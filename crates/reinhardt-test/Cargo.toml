@@ -1,0 +1,45 @@
+[package]
+name = "reinhardt-test"
+version = "0.1.0"
+edition = "2024"
+description = "Testing utilities and helpers for Reinhardt framework"
+
+[features]
+default = []
+testcontainers = [
+  "dep:testcontainers",
+  "dep:testcontainers-modules",
+  "dep:sqlx",
+]
+
+[dependencies]
+reinhardt-apps = { workspace = true }
+reinhardt-serializers = { workspace = true }
+reinhardt-views = { workspace = true }
+reinhardt-auth = { workspace = true }
+reinhardt-parsers = { workspace = true }
+reinhardt-renderers = { workspace = true }
+reinhardt-messages = { workspace = true }
+
+hyper = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bytes = { workspace = true }
+http = "1.0"
+http-body-util = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+url = "2.5"
+cookie = "0.18"
+mime = "0.3"
+base64-simd = "0.8"
+
+# Optional dependencies for testcontainers feature
+testcontainers = { workspace = true, optional = true }
+testcontainers-modules = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+tokio-test = "0.4"
