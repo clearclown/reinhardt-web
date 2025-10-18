@@ -1,0 +1,15 @@
+[package]
+name = "reinhardt-types"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+reinhardt-http = { path = "../../../reinhardt-http" }
+reinhardt-exception = { path = "../exception" }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }
+bytes = { workspace = true }
+hyper = { workspace = true }
