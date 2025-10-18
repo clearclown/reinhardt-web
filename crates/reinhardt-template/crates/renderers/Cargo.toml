@@ -1,0 +1,29 @@
+[package]
+name = "reinhardt-renderers"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Response renderers for Reinhardt framework (Django REST Framework inspired)"
+keywords = ["web", "framework", "renderer", "rest", "api"]
+categories = ["web-programming"]
+
+[dependencies]
+reinhardt-apps = { workspace = true }
+reinhardt-browsable-api = { workspace = true }
+reinhardt-exception = { workspace = true }
+async-trait = "0.1"
+bytes = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+quick-xml = { version = "0.31", features = ["serialize"] }
+csv = "1.3"
+thiserror = "1.0"
+mime = "0.3"
+utoipa = { version = "5.4", features = ["yaml"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+hyper = "1.0"
