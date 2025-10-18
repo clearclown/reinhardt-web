@@ -1,0 +1,19 @@
+[package]
+name = "parsers-ext"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+reinhardt-parsers = { workspace = true }
+reinhardt-exception = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+serde_json = { workspace = true }
+multer = "3.1"
+serde = { workspace = true }
+serde_urlencoded = "0.7"
+urlencoding = "2.1"
+tokio = { workspace = true }
+futures-util = "0.3"
