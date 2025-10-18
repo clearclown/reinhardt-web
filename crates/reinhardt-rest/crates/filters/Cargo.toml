@@ -1,0 +1,20 @@
+[package]
+name = "reinhardt-filters"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Filtering backends for Reinhardt framework (Django REST Framework inspired)"
+
+[dependencies]
+reinhardt-apps = { workspace = true }
+reinhardt-orm = { workspace = true }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+regex = "1.10"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full", "test-util"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite"] }
+tempfile = "3.0"
