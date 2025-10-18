@@ -1,0 +1,46 @@
+[package]
+name = "reinhardt-sessions"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+reinhardt-apps = { workspace = true }
+reinhardt-cache = { workspace = true }
+reinhardt-di = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+
+# Optional dependencies for different backends
+reinhardt-orm = { workspace = true, optional = true }
+reinhardt-db = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["fs"] }
+fs2 = { version = "0.4", optional = true }
+base64 = { version = "0.22", optional = true }
+aes-gcm = { version = "0.10", optional = true }
+rand = { version = "0.8", optional = true }
+hmac = { version = "0.12", optional = true }
+sha2 = { version = "0.10", optional = true }
+
+# Optional dependencies for HTTP middleware
+reinhardt-http = { workspace = true, optional = true }
+reinhardt-types = { workspace = true, optional = true }
+reinhardt-exception = { workspace = true, optional = true }
+
+[features]
+default = []
+database = ["reinhardt-orm", "reinhardt-db", "sqlx"]
+file = ["tokio", "fs2"]
+cookie = ["base64", "aes-gcm", "rand", "hmac", "sha2"]
+middleware = ["reinhardt-http", "reinhardt-types", "reinhardt-exception"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+hyper = { workspace = true }
