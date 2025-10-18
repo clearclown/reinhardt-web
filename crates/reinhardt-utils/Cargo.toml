@@ -1,0 +1,29 @@
+[package]
+name = "reinhardt-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+# Core utils (always included)
+utils-core = { path = "crates/utils-core" }
+
+# Internal crates as optional dependencies
+reinhardt-logging = { path = "crates/logging", optional = true }
+reinhardt-cache = { path = "crates/cache", optional = true }
+reinhardt-storage = { path = "crates/storage", optional = true }
+
+[features]
+default = []
+logging = ["dep:reinhardt-logging"]
+cache = ["dep:reinhardt-cache"]
+storage = ["dep:reinhardt-storage"]
+all = ["logging", "cache", "storage"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+proptest = "1.8"
