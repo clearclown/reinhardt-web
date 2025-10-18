@@ -1,0 +1,60 @@
+[package]
+name = "reinhardt-contrib"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+# CLI dependencies for bin/reinhardt-admin
+clap = { version = "4.5", features = ["derive"], optional = true }
+tokio = { workspace = true, optional = true }
+
+# Re-export internal crates as optional dependencies
+reinhardt-auth = { path = "crates/auth", optional = true }
+reinhardt-contenttypes = { path = "crates/contenttypes", optional = true }
+reinhardt-sessions = { path = "crates/sessions", optional = true }
+reinhardt-messages = { path = "crates/messages", optional = true }
+reinhardt-static = { path = "crates/static", optional = true }
+reinhardt-mail = { path = "crates/mail", optional = true }
+reinhardt-graphql = { path = "crates/graphql", optional = true }
+reinhardt-websockets = { path = "crates/websockets", optional = true }
+reinhardt-i18n = { path = "crates/i18n", optional = true }
+reinhardt-commands = { path = "crates/commands", optional = true }
+reinhardt-utils = { workspace = true }
+chrono = { workspace = true }
+
+[features]
+default = []
+
+# CLI feature for reinhardt-admin binary
+cli = ["dep:clap", "dep:tokio", "commands"]
+
+# Individual feature flags for each contrib module
+auth = ["dep:reinhardt-auth"]
+contenttypes = ["dep:reinhardt-contenttypes"]
+sessions = ["dep:reinhardt-sessions"]
+messages = ["dep:reinhardt-messages"]
+static = ["dep:reinhardt-static"]
+mail = ["dep:reinhardt-mail"]
+graphql = ["dep:reinhardt-graphql"]
+websockets = ["dep:reinhardt-websockets"]
+i18n = ["dep:reinhardt-i18n"]
+commands = ["dep:reinhardt-commands"]
+
+# Convenience feature to enable all contrib modules
+full = [
+  "auth",
+  "contenttypes",
+  "sessions",
+  "messages",
+  "static",
+  "mail",
+  "graphql",
+  "websockets",
+  "i18n",
+  "commands",
+]
+
+[[bin]]
+name = "reinhardt-admin"
+required-features = ["cli"]
