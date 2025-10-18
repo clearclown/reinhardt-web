@@ -1,0 +1,305 @@
+//! X-Frame-Options Middleware
+//!
+//! Provides clickjacking protection by setting the X-Frame-Options header.
+
+use async_trait::async_trait;
+use hyper::header::HeaderName;
+use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
+use std::sync::Arc;
+
+/// X-Frame-Options values
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum XFrameOptions {
+    /// DENY - The page cannot be displayed in a frame
+    Deny,
+    /// SAMEORIGIN - The page can only be displayed in a frame on the same origin
+    SameOrigin,
+}
+
+impl XFrameOptions {
+    /// Convert to header value string
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_middleware::XFrameOptions;
+    ///
+    /// let deny = XFrameOptions::Deny;
+    /// assert_eq!(deny.as_str(), "DENY");
+    ///
+    /// let same_origin = XFrameOptions::SameOrigin;
+    /// assert_eq!(same_origin.as_str(), "SAMEORIGIN");
+    /// ```
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            XFrameOptions::Deny => "DENY",
+            XFrameOptions::SameOrigin => "SAMEORIGIN",
+        }
+    }
+}
+
+/// X-Frame-Options middleware for clickjacking protection
+pub struct XFrameOptionsMiddleware {
+    option: XFrameOptions,
+}
+
+impl XFrameOptionsMiddleware {
+    /// Create middleware with DENY option
+    ///
+    /// Prevents the page from being displayed in any frame, providing maximum clickjacking protection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use reinhardt_middleware::XFrameOptionsMiddleware;
+    /// use reinhardt_apps::{Handler, Middleware, Request, Response};
+    /// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+    /// use bytes::Bytes;
+    ///
+    /// struct TestHandler;
+    ///
+    /// #[async_trait::async_trait]
+    /// impl Handler for TestHandler {
+    ///     async fn handle(&self, _request: Request) -> reinhardt_apps::Result<Response> {
+    ///         Ok(Response::new(StatusCode::OK))
+    ///     }
+    /// }
+    ///
+    /// # tokio_test::block_on(async {
+    /// let middleware = XFrameOptionsMiddleware::deny();
+    /// let handler = Arc::new(TestHandler);
+    ///
+    /// let request = Request::new(
+    ///     Method::GET,
+    ///     Uri::from_static("/secure-page"),
+    ///     Version::HTTP_11,
+    ///     HeaderMap::new(),
+    ///     Bytes::new(),
+    /// );
+    ///
+    /// let response = middleware.process(request, handler).await.unwrap();
+    /// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "DENY");
+    /// # });
+    /// ```
+    pub fn deny() -> Self {
+        Self {
+            option: XFrameOptions::Deny,
+        }
+    }
+    /// Create middleware with SAMEORIGIN option
+    ///
+    /// Allows the page to be framed only by pages from the same origin.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use reinhardt_middleware::XFrameOptionsMiddleware;
+    /// use reinhardt_apps::{Handler, Middleware, Request, Response};
+    /// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+    /// use bytes::Bytes;
+    ///
+    /// struct TestHandler;
+    ///
+    /// #[async_trait::async_trait]
+    /// impl Handler for TestHandler {
+    ///     async fn handle(&self, _request: Request) -> reinhardt_apps::Result<Response> {
+    ///         Ok(Response::new(StatusCode::OK))
+    ///     }
+    /// }
+    ///
+    /// # tokio_test::block_on(async {
+    /// let middleware = XFrameOptionsMiddleware::same_origin();
+    /// let handler = Arc::new(TestHandler);
+    ///
+    /// let request = Request::new(
+    ///     Method::GET,
+    ///     Uri::from_static("/dashboard"),
+    ///     Version::HTTP_11,
+    ///     HeaderMap::new(),
+    ///     Bytes::new(),
+    /// );
+    ///
+    /// let response = middleware.process(request, handler).await.unwrap();
+    /// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "SAMEORIGIN");
+    /// # });
+    /// ```
+    pub fn same_origin() -> Self {
+        Self {
+            option: XFrameOptions::SameOrigin,
+        }
+    }
+    /// Create middleware with custom option
+    ///
+    /// # Arguments
+    ///
+    /// * `option` - The X-Frame-Options value to use
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use reinhardt_middleware::{XFrameOptionsMiddleware, XFrameOptions};
+    /// use reinhardt_apps::{Handler, Middleware, Request, Response};
+    /// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+    /// use bytes::Bytes;
+    ///
+    /// struct TestHandler;
+    ///
+    /// #[async_trait::async_trait]
+    /// impl Handler for TestHandler {
+    ///     async fn handle(&self, _request: Request) -> reinhardt_apps::Result<Response> {
+    ///         Ok(Response::new(StatusCode::OK))
+    ///     }
+    /// }
+    ///
+    /// # tokio_test::block_on(async {
+    /// let middleware = XFrameOptionsMiddleware::new(XFrameOptions::Deny);
+    /// let handler = Arc::new(TestHandler);
+    ///
+    /// let request = Request::new(
+    ///     Method::GET,
+    ///     Uri::from_static("/admin"),
+    ///     Version::HTTP_11,
+    ///     HeaderMap::new(),
+    ///     Bytes::new(),
+    /// );
+    ///
+    /// let response = middleware.process(request, handler).await.unwrap();
+    /// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "DENY");
+    /// # });
+    /// ```
+    pub fn new(option: XFrameOptions) -> Self {
+        Self { option }
+    }
+}
+
+impl Default for XFrameOptionsMiddleware {
+    fn default() -> Self {
+        Self::same_origin()
+    }
+}
+
+const X_FRAME_OPTIONS: HeaderName = HeaderName::from_static("x-frame-options");
+
+#[async_trait]
+impl Middleware for XFrameOptionsMiddleware {
+    async fn process(&self, request: Request, handler: Arc<dyn Handler>) -> Result<Response> {
+        let mut response = handler.handle(request).await?;
+
+        // Only add header if not already present
+        if !response.headers.contains_key(&X_FRAME_OPTIONS) {
+            response
+                .headers
+                .insert(X_FRAME_OPTIONS, self.option.as_str().parse().unwrap());
+        }
+
+        Ok(response)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+    use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+
+    struct TestHandler;
+
+    #[async_trait]
+    impl Handler for TestHandler {
+        async fn handle(&self, _request: Request) -> Result<Response> {
+            Ok(Response::new(StatusCode::OK).with_body(Bytes::from(&b"test"[..])))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_deny_option() {
+        let middleware = XFrameOptionsMiddleware::deny();
+        let handler = Arc::new(TestHandler);
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/test"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        let response = middleware.process(request, handler).await.unwrap();
+
+        assert_eq!(response.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
+    }
+
+    #[tokio::test]
+    async fn test_same_origin_option() {
+        let middleware = XFrameOptionsMiddleware::same_origin();
+        let handler = Arc::new(TestHandler);
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/test"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        let response = middleware.process(request, handler).await.unwrap();
+
+        assert_eq!(
+            response.headers.get(&X_FRAME_OPTIONS).unwrap(),
+            "SAMEORIGIN"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_default_is_same_origin() {
+        let middleware = XFrameOptionsMiddleware::default();
+        let handler = Arc::new(TestHandler);
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/test"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        let response = middleware.process(request, handler).await.unwrap();
+
+        assert_eq!(
+            response.headers.get(&X_FRAME_OPTIONS).unwrap(),
+            "SAMEORIGIN"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_does_not_override_existing_header() {
+        struct TestHandlerWithHeader;
+
+        #[async_trait]
+        impl Handler for TestHandlerWithHeader {
+            async fn handle(&self, _request: Request) -> Result<Response> {
+                let mut response =
+                    Response::new(StatusCode::OK).with_body(Bytes::from(&b"test"[..]));
+                response
+                    .headers
+                    .insert(X_FRAME_OPTIONS, "DENY".parse().unwrap());
+                Ok(response)
+            }
+        }
+
+        let middleware = XFrameOptionsMiddleware::same_origin();
+        let handler = Arc::new(TestHandlerWithHeader);
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/test"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        let response = middleware.process(request, handler).await.unwrap();
+
+        // Should keep the original DENY value
+        assert_eq!(response.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
+    }
+}

@@ -1,0 +1,36 @@
+[package]
+name = "reinhardt-middleware"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[features]
+default = []
+sqlx = ["dep:sqlx"]
+
+[dependencies]
+reinhardt-types = { workspace = true }
+reinhardt-http = { path = "../reinhardt-http" }
+reinhardt-exception = { workspace = true }
+reinhardt-contrib = { path = "../reinhardt-contrib" }
+reinhardt-apps = { workspace = true }
+reinhardt-security = { workspace = true }
+reinhardt-auth = { workspace = true }
+reinhardt-mail = { workspace = true }
+reinhardt-di = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+hyper = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+flate2 = { workspace = true }
+sha2 = { workspace = true }
+hex = "0.4"
+httpdate = "1.0"
+bytes = { workspace = true }
+sqlx = { workspace = true, optional = true }
+regex = "1.10"
+
+[dev-dependencies]
+tokio = { workspace = true }
+tokio-test = "0.4"
