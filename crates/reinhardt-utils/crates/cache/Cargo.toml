@@ -1,0 +1,42 @@
+[package]
+name = "reinhardt-cache"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+reinhardt-apps = { workspace = true }
+reinhardt-di = { workspace = true }
+reinhardt-exception = { workspace = true }
+
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+hyper = { workspace = true }
+bytes = { workspace = true }
+
+# Redis support
+redis = { version = "0.27", features = [
+  "tokio-comp",
+  "connection-manager",
+], optional = true }
+
+# Memcached support
+memcache = { version = "0.17", optional = true }
+
+# Time utilities
+chrono = { version = "0.4", features = ["serde"] }
+
+[features]
+default = []
+redis-backend = ["redis"]
+memcached-backend = ["memcache"]
+all-backends = ["redis-backend", "memcached-backend"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+bytes = { workspace = true }
