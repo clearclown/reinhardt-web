@@ -1,0 +1,78 @@
+[package]
+name = "reinhardt-db"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Django-style database layer for Reinhardt framework"
+
+[dependencies]
+# Internal crates (optional)
+backends = { path = "crates/backends", version = "0.1.0", optional = true }
+backends-pool = { path = "crates/backends-pool", version = "0.1.0", optional = true }
+reinhardt-database = { path = "crates/database", version = "0.1.0", optional = true }
+reinhardt-pool = { path = "crates/pool", version = "0.1.0", optional = true }
+reinhardt-orm = { path = "crates/orm", version = "0.1.0", optional = true }
+reinhardt-migrations = { path = "crates/migrations", version = "0.1.0", optional = true }
+reinhardt-hybrid = { path = "crates/hybrid", version = "0.1.0", optional = true }
+reinhardt-associations = { path = "crates/associations", version = "0.1.0", optional = true }
+
+# DI support for connection pooling
+reinhardt-di = { path = "../reinhardt-di", version = "0.1.0", optional = true }
+
+# Database drivers
+sqlx = { version = "0.8", features = [
+  "runtime-tokio",
+  "chrono",
+  "sqlite",
+  "postgres",
+  "mysql",
+  "macros",
+  "migrate",
+] }
+
+# Async runtime
+tokio = { version = "1.41", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Error handling
+thiserror = "2.0"
+
+[features]
+default = [
+  "database",
+  "backends",
+  "pool",
+  "postgres",
+  "orm",
+  "migrations",
+  "hybrid",
+  "associations",
+]
+
+# Module features
+backends = ["dep:backends"]
+
+# Internal crate features
+database = ["dep:reinhardt-database"]
+pool = ["dep:backends-pool", "dep:reinhardt-pool", "reinhardt-di"]
+orm = ["dep:reinhardt-orm"]
+migrations = ["dep:reinhardt-migrations"]
+hybrid = ["dep:reinhardt-hybrid"]
+associations = ["dep:reinhardt-associations"]
+
+# Database-specific features
+postgres = ["sqlx/postgres"]
+sqlite = ["sqlx/sqlite"]
+mysql = ["sqlx/mysql"]
+all-databases = ["postgres", "sqlite", "mysql"]
+
+[dev-dependencies]
+tokio-test = "0.4"
