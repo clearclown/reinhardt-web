@@ -1,0 +1,227 @@
+use crate::field::{FieldError, FieldResult, FormField, Widget};
+use std::str::FromStr;
+
+/// DecimalField for precise decimal number input
+pub struct DecimalField {
+    pub name: String,
+    pub label: Option<String>,
+    pub required: bool,
+    pub help_text: Option<String>,
+    pub widget: Widget,
+    pub initial: Option<serde_json::Value>,
+    pub max_value: Option<f64>,
+    pub min_value: Option<f64>,
+    pub max_digits: Option<usize>,
+    pub decimal_places: Option<usize>,
+    pub localize: bool,
+    pub locale: Option<String>,
+    pub use_thousands_separator: bool,
+}
+
+impl DecimalField {
+    /// Create a new DecimalField
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::fields::DecimalField;
+    ///
+    /// let field = DecimalField::new("price".to_string());
+    /// assert_eq!(field.name, "price");
+    /// assert!(field.required);
+    /// ```
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            label: None,
+            required: true,
+            help_text: None,
+            widget: Widget::NumberInput,
+            initial: None,
+            max_value: None,
+            min_value: None,
+            max_digits: None,
+            decimal_places: None,
+            localize: false,
+            locale: None,
+            use_thousands_separator: false,
+        }
+    }
+    pub fn with_localize(mut self, localize: bool) -> Self {
+        self.localize = localize;
+        self
+    }
+    pub fn with_locale(mut self, locale: String) -> Self {
+        self.locale = Some(locale);
+        self
+    }
+    pub fn with_thousands_separator(mut self, use_separator: bool) -> Self {
+        self.use_thousands_separator = use_separator;
+        self
+    }
+
+    fn validate_decimal(&self, s: &str) -> Result<f64, String> {
+        let num = f64::from_str(s).map_err(|_| "Enter a number".to_string())?;
+
+        if !num.is_finite() {
+            return Err("Enter a valid number".to_string());
+        }
+
+        // Check total digits
+        if let Some(max_digits) = self.max_digits {
+            let parts: Vec<&str> = s.split('.').collect();
+            let total_digits =
+                parts[0].trim_start_matches('-').len() + parts.get(1).map(|p| p.len()).unwrap_or(0);
+            if total_digits > max_digits {
+                return Err(format!(
+                    "Ensure that there are no more than {} digits in total",
+                    max_digits
+                ));
+            }
+        }
+
+        // Check decimal places
+        if let Some(decimal_places) = self.decimal_places {
+            let parts: Vec<&str> = s.split('.').collect();
+            if let Some(decimals) = parts.get(1) {
+                if decimals.len() > decimal_places {
+                    return Err(format!(
+                        "Ensure that there are no more than {} decimal places",
+                        decimal_places
+                    ));
+                }
+            }
+        }
+
+        Ok(num)
+    }
+}
+
+impl FormField for DecimalField {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn label(&self) -> Option<&str> {
+        self.label.as_deref()
+    }
+
+    fn required(&self) -> bool {
+        self.required
+    }
+
+    fn help_text(&self) -> Option<&str> {
+        self.help_text.as_deref()
+    }
+
+    fn widget(&self) -> &Widget {
+        &self.widget
+    }
+
+    fn initial(&self) -> Option<&serde_json::Value> {
+        self.initial.as_ref()
+    }
+
+    fn clean(&self, value: Option<&serde_json::Value>) -> FieldResult<serde_json::Value> {
+        match value {
+            None if self.required => Err(FieldError::required(None)),
+            None => Ok(serde_json::Value::Null),
+            Some(v) => {
+                // Parse decimal from either number or string
+                let num = if let Some(f) = v.as_f64() {
+                    f
+                } else if let Some(s) = v.as_str() {
+                    let s = s.trim();
+
+                    if s.is_empty() {
+                        if self.required {
+                            return Err(FieldError::required(None));
+                        }
+                        return Ok(serde_json::Value::Null);
+                    }
+
+                    self.validate_decimal(s)
+                        .map_err(|e| FieldError::Validation(e))?
+                } else if let Some(i) = v.as_i64() {
+                    i as f64
+                } else {
+                    return Err(FieldError::Invalid("Expected number or string".to_string()));
+                };
+
+                // Validate range
+                if let Some(max) = self.max_value {
+                    if num > max {
+                        return Err(FieldError::Validation(format!(
+                            "Ensure this value is less than or equal to {}",
+                            max
+                        )));
+                    }
+                }
+
+                if let Some(min) = self.min_value {
+                    if num < min {
+                        return Err(FieldError::Validation(format!(
+                            "Ensure this value is greater than or equal to {}",
+                            min
+                        )));
+                    }
+                }
+
+                Ok(serde_json::json!(num))
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decimalfield_basic() {
+        let field = DecimalField::new("amount".to_string());
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(3.14))).unwrap(),
+            serde_json::json!(3.14)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("3.14"))).unwrap(),
+            serde_json::json!(3.14)
+        );
+    }
+
+    #[test]
+    fn test_decimalfield_max_digits() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.max_digits = Some(5);
+        field.decimal_places = Some(2);
+
+        assert!(field.clean(Some(&serde_json::json!("123.45"))).is_ok());
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("1234.567"))),
+            Err(FieldError::Validation(_))
+        ));
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("123.456"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_decimalfield_range() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.min_value = Some(0.0);
+        field.max_value = Some(100.0);
+
+        assert!(field.clean(Some(&serde_json::json!(50.0))).is_ok());
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!(-1.0))),
+            Err(FieldError::Validation(_))
+        ));
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!(101.0))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+}

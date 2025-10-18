@@ -1,0 +1,36 @@
+[package]
+name = "reinhardt-forms"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Internal dependencies
+reinhardt-apps = { workspace = true }
+reinhardt-validators = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+async-trait = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Regex
+regex = "1.10"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Security
+md5 = "0.7"
+
+[dev-dependencies]
+tokio-test = "0.4"
