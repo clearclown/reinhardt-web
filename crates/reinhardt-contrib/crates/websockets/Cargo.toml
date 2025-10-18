@@ -1,0 +1,31 @@
+[package]
+name = "reinhardt-websockets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+tokio-tungstenite = "0.24"
+async-trait = { workspace = true }
+
+# WebSocket
+tungstenite = "0.24"
+futures-util = "0.3"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Utilities
+bytes = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
