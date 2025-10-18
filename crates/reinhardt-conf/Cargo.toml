@@ -1,0 +1,30 @@
+[package]
+name = "reinhardt-conf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Configuration management framework for Reinhardt - Django-inspired settings with encryption and secrets management"
+keywords = ["settings", "configuration", "secrets", "django", "reinhardt"]
+categories = ["config", "web-programming"]
+readme = "README.md"
+repository.workspace = true
+
+[dependencies]
+# 内部クレート - optional でre-exportできるようにする
+reinhardt-settings = { path = "crates/settings", version = "0.1.0", optional = true }
+reinhardt-settings-cli = { path = "crates/settings-cli", version = "0.1.0", optional = true }
+
+[features]
+default = ["settings"]
+settings = ["reinhardt-settings"]
+settings-cli = ["reinhardt-settings-cli"]
+
+# 内部クレートの機能をそのまま公開
+async = ["reinhardt-settings?/async"]
+dynamic-redis = ["reinhardt-settings?/dynamic-redis"]
+dynamic-database = ["reinhardt-settings?/dynamic-database"]
+vault = ["reinhardt-settings?/vault"]
+aws-secrets = ["reinhardt-settings?/aws-secrets"]
+azure-keyvault = ["reinhardt-settings?/azure-keyvault"]
+secret-rotation = ["reinhardt-settings?/secret-rotation"]
+encryption = ["reinhardt-settings?/encryption"]
