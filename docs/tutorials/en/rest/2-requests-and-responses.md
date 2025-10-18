@@ -1,0 +1,264 @@
+# Tutorial 2: Requests and Responses
+
+Learn how to handle HTTP requests and responses in Reinhardt.
+
+## Request Object
+
+Reinhardt's `Request` object from `reinhardt-core` provides access to HTTP request data:
+
+```rust
+use reinhardt_core::{Request, Response, Result};
+use hyper::{Method, StatusCode};
+
+async fn my_view(request: Request) -> Result<Response> {
+    // Access HTTP method
+    match request.method {
+        Method::GET => println!("GET request"),
+        Method::POST => println!("POST request"),
+        _ => println!("Other method"),
+    }
+
+    // Access headers
+    if let Some(content_type) = request.headers.get("content-type") {
+        println!("Content-Type: {:?}", content_type);
+    }
+
+    // Access query parameters
+    let query = request.query_string();
+
+    // Access request body
+    let body_bytes = &request.body;
+
+    Ok(Response::ok("Success"))
+}
+```
+
+## Response Object
+
+Create responses using the builder pattern:
+
+```rust
+use reinhardt_core::Response;
+use hyper::StatusCode;
+use serde_json::json;
+
+// Simple text response
+let response = Response::ok("Hello, World!");
+
+// JSON response
+let data = json!({
+    "message": "Success",
+    "count": 42
+});
+let response = Response::ok(data);
+
+// Custom status code
+let response = Response::new(StatusCode::CREATED, "Created");
+
+// Response with custom headers
+let mut response = Response::ok("Data");
+response.headers.insert(
+    "X-Custom-Header",
+    "value".parse().unwrap()
+);
+```
+
+## Status Codes
+
+Reinhardt provides convenience methods for common status codes:
+
+```rust
+// 200 OK
+Response::ok(data)
+
+// 201 Created
+Response::created(data)
+
+// 204 No Content
+Response::no_content()
+
+// 400 Bad Request
+Response::bad_request("Invalid input")
+
+// 404 Not Found
+Response::not_found("Resource not found")
+
+// 500 Internal Server Error
+Response::internal_server_error("Error occurred")
+```
+
+## Parsing Request Data
+
+Parse JSON from request body:
+
+```rust
+use reinhardt_serializers::JsonSerializer;
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CreateSnippet {
+    title: String,
+    code: String,
+    language: String,
+}
+
+async fn create_snippet(request: Request) -> Result<Response> {
+    // Parse JSON from request body
+    let serializer = JsonSerializer::<CreateSnippet>::new();
+    let data = serializer.deserialize(&request.body)?;
+
+    println!("Title: {}", data.title);
+    println!("Code: {}", data.code);
+
+    Ok(Response::created(data))
+}
+```
+
+## Content Negotiation
+
+Reinhardt supports multiple content types:
+
+```rust
+use reinhardt_serializers::{JSONParser, FormParser};
+
+async fn handle_request(request: Request) -> Result<Response> {
+    let content_type = request.headers
+        .get("content-type")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+
+    match content_type {
+        "application/json" => {
+            let parser = JSONParser::new();
+            let data = parser.parse(&request.body)?;
+            Ok(Response::ok(data))
+        }
+        "application/x-www-form-urlencoded" => {
+            let parser = FormParser::new();
+            let data = parser.parse(&request.body)?;
+            Ok(Response::ok(data))
+        }
+        _ => {
+            Ok(Response::bad_request("Unsupported content type"))
+        }
+    }
+}
+```
+
+## Error Handling
+
+Handle errors gracefully:
+
+```rust
+use reinhardt_core::Error;
+
+async fn safe_view(request: Request) -> Result<Response> {
+    // Parse and validate data
+    let serializer = JsonSerializer::<CreateSnippet>::new();
+    let data = match serializer.deserialize(&request.body) {
+        Ok(d) => d,
+        Err(e) => {
+            return Ok(Response::bad_request(
+                format!("Invalid JSON: {}", e)
+            ));
+        }
+    };
+
+    // Validate required fields
+    if data.title.is_empty() {
+        return Ok(Response::bad_request("Title is required"));
+    }
+
+    Ok(Response::created(data))
+}
+```
+
+## Complete Example
+
+Full request/response handling:
+
+```rust
+use reinhardt_core::{Request, Response, Result};
+use reinhardt_serializers::{JsonSerializer, Serializer, ValidationError};
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct Snippet {
+    id: Option<i64>,
+    title: String,
+    code: String,
+    language: String,
+}
+
+struct SnippetValidator;
+
+impl Serializer<Snippet> for SnippetValidator {
+    fn validate(&self, snippet: &Snippet) -> Result<(), Vec<ValidationError>> {
+        let mut errors = Vec::new();
+
+        if snippet.title.is_empty() {
+            errors.push(ValidationError::new("title", "Title is required"));
+        }
+
+        if snippet.code.is_empty() {
+            errors.push(ValidationError::new("code", "Code is required"));
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+async fn snippet_list(request: Request) -> Result<Response> {
+    match request.method {
+        Method::GET => {
+            // Return list of snippets
+            let snippets = vec![
+                Snippet {
+                    id: Some(1),
+                    title: "Hello".to_string(),
+                    code: "print('hello')".to_string(),
+                    language: "python".to_string(),
+                }
+            ];
+            Ok(Response::ok(snippets))
+        }
+        Method::POST => {
+            // Create new snippet
+            let serializer = JsonSerializer::<Snippet>::new();
+            let mut snippet = serializer.deserialize(&request.body)?;
+
+            // Validate
+            let validator = SnippetValidator;
+            validator.validate(&snippet)?;
+
+            // Assign ID and save
+            snippet.id = Some(1);
+
+            Ok(Response::created(snippet))
+        }
+        _ => {
+            Ok(Response::new(
+                StatusCode::METHOD_NOT_ALLOWED,
+                "Method not allowed"
+            ))
+        }
+    }
+}
+```
+
+## Summary
+
+In this tutorial, you learned:
+
+1. Accessing request data (method, headers, body)
+2. Creating responses with different status codes
+3. Parsing JSON from request bodies
+4. Content negotiation
+5. Error handling
+6. Complete request/response workflow
+
+Next tutorial: [Tutorial 3: Class-Based Views](3-class-based-views.md)
