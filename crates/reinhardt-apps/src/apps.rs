@@ -413,7 +413,7 @@ impl Apps {
     /// }
     ///
     /// let apps = Apps::new(vec!["auth".to_string()]);
-    /// // This will compile because AuthApp implements AppLabel
+    // This will compile because AuthApp implements AppLabel
     /// let result = apps.get_app_config_typed::<AuthApp>();
     /// ```
     pub fn get_app_config_typed<A: AppLabel>(&self) -> AppResult<AppConfig> {
@@ -444,7 +444,7 @@ impl Apps {
 mod typed_tests {
     use super::*;
 
-    /// // Test application types
+    // Test application types
     struct AuthApp;
     impl AppLabel for AuthApp {
         const LABEL: &'static str = "auth";

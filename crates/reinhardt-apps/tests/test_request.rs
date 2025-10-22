@@ -24,7 +24,7 @@ fn test_request_creation() {
 
     assert_eq!(request.method, method);
     assert_eq!(request.path(), "/test");
-    assert_eq!(request.body, body);
+    assert_eq!(request.body(), &body);
 }
 
 #[test]
@@ -278,7 +278,7 @@ fn test_request_empty_body() {
         Bytes::new(),
     );
 
-    assert!(request.body.is_empty());
+    assert!(request.body().is_empty());
 }
 
 #[test]
@@ -316,7 +316,7 @@ fn test_request_complex_query_string() {
 #[test]
 fn test_request_query_params_special_characters() {
     // Test URL-encoded query parameters
-    let uri = Uri::from_static("/test?name=John%20Doe");
+    let uri = Uri::from_static("/test?name=John%20Doe&city=San%20Francisco");
     let request = Request::new(
         Method::GET,
         uri,
@@ -325,8 +325,9 @@ fn test_request_query_params_special_characters() {
         Bytes::new(),
     );
 
-    // Note: The actual URL decoding would need to be implemented
-    assert!(request.query_params.contains_key("name"));
+    let decoded = request.decoded_query_params();
+    assert_eq!(decoded.get("name"), Some(&"John Doe".to_string()));
+    assert_eq!(decoded.get("city"), Some(&"San Francisco".to_string()));
 }
 
 #[test]
@@ -362,4 +363,69 @@ fn test_request_json_with_nested_data() {
 
     let parsed: User = request.json().unwrap();
     assert_eq!(parsed, user);
+}
+
+#[test]
+fn test_request_special_characters_in_query() {
+    let uri = Uri::from_static("/test?email=user%40example.com&path=%2Fhome%2Fuser");
+    let request = Request::new(
+        Method::GET,
+        uri,
+        Version::HTTP_11,
+        HeaderMap::new(),
+        Bytes::new(),
+    );
+
+    let decoded = request.decoded_query_params();
+    assert_eq!(decoded.get("email"), Some(&"user@example.com".to_string()));
+    assert_eq!(decoded.get("path"), Some(&"/home/user".to_string()));
+}
+
+#[test]
+fn test_request_unicode_in_query() {
+    let uri = Uri::from_static("/test?message=%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%81%AF");
+    let request = Request::new(
+        Method::GET,
+        uri,
+        Version::HTTP_11,
+        HeaderMap::new(),
+        Bytes::new(),
+    );
+
+    let decoded = request.decoded_query_params();
+    assert_eq!(decoded.get("message"), Some(&"こんにちは".to_string()));
+}
+
+#[test]
+fn test_request_plus_sign_in_query() {
+    let uri = Uri::from_static("/test?query=hello+world");
+    let request = Request::new(
+        Method::GET,
+        uri,
+        Version::HTTP_11,
+        HeaderMap::new(),
+        Bytes::new(),
+    );
+
+    let decoded = request.decoded_query_params();
+    // Note: '+' in query params is typically decoded as space in form data,
+    // but in standard URL encoding it remains as '+'
+    // percent_decode_str treats '+' as '+', not as space
+    assert_eq!(decoded.get("query"), Some(&"hello+world".to_string()));
+}
+
+#[test]
+fn test_request_empty_query_params() {
+    let uri = Uri::from_static("/test?empty=&key=value");
+    let request = Request::new(
+        Method::GET,
+        uri,
+        Version::HTTP_11,
+        HeaderMap::new(),
+        Bytes::new(),
+    );
+
+    let decoded = request.decoded_query_params();
+    assert_eq!(decoded.get("empty"), Some(&"".to_string()));
+    assert_eq!(decoded.get("key"), Some(&"value".to_string()));
 }

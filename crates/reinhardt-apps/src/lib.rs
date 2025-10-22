@@ -1,4 +1,5 @@
 pub mod apps;
+pub mod builder;
 
 // Re-export from reinhardt-http
 pub use reinhardt_http::{Request, Response, StreamBody, StreamingResponse};
@@ -17,6 +18,12 @@ pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 
 // Re-export from apps module
 pub use apps::{get_apps, init_apps, init_apps_checked, AppConfig, AppError, AppResult, Apps};
+
+// Re-export from builder module
+pub use builder::{
+    Application, ApplicationBuilder, ApplicationDatabaseConfig, BuildError, BuildResult,
+    RouteConfig,
+};
 
 #[cfg(test)]
 mod tests {
