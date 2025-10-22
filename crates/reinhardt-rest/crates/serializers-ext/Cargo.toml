@@ -5,10 +5,11 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+tokio = { workspace = true }
 reinhardt-serializers = { workspace = true }
 reinhardt-orm = { workspace = true }
 reinhardt-apps = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-sqlx = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio"] }

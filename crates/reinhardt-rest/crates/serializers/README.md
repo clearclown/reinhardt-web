@@ -95,6 +95,57 @@ Provides serializers for converting between Rust types and various formats (JSON
   - Configurable list of valid choices
   - Comprehensive doctests (3 tests) and unit tests (2 tests)
 
+#### Advanced Serialization
+- **`SerializerMethodField`**: Compute custom read-only fields
+  - Method-based computed fields for serializers
+  - Custom method names with `.method_name()`
+  - HashMap-based context for method values
+  - Read-only field support (always `read_only: true`)
+  - Example: `full_name` field computed from `first_name` + `last_name`
+  - Comprehensive doctests (2 tests) and unit tests (7 tests)
+
+- **`MethodFieldProvider` trait**: Support for serializers with method fields
+  - `compute_method_fields()`: Generate all method field values
+  - `compute_method()`: Generate single method field value
+  - Integration with serializer context
+
+- **`MethodFieldRegistry`**: Manage multiple method fields
+  - Register method fields with `.register()`
+  - Retrieve fields with `.get()` and `.contains()`
+  - Access all fields with `.all()`
+
+#### Validation System
+- **`ValidationError`**: Structured validation error messages
+  - `FieldError`: Single field validation errors with field name and message
+  - `MultipleErrors`: Collection of multiple validation errors
+  - `ObjectError`: Object-level validation errors
+  - Helper methods: `field_error()`, `object_error()`, `multiple()`
+  - thiserror integration for error handling
+
+- **`FieldValidator` trait**: Field-level validation
+  - `validate()`: Validate individual field values
+  - Implemented by custom validators (EmailValidator, AgeValidator, etc.)
+  - JSON Value-based validation
+
+- **`ObjectValidator` trait**: Object-level validation
+  - `validate()`: Validate entire objects with multiple fields
+  - Cross-field validation support
+  - Example: Password confirmation matching
+
+- **`FieldLevelValidation` trait**: Serializer field-level validation
+  - `validate_field()`: Validate specific field by name
+  - `get_field_validators()`: Get all registered field validators
+  - Django-style `validate_<field>()` pattern support
+
+- **`ObjectLevelValidation` trait**: Serializer object-level validation
+  - `validate()`: Validate entire serialized object
+  - Called after all field validations pass
+
+- **`validate_fields()` helper**: Validate all fields in a data object
+  - Takes HashMap of field validators
+  - Returns single error or MultipleErrors
+  - Comprehensive doctests (3 tests) and unit tests (13 tests)
+
 ### Planned
 
 #### Additional Field Types
@@ -105,18 +156,12 @@ Provides serializers for converting between Rust types and various formats (JSON
 - `NestedSerializer`: Handle nested object serialization
 - `WritableNestedSerializer`: Support updates to nested objects
 - `ListSerializer`: Serialize collections of objects
-- `SerializerMethodField`: Compute custom read-only fields
 
 #### Relations
 - `PrimaryKeyRelatedField`: Represent relations using primary keys
 - `HyperlinkedRelatedField`: Represent relations using hyperlinks
 - `SlugRelatedField`: Represent relations using slug fields
 - `StringRelatedField`: Read-only string representation of related objects
-
-#### Additional Validators
-- `ValidationError`: Structured validation error messages
-- `Validator`: Generic validator trait
-- Custom validator support with field-level and object-level validation
 
 #### Additional Renderers
 - `YAMLRenderer`: Render data as YAML
@@ -208,6 +253,125 @@ values.insert("last_name".to_string(), "Smith".to_string());
 validator.validate(&pool, &values, None).await?;
 ```
 
+### SerializerMethodField for Computed Fields
+
+```rust
+use reinhardt_serializers::{SerializerMethodField, MethodFieldProvider, MethodFieldRegistry};
+use serde_json::{json, Value};
+use std::collections::HashMap;
+
+struct UserSerializer {
+    method_fields: MethodFieldRegistry,
+}
+
+impl UserSerializer {
+    fn new() -> Self {
+        let mut method_fields = MethodFieldRegistry::new();
+        method_fields.register("full_name", SerializerMethodField::new("full_name"));
+        Self { method_fields }
+    }
+}
+
+impl MethodFieldProvider for UserSerializer {
+    fn compute_method_fields(&self, instance: &Value) -> HashMap<String, Value> {
+        let mut context = HashMap::new();
+
+        if let Some(obj) = instance.as_object() {
+            if let (Some(first), Some(last)) = (
+                obj.get("first_name").and_then(|v| v.as_str()),
+                obj.get("last_name").and_then(|v| v.as_str()),
+            ) {
+                let full_name = format!("{} {}", first, last);
+                context.insert("full_name".to_string(), json!(full_name));
+            }
+        }
+
+        context
+    }
+
+    fn compute_method(&self, method_name: &str, instance: &Value) -> Option<Value> {
+        let context = self.compute_method_fields(instance);
+        context.get(method_name).cloned()
+    }
+}
+
+// Usage
+let serializer = UserSerializer::new();
+let user_data = json!({
+    "first_name": "Alice",
+    "last_name": "Johnson"
+});
+
+let context = serializer.compute_method_fields(&user_data);
+assert_eq!(context.get("full_name").unwrap(), &json!("Alice Johnson"));
+```
+
+### Field-Level Validation
+
+```rust
+use reinhardt_serializers::{FieldValidator, ValidationResult, ValidationError, validate_fields};
+use serde_json::{json, Value};
+use std::collections::HashMap;
+
+struct EmailValidator;
+
+impl FieldValidator for EmailValidator {
+    fn validate(&self, value: &Value) -> ValidationResult {
+        if let Some(email) = value.as_str() {
+            if email.contains('@') && email.contains('.') {
+                Ok(())
+            } else {
+                Err(ValidationError::field_error("email", "Invalid email format"))
+            }
+        } else {
+            Err(ValidationError::field_error("email", "Must be a string"))
+        }
+    }
+}
+
+// Register validators
+let mut validators: HashMap<String, Box<dyn FieldValidator>> = HashMap::new();
+validators.insert("email".to_string(), Box::new(EmailValidator));
+
+// Validate data
+let mut data = HashMap::new();
+data.insert("email".to_string(), json!("user@example.com"));
+
+let result = validate_fields(&data, &validators);
+assert!(result.is_ok());
+```
+
+### Object-Level Validation
+
+```rust
+use reinhardt_serializers::{ObjectValidator, ValidationResult, ValidationError};
+use serde_json::{json, Value};
+use std::collections::HashMap;
+
+struct PasswordMatchValidator;
+
+impl ObjectValidator for PasswordMatchValidator {
+    fn validate(&self, data: &HashMap<String, Value>) -> ValidationResult {
+        let password = data.get("password").and_then(|v| v.as_str());
+        let confirm = data.get("password_confirm").and_then(|v| v.as_str());
+
+        if password == confirm {
+            Ok(())
+        } else {
+            Err(ValidationError::object_error("Passwords do not match"))
+        }
+    }
+}
+
+// Validate
+let validator = PasswordMatchValidator;
+let mut data = HashMap::new();
+data.insert("password".to_string(), json!("secret123"));
+data.insert("password_confirm".to_string(), json!("secret123"));
+
+assert!(validator.validate(&data).is_ok());
+```
+
 ### Content Negotiation
 
 ```rust
@@ -230,6 +394,8 @@ let renderer = negotiator.select("application/json")?;
 - `serde`, `serde_json`: Serialization infrastructure
 - `sqlx`: Database operations for validators
 - `chrono`: Date and time handling
+- `thiserror`: Error type definitions for validation and method fields
+- `async-trait`: Async trait support
 
 ## License
 

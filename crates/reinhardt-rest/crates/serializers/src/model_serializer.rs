@@ -37,14 +37,14 @@ use std::marker::PhantomData;
 /// # fn example() {
 /// let serializer = ModelSerializer::<User>::new();
 ///
-/// // Serialize a user
+// Serialize a user
 /// let user = User {
 ///     id: Some(1),
 ///     username: "alice".to_string(),
 ///     email: "alice@example.com".to_string(),
 /// };
 ///
-/// // Validate and serialize
+// Validate and serialize
 /// assert!(serializer.validate(&user).is_ok());
 /// let json = serializer.serialize(&user).unwrap();
 /// # }
