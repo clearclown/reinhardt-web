@@ -15,6 +15,9 @@ use argon2::{
     Argon2,
 };
 
+#[cfg(feature = "database")]
+use sea_query::{Alias, ColumnDef, Expr, Query, SqliteQueryBuilder, Table};
+
 #[derive(Parser, Debug)]
 #[command(name = "createsuperuser")]
 #[command(about = "Creates a superuser account", long_about = None)]
@@ -55,25 +58,55 @@ async fn create_user_in_database(
     email: &str,
     password: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    /// // Create users table if it doesn't exist
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS auth_user (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL UNIQUE,
-            email TEXT NOT NULL,
-            password_hash TEXT,
-            is_staff BOOLEAN NOT NULL DEFAULT 0,
-            is_active BOOLEAN NOT NULL DEFAULT 1,
-            is_superuser BOOLEAN NOT NULL DEFAULT 0,
-            date_joined DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    // Create users table if it doesn't exist
+    let stmt = Table::create()
+        .table(Alias::new("auth_user"))
+        .if_not_exists()
+        .col(
+            ColumnDef::new(Alias::new("id"))
+                .integer()
+                .not_null()
+                .auto_increment()
+                .primary_key(),
         )
-        "#,
-    )
-    .execute(pool)
-    .await?;
+        .col(
+            ColumnDef::new(Alias::new("username"))
+                .text()
+                .not_null()
+                .unique_key(),
+        )
+        .col(ColumnDef::new(Alias::new("email")).text().not_null())
+        .col(ColumnDef::new(Alias::new("password_hash")).text())
+        .col(
+            ColumnDef::new(Alias::new("is_staff"))
+                .boolean()
+                .not_null()
+                .default(0),
+        )
+        .col(
+            ColumnDef::new(Alias::new("is_active"))
+                .boolean()
+                .not_null()
+                .default(1),
+        )
+        .col(
+            ColumnDef::new(Alias::new("is_superuser"))
+                .boolean()
+                .not_null()
+                .default(0),
+        )
+        .col(
+            ColumnDef::new(Alias::new("date_joined"))
+                .date_time()
+                .not_null()
+                .default("CURRENT_TIMESTAMP"),
+        )
+        .to_owned();
+    let sql = stmt.to_string(SqliteQueryBuilder);
 
-    /// // Hash the password if provided
+    sqlx::query(&sql).execute(pool).await?;
+
+    // Hash the password if provided
     let password_hash = if let Some(pwd) = password {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
@@ -85,18 +118,32 @@ async fn create_user_in_database(
         None
     };
 
-    /// // Insert the superuser
-    sqlx::query(
-        r#"
-        INSERT INTO auth_user (username, email, password_hash, is_staff, is_superuser)
-        VALUES (?, ?, ?, 1, 1)
-        "#,
-    )
-    .bind(username)
-    .bind(email)
-    .bind(password_hash)
-    .execute(pool)
-    .await?;
+    // Insert the superuser
+    let stmt = Query::insert()
+        .into_table(Alias::new("auth_user"))
+        .columns([
+            Alias::new("username"),
+            Alias::new("email"),
+            Alias::new("password_hash"),
+            Alias::new("is_staff"),
+            Alias::new("is_superuser"),
+        ])
+        .values(
+            [
+                Expr::val(username),
+                Expr::val(email),
+                Expr::val(password_hash),
+                Expr::val(1),
+                Expr::val(1),
+            ]
+            .into_iter()
+            .collect::<Vec<Expr>>(),
+        )
+        .unwrap()
+        .to_owned();
+    let sql = stmt.to_string(SqliteQueryBuilder);
+
+    sqlx::query(&sql).execute(pool).await?;
 
     Ok(())
 }
@@ -108,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", style("Creating superuser account").cyan().bold());
     println!();
 
-    /// // Get username
+    // Get username
     let username = if let Some(username) = args.username {
         if args.noinput && !validate_username(&username) {
             eprintln!(
@@ -137,7 +184,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .interact_text()?
     };
 
-    /// // Get email
+    // Get email
     let email = if let Some(email) = args.email {
         if args.noinput && !validate_email(&email) {
             eprintln!("{}", style("Error: Invalid email address").red());
@@ -163,7 +210,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .interact_text()?
     };
 
-    /// // Get password
+    // Get password
     let password = if args.no_password {
         println!(
             "{}",
@@ -201,7 +248,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("  Password: {}", style("(not set)").red());
     }
 
-    /// // Confirmation
+    // Confirmation
     if !args.noinput {
         println!();
         let confirmed = Confirm::new()
@@ -215,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    /// // Create the user in the database
+    // Create the user in the database
     println!();
     println!("{}", style("Creating user in database...").cyan());
 
@@ -270,16 +317,16 @@ async fn create_database_user(
     use sqlx::sqlite::SqliteConnectOptions;
     use std::str::FromStr;
 
-    /// // Parse database URL
+    // Parse database URL
     let options = SqliteConnectOptions::from_str(database_url)?;
 
-    /// // Create connection pool
+    // Create connection pool
     let pool = SqlitePool::connect_with(options).await?;
 
-    /// // Create user
+    // Create user
     create_user_in_database(&pool, username, email, password).await?;
 
-    /// // Close pool
+    // Close pool
     pool.close().await;
 
     Ok(())

@@ -4,6 +4,7 @@ pub mod basic;
 pub mod di_support;
 pub mod drf_authentication;
 pub mod drf_permissions;
+pub mod handlers;
 pub mod jwt;
 pub mod mfa;
 pub mod model_permissions;
@@ -15,44 +16,35 @@ pub mod session;
 pub mod token_blacklist;
 pub mod user;
 
-// pub use advanced_permissions::{
-//     InMemoryRateLimitStore, IpBlacklistPermission, IpWhitelistPermission, RateLimitAction,
-//     RateLimitConfig, RateLimitPermission, RateLimitStore, TimeBasedPermission, TimeWindow,
-// };
+pub use advanced_permissions::{ObjectPermission, RoleBasedPermission};
 pub use backend::{Argon2Hasher, AuthBackend, CompositeAuthBackend, PasswordHasher};
 pub use basic::BasicAuthentication as HttpBasicAuth;
-// pub use drf_authentication::{
-//     AuthUser, Authentication, BasicAuthConfig, BasicAuthentication, JWTAuthentication,
-//     RemoteUserAuthentication, SessionAuthConfig, SessionAuthentication, TokenAuthConfig,
-//     TokenAuthentication,
-// };
-// pub use drf_permissions::{
-//     AllowAny as DrfAllowAny, IsAdminUser as DrfIsAdminUser, IsAuthenticated as DrfIsAuthenticated,
-//     Permission as DrfPermission,
-// };
+pub use drf_authentication::{
+    Authentication, BasicAuthConfig, CompositeAuthentication, RemoteUserAuthentication,
+    SessionAuthConfig, SessionAuthentication, TokenAuthConfig, TokenAuthentication,
+};
+pub use drf_permissions::{
+    DrfAllowAny, DrfIsAdminUser, DrfIsAuthenticated, DrfIsAuthenticatedOrReadOnly,
+};
+pub use handlers::{LoginCredentials, LoginHandler, LogoutHandler, SESSION_COOKIE_NAME};
 pub use jwt::{Claims, JwtAuth};
-// pub use mfa::{BackupCode, InMemoryMfaStore, MfaDeviceStore, MfaManager, MfaMethod, TotpDevice};
-// pub use model_permissions::{
-//     DjangoModelPermissions, DjangoModelPermissionsOrAnonReadOnly, ModelPermission, PermissionError,
-//     PermissionResult,
-// };
-// pub use oauth2::{
-//     AccessToken, AuthorizationCode, GrantType, InMemoryOAuth2Store, OAuth2Application,
-//     OAuth2Authentication, OAuth2Token, OAuth2TokenStore,
-// };
-// pub use permission_operators::{combinators, AndPermission, NotPermission, OrPermission};
+pub use mfa::MFAAuthentication as MfaManager;
+pub use model_permissions::ModelPermission;
+pub use oauth2::{
+    AccessToken, AuthorizationCode, GrantType, InMemoryOAuth2Store, OAuth2Application,
+    OAuth2Authentication, OAuth2TokenStore,
+};
+pub use permission_operators::{AndPermission, NotPermission, OrPermission};
 pub use permissions::{
     AllowAny, IsActiveUser, IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly, Permission,
     PermissionContext,
 };
-// pub use remote_user::{
-//     PersistentRemoteUserAuthentication, RemoteUserAuthentication as RemoteUserAuth,
-// };
-// pub use session::{SessionAuthentication as SessionAuth, SessionStore};
-// pub use token_blacklist::{
-//     BlacklistReason, BlacklistStats, BlacklistedToken, InMemoryRefreshTokenStore,
-//     InMemoryTokenBlacklist, RefreshToken, RefreshTokenStore, TokenBlacklist, TokenRotationManager,
-// };
+pub use remote_user::RemoteUserAuthentication as RemoteUserAuth;
+pub use session::{InMemorySessionStore, Session, SessionId, SessionStore, SESSION_KEY_USER_ID};
+pub use token_blacklist::{
+    BlacklistReason, BlacklistStats, BlacklistedToken, InMemoryRefreshTokenStore,
+    InMemoryTokenBlacklist, RefreshToken, RefreshTokenStore, TokenBlacklist, TokenRotationManager,
+};
 pub use user::{AnonymousUser, SimpleUser, User};
 
 /// Authentication errors

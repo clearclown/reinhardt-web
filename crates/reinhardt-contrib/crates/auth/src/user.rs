@@ -199,7 +199,7 @@ pub trait User: Send + Sync {
 /// use reinhardt_auth::user::{User, SimpleUser};
 /// use uuid::Uuid;
 ///
-/// // Create a regular user
+// Create a regular user
 /// let user = SimpleUser {
 ///     id: Uuid::new_v4(),
 ///     username: "john_doe".to_string(),
@@ -305,12 +305,12 @@ impl User for SimpleUser {
 ///
 /// let anonymous = AnonymousUser;
 ///
-/// // Authenticated user has identity
+// Authenticated user has identity
 /// assert!(!authenticated.id().is_empty());
 /// assert_eq!(authenticated.username(), "user");
 /// assert!(authenticated.is_authenticated());
 ///
-/// // Anonymous user has no identity
+// Anonymous user has no identity
 /// assert!(anonymous.id().is_empty());
 /// assert!(anonymous.username().is_empty());
 /// assert!(!anonymous.is_authenticated());

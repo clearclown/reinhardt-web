@@ -14,7 +14,7 @@ use async_trait::async_trait;
 /// use std::collections::HashMap;
 /// use uuid::Uuid;
 ///
-/// // Custom authentication backend using in-memory storage
+// Custom authentication backend using in-memory storage
 /// struct InMemoryBackend {
 ///     users: HashMap<String, (String, SimpleUser)>, // username -> (password_hash, user)
 ///     hasher: Argon2Hasher,
@@ -104,15 +104,15 @@ pub trait AuthBackend: Send + Sync {
 ///
 /// let hasher = Argon2Hasher::new();
 ///
-/// // Hash a password
+// Hash a password
 /// let password = "my_secure_password";
 /// let hash = hasher.hash(password).unwrap();
 /// assert!(!hash.is_empty());
 ///
-/// // Verify correct password
+// Verify correct password
 /// assert!(hasher.verify(password, &hash).unwrap());
 ///
-/// // Verify incorrect password
+// Verify incorrect password
 /// assert!(!hasher.verify("wrong_password", &hash).unwrap());
 /// ```
 ///
@@ -122,7 +122,7 @@ pub trait AuthBackend: Send + Sync {
 /// use reinhardt_auth::PasswordHasher;
 /// use sha2::{Sha256, Digest};
 ///
-/// // Simple SHA-256 hasher (NOT recommended for production!)
+// Simple SHA-256 hasher (NOT recommended for production!)
 /// struct SimpleHasher;
 ///
 /// impl PasswordHasher for SimpleHasher {
@@ -163,14 +163,14 @@ impl Argon2Hasher {
     /// let hasher = Argon2Hasher::new();
     /// let password = "secure_password123";
     ///
-    /// // Hash a password
+    // Hash a password
     /// let hash = hasher.hash(password).unwrap();
     /// assert!(!hash.is_empty());
     ///
-    /// // Verify the password against the hash
+    // Verify the password against the hash
     /// assert!(hasher.verify(password, &hash).unwrap());
     ///
-    /// // Wrong password should fail verification
+    // Wrong password should fail verification
     /// assert!(!hasher.verify("wrong_password", &hash).unwrap());
     /// ```
     pub fn new() -> Self {
@@ -242,7 +242,7 @@ impl<U: User> CompositeAuthBackend<U> {
     /// use std::collections::HashMap;
     /// use uuid::Uuid;
     ///
-    /// // Example: Create a custom authentication backend
+    // Example: Create a custom authentication backend
     /// struct InMemoryAuthBackend {
     ///     users: HashMap<String, (String, SimpleUser)>, // username -> (password_hash, user)
     ///     hasher: Argon2Hasher,
@@ -290,7 +290,7 @@ impl<U: User> CompositeAuthBackend<U> {
     ///     }
     /// }
     ///
-    /// // Create a composite backend with no backends initially
+    // Create a composite backend with no backends initially
     /// let backend: CompositeAuthBackend<SimpleUser> = CompositeAuthBackend::new();
     /// ```
     pub fn new() -> Self {
@@ -310,7 +310,7 @@ impl<U: User> CompositeAuthBackend<U> {
     /// use std::collections::HashMap;
     /// use uuid::Uuid;
     ///
-    /// // Define a simple in-memory auth backend
+    // Define a simple in-memory auth backend
     /// struct TestAuthBackend {
     ///     users: HashMap<String, SimpleUser>,
     /// }
@@ -336,7 +336,7 @@ impl<U: User> CompositeAuthBackend<U> {
     ///     }
     /// }
     ///
-    /// // Create and configure composite backend
+    // Create and configure composite backend
     /// let mut composite: CompositeAuthBackend<SimpleUser> = CompositeAuthBackend::new();
     ///
     /// let mut users = HashMap::new();

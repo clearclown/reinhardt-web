@@ -24,7 +24,7 @@ impl BasicAuthentication {
     ///
     /// let auth = HttpBasicAuth::new();
     ///
-    /// // Create a request without authentication header
+    // Create a request without authentication header
     /// let request = Request::new(
     ///     Method::GET,
     ///     Uri::from_static("/"),
@@ -33,7 +33,7 @@ impl BasicAuthentication {
     ///     Bytes::new(),
     /// );
     ///
-    /// // Since no users are registered, authentication should return None
+    // Since no users are registered, authentication should return None
     /// let result = auth.authenticate(&request).unwrap();
     /// assert!(result.is_none());
     /// ```
@@ -56,8 +56,8 @@ impl BasicAuthentication {
     /// auth.add_user("alice", "secret123");
     /// auth.add_user("bob", "password456");
     ///
-    /// // Create a request with valid Basic auth credentials
-    /// // "alice:secret123" in base64 is "YWxpY2U6c2VjcmV0MTIz"
+    // Create a request with valid Basic auth credentials
+    // "alice:secret123" in base64 is "YWxpY2U6c2VjcmV0MTIz"
     /// let mut headers = HeaderMap::new();
     /// headers.insert("Authorization", "Basic YWxpY2U6c2VjcmV0MTIz".parse().unwrap());
     /// let request = Request::new(
@@ -68,7 +68,7 @@ impl BasicAuthentication {
     ///     Bytes::new(),
     /// );
     ///
-    /// // Authentication should succeed
+    // Authentication should succeed
     /// let result = auth.authenticate(&request).unwrap();
     /// assert!(result.is_some());
     /// assert_eq!(result.unwrap().get_username(), "alice");
