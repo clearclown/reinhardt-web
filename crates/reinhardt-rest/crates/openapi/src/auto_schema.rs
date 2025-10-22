@@ -215,7 +215,7 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
-/// // Simple HashMap with primitive values
+// Simple HashMap with primitive values
 /// let schema = <HashMap<String, i32>>::schema();
 /// # // Verify it's a valid schema
 /// # match schema {
@@ -230,7 +230,7 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
-/// // Nested HashMaps are supported
+// Nested HashMaps are supported
 /// let schema = <HashMap<String, HashMap<String, String>>>::schema();
 /// # match schema {
 /// #     reinhardt_openapi::Schema::Object(_) => {},

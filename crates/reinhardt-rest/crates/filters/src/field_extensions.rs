@@ -14,7 +14,7 @@ pub trait FieldOrderingExt<M: Model, T> {
     ///
     /// ```rust,ignore
     /// let order = Field::<Post, String>::new(vec!["title"]).asc();
-    /// // Generates: ORDER BY title ASC
+    // Generates: ORDER BY title ASC
     /// ```
     fn asc(self) -> OrderingField<M>;
 
@@ -24,7 +24,7 @@ pub trait FieldOrderingExt<M: Model, T> {
     ///
     /// ```rust,ignore
     /// let order = Field::<Post, String>::new(vec!["created_at"]).desc();
-    /// // Generates: ORDER BY created_at DESC
+    // Generates: ORDER BY created_at DESC
     /// ```
     fn desc(self) -> OrderingField<M>;
 }

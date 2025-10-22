@@ -212,7 +212,7 @@ impl SimpleMetadata {
     /// let allowed_methods = vec!["GET".to_string(), "POST".to_string(), "PUT".to_string()];
     /// let actions = metadata.determine_actions(&allowed_methods, &fields);
     ///
-    /// // GET is not included in actions, only POST and PUT
+    // GET is not included in actions, only POST and PUT
     /// assert!(!actions.contains_key("GET"));
     /// assert!(actions.contains_key("POST"));
     /// assert!(actions.contains_key("PUT"));
@@ -576,8 +576,8 @@ mod tests {
         )
     }
 
-    /// // DRF test: test_determine_metadata_abstract_method_raises_proper_error
-    /// // BaseMetadata is a trait in Rust, so we test implementation requirements instead
+    // DRF test: test_determine_metadata_abstract_method_raises_proper_error
+    // BaseMetadata is a trait in Rust, so we test implementation requirements instead
     #[tokio::test]
     async fn test_base_metadata_trait_requires_implementation() {
         // This test verifies that BaseMetadata trait requires determine_metadata implementation
@@ -590,8 +590,8 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    /// // DRF test: test_metadata
-    /// // OPTIONS requests should return valid 200 response with metadata
+    // DRF test: test_metadata
+    // OPTIONS requests should return valid 200 response with metadata
     #[tokio::test]
     async fn test_metadata_basic_response() {
         let metadata = SimpleMetadata::new();
@@ -632,8 +632,8 @@ mod tests {
         );
     }
 
-    /// // DRF test: test_actions
-    /// // OPTIONS should return 'actions' key with field metadata for POST/PUT
+    // DRF test: test_actions
+    // OPTIONS should return 'actions' key with field metadata for POST/PUT
     #[tokio::test]
     async fn test_actions_with_fields() {
         let metadata = SimpleMetadata::new();
@@ -756,7 +756,7 @@ mod tests {
         assert!(children.contains_key("b"));
     }
 
-    /// // DRF test: test_null_boolean_field_info_type
+    // DRF test: test_null_boolean_field_info_type
     #[test]
     fn test_boolean_field_info_type() {
         let field = FieldInfoBuilder::new(FieldType::Boolean)
@@ -766,7 +766,7 @@ mod tests {
         assert_eq!(field.field_type, FieldType::Boolean);
     }
 
-    /// // DRF test: test_decimal_field_info_type
+    // DRF test: test_decimal_field_info_type
     #[test]
     fn test_decimal_field_info_type() {
         // Note: In DRF, max_digits and decimal_places are specific to DecimalField
@@ -858,7 +858,7 @@ mod tests {
         assert!(json.contains("application/json"));
     }
 
-    /// // DRF test: test_list_serializer_metadata_returns_info_about_fields_of_child_serializer
+    // DRF test: test_list_serializer_metadata_returns_info_about_fields_of_child_serializer
     #[test]
     fn test_list_field_with_child() {
         let child_field = FieldInfoBuilder::new(FieldType::Integer)
@@ -879,8 +879,8 @@ mod tests {
         assert_eq!(child.field_type, FieldType::Integer);
     }
 
-    /// // DRF test: test_dont_show_hidden_fields
-    /// // In Rust, we handle this by simply not adding hidden fields to the field map
+    // DRF test: test_dont_show_hidden_fields
+    // In Rust, we handle this by simply not adding hidden fields to the field map
     #[test]
     fn test_hidden_fields_not_included() {
         let mut fields = HashMap::new();

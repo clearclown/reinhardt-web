@@ -17,7 +17,7 @@ pub use filter::{FilterBackend, FilterError, FilterResult};
 
 // Type-safe exports
 pub use field_extensions::FieldOrderingExt;
-pub use multi_term::MultiTermSearch;
+pub use multi_term::{MultiTermSearch, Operator, SearchTerm, TermType};
 pub use ordering_field::{OrderDirection, OrderingField};
 pub use query_filter::QueryFilter;
 pub use searchable::SearchableModel;

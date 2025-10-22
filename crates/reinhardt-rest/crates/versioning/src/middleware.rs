@@ -175,7 +175,7 @@ mod tests {
         )
     }
 
-    /// // Dummy handler for testing
+    // Dummy handler for testing
     struct DummyHandler;
 
     #[async_trait]

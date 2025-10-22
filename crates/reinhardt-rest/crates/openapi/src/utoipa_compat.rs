@@ -144,7 +144,7 @@ fn convert_operation(operation: crate::openapi::Operation) -> utoipa::openapi::O
         builder = builder.request_body(convert_request_body(request_body));
     }
 
-    /// // Convert responses
+    // Convert responses
     for (status, response) in operation.responses {
         builder = builder.response(status, convert_response(response));
     }
@@ -204,7 +204,7 @@ fn convert_request_body(request_body: crate::openapi::RequestBody) -> utoipa::op
         builder = builder.required(required);
     }
 
-    /// // Convert content
+    // Convert content
     for (content_type, media_type) in request_body.content {
         builder = builder.content(content_type, convert_media_type(media_type));
     }
@@ -244,7 +244,7 @@ fn convert_media_type(media_type: crate::openapi::MediaType) -> utoipa::openapi:
 fn convert_schema(schema: Schema) -> utoipa::openapi::Schema {
     use utoipa::openapi::schema::{ArrayBuilder, ObjectBuilder};
 
-    /// // Check if this is a reference
+    // Check if this is a reference
     if let Some(reference) = schema.reference {
         return utoipa::openapi::Schema::Object(
             ObjectBuilder::new()
@@ -254,7 +254,7 @@ fn convert_schema(schema: Schema) -> utoipa::openapi::Schema {
         );
     }
 
-    /// // Determine schema type
+    // Determine schema type
     let schema_type_str = schema.schema_type.as_deref().unwrap_or("object");
 
     match schema_type_str {

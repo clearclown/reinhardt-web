@@ -312,7 +312,7 @@ mod tests {
     use crate::{AcceptHeaderVersioning, URLPathVersioning};
     use bytes::Bytes;
 
-    /// // Test handler for testing
+    // Test handler for testing
     struct TestHandler {
         response: String,
     }

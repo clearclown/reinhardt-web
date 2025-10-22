@@ -3,7 +3,7 @@
 //! Provides a completely type-safe filtering system using reinhardt-orm's
 //! Field<M, T> and Lookup types.
 
-use crate::filter::{FilterBackend, FilterError, FilterResult};
+use crate::filter::{FilterBackend, FilterResult};
 use crate::ordering_field::OrderingField;
 use async_trait::async_trait;
 use reinhardt_orm::{Lookup, Model, QueryFieldCompiler};
@@ -93,7 +93,7 @@ impl<M: Model> QueryFilter<M> {
     /// # Examples
     ///
     /// ```rust,ignore
-    /// // (title ICONTAINS 'rust' OR content ICONTAINS 'rust')
+    // (title ICONTAINS 'rust' OR content ICONTAINS 'rust')
     /// let filter = QueryFilter::<Post>::new()
     ///     .add_or_group(vec![
     ///         Field::new(vec!["title"]).icontains("rust"),
@@ -183,6 +183,57 @@ impl<M: Model> QueryFilter<M> {
 
         Some(order_parts.join(", "))
     }
+
+    /// Append order clause to existing ORDER BY
+    ///
+    /// Supports:
+    /// - Appending to existing ORDER BY clause
+    /// - Merging multiple ordering fields
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Input: "SELECT * FROM posts ORDER BY created_at DESC"
+    /// // New ordering: "title ASC"
+    /// // Output: "SELECT * FROM posts ORDER BY created_at DESC, title ASC"
+    /// ```
+    fn append_order_clause(&self, sql: &str, new_order: &str) -> String {
+        // Find ORDER BY position
+        if let Some(order_by_pos) = sql.find("ORDER BY") {
+            let before_order = &sql[..order_by_pos + 8]; // Include "ORDER BY"
+            let after_order = &sql[order_by_pos + 8..];
+
+            // Find end of ORDER BY clause (before LIMIT, OFFSET, or end of string)
+            let end_markers = ["LIMIT", "OFFSET", ";"];
+            let mut end_pos = after_order.len();
+
+            for marker in &end_markers {
+                if let Some(pos) = after_order.find(marker) {
+                    end_pos = end_pos.min(pos);
+                }
+            }
+
+            let existing_order = after_order[..end_pos].trim();
+            let remaining = &after_order[end_pos..];
+
+            // Merge existing and new order clauses
+            // Ensure space before remaining clause if it exists
+            if remaining.is_empty() {
+                format!("{} {}, {}", before_order, existing_order, new_order)
+            } else {
+                format!(
+                    "{} {}, {} {}",
+                    before_order,
+                    existing_order,
+                    new_order,
+                    remaining.trim()
+                )
+            }
+        } else {
+            // No ORDER BY found, append it
+            format!("{} ORDER BY {}", sql, new_order)
+        }
+    }
 }
 
 impl<M: Model> Default for QueryFilter<M> {
@@ -212,12 +263,8 @@ impl<M: Model> FilterBackend for QueryFilter<M> {
         // Add ORDER BY clause if we have ordering
         if let Some(order_clause) = self.compile_order_clause() {
             if sql.contains("ORDER BY") {
-                // Already has ORDER BY, replace it
-                // Note: This is a simple implementation. More complex logic may be needed
-                // to append to existing ORDER BY
-                return Err(FilterError::InvalidQuery(
-                    "Query already has ORDER BY clause".to_string(),
-                ));
+                // Already has ORDER BY, append to it
+                sql = self.append_order_clause(&sql, &order_clause);
             } else {
                 sql = format!("{} ORDER BY {}", sql, order_clause);
             }
@@ -230,7 +277,7 @@ impl<M: Model> FilterBackend for QueryFilter<M> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reinhardt_orm::{Comparable, Field};
+    use reinhardt_orm::Field;
 
     #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
     struct TestPost {
@@ -312,5 +359,69 @@ mod tests {
         assert!(result.contains("WHERE"));
         assert!(result.contains("ORDER BY"));
         assert!(result.contains("created_at DESC"));
+    }
+
+    #[tokio::test]
+    async fn test_append_to_existing_order_by() {
+        use crate::field_extensions::FieldOrderingExt;
+
+        let filter =
+            QueryFilter::new().order_by(Field::<TestPost, String>::new(vec!["title"]).asc());
+
+        let sql = "SELECT * FROM test_posts ORDER BY created_at DESC".to_string();
+        let result = filter.filter_queryset(&HashMap::new(), sql).await.unwrap();
+
+        assert!(result.contains("ORDER BY"));
+        assert!(result.contains("created_at DESC"));
+        assert!(result.contains("title ASC"));
+        assert!(result.contains("created_at DESC, title ASC"));
+    }
+
+    #[tokio::test]
+    async fn test_append_order_with_limit() {
+        use crate::field_extensions::FieldOrderingExt;
+
+        let filter =
+            QueryFilter::new().order_by(Field::<TestPost, String>::new(vec!["title"]).asc());
+
+        let sql = "SELECT * FROM test_posts ORDER BY created_at DESC LIMIT 10".to_string();
+        let result = filter.filter_queryset(&HashMap::new(), sql).await.unwrap();
+
+        assert!(result.contains("ORDER BY"));
+        assert!(result.contains("created_at DESC, title ASC"));
+        assert!(result.contains("LIMIT 10"));
+        // Ensure LIMIT comes after ORDER BY
+        let order_pos = result.find("ORDER BY").unwrap();
+        let limit_pos = result.find("LIMIT").unwrap();
+        assert!(order_pos < limit_pos);
+    }
+
+    #[test]
+    fn test_append_order_clause_method() {
+        let filter = QueryFilter::<TestPost>::new();
+
+        // Test with existing ORDER BY
+        let sql = "SELECT * FROM test_posts ORDER BY created_at DESC";
+        let result = filter.append_order_clause(sql, "title ASC");
+        assert_eq!(
+            result,
+            "SELECT * FROM test_posts ORDER BY created_at DESC, title ASC"
+        );
+
+        // Test with LIMIT
+        let sql = "SELECT * FROM test_posts ORDER BY created_at DESC LIMIT 10";
+        let result = filter.append_order_clause(sql, "title ASC");
+        assert_eq!(
+            result,
+            "SELECT * FROM test_posts ORDER BY created_at DESC, title ASC LIMIT 10"
+        );
+
+        // Test with OFFSET
+        let sql = "SELECT * FROM test_posts ORDER BY created_at DESC OFFSET 5";
+        let result = filter.append_order_clause(sql, "title ASC");
+        assert_eq!(
+            result,
+            "SELECT * FROM test_posts ORDER BY created_at DESC, title ASC OFFSET 5"
+        );
     }
 }

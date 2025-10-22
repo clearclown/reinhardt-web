@@ -47,6 +47,14 @@ pub struct FormField {
     pub required: bool,
     pub help_text: Option<String>,
     pub initial_value: Option<Value>,
+    pub options: Option<Vec<SelectOption>>,
+    pub initial_label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SelectOption {
+    pub value: String,
+    pub label: String,
 }
 
 /// Renderer for browsable API HTML responses
@@ -175,7 +183,16 @@ impl BrowsableApiRenderer {
                             {{label}}
                             {{#if required}}<span style="color: red;">*</span>{{/if}}
                         </label>
-                        {{#if (eq field_type "textarea")}}
+                        {{#if (eq field_type "select")}}
+                        <select id="{{name}}" name="{{name}}" {{#if required}}required{{/if}}>
+                            {{#if initial_label}}
+                            <option value="" selected>{{initial_label}}</option>
+                            {{/if}}
+                            {{#each options}}
+                            <option value="{{value}}" {{#if (eq value ../initial_value)}}selected{{/if}}>{{label}}</option>
+                            {{/each}}
+                        </select>
+                        {{else if (eq field_type "textarea")}}
                         <textarea id="{{name}}" name="{{name}}" {{#if required}}required{{/if}}>{{#if initial_value}}{{initial_value}}{{/if}}</textarea>
                         {{else}}
                         <input type="{{field_type}}" id="{{name}}" name="{{name}}" {{#if required}}required{{/if}} {{#if initial_value}}value="{{initial_value}}"{{/if}}>
@@ -271,6 +288,8 @@ mod tests {
                     required: true,
                     help_text: Some("Enter user name".to_string()),
                     initial_value: None,
+                    options: None,
+                    initial_label: None,
                 }],
                 submit_url: "/api/users/".to_string(),
                 submit_method: "POST".to_string(),
@@ -282,5 +301,118 @@ mod tests {
         assert!(html.contains("Make a Request"));
         assert!(html.contains("name=\"name\""));
         assert!(html.contains("Enter user name"));
+    }
+
+    #[test]
+    fn test_render_select_field() {
+        let renderer = BrowsableApiRenderer::new();
+        let context = ApiContext {
+            title: "Create Post".to_string(),
+            description: None,
+            endpoint: "/api/posts/".to_string(),
+            method: "POST".to_string(),
+            response_data: serde_json::json!({}),
+            response_status: 200,
+            allowed_methods: vec!["POST".to_string()],
+            request_form: Some(FormContext {
+                fields: vec![FormField {
+                    name: "category".to_string(),
+                    label: "Category".to_string(),
+                    field_type: "select".to_string(),
+                    required: true,
+                    help_text: Some("Select a category".to_string()),
+                    initial_value: Some(serde_json::json!("tech")),
+                    options: Some(vec![
+                        SelectOption {
+                            value: "tech".to_string(),
+                            label: "Technology".to_string(),
+                        },
+                        SelectOption {
+                            value: "science".to_string(),
+                            label: "Science".to_string(),
+                        },
+                        SelectOption {
+                            value: "art".to_string(),
+                            label: "Art".to_string(),
+                        },
+                    ]),
+                    initial_label: None,
+                }],
+                submit_url: "/api/posts/".to_string(),
+                submit_method: "POST".to_string(),
+            }),
+            headers: vec![],
+        };
+
+        let html = renderer.render(&context).unwrap();
+        assert!(html.contains("<select"));
+        assert!(html.contains("name=\"category\""));
+        assert!(html.contains("Technology"));
+        assert!(html.contains("Science"));
+        assert!(html.contains("Art"));
+        assert!(html.contains("value=\"tech\""));
+        assert!(html.contains("value=\"science\""));
+        assert!(html.contains("value=\"art\""));
+    }
+
+    #[test]
+    fn test_render_select_with_initial_label() {
+        // Test: Select field with initial_label displays placeholder option
+        let renderer = BrowsableApiRenderer::new();
+        let context = ApiContext {
+            title: "Create Item".to_string(),
+            description: None,
+            endpoint: "/api/items/".to_string(),
+            method: "POST".to_string(),
+            response_data: serde_json::json!({}),
+            response_status: 200,
+            allowed_methods: vec!["POST".to_string()],
+            request_form: Some(FormContext {
+                fields: vec![FormField {
+                    name: "category".to_string(),
+                    label: "Category".to_string(),
+                    field_type: "select".to_string(),
+                    required: false,
+                    help_text: Some("Choose a category".to_string()),
+                    initial_value: None,
+                    options: Some(vec![
+                        SelectOption {
+                            value: "tech".to_string(),
+                            label: "Technology".to_string(),
+                        },
+                        SelectOption {
+                            value: "science".to_string(),
+                            label: "Science".to_string(),
+                        },
+                    ]),
+                    initial_label: Some("-- Select a category --".to_string()),
+                }],
+                submit_url: "/api/items/".to_string(),
+                submit_method: "POST".to_string(),
+            }),
+            headers: vec![],
+        };
+
+        let html = renderer.render(&context).unwrap();
+
+        // Verify select element exists
+        assert!(html.contains("<select"));
+        assert!(html.contains("name=\"category\""));
+
+        // Verify initial option is rendered with empty value and selected attribute
+        assert!(html.contains("-- Select a category --"));
+        assert!(html.contains(r#"<option value="" selected>-- Select a category --</option>"#));
+
+        // Verify regular options are present
+        assert!(html.contains("Technology"));
+        assert!(html.contains("Science"));
+
+        // Verify initial option appears before regular options
+        let initial_pos = html.find("-- Select a category --").unwrap();
+        let tech_pos = html.find("Technology").unwrap();
+        assert!(
+            initial_pos < tech_pos,
+            "Initial option should appear before regular options"
+        );
     }
 }

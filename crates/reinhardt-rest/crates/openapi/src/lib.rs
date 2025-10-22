@@ -27,21 +27,20 @@
 
 pub mod auto_schema;
 pub mod generator;
-pub mod inspector;
 pub mod openapi;
+pub mod param_metadata;
 pub mod swagger;
 pub mod viewset_inspector;
-// pub mod utoipa_compat;  // Temporarily disabled - requires extensive utoipa API updates
 
 use thiserror::Error;
 
 pub use auto_schema::{SchemaObject, ToSchema};
 pub use generator::SchemaGenerator;
-pub use inspector::ViewSetInspector as LegacyViewSetInspector;
 pub use openapi::{
-    Header, Info, MediaType, OpenApiSchema, Operation, Parameter, ParameterLocation, PathItem,
-    RequestBody, Response, Schema, Server,
+    Header, Info, MediaType, OpenApiSchema, Operation, Parameter, ParameterIn as ParameterLocation,
+    PathItem, RequestBody, Required, Response, Schema, Server,
 };
+pub use param_metadata::{CookieParam, HeaderParam, ParameterMetadata, PathParam, QueryParam};
 pub use swagger::SwaggerUI;
 pub use viewset_inspector::{InspectorConfig, ViewSetInspector};
 

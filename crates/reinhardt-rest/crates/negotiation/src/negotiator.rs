@@ -58,7 +58,7 @@ impl ContentNegotiator {
     /// use reinhardt_negotiation::ContentNegotiator;
     ///
     /// let negotiator = ContentNegotiator::new();
-    /// // Default media type is application/json
+    // Default media type is application/json
     /// ```
     pub fn new() -> Self {
         Self {
@@ -131,7 +131,7 @@ impl ContentNegotiator {
     /// let (media_type, media_type_str) = result.unwrap();
     /// assert_eq!(media_type.subtype, "json");
     ///
-    /// // No accept header uses first renderer
+    // No accept header uses first renderer
     /// let result2 = negotiator.select_renderer(None, &renderers);
     /// assert!(result2.is_ok());
     /// ```

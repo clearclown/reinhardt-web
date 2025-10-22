@@ -43,9 +43,6 @@
 //! This crate contains unit tests for the integrated modules.
 //! Integration tests are located in `tests/integration/`.
 
-// Note: authentication, response, routers modules have been moved to internal crates
-// pub mod schema;  // Temporarily disabled - utoipa API compatibility issues
-
 // Re-export internal crates (2024 edition module system)
 // These modules represent the internal crates that are now part of reinhardt-rest
 

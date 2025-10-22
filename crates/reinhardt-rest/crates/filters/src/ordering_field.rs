@@ -26,11 +26,11 @@ pub enum OrderDirection {
 /// use reinhardt_filters::OrderingField;
 /// use reinhardt_orm::Field;
 ///
-/// // Create ascending ordering - call .asc() on Field
+// Create ascending ordering - call .asc() on Field
 /// let field = Field::<Post, String>::new(vec!["title"]);
 /// let asc_order = field.asc();
 ///
-/// // Create descending ordering - call .desc() on Field
+// Create descending ordering - call .desc() on Field
 /// let field = Field::<Post, String>::new(vec!["created_at"]);
 /// let desc_order = field.desc();
 /// ```

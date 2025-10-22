@@ -4,21 +4,47 @@
 //! multiple fields, combining them with AND/OR logic.
 
 use crate::searchable::SearchableModel;
-use reinhardt_orm::{Field, Lookup, Model, QueryFieldCompiler};
+use reinhardt_orm::{Field, Lookup, Model};
 
 /// Combines multiple search terms across multiple fields
 ///
 /// # Examples
 ///
 /// ```rust,ignore
-/// // Search for posts containing "rust" AND "programming"
+// Search for posts containing "rust" AND "programming"
 /// let terms = vec!["rust", "programming"];
 /// let lookups = MultiTermSearch::search_terms::<Post>(terms);
 ///
-/// // This creates: (title ICONTAINS 'rust' OR content ICONTAINS 'rust')
-/// //           AND (title ICONTAINS 'programming' OR content ICONTAINS 'programming')
+// This creates: (title ICONTAINS 'rust' OR content ICONTAINS 'rust')
+//           AND (title ICONTAINS 'programming' OR content ICONTAINS 'programming')
 /// ```
 pub struct MultiTermSearch;
+
+/// Search term representation with advanced features
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchTerm {
+    pub value: String,
+    pub term_type: TermType,
+    pub field: Option<String>,
+    pub operator: Operator,
+}
+
+/// Term type for different search patterns
+#[derive(Debug, Clone, PartialEq)]
+pub enum TermType {
+    Word,
+    Phrase,
+    Wildcard,
+    FieldValue,
+}
+
+/// Boolean operators for combining terms
+#[derive(Debug, Clone, PartialEq)]
+pub enum Operator {
+    And,
+    Or,
+    Not,
+}
 
 impl MultiTermSearch {
     /// Create lookups for searching multiple terms across searchable fields
@@ -176,6 +202,154 @@ impl MultiTermSearch {
             Some(format!("({})", term_clauses.join(" AND ")))
         }
     }
+
+    /// Parse search query into structured terms with advanced operators
+    ///
+    /// Supports:
+    /// - Quoted phrases (`"exact phrase"`)
+    /// - Boolean operators (`AND`, `OR`, `NOT`)
+    /// - Field-specific search (`field:value`)
+    /// - Wildcard search (`term*`)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_filters::multi_term::MultiTermSearch;
+    ///
+    /// let query = r#"title:"machine learning" AND author:Smith"#;
+    /// let terms = MultiTermSearch::parse_query(query);
+    /// assert_eq!(terms.len(), 2);
+    /// ```
+    pub fn parse_query(query: &str) -> Vec<SearchTerm> {
+        let mut terms = Vec::new();
+        let mut current_term = String::new();
+        let mut in_quotes = false;
+        let mut chars = query.chars().peekable();
+        let mut current_operator = Operator::And;
+
+        while let Some(ch) = chars.next() {
+            match ch {
+                '"' => {
+                    in_quotes = !in_quotes;
+                    if !in_quotes && !current_term.is_empty() {
+                        // End of quoted phrase
+                        terms.push(SearchTerm {
+                            value: current_term.clone(),
+                            term_type: TermType::Phrase,
+                            field: None,
+                            operator: current_operator.clone(),
+                        });
+                        current_term.clear();
+                    }
+                }
+                ' ' if !in_quotes => {
+                    if !current_term.is_empty() {
+                        // Check for operators
+                        match current_term.to_uppercase().as_str() {
+                            "AND" => {
+                                current_operator = Operator::And;
+                            }
+                            "OR" => {
+                                current_operator = Operator::Or;
+                            }
+                            "NOT" => {
+                                current_operator = Operator::Not;
+                            }
+                            _ => {
+                                terms.push(Self::parse_single_term(
+                                    &current_term,
+                                    current_operator.clone(),
+                                ));
+                            }
+                        }
+                        current_term.clear();
+                    }
+                }
+                ':' if !in_quotes => {
+                    // Field-specific search
+                    let field = current_term.clone();
+                    current_term.clear();
+
+                    // Check if value starts with quote
+                    let mut field_in_quotes = false;
+                    if let Some(&'"') = chars.peek() {
+                        chars.next(); // Consume opening quote
+                        field_in_quotes = true;
+                    }
+
+                    // Get the value after ':'
+                    while let Some(next_ch) = chars.next() {
+                        if field_in_quotes {
+                            if next_ch == '"' {
+                                // End of quoted value
+                                field_in_quotes = false;
+                                break;
+                            } else {
+                                current_term.push(next_ch);
+                            }
+                        } else {
+                            if next_ch == ' ' {
+                                // End of unquoted value
+                                break;
+                            } else {
+                                current_term.push(next_ch);
+                            }
+                        }
+                    }
+
+                    terms.push(SearchTerm {
+                        value: current_term.clone(),
+                        term_type: TermType::FieldValue,
+                        field: Some(field),
+                        operator: current_operator.clone(),
+                    });
+                    current_term.clear();
+                }
+                _ => {
+                    current_term.push(ch);
+                }
+            }
+        }
+
+        // Handle remaining term
+        if !current_term.is_empty() {
+            if in_quotes {
+                terms.push(SearchTerm {
+                    value: current_term,
+                    term_type: TermType::Phrase,
+                    field: None,
+                    operator: current_operator,
+                });
+            } else {
+                match current_term.to_uppercase().as_str() {
+                    "AND" | "OR" | "NOT" => {
+                        // Skip trailing operators
+                    }
+                    _ => {
+                        terms.push(Self::parse_single_term(&current_term, current_operator));
+                    }
+                }
+            }
+        }
+
+        terms
+    }
+
+    /// Parse single term with wildcard detection
+    fn parse_single_term(term: &str, operator: Operator) -> SearchTerm {
+        let term_type = if term.ends_with('*') {
+            TermType::Wildcard
+        } else {
+            TermType::Word
+        };
+
+        SearchTerm {
+            value: term.to_string(),
+            term_type,
+            field: None,
+            operator,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -302,9 +476,9 @@ mod tests {
         let input = "\"hello world\", rust";
         let terms = MultiTermSearch::parse_search_terms(input);
 
-        // Note: The current implementation is simplified
-        // A full implementation would properly handle quoted strings
-        assert!(terms.len() >= 1);
+        assert_eq!(terms.len(), 2);
+        assert_eq!(terms[0], "hello world");
+        assert_eq!(terms[1], "rust");
     }
 
     #[test]
@@ -313,5 +487,129 @@ mod tests {
         let terms = MultiTermSearch::parse_search_terms(input);
 
         assert_eq!(terms.len(), 0);
+    }
+
+    #[test]
+    fn test_parse_query_simple_terms() {
+        let query = "hello world";
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 2);
+        assert_eq!(terms[0].value, "hello");
+        assert_eq!(terms[0].term_type, TermType::Word);
+        assert_eq!(terms[1].value, "world");
+        assert_eq!(terms[1].term_type, TermType::Word);
+    }
+
+    #[test]
+    fn test_parse_query_quoted_phrase() {
+        let query = r#""exact phrase""#;
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].value, "exact phrase");
+        assert_eq!(terms[0].term_type, TermType::Phrase);
+    }
+
+    #[test]
+    fn test_parse_query_field_search() {
+        let query = "title:rust";
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].value, "rust");
+        assert_eq!(terms[0].field, Some("title".to_string()));
+        assert_eq!(terms[0].term_type, TermType::FieldValue);
+    }
+
+    #[test]
+    fn test_parse_query_field_with_quoted_value() {
+        let query = r#"title:"machine learning""#;
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].value, "machine learning");
+        assert_eq!(terms[0].field, Some("title".to_string()));
+        assert_eq!(terms[0].term_type, TermType::FieldValue);
+    }
+
+    #[test]
+    fn test_parse_query_wildcard() {
+        let query = "rust*";
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 1);
+        assert_eq!(terms[0].value, "rust*");
+        assert_eq!(terms[0].term_type, TermType::Wildcard);
+    }
+
+    #[test]
+    fn test_parse_query_with_and_operator() {
+        let query = "rust AND web";
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 2);
+        assert_eq!(terms[0].value, "rust");
+        assert_eq!(terms[0].operator, Operator::And);
+        assert_eq!(terms[1].value, "web");
+        assert_eq!(terms[1].operator, Operator::And);
+    }
+
+    #[test]
+    fn test_parse_query_with_or_operator() {
+        let query = "rust OR python";
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 2);
+        assert_eq!(terms[0].value, "rust");
+        assert_eq!(terms[1].value, "python");
+        assert_eq!(terms[1].operator, Operator::Or);
+    }
+
+    #[test]
+    fn test_parse_query_complex() {
+        let query = r#"title:"machine learning" AND author:Smith OR year:2024"#;
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 3);
+
+        // First term: title:"machine learning"
+        assert_eq!(terms[0].value, "machine learning");
+        assert_eq!(terms[0].field, Some("title".to_string()));
+        assert_eq!(terms[0].term_type, TermType::FieldValue);
+
+        // Second term: author:Smith (with AND)
+        assert_eq!(terms[1].value, "Smith");
+        assert_eq!(terms[1].field, Some("author".to_string()));
+        assert_eq!(terms[1].operator, Operator::And);
+
+        // Third term: year:2024 (with OR)
+        assert_eq!(terms[2].value, "2024");
+        assert_eq!(terms[2].field, Some("year".to_string()));
+        assert_eq!(terms[2].operator, Operator::Or);
+    }
+
+    #[test]
+    fn test_parse_query_multiple_phrases() {
+        let query = r#""hello world" AND "rust programming""#;
+        let terms = MultiTermSearch::parse_query(query);
+
+        assert_eq!(terms.len(), 2);
+        assert_eq!(terms[0].value, "hello world");
+        assert_eq!(terms[0].term_type, TermType::Phrase);
+        assert_eq!(terms[1].value, "rust programming");
+        assert_eq!(terms[1].term_type, TermType::Phrase);
+        assert_eq!(terms[1].operator, Operator::And);
+    }
+
+    #[test]
+    fn test_parse_single_term() {
+        let term = MultiTermSearch::parse_single_term("test", Operator::And);
+        assert_eq!(term.value, "test");
+        assert_eq!(term.term_type, TermType::Word);
+        assert_eq!(term.operator, Operator::And);
+
+        let wildcard = MultiTermSearch::parse_single_term("test*", Operator::Or);
+        assert_eq!(wildcard.term_type, TermType::Wildcard);
     }
 }

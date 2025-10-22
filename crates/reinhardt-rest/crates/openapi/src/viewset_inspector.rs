@@ -37,7 +37,7 @@ use utoipa::openapi::ContentBuilder;
 /// let viewset = ModelViewSet::<User, UserSerializer>::new("users");
 /// let inspector = ViewSetInspector::new();
 ///
-/// // Extract path information
+// Extract path information
 /// let paths = inspector.extract_paths(&viewset, "/api/users");
 /// ```
 pub struct ViewSetInspector {
@@ -279,7 +279,7 @@ impl ViewSetInspector {
     /// let inspector = ViewSetInspector::new();
     /// let schema = inspector.extract_model_schema("User");
     ///
-    /// // Schema can be used in OpenAPI components
+    // Schema can be used in OpenAPI components
     /// ```
     pub fn extract_model_schema(&self, model_name: &str) -> Schema {
         // Create a basic object schema as placeholder

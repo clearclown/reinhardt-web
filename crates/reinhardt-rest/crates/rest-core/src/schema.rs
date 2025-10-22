@@ -2,11 +2,17 @@
 //!
 //! Re-exports schema types from reinhardt-openapi.
 //!
-//! TODO: This module is temporarily disabled due to ongoing refactoring
-//! of reinhardt-openapi's utoipa integration. The auto-schema generation
-//! system requires significant implementation work (see reinhardt-openapi/src/auto_schema.rs).
+//! NOTE: This module is temporarily disabled pending reinhardt-openapi refactoring.
 //!
-//! Re-enable this module once reinhardt-openapi provides stable exports.
+//! The reinhardt-openapi crate is undergoing significant refactoring to improve
+//! its utoipa integration and auto-schema generation capabilities. This module
+//! will be re-enabled once the following conditions are met:
+//!
+//! 1. reinhardt-openapi provides stable public API exports
+//! 2. Auto-schema generation is fully implemented (see reinhardt-openapi/src/auto_schema.rs)
+//! 3. Integration tests validate the schema generation functionality
+//!
+//! For current schema generation needs, use reinhardt-openapi directly.
 
 /*
 // Re-export all schema types from reinhardt-openapi

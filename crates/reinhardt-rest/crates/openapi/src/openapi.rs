@@ -5,7 +5,7 @@
 // Re-export core utoipa types as Reinhardt's OpenAPI types
 pub use utoipa::openapi::{
     Components, Contact, Header, Info, License, OpenApi as OpenApiSchema, PathItem, Paths, RefOr,
-    Schema, Server, Tag,
+    Required, Schema, Server, Tag,
 };
 
 // Re-export request/response types

@@ -325,7 +325,7 @@ impl URLPathVersioning {
     /// let custom_regex = Regex::new(r"/api/v(\d+)").unwrap();
     /// let versioning = URLPathVersioning::new()
     ///     .with_path_regex(custom_regex);
-    /// // The versioning will now match paths like /api/v1, /api/v2, etc.
+    // The versioning will now match paths like /api/v1, /api/v2, etc.
     /// ```
     pub fn with_path_regex(mut self, regex: Regex) -> Self {
         self.path_regex = regex;
@@ -343,7 +343,7 @@ impl URLPathVersioning {
     ///
     /// let versioning = URLPathVersioning::new()
     ///     .with_pattern("/v{version}/");
-    /// // The versioning will now match paths like /v1/, /v2/, etc.
+    // The versioning will now match paths like /v1/, /v2/, etc.
     /// ```
     pub fn with_pattern(mut self, pattern: &str) -> Self {
         // Convert pattern like "/v{version}/" to regex "/v?([^/]+)"
@@ -470,7 +470,7 @@ impl HostNameVersioning {
     /// let custom_regex = Regex::new(r"^v(\d+)-api\.").unwrap();
     /// let versioning = HostNameVersioning::new()
     ///     .with_hostname_regex(custom_regex);
-    /// // The versioning will now match hostnames like v1-api.example.com
+    // The versioning will now match hostnames like v1-api.example.com
     /// ```
     pub fn with_hostname_regex(mut self, regex: Regex) -> Self {
         self.hostname_regex = regex;
@@ -488,7 +488,7 @@ impl HostNameVersioning {
     ///
     /// let versioning = HostNameVersioning::new()
     ///     .with_host_format("{version}.api.example.com");
-    /// // The versioning will match hostnames like v1.api.example.com
+    // The versioning will match hostnames like v1.api.example.com
     /// ```
     pub fn with_host_format(mut self, format: &str) -> Self {
         // Convert format like "{version}.api.example.com" to regex "^([^.]+)\.api\.example\.com"
@@ -511,7 +511,7 @@ impl HostNameVersioning {
     ///
     /// let versioning = HostNameVersioning::new()
     ///     .with_hostname_pattern("v1", "v1.api.example.com");
-    /// // The versioning will match v1.api.example.com to version "v1"
+    // The versioning will match v1.api.example.com to version "v1"
     /// ```
     pub fn with_hostname_pattern(mut self, version: &str, _hostname: &str) -> Self {
         // For now, we'll use a simple approach - store the mapping in allowed_versions
@@ -636,7 +636,7 @@ impl QueryParameterVersioning {
     /// let versioning = QueryParameterVersioning::new()
     ///     .with_version_param("v");
     /// assert_eq!(versioning.version_param.as_str(), "v");
-    /// // This will now look for ?v=1.0 instead of ?version=1.0
+    // This will now look for ?v=1.0 instead of ?version=1.0
     /// ```
     pub fn with_version_param(mut self, param: impl Into<String>) -> Self {
         self.version_param = param.into();

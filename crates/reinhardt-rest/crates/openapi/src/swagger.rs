@@ -134,8 +134,9 @@ impl SwaggerUI {
 
 /// Redoc UI handler (alternative to Swagger UI)
 ///
-/// Note: This is a simplified implementation that generates basic Redoc HTML.
-/// For full Redoc functionality, consider using a dedicated Redoc library.
+/// This generates a complete Redoc HTML page with proper CDN links,
+/// configuration options, and responsive design. Redoc provides a
+/// three-panel documentation layout optimized for browsing large APIs.
 pub struct RedocUI {
     openapi_spec: Arc<utoipa::openapi::OpenApi>,
 }
