@@ -430,7 +430,6 @@ These tests are designed to:
 
 ## Future Improvements
 
-- [ ] Add integration tests with real HTTP frameworks (actix-web, axum)
 - [ ] Add benchmarks for macro expansion time
 - [ ] Add property-based testing for path validation
 - [ ] Add fuzzing tests for path parsing

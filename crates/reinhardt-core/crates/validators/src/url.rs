@@ -71,8 +71,7 @@ impl Validator<str> for UrlValidator {
 mod tests {
     use super::*;
 
-    /// // Tests based on Django validators/tests.py URL validation tests
-    /// // NOTE: Current implementation supports basic URLs without ports, query strings, or fragments
+    /// Tests based on Django validators/tests.py URL validation tests
     #[test]
     fn test_url_validator_valid_urls() {
         let validator = UrlValidator::new();
@@ -230,7 +229,6 @@ mod tests {
         // URLs are case-sensitive in path/query, but not in domain
         assert!(validator.validate("http://Example.COM/").is_ok());
         assert!(validator.validate("http://EXAMPLE.COM/PATH").is_ok());
-        // NOTE: Current implementation requires lowercase http/https
         assert!(validator.validate("http://example.com/").is_ok());
     }
 

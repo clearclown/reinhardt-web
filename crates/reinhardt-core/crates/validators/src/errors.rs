@@ -25,6 +25,9 @@ pub enum ValidationError {
     #[error("Pattern mismatch: {0}")]
     PatternMismatch(String),
 
+    #[error("Field '{field}' must be unique. Value '{value}' already exists")]
+    NotUnique { field: String, value: String },
+
     #[error("Custom validation error: {0}")]
     Custom(String),
 }
@@ -35,7 +38,7 @@ pub type ValidationResult<T> = Result<T, ValidationError>;
 mod tests {
     use super::*;
 
-    /// // Tests based on Django validators/tests.py - test_single_message, test_message_list, test_message_dict
+    // Tests based on Django validators/tests.py - test_single_message, test_message_list, test_message_dict
     #[test]
     fn test_validation_error_display() {
         let error = ValidationError::Custom("Not Valid".to_string());
@@ -119,5 +122,17 @@ mod tests {
     fn test_validation_result_err() {
         let result: ValidationResult<i32> = Err(ValidationError::Custom("error".to_string()));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_not_unique_error() {
+        let error = ValidationError::NotUnique {
+            field: "username".to_string(),
+            value: "existinguser".to_string(),
+        };
+        assert_eq!(
+            error.to_string(),
+            "Field 'username' must be unique. Value 'existinguser' already exists"
+        );
     }
 }

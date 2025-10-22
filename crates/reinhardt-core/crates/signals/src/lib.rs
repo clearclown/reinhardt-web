@@ -61,10 +61,10 @@ use std::time::{Duration, Instant};
 /// ```
 /// use reinhardt_signals::SignalName;
 ///
-/// // Use built-in signal names
+// Use built-in signal names
 /// let signal_name = SignalName::PRE_SAVE;
 ///
-/// // Create custom signal names
+// Create custom signal names
 /// let custom = SignalName::custom("my_custom_signal");
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -143,13 +143,13 @@ impl SignalName {
     /// ```
     /// use reinhardt_signals::SignalName;
     ///
-    /// // Valid custom signal names
+    // Valid custom signal names
     /// let valid = SignalName::custom_validated("my_custom_signal").unwrap();
     ///
-    /// // Invalid: not snake_case
+    // Invalid: not snake_case
     /// assert!(SignalName::custom_validated("MySignal").is_err());
     ///
-    /// // Invalid: reserved name
+    // Invalid: reserved name
     /// assert!(SignalName::custom_validated("pre_save").is_err());
     /// ```
     ///
@@ -814,10 +814,10 @@ impl<T: Send + Sync + 'static> Signal<T> {
     /// ```
     /// use reinhardt_signals::{Signal, SignalName};
     ///
-    /// // Use built-in signal names
+    // Use built-in signal names
     /// let signal = Signal::<String>::new(SignalName::PRE_SAVE);
     ///
-    /// // Use custom signal names
+    // Use custom signal names
     /// let custom = Signal::<String>::new(SignalName::custom("my_signal"));
     /// ```
     pub fn new(name: SignalName) -> Self {
@@ -963,7 +963,7 @@ impl<T: Send + Sync + 'static> Signal<T> {
     ///
     /// signal_a.chain(&signal_b);
     ///
-    /// // Now sending signal_a will also trigger signal_b
+    // Now sending signal_a will also trigger signal_b
     /// signal_a.send(user).await?;
     /// ```
     pub fn chain(&self, next: &Signal<T>)
@@ -2832,7 +2832,7 @@ mod tests {
         }
     }
 
-    /// // Middleware tests
+    // Middleware tests
     struct LoggingMiddleware {
         log: Arc<RwLock<Vec<String>>>,
     }
@@ -3103,7 +3103,7 @@ mod tests {
         assert!(log_entries[log_entries.len() - 1].starts_with("after_send"));
     }
 
-    /// // SignalSpy tests
+    // SignalSpy tests
     #[tokio::test]
     async fn test_signal_spy_basic() {
         let signal = Signal::new(SignalName::custom("test"));
@@ -3257,7 +3257,7 @@ mod tests {
         assert_eq!(spy2.call_count(), 1);
     }
 
-    /// // SignalContext tests
+    // SignalContext tests
     #[tokio::test]
     async fn test_signal_context_basic() {
         let context = SignalContext::new();
@@ -3389,9 +3389,9 @@ mod tests {
         assert!(context.get::<i32>("value").is_some());
     }
 
-    /// // ========================================
-    /// // Signal Composition Tests
-    /// // ========================================
+    // ========================================
+    // Signal Composition Tests
+    // ========================================
 
     #[tokio::test]
     async fn test_signal_chain() {
@@ -3683,9 +3683,9 @@ mod tests {
         assert!(results.contains(&200));
     }
 
-    /// // ========================================
-    /// // Metrics Tests
-    /// // ========================================
+    // ========================================
+    // Metrics Tests
+    // ========================================
 
     #[tokio::test]
     async fn test_signal_metrics_basic() {
@@ -3885,9 +3885,9 @@ mod tests {
         assert_eq!(metrics1.receiver_executions, metrics2.receiver_executions);
     }
 
-    /// // ========================================
-    /// // Additional Signal Types Tests
-    /// // ========================================
+    // ========================================
+    // Additional Signal Types Tests
+    // ========================================
 
     #[tokio::test]
     async fn test_m2m_changed_signal() {

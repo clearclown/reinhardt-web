@@ -1,6 +1,7 @@
 use crate::extensions::Extensions;
 use bytes::Bytes;
 use hyper::{header::ACCEPT_LANGUAGE, HeaderMap, Method, Uri, Version};
+use percent_encoding::percent_decode_str;
 use reinhardt_parsers::parser::{ParsedData, Parser};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -157,6 +158,40 @@ impl Request {
     pub fn path(&self) -> &str {
         self.uri.path()
     }
+    /// Get URL-decoded query parameters
+    ///
+    /// Returns a new HashMap with all query parameter keys and values URL-decoded.
+    /// This is useful when query parameters contain special characters or Unicode.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_http::Request;
+    /// use hyper::{Method, Uri, Version, HeaderMap};
+    /// use bytes::Bytes;
+    ///
+    /// let uri = "/test?name=John%20Doe".parse::<Uri>().unwrap();
+    /// let request = Request::new(
+    ///     Method::GET,
+    ///     uri,
+    ///     Version::HTTP_11,
+    ///     HeaderMap::new(),
+    ///     Bytes::new(),
+    /// );
+    ///
+    /// let decoded = request.decoded_query_params();
+    /// assert_eq!(decoded.get("name"), Some(&"John Doe".to_string()));
+    /// ```
+    pub fn decoded_query_params(&self) -> HashMap<String, String> {
+        self.query_params
+            .iter()
+            .map(|(k, v)| {
+                let decoded_key = percent_decode_str(k).decode_utf8_lossy().to_string();
+                let decoded_value = percent_decode_str(v).decode_utf8_lossy().to_string();
+                (decoded_key, decoded_value)
+            })
+            .collect()
+    }
     /// Parse the request body as JSON
     ///
     /// # Examples
@@ -203,7 +238,7 @@ impl Request {
     /// use hyper::{Method, Uri, Version, HeaderMap};
     /// use bytes::Bytes;
     ///
-    /// // Direct HTTPS connection
+    // Direct HTTPS connection
     /// let request = Request::new_with_secure(
     ///     Method::GET,
     ///     "/".parse::<Uri>().unwrap(),
@@ -214,7 +249,7 @@ impl Request {
     /// );
     /// assert!(request.is_secure());
     ///
-    /// // Behind reverse proxy
+    // Behind reverse proxy
     /// let mut headers = HeaderMap::new();
     /// headers.insert("x-forwarded-proto", "https".parse().unwrap());
     /// let request = Request::new(
@@ -512,13 +547,39 @@ impl Request {
     ///     Bytes::new()
     /// );
     ///
-    /// // Set up parsers (empty vec for this example)
+    // Set up parsers (empty vec for this example)
     /// let request = request.with_parsers(vec![]);
     /// assert_eq!(request.method, Method::POST);
     /// ```
     pub fn with_parsers(mut self, parsers: Vec<Box<dyn Parser>>) -> Self {
         self.parsers = parsers;
         self
+    }
+    /// Get a reference to the request body
+    ///
+    /// This is a non-consuming accessor that can be called multiple times.
+    /// Useful for testing and inspection purposes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_http::Request;
+    /// use hyper::{Method, Uri, Version, HeaderMap};
+    /// use bytes::Bytes;
+    ///
+    /// let body = Bytes::from("test body");
+    /// let request = Request::new(
+    ///     Method::POST,
+    ///     "/".parse::<Uri>().unwrap(),
+    ///     Version::HTTP_11,
+    ///     HeaderMap::new(),
+    ///     body.clone()
+    /// );
+    ///
+    /// assert_eq!(request.body(), &body);
+    /// ```
+    pub fn body(&self) -> &Bytes {
+        &self.body
     }
     /// Read and consume the request body
     /// This marks the body as consumed and subsequent parse attempts will fail
@@ -541,7 +602,7 @@ impl Request {
     /// let body = request.read_body().unwrap();
     /// assert_eq!(body, Bytes::from("request body"));
     ///
-    /// // Second read fails because body is consumed
+    // Second read fails because body is consumed
     /// assert!(request.read_body().is_err());
     /// ```
     pub fn read_body(&self) -> crate::Result<Bytes> {

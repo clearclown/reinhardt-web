@@ -15,3 +15,4 @@ reinhardt-parsers = { workspace = true }
 reinhardt-exception = { workspace = true }
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["sync"] }
+percent-encoding = "2.3"

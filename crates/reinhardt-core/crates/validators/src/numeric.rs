@@ -119,7 +119,7 @@ impl<T: PartialOrd + Display + Clone> Validator<T> for RangeValidator<T> {
 mod tests {
     use super::*;
 
-    /// // Tests based on Django validators/tests.py - TestValidatorEquality::test_basic_equality
+    // Tests based on Django validators/tests.py - TestValidatorEquality::test_basic_equality
     #[test]
     fn test_min_value_validator_integers() {
         let validator = MinValueValidator::new(10);
@@ -254,7 +254,7 @@ mod tests {
         assert!(max_validator.validate(&101).is_err());
     }
 
-    /// // Test with different numeric types
+    // Test with different numeric types
     #[test]
     fn test_validators_with_i32() {
         let validator = RangeValidator::new(i32::MIN + 1000, i32::MAX - 1000);

@@ -186,7 +186,7 @@ pub fn permission_required(args: TokenStream, input: TokenStream) -> TokenStream
 ///     myapp: "apps.myapp",
 /// }
 ///
-/// // Use in settings
+// Use in settings
 /// let apps = InstalledApp::all_apps();
 /// ```
 ///
@@ -214,13 +214,13 @@ pub fn installed_apps(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// use reinhardt_macros::path;
 ///
-/// // Simple parameter
+// Simple parameter
 /// let pattern = path!("polls/{id}/");
 ///
-/// // Typed parameter (Django-style)
+// Typed parameter (Django-style)
 /// let pattern = path!("polls/{<int:question_id>}/");
 ///
-/// // Multiple parameters
+// Multiple parameters
 /// let pattern = path!("users/{user_id}/posts/{post_id}/");
 /// ```
 ///
@@ -308,7 +308,7 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 ///     Ok(format!("Handler with db and config"))
 /// }
 ///
-/// // Works with any function
+// Works with any function
 /// #[use_injection]
 /// async fn process_data(
 ///     #[inject] db: Database,
@@ -378,16 +378,16 @@ pub fn endpoint(args: TokenStream, input: TokenStream) -> TokenStream {
 ///     created_at: DateTime,
 /// }
 ///
-/// // Type-safe queries with compile-time validation
+// Type-safe queries with compile-time validation
 /// QuerySet::<User>::new()
 ///     .filter(User::email().lower().contains("example.com"))
 ///     .filter(User::age().gte(18))
 ///     .filter(User::created_at().year().eq(2025));
 ///
-/// // These would cause compile errors:
-/// // User::age().contains(18);     // ERROR: contains() only for String
-/// // User::email().year();          // ERROR: year() only for DateTime
-/// // User::emai();                  // ERROR: field doesn't exist
+// These would cause compile errors:
+// User::age().contains(18);     // ERROR: contains() only for String
+// User::email().year();          // ERROR: year() only for DateTime
+// User::emai();                  // ERROR: field doesn't exist
 /// ```
 ///
 /// # Generated Methods
@@ -442,7 +442,7 @@ pub fn derive_field_lookup(input: TokenStream) -> TokenStream {
 ///     roles: Vec<String>,
 /// }
 ///
-/// // Schema is automatically generated
+// Schema is automatically generated
 /// let schema = User::schema();
 /// ```
 ///

@@ -9,6 +9,7 @@ pub mod identifier;
 pub mod numeric;
 pub mod reserved;
 pub mod string;
+pub mod uniqueness;
 pub mod url;
 
 pub use email::EmailValidator;
@@ -16,6 +17,7 @@ pub use errors::{ValidationError, ValidationResult};
 pub use identifier::{ConstraintName, FieldName, IdentifierValidationError, TableName};
 pub use numeric::{MaxValueValidator, MinValueValidator, RangeValidator};
 pub use string::{MaxLengthValidator, MinLengthValidator, RegexValidator};
+pub use uniqueness::UniqueValidator;
 pub use url::UrlValidator;
 
 /// Re-export commonly used types
@@ -25,6 +27,7 @@ pub mod prelude {
     pub use crate::identifier::*;
     pub use crate::numeric::*;
     pub use crate::string::*;
+    pub use crate::uniqueness::*;
     pub use crate::url::*;
 }
 
@@ -52,7 +55,7 @@ pub trait SettingsValidator: Send + Sync {
 mod tests {
     use super::*;
 
-    /// // Integration tests for validator trait - based on Django validators/tests.py
+    // Integration tests for validator trait - based on Django validators/tests.py
     #[test]
     fn test_min_length_validator_trait() {
         let validator = MinLengthValidator::new(5);
@@ -110,7 +113,7 @@ mod tests {
         assert!(validator.validate("abc").is_err());
     }
 
-    /// // Test combining validators
+    // Test combining validators
     #[test]
     fn test_multiple_validators() {
         let min_validator = MinLengthValidator::new(3);
@@ -129,7 +132,7 @@ mod tests {
         assert!(max_validator.validate(too_long).is_err());
     }
 
-    /// // Test prelude exports
+    // Test prelude exports
     #[test]
     fn test_prelude_exports() {
         use crate::prelude::*;

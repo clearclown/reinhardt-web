@@ -167,7 +167,7 @@ impl Validator<str> for RegexValidator {
 mod tests {
     use super::*;
 
-    /// // Tests based on Django validators/tests.py
+    // Tests based on Django validators/tests.py
     #[test]
     fn test_min_length_validator_valid() {
         let validator = MinLengthValidator::new(5);
@@ -239,7 +239,7 @@ mod tests {
         assert!(validator.validate("ab").is_err());
     }
 
-    /// // Based on Django test_regex_validator_flags
+    // Based on Django test_regex_validator_flags
     #[test]
     fn test_regex_validator_basic() {
         let validator = RegexValidator::new(r"^\d{3}-\d{4}$").unwrap();
@@ -310,7 +310,7 @@ mod tests {
         assert!(validator.validate("1a5").is_err());
     }
 
-    /// // Test both String and str implementations
+    // Test both String and str implementations
     #[test]
     fn test_validators_work_with_string_types() {
         let min_validator = MinLengthValidator::new(3);
@@ -326,7 +326,7 @@ mod tests {
         assert!(max_validator.validate(&s).is_ok());
     }
 
-    /// // Based on Django test_max_length_validator_message
+    // Based on Django test_max_length_validator_message
     #[test]
     fn test_min_length_error_contains_correct_values() {
         let validator = MinLengthValidator::new(16);

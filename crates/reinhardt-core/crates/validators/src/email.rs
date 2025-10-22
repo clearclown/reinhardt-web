@@ -203,7 +203,7 @@ mod tests {
         assert!(validator.validate("USER@EXAMPLE.COM").is_ok());
     }
 
-    /// // Additional tests based on Django validators/tests.py - TestValidatorEquality::test_email_equality
+    // Additional tests based on Django validators/tests.py - TestValidatorEquality::test_email_equality
     #[test]
     fn test_email_validator_with_numbers() {
         let validator = EmailValidator::new();
