@@ -68,25 +68,34 @@ Django-inspired settings management for Rust with advanced features like secrets
   - ✓ Memory audit backend for testing (`MemoryAuditBackend`)
   - ✓ Separate audit logging for secrets
 
-### Dynamic Features (Partial Implementation)
+### Dynamic Features
 
-- **⚡ Dynamic Settings**: Runtime configuration changes with Redis and SQL backends
+- **⚡ Dynamic Settings**: Runtime configuration changes with multiple storage backends
   - ✓ Backend trait definition (`DynamicBackend`)
-  - ✓ Memory backend for testing (`MemoryBackend`)
+  - ✓ Memory backend with TTL support (`MemoryBackend`)
   - ✓ Redis backend (feature: `dynamic-redis`)
   - ✓ Database backend (feature: `dynamic-database`)
-  - ⚠️ Note: Core dynamic settings functionality is placeholder-based
+  - ✓ CRUD operations with type-safe generics
+  - ✓ Observer pattern for change notifications
+  - ✓ LRU caching with TTL (feature: `caching`)
 
-- **🔄 Hot Reload**: Dynamic configuration updates without restarts (with async backends)
-  - ⚠️ Planned for future implementation with async backend support
+- **🔄 Hot Reload**: File system watching for automatic configuration reload
+  - ✓ File watching with `notify` crate (feature: `hot-reload`)
+  - ✓ Debouncing for rapid file changes
+  - ✓ Callback-based notification system
+  - ✓ Integration with DynamicSettings
+
+- **🛠️ CLI Tools**: Command-line utilities for configuration management (implemented in `reinhardt-settings-cli`)
+  - ✓ Settings validation CLI (`validate` command)
+  - ✓ Settings display CLI (`show` command)
+  - ✓ Settings modification CLI (`set` command)
+  - ✓ Configuration comparison CLI (`diff` command)
+  - ✓ Secret management CLI (`encrypt`, `decrypt` commands)
+  - See [reinhardt-settings-cli](../settings-cli/README.md) for details
 
 ### Planned Features
 
-- **🛠️ CLI Tools**: Command-line utilities for configuration management
-  - Planned: Settings validation CLI
-  - Planned: Configuration migration tools
-  - Planned: Secret management CLI
-  - Planned: Encryption key generation utilities
+<!-- TODO: The following features are not yet implemented -->
 
 ## Installation
 
@@ -105,19 +114,23 @@ reinhardt-settings = { version = "0.1.0", features = ["async", "encryption", "va
 ## Feature Flags
 
 ### Core Features
+
 - `async` - Async support (required for dynamic backends and secret management)
 
 ### Dynamic Settings Backends
+
 - `dynamic-redis` - Redis backend for runtime configuration changes (requires `async`)
 - `dynamic-database` - SQL backend with sqlx for dynamic settings (requires `async`)
 
 ### Secret Management Providers
+
 - `vault` - HashiCorp Vault integration for secret storage (requires `async`)
 - `aws-secrets` - AWS Secrets Manager integration (requires `async`)
 - `azure-keyvault` - Azure Key Vault integration (requires `async`)
 - `secret-rotation` - Automatic secret rotation capabilities (requires `async`)
 
 ### Security Features
+
 - `encryption` - AES-256-GCM file encryption with PBKDF2 key derivation
 
 ### Example Combinations
@@ -310,17 +323,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Documentation
 
-For complete documentation, examples, and API reference, visit:
+For complete documentation and API reference, visit:
 
 - [API Documentation](https://docs.rs/reinhardt-settings)
-- [Examples Directory](examples/)
-  - [Basic Usage](examples/settings_basic_usage.rs)
-  - [Environment Profiles](examples/environment_profiles.rs)
-  - [Secret Management](examples/secret_management.rs)
-  - [Encryption](examples/encryption.rs)
-  - [Audit Logging](examples/audit_logging.rs)
-  - [Dynamic Settings with Redis](examples/dynamic_settings_redis.rs)
-  - [Dynamic Settings with Database](examples/dynamic_settings_database.rs)
 
 ## Module Structure
 
@@ -435,6 +440,7 @@ at your option.
 ## Acknowledgments
 
 Inspired by:
+
 - [Django Settings](https://docs.djangoproject.com/en/stable/ref/settings/)
 - [django-environ](https://django-environ.readthedocs.io/)
 - [config-rs](https://github.com/mehcode/config-rs)

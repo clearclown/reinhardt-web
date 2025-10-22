@@ -31,7 +31,7 @@ pub struct SetArgs {
 pub async fn execute(args: SetArgs) -> anyhow::Result<()> {
     output::info(&format!("Setting configuration value in: {:?}", args.file));
 
-    /// // Check if file exists
+    // Check if file exists
     if !args.file.exists() {
         if args.create {
             output::info("Creating new configuration file");
@@ -58,7 +58,7 @@ pub async fn execute(args: SetArgs) -> anyhow::Result<()> {
         }
     }
 
-    /// // Create backup if requested
+    // Create backup if requested
     if args.backup && args.file.exists() {
         let backup_path = args.file.with_extension(
             format!(
@@ -71,7 +71,7 @@ pub async fn execute(args: SetArgs) -> anyhow::Result<()> {
         output::info(&format!("Backup created: {:?}", backup_path));
     }
 
-    /// // Determine file type and modify
+    // Determine file type and modify
     let extension = args.file.extension().and_then(|s| s.to_str());
 
     match extension {
@@ -143,7 +143,7 @@ fn set_nested_value(value: &mut toml::Value, key: &str, new_value: &str) -> anyh
         return Err(anyhow::anyhow!("Invalid key"));
     }
 
-    /// // Navigate to parent
+    // Navigate to parent
     let mut current = value;
     for part in &parts[..parts.len() - 1] {
         if !current.is_table() {
@@ -157,10 +157,10 @@ fn set_nested_value(value: &mut toml::Value, key: &str, new_value: &str) -> anyh
             .or_insert(toml::Value::Table(toml::map::Map::new()));
     }
 
-    /// // Set the final value
+    // Set the final value
     let final_key = parts[parts.len() - 1];
 
-    /// // Try to parse as different types
+    // Try to parse as different types
     let parsed_value = if let Ok(b) = new_value.parse::<bool>() {
         toml::Value::Boolean(b)
     } else if let Ok(i) = new_value.parse::<i64>() {
@@ -191,7 +191,7 @@ fn set_nested_json_value(
         return Err(anyhow::anyhow!("Invalid key"));
     }
 
-    /// // Navigate to parent
+    // Navigate to parent
     let mut current = value;
     for part in &parts[..parts.len() - 1] {
         if !current.is_object() {
@@ -205,10 +205,10 @@ fn set_nested_json_value(
             .or_insert(serde_json::Value::Object(serde_json::Map::new()));
     }
 
-    /// // Set the final value
+    // Set the final value
     let final_key = parts[parts.len() - 1];
 
-    /// // Try to parse as different types
+    // Try to parse as different types
     let parsed_value = if let Ok(b) = new_value.parse::<bool>() {
         serde_json::Value::Bool(b)
     } else if let Ok(i) = new_value.parse::<i64>() {

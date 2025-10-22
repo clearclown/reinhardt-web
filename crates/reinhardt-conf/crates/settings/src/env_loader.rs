@@ -33,8 +33,8 @@ impl EnvLoader {
     ///     .path(PathBuf::from(".env.test"))
     ///     .interpolate(true);
     ///
-    /// // Loader is configured and ready to load .env files
-    /// // Can call loader.load_optional() to load the file
+    // Loader is configured and ready to load .env files
+    // Can call loader.load_optional() to load the file
     /// ```
     pub fn new() -> Self {
         Self {
@@ -54,7 +54,7 @@ impl EnvLoader {
     /// let loader = EnvLoader::new()
     ///     .path(PathBuf::from(".env.production"));
     ///
-    /// // Loader is configured to load from .env.production
+    // Loader is configured to load from .env.production
     /// ```
     pub fn path(mut self, path: impl Into<PathBuf>) -> Self {
         self.path = Some(path.into());
@@ -70,7 +70,7 @@ impl EnvLoader {
     /// let loader = EnvLoader::new()
     ///     .overwrite(true);
     ///
-    /// // When loading .env, existing env vars will be overwritten
+    // When loading .env, existing env vars will be overwritten
     /// ```
     pub fn overwrite(mut self, enabled: bool) -> Self {
         self.overwrite = enabled;
@@ -86,7 +86,7 @@ impl EnvLoader {
     /// let loader = EnvLoader::new()
     ///     .interpolate(true);
     ///
-    /// // Variables like $HOME or ${USER} will be expanded
+    // Variables like $HOME or ${USER} will be expanded
     /// ```
     pub fn interpolate(mut self, enabled: bool) -> Self {
         self.interpolate = enabled;
@@ -103,7 +103,7 @@ impl EnvLoader {
     /// let loader = EnvLoader::new()
     ///     .path(PathBuf::from(".env"));
     ///
-    /// // Load the .env file (will error if not found)
+    // Load the .env file (will error if not found)
     /// loader.load().expect("Failed to load .env");
     /// ```
     pub fn load(&self) -> Result<(), EnvError> {
@@ -135,9 +135,9 @@ impl EnvLoader {
     /// let loader = EnvLoader::new()
     ///     .path(PathBuf::from(".env.optional"));
     ///
-    /// // Returns Ok(true) if loaded, Ok(false) if not found
+    // Returns Ok(true) if loaded, Ok(false) if not found
     /// let loaded = loader.load_optional().unwrap();
-    /// // Won't panic if file doesn't exist
+    // Won't panic if file doesn't exist
     /// ```
     pub fn load_optional(&self) -> Result<bool, EnvError> {
         let path = match &self.path {
@@ -304,7 +304,7 @@ impl Default for EnvLoader {
 /// use std::path::PathBuf;
 ///
 /// load_env(PathBuf::from(".env")).expect("Failed to load .env");
-/// // Environment variables from .env are now loaded
+// Environment variables from .env are now loaded
 /// ```
 pub fn load_env(path: impl Into<PathBuf>) -> Result<(), EnvError> {
     EnvLoader::new().path(path).load()
@@ -316,7 +316,7 @@ pub fn load_env(path: impl Into<PathBuf>) -> Result<(), EnvError> {
 /// ```no_run
 /// use reinhardt_settings::env_loader::load_env_auto;
 ///
-/// // Searches for .env in current and parent directories
+// Searches for .env in current and parent directories
 /// load_env_auto().expect("No .env file found");
 /// ```
 pub fn load_env_auto() -> Result<(), EnvError> {
@@ -330,9 +330,9 @@ pub fn load_env_auto() -> Result<(), EnvError> {
 /// use reinhardt_settings::env_loader::load_env_optional;
 /// use std::path::PathBuf;
 ///
-/// // Returns true if loaded, false if not found
+// Returns true if loaded, false if not found
 /// let loaded = load_env_optional(PathBuf::from(".env.test")).unwrap();
-/// // Will not panic if file doesn't exist
+// Will not panic if file doesn't exist
 /// ```
 pub fn load_env_optional(path: impl Into<PathBuf>) -> Result<bool, EnvError> {
     EnvLoader::new().path(path).load_optional()

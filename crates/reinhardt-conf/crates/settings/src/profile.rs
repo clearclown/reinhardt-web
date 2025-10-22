@@ -31,7 +31,7 @@ impl Profile {
     /// ```
     /// use reinhardt_settings::profile::Profile;
     ///
-    /// // Returns the profile from environment variables
+    // Returns the profile from environment variables
     /// if let Some(profile) = Profile::from_env() {
     ///     println!("Running in {:?} mode", profile);
     /// }

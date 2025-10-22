@@ -44,13 +44,13 @@ impl From<OutputFormatArg> for OutputFormat {
 pub async fn execute(args: ShowArgs) -> anyhow::Result<()> {
     output::info(&format!("Reading configuration file: {:?}", args.file));
 
-    /// // Check if file exists
+    // Check if file exists
     if !args.file.exists() {
         output::error("Configuration file not found");
         return Err(anyhow::anyhow!("File not found: {:?}", args.file));
     }
 
-    /// // Determine file type and load
+    // Determine file type and load
     let extension = args.file.extension().and_then(|s| s.to_str());
 
     let value: serde_json::Value = match extension {
@@ -88,7 +88,7 @@ pub async fn execute(args: ShowArgs) -> anyhow::Result<()> {
         }
     };
 
-    /// // If a specific key is requested, extract it
+    // If a specific key is requested, extract it
     if let Some(key) = &args.key {
         let parts: Vec<&str> = key.split('.').collect();
         let mut current = &value;

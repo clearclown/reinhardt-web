@@ -28,15 +28,15 @@ pub struct DiffArgs {
 pub async fn execute(args: DiffArgs) -> anyhow::Result<()> {
     output::info("Comparing configuration files");
 
-    /// // Load both files
+    // Load both files
     let value1 = load_config_file(&args.file1)?;
     let value2 = load_config_file(&args.file2)?;
 
-    /// // Flatten both configs into maps
+    // Flatten both configs into maps
     let map1 = flatten_value("", &value1);
     let map2 = flatten_value("", &value2);
 
-    /// // Collect all keys
+    // Collect all keys
     let mut all_keys: std::collections::BTreeSet<String> = map1.keys().cloned().collect();
     all_keys.extend(map2.keys().cloned());
 
@@ -90,7 +90,7 @@ pub async fn execute(args: DiffArgs) -> anyhow::Result<()> {
         }
     }
 
-    /// // Summary
+    // Summary
     println!();
     output::info(&format!("Total differences: {}", differences));
     output::info(&format!("Additions: {}", additions));

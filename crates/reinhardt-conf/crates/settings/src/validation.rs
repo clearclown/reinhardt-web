@@ -73,7 +73,7 @@ impl RequiredValidator {
     ///     "secret_key".to_string(),
     ///     "database_url".to_string(),
     /// ]);
-    /// // Validator will check that these fields exist in settings
+    // Validator will check that these fields exist in settings
     /// ```
     pub fn new(fields: Vec<String>) -> Self {
         Self { fields }
@@ -133,7 +133,7 @@ impl SecurityValidator {
     /// use reinhardt_settings::profile::Profile;
     ///
     /// let validator = SecurityValidator::new(Profile::Production);
-    /// // Validator will enforce production security requirements
+    // Validator will enforce production security requirements
     /// ```
     pub fn new(profile: Profile) -> Self {
         Self { profile }
@@ -281,7 +281,7 @@ impl RangeValidator {
     /// use reinhardt_settings::validation::RangeValidator;
     ///
     /// let validator = RangeValidator::new(Some(0.0), Some(100.0));
-    /// // Validator will check values are between 0 and 100
+    // Validator will check values are between 0 and 100
     /// ```
     pub fn new(min: Option<f64>, max: Option<f64>) -> Self {
         Self { min, max }
@@ -294,7 +294,7 @@ impl RangeValidator {
     /// use reinhardt_settings::validation::RangeValidator;
     ///
     /// let validator = RangeValidator::min(0.0);
-    /// // Values must be >= 0
+    // Values must be >= 0
     /// ```
     pub fn min(min: f64) -> Self {
         Self {
@@ -310,7 +310,7 @@ impl RangeValidator {
     /// use reinhardt_settings::validation::RangeValidator;
     ///
     /// let validator = RangeValidator::max(100.0);
-    /// // Values must be <= 100
+    // Values must be <= 100
     /// ```
     pub fn max(max: f64) -> Self {
         Self {
@@ -326,7 +326,7 @@ impl RangeValidator {
     /// use reinhardt_settings::validation::RangeValidator;
     ///
     /// let validator = RangeValidator::between(1.0, 10.0);
-    /// // Values must be between 1 and 10 (inclusive)
+    // Values must be between 1 and 10 (inclusive)
     /// ```
     pub fn between(min: f64, max: f64) -> Self {
         Self {
@@ -434,7 +434,7 @@ impl PatternValidator {
     /// use reinhardt_settings::validation::PatternValidator;
     ///
     /// let validator = PatternValidator::new(r"^\d{3}-\d{3}-\d{4}$").unwrap();
-    /// // Validates phone number format
+    // Validates phone number format
     /// ```
     pub fn new(pattern: &str) -> Result<Self, regex::Error> {
         Ok(Self {
@@ -514,7 +514,7 @@ impl ChoiceValidator {
     ///     "staging".to_string(),
     ///     "production".to_string(),
     /// ]);
-    /// // Value must be one of the allowed choices
+    // Value must be one of the allowed choices
     /// ```
     pub fn new(choices: Vec<String>) -> Self {
         Self { choices }

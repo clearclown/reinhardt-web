@@ -20,13 +20,13 @@ pub struct ValidateArgs {
 pub async fn execute(args: ValidateArgs) -> anyhow::Result<()> {
     output::info(&format!("Validating configuration file: {:?}", args.file));
 
-    /// // Check if file exists
+    // Check if file exists
     if !args.file.exists() {
         output::error("Configuration file not found");
         return Err(anyhow::anyhow!("File not found: {:?}", args.file));
     }
 
-    /// // Determine file type and load
+    // Determine file type and load
     let extension = args.file.extension().and_then(|s| s.to_str());
 
     match extension {
@@ -64,7 +64,7 @@ pub async fn execute(args: ValidateArgs) -> anyhow::Result<()> {
         }
     }
 
-    /// // Profile-specific validation
+    // Profile-specific validation
     if let Some(profile_name) = args.profile {
         output::info(&format!("Validating for profile: {}", profile_name));
 
