@@ -7,6 +7,7 @@ pub mod fields;
 pub mod file_handling;
 pub mod form;
 pub mod formset;
+pub mod formsets;
 pub mod media;
 pub mod model_form;
 pub mod model_formset;
@@ -33,13 +34,18 @@ pub use fields::{
     ModelMultipleChoiceField, MultiValueField, MultipleChoiceField, RegexField, SlugField,
     SplitDateTimeField, TimeField, URLField, UUIDField,
 };
+pub use file_handling::{
+    FileUploadError, FileUploadHandler, MemoryFileUpload, TemporaryFileUpload,
+};
 pub use form::{Form, FormError, FormResult};
 pub use formset::FormSet;
+pub use formsets::{
+    FormSetFactory,
+    InlineFormSet,
+    ModelFormSet as AdvancedModelFormSet, // Renamed to avoid conflict
+};
 pub use media::{Media, MediaDefiningWidget};
 pub use model_form::{FieldType, FormModel, ModelForm, ModelFormBuilder, ModelFormConfig};
 pub use model_formset::{ModelFormSet, ModelFormSetBuilder, ModelFormSetConfig};
+pub use security::{FormSecurityMiddleware, HoneypotField, RateLimiter, SecurityError};
 pub use wizard::{FormWizard, WizardStep};
-
-// Re-export items from empty modules as they're implemented
-// pub use file_handling::{...};
-// pub use security::{...};

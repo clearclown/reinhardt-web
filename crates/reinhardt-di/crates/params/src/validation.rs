@@ -95,6 +95,7 @@
 
 #[cfg(feature = "validation")]
 use reinhardt_validators::{ValidationResult, Validator};
+#[cfg(feature = "validation")]
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
@@ -309,7 +310,7 @@ impl<T> Deref for ValidationConstraints<T> {
 /// ```rust,ignore
 /// use reinhardt_params::{ValidatedPath, WithValidation};
 ///
-/// // In your handler:
+// In your handler:
 /// async fn handler(
 ///     // Extract path parameter "id" and validate it
 ///     id: ValidatedPath<i32>,
@@ -318,10 +319,10 @@ impl<T> Deref for ValidationConstraints<T> {
 ///     let value = id.0;
 /// }
 ///
-/// // Usage pattern:
-/// // 1. Extract Path<T> from request
-/// // 2. Apply validation constraints
-/// // 3. Validate
+// Usage pattern:
+// 1. Extract Path<T> from request
+// 2. Apply validation constraints
+// 3. Validate
 /// let path = Path::<i32>::from_request(req, ctx).await?;
 /// let validated = path.min_value(1).max_value(100);
 /// validated.validate_number(&validated.0)?;

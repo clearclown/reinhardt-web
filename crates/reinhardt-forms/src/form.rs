@@ -668,7 +668,7 @@ mod tests {
         assert!(!form.errors().is_empty());
     }
 
-    /// // Additional tests based on Django forms tests
+    // Additional tests based on Django forms tests
 
     #[test]
     fn test_form_basic() {

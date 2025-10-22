@@ -288,8 +288,9 @@ impl Middleware for CspMiddleware {
         };
 
         // Call handler
-        // Note: In a real application, you would want to pass the nonce to templates
-        // This could be done through response headers or by extending the Request type
+        // NOTE: To pass the nonce to templates, you would need to extend the Request type
+        // with a context mechanism or use response headers. This is a framework-level
+        // enhancement that would require changes to reinhardt-apps.
         let mut response = handler.handle(request).await?;
 
         // Add CSP header

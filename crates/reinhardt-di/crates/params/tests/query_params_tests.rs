@@ -354,7 +354,7 @@ async fn test_query_list_multiple_values() {
     let result = Query::<QueryParams>::from_request(&req, &ctx).await;
 
     // Note: serde_urlencoded doesn't support repeated keys by default
-    // NOTE: Known limitation - consider custom deserializer for future enhancement
+    // Known limitation - consider custom deserializer for future enhancement
     // For now, we document that only the last value is kept
     assert!(result.is_ok() || result.is_err(), "List handling may vary");
 }
@@ -767,12 +767,12 @@ async fn test_query_invalid_plain_dict() {
 
 /// Test: Multiple Query annotations combined for validation
 /// Reference: fastapi/tests/test_ambiguous_params.py::test_multiple_annotations
-/// NOTE: Rust doesn't have runtime annotation merging like Python's Annotated.
+/// Note: Rust doesn't have runtime annotation merging like Python's Annotated.
 /// Validation would be done through validator crate or custom logic.
 #[tokio::test]
 #[ignore = "Validation constraints not yet implemented"]
 async fn test_query_validation_constraints_old() {
-    // NOTE: Future enhancement - validation support via validator crate
+    // Note: Future enhancement - validation support via validator crate
     // This would require integrating a validation framework like validator crate
     // Example: gt=2, lt=10 constraints on an integer parameter
 }
@@ -963,7 +963,7 @@ async fn test_query_encoding_changes() {
 
 /// Test: Multiple query parameters with same name parsed as array
 /// Source: fastapi/tests/test_multi_query_errors.py::test_multi_query
-/// NOTE: Requires the `multi-value-arrays` feature (enabled by default) which uses serde_qs
+/// Note: Requires the `multi-value-arrays` feature (enabled by default) which uses serde_qs
 /// to parse repeated parameters as arrays (e.g., q=5&q=6 -> vec![5, 6])
 #[tokio::test]
 #[cfg(feature = "multi-value-arrays")]

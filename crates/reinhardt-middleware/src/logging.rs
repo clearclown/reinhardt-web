@@ -43,7 +43,7 @@ impl LoggingMiddleware {
     ///
     /// let response = middleware.process(request, handler).await.unwrap();
     /// assert_eq!(response.status, StatusCode::OK);
-    /// // Logs: [2024-01-01 12:00:00] GET /api/users - 200 (5 ms)
+    // Logs: [2024-01-01 12:00:00] GET /api/users - 200 (5 ms)
     /// # });
     /// ```
     pub fn new() -> Self {

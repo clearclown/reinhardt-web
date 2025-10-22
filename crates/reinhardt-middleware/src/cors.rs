@@ -114,7 +114,7 @@ impl CorsMiddleware {
     /// let middleware = CorsMiddleware::permissive();
     /// let handler = Arc::new(TestHandler);
     ///
-    /// // Preflight request
+    // Preflight request
     /// let request = Request::new(
     ///     Method::OPTIONS,
     ///     Uri::from_static("/api/users"),

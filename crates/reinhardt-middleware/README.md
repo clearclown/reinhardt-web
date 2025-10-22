@@ -76,13 +76,22 @@ The following middleware have configuration structures but no complete implement
 - **Message Framework** - Flash message storage (Session/Cookie)
 - **Redirect Fallback** - Fallback URL configuration
 
+## Related Crates
+
+The following middleware are implemented in separate crates:
+
+- **Session Middleware** - Implemented in `reinhardt-sessions`
+  - See [reinhardt-sessions](../contrib/crates/sessions/README.md) for session management and persistence
+- **Cache Middleware** - Implemented in `reinhardt-cache`
+  - See [reinhardt-cache](../utils/crates/cache/README.md) for response caching layer
+
 ## Planned Features
 
+<!-- TODO: The following features are not yet implemented -->
+
 ### Django-Inspired Middleware
-- **Session Middleware** - Session management and persistence
 - **Site Middleware** - Multi-site support
 - **Flatpages Middleware** - Static page fallback
-- **Cache Middleware** - Response caching layer
 
 ### Additional Security
 - **Permissions** - Permission-based access control
@@ -92,4 +101,64 @@ The following middleware have configuration structures but no complete implement
 - **Request ID** - Request tracing and correlation
 - **Metrics** - Request/response metrics collection
 - **Tracing** - Distributed tracing support
+
+
+## CSRF Middleware Usage
+
+### Basic Usage
+
+```rust
+use reinhardt_middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
+use reinhardt_apps::{Handler, Middleware};
+use std::sync::Arc;
+
+// Default configuration
+let csrf_middleware = CsrfMiddleware::new();
+
+// Production configuration
+let config = CsrfMiddlewareConfig::production(vec![
+    "https://example.com".to_string(),
+    "https://api.example.com".to_string(),
+]);
+
+let csrf_middleware = CsrfMiddleware::with_config(config);
+```
+
+### Exempt Paths
+
+```rust
+let config = CsrfMiddlewareConfig::default()
+    .add_exempt_path("/api/webhooks".to_string())
+    .add_exempt_path("/health".to_string());
+
+let csrf_middleware = CsrfMiddleware::with_config(config);
+```
+
+### Token Extraction
+
+CSRF tokens can be sent via:
+
+1. **HTTP Header** (recommended): `X-CSRFToken` header
+2. **Cookie**: `csrftoken` cookie
+
+```javascript
+// Send token via header from JavaScript
+fetch('/api/endpoint', {
+    method: 'POST',
+    headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+});
+```
+
+### How It Works
+
+1. **GET requests**: Automatically sets a CSRF cookie
+2. **POST requests**: Validates the token
+   - Extracts token from header or cookie
+   - Checks Referer header (if configured)
+   - Validates token format and value
+3. **Validation failure**: Returns 403 Forbidden
 

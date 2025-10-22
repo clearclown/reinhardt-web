@@ -219,9 +219,9 @@ async fn test_path_bool_true_capitalized() {
     let req = create_mock_request();
 
     let result = Path::<bool>::from_request(&req, &ctx).await;
-    // NOTE: serde_json's boolean parsing is strict, only accepts "true"/"false"
+    // Note: serde_json's boolean parsing is strict, only accepts "true"/"false"
     // This is different from FastAPI which accepts "True"/"False"
-    // NOTE: Consider custom boolean deserializer for FastAPI compatibility if needed
+    // Consider custom boolean deserializer for FastAPI compatibility if needed
     assert!(
         result.is_err(),
         "Strict boolean parsing: 'True' should fail"
@@ -246,7 +246,7 @@ async fn test_path_bool_false_capitalized() {
     let req = create_mock_request();
 
     let result = Path::<bool>::from_request(&req, &ctx).await;
-    // NOTE: Consider custom boolean deserializer for FastAPI compatibility if needed
+    // Note: Consider custom boolean deserializer for FastAPI compatibility if needed
     assert!(
         result.is_err(),
         "Strict boolean parsing: 'False' should fail"
@@ -260,8 +260,8 @@ async fn test_path_bool_one() {
     let req = create_mock_request();
 
     let result = Path::<bool>::from_request(&req, &ctx).await;
-    // NOTE: serde_json doesn't parse "1" as boolean
-    // NOTE: Consider custom boolean deserializer for FastAPI compatibility if needed
+    // Note: serde_json doesn't parse "1" as boolean
+    // Consider custom boolean deserializer for FastAPI compatibility if needed
     assert!(result.is_err(), "Strict boolean parsing: '1' should fail");
 }
 
@@ -272,7 +272,7 @@ async fn test_path_bool_zero() {
     let req = create_mock_request();
 
     let result = Path::<bool>::from_request(&req, &ctx).await;
-    // NOTE: Consider custom boolean deserializer for FastAPI compatibility if needed
+    // Note: Consider custom boolean deserializer for FastAPI compatibility if needed
     assert!(result.is_err(), "Strict boolean parsing: '0' should fail");
 }
 
@@ -612,7 +612,7 @@ async fn test_path_no_default_values() {
 
 /// Test: Same path parameter used in both endpoint and dependency
 /// Reference: fastapi/tests/test_param_in_path_and_dependency.py::test_read_users
-/// NOTE: This is an integration test that would require the full framework.
+/// Note: This is an integration test that would require the full framework.
 /// For now, we test that path extraction works consistently.
 #[tokio::test]
 async fn test_path_consistent_extraction() {
@@ -841,9 +841,11 @@ async fn test_path_param_no_defaults() {
 
 /// Test: Hidden path parameters still extract values
 /// Source: fastapi/tests/test_param_include_in_schema.py::test_hidden_path
-/// NOTE: include_in_schema is an OpenAPI/schema concern, not extraction concern
+///
+/// Path parameters with include_in_schema=False should still extract normally
+/// but not appear in OpenAPI schema. This is tested in the openapi crate.
+/// This test verifies that extraction works regardless of schema visibility.
 #[tokio::test]
-#[ignore = "Schema generation not implemented in params crate - needs OpenAPI integration"]
 async fn test_path_param_hidden_in_schema() {
     // Path parameters with include_in_schema=False should still extract normally
     // but not appear in OpenAPI schema. This is tested in integration tests.

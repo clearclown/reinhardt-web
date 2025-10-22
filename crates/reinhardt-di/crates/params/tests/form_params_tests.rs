@@ -452,21 +452,30 @@ async fn test_form_extra_fields_ignored() {
 }
 
 // ============================================================================
-// Multipart Form Data (Not Yet Implemented)
+// Multipart Form Data
 // ============================================================================
 
-/// Test: Multipart form data should return error (not yet implemented)
+/// Test: Multipart form data extraction with text fields
 #[tokio::test]
-async fn test_form_multipart_not_implemented() {
-    #[derive(Debug, Deserialize)]
+async fn test_form_multipart_text_fields() {
+    #[derive(Debug, Deserialize, PartialEq)]
     struct FormData {
         username: String,
     }
 
+    let boundary = "----WebKitFormBoundary";
+    let body = format!(
+        "------WebKitFormBoundary\r\n\
+         Content-Disposition: form-data; name=\"username\"\r\n\
+         \r\n\
+         test\r\n\
+         ------WebKitFormBoundary--\r\n"
+    );
+
     let mut headers = HeaderMap::new();
     headers.insert(
         hyper::header::CONTENT_TYPE,
-        "multipart/form-data; boundary=----WebKitFormBoundary"
+        format!("multipart/form-data; boundary={}", boundary)
             .parse()
             .unwrap(),
     );
@@ -476,30 +485,25 @@ async fn test_form_multipart_not_implemented() {
         Uri::from_static("/test"),
         Version::HTTP_11,
         headers,
-        Bytes::from("------WebKitFormBoundary\r\nContent-Disposition: form-data; name=\"username\"\r\n\r\ntest\r\n------WebKitFormBoundary--"),
+        Bytes::from(body),
     );
     let ctx = create_empty_context();
 
     let result = Form::<FormData>::from_request(&req, &ctx).await;
 
-    if result.is_ok() {
-        todo!(
-            "multipart/form-data parsing not yet implemented. \
-            Major feature requiring: \
-            - multipart/form-data parser (consider using 'multer' crate), \
-            - File upload support (File extractor type), \
-            - Memory/disk buffering strategy, \
-            - Size limits and validation, \
-            - Integration with Form<T> extractor. \
-            Estimated effort: 2-3 weeks. \
-            Reference: FastAPI's UploadFile and Form combination"
-        );
+    #[cfg(feature = "multipart")]
+    {
+        assert!(result.is_ok(), "Failed to parse multipart form data");
+        assert_eq!(result.unwrap().username, "test");
     }
 
-    assert!(
-        result.is_err(),
-        "multipart/form-data is not yet implemented"
-    );
+    #[cfg(not(feature = "multipart"))]
+    {
+        assert!(
+            result.is_err(),
+            "multipart/form-data requires 'multipart' feature"
+        );
+    }
 }
 
 // ============================================================================
@@ -755,6 +759,109 @@ async fn test_mixed_form_and_files() {
     assert_eq!(field.file_name(), Some("data.txt"));
     let content = field.bytes().await.unwrap();
     assert_eq!(&content[..], b"File content");
+}
+
+/// Test: Form extractor with multipart - extracts only text fields
+#[cfg(feature = "multipart")]
+#[tokio::test]
+async fn test_form_extractor_multipart_text_only() {
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct ContactForm {
+        name: String,
+        email: String,
+    }
+
+    let boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW";
+    let body = format!(
+        "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\n\
+         Content-Disposition: form-data; name=\"name\"\r\n\
+         \r\n\
+         Alice\r\n\
+         ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\n\
+         Content-Disposition: form-data; name=\"email\"\r\n\
+         \r\n\
+         alice@example.com\r\n\
+         ------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n"
+    );
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        hyper::header::CONTENT_TYPE,
+        format!("multipart/form-data; boundary={}", boundary)
+            .parse()
+            .unwrap(),
+    );
+
+    let req = Request::new(
+        Method::POST,
+        Uri::from_static("/contact"),
+        Version::HTTP_11,
+        headers,
+        Bytes::from(body),
+    );
+    let ctx = create_empty_context();
+
+    let result = Form::<ContactForm>::from_request(&req, &ctx).await;
+    assert!(
+        result.is_ok(),
+        "Failed to parse multipart form: {:?}",
+        result.err()
+    );
+
+    let form = result.unwrap();
+    assert_eq!(form.name, "Alice");
+    assert_eq!(form.email, "alice@example.com");
+}
+
+/// Test: Form extractor ignores file fields in multipart
+#[cfg(feature = "multipart")]
+#[tokio::test]
+async fn test_form_extractor_ignores_files() {
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct FormWithText {
+        username: String,
+    }
+
+    let boundary = "----WebKitFormBoundary7MA4YWxkTrZu0gW";
+    let body = format!(
+        "------WebKitFormBoundary7MA4YWxkTrZu0gW\r\n\
+         Content-Disposition: form-data; name=\"username\"\r\n\
+         \r\n\
+         Bob\r\n\
+         ------WebKitFormBoundary7MA4YWxkTrZu0gW\r\n\
+         Content-Disposition: form-data; name=\"avatar\"; filename=\"photo.jpg\"\r\n\
+         Content-Type: image/jpeg\r\n\
+         \r\n\
+         <binary data>\r\n\
+         ------WebKitFormBoundary7MA4YWxkTrZu0gW--\r\n"
+    );
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        hyper::header::CONTENT_TYPE,
+        format!("multipart/form-data; boundary={}", boundary)
+            .parse()
+            .unwrap(),
+    );
+
+    let req = Request::new(
+        Method::POST,
+        Uri::from_static("/profile"),
+        Version::HTTP_11,
+        headers,
+        Bytes::from(body),
+    );
+    let ctx = create_empty_context();
+
+    let result = Form::<FormWithText>::from_request(&req, &ctx).await;
+    assert!(
+        result.is_ok(),
+        "Failed to parse multipart form: {:?}",
+        result.err()
+    );
+
+    let form = result.unwrap();
+    assert_eq!(form.username, "Bob");
 }
 
 // ============================================================================

@@ -23,16 +23,16 @@ use crate::{context::InjectionContext, DiResult};
 /// ```rust,ignore
 /// use reinhardt_di::{Injectable, InjectionContext, DiResult, Depends};
 ///
-/// // Automatic injection for types with Default + Clone
+// Automatic injection for types with Default + Clone
 /// #[derive(Default, Clone)]
 /// struct Config {
 ///     api_key: String,
 /// }
 ///
-/// // Config now has Injectable automatically
-/// // Can be used directly: Depends<Config>
+// Config now has Injectable automatically
+// Can be used directly: Depends<Config>
 ///
-/// // Custom injection logic
+// Custom injection logic
 /// struct Database {
 ///     pool: DbPool,
 /// }

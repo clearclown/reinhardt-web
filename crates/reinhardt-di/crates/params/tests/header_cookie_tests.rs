@@ -395,7 +395,7 @@ async fn test_header_and_cookie_combined() {
 ///
 /// **Alternative Not Recommended**:
 /// ```rust,ignore
-/// // NOT IMPLEMENTED - use HeaderStruct instead
+// NOT IMPLEMENTED - use HeaderStruct instead
 /// let count = Header::<i64>::from_request(&req, &ctx).await?;
 /// ```
 #[test]
@@ -739,12 +739,12 @@ async fn test_content_type_header_with_struct() {
 }
 
 // ============================================================================
-// OpenAPI Schema Tests - MOVED to reinhardt-openapi crate
+// OpenAPI Schema Tests - MOVED to openapi crate
 // ============================================================================
-// NOTE: OpenAPI/schema tests belong in reinhardt-openapi integration tests
-// - test_params_include_in_schema
-// - test_hidden_header_still_functional
-// - test_hidden_cookie_still_functional
+// NOTE: OpenAPI/schema tests are implemented in the openapi crate:
+// - Parameter metadata extraction (param_metadata.rs)
+// - include_in_schema functionality
+// - Hidden parameters that still function at runtime
 
 // ============================================================================
 // Tests from FastAPI test_tutorial/test_header_param_models

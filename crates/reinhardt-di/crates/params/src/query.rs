@@ -96,21 +96,21 @@ fn parse_query_multi_value(query_string: &str) -> HashMap<String, Vec<String>> {
 /// Convert a string value to the most appropriate JSON value type
 /// Tries number types first, then falls back to string
 fn string_to_json_value(s: &str) -> serde_json::Value {
-    /// // Try parsing as integer
+    // Try parsing as integer
     if let Ok(i) = s.parse::<i64>() {
         return serde_json::Value::Number(i.into());
     }
-    /// // Try parsing as float
+    // Try parsing as float
     if let Ok(f) = s.parse::<f64>() {
         if let Some(num) = serde_json::Number::from_f64(f) {
             return serde_json::Value::Number(num);
         }
     }
-    /// // Try parsing as boolean
+    // Try parsing as boolean
     if let Ok(b) = s.parse::<bool>() {
         return serde_json::Value::Bool(b);
     }
-    /// // Fall back to string
+    // Fall back to string
     serde_json::Value::String(s.to_string())
 }
 
@@ -181,12 +181,6 @@ mod tests {
         page: Option<i32>,
         limit: Option<i32>,
         search: Option<String>,
-    }
-
-    #[tokio::test]
-    async fn test_query_params() {
-        // This test requires a proper Request implementation
-        // For now, it's a placeholder
     }
 }
 

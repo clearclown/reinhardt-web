@@ -282,8 +282,8 @@ impl FormWizard {
     /// let mut data = HashMap::new();
     /// data.insert("field".to_string(), json!("value"));
     ///
-    /// // Note: process_step() requires form validation
-    /// // let result = wizard.process_step(data);
+    // Note: process_step() requires form validation
+    // let result = wizard.process_step(data);
     /// ```
     pub fn process_step(
         &mut self,

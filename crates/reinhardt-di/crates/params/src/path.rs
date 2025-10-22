@@ -241,7 +241,7 @@ mod tests {
         assert_eq!(result.unwrap().id, 42);
     }
 
-    /// // Test primitive type extraction
+    // Test primitive type extraction
     #[tokio::test]
     async fn test_path_primitive_i64() {
         use bytes::Bytes;

@@ -92,6 +92,189 @@ pub enum Widget {
     HiddenInput,
 }
 
+impl Widget {
+    /// Renders the widget as HTML
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::Widget;
+    ///
+    /// let widget = Widget::TextInput;
+    /// let html = widget.render_html("username", Some("john_doe"), None);
+    /// assert!(html.contains("<input"));
+    /// assert!(html.contains("type=\"text\""));
+    /// assert!(html.contains("name=\"username\""));
+    /// assert!(html.contains("value=\"john_doe\""));
+    /// ```
+    pub fn render_html(
+        &self,
+        name: &str,
+        value: Option<&str>,
+        attrs: Option<&HashMap<String, String>>,
+    ) -> String {
+        let mut html = String::new();
+        let default_attrs = HashMap::new();
+        let attrs = attrs.unwrap_or(&default_attrs);
+
+        // Build common attributes
+        let mut common_attrs = String::new();
+        for (key, val) in attrs {
+            common_attrs.push_str(&format!(" {}=\"{}\"", key, val));
+        }
+
+        match self {
+            Widget::TextInput => {
+                html.push_str(&format!(
+                    "<input type=\"text\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::PasswordInput => {
+                html.push_str(&format!(
+                    "<input type=\"password\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::EmailInput => {
+                html.push_str(&format!(
+                    "<input type=\"email\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::NumberInput => {
+                html.push_str(&format!(
+                    "<input type=\"number\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::TextArea => {
+                html.push_str(&format!("<textarea name=\"{}\"{}", name, common_attrs));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(">");
+                html.push_str(value.unwrap_or(""));
+                html.push_str("</textarea>");
+            }
+            Widget::Select { choices } => {
+                html.push_str(&format!("<select name=\"{}\"{}", name, common_attrs));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(">");
+                for (choice_value, choice_label) in choices {
+                    let selected = if Some(choice_value.as_str()) == value {
+                        " selected"
+                    } else {
+                        ""
+                    };
+                    html.push_str(&format!(
+                        "<option value=\"{}\"{}>{}</option>",
+                        choice_value, selected, choice_label
+                    ));
+                }
+                html.push_str("</select>");
+            }
+            Widget::CheckboxInput => {
+                html.push_str(&format!("<input type=\"checkbox\" name=\"{}\"", name));
+                if value == Some("true") || value == Some("on") {
+                    html.push_str(" checked");
+                }
+                html.push_str(&common_attrs);
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::RadioSelect { choices } => {
+                for (i, (choice_value, choice_label)) in choices.iter().enumerate() {
+                    let checked = if Some(choice_value.as_str()) == value {
+                        " checked"
+                    } else {
+                        ""
+                    };
+                    html.push_str(&format!(
+                        "<input type=\"radio\" name=\"{}\" value=\"{}\" id=\"id_{}_{}\"{}{} />",
+                        name, choice_value, name, i, checked, common_attrs
+                    ));
+                    html.push_str(&format!(
+                        "<label for=\"id_{}_{}\">{}</label>",
+                        name, i, choice_label
+                    ));
+                }
+            }
+            Widget::DateInput => {
+                html.push_str(&format!(
+                    "<input type=\"date\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::DateTimeInput => {
+                html.push_str(&format!(
+                    "<input type=\"datetime-local\" name=\"{}\" value=\"{}\"{}",
+                    name,
+                    value.unwrap_or(""),
+                    common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::FileInput => {
+                html.push_str(&format!(
+                    "<input type=\"file\" name=\"{}\"{}",
+                    name, common_attrs
+                ));
+                if !attrs.contains_key("id") {
+                    html.push_str(&format!(" id=\"id_{}\"", name));
+                }
+                html.push_str(" />");
+            }
+            Widget::HiddenInput => {
+                html.push_str(&format!(
+                    "<input type=\"hidden\" name=\"{}\" value=\"{}\" />",
+                    name,
+                    value.unwrap_or("")
+                ));
+            }
+        }
+
+        html
+    }
+}
+
 /// Base field trait for forms
 ///
 /// This trait is specifically for form fields. For ORM fields, use `reinhardt_orm::Field`.
@@ -151,7 +334,7 @@ impl CharField {
     /// assert_eq!(field.name(), "username");
     /// assert!(field.required());
     ///
-    /// // Field can clean and validate input
+    // Field can clean and validate input
     /// let result = field.clean(Some(&serde_json::json!("john_doe")));
     /// assert!(result.is_ok());
     /// ```
@@ -295,7 +478,7 @@ impl IntegerField {
     /// assert_eq!(field.name(), "age");
     /// assert!(field.required());
     ///
-    /// // Field can clean and validate integer input
+    // Field can clean and validate integer input
     /// let result = field.clean(Some(&serde_json::json!(25)));
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap(), serde_json::json!(25));
@@ -414,7 +597,7 @@ impl BooleanField {
     /// assert_eq!(field.name(), "accept_terms");
     /// assert!(!field.required()); // BooleanField is not required by default
     ///
-    /// // Field can clean and validate boolean input
+    // Field can clean and validate boolean input
     /// let result = field.clean(Some(&serde_json::json!(true)));
     /// assert!(result.is_ok());
     /// assert_eq!(result.unwrap(), serde_json::json!(true));
@@ -522,7 +705,7 @@ impl EmailField {
     /// assert_eq!(field.name(), "email");
     /// assert!(field.required());
     ///
-    /// // Field validates email format
+    // Field validates email format
     /// let valid_result = field.clean(Some(&serde_json::json!("user@example.com")));
     /// assert!(valid_result.is_ok());
     ///
@@ -687,7 +870,7 @@ mod tests {
         assert_eq!(result.unwrap(), serde_json::json!(false));
     }
 
-    /// // Additional tests based on Django forms tests
+    // Additional tests based on Django forms tests
 
     #[test]
     fn test_charfield_required() {
@@ -997,7 +1180,7 @@ mod tests {
         assert_eq!(field.clean(None).unwrap(), serde_json::json!(false));
     }
 
-    /// // IntegerField string parsing tests
+    // IntegerField string parsing tests
 
     #[test]
     fn test_integerfield_string_parsing() {
@@ -1048,7 +1231,7 @@ mod tests {
         ));
     }
 
-    /// // BooleanField string conversion tests
+    // BooleanField string conversion tests
 
     #[test]
     fn test_booleanfield_string_conversion() {
@@ -1137,7 +1320,7 @@ mod tests {
         assert!(matches!(field.clean(None), Err(FieldError::Required(_))));
     }
 
-    /// // EmailField tests
+    // EmailField tests
 
     #[test]
     fn test_emailfield_required() {
