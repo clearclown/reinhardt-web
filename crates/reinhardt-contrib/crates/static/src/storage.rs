@@ -1,5 +1,7 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::fs;
+use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -168,11 +170,73 @@ impl StaticFilesFinder {
             format!("File not found in any directory: {}", path),
         ))
     }
+
+    /// Find all static files across all configured directories
+    ///
+    /// Returns a vector of all static file paths found in the configured directories.
+    /// Each path is relative to its source directory.
+    ///
+    /// # Example
+    ///
+    /// ```rust,ignore
+    /// use reinhardt_static::StaticFilesFinder;
+    /// use std::path::PathBuf;
+    ///
+    /// let finder = StaticFilesFinder::new(vec![
+    ///     PathBuf::from("static"),
+    ///     PathBuf::from("assets"),
+    /// ]);
+    ///
+    /// let files = finder.find_all();
+    // Returns: ["css/style.css", "js/app.js", "images/logo.png", ...]
+    /// ```
+    pub fn find_all(&self) -> Vec<String> {
+        let mut all_files = Vec::new();
+
+        for dir in &self.directories {
+            if !dir.exists() || !dir.is_dir() {
+                continue;
+            }
+
+            if let Ok(entries) = self.walk_directory(dir, dir) {
+                all_files.extend(entries);
+            }
+        }
+
+        all_files
+    }
+
+    /// Recursively walk a directory and collect all file paths
+    fn walk_directory(&self, base_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<Vec<String>> {
+        let mut files = Vec::new();
+
+        for entry in fs::read_dir(current_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                // Get relative path from base directory
+                if let Ok(relative) = path.strip_prefix(base_dir) {
+                    if let Some(path_str) = relative.to_str() {
+                        files.push(path_str.to_string());
+                    }
+                }
+            } else if path.is_dir() {
+                // Recursively walk subdirectories
+                if let Ok(sub_files) = self.walk_directory(base_dir, &path) {
+                    files.extend(sub_files);
+                }
+            }
+        }
+
+        Ok(files)
+    }
 }
 
 pub struct HashedFileStorage {
     pub location: PathBuf,
     pub base_url: String,
+    hashed_files: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl HashedFileStorage {
@@ -180,8 +244,136 @@ impl HashedFileStorage {
         Self {
             location: location.into(),
             base_url: base_url.to_string(),
+            hashed_files: Arc::new(RwLock::new(HashMap::new())),
         }
     }
+
+    fn hash_content(content: &[u8]) -> String {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        content.hash(&mut hasher);
+        format!("{:x}", hasher.finish())
+    }
+
+    fn get_hashed_name(&self, name: &str, content: &[u8]) -> String {
+        let hash = Self::hash_content(content);
+        let hash_short = &hash[..12];
+        if let Some(dot_pos) = name.rfind('.') {
+            format!("{}.{}{}", &name[..dot_pos], hash_short, &name[dot_pos..])
+        } else {
+            format!("{}.{}", name, hash_short)
+        }
+    }
+
+    pub fn save(&self, name: &str, content: &[u8]) -> io::Result<String> {
+        let hashed_name = self.get_hashed_name(name, content);
+        let file_path = self.location.join(&hashed_name);
+
+        if let Some(parent) = file_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        fs::write(&file_path, content)?;
+
+        let mut hashed_files = self.hashed_files.write().unwrap();
+        hashed_files.insert(name.to_string(), hashed_name.clone());
+
+        Ok(hashed_name)
+    }
+
+    pub fn save_with_dependencies(&self, files: HashMap<String, Vec<u8>>) -> io::Result<usize> {
+        let mut hashed_map = HashMap::new();
+        let mut processed_files = HashMap::new();
+
+        // First pass: hash all files to build the mapping
+        for (name, content) in &files {
+            let hashed_name = self.get_hashed_name(name, content);
+            hashed_map.insert(name.clone(), hashed_name);
+        }
+
+        // Second pass: process CSS files to update references, then save all files
+        for (name, content) in files {
+            let mut final_content = content;
+
+            // If it's a CSS file, update URL references
+            if name.ends_with(".css") {
+                let content_str = String::from_utf8_lossy(&final_content);
+                let mut updated = content_str.to_string();
+
+                // Replace all references to other files with their hashed names
+                for (orig_name, hashed_name) in &hashed_map {
+                    if orig_name != &name {
+                        updated = updated.replace(orig_name, hashed_name);
+                    }
+                }
+
+                final_content = updated.into_bytes();
+            }
+
+            let hashed_name = hashed_map.get(&name).unwrap();
+            let file_path = self.location.join(hashed_name);
+
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            fs::write(&file_path, &final_content)?;
+            processed_files.insert(name, hashed_name.clone());
+        }
+
+        // Update the internal mapping
+        let mut hashed_files = self.hashed_files.write().unwrap();
+        for (orig, hashed) in processed_files {
+            hashed_files.insert(orig, hashed);
+        }
+
+        Ok(hashed_map.len())
+    }
+
+    pub fn open(&self, name: &str) -> io::Result<Vec<u8>> {
+        let hashed_files = self.hashed_files.read().unwrap();
+        let hashed_name = hashed_files
+            .get(name)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "File not found in mapping"))?;
+
+        let file_path = self.location.join(hashed_name);
+        fs::read(file_path)
+    }
+
+    pub fn url(&self, name: &str) -> String {
+        let hashed_files = self.hashed_files.read().unwrap();
+        if let Some(hashed_name) = hashed_files.get(name) {
+            format!("{}{}", self.base_url, hashed_name)
+        } else {
+            format!("{}{}", self.base_url, name)
+        }
+    }
+
+    pub fn exists(&self, name: &str) -> bool {
+        let hashed_files = self.hashed_files.read().unwrap();
+        if let Some(hashed_name) = hashed_files.get(name) {
+            self.location.join(hashed_name).exists()
+        } else {
+            false
+        }
+    }
+
+    pub fn get_hashed_path(&self, name: &str) -> Option<String> {
+        let hashed_files = self.hashed_files.read().unwrap();
+        hashed_files.get(name).cloned()
+    }
+}
+
+/// Manifest file format version
+pub enum ManifestVersion {
+    V1,
+}
+
+/// Manifest file structure for static files
+pub struct Manifest {
+    pub version: ManifestVersion,
+    pub paths: std::collections::HashMap<String, String>,
 }
 
 pub struct ManifestStaticFilesStorage {
@@ -189,6 +381,7 @@ pub struct ManifestStaticFilesStorage {
     pub base_url: String,
     pub manifest_name: String,
     pub manifest_strict: bool,
+    hashed_files: Arc<RwLock<HashMap<String, String>>>,
 }
 
 impl ManifestStaticFilesStorage {
@@ -198,11 +391,133 @@ impl ManifestStaticFilesStorage {
             base_url: base_url.to_string(),
             manifest_name: "staticfiles.json".to_string(),
             manifest_strict: true,
+            hashed_files: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
     pub fn with_manifest_strict(mut self, strict: bool) -> Self {
         self.manifest_strict = strict;
         self
+    }
+
+    fn hash_content(content: &[u8]) -> String {
+        let mut hasher = DefaultHasher::new();
+        content.hash(&mut hasher);
+        format!("{:x}", hasher.finish())
+    }
+
+    fn get_hashed_name(&self, name: &str, content: &[u8]) -> String {
+        let hash = Self::hash_content(content);
+        let hash_short = &hash[..12];
+
+        if let Some(dot_pos) = name.rfind('.') {
+            format!("{}.{}{}", &name[..dot_pos], hash_short, &name[dot_pos..])
+        } else {
+            format!("{}.{}", name, hash_short)
+        }
+    }
+
+    fn normalize_path(&self, name: &str) -> PathBuf {
+        let name = name.trim_start_matches('/');
+        self.location.join(name)
+    }
+
+    fn normalize_url(&self, base: &str, name: &str) -> String {
+        let base = base.trim_end_matches('/');
+        let name = name.trim_start_matches('/');
+        format!("{}/{}", base, name)
+    }
+
+    /// Save multiple files with dependency resolution
+    pub fn save_with_dependencies(&self, files: HashMap<String, Vec<u8>>) -> io::Result<usize> {
+        let mut hashed_map = HashMap::new();
+        let mut processed_files = HashMap::new();
+
+        // First pass: hash all files and create mapping
+        for (name, content) in &files {
+            let hashed_name = self.get_hashed_name(name, content);
+            hashed_map.insert(name.clone(), hashed_name);
+        }
+
+        // Second pass: update CSS references and save files
+        for (name, content) in files {
+            let mut final_content = content;
+
+            // If this is a CSS file, update image references
+            if name.ends_with(".css") {
+                let content_str = String::from_utf8_lossy(&final_content);
+                let mut updated = content_str.to_string();
+
+                // Update all url() references
+                for (orig_name, hashed_name) in &hashed_map {
+                    if orig_name != &name {
+                        updated = updated.replace(orig_name, hashed_name);
+                    }
+                }
+
+                final_content = updated.into_bytes();
+            }
+
+            let hashed_name = hashed_map.get(&name).unwrap();
+            let file_path = self.normalize_path(hashed_name);
+
+            if let Some(parent) = file_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+
+            fs::write(&file_path, &final_content)?;
+            processed_files.insert(name, hashed_name.clone());
+        }
+
+        // Update internal mapping
+        {
+            let mut hashed_files = self.hashed_files.write().unwrap();
+            hashed_files.extend(processed_files);
+        }
+
+        // Save manifest
+        self.save_manifest()?;
+
+        Ok(hashed_map.len())
+    }
+
+    fn save_manifest(&self) -> io::Result<()> {
+        let hashed_files = self.hashed_files.read().unwrap();
+        let manifest_path = self.normalize_path(&self.manifest_name);
+
+        let manifest_json = serde_json::to_string_pretty(&*hashed_files)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        fs::write(manifest_path, manifest_json)
+    }
+
+    /// Get the hashed path for a given file
+    pub fn get_hashed_path(&self, name: &str) -> Option<String> {
+        let hashed_files = self.hashed_files.read().unwrap();
+        hashed_files.get(name).cloned()
+    }
+
+    /// Check if a file exists (checks both original and hashed names)
+    pub fn exists(&self, name: &str) -> bool {
+        self.normalize_path(name).exists()
+    }
+
+    /// Open a file by its original name
+    pub fn open(&self, name: &str) -> io::Result<Vec<u8>> {
+        let hashed_files = self.hashed_files.read().unwrap();
+        let actual_name = hashed_files.get(name).unwrap_or(&name.to_string()).clone();
+        drop(hashed_files);
+
+        let file_path = self.normalize_path(&actual_name);
+        fs::read(file_path)
+    }
+
+    /// Get URL for a file
+    pub fn url(&self, name: &str) -> String {
+        let hashed_files = self.hashed_files.read().unwrap();
+        let actual_name = hashed_files.get(name).unwrap_or(&name.to_string()).clone();
+        drop(hashed_files);
+
+        self.normalize_url(&self.base_url, &actual_name)
     }
 }

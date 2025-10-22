@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 authors.workspace = true
+description = "Static file serving and production utilities for Reinhardt with health checks and metrics"
 
 [dependencies]
 # Internal dependencies

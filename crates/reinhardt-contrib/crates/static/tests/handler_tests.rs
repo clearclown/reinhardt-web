@@ -1,5 +1,9 @@
-use crate::common::{assertions, TestFileSetup};
+mod common;
+
+use common::{assertions, TestFileSetup};
 use reinhardt_static::handler::{StaticError, StaticFileHandler};
+use std::fs;
+use tempfile::TempDir;
 
 #[tokio::test]
 async fn test_serve_existing_file() {

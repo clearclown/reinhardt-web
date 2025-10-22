@@ -99,7 +99,7 @@ pub mod assertions {
 /// 設定テスト用の共通ヘルパー
 pub mod config_helpers {
     use reinhardt_static::storage::StaticFilesConfig;
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     /// デフォルト設定を作成
     pub fn create_default_config() -> StaticFilesConfig {

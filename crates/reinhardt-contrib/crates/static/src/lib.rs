@@ -4,7 +4,6 @@ pub mod checks;
 pub mod dependency_resolver;
 pub mod handler;
 pub mod health;
-pub mod manifest_storage;
 pub mod media;
 pub mod metrics;
 pub mod middleware;
@@ -17,11 +16,10 @@ pub use health::{
     CacheHealthCheck, DatabaseHealthCheck, HealthCheck, HealthCheckManager, HealthCheckResult,
     HealthReport, HealthStatus,
 };
-pub use manifest_storage::{Manifest, ManifestStaticFilesStorage, ManifestVersion};
 pub use media::{HasMedia, Media};
 pub use metrics::{Metric, MetricsCollector, RequestMetrics, RequestTimer};
 pub use middleware::StaticFilesMiddleware;
 pub use storage::{
-    FileSystemStorage, HashedFileStorage, MemoryStorage, StaticFilesConfig, StaticFilesFinder,
-    Storage,
+    FileSystemStorage, HashedFileStorage, Manifest, ManifestStaticFilesStorage, ManifestVersion,
+    MemoryStorage, StaticFilesConfig, StaticFilesFinder, Storage,
 };

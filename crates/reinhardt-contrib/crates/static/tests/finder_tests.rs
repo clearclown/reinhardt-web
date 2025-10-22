@@ -48,7 +48,7 @@ fn test_find_first() {
 
     // Should find the first occurrence
     let found = finder.find("test/file.txt");
-    assert!(found.is_some());
+    assert!(found.is_ok());
     let found_path = found.unwrap();
     assert_eq!(
         found_path.canonicalize().unwrap(),
@@ -68,13 +68,14 @@ fn test_find_nonexistent() {
         static_root: PathBuf::from("static"),
         static_url: "/static/".to_string(),
         staticfiles_dirs: vec![temp_dir1.path().to_path_buf()],
+        media_url: None,
     };
 
-    let finder = StaticFilesFinder::new(config);
+    let finder = StaticFilesFinder::new(config.staticfiles_dirs);
 
-    // Should return None for non-existent file
+    // Should return Err for non-existent file
     let found = finder.find("does/not/exist.txt");
-    assert!(found.is_none());
+    assert!(found.is_err());
 }
 
 #[test]
@@ -95,7 +96,7 @@ fn test_find_in_multiple_dirs() {
 
     // Should find file in second directory
     let found = finder.find("other/file.txt");
-    assert!(found.is_some());
+    assert!(found.is_ok());
     let found_path = found.unwrap();
     assert_eq!(
         found_path.canonicalize().unwrap(),
@@ -120,13 +121,18 @@ fn test_find_all_files() {
         static_root: PathBuf::from("static"),
         static_url: "/static/".to_string(),
         staticfiles_dirs: vec![temp_dir.path().to_path_buf()],
+        media_url: None,
     };
 
-    let finder = StaticFilesFinder::new(config);
+    let finder = StaticFilesFinder::new(config.staticfiles_dirs);
 
-    // Should find all files in root directory
     let files = finder.find_all();
     assert_eq!(files.len(), 3);
+
+    // Verify files can be found individually
+    assert!(finder.find("file1.txt").is_ok());
+    assert!(finder.find("file2.txt").is_ok());
+    assert!(finder.find("file3.css").is_ok());
 }
 
 #[test]
@@ -135,15 +141,15 @@ fn test_empty_staticfiles_dirs() {
         static_root: PathBuf::from("static"),
         static_url: "/static/".to_string(),
         staticfiles_dirs: vec![],
+        media_url: None,
     };
 
-    let finder = StaticFilesFinder::new(config);
+    let finder = StaticFilesFinder::new(config.staticfiles_dirs);
 
-    // Should return None when no directories configured
+    // Should return Err when no directories configured
     let found = finder.find("test/file.txt");
-    assert!(found.is_none());
+    assert!(found.is_err());
 
-    // Should return empty list
     let files = finder.find_all();
     assert!(files.is_empty());
 }
@@ -154,13 +160,14 @@ fn test_nonexistent_staticfiles_dirs() {
         static_root: PathBuf::from("static"),
         static_url: "/static/".to_string(),
         staticfiles_dirs: vec![PathBuf::from("/nonexistent/directory")],
+        media_url: None,
     };
 
-    let finder = StaticFilesFinder::new(config);
+    let finder = StaticFilesFinder::new(config.staticfiles_dirs);
 
     // Should handle non-existent directories gracefully
     let found = finder.find("test/file.txt");
-    assert!(found.is_none());
+    assert!(found.is_err());
 
     let files = finder.find_all();
     assert!(files.is_empty());

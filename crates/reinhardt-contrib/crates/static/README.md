@@ -26,6 +26,8 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
 - **Static File Finder** (`StaticFilesFinder`)
   - Locate files across multiple static directories
   - Support for collecting files from various sources
+  - `find_all()` - Recursively discover all static files across configured directories
+  - Efficient directory tree traversal with proper error handling
 
 - **Hashed File Storage** (`HashedFileStorage`)
   - File hashing for cache busting
@@ -51,6 +53,9 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
   - MIME type detection via `mime_guess`
   - Error handling with `StaticError` and `StaticResult` types
   - File serving with proper content types
+  - Directory serving with automatic index file detection
+  - Configurable index files (default: `["index.html"]`) via `with_index_files()`
+  - Serves index.html when accessing directories directly
 
 - **Configuration Validation** (`checks` module)
   - Django-style system checks for static files configuration
@@ -99,13 +104,18 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
   - Resolve asset loading order
   - Support for complex asset dependency chains
 
+#### Implemented in Related Crates
+
+- **collectstatic Command** (implemented in `reinhardt-commands`)
+  - ✓ CLI command for collecting static files from all sources
+  - ✓ Copy files to STATIC_ROOT with optional processing
+  - ✓ Integration with deployment workflows
+  - ✓ Progress reporting and verbose output
+  - See [reinhardt-commands](../../commands/README.md) for details
+
 #### Planned
 
-- **collectstatic Command**
-  - CLI command for collecting static files from all sources
-  - Copy files to STATIC_ROOT with optional processing
-  - Integration with deployment workflows
-  - Progress reporting and verbose output
+<!-- TODO: The following features are not yet implemented -->
 
 - **Advanced Storage Backends**
   - S3-compatible storage backend
@@ -194,6 +204,39 @@ for message in messages {
         println!("  Hint: {}", hint);
     }
 }
+```
+
+### Finding All Static Files
+
+```rust
+use reinhardt_static::StaticFilesFinder;
+use std::path::PathBuf;
+
+let mut finder = StaticFilesFinder::new();
+finder.add_directory(PathBuf::from("app/static"));
+finder.add_directory(PathBuf::from("vendor/static"));
+
+// Recursively find all static files
+let all_files = finder.find_all();
+for file in all_files {
+    println!("Found: {}", file);
+}
+```
+
+### Directory Serving with Index Files
+
+```rust
+use reinhardt_static::StaticFileHandler;
+use std::path::PathBuf;
+
+let handler = StaticFileHandler::new(PathBuf::from("/var/www/static"))
+    .with_index_files(vec![
+        "index.html".to_string(),
+        "index.htm".to_string(),
+        "default.html".to_string(),
+    ]);
+
+// Accessing /docs/ will serve /docs/index.html if it exists
 ```
 
 ### Media Assets for Forms

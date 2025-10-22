@@ -34,11 +34,34 @@ impl StaticFile {
 
 pub struct StaticFileHandler {
     root: PathBuf,
+    index_files: Vec<String>,
 }
 
 impl StaticFileHandler {
     pub fn new(root: PathBuf) -> Self {
-        Self { root }
+        Self {
+            root,
+            index_files: vec!["index.html".to_string()],
+        }
+    }
+
+    /// Configure custom index files to serve for directories
+    ///
+    /// When a directory is requested, the handler will try to serve
+    /// the first matching index file from this list.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_static::handler::StaticFileHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = StaticFileHandler::new(PathBuf::from("static"))
+    ///     .with_index_files(vec!["index.html".to_string(), "default.html".to_string()]);
+    /// ```
+    pub fn with_index_files(mut self, index_files: Vec<String>) -> Self {
+        self.index_files = index_files;
+        self
     }
 
     pub async fn serve(&self, path: &str) -> Result<StaticFile, StaticError> {
@@ -72,6 +95,21 @@ impl StaticFileHandler {
         // Ensure file is within root directory
         if !canonical_file.starts_with(&canonical_root) {
             return Err(StaticError::DirectoryTraversal(path.to_string()));
+        }
+
+        // If it's a directory, try to serve an index file
+        if canonical_file.is_dir() {
+            for index_file in &self.index_files {
+                let index_path = canonical_file.join(index_file);
+                if index_path.exists() && index_path.is_file() {
+                    return Ok(index_path);
+                }
+            }
+            // No index file found in directory
+            return Err(StaticError::NotFound(format!(
+                "{} (directory without index file)",
+                path
+            )));
         }
 
         Ok(canonical_file)
