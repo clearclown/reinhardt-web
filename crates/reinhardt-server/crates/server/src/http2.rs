@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Incoming;
-use hyper::server::conn::http1;
+use hyper::server::conn::http2;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
 use reinhardt_http::{Request, Response};
@@ -14,19 +14,19 @@ use tokio::net::{TcpListener, TcpStream};
 
 use crate::shutdown::ShutdownCoordinator;
 
-/// HTTP Server
-pub struct HttpServer {
+/// HTTP/2 Server
+pub struct Http2Server {
     pub handler: Arc<dyn Handler>,
 }
 
-impl HttpServer {
-    /// Create a new server with the given handler
+impl Http2Server {
+    /// Create a new HTTP/2 server with the given handler
     ///
     /// # Examples
     ///
     /// ```
     /// use std::sync::Arc;
-    /// use reinhardt_server::HttpServer;
+    /// use reinhardt_server::Http2Server;
     /// use reinhardt_types::Handler;
     /// use reinhardt_http::{Request, Response};
     ///
@@ -35,19 +35,20 @@ impl HttpServer {
     /// #[async_trait::async_trait]
     /// impl Handler for MyHandler {
     ///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
-    ///         Ok(Response::ok().with_body("Hello"))
+    ///         Ok(Response::ok().with_body("Hello from HTTP/2"))
     ///     }
     /// }
     ///
     /// let handler = Arc::new(MyHandler);
-    /// let server = HttpServer::new(handler);
+    /// let server = Http2Server::new(handler);
     /// ```
     pub fn new(handler: Arc<dyn Handler>) -> Self {
         Self { handler }
     }
+
     /// Start the server and listen on the given address
     ///
-    /// This method starts the server and begins accepting connections.
+    /// This method starts the HTTP/2 server and begins accepting connections.
     /// It runs indefinitely until an error occurs.
     ///
     /// # Examples
@@ -55,7 +56,7 @@ impl HttpServer {
     /// ```no_run
     /// use std::sync::Arc;
     /// use std::net::SocketAddr;
-    /// use reinhardt_server::HttpServer;
+    /// use reinhardt_server::Http2Server;
     /// use reinhardt_types::Handler;
     /// use reinhardt_http::{Request, Response};
     ///
@@ -70,7 +71,7 @@ impl HttpServer {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let handler = Arc::new(MyHandler);
-    /// let server = HttpServer::new(handler);
+    /// let server = Http2Server::new(handler);
     /// let addr: SocketAddr = "127.0.0.1:8080".parse()?;
     /// server.listen(addr).await?;
     /// # Ok(())
@@ -78,7 +79,7 @@ impl HttpServer {
     /// ```
     pub async fn listen(self, addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(addr).await?;
-        println!("Server listening on http://{}", addr);
+        println!("HTTP/2 server listening on http://{}", addr);
 
         loop {
             let (stream, _) = listener.accept().await?;
@@ -86,7 +87,7 @@ impl HttpServer {
 
             tokio::task::spawn(async move {
                 if let Err(err) = Self::handle_connection(stream, handler).await {
-                    eprintln!("Error handling connection: {:?}", err);
+                    eprintln!("Error handling HTTP/2 connection: {:?}", err);
                 }
             });
         }
@@ -94,7 +95,7 @@ impl HttpServer {
 
     /// Start the server with graceful shutdown support
     ///
-    /// This method starts the server and listens for shutdown signals.
+    /// This method starts the HTTP/2 server and listens for shutdown signals.
     /// When a shutdown signal is received, it stops accepting new connections
     /// and waits for existing connections to complete.
     ///
@@ -104,7 +105,7 @@ impl HttpServer {
     /// use std::sync::Arc;
     /// use std::net::SocketAddr;
     /// use std::time::Duration;
-    /// use reinhardt_server::{HttpServer, ShutdownCoordinator};
+    /// use reinhardt_server::{Http2Server, ShutdownCoordinator};
     /// use reinhardt_types::Handler;
     /// use reinhardt_http::{Request, Response};
     ///
@@ -119,7 +120,7 @@ impl HttpServer {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let handler = Arc::new(MyHandler);
-    /// let server = HttpServer::new(handler);
+    /// let server = Http2Server::new(handler);
     /// let addr: SocketAddr = "127.0.0.1:8080".parse()?;
     /// let coordinator = ShutdownCoordinator::new(Duration::from_secs(30));
     /// server.listen_with_shutdown(addr, coordinator).await?;
@@ -132,7 +133,7 @@ impl HttpServer {
         coordinator: ShutdownCoordinator,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let listener = TcpListener::bind(addr).await?;
-        println!("Server listening on http://{}", addr);
+        println!("HTTP/2 server listening on http://{}", addr);
 
         let mut shutdown_rx = coordinator.subscribe();
 
@@ -149,7 +150,7 @@ impl HttpServer {
                         tokio::select! {
                             result = Self::handle_connection(stream, handler) => {
                                 if let Err(err) = result {
-                                    eprintln!("Error handling connection: {:?}", err);
+                                    eprintln!("Error handling HTTP/2 connection: {:?}", err);
                                 }
                             }
                             _ = conn_shutdown.recv() => {
@@ -160,7 +161,7 @@ impl HttpServer {
                 }
                 // Shutdown signal received
                 _ = shutdown_rx.recv() => {
-                    println!("Shutdown signal received, stopping server...");
+                    println!("Shutdown signal received, stopping HTTP/2 server...");
                     break;
                 }
             }
@@ -171,7 +172,8 @@ impl HttpServer {
 
         Ok(())
     }
-    /// Handle a single TCP connection by processing HTTP requests
+
+    /// Handle a single TCP connection by processing HTTP/2 requests
     ///
     /// This is an internal method used by the server to process individual connections.
     ///
@@ -181,7 +183,7 @@ impl HttpServer {
     /// use std::sync::Arc;
     /// use std::net::SocketAddr;
     /// use tokio::net::TcpStream;
-    /// use reinhardt_server::HttpServer;
+    /// use reinhardt_server::Http2Server;
     /// use reinhardt_types::Handler;
     /// use reinhardt_http::{Request, Response};
     ///
@@ -198,7 +200,7 @@ impl HttpServer {
     /// let handler = Arc::new(MyHandler);
     /// let addr: SocketAddr = "127.0.0.1:8080".parse()?;
     /// let stream = TcpStream::connect(addr).await?;
-    /// HttpServer::handle_connection(stream, handler).await?;
+    /// Http2Server::handle_connection(stream, handler).await?;
     /// # Ok(())
     /// # }
     /// ```
@@ -209,7 +211,9 @@ impl HttpServer {
         let io = TokioIo::new(stream);
         let service = RequestService { handler };
 
-        http1::Builder::new().serve_connection(io, service).await?;
+        http2::Builder::new(hyper_util::rt::TokioExecutor::new())
+            .serve_connection(io, service)
+            .await?;
 
         Ok(())
     }
@@ -262,16 +266,17 @@ impl Service<hyper::Request<Incoming>> for RequestService {
         })
     }
 }
-/// Helper function to create and run a server
+
+/// Helper function to create and run an HTTP/2 server
 ///
-/// This is a convenience function that creates an `HttpServer` and starts listening.
+/// This is a convenience function that creates an `Http2Server` and starts listening.
 ///
 /// # Examples
 ///
 /// ```no_run
 /// use std::sync::Arc;
 /// use std::net::SocketAddr;
-/// use reinhardt_server::serve;
+/// use reinhardt_server::serve_http2;
 /// use reinhardt_types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
@@ -280,28 +285,28 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
 ///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
-///         Ok(Response::ok().with_body("Hello, World!"))
+///         Ok(Response::ok().with_body("Hello from HTTP/2!"))
 ///     }
 /// }
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let handler = Arc::new(MyHandler);
 /// let addr: SocketAddr = "127.0.0.1:3000".parse()?;
-/// serve(addr, handler).await?;
+/// serve_http2(addr, handler).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn serve(
+pub async fn serve_http2(
     addr: SocketAddr,
     handler: Arc<dyn Handler>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let server = HttpServer::new(handler);
+    let server = Http2Server::new(handler);
     server.listen(addr).await
 }
 
-/// Helper function to create and run a server with graceful shutdown
+/// Helper function to create and run an HTTP/2 server with graceful shutdown
 ///
-/// This function sets up a server with shutdown signal handling and graceful shutdown support.
+/// This function sets up an HTTP/2 server with shutdown signal handling and graceful shutdown support.
 ///
 /// # Examples
 ///
@@ -309,7 +314,7 @@ pub async fn serve(
 /// use std::sync::Arc;
 /// use std::net::SocketAddr;
 /// use std::time::Duration;
-/// use reinhardt_server::{serve_with_shutdown, shutdown_signal, ShutdownCoordinator};
+/// use reinhardt_server::{serve_http2_with_shutdown, shutdown_signal, ShutdownCoordinator};
 /// use reinhardt_types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
@@ -318,7 +323,7 @@ pub async fn serve(
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
 ///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
-///         Ok(Response::ok().with_body("Hello, World!"))
+///         Ok(Response::ok().with_body("Hello from HTTP/2!"))
 ///     }
 /// }
 ///
@@ -328,7 +333,7 @@ pub async fn serve(
 /// let coordinator = ShutdownCoordinator::new(Duration::from_secs(30));
 ///
 /// tokio::select! {
-///     result = serve_with_shutdown(addr, handler, coordinator.clone()) => {
+///     result = serve_http2_with_shutdown(addr, handler, coordinator.clone()) => {
 ///         result?;
 ///     }
 ///     _ = shutdown_signal() => {
@@ -339,12 +344,12 @@ pub async fn serve(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn serve_with_shutdown(
+pub async fn serve_http2_with_shutdown(
     addr: SocketAddr,
     handler: Arc<dyn Handler>,
     coordinator: ShutdownCoordinator,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let server = HttpServer::new(handler);
+    let server = Http2Server::new(handler);
     server.listen_with_shutdown(addr, coordinator).await
 }
 
@@ -357,13 +362,13 @@ mod tests {
     #[async_trait::async_trait]
     impl Handler for TestHandler {
         async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
-            Ok(Response::ok().with_body("Hello, World!"))
+            Ok(Response::ok().with_body("Hello from HTTP/2!"))
         }
     }
 
     #[tokio::test]
-    async fn test_http_server_creation() {
-        let _server = HttpServer::new(Arc::new(TestHandler));
+    async fn test_http2_server_creation() {
+        let _server = Http2Server::new(Arc::new(TestHandler));
         // Just verify server can be created without panicking
     }
 }
