@@ -1,9 +1,12 @@
 //! Permission Operators
 //!
 //! Provides logical operators (AND, OR, NOT) for composing permissions.
+//! Supports both builder-style composition (`AndPermission::new()`) and
+//! operator-based composition (`&`, `|`, `!`).
 
 use crate::permissions::{Permission, PermissionContext};
 use async_trait::async_trait;
+use std::ops::{BitAnd, BitOr, Not};
 
 /// AND permission operator
 ///
@@ -216,6 +219,169 @@ where
 {
     async fn has_permission(&self, context: &PermissionContext<'_>) -> bool {
         !self.inner.has_permission(context).await
+    }
+}
+
+// Operator overloading implementations using macros
+//
+// Due to Rust's orphan rules, we need to implement operators for each concrete permission type.
+// This macro makes it easy to add operator support for new permission types.
+
+/// Macro to implement BitAnd, BitOr, and Not operators for permission types.
+///
+/// This allows natural composition syntax like:
+/// ```ignore
+/// let permission = IsAuthenticated & IsActiveUser;
+/// let permission = IsAdminUser | IsActiveUser;
+/// let permission = !IsAuthenticated;
+/// ```
+///
+/// The macro generates implementations for `&`, `|`, and `!` operators
+/// that create the appropriate `AndPermission`, `OrPermission`, and `NotPermission` types.
+macro_rules! impl_permission_operators {
+    ($type:ty) => {
+        impl<B: Permission> BitAnd<B> for $type {
+            type Output = AndPermission<Self, B>;
+
+            fn bitand(self, rhs: B) -> Self::Output {
+                AndPermission::new(self, rhs)
+            }
+        }
+
+        impl<B: Permission> BitOr<B> for $type {
+            type Output = OrPermission<Self, B>;
+
+            fn bitor(self, rhs: B) -> Self::Output {
+                OrPermission::new(self, rhs)
+            }
+        }
+
+        impl Not for $type {
+            type Output = NotPermission<Self>;
+
+            fn not(self) -> Self::Output {
+                NotPermission::new(self)
+            }
+        }
+    };
+}
+
+// Apply operators to all built-in permission types
+impl_permission_operators!(crate::permissions::AllowAny);
+impl_permission_operators!(crate::permissions::IsAuthenticated);
+impl_permission_operators!(crate::permissions::IsAdminUser);
+impl_permission_operators!(crate::permissions::IsActiveUser);
+impl_permission_operators!(crate::permissions::IsAuthenticatedOrReadOnly);
+
+// Apply operators to composite permission types to allow chaining
+impl<A, B, C> BitAnd<C> for AndPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+    C: Permission,
+{
+    type Output = AndPermission<Self, C>;
+
+    fn bitand(self, rhs: C) -> Self::Output {
+        AndPermission::new(self, rhs)
+    }
+}
+
+impl<A, B, C> BitOr<C> for AndPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+    C: Permission,
+{
+    type Output = OrPermission<Self, C>;
+
+    fn bitor(self, rhs: C) -> Self::Output {
+        OrPermission::new(self, rhs)
+    }
+}
+
+impl<A, B> Not for AndPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+{
+    type Output = NotPermission<Self>;
+
+    fn not(self) -> Self::Output {
+        NotPermission::new(self)
+    }
+}
+
+impl<A, B, C> BitAnd<C> for OrPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+    C: Permission,
+{
+    type Output = AndPermission<Self, C>;
+
+    fn bitand(self, rhs: C) -> Self::Output {
+        AndPermission::new(self, rhs)
+    }
+}
+
+impl<A, B, C> BitOr<C> for OrPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+    C: Permission,
+{
+    type Output = OrPermission<Self, C>;
+
+    fn bitor(self, rhs: C) -> Self::Output {
+        OrPermission::new(self, rhs)
+    }
+}
+
+impl<A, B> Not for OrPermission<A, B>
+where
+    A: Permission,
+    B: Permission,
+{
+    type Output = NotPermission<Self>;
+
+    fn not(self) -> Self::Output {
+        NotPermission::new(self)
+    }
+}
+
+impl<P, B> BitAnd<B> for NotPermission<P>
+where
+    P: Permission,
+    B: Permission,
+{
+    type Output = AndPermission<Self, B>;
+
+    fn bitand(self, rhs: B) -> Self::Output {
+        AndPermission::new(self, rhs)
+    }
+}
+
+impl<P, B> BitOr<B> for NotPermission<P>
+where
+    P: Permission,
+    B: Permission,
+{
+    type Output = OrPermission<Self, B>;
+
+    fn bitor(self, rhs: B) -> Self::Output {
+        OrPermission::new(self, rhs)
+    }
+}
+
+impl<P> Not for NotPermission<P>
+where
+    P: Permission,
+{
+    type Output = NotPermission<Self>;
+
+    fn not(self) -> Self::Output {
+        NotPermission::new(self)
     }
 }
 
@@ -436,6 +602,115 @@ mod tests {
             is_active: false,
         };
 
+        assert!(permission.has_permission(&context).await);
+    }
+
+    // Tests for operator overloading
+
+    #[tokio::test]
+    async fn test_bitand_operator() {
+        let permission = IsAuthenticated & IsAdminUser;
+
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        // Both conditions met
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: true,
+            is_admin: true,
+            is_active: true,
+        };
+        assert!(permission.has_permission(&context).await);
+
+        // Only authenticated, not admin
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: true,
+            is_admin: false,
+            is_active: true,
+        };
+        assert!(!permission.has_permission(&context).await);
+    }
+
+    #[tokio::test]
+    async fn test_bitor_operator() {
+        let permission = IsAuthenticated | AllowAny;
+
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        // Not authenticated, but AllowAny should allow
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: false,
+            is_admin: false,
+            is_active: false,
+        };
+        assert!(permission.has_permission(&context).await);
+    }
+
+    #[tokio::test]
+    async fn test_not_operator() {
+        let permission = !IsAuthenticated;
+
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        // Not authenticated - should be allowed
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: false,
+            is_admin: false,
+            is_active: false,
+        };
+        assert!(permission.has_permission(&context).await);
+
+        // Authenticated - should be denied
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: true,
+            is_admin: false,
+            is_active: true,
+        };
+        assert!(!permission.has_permission(&context).await);
+    }
+
+    #[tokio::test]
+    async fn test_complex_operator_combination() {
+        // (IsAuthenticated & IsAdminUser) | AllowAny
+        let permission = (IsAuthenticated & IsAdminUser) | AllowAny;
+
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/"),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        // Not authenticated, but AllowAny allows
+        let context = PermissionContext {
+            request: &request,
+            is_authenticated: false,
+            is_admin: false,
+            is_active: false,
+        };
         assert!(permission.has_permission(&context).await);
     }
 }
