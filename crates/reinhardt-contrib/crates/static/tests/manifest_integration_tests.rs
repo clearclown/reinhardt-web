@@ -1,11 +1,11 @@
 //! Integration tests for ManifestStaticFilesStorage with dependency resolution
 
-use reinhardt_static::{ManifestStaticFilesStorage, Storage};
+use reinhardt_static::ManifestStaticFilesStorage;
 use std::collections::HashMap;
 use tempfile::TempDir;
 
-#[test]
-fn test_manifest_save_with_dependencies() {
+#[tokio::test]
+async fn test_manifest_save_with_dependencies() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
@@ -17,7 +17,7 @@ fn test_manifest_save_with_dependencies() {
         b"body { background: url(img/logo.png); }".to_vec(),
     );
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 2);
 
     // Check that files were hashed
@@ -30,7 +30,7 @@ fn test_manifest_save_with_dependencies() {
     assert!(img_url.ends_with(".png"));
 
     // Check that CSS references the hashed image
-    let saved_css = storage.open("styles.css").unwrap();
+    let saved_css = storage.open("styles.css").await.unwrap();
     let saved_str = String::from_utf8(saved_css).unwrap();
     assert!(
         saved_str.contains("img/logo.") && saved_str.contains(".png"),
@@ -42,8 +42,8 @@ fn test_manifest_save_with_dependencies() {
     assert!(storage.exists("staticfiles.json"));
 }
 
-#[test]
-fn test_manifest_with_multiple_css_dependencies() {
+#[tokio::test]
+async fn test_manifest_with_multiple_css_dependencies() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
@@ -58,7 +58,7 @@ fn test_manifest_with_multiple_css_dependencies() {
     );
     files.insert("main.css".to_string(), b"@import url(base.css);".to_vec());
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 3);
 
     // Check that all files are in manifest
@@ -67,7 +67,7 @@ fn test_manifest_with_multiple_css_dependencies() {
     assert!(storage.get_hashed_path("main.css").is_some());
 
     // Check that base.css references hashed font
-    let base_css = storage.open("base.css").unwrap();
+    let base_css = storage.open("base.css").await.unwrap();
     let base_str = String::from_utf8(base_css).unwrap();
     assert!(
         base_str.contains("fonts/font.") && base_str.contains(".woff"),
@@ -76,7 +76,7 @@ fn test_manifest_with_multiple_css_dependencies() {
     );
 
     // Check that main.css references hashed base.css
-    let main_css = storage.open("main.css").unwrap();
+    let main_css = storage.open("main.css").await.unwrap();
     let main_str = String::from_utf8(main_css).unwrap();
     assert!(
         main_str.contains("base.") && main_str.contains(".css"),
@@ -85,8 +85,8 @@ fn test_manifest_with_multiple_css_dependencies() {
     );
 }
 
-#[test]
-fn test_manifest_persistence_after_batch_processing() {
+#[tokio::test]
+async fn test_manifest_persistence_after_batch_processing() {
     let temp_dir = TempDir::new().unwrap();
 
     // First instance: save with dependencies
@@ -98,7 +98,7 @@ fn test_manifest_persistence_after_batch_processing() {
         files.insert("app.js".to_string(), b"console.log('app');".to_vec());
         files.insert("styles.css".to_string(), b"body { color: red; }".to_vec());
 
-        storage.save_with_dependencies(files).unwrap();
+        storage.save_with_dependencies(files).await.unwrap();
     }
 
     // Second instance: should be able to read from manifest
@@ -115,20 +115,20 @@ fn test_manifest_persistence_after_batch_processing() {
     }
 }
 
-#[test]
-fn test_manifest_empty_files() {
+#[tokio::test]
+async fn test_manifest_empty_files() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
 
     let files = HashMap::new();
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
 
     assert_eq!(count, 0);
 }
 
-#[test]
-fn test_manifest_single_file_no_dependencies() {
+#[tokio::test]
+async fn test_manifest_single_file_no_dependencies() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
@@ -136,15 +136,15 @@ fn test_manifest_single_file_no_dependencies() {
     let mut files = HashMap::new();
     files.insert("standalone.txt".to_string(), b"standalone content".to_vec());
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 1);
 
     assert!(storage.get_hashed_path("standalone.txt").is_some());
     assert!(storage.exists("staticfiles.json"));
 }
 
-#[test]
-fn test_manifest_non_css_files() {
+#[tokio::test]
+async fn test_manifest_non_css_files() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
@@ -154,7 +154,7 @@ fn test_manifest_non_css_files() {
     files.insert("data.json".to_string(), b"{}".to_vec());
     files.insert("script.js".to_string(), b"alert('hi')".to_vec());
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 3);
 
     // All should be in manifest
@@ -163,8 +163,8 @@ fn test_manifest_non_css_files() {
     assert!(storage.get_hashed_path("script.js").is_some());
 }
 
-#[test]
-fn test_manifest_complex_directory_structure() {
+#[tokio::test]
+async fn test_manifest_complex_directory_structure() {
     let temp_dir = TempDir::new().unwrap();
     let storage =
         ManifestStaticFilesStorage::new(temp_dir.path(), "/static/").with_manifest_strict(false);
@@ -176,7 +176,7 @@ fn test_manifest_complex_directory_structure() {
         b"body { background: url(../images/logo.png); }".to_vec(),
     );
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 2);
 
     // Check paths are preserved in manifest

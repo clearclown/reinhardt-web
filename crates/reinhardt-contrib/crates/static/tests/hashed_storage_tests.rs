@@ -2,14 +2,14 @@ use reinhardt_static::storage::HashedFileStorage;
 use std::collections::HashMap;
 use tempfile::TempDir;
 
-#[test]
-fn test_hashed_storage_basic() {
+#[tokio::test]
+async fn test_hashed_storage_basic() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
     // Save a simple file
     let content = b"Hello, world!";
-    let hashed_name = storage.save("test.txt", content).unwrap();
+    let hashed_name = storage.save("test.txt", content).await.unwrap();
 
     // Verify the hashed name contains a hash
     assert!(hashed_name.contains("."));
@@ -17,7 +17,7 @@ fn test_hashed_storage_basic() {
     assert_ne!(hashed_name, "test.txt");
 
     // Verify we can read it back
-    let read_content = storage.open("test.txt").unwrap();
+    let read_content = storage.open("test.txt").await.unwrap();
     assert_eq!(read_content, content);
 
     // Verify URL generation
@@ -32,8 +32,8 @@ fn test_hashed_storage_basic() {
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_css_url_replacement() {
+#[tokio::test]
+async fn test_css_url_replacement() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
@@ -50,11 +50,11 @@ fn test_css_url_replacement() {
     );
 
     // Process with dependency resolution
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 2);
 
     // Read back the saved CSS
-    let saved_css = storage.open("styles.css").unwrap();
+    let saved_css = storage.open("styles.css").await.unwrap();
     let saved_str = String::from_utf8(saved_css).unwrap();
 
     // Should contain hashed version
@@ -69,22 +69,23 @@ fn test_css_url_replacement() {
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_css_url_with_quotes() {
+#[tokio::test]
+async fn test_css_url_with_quotes() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
     // Save image first
-    storage.save("bg.jpg", b"fake image").unwrap();
+    storage.save("bg.jpg", b"fake image").await.unwrap();
 
     // Save CSS that references it
     storage
         .save("app.css", b"body { background: url('bg.jpg'); }")
+        .await
         .unwrap();
 
     // The current implementation does simple string replacement
     // which works for simple cases like this
-    let saved_css = storage.open("app.css").unwrap();
+    let saved_css = storage.open("app.css").await.unwrap();
     let saved_str = String::from_utf8(saved_css).unwrap();
 
     // Should not contain original reference (it was replaced during save)
@@ -95,16 +96,16 @@ fn test_css_url_with_quotes() {
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_multiple_files_same_content() {
+#[tokio::test]
+async fn test_multiple_files_same_content() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
     let content = b"same content";
 
     // Save the same content with different names
-    let hash1 = storage.save("file1.txt", content).unwrap();
-    let hash2 = storage.save("file2.txt", content).unwrap();
+    let hash1 = storage.save("file1.txt", content).await.unwrap();
+    let hash2 = storage.save("file2.txt", content).await.unwrap();
 
     // The hashed parts should be the same (same content = same hash)
     // but the base names are different
@@ -120,27 +121,30 @@ fn test_multiple_files_same_content() {
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_nested_paths() {
+#[tokio::test]
+async fn test_nested_paths() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
     // Save a file in a nested directory
     let content = b"nested file content";
-    let hashed_name = storage.save("css/components/button.css", content).unwrap();
+    let hashed_name = storage
+        .save("css/components/button.css", content)
+        .await
+        .unwrap();
 
     assert!(hashed_name.contains("css/components/"));
     assert!(hashed_name.ends_with(".css"));
 
     // Verify we can read it back
-    let read_content = storage.open("css/components/button.css").unwrap();
+    let read_content = storage.open("css/components/button.css").await.unwrap();
     assert_eq!(read_content, content);
 
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_get_hashed_path() {
+#[tokio::test]
+async fn test_get_hashed_path() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
@@ -149,7 +153,7 @@ fn test_get_hashed_path() {
 
     // After saving, should return the hashed name
     let content = b"test content";
-    let hashed_name = storage.save("test.txt", content).unwrap();
+    let hashed_name = storage.save("test.txt", content).await.unwrap();
 
     let retrieved = storage.get_hashed_path("test.txt").unwrap();
     assert_eq!(retrieved, hashed_name);
@@ -157,8 +161,8 @@ fn test_get_hashed_path() {
     // Cleanup is automatic with TempDir
 }
 
-#[test]
-fn test_save_with_dependencies_multiple_css() {
+#[tokio::test]
+async fn test_save_with_dependencies_multiple_css() {
     let temp_dir = TempDir::new().unwrap();
     let storage = HashedFileStorage::new(temp_dir.path(), "/static/");
 
@@ -177,16 +181,16 @@ fn test_save_with_dependencies_multiple_css() {
         b".header { background: url(logo.png); }".to_vec(),
     );
 
-    let count = storage.save_with_dependencies(files).unwrap();
+    let count = storage.save_with_dependencies(files).await.unwrap();
     assert_eq!(count, 3);
 
     // Both CSS files should have the hashed logo reference
-    let main_css = storage.open("main.css").unwrap();
+    let main_css = storage.open("main.css").await.unwrap();
     let main_str = String::from_utf8(main_css).unwrap();
     assert!(main_str.contains("logo.") && main_str.contains(".png"));
     assert!(!main_str.contains("url(logo.png)"));
 
-    let theme_css = storage.open("theme.css").unwrap();
+    let theme_css = storage.open("theme.css").await.unwrap();
     let theme_str = String::from_utf8(theme_css).unwrap();
     assert!(theme_str.contains("logo.") && theme_str.contains(".png"));
     assert!(!theme_str.contains("url(logo.png)"));

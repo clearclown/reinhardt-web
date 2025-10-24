@@ -1,12 +1,12 @@
-//! reinhardt-static クレート用の共通テストヘルパー
+//! Common test helpers for the reinhardt-static crate
 //!
-//! 重複テストの共通化のためのヘルパー関数を提供します。
+//! Provides helper functions to consolidate duplicate tests.
 
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tempfile::TempDir;
 
-/// テスト用の一時ディレクトリとファイルを作成するヘルパー
+/// Helper to create temporary directories and files for testing
 pub struct TestFileSetup {
     pub temp_dir: TempDir,
     pub file_path: PathBuf,
@@ -14,7 +14,7 @@ pub struct TestFileSetup {
 }
 
 impl TestFileSetup {
-    /// 指定されたファイル名と内容でテストファイルを作成
+    /// Creates a test file with the specified filename and content
     pub fn new(filename: &str, content: &[u8]) -> Self {
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join(filename);
@@ -27,7 +27,7 @@ impl TestFileSetup {
         }
     }
 
-    /// ネストしたディレクトリ構造でテストファイルを作成
+    /// Creates a test file in a nested directory structure
     pub fn with_nested_path(base_path: &str, filename: &str, content: &[u8]) -> Self {
         let temp_dir = TempDir::new().unwrap();
         let full_path = temp_dir.path().join(base_path).join(filename);
@@ -41,7 +41,7 @@ impl TestFileSetup {
         }
     }
 
-    /// 複数のテストファイルを作成
+    /// Creates multiple test files
     pub fn with_multiple_files(files: &[(&str, &[u8])]) -> Self {
         let temp_dir = TempDir::new().unwrap();
 
@@ -53,7 +53,7 @@ impl TestFileSetup {
             fs::write(&file_path, content).unwrap();
         }
 
-        // 最初のファイルをメインとして使用
+        // Use the first file as the main file
         let first_file = files.first().unwrap();
         let file_path = temp_dir.path().join(first_file.0);
         let content = first_file.1.to_vec();
@@ -66,11 +66,11 @@ impl TestFileSetup {
     }
 }
 
-/// 静的ファイルテスト用の共通アサーション
+/// Common assertions for static file tests
 pub mod assertions {
     use reinhardt_static::handler::StaticError;
 
-    /// ファイルが正常に提供されることをアサート
+    /// Asserts that a file is served successfully
     pub fn assert_file_served_successfully(
         result: Result<reinhardt_static::handler::StaticFile, StaticError>,
         expected_content: &[u8],
@@ -80,7 +80,7 @@ pub mod assertions {
         assert_eq!(static_file.content, expected_content);
     }
 
-    /// ファイルが見つからないエラーをアサート
+    /// Asserts that a file not found error occurs
     pub fn assert_file_not_found_error(
         result: Result<reinhardt_static::handler::StaticFile, StaticError>,
     ) {
@@ -88,7 +88,7 @@ pub mod assertions {
         assert!(matches!(result.unwrap_err(), StaticError::NotFound(_)));
     }
 
-    /// ディレクトリトラバーサル攻撃を防ぐことをアサート
+    /// Asserts that directory traversal attacks are blocked
     pub fn assert_directory_traversal_blocked(
         result: Result<reinhardt_static::handler::StaticFile, StaticError>,
     ) {
@@ -96,17 +96,17 @@ pub mod assertions {
     }
 }
 
-/// 設定テスト用の共通ヘルパー
+/// Common helpers for configuration tests
 pub mod config_helpers {
     use reinhardt_static::storage::StaticFilesConfig;
     use std::path::{Path, PathBuf};
 
-    /// デフォルト設定を作成
+    /// Creates a default configuration
     pub fn create_default_config() -> StaticFilesConfig {
         StaticFilesConfig::default()
     }
 
-    /// カスタム設定を作成
+    /// Creates a custom configuration
     pub fn create_custom_config(
         static_root: PathBuf,
         static_url: String,
@@ -120,7 +120,7 @@ pub mod config_helpers {
         }
     }
 
-    /// 設定の基本プロパティをテスト
+    /// Tests basic configuration properties
     pub fn assert_config_properties(
         config: &StaticFilesConfig,
         expected_root: &Path,
@@ -133,13 +133,13 @@ pub mod config_helpers {
     }
 }
 
-/// 統合テスト用の共通ヘルパー
+/// Common helpers for integration tests
 pub mod integration_helpers {
     use super::*;
     use reinhardt_static::handler::StaticFileHandler;
     use reinhardt_static::storage::{StaticFilesConfig, StaticFilesFinder};
 
-    /// 統合テスト用のセットアップ
+    /// Setup for integration tests
     pub struct IntegrationTestSetup {
         pub temp_dirs: Vec<TempDir>,
         pub config: StaticFilesConfig,
@@ -148,7 +148,7 @@ pub mod integration_helpers {
     }
 
     impl IntegrationTestSetup {
-        /// 新しい統合テストセットアップを作成
+        /// Creates a new integration test setup
         pub fn new() -> Self {
             let temp_dir = TempDir::new().unwrap();
             let config = StaticFilesConfig {
@@ -169,7 +169,7 @@ pub mod integration_helpers {
             }
         }
 
-        /// 複数のディレクトリでセットアップを作成
+        /// Creates setup with multiple directories
         pub fn with_multiple_dirs() -> Self {
             let temp_dir1 = TempDir::new().unwrap();
             let temp_dir2 = TempDir::new().unwrap();
@@ -195,7 +195,7 @@ pub mod integration_helpers {
             }
         }
 
-        /// テストファイルを作成
+        /// Creates a test file
         pub fn create_test_file(&self, filename: &str, content: &[u8]) -> PathBuf {
             let file_path = self.temp_dirs[0].path().join(filename);
             if let Some(parent) = file_path.parent() {
