@@ -11,7 +11,7 @@ authors.workspace = true
 default = ["standard"]
 
 # Minimal feature set - for microservices and simple APIs
-minimal = ["reinhardt-views", "reinhardt-params", "reinhardt-di"]
+minimal = ["reinhardt-params", "reinhardt-di"]
 
 # Standard feature set - balanced for most projects
 standard = [
@@ -42,11 +42,11 @@ database = [
 ]
 api = ["reinhardt-serializers", "reinhardt-viewsets"]
 auth = ["reinhardt-auth"]
-# admin = ["reinhardt-admin", "reinhardt-forms", "reinhardt-templates"]  # reinhardt-admin not yet created
-admin = ["reinhardt-forms", "reinhardt-templates"]
+# admin = ["reinhardt-admin", "reinhardt-forms", "reinhardt-template"]  # reinhardt-admin not yet created
+admin = ["reinhardt-forms", "reinhardt-template"]
 forms = ["reinhardt-forms"]
 graphql = ["reinhardt-graphql"]
-templates = ["reinhardt-templates", "reinhardt-template"]
+templates = ["reinhardt-template"]
 websockets = ["reinhardt-websockets"]
 cache = ["reinhardt-cache"]
 i18n = ["reinhardt-i18n"]
@@ -55,6 +55,9 @@ sessions = ["reinhardt-sessions"]
 static-files = ["reinhardt-static"]
 storage = ["reinhardt-storage"]
 contrib = ["reinhardt-contrib"]
+shortcuts = ["reinhardt-shortcuts"]
+tasks = ["reinhardt-tasks"]
+server = ["reinhardt-server"]
 
 # Parent crate features (new module structure)
 conf = ["reinhardt-conf"]
@@ -83,6 +86,7 @@ full = [
 [dependencies]
 # Core dependencies (always included)
 reinhardt-apps = { workspace = true }
+reinhardt-http = { workspace = true }
 reinhardt-settings = { workspace = true }
 reinhardt-routers = { workspace = true }
 reinhardt-urls = { workspace = true }
@@ -133,7 +137,6 @@ reinhardt-sessions = { workspace = true, optional = true }
 # reinhardt-admin = { workspace = true, optional = true }  # Not yet created
 reinhardt-forms = { workspace = true, optional = true }
 reinhardt-graphql = { workspace = true, optional = true }
-reinhardt-templates = { workspace = true, optional = true }
 reinhardt-websockets = { workspace = true, optional = true }
 reinhardt-i18n = { workspace = true, optional = true }
 reinhardt-mail = { workspace = true, optional = true }
@@ -141,6 +144,8 @@ reinhardt-static = { workspace = true, optional = true }
 reinhardt-storage = { workspace = true, optional = true }
 reinhardt-contrib = { workspace = true, optional = true }
 reinhardt-shortcuts = { workspace = true, optional = true }
+reinhardt-tasks = { workspace = true, optional = true }
+reinhardt-server = { workspace = true, optional = true }
 
 # Re-export commonly used dependencies
 tokio = { workspace = true }

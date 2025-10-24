@@ -66,6 +66,8 @@ pub mod http;
 pub mod middleware;
 #[cfg(feature = "rest")]
 pub mod rest;
+#[cfg(feature = "server")]
+pub mod server;
 #[cfg(feature = "shortcuts")]
 pub mod shortcuts;
 #[cfg(feature = "tasks")]
@@ -106,7 +108,10 @@ pub use reinhardt_viewsets::{
 };
 
 // Re-export routers
-pub use reinhardt_routers::{DefaultRouter, PathMatcher, PathPattern, Route, Router};
+pub use reinhardt_routers::{
+    clear_router, get_router, is_router_registered, register_router, DefaultRouter, PathMatcher,
+    PathPattern, Route, Router, UnifiedRouter,
+};
 
 // Re-export auth
 pub use reinhardt_auth::{
@@ -209,12 +214,16 @@ pub mod prelude {
     pub use crate::{
         // External
         async_trait,
+        clear_router,
+        get_router,
+        is_router_registered,
         m2m_changed,
 
         post_delete,
         post_save,
         pre_delete,
         pre_save,
+        register_router,
         // Versioning
         AcceptHeaderVersioning,
         Action,
@@ -303,6 +312,7 @@ pub mod prelude {
 
         Timestamped,
         URLPathVersioning,
+        UnifiedRouter,
         // Auth
         User,
         UserRateThrottle,
