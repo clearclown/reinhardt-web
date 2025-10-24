@@ -9,10 +9,10 @@
 use crate::{PathMatcher, PathPattern, Route, UrlReverser};
 use async_trait::async_trait;
 use hyper::Method;
-use reinhardt_apps::{Error, Handler, Request, Response, Result};
+use reinhardt_apps::{Error, Handler, MiddlewareChain, Request, Response, Result};
 use reinhardt_di::InjectionContext;
 use reinhardt_middleware::Middleware;
-use reinhardt_viewsets::ViewSet;
+use reinhardt_viewsets::{Action, ViewSet};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -892,9 +892,90 @@ impl UnifiedRouter {
             }
         }
 
-        // TODO: Try ViewSets (requires ViewSet integration)
+        // Try ViewSets
+        for (prefix, viewset) in &self.viewsets {
+            let base_path = if self.prefix.is_empty() {
+                format!("/{}", prefix.trim_start_matches('/'))
+            } else {
+                format!("{}/{}", self.prefix, prefix.trim_start_matches('/'))
+            };
+
+            // Check for collection route (list/create): /prefix/
+            let collection_path = format!("{}/", base_path.trim_end_matches('/'));
+            if path == collection_path.trim_start_matches('/') || path == collection_path {
+                // Determine action based on HTTP method
+                let action = match full_path.as_str() {
+                    _ if path.ends_with('/') => {
+                        // Collection endpoint
+                        Action::list() // Default to list for GET, create for POST
+                    }
+                    _ => continue,
+                };
+
+                return Some(RouteMatch {
+                    handler: Arc::new(ViewSetHandler {
+                        viewset: viewset.clone(),
+                        action,
+                    }),
+                    params: HashMap::new(),
+                    full_path: full_path.clone(),
+                    middleware_stack: middleware_stack.clone(),
+                    di_context: di_context.clone(),
+                });
+            }
+
+            // Check for detail route (retrieve/update/destroy): /prefix/{id}/
+            let detail_pattern = format!("{}/(?P<id>[^/]+)/?$", base_path.trim_end_matches('/'));
+            let re = regex::Regex::new(&detail_pattern).ok()?;
+
+            if let Some(captures) = re.captures(path) {
+                let id = captures.name("id")?.as_str().to_string();
+                let lookup_field = viewset.get_lookup_field();
+
+                let action = Action::retrieve(); // Default to retrieve, actual action determined by HTTP method
+
+                let mut params = HashMap::new();
+                params.insert(lookup_field.to_string(), id);
+
+                return Some(RouteMatch {
+                    handler: Arc::new(ViewSetHandler {
+                        viewset: viewset.clone(),
+                        action,
+                    }),
+                    params,
+                    full_path: full_path.clone(),
+                    middleware_stack: middleware_stack.clone(),
+                    di_context: di_context.clone(),
+                });
+            }
+        }
 
         None
+    }
+}
+
+/// Handler adapter for ViewSets
+struct ViewSetHandler {
+    viewset: Arc<dyn ViewSet>,
+    action: Action,
+}
+
+#[async_trait]
+impl Handler for ViewSetHandler {
+    async fn handle(&self, req: Request) -> Result<Response> {
+        // Check if ViewSet supports DI
+        if self.viewset.supports_di() {
+            if let Some(di_ctx) = req.get_di_context::<InjectionContext>() {
+                // Use DI-aware dispatch
+                return self
+                    .viewset
+                    .dispatch_with_context(req, self.action, &di_ctx)
+                    .await;
+            }
+        }
+
+        // Fallback to regular dispatch
+        self.viewset.dispatch(req, self.action).await
     }
 }
 
@@ -941,7 +1022,7 @@ impl Default for UnifiedRouter {
 /// Handler implementation for UnifiedRouter
 #[async_trait]
 impl Handler for UnifiedRouter {
-    async fn handle(&self, req: Request) -> Result<Response> {
+    async fn handle(&self, mut req: Request) -> Result<Response> {
         let path = req.uri.path();
 
         // Resolve route
@@ -950,28 +1031,32 @@ impl Handler for UnifiedRouter {
             .ok_or_else(|| Error::NotFound(format!("No route for {}", path)))?;
 
         // Set path parameters in request
-        for (_key, _value) in route_match.params {
-            // TODO: Add set_path_param method to Request
-            // req.set_path_param(key, value);
+        for (key, value) in route_match.params {
+            req.set_path_param(key, value);
         }
 
         // Set DI context if available
-        if let Some(_di_ctx) = &route_match.di_context {
-            // TODO: Add set_di_context method to Request
-            // req.set_di_context(di_ctx.clone());
+        if let Some(di_ctx) = &route_match.di_context {
+            req.set_di_context(di_ctx.clone());
         }
 
-        // Apply middleware stack
-        let handler = route_match.handler;
+        // Apply middleware stack using MiddlewareChain
+        if route_match.middleware_stack.is_empty() {
+            // No middleware, execute handler directly
+            route_match.handler.handle(req).await
+        } else {
+            // Build middleware chain
+            let chain = route_match
+                .middleware_stack
+                .iter()
+                .fold(
+                    MiddlewareChain::new(route_match.handler.clone()),
+                    |chain, mw| chain.with_middleware(mw.clone()),
+                );
 
-        // Apply middleware in reverse order (last middleware executes first)
-        for _middleware in route_match.middleware_stack.iter().rev() {
-            // TODO: Implement middleware wrapping
-            // handler = middleware.wrap(handler)?;
+            // Execute chain
+            chain.handle(req).await
         }
-
-        // Execute final handler
-        handler.handle(req).await
     }
 }
 
