@@ -100,6 +100,7 @@ pub trait ViewSet: Send + Sync {
 /// Generic ViewSet implementation
 /// Composes functionality through trait bounds
 #[allow(dead_code)]
+#[derive(Clone)]
 pub struct GenericViewSet<T> {
     basename: String,
     handler: T,
@@ -111,7 +112,7 @@ impl<T: 'static> GenericViewSet<T> {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_viewsets::GenericViewSet;
+    /// use reinhardt_viewsets::{GenericViewSet, ViewSet};
     ///
     /// let viewset = GenericViewSet::new("users", ());
     /// assert_eq!(viewset.get_basename(), "users");
@@ -174,7 +175,7 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_viewsets::ModelViewSet;
+    /// use reinhardt_viewsets::{ModelViewSet, ViewSet};
     /// use reinhardt_orm::Model;
     /// use serde::{Serialize, Deserialize};
     ///
@@ -343,7 +344,7 @@ impl<M: 'static, S: 'static> ReadOnlyModelViewSet<M, S> {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_viewsets::ReadOnlyModelViewSet;
+    /// use reinhardt_viewsets::{ReadOnlyModelViewSet, ViewSet};
     /// use reinhardt_orm::Model;
     /// use serde::{Serialize, Deserialize};
     ///

@@ -3,7 +3,7 @@
 use crate::viewset::ViewSet;
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response, Result};
-use reinhardt_di::{Depends, DiResult, Injectable, InjectionContext};
+use reinhardt_di::{Depends, DiError, DiResult, Injectable, InjectionContext};
 use std::sync::Arc;
 
 /// ViewSet with DI support
@@ -17,28 +17,38 @@ impl<V: ViewSet + Injectable + Clone> DiViewSet<V> {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_viewsets::{DiViewSet, GenericViewSet};
-    /// use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
+    /// use reinhardt_viewsets::{DiViewSet, ViewSet};
+    /// use reinhardt_di::{Injectable, InjectionContext, SingletonScope, DiResult};
+    /// use reinhardt_apps::{Request, Response, Result};
     /// use std::sync::Arc;
     /// use async_trait::async_trait;
     ///
     /// #[derive(Clone)]
-    /// struct MyHandler;
+    /// struct MyViewSet {
+    ///     basename: String,
+    /// }
     ///
-    /// #[async_trait]
-    /// impl Injectable for MyHandler {
-    ///     async fn inject(_ctx: &InjectionContext) -> reinhardt_di::DiResult<Self> {
-    ///         Ok(MyHandler)
+    /// impl MyViewSet {
+    ///     fn new(basename: &str) -> Self {
+    ///         Self { basename: basename.to_string() }
     ///     }
     /// }
     ///
-    /// type MyViewSet = GenericViewSet<MyHandler>;
+    /// #[async_trait]
+    /// impl ViewSet for MyViewSet {
+    ///     fn get_basename(&self) -> &str {
+    ///         &self.basename
+    ///     }
+    ///
+    ///     async fn dispatch(&self, _request: Request, _action: reinhardt_viewsets::Action) -> Result<Response> {
+    ///         Ok(Response::ok())
+    ///     }
+    /// }
     ///
     /// #[async_trait]
     /// impl Injectable for MyViewSet {
-    ///     async fn inject(ctx: &InjectionContext) -> reinhardt_di::DiResult<Self> {
-    ///         let handler = MyHandler::inject(ctx).await?;
-    ///         Ok(GenericViewSet::new("my_resource", handler))
+    ///     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+    ///         Ok(MyViewSet::new("my_resource"))
     ///     }
     /// }
     ///
@@ -59,28 +69,38 @@ impl<V: ViewSet + Injectable + Clone> DiViewSet<V> {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_viewsets::{DiViewSet, GenericViewSet};
-    /// use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
+    /// use reinhardt_viewsets::{DiViewSet, ViewSet};
+    /// use reinhardt_di::{Injectable, InjectionContext, SingletonScope, DiResult};
+    /// use reinhardt_apps::{Request, Response, Result};
     /// use std::sync::Arc;
     /// use async_trait::async_trait;
     ///
     /// #[derive(Clone)]
-    /// struct MyHandler;
+    /// struct MyViewSet {
+    ///     basename: String,
+    /// }
     ///
-    /// #[async_trait]
-    /// impl Injectable for MyHandler {
-    ///     async fn inject(_ctx: &InjectionContext) -> reinhardt_di::DiResult<Self> {
-    ///         Ok(MyHandler)
+    /// impl MyViewSet {
+    ///     fn new(basename: &str) -> Self {
+    ///         Self { basename: basename.to_string() }
     ///     }
     /// }
     ///
-    /// type MyViewSet = GenericViewSet<MyHandler>;
+    /// #[async_trait]
+    /// impl ViewSet for MyViewSet {
+    ///     fn get_basename(&self) -> &str {
+    ///         &self.basename
+    ///     }
+    ///
+    ///     async fn dispatch(&self, _request: Request, _action: reinhardt_viewsets::Action) -> Result<Response> {
+    ///         Ok(Response::ok())
+    ///     }
+    /// }
     ///
     /// #[async_trait]
     /// impl Injectable for MyViewSet {
-    ///     async fn inject(ctx: &InjectionContext) -> reinhardt_di::DiResult<Self> {
-    ///         let handler = MyHandler::inject(ctx).await?;
-    ///         Ok(GenericViewSet::new("my_resource", handler))
+    ///     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+    ///         Ok(MyViewSet::new("my_resource"))
     ///     }
     /// }
     ///
@@ -118,19 +138,94 @@ pub trait ViewSetFactory: Send + Sync {
     async fn create(&self, ctx: &InjectionContext) -> DiResult<Self::ViewSet>;
 }
 
-/// Example: Database connection as an injectable dependency
+/// Database connection injectable dependency
+///
+/// Provides database connection pooling using sqlx::SqlitePool.
+/// This can be injected into ViewSets and other handlers.
+///
+/// # Examples
+///
+/// ```rust
+/// use reinhardt_viewsets::di_support::DatabaseConnection;
+/// use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
+/// use std::sync::Arc;
+///
+/// # tokio_test::block_on(async {
+/// let singleton = Arc::new(SingletonScope::new());
+/// let ctx = InjectionContext::new(singleton);
+///
+/// // DatabaseConnection will be automatically injected when requested
+/// let db = DatabaseConnection::inject(&ctx).await.unwrap();
+/// assert!(!db.pool.is_closed());
+/// # });
+/// ```
 #[derive(Clone)]
 pub struct DatabaseConnection {
-    // TODO: Replace with actual DB pool type (e.g., deadpool::Pool)
-    pub pool: Arc<String>,
+    /// Database connection pool (SQLite)
+    pub pool: Arc<sqlx::SqlitePool>,
+}
+
+impl DatabaseConnection {
+    /// Create a new DatabaseConnection from a connection URL
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_viewsets::di_support::DatabaseConnection;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let db = DatabaseConnection::new("sqlite::memory:").await.unwrap();
+    /// assert!(!db.pool.is_closed());
+    /// # });
+    /// ```
+    pub async fn new(url: &str) -> DiResult<Self> {
+        let pool = sqlx::SqlitePool::connect(url)
+            .await
+            .map_err(|e| DiError::ProviderError(format!("Failed to connect to database: {}", e)))?;
+
+        Ok(DatabaseConnection {
+            pool: Arc::new(pool),
+        })
+    }
+
+    /// Get a connection from the pool
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_viewsets::di_support::DatabaseConnection;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let db = DatabaseConnection::new("sqlite::memory:").await.unwrap();
+    /// let conn = db.get_connection().await.unwrap();
+    /// # });
+    /// ```
+    pub async fn get_connection(&self) -> DiResult<sqlx::pool::PoolConnection<sqlx::Sqlite>> {
+        self.pool
+            .acquire()
+            .await
+            .map_err(|e| DiError::ProviderError(format!("Failed to acquire database connection: {}", e)))
+    }
 }
 
 #[async_trait]
 impl Injectable for DatabaseConnection {
-    async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
-        Ok(DatabaseConnection {
-            pool: Arc::new("postgres://localhost/db".to_string()),
-        })
+    async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+        // Try to get database connection from singleton scope
+        if let Some(db) = ctx.get_singleton::<DatabaseConnection>() {
+            return Ok((*db).clone());
+        }
+
+        // Fallback: try to get database URL from environment or context
+        let db_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+        let db = DatabaseConnection::new(&db_url).await?;
+
+        // Cache in singleton scope for future requests
+        ctx.set_singleton(db.clone());
+
+        Ok(db)
     }
 }
 
@@ -157,8 +252,10 @@ mod tests {
     impl TestHandler {
         #[allow(dead_code)]
         async fn handle(&self, _request: Request) -> Result<Response> {
+            // Return success response indicating database connection is available
             Ok(Response::ok().with_json(&serde_json::json!({
-                "db": *self.db.pool
+                "status": "ok",
+                "database": "connected"
             }))?)
         }
     }
@@ -179,7 +276,8 @@ mod tests {
         let ctx = InjectionContext::new(singleton);
 
         let db = DatabaseConnection::inject(&ctx).await.unwrap();
-        assert_eq!(*db.pool, "postgres://localhost/db");
+        // Verify that we have a valid pool
+        assert!(!db.pool.is_closed());
     }
 
     #[tokio::test]
@@ -188,6 +286,28 @@ mod tests {
         let ctx = InjectionContext::new(singleton);
 
         let handler = TestHandler::inject(&ctx).await.unwrap();
-        assert_eq!(*handler.db.pool, "postgres://localhost/db");
+        // Verify that handler has a valid database connection
+        assert!(!handler.db.pool.is_closed());
+    }
+
+    #[tokio::test]
+    async fn test_database_connection_from_env() {
+        // Set DATABASE_URL environment variable
+        // SAFETY: This is safe for testing purposes in an isolated test environment
+        unsafe {
+            std::env::set_var("DATABASE_URL", "sqlite::memory:");
+        }
+
+        let singleton = Arc::new(SingletonScope::new());
+        let ctx = InjectionContext::new(singleton);
+
+        let db = DatabaseConnection::inject(&ctx).await.unwrap();
+        assert!(!db.pool.is_closed());
+
+        // Cleanup
+        // SAFETY: This is safe for testing purposes in an isolated test environment
+        unsafe {
+            std::env::remove_var("DATABASE_URL");
+        }
     }
 }

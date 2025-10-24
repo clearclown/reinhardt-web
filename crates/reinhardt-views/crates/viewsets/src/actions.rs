@@ -11,6 +11,7 @@ pub enum ActionType {
 }
 
 /// Action metadata
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Action {
     pub action_type: ActionType,
     pub detail: bool, // Whether this action operates on a single object
