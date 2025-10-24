@@ -14,7 +14,7 @@ use crate::{LazyString, TRANSLATION_STATE};
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, gettext, MessageCatalog};
 ///
-// Create and activate a Japanese catalog
+/// // Create and activate a Japanese catalog
 /// let mut catalog = MessageCatalog::new("ja");
 /// catalog.add_translation("Hello, world!", "こんにちは、世界！");
 /// load_catalog("ja", catalog).unwrap();
@@ -53,17 +53,17 @@ pub fn gettext(message: &str) -> String {
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, ngettext, MessageCatalog};
 ///
-// Set up German plural translations
+/// // Set up German plural translations
 /// let mut catalog = MessageCatalog::new("de");
 /// catalog.add_plural_str("item", "items", vec!["Artikel", "Artikel"]);
 /// load_catalog("de", catalog).unwrap();
 /// activate("de").unwrap();
 ///
-// Singular form (1 item)
+/// // Singular form (1 item)
 /// let msg_singular = ngettext("item", "items", 1);
 /// assert_eq!(msg_singular, "Artikel");
 ///
-// Plural form (5 items)
+/// // Plural form (5 items)
 /// let msg_plural = ngettext("item", "items", 5);
 /// assert_eq!(msg_plural, "Artikel");
 /// ```
@@ -105,14 +105,14 @@ pub fn ngettext(singular: &str, plural: &str, count: usize) -> String {
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, pgettext, MessageCatalog};
 ///
-// Set up contextual translations for Japanese
+/// // Set up contextual translations for Japanese
 /// let mut catalog = MessageCatalog::new("ja");
 /// catalog.add_context("menu".to_string(), "File".to_string(), "ファイル".to_string());
 /// catalog.add_context("verb".to_string(), "File".to_string(), "提出する".to_string());
 /// load_catalog("ja", catalog).unwrap();
 /// activate("ja").unwrap();
 ///
-// Same word, different meanings based on context
+/// // Same word, different meanings based on context
 /// let menu_file = pgettext("menu", "File");
 /// assert_eq!(menu_file, "ファイル");
 ///
@@ -149,22 +149,22 @@ pub fn pgettext(context: &str, message: &str) -> String {
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, npgettext, MessageCatalog};
 ///
-// Set up contextual plural translations for Spanish
+/// // Set up contextual plural translations for Spanish
 /// let mut catalog = MessageCatalog::new("es");
 /// catalog.add_context_plural("email", "message", "messages", vec!["mensaje", "mensajes"]);
 /// catalog.add_context_plural("notification", "message", "messages", vec!["notificación", "notificaciones"]);
 /// load_catalog("es", catalog).unwrap();
 /// activate("es").unwrap();
 ///
-// Email context (1 message)
+/// // Email context (1 message)
 /// let email_singular = npgettext("email", "message", "messages", 1);
 /// assert_eq!(email_singular, "mensaje");
 ///
-// Email context (5 messages)
+/// // Email context (5 messages)
 /// let email_plural = npgettext("email", "message", "messages", 5);
 /// assert_eq!(email_plural, "mensajes");
 ///
-// Notification context (3 messages)
+/// // Notification context (3 messages)
 /// let notification_plural = npgettext("notification", "message", "messages", 3);
 /// assert_eq!(notification_plural, "notificaciones");
 /// ```
@@ -202,16 +202,16 @@ pub fn npgettext(context: &str, singular: &str, plural: &str, count: usize) -> S
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, gettext_lazy, MessageCatalog};
 ///
-// Create lazy translation before setting up catalog
+/// // Create lazy translation before setting up catalog
 /// let lazy_msg = gettext_lazy("Good morning");
 ///
-// Set up catalog later
+/// // Set up catalog later
 /// let mut catalog = MessageCatalog::new("ko");
 /// catalog.add_translation("Good morning", "좋은 아침");
 /// load_catalog("ko", catalog).unwrap();
 /// activate("ko").unwrap();
 ///
-// Translation happens when we use it
+/// // Translation happens when we use it
 /// assert_eq!(lazy_msg.to_string(), "좋은 아침");
 /// ```
 pub fn gettext_lazy(message: &str) -> LazyString {
@@ -224,16 +224,16 @@ pub fn gettext_lazy(message: &str) -> LazyString {
 /// ```
 /// use reinhardt_i18n::{activate, load_catalog, ngettext_lazy, MessageCatalog};
 ///
-// Create lazy plural translation
+/// // Create lazy plural translation
 /// let lazy_msg = ngettext_lazy("apple", "apples", 7);
 ///
-// Set up catalog with plural forms
+/// // Set up catalog with plural forms
 /// let mut catalog = MessageCatalog::new("pl");
 /// catalog.add_plural_str("apple", "apples", vec!["jabłko", "jabłka"]);
 /// load_catalog("pl", catalog).unwrap();
 /// activate("pl").unwrap();
 ///
-// Translation happens when evaluated
+/// // Translation happens when evaluated
 /// assert_eq!(lazy_msg.to_string(), "jabłka");
 /// ```
 pub fn ngettext_lazy(singular: &str, plural: &str, count: usize) -> LazyString {

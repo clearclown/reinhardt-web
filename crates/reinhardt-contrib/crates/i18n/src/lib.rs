@@ -42,6 +42,7 @@ pub enum I18nError {
 mod catalog;
 mod lazy;
 mod locale;
+pub mod po_parser;
 mod translation;
 pub mod utils;
 
@@ -55,23 +56,83 @@ pub use locale::get_locale as get_language;
 
 /// Catalog loader for loading message catalogs from files or other sources
 pub struct CatalogLoader {
-    #[allow(dead_code)]
     base_path: std::path::PathBuf,
 }
 
 impl CatalogLoader {
     /// Create a new catalog loader with the given base path
+    ///
+    /// # Example
+    /// ```
+    /// use reinhardt_i18n::CatalogLoader;
+    ///
+    /// let loader = CatalogLoader::new("locale");
+    /// ```
     pub fn new<P: Into<std::path::PathBuf>>(base_path: P) -> Self {
         Self {
             base_path: base_path.into(),
         }
     }
 
-    /// Load a catalog for the given locale
+    /// Load a catalog for the given locale from a .po file
+    ///
+    /// This method looks for .po files in the following locations:
+    /// - `{base_path}/{locale}/LC_MESSAGES/django.po`
+    /// - `{base_path}/{locale}/LC_MESSAGES/messages.po`
+    ///
+    /// # Example
+    /// ```no_run
+    /// use reinhardt_i18n::CatalogLoader;
+    ///
+    /// let loader = CatalogLoader::new("locale");
+    /// let catalog = loader.load("fr").unwrap();
+    /// ```
     pub fn load(&self, locale: &str) -> Result<MessageCatalog, String> {
-        // For now, return an empty catalog
-        // In a real implementation, this would load from .po/.mo files
+        // Try multiple common .po file locations
+        let possible_paths = vec![
+            self.base_path
+                .join(locale)
+                .join("LC_MESSAGES")
+                .join("django.po"),
+            self.base_path
+                .join(locale)
+                .join("LC_MESSAGES")
+                .join("messages.po"),
+        ];
+
+        for path in possible_paths {
+            if path.exists() {
+                let file = std::fs::File::open(&path)
+                    .map_err(|e| format!("Failed to open .po file at {:?}: {}", path, e))?;
+
+                return po_parser::parse_po_file(file, locale)
+                    .map_err(|e| format!("Failed to parse .po file: {}", e));
+            }
+        }
+
+        // If no .po file found, return an empty catalog
         Ok(MessageCatalog::new(locale))
+    }
+
+    /// Load a catalog from a specific .po file path
+    ///
+    /// # Example
+    /// ```no_run
+    /// use reinhardt_i18n::CatalogLoader;
+    ///
+    /// let loader = CatalogLoader::new("locale");
+    /// let catalog = loader.load_from_file("locale/fr/custom.po", "fr").unwrap();
+    /// ```
+    pub fn load_from_file<P: AsRef<std::path::Path>>(
+        &self,
+        path: P,
+        locale: &str,
+    ) -> Result<MessageCatalog, String> {
+        let file = std::fs::File::open(path.as_ref())
+            .map_err(|e| format!("Failed to open .po file: {}", e))?;
+
+        po_parser::parse_po_file(file, locale)
+            .map_err(|e| format!("Failed to parse .po file: {}", e))
     }
 }
 

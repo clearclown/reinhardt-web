@@ -229,9 +229,85 @@ fn test_catalog_loader_json() {
     // Verify the catalog has the correct locale
     assert_eq!(catalog.locale(), "fr-FR");
 
-    // Note: The current implementation returns empty catalogs
-    // In production, this would load from .po/.mo files
-    // For now, we verify the basic loader functionality works
+    // The loader successfully loads .po files when they exist in the expected locations:
+    // - {base_path}/{locale}/LC_MESSAGES/django.po
+    // - {base_path}/{locale}/LC_MESSAGES/messages.po
+    // If no .po file is found, it returns an empty catalog (as verified in this test)
+
+    // Cleanup is automatic with TempDir
+}
+
+#[test]
+#[serial(i18n)]
+fn test_catalog_loader_loads_po_file() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create locale directory structure
+    let locale_dir = temp_dir.path().join("fr-FR").join("LC_MESSAGES");
+    std::fs::create_dir_all(&locale_dir).unwrap();
+
+    // Create a sample .po file
+    let po_content = r#"
+msgid "Hello"
+msgstr "Bonjour"
+
+msgid "Goodbye"
+msgstr "Au revoir"
+
+msgid "item"
+msgid_plural "items"
+msgstr[0] "article"
+msgstr[1] "articles"
+"#;
+    std::fs::write(locale_dir.join("django.po"), po_content).unwrap();
+
+    // Create a catalog loader
+    let loader = CatalogLoader::new(temp_dir.path());
+
+    let locale: LanguageIdentifier = "fr-FR".parse().unwrap();
+
+    // Load the catalog from the .po file
+    let catalog = loader.load(&locale.to_string()).unwrap();
+
+    // Verify translations were loaded
+    assert_eq!(catalog.get("Hello"), Some(&"Bonjour".to_string()));
+    assert_eq!(catalog.get("Goodbye"), Some(&"Au revoir".to_string()));
+
+    // Verify plural translations were loaded
+    assert_eq!(catalog.get_plural("item", 1), Some(&"article".to_string()));
+    assert_eq!(catalog.get_plural("item", 5), Some(&"articles".to_string()));
+
+    // Cleanup is automatic with TempDir
+}
+
+#[test]
+#[serial(i18n)]
+fn test_catalog_loader_loads_messages_po_file() {
+    let temp_dir = TempDir::new().unwrap();
+
+    // Create locale directory structure
+    let locale_dir = temp_dir.path().join("ja").join("LC_MESSAGES");
+    std::fs::create_dir_all(&locale_dir).unwrap();
+
+    // Create a sample messages.po file (fallback when django.po doesn't exist)
+    let po_content = r#"
+msgid "Welcome"
+msgstr "ようこそ"
+
+msgid "Thank you"
+msgstr "ありがとう"
+"#;
+    std::fs::write(locale_dir.join("messages.po"), po_content).unwrap();
+
+    // Create a catalog loader
+    let loader = CatalogLoader::new(temp_dir.path());
+
+    // Load the catalog from the messages.po file
+    let catalog = loader.load("ja").unwrap();
+
+    // Verify translations were loaded
+    assert_eq!(catalog.get("Welcome"), Some(&"ようこそ".to_string()));
+    assert_eq!(catalog.get("Thank you"), Some(&"ありがとう".to_string()));
 
     // Cleanup is automatic with TempDir
 }
