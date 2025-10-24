@@ -19,14 +19,14 @@ cargo init --name tutorial
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard"] }
+reinhardt = { version = "0.1.0", features = ["standard", "rest", "serializers", "viewsets", "routers", "auth"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
 ```
 
-> **注記**: `reinhardt`クレートの`"standard"`フィーチャーフラグを使用することで、`reinhardt-core`、`reinhardt-auth`、`reinhardt-serializers`、`reinhardt-viewsets`、`reinhardt-routers`などの個別クレートが自動的にインクルードされます。フィーチャーフラグの詳細については、[Feature Flags Guide](../../../FEATURE_FLAGS.md)を参照してください。
+> **注記**: `reinhardt`クレートの`"standard"`フィーチャーフラグに加えて、REST API機能に必要な`"rest"`、`"serializers"`、`"viewsets"`、`"routers"`、`"auth"`を追加します。すべての機能は統合された`reinhardt`クレートから提供されるため、個別の`reinhardt-*`依存関係を追加する必要はありません。フィーチャーフラグの詳細については、[Feature Flags Guide](../../../FEATURE_FLAGS.md)を参照してください。
 
 プロジェクトのレイアウトは以下のようになります:
 
@@ -40,15 +40,15 @@ $ tree .
 
 ## モデル
 
-このクイックスタートでは、Reinhardtの組み込み`User`と`Group`モデルを使用します。これらは`reinhardt-auth`クレートに定義されています。
+このクイックスタートでは、Reinhardtの組み込み`User`と`Group`モデルを使用します。これらはauth機能から提供されます。
 
 ## シリアライザ
 
 データ表現用のシリアライザを定義します。`src/main.rs`に以下を追加します:
 
 ```rust
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
-use reinhardt_serializers::{Serializer, HyperlinkedModelSerializer};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserSerializer {
@@ -71,7 +71,7 @@ pub struct GroupSerializer {
 ViewSetを使用してCRUD操作を実装します。`src/main.rs`に追加:
 
 ```rust
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 use std::sync::Arc;
 
 // UserViewSet - 完全なCRUD操作
@@ -88,9 +88,7 @@ let group_viewset = ReadOnlyModelViewSet::<Group, GroupSerializer>::new("group")
 ViewSetをルーターに登録してURLを自動生成します。`src/main.rs`の完全な例:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 
@@ -139,7 +137,7 @@ async fn main() -> Result<()> {
     // GET         /groups/{id}/ - グループ詳細
 
     // サーバーを起動（実装は省略）
-    // reinhardt_core::serve(router).await
+    // reinhardt::serve(router).await
 
     Ok(())
 }
@@ -158,10 +156,10 @@ async fn main() -> Result<()> {
 
 ## パーミッション（オプション）
 
-認証とパーミッションを追加するには、`reinhardt-auth`クレートを使用します:
+認証とパーミッションを追加するには、`reinhardt::auth::permissions`モジュールを使用します:
 
 ```rust
-use reinhardt_auth::permissions::{IsAuthenticated, IsAuthenticatedOrReadOnly};
+use reinhardt::auth::permissions::{IsAuthenticated, IsAuthenticatedOrReadOnly};
 
 // ViewSet作成時にパーミッションを設定できます
 // 注: 現在の実装では、カスタムViewSet実装が必要です
@@ -172,7 +170,7 @@ use reinhardt_auth::permissions::{IsAuthenticated, IsAuthenticatedOrReadOnly};
 大量のデータを扱う場合は、ページネーションを実装できます:
 
 ```rust
-use reinhardt_pagination::PageNumberPagination;
+use reinhardt::rest::pagination::PageNumberPagination;
 
 // ページネーションの設定例
 let pagination = PageNumberPagination::new(10); // 1ページあたり10件

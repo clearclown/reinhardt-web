@@ -4,15 +4,14 @@
 
 ## ジェネリックビューの使用
 
-Reinhardtは、一般的なRESTパターン用のジェネリックビューを提供します。`reinhardt-views`クレートで定義されています。
+Reinhardtは、一般的なRESTパターン用のジェネリックビューを提供します。
 
 ### ListAPIView
 
 オブジェクトのリストを表示するビュー:
 
 ```rust
-use reinhardt_views::ListAPIView;
-use reinhardt_core::{Request, Response, Result};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +61,7 @@ Reinhardtは以下のジェネリックビューを提供します:
 より複雑なAPIには、ViewSetの使用を推奨します。ViewSetは複数のアクションを1つの構造体にまとめます:
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 
 // ViewSetは自動的に全てのCRUD操作を提供
 let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet");

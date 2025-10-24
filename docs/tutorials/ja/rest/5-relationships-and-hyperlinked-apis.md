@@ -9,9 +9,7 @@ Reinhardtは名前付きルートからURLを生成する機能を提供しま�
 ### reverseの使用
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router, path};
-use reinhardt_apps::Handler;
-use std::sync::Arc;
+use reinhardt::prelude::*;
 use std::collections::HashMap;
 
 let mut router = DefaultRouter::new();
@@ -34,7 +32,7 @@ let url = router.reverse("snippet:detail", &params)?;
 ### パラメータ付きURL逆引き
 
 ```rust
-use reinhardt_routers::DefaultRouter;
+use reinhardt::prelude::*;
 
 let router = DefaultRouter::new();
 
@@ -75,7 +73,7 @@ impl SnippetSerializer {
 ### ルーターを使用したURL生成
 
 ```rust
-use reinhardt_routers::DefaultRouter;
+use reinhardt::prelude::*;
 use std::collections::HashMap;
 
 fn build_snippet_url(router: &DefaultRouter, id: i64) -> String {
@@ -92,7 +90,7 @@ fn build_snippet_url(router: &DefaultRouter, id: i64) -> String {
 APIのエントリポイントを提供:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
+use reinhardt::prelude::*;
 use serde_json::json;
 
 async fn api_root(request: Request) -> Result<Response> {

@@ -4,15 +4,14 @@ Use struct-based generic views instead of writing function-based views.
 
 ## Using Generic Views
 
-Reinhardt provides generic views for common REST patterns, defined in the `reinhardt-views` crate.
+Reinhardt provides generic views for common REST patterns.
 
 ### ListAPIView
 
 View for displaying a list of objects:
 
 ```rust
-use reinhardt_views::ListAPIView;
-use reinhardt_core::{Request, Response, Result};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -62,7 +61,7 @@ Reinhardt provides the following generic views:
 For more complex APIs, we recommend using ViewSets. ViewSets combine multiple actions in one struct:
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 
 // ViewSet automatically provides all CRUD operations
 let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet");

@@ -4,10 +4,10 @@ Learn how to handle HTTP requests and responses in Reinhardt.
 
 ## Request Object
 
-Reinhardt's `Request` object from `reinhardt-core` provides access to HTTP request data:
+Reinhardt's `Request` object provides access to HTTP request data:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
+use reinhardt::prelude::*;
 use hyper::{Method, StatusCode};
 
 async fn my_view(request: Request) -> Result<Response> {
@@ -38,7 +38,7 @@ async fn my_view(request: Request) -> Result<Response> {
 Create responses using the builder pattern:
 
 ```rust
-use reinhardt_core::Response;
+use reinhardt::prelude::*;
 use hyper::StatusCode;
 use serde_json::json;
 
@@ -92,7 +92,7 @@ Response::internal_server_error("Error occurred")
 Parse JSON from request body:
 
 ```rust
-use reinhardt_serializers::JsonSerializer;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,7 +119,7 @@ async fn create_snippet(request: Request) -> Result<Response> {
 Reinhardt supports multiple content types:
 
 ```rust
-use reinhardt_serializers::{JSONParser, FormParser};
+use reinhardt::prelude::*;
 
 async fn handle_request(request: Request) -> Result<Response> {
     let content_type = request.headers
@@ -150,7 +150,7 @@ async fn handle_request(request: Request) -> Result<Response> {
 Handle errors gracefully:
 
 ```rust
-use reinhardt_core::Error;
+use reinhardt::prelude::*;
 
 async fn safe_view(request: Request) -> Result<Response> {
     // Parse and validate data
@@ -178,8 +178,7 @@ async fn safe_view(request: Request) -> Result<Response> {
 Full request/response handling:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_serializers::{JsonSerializer, Serializer, ValidationError};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

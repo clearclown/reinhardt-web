@@ -19,14 +19,14 @@ Add Reinhardt dependencies to `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard"] }
+reinhardt = { version = "0.1.0", features = ["standard", "rest", "serializers", "viewsets", "routers", "auth"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
 ```
 
-> **Note:** We use the `"standard"` feature flag which includes `reinhardt-serializers`, `reinhardt-viewsets`, `reinhardt-routers`, `reinhardt-auth`, and other REST API components. For more details on customizing features for your project, see the [Feature Flags Guide](../../../FEATURE_FLAGS.md).
+> **Note:** We use the `"standard"` feature flag along with additional REST API features (`rest`, `serializers`, `viewsets`, `routers`, `auth`). All functionality is provided by the unified `reinhardt` crate—you don't need to add individual `reinhardt-*` dependencies. For more details on customizing features for your project, see the [Feature Flags Guide](../../../FEATURE_FLAGS.md).
 
 Project layout:
 
@@ -40,7 +40,7 @@ $ tree .
 
 ## Models
 
-For this quickstart, we'll use Reinhardt's built-in `User` and `Group` models defined in the `reinhardt-auth` crate.
+For this quickstart, we'll use Reinhardt's built-in `User` and `Group` models provided by the auth feature.
 
 ## Serializers
 
@@ -70,7 +70,7 @@ This example uses simple data structures. In real applications, you can implemen
 Use ViewSets to implement CRUD operations. Add to `src/main.rs`:
 
 ```rust
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 
 // UserViewSet - full CRUD operations
 let user_viewset = ModelViewSet::<User, UserSerializer>::new("user");
@@ -86,9 +86,7 @@ let group_viewset = ReadOnlyModelViewSet::<Group, GroupSerializer>::new("group")
 Register ViewSets with the router to automatically generate URLs:
 
 ```rust
-use reinhardt_core::Result;
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[tokio::main]

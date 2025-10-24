@@ -19,8 +19,8 @@ cd tutorial
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard"] }
-# または、最小限の場合: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal", "api"] }
+reinhardt = { version = "0.1.0", features = ["standard", "rest", "serializers"] }
+# または、最小限の場合: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -30,8 +30,9 @@ chrono = { version = "0.4", features = ["serde"] }
 > **機能フラグについて:**
 >
 > - `standard`: ORM、シリアライザ、ViewSet、認証、ページネーションを含む標準的な機能セット
+> - `rest`: REST API機能を有効にする
+> - `serializers`: シリアライゼーション機能を有効にする
 > - `minimal`: 基本的なルーティングとパラメータ抽出のみ（マイクロサービス向け）
-> - `api`: REST API機能を含む
 >
 > 詳細は[Feature Flags Guide](../../../FEATURE_FLAGS.md)を参照してください。
 
@@ -168,7 +169,7 @@ impl SnippetSerializer {
 - **バリデーション**: データの妥当性検証（`validate`メソッド）
 
 ```rust
-use reinhardt_serializers::{Serializer, ValidationError, ValidationResult};
+use reinhardt::serializers::{Serializer, ValidationError, ValidationResult};
 
 impl Serializer<Snippet> for SnippetSerializer {
     fn serialize(&self, instance: &Snippet) -> Result<Vec<u8>, String> {
@@ -269,7 +270,7 @@ fn main() {
 個別のフィールドに対するバリデーション:
 
 ```rust
-use reinhardt_serializers::fields::CharField;
+use reinhardt::serializers::fields::CharField;
 
 fn validate_title(title: &str) -> Result<(), String> {
     let field = CharField::new()
@@ -300,7 +301,7 @@ fn main() {
 
 ```rust
 use chrono::{DateTime, Utc};
-use reinhardt_serializers::{Serializer, ValidationError, ValidationResult};
+use reinhardt::serializers::{Serializer, ValidationError, ValidationResult};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

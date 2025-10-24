@@ -4,12 +4,12 @@ APIを保護するために、認証とパーミッションシステムを実�
 
 ## パーミッションシステム
 
-Reinhardtは柔軟なパーミッションシステムを提供します。`reinhardt-auth`クレートで定義されています。
+Reinhardtは柔軟なパーミッションシステムを提供します。
 
 ### 組み込みパーミッション
 
 ```rust
-use reinhardt_auth::permissions::{
+use reinhardt::auth::permissions::{
     Permission, PermissionContext,
     AllowAny, IsAuthenticated, IsAdminUser, IsActiveUser, IsAuthenticatedOrReadOnly
 };
@@ -35,8 +35,8 @@ let perm = IsActiveUser;
 パーミッションは`PermissionContext`を使用してチェックされます:
 
 ```rust
-use reinhardt_auth::permissions::{Permission, PermissionContext};
-use reinhardt_core::Request;
+use reinhardt::prelude::*;
+use reinhardt::auth::permissions::{Permission, PermissionContext};
 use async_trait::async_trait;
 
 // カスタムパーミッションの例
@@ -56,8 +56,8 @@ impl Permission for IsOwner {
 ハンドラでパーミッションをチェック:
 
 ```rust
-use reinhardt_core::{Request, Response, Result, Error};
-use reinhardt_auth::permissions::{Permission, PermissionContext, IsAuthenticated};
+use reinhardt::prelude::*;
+use reinhardt::auth::permissions::{Permission, PermissionContext, IsAuthenticated};
 
 async fn protected_handler(request: Request) -> Result<Response> {
     let permission = IsAuthenticated;
@@ -84,7 +84,7 @@ async fn protected_handler(request: Request) -> Result<Response> {
 複数のパーミッションを組み合わせる:
 
 ```rust
-use reinhardt_auth::permissions::{AndPermission, OrPermission, NotPermission};
+use reinhardt::auth::permissions::{AndPermission, OrPermission, NotPermission};
 
 // 従来の方法: 明示的なコンストラクタ
 let and_perm = AndPermission::new(IsAuthenticated, IsActiveUser);
@@ -97,7 +97,7 @@ let not_perm = NotPermission::new(IsAuthenticated);
 Reinhardtは演算子を使用したパーミッション合成もサポートしています:
 
 ```rust
-use reinhardt_auth::permissions::{IsAuthenticated, IsActiveUser, IsAdminUser};
+use reinhardt::auth::permissions::{IsAuthenticated, IsActiveUser, IsAdminUser};
 
 // & 演算子: 全てのパーミッションが必要（AND）
 let and_perm = IsAuthenticated & IsActiveUser;
@@ -118,7 +118,7 @@ let complex_perm = (IsAuthenticated & IsActiveUser) | IsAdminUser;
 オブジェクトレベルのパーミッション:
 
 ```rust
-use reinhardt_auth::permissions::{Permission, PermissionContext};
+use reinhardt::auth::permissions::{Permission, PermissionContext};
 use async_trait::async_trait;
 
 struct IsOwnerOrReadOnly;

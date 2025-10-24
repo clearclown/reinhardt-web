@@ -4,10 +4,10 @@
 
 ## Requestオブジェクト
 
-Reinhardtの`Request`オブジェクトは、HTTPリクエストをカプセル化します。`reinhardt-core`クレートで定義されています。
+Reinhardtの`Request`オブジェクトは、HTTPリクエストをカプセル化します。
 
 ```rust
-use reinhardt_core::Request;
+use reinhardt::prelude::*;
 
 // Requestオブジェクトには以下の情報が含まれます:
 // - method: HTTPメソッド (GET, POST, PUT, DELETE等)
@@ -22,7 +22,7 @@ use reinhardt_core::Request;
 JSONボディを解析する例:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
+use reinhardt::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ async fn create_snippet(request: Request) -> Result<Response> {
     // JSONボディをデシリアライズ
     let body_bytes = request.body_bytes();
     let data: CreateSnippet = serde_json::from_slice(&body_bytes)
-        .map_err(|e| reinhardt_core::Error::Validation(format!("Invalid JSON: {}", e)))?;
+        .map_err(|e| Error::Validation(format!("Invalid JSON: {}", e)))?;
 
     println!("Received code: {}", data.code);
 
@@ -45,11 +45,10 @@ async fn create_snippet(request: Request) -> Result<Response> {
 
 ### より簡単な方法: Json<T>エクストラクタ
 
-`reinhardt-params`クレートの`Json<T>`エクストラクタを使用すると、より簡潔に書けます:
+`Json<T>`エクストラクタを使用すると、より簡潔に書けます:
 
 ```rust
-use reinhardt_params::Json;
-use reinhardt_core::{Response, Result};
+use reinhardt::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -78,7 +77,7 @@ async fn create_snippet(data: Json<CreateSnippet>) -> Result<Response> {
 `Response`オブジェクトは、HTTPレスポンスを構築するための便利なビルダーパターンを提供します。
 
 ```rust
-use reinhardt_core::Response;
+use reinhardt::prelude::*;
 
 // 基本的なレスポンス
 let response = Response::ok();
@@ -99,7 +98,7 @@ let response = Response::ok()
 ### 便利なレスポンスビルダー
 
 ```rust
-use reinhardt_core::Response;
+use reinhardt::prelude::*;
 
 // 200 OK
 Response::ok()
@@ -125,7 +124,7 @@ Response::new(418)  // I'm a teapot
 明示的なステータスコードの使用:
 
 ```rust
-use reinhardt_core::Response;
+use reinhardt::prelude::*;
 
 // 成功レスポンス
 let response = Response::new(200);  // OK

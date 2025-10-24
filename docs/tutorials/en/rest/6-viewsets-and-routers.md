@@ -11,7 +11,7 @@ ViewSets allow you to implement common RESTful API patterns concisely.
 Provides full CRUD operations:
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ let snippet_viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
 Provides read-only operations:
 
 ```rust
-use reinhardt_viewsets::ReadOnlyModelViewSet;
+use reinhardt::prelude::*;
 
 let snippet_viewset = ReadOnlyModelViewSet::<Snippet, SnippetSerializer>::new("snippet");
 ```
@@ -47,8 +47,7 @@ let snippet_viewset = ReadOnlyModelViewSet::<Snippet, SnippetSerializer>::new("s
 Register ViewSets with routers to automatically generate URLs:
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 
 #[tokio::main]
 async fn main() {
@@ -106,9 +105,7 @@ Routers automatically generate URL patterns from ViewSets:
 ## Complete Example
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

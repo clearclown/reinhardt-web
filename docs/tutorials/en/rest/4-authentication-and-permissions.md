@@ -4,10 +4,10 @@ Protect your API with authentication and permission controls.
 
 ## Authentication
 
-Reinhardt provides authentication through the `reinhardt-auth` crate:
+Reinhardt provides authentication:
 
 ```rust
-use reinhardt_auth::{User, authenticate};
+use reinhardt::prelude::*;
 
 async fn login(username: &str, password: &str) -> Option<User> {
     // Authenticate user
@@ -20,7 +20,7 @@ async fn login(username: &str, password: &str) -> Option<User> {
 Implement custom permissions using the `Permission` trait:
 
 ```rust
-use reinhardt_auth::{Permission, PermissionContext};
+use reinhardt::prelude::*;
 use async_trait::async_trait;
 
 pub struct IsAuthenticated;
@@ -55,7 +55,7 @@ Reinhardt provides common permission classes:
 Only authenticated users can access:
 
 ```rust
-use reinhardt_auth::IsAuthenticated;
+use reinhardt::prelude::*;
 
 let permission = IsAuthenticated;
 ```
@@ -65,7 +65,7 @@ let permission = IsAuthenticated;
 Only admin users can access:
 
 ```rust
-use reinhardt_auth::IsAdminUser;
+use reinhardt::prelude::*;
 
 pub struct IsAdminUser;
 
@@ -86,7 +86,7 @@ impl Permission for IsAdminUser {
 All users can access (default):
 
 ```rust
-use reinhardt_auth::AllowAny;
+use reinhardt::prelude::*;
 
 pub struct AllowAny;
 
@@ -103,7 +103,7 @@ impl Permission for AllowAny {
 Create custom permissions for specific requirements:
 
 ```rust
-use reinhardt_auth::{Permission, PermissionContext};
+use reinhardt::prelude::*;
 use async_trait::async_trait;
 
 pub struct IsOwnerOrReadOnly;
@@ -133,8 +133,7 @@ impl Permission for IsOwnerOrReadOnly {
 Apply permissions to ViewSets:
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
-use reinhardt_auth::IsAuthenticated;
+use reinhardt::prelude::*;
 
 let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
     .with_permission(IsAuthenticated);
@@ -145,7 +144,7 @@ let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
 Check permissions for specific objects:
 
 ```rust
-use reinhardt_auth::{Permission, PermissionContext};
+use reinhardt::prelude::*;
 use async_trait::async_trait;
 
 pub struct IsOwner;
@@ -175,7 +174,7 @@ impl Permission for IsOwner {
 Combine multiple permissions:
 
 ```rust
-use reinhardt_auth::{Permission, PermissionContext, IsAuthenticated};
+use reinhardt::prelude::*;
 use async_trait::async_trait;
 
 pub struct IsAuthenticatedAndActive;
@@ -201,9 +200,7 @@ impl Permission for IsAuthenticatedAndActive {
 Full authentication and permission workflow:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_auth::{Permission, PermissionContext, User};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
 use hyper::Method;

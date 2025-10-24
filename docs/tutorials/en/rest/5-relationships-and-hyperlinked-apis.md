@@ -7,7 +7,7 @@ Create APIs with relationships between resources and use hyperlinks for navigati
 Generate URLs for named routes using the router's `reverse()` method:
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router};
+use reinhardt::prelude::*;
 use std::collections::HashMap;
 
 let router = DefaultRouter::new();
@@ -26,7 +26,7 @@ let url = router.reverse("snippet-detail", &params)?;
 Use hyperlinked fields in serializers to reference related resources:
 
 ```rust
-use reinhardt_serializers::HyperlinkedRelatedField;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,7 +51,7 @@ let owner_url = router.reverse("user-detail", &{
 Create serializers with automatic hyperlink generation:
 
 ```rust
-use reinhardt_serializers::HyperlinkedModelSerializer;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,8 +106,7 @@ struct SnippetWithUser {
 Define URL patterns with route names:
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 
 let mut router = DefaultRouter::new();
 
@@ -130,8 +129,7 @@ router.register_viewset("users", user_viewset);
 Create responses with hyperlinks:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_routers::Router;
+use reinhardt::prelude::*;
 use std::collections::HashMap;
 
 async fn snippet_detail(
@@ -201,9 +199,7 @@ let tag_urls: Vec<String> = snippet.tags
 Full hyperlinked API implementation:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 

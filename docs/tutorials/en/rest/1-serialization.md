@@ -8,8 +8,8 @@ First, add Reinhardt to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard"] }
-# Or for minimal setup: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal", "api"] }
+reinhardt = { version = "0.1.0", features = ["standard", "serializers"] }
+# Or for minimal setup: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal", "serializers"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
@@ -39,7 +39,7 @@ pub struct Snippet {
 For custom validation logic, implement the `Serializer` trait:
 
 ```rust
-use reinhardt_serializers::{Serializer, ValidationResult, ValidationError};
+use reinhardt::prelude::*;
 
 pub struct SnippetSerializer;
 
@@ -80,7 +80,7 @@ impl Serializer<Snippet> for SnippetSerializer {
 Use field validators for specific field constraints:
 
 ```rust
-use reinhardt_serializers::{CharField, IntegerField, EmailField, Field};
+use reinhardt::prelude::*;
 
 // String field with length constraints
 let title_field = CharField::new()
@@ -106,7 +106,7 @@ email_field.validate(&"user@example.com".to_string()).unwrap();
 Convert data to/from JSON:
 
 ```rust
-use reinhardt_serializers::JsonSerializer;
+use reinhardt::prelude::*;
 
 let serializer = JsonSerializer::<Snippet>::new();
 
@@ -132,7 +132,7 @@ let snippet = serializer.deserialize(json.as_bytes()).unwrap();
 For database models, use `ModelSerializer` with custom validation:
 
 ```rust
-use reinhardt_serializers::{ModelSerializer, ValidationResult, ValidationError};
+use reinhardt::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -192,7 +192,7 @@ assert!(serializer.validate(&invalid_user).is_err());
 Handle nested data structures:
 
 ```rust
-use reinhardt_serializers::NestedSerializer;
+use reinhardt::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Author {
@@ -226,8 +226,7 @@ let json = serializer.serialize(&article).unwrap();
 Typical validation workflow in an API view:
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_serializers::{JsonSerializer, Serializer};
+use reinhardt::prelude::*;
 
 async fn create_snippet(request: Request) -> Result<Response> {
     // 1. Parse JSON from request body

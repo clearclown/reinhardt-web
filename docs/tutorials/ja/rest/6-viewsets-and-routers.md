@@ -11,7 +11,7 @@ ViewSetはRESTful APIの一般的なパターンを簡潔に実装できます�
 完全なCRUD操作を提供:
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +37,7 @@ let snippet_viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
 読み取り専用操作のみを提供:
 
 ```rust
-use reinhardt_viewsets::ReadOnlyModelViewSet;
+use reinhardt::prelude::*;
 
 let snippet_viewset = ReadOnlyModelViewSet::<Snippet, SnippetSerializer>::new("snippet");
 ```
@@ -47,8 +47,7 @@ let snippet_viewset = ReadOnlyModelViewSet::<Snippet, SnippetSerializer>::new("s
 ViewSetをルーターに登録して自動的にURLを生成:
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt::prelude::*;
 
 #[tokio::main]
 async fn main() {
@@ -106,9 +105,7 @@ async fn main() {
 ## 完全な例
 
 ```rust
-use reinhardt_core::{Request, Response, Result};
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
