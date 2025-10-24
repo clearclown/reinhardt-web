@@ -1253,30 +1253,4 @@ fn test_paginated_serializer_response() {
     assert_eq!(last_page.results.len(), 1);
 }
 
-// Implementation notes for future work:
-//
-// 1. Model Serializer Implementation Plan:
-//    - Create ModelSerializer trait in reinhardt-serializers
-//    - Integrate with reinhardt-orm Model trait
-//    - Support automatic field generation from model
-//    - Support Meta class configuration
-//    - Support nested serializers for relations
-//
-// 2. Required Dependencies:
-//    - reinhardt-orm: Model, Field types, QuerySet
-//    - reinhardt-validators: UniqueValidator, UniqueTogetherValidator
-//    - reinhardt-rest: URL routing, reverse URL generation
-//    - reinhardt-forms: HTML form rendering
-//    - reinhardt-pagination: Pagination support
-//
-// 3. Database Test Setup:
-//    - Use SQLx for database operations
-//    - Support both SQLite (for CI) and PostgreSQL (for production)
-//    - Use transactions for test isolation
-//    - Implement test fixtures and factories
-//
-// 4. Performance Considerations:
-//    - Implement select_related for eager loading
-//    - Implement prefetch_related for optimized queries
-//    - Cache field introspection results
-//    - Use connection pooling in tests
+// See docs/IMPLEMENTATION_NOTES.md for Model Serializer implementation plan

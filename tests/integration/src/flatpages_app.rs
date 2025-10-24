@@ -1,10 +1,10 @@
 //! Flatpages application builder for integration tests
 
 use async_trait::async_trait;
-use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
-use reinhardt_auth::session::{InMemorySessionStore, Session, SessionStore, SESSION_KEY_USER_ID};
-use reinhardt_auth::{AnonymousUser, SimpleUser, User};
-use reinhardt_middleware::csrf::{get_token, CsrfMiddleware, CsrfMiddlewareConfig};
+use reinhardt_apps::{Handler, Request, Response, Result};
+use reinhardt_auth::session::InMemorySessionStore;
+use reinhardt_auth::{SimpleUser, User};
+use reinhardt_middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
 use reinhardt_middleware::AuthenticationMiddleware;
 use reinhardt_routers::{path, DefaultRouter, Router};
 use reinhardt_security::csrf::{check_token, get_secret, CsrfMeta};
@@ -274,8 +274,9 @@ struct TestAuthBackend {
     test_user: Option<SimpleUser>,
 }
 
+#[async_trait]
 impl reinhardt_auth::AuthenticationBackend for TestAuthBackend {
-    fn authenticate(
+    async fn authenticate(
         &self,
         _request: &Request,
     ) -> std::result::Result<Option<Box<dyn User>>, reinhardt_auth::AuthenticationError> {
@@ -296,7 +297,7 @@ impl reinhardt_auth::AuthenticationBackend for TestAuthBackend {
         }
     }
 
-    fn get_user(
+    async fn get_user(
         &self,
         _user_id: &str,
     ) -> std::result::Result<Option<Box<dyn User>>, reinhardt_auth::AuthenticationError> {

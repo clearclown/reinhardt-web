@@ -90,7 +90,7 @@ async fn test_query_string_unicode() {
     }
 
     // Unicode should be URL-encoded
-    // "日本語" URL-encoded
+    // "nihongo" (Japanese) URL-encoded
     let uri = Uri::try_from("/test?text=%E6%97%A5%E6%9C%AC%E8%AA%9E").expect("Invalid URI");
 
     let req = Request::new(
@@ -104,7 +104,7 @@ async fn test_query_string_unicode() {
 
     let result = Query::<QueryParams>::from_request(&req, &ctx).await;
     assert!(result.is_ok(), "Failed to parse Unicode query parameter");
-    assert_eq!(result.unwrap().text, "日本語");
+    assert_eq!(result.unwrap().text, "日本語"); // Japanese text "nihongo"
 }
 
 /// Test: Query string with emoji

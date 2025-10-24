@@ -685,7 +685,7 @@ async fn test_non_unicode_query_string() {
     // in query strings will be encoded properly
     // This test verifies that valid encoded queries work
     let response = client
-        .get(&format!("{}?name=%E3%81%82", url)) // Japanese "あ" encoded
+        .get(&format!("{}?name=%E3%81%82", url)) // Japanese character "a" (hiragana) encoded
         .send()
         .await
         .unwrap();

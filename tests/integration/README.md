@@ -407,17 +407,17 @@ Currently all planned features are implemented. Future integration tests will be
 
 ## Test Count Summary
 
-| Category                  | Tests | Files |
-|---------------------------|-------|-------|
-| Authentication & Security | 67    | 9     |
-| Database & ORM            | 40    | 14    |
-| Serializers               | 152   | 13    |
-| Routing & Views           | 66    | 8     |
-| Templates & Rendering     | 90    | 12    |
-| API & REST                | 98    | 10    |
-| Server & HTTP             | 72    | 9     |
-| Framework Features        | 161   | 33    |
-| Utilities & Core          | 91    | 11    |
+| Category                  | Tests   | Files   |
+| ------------------------- | ------- | ------- |
+| Authentication & Security | 67      | 9       |
+| Database & ORM            | 40      | 14      |
+| Serializers               | 152     | 13      |
+| Routing & Views           | 66      | 8       |
+| Templates & Rendering     | 90      | 12      |
+| API & REST                | 98      | 10      |
+| Server & HTTP             | 72      | 9       |
+| Framework Features        | 161     | 33      |
+| Utilities & Core          | 91      | 11      |
 | **Total**                 | **594** | **119** |
 
 ## Prerequisites

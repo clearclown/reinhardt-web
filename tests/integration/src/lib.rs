@@ -10,13 +10,13 @@ use sqlx::{Pool, Postgres};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-pub mod flatpages_app;
+// pub mod flatpages_app;
 pub mod message_middleware_mock;
 pub mod messages_helpers;
 pub mod security_test_helpers;
 
 // New shared modules
-pub mod flatpages_common;
+// pub mod flatpages_common;
 pub mod proxy;
 pub mod test_helpers;
 pub mod validator_test_common;

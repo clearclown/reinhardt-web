@@ -8,12 +8,7 @@ publish = false
 
 [dependencies]
 # Reinhardt crates
-reinhardt-contrib = { path = "../../crates/reinhardt-contrib", features = [
-  "sitemaps-cache",
-  "sitemaps-http",
-  "sitemaps-i18n",
-  "sitemaps-orm",
-] }
+reinhardt-contrib = { path = "../../crates/reinhardt-contrib" }
 reinhardt-auth = { path = "../../crates/reinhardt-contrib/crates/auth" }
 reinhardt-security = { path = "../../crates/reinhardt-core/crates/security" }
 reinhardt-middleware = { path = "../../crates/reinhardt-middleware" }
@@ -45,7 +40,9 @@ reinhardt-logging = { path = "../../crates/reinhardt-utils/crates/logging" }
 reinhardt-mail = { path = "../../crates/reinhardt-contrib/crates/mail" }
 reinhardt-di = { path = "../../crates/reinhardt-di" }
 reinhardt-macros = { path = "../../crates/reinhardt-core/crates/macros" }
-reinhardt-static = { path = "../../crates/reinhardt-contrib/crates/static" }
+reinhardt-static = { path = "../../crates/reinhardt-contrib/crates/static", features = [
+  "templates-integration",
+] }
 reinhardt-cache = { path = "../../crates/reinhardt-utils/crates/cache" }
 reinhardt-views-core = { path = "../../crates/reinhardt-views/crates/views-core" }
 reinhardt-negotiation = { path = "../../crates/reinhardt-rest/crates/negotiation" }
@@ -108,6 +105,7 @@ percent-encoding = "2.3"
 unic-langid = "0.9"
 once_cell = "1.20"
 serial_test = "3.2"
+ctor = "0.6.0"
 
 # Templates
 askama = "0.14.0"
@@ -201,6 +199,10 @@ path = "tests/sitemaps/sitemap_http_tests.rs"
 [[test]]
 name = "macros_di_integration_tests"
 path = "tests/di/macros_di_integration_tests.rs"
+
+[[test]]
+name = "composite_pk_migration_tests"
+path = "tests/migrations/composite_pk_migration_tests.rs"
 
 [[test]]
 name = "logging_template_integration_tests"
@@ -576,3 +578,43 @@ path = "tests/settings/dynamic_settings_memory.rs"
 [[test]]
 name = "hot_reload_integration"
 path = "tests/settings/hot_reload_integration.rs"
+
+# Command integration tests
+[[test]]
+name = "commands_integration_tests"
+path = "tests/commands/commands_integration_tests.rs"
+
+# Macro integration tests
+[[test]]
+name = "macros_model_derive_integration"
+path = "tests/macros/model_derive_integration.rs"
+
+[[test]]
+name = "macros_composite_pk_integration"
+path = "tests/macros/composite_pk_integration.rs"
+
+[[test]]
+name = "macros_constraint_integration"
+path = "tests/macros/constraint_integration.rs"
+
+[[test]]
+name = "macros_validator_integration"
+path = "tests/macros/validator_integration.rs"
+
+# Static template integration tests
+[[test]]
+name = "storage_static_template_integration_tests"
+path = "tests/storage/static_template_integration_tests.rs"
+
+[[test]]
+name = "storage_static_processing_integration_tests"
+path = "tests/storage/static_processing_integration_tests.rs"
+
+[[test]]
+name = "serializer_nested_integration_tests"
+path = "tests/serializers/serializer_nested_integration_tests.rs"
+
+# UnifiedRouter hierarchical routing integration tests
+[[test]]
+name = "unified_router_integration"
+path = "tests/routing/unified_router_integration_tests.rs"

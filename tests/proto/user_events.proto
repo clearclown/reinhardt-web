@@ -1,0 +1,31 @@
+syntax = "proto3";
+package reinhardt.user_events;
+
+import "user.proto";
+import "common.proto";
+
+// イベント型
+message UserEvent {
+  enum EventType {
+    CREATED = 0;
+    UPDATED = 1;
+    DELETED = 2;
+  }
+
+  EventType type = 1;
+  reinhardt.user.User user = 2;  // DELETED以外の場合
+  string user_id = 3;             // DELETEDの場合のID
+  reinhardt.common.Timestamp timestamp = 4;
+}
+
+// Subscription用リクエスト
+message SubscribeUserEventsRequest {
+  repeated string event_types = 1;  // フィルタ（空=全て）
+  optional string user_id = 2;       // 特定ユーザーのみ（空=全て）
+}
+
+// UserEventsService定義（Server Streaming）
+service UserEventsService {
+  // ユーザーイベントをストリーミング
+  rpc SubscribeUserEvents(SubscribeUserEventsRequest) returns (stream UserEvent);
+}

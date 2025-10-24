@@ -1,6 +1,6 @@
 //! Common test utilities for flatpages tests
 
-use reinhardt_contrib::contrib::flatpages::FlatPage;
+use reinhardt_contrib::flatpages::FlatPage;
 use sqlx::{Pool, Postgres, Row};
 use std::env;
 #[cfg(feature = "testcontainers")]
