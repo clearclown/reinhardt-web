@@ -25,6 +25,8 @@ reinhardt-apps = { workspace = true }
 reinhardt-params = { workspace = true, optional = true }
 reinhardt-di = { workspace = true, optional = true }
 reinhardt-routers = { workspace = true, optional = true }
+reinhardt-macros = { workspace = true }
+reinhardt-middleware = { workspace = true }
 # reinhardt-openapi = { workspace = true, optional = true }  # Temporarily disabled
 reinhardt-orm = { workspace = true, optional = true }
 reinhardt-server = { workspace = true }

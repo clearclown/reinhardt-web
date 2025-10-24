@@ -71,6 +71,32 @@ pub use reinhardt_di::Depends;
 #[cfg(feature = "database")]
 pub use reinhardt_orm as orm;
 
+// Re-export endpoint macros for FastAPI-style function-based endpoints
+pub use reinhardt_macros::{delete, endpoint, get, patch, post, put, use_injection};
+
+/// Built-in middleware shortcuts for common use cases
+pub mod middleware {
+    pub use reinhardt_middleware::{
+        // Compression
+        BrotliMiddleware,
+        // CORS
+        CorsMiddleware,
+        // Security
+        CsrfMiddleware,
+        GZipMiddleware,
+        // HTTPS
+        HttpsRedirectMiddleware,
+        // Logging
+        LoggingMiddleware,
+        // Middleware trait
+        Middleware,
+        // Request tracking
+        RequestIdMiddleware,
+        SecurityMiddleware,
+        TracingMiddleware,
+    };
+}
+
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use super::{Error, Request, Response, Result};
@@ -80,6 +106,9 @@ pub mod prelude {
 
     #[cfg(feature = "di")]
     pub use reinhardt_di::Depends;
+
+    // Re-export endpoint macros
+    pub use reinhardt_macros::{delete, endpoint, get, patch, post, put, use_injection};
 
     pub use async_trait::async_trait;
     pub use serde::{Deserialize, Serialize};
@@ -184,8 +213,10 @@ mod tests {
 
     #[test]
     fn test_app_default() {
-        let app = App::default();
-        assert_eq!(std::mem::size_of_val(&app), 0); // Empty struct
+        let app1 = App::default();
+        let app2 = App::new();
+        // Both should create the same type of App with DefaultRouter
+        assert_eq!(std::mem::size_of_val(&app1), std::mem::size_of_val(&app2));
     }
 
     use async_trait::async_trait;

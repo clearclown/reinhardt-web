@@ -57,100 +57,52 @@ impl TestResponse {
         }
     }
     /// Get response status
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn status(&self) -> StatusCode {
         self.status
     }
     /// Get response status code as u16
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn status_code(&self) -> u16 {
         self.status.as_u16()
     }
     /// Get response headers
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn headers(&self) -> &HeaderMap {
         &self.headers
     }
     /// Get response body as bytes
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn body(&self) -> &Bytes {
         &self.body
     }
     /// Get response body as string
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn text(&self) -> String {
         String::from_utf8_lossy(&self.body).to_string()
     }
     /// Parse response body as JSON
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn json<T: DeserializeOwned>(&self) -> Result<T, serde_json::Error> {
         serde_json::from_slice(&self.body)
     }
     /// Parse response body as generic JSON value
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn json_value(&self) -> Result<Value, serde_json::Error> {
         serde_json::from_slice(&self.body)
     }
     /// Check if response is successful (2xx)
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn is_success(&self) -> bool {
         self.status.is_success()
     }
     /// Check if response is client error (4xx)
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn is_client_error(&self) -> bool {
         self.status.is_client_error()
     }
     /// Check if response is server error (5xx)
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn is_server_error(&self) -> bool {
         self.status.is_server_error()
     }
     /// Get content type header
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn content_type(&self) -> Option<&str> {
         self.headers
             .get("content-type")
             .and_then(|v| v.to_str().ok())
     }
     /// Get header value
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn header(&self, name: &str) -> Option<&str> {
         self.headers.get(name).and_then(|v| v.to_str().ok())
     }

@@ -13,6 +13,7 @@ Supports both unit testing and integration testing with real or test databases.
 ### Implemented ✓
 
 #### API Testing Client
+
 - **APIClient**: HTTP test client with authentication support
   - HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
   - Authentication: Force authentication, Basic auth, login/logout
@@ -25,6 +26,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Force authentication support
 
 #### Response Testing
+
 - **TestResponse**: Response wrapper with assertion helpers
   - Status code assertions: `assert_ok()`, `assert_created()`, `assert_not_found()`, etc.
   - Status range checks: `assert_success()`, `assert_client_error()`, `assert_server_error()`
@@ -32,6 +34,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Header access and content type checking
 
 #### Test Case Base Classes
+
 - **APITestCase**: Base test case with common setup/teardown
   - Pre-configured APIClient instance
   - Setup and teardown lifecycle hooks
@@ -42,6 +45,7 @@ Supports both unit testing and integration testing with real or test databases.
   - `test_case_with_db!`: Database-backed test cases (requires `testcontainers` feature)
 
 #### Fixtures and Factories
+
 - **FixtureLoader**: JSON-based test data loader
   - Load fixtures from JSON strings
   - Type-safe deserialization
@@ -52,6 +56,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Batch data generation support
 
 #### Mock and Spy Utilities
+
 - **MockFunction**: Function call tracking with configurable return values
   - Return value queuing and default values
   - Call count and argument tracking
@@ -62,6 +67,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Reset and inspection capabilities
 
 #### Message Testing (Django-style)
+
 - **Message assertions**: Test message framework integration
   - `assert_message_count()`: Verify message count
   - `assert_message_exists()`: Check for specific messages
@@ -73,6 +79,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Tag-based message assertions
 
 #### JSON Assertions
+
 - **JSON field assertions**:
   - `assert_json_field_eq()`: Field value equality
   - `assert_json_has_field()`: Field presence
@@ -85,6 +92,7 @@ Supports both unit testing and integration testing with real or test databases.
   - `assert_json_matches()`: Subset matching for complex structures
 
 #### HTTP Assertions
+
 - **Status code assertions**:
   - `assert_status_eq()`: Exact status code matching
   - `assert_status_success()`: 2xx range verification
@@ -97,6 +105,7 @@ Supports both unit testing and integration testing with real or test databases.
   - `assert_not_contains()`: Text substring absence
 
 #### Debug Toolbar
+
 - **DebugToolbar**: Request/response debugging utilities
   - Timing information tracking (total time, SQL time, cache hits/misses)
   - SQL query recording with duration and stack traces
@@ -105,6 +114,7 @@ Supports both unit testing and integration testing with real or test databases.
   - Enable/disable debugging support
 
 #### TestContainers Integration (optional, requires `testcontainers` feature)
+
 - **Database containers**:
   - `PostgresContainer`: PostgreSQL test container with custom credentials
   - `MySqlContainer`: MySQL test container with custom credentials

@@ -34,18 +34,10 @@ pub struct PostgresContainer<'a> {
 
 impl<'a> PostgresContainer<'a> {
     /// Create a new PostgreSQL container with default settings
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
         Self::with_credentials(docker, "postgres", "postgres", "test")
     }
     /// Create a PostgreSQL container with custom credentials
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn with_credentials(
         docker: &'a testcontainers::clients::Cli,
         username: &str,
@@ -70,10 +62,6 @@ impl<'a> PostgresContainer<'a> {
         }
     }
     /// Get the container port
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn port(&self) -> u16 {
         self.port
     }
@@ -114,18 +102,10 @@ pub struct MySqlContainer<'a> {
 
 impl<'a> MySqlContainer<'a> {
     /// Create a new MySQL container with default settings
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
         Self::with_credentials(docker, "root", "test", "test")
     }
     /// Create a MySQL container with custom credentials
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn with_credentials(
         docker: &'a testcontainers::clients::Cli,
         username: &str,
@@ -149,10 +129,6 @@ impl<'a> MySqlContainer<'a> {
         }
     }
     /// Get the container port
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn port(&self) -> u16 {
         self.port
     }
@@ -190,10 +166,6 @@ pub struct RedisContainer<'a> {
 
 impl<'a> RedisContainer<'a> {
     /// Create a new Redis container
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
         let image = RedisImage::default();
         let container = docker.run(image);
@@ -206,18 +178,10 @@ impl<'a> RedisContainer<'a> {
         }
     }
     /// Get the connection URL for Redis
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn connection_url(&self) -> String {
         format!("redis://{}:{}", self.host, self.port)
     }
     /// Get the container port
-    ///
-    /// # Examples
-    ///
-    /// ```
     pub fn port(&self) -> u16 {
         self.port
     }
@@ -249,11 +213,6 @@ where
     f(container).await
 }
 /// Helper function to run a test with a MySQL container
-///
-/// # Examples
-///
-/// ```
-/// ```
 pub async fn with_mysql<F, Fut>(f: F) -> Result<(), Box<dyn std::error::Error>>
 where
     F: FnOnce(MySqlContainer) -> Fut,
@@ -265,11 +224,6 @@ where
     f(container).await
 }
 /// Helper function to run a test with a Redis container
-///
-/// # Examples
-///
-/// ```
-/// ```
 pub async fn with_redis<F, Fut>(f: F) -> Result<(), Box<dyn std::error::Error>>
 where
     F: FnOnce(RedisContainer) -> Fut,
