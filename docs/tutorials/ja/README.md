@@ -61,4 +61,4 @@ FastAPI風のDependency Injectionシステムの使い方を学びます。
 
 ## フィードバック
 
-チュートリアルに関するフィードバックやご質問は、[GitHub Issues](https://github.com/your-org/reinhardt/issues)までお願いします。
+チュートリアルに関するフィードバックやご質問は、[GitHub Issues](https://github.com/kent8192/reinhardt/issues)までお願いします。

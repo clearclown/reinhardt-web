@@ -446,4 +446,4 @@ If expected functionality is missing:
 
 ---
 
-Need help? Check the [GitHub Discussions](https://github.com/your-org/reinhardt/discussions) or [open an issue](https://github.com/your-org/reinhardt/issues).
+Need help? Check the [GitHub Discussions](https://github.com/kent8192/reinhardt/discussions) or [open an issue](https://github.com/kent8192/reinhardt/issues).

@@ -517,14 +517,14 @@ fn validate_email(email: &str) -> ValidationResult {
 - [Getting Started Guide](../GETTING_STARTED.md)
 - [Tutorials](../tutorials/README.md)
 - [Feature Flags](../FEATURE_FLAGS.md)
-- [GitHub Repository](https://github.com/your-org/reinhardt)
+- [GitHub Repository](https://github.com/kent8192/reinhardt)
 
 ## Contributing
 
 Found an error in the documentation? Want to improve it?
 
-- [Report documentation issues](https://github.com/your-org/reinhardt/issues)
-- [Contribute to docs](https://github.com/your-org/reinhardt/blob/main/CONTRIBUTING.md)
+- [Report documentation issues](https://github.com/kent8192/reinhardt/issues)
+- [Contribute to docs](https://github.com/kent8192/reinhardt/blob/main/CONTRIBUTING.md)
 
 ---
 

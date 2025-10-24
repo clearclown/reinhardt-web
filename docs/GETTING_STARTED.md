@@ -300,8 +300,8 @@ Check out the [ORM documentation](api/README.md) for more details.
 ## Getting Help
 
 - 📖 [API Reference](https://docs.rs/reinhardt)
-- 💬 [GitHub Discussions](https://github.com/your-org/reinhardt/discussions)
-- 🐛 [Report Issues](https://github.com/your-org/reinhardt/issues)
+- 💬 [GitHub Discussions](https://github.com/kent8192/reinhardt/discussions)
+- 🐛 [Report Issues](https://github.com/kent8192/reinhardt/issues)
 
 ## Common Issues
 
