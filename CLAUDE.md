@@ -144,13 +144,19 @@ For details about the Reinhardt project, please refer to README.md.
 
 - **MUST** use one of the following for unimplemented features:
   - `// TODO:` comment with explanation
-  - `todo!()` macro for runtime panics
-  - `unimplemented!()` macro for not-yet-implemented functionality
+  - `todo!()` macro for features planned to be implemented in the future
+  - `unimplemented!()` macro for features intentionally not implemented (will never be implemented)
 - **NEVER** use alternative notations like:
   - ❌ Bad: `// Implementation Note:`
   - ❌ Bad: `// FIXME:`
   - ❌ Bad: `// NOTE: Not implemented yet`
   - ❌ Bad: Custom placeholder comments
+- **Macro Selection Guidelines**:
+  - Use `todo!()` for features that **WILL** be implemented later
+  - Use `unimplemented!()` for features that **WILL NOT** be implemented (intentionally omitted)
+  - Use `// TODO:` comments for planning without runtime panics
+  - **DELETE** `todo!()` and `// TODO:` comments when the functionality is implemented
+  - **KEEP** `unimplemented!()` for permanently excluded features
 - **TODO Comment Guidelines**:
   - Explain what needs to be implemented and why it's pending
   - **DELETE** when the functionality is implemented
@@ -162,17 +168,26 @@ For details about the Reinhardt project, please refer to README.md.
   - Provide actual implementations or use `todo!()`/`unimplemented!()` macro for compile-time errors
 - **Examples**:
   ```rust
-  // ✅ Good: Clear TODO comment
+  // ✅ Good: Clear TODO comment (planning)
   // TODO: Implement caching mechanism for frequently accessed data
 
-  // ✅ Good: Using todo!() macro
+  // ✅ Good: Using todo!() macro (will be implemented)
   fn validate_input(data: &str) -> Result<()> {
-      todo!("Add input validation logic")
+      todo!("Add input validation logic - planned for next sprint")
   }
 
-  // ✅ Good: Using unimplemented!() macro
-  fn complex_feature() -> String {
-      unimplemented!("Waiting for upstream API specification")
+  // ✅ Good: Using unimplemented!() macro (intentionally not implemented)
+  fn legacy_api_endpoint() -> String {
+      unimplemented!("This legacy API is intentionally not supported in Rust version")
+  }
+
+  // ✅ Good: Another unimplemented!() example (never will be implemented)
+  fn windows_only_feature() -> Result<()> {
+      #[cfg(not(target_os = "windows"))]
+      unimplemented!("This feature is only available on Windows");
+
+      #[cfg(target_os = "windows")]
+      Ok(())
   }
 
   // ❌ Bad: Custom notation
@@ -180,6 +195,11 @@ For details about the Reinhardt project, please refer to README.md.
 
   // ❌ Bad: Using NOTE for unimplemented features
   // NOTE: Not implemented yet
+
+  // ❌ Bad: Using unimplemented!() for future work
+  fn upcoming_feature() -> String {
+      unimplemented!("Will implement next week")  // Use todo!() instead!
+  }
   ```
 
 #### TI-3 (MUST): Test Cleanup
@@ -339,9 +359,12 @@ For detailed commit guidelines including message format, granularity, and execut
 - ❌ NO excessive `.to_string()` calls
 - ❌ NO comments documenting deleted code/tests
 - ❌ NO alternative notations like `Implementation Note:`, `FIXME:`, etc.
+- ❌ NO using `unimplemented!()` for future work (use `todo!()` instead)
 - ✅ USE 2024 edition module system
 - ✅ DELETE old code immediately
-- ✅ USE `// TODO:`, `todo!()`, or `unimplemented!()` for unimplemented features
+- ✅ USE `// TODO:` comments for planning
+- ✅ USE `todo!()` for features that WILL be implemented
+- ✅ USE `unimplemented!()` for features that WILL NOT be implemented (intentionally omitted)
 - ✅ USE `// NOTE:` for informational comments only
 - ✅ EXTRACT important notes to docs/IMPLEMENTATION_NOTES.md
 
