@@ -439,7 +439,9 @@ pub trait Paginator: Send + Sync {
     ) -> Result<PaginatedResponse<T>>;
 
     /// Get the pagination metadata for schema generation
-    fn get_schema_parameters(&self) -> Vec<SchemaParameter>;
+    fn get_schema_parameters(&self) -> Vec<SchemaParameter> {
+        Vec::new()
+    }
 }
 
 /// Async version of Paginator trait
@@ -461,7 +463,9 @@ pub trait AsyncPaginator: Send + Sync {
 
     /// Get the pagination metadata for schema generation
     /// (Same as sync version - no I/O involved)
-    fn get_schema_parameters(&self) -> Vec<SchemaParameter>;
+    fn get_schema_parameters(&self) -> Vec<SchemaParameter> {
+        Vec::new()
+    }
 }
 
 /// Schema parameter for OpenAPI/documentation
