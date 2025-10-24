@@ -9,10 +9,18 @@ reinhardt-apps = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-viewsets = { workspace = true }
 reinhardt-routers-macros = { path = "../routers-macros", version = "0.1.0" }
+reinhardt-di = { workspace = true, optional = true }
+reinhardt-middleware = { workspace = true, optional = true }
 regex = { workspace = true }
 nom = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
+hyper = { workspace = true }
+once_cell = "1.20"
+
+[features]
+default = ["unified-router"]
+unified-router = ["reinhardt-di", "reinhardt-middleware"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

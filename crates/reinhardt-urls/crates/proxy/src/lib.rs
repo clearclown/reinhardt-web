@@ -59,7 +59,7 @@ pub use proxy::{AssociationProxy, ProxyAccessor, ProxyTarget, ScalarValue};
 pub use query::{FilterCondition, FilterOp, QueryFilter};
 pub use reflection::{
     downcast_relationship, extract_collection_values, AttributeExtractor, ProxyCollection,
-    Reflectable,
+    Reflectable, ReflectableFactory,
 };
 pub use scalar::{ScalarComparison, ScalarProxy};
 
@@ -94,4 +94,8 @@ pub enum ProxyError {
     /// Serialization error
     #[error("Serialization error: {0}")]
     SerializationError(String),
+
+    /// Factory not configured for collection proxy
+    #[error("Factory not configured for collection proxy - required for creating objects from scalar values")]
+    FactoryNotConfigured,
 }

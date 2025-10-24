@@ -126,7 +126,7 @@ impl Reflectable for Child {
 
 #[tokio::test]
 async fn test_list_append() {
-    // Test: リストプロキシへの追加が正しく動作することを確認
+    // Test: Verify that appending to list proxy works correctly
     // Based on: test_list_append from SQLAlchemy
 
     let proxy = CollectionProxy::new("children_data", "name");
@@ -153,7 +153,7 @@ async fn test_list_append() {
 
 #[tokio::test]
 async fn test_list_extend() {
-    // Test: リストプロキシの拡張が正しく動作することを確認
+    // Test: Verify that extending list proxy works correctly
     // Based on: test_list_extend from SQLAlchemy
 
     let proxy = CollectionProxy::new("children_data", "name");
@@ -186,7 +186,7 @@ async fn test_list_extend() {
 
 #[tokio::test]
 async fn test_proxy_collection_creation() {
-    // Test: コレクションプロキシの作成が正しく動作することを確認
+    // Test: Verify that collection proxy creation works correctly
 
     let proxy = CollectionProxy::new("posts", "title");
     assert_eq!(proxy.relationship, "posts");
@@ -196,7 +196,7 @@ async fn test_proxy_collection_creation() {
 
 #[tokio::test]
 async fn test_proxy_collection_unique() {
-    // Test: ユニークなコレクションプロキシが正しく動作することを確認
+    // Test: Verify that unique collection proxy works correctly
 
     let proxy = CollectionProxy::unique("posts", "title");
     assert_eq!(proxy.relationship, "posts");
@@ -206,7 +206,7 @@ async fn test_proxy_collection_unique() {
 
 #[tokio::test]
 async fn test_bulk_replace() {
-    // Test: 一括置換が正しく動作することを確認
+    // Test: Verify that bulk replacement works correctly
     // Based on: test_bulk_replace from SQLAlchemy
 
     let proxy = CollectionProxy::new("children_data", "name");
@@ -256,7 +256,7 @@ async fn test_bulk_replace() {
 
 #[tokio::test]
 async fn test_contains() {
-    // Test: contains操作が正しく動作することを確認
+    // Test: Verify that contains operation works correctly
 
     let proxy = CollectionProxy::new("children_data", "name");
 
@@ -280,7 +280,7 @@ async fn test_contains() {
 
 #[tokio::test]
 async fn test_remove() {
-    // Test: remove操作が正しく動作することを確認
+    // Test: Verify that remove operation works correctly
 
     let proxy = CollectionProxy::new("children_data", "name");
 
@@ -311,7 +311,7 @@ async fn test_remove() {
 
 #[tokio::test]
 async fn test_proxy_collection_count() {
-    // Test: count操作が正しく動作することを確認
+    // Test: Verify that count operation works correctly
 
     let proxy = CollectionProxy::new("children_data", "name");
 
@@ -338,7 +338,7 @@ async fn test_proxy_collection_count() {
 
 #[tokio::test]
 async fn test_proxy_collection_empty() {
-    // Test: 空のコレクションが正しく処理されることを確認
+    // Test: Verify that empty collections are handled correctly
     // Based on: test_empty from SQLAlchemy
 
     let proxy = CollectionProxy::new("children_data", "name");

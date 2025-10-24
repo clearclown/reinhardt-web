@@ -3,6 +3,8 @@ pub mod pattern;
 pub mod reverse;
 pub mod route;
 pub mod router;
+pub mod script_prefix;
+pub mod unified_router;
 
 // Re-export the path! macro for compile-time path validation
 pub use reinhardt_routers_macros::path;
@@ -23,3 +25,7 @@ pub use reverse::{
 };
 pub use route::Route;
 pub use router::{DefaultRouter, Router};
+pub use script_prefix::{clear_script_prefix, get_script_prefix, set_script_prefix};
+pub use unified_router::{
+    clear_router, get_router, is_router_registered, register_router, UnifiedRouter,
+};

@@ -143,7 +143,7 @@ impl Reflectable for Profile {
 
 #[tokio::test]
 async fn test_scalar_proxy() {
-    // Test: スカラープロキシが正しく動作することを確認
+    // Test: Verify that scalar proxy works correctly
     // Based on: test_scalar_proxy from SQLAlchemy
 
     let proxy = ScalarProxy::new("profile_data", "bio");
@@ -168,7 +168,7 @@ async fn test_scalar_proxy() {
 
 #[tokio::test]
 async fn test_scalar_proxy_none() {
-    // Test: スカラープロキシでNoneを扱えることを確認
+    // Test: Verify that scalar proxy can handle None
 
     let proxy = ScalarProxy::new("profile_data", "bio");
 
@@ -184,7 +184,7 @@ async fn test_scalar_proxy_none() {
 
 #[tokio::test]
 async fn test_scalar_proxy_set_value() {
-    // Test: スカラープロキシで値の設定が正しく動作することを確認
+    // Test: Verify that setting values with scalar proxy works correctly
 
     let proxy = ScalarProxy::new("profile_data", "bio");
 
@@ -210,7 +210,7 @@ async fn test_scalar_proxy_set_value() {
 
 #[tokio::test]
 async fn test_create_on_set_none() {
-    // Test: None設定時の作成が正しく動作することを確認
+    // Test: Verify that creation on setting None works correctly
     // Based on: test_create_on_set_none from SQLAlchemy
 
     let proxy = ScalarProxy::new("profile_data", "website");
@@ -245,7 +245,7 @@ async fn test_create_on_set_none() {
 
 #[tokio::test]
 async fn test_empty_scalars() {
-    // Test: 空のスカラーが正しく処理されることを確認
+    // Test: Verify that empty scalars are handled correctly
     // Based on: test_empty_scalars from SQLAlchemy
 
     let proxy = ScalarProxy::new("profile_data", "bio");
@@ -268,7 +268,7 @@ async fn test_empty_scalars() {
 
 #[test]
 fn test_proxy_scalar_comparison_builders() {
-    // Test: スカラー比較ビルダーが正しく動作することを確認
+    // Test: Verify that scalar comparison builders work correctly
 
     let eq = ScalarComparison::eq("test");
     assert!(matches!(eq, ScalarComparison::Eq(_)));
@@ -303,7 +303,7 @@ fn test_proxy_scalar_comparison_builders() {
 
 #[test]
 fn test_scalar_comparison_in_values() {
-    // Test: IN比較が正しく動作することを確認
+    // Test: Verify that IN comparison works correctly
 
     let values = vec![
         ScalarValue::Integer(1),

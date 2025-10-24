@@ -92,6 +92,64 @@ pub trait Reflectable {
     fn has_attribute(&self, name: &str) -> bool {
         self.get_attribute(name).is_some()
     }
+
+    /// Get a reference to self as Any for downcasting
+    fn as_any(&self) -> &dyn Any {
+        panic!("as_any() not implemented for this type");
+    }
+}
+
+/// Factory trait for creating Reflectable instances from ScalarValue
+///
+/// This trait enables CollectionProxy to create new instances of related
+/// objects from scalar values (strings, integers, etc.).
+///
+/// # Examples
+///
+/// ```ignore
+/// use reinhardt_proxy::{ReflectableFactory, Reflectable, ScalarValue, ProxyResult};
+///
+/// struct TagFactory;
+///
+/// impl ReflectableFactory for TagFactory {
+///     fn create_from_scalar(
+///         &self,
+///         attribute_name: &str,
+///         value: ScalarValue,
+///     ) -> ProxyResult<Box<dyn Reflectable>> {
+///         match attribute_name {
+///             "name" => {
+///                 if let ScalarValue::String(name) = value {
+///                     Ok(Box::new(Tag { id: None, name }))
+///                 } else {
+///                     Err(ProxyError::TypeMismatch {
+///                         expected: "String".to_string(),
+///                         actual: format!("{:?}", value),
+///                     })
+///                 }
+///             }
+///             _ => Err(ProxyError::AttributeNotFound(attribute_name.to_string())),
+///         }
+///     }
+/// }
+/// ```
+pub trait ReflectableFactory: Send + Sync {
+    /// Create a new Reflectable instance with the given attribute value
+    ///
+    /// # Arguments
+    ///
+    /// * `attribute_name` - The name of the attribute to set
+    /// * `value` - The scalar value to set for the attribute
+    ///
+    /// # Returns
+    ///
+    /// A boxed Reflectable instance with the attribute set, or an error
+    /// if the attribute doesn't exist or the value type is incompatible.
+    fn create_from_scalar(
+        &self,
+        attribute_name: &str,
+        value: ScalarValue,
+    ) -> ProxyResult<Box<dyn Reflectable>>;
 }
 
 /// Trait for collections that can be accessed through association proxies

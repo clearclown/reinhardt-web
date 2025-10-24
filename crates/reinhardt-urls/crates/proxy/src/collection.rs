@@ -15,7 +15,7 @@ use crate::{ProxyError, ProxyResult};
 /// let titles_proxy = CollectionProxy::new("posts", "title");
 /// let titles: Vec<String> = titles_proxy.get_values(&user).await?;
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CollectionProxy {
     /// Name of the relationship
     pub relationship: String,
@@ -25,6 +25,9 @@ pub struct CollectionProxy {
 
     /// Whether to remove duplicates
     pub unique: bool,
+
+    /// Factory for creating new instances from scalar values
+    pub factory: Option<std::sync::Arc<dyn crate::reflection::ReflectableFactory>>,
 }
 
 impl CollectionProxy {
@@ -45,6 +48,7 @@ impl CollectionProxy {
             relationship: relationship.to_string(),
             attribute: attribute.to_string(),
             unique: false,
+            factory: None,
         }
     }
     /// Create a collection proxy that removes duplicates
@@ -64,7 +68,30 @@ impl CollectionProxy {
             relationship: relationship.to_string(),
             attribute: attribute.to_string(),
             unique: true,
+            factory: None,
         }
+    }
+
+    /// Create a collection proxy with a factory for creating instances
+    pub fn with_factory(
+        relationship: &str,
+        attribute: &str,
+        factory: std::sync::Arc<dyn crate::reflection::ReflectableFactory>,
+    ) -> Self {
+        Self {
+            relationship: relationship.to_string(),
+            attribute: attribute.to_string(),
+            unique: false,
+            factory: Some(factory),
+        }
+    }
+
+    /// Set the factory for this proxy
+    pub fn set_factory(
+        &mut self,
+        factory: std::sync::Arc<dyn crate::reflection::ReflectableFactory>,
+    ) {
+        self.factory = Some(factory);
     }
     /// Get collection of values from related objects
     ///
@@ -126,16 +153,22 @@ impl CollectionProxy {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn set_values<T>(&self, source: &mut T, _values: Vec<ScalarValue>) -> ProxyResult<()>
+    pub async fn set_values<T>(&self, source: &mut T, values: Vec<ScalarValue>) -> ProxyResult<()>
     where
         T: crate::reflection::Reflectable,
     {
-        // 1. Access the relationship
+        // 1. Check if factory is configured
+        let factory = self
+            .factory
+            .as_ref()
+            .ok_or(ProxyError::FactoryNotConfigured)?;
+
+        // 2. Access the relationship
         let relationship = source
             .get_relationship_mut(&self.relationship)
             .ok_or_else(|| ProxyError::RelationshipNotFound(self.relationship.clone()))?;
 
-        // 2. Downcast to Vec<Box<dyn Reflectable>>
+        // 3. Downcast to Vec<Box<dyn Reflectable>>
         let collection = relationship
             .downcast_mut::<Vec<Box<dyn crate::reflection::Reflectable>>>()
             .ok_or_else(|| ProxyError::TypeMismatch {
@@ -143,14 +176,14 @@ impl CollectionProxy {
                 actual: "unknown".to_string(),
             })?;
 
-        // 3. Clear existing items
+        // 4. Clear existing collection
         collection.clear();
 
-        // 4. Create new association objects for each value
-        // Note: This requires T to be constructible from ScalarValue
-        // In practice, this would use ORM integration to create instances
-        // For now, we clear the collection as the actual object creation
-        // depends on the specific ORM model implementation
+        // 5. Create new objects from scalar values and add to collection
+        for value in values {
+            let new_object = factory.create_from_scalar(&self.attribute, value)?;
+            collection.push(new_object);
+        }
 
         Ok(())
     }
@@ -168,16 +201,35 @@ impl CollectionProxy {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn append<T>(&self, _source: &mut T, _value: ScalarValue) -> ProxyResult<()>
+    pub async fn append<T>(&self, source: &mut T, value: ScalarValue) -> ProxyResult<()>
     where
         T: crate::reflection::Reflectable,
     {
-        // Note: Creating and appending a new association object requires:
-        // 1. A constructor function for the association type
-        // 2. Access to the relationship collection
-        // 3. Setting the attribute on the new instance
-        // This functionality requires ORM integration and a creator function
-        // The implementation depends on the specific model structure
+        // 1. Check if factory is configured
+        let factory = self
+            .factory
+            .as_ref()
+            .ok_or(ProxyError::FactoryNotConfigured)?;
+
+        // 2. Access the relationship
+        let relationship = source
+            .get_relationship_mut(&self.relationship)
+            .ok_or_else(|| ProxyError::RelationshipNotFound(self.relationship.clone()))?;
+
+        // 3. Downcast to Vec<Box<dyn Reflectable>>
+        let collection = relationship
+            .downcast_mut::<Vec<Box<dyn crate::reflection::Reflectable>>>()
+            .ok_or_else(|| ProxyError::TypeMismatch {
+                expected: "Vec<Box<dyn Reflectable>>".to_string(),
+                actual: "unknown".to_string(),
+            })?;
+
+        // 4. Create new object from scalar value
+        let new_object = factory.create_from_scalar(&self.attribute, value)?;
+
+        // 5. Append to collection
+        collection.push(new_object);
+
         Ok(())
     }
     /// Remove a value from the collection
@@ -626,16 +678,42 @@ impl CollectionAggregations {
     }
 }
 
+// Manual Debug implementation for CollectionProxy
+impl std::fmt::Debug for CollectionProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CollectionProxy")
+            .field("relationship", &self.relationship)
+            .field("attribute", &self.attribute)
+            .field("unique", &self.unique)
+            .field("factory", &self.factory.as_ref().map(|_| "Some(<factory>)"))
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::reflection::Reflectable;
     use std::any::Any;
+    use std::sync::Arc;
 
-    #[derive(Clone)]
     struct TestParent {
         id: i64,
         children: Vec<TestChild>,
+        // For set_values/append tests - dynamic collection
+        dynamic_children: Option<Vec<Box<dyn Reflectable>>>,
+    }
+
+    // Manual Clone implementation (can't derive because Box<dyn Reflectable> isn't Clone)
+    impl Clone for TestParent {
+        fn clone(&self) -> Self {
+            Self {
+                id: self.id,
+                children: self.children.clone(),
+                // Don't clone dynamic_children - it's for mutable operations only
+                dynamic_children: None,
+            }
+        }
     }
 
     #[derive(Clone)]
@@ -643,6 +721,37 @@ mod tests {
         id: i64,
         value: i64,
         score: f64,
+    }
+
+    // Factory for creating TestChild instances
+    struct TestChildFactory;
+
+    impl crate::reflection::ReflectableFactory for TestChildFactory {
+        fn create_from_scalar(
+            &self,
+            attribute_name: &str,
+            value: ScalarValue,
+        ) -> ProxyResult<Box<dyn Reflectable>> {
+            match attribute_name {
+                "value" => {
+                    let val = value.as_integer()?;
+                    Ok(Box::new(TestChild {
+                        id: 0, // ID will be set by ORM in real implementation
+                        value: val,
+                        score: 0.0,
+                    }))
+                }
+                "score" => {
+                    let val = value.as_float()?;
+                    Ok(Box::new(TestChild {
+                        id: 0,
+                        value: 0,
+                        score: val,
+                    }))
+                }
+                _ => Err(ProxyError::AttributeNotFound(attribute_name.to_string())),
+            }
+        }
     }
 
     impl Reflectable for TestParent {
@@ -662,7 +771,14 @@ mod tests {
 
         fn get_relationship_mut(&mut self, name: &str) -> Option<&mut dyn Any> {
             match name {
-                "children" => Some(&mut self.children as &mut dyn Any),
+                "children" => {
+                    // Prioritize dynamic_children if present (for factory-based tests)
+                    if let Some(ref mut dynamic) = self.dynamic_children {
+                        Some(dynamic as &mut dyn Any)
+                    } else {
+                        Some(&mut self.children as &mut dyn Any)
+                    }
+                }
                 _ => None,
             }
         }
@@ -691,6 +807,10 @@ mod tests {
             _value: ScalarValue,
         ) -> ProxyResult<()> {
             Err(ProxyError::RelationshipNotFound(relationship.to_string()))
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
         }
     }
 
@@ -737,6 +857,10 @@ mod tests {
             _value: ScalarValue,
         ) -> ProxyResult<()> {
             Err(ProxyError::RelationshipNotFound(relationship.to_string()))
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
         }
     }
 
@@ -792,6 +916,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let filtered = ops
@@ -823,6 +948,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let filtered = ops
@@ -852,6 +978,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let filtered = ops
@@ -870,6 +997,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let filtered = ops
@@ -904,6 +1032,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let filtered = ops
@@ -936,6 +1065,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let mapped: Vec<i64> = ops
@@ -970,6 +1100,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let mapped: Vec<String> = ops
@@ -993,6 +1124,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let mapped: Vec<i64> = ops
@@ -1025,6 +1157,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let mapped: Vec<i64> = ops
@@ -1059,6 +1192,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let mapped: Vec<i64> = ops.map(&parent, |_| 42).await.unwrap();
@@ -1092,6 +1226,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sorted = ops.sort(&parent).await.unwrap();
@@ -1126,6 +1261,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sorted = ops.sort(&parent).await.unwrap();
@@ -1144,6 +1280,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let sorted = ops.sort(&parent).await.unwrap();
@@ -1162,6 +1299,7 @@ mod tests {
                 value: 42,
                 score: 1.0,
             }],
+            dynamic_children: None,
         };
 
         let sorted = ops.sort(&parent).await.unwrap();
@@ -1194,6 +1332,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sorted = ops.sort(&parent).await.unwrap();
@@ -1228,6 +1367,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let distinct = ops.distinct(&parent).await.unwrap();
@@ -1261,6 +1401,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let distinct = ops.distinct(&parent).await.unwrap();
@@ -1292,6 +1433,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let distinct = ops.distinct(&parent).await.unwrap();
@@ -1308,6 +1450,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let distinct = ops.distinct(&parent).await.unwrap();
@@ -1348,6 +1491,7 @@ mod tests {
                     score: 5.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let distinct = ops.distinct(&parent).await.unwrap();
@@ -1382,6 +1526,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sum = agg.sum(&parent).await.unwrap();
@@ -1396,6 +1541,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let sum = agg.sum(&parent).await.unwrap();
@@ -1421,6 +1567,7 @@ mod tests {
                     score: 2.5,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sum = agg.sum(&parent).await.unwrap();
@@ -1439,6 +1586,7 @@ mod tests {
                 value: 42,
                 score: 1.0,
             }],
+            dynamic_children: None,
         };
 
         let sum = agg.sum(&parent).await.unwrap();
@@ -1464,6 +1612,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let sum = agg.sum(&parent).await.unwrap();
@@ -1494,6 +1643,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let avg = agg.avg(&parent).await.unwrap();
@@ -1508,6 +1658,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let avg = agg.avg(&parent).await.unwrap();
@@ -1526,6 +1677,7 @@ mod tests {
                 value: 42,
                 score: 1.0,
             }],
+            dynamic_children: None,
         };
 
         let avg = agg.avg(&parent).await.unwrap();
@@ -1551,6 +1703,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let avg = agg.avg(&parent).await.unwrap();
@@ -1576,6 +1729,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let avg = agg.avg(&parent).await.unwrap();
@@ -1606,6 +1760,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let min = agg.min(&parent).await.unwrap();
@@ -1621,6 +1776,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let min = agg.min(&parent).await.unwrap();
@@ -1639,6 +1795,7 @@ mod tests {
                 value: 42,
                 score: 1.0,
             }],
+            dynamic_children: None,
         };
 
         let min = agg.min(&parent).await.unwrap();
@@ -1665,6 +1822,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let min = agg.min(&parent).await.unwrap();
@@ -1691,6 +1849,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let min = agg.min(&parent).await.unwrap();
@@ -1722,6 +1881,7 @@ mod tests {
                     score: 3.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let max = agg.max(&parent).await.unwrap();
@@ -1737,6 +1897,7 @@ mod tests {
         let parent = TestParent {
             id: 1,
             children: vec![],
+            dynamic_children: None,
         };
 
         let max = agg.max(&parent).await.unwrap();
@@ -1755,6 +1916,7 @@ mod tests {
                 value: 42,
                 score: 1.0,
             }],
+            dynamic_children: None,
         };
 
         let max = agg.max(&parent).await.unwrap();
@@ -1781,6 +1943,7 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let max = agg.max(&parent).await.unwrap();
@@ -1807,10 +1970,155 @@ mod tests {
                     score: 2.0,
                 },
             ],
+            dynamic_children: None,
         };
 
         let max = agg.max(&parent).await.unwrap();
         assert!(max.is_some());
         assert_eq!(max.unwrap().as_integer().unwrap(), 10);
+    }
+
+    // Tests for set_values() with factory
+    #[tokio::test]
+    async fn test_set_values_with_factory() {
+        let factory = Arc::new(TestChildFactory);
+        let proxy = CollectionProxy::with_factory("children", "value", factory);
+
+        let mut parent = TestParent {
+            id: 1,
+            children: vec![],
+            dynamic_children: Some(vec![]),
+        };
+
+        let new_values = vec![
+            ScalarValue::Integer(10),
+            ScalarValue::Integer(20),
+            ScalarValue::Integer(30),
+        ];
+
+        proxy.set_values(&mut parent, new_values).await.unwrap();
+
+        // Verify collection was replaced
+        let dynamic = parent.dynamic_children.as_ref().unwrap();
+        assert_eq!(dynamic.len(), 3);
+        assert_eq!(
+            dynamic[0]
+                .get_attribute("value")
+                .unwrap()
+                .as_integer()
+                .unwrap(),
+            10
+        );
+        assert_eq!(
+            dynamic[1]
+                .get_attribute("value")
+                .unwrap()
+                .as_integer()
+                .unwrap(),
+            20
+        );
+        assert_eq!(
+            dynamic[2]
+                .get_attribute("value")
+                .unwrap()
+                .as_integer()
+                .unwrap(),
+            30
+        );
+    }
+
+    #[tokio::test]
+    async fn test_set_values_without_factory() {
+        let proxy = CollectionProxy::new("children", "value");
+
+        let mut parent = TestParent {
+            id: 1,
+            children: vec![],
+            dynamic_children: Some(vec![]),
+        };
+
+        let new_values = vec![ScalarValue::Integer(42)];
+
+        let result = proxy.set_values(&mut parent, new_values).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ProxyError::FactoryNotConfigured
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_append_with_factory() {
+        let factory = Arc::new(TestChildFactory);
+        let proxy = CollectionProxy::with_factory("children", "value", factory);
+
+        let mut parent = TestParent {
+            id: 1,
+            children: vec![],
+            dynamic_children: Some(vec![]),
+        };
+
+        proxy
+            .append(&mut parent, ScalarValue::Integer(42))
+            .await
+            .unwrap();
+
+        let dynamic = parent.dynamic_children.as_ref().unwrap();
+        assert_eq!(dynamic.len(), 1);
+        assert_eq!(
+            dynamic[0]
+                .get_attribute("value")
+                .unwrap()
+                .as_integer()
+                .unwrap(),
+            42
+        );
+    }
+
+    #[tokio::test]
+    async fn test_append_without_factory() {
+        let proxy = CollectionProxy::new("children", "value");
+
+        let mut parent = TestParent {
+            id: 1,
+            children: vec![],
+            dynamic_children: Some(vec![]),
+        };
+
+        let result = proxy.append(&mut parent, ScalarValue::Integer(42)).await;
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ProxyError::FactoryNotConfigured
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_set_factory_method() {
+        let mut proxy = CollectionProxy::new("children", "value");
+        assert!(proxy.factory.is_none());
+
+        let factory = Arc::new(TestChildFactory);
+        proxy.set_factory(factory);
+        assert!(proxy.factory.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_collection_proxy_debug_with_factory() {
+        let factory = Arc::new(TestChildFactory);
+        let proxy = CollectionProxy::with_factory("children", "value", factory);
+        let debug_str = format!("{:?}", proxy);
+        assert!(debug_str.contains("CollectionProxy"));
+        assert!(debug_str.contains("factory"));
+        assert!(debug_str.contains("Some(<factory>)"));
+    }
+
+    #[tokio::test]
+    async fn test_collection_proxy_debug_without_factory() {
+        let proxy = CollectionProxy::new("children", "value");
+        let debug_str = format!("{:?}", proxy);
+        assert!(debug_str.contains("CollectionProxy"));
+        assert!(debug_str.contains("factory"));
+        assert!(debug_str.contains("None"));
     }
 }

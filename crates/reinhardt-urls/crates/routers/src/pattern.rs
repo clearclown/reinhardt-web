@@ -104,6 +104,44 @@ impl PathPattern {
     pub fn param_names(&self) -> &[String] {
         &self.param_names
     }
+
+    /// Test if the pattern matches a given path
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::{PathPattern, path};
+    ///
+    /// let pattern = PathPattern::new(path!("/users/{id}/")).unwrap();
+    /// assert!(pattern.is_match("/users/123/"));
+    /// assert!(!pattern.is_match("/users/"));
+    /// ```
+    pub fn is_match(&self, path: &str) -> bool {
+        self.regex.is_match(path)
+    }
+
+    /// Match a path and extract parameters
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::{PathPattern, path};
+    ///
+    /// let pattern = PathPattern::new(path!("/users/{id}/")).unwrap();
+    /// let params = pattern.extract_params("/users/123/").unwrap();
+    /// assert_eq!(params.get("id"), Some(&"123".to_string()));
+    /// ```
+    pub fn extract_params(&self, path: &str) -> Option<HashMap<String, String>> {
+        self.regex.captures(path).map(|captures| {
+            let mut params = HashMap::new();
+            for name in self.param_names() {
+                if let Some(value) = captures.name(name) {
+                    params.insert(name.clone(), value.as_str().to_string());
+                }
+            }
+            params
+        })
+    }
 }
 
 /// Path matcher - uses composition to match paths

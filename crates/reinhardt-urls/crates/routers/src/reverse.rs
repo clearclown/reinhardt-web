@@ -3,7 +3,7 @@
 ///
 /// This module provides both string-based (runtime) and type-safe (compile-time)
 /// URL reversal mechanisms.
-use crate::path;
+// use crate::path;
 use crate::{PathPattern, Route};
 use reinhardt_exception::{Error, Result};
 use std::collections::HashMap;
@@ -31,6 +31,65 @@ impl UrlReverser {
         if let Some(full_name) = route.full_name() {
             self.routes.insert(full_name, route);
         }
+    }
+
+    /// Register a route by name and path (without handler)
+    ///
+    /// This is used for hierarchical routers where we only need the name-to-path mapping
+    /// for URL reversal, not the actual handler.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - The fully qualified route name (e.g., "v1:users:detail")
+    /// * `path` - The URL path pattern (e.g., "/users/{id}/")
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::UrlReverser;
+    ///
+    /// let mut reverser = UrlReverser::new();
+    /// reverser.register_path("v1:users:detail", "/api/v1/users/{id}/");
+    ///
+    /// let url = reverser.reverse_with("v1:users:detail", &[("id", "123")]).unwrap();
+    /// assert_eq!(url, "/api/v1/users/123/");
+    /// ```
+    pub fn register_path(&mut self, name: &str, path: &str) {
+        // Create a dummy handler for the route
+        // The handler is never used for URL reversal
+        use reinhardt_apps::Handler;
+        use std::sync::Arc;
+
+        #[derive(Clone)]
+        struct DummyHandler;
+
+        #[async_trait::async_trait]
+        impl Handler for DummyHandler {
+            async fn handle(
+                &self,
+                _req: reinhardt_apps::Request,
+            ) -> reinhardt_apps::Result<reinhardt_apps::Response> {
+                unreachable!("DummyHandler should never be called")
+            }
+        }
+
+        // Parse the name to extract namespace (if any)
+        let parts: Vec<&str> = name.rsplitn(2, ':').collect();
+        let (route_name, namespace) = if parts.len() == 2 {
+            (parts[0].to_string(), Some(parts[1].to_string()))
+        } else {
+            (name.to_string(), None)
+        };
+
+        let route = Route::new(path, Arc::new(DummyHandler)).with_name(&route_name);
+
+        let route = if let Some(ns) = namespace {
+            route.with_namespace(&ns)
+        } else {
+            route
+        };
+
+        self.routes.insert(name.to_string(), route);
     }
 
     /// Reverse a URL name to a path with parameters
@@ -355,7 +414,7 @@ impl<U: UrlPatternWithParams> Default for UrlParams<U> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Route;
+    use crate::{path, Route};
     use async_trait::async_trait;
     use reinhardt_apps::{Handler, Request, Response, Result as CoreResult};
     use std::sync::Arc;

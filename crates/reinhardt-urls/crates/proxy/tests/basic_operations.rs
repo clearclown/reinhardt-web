@@ -10,7 +10,7 @@ use reinhardt_proxy::{AssociationProxy, ProxyBuilder, ScalarValue};
 
 #[test]
 fn test_constructor() {
-    // Test: コンストラクタが正しく動作することを確認
+    // Test: Verify that the constructor works correctly
     // Based on: test_constructor from SQLAlchemy
 
     let proxy: AssociationProxy<(), ()> = AssociationProxy::new("children", "name");
@@ -21,7 +21,7 @@ fn test_constructor() {
 
 #[test]
 fn test_with_creator() {
-    // Test: creatorを指定したプロキシが正しく動作することを確認
+    // Test: Verify that proxy with creator works correctly
 
     fn creator(_name: String) -> i32 {
         42
@@ -36,7 +36,7 @@ fn test_with_creator() {
 
 #[test]
 fn test_proxy_builder_basic() {
-    // Test: ビルダーパターンが正しく動作することを確認
+    // Test: Verify that builder pattern works correctly
 
     let proxy: AssociationProxy<(), ()> = ProxyBuilder::new()
         .relationship("rel")
@@ -49,7 +49,7 @@ fn test_proxy_builder_basic() {
 
 #[test]
 fn test_builder_with_creator() {
-    // Test: creatorを含むビルダーが正しく動作することを確認
+    // Test: Verify that builder with creator works correctly
 
     fn creator(_: String) -> i32 {
         42
@@ -66,7 +66,7 @@ fn test_builder_with_creator() {
 
 #[test]
 fn test_try_build_success() {
-    // Test: try_buildが成功することを確認
+    // Test: Verify that try_build succeeds
 
     let proxy: Option<AssociationProxy<(), ()>> = ProxyBuilder::new()
         .relationship("rel")
@@ -78,7 +78,7 @@ fn test_try_build_success() {
 
 #[test]
 fn test_try_build_failure() {
-    // Test: try_buildが失敗することを確認
+    // Test: Verify that try_build fails
 
     let proxy: Option<AssociationProxy<(), ()>> =
         ProxyBuilder::new().relationship("rel").try_build();
@@ -89,7 +89,7 @@ fn test_try_build_failure() {
 #[test]
 #[should_panic(expected = "Attribute must be set")]
 fn test_builder_panic_no_attribute() {
-    // Test: 属性が設定されていない場合にpanicすることを確認
+    // Test: Verify that builder panics when attribute is not set
 
     let _proxy: AssociationProxy<(), ()> = ProxyBuilder::new().relationship("rel").build();
 }
@@ -97,14 +97,14 @@ fn test_builder_panic_no_attribute() {
 #[test]
 #[should_panic(expected = "Relationship must be set")]
 fn test_builder_panic_no_relationship() {
-    // Test: リレーションシップが設定されていない場合にpanicすることを確認
+    // Test: Verify that builder panics when relationship is not set
 
     let _proxy: AssociationProxy<(), ()> = ProxyBuilder::new().attribute("attr").build();
 }
 
 #[test]
 fn test_proxy_basic_scalar_conversions() {
-    // Test: ScalarValueの型変換が正しく動作することを確認
+    // Test: Verify that ScalarValue type conversions work correctly
 
     let s = ScalarValue::String("test".to_string());
     assert_eq!(s.as_string().unwrap(), "test");
@@ -129,7 +129,7 @@ fn test_proxy_basic_scalar_conversions() {
 
 #[test]
 fn test_scalar_value_from_conversions() {
-    // Test: ScalarValueへの変換が正しく動作することを確認
+    // Test: Verify that conversions to ScalarValue work correctly
 
     let s: ScalarValue = "test".into();
     assert_eq!(s.as_string().unwrap(), "test");
@@ -149,7 +149,7 @@ fn test_scalar_value_from_conversions() {
 
 #[test]
 fn test_proxy_basic_scalar_type_mismatch() {
-    // Test: 型の不一致エラーが正しく動作することを確認
+    // Test: Verify that type mismatch errors work correctly
 
     let s = ScalarValue::String("test".to_string());
     let result = s.as_integer();
@@ -167,7 +167,7 @@ fn test_proxy_basic_scalar_type_mismatch() {
 
 #[test]
 fn test_association_proxy_helper() {
-    // Test: association_proxyヘルパー関数が正しく動作することを確認
+    // Test: Verify that association_proxy helper function works correctly
 
     use reinhardt_proxy::builder::association_proxy;
 
