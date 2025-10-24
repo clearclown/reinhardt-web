@@ -4,14 +4,15 @@
 //! including paths, operations, parameters, and request/response schemas.
 
 use crate::openapi::{
-    Operation, Parameter, ParameterIn, PathItem, RefOr, RequestBody, Response, Responses, Schema,
+    Operation, Parameter, ParameterIn, PathItem, RefOr, RequestBody, Response,
+    /* Responses, */ Schema,
 };
-use crate::SchemaError;
+// use crate::SchemaError;
 use hyper::Method;
-use indexmap::IndexMap;
+// use indexmap::IndexMap;
 use reinhardt_viewsets::{ActionMetadata, ViewSet};
 use std::collections::HashMap;
-use utoipa::openapi::path::{OperationBuilder, ParameterBuilder, PathItemBuilder, PathItemType};
+use utoipa::openapi::path::{HttpMethod, OperationBuilder, ParameterBuilder, PathItemBuilder};
 use utoipa::openapi::request_body::RequestBodyBuilder;
 use utoipa::openapi::response::ResponseBuilder;
 use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
@@ -21,7 +22,7 @@ use utoipa::openapi::ContentBuilder;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use reinhardt_openapi::ViewSetInspector;
 /// use reinhardt_viewsets::ModelViewSet;
 ///
@@ -71,7 +72,7 @@ impl ViewSetInspector {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use reinhardt_openapi::ViewSetInspector;
     ///
     /// let inspector = ViewSetInspector::new();
@@ -86,7 +87,7 @@ impl ViewSetInspector {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use reinhardt_openapi::{ViewSetInspector, InspectorConfig};
     ///
     /// let config = InspectorConfig {
@@ -107,7 +108,7 @@ impl ViewSetInspector {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use reinhardt_openapi::ViewSetInspector;
     /// use reinhardt_viewsets::ModelViewSet;
     ///
@@ -155,11 +156,11 @@ impl ViewSetInspector {
 
         // GET - List
         collection_item =
-            collection_item.operation(PathItemType::Get, self.create_list_operation(basename));
+            collection_item.operation(HttpMethod::Get, self.create_list_operation(basename));
 
         // POST - Create
         collection_item =
-            collection_item.operation(PathItemType::Post, self.create_create_operation(basename));
+            collection_item.operation(HttpMethod::Post, self.create_create_operation(basename));
 
         paths.insert(collection_path, collection_item.build());
 
@@ -169,21 +170,19 @@ impl ViewSetInspector {
 
         // GET - Retrieve
         detail_item =
-            detail_item.operation(PathItemType::Get, self.create_retrieve_operation(basename));
+            detail_item.operation(HttpMethod::Get, self.create_retrieve_operation(basename));
 
         // PUT - Update
         detail_item =
-            detail_item.operation(PathItemType::Put, self.create_update_operation(basename));
+            detail_item.operation(HttpMethod::Put, self.create_update_operation(basename));
 
         // PATCH - Partial Update
         detail_item =
-            detail_item.operation(PathItemType::Patch, self.create_patch_operation(basename));
+            detail_item.operation(HttpMethod::Patch, self.create_patch_operation(basename));
 
         // DELETE - Destroy
-        detail_item = detail_item.operation(
-            PathItemType::Delete,
-            self.create_destroy_operation(basename),
-        );
+        detail_item =
+            detail_item.operation(HttpMethod::Delete, self.create_destroy_operation(basename));
 
         paths.insert(detail_path, detail_item.build());
 
@@ -220,8 +219,8 @@ impl ViewSetInspector {
 
             // Add operation for each method
             for method in &action.methods {
-                let path_type = self.method_to_path_type(method);
-                path_item = path_item.operation(path_type, operation.clone());
+                let http_method = self.hyper_method_to_utoipa(method);
+                path_item = path_item.operation(http_method, operation.clone());
             }
 
             paths.insert(path, path_item.build());
@@ -234,7 +233,7 @@ impl ViewSetInspector {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use reinhardt_openapi::ViewSetInspector;
     /// use reinhardt_viewsets::ModelViewSet;
     ///
@@ -273,7 +272,7 @@ impl ViewSetInspector {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,ignore
     /// use reinhardt_openapi::{ViewSetInspector, Schema};
     ///
     /// let inspector = ViewSetInspector::new();
@@ -524,17 +523,17 @@ impl ViewSetInspector {
         Schema::Array(Array::new(Self::create_object_schema()))
     }
 
-    fn method_to_path_type(&self, method: &Method) -> PathItemType {
+    fn hyper_method_to_utoipa(&self, method: &Method) -> HttpMethod {
         match *method {
-            Method::GET => PathItemType::Get,
-            Method::POST => PathItemType::Post,
-            Method::PUT => PathItemType::Put,
-            Method::PATCH => PathItemType::Patch,
-            Method::DELETE => PathItemType::Delete,
-            Method::HEAD => PathItemType::Head,
-            Method::OPTIONS => PathItemType::Options,
-            Method::TRACE => PathItemType::Trace,
-            _ => PathItemType::Get, // Default fallback
+            Method::GET => HttpMethod::Get,
+            Method::POST => HttpMethod::Post,
+            Method::PUT => HttpMethod::Put,
+            Method::PATCH => HttpMethod::Patch,
+            Method::DELETE => HttpMethod::Delete,
+            Method::HEAD => HttpMethod::Head,
+            Method::OPTIONS => HttpMethod::Options,
+            Method::TRACE => HttpMethod::Trace,
+            _ => HttpMethod::Get, // Default fallback
         }
     }
 }

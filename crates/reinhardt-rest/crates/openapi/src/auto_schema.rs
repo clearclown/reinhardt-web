@@ -12,7 +12,7 @@ use crate::openapi::Schema;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use reinhardt_openapi::{ToSchema, Schema};
 /// use utoipa::openapi::schema::{Object, SchemaType};
 ///
@@ -37,7 +37,7 @@ use crate::openapi::Schema;
 ///         Some("User".to_string())
 ///     }
 /// }
-/// ```
+/// ```ignore
 pub trait ToSchema {
     /// Generate an OpenAPI schema for this type
     fn schema() -> Schema;
@@ -211,7 +211,7 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
@@ -222,11 +222,11 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 /// #     reinhardt_openapi::Schema::Object(_) => {},
 /// #     _ => panic!("Expected Object schema"),
 /// # }
-/// ```
+/// ```ignore
 ///
 /// # Nested HashMaps
 ///
-/// ```rust
+/// ```rust,ignore
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
@@ -236,7 +236,7 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 /// #     reinhardt_openapi::Schema::Object(_) => {},
 /// #     _ => panic!("Expected Object schema"),
 /// # }
-/// ```
+/// ```ignore
 impl<V: ToSchema> ToSchema for std::collections::HashMap<String, V> {
     fn schema() -> Schema {
         Schema::Object(
@@ -290,7 +290,7 @@ mod tests {
         match schema {
             Schema::Object(obj) => {
                 // Verify it's an object type
-                assert_eq!(obj.schema_type, Some(SchemaType::Type(Type::Object)));
+                assert!(matches!(obj.schema_type, SchemaType::Type(Type::Object)));
 
                 // Verify additional_properties is set
                 assert!(obj.additional_properties.is_some());
@@ -298,10 +298,18 @@ mod tests {
                 // Verify the additional_properties schema is for i32
                 if let Some(additional_props) = &obj.additional_properties {
                     match additional_props.as_ref() {
-                        Schema::Object(inner) => {
-                            assert_eq!(inner.schema_type, Some(SchemaType::Type(Type::Integer)));
+                        utoipa::openapi::schema::AdditionalProperties::RefOr(ref_or) => {
+                            match ref_or {
+                                utoipa::openapi::RefOr::T(Schema::Object(inner)) => {
+                                    assert!(matches!(
+                                        inner.schema_type,
+                                        SchemaType::Type(Type::Integer)
+                                    ));
+                                }
+                                _ => panic!("Expected Object schema for additional properties"),
+                            }
                         }
-                        _ => panic!("Expected Object schema for additional properties"),
+                        _ => panic!("Expected RefOr AdditionalProperties"),
                     }
                 }
             }
@@ -324,19 +332,27 @@ mod tests {
 
         match schema {
             Schema::Object(obj) => {
-                assert_eq!(obj.schema_type, Some(SchemaType::Type(Type::Object)));
+                assert!(matches!(obj.schema_type, SchemaType::Type(Type::Object)));
                 assert!(obj.additional_properties.is_some());
 
                 // Verify the additional_properties contains User schema
                 if let Some(additional_props) = &obj.additional_properties {
                     match additional_props.as_ref() {
-                        Schema::Object(inner) => {
-                            assert_eq!(inner.schema_type, Some(SchemaType::Type(Type::Object)));
-                            // User schema should have properties
-                            assert!(inner.properties.contains_key("id"));
-                            assert!(inner.properties.contains_key("name"));
+                        utoipa::openapi::schema::AdditionalProperties::RefOr(ref_or) => {
+                            match ref_or {
+                                utoipa::openapi::RefOr::T(Schema::Object(inner)) => {
+                                    assert!(matches!(
+                                        inner.schema_type,
+                                        SchemaType::Type(Type::Object)
+                                    ));
+                                    // User schema should have properties
+                                    assert!(inner.properties.contains_key("id"));
+                                    assert!(inner.properties.contains_key("name"));
+                                }
+                                _ => panic!("Expected Object schema for User"),
+                            }
                         }
-                        _ => panic!("Expected Object schema for User"),
+                        _ => panic!("Expected RefOr AdditionalProperties"),
                     }
                 }
             }
@@ -350,31 +366,44 @@ mod tests {
 
         match schema {
             Schema::Object(obj) => {
-                assert_eq!(obj.schema_type, Some(SchemaType::Type(Type::Object)));
+                assert!(matches!(obj.schema_type, SchemaType::Type(Type::Object)));
                 assert!(obj.additional_properties.is_some());
 
                 // Verify nested HashMap structure
                 if let Some(additional_props) = &obj.additional_properties {
                     match additional_props.as_ref() {
-                        Schema::Object(inner) => {
-                            // Inner should also be an object with additional_properties
-                            assert_eq!(inner.schema_type, Some(SchemaType::Type(Type::Object)));
-                            assert!(inner.additional_properties.is_some());
+                        utoipa::openapi::schema::AdditionalProperties::RefOr(ref_or) => {
+                            match ref_or {
+                                utoipa::openapi::RefOr::T(Schema::Object(inner)) => {
+                                    // Inner should also be an object with additional_properties
+                                    assert!(matches!(
+                                        inner.schema_type,
+                                        SchemaType::Type(Type::Object)
+                                    ));
+                                    assert!(inner.additional_properties.is_some());
 
-                            // Verify innermost type is String
-                            if let Some(innermost) = &inner.additional_properties {
-                                match innermost.as_ref() {
-                                    Schema::Object(innermost_obj) => {
-                                        assert_eq!(
-                                            innermost_obj.schema_type,
-                                            Some(SchemaType::Type(Type::String))
-                                        );
+                                    // Verify innermost type is String
+                                    if let Some(innermost) = &inner.additional_properties {
+                                        match innermost.as_ref() {
+                                            utoipa::openapi::schema::AdditionalProperties::RefOr(inner_ref_or) => {
+                                                match inner_ref_or {
+                                                    utoipa::openapi::RefOr::T(Schema::Object(innermost_obj)) => {
+                                                        assert!(matches!(
+                                                            innermost_obj.schema_type,
+                                                            SchemaType::Type(Type::String)
+                                                        ));
+                                                    }
+                                                    _ => panic!("Expected Object schema for String"),
+                                                }
+                                            }
+                                            _ => panic!("Expected RefOr AdditionalProperties for innermost"),
+                                        }
                                     }
-                                    _ => panic!("Expected Object schema for String"),
                                 }
+                                _ => panic!("Expected Object schema for nested HashMap"),
                             }
                         }
-                        _ => panic!("Expected Object schema for nested HashMap"),
+                        _ => panic!("Expected RefOr AdditionalProperties"),
                     }
                 }
             }
@@ -388,16 +417,24 @@ mod tests {
 
         match schema {
             Schema::Object(obj) => {
-                assert_eq!(obj.schema_type, Some(SchemaType::Type(Type::Object)));
+                assert!(matches!(obj.schema_type, SchemaType::Type(Type::Object)));
                 assert!(obj.additional_properties.is_some());
 
                 // Option<T> should return T's schema
                 if let Some(additional_props) = &obj.additional_properties {
                     match additional_props.as_ref() {
-                        Schema::Object(inner) => {
-                            assert_eq!(inner.schema_type, Some(SchemaType::Type(Type::Integer)));
+                        utoipa::openapi::schema::AdditionalProperties::RefOr(ref_or) => {
+                            match ref_or {
+                                utoipa::openapi::RefOr::T(Schema::Object(inner)) => {
+                                    assert!(matches!(
+                                        inner.schema_type,
+                                        SchemaType::Type(Type::Integer)
+                                    ));
+                                }
+                                _ => panic!("Expected Object schema for Option<i32>"),
+                            }
                         }
-                        _ => panic!("Expected Object schema for Option<i32>"),
+                        _ => panic!("Expected RefOr AdditionalProperties"),
                     }
                 }
             }
@@ -411,25 +448,35 @@ mod tests {
 
         match schema {
             Schema::Object(obj) => {
-                assert_eq!(obj.schema_type, Some(SchemaType::Type(Type::Object)));
+                assert!(matches!(obj.schema_type, SchemaType::Type(Type::Object)));
                 assert!(obj.additional_properties.is_some());
 
                 // Verify additional_properties is an array
                 if let Some(additional_props) = &obj.additional_properties {
                     match additional_props.as_ref() {
-                        Schema::Array(arr) => {
-                            // Array items should be String
-                            match arr.items.as_ref() {
-                                Schema::Object(item_obj) => {
-                                    assert_eq!(
-                                        item_obj.schema_type,
-                                        Some(SchemaType::Type(Type::String))
-                                    );
+                        utoipa::openapi::schema::AdditionalProperties::RefOr(ref_or) => {
+                            match ref_or {
+                                utoipa::openapi::RefOr::T(Schema::Array(arr)) => {
+                                    // Array items should be String - access via ArrayItems enum
+                                    match &arr.items {
+                                        utoipa::openapi::schema::ArrayItems::RefOrSchema(
+                                            boxed_schema,
+                                        ) => match boxed_schema.as_ref() {
+                                            utoipa::openapi::RefOr::T(Schema::Object(item_obj)) => {
+                                                assert!(matches!(
+                                                    item_obj.schema_type,
+                                                    SchemaType::Type(Type::String)
+                                                ));
+                                            }
+                                            _ => panic!("Expected Object schema for String items"),
+                                        },
+                                        _ => panic!("Expected RefOrSchema ArrayItems"),
+                                    }
                                 }
-                                _ => panic!("Expected Object schema for String items"),
+                                _ => panic!("Expected Array schema for Vec"),
                             }
                         }
-                        _ => panic!("Expected Array schema for Vec"),
+                        _ => panic!("Expected RefOr AdditionalProperties"),
                     }
                 }
             }

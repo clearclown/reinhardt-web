@@ -2,207 +2,112 @@
 //!
 //! Tests for request bodies, response bodies, and content types.
 
-use reinhardt_openapi::{MediaType, Operation, Response, Schema};
-use std::collections::HashMap;
+use openapi::openapi::{RefOr, RequestBodyBuilder, ResponseBuilder};
+use openapi::{MediaType, OperationExt, Required, ResponsesExt, Schema, SchemaExt};
 
 #[test]
 fn test_request_body() {
     // Test request body schemas
-    use reinhardt_openapi::RequestBody;
-
-    let mut content = HashMap::new();
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(Schema::string()),
-            example: None,
-        },
-    );
-
-    let request_body = RequestBody {
-        description: Some("Request body".to_string()),
-        content,
-        required: Some(true),
-    };
+    let request_body = RequestBodyBuilder::new()
+        .description(Some("Request body"))
+        .content("application/json", MediaType::new(Some(Schema::string())))
+        .required(Some(Required::True))
+        .build();
 
     assert_eq!(request_body.description, Some("Request body".to_string()));
-    assert_eq!(request_body.required, Some(true));
+    assert!(matches!(request_body.required, Some(Required::True)));
     assert!(request_body.content.contains_key("application/json"));
 }
 
 #[test]
 fn test_response_body_generation() {
     // Test response body generation
-    let mut content = HashMap::new();
-    let mut schema_props = HashMap::new();
-    schema_props.insert("id".to_string(), Schema::integer());
-    schema_props.insert("name".to_string(), Schema::string());
-
-    let schema = Schema {
-        schema_type: Some("object".to_string()),
-        format: None,
-        properties: Some(schema_props),
-        required: Some(vec!["id".to_string(), "name".to_string()]),
-        items: None,
-        reference: None,
-        description: None,
-        minimum: None,
-        maximum: None,
-        pattern: None,
-        enum_values: None,
-        min_length: None,
-        max_length: None,
-        default: None,
-    };
-
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(schema),
-            example: None,
-        },
+    let schema = Schema::object_with_properties(
+        vec![("id", Schema::integer()), ("name", Schema::string())],
+        vec!["id", "name"],
     );
 
-    let response = Response {
-        description: "Success".to_string(),
-        content: Some(content),
-        headers: None,
-    };
+    let media_type = MediaType::new(Some(schema));
+
+    let response = ResponseBuilder::new()
+        .description("Success")
+        .content("application/json", media_type)
+        .build();
 
     assert_eq!(response.description, "Success");
-    assert!(response.content.is_some());
-    let content_map = response.content.as_ref().unwrap();
-    assert!(content_map.contains_key("application/json"));
+    assert!(!response.content.is_empty());
+    assert!(response.content.contains_key("application/json"));
 }
 
 #[test]
 fn test_list_response_body_generation() {
     // Test list responses
-    let item_schema = Schema {
-        schema_type: Some("object".to_string()),
-        format: None,
-        properties: None,
-        required: None,
-        items: None,
-        reference: Some("#/components/schemas/Item".to_string()),
-        description: None,
-        minimum: None,
-        maximum: None,
-        pattern: None,
-        enum_values: None,
-        min_length: None,
-        max_length: None,
-        default: None,
-    };
+    let list_schema = Schema::array(Schema::Object(Default::default()));
 
-    let list_schema = Schema::array(item_schema);
+    let media_type = MediaType::new(Some(list_schema));
 
-    let mut content = HashMap::new();
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(list_schema),
-            example: None,
-        },
-    );
+    let response = ResponseBuilder::new()
+        .description("List of items")
+        .content("application/json", media_type)
+        .build();
 
-    let response = Response {
-        description: "List of items".to_string(),
-        content: Some(content),
-        headers: None,
-    };
-
-    let content_map = response.content.as_ref().unwrap();
-    let media_type = &content_map["application/json"];
+    let media_type = &response.content["application/json"];
     let schema = media_type.schema.as_ref().unwrap();
 
-    assert_eq!(schema.schema_type, Some("array".to_string()));
-    assert!(schema.items.is_some());
+    // Verify it's an array schema wrapped in RefOr::T
+    assert!(matches!(schema, RefOr::T(Schema::Array(_))));
 }
 
 #[test]
 fn test_paginated_list_response_body_generation() {
     // Test paginated responses
-    let mut schema_props = HashMap::new();
-    schema_props.insert("count".to_string(), Schema::integer());
-    schema_props.insert("next".to_string(), Schema::string());
-    schema_props.insert("previous".to_string(), Schema::string());
+    let item_array = Schema::array(Schema::Object(Default::default()));
 
-    let item_schema = Schema::reference("#/components/schemas/Item");
-    schema_props.insert("results".to_string(), Schema::array(item_schema));
-
-    let paginated_schema = Schema {
-        schema_type: Some("object".to_string()),
-        format: None,
-        properties: Some(schema_props),
-        required: Some(vec!["count".to_string(), "results".to_string()]),
-        items: None,
-        reference: None,
-        description: None,
-        minimum: None,
-        maximum: None,
-        pattern: None,
-        enum_values: None,
-        min_length: None,
-        max_length: None,
-        default: None,
-    };
-
-    let mut content = HashMap::new();
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(paginated_schema),
-            example: None,
-        },
+    let paginated_schema = Schema::object_with_properties(
+        vec![
+            ("count", Schema::integer()),
+            ("next", Schema::string()),
+            ("previous", Schema::string()),
+            ("results", item_array),
+        ],
+        vec!["count", "results"],
     );
 
-    let response = Response {
-        description: "Paginated list".to_string(),
-        content: Some(content),
-        headers: None,
-    };
+    let media_type = MediaType::new(Some(paginated_schema));
 
-    let content_map = response.content.as_ref().unwrap();
-    let media_type = &content_map["application/json"];
+    let response = ResponseBuilder::new()
+        .description("Paginated list")
+        .content("application/json", media_type)
+        .build();
+
+    let media_type = &response.content["application/json"];
     let schema = media_type.schema.as_ref().unwrap();
-    let props = schema.properties.as_ref().unwrap();
 
-    assert!(props.contains_key("count"));
-    assert!(props.contains_key("next"));
-    assert!(props.contains_key("previous"));
-    assert!(props.contains_key("results"));
+    // Verify it's an object schema wrapped in RefOr::T
+    assert!(matches!(schema, RefOr::T(Schema::Object(_))));
+
+    // Extract properties if it's an Object variant
+    if let RefOr::T(Schema::Object(obj)) = schema {
+        let props = &obj.properties;
+        assert!(props.contains_key("count"));
+        assert!(props.contains_key("next"));
+        assert!(props.contains_key("previous"));
+        assert!(props.contains_key("results"));
+    }
 }
 
 #[test]
 fn test_multiple_content_types() {
     // Test multiple content types in response
-    let mut content = HashMap::new();
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(Schema::string()),
-            example: None,
-        },
-    );
-    content.insert(
-        "application/xml".to_string(),
-        MediaType {
-            schema: Some(Schema::string()),
-            example: None,
-        },
-    );
+    let response = ResponseBuilder::new()
+        .description("Multi-format response")
+        .content("application/json", MediaType::new(Some(Schema::string())))
+        .content("application/xml", MediaType::new(Some(Schema::string())))
+        .build();
 
-    let response = Response {
-        description: "Multi-format response".to_string(),
-        content: Some(content),
-        headers: None,
-    };
-
-    let content_map = response.content.as_ref().unwrap();
-    assert_eq!(content_map.len(), 2);
-    assert!(content_map.contains_key("application/json"));
-    assert!(content_map.contains_key("application/xml"));
+    assert_eq!(response.content.len(), 2);
+    assert!(response.content.contains_key("application/json"));
+    assert!(response.content.contains_key("application/xml"));
 }
 
 #[test]
@@ -215,23 +120,15 @@ fn test_response_with_example() {
         "name": "Test Item"
     });
 
-    let mut content = HashMap::new();
-    content.insert(
-        "application/json".to_string(),
-        MediaType {
-            schema: Some(Schema::string()),
-            example: Some(example.clone()),
-        },
-    );
+    let mut media_type = MediaType::new(Some(Schema::string()));
+    media_type.example = Some(example.clone());
 
-    let response = Response {
-        description: "Response with example".to_string(),
-        content: Some(content),
-        headers: None,
-    };
+    let response = ResponseBuilder::new()
+        .description("Response with example")
+        .content("application/json", media_type)
+        .build();
 
-    let content_map = response.content.as_ref().unwrap();
-    let media_type = &content_map["application/json"];
+    let media_type = &response.content["application/json"];
     assert!(media_type.example.is_some());
     assert_eq!(media_type.example, Some(example));
 }
@@ -239,33 +136,25 @@ fn test_response_with_example() {
 #[test]
 fn test_empty_response() {
     // Test response without content (e.g., 204 No Content)
-    let response = Response {
-        description: "No content".to_string(),
-        content: None,
-        headers: None,
-    };
+    let response = ResponseBuilder::new().description("No content").build();
 
     assert_eq!(response.description, "No content");
-    assert!(response.content.is_none());
+    assert!(response.content.is_empty());
 }
 
 #[test]
 fn test_response_in_operation() {
     // Test adding responses to operations
-    let mut operation = Operation::new();
+    use openapi::Operation;
 
-    let success_response = Response {
-        description: "Successful operation".to_string(),
-        content: None,
-        headers: None,
-    };
+    let mut operation = <Operation as OperationExt>::new();
+
+    let success_response = ResponseBuilder::new()
+        .description("Successful operation")
+        .build();
     operation.add_response("200", success_response);
 
-    let error_response = Response {
-        description: "Not found".to_string(),
-        content: None,
-        headers: None,
-    };
+    let error_response = ResponseBuilder::new().description("Not found").build();
     operation.add_response("404", error_response);
 
     assert_eq!(operation.responses.len(), 2);

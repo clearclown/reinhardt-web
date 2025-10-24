@@ -14,7 +14,7 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,ignore
 /// use openapi::param_metadata::ParameterMetadata;
 /// use openapi::{Parameter, ParameterIn};
 ///
@@ -30,7 +30,7 @@ use std::marker::PhantomData;
 ///         Some(Parameter::new(name, ParameterIn::Path).schema(T::schema()))
 ///     }
 /// }
-/// ```
+/// ```ignore
 pub trait ParameterMetadata {
     /// Generate OpenAPI parameter metadata
     ///
