@@ -72,12 +72,39 @@ impl std::fmt::Display for AuthenticationError {
 impl std::error::Error for AuthenticationError {}
 
 /// Authentication backend trait
+///
+/// All authentication operations are asynchronous to support various backends
+/// including database lookups, external API calls, and distributed systems.
+#[async_trait::async_trait]
 pub trait AuthenticationBackend: Send + Sync {
-    fn authenticate(
+    /// Authenticate a request and return a user if successful
+    ///
+    /// # Arguments
+    ///
+    /// * `request` - The incoming HTTP request
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some(user))` if authentication succeeded
+    /// - `Ok(None)` if authentication failed but should try next backend
+    /// - `Err(error)` if a fatal error occurred
+    async fn authenticate(
         &self,
         request: &reinhardt_apps::Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError>;
-    fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError>;
+
+    /// Get a user by their ID
+    ///
+    /// # Arguments
+    ///
+    /// * `user_id` - The user's unique identifier
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Some(user))` if user was found
+    /// - `Ok(None)` if user doesn't exist
+    /// - `Err(error)` if an error occurred
+    async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError>;
 }
 
 #[cfg(test)]

@@ -87,15 +87,36 @@ impl MFAAuthentication {
 
     /// Verify TOTP code
     ///
-    /// In production, this should use a library like `totp-lite` for actual TOTP verification.
-    /// This implementation accepts any 6-digit numeric code for demonstration purposes.
+    /// Verifies a TOTP code using the RFC 6238 algorithm.
+    /// The secret must be a valid base32-encoded string.
     pub fn verify_totp(&self, username: &str, code: &str) -> Result<bool, AuthenticationError> {
         let secrets = self.secrets.lock().unwrap();
 
-        if let Some(_secret) = secrets.get(username) {
-            // For demonstration, accept any 6-digit code
-            // In production, use: totp-lite or similar library
-            Ok(code.len() == 6 && code.chars().all(|c| c.is_numeric()))
+        if let Some(secret) = secrets.get(username) {
+            // Decode base32 secret
+            let secret_bytes = match data_encoding::BASE32_NOPAD.decode(secret.as_bytes()) {
+                Ok(bytes) => bytes,
+                Err(_) => return Err(AuthenticationError::InvalidCredentials),
+            };
+
+            // Get current timestamp
+            let current_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+
+            // Calculate time step
+            let time_step = current_time / self.time_window;
+
+            // Generate TOTP for current time window
+            let totp = totp_lite::totp_custom::<totp_lite::Sha1>(
+                self.time_window,
+                6,
+                &secret_bytes,
+                time_step,
+            );
+
+            Ok(totp == code)
         } else {
             Err(AuthenticationError::UserNotFound)
         }
@@ -108,8 +129,9 @@ impl Default for MFAAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for MFAAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -141,7 +163,7 @@ impl AuthenticationBackend for MFAAuthentication {
         }
     }
 
-    fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         // Check if user exists in our secrets store
         let secrets = self.secrets.lock().unwrap();
         if secrets.contains_key(user_id) {
@@ -185,22 +207,36 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_totp_valid_format() {
+    fn test_verify_totp_valid_code() {
         let mfa = MFAAuthentication::new("TestApp");
-        mfa.register_user("alice", "SECRET");
+        // Use a known base32 secret for testing
+        let secret = "JBSWY3DPEHPK3PXP"; // Base32 encoded "Hello!"
+        mfa.register_user("alice", secret);
 
-        // 6-digit numeric code should be accepted in demo mode
-        let result = mfa.verify_totp("alice", "123456");
+        // Generate TOTP for current time
+        let current_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let time_step = current_time / 30;
+        let secret_bytes = data_encoding::BASE32_NOPAD
+            .decode(secret.as_bytes())
+            .unwrap();
+        let totp = totp_lite::totp_custom::<totp_lite::Sha1>(30, 6, &secret_bytes, time_step);
+
+        let result = mfa.verify_totp("alice", &totp);
         assert!(result.is_ok());
         assert!(result.unwrap());
     }
 
     #[test]
-    fn test_verify_totp_invalid_format() {
+    fn test_verify_totp_invalid_code() {
         let mfa = MFAAuthentication::new("TestApp");
-        mfa.register_user("alice", "SECRET");
+        let secret = "JBSWY3DPEHPK3PXP";
+        mfa.register_user("alice", secret);
 
-        let result = mfa.verify_totp("alice", "12345"); // Too short
+        // Invalid TOTP code
+        let result = mfa.verify_totp("alice", "000000");
         assert!(result.is_ok());
         assert!(!result.unwrap());
     }
@@ -213,14 +249,26 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test]
-    fn test_mfa_authentication_with_valid_code() {
+    #[tokio::test]
+    async fn test_mfa_authentication_with_valid_code() {
         let mfa = MFAAuthentication::new("TestApp");
-        mfa.register_user("alice", "SECRET");
+        let secret = "JBSWY3DPEHPK3PXP";
+        mfa.register_user("alice", secret);
+
+        // Generate valid TOTP code
+        let current_time = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let time_step = current_time / 30;
+        let secret_bytes = data_encoding::BASE32_NOPAD
+            .decode(secret.as_bytes())
+            .unwrap();
+        let totp = totp_lite::totp_custom::<totp_lite::Sha1>(30, 6, &secret_bytes, time_step);
 
         let mut headers = HeaderMap::new();
         headers.insert("X-Username", "alice".parse().unwrap());
-        headers.insert("X-MFA-Code", "123456".parse().unwrap());
+        headers.insert("X-MFA-Code", totp.parse().unwrap());
 
         let request = Request::new(
             Method::GET,
@@ -230,13 +278,13 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = mfa.authenticate(&request).unwrap();
+        let result = mfa.authenticate(&request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "alice");
     }
 
-    #[test]
-    fn test_mfa_authentication_without_headers() {
+    #[tokio::test]
+    async fn test_mfa_authentication_without_headers() {
         let mfa = MFAAuthentication::new("TestApp");
 
         let request = Request::new(
@@ -247,7 +295,7 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = mfa.authenticate(&request).unwrap();
+        let result = mfa.authenticate(&request).await.unwrap();
         assert!(result.is_none());
     }
 

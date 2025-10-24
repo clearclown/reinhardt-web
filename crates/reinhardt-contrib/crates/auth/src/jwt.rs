@@ -1,6 +1,10 @@
+use crate::drf_authentication::Authentication;
+use crate::{AuthenticationError, SimpleUser, User};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use reinhardt_apps::Request;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// JWT Claims
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -182,5 +186,44 @@ impl JwtAuth {
         }
 
         Ok(claims)
+    }
+}
+
+// Implement DRF-style Authentication trait
+#[async_trait::async_trait]
+impl Authentication for JwtAuth {
+    async fn authenticate(
+        &self,
+        request: &Request,
+    ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+        // Get Authorization header
+        let auth_header = request
+            .headers
+            .get("Authorization")
+            .and_then(|h| h.to_str().ok());
+
+        if let Some(header) = auth_header {
+            // Check for Bearer token
+            if let Some(token) = header.strip_prefix("Bearer ") {
+                // Verify and decode token
+                match self.verify_token(token) {
+                    Ok(claims) => {
+                        // Create user from claims
+                        return Ok(Some(Box::new(SimpleUser {
+                            id: Uuid::parse_str(&claims.sub).unwrap_or_else(|_| Uuid::new_v4()),
+                            username: claims.username.clone(),
+                            email: format!("{}@example.com", claims.username),
+                            is_active: true,
+                            is_admin: false,
+                        })));
+                    }
+                    Err(_) => {
+                        return Err(AuthenticationError::InvalidToken);
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 }

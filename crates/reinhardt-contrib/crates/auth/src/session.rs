@@ -161,13 +161,14 @@ pub trait SessionStore: Send + Sync {
 /// ```
 /// use reinhardt_auth::session::{InMemorySessionStore, SessionStore};
 ///
-/// # tokio_test::block_on(async {
-/// let store = InMemorySessionStore::new();
-/// let session_id = store.create_session_id();
+/// #[tokio::main]
+/// async fn main() {
+///     let store = InMemorySessionStore::new();
+///     let session_id = store.create_session_id();
 ///
-/// let session = store.load(&session_id).await;
-/// assert!(session.is_none());
-/// # });
+///     let session = store.load(&session_id).await;
+///     assert!(session.is_none());
+/// }
 /// ```
 pub struct InMemorySessionStore {
     sessions: Arc<Mutex<HashMap<SessionId, Session>>>,

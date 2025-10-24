@@ -3,7 +3,7 @@
 //! Provides token blacklisting and refresh token management for JWT authentication.
 
 use async_trait::async_trait;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -70,19 +70,19 @@ pub trait TokenBlacklist: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_auth::InMemoryTokenBlacklist;
-/// use reinhardt_auth::BlacklistReason;
+/// use reinhardt_auth::{InMemoryTokenBlacklist, TokenBlacklist, BlacklistReason};
 /// use chrono::{Utc, Duration};
 ///
-/// # tokio_test::block_on(async {
-/// let blacklist = InMemoryTokenBlacklist::new();
+/// #[tokio::main]
+/// async fn main() {
+///     let blacklist = InMemoryTokenBlacklist::new();
 ///
-/// let jti = "token_123";
-/// let expires_at = Utc::now() + Duration::hours(1);
+///     let jti = "token_123";
+///     let expires_at = Utc::now() + Duration::hours(1);
 ///
-/// blacklist.blacklist(jti, expires_at, BlacklistReason::Logout).await.unwrap();
-/// assert!(blacklist.is_blacklisted(jti).await.unwrap());
-/// # });
+///     blacklist.blacklist(jti, expires_at, BlacklistReason::Logout).await.unwrap();
+///     assert!(blacklist.is_blacklisted(jti).await.unwrap());
+/// }
 /// ```
 pub struct InMemoryTokenBlacklist {
     tokens: Arc<Mutex<HashMap<String, BlacklistedToken>>>,
@@ -210,25 +210,25 @@ pub trait RefreshTokenStore: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_auth::InMemoryRefreshTokenStore;
-/// use reinhardt_auth::RefreshToken;
+/// use reinhardt_auth::{InMemoryRefreshTokenStore, RefreshTokenStore, RefreshToken};
 /// use chrono::{Utc, Duration};
 ///
-/// # tokio_test::block_on(async {
-/// let store = InMemoryRefreshTokenStore::new();
+/// #[tokio::main]
+/// async fn main() {
+///     let store = InMemoryRefreshTokenStore::new();
 ///
-/// let token = RefreshToken {
-///     jti: "refresh_123".to_string(),
-///     user_id: "user_456".to_string(),
-///     created_at: Utc::now(),
-///     expires_at: Utc::now() + Duration::days(7),
-///     is_used: false,
-/// };
+///     let token = RefreshToken {
+///         jti: "refresh_123".to_string(),
+///         user_id: "user_456".to_string(),
+///         created_at: Utc::now(),
+///         expires_at: Utc::now() + Duration::days(7),
+///         is_used: false,
+///     };
 ///
-/// store.store(token.clone()).await.unwrap();
-/// let retrieved = store.get(&token.jti).await.unwrap();
-/// assert!(retrieved.is_some());
-/// # });
+///     store.store(token.clone()).await.unwrap();
+///     let retrieved = store.get(&token.jti).await.unwrap();
+///     assert!(retrieved.is_some());
+/// }
 /// ```
 pub struct InMemoryRefreshTokenStore {
     tokens: Arc<Mutex<HashMap<String, RefreshToken>>>,
@@ -336,6 +336,7 @@ impl TokenRotationManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Duration;
 
     #[tokio::test]
     async fn test_blacklist_token() {

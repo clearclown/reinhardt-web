@@ -96,8 +96,9 @@ impl Default for RemoteUserAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for RemoteUserAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -125,7 +126,7 @@ impl AuthenticationBackend for RemoteUserAuthentication {
         }
     }
 
-    fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         // For remote user auth, we can't retrieve users by ID
         // since we only have the username from the header
         Ok(None)
@@ -138,8 +139,8 @@ mod tests {
     use bytes::Bytes;
     use hyper::{HeaderMap, Method, Uri, Version};
 
-    #[test]
-    fn test_remote_user_with_header() {
+    #[tokio::test]
+    async fn test_remote_user_with_header() {
         let auth = RemoteUserAuthentication::new();
         let mut headers = HeaderMap::new();
         headers.insert("REMOTE_USER", "testuser".parse().unwrap());
@@ -152,13 +153,13 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = auth.authenticate(&request).unwrap();
+        let result = auth.authenticate(&request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "testuser");
     }
 
-    #[test]
-    fn test_remote_user_without_header() {
+    #[tokio::test]
+    async fn test_remote_user_without_header() {
         let auth = RemoteUserAuthentication::new();
         let request = Request::new(
             Method::GET,
@@ -168,12 +169,12 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = auth.authenticate(&request).unwrap();
+        let result = auth.authenticate(&request).await.unwrap();
         assert!(result.is_none());
     }
 
-    #[test]
-    fn test_custom_header() {
+    #[tokio::test]
+    async fn test_custom_header() {
         let auth = RemoteUserAuthentication::new().with_header("X-Auth-User");
         let mut headers = HeaderMap::new();
         headers.insert("X-Auth-User", "alice".parse().unwrap());
@@ -186,13 +187,13 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = auth.authenticate(&request).unwrap();
+        let result = auth.authenticate(&request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "alice");
     }
 
-    #[test]
-    fn test_empty_header() {
+    #[tokio::test]
+    async fn test_empty_header() {
         let auth = RemoteUserAuthentication::new();
         let mut headers = HeaderMap::new();
         headers.insert("REMOTE_USER", "".parse().unwrap());
@@ -205,7 +206,7 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = auth.authenticate(&request).unwrap();
+        let result = auth.authenticate(&request).await.unwrap();
         assert!(result.is_none());
     }
 }

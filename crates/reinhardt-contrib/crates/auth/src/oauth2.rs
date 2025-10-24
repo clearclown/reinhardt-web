@@ -90,21 +90,22 @@ pub trait OAuth2TokenStore: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_auth::{InMemoryOAuth2Store, AuthorizationCode};
+/// use reinhardt_auth::{InMemoryOAuth2Store, AuthorizationCode, OAuth2TokenStore};
 ///
-/// # tokio_test::block_on(async {
-/// let store = InMemoryOAuth2Store::new();
+/// #[tokio::main]
+/// async fn main() {
+///     let store = InMemoryOAuth2Store::new();
 ///
-/// let code = AuthorizationCode {
-///     code: "auth_code_123".to_string(),
-///     client_id: "client_1".to_string(),
-///     redirect_uri: "https://example.com/callback".to_string(),
-///     user_id: "user_456".to_string(),
-///     scope: Some("read write".to_string()),
-/// };
+///     let code = AuthorizationCode {
+///         code: "auth_code_123".to_string(),
+///         client_id: "client_1".to_string(),
+///         redirect_uri: "https://example.com/callback".to_string(),
+///         user_id: "user_456".to_string(),
+///         scope: Some("read write".to_string()),
+///     };
 ///
-/// store.store_code(code).await.unwrap();
-/// # });
+///     store.store_code(code).await.unwrap();
+/// }
 /// ```
 pub struct InMemoryOAuth2Store {
     codes: Arc<Mutex<HashMap<String, AuthorizationCode>>>,
@@ -279,8 +280,9 @@ impl Default for OAuth2Authentication {
     }
 }
 
+#[async_trait]
 impl AuthenticationBackend for OAuth2Authentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -291,20 +293,34 @@ impl AuthenticationBackend for OAuth2Authentication {
             .and_then(|h| h.to_str().ok());
 
         if let Some(header) = auth_header {
-            if let Some(_token) = header.strip_prefix("Bearer ") {
-                // In a real implementation, this would be async
-                // For demonstration, we always return None
-                // A real implementation would query the token store asynchronously
-                return Ok(None);
+            if let Some(token) = header.strip_prefix("Bearer ") {
+                // Query the token store asynchronously
+                match self.token_store.get_token(token).await {
+                    Ok(Some(user_id)) => {
+                        // Token is valid, get the user
+                        return self.get_user(&user_id).await;
+                    }
+                    Ok(None) => {
+                        // Token not found or expired
+                        return Ok(None);
+                    }
+                    Err(e) => {
+                        // Error querying token store
+                        return Err(AuthenticationError::Unknown(format!(
+                            "Token store error: {}",
+                            e
+                        )));
+                    }
+                }
             }
         }
 
         Ok(None)
     }
 
-    fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-        // For OAuth2, we would typically look up the user in a database
-        // For demonstration, we'll create a user object
+    async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+        // In a production system, this would query a user database
+        // For now, we create a simple user object
         Ok(Some(Box::new(SimpleUser {
             id: Uuid::new_v4(),
             username: user_id.to_string(),

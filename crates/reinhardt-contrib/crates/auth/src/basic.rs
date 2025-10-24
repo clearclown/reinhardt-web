@@ -1,5 +1,6 @@
 //! HTTP Basic Authentication
 
+use crate::drf_authentication::Authentication;
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use reinhardt_types::Request;
@@ -102,8 +103,9 @@ impl Default for BasicAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for BasicAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -132,7 +134,7 @@ impl AuthenticationBackend for BasicAuthentication {
         Ok(None)
     }
 
-    fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         if self.users.contains_key(user_id) {
             Ok(Some(Box::new(SimpleUser {
                 id: Uuid::new_v4(),
@@ -144,6 +146,18 @@ impl AuthenticationBackend for BasicAuthentication {
         } else {
             Ok(None)
         }
+    }
+}
+
+// Implement DRF-style Authentication trait by forwarding to AuthenticationBackend
+#[async_trait::async_trait]
+impl Authentication for BasicAuthentication {
+    async fn authenticate(
+        &self,
+        request: &Request,
+    ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+        // Forward to AuthenticationBackend implementation
+        AuthenticationBackend::authenticate(self, request).await
     }
 }
 
@@ -165,8 +179,8 @@ mod tests {
         )
     }
 
-    #[test]
-    fn test_basic_auth_success() {
+    #[tokio::test]
+    async fn test_basic_auth_success() {
         let mut backend = BasicAuthentication::new();
         backend.add_user("testuser", "testpass");
 
@@ -174,13 +188,15 @@ mod tests {
         let auth = "Basic dGVzdHVzZXI6dGVzdHBhc3M=";
         let request = create_request_with_auth(auth);
 
-        let result = backend.authenticate(&request).unwrap();
+        let result = AuthenticationBackend::authenticate(&backend, &request)
+            .await
+            .unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "testuser");
     }
 
-    #[test]
-    fn test_basic_auth_invalid_password() {
+    #[tokio::test]
+    async fn test_basic_auth_invalid_password() {
         let mut backend = BasicAuthentication::new();
         backend.add_user("testuser", "correctpass");
 
@@ -188,12 +204,12 @@ mod tests {
         let auth = "Basic dGVzdHVzZXI6d3JvbmdwYXNz";
         let request = create_request_with_auth(auth);
 
-        let result = backend.authenticate(&request);
+        let result = AuthenticationBackend::authenticate(&backend, &request).await;
         assert!(result.is_err());
     }
 
-    #[test]
-    fn test_basic_auth_no_header() {
+    #[tokio::test]
+    async fn test_basic_auth_no_header() {
         let backend = BasicAuthentication::new();
         let request = Request::new(
             Method::GET,
@@ -203,7 +219,9 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = backend.authenticate(&request).unwrap();
+        let result = AuthenticationBackend::authenticate(&backend, &request)
+            .await
+            .unwrap();
         assert!(result.is_none());
     }
 
@@ -216,16 +234,16 @@ mod tests {
         assert_eq!(pass, "pass");
     }
 
-    #[test]
-    fn test_get_user() {
+    #[tokio::test]
+    async fn test_get_user() {
         let mut backend = BasicAuthentication::new();
         backend.add_user("testuser", "testpass");
 
-        let user = backend.get_user("testuser").unwrap();
+        let user = backend.get_user("testuser").await.unwrap();
         assert!(user.is_some());
         assert_eq!(user.unwrap().get_username(), "testuser");
 
-        let no_user = backend.get_user("nonexistent").unwrap();
+        let no_user = backend.get_user("nonexistent").await.unwrap();
         assert!(no_user.is_none());
     }
 }

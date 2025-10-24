@@ -39,14 +39,15 @@ pub const SESSION_COOKIE_NAME: &str = "sessionid";
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// use reinhardt_auth::handlers::LoginHandler;
 /// use reinhardt_auth::session::InMemorySessionStore;
 /// use reinhardt_auth::backend::AuthBackend;
 /// use std::sync::Arc;
 ///
 /// let session_store = Arc::new(InMemorySessionStore::new());
-/// let auth_backend = Arc::new(AuthBackend::new());
+/// // AuthBackend is a trait - use a concrete implementation
+/// let auth_backend = Arc::new(YourAuthBackendImpl::new());
 /// let handler = LoginHandler::new(session_store, auth_backend);
 /// ```
 pub struct LoginHandler<S: SessionStore, A: AuthenticationBackend> {
@@ -59,14 +60,15 @@ impl<S: SessionStore, A: AuthenticationBackend> LoginHandler<S, A> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```ignore
     /// use reinhardt_auth::handlers::LoginHandler;
     /// use reinhardt_auth::session::InMemorySessionStore;
     /// use reinhardt_auth::backend::AuthBackend;
     /// use std::sync::Arc;
     ///
     /// let session_store = Arc::new(InMemorySessionStore::new());
-    /// let auth_backend = Arc::new(AuthBackend::new());
+    /// // AuthBackend is a trait - use a concrete implementation
+    /// let auth_backend = Arc::new(YourAuthBackendImpl::new());
     /// let handler = LoginHandler::new(session_store, auth_backend);
     /// ```
     pub fn new(session_store: Arc<S>, auth_backend: Arc<A>) -> Self {
@@ -95,7 +97,13 @@ impl<S: SessionStore, A: AuthenticationBackend> LoginHandler<S, A> {
 #[async_trait]
 impl<S: SessionStore + 'static, A: AuthenticationBackend + 'static> Handler for LoginHandler<S, A> {
     async fn handle(&self, request: Request) -> Result<Response> {
-        if let Some(user) = self.auth_backend.authenticate(&request).ok().flatten() {
+        if let Some(user) = self
+            .auth_backend
+            .authenticate(&request)
+            .await
+            .ok()
+            .flatten()
+        {
             let (_session_id, cookie_str) = self.perform_login(user).await?;
 
             Ok(Response::ok()
@@ -192,7 +200,7 @@ impl<S: SessionStore + 'static> Handler for LogoutHandler<S> {
 mod tests {
     use super::*;
     use crate::session::InMemorySessionStore;
-    use crate::user::{AnonymousUser, SimpleUser};
+    use crate::user::SimpleUser;
     use crate::AuthenticationError;
     use bytes::Bytes;
     use hyper::{HeaderMap, Method, Uri, Version};
@@ -202,8 +210,9 @@ mod tests {
         test_user: Option<SimpleUser>,
     }
 
+    #[async_trait]
     impl AuthenticationBackend for TestAuthBackend {
-        fn authenticate(
+        async fn authenticate(
             &self,
             _request: &Request,
         ) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -214,7 +223,7 @@ mod tests {
             }
         }
 
-        fn get_user(
+        async fn get_user(
             &self,
             _user_id: &str,
         ) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {

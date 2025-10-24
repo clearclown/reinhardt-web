@@ -9,10 +9,13 @@ use std::sync::Arc;
 /// DRF-style authentication trait wrapper
 ///
 /// Provides a Django REST Framework-compatible interface for authentication.
+#[async_trait::async_trait]
 pub trait Authentication: Send + Sync {
     /// Authenticate a request and return a user if successful
-    fn authenticate(&self, request: &Request)
-        -> Result<Option<Box<dyn User>>, AuthenticationError>;
+    async fn authenticate(
+        &self,
+        request: &Request,
+    ) -> Result<Option<Box<dyn User>>, AuthenticationError>;
 }
 
 /// Basic authentication configuration
@@ -73,12 +76,12 @@ impl Default for TokenAuthConfig {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_auth::{CompositeAuthentication, HttpBasicAuth, JwtAuth};
+/// use reinhardt_auth::{CompositeAuthentication, SessionAuthentication, TokenAuthentication};
 /// use std::sync::Arc;
 ///
 /// let mut auth = CompositeAuthentication::new();
-/// auth.add_backend(Arc::new(JwtAuth::new(b"secret")));
-/// auth.add_backend(Arc::new(HttpBasicAuth::new()));
+/// auth.add_backend(Arc::new(SessionAuthentication::new()));
+/// auth.add_backend(Arc::new(TokenAuthentication::new()));
 /// ```
 pub struct CompositeAuthentication {
     backends: Vec<Arc<dyn Authentication>>,
@@ -107,11 +110,11 @@ impl CompositeAuthentication {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_auth::{CompositeAuthentication, JwtAuth};
+    /// use reinhardt_auth::{CompositeAuthentication, TokenAuthentication};
     /// use std::sync::Arc;
     ///
     /// let mut auth = CompositeAuthentication::new();
-    /// auth.add_backend(Arc::new(JwtAuth::new(b"secret")));
+    /// auth.add_backend(Arc::new(TokenAuthentication::new()));
     /// ```
     pub fn add_backend(&mut self, backend: Arc<dyn Authentication>) {
         self.backends.push(backend);
@@ -129,14 +132,15 @@ impl Default for CompositeAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl Authentication for CompositeAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         // Try each backend in order
         for backend in &self.backends {
-            match backend.authenticate(request) {
+            match backend.authenticate(request).await {
                 Ok(Some(user)) => return Ok(Some(user)),
                 Ok(None) => continue,
                 Err(e) => {
@@ -150,15 +154,16 @@ impl Authentication for CompositeAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for CompositeAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-        Authentication::authenticate(self, request)
+        Authentication::authenticate(self, request).await
     }
 
-    fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         // For composite auth, we can't determine which backend to use
         // In a real implementation, we'd need to track which backend authenticated the user
         Ok(None)
@@ -210,8 +215,9 @@ impl Default for TokenAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl Authentication for TokenAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -239,15 +245,16 @@ impl Authentication for TokenAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for TokenAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-        Authentication::authenticate(self, request)
+        Authentication::authenticate(self, request).await
     }
 
-    fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         if self.tokens.values().any(|id| id == user_id) {
             Ok(Some(Box::new(SimpleUser {
                 id: uuid::Uuid::new_v4(),
@@ -289,8 +296,9 @@ impl Default for RemoteUserAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl Authentication for RemoteUserAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -315,15 +323,16 @@ impl Authentication for RemoteUserAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for RemoteUserAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-        Authentication::authenticate(self, request)
+        Authentication::authenticate(self, request).await
     }
 
-    fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         Ok(None)
     }
 }
@@ -354,8 +363,9 @@ impl Default for SessionAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl Authentication for SessionAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -383,15 +393,16 @@ impl Authentication for SessionAuthentication {
     }
 }
 
+#[async_trait::async_trait]
 impl AuthenticationBackend for SessionAuthentication {
-    fn authenticate(
+    async fn authenticate(
         &self,
         request: &Request,
     ) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-        Authentication::authenticate(self, request)
+        Authentication::authenticate(self, request).await
     }
 
-    fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+    async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
         Ok(None)
     }
 }
@@ -399,11 +410,13 @@ impl AuthenticationBackend for SessionAuthentication {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::basic::BasicAuthentication;
+    use crate::JwtAuth;
     use bytes::Bytes;
     use hyper::{HeaderMap, Method, Uri, Version};
 
-    #[test]
-    fn test_composite_authentication() {
+    #[tokio::test]
+    async fn test_composite_authentication() {
         let mut composite = CompositeAuthentication::new();
 
         let mut basic = BasicAuthentication::new();
@@ -429,12 +442,56 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = composite.authenticate(&request).unwrap();
+        let result = Authentication::authenticate(&composite, &request)
+            .await
+            .unwrap();
         assert!(result.is_some());
+        assert_eq!(result.unwrap().get_username(), "user1");
     }
 
-    #[test]
-    fn test_token_authentication() {
+    #[tokio::test]
+    async fn test_composite_authentication_with_jwt() {
+        let mut composite = CompositeAuthentication::new();
+
+        let mut basic = BasicAuthentication::new();
+        basic.add_user("user1", "pass1");
+
+        let jwt_secret = b"test_secret_key";
+        let jwt = JwtAuth::new(jwt_secret);
+        let jwt_for_backend = JwtAuth::new(jwt_secret);
+
+        composite.add_backend(Arc::new(jwt_for_backend));
+        composite.add_backend(Arc::new(basic));
+
+        // Generate a JWT token
+        let token = jwt
+            .generate_token("user123".to_string(), "testuser".to_string())
+            .unwrap();
+
+        // Test with JWT Bearer token
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", token).parse().unwrap(),
+        );
+
+        let request = Request::new(
+            Method::GET,
+            Uri::from_static("/"),
+            Version::HTTP_11,
+            headers,
+            Bytes::new(),
+        );
+
+        let result = Authentication::authenticate(&composite, &request)
+            .await
+            .unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().get_username(), "testuser");
+    }
+
+    #[tokio::test]
+    async fn test_token_authentication() {
         let mut auth = TokenAuthentication::new();
         auth.add_token("secret_token", "alice");
 
@@ -449,13 +506,13 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = Authentication::authenticate(&auth, &request).unwrap();
+        let result = Authentication::authenticate(&auth, &request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "alice");
     }
 
-    #[test]
-    fn test_remote_user_authentication() {
+    #[tokio::test]
+    async fn test_remote_user_authentication() {
         let auth = RemoteUserAuthentication::new();
 
         let mut headers = HeaderMap::new();
@@ -469,13 +526,13 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = Authentication::authenticate(&auth, &request).unwrap();
+        let result = Authentication::authenticate(&auth, &request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "bob");
     }
 
-    #[test]
-    fn test_session_authentication() {
+    #[tokio::test]
+    async fn test_session_authentication() {
         let auth = SessionAuthentication::new();
 
         let mut headers = HeaderMap::new();
@@ -489,12 +546,12 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = Authentication::authenticate(&auth, &request).unwrap();
+        let result = Authentication::authenticate(&auth, &request).await.unwrap();
         assert!(result.is_some());
     }
 
-    #[test]
-    fn test_custom_token_config() {
+    #[tokio::test]
+    async fn test_custom_token_config() {
         let config = TokenAuthConfig {
             header_name: "X-API-Key".to_string(),
             prefix: "Bearer".to_string(),
@@ -514,7 +571,7 @@ mod tests {
             Bytes::new(),
         );
 
-        let result = Authentication::authenticate(&auth, &request).unwrap();
+        let result = Authentication::authenticate(&auth, &request).await.unwrap();
         assert!(result.is_some());
         assert_eq!(result.unwrap().get_username(), "charlie");
     }
