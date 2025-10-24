@@ -37,8 +37,11 @@
 //! ```
 
 pub mod backend;
+pub mod backends;
+pub mod chain;
 pub mod queue;
 pub mod result;
+pub mod retry;
 pub mod scheduler;
 pub mod task;
 pub mod worker;
@@ -47,8 +50,19 @@ pub use backend::{
     DummyBackend, ImmediateBackend, ResultStatus, TaskBackend, TaskBackends, TaskExecutionError,
     TaskResultStatus,
 };
+
+#[cfg(feature = "redis-backend")]
+pub use backends::RedisBackend;
+
+#[cfg(feature = "database-backend")]
+pub use backends::SqliteBackend;
+pub use chain::{ChainStatus, TaskChain, TaskChainBuilder};
 pub use queue::{QueueConfig, TaskQueue};
-pub use result::{TaskOutput, TaskResult as TaskResultBackend};
+pub use result::{
+    MemoryResultBackend, ResultBackend, TaskOutput, TaskResult as TaskResultBackend,
+    TaskResultMetadata,
+};
+pub use retry::{RetryState, RetryStrategy};
 pub use scheduler::{CronSchedule, Schedule, Scheduler};
 pub use task::{
     Task, TaskExecutor, TaskId, TaskPriority, TaskStatus, DEFAULT_TASK_QUEUE_NAME,

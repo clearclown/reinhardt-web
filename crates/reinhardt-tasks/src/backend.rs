@@ -22,7 +22,13 @@ pub type TaskResultStatus = TaskStatus;
 #[async_trait]
 pub trait TaskBackend: Send + Sync {
     async fn enqueue(&self, task: Box<dyn Task>) -> Result<TaskId, TaskExecutionError>;
+    async fn dequeue(&self) -> Result<Option<TaskId>, TaskExecutionError>;
     async fn get_status(&self, task_id: TaskId) -> Result<TaskStatus, TaskExecutionError>;
+    async fn update_status(
+        &self,
+        task_id: TaskId,
+        status: TaskStatus,
+    ) -> Result<(), TaskExecutionError>;
     fn backend_name(&self) -> &str;
 }
 
@@ -60,8 +66,20 @@ impl TaskBackend for DummyBackend {
         Ok(TaskId::new())
     }
 
+    async fn dequeue(&self) -> Result<Option<TaskId>, TaskExecutionError> {
+        Ok(None)
+    }
+
     async fn get_status(&self, _task_id: TaskId) -> Result<TaskStatus, TaskExecutionError> {
         Ok(TaskStatus::Success)
+    }
+
+    async fn update_status(
+        &self,
+        _task_id: TaskId,
+        _status: TaskStatus,
+    ) -> Result<(), TaskExecutionError> {
+        Ok(())
     }
 
     fn backend_name(&self) -> &str {
@@ -89,8 +107,20 @@ impl TaskBackend for ImmediateBackend {
         Ok(TaskId::new())
     }
 
+    async fn dequeue(&self) -> Result<Option<TaskId>, TaskExecutionError> {
+        Ok(None)
+    }
+
     async fn get_status(&self, _task_id: TaskId) -> Result<TaskStatus, TaskExecutionError> {
         Ok(TaskStatus::Success)
+    }
+
+    async fn update_status(
+        &self,
+        _task_id: TaskId,
+        _status: TaskStatus,
+    ) -> Result<(), TaskExecutionError> {
+        Ok(())
     }
 
     fn backend_name(&self) -> &str {

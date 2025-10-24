@@ -1,0 +1,267 @@
+//! SQLite-based task backend implementation
+
+use crate::{Task, TaskExecutionError, TaskId, TaskStatus};
+use async_trait::async_trait;
+use sqlx::SqlitePool;
+
+/// SQLite-based task backend
+///
+/// Stores tasks in a SQLite database with status tracking.
+///
+/// # Examples
+///
+/// ```no_run
+/// use reinhardt_tasks::SqliteBackend;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let backend = SqliteBackend::new("sqlite::memory:").await?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct SqliteBackend {
+    pool: SqlitePool,
+}
+
+impl SqliteBackend {
+    /// Create a new SQLite backend
+    ///
+    /// # Arguments
+    ///
+    /// * `database_url` - SQLite database URL (e.g., "sqlite::memory:" or "sqlite://path/to/db.sqlite")
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_tasks::SqliteBackend;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = SqliteBackend::new("sqlite::memory:").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
+        let pool = SqlitePool::connect(database_url).await?;
+
+        let backend = Self { pool };
+
+        backend.create_tables().await?;
+
+        Ok(backend)
+    }
+
+    /// Create necessary database tables
+    async fn create_tables(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS tasks (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                status TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL
+            )
+        "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl crate::backend::TaskBackend for SqliteBackend {
+    async fn enqueue(&self, task: Box<dyn Task>) -> Result<TaskId, TaskExecutionError> {
+        let task_id = task.id();
+        let task_name = task.name().to_string();
+        let now = chrono::Utc::now().timestamp();
+
+        let id_str = task_id.to_string();
+        let status_str = "pending";
+
+        sqlx::query(
+            "INSERT INTO tasks (id, name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(&id_str)
+        .bind(&task_name)
+        .bind(status_str)
+        .bind(now)
+        .bind(now)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        Ok(task_id)
+    }
+
+    async fn dequeue(&self) -> Result<Option<TaskId>, TaskExecutionError> {
+        // Get oldest pending task
+        let record: Option<(String,)> = sqlx::query_as(
+            "SELECT id FROM tasks WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1",
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        match record {
+            Some((id_str,)) => {
+                let task_id = id_str
+                    .parse()
+                    .map_err(|e: uuid::Error| TaskExecutionError::BackendError(e.to_string()))?;
+
+                // Mark as running
+                let now = chrono::Utc::now().timestamp();
+                sqlx::query("UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?")
+                    .bind("running")
+                    .bind(now)
+                    .bind(&id_str)
+                    .execute(&self.pool)
+                    .await
+                    .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+                Ok(Some(task_id))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn get_status(&self, task_id: TaskId) -> Result<TaskStatus, TaskExecutionError> {
+        let id_str = task_id.to_string();
+
+        let record: Option<(String,)> = sqlx::query_as("SELECT status FROM tasks WHERE id = ?")
+            .bind(&id_str)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        match record {
+            Some((status_str,)) => {
+                let status = match status_str.as_str() {
+                    "pending" => TaskStatus::Pending,
+                    "running" => TaskStatus::Running,
+                    "success" => TaskStatus::Success,
+                    "failure" => TaskStatus::Failure,
+                    "retry" => TaskStatus::Retry,
+                    _ => TaskStatus::Pending,
+                };
+                Ok(status)
+            }
+            None => Err(TaskExecutionError::NotFound(task_id)),
+        }
+    }
+
+    async fn update_status(
+        &self,
+        task_id: TaskId,
+        status: TaskStatus,
+    ) -> Result<(), TaskExecutionError> {
+        let id_str = task_id.to_string();
+        let status_str = match status {
+            TaskStatus::Pending => "pending",
+            TaskStatus::Running => "running",
+            TaskStatus::Success => "success",
+            TaskStatus::Failure => "failure",
+            TaskStatus::Retry => "retry",
+        };
+        let now = chrono::Utc::now().timestamp();
+
+        let result = sqlx::query("UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?")
+            .bind(status_str)
+            .bind(now)
+            .bind(&id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        if result.rows_affected() == 0 {
+            Err(TaskExecutionError::NotFound(task_id))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn backend_name(&self) -> &str {
+        "sqlite"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::backend::TaskBackend;
+    use crate::{TaskId, TaskPriority};
+
+    struct TestTask {
+        id: TaskId,
+        name: String,
+    }
+
+    impl Task for TestTask {
+        fn id(&self) -> TaskId {
+            self.id
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn priority(&self) -> TaskPriority {
+            TaskPriority::new(5)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_backend_creation() {
+        let backend = SqliteBackend::new("sqlite::memory:").await;
+        assert!(backend.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_backend_enqueue() {
+        let backend = SqliteBackend::new("sqlite::memory:")
+            .await
+            .expect("Failed to create backend");
+
+        let task = Box::new(TestTask {
+            id: TaskId::new(),
+            name: "test_task".to_string(),
+        });
+
+        let task_id = task.id();
+        let result = backend.enqueue(task).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), task_id);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_backend_get_status() {
+        let backend = SqliteBackend::new("sqlite::memory:")
+            .await
+            .expect("Failed to create backend");
+
+        let task = Box::new(TestTask {
+            id: TaskId::new(),
+            name: "test_task".to_string(),
+        });
+
+        let task_id = task.id();
+        backend.enqueue(task).await.expect("Failed to enqueue");
+
+        let status = backend
+            .get_status(task_id)
+            .await
+            .expect("Failed to get status");
+        assert_eq!(status, TaskStatus::Pending);
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_backend_not_found() {
+        let backend = SqliteBackend::new("sqlite::memory:")
+            .await
+            .expect("Failed to create backend");
+
+        let result = backend.get_status(TaskId::new()).await;
+        assert!(result.is_err());
+        assert!(matches!(result, Err(TaskExecutionError::NotFound(_))));
+    }
+}

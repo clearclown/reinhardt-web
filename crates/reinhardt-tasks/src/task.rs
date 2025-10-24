@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::str::FromStr;
 
 pub const DEFAULT_TASK_QUEUE_NAME: &str = "default";
 pub const TASK_MIN_PRIORITY: i32 = 0;
@@ -47,6 +48,14 @@ impl Default for TaskId {
 impl fmt::Display for TaskId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for TaskId {
+    type Err = uuid::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(uuid::Uuid::parse_str(s)?))
     }
 }
 
