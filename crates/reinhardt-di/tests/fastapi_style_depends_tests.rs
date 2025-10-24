@@ -16,7 +16,7 @@ struct Database {
     connection_count: usize,
 }
 
-// カスタムInjectableでインスタンスカウンタ（AtomicUsizeで安全に）
+// Custom Injectable with instance counter (thread-safe using AtomicUsize)
 static INSTANCE_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone)]
@@ -37,7 +37,7 @@ async fn test_depends_with_cache_default() {
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
-    // デフォルトではキャッシュが有効
+    // Cache is enabled by default
     let params1 = Depends::<CommonQueryParams>::new()
         .resolve(&ctx)
         .await
@@ -47,7 +47,7 @@ async fn test_depends_with_cache_default() {
         .await
         .unwrap();
 
-    // 同じインスタンスを返す
+    // Returns the same instance
     assert_eq!(*params1, *params2);
 }
 
@@ -56,7 +56,7 @@ async fn test_depends_no_cache() {
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
-    // キャッシュ無効
+    // Cache disabled
     let service1 = Depends::<CountedService>::no_cache()
         .resolve(&ctx)
         .await
@@ -66,7 +66,7 @@ async fn test_depends_no_cache() {
         .await
         .unwrap();
 
-    // 異なるインスタンスが作成される (IDは連続している)
+    // Different instances are created (IDs are sequential)
     assert_ne!(service1.instance_id, service2.instance_id);
     assert_eq!(service1.instance_id + 1, service2.instance_id);
 }
@@ -76,7 +76,7 @@ async fn test_depends_with_cache_enabled() {
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
-    // キャッシュ有効（デフォルト）
+    // Cache enabled (default)
     let service1 = Depends::<CountedService>::new()
         .resolve(&ctx)
         .await
@@ -86,7 +86,7 @@ async fn test_depends_with_cache_enabled() {
         .await
         .unwrap();
 
-    // 同じインスタンスを返す（IDが同じ）
+    // Returns the same instance (same ID)
     assert_eq!(service1.instance_id, service2.instance_id);
 }
 
@@ -110,7 +110,7 @@ async fn test_depends_deref() {
         .await
         .unwrap();
 
-    // Derefで直接フィールドにアクセス可能
+    // Can access fields directly via Deref
     assert_eq!(params.skip, 0);
     assert_eq!(params.limit, 0);
 }
@@ -126,11 +126,11 @@ async fn test_fastapi_depends_clone() {
         .unwrap();
     let params2 = params1.clone();
 
-    // Cloneは参照をコピー（Arc::clone）
+    // Clone copies the reference (Arc::clone)
     assert_eq!(*params1, *params2);
 }
 
-// FastAPIスタイルの使用例
+// FastAPI-style usage example
 #[tokio::test]
 async fn test_fastapi_style_usage() {
     #[derive(Clone, Default)]
@@ -148,7 +148,7 @@ async fn test_fastapi_style_usage() {
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
-    // エンドポイントでの使用をシミュレート
+    // Simulate endpoint usage
     let config = Depends::<Config>::new().resolve(&ctx).await.unwrap();
     let params = Depends::<CommonQueryParams>::new()
         .resolve(&ctx)

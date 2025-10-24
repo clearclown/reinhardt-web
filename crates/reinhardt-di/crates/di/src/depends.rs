@@ -118,8 +118,8 @@ where
                 v
             }
         } else {
-            // Skip cache - always create new instance
-            T::inject(ctx).await?
+            // Skip cache - always create new instance using inject_uncached()
+            T::inject_uncached(ctx).await?
         };
 
         Ok(Self {

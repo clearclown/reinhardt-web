@@ -403,15 +403,6 @@ fn test_header_type_conversion_design_decision() {
     // This test documents the design decision that Header<T> is String-only.
     // HeaderStruct provides type conversion capabilities.
 
-    // Verify HeaderStruct with type conversion exists and works
-    // (actual functionality tested in test_header_type_conversion_with_struct)
-
-    // Design benefits:
-    // 1. Clear separation: Header<String> for single values, HeaderStruct<T> for typed extraction
-    // 2. No runtime parsing overhead for simple string headers
-    // 3. Serde handles all type conversion edge cases consistently
-    // 4. Users can implement custom Deserialize for complex conversions
-
     assert!(
         true,
         "Header<T> is intentionally String-only; use HeaderStruct for type conversion"
@@ -421,32 +412,6 @@ fn test_header_type_conversion_design_decision() {
 // ============================================================================
 // Documentation Tests
 // ============================================================================
-
-/// Test that documents current Header/Cookie limitations
-///
-/// This test passes and serves as documentation that the feature needs work.
-#[tokio::test]
-async fn test_header_cookie_needs_enhancement() {
-    // Current state: Header and Cookie extractors exist but require
-    // additional implementation to specify which header/cookie to extract.
-    //
-    // Proposed solutions:
-    // 1. Attribute macros: #[header("name")] or #[cookie("name")]
-    // 2. Type-level encoding: Header<"Authorization", String>
-    // 3. Struct-based extraction with field attributes:
-    //    #[derive(FromRequest)]
-    //    struct Headers {
-    //        #[header("Authorization")]
-    //        auth: String,
-    //    }
-    //
-    // Until implemented, header/cookie extraction returns errors.
-
-    assert!(
-        true,
-        "Header and Cookie extraction needs name specification mechanism"
-    );
-}
 
 // ============================================================================
 // Header Parameter Models (FastAPI test_tutorial/test_header_param_models)

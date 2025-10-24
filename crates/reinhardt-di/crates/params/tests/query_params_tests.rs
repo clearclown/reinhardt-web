@@ -767,14 +767,142 @@ async fn test_query_invalid_plain_dict() {
 
 /// Test: Multiple Query annotations combined for validation
 /// Reference: fastapi/tests/test_ambiguous_params.py::test_multiple_annotations
+/// Test: Query parameter validation with constraints
+///
 /// Note: Rust doesn't have runtime annotation merging like Python's Annotated.
-/// Validation would be done through validator crate or custom logic.
+/// Validation is done through the WithValidation trait and ValidationConstraints.
 #[tokio::test]
-#[ignore = "Validation constraints not yet implemented"]
-async fn test_query_validation_constraints_old() {
-    // Note: Future enhancement - validation support via validator crate
-    // This would require integrating a validation framework like validator crate
-    // Example: gt=2, lt=10 constraints on an integer parameter
+#[cfg(feature = "validation")]
+async fn test_query_validation_constraints() {
+    use reinhardt_params::WithValidation;
+
+    #[derive(Deserialize)]
+    struct QueryParams {
+        value: i32,
+    }
+
+    // Test valid value within constraints (gt=2, lt=10)
+    let req = create_test_request("value=5");
+    let ctx = create_empty_context();
+
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok(), "Failed to extract query parameter");
+    let query = result.unwrap();
+
+    // Apply validation constraints
+    let validated = query.min_value(3).max_value(9);
+    assert!(
+        validated.validate_number(&validated.value).is_ok(),
+        "Valid value should pass validation"
+    );
+
+    // Test value below minimum
+    let req = create_test_request("value=2");
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+    let validated = query.min_value(3).max_value(9);
+    assert!(
+        validated.validate_number(&validated.value).is_err(),
+        "Value below minimum should fail"
+    );
+
+    // Test value above maximum
+    let req = create_test_request("value=10");
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+    let validated = query.min_value(3).max_value(9);
+    assert!(
+        validated.validate_number(&validated.value).is_err(),
+        "Value above maximum should fail"
+    );
+}
+
+/// Test: String query parameter validation with length constraints
+#[tokio::test]
+#[cfg(feature = "validation")]
+async fn test_query_string_validation_constraints() {
+    use reinhardt_params::WithValidation;
+
+    #[derive(Deserialize)]
+    struct QueryParams {
+        name: String,
+    }
+
+    // Test valid string length
+    let req = create_test_request("name=alice");
+    let ctx = create_empty_context();
+
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+
+    // Apply validation constraints
+    let validated = query.min_length(3).max_length(10);
+    assert!(
+        validated.validate_string(&validated.name).is_ok(),
+        "Valid string length should pass"
+    );
+
+    // Test string too short
+    let req = create_test_request("name=ab");
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+    let validated = query.min_length(3).max_length(10);
+    assert!(
+        validated.validate_string(&validated.name).is_err(),
+        "String too short should fail"
+    );
+
+    // Test string too long
+    let req = create_test_request("name=this_is_too_long");
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+    let validated = query.min_length(3).max_length(10);
+    assert!(
+        validated.validate_string(&validated.name).is_err(),
+        "String too long should fail"
+    );
+}
+
+/// Test: Email validation for query parameters
+#[tokio::test]
+#[cfg(feature = "validation")]
+async fn test_query_email_validation() {
+    use reinhardt_params::WithValidation;
+
+    #[derive(Deserialize)]
+    struct QueryParams {
+        email: String,
+    }
+
+    // Test valid email
+    let req = create_test_request("email=user@example.com");
+    let ctx = create_empty_context();
+
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+
+    let validated = query.email();
+    assert!(
+        validated.validate_string(&validated.email).is_ok(),
+        "Valid email should pass"
+    );
+
+    // Test invalid email
+    let req = create_test_request("email=not_an_email");
+    let result = Query::<QueryParams>::from_request(&req, &ctx).await;
+    assert!(result.is_ok());
+    let query = result.unwrap();
+    let validated = query.email();
+    assert!(
+        validated.validate_string(&validated.email).is_err(),
+        "Invalid email should fail"
+    );
 }
 
 // ============================================================================

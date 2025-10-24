@@ -50,6 +50,15 @@ use crate::{context::InjectionContext, DiResult};
 #[async_trait::async_trait]
 pub trait Injectable: Sized + Send + Sync + 'static {
     async fn inject(ctx: &InjectionContext) -> DiResult<Self>;
+
+    /// Inject without using cache (for `cache = false` support).
+    ///
+    /// This method creates a new instance without checking or updating any cache.
+    /// By default, it delegates to `inject()`, but types can override this
+    /// to provide cache-free injection.
+    async fn inject_uncached(ctx: &InjectionContext) -> DiResult<Self> {
+        Self::inject(ctx).await
+    }
 }
 
 /// Automatic Injectable implementation for types with Default + Clone.
@@ -81,5 +90,10 @@ where
         ctx.set_request(instance.clone());
 
         Ok(instance)
+    }
+
+    async fn inject_uncached(_ctx: &InjectionContext) -> DiResult<Self> {
+        // Create new instance without checking or updating cache
+        Ok(Self::default())
     }
 }
