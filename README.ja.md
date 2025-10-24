@@ -67,8 +67,45 @@ reinhardt = { version = "0.1.0", features = ["standard", "websockets", "graphql"
 ## クイックスタート
 
 ```rust
-// 例は近日公開予定
+use reinhardt::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct User {
+    id: i64,
+    name: String,
+    email: String,
+}
+
+#[derive(Debug, Clone)]
+struct UserSerializer;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a router
+    let mut router = DefaultRouter::new();
+
+    // Create and register a ViewSet for CRUD operations
+    let user_viewset: Arc<ModelViewSet<User, UserSerializer>> =
+        Arc::new(ModelViewSet::new("users"));
+    router.register_viewset("users", user_viewset);
+
+    // Start the server
+    println!("Server running on http://127.0.0.1:8000");
+    reinhardt::serve("127.0.0.1:8000", router).await?;
+
+    Ok(())
+}
 ```
+
+これにより、以下のエンドポイントを持つ完全なCRUD APIが作成されます:
+
+- `GET /users/` - 全ユーザーの一覧取得
+- `POST /users/` - 新規ユーザーの作成
+- `GET /users/{id}/` - ユーザーの取得
+- `PUT /users/{id}/` - ユーザーの更新
+- `DELETE /users/{id}/` - ユーザーの削除
 
 ## 適切なフレーバーの選択
 
@@ -111,6 +148,7 @@ Reinhardtには以下のコアコンポーネントが含まれています:
 - **ルーター**: 自動URL構成
 - **認証**: JWT認証とパーミッションシステム
 - **ミドルウェア**: リクエスト/レスポンス処理パイプライン
+- **管理コマンド**: プロジェクト管理のためのDjangoスタイルCLI (`reinhardt-commands`)
 
 ### REST API機能 (reinhardt-rest)
 

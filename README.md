@@ -67,8 +67,45 @@ reinhardt = { version = "0.1.0", features = ["standard", "websockets", "graphql"
 ## Quick Start
 
 ```rust
-// Example coming soon
+use reinhardt::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct User {
+    id: i64,
+    name: String,
+    email: String,
+}
+
+#[derive(Debug, Clone)]
+struct UserSerializer;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a router
+    let mut router = DefaultRouter::new();
+
+    // Create and register a ViewSet for CRUD operations
+    let user_viewset: Arc<ModelViewSet<User, UserSerializer>> =
+        Arc::new(ModelViewSet::new("users"));
+    router.register_viewset("users", user_viewset);
+
+    // Start the server
+    println!("Server running on http://127.0.0.1:8000");
+    reinhardt::serve("127.0.0.1:8000", router).await?;
+
+    Ok(())
+}
 ```
+
+This creates a full CRUD API with the following endpoints:
+
+- `GET /users/` - List all users
+- `POST /users/` - Create a new user
+- `GET /users/{id}/` - Retrieve a user
+- `PUT /users/{id}/` - Update a user
+- `DELETE /users/{id}/` - Delete a user
 
 ## Choosing the Right Flavor
 
@@ -111,6 +148,7 @@ Reinhardt includes the following core components:
 - **Routers**: Automatic URL routing configuration
 - **Authentication**: JWT auth, permissions system
 - **Middleware**: Request/response processing pipeline
+- **Management Commands**: Django-style CLI for project management (`reinhardt-commands`)
 
 ### REST API Features (reinhardt-rest)
 
