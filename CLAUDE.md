@@ -45,6 +45,17 @@ For details about the Reinhardt project, please refer to README.md.
 - If a file is too large to read in one operation, split it into multiple parts for reading
 - Use streaming or chunked reading approaches when appropriate
 
+### FM-4 (MUST): Relative Path Restrictions
+
+- **DO NOT USE** relative path references that go up more than one level (e.g., `../..`)
+- **PREFER** absolute paths or single-level relative paths (e.g., `../`)
+- Deep relative paths make code harder to understand and maintain
+- Examples:
+  - ❌ Bad: `../../config/settings.toml`
+  - ❌ Bad: `../../../data/file.json`
+  - ✅ Good: `../sibling_crate/module.rs`
+  - ✅ Good: Use absolute paths or workspace-relative paths instead
+
 ---
 
 ## Code Style & Conventions
@@ -73,6 +84,18 @@ For details about the Reinhardt project, please refer to README.md.
 - **IMMEDIATELY** delete obsolete code once it is no longer needed
 - Do not leave commented-out code or unused functions
 - Remove deprecated functionality promptly
+
+### CS-5 (MUST): Deletion Records
+
+- **NEVER** leave comments documenting deleted code, tests, or files in the codebase
+- **DO NOT** create "Removed empty test" or "Deleted file" comments
+- Git history serves as the permanent record of deletions
+- If documentation is needed, extract to `docs/IMPLEMENTATION_NOTES.md` instead
+- Examples:
+  - ❌ Bad: `// Removed empty test: test_foo - This test was empty`
+  - ❌ Bad: `// Deleted: old_module.rs (deprecated)`
+  - ✅ Good: Simply delete without comments
+  - ✅ Good: Extract important notes to docs/IMPLEMENTATION_NOTES.md
 
 ---
 
@@ -117,17 +140,47 @@ For details about the Reinhardt project, please refer to README.md.
 - If tests cannot be fully implemented, leave a `// TODO:` comment explaining why
 - **DELETE** the TODO comment when the test is implemented
 
-#### TI-2 (MUST): Comment Usage Guidelines
+#### TI-2 (MUST): Unimplemented Feature Notation
 
-- **TODO Comments**: Use `// TODO:` or `todo!()` macro for unimplemented features
+- **MUST** use one of the following for unimplemented features:
+  - `// TODO:` comment with explanation
+  - `todo!()` macro for runtime panics
+  - `unimplemented!()` macro for not-yet-implemented functionality
+- **NEVER** use alternative notations like:
+  - ❌ Bad: `// Implementation Note:`
+  - ❌ Bad: `// FIXME:`
+  - ❌ Bad: `// NOTE: Not implemented yet`
+  - ❌ Bad: Custom placeholder comments
+- **TODO Comment Guidelines**:
   - Explain what needs to be implemented and why it's pending
   - **DELETE** when the functionality is implemented
 - **NOTE Comments**: Use `// NOTE:` for informational comments to users ONLY
   - **DO NOT** use NOTE comments for unimplemented features
-  - Use TODO comments or `todo!()` macro instead for incomplete implementations
+  - Use TODO comments or `todo!()`/`unimplemented!()` macro instead
 - **User-Facing Placeholders**:
   - **NEVER** use TODO or NOTE comments in user-facing code
-  - Provide actual implementations or use `todo!()` macro for compile-time errors
+  - Provide actual implementations or use `todo!()`/`unimplemented!()` macro for compile-time errors
+- **Examples**:
+  ```rust
+  // ✅ Good: Clear TODO comment
+  // TODO: Implement caching mechanism for frequently accessed data
+
+  // ✅ Good: Using todo!() macro
+  fn validate_input(data: &str) -> Result<()> {
+      todo!("Add input validation logic")
+  }
+
+  // ✅ Good: Using unimplemented!() macro
+  fn complex_feature() -> String {
+      unimplemented!("Waiting for upstream API specification")
+  }
+
+  // ❌ Bad: Custom notation
+  // Implementation Note: This needs to be completed
+
+  // ❌ Bad: Using NOTE for unimplemented features
+  // NOTE: Not implemented yet
+  ```
 
 #### TI-3 (MUST): Test Cleanup
 
@@ -146,6 +199,7 @@ For details about the Reinhardt project, please refer to README.md.
 - **ALWAYS** add `serial_test = { workspace = true }` to `[dev-dependencies]` when using
 - **ALWAYS** call cleanup functions (e.g., `deactivate()`, `clear_url_overrides()`) in test teardown
 - Example:
+
   ```rust
   use serial_test::serial;
 
@@ -178,6 +232,53 @@ For details about the Reinhardt project, please refer to README.md.
 
 ---
 
+## Documentation Maintenance
+
+### DM-1 (MUST): Documentation Updates with Code Changes
+
+- **ALWAYS** update relevant documentation when implementing or modifying features
+- Documentation updates **MUST** be done in the same workflow as the code changes
+- **DO NOT** leave documentation outdated after code modifications
+
+### DM-2 (MUST): Documentation Locations
+
+When modifying features, check and update the following documentation as applicable:
+
+- **README.md**: Project-level overview and features (English)
+- **README.ja.md**: Project-level overview and features (Japanese)
+- **Crate README.md**: Individual crate documentation (English)
+- **Crate README.ja.md**: Individual crate documentation (Japanese)
+- **docs/ directory**: Detailed guides, tutorials, and API documentation
+  - `docs/GETTING_STARTED.md`: Getting started guide
+  - `docs/FEATURE_FLAGS.md`: Feature flags documentation
+  - `docs/tutorials/`: Tutorial files
+  - Other relevant documentation files
+
+### DM-3 (MUST): Documentation Synchronization
+
+- Keep English and Japanese documentation synchronized
+- When updating README.md, update README.ja.md as well
+- Ensure consistency across all documentation levels (project, crate, docs/)
+
+### DM-4 (SHOULD): Documentation Scope
+
+Update documentation for:
+
+- New features: Add feature descriptions, usage examples, and API references
+- Modified features: Update affected sections to reflect changes
+- Deprecated features: Mark as deprecated and provide migration guides
+- Removed features: Remove documentation and add migration notes if necessary
+- API changes: Update function signatures, parameters, and return types
+
+### DM-5 (MUST): Documentation Quality
+
+- Ensure examples in documentation are tested and working
+- Update code snippets to reflect current API
+- Verify that all links and references are valid
+- Maintain consistency in terminology and formatting
+
+---
+
 ## Workflow
 
 ### W-1 (SHOULD): Iterative Development
@@ -192,6 +293,11 @@ For details about the Reinhardt project, please refer to README.md.
 - This helps clarify requirements and edge cases
 
 ### W-3 (MUST): Git Commit Policy
+
+For detailed commit guidelines including message format, granularity, and execution policy, refer to:
+@CLAUDE.commit.md
+
+**Summary:**
 
 - **NEVER** create commits without explicit user instruction
 - **NEVER** push commits without explicit user instruction
@@ -226,15 +332,21 @@ For details about the Reinhardt project, please refer to README.md.
 **Critical Rules Summary:**
 
 ### Code & Module System
+
 - ❌ NO `mod.rs` files
 - ❌ NO TODO/NOTE comments in user-facing placeholders
 - ❌ NO keeping obsolete code
 - ❌ NO excessive `.to_string()` calls
+- ❌ NO comments documenting deleted code/tests
+- ❌ NO alternative notations like `Implementation Note:`, `FIXME:`, etc.
 - ✅ USE 2024 edition module system
 - ✅ DELETE old code immediately
-- ✅ USE TODO for unimplemented features or incomplete implementations, NOTE for user information only
+- ✅ USE `// TODO:`, `todo!()`, or `unimplemented!()` for unimplemented features
+- ✅ USE `// NOTE:` for informational comments only
+- ✅ EXTRACT important notes to docs/IMPLEMENTATION_NOTES.md
 
 ### Testing
+
 - ❌ NO skeleton tests (tests must have real assertions)
 - ❌ NO cross-crate dependencies for testing in functional crates
 - ✅ CLEAN UP all test artifacts
@@ -242,15 +354,29 @@ For details about the Reinhardt project, please refer to README.md.
 - ✅ USE TestContainers for infrastructure tests
 
 ### File Management
+
 - ❌ NO saving files to project directory (use `/tmp`)
+- ❌ NO relative paths with more than one level up (e.g., `../..`)
 - ✅ DELETE `/tmp` files when done
+- ✅ USE absolute paths or single-level relative paths
+
+### Documentation
+
+- ❌ NO outdated documentation after code changes
+- ❌ NO unsynchronized English/Japanese documentation
+- ✅ UPDATE documentation with code changes in the same workflow
+- ✅ SYNCHRONIZE README.md and README.ja.md
+- ✅ UPDATE all relevant crate and docs/ files
+- ✅ VERIFY examples and code snippets are working
 
 ### Workflow
+
 - ❌ NO commits without explicit user instruction
 - ❌ NO bulk replacements without dry-run verification
 - ✅ CREATE dry-run scripts for batch operations
 - ✅ USE parallel agents for independent file edits
 
 ### Database
+
 - ✅ USE `reinhardt-orm` for CRUD operations
 - ✅ USE `reinhardt-database` for low-level operations
