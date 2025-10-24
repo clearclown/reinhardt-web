@@ -9,9 +9,9 @@
 Paginationが含まれます。
 
 ## 機能
+
 - PageNumberPagination
 - LimitOffsetPagination
 - CursorPagination
 - カスタムページネーションクラス
 - ページサイズ設定
-

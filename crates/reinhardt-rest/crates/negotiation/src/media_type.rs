@@ -153,22 +153,7 @@ impl MediaType {
 
         prec
     }
-    /// Converts media type to a basic string representation
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use reinhardt_negotiation::MediaType;
-    ///
-    /// let json = MediaType::new("application", "json");
-    /// assert_eq!(json.to_string(), "application/json");
-    ///
-    /// let html = MediaType::new("text", "html");
-    /// assert_eq!(html.to_string(), "text/html");
-    /// ```
-    pub fn to_string(&self) -> String {
-        format!("{}/{}", self.type_, self.subtype)
-    }
+
     /// Full string representation including parameters
     ///
     /// # Examples

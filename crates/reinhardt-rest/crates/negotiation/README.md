@@ -11,6 +11,7 @@ Django REST Framework風のコンテンツネゴシエーションシステム
 ### Core Components
 
 #### MediaType
+
 - **MIMEタイプの表現**: `type/subtype` 形式のメディアタイプ
 - **パラメータサポート**: `charset=utf-8` などのパラメータを保持
 - **品質値 (q値)**: Accept headerの優先度を示す `q` パラメータ
@@ -20,12 +21,14 @@ Django REST Framework風のコンテンツネゴシエーションシステム
 - **完全文字列表現**: パラメータを含む完全な文字列生成
 
 #### AcceptHeader
+
 - **Accept headerパーサー**: HTTP Accept headerの解析
 - **品質値によるソート**: q値の高い順に自動ソート
 - **最適マッチ検索**: 利用可能なメディアタイプから最適なものを選択
 - **空のAccept header対応**: Accept headerがない場合の処理
 
 #### ContentNegotiator
+
 - **レンダラー選択**: Accept headerに基づく最適なレンダラーの選択
 - **デフォルトメディアタイプ**: 設定可能なデフォルト値 (初期値: `application/json`)
 - **ネゴシエーション**: クライアントの要求と利用可能なフォーマットのマッチング

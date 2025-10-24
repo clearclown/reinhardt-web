@@ -14,7 +14,11 @@ pub type ThrottleResult<T> = Result<T, ThrottleError>;
 #[async_trait]
 pub trait Throttle: Send + Sync {
     async fn allow_request(&self, key: &str) -> ThrottleResult<bool>;
-    async fn wait_time(&self, key: &str) -> ThrottleResult<Option<u64>>;
+
+    async fn wait_time(&self, _key: &str) -> ThrottleResult<Option<u64>> {
+        Ok(None)
+    }
+
     fn get_rate(&self) -> (usize, u64);
 }
 

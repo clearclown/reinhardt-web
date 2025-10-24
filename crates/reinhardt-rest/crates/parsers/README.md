@@ -11,32 +11,39 @@ Provides a comprehensive set of parsers for handling different request content t
 ### Core Parser System
 
 #### `Parser` Trait
+
 - **Async trait** for parsing request bodies with content-type negotiation
 - `media_types()` - Returns list of supported MIME types
 - `parse()` - Asynchronous parsing of request body into `ParsedData`
 - `can_parse()` - Automatic content-type matching with wildcard support
 
 #### `ParserRegistry`
+
 - **Central registry** for managing multiple parsers
 - Automatic parser selection based on request Content-Type header
 - Builder pattern for registering parsers
 - Support for custom parser implementations
 
 #### `MediaType`
+
 - **Content-Type parsing and manipulation**
 - Support for MIME type parameters (e.g., `charset=utf-8`)
 - Wildcard matching (`application/*`, `*/json`, `*/*`)
 - RFC-compliant parsing from Content-Type header strings
 
 #### `ParsedData` Enum
+
 Unified representation of parsed request data:
+
 - `Json(Value)` - JSON data parsed with `serde_json`
 - `Form(HashMap<String, String>)` - URL-encoded form data
 - `MultiPart { fields, files }` - Multipart form data with file uploads
 - `File(UploadedFile)` - Raw file upload
 
 #### `UploadedFile`
+
 File upload representation with:
+
 - Field name and optional filename
 - Content-Type detection
 - File size tracking
@@ -45,11 +52,13 @@ File upload representation with:
 ### JSON Parser (`JSONParser`)
 
 #### Basic Features
+
 - **Content-Type**: `application/json`, `application/*+json`
 - Parse JSON request bodies using `serde_json`
 - Returns `ParsedData::Json(Value)` for flexible data handling
 
 #### Advanced Options
+
 - **Empty body handling** - Configurable via `allow_empty()`
   - Default: Reject empty bodies
   - Optional: Return `null` for empty requests
@@ -59,17 +68,20 @@ File upload representation with:
   - Can be disabled for lenient parsing
 
 #### Validation
+
 - Recursive validation for nested structures (objects and arrays)
 - Detailed error messages for malformed JSON
 
 ### Form Parser (`FormParser`)
 
 #### Basic Features
+
 - **Content-Type**: `application/x-www-form-urlencoded`
 - Parse HTML form data using `serde_urlencoded`
 - Returns `ParsedData::Form(HashMap<String, String>)`
 
 #### URL Encoding Support
+
 - Automatic percent-decoding of form values
 - Handles special characters and spaces correctly
 - Empty body returns empty HashMap (not an error)
@@ -77,35 +89,41 @@ File upload representation with:
 ### MultiPart Parser (`MultiPartParser`)
 
 #### Basic Features
+
 - **Content-Type**: `multipart/form-data`
 - Handle file uploads and form fields in single request
 - Returns `ParsedData::MultiPart { fields, files }`
 - Built on `multer` crate for robust parsing
 
 #### File Upload Features
+
 - **Multiple file uploads** in single request
 - Separate handling of form fields vs. file fields
 - Content-Type detection per file
 - Original filename preservation
 
 #### Size Limits
+
 - **Per-file size limit** - `max_file_size()`
 - **Total upload size limit** - `max_total_size()`
 - Detailed error messages when limits exceeded
 
 #### Boundary Parsing
+
 - Automatic extraction from Content-Type header
 - RFC-compliant multipart boundary handling
 
 ### File Upload Parser (`FileUploadParser`)
 
 #### Basic Features
+
 - **Content-Type**: `application/octet-stream`, `*/*`
 - Raw file upload without multipart overhead
 - Returns `ParsedData::File(UploadedFile)`
 - Configurable field name
 
 #### Filename Extraction
+
 - **Standard filename** - Parse from `Content-Disposition` header
 - **RFC2231 encoded filenames** - Support for international characters
   - Format: `filename*=utf-8''%encoded_name`
@@ -114,10 +132,12 @@ File upload representation with:
 - Automatic URL decoding of encoded filenames
 
 #### Size Control
+
 - **Maximum file size** - Configurable via `max_file_size()`
 - Detailed error reporting when limit exceeded
 
 ### Error Handling
+
 - Unified error types using `reinhardt_exception::Error`
 - Type aliases: `ParseError` and `ParseResult<T>`
 - Detailed error messages for debugging
@@ -126,12 +146,14 @@ File upload representation with:
 ## Planned
 
 ### Additional Parsers
+
 - **XML Parser** - For `application/xml` and `text/xml`
 - **YAML Parser** - For `application/x-yaml`
 - **MessagePack Parser** - For binary message format
 - **Protobuf Parser** - For Protocol Buffers
 
 ### Enhanced Features
+
 - **Streaming parsing** - For large file uploads without loading entire body into memory
 - **Content negotiation** - Automatic parser selection based on Accept header
 - **Custom validators** - Per-parser validation hooks
@@ -139,6 +161,7 @@ File upload representation with:
 - **Compression support** - Gzip, Brotli, Deflate decompression
 
 ### Performance Optimizations
+
 - **Zero-copy parsing** - Where possible with current parser implementations
 - **Parallel multipart processing** - Parse multiple files concurrently
 - **Memory pooling** - Reuse buffers for repeated parsing operations

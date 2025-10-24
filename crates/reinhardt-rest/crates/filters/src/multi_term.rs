@@ -282,7 +282,6 @@ impl MultiTermSearch {
                         if field_in_quotes {
                             if next_ch == '"' {
                                 // End of quoted value
-                                field_in_quotes = false;
                                 break;
                             } else {
                                 current_term.push(next_ch);

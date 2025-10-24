@@ -11,6 +11,7 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
 ### Implemented ✓
 
 #### Core Rendering
+
 - **BrowsableApiRenderer**: Handlebars-based HTML template renderer
   - Default DRF-inspired template with gradient header design
   - Customizable template registration support
@@ -24,6 +25,7 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
   - Optional form context integration
 
 #### Response Handling
+
 - **BrowsableResponse**: Structured API response type
   - Data payload with serde_json::Value support
   - ResponseMetadata with status, method, path, and headers
@@ -31,6 +33,7 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
   - Full serialization/deserialization support
 
 #### Form Generation
+
 - **FormContext**: Interactive request form rendering
   - Dynamic form field generation
   - Support for multiple input types (text, textarea, etc.)
@@ -43,12 +46,14 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
   - Help text and initial value support
 
 #### Template System
+
 - **ApiTemplate**: Basic HTML template utilities
   - Simple API response rendering
   - Error page generation with status codes
   - Fallback templates for simple use cases
 
 #### Visual Features
+
 - HTTP method badges with color coding (GET, POST, PUT, PATCH, DELETE)
 - Monospace endpoint display
 - Dark theme code blocks for JSON responses
@@ -59,4 +64,3 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
 ### Planned
 
 Currently all planned features are implemented.
-

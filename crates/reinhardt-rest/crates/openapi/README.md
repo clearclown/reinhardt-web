@@ -11,6 +11,7 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
 ### Implemented ✓
 
 #### OpenAPI 3.0 Core Types
+
 - **Complete OpenAPI 3.0 Specification**: Full support for OpenAPI 3.0 types via `utoipa` re-exports
   - Info, Contact, License metadata
   - Paths, PathItem, Operation definitions
@@ -22,11 +23,13 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
   - Tag definitions for API organization
 
 #### Schema Generation
+
 - **SchemaGenerator**: Builder pattern for creating OpenAPI schemas
   - Fluent API for setting title, version, description
   - Direct generation to `OpenApiSchema` (utoipa's `OpenApi` type)
 
 #### Documentation UI
+
 - **Swagger UI Integration**: Built-in Swagger UI via `utoipa-swagger-ui` and `askama` templates
   - HTML rendering with customizable title and spec URL
   - Request handler for serving Swagger UI pages
@@ -38,10 +41,12 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
   - Uses same OpenAPI spec endpoint
 
 #### Format Export
+
 - **JSON Export**: Serialize OpenAPI schemas to JSON format
 - **YAML Export**: Support via `serde_yaml` dependency (capability present in dependencies)
 
 #### utoipa Compatibility Layer
+
 - **Bidirectional Type Conversion**: Complete conversion utilities between Reinhardt and utoipa types
   - Schema type conversions (Object, Array, primitives)
   - Parameter and request/response body conversions
@@ -51,6 +56,7 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
   - Comprehensive test coverage
 
 #### Auto-Schema Derivation
+
 - **ToSchema Trait**: Core trait for types that can generate OpenAPI schemas
   - `schema()` method returns OpenAPI schema representation
   - `schema_name()` method returns optional schema identifier
@@ -68,6 +74,7 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
 ### Planned
 
 #### Extended Auto-Schema Features
+
 - **Attribute Macro Support**: Advanced schema customization
   - Field configuration: `#[schema(example = "...", description = "...")]`
   - Nested schema generation with `$ref` references
@@ -80,6 +87,7 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
 - **Tuple Struct Support**: Schema generation for tuple structs
 
 #### ViewSet Integration
+
 - **ViewSet Inspector**: Automatic schema extraction from ViewSets
   - Introspect ViewSet methods and serializers
   - Generate paths and operations from ViewSet definitions
@@ -123,6 +131,7 @@ fn main() {
 ```
 
 **Key Features:**
+
 - Doc comments (`///`) are automatically extracted as field descriptions
 - `Option<T>` fields are automatically marked as optional (not required)
 - Non-optional fields are automatically marked as required

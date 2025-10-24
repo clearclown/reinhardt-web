@@ -3,7 +3,7 @@
 //! Provides compile-time safe field ordering using reinhardt-orm's Field system.
 //! Similar to Field/Lookup pattern in field_lookup module.
 
-use reinhardt_orm::{Field, Model};
+use reinhardt_orm::Model;
 use std::marker::PhantomData;
 
 /// Ordering direction
@@ -115,7 +115,7 @@ impl<M: Model> Clone for OrderingField<M> {
 mod tests {
     use super::*;
     use crate::field_extensions::FieldOrderingExt;
-    use reinhardt_orm::Model;
+    use reinhardt_orm::{Field, Model};
 
     #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
     struct TestPost {

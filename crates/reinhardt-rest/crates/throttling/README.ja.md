@@ -7,9 +7,9 @@
 Redisを含む複数のバックエンドストレージオプションをサポートします。
 
 ## 機能
+
 - レート制限
 - 匿名ユーザー用AnonRateThrottle
 - 認証ユーザー用UserRateThrottle
 - カスタムスコープ用ScopedRateThrottle
 - カスタムスロットルクラス
-

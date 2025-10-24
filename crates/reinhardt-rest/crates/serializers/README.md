@@ -11,6 +11,7 @@ Provides serializers for converting between Rust types and various formats (JSON
 ### Implemented ✓
 
 #### Core Serialization
+
 - **`Serializer` trait**: Generic trait for data serialization and deserialization
   - `serialize()`: Convert Rust types to output format
   - `deserialize()`: Parse output format back to Rust types
@@ -26,36 +27,129 @@ Provides serializers for converting between Rust types and various formats (JSON
   - Enables more flexible data parsing pipelines
 
 #### Model Serialization
+
 - **`ModelSerializer<M>`**: Automatic serialization for ORM models
   - Django-style automatic field mapping from model definitions
   - Built-in validation support with `validate()` method
   - Seamless integration with `reinhardt-orm::Model` trait
   - JSON serialization/deserialization for database models
   - Extensible validation system for custom business logic
+  - **Meta Configuration**: Field inclusion/exclusion, read-only/write-only fields
+  - **Field Introspection**: Automatic detection of model fields and types
+  - **Nested Serializer Support**: Configure and serialize related objects
+  - **Validator Integration**: Built-in database constraint validation
+
+#### Meta Configuration
+
+- **`MetaConfig`**: Django REST Framework-style Meta options
+  - `fields`: Explicitly include specific fields
+  - `exclude`: Exclude specific fields
+  - `read_only_fields`: Mark fields as read-only
+  - `write_only_fields`: Mark fields as write-only (e.g., passwords)
+  - Builder pattern with chainable methods
+  - Comprehensive doctests (4 tests) and unit tests (8 tests)
+
+#### Field Introspection
+
+- **`FieldIntrospector`**: Automatic field discovery and type inference
+  - Register fields with `FieldInfo` (name, type, optional, collection, primary key)
+  - Query fields: `field_names()`, `required_fields()`, `optional_fields()`, `primary_key_field()`
+  - Type mapping with `TypeMapper` for common Rust types
+  - Integration with ModelSerializer for automatic field detection
+  - Comprehensive unit tests (14 tests) and integration tests (10 tests)
+
+- **`FieldInfo`**: Rich field metadata
+  - Field name, type name, optionality, collection status
+  - Primary key identification
+  - Builder pattern for configuration
+
+#### Nested Serialization
+
+- **`NestedSerializerConfig`**: Configure nested object serialization
+  - Per-field depth control
+  - Read-only vs writable nested fields
+  - Create/update permissions (`allow_create`, `allow_update`)
+  - Flexible nested field configuration
+  - Comprehensive unit tests (11 tests)
+
+- **`NestedFieldConfig`**: Individual nested field configuration
+  - `depth()`: Set nesting depth (default: 1)
+  - `read_only()`: Mark as read-only
+  - `writable()`: Enable create/update operations
+  - `allow_create()`, `allow_update()`: Fine-grained permissions
+
+- **`SerializationContext`**: Circular reference and depth management
+  - Track visited objects to prevent infinite loops
+  - Max depth enforcement
+  - Context-aware traversal methods
+  - Comprehensive unit tests (15 tests) and integration tests (17 tests)
+
+- **`RecursiveError`**: Error handling for nested serialization
+  - `MaxDepthExceeded`: Nesting too deep
+  - `CircularReference`: Circular dependency detected
+  - `SerializationError`: Generic serialization failures
+
+#### Validator Configuration
+
+- **`ValidatorConfig<M>`**: Manage validators for ModelSerializer
+  - Register `UniqueValidator` and `UniqueTogetherValidator`
+  - Query registered validators
+  - Type-safe validator management
+  - Comprehensive unit tests (4 tests) and integration tests (17 tests)
 
 #### Database Validators
+
 - **`UniqueValidator<M>`**: Enforce field uniqueness in database
   - Async validation against PostgreSQL database
   - Supports update operations (excludes current instance from uniqueness check)
-  - Customizable field names
+  - Customizable field names and error messages
   - Database-level uniqueness verification
+  - Builder pattern with `with_message()` for custom error messages
+  - Cloneable and debuggable
+  - Comprehensive unit tests (4 tests)
 
 - **`UniqueTogetherValidator<M>`**: Ensure unique field combinations
   - Multi-field uniqueness constraints
   - Async PostgreSQL validation
   - Support for update operations
+  - Customizable error messages with `with_message()`
   - Flexible field combinations
+  - Cloneable and debuggable
+  - Comprehensive unit tests (4 tests)
+
+#### Error Handling
+
+- **`SerializerError`**: Comprehensive error type for all serialization operations
+  - `Validation(ValidatorError)`: Validation errors with detailed context
+  - `Serde { message }`: Serialization/deserialization errors
+  - `Other { message }`: Generic errors
+  - Helper constructors: `unique_violation()`, `unique_together_violation()`, `required_field()`, `database_error()`
+  - `is_validation_error()`, `as_validator_error()` for error inspection
+  - Comprehensive error handling tests (22 tests)
+
+- **`ValidatorError`**: Detailed validation error information
+  - `UniqueViolation`: Single field uniqueness violation
+  - `UniqueTogetherViolation`: Multi-field uniqueness violation
+  - `RequiredField`: Missing required field
+  - `FieldValidation`: Field constraint violation (regex, range, etc.)
+  - `DatabaseError`: Database operation errors
+  - `Custom`: Generic validation errors
+  - Rich error context with field names, values, and constraints
+  - Methods: `message()`, `field_names()`, `is_database_error()`, `is_uniqueness_violation()`
 
 #### Content Negotiation (Re-exported)
+
 - **`ContentNegotiator`**: Select appropriate response format based on client request
 - **`MediaType`**: Parse and compare media type strings
 
 #### Renderers (Re-exported from `reinhardt-renderers`)
+
 - **`JSONRenderer`**: Render data as JSON
 - **`XMLRenderer`**: Render data as XML
 - **`BrowsableAPIRenderer`**: Interactive HTML interface for API exploration
 
 #### Parsers (Re-exported from `reinhardt-parsers`)
+
 - **`JSONParser`**: Parse JSON request bodies
 - **`FormParser`**: Parse form-encoded data
 - **`MultiPartParser`**: Handle multipart/form-data (file uploads)
@@ -63,6 +157,7 @@ Provides serializers for converting between Rust types and various formats (JSON
 - **`ParseError`**: Error type for parsing failures
 
 #### Field Types
+
 - **`FieldError`**: Comprehensive error types for field validation failures
   - 14 error variants covering all validation scenarios
   - Display implementation for user-friendly error messages
@@ -96,6 +191,7 @@ Provides serializers for converting between Rust types and various formats (JSON
   - Comprehensive doctests (3 tests) and unit tests (2 tests)
 
 #### Advanced Serialization
+
 - **`SerializerMethodField`**: Compute custom read-only fields
   - Method-based computed fields for serializers
   - Custom method names with `.method_name()`
@@ -115,6 +211,7 @@ Provides serializers for converting between Rust types and various formats (JSON
   - Access all fields with `.all()`
 
 #### Validation System
+
 - **`ValidationError`**: Structured validation error messages
   - `FieldError`: Single field validation errors with field name and message
   - `MultipleErrors`: Collection of multiple validation errors
@@ -146,29 +243,243 @@ Provides serializers for converting between Rust types and various formats (JSON
   - Returns single error or MultipleErrors
   - Comprehensive doctests (3 tests) and unit tests (13 tests)
 
+### Advanced Relations
+
+#### Hyperlinked Model Serializer
+
+- **HyperlinkedModelSerializer<M>**: Django REST Framework-style hyperlinked serialization
+- **UrlReverser Trait**: Automatic URL generation for resources
+- **View Name Mapping**: Generate URLs based on view names
+- **Custom URL Fields**: Configurable URL field names
+
+```rust
+use reinhardt_serializers::HyperlinkedModelSerializer;
+
+let serializer = HyperlinkedModelSerializer::<User>::new("user-detail");
+// Generates URLs like: {"url": "/api/users/123/", "username": "alice"}
+```
+
+#### Nested Serializers
+
+- **NestedSerializer<M, R>**: Handle nested object serialization
+- **Relationship Fields**: Serialize related models inline
+- **Depth Control**: Configure nesting depth
+- **Bidirectional Relations**: Support for parent-child relationships
+
+```rust
+use reinhardt_serializers::NestedSerializer;
+
+let serializer = NestedSerializer::<Post, User>::new("author", 2);
+// Serializes: {"title": "Post", "author": {"id": 1, "username": "alice"}}
+```
+
+#### Relation Fields
+
+- **PrimaryKeyRelatedField<T>**: Represent relations using primary keys
+- **SlugRelatedField<T>**: Represent relations using slug fields
+- **StringRelatedField<T>**: Read-only string representation of related objects
+- **Flexible Representation**: Choose the best representation for your API
+
+```rust
+use reinhardt_serializers::{PrimaryKeyRelatedField, SlugRelatedField};
+
+// Primary key relation: {"author": 123}
+let pk_field = PrimaryKeyRelatedField::<User>::new();
+
+// Slug relation: {"author": "alice-smith"}
+let slug_field = SlugRelatedField::<User>::new("slug");
+```
+
+### ORM Integration
+
+#### QuerySet Integration
+
+- **`SerializerSaveMixin` trait**: Django-style save interface for serializers
+- **`SaveContext`**: Transaction-aware context for save operations
+- **Manager Integration**: Automatic ORM create/update operations
+
+```rust
+use reinhardt_serializers::{SerializerSaveMixin, SaveContext};
+use reinhardt_orm::{Model, Manager};
+
+// Create new instance
+let context = SaveContext::new();
+let user = serializer.save(context).await?;
+
+// Update existing instance
+let context = SaveContext::with_instance(existing_user);
+let updated_user = serializer.update(validated_data, existing_user).await?;
+```
+
+#### Transaction Management
+
+- **`TransactionHelper`**: RAII-based transaction management
+- **Automatic Rollback**: Drop-based cleanup on errors
+- **Savepoint Support**: Nested transaction handling
+
+```rust
+use reinhardt_serializers::TransactionHelper;
+
+// Wrap operations in transaction
+TransactionHelper::with_transaction(|| async {
+    // All database operations here are atomic
+    let user = manager.create(user_data).await?;
+    let profile = manager.create(profile_data).await?;
+    Ok((user, profile))
+}).await?;
+
+// Nested transactions with savepoints
+TransactionHelper::savepoint(depth, || async {
+    // Nested operation with automatic savepoint
+    manager.update(instance).await
+}).await?;
+```
+
+#### Nested Save Context
+
+- **`NestedSaveContext`**: Depth-aware transaction management
+- **Automatic Scope Selection**: Transaction vs savepoint based on depth
+- **Hierarchical Operations**: Support for deeply nested serializers
+
+```rust
+use reinhardt_serializers::NestedSaveContext;
+
+let context = NestedSaveContext::new(depth);
+
+// Automatically uses transaction (depth=0) or savepoint (depth>0)
+context.with_scope(|| async {
+    // Nested serializer save operations
+    nested_serializer.save(data).await
+}).await?;
+```
+
+#### Many-to-Many Relationship Management
+
+- **`ManyToManyManager`**: Junction table operations
+- **Bulk Operations**: Efficient batch insert/delete
+- **Set Operations**: Replace all relationships atomically
+
+```rust
+use reinhardt_serializers::ManyToManyManager;
+
+let m2m_manager = ManyToManyManager::<User, Tag>::new(
+    "user_tags",      // Junction table
+    "user_id",        // Source FK
+    "tag_id"          // Target FK
+);
+
+// Add multiple relationships
+m2m_manager.add_bulk(&user_id, vec![tag1_id, tag2_id, tag3_id]).await?;
+
+// Remove specific relationships
+m2m_manager.remove_bulk(&user_id, vec![tag1_id]).await?;
+
+// Replace all relationships atomically
+m2m_manager.set(&user_id, vec![tag4_id, tag5_id]).await?;
+
+// Clear all relationships
+m2m_manager.clear(&user_id).await?;
+```
+
+#### Relation Field Database Lookups
+
+- **`PrimaryKeyRelatedFieldORM`**: Database-backed primary key relations
+- **`SlugRelatedFieldORM`**: Database-backed slug field relations
+- **Batch Query Optimization**: IN clause for multiple lookups
+- **Custom QuerySet Filters**: Additional filtering constraints
+
+```rust
+use reinhardt_serializers::{PrimaryKeyRelatedFieldORM, SlugRelatedFieldORM};
+use reinhardt_orm::{Filter, FilterOperator, FilterValue};
+
+// Primary key relation with database validation
+let pk_field = PrimaryKeyRelatedFieldORM::<User>::new();
+
+// Validate existence in database
+pk_field.validate_exists(&user_id).await?;
+
+// Fetch single instance
+let user = pk_field.get_instance(&user_id).await?;
+
+// Batch fetch (prevents N+1 queries)
+let users = pk_field.get_instances(vec![id1, id2, id3]).await?;
+
+// Slug field relation with custom filter
+let slug_field = SlugRelatedFieldORM::<User>::new("username")
+    .with_queryset_filter(Filter::new(
+        "is_active",
+        FilterOperator::Eq,
+        FilterValue::Bool(true)
+    ));
+
+// Validate slug exists
+slug_field.validate_exists(&slug_value).await?;
+
+// Fetch by slug
+let user = slug_field.get_instance(&slug_value).await?;
+
+// Batch fetch by slugs
+let users = slug_field.get_instances(vec!["alice", "bob", "charlie"]).await?;
+```
+
+#### Performance Optimization
+
+- **`IntrospectionCache`**: Cache field metadata to avoid repeated introspection
+- **`QueryCache`**: TTL-based query result caching
+- **`BatchValidator`**: Combine multiple database checks into single queries
+- **`PerformanceMetrics`**: Track serialization and validation performance
+
+```rust
+use reinhardt_serializers::{IntrospectionCache, QueryCache, BatchValidator, PerformanceMetrics};
+use std::time::Duration;
+
+// Cache field introspection results
+let cache = IntrospectionCache::new();
+if let Some(fields) = cache.get("User") {
+    // Use cached fields
+} else {
+    let fields = introspect_fields();
+    cache.set("User".to_string(), fields);
+}
+
+// Query result caching with TTL
+let query_cache = QueryCache::new(Duration::from_secs(300));
+query_cache.set("user:123".to_string(), user_data);
+
+// Batch validation
+let mut validator = BatchValidator::new();
+validator.add_unique_check("users", "email", "alice@example.com");
+validator.add_unique_check("users", "username", "alice");
+let failures = validator.execute().await?;
+
+// Performance tracking
+let metrics = PerformanceMetrics::new();
+metrics.record_serialization(50); // 50ms
+let stats = metrics.get_stats();
+println!("Average: {}ms", stats.avg_serialization_ms);
+```
+
+**Note**: ORM integration features require the `django-compat` feature flag to be enabled. Without this flag, stub implementations will return appropriate errors.
+
 ### Planned
 
 #### Additional Field Types
+
 - `DateField`, `DateTimeField`: Date and time handling with chrono integration
 
 #### Advanced Serialization
-- `HyperlinkedModelSerializer`: Generate hyperlinked relations instead of primary keys
-- `NestedSerializer`: Handle nested object serialization
+
 - `WritableNestedSerializer`: Support updates to nested objects
 - `ListSerializer`: Serialize collections of objects
 
-#### Relations
-- `PrimaryKeyRelatedField`: Represent relations using primary keys
-- `HyperlinkedRelatedField`: Represent relations using hyperlinks
-- `SlugRelatedField`: Represent relations using slug fields
-- `StringRelatedField`: Read-only string representation of related objects
-
 #### Additional Renderers
+
 - `YAMLRenderer`: Render data as YAML
 - `CSVRenderer`: Render data as CSV (for list endpoints)
 - `OpenAPIRenderer`: Generate OpenAPI/Swagger specifications
 
 #### Meta Options
+
 - Field inclusion/exclusion
 - Read-only/write-only fields
 - Custom field mappings

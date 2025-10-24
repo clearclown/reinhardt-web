@@ -19,6 +19,7 @@ Generates comprehensive metadata about API endpoints including available actions
 ### Field Type System
 
 Comprehensive field types supporting various data types:
+
 - Basic types: `Field`, `Boolean`, `String`, `Integer`, `Float`, `Decimal`
 - Date/Time types: `Date`, `DateTime`, `Time`, `Duration`
 - Special types: `Email`, `Url`, `Uuid`
@@ -149,4 +150,3 @@ let actions = metadata.determine_actions(&options.allowed_methods, &fields);
 - `async-trait`: Async trait support
 - `serde`: Serialization framework
 - `thiserror`: Error handling
-

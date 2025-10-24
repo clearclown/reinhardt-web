@@ -9,6 +9,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 ## Implemented ✓
 
 ### Core Throttle System
+
 - **`Throttle` Trait**: Async trait defining the throttling interface
   - `allow_request`: Check if a request should be allowed
   - `wait_time`: Get the time to wait before retrying
@@ -19,6 +20,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 ### Throttle Implementations
 
 #### Anonymous User Throttling
+
 - **`AnonRateThrottle`**: Rate limiting for anonymous users (by IP address)
   - Constructor with memory backend: `new(rate, window_secs)`
   - Constructor with custom backend: `with_backend(rate, window_secs, backend)`
@@ -26,6 +28,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Example: Allow 60 requests per hour for anonymous users
 
 #### Authenticated User Throttling
+
 - **`UserRateThrottle`**: Rate limiting for authenticated users (by user ID)
   - Constructor with memory backend: `new(rate, window_secs)`
   - Constructor with custom backend: `with_backend(rate, window_secs, backend)`
@@ -34,6 +37,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Example: Allow 100 requests per 60 seconds per user
 
 #### Scoped Throttling
+
 - **`ScopedRateThrottle`**: Per-endpoint or custom scope rate limiting
   - Constructor with memory backend: `new()`
   - Constructor with custom backend: `with_backend(backend)`
@@ -44,6 +48,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Example: API scope with 100/min, Upload scope with 10/min
 
 #### Burst Rate Throttling
+
 - **`BurstRateThrottle`**: Dual-window throttling with burst and sustained rates
   - Separate burst rate (short window) and sustained rate (long window)
   - Constructor: `new(backend, burst_rate, sustained_rate, burst_duration, sustained_duration)`
@@ -51,6 +56,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Example: 10 requests per second burst, 100 requests per minute sustained
 
 #### Tiered Rate Throttling
+
 - **`TieredRateThrottle`**: User-level based throttling (e.g., free vs premium)
   - `Tier` struct for defining tier configurations
   - Constructor: `new(backend, default_tier)`
@@ -63,6 +69,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 ### Backend Storage
 
 #### Memory Backend
+
 - **`MemoryBackend`**: In-memory rate limit tracking
   - Default constructor: `new()`
   - With time provider: `with_time_provider(time_provider)`
@@ -72,6 +79,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Perfect for single-server deployments
 
 #### Redis Backend
+
 - **`RedisBackend`**: Distributed rate limiting (feature-gated: `redis-backend`)
   - Constructor: `new(url)` with Redis connection URL
   - Uses Redis INCR and EXPIRE commands
@@ -79,6 +87,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - Async connection pooling with multiplexed connections
 
 #### Backend Trait
+
 - **`ThrottleBackend`**: Common interface for all backends
   - `increment(key, window)`: Increment counter with expiration
   - `get_count(key)`: Get current request count
@@ -86,6 +95,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - `get_wait_time(key)`: Get time until rate limit resets
 
 ### Testing Utilities
+
 - **`TimeProvider` Trait**: Time abstraction for testability
   - `now()`: Get current time
 - **`SystemTimeProvider`**: Real system time implementation
@@ -99,6 +109,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 ## Planned
 
 ### Advanced Features
+
 - Distributed consensus for rate limit synchronization
 - Graceful degradation under backend failure
 - Rate limit warmup and cooldown strategies
@@ -108,12 +119,14 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 - Leaky bucket algorithm implementation
 
 ### Backend Extensions
+
 - Memcached backend support
 - Database-backed rate limiting
 - Multi-tier caching with fallback
 - Custom backend plugin system
 
 ### Additional Throttle Types
+
 - Concurrent request throttling
 - Bandwidth throttling
 - Geo-based rate limiting
@@ -127,6 +140,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 ## Usage Examples
 
 See the documentation tests in each module for detailed usage examples:
+
 - Memory backend throttling
 - Redis-backed distributed throttling
 - Time-based testing with MockTimeProvider
