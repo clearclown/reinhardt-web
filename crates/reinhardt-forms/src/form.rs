@@ -410,7 +410,7 @@ impl Form {
             format!("{}-{}", self.prefix, field_name)
         }
     }
-    pub fn get_bound_field(&self, name: &str) -> Option<BoundField> {
+    pub fn get_bound_field<'a>(&'a self, name: &str) -> Option<BoundField<'a>> {
         let field = self.get_field(name)?;
         let data = self.data.get(name);
         let errors = self.errors.get(name).map(|e| e.as_slice()).unwrap_or(&[]);

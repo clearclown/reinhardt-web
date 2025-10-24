@@ -12,7 +12,7 @@ pub mod regex_field;
 pub mod time_field;
 pub mod url_field;
 
-pub use advanced_fields::{ComboField, DurationField, UUIDField};
+pub use advanced_fields::{ColorField, ComboField, DurationField, PasswordField, UUIDField};
 pub use choice_field::{ChoiceField, MultipleChoiceField};
 pub use date_field::DateField;
 pub use datetime_field::DateTimeField;

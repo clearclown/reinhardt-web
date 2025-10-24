@@ -4,7 +4,7 @@
 //! Similar to Django's SECURE_SSL_REDIRECT setting.
 
 use async_trait::async_trait;
-use hyper::{StatusCode, Uri};
+use hyper::StatusCode;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
 use std::sync::Arc;
 
@@ -191,7 +191,7 @@ impl Middleware for HttpsRedirectMiddleware {
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use hyper::{HeaderMap, Method, Version};
+    use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
     use reinhardt_apps::Request;
 
     struct TestHandler;

@@ -596,6 +596,443 @@ impl FormField for ComboField {
     }
 }
 
+/// A field for color validation (hex format)
+///
+/// Validates that the input is a valid hex color code (e.g., "#FF0000" or "#F00").
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_forms::fields::ColorField;
+/// use reinhardt_forms::Field;
+/// use serde_json::json;
+///
+/// let field = ColorField::new("color");
+///
+/// // Valid 6-digit hex color
+/// let result = field.clean(Some(&json!("#FF0000")));
+/// assert!(result.is_ok());
+///
+/// // Valid 3-digit hex color
+/// let result = field.clean(Some(&json!("#F00")));
+/// assert!(result.is_ok());
+/// ```
+#[derive(Debug, Clone)]
+pub struct ColorField {
+    pub name: String,
+    pub required: bool,
+    pub error_messages: HashMap<String, String>,
+    pub widget: Widget,
+    pub help_text: String,
+    pub initial: Option<Value>,
+}
+
+impl ColorField {
+    /// Create a new ColorField
+    pub fn new(name: impl Into<String>) -> Self {
+        let mut error_messages = HashMap::new();
+        error_messages.insert(
+            "required".to_string(),
+            "This field is required.".to_string(),
+        );
+        error_messages.insert(
+            "invalid".to_string(),
+            "Enter a valid hex color code (e.g., #FF0000).".to_string(),
+        );
+
+        Self {
+            name: name.into(),
+            required: true,
+            error_messages,
+            widget: Widget::TextInput,
+            help_text: String::new(),
+            initial: None,
+        }
+    }
+
+    /// Set whether this field is required
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    /// Set the help text
+    pub fn help_text(mut self, text: impl Into<String>) -> Self {
+        self.help_text = text.into();
+        self
+    }
+
+    /// Set the initial value
+    pub fn initial(mut self, value: Value) -> Self {
+        self.initial = Some(value);
+        self
+    }
+
+    /// Validate hex color format
+    fn validate_color(&self, s: &str) -> bool {
+        if !s.starts_with('#') {
+            return false;
+        }
+
+        let hex = &s[1..];
+        if hex.len() != 3 && hex.len() != 6 {
+            return false;
+        }
+
+        hex.chars().all(|c| c.is_ascii_hexdigit())
+    }
+}
+
+impl FormField for ColorField {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn label(&self) -> Option<&str> {
+        None
+    }
+
+    fn widget(&self) -> &Widget {
+        &self.widget
+    }
+
+    fn required(&self) -> bool {
+        self.required
+    }
+
+    fn initial(&self) -> Option<&Value> {
+        self.initial.as_ref()
+    }
+
+    fn help_text(&self) -> Option<&str> {
+        if self.help_text.is_empty() {
+            None
+        } else {
+            Some(&self.help_text)
+        }
+    }
+
+    fn clean(&self, value: Option<&Value>) -> FieldResult<Value> {
+        if value.is_none() || value == Some(&Value::Null) {
+            if self.required {
+                let error_msg = self
+                    .error_messages
+                    .get("required")
+                    .cloned()
+                    .unwrap_or_else(|| "This field is required.".to_string());
+                return Err(FieldError::validation(Some(&self.name), &error_msg));
+            }
+            return Ok(Value::Null);
+        }
+
+        let s = match value.unwrap() {
+            Value::String(s) => s.trim(),
+            _ => {
+                let error_msg = self
+                    .error_messages
+                    .get("invalid")
+                    .cloned()
+                    .unwrap_or_else(|| "Enter a valid hex color code.".to_string());
+                return Err(FieldError::validation(Some(&self.name), &error_msg));
+            }
+        };
+
+        if s.is_empty() {
+            if self.required {
+                let error_msg = self
+                    .error_messages
+                    .get("required")
+                    .cloned()
+                    .unwrap_or_else(|| "This field is required.".to_string());
+                return Err(FieldError::validation(Some(&self.name), &error_msg));
+            }
+            return Ok(Value::Null);
+        }
+
+        if !self.validate_color(s) {
+            let error_msg = self
+                .error_messages
+                .get("invalid")
+                .cloned()
+                .unwrap_or_else(|| "Enter a valid hex color code.".to_string());
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        Ok(Value::String(s.to_uppercase()))
+    }
+
+    fn has_changed(&self, initial: Option<&Value>, data: Option<&Value>) -> bool {
+        match (initial, data) {
+            (None, None) => false,
+            (Some(_), None) | (None, Some(_)) => true,
+            (Some(Value::String(a)), Some(Value::String(b))) => {
+                a.to_uppercase() != b.to_uppercase()
+            }
+            (Some(a), Some(b)) => a != b,
+        }
+    }
+}
+
+/// A field for password validation with strength requirements
+///
+/// Validates password strength including minimum length, required character types.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_forms::fields::PasswordField;
+/// use reinhardt_forms::Field;
+/// use serde_json::json;
+///
+/// let field = PasswordField::new("password")
+///     .min_length(8)
+///     .require_uppercase(true)
+///     .require_digit(true);
+///
+/// // Valid strong password
+/// let result = field.clean(Some(&json!("SecurePass123")));
+/// assert!(result.is_ok());
+///
+/// // Invalid: too short
+/// let result = field.clean(Some(&json!("Pass1")));
+/// assert!(result.is_err());
+/// ```
+#[derive(Debug, Clone)]
+pub struct PasswordField {
+    pub name: String,
+    pub required: bool,
+    pub error_messages: HashMap<String, String>,
+    pub widget: Widget,
+    pub help_text: String,
+    pub initial: Option<Value>,
+    pub min_length: usize,
+    pub require_uppercase: bool,
+    pub require_lowercase: bool,
+    pub require_digit: bool,
+    pub require_special: bool,
+}
+
+impl PasswordField {
+    /// Create a new PasswordField
+    pub fn new(name: impl Into<String>) -> Self {
+        let mut error_messages = HashMap::new();
+        error_messages.insert(
+            "required".to_string(),
+            "This field is required.".to_string(),
+        );
+        error_messages.insert(
+            "too_short".to_string(),
+            "Password must be at least {min_length} characters.".to_string(),
+        );
+        error_messages.insert(
+            "no_uppercase".to_string(),
+            "Password must contain at least one uppercase letter.".to_string(),
+        );
+        error_messages.insert(
+            "no_lowercase".to_string(),
+            "Password must contain at least one lowercase letter.".to_string(),
+        );
+        error_messages.insert(
+            "no_digit".to_string(),
+            "Password must contain at least one digit.".to_string(),
+        );
+        error_messages.insert(
+            "no_special".to_string(),
+            "Password must contain at least one special character.".to_string(),
+        );
+
+        Self {
+            name: name.into(),
+            required: true,
+            error_messages,
+            widget: Widget::PasswordInput,
+            help_text: String::new(),
+            initial: None,
+            min_length: 8,
+            require_uppercase: false,
+            require_lowercase: false,
+            require_digit: false,
+            require_special: false,
+        }
+    }
+
+    /// Set minimum length
+    pub fn min_length(mut self, length: usize) -> Self {
+        self.min_length = length;
+        self
+    }
+
+    /// Require uppercase letter
+    pub fn require_uppercase(mut self, required: bool) -> Self {
+        self.require_uppercase = required;
+        self
+    }
+
+    /// Require lowercase letter
+    pub fn require_lowercase(mut self, required: bool) -> Self {
+        self.require_lowercase = required;
+        self
+    }
+
+    /// Require digit
+    pub fn require_digit(mut self, required: bool) -> Self {
+        self.require_digit = required;
+        self
+    }
+
+    /// Require special character
+    pub fn require_special(mut self, required: bool) -> Self {
+        self.require_special = required;
+        self
+    }
+
+    /// Set whether this field is required
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    /// Set the help text
+    pub fn help_text(mut self, text: impl Into<String>) -> Self {
+        self.help_text = text.into();
+        self
+    }
+}
+
+impl FormField for PasswordField {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn label(&self) -> Option<&str> {
+        None
+    }
+
+    fn widget(&self) -> &Widget {
+        &self.widget
+    }
+
+    fn required(&self) -> bool {
+        self.required
+    }
+
+    fn initial(&self) -> Option<&Value> {
+        self.initial.as_ref()
+    }
+
+    fn help_text(&self) -> Option<&str> {
+        if self.help_text.is_empty() {
+            None
+        } else {
+            Some(&self.help_text)
+        }
+    }
+
+    fn clean(&self, value: Option<&Value>) -> FieldResult<Value> {
+        if value.is_none() || value == Some(&Value::Null) {
+            if self.required {
+                let error_msg = self
+                    .error_messages
+                    .get("required")
+                    .cloned()
+                    .unwrap_or_else(|| "This field is required.".to_string());
+                return Err(FieldError::validation(Some(&self.name), &error_msg));
+            }
+            return Ok(Value::Null);
+        }
+
+        let s = match value.unwrap() {
+            Value::String(s) => s,
+            _ => {
+                return Err(FieldError::validation(
+                    Some(&self.name),
+                    "Invalid password format.",
+                ))
+            }
+        };
+
+        if s.is_empty() {
+            if self.required {
+                let error_msg = self
+                    .error_messages
+                    .get("required")
+                    .cloned()
+                    .unwrap_or_else(|| "This field is required.".to_string());
+                return Err(FieldError::validation(Some(&self.name), &error_msg));
+            }
+            return Ok(Value::Null);
+        }
+
+        // Check minimum length
+        if s.len() < self.min_length {
+            let error_msg = self
+                .error_messages
+                .get("too_short")
+                .cloned()
+                .unwrap_or_else(|| {
+                    format!("Password must be at least {} characters.", self.min_length)
+                });
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        // Check uppercase requirement
+        if self.require_uppercase && !s.chars().any(|c| c.is_uppercase()) {
+            let error_msg = self
+                .error_messages
+                .get("no_uppercase")
+                .cloned()
+                .unwrap_or_else(|| {
+                    "Password must contain at least one uppercase letter.".to_string()
+                });
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        // Check lowercase requirement
+        if self.require_lowercase && !s.chars().any(|c| c.is_lowercase()) {
+            let error_msg = self
+                .error_messages
+                .get("no_lowercase")
+                .cloned()
+                .unwrap_or_else(|| {
+                    "Password must contain at least one lowercase letter.".to_string()
+                });
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        // Check digit requirement
+        if self.require_digit && !s.chars().any(|c| c.is_ascii_digit()) {
+            let error_msg = self
+                .error_messages
+                .get("no_digit")
+                .cloned()
+                .unwrap_or_else(|| "Password must contain at least one digit.".to_string());
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        // Check special character requirement
+        if self.require_special && !s.chars().any(|c| !c.is_alphanumeric()) {
+            let error_msg = self
+                .error_messages
+                .get("no_special")
+                .cloned()
+                .unwrap_or_else(|| {
+                    "Password must contain at least one special character.".to_string()
+                });
+            return Err(FieldError::validation(Some(&self.name), &error_msg));
+        }
+
+        Ok(Value::String(s.to_string()))
+    }
+
+    fn has_changed(&self, initial: Option<&Value>, data: Option<&Value>) -> bool {
+        match (initial, data) {
+            (None, None) => false,
+            (Some(_), None) | (None, Some(_)) => true,
+            (Some(a), Some(b)) => a != b,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -694,6 +1131,78 @@ mod tests {
 
         // Not an email
         let result = field.clean(Some(&json!("hello world")));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_color_field_valid() {
+        let field = ColorField::new("color");
+
+        // 6-digit hex
+        let result = field.clean(Some(&json!("#FF0000")));
+        assert!(result.is_ok());
+
+        // 3-digit hex
+        let result = field.clean(Some(&json!("#F00")));
+        assert!(result.is_ok());
+
+        // Lowercase
+        let result = field.clean(Some(&json!("#ff0000")));
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_color_field_invalid() {
+        let field = ColorField::new("color");
+
+        // Missing #
+        let result = field.clean(Some(&json!("FF0000")));
+        assert!(result.is_err());
+
+        // Invalid length
+        let result = field.clean(Some(&json!("#FF00")));
+        assert!(result.is_err());
+
+        // Invalid characters
+        let result = field.clean(Some(&json!("#GGGGGG")));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_password_field_basic() {
+        let field = PasswordField::new("password").min_length(6);
+
+        // Valid
+        let result = field.clean(Some(&json!("password123")));
+        assert!(result.is_ok());
+
+        // Too short
+        let result = field.clean(Some(&json!("pass")));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_password_field_requirements() {
+        let field = PasswordField::new("password")
+            .min_length(8)
+            .require_uppercase(true)
+            .require_digit(true)
+            .require_special(true);
+
+        // Valid: has uppercase, digit, and special char
+        let result = field.clean(Some(&json!("SecurePass123!")));
+        assert!(result.is_ok());
+
+        // Missing uppercase
+        let result = field.clean(Some(&json!("password123!")));
+        assert!(result.is_err());
+
+        // Missing digit
+        let result = field.clean(Some(&json!("SecurePassword!")));
+        assert!(result.is_err());
+
+        // Missing special char
+        let result = field.clean(Some(&json!("SecurePassword123")));
         assert!(result.is_err());
     }
 }

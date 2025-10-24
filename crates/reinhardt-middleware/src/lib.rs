@@ -1,18 +1,25 @@
 pub mod auth;
 pub mod broken_link;
+pub mod brotli;
 pub mod common;
 pub mod conditional;
 pub mod cors;
 pub mod csp;
+pub mod csp_helpers;
 pub mod csrf;
 pub mod di_support;
+pub mod flatpages;
 pub mod gzip;
 pub mod https_redirect;
 pub mod locale;
 pub mod logging;
 pub mod messages;
+pub mod metrics;
 pub mod redirect_fallback;
+pub mod request_id;
 pub mod security_middleware;
+pub mod site;
+pub mod tracing;
 pub mod xframe;
 
 // Re-export core middleware traits from reinhardt-types
@@ -20,10 +27,12 @@ pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 
 pub use auth::AuthenticationMiddleware;
 pub use broken_link::{BrokenLinkConfig, BrokenLinkEmailsMiddleware};
+pub use brotli::{BrotliConfig, BrotliMiddleware, BrotliQuality};
 pub use common::{CommonConfig, CommonMiddleware};
 pub use conditional::ConditionalGetMiddleware;
 pub use cors::CorsMiddleware;
-pub use csp::{CspConfig, CspMiddleware};
+pub use csp::{CspConfig, CspMiddleware, CspNonce};
+pub use csp_helpers::{csp_nonce_attr, get_csp_nonce};
 pub use csrf::{
     check_origin, check_referer, check_token, check_token_format, does_token_match, get_secret,
     get_token, is_same_domain, mask_cipher_secret, rotate_token, unmask_cipher_token, CsrfConfig,
@@ -33,13 +42,21 @@ pub use csrf::{
     REASON_INSECURE_REFERER, REASON_INVALID_CHARACTERS, REASON_MALFORMED_REFERER,
     REASON_NO_CSRF_COOKIE, REASON_NO_REFERER,
 };
+pub use flatpages::{Flatpage, FlatpageStore, FlatpagesConfig, FlatpagesMiddleware};
 pub use gzip::{GZipConfig, GZipMiddleware};
 pub use https_redirect::{HttpsRedirectConfig, HttpsRedirectMiddleware};
 pub use locale::{LocaleConfig, LocaleMiddleware};
 pub use logging::LoggingMiddleware;
 pub use messages::{CookieStorage, Message, MessageLevel, MessageStorage, SessionStorage};
+pub use metrics::{MetricsConfig, MetricsMiddleware, MetricsStore};
 pub use redirect_fallback::{RedirectFallbackMiddleware, RedirectResponseConfig};
+pub use request_id::{RequestIdConfig, RequestIdMiddleware, REQUEST_ID_HEADER};
 pub use security_middleware::{SecurityConfig, SecurityMiddleware};
+pub use site::{Site, SiteConfig, SiteMiddleware, SiteRegistry, SITE_ID_HEADER};
+pub use tracing::{
+    Span, SpanStatus, TraceStore, TracingConfig, TracingMiddleware, PARENT_SPAN_ID_HEADER,
+    SPAN_ID_HEADER, TRACE_ID_HEADER,
+};
 pub use xframe::{XFrameOptions, XFrameOptionsMiddleware};
 
 #[cfg(test)]

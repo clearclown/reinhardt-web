@@ -1,5 +1,5 @@
 [package]
-name = "utils-core"
+name = "reinhardt-utils-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -163,7 +163,7 @@ impl<S: SessionStore, A: AuthenticationBackend> AuthenticationMiddleware<S, A> {
         if let Some(session) = self.session_store.load(session_id).await {
             if let Some(user_id_value) = session.get(SESSION_KEY_USER_ID) {
                 if let Some(user_id) = user_id_value.as_str() {
-                    if let Ok(Some(user)) = self.auth_backend.get_user(user_id) {
+                    if let Ok(Some(user)) = self.auth_backend.get_user(user_id).await {
                         return Some(user);
                     }
                 }
@@ -286,8 +286,9 @@ mod tests {
         user: Option<SimpleUser>,
     }
 
+    #[async_trait::async_trait]
     impl AuthenticationBackend for TestAuthBackend {
-        fn authenticate(
+        async fn authenticate(
             &self,
             _request: &Request,
         ) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -297,7 +298,7 @@ mod tests {
                 .map(|u| Box::new(u.clone()) as Box<dyn User>))
         }
 
-        fn get_user(
+        async fn get_user(
             &self,
             _user_id: &str,
         ) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {

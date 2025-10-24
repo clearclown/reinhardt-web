@@ -10,9 +10,9 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 reinhardt-types = { workspace = true }
-reinhardt-http = { path = "../reinhardt-http" }
+reinhardt-http = { version = "0.1.0", path = "../reinhardt-http" }
 reinhardt-exception = { workspace = true }
-reinhardt-contrib = { path = "../reinhardt-contrib" }
+reinhardt-contrib = { version = "0.1.0", path = "../reinhardt-contrib" }
 reinhardt-apps = { workspace = true }
 reinhardt-security = { workspace = true }
 reinhardt-auth = { workspace = true }
@@ -24,14 +24,17 @@ hyper = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 flate2 = { workspace = true }
+brotli = "6.0"
 sha2 = { workspace = true }
 hex = "0.4"
 httpdate = "1.0"
 bytes = { workspace = true }
 sqlx = { workspace = true, optional = true }
 regex = "1.10"
+log = "0.4"
+url = "2.5"
+uuid = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
 tokio-test = "0.4"
-uuid = { workspace = true }

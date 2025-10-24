@@ -10,12 +10,12 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 
 # Core utils (always included)
-utils-core = { path = "crates/utils-core" }
+utils-core = { version = "0.1.0", path = "crates/utils-core", package = "reinhardt-utils-core" }
 
 # Internal crates as optional dependencies
-reinhardt-logging = { path = "crates/logging", optional = true }
-reinhardt-cache = { path = "crates/cache", optional = true }
-reinhardt-storage = { path = "crates/storage", optional = true }
+reinhardt-logging = { version = "0.1.0", path = "crates/logging", optional = true }
+reinhardt-cache = { version = "0.1.0", path = "crates/cache", optional = true }
+reinhardt-storage = { version = "0.1.0", path = "crates/storage", optional = true }
 
 [features]
 default = []

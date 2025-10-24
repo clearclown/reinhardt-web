@@ -33,11 +33,17 @@ pub trait Storage: Send + Sync {
     fn path(&self, name: &str) -> String;
 
     /// Get file accessed time
-    async fn get_accessed_time(&self, path: &str) -> StorageResult<DateTime<Utc>>;
+    async fn get_accessed_time(&self, path: &str) -> StorageResult<DateTime<Utc>> {
+        Ok(self.metadata(path).await?.modified_at)
+    }
 
     /// Get file created time
-    async fn get_created_time(&self, path: &str) -> StorageResult<DateTime<Utc>>;
+    async fn get_created_time(&self, path: &str) -> StorageResult<DateTime<Utc>> {
+        Ok(self.metadata(path).await?.created_at)
+    }
 
     /// Get file modified time
-    async fn get_modified_time(&self, path: &str) -> StorageResult<DateTime<Utc>>;
+    async fn get_modified_time(&self, path: &str) -> StorageResult<DateTime<Utc>> {
+        Ok(self.metadata(path).await?.modified_at)
+    }
 }

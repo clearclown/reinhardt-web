@@ -7,10 +7,14 @@
 //! - Per-request CSP overrides
 
 use async_trait::async_trait;
-use hyper::StatusCode;
+// use hyper::StatusCode;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// Type wrapper for CSP nonce stored in Request extensions
+#[derive(Debug, Clone)]
+pub struct CspNonce(pub String);
 
 /// CSP directive configuration
 #[derive(Debug, Clone)]
@@ -282,15 +286,15 @@ impl Middleware for CspMiddleware {
     async fn process(&self, request: Request, handler: Arc<dyn Handler>) -> Result<Response> {
         // Generate nonce if enabled
         let nonce = if self.config.include_nonce {
-            Some(self.generate_nonce())
+            let generated_nonce = self.generate_nonce();
+            // Store nonce in request extensions for template access
+            request.extensions.insert(CspNonce(generated_nonce.clone()));
+            Some(generated_nonce)
         } else {
             None
         };
 
         // Call handler
-        // NOTE: To pass the nonce to templates, you would need to extend the Request type
-        // with a context mechanism or use response headers. This is a framework-level
-        // enhancement that would require changes to reinhardt-apps.
         let mut response = handler.handle(request).await?;
 
         // Add CSP header
@@ -359,7 +363,7 @@ pub mod base64 {
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use hyper::{HeaderMap, Method, Uri, Version};
+    use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 
     struct TestHandler;
 

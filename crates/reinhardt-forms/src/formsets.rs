@@ -4,7 +4,7 @@
 //! model-based formsets, and dynamic formset generation.
 
 use crate::formset::FormSet;
-use crate::model_form::{FormModel, ModelForm, ModelFormConfig};
+use crate::model_form::{FormModel, ModelForm};
 use crate::FormError;
 use std::marker::PhantomData;
 
@@ -439,6 +439,7 @@ impl FormSetFactory {
 mod tests {
     use super::*;
     use crate::model_form::FieldType;
+    use crate::ModelFormConfig;
     use serde_json::Value;
 
     // Test model implementation
