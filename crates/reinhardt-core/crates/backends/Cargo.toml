@@ -1,0 +1,38 @@
+[package]
+name = "reinhardt-backends"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Shared backend infrastructure for Reinhardt framework"
+
+[dependencies]
+# Async support
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+
+# Serialization
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# Redis support (optional)
+redis = { version = "0.27", features = [
+  "tokio-comp",
+  "connection-manager",
+], optional = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# Utilities
+dashmap = "6.1"
+parking_lot = "0.12"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full", "test-util"] }
+
+[features]
+default = ["memory"]
+memory = []
+redis-backend = ["dep:redis"]
