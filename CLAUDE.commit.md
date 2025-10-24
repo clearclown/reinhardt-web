@@ -70,6 +70,15 @@ git apply --cached /tmp/changes.patch
 - Verify staged files before committing
 - Use `git status` to confirm no ignored files are included
 
+### CE-5 (MUST): No Batch Commits
+
+- **NEVER** execute multiple commits in a batch operation
+- **ALWAYS** create commits one at a time, with user confirmation between each
+- After creating a commit, wait for user instruction before proceeding with the next commit
+- ❌ Bad: Creating 5 commits in sequence without user interaction
+- ✅ Good: Create one commit, inform user, wait for next instruction, then proceed
+- This ensures user has control and visibility over commit history
+
 ---
 
 ## Commit Message Structure
@@ -186,9 +195,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - ❌ NO commits without explicit user instruction
 - ❌ NO pushing without explicit user instruction
 - ❌ NO committing .gitignore files
+- ❌ NO batch commits (multiple commits without user confirmation)
 - ✅ SPLIT commits by logical purpose
 - ✅ KEEP each commit small enough to explain in one line
 - ✅ USE `git add -e` or patch files for partial file commits
+- ✅ CREATE one commit at a time with user confirmation between each
 
 ### Message Format
 
