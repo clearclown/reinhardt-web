@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package reinhardt.graphql;
+
+import "common.proto";
+
+// GraphQL リクエスト
+message GraphQLRequest {
+  // GraphQL クエリ文字列
+  string query = 1;
+
+  // 変数（JSON形式の文字列）
+  optional string variables = 2;
+
+  // オペレーション名（複数のオペレーションがある場合に指定）
+  optional string operation_name = 3;
+}
+
+// GraphQL エラー
+message GraphQLError {
+  // エラーメッセージ
+  string message = 1;
+
+  // エラー位置情報
+  repeated GraphQLLocation locations = 2;
+
+  // エラーパス
+  repeated PathSegment path = 3;
+
+  // 拡張情報（JSON形式の文字列）
+  optional string extensions = 4;
+}
+
+// GraphQL エラーの位置情報
+message GraphQLLocation {
+  int32 line = 1;
+  int32 column = 2;
+}
+
+// エラーパスのセグメント
+message PathSegment {
+  oneof segment {
+    string field = 1;
+    int32 index = 2;
+  }
+}
+
+// GraphQL レスポンス
+message GraphQLResponse {
+  // レスポンスデータ（JSON形式の文字列）
+  optional string data = 1;
+
+  // エラーリスト
+  repeated GraphQLError errors = 2;
+
+  // 拡張情報（JSON形式の文字列）
+  optional string extensions = 3;
+}
+
+// サブスクリプションイベント
+message SubscriptionEvent {
+  // イベントID
+  string id = 1;
+
+  // イベントタイプ
+  string event_type = 2;
+
+  // ペイロード（GraphQLResponse）
+  GraphQLResponse payload = 3;
+
+  // タイムスタンプ
+  reinhardt.common.Timestamp timestamp = 4;
+}
+
+// GraphQL サービス
+service GraphQLService {
+  // Query オペレーション（unary RPC）
+  rpc ExecuteQuery(GraphQLRequest) returns (GraphQLResponse);
+
+  // Mutation オペレーション（unary RPC）
+  rpc ExecuteMutation(GraphQLRequest) returns (GraphQLResponse);
+
+  // Subscription オペレーション（server streaming RPC）
+  rpc ExecuteSubscription(GraphQLRequest) returns (stream SubscriptionEvent);
+}
