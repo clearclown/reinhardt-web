@@ -74,6 +74,7 @@ uuid = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 serial_test = { workspace = true }
+sqlx = { workspace = true }
 
 # gRPC integration dependencies
 reinhardt-grpc = { workspace = true }
@@ -86,6 +87,10 @@ async-stream = "0.3"
 [build-dependencies]
 tonic-build = "0.12"
 protox = "0.7"
+
+[lib]
+path = "integration/src/lib.rs"
+
 [[test]]
 name = "api_browsable_api_integration"
 path = "integration/tests/api/browsable_api_integration.rs"
