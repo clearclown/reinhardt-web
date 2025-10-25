@@ -42,7 +42,6 @@
 //! TODO: Write-behind - Asynchronous cache updates
 //! TODO: Cache-aside - Application-managed caching
 //! TODO: Read-through - Automatic cache population on miss
-//! TODO: Cache statistics - Hit/miss rates, entry counts, memory usage
 //! TODO: Cache inspection - List keys, view entries, export cache state
 //! TODO: Automatic cleanup - Background task for expired entry removal
 //! TODO: Event hooks - Pre/post cache operations callbacks
@@ -73,9 +72,71 @@ use async_trait::async_trait;
 use reinhardt_exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
+
+/// Cache statistics
+#[derive(Debug, Clone, Default)]
+pub struct CacheStatistics {
+    /// Number of cache hits
+    pub hits: u64,
+    /// Number of cache misses
+    pub misses: u64,
+    /// Total number of requests
+    pub total_requests: u64,
+    /// Current number of entries in cache
+    pub entry_count: u64,
+    /// Approximate memory usage in bytes
+    pub memory_usage: u64,
+}
+
+impl CacheStatistics {
+    /// Calculate hit rate (0.0 to 1.0)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_cache::CacheStatistics;
+    ///
+    /// let mut stats = CacheStatistics::default();
+    /// stats.hits = 75;
+    /// stats.misses = 25;
+    /// stats.total_requests = 100;
+    ///
+    /// assert_eq!(stats.hit_rate(), 0.75);
+    /// ```
+    pub fn hit_rate(&self) -> f64 {
+        if self.total_requests == 0 {
+            0.0
+        } else {
+            self.hits as f64 / self.total_requests as f64
+        }
+    }
+
+    /// Calculate miss rate (0.0 to 1.0)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_cache::CacheStatistics;
+    ///
+    /// let mut stats = CacheStatistics::default();
+    /// stats.hits = 75;
+    /// stats.misses = 25;
+    /// stats.total_requests = 100;
+    ///
+    /// assert_eq!(stats.miss_rate(), 0.25);
+    /// ```
+    pub fn miss_rate(&self) -> f64 {
+        if self.total_requests == 0 {
+            0.0
+        } else {
+            self.misses as f64 / self.total_requests as f64
+        }
+    }
+}
 
 /// Cache entry with expiration
 #[derive(Debug, Clone)]
@@ -173,6 +234,8 @@ pub trait Cache: Send + Sync {
 pub struct InMemoryCache {
     store: Arc<RwLock<HashMap<String, CacheEntry>>>,
     default_ttl: Option<Duration>,
+    hits: Arc<AtomicU64>,
+    misses: Arc<AtomicU64>,
 }
 
 impl InMemoryCache {
@@ -190,6 +253,8 @@ impl InMemoryCache {
         Self {
             store: Arc::new(RwLock::new(HashMap::new())),
             default_ttl: None,
+            hits: Arc::new(AtomicU64::new(0)),
+            misses: Arc::new(AtomicU64::new(0)),
         }
     }
     /// Set a default TTL for all cache entries
@@ -247,6 +312,51 @@ impl InMemoryCache {
         let mut store = self.store.write().await;
         store.retain(|_, entry| !entry.is_expired());
     }
+
+    /// Get cache statistics
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_cache::{InMemoryCache, Cache};
+    ///
+    /// # async fn example() {
+    /// let cache = InMemoryCache::new();
+    ///
+    /// // Set and get some values
+    /// cache.set("key1", &"value1", None).await.unwrap();
+    /// cache.set("key2", &"value2", None).await.unwrap();
+    ///
+    /// let _: Option<String> = cache.get("key1").await.unwrap(); // Hit
+    /// let _: Option<String> = cache.get("key2").await.unwrap(); // Hit
+    /// let _: Option<String> = cache.get("key3").await.unwrap(); // Miss
+    ///
+    /// let stats = cache.get_statistics().await;
+    /// assert_eq!(stats.hits, 2);
+    /// assert_eq!(stats.misses, 1);
+    /// assert_eq!(stats.total_requests, 3);
+    /// assert_eq!(stats.entry_count, 2);
+    /// assert_eq!(stats.hit_rate(), 2.0 / 3.0);
+    /// # }
+    /// ```
+    pub async fn get_statistics(&self) -> CacheStatistics {
+        let store = self.store.read().await;
+        let hits = self.hits.load(Ordering::Relaxed);
+        let misses = self.misses.load(Ordering::Relaxed);
+        let entry_count = store.len() as u64;
+        let memory_usage = store
+            .values()
+            .map(|entry| entry.value.len() as u64)
+            .sum::<u64>();
+
+        CacheStatistics {
+            hits,
+            misses,
+            total_requests: hits + misses,
+            entry_count,
+            memory_usage,
+        }
+    }
 }
 
 impl Default for InMemoryCache {
@@ -265,14 +375,20 @@ impl Cache for InMemoryCache {
 
         if let Some(entry) = store.get(key) {
             if entry.is_expired() {
-                // Entry expired, return None
+                // Entry expired, count as miss
+                self.misses.fetch_add(1, Ordering::Relaxed);
                 return Ok(None);
             }
+
+            // Cache hit
+            self.hits.fetch_add(1, Ordering::Relaxed);
 
             let value = serde_json::from_slice(&entry.value)
                 .map_err(|e| Error::Serialization(e.to_string()))?;
             Ok(Some(value))
         } else {
+            // Cache miss
+            self.misses.fetch_add(1, Ordering::Relaxed);
             Ok(None)
         }
     }
@@ -518,5 +634,117 @@ mod tests {
         // key1 should be gone, key2 should remain
         assert!(!cache.has_key("key1").await.unwrap());
         assert!(cache.has_key("key2").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_cache_statistics_basic() {
+        let cache = InMemoryCache::new();
+
+        // Initially, stats should be zero
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.total_requests, 0);
+        assert_eq!(stats.entry_count, 0);
+        assert_eq!(stats.memory_usage, 0);
+
+        // Set some values
+        cache.set("key1", &"value1", None).await.unwrap();
+        cache.set("key2", &"value2", None).await.unwrap();
+
+        // Check entry count
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.entry_count, 2);
+        assert!(stats.memory_usage > 0);
+
+        // Get existing keys (hits)
+        let _: Option<String> = cache.get("key1").await.unwrap();
+        let _: Option<String> = cache.get("key2").await.unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.hits, 2);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.total_requests, 2);
+
+        // Get non-existing key (miss)
+        let _: Option<String> = cache.get("key3").await.unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.hits, 2);
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.total_requests, 3);
+    }
+
+    #[tokio::test]
+    async fn test_cache_statistics_hit_miss_rate() {
+        let cache = InMemoryCache::new();
+
+        cache.set("key1", &"value1", None).await.unwrap();
+        cache.set("key2", &"value2", None).await.unwrap();
+
+        // 2 hits
+        let _: Option<String> = cache.get("key1").await.unwrap();
+        let _: Option<String> = cache.get("key2").await.unwrap();
+
+        // 1 miss
+        let _: Option<String> = cache.get("key3").await.unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.hit_rate(), 2.0 / 3.0);
+        assert_eq!(stats.miss_rate(), 1.0 / 3.0);
+    }
+
+    #[tokio::test]
+    async fn test_cache_statistics_expired_counts_as_miss() {
+        let cache = InMemoryCache::new();
+
+        // Set with short TTL
+        cache
+            .set("key1", &"value1", Some(Duration::from_millis(10)))
+            .await
+            .unwrap();
+
+        // Wait for expiration
+        tokio::time::sleep(Duration::from_millis(20)).await;
+
+        // Try to get expired key
+        let _: Option<String> = cache.get("key1").await.unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 1);
+    }
+
+    #[tokio::test]
+    async fn test_cache_statistics_memory_usage() {
+        let cache = InMemoryCache::new();
+
+        // Set some values
+        cache.set("key1", &"short", None).await.unwrap();
+        cache
+            .set("key2", &"a longer value", None)
+            .await
+            .unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert!(stats.memory_usage > 0);
+
+        // Memory usage should increase with more data
+        let initial_usage = stats.memory_usage;
+
+        cache
+            .set("key3", &"even longer value here", None)
+            .await
+            .unwrap();
+
+        let stats = cache.get_statistics().await;
+        assert!(stats.memory_usage > initial_usage);
+    }
+
+    #[tokio::test]
+    async fn test_statistics_hit_miss_rate_zero_requests() {
+        let stats = CacheStatistics::default();
+        assert_eq!(stats.hit_rate(), 0.0);
+        assert_eq!(stats.miss_rate(), 0.0);
     }
 }
