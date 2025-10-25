@@ -24,6 +24,8 @@ This parent crate re-exports functionality from the `server` sub-crate:
 - **WebSocket Support** (feature = "websocket"): WebSocket server implementation
   - tokio-tungstenite based WebSocket server
   - Custom message handler support
+  - Broadcast support for multiple clients
+  - Client connection management with automatic registration/unregistration
   - Connection lifecycle hooks (on_connect, on_disconnect)
   - Text and binary message handling
   - Automatic connection management
@@ -125,23 +127,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### WebSocket Server
 
 ```rust
-use reinhardt_server::{serve_websocket, WebSocketHandler};
+use reinhardt_server::{WebSocketServer, WebSocketHandler};
+use std::sync::Arc;
 
-struct MyWebSocketHandler;
+struct EchoHandler;
 
-impl WebSocketHandler for MyWebSocketHandler {
-    async fn on_connect(&self, peer: SocketAddr) {
-        println!("Client connected: {}", peer);
+#[async_trait::async_trait]
+impl WebSocketHandler for EchoHandler {
+    async fn handle_message(&self, message: String) -> Result<String, String> {
+        Ok(format!("Echo: {}", message))
     }
 
-    async fn on_text(&self, peer: SocketAddr, text: String) -> Option<String> {
-        Some(format!("Echo: {}", text))
+    async fn on_connect(&self) {
+        println!("Client connected");
+    }
+
+    async fn on_disconnect(&self) {
+        println!("Client disconnected");
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    serve_websocket("127.0.0.1:8080", MyWebSocketHandler).await?;
+    let handler = Arc::new(EchoHandler);
+    let server = WebSocketServer::new(handler);
+    server.listen("127.0.0.1:9001".parse()?).await?;
+    Ok(())
+}
+```
+
+### WebSocket Server with Broadcast
+
+```rust
+use reinhardt_server::{WebSocketServer, WebSocketHandler};
+use std::sync::Arc;
+
+struct ChatHandler;
+
+#[async_trait::async_trait]
+impl WebSocketHandler for ChatHandler {
+    async fn handle_message(&self, message: String) -> Result<String, String> {
+        Ok(format!("Received: {}", message))
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let handler = Arc::new(ChatHandler);
+    let server = WebSocketServer::new(handler)
+        .with_broadcast(100); // Enable broadcast with capacity of 100 messages
+
+    // Clone broadcast manager to send messages from other tasks
+    let broadcast_manager = server.broadcast_manager().unwrap().clone();
+
+    // Spawn a task to send periodic broadcasts
+    tokio::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+            broadcast_manager.broadcast("Server announcement!".to_string()).await;
+        }
+    });
+
+    server.listen("127.0.0.1:9001".parse()?).await?;
     Ok(())
 }
 ```

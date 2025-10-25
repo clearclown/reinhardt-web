@@ -20,7 +20,7 @@ pub use timeout::TimeoutHandler;
 pub use graphql::{graphql_handler, GraphQLHandler};
 
 #[cfg(feature = "websocket")]
-pub use websocket::{serve_websocket, WebSocketHandler, WebSocketServer};
+pub use websocket::{serve_websocket, BroadcastManager, WebSocketHandler, WebSocketServer};
 
 // Re-export types needed for server trait
 pub use reinhardt_http::{Request, Response};
