@@ -86,10 +86,7 @@ fn test_apps_response_with_json() {
 
 #[test]
 fn test_response_with_header() {
-    let response = Response::ok().with_header(
-        hyper::header::CONTENT_TYPE,
-        hyper::header::HeaderValue::from_static("text/plain"),
-    );
+    let response = Response::ok().with_header("content-type", "text/plain");
 
     assert_eq!(
         response.headers.get(hyper::header::CONTENT_TYPE).unwrap(),
@@ -164,10 +161,9 @@ fn test_status_categories_server_error() {
 
 #[test]
 fn test_response_chaining() {
-    let response = Response::ok().with_body("test").with_header(
-        hyper::header::CONTENT_TYPE,
-        hyper::header::HeaderValue::from_static("text/plain"),
-    );
+    let response = Response::ok()
+        .with_body("test")
+        .with_header("content-type", "text/plain");
 
     assert_eq!(response.status, StatusCode::OK);
     assert_eq!(String::from_utf8(response.body.to_vec()).unwrap(), "test");
@@ -180,14 +176,8 @@ fn test_response_chaining() {
 #[test]
 fn test_response_with_multiple_headers() {
     let response = Response::ok()
-        .with_header(
-            hyper::header::CONTENT_TYPE,
-            hyper::header::HeaderValue::from_static("application/json"),
-        )
-        .with_header(
-            hyper::header::CACHE_CONTROL,
-            hyper::header::HeaderValue::from_static("no-cache"),
-        );
+        .with_header("content-type", "application/json")
+        .with_header("cache-control", "no-cache");
 
     assert_eq!(
         response.headers.get(hyper::header::CONTENT_TYPE).unwrap(),
