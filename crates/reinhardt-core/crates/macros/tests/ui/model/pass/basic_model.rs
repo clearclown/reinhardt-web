@@ -3,6 +3,12 @@
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
+// Required by Model derive macro
+#[allow(unused_imports)]
+use reinhardt_migrations as _;
+#[allow(unused_imports)]
+use reinhardt_orm as _;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Model)]
 #[model(app_label = "test", table_name = "users")]
 struct User {
@@ -12,7 +18,7 @@ struct User {
     #[field(max_length = 100)]
     username: String,
 
-    #[field(null = true)]
+    #[field(max_length = 255, null = true)]
     email: Option<String>,
 }
 

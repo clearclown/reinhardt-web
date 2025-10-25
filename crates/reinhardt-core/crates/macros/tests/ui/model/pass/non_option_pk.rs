@@ -3,6 +3,12 @@
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
+// Required by Model derive macro
+#[allow(unused_imports)]
+use reinhardt_migrations as _;
+#[allow(unused_imports)]
+use reinhardt_orm as _;
+
 #[derive(Debug, Clone, Serialize, Deserialize, Model)]
 #[model(app_label = "test", table_name = "posts")]
 struct Post {
@@ -12,7 +18,7 @@ struct Post {
     #[field(max_length = 200)]
     title: String,
 
-    #[field]
+    #[field(max_length = 10000)]
     content: String,
 }
 

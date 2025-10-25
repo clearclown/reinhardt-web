@@ -276,33 +276,42 @@ impl CdnPurgeHelper {
         CdnInvalidationRequest::new(vec![pattern.to_string()])
     }
 
-    /// Generate purge URL for the given provider
+    /// Get the CDN purge endpoint URL
     ///
     /// # Implementation Status
     ///
-    /// This is a placeholder implementation that returns template URLs.
-    /// For production use, integrate with the actual CDN provider's SDK:
+    /// Returns the API endpoint URL for each CDN provider.
+    /// For production use with actual purging, integrate with the CDN provider's SDK:
     /// - CloudFront: Use `aws-sdk-cloudfront` crate
     /// - Fastly: Use `fastly` crate or HTTP API
     /// - Cloudflare: Use `cloudflare` crate or HTTP API
+    ///
+    /// # Note
+    ///
+    /// The returned URLs contain placeholders (e.g., `{distribution-id}`, `{service-id}`)
+    /// that must be replaced with actual values from your CDN configuration.
     pub fn get_purge_endpoint(&self) -> String {
-        todo!("Implement actual CDN provider SDK integration for cache purging");
-
-        // Placeholder URLs for reference (will be replaced by actual SDK integration):
-        // match &self.config.provider {
-        //     CdnProvider::CloudFront => {
-        //         "https://cloudfront.amazonaws.com/2020-05-31/distribution/{distribution-id}/invalidation".to_string()
-        //     }
-        //     CdnProvider::Fastly => {
-        //         "https://api.fastly.com/service/{service-id}/purge".to_string()
-        //     }
-        //     CdnProvider::Cloudflare => {
-        //         "https://api.cloudflare.com/client/v4/zones/{zone-id}/purge_cache".to_string()
-        //     }
-        //     CdnProvider::Custom(name) => {
-        //         format!("custom://{}/purge", name)
-        //     }
-        // }
+        match &self.config.provider {
+            CdnProvider::CloudFront => {
+                // CloudFront invalidation endpoint
+                // Replace {distribution-id} with your actual distribution ID
+                "https://cloudfront.amazonaws.com/2020-05-31/distribution/{distribution-id}/invalidation".to_string()
+            }
+            CdnProvider::Fastly => {
+                // Fastly purge endpoint
+                // Replace {service-id} with your actual service ID
+                "https://api.fastly.com/service/{service-id}/purge".to_string()
+            }
+            CdnProvider::Cloudflare => {
+                // Cloudflare purge cache endpoint
+                // Replace {zone-id} with your actual zone ID
+                "https://api.cloudflare.com/client/v4/zones/{zone-id}/purge_cache".to_string()
+            }
+            CdnProvider::Custom(name) => {
+                // Custom CDN endpoint
+                format!("custom://{}/purge", name)
+            }
+        }
     }
 }
 
@@ -460,14 +469,34 @@ mod tests {
         assert_eq!(request.paths, vec!["/css/*"]);
     }
 
-    // Test disabled: get_purge_endpoint() is not yet implemented (marked with todo!())
-    // Will be re-enabled when CDN provider SDK integration is complete
     #[test]
-    #[should_panic(expected = "not yet implemented")]
-    fn test_purge_endpoints_not_implemented() {
+    fn test_purge_endpoints() {
+        // Test CloudFront endpoint
         let config = CdnConfig::new(CdnProvider::CloudFront, "example.com".to_string());
         let helper = CdnPurgeHelper::new(config);
-        let _ = helper.get_purge_endpoint(); // Should panic with todo!()
+        let endpoint = helper.get_purge_endpoint();
+        assert!(endpoint.contains("cloudfront.amazonaws.com"));
+        assert!(endpoint.contains("invalidation"));
+
+        // Test Fastly endpoint
+        let config = CdnConfig::new(CdnProvider::Fastly, "example.com".to_string());
+        let helper = CdnPurgeHelper::new(config);
+        let endpoint = helper.get_purge_endpoint();
+        assert!(endpoint.contains("api.fastly.com"));
+        assert!(endpoint.contains("purge"));
+
+        // Test Cloudflare endpoint
+        let config = CdnConfig::new(CdnProvider::Cloudflare, "example.com".to_string());
+        let helper = CdnPurgeHelper::new(config);
+        let endpoint = helper.get_purge_endpoint();
+        assert!(endpoint.contains("api.cloudflare.com"));
+        assert!(endpoint.contains("purge_cache"));
+
+        // Test Custom provider
+        let config = CdnConfig::new(CdnProvider::Custom("mycdn".to_string()), "example.com".to_string());
+        let helper = CdnPurgeHelper::new(config);
+        let endpoint = helper.get_purge_endpoint();
+        assert!(endpoint.contains("custom://mycdn/purge"));
     }
 
     #[test]

@@ -3,28 +3,31 @@
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
+// Required by Model derive macro
+#[allow(unused_imports)]
+use reinhardt_migrations as _;
+#[allow(unused_imports)]
+use reinhardt_orm::{self as _, Model as _};
+
 #[derive(Debug, Clone, Serialize, Deserialize, Model)]
 #[model(app_label = "test", table_name = "complex_model")]
 struct ComplexModel {
     #[field(primary_key = true)]
     id: Option<i64>,
 
-    #[field]
     integer_field: i32,
 
-    #[field]
+    #[field(max_length = 255)]
     string_field: String,
 
-    #[field]
     boolean_field: bool,
 
-    #[field]
     float_field: f64,
 
     #[field(null = true)]
     optional_int: Option<i32>,
 
-    #[field(null = true)]
+    #[field(max_length = 255, null = true)]
     optional_string: Option<String>,
 
     #[field(default = "true")]
@@ -32,7 +35,7 @@ struct ComplexModel {
 }
 
 fn main() {
-    let model = ComplexModel {
+    let _model = ComplexModel {
         id: Some(1),
         integer_field: 42,
         string_field: "test".to_string(),

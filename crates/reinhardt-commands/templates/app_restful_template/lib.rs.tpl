@@ -1,11 +1,17 @@
-//! {{ app_name }} app module (RESTful)
+//! {{ app_name }} application module
+//!
+//! A RESTful API application
 
-pub mod models;
-pub mod views;
-pub mod serializers;
-pub mod admin;
-pub mod tests;
-pub mod urls;
-pub mod apps;
+use reinhardt::prelude::*;
 
-pub use apps::{{ camel_case_app_name }}Config;
+pub struct {{ camel_case_app_name }}Config;
+
+impl AppConfig for {{ camel_case_app_name }}Config {
+    fn name(&self) -> &str {
+        "{{ app_name }}"
+    }
+
+    fn label(&self) -> &str {
+        "{{ app_name }}"
+    }
+}

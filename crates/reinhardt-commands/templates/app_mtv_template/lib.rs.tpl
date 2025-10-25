@@ -1,10 +1,17 @@
-//! {{ app_name }} app (MTV Architecture)
+//! {{ app_name }} application module
 //!
-//! MTV: Model-Template-View (Django-style)
+//! A Model-Template-View application
 
-pub mod models;
-pub mod views;
-pub mod urls;
-pub mod apps;
-pub mod admin;
-pub mod tests;
+use reinhardt::prelude::*;
+
+pub struct {{ camel_case_app_name }}Config;
+
+impl AppConfig for {{ camel_case_app_name }}Config {
+    fn name(&self) -> &str {
+        "{{ app_name }}"
+    }
+
+    fn label(&self) -> &str {
+        "{{ app_name }}"
+    }
+}
