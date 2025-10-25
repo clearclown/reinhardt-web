@@ -1,8 +1,3 @@
-// TODO: Implement middleware pipeline for request/response processing
-// TODO: Implement connection pooling for HTTP connections
-// TODO: Enhance graceful shutdown with connection draining
-// TODO: Complete HTTP/2 support implementation
-
 pub mod http;
 pub mod http2;
 pub mod rate_limit;
@@ -14,7 +9,6 @@ pub mod graphql;
 
 #[cfg(feature = "websocket")]
 pub mod websocket;
-// TODO: Implement WebSocket broadcast support for multiple clients
 
 pub use http::{serve, serve_with_shutdown, HttpServer};
 pub use http2::{serve_http2, serve_http2_with_shutdown, Http2Server};

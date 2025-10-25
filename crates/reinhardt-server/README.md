@@ -15,6 +15,8 @@ This parent crate re-exports functionality from the `server` sub-crate:
 - **Core HTTP Server**: High-performance HTTP/1.1 server
   - Async request processing with Tokio runtime
   - Custom handler support via Handler trait
+  - Middleware pipeline for request/response processing
+  - Builder pattern for middleware configuration
   - Efficient TCP connection management
   - Automatic request/response conversion
   - Built-in error handling
@@ -74,6 +76,48 @@ async fn my_handler(req: Request) -> Result<Response, Error> {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let handler = Arc::new(my_handler);
     serve("127.0.0.1:8000", handler).await?;
+    Ok(())
+}
+```
+
+### HTTP Server with Middleware
+
+```rust
+use reinhardt_server::HttpServer;
+use reinhardt_types::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
+use std::sync::Arc;
+
+struct MyHandler;
+
+#[async_trait::async_trait]
+impl Handler for MyHandler {
+    async fn handle(&self, _req: Request) -> Result<Response, Error> {
+        Ok(Response::ok().with_body("Hello from handler!"))
+    }
+}
+
+struct LoggingMiddleware;
+
+#[async_trait::async_trait]
+impl Middleware for LoggingMiddleware {
+    async fn process(&self, request: Request, next: Arc<dyn Handler>) -> Result<Response, Error> {
+        println!("Request: {} {}", request.method, request.uri);
+        let response = next.handle(request).await?;
+        println!("Response: {}", response.status);
+        Ok(response)
+    }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let handler = Arc::new(MyHandler);
+    let middleware = Arc::new(LoggingMiddleware);
+
+    let server = HttpServer::new(handler)
+        .with_middleware(middleware);
+
+    server.listen("127.0.0.1:8000".parse()?).await?;
     Ok(())
 }
 ```

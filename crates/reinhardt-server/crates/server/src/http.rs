@@ -14,9 +14,10 @@ use tokio::net::{TcpListener, TcpStream};
 
 use crate::shutdown::ShutdownCoordinator;
 
-/// HTTP Server
+/// HTTP Server with middleware support
 pub struct HttpServer {
     pub handler: Arc<dyn Handler>,
+    pub(crate) middlewares: Vec<Arc<dyn reinhardt_types::Middleware>>,
 }
 
 impl HttpServer {
@@ -43,7 +44,65 @@ impl HttpServer {
     /// let server = HttpServer::new(handler);
     /// ```
     pub fn new(handler: Arc<dyn Handler>) -> Self {
-        Self { handler }
+        Self {
+            handler,
+            middlewares: Vec::new(),
+        }
+    }
+
+    /// Add a middleware to the server using builder pattern
+    ///
+    /// Middlewares are executed in the order they are added.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::sync::Arc;
+    /// use reinhardt_server::HttpServer;
+    /// use reinhardt_types::{Handler, Middleware};
+    /// use reinhardt_http::{Request, Response};
+    ///
+    /// struct MyHandler;
+    /// struct MyMiddleware;
+    ///
+    /// #[async_trait::async_trait]
+    /// impl Handler for MyHandler {
+    ///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+    ///         Ok(Response::ok())
+    ///     }
+    /// }
+    ///
+    /// #[async_trait::async_trait]
+    /// impl Middleware for MyMiddleware {
+    ///     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+    ///         next.handle(request).await
+    ///     }
+    /// }
+    ///
+    /// let handler = Arc::new(MyHandler);
+    /// let middleware = Arc::new(MyMiddleware);
+    /// let server = HttpServer::new(handler)
+    ///     .with_middleware(middleware);
+    /// ```
+    pub fn with_middleware(mut self, middleware: Arc<dyn reinhardt_types::Middleware>) -> Self {
+        self.middlewares.push(middleware);
+        self
+    }
+
+    /// Build the final handler with middleware chain
+    ///
+    /// This creates a MiddlewareChain that wraps the handler with all configured middlewares.
+    fn build_handler(&self) -> Arc<dyn Handler> {
+        if self.middlewares.is_empty() {
+            return self.handler.clone();
+        }
+
+        let mut chain = reinhardt_types::MiddlewareChain::new(self.handler.clone());
+        for middleware in &self.middlewares {
+            chain.add_middleware(middleware.clone());
+        }
+
+        Arc::new(chain)
     }
     /// Start the server and listen on the given address
     ///
@@ -80,9 +139,12 @@ impl HttpServer {
         let listener = TcpListener::bind(addr).await?;
         println!("Server listening on http://{}", addr);
 
+        // Build the handler with middleware chain
+        let handler = self.build_handler();
+
         loop {
             let (stream, _) = listener.accept().await?;
-            let handler = self.handler.clone();
+            let handler = handler.clone();
 
             tokio::task::spawn(async move {
                 if let Err(err) = Self::handle_connection(stream, handler).await {
@@ -134,6 +196,9 @@ impl HttpServer {
         let listener = TcpListener::bind(addr).await?;
         println!("Server listening on http://{}", addr);
 
+        // Build the handler with middleware chain
+        let handler = self.build_handler();
+
         let mut shutdown_rx = coordinator.subscribe();
 
         loop {
@@ -141,7 +206,7 @@ impl HttpServer {
                 // Accept new connection
                 result = listener.accept() => {
                     let (stream, _) = result?;
-                    let handler = self.handler.clone();
+                    let handler = handler.clone();
                     let mut conn_shutdown = coordinator.subscribe();
 
                     tokio::task::spawn(async move {
@@ -365,5 +430,129 @@ mod tests {
     async fn test_http_server_creation() {
         let _server = HttpServer::new(Arc::new(TestHandler));
         // Just verify server can be created without panicking
+    }
+
+    #[tokio::test]
+    async fn test_http_server_with_middleware() {
+        use reinhardt_types::Middleware;
+
+        struct TestMiddleware {
+            prefix: String,
+        }
+
+        #[async_trait::async_trait]
+        impl Middleware for TestMiddleware {
+            async fn process(
+                &self,
+                request: Request,
+                next: Arc<dyn Handler>,
+            ) -> reinhardt_exception::Result<Response> {
+                let response = next.handle(request).await?;
+                let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
+                let new_body = format!("{}{}", self.prefix, current_body);
+                Ok(Response::ok().with_body(new_body))
+            }
+        }
+
+        let middleware = Arc::new(TestMiddleware {
+            prefix: "Middleware: ".to_string(),
+        });
+
+        let server = HttpServer::new(Arc::new(TestHandler))
+            .with_middleware(middleware);
+
+        // Verify middleware is added
+        assert_eq!(server.middlewares.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_http_server_multiple_middlewares() {
+        use reinhardt_types::Middleware;
+
+        struct PrefixMiddleware {
+            prefix: String,
+        }
+
+        #[async_trait::async_trait]
+        impl Middleware for PrefixMiddleware {
+            async fn process(
+                &self,
+                request: Request,
+                next: Arc<dyn Handler>,
+            ) -> reinhardt_exception::Result<Response> {
+                let response = next.handle(request).await?;
+                let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
+                let new_body = format!("{}{}", self.prefix, current_body);
+                Ok(Response::ok().with_body(new_body))
+            }
+        }
+
+        let mw1 = Arc::new(PrefixMiddleware {
+            prefix: "MW1:".to_string(),
+        });
+        let mw2 = Arc::new(PrefixMiddleware {
+            prefix: "MW2:".to_string(),
+        });
+
+        let server = HttpServer::new(Arc::new(TestHandler))
+            .with_middleware(mw1)
+            .with_middleware(mw2);
+
+        assert_eq!(server.middlewares.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_middleware_chain_execution() {
+        use bytes::Bytes;
+        use hyper::{HeaderMap, Method, Uri, Version};
+        use reinhardt_types::Middleware;
+
+        struct PrefixMiddleware {
+            prefix: String,
+        }
+
+        #[async_trait::async_trait]
+        impl Middleware for PrefixMiddleware {
+            async fn process(
+                &self,
+                request: Request,
+                next: Arc<dyn Handler>,
+            ) -> reinhardt_exception::Result<Response> {
+                let response = next.handle(request).await?;
+                let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
+                let new_body = format!("{}{}", self.prefix, current_body);
+                Ok(Response::ok().with_body(new_body))
+            }
+        }
+
+        let mw1 = Arc::new(PrefixMiddleware {
+            prefix: "First:".to_string(),
+        });
+        let mw2 = Arc::new(PrefixMiddleware {
+            prefix: "Second:".to_string(),
+        });
+
+        let server = HttpServer::new(Arc::new(TestHandler))
+            .with_middleware(mw1)
+            .with_middleware(mw2);
+
+        // Build the handler with middleware chain
+        let handler = server.build_handler();
+
+        // Create a test request
+        let request = Request::new(
+            Method::GET,
+            "/".parse::<Uri>().unwrap(),
+            Version::HTTP_11,
+            HeaderMap::new(),
+            Bytes::new(),
+        );
+
+        // Execute the handler
+        let response = handler.handle(request).await.unwrap();
+        let body = String::from_utf8(response.body.to_vec()).unwrap();
+
+        // Middlewares should be applied in order: First -> Second -> Handler
+        assert_eq!(body, "First:Second:Hello, World!");
     }
 }
