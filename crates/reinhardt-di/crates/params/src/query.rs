@@ -13,6 +13,10 @@ use std::collections::HashMap;
 
 /// Extract query parameters from the URL
 ///
+/// With the `multi-value-arrays` feature (enabled by default), repeated query
+/// parameters are properly parsed into vectors. For example, `?q=5&q=6` will be
+/// parsed as `vec![5, 6]` when the target field type is `Vec<T>`.
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -26,6 +30,21 @@ use std::collections::HashMap;
 /// async fn list_users(query: Query<Pagination>) -> Result<Vec<User>> {
 ///     let page = query.page.unwrap_or(1);
 ///     let per_page = query.per_page.unwrap_or(10);
+///     // ...
+/// }
+/// ```
+///
+/// # Multi-value Parameters
+///
+/// ```rust,ignore
+/// #[derive(Deserialize)]
+/// struct SearchQuery {
+///     q: Vec<i64>,  // Supports repeated keys: ?q=5&q=6
+/// }
+///
+/// #[endpoint(GET "/search")]
+/// async fn search(query: Query<SearchQuery>) -> Result<Vec<Item>> {
+///     // query.q will contain vec![5, 6]
 ///     // ...
 /// }
 /// ```

@@ -641,7 +641,7 @@ async fn test_query_negative_int() {
 
 /// Test: Multiple query parameters with same name as list
 /// Reference: fastapi/tests/test_multi_query_errors.py::test_multi_query
-/// NOTE: serde_urlencoded has limitations with repeated keys
+/// NOTE: With multi-value-arrays feature (enabled by default), repeated keys are properly parsed
 #[tokio::test]
 async fn test_query_multi_same_name() {
     #[derive(Deserialize, Debug)]
@@ -653,19 +653,10 @@ async fn test_query_multi_same_name() {
     let ctx = create_empty_context();
 
     let result = Query::<QueryParams>::from_request(&req, &ctx).await;
-    // TODO: Implement custom deserializer or manual parsing for repeated query parameter keys
-    // NOTE: serde_urlencoded doesn't support repeated keys by default
-    // This is a known limitation - manual parsing or custom deserializer needed
-    // For now, document the limitation
-    if result.is_err() {
-        // Expected: serde_urlencoded doesn't handle repeated keys well
-        assert!(true, "serde_urlencoded limitation with repeated keys");
-    } else {
-        // If it somehow works, verify the values
-        let params = result.unwrap();
-        // Typically only last value is kept
-        assert!(params.q.len() >= 1, "At least one value should be parsed");
-    }
+    assert!(result.is_ok(), "Should successfully parse repeated query parameters");
+
+    let params = result.unwrap();
+    assert_eq!(params.q, vec![5, 6], "Should parse both values into a vector");
 }
 
 /// Test: Validation errors for multiple query parameters with incorrect types
