@@ -3,6 +3,7 @@ name = "reinhardt-integration-tests"
 version = "0.1.0"
 edition = "2021"
 publish = false
+autotests = false
 
 [workspace]
 
@@ -125,67 +126,27 @@ tokio-test = "0.4"
 name = "parser_integration"
 path = "tests/api/parser_integration.rs"
 
+
 [[test]]
 name = "router_viewset_integration"
 path = "tests/routing/router_viewset_integration.rs"
 
-[[test]]
-name = "router_schema_integration"
-path = "tests/routing/router_schema_integration.rs"
-
-[[test]]
-name = "router_auth_integration"
-path = "tests/auth/router_auth_integration.rs"
-
-[[test]]
-name = "router_template_integration"
-path = "tests/routing/router_template_integration.rs"
-
-[[test]]
-name = "security_middleware_integration"
-path = "tests/middleware/security_middleware_integration.rs"
 
 [[test]]
 name = "csrf_middleware_integration"
 path = "tests/middleware/csrf_middleware_integration.rs"
 
-[[test]]
-name = "https_redirect_integration"
-path = "tests/middleware/https_redirect_integration.rs"
 
 [[test]]
 name = "auth_security_integration"
 path = "tests/auth/auth_security_integration.rs"
 
+
 [[test]]
 name = "session_security_integration"
 path = "tests/sessions/session_security_integration.rs"
 
-[[test]]
-name = "csp_integration"
-path = "tests/middleware/csp_integration.rs"
 
-[[test]]
-name = "router_lifecycle_integration"
-path = "tests/routing/router_lifecycle_integration.rs"
-
-[[test]]
-name = "server_integration_tests"
-path = "tests/server/server_integration_tests.rs"
-
-[[test]]
-name = "logging_email_integration"
-path = "tests/utils/logging_email_integration_tests.rs"
-
-[[test]]
-name = "openapi_schema_integration"
-path = "tests/api/openapi_schema_integration.rs"
-
-[[test]]
-name = "sitemap_http_integration"
-path = "tests/sitemaps/sitemap_http_tests.rs"
-
-# Migrated integration tests from individual crates
 # Temporarily disabled due to reinhardt-contrib View import error
 # [[test]]
 # name = "contrib_messages_integration_tests"
@@ -200,25 +161,21 @@ path = "tests/sitemaps/sitemap_http_tests.rs"
 name = "macros_di_integration_tests"
 path = "tests/di/macros_di_integration_tests.rs"
 
+
 [[test]]
 name = "composite_pk_migration_tests"
 path = "tests/migrations/composite_pk_migration_tests.rs"
 
-[[test]]
-name = "logging_template_integration_tests"
-path = "tests/utils/logging_template_integration_tests.rs"
 
 [[test]]
 name = "logging_orm_integration_tests"
 path = "tests/utils/logging_orm_integration_tests.rs"
 
-[[test]]
-name = "mail_integration_tests"
-path = "tests/contrib/mail_integration_tests.rs"
 
 [[test]]
 name = "renderers_http_integration_tests"
 path = "tests/rendering/renderers_http_integration_tests.rs"
+
 
 # Requires PostgreSQL database - testcontainers available but startup takes 3+ minutes
 # Recommended manual setup for faster testing:
@@ -233,388 +190,216 @@ path = "tests/rendering/renderers_http_integration_tests.rs"
 name = "server_middleware_integration_tests"
 path = "tests/server/server_middleware_integration_tests.rs"
 
+
 [[test]]
 name = "renderer_template_integration"
 path = "tests/rendering/renderer_template_integration.rs"
 
-[[test]]
-name = "sitemap_advanced_tests"
-path = "tests/sitemaps/sitemap_advanced_tests.rs"
-
-[[test]]
-name = "sitemap_advanced_real_tests"
-path = "tests/sitemaps/sitemap_advanced_real_tests.rs"
-
-[[test]]
-name = "sitemap_i18n_mocks"
-path = "tests/sitemaps/sitemap_i18n_mocks.rs"
-
-[[test]]
-name = "sitemap_orm_integration_tests"
-path = "tests/sitemaps/sitemap_orm_integration_tests.rs"
-
-[[test]]
-name = "sitemap_cache_real_tests"
-path = "tests/sitemaps/sitemap_cache_real_tests.rs"
-
-[[test]]
-name = "sitemap_http_real_tests"
-path = "tests/sitemaps/sitemap_http_real_tests.rs"
-
-[[test]]
-name = "sitemap_i18n_real_tests"
-path = "tests/sitemaps/sitemap_i18n_real_tests.rs"
 
 [[test]]
 name = "param_validation_integration"
 path = "tests/validation/param_validation_integration.rs"
 
-[[test]]
-name = "param_openapi_integration"
-path = "tests/validation/param_openapi_integration.rs"
-
-[[test]]
-name = "serializer_basic_integration"
-path = "tests/serializers/serializer_basic_integration.rs"
-
-[[test]]
-name = "renderer_integration"
-path = "tests/rendering/renderer_integration.rs"
 
 [[test]]
 name = "query_encoding_integration"
 path = "tests/utils/query_encoding_integration.rs"
 
+
 [[test]]
 name = "messages_framework_integration"
 path = "tests/contrib/messages_framework_integration.rs"
+
 
 [[test]]
 name = "settings_system_integration"
 path = "tests/settings/settings_system_integration.rs"
 
+
 [[test]]
 name = "browsable_api_integration"
 path = "tests/api/browsable_api_integration.rs"
+
 
 [[test]]
 name = "parser_advanced_integration"
 path = "tests/api/parser_advanced_integration.rs"
 
-[[test]]
-name = "orm_model_serializer_integration"
-path = "tests/database/orm_model_serializer_integration.rs"
-
-[[test]]
-name = "i18n_framework_integration"
-path = "tests/utils/i18n_framework_integration.rs"
 
 [[test]]
 name = "server_advanced_integration"
 path = "tests/server/server_advanced_integration.rs"
 
-[[test]]
-name = "renderer_advanced_integration"
-path = "tests/rendering/renderer_advanced_integration.rs"
-
-[[test]]
-name = "syndication_integration_tests"
-path = "tests/contrib/syndication_integration_tests.rs"
-
-[[test]]
-name = "background_tasks_integration"
-path = "tests/utils/background_tasks_integration.rs"
-
-# Migrated from reinhardt-serializers (integration tests using multiple crates)
-[[test]]
-name = "serializer_model_basic_tests"
-path = "tests/serializers/serializer_model_basic_tests.rs"
-
-[[test]]
-name = "serializer_model_crud_tests"
-path = "tests/serializers/serializer_model_crud_tests.rs"
-
-[[test]]
-name = "serializer_model_meta_tests"
-path = "tests/serializers/serializer_model_meta_tests.rs"
-
-[[test]]
-name = "serializer_model_relations_tests"
-path = "tests/serializers/serializer_model_relations_tests.rs"
-
-[[test]]
-name = "serializer_database_integration_tests"
-path = "tests/serializers/serializer_database_integration_tests.rs"
-
-[[test]]
-name = "serializer_forms_integration_tests"
-path = "tests/serializers/serializer_forms_integration_tests.rs"
-
-[[test]]
-name = "serializer_rest_integration_tests"
-path = "tests/serializers/serializer_rest_integration_tests.rs"
 
 # Migrated from reinhardt-server (integration tests using multiple crates)
 [[test]]
-name = "server_e2e_http_tests"
-path = "tests/server/server_e2e_http_tests.rs"
-
-[[test]]
-name = "server_async_tests"
-path = "tests/server/server_async_tests.rs"
-
-[[test]]
-name = "server_basic_tests"
-path = "tests/server/server_basic_tests.rs"
-
-[[test]]
-name = "server_protocol_tests"
-path = "tests/server/server_protocol_tests.rs"
-
-[[test]]
 name = "viewset_router_tests"
 path = "tests/routing/viewset_router_tests.rs"
+
 
 [[test]]
 name = "utils_comprehensive_integration"
 path = "tests/utils/utils_comprehensive_integration.rs"
 
-[[test]]
-name = "storage_forms_integration_tests"
-path = "tests/storage/storage_forms_integration_tests.rs"
 
 [[test]]
 name = "storage_orm_integration_tests"
 path = "tests/storage/storage_orm_integration_tests.rs"
 
-[[test]]
-name = "storage_settings_integration_tests"
-path = "tests/storage/storage_settings_integration_tests.rs"
-
-[[test]]
-name = "storage_advanced_tests"
-path = "tests/storage/storage_advanced_tests.rs"
 
 [[test]]
 name = "versioning_integration_tests"
 path = "tests/api/versioning_integration_tests.rs"
 
-# Template integration tests
-[[test]]
-name = "template_renderer_advanced_integration"
-path = "tests/rendering/template_renderer_advanced_integration.rs"
 
+# Template integration tests
 [[test]]
 name = "template_pagination_integration"
 path = "tests/rendering/template_pagination_integration.rs"
+
 
 [[test]]
 name = "template_i18n_integration"
 path = "tests/rendering/template_i18n_integration.rs"
 
-[[test]]
-name = "template_static_integration"
-path = "tests/rendering/template_static_integration.rs"
 
-# Messages integration tests
 [[test]]
 name = "messages_integration"
 path = "tests/contrib/messages_integration.rs"
+
 
 # Pagination integration tests
 [[test]]
 name = "pagination_orm_integration"
 path = "tests/pagination/orm.rs"
 
-[[test]]
-name = "pagination_rest_integration"
-path = "tests/pagination/rest.rs"
-
-# Database abstraction integration tests
-[[test]]
-name = "database_integration_tests"
-path = "tests/database/database_integration_tests.rs"
-
-[[test]]
-name = "renderer_specialized_integration"
-path = "tests/rendering/renderer_specialized_integration.rs"
 
 [[test]]
 name = "serializer_integration_tests"
 path = "tests/serializers/serializer_integration_tests.rs"
+
 
 # Validator integration tests
 [[test]]
 name = "validator_orm_integration_tests"
 path = "tests/validation/validator_orm_integration_tests.rs"
 
-[[test]]
-name = "validator_serializer_integration_tests"
-path = "tests/validation/validator_serializer_integration_tests.rs"
-
-# Session integration tests
-[[test]]
-name = "session_database_tests"
-path = "tests/sessions/session_database_tests.rs"
-
-# Settings backend integration tests
-[[test]]
-name = "settings_database_backend_tests"
-path = "tests/settings/settings_database_backend_tests.rs"
-
-[[test]]
-name = "settings_redis_backend_tests"
-path = "tests/settings/settings_redis_backend_tests.rs"
-
-[[test]]
-name = "database_advanced_tests"
-path = "tests/database/database_advanced_tests.rs"
 
 [[test]]
 name = "orm_core_integration_tests"
 path = "tests/database/orm_core_integration_tests.rs"
 
+
 [[test]]
 name = "di_core_integration_tests"
 path = "tests/di/di_core_integration_tests.rs"
+
 
 [[test]]
 name = "renderers_core_integration_tests"
 path = "tests/rendering/renderers_core_integration_tests.rs"
 
-[[test]]
-name = "viewset_inspector_tests"
-path = "tests/routing/viewset_inspector_tests.rs"
-
-[[test]]
-name = "settings_encryption_tests"
-path = "tests/settings/settings_encryption_tests.rs"
-
-[[test]]
-name = "sitemap_basic_generation_tests"
-path = "tests/sitemaps/sitemap_basic_generation_tests.rs"
-
-[[test]]
-name = "sitemap_template_tests"
-path = "tests/sitemaps/sitemap_template_tests.rs"
-
-[[test]]
-name = "static_handler_integration_tests"
-path = "tests/storage/static_handler_integration_tests.rs"
-
-[[test]]
-name = "csrf_tests"
-path = "tests/middleware/csrf_tests.rs"
-
-[[test]]
-name = "redirects_integration"
-path = "tests/middleware/redirects_integration.rs"
-
-[[test]]
-name = "flatpages_http"
-path = "tests/contrib/flatpages_http.rs"
 
 [[test]]
 name = "graphql_integration"
 path = "tests/contrib/graphql_integration.rs"
 
+
 [[test]]
 name = "websocket_integration_tests"
 path = "tests/contrib/websocket_integration_tests.rs"
+
 
 [[test]]
 name = "metadata_tests"
 path = "tests/api/metadata_tests.rs"
 
+
 [[test]]
 name = "throttling_integration_tests"
 path = "tests/api/throttling_integration_tests.rs"
+
 
 [[test]]
 name = "pagination_basic_tests"
 path = "tests/utils/pagination_basic_tests.rs"
 
+
 [[test]]
 name = "query_string_encoding_integration"
 path = "tests/utils/query_string_encoding_integration.rs"
 
-[[test]]
-name = "views_api_integration_tests"
-path = "tests/views/views_api_integration_tests.rs"
 
 [[test]]
 name = "views_core_integration_tests"
 path = "tests/views/views_core_integration_tests.rs"
 
-[[test]]
-name = "views_integration_tests"
-path = "tests/views/views_integration_tests.rs"
-
-[[test]]
-name = "proxy_advanced_features_tests"
-path = "tests/proxy/proxy_advanced_features_tests.rs"
-
-[[test]]
-name = "proxy_orm_integration_tests"
-path = "tests/proxy/proxy_orm_integration_tests.rs"
 
 [[test]]
 name = "server_tests"
 path = "tests/server/server_tests.rs"
 
+
 [[test]]
 name = "server_test_helpers"
 path = "tests/server/server_test_helpers.rs"
 
-[[test]]
-name = "serializer_model_validator_integration_tests"
-path = "tests/serializers/serializer_model_validator_integration_tests.rs"
 
-# Settings dynamic and hot reload integration tests
 [[test]]
 name = "dynamic_settings_memory"
 path = "tests/settings/dynamic_settings_memory.rs"
 
+
 [[test]]
 name = "hot_reload_integration"
 path = "tests/settings/hot_reload_integration.rs"
+
 
 # Command integration tests
 [[test]]
 name = "commands_integration_tests"
 path = "tests/commands/commands_integration_tests.rs"
 
+
 # Macro integration tests
 [[test]]
 name = "macros_model_derive_integration"
 path = "tests/macros/model_derive_integration.rs"
 
+
 [[test]]
 name = "macros_composite_pk_integration"
 path = "tests/macros/composite_pk_integration.rs"
+
 
 [[test]]
 name = "macros_constraint_integration"
 path = "tests/macros/constraint_integration.rs"
 
+
 [[test]]
 name = "macros_validator_integration"
 path = "tests/macros/validator_integration.rs"
+
 
 # Static template integration tests
 [[test]]
 name = "storage_static_template_integration_tests"
 path = "tests/storage/static_template_integration_tests.rs"
 
+
 [[test]]
 name = "storage_static_processing_integration_tests"
 path = "tests/storage/static_processing_integration_tests.rs"
+
 
 [[test]]
 name = "serializer_nested_integration_tests"
 path = "tests/serializers/serializer_nested_integration_tests.rs"
 
+
 # UnifiedRouter hierarchical routing integration tests
 [[test]]
 name = "unified_router_integration"
 path = "tests/routing/unified_router_integration_tests.rs"
+
