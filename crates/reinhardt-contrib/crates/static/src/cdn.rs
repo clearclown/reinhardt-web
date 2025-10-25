@@ -278,23 +278,31 @@ impl CdnPurgeHelper {
 
     /// Generate purge URL for the given provider
     ///
-    /// NOTE: This returns a placeholder URL. In production, you would use
-    /// the actual CDN provider's SDK or API.
+    /// # Implementation Status
+    ///
+    /// This is a placeholder implementation that returns template URLs.
+    /// For production use, integrate with the actual CDN provider's SDK:
+    /// - CloudFront: Use `aws-sdk-cloudfront` crate
+    /// - Fastly: Use `fastly` crate or HTTP API
+    /// - Cloudflare: Use `cloudflare` crate or HTTP API
     pub fn get_purge_endpoint(&self) -> String {
-        match &self.config.provider {
-            CdnProvider::CloudFront => {
-                "https://cloudfront.amazonaws.com/2020-05-31/distribution/{distribution-id}/invalidation".to_string()
-            }
-            CdnProvider::Fastly => {
-                "https://api.fastly.com/service/{service-id}/purge".to_string()
-            }
-            CdnProvider::Cloudflare => {
-                "https://api.cloudflare.com/client/v4/zones/{zone-id}/purge_cache".to_string()
-            }
-            CdnProvider::Custom(name) => {
-                format!("custom://{}/purge", name)
-            }
-        }
+        todo!("Implement actual CDN provider SDK integration for cache purging");
+
+        // Placeholder URLs for reference (will be replaced by actual SDK integration):
+        // match &self.config.provider {
+        //     CdnProvider::CloudFront => {
+        //         "https://cloudfront.amazonaws.com/2020-05-31/distribution/{distribution-id}/invalidation".to_string()
+        //     }
+        //     CdnProvider::Fastly => {
+        //         "https://api.fastly.com/service/{service-id}/purge".to_string()
+        //     }
+        //     CdnProvider::Cloudflare => {
+        //         "https://api.cloudflare.com/client/v4/zones/{zone-id}/purge_cache".to_string()
+        //     }
+        //     CdnProvider::Custom(name) => {
+        //         format!("custom://{}/purge", name)
+        //     }
+        // }
     }
 }
 
@@ -452,21 +460,14 @@ mod tests {
         assert_eq!(request.paths, vec!["/css/*"]);
     }
 
+    // Test disabled: get_purge_endpoint() is not yet implemented (marked with todo!())
+    // Will be re-enabled when CDN provider SDK integration is complete
     #[test]
-    fn test_purge_endpoints_for_providers() {
-        let providers = vec![
-            (CdnProvider::CloudFront, "cloudfront.amazonaws.com"),
-            (CdnProvider::Fastly, "api.fastly.com"),
-            (CdnProvider::Cloudflare, "api.cloudflare.com"),
-        ];
-
-        for (provider, expected_domain) in providers {
-            let config = CdnConfig::new(provider, "example.com".to_string());
-            let helper = CdnPurgeHelper::new(config);
-            let endpoint = helper.get_purge_endpoint();
-
-            assert!(endpoint.contains(expected_domain));
-        }
+    #[should_panic(expected = "not yet implemented")]
+    fn test_purge_endpoints_not_implemented() {
+        let config = CdnConfig::new(CdnProvider::CloudFront, "example.com".to_string());
+        let helper = CdnPurgeHelper::new(config);
+        let _ = helper.get_purge_endpoint(); // Should panic with todo!()
     }
 
     #[test]
