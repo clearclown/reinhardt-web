@@ -156,7 +156,6 @@ path = "tests/sessions/session_security_integration.rs"
 # name = "contrib_health_integration_tests"
 # path = "tests/contrib_health_integration_tests.rs"
 
-# TODO: Fix macro injection test code - compilation errors with #[use_injection] macro usage
 [[test]]
 name = "macros_di_integration_tests"
 path = "tests/di/macros_di_integration_tests.rs"

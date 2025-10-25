@@ -2,7 +2,7 @@ use reinhardt_auth::{
     AnonymousUser, Argon2Hasher, AuthBackend, CompositeAuthBackend, PasswordHasher, SimpleUser,
     User,
 };
-use reinhardt_types::Result;
+use reinhardt_exception::Result;
 use uuid::Uuid;
 
 /// Mock authentication backend for testing

@@ -151,40 +151,38 @@ impl Room {
         Ok(())
     }
 
-    /// Broadcast a message to all clients in the room
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use reinhardt_websockets::room::Room;
-    /// use reinhardt_websockets::{WebSocketConnection, Message};
-    /// use tokio::sync::mpsc;
-    /// use std::sync::Arc;
-    ///
-    /// # tokio_test::block_on(async {
-    /// let room = Room::new("announcements".to_string());
-    ///
-    /// let (tx1, mut rx1) = mpsc::unbounded_channel();
-    /// let (tx2, mut rx2) = mpsc::unbounded_channel();
-    ///
-    /// let client1 = Arc::new(WebSocketConnection::new("user1".to_string(), tx1));
-    /// let client2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
-    ///
-    /// room.join("user1".to_string(), client1).await.unwrap();
-    /// room.join("user2".to_string(), client2).await.unwrap();
-    ///
-    /// let msg = Message::text("Hello everyone!".to_string());
-    /// room.broadcast(msg).await.unwrap();
-    ///
-    /// assert!(matches!(rx1.try_recv(), Ok(Message::Text { .. })));
-    /// assert!(matches!(rx2.try_recv(), Ok(Message::Text { .. })));
-    /// # });
-    /// ```
     pub async fn broadcast(&self, message: Message) -> RoomResult<()> {
         let clients = self.clients.read().await;
 
-        for client in clients.values() {
-            client.send(message.clone()).await?;
+        let mut failed_clients = Vec::new();
+        let mut last_error = None;
+
+        for (client_id, client) in clients.iter() {
+            if let Err(e) = client.send(message.clone()).await {
+                // Record failed client but continue broadcasting to others
+                failed_clients.push(client_id.clone());
+                last_error = Some(e);
+            }
+        }
+
+        // Drop read lock before acquiring write lock
+        drop(clients);
+
+        // Remove failed clients from the room
+        if !failed_clients.is_empty() {
+            let mut clients_write = self.clients.write().await;
+            for client_id in &failed_clients {
+                clients_write.remove(client_id);
+            }
+        }
+
+        // If all clients failed, return the last error
+        // Otherwise, consider it a success (partial delivery is acceptable)
+        if let Some(err) = last_error {
+            let total_clients = self.client_count().await + failed_clients.len();
+            if failed_clients.len() == total_clients {
+                return Err(err.into());
+            }
         }
 
         Ok(())

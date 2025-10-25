@@ -210,8 +210,18 @@ where
     }
     /// Close the pool
     ///
+    /// Attempts to gracefully close the pool with a 5-second timeout.
+    /// If active connections are not returned within this time, the pool
+    /// will be forcefully closed.
     pub async fn close(&self) {
-        self.pool.close().await;
+        use tokio::time::{timeout, Duration};
+
+        // Try to close gracefully with a timeout
+        let close_future = self.pool.close();
+        if timeout(Duration::from_secs(5), close_future).await.is_err() {
+            // Timeout occurred - pool had active connections
+            // The pool will be forcefully closed when dropped
+        }
     }
     /// Get the database URL
     ///

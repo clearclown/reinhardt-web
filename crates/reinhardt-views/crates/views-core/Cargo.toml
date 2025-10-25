@@ -9,7 +9,6 @@ reinhardt-apps = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-orm = { workspace = true }
 reinhardt-serializers = { workspace = true }
-reinhardt-viewsets = { workspace = true }
 async-trait = { workspace = true }
 bytes = { workspace = true }
 hyper = { workspace = true }

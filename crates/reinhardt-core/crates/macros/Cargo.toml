@@ -20,3 +20,5 @@ ctor = "0.6.0"
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
 trybuild = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+reinhardt-orm = { workspace = true }
+reinhardt-migrations = { workspace = true }

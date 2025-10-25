@@ -967,7 +967,9 @@ where
         if is_head {
             Ok(Response::ok().with_header("Content-Type", "application/json"))
         } else {
-            Response::ok().with_json(&serialized)
+            Ok(Response::ok()
+                .with_body(serialized)
+                .with_header("Content-Type", "application/json"))
         }
     }
 }
