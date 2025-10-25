@@ -91,10 +91,6 @@ FastAPI-inspired parameter extraction system for Reinhardt.
 - **型エイリアス**: `ValidatedPath<T>`, `ValidatedQuery<T>`, `ValidatedForm<T>`
 - **`reinhardt-validators`との統合**
 
-### Planned
-
-現在、計画されている未実装機能はありません。全ての主要機能が実装済みです。
-
 ## Quick Start
 
 ```rustuse reinhardt_params::{Path, Query, Json};

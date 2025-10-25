@@ -47,12 +47,6 @@ This parent crate re-exports functionality from the following sub-crates:
   - Custom renderer support
   - Pretty printing and formatting options
 
-### Planned
-
-- Additional template filters beyond the current set (upper, lower, trim, reverse, truncate, join, default, capitalize, title, length, ljust, rjust, replace, split, striptags)
-- Enhanced error messages with better diagnostics
-- Template debugging tools and development mode
-
 ## Installation
 
 Add this to your `Cargo.toml`:

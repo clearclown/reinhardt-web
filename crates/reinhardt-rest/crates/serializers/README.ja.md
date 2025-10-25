@@ -461,29 +461,6 @@ println!("平均: {}ms", stats.avg_serialization_ms);
 
 **注意**: ORM統合機能には`django-compat`フィーチャーフラグが有効である必要があります。このフラグがない場合、スタブ実装は適切なエラーを返します。
 
-### 予定
-
-#### 追加のフィールドタイプ
-
-- `DateField`, `DateTimeField`: chronoとの統合による日付と時刻の処理
-
-#### 高度なシリアライゼーション
-
-- `WritableNestedSerializer`: ネストされたオブジェクトへの更新をサポート
-- `ListSerializer`: オブジェクトのコレクションのシリアライズ
-
-#### 追加のレンダラー
-
-- `YAMLRenderer`: データをYAMLとしてレンダリング
-- `CSVRenderer`: データをCSVとしてレンダリング(リストエンドポイント用)
-- `OpenAPIRenderer`: OpenAPI/Swagger仕様の生成
-
-#### Metaオプション
-
-- フィールドの包含/除外
-- 読み取り専用/書き込み専用フィールド
-- カスタムフィールドマッピング
-- ネストされたシリアライゼーションの深さ制御
 
 ## 使用例
 

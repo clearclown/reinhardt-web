@@ -20,11 +20,6 @@ Django is known for being "batteries-included", but this comes at a cost: simple
 - **Function-based endpoint macros** - FastAPI-style `#[get]`, `#[post]`, `#[put]`, `#[patch]`, `#[delete]` decorators
 - **Built-in middleware shortcuts** - Quick imports for common middleware (CORS, CSRF, Compression, Logging, etc.)
 
-### Planned
-
-- More middleware configuration helpers
-- Additional utility functions
-
 ## Quick Start
 
 Add Reinhardt Micro to your `Cargo.toml`:

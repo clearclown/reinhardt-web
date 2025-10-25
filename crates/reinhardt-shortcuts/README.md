@@ -228,12 +228,6 @@ directory is specified by the `REINHARDT_TEMPLATE_DIR` environment variable (def
 **Current Implementation**: Basic variable substitution is supported using `{{ variable }}` syntax.
 Templates are rendered dynamically at runtime with simple placeholder replacement.
 
-**Planned Enhancements**:
-
-- Full Askama template syntax: control structures (`{% if %}`, `{% for %}`)
-- Template inheritance (`{% extends %}`, `{% block %}`)
-- Custom filters and tags
-
 #### `render_template(request: &Request, template_name: &str, context: HashMap) -> Result<Response, Response>`
 
 Template rendering with context. Loads a template file from the filesystem and returns
@@ -282,20 +276,6 @@ async fn custom_view(request: Request) -> Result<Response, Response> {
     Ok(response)
 }
 ```
-
-## Planned Features
-
-### Error Handling (Not Yet Implemented)
-
-- Custom error pages (404, 500, etc.)
-- Error page templates
-- Debug error pages for development
-
-### Template Engine Integration
-
-- Full Askama template engine integration for variable substitution
-- Template inheritance and includes
-- Custom template filters and tags
 
 ## Usage Patterns
 

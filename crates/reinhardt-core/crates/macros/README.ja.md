@@ -96,6 +96,3 @@
   - すべてのフィールド: `eq()`、`ne()`、`gt()`、`gte()`、`lt()`、`lte()`
   - 例: `QuerySet::<User>::new().filter(User::email().lower().contains("example.com"))`
 
-### 予定
-
-現在、予定されている機能はすべて実装済みです。

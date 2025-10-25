@@ -153,32 +153,6 @@ Module: `dispatch`
 - **Thread Safety**: RwLock for concurrent receiver access
 - **Performance Monitoring**: Built-in metrics with atomic operations
 
-## Planned Features
-
-### Advanced Features
-
-- **Signal Batching**: Batch multiple signals into a single dispatch
-- **Signal Throttling**: Rate limiting for signal emissions
-- **Persistent Signals**: Store and replay signals from durable storage
-- **Signal Replay**: Replay past signals for debugging and testing
-- **Signal History**: Track signal emission history with timestamps
-- **Dead Letter Queue**: Handle failed signals with retry logic
-
-### Integration Features
-
-- **ORM Integration**: Automatic signal dispatch from ORM operations
-- **Transaction Support**: Signals tied to database transaction lifecycle
-- **Distributed Signals**: Cross-service signal dispatch via message brokers
-- **WebSocket Signals**: Real-time signal propagation to clients
-- **GraphQL Subscriptions**: Signal-based GraphQL subscription support
-
-### Developer Tools
-
-- **Signal Debugger**: Visual debugging tool for signal flow
-- **Signal Profiler**: Performance profiling for signal systems
-- **Signal Documentation Generator**: Auto-generate docs from signal definitions
-- **Signal Visualization**: Graphical representation of signal connections
-
 ## Usage Examples
 
 ## Basic Signal Connection

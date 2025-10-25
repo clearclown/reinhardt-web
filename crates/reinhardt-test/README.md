@@ -128,6 +128,3 @@ Supports both unit testing and integration testing with real or test databases.
   - `with_mysql()`: Run tests with MySQL container
   - `with_redis()`: Run tests with Redis container
 
-### Planned
-
-Currently all planned features are implemented.

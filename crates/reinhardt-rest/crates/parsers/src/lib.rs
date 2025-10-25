@@ -17,6 +17,20 @@
 //! let parser = JSONParser::new();
 //! let data = parser.parse(&request).await?;
 //! ```
+//!
+//! ## Planned Features
+//! TODO: XML Parser - For `application/xml` and `text/xml`
+//! TODO: YAML Parser - For `application/x-yaml`
+//! TODO: MessagePack Parser - For binary message format
+//! TODO: Protobuf Parser - For Protocol Buffers
+//! TODO: Streaming parsing - For large file uploads without loading entire body into memory
+//! TODO: Content negotiation - Automatic parser selection based on Accept header
+//! TODO: Custom validators - Per-parser validation hooks
+//! TODO: Schema validation - JSON Schema, XML Schema support
+//! TODO: Compression support - Gzip, Brotli, Deflate decompression
+//! TODO: Zero-copy parsing - Where possible with current parser implementations
+//! TODO: Parallel multipart processing - Parse multiple files concurrently
+//! TODO: Memory pooling - Reuse buffers for repeated parsing operations
 
 pub mod file;
 pub mod form;

@@ -315,44 +315,6 @@ let auth = RemoteUserAuthentication::new("REMOTE_USER").force_logout_if_no_heade
 let user = auth.authenticate(&request).await?;
 ```
 
-## Planned
-
-The following features are planned for future releases:
-
-### Token-Based Authentication
-
-- **TokenAuthentication**: API token authentication
-- **Token Storage**: Token persistence and lookup
-- **Token Rotation**: Automatic token rotation for security
-
-### Advanced Permissions
-
-- **RateLimitPermission**: Request rate limiting by IP or user
-- **TimeBasedPermission**: Time-of-day access control
-- **IpWhitelistPermission**: IP-based access control
-- **IpBlacklistPermission**: IP blocking
-- **Permission Operators**: AND, OR, NOT combinators for complex logic
-
-### Model Permissions
-
-- **DjangoModelPermissions**: Django-style model permissions
-- **DjangoModelPermissionsOrAnonReadOnly**: Anonymous read access
-- **ModelPermission**: CRUD permissions per model
-- **Permission Checking**: Object-level permission support
-
-### Django REST Framework Compatibility
-
-- **DRF Authentication Classes**: Compatible authentication interfaces
-- **DRF Permission Classes**: Compatible permission interfaces
-- **Browsable API Support**: Integration with DRF-style browsable API
-
-### Admin & Management
-
-- **User Management**: CRUD operations for users
-- **Group Management**: User groups and permissions
-- **Permission Assignment**: Assign permissions to users/groups
-- **createsuperuser Command**: CLI tool for creating admin users
-
 ## Usage Examples
 
 ### Complete Authentication Flow

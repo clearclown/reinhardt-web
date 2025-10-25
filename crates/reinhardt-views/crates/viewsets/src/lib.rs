@@ -1,3 +1,14 @@
+//! ViewSets for Reinhardt framework
+//!
+//! ## Planned Features
+//! TODO: Implement automatic pagination integration for list actions
+//! TODO: Add query parameter-based filtering system
+//! TODO: Implement sortable collections with multiple field ordering support
+//! TODO: Complete bulk operations for batch create/update/delete
+//! TODO: Enhance nested ViewSets for parent-child resource relationships
+//! TODO: Add OpenAPI schema generation from ViewSet definitions
+//! TODO: Implement response caching for read-only operations
+
 pub mod actions;
 pub mod batch_operations;
 pub mod builder;

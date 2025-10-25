@@ -101,10 +101,6 @@ This crate serves as a **convenience layer** that combines multiple Reinhardt cr
   - `pre_delete`, `post_delete` - Model delete signals
   - `m2m_changed` - Many-to-many relationship signals
 
-### Planned
-
-Currently all planned features for this crate are implemented.
-
 ## Testing
 
 This crate does not contain tests. All functionality is tested in the underlying specialized crates:

@@ -105,6 +105,3 @@ Includes date/time utilities, string manipulation, encoding/decoding, and other 
   - `get_timezone_name_utc()`: UTC日時のタイムゾーン名取得
   - `get_timezone_name_local()`: ローカル日時のタイムゾーン名取得
 
-### Planned
-
-Currently all planned features are implemented.

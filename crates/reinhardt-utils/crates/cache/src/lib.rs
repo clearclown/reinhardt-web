@@ -28,6 +28,29 @@
 //! cache.delete("key").await.unwrap();
 //! # }
 //! ```
+//!
+//! ## Planned Features
+//! TODO: File-based cache - Persistent file system cache
+//! TODO: Memcached backend - Memcached integration (dependency declared but not implemented)
+//! TODO: Hybrid cache - Multi-tier caching (memory + distributed)
+//! TODO: Per-view caching - View-level cache decorators
+//! TODO: Template fragment caching - Selective template output caching
+//! TODO: QuerySet caching - Automatic ORM query result caching
+//! TODO: Cache warming - Pre-populate cache on startup
+//! TODO: Cache tags - Tag-based invalidation for related entries
+//! TODO: Write-through - Synchronous cache updates
+//! TODO: Write-behind - Asynchronous cache updates
+//! TODO: Cache-aside - Application-managed caching
+//! TODO: Read-through - Automatic cache population on miss
+//! TODO: Cache statistics - Hit/miss rates, entry counts, memory usage
+//! TODO: Cache inspection - List keys, view entries, export cache state
+//! TODO: Automatic cleanup - Background task for expired entry removal
+//! TODO: Event hooks - Pre/post cache operations callbacks
+//! TODO: Full Redis integration - Complete implementation of Redis operations
+//! TODO: Connection pooling - Efficient connection management
+//! TODO: Redis Cluster support - Distributed Redis deployments
+//! TODO: Redis Sentinel support - High availability configurations
+//! TODO: Pub/Sub support - Cache invalidation via Redis channels
 
 pub mod di_support;
 pub mod middleware;

@@ -133,18 +133,6 @@ Supports task scheduling, retries, task priorities, and multiple worker processe
 - **TaskExecutionError**: バックエンド実行エラー
   - 実行失敗、タスク未発見、バックエンドエラー
 
-### Planned
-
-- **Redis/Database での結果永続化**: 永続的な結果バックエンドの実装
-  - RedisResultBackend
-  - DatabaseResultBackend
-- **分散タスク実行の完成**: 複数ワーカーでのタスク分散処理
-  - ワーカー間の負荷分散
-  - タスクのロック機構
-- **実際のタスク実行**: タスクデータのデシリアライゼーションと実行
-  - タスクレジストリ
-  - 動的タスクディスパッチ
-
 ## Testing
 
 Redis バックエンドのテストは TestContainers を使用して実行されます:

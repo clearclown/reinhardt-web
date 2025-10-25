@@ -10,6 +10,12 @@
 //! - **Composable**: Dependencies can depend on other dependencies
 //! - **Cache**: Automatic caching within request scope
 //!
+//! ## Planned Features
+//! TODO: Integrate async generator syntax when stable in Rust
+//! TODO: Add dependency visualization tools
+//! TODO: Implement performance profiling for dependency injection
+//! TODO: Add advanced caching strategies
+//!
 //! ## Example
 //!
 //! ```rust,ignore

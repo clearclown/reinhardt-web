@@ -22,13 +22,6 @@ Derive macros for GraphQL-gRPC integration in Reinhardt framework
   - Optional filtering with `#[graphql(filter = "...")]`
   - Rust 2024 lifetime compatibility
 
-### Planned
-
-- Additional conversion strategies
-- Enhanced error handling
-- More customization options
-- Bidirectional streaming support
-
 ## Usage
 
 ### Type Conversion

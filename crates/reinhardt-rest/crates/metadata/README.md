@@ -68,27 +68,6 @@ Comprehensive field types supporting various data types:
   - `DeterminationError`: Metadata determination failures
   - `SerializerNotAvailable`: Missing serializer errors
 
-## Planned
-
-### OpenAPI Integration
-
-- OpenAPI 3.0 schema generation from field metadata
-- Automatic schema inference from Rust types
-- Schema validation and documentation
-
-### Advanced Metadata Providers
-
-- Serializer-aware metadata generation
-- Model-based metadata introspection
-- Custom metadata class support
-
-### Extended Field Features
-
-- Regular expression validation patterns
-- Custom field validators
-- Field dependencies and conditional requirements
-- Default value specification
-
 ## Usage Example
 
 ```rust

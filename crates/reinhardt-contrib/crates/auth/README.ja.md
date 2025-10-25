@@ -315,43 +315,6 @@ let auth = RemoteUserAuthentication::new("REMOTE_USER").force_logout_if_no_heade
 let user = auth.authenticate(&request).await?;
 ```
 
-## 予定
-
-以下の機能は将来のリリースで実装予定です：
-
-### トークンベース認証
-
-- **TokenAuthentication**: APIトークン認証
-- **Token Storage**: トークンの永続化とルックアップ
-- **Token Rotation**: セキュリティのための自動トークンローテーション
-
-### 高度なパーミッション
-
-- **RateLimitPermission**: IPまたはユーザーによるリクエストレート制限
-- **TimeBasedPermission**: 時間帯によるアクセス制御
-- **IpWhitelistPermission**: IPベースのアクセス制御
-- **IpBlacklistPermission**: IPブロッキング
-- **Permission Operators**: 複雑なロジックのためのAND、OR、NOT演算子
-
-### モデルパーミッション
-
-- **DjangoModelPermissions**: Djangoスタイルのモデルパーミッション
-- **DjangoModelPermissionsOrAnonReadOnly**: 匿名読み取りアクセス
-- **ModelPermission**: モデルごとのCRUDパーミッション
-- **Permission Checking**: オブジェクトレベルのパーミッションサポート
-
-### Django REST Framework互換性
-
-- **DRF Authentication Classes**: 互換性のある認証インターフェース
-- **DRF Permission Classes**: 互換性のあるパーミッションインターフェース
-- **Browsable API Support**: DRFスタイルのブラウザブルAPI統合
-
-### 管理とマネジメント
-
-- **User Management**: ユーザーのCRUD操作
-- **Group Management**: ユーザーグループとパーミッション
-- **Permission Assignment**: ユーザー/グループへのパーミッション割り当て
-- **createsuperuser Command**: 管理者ユーザー作成のためのCLIツール
 
 ## 使用例
 

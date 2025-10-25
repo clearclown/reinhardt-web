@@ -42,6 +42,9 @@
 //! - **Migration Files**: Generate migration files from model changes
 //! - **Rollback Support**: Reverse migrations when needed
 //!
+//! ## Planned Features
+//! TODO: Add support for additional database backends (MongoDB, CockroachDB, etc.)
+//!
 //! ## Quick Start
 //!
 //! ### Using Schema Editor

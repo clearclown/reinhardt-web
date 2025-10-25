@@ -255,27 +255,6 @@ Base trait for all renderers with async support.
 
 Context information passed to renderers during rendering.
 
-## Planned
-
-### Additional Renderers
-
-- **TemplateRenderer** - Template-based HTML rendering with template engine integration
-
-### Content Negotiation
-
-- Automatic renderer selection based on Accept headers
-- Renderer registry for managing multiple renderers
-- Quality value (q-factor) support
-- Format suffix handling (e.g., `/api/users.json`)
-
-### Advanced Features
-
-- Custom renderer middleware
-- Renderer chaining
-- Response caching
-- Streaming support for large responses
-- Compression support (gzip, brotli)
-
 ## Dependencies
 
 - `serde_json` - JSON serialization

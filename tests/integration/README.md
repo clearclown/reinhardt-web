@@ -401,10 +401,6 @@ These integration tests verify that multiple Reinhardt crates work correctly whe
   - Collection utilities
   - Encoding/decoding helpers
 
-### Planned
-
-Currently all planned features are implemented. Future integration tests will be added as new crates and features are developed.
-
 ## Test Count Summary
 
 | Category                  | Tests   | Files   |

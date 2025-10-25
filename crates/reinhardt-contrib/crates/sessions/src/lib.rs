@@ -12,6 +12,13 @@
 //! - **File Backend** (feature: `file`): Store sessions as files on disk
 //! - **Cookie Backend** (feature: `cookie`): Store encrypted sessions in cookies
 //!
+//! ## Planned Features
+//! TODO: Implement automatic session expiration and cleanup
+//! TODO: Add session key rotation support
+//! TODO: Integrate CSRF protection
+//! TODO: Support multiple session serialization formats (JSON, MessagePack, etc.)
+//! TODO: Add session storage migration tools
+//!
 //! ## Quick Start
 //!
 //! ```rust

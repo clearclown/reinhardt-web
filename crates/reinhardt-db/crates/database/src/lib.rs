@@ -13,6 +13,44 @@
 //! - **DDL Operations**: CREATE TABLE, ALTER TABLE, CREATE INDEX, etc.
 //! - **Migration Support**: Designed for use with `reinhardt-migrations`
 //!
+//! ## Planned Features
+//!
+//! ### PostgreSQL Advanced Features
+//! TODO: Implement array field operations for PostgreSQL
+//! TODO: Add JSONB field operations and operators for PostgreSQL
+//! TODO: Implement HStore field support for PostgreSQL
+//! TODO: Add full-text search (tsvector, tsquery, search configurations)
+//! TODO: Implement range types (int4range, int8range, tsrange, etc.)
+//! TODO: Add geometric types support
+//! TODO: Implement network address types (inet, cidr, macaddr)
+//! TODO: Add UUID type support
+//! TODO: Implement custom types and domains
+//!
+//! ### MySQL Advanced Features
+//! TODO: Implement JSON field operations and path expressions for MySQL
+//! TODO: Add full-text search (FULLTEXT index, MATCH AGAINST) for MySQL
+//! TODO: Implement spatial data types and operations for MySQL
+//! TODO: Add XA transaction support for MySQL
+//! TODO: Implement partition management for MySQL
+//!
+//! ### SQLite Advanced Features
+//! TODO: Implement JSON1 extension operations for SQLite
+//! TODO: Add FTS5 full-text search for SQLite
+//! TODO: Implement R*Tree spatial index for SQLite
+//! TODO: Add virtual table support for SQLite
+//! TODO: Implement Common Table Expressions (CTE) for SQLite
+//!
+//! ### General Enhancements
+//! TODO: Implement transaction management
+//! TODO: Add connection pool configuration
+//! TODO: Implement query result streaming for large datasets
+//! TODO: Add prepared statement caching
+//! TODO: Implement database migration support
+//! TODO: Add connection health checks
+//! TODO: Implement retry logic for transient failures
+//! TODO: Add database-specific error handling
+//! TODO: Implement query logging and metrics
+//!
 //! ## Quick Start
 //!
 //! ```rust

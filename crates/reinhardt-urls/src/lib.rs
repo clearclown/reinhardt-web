@@ -7,6 +7,9 @@
 //! - `reinhardt-routers`: URL routing and pattern matching
 //! - `reinhardt-routers-macros`: Compile-time URL validation macros
 //! - `reinhardt-proxy`: Lazy relationship loading for ORM
+//!
+//! ## Planned Features
+//! TODO: Add route middleware support
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

@@ -89,8 +89,6 @@ A comprehensive collection of reusable validators following Django's validator p
 - `PatternMismatch(String)`: Regex pattern did not match
 - `Custom(String)`: Custom validation error
 
-### Planned
-
 #### Additional Validators
 
 - **SlugValidator**: Validate URL-safe slugs

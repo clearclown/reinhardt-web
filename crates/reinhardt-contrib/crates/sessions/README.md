@@ -80,8 +80,6 @@ Session framework for maintaining state across HTTP requests. This crate provide
 - **HttpSessionConfig** - Comprehensive middleware configuration
 - **SameSite** enum - Cookie SameSite attribute (Strict, Lax, None)
 
-### Planned
-
 #### Session Management Features
 
 - Session expiration and cleanup

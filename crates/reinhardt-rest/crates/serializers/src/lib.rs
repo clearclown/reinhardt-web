@@ -1,3 +1,8 @@
+//! Serializers for Reinhardt REST framework
+//!
+//! ## Planned Features
+//! TODO: Add DateField and DateTimeField with chrono integration
+
 pub mod cache_invalidation;
 pub mod content_negotiation;
 pub mod fields;

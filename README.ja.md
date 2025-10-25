@@ -322,7 +322,7 @@ Reinhardtには以下のコアコンポーネントが含まれています:
 
 - 📚 [Getting Started Guide](docs/GETTING_STARTED.md) - 初心者向けステップバイステップチュートリアル
 - 🎛️ [Feature Flags Guide](docs/FEATURE_FLAGS.md) - きめ細かい機能制御でビルドを最適化
-- 📖 [API Reference](https://docs.rs/reinhardt) (近日公開予定)
+- 📖 [API Reference](https://docs.rs/reinhardt) 
 - 📝 [Tutorials](docs/tutorials/) - 実際のアプリケーションを構築しながら学ぶ
 
 ## 💬 ヘルプを得る

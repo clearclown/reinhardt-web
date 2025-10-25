@@ -1,3 +1,19 @@
+//! # Reinhardt Routers
+//!
+//! URL routing for Reinhardt framework.
+//!
+//! ## Planned Features
+//! TODO: SimpleRouter - Lightweight router for basic routing needs with minimal overhead
+//! TODO: Namespace-based URL reversal - Hierarchical route naming (`"v1:users:detail"`)
+//! TODO: Nested namespace resolution
+//! TODO: URL reversal with namespace support
+//! TODO: Route caching - Performance optimization for large route tables
+//! TODO: Custom converters - Type-specific path parameter converters (Integer, UUID, slug)
+//! TODO: Custom validation rules for path parameters
+//! TODO: Route introspection - Runtime route analysis and debugging
+//! TODO: OpenAPI integration - Automatic OpenAPI schema generation from routes
+//! TODO: Route visualization - Generate route maps for documentation
+
 pub mod helpers;
 pub mod pattern;
 pub mod reverse;

@@ -71,8 +71,6 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
   - Support for enum types with string variant generation
   - Compatible with utoipa 5.4 ObjectBuilder pattern
 
-### Planned
-
 #### Extended Auto-Schema Features
 
 - **Attribute Macro Support**: Advanced schema customization

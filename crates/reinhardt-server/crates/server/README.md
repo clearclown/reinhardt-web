@@ -1,10 +1,10 @@
 # reinhardt-server
 
-高性能HTTPサーバー実装
+High-performance HTTP server implementation
 
 ## Overview
 
-Hyperをベースにした高性能HTTPサーバー。リクエストルーティング、WebSocket接続、GraphQLサポートを提供し、async/awaitによる並行接続を処理します。
+High-performance HTTP server based on Hyper. Provides request routing, WebSocket connections, GraphQL support, and handles concurrent connections with async/await.
 
 ## Features
 
@@ -12,108 +12,106 @@ Hyperをベースにした高性能HTTPサーバー。リクエストルーテ�
 
 #### Core HTTP Server
 
-- **HTTP/1.1サーバー**: Hyperベースの高性能HTTP/1.1サーバー実装
-- **非同期リクエスト処理**: Tokioランタイムによる完全非同期処理
-- **カスタムハンドラーサポート**: `Handler` traitを実装することでカスタムロジックを追加可能
-- **TCP接続管理**: 効率的なTCP接続管理とタスクスポーニング
-- **リクエスト/レスポンス変換**: Hyperリクエストとreinhardt-httpのRequest/Response間の自動変換
-- **エラーハンドリング**: ハンドラーエラーを自動的に500エラーレスポンスに変換
+- **HTTP/1.1 Server**: High-performance HTTP/1.1 server implementation based on Hyper
+- **Async Request Processing**: Full asynchronous processing with Tokio runtime
+- **Custom Handler Support**: Add custom logic by implementing the `Handler` trait
+- **TCP Connection Management**: Efficient TCP connection management and task spawning
+- **Request/Response Conversion**: Automatic conversion between Hyper requests and reinhardt-http Request/Response
+- **Error Handling**: Automatically converts handler errors to 500 error responses
 
 #### WebSocket Support (feature = "websocket")
 
-- **WebSocketサーバー**: tokio-tungstenitベースのWebSocketサーバー実装
-- **カスタムメッセージハンドラー**: `WebSocketHandler` traitによるメッセージ処理のカスタマイズ
-- **接続ライフサイクルフック**: `on_connect`と`on_disconnect`による接続イベントのハンドリング
-- **テキスト/バイナリメッセージ**: テキストメッセージの処理とバイナリメッセージのエコー
-- **自動接続管理**: WebSocket接続の確立、メッセージループ、クローズ処理の自動管理
-- **ピア情報**: クライアントのSocketAddr情報へのアクセス
+- **WebSocket Server**: WebSocket server implementation based on tokio-tungstenite
+- **Custom Message Handlers**: Customize message processing via the `WebSocketHandler` trait
+- **Connection Lifecycle Hooks**: Handle connection events with `on_connect` and `on_disconnect`
+- **Text/Binary Messages**: Process text messages and echo binary messages
+- **Automatic Connection Management**: Automatic handling of WebSocket connection establishment, message loops, and closure
+- **Peer Information**: Access to client SocketAddr information
 
 #### GraphQL Support (feature = "graphql")
 
-- **GraphQLハンドラー**: async-graphql統合によるGraphQLエンドポイントのサポート
-- **スキーマビルダー**: QueryとMutationルートからのスキーマ自動構築
-- **POSTリクエスト処理**: GraphQLクエリのPOSTリクエストによる実行
-- **JSON レスポンス**: GraphQL実行結果の自動JSON シリアライゼーション
-- **エラーハンドリング**: GraphQLエラーの適切な処理とレスポンス
-- **空のサブスクリプション**: デフォルトで`EmptySubscription`を使用
+- **GraphQL Handler**: GraphQL endpoint support with async-graphql integration
+- **Schema Builder**: Automatic schema construction from Query and Mutation roots
+- **POST Request Processing**: Execute GraphQL queries via POST requests
+- **JSON Responses**: Automatic JSON serialization of GraphQL execution results
+- **Error Handling**: Proper handling and response of GraphQL errors
+- **Empty Subscriptions**: Uses `EmptySubscription` by default
 
 #### Convenience Functions
 
-- **`serve()` 関数**: HTTPサーバーの簡単な起動を提供するヘルパー関数
-- **`serve_websocket()` 関数**: WebSocketサーバーの簡単な起動を提供するヘルパー関数
-- **`graphql_handler()` 関数**: GraphQLハンドラーのArc包装を簡略化
+- **`serve()` function**: Helper function providing easy HTTP server startup
+- **`serve_websocket()` function**: Helper function providing easy WebSocket server startup
+- **`graphql_handler()` function**: Simplifies Arc wrapping of GraphQL handlers
 
 #### Graceful Shutdown
 
-- **ShutdownCoordinator**: Gracefulシャットダウンの調整機構
-  - シグナルハンドリング (SIGTERM, SIGINT)
-  - 既存接続の完了待機
-  - タイムアウト処理付きシャットダウン
-  - Broadcast channelによるシャットダウン通知
-- **shutdown_signal()**: OSシャットダウンシグナルのリスニング
-- **listen_with_shutdown()**: Graceful shutdownサポート付きサーバー起動
-- **serve_with_shutdown()**: Graceful shutdown対応の便利関数
-- **with_shutdown()**: Futureにシャットダウンハンドリングを追加
+- **ShutdownCoordinator**: Graceful shutdown coordination mechanism
+  - Signal handling (SIGTERM, SIGINT)
+  - Wait for existing connections to complete
+  - Shutdown with timeout processing
+  - Shutdown notification via broadcast channel
+- **shutdown_signal()**: Listen for OS shutdown signals
+- **listen_with_shutdown()**: Start server with graceful shutdown support
+- **serve_with_shutdown()**: Convenience function with graceful shutdown support
+- **with_shutdown()**: Add shutdown handling to Futures
 
 #### HTTP/2 Support
 
-- **Http2Server**: HTTP/2プロトコルサーバー実装
-  - hyper-utilのHTTP/2ビルダー使用
-  - 完全非同期リクエスト処理
-  - Graceful shutdownサポート
-  - HTTP/1.1と同じHandlerトレイトを使用
-- **serve_http2()**: HTTP/2サーバーの簡単な起動を提供
-- **serve_http2_with_shutdown()**: Graceful shutdown対応のHTTP/2サーバー起動
+- **Http2Server**: HTTP/2 protocol server implementation
+  - Uses hyper-util's HTTP/2 builder
+  - Full asynchronous request processing
+  - Graceful shutdown support
+  - Uses same Handler trait as HTTP/1.1
+- **serve_http2()**: Easy HTTP/2 server startup
+- **serve_http2_with_shutdown()**: HTTP/2 server startup with graceful shutdown support
 
 #### Request Timeouts
 
-- **TimeoutHandler**: リクエストタイムアウトミドルウェア
-  - 設定可能なタイムアウト期間
-  - タイムアウト時に408 Request Timeout応答を返す
-  - 任意のHandlerをラップ可能
-  - 完全にテスト済み
+- **TimeoutHandler**: Request timeout middleware
+  - Configurable timeout duration
+  - Returns 408 Request Timeout response on timeout
+  - Can wrap any Handler
+  - Fully tested
 
 #### Rate Limiting
 
-- **RateLimitHandler**: レート制限ミドルウェア
-  - IPアドレスベースのレート制限
-  - Fixed WindowとSliding Window戦略をサポート
-  - 設定可能なウィンドウ期間と最大リクエスト数
-  - レート制限超過時に429 Too Many Requests応答を返す
-- **RateLimitConfig**: レート制限設定
-  - `per_minute()`: 分単位のレート制限
-  - `per_hour()`: 時間単位のレート制限
-  - カスタム設定可能
-
-### Planned
+- **RateLimitHandler**: Rate limiting middleware
+  - IP address-based rate limiting
+  - Supports Fixed Window and Sliding Window strategies
+  - Configurable window period and maximum request count
+  - Returns 429 Too Many Requests response when rate limit exceeded
+- **RateLimitConfig**: Rate limit configuration
+  - `per_minute()`: Per-minute rate limiting
+  - `per_hour()`: Per-hour rate limiting
+  - Custom configurable
 
 #### Advanced HTTP Features
 
-- **ミドルウェアパイプライン**: リクエスト/レスポンス処理のミドルウェアチェーン
-- **接続プーリング**: HTTP接続の効率的なプーリング機構
-- **リクエストロギング**: 構造化されたリクエストログ
+- **Middleware Pipeline**: Middleware chain for request/response processing
+- **Connection Pooling**: Efficient HTTP connection pooling mechanism
+- **Request Logging**: Structured request logging
 
 #### WebSocket Advanced Features
 
-- **ブロードキャストサポート**: 複数クライアントへのメッセージブロードキャスト
-- **ルームベース管理**: クライアントをルームごとに管理
-- **メッセージ圧縮**: WebSocketメッセージの圧縮サポート
-- **ハートビート/Ping-Pong**: 接続の生存確認機構
-- **認証/認可**: WebSocket接続の認証と認可
+- **Broadcast Support**: Message broadcasting to multiple clients
+- **Room-Based Management**: Manage clients by rooms
+- **Message Compression**: WebSocket message compression support
+- **Heartbeat/Ping-Pong**: Connection alive check mechanism
+- **Authentication/Authorization**: Authentication and authorization for WebSocket connections
 
 #### GraphQL Advanced Features
 
-- **サブスクリプションサポート**: リアルタイムGraphQLサブスクリプション
-- **DataLoader統合**: N+1問題解決のためのDataLoader
-- **GraphQLプレイグラウンド**: GraphQL IDE統合
-- **ファイルアップロード**: GraphQLによるファイルアップロード
-- **バッチクエリ**: 複数クエリのバッチ実行
+- **Subscription Support**: Real-time GraphQL subscriptions
+- **DataLoader Integration**: DataLoader for solving N+1 problems
+- **GraphQL Playground**: GraphQL IDE integration
+- **File Uploads**: File uploads via GraphQL
+- **Batch Queries**: Batch execution of multiple queries
 
 #### Testing & Monitoring
 
-- **メトリクス**: サーバーメトリクスの収集と公開
-- **ヘルスチェック**: サーバーヘルスチェックエンドポイント
-- **トレーシング**: 分散トレーシングのサポート
+- **Metrics**: Server metrics collection and publishing
+- **Health Checks**: Server health check endpoints
+- **Tracing**: Distributed tracing support
 
 ## Usage
 
@@ -228,12 +226,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Feature Flags
 
-- `websocket`: WebSocketサーバーサポートを有効化
-- `graphql`: GraphQLサーバーサポートを有効化
+- `websocket`: Enable WebSocket server support
+- `graphql`: Enable GraphQL server support
 
 ## Dependencies
 
-- `hyper`: HTTPサーバーの基盤
-- `tokio`: 非同期ランタイム
-- `tokio-tungstenite`: WebSocketサポート (optional)
-- `async-graphql`: GraphQLサポート (optional)
+- `hyper`: HTTP server foundation
+- `tokio`: Async runtime
+- `tokio-tungstenite`: WebSocket support (optional)
+- `async-graphql`: GraphQL support (optional)

@@ -341,6 +341,25 @@ Update documentation for:
 - Verify that all links and references are valid
 - Maintain consistency in terminology and formatting
 
+### DM-6 (MUST): Planned Features Location
+
+- **Planned Features** (計画中の機能) **MUST** be documented in the crate's `lib.rs` file header
+- **DO NOT** include Planned Features sections in README.md files
+- Use the following format in `lib.rs`:
+  ```rust
+  //! # Crate Name
+  //!
+  //! Brief description
+  //!
+  //! ## Planned Features
+  //!
+  //! - Feature 1: Description
+  //! - Feature 2: Description
+  ```
+- Keep planned features close to the implementation code for better visibility and maintenance
+- README.md should focus on **implemented** features only
+- When a planned feature is implemented, **remove it from the Planned Features list** and update README.md if applicable
+
 ---
 
 ## Workflow
@@ -433,10 +452,12 @@ For detailed commit guidelines including message format, granularity, and execut
 
 - ❌ NO outdated documentation after code changes
 - ❌ NO unsynchronized English/Japanese documentation
+- ❌ NO Planned Features in README.md files
 - ✅ UPDATE documentation with code changes in the same workflow
 - ✅ SYNCHRONIZE README.md and README.ja.md
 - ✅ UPDATE all relevant crate and docs/ files
 - ✅ VERIFY examples and code snippets are working
+- ✅ PLACE Planned Features in lib.rs file headers
 
 ### Workflow
 

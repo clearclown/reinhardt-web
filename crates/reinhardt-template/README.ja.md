@@ -47,11 +47,6 @@ Reinhardtフレームワーク用のテンプレートシステム
   - カスタムレンダラーのサポート
   - 整形表示とフォーマットオプション
 
-### 予定
-
-- 現在のセット (upper, lower, trim, reverse, truncate, join, default, capitalize, title, length, ljust, rjust, replace, split, striptags) を超える追加のテンプレートフィルタ
-- より良い診断を備えた強化されたエラーメッセージ
-- テンプレートデバッグツールと開発モード
 
 ## インストール
 

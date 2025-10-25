@@ -1,3 +1,27 @@
+//! # Reinhardt Auth
+//!
+//! Authentication and authorization system for Reinhardt framework.
+//!
+//! ## Planned Features
+//! TODO: Token Storage - Token persistence and lookup
+//! TODO: Token Rotation - Automatic token rotation for security
+//! TODO: RateLimitPermission - Request rate limiting by IP or user
+//! TODO: TimeBasedPermission - Time-of-day access control
+//! TODO: IpWhitelistPermission - IP-based access control
+//! TODO: IpBlacklistPermission - IP blocking
+//! TODO: Permission Operators - AND, OR, NOT combinators for complex logic
+//! TODO: DjangoModelPermissions - Django-style model permissions
+//! TODO: DjangoModelPermissionsOrAnonReadOnly - Anonymous read access
+//! TODO: ModelPermission - CRUD permissions per model
+//! TODO: Permission Checking - Object-level permission support
+//! TODO: DRF Authentication Classes - Compatible authentication interfaces
+//! TODO: DRF Permission Classes - Compatible permission interfaces
+//! TODO: Browsable API Support - Integration with DRF-style browsable API
+//! TODO: User Management - CRUD operations for users
+//! TODO: Group Management - User groups and permissions
+//! TODO: Permission Assignment - Assign permissions to users/groups
+//! TODO: createsuperuser Command - CLI tool for creating admin users
+
 pub mod advanced_permissions;
 pub mod backend;
 pub mod basic;

@@ -59,13 +59,6 @@ This parent crate re-exports functionality from the following sub-crates:
   - Memory backend implementation
   - Redis backend implementation
 
-### Planned
-
-- Additional middleware types
-- Enhanced security features
-- More validator types
-- Additional backend implementations
-
 ## Installation
 
 Add this to your `Cargo.toml`:

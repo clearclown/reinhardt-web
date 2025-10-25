@@ -94,8 +94,6 @@ Automatically handles common patterns like list, retrieve, create, update, and d
   - Middleware integration testing
 - **SimpleViewSet** - Minimal ViewSet for basic testing scenarios
 
-### Planned
-
 #### Advanced Features
 
 - **Pagination Integration** - Automatic pagination support for list actions

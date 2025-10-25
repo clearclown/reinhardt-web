@@ -91,9 +91,6 @@ FastAPIにインスパイアされたReinhardtのパラメータ抽出システ�
 - **型エイリアス**: `ValidatedPath<T>`, `ValidatedQuery<T>`, `ValidatedForm<T>`
 - **`reinhardt-validators`との統合**
 
-### 予定
-
-現在、計画されている未実装機能はありません。全ての主要機能が実装済みです。
 
 ## クイックスタート
 

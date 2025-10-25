@@ -61,6 +61,3 @@ Web-based interface for exploring and testing API endpoints. Provides human-frie
 - Form styling with proper input controls
 - Header table display with clean formatting
 
-### Planned
-
-Currently all planned features are implemented.

@@ -74,6 +74,3 @@ Includes request logging, error logging, and integration with external logging s
 - **Type Safety**: Strongly-typed configuration and log levels
 - **Async Support**: Built on Tokio for async runtime compatibility
 
-### Planned
-
-Currently all planned features are implemented.

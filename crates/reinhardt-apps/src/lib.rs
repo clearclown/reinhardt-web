@@ -1,3 +1,12 @@
+//! Application configuration and registry for Reinhardt
+//!
+//! ## Planned Features
+//! TODO: Implement model discovery and registration
+//! TODO: Add reverse relation building
+//! TODO: Implement ready hooks (AppConfig.ready())
+//! TODO: Add signal integration for app lifecycle events
+//! TODO: Implement migration detection
+
 pub mod apps;
 pub mod builder;
 

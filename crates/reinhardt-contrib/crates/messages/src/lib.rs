@@ -2,6 +2,12 @@
 //!
 //! This crate provides Django-style messaging for displaying one-time
 //! notifications to users.
+//!
+//! ## Planned Features
+//! TODO: Implement request/response middleware for automatic message handling
+//! TODO: Add automatic message retrieval and storage during request lifecycle
+//! TODO: Implement context processor for template integration
+//! TODO: Add message filtering by level
 
 pub mod levels;
 pub mod message;

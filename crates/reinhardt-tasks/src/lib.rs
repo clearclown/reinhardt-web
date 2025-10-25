@@ -11,6 +11,14 @@
 //! - Task chaining
 //! - Result backend
 //!
+//! ## Planned Features
+//! TODO: Implement Redis/Database result persistence (RedisResultBackend, DatabaseResultBackend)
+//! TODO: Complete distributed task execution across multiple workers
+//! TODO: Add worker load balancing
+//! TODO: Implement task locking mechanism for distributed systems
+//! TODO: Complete actual task execution with deserialization and dispatch
+//! TODO: Implement task registry for dynamic task dispatch
+//!
 //! ## Example
 //!
 //! ```rust,ignore

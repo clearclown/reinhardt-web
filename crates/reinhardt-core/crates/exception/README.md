@@ -21,6 +21,3 @@ Provides comprehensive error handling with Django-inspired exception hierarchy. 
 - **Error categorization** - `ErrorKind` enum for categorical classification
 - **Standard conversions** - `From` implementations for `serde_json::Error`, `std::io::Error`, `http::Error`
 
-### Planned
-
-Currently all planned features are implemented.

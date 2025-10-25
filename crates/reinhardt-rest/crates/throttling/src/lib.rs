@@ -1,4 +1,23 @@
 //! Rate limiting for Reinhardt framework
+//!
+//! ## Planned Features
+//! TODO: Distributed consensus for rate limit synchronization
+//! TODO: Graceful degradation under backend failure
+//! TODO: Rate limit warmup and cooldown strategies
+//! TODO: Adaptive rate limiting based on system load
+//! TODO: Rate limit analytics and reporting
+//! TODO: Token bucket algorithm implementation
+//! TODO: Leaky bucket algorithm implementation
+//! TODO: Memcached backend support
+//! TODO: Database-backed rate limiting
+//! TODO: Multi-tier caching with fallback
+//! TODO: Custom backend plugin system
+//! TODO: Concurrent request throttling
+//! TODO: Bandwidth throttling
+//! TODO: Geo-based rate limiting
+//! TODO: Time-of-day based rate limiting
+//! TODO: Dynamic rate adjustment
+
 pub mod anon;
 pub mod backend;
 pub mod burst;

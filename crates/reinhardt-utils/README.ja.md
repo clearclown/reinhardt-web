@@ -105,6 +105,3 @@
   - `get_timezone_name_utc()`: UTC日時のタイムゾーン名取得
   - `get_timezone_name_local()`: ローカル日時のタイムゾーン名取得
 
-### 予定
-
-現在、すべての予定機能が実装済みです。

@@ -28,6 +28,3 @@ Core HTTP abstractions for the Reinhardt framework. Provides request and respons
   - Thread-safe with Arc/Mutex
 - **Error integration** - Re-exports `reinhardt_exception::Error` and `Result`
 
-### Planned
-
-Currently all planned features are implemented.

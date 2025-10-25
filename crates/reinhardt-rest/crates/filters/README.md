@@ -49,28 +49,6 @@ Powerful filtering and ordering system that provides compile-time type-safe filt
   - `.default_ordering()` - Define default sort order for model queries
   - `.searchable_field_names()` - Helper to extract field names as strings
 
-## Planned
-
-### Advanced Filtering
-
-- Range filters for date and numeric fields
-- Geographic/spatial filtering
-- Full-text search integration
-- Custom filter backends for specialized use cases
-
-### Query Optimization
-
-- Query result caching
-- Intelligent index usage
-- Query plan optimization hints
-
-### Enhanced Search
-
-- Fuzzy search support
-- Relevance scoring
-- Synonym handling
-- Search result highlighting
-
 ## Usage Examples
 
 ### Basic Query Filtering

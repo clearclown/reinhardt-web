@@ -23,6 +23,17 @@
 //! let renderer = JSONRenderer::new();
 //! let response = renderer.render(&data, None).await?;
 //! ```
+//!
+//! ## Planned Features
+//! TODO: Automatic renderer selection based on Accept headers
+//! TODO: Renderer registry for managing multiple renderers
+//! TODO: Quality value (q-factor) support
+//! TODO: Format suffix handling (e.g., `/api/users.json`)
+//! TODO: Custom renderer middleware
+//! TODO: Renderer chaining
+//! TODO: Response caching
+//! TODO: Streaming support for large responses
+//! TODO: Compression support (gzip, brotli)
 
 pub mod admin_renderer;
 pub mod csv_renderer;

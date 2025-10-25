@@ -95,8 +95,6 @@ This crate provides the view layer for building RESTful APIs in Reinhardt. It in
 - **Middleware Support** - ViewSet-specific middleware
 - **Registry** - ViewSet registration and discovery
 
-### Planned
-
 #### Enhanced Browsable API
 
 - HTML rendering for API exploration

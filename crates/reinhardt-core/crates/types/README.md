@@ -17,6 +17,3 @@ Fundamental type definitions used across the Reinhardt framework. Provides trait
 - **Async trait support** - Full async/await support via `async_trait`
 - **Zero-cost abstractions** - All traits compile to efficient code with no runtime overhead
 
-### Planned
-
-Currently all planned features are implemented.

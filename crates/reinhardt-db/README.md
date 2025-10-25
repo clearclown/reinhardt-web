@@ -82,10 +82,6 @@ This parent crate re-exports functionality from the following sub-crates:
   - Per-model read and write database configuration
   - Multi-database support through hybrid module
 
-### Planned
-
-- Additional database backends (MongoDB, CockroachDB, etc.)
-
 ## Installation
 
 Add this to your `Cargo.toml`:

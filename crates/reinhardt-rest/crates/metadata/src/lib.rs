@@ -23,6 +23,18 @@
 //!     parses: vec!["application/json".to_string()],
 //! };
 //! ```
+//!
+//! ## Planned Features
+//! TODO: OpenAPI 3.0 schema generation from field metadata
+//! TODO: Automatic schema inference from Rust types
+//! TODO: Schema validation and documentation
+//! TODO: Serializer-aware metadata generation
+//! TODO: Model-based metadata introspection
+//! TODO: Custom metadata class support
+//! TODO: Regular expression validation patterns
+//! TODO: Custom field validators
+//! TODO: Field dependencies and conditional requirements
+//! TODO: Default value specification
 
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Result};

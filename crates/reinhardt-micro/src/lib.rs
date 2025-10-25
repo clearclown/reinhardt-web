@@ -13,6 +13,10 @@
 //! - **Small binaries**: Optimized for microservices and serverless
 //! - **FastAPI-inspired ergonomics**: Function-based endpoints with type-safe parameter extraction
 //!
+//! ## Planned Features
+//! TODO: Add more middleware configuration helpers
+//! TODO: Implement additional utility functions
+//!
 //! ## Quick Start
 //!
 //! ```rust,no_run

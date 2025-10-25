@@ -13,6 +13,10 @@
 //! - **Zero-Cost Abstractions**: High-level ergonomics without runtime overhead
 //! - **Async-First**: Built on tokio and async/await from the ground up
 //!
+//! ## Planned Features
+//! TODO: Add additional feature flag combinations for specific use cases
+//! TODO: Implement more granular feature control
+//!
 //! ## Quick Example
 //!
 //! ```rust,ignore

@@ -40,6 +40,23 @@
 //! // Send signal
 //! post_save::<User>().send(&user).await?;
 //! ```
+//!
+//! ## Planned Features
+//! TODO: Signal Batching - Batch multiple signals into a single dispatch
+//! TODO: Signal Throttling - Rate limiting for signal emissions
+//! TODO: Persistent Signals - Store and replay signals from durable storage
+//! TODO: Signal Replay - Replay past signals for debugging and testing
+//! TODO: Signal History - Track signal emission history with timestamps
+//! TODO: Dead Letter Queue - Handle failed signals with retry logic
+//! TODO: ORM Integration - Automatic signal dispatch from ORM operations
+//! TODO: Transaction Support - Signals tied to database transaction lifecycle
+//! TODO: Distributed Signals - Cross-service signal dispatch via message brokers
+//! TODO: WebSocket Signals - Real-time signal propagation to clients
+//! TODO: GraphQL Subscriptions - Signal-based GraphQL subscription support
+//! TODO: Signal Debugger - Visual debugging tool for signal flow
+//! TODO: Signal Profiler - Performance profiling for signal systems
+//! TODO: Signal Documentation Generator - Auto-generate docs from signal definitions
+//! TODO: Signal Visualization - Graphical representation of signal connections
 
 use parking_lot::RwLock;
 use std::any::{Any, TypeId};

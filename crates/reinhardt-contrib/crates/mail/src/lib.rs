@@ -11,6 +11,15 @@
 //! - **Templates**: Integration with template system
 //! - **Bulk Sending**: Connection pooling for bulk emails
 //!
+//! ## Planned Features
+//! TODO: Complete template system integration for dynamic email content
+//! TODO: Fully implement file attachment support (Alternative and Attachment structs)
+//! TODO: Add inline image support for HTML emails
+//! TODO: Implement advanced SMTP features (TLS/SSL, authentication methods)
+//! TODO: Add email validation and sanitization
+//! TODO: Complete async email sending capabilities
+//! TODO: Implement connection pooling for bulk email operations
+//!
 //! ## Example
 //!
 //! ```rust,ignore

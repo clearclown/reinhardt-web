@@ -240,10 +240,6 @@ API versioning strategies for Reinhardt framework, inspired by Django REST Frame
     - Async trait for async version detection
     - Send + Sync for thread safety
 
-### Planned
-
-なし - すべての機能が実装済みです
-
 ## Quick Start
 
 ## Basic Usage

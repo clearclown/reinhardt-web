@@ -51,17 +51,6 @@ Django REST Framework風のコンテンツネゴシエーションシステム
 - **詳細なドキュメント**: すべての公開APIにdoctestを含むドキュメント
 - **包括的なテスト**: DRFの動作を再現する統合テスト
 
-## Planned
-
-### 今後の拡張予定
-
-- **カスタムネゴシエーション戦略**: プラグイン可能なネゴシエーションロジック
-- **Content-Type検出**: リクエストボディのContent-Type自動検出
-- **言語ネゴシエーション**: Accept-Language headerのサポート
-- **エンコーディングネゴシエーション**: Accept-Encoding headerのサポート
-- **キャッシュ最適化**: ネゴシエーション結果のキャッシング
-- **より詳細なエラー情報**: ネゴシエーション失敗時の詳細なフィードバック
-
 ## Usage Examples
 
 ### Basic Content Negotiation

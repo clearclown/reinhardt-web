@@ -84,48 +84,6 @@ Database abstraction layer for Reinhardt framework with unified interfaces for S
   - Parameterized queries (?) ✓
 - **Schema Editor**: Standard DDL operations ✓
 
-### Planned Features
-
-#### PostgreSQL Advanced Features (Planned)
-
-- Array field operations
-- JSONB field operations and operators
-- HStore field support
-- Full-text search (tsvector, tsquery, search configurations)
-- Range types (int4range, int8range, tsrange, etc.)
-- Geometric types
-- Network address types (inet, cidr, macaddr)
-- UUID type support
-- Custom types and domains
-
-#### MySQL Advanced Features (Planned)
-
-- JSON field operations and path expressions
-- Full-text search (FULLTEXT index, MATCH AGAINST)
-- Spatial data types and operations
-- XA transaction support
-- Partition management
-
-#### SQLite Advanced Features (Planned)
-
-- JSON1 extension operations
-- FTS5 full-text search
-- R\*Tree spatial index
-- Virtual table support
-- Common Table Expressions (CTE)
-
-#### General Enhancements (Planned)
-
-- Transaction management
-- Connection pool configuration
-- Query result streaming for large datasets
-- Prepared statement caching
-- Database migration support
-- Connection health checks
-- Retry logic for transient failures
-- Database-specific error handling
-- Query logging and metrics
-
 ## Installation
 
 ```toml

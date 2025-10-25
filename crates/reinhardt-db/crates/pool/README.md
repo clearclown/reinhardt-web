@@ -96,6 +96,3 @@ Provides efficient connection reuse, automatic cleanup, and configurable pool si
 - **Type-safe results**: `PoolResult<T>` type alias
 - **Error propagation**: Automatic conversion from sqlx errors
 
-### Planned
-
-Currently all planned features are implemented.

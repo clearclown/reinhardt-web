@@ -72,8 +72,6 @@ Useful for building flexible systems like comments, tags, or activity streams th
   - `add_object()` - Add object ID to query
   - `to_sql()` - Generate SQL query for fetching related objects
 
-### Planned
-
 #### Database Integration
 
 - Automatic ContentType table creation and migration

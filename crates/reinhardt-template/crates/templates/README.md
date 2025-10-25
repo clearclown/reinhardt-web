@@ -93,8 +93,6 @@ Basic i18n support with placeholder implementations:
 - `localize_date_filter(date)` - Localize date formatting
 - `localize_number_filter(number)` - Localize number formatting
 
-### Planned
-
 #### Advanced Template Features
 
 - **Context processors**: Global context variables for all templates

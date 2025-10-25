@@ -2,6 +2,12 @@
 //!
 //! Core components for the Reinhardt framework, providing fundamental types,
 //! exception handling, signals, macros, security, and validation utilities.
+//!
+//! ## Planned Features
+//! TODO: Add additional middleware types
+//! TODO: Enhance security features
+//! TODO: Add more validator types
+//! TODO: Implement additional backend implementations
 
 #[cfg(feature = "types")]
 pub use reinhardt_types as types;

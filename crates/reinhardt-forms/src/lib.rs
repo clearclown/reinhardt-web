@@ -1,4 +1,13 @@
 //! Form processing and validation for Reinhardt
+//!
+//! ## Planned Features
+//! TODO: Enhance CSRF protection with cryptographic token generation
+//! TODO: Implement token rotation for CSRF tokens
+//! TODO: Add same-site cookie support for CSRF protection
+//! TODO: Implement origin validation for CSRF
+//! TODO: Complete chunked upload support
+//! TODO: Add upload progress tracking
+//! TODO: Enhance file handling capabilities
 
 pub mod bound_field;
 pub mod chunked_upload;

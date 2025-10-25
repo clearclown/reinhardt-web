@@ -33,15 +33,6 @@ This parent crate re-exports functionality from the `server` sub-crate:
   - JSON response serialization
   - Error handling for GraphQL errors
 
-### Planned
-
-- HTTP/2 support
-- Middleware pipeline
-- Connection pooling
-- Graceful shutdown
-- Request timeouts
-- Rate limiting
-
 ## Installation
 
 Add this to your `Cargo.toml`:

@@ -10,6 +10,13 @@
 //! - **UpdateView**: Handle object updates
 //! - **DeleteView**: Handle object deletion
 //!
+//! ## Planned Features
+//! TODO: Implement HTML rendering for browsable API exploration
+//! TODO: Add interactive API documentation interface
+//! TODO: Implement form generation for POST/PUT/PATCH methods
+//! TODO: Add syntax highlighting for response rendering
+//! TODO: Enhance schema generation capabilities
+//!
 //! ## Example
 //!
 //! ```rust,ignore

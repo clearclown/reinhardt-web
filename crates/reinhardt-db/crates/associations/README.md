@@ -34,13 +34,3 @@ Provides SQLAlchemy-style association proxies for simplifying access to related 
 
 - Re-exports commonly used types for convenient importing
 
-### Planned
-
-The following features are planned for future implementation:
-
-- **Relationship Configuration**: One-to-One, One-to-Many (ForeignKey), and Many-to-Many relationship definitions
-- **Reverse Relationship Access**: Automatic reverse accessor generation
-- **Related Name Customization**: Custom naming for reverse relationships
-- **Loading Strategies**: Lazy loading and eager loading support
-- **Cascade Operations**: Cascade deletion and update options
-- **Polymorphic Associations**: Support for polymorphic relationships

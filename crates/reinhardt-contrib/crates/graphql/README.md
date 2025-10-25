@@ -78,10 +78,6 @@ GraphQL API support with schema generation from models, query and mutation resol
 - **Network Communication**: Full TCP/HTTP2 support via tonic
 - **Streaming**: Efficient server-side streaming for real-time subscriptions
 
-### Planned
-
-Currently all planned features are implemented.
-
 ## Installation
 
 ```toml

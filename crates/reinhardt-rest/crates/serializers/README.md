@@ -461,8 +461,6 @@ println!("Average: {}ms", stats.avg_serialization_ms);
 
 **Note**: ORM integration features require the `django-compat` feature flag to be enabled. Without this flag, stub implementations will return appropriate errors.
 
-### Planned
-
 #### Additional Field Types
 
 - `DateField`, `DateTimeField`: Date and time handling with chrono integration

@@ -143,29 +143,6 @@ File upload representation with:
 - Detailed error messages for debugging
 - Integration with framework exception system
 
-## Planned
-
-### Additional Parsers
-
-- **XML Parser** - For `application/xml` and `text/xml`
-- **YAML Parser** - For `application/x-yaml`
-- **MessagePack Parser** - For binary message format
-- **Protobuf Parser** - For Protocol Buffers
-
-### Enhanced Features
-
-- **Streaming parsing** - For large file uploads without loading entire body into memory
-- **Content negotiation** - Automatic parser selection based on Accept header
-- **Custom validators** - Per-parser validation hooks
-- **Schema validation** - JSON Schema, XML Schema support
-- **Compression support** - Gzip, Brotli, Deflate decompression
-
-### Performance Optimizations
-
-- **Zero-copy parsing** - Where possible with current parser implementations
-- **Parallel multipart processing** - Parse multiple files concurrently
-- **Memory pooling** - Reuse buffers for repeated parsing operations
-
 ## Usage Example
 
 ```rust

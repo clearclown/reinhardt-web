@@ -139,28 +139,6 @@ Automatic URL routing configuration for Reinhardt framework
   - Child routers checked before parent's own routes
   - Full middleware and DI context propagation
 
-## Planned
-
-### Advanced Features
-
-- **`SimpleRouter`**: Lightweight router for basic routing needs
-  - Minimal overhead for simple applications
-  - Subset of DefaultRouter functionality
-- **Namespace-based URL reversal** (Phase 2 - In Progress):
-  - Hierarchical route naming (`"v1:users:detail"`)
-  - Nested namespace resolution
-  - URL reversal with namespace support
-- **Route caching**: Performance optimization for large route tables
-- **Custom converters**: Type-specific path parameter converters
-  - Integer, UUID, slug converters
-  - Custom validation rules
-
-### Developer Experience
-
-- **Route introspection**: Runtime route analysis and debugging
-- **OpenAPI integration**: Automatic OpenAPI schema generation from routes
-- **Route visualization**: Generate route maps for documentation
-
 ## Usage Examples
 
 ### DefaultRouter (Traditional)

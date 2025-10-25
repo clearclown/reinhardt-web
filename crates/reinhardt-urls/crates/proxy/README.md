@@ -100,6 +100,3 @@ Association proxies allow you to access attributes on related objects as if they
   - `SerializationError` - Serialization errors
 - `ProxyResult<T>` type alias for Result with ProxyError
 
-### Planned
-
-Currently all planned features are implemented.

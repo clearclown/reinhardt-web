@@ -93,44 +93,6 @@ Flexible caching framework with support for multiple backends including memory, 
 - `memcached-backend`: Enable Memcached support (optional dependency)
 - `all-backends`: Enable all backend implementations
 
-## Planned Features
-
-### Cache Backends
-
-- **File-based cache**: Persistent file system cache
-- **Memcached backend**: Memcached integration (dependency declared but not implemented)
-- **Hybrid cache**: Multi-tier caching (memory + distributed)
-
-### Advanced Caching
-
-- **Per-view caching**: View-level cache decorators
-- **Template fragment caching**: Selective template output caching
-- **QuerySet caching**: Automatic ORM query result caching
-- **Cache warming**: Pre-populate cache on startup
-- **Cache tags**: Tag-based invalidation for related entries
-
-### Cache Strategies
-
-- **Write-through**: Synchronous cache updates
-- **Write-behind**: Asynchronous cache updates
-- **Cache-aside**: Application-managed caching
-- **Read-through**: Automatic cache population on miss
-
-### Monitoring & Management
-
-- **Cache statistics**: Hit/miss rates, entry counts, memory usage
-- **Cache inspection**: List keys, view entries, export cache state
-- **Automatic cleanup**: Background task for expired entry removal
-- **Event hooks**: Pre/post cache operations callbacks
-
-### Redis Backend Completion
-
-- **Full Redis integration**: Complete implementation of Redis operations
-- **Connection pooling**: Efficient connection management
-- **Redis Cluster support**: Distributed Redis deployments
-- **Redis Sentinel support**: High availability configurations
-- **Pub/Sub support**: Cache invalidation via Redis channels
-
 ## Installation
 
 Add to your `Cargo.toml`:

@@ -46,10 +46,6 @@ This parent crate re-exports functionality from the following sub-crates:
   - Path constraint validation (snake_case parameters, no double slashes, etc.)
   - Regex-based URL matching with named capture groups
 
-### Planned
-
-- Route middleware support
-
 ## Installation
 
 Add this to your `Cargo.toml`:

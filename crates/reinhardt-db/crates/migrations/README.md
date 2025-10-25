@@ -63,8 +63,6 @@ Database migration system for managing schema changes across PostgreSQL, MySQL, 
   - `MigrationConfig`: Configuration management
   - Integration with reinhardt-di
 
-### Planned
-
 #### Advanced Features
 
 - **Migration Graph**: Complete dependency resolution system (graph.rs skeleton exists)

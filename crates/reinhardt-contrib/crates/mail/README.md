@@ -57,12 +57,3 @@ Email framework for sending emails with support for HTML and plain text, attachm
   - InvalidHeader: Email header validation errors
   - HeaderInjection: Security validation for header injection attacks
 
-### Planned
-
-- Template system integration for dynamic email content
-- File attachment support (Alternative and Attachment structs are defined but not implemented)
-- Inline image support for HTML emails
-- Advanced SMTP features (TLS/SSL, authentication methods)
-- Email validation and sanitization
-- Async email sending capabilities
-- Connection pooling for bulk email operations

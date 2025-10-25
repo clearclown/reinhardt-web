@@ -17,6 +17,14 @@
 //! // Get object or return 404 (requires "database" feature)
 //! let user = get_object_or_404::<User>(id).await?;
 //! ```
+//!
+//! ## Planned Features
+//! TODO: Custom error pages (404, 500, etc.)
+//! TODO: Error page templates
+//! TODO: Debug error pages for development
+//! TODO: Full Askama template engine integration for variable substitution
+//! TODO: Template inheritance and includes
+//! TODO: Custom template filters and tags
 
 pub mod get_or_404;
 pub mod redirect;

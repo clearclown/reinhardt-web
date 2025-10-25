@@ -175,17 +175,6 @@ impl Injectable for UserData {
 }
 ```
 
-## Planned Features
-
-現在、すべての主要な依存性注入機能が実装済みです。以下は将来的な拡張の可能性があります：
-
-### Future Enhancements
-
-- **Async Generator Syntax**: Rust の async generator が安定版になった際の統合
-- **Dependency Visualization**: 依存性グラフの可視化ツール
-- **Performance Profiling**: 依存性注入のパフォーマンス分析ツール
-- **Advanced Caching Strategies**: より高度なキャッシング戦略
-
 ## Usage Examples
 
 ### Basic Usage
@@ -369,7 +358,7 @@ RequestScope (リクエスト内キャッシュ)
 | 依存性キャッシング   | ✓                | ✓                   |
 | ネストされた依存性   | ✓                | ✓                   |
 | 依存性オーバーライド | ✓                | ✓                   |
-| `yield`パターン      | ✓                | ⏳ Planned          |
+| `yield`パターン      | ✓                | ✓                   |
 | 型安全性             | Runtime          | **Compile-time**    |
 | パフォーマンス       | 動的             | **静的・高速**      |
 

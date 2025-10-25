@@ -175,8 +175,6 @@ This crate serves as a high-level integration point, bringing together HTTP hand
   - Apps registry integration
   - Readiness state verification
 
-### Planned
-
 #### Application Registry Enhancements
 
 - Model discovery and registration

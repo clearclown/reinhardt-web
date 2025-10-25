@@ -1,3 +1,30 @@
+//! # Reinhardt ORM
+//!
+//! Object-Relational Mapping for Reinhardt framework.
+//!
+//! ## Planned Features
+//! TODO: Migration generation from model changes (provided by reinhardt-migrations)
+//! TODO: Migration dependency resolution (provided by reinhardt-migrations)
+//! TODO: Forward and backward migration execution (provided by reinhardt-migrations)
+//! TODO: Schema introspection and diffing (provided by reinhardt-migrations)
+//! TODO: Polymorphic models and queries (started, not complete)
+//! TODO: Database routing for multi-database setups (started, not complete)
+//! TODO: Instrumentation and profiling (started, not complete)
+//! TODO: Reflection and metadata inspection (started, not complete)
+//! TODO: Declarative base system (started, not complete)
+//! TODO: Session management (started, not complete)
+//! TODO: Connection pooling configuration
+//! TODO: Two-phase commit support
+//! TODO: Generated fields (started, not complete)
+//! TODO: File fields (started, not complete)
+//! TODO: GIS support (started, not complete)
+//! TODO: Common Table Expressions (CTE) support (started, not complete)
+//! TODO: Lateral joins (started, not complete)
+//! TODO: Lambda statement support (started, not complete)
+//! TODO: Absolute URL overrides (started, not complete)
+//! TODO: Composite synonyms (started, not complete)
+//! TODO: Order with respect to (started, not complete)
+
 // Core modules - always available
 pub mod aggregation;
 pub mod annotation;

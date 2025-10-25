@@ -52,8 +52,6 @@ Django-inspired messaging framework for displaying one-time notification message
   - `peek()`: View messages without clearing
   - `clear()`: Remove all messages
 
-### Planned
-
 #### Middleware Integration
 
 - Request/response middleware for automatic message handling

@@ -21,7 +21,3 @@ This is the main crate that re-exports all the core components of the Reinhardt 
 - **Prelude module** - Convenient re-exports for common imports
 - **Feature-based modularity** - Optional features for database, cache, sessions, etc.
 
-### Planned
-
-- Additional feature flag combinations for specific use cases
-- More granular feature control

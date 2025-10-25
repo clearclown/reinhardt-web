@@ -106,33 +106,6 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
   - `set_time(time)`: Set absolute time
   - Thread-safe with `Arc<RwLock<Instant>>`
 
-## Planned
-
-### Advanced Features
-
-- Distributed consensus for rate limit synchronization
-- Graceful degradation under backend failure
-- Rate limit warmup and cooldown strategies
-- Adaptive rate limiting based on system load
-- Rate limit analytics and reporting
-- Token bucket algorithm implementation
-- Leaky bucket algorithm implementation
-
-### Backend Extensions
-
-- Memcached backend support
-- Database-backed rate limiting
-- Multi-tier caching with fallback
-- Custom backend plugin system
-
-### Additional Throttle Types
-
-- Concurrent request throttling
-- Bandwidth throttling
-- Geo-based rate limiting
-- Time-of-day based rate limiting
-- Dynamic rate adjustment
-
 ## Feature Flags
 
 - `redis-backend`: Enable Redis backend support (requires Redis client dependency)

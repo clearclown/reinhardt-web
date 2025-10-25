@@ -89,13 +89,3 @@ let paginator = CursorPagination::new()
     .max_page_size(50)
     .ordering(vec!["-created_at".to_string(), "id".to_string()]);
 ```
-
-## Planned
-
-- Database integration for direct QuerySet pagination
-- Custom cursor encoding strategies
-- Configurable cursor expiry time
-- Bi-directional cursor pagination
-- Relay-style cursor pagination
-- Custom ordering strategies for cursor pagination
-- Performance optimizations for very large datasets

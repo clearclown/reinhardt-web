@@ -10,6 +10,14 @@
 //! - **Swagger UI**: Built-in Swagger UI integration
 //! - **YAML/JSON**: Export schemas in both formats
 //!
+//! ## Planned Features
+//! TODO: Add attribute macro support for field configuration (#[schema(example, description)])
+//! TODO: Implement nested schema generation with $ref references
+//! TODO: Add advanced enum handling (tagged, adjacently tagged, untagged)
+//! TODO: Integrate with serde attributes (#[serde(rename)], #[serde(skip)])
+//! TODO: Implement schema registry for component reuse
+//! TODO: Add validation constraint reflection (min, max, pattern)
+//!
 //! ## Example
 //!
 //! ```rust,ignore

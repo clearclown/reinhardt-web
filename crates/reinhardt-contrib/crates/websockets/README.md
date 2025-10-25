@@ -52,14 +52,3 @@ WebSocket protocol support for real-time bidirectional communication. Includes c
   - `on_connect`: Handle new connections
   - `on_disconnect`: Handle disconnections
 
-### Planned
-
-- WebSocket routing integration
-- Authentication and authorization hooks
-- Rate limiting and throttling
-- Automatic reconnection support
-- Message compression
-- Custom protocol support
-- Channel layers for distributed systems
-- Consumer classes for advanced patterns
-- Integration with Reinhardt middleware system

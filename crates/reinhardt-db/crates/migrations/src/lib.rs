@@ -1,6 +1,15 @@
 //! # Reinhardt Migrations
 //!
 //! Database migration system for Reinhardt framework.
+//!
+//! ## Planned Features
+//! TODO: Complete migration graph dependency resolution system
+//! TODO: Implement migration squashing to combine multiple migrations
+//! TODO: Add built-in support for complex data migrations
+//! TODO: Implement zero-downtime migration support
+//! TODO: Add automatic operation reordering and optimization
+//! TODO: Enhance atomic operations with better transaction handling
+//! TODO: Add schema history visualization tools
 
 pub mod autodetector;
 pub mod commands;

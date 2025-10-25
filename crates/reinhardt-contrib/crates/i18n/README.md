@@ -50,6 +50,3 @@ Framework for translating applications into multiple languages with Django-style
 - **Plural support**: Lazy evaluation for plural translations
 - **Context support**: Lazy evaluation for contextual translations
 
-### Planned
-
-Currently all planned features are implemented.

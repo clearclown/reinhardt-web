@@ -67,6 +67,3 @@ Hybrid properties that work both as instance attributes and class-level query ex
 
 - **hybrid_property! macro**: Convenience macro for defining hybrid properties
 
-### Planned
-
-Currently all planned features are implemented.

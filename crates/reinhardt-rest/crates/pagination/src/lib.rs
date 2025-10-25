@@ -19,6 +19,15 @@
 //!
 //! let page = paginator.paginate(&items, &request)?;
 //! ```
+//!
+//! ## Planned Features
+//! TODO: Database integration for direct QuerySet pagination
+//! TODO: Custom cursor encoding strategies
+//! TODO: Configurable cursor expiry time
+//! TODO: Bi-directional cursor pagination
+//! TODO: Relay-style cursor pagination
+//! TODO: Custom ordering strategies for cursor pagination
+//! TODO: Performance optimizations for very large datasets
 
 use async_trait::async_trait;
 use reinhardt_exception::{Error, Result};

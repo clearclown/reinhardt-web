@@ -68,6 +68,3 @@ Command-line interface for managing Reinhardt configuration files. Provides comm
   - JSON format with pretty printing
   - TOML format with pretty printing
 
-### Planned
-
-Currently all planned features are implemented.

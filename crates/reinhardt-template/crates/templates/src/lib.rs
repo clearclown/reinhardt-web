@@ -10,6 +10,16 @@
 //! - Filters and custom filters
 //! - i18n support: translation and localization
 //!
+//! ## Planned Features
+//! TODO: Implement context processors for global context variables
+//! TODO: Add custom template tags beyond filters
+//! TODO: Implement automatic HTML escaping for security
+//! TODO: Add include templates with `{% include %}` tag support
+//! TODO: Enhance i18n support with more localization features
+//! TODO: Add template debugging tools and development mode
+//! TODO: Add additional template filters beyond current set
+//! TODO: Enhance error messages with better diagnostics
+//!
 //! ## Example
 //!
 //! ```rust

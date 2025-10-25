@@ -62,6 +62,3 @@ Abstraction layer for file storage with support for local filesystem, cloud stor
 
 - Re-exports of commonly used types for convenient importing
 
-### Planned
-
-Currently all planned features are implemented.
