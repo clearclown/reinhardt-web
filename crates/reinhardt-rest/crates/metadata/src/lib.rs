@@ -32,7 +32,6 @@
 //! TODO: Model-based metadata introspection
 //! TODO: Custom metadata class support
 //! TODO: Regular expression validation patterns
-//! TODO: Custom field validators
 //! TODO: Field dependencies and conditional requirements
 //! TODO: Default value specification
 
@@ -102,6 +101,8 @@ pub struct FieldInfo {
     pub child: Option<Box<FieldInfo>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub children: Option<HashMap<String, FieldInfo>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validators: Option<Vec<FieldValidator>>,
 }
 
 /// Choice information for choice fields
@@ -109,6 +110,19 @@ pub struct FieldInfo {
 pub struct ChoiceInfo {
     pub value: String,
     pub display_name: String,
+}
+
+/// Field validator specification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FieldValidator {
+    /// Type of validator (e.g., "email", "url", "regex", "min_length", "max_length")
+    pub validator_type: String,
+    /// Optional validator configuration (e.g., regex pattern, min/max values)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub options: Option<serde_json::Value>,
+    /// Optional error message for validation failures
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 /// Action metadata (for POST, PUT, etc.)
@@ -297,6 +311,7 @@ pub struct FieldInfoBuilder {
     choices: Option<Vec<ChoiceInfo>>,
     child: Option<Box<FieldInfo>>,
     children: Option<HashMap<String, FieldInfo>>,
+    validators: Vec<FieldValidator>,
 }
 
 impl FieldInfoBuilder {
@@ -326,6 +341,7 @@ impl FieldInfoBuilder {
             choices: None,
             child: None,
             children: None,
+            validators: Vec::new(),
         }
     }
     /// Sets whether the field is required
@@ -534,6 +550,65 @@ impl FieldInfoBuilder {
         self.children = Some(children);
         self
     }
+
+    /// Adds a custom validator to the field
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_metadata::{FieldInfoBuilder, FieldType, FieldValidator};
+    ///
+    /// let validator = FieldValidator {
+    ///     validator_type: "email".to_string(),
+    ///     options: None,
+    ///     message: Some("Invalid email format".to_string()),
+    /// };
+    ///
+    /// let field = FieldInfoBuilder::new(FieldType::Email)
+    ///     .required(true)
+    ///     .add_validator(validator)
+    ///     .build();
+    ///
+    /// assert!(field.validators.is_some());
+    /// assert_eq!(field.validators.as_ref().unwrap().len(), 1);
+    /// assert_eq!(field.validators.as_ref().unwrap()[0].validator_type, "email");
+    /// ```
+    pub fn add_validator(mut self, validator: FieldValidator) -> Self {
+        self.validators.push(validator);
+        self
+    }
+
+    /// Adds multiple validators to the field
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_metadata::{FieldInfoBuilder, FieldType, FieldValidator};
+    ///
+    /// let validators = vec![
+    ///     FieldValidator {
+    ///         validator_type: "min_length".to_string(),
+    ///         options: Some(serde_json::json!({"min": 3})),
+    ///         message: Some("Too short".to_string()),
+    ///     },
+    ///     FieldValidator {
+    ///         validator_type: "max_length".to_string(),
+    ///         options: Some(serde_json::json!({"max": 50})),
+    ///         message: Some("Too long".to_string()),
+    ///     },
+    /// ];
+    ///
+    /// let field = FieldInfoBuilder::new(FieldType::String)
+    ///     .validators(validators)
+    ///     .build();
+    ///
+    /// assert!(field.validators.is_some());
+    /// assert_eq!(field.validators.as_ref().unwrap().len(), 2);
+    /// ```
+    pub fn validators(mut self, validators: Vec<FieldValidator>) -> Self {
+        self.validators = validators;
+        self
+    }
     /// Builds the final `FieldInfo` from the builder
     ///
     /// # Examples
@@ -568,6 +643,11 @@ impl FieldInfoBuilder {
             choices: self.choices,
             child: self.child,
             children: self.children,
+            validators: if self.validators.is_empty() {
+                None
+            } else {
+                Some(self.validators)
+            },
         }
     }
 }
@@ -911,5 +991,109 @@ mod tests {
         assert!(fields.contains_key("integer_field"));
         assert!(!fields.contains_key("hidden_field"));
         assert_eq!(fields.len(), 1);
+    }
+
+    #[test]
+    fn test_field_with_single_validator() {
+        let validator = FieldValidator {
+            validator_type: "email".to_string(),
+            options: None,
+            message: Some("Invalid email format".to_string()),
+        };
+
+        let field = FieldInfoBuilder::new(FieldType::Email)
+            .required(true)
+            .add_validator(validator)
+            .build();
+
+        assert!(field.validators.is_some());
+        let validators = field.validators.as_ref().unwrap();
+        assert_eq!(validators.len(), 1);
+        assert_eq!(validators[0].validator_type, "email");
+        assert_eq!(
+            validators[0].message,
+            Some("Invalid email format".to_string())
+        );
+    }
+
+    #[test]
+    fn test_field_with_multiple_validators() {
+        let validators = vec![
+            FieldValidator {
+                validator_type: "min_length".to_string(),
+                options: Some(serde_json::json!({"min": 3})),
+                message: Some("Too short".to_string()),
+            },
+            FieldValidator {
+                validator_type: "max_length".to_string(),
+                options: Some(serde_json::json!({"max": 50})),
+                message: Some("Too long".to_string()),
+            },
+            FieldValidator {
+                validator_type: "regex".to_string(),
+                options: Some(serde_json::json!({"pattern": "^[a-zA-Z0-9_]+$"})),
+                message: Some("Invalid characters".to_string()),
+            },
+        ];
+
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .validators(validators)
+            .build();
+
+        assert!(field.validators.is_some());
+        let field_validators = field.validators.as_ref().unwrap();
+        assert_eq!(field_validators.len(), 3);
+        assert_eq!(field_validators[0].validator_type, "min_length");
+        assert_eq!(field_validators[1].validator_type, "max_length");
+        assert_eq!(field_validators[2].validator_type, "regex");
+    }
+
+    #[test]
+    fn test_field_without_validators() {
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .required(true)
+            .label("Username")
+            .build();
+
+        assert!(field.validators.is_none());
+    }
+
+    #[test]
+    fn test_validator_with_options() {
+        let validator = FieldValidator {
+            validator_type: "range".to_string(),
+            options: Some(serde_json::json!({"min": 1, "max": 100})),
+            message: Some("Value must be between 1 and 100".to_string()),
+        };
+
+        let field = FieldInfoBuilder::new(FieldType::Integer)
+            .add_validator(validator)
+            .build();
+
+        let validators = field.validators.as_ref().unwrap();
+        assert_eq!(validators[0].validator_type, "range");
+        assert!(validators[0].options.is_some());
+
+        let options = validators[0].options.as_ref().unwrap();
+        assert_eq!(options["min"], 1);
+        assert_eq!(options["max"], 100);
+    }
+
+    #[test]
+    fn test_validator_serialization() {
+        let validator = FieldValidator {
+            validator_type: "custom".to_string(),
+            options: Some(serde_json::json!({"key": "value"})),
+            message: Some("Custom validation failed".to_string()),
+        };
+
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .add_validator(validator)
+            .build();
+
+        let json = serde_json::to_string(&field).unwrap();
+        assert!(json.contains("custom"));
+        assert!(json.contains("Custom validation failed"));
+        assert!(json.contains("validators"));
     }
 }
