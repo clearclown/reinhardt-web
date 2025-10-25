@@ -1,6 +1,7 @@
 //! Tests for FastAPI-style Depends functionality
 
 use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
+use serial_test::serial;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
@@ -52,7 +53,11 @@ async fn test_depends_with_cache_default() {
 }
 
 #[tokio::test]
+#[serial(counted_service)]
 async fn test_depends_no_cache() {
+    // Reset counter for this test
+    INSTANCE_COUNTER.store(0, Ordering::SeqCst);
+
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
@@ -72,7 +77,11 @@ async fn test_depends_no_cache() {
 }
 
 #[tokio::test]
+#[serial(counted_service)]
 async fn test_depends_with_cache_enabled() {
+    // Reset counter for this test
+    INSTANCE_COUNTER.store(0, Ordering::SeqCst);
+
     let singleton = Arc::new(SingletonScope::new());
     let ctx = InjectionContext::new(singleton);
 
