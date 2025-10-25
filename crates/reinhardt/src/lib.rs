@@ -189,20 +189,24 @@ pub use reinhardt_migrations::{
 // Re-export cache (cache feature)
 #[cfg(feature = "cache")]
 pub use reinhardt_cache::{
-    Cache, CacheError, CacheKeyBuilder, CacheMiddleware, CacheMiddlewareConfig, CacheResult,
-    CacheService, InMemoryCache, RedisCache,
+    Cache, CacheKeyBuilder, CacheMiddleware, CacheMiddlewareConfig, CacheService, InMemoryCache,
 };
+
+#[cfg(all(feature = "cache", feature = "redis-backend"))]
+pub use reinhardt_cache::RedisCache;
 
 // Re-export sessions (sessions feature)
 #[cfg(feature = "sessions")]
 pub use reinhardt_sessions::{
-    CacheSessionBackend, InMemorySessionBackend, Session, SessionBackend, SessionConfig,
-    SessionData, SessionError, SessionMiddleware, SessionResult, SessionService,
+    CacheSessionBackend, InMemorySessionBackend, Session, SessionBackend, SessionError,
 };
 
+#[cfg(all(feature = "sessions", feature = "middleware"))]
+pub use reinhardt_sessions::{HttpSessionConfig, SameSite, SessionMiddleware};
+
 // Re-export contrib modules (contrib feature)
-#[cfg(feature = "contrib")]
-pub use reinhardt_contrib::contrib;
+// Note: reinhardt_contrib exports individual modules (auth, sessions, etc.)
+// rather than a single "contrib" module
 
 // Re-export common external dependencies
 pub use async_trait::async_trait;
