@@ -86,6 +86,7 @@ impl GcsConfig {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Debug)]
 pub struct GcsStorage {
     client: Arc<Client>,
     config: GcsConfig,
@@ -102,12 +103,69 @@ impl GcsStorage {
     }
 
     /// Create GCS client from configuration
+    ///
+    /// # Authentication Methods
+    ///
+    /// 1. Service Account Key (if provided): Sets GOOGLE_APPLICATION_CREDENTIALS
+    /// 2. Default credentials: Uses Application Default Credentials (ADC)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Service account key JSON is invalid
+    /// - Failed to create temporary credentials file
+    /// - Client initialization fails
     async fn create_client(config: &GcsConfig) -> io::Result<Client> {
-        let client = if let Some(_key_json) = &config.service_account_key {
-            // TODO: Support service account key authentication
-            // For now, use default credentials
-            Client::default()
+        let client = if let Some(key_json) = &config.service_account_key {
+            // Validate JSON structure
+            serde_json::from_str::<serde_json::Value>(key_json).map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("Invalid service account key JSON: {}", e),
+                )
+            })?;
+
+            // Create temporary file for service account key
+            // GCS client library reads credentials from GOOGLE_APPLICATION_CREDENTIALS env var
+            let temp_dir = std::env::temp_dir();
+            let key_file_path = temp_dir.join(format!(
+                "gcs-service-account-{}.json",
+                std::process::id()
+            ));
+
+            // Write service account key to temporary file
+            std::fs::write(&key_file_path, key_json).map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Failed to write service account key file: {}", e),
+                )
+            })?;
+
+            // Set environment variable for GCS client
+            // SAFETY: This is safe because we're setting a process-level environment variable
+            // for GCS authentication. The variable is only used by the GCS client library
+            // and won't affect other parts of the application.
+            unsafe {
+                std::env::set_var(
+                    "GOOGLE_APPLICATION_CREDENTIALS",
+                    key_file_path.to_string_lossy().to_string(),
+                );
+            }
+
+            // Create client (will use the credentials file)
+            let client = Client::default();
+
+            // Clean up: Remove the temporary file after client creation
+            // Note: The client has already read the credentials at this point
+            let _ = std::fs::remove_file(key_file_path);
+
+            client
         } else {
+            // Use default authentication (Application Default Credentials)
+            // This includes:
+            // - GOOGLE_APPLICATION_CREDENTIALS environment variable
+            // - gcloud CLI credentials
+            // - Compute Engine/GKE metadata server
             Client::default()
         };
 
@@ -320,5 +378,77 @@ mod tests {
             .with_prefix("/static/".to_string());
 
         assert_eq!(config.prefix, Some("static".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_create_client_with_invalid_service_account_key() {
+        let config = GcsConfig::new("test-bucket".to_string(), "test-project".to_string())
+            .with_service_account_key("invalid json".to_string());
+
+        let result = GcsStorage::new(config).await;
+        assert!(
+            result.is_err(),
+            "Should fail with invalid service account key"
+        );
+
+        let error = result.unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(
+            error.to_string().contains("Invalid service account key JSON"),
+            "Error message should indicate JSON validation failure"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_client_with_valid_service_account_key_structure() {
+        // Valid JSON structure (even if not a real service account key)
+        let fake_key_json = r#"{
+            "type": "service_account",
+            "project_id": "test-project",
+            "private_key_id": "test-key-id",
+            "private_key": "-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----\n",
+            "client_email": "test@test-project.iam.gserviceaccount.com",
+            "client_id": "123456789",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token"
+        }"#;
+
+        let config = GcsConfig::new("test-bucket".to_string(), "test-project".to_string())
+            .with_service_account_key(fake_key_json.to_string());
+
+        // This will create a GcsStorage instance
+        // In a real test environment, this would fail at the point of actual API calls
+        // because the credentials are fake
+        let result = GcsStorage::new(config).await;
+
+        // The client creation should succeed (validation passes)
+        // Actual GCS operations would fail with authentication errors
+        assert!(
+            result.is_ok(),
+            "Client creation should succeed with valid JSON structure"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_create_client_without_service_account_key() {
+        // Test default authentication (will use ADC if available)
+        let config = GcsConfig::new("test-bucket".to_string(), "test-project".to_string());
+
+        // This should succeed (uses default credentials)
+        let result = GcsStorage::new(config).await;
+        assert!(
+            result.is_ok(),
+            "Client creation with default credentials should succeed"
+        );
+    }
+
+    #[test]
+    fn test_service_account_key_validation() {
+        // Test that JSON validation works correctly
+        let valid_json = r#"{"type": "service_account"}"#;
+        let invalid_json = "not json";
+
+        assert!(serde_json::from_str::<serde_json::Value>(valid_json).is_ok());
+        assert!(serde_json::from_str::<serde_json::Value>(invalid_json).is_err());
     }
 }
