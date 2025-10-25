@@ -33,7 +33,6 @@
 //! TODO: Custom metadata class support
 //! TODO: Regular expression validation patterns
 //! TODO: Field dependencies and conditional requirements
-//! TODO: Default value specification
 
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Result};
@@ -103,6 +102,8 @@ pub struct FieldInfo {
     pub children: Option<HashMap<String, FieldInfo>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub validators: Option<Vec<FieldValidator>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_value: Option<serde_json::Value>,
 }
 
 /// Choice information for choice fields
@@ -312,6 +313,7 @@ pub struct FieldInfoBuilder {
     child: Option<Box<FieldInfo>>,
     children: Option<HashMap<String, FieldInfo>>,
     validators: Vec<FieldValidator>,
+    default_value: Option<serde_json::Value>,
 }
 
 impl FieldInfoBuilder {
@@ -342,6 +344,7 @@ impl FieldInfoBuilder {
             child: None,
             children: None,
             validators: Vec::new(),
+            default_value: None,
         }
     }
     /// Sets whether the field is required
@@ -609,6 +612,26 @@ impl FieldInfoBuilder {
         self.validators = validators;
         self
     }
+
+    /// Sets the default value for the field
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_metadata::{FieldInfoBuilder, FieldType};
+    ///
+    /// let field = FieldInfoBuilder::new(FieldType::String)
+    ///     .required(false)
+    ///     .default_value(serde_json::json!("default"))
+    ///     .build();
+    ///
+    /// assert!(field.default_value.is_some());
+    /// assert_eq!(field.default_value, Some(serde_json::json!("default")));
+    /// ```
+    pub fn default_value(mut self, default_value: serde_json::Value) -> Self {
+        self.default_value = Some(default_value);
+        self
+    }
     /// Builds the final `FieldInfo` from the builder
     ///
     /// # Examples
@@ -648,6 +671,7 @@ impl FieldInfoBuilder {
             } else {
                 Some(self.validators)
             },
+            default_value: self.default_value,
         }
     }
 }
@@ -1095,5 +1119,96 @@ mod tests {
         assert!(json.contains("custom"));
         assert!(json.contains("Custom validation failed"));
         assert!(json.contains("validators"));
+    }
+
+    #[test]
+    fn test_field_with_default_value_string() {
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .required(false)
+            .default_value(serde_json::json!("default text"))
+            .build();
+
+        assert!(field.default_value.is_some());
+        assert_eq!(field.default_value, Some(serde_json::json!("default text")));
+    }
+
+    #[test]
+    fn test_field_with_default_value_number() {
+        let field = FieldInfoBuilder::new(FieldType::Integer)
+            .required(false)
+            .default_value(serde_json::json!(42))
+            .build();
+
+        assert!(field.default_value.is_some());
+        assert_eq!(field.default_value, Some(serde_json::json!(42)));
+    }
+
+    #[test]
+    fn test_field_with_default_value_boolean() {
+        let field = FieldInfoBuilder::new(FieldType::Boolean)
+            .required(false)
+            .default_value(serde_json::json!(true))
+            .build();
+
+        assert!(field.default_value.is_some());
+        assert_eq!(field.default_value, Some(serde_json::json!(true)));
+    }
+
+    #[test]
+    fn test_field_with_default_value_object() {
+        let default_obj = serde_json::json!({
+            "name": "John Doe",
+            "age": 30
+        });
+
+        let field = FieldInfoBuilder::new(FieldType::NestedObject)
+            .required(false)
+            .default_value(default_obj.clone())
+            .build();
+
+        assert!(field.default_value.is_some());
+        assert_eq!(field.default_value, Some(default_obj));
+    }
+
+    #[test]
+    fn test_field_with_default_value_array() {
+        let default_array = serde_json::json!(["item1", "item2", "item3"]);
+
+        let field = FieldInfoBuilder::new(FieldType::List)
+            .required(false)
+            .default_value(default_array.clone())
+            .build();
+
+        assert!(field.default_value.is_some());
+        assert_eq!(field.default_value, Some(default_array));
+    }
+
+    #[test]
+    fn test_field_without_default_value() {
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .required(true)
+            .label("Username")
+            .build();
+
+        assert!(field.default_value.is_none());
+    }
+
+    #[test]
+    fn test_default_value_serialization() {
+        let field = FieldInfoBuilder::new(FieldType::String)
+            .default_value(serde_json::json!("default"))
+            .build();
+
+        let json = serde_json::to_string(&field).unwrap();
+        assert!(json.contains("default_value"));
+        assert!(json.contains("default"));
+    }
+
+    #[test]
+    fn test_default_value_not_serialized_when_none() {
+        let field = FieldInfoBuilder::new(FieldType::String).build();
+
+        let json = serde_json::to_string(&field).unwrap();
+        assert!(!json.contains("default_value"));
     }
 }
