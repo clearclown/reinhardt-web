@@ -85,12 +85,14 @@ impl BaseCommand for MakeMessagesCommand {
             ));
         }
 
-        // Validate locales
+        // Validate and normalize locales
+        let mut normalized_locales = Vec::new();
         for locale in &locales {
             Self::validate_locale(locale)?;
+            normalized_locales.push(Self::normalize_locale(locale));
         }
 
-        ctx.verbose(&format!("Processing locales: {}", locales.join(", ")));
+        ctx.verbose(&format!("Processing locales: {}", normalized_locales.join(", ")));
 
         // Get file extensions
         let extensions = ctx.option_values("extension").unwrap_or_else(|| {
@@ -121,7 +123,7 @@ impl BaseCommand for MakeMessagesCommand {
         };
 
         // Process each locale
-        for locale in &locales {
+        for locale in &normalized_locales {
             ctx.info(&format!("Processing locale: {}", locale));
 
             let locale_dir = PathBuf::from("locale").join(locale).join("LC_MESSAGES");
@@ -164,7 +166,7 @@ impl BaseCommand for MakeMessagesCommand {
 
         ctx.success(&format!(
             "Successfully processed {} locale(s)",
-            locales.len()
+            normalized_locales.len()
         ));
         Ok(())
     }
@@ -177,34 +179,37 @@ impl MakeMessagesCommand {
             return Err(CommandError::InvalidArguments("Empty locale".to_string()));
         }
 
-        // Check for invalid characters
-        if !locale
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == '_' || c == '-')
-        {
+        // Check for invalid characters (only alphanumeric, underscore, and hyphen allowed)
+        if !locale.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-') {
             return Err(CommandError::InvalidArguments(format!(
-                "Invalid locale format: {}",
+                "Invalid locale format: {}. Only lowercase letters, numbers, underscores, and hyphens are allowed (e.g., en_us, en-US, ja_jp)",
                 locale
             )));
         }
 
         // Check for invalid patterns
-        if locale.starts_with('_') || locale.ends_with('_') {
+        if locale.starts_with('_') || locale.ends_with('_') || locale.starts_with('-') || locale.ends_with('-') {
             return Err(CommandError::InvalidArguments(format!(
-                "Locale cannot start or end with underscore: {}",
+                "Locale cannot start or end with underscore or hyphen: {}",
                 locale
             )));
         }
 
-        // Check if uppercase (Django convention is lowercase with underscore)
+        // Check if uppercase (Django convention is lowercase)
         if locale.chars().any(|c| c.is_uppercase()) {
             return Err(CommandError::InvalidArguments(format!(
-                "Locale should be lowercase with underscore (e.g., en_us, not en-US): {}",
+                "Locale should be lowercase (e.g., en_us or en-us, not EN_US or EN-US): {}",
                 locale
             )));
         }
 
         Ok(())
+    }
+
+    fn normalize_locale(locale: &str) -> String {
+        // Normalize locale: convert hyphens to underscores and to lowercase
+        // This ensures filesystem compatibility (e.g., en-US -> en_us)
+        locale.replace('-', "_").to_lowercase()
     }
 
     fn find_all_locales(base_path: &str) -> CommandResult<Vec<String>> {
@@ -550,6 +555,13 @@ impl CompileMessagesCommand {
 
         // Write .mo file (simplified binary format)
         let mo_content = Self::generate_mo_content(&messages)?;
+
+        // Ensure parent directory exists
+        if let Some(parent) = mo_file.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                CommandError::ExecutionError(format!("Failed to create directory: {}", e))
+            })?;
+        }
 
         std::fs::write(mo_file, mo_content)
             .map_err(|e| CommandError::ExecutionError(format!("Failed to write MO file: {}", e)))?;
