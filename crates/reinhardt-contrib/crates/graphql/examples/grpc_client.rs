@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let response = client.execute_mutation(request).await?;
     let data = response.into_inner();
     println!("Mutation: createUser");
-    println!("Response: {}\n", data.data.unwrap_or_default());
+    println!("Response: {}\n", data.data.clone().unwrap_or_default());
 
     // Extract user ID for next example (simple parsing)
     let user_id = if let Some(ref data_str) = data.data {
