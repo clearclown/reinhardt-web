@@ -1,7 +1,4 @@
 //! Serializers for Reinhardt REST framework
-//!
-//! ## Planned Features
-//! TODO: Add DateField and DateTimeField with chrono integration
 
 pub mod cache_invalidation;
 pub mod content_negotiation;
@@ -29,8 +26,8 @@ pub mod validators;
 pub use cache_invalidation::{CacheInvalidator, InvalidationStrategy};
 pub use content_negotiation::ContentNegotiator;
 pub use fields::{
-    BooleanField, CharField, ChoiceField, EmailField, FieldError, FloatField, IntegerField,
-    URLField,
+    BooleanField, CharField, ChoiceField, DateField, DateTimeField, EmailField, FieldError,
+    FloatField, IntegerField, URLField,
 };
 pub use hyperlinked::{HyperlinkedModelSerializer, UrlReverser};
 pub use introspection::{FieldInfo, FieldIntrospector, TypeMapper};

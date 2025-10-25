@@ -4,6 +4,7 @@
 //! and transformation in serializers.
 
 // use serde::{Deserialize, Serialize};
+use chrono::{NaiveDate, NaiveDateTime};
 use std::fmt;
 
 /// Errors that can occur during field validation
@@ -882,9 +883,261 @@ impl ChoiceField {
     }
 }
 
+/// Date field with chrono integration
+///
+/// Supports date validation and parsing using chrono's NaiveDate.
+///
+/// # Example
+///
+/// ```rust
+/// use reinhardt_serializers::fields::DateField;
+/// use chrono::NaiveDate;
+///
+/// let field = DateField::new();
+/// let date = field.parse("2024-01-15").unwrap();
+/// assert_eq!(date.year(), 2024);
+/// assert_eq!(date.month(), 1);
+/// assert_eq!(date.day(), 15);
+/// ```
+#[derive(Debug, Clone)]
+pub struct DateField {
+    pub required: bool,
+    pub allow_null: bool,
+    pub format: String,
+    pub default: Option<NaiveDate>,
+}
+
+impl DateField {
+    /// Create a new DateField with default settings (ISO 8601 format: YYYY-MM-DD)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateField;
+    ///
+    /// let field = DateField::new();
+    /// assert!(field.parse("2024-01-15").is_ok());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            required: true,
+            allow_null: false,
+            format: "%Y-%m-%d".to_string(),
+            default: None,
+        }
+    }
+
+    /// Set whether the field is required
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    /// Set whether null values are allowed
+    pub fn allow_null(mut self, allow_null: bool) -> Self {
+        self.allow_null = allow_null;
+        self
+    }
+
+    /// Set custom date format (strftime format)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateField;
+    ///
+    /// let field = DateField::new().format("%d/%m/%Y");
+    /// assert!(field.parse("15/01/2024").is_ok());
+    /// ```
+    pub fn format(mut self, format: &str) -> Self {
+        self.format = format.to_string();
+        self
+    }
+
+    /// Set default value
+    pub fn default(mut self, default: NaiveDate) -> Self {
+        self.default = Some(default);
+        self
+    }
+
+    /// Parse a date string
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateField;
+    ///
+    /// let field = DateField::new();
+    /// let date = field.parse("2024-01-15").unwrap();
+    /// assert_eq!(date.year(), 2024);
+    /// ```
+    pub fn parse(&self, value: &str) -> Result<NaiveDate, FieldError> {
+        if value.is_empty() {
+            if !self.required {
+                if let Some(default) = self.default {
+                    return Ok(default);
+                }
+            }
+            return Err(FieldError::Required);
+        }
+
+        NaiveDate::parse_from_str(value, &self.format).map_err(|_| FieldError::InvalidDate)
+    }
+
+    /// Validate a date string
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateField;
+    ///
+    /// let field = DateField::new();
+    /// assert!(field.validate("2024-01-15").is_ok());
+    /// assert!(field.validate("invalid-date").is_err());
+    /// ```
+    pub fn validate(&self, value: &str) -> Result<(), FieldError> {
+        self.parse(value)?;
+        Ok(())
+    }
+}
+
+impl Default for DateField {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// DateTime field with chrono integration
+///
+/// Supports datetime validation and parsing using chrono's NaiveDateTime.
+///
+/// # Example
+///
+/// ```rust
+/// use reinhardt_serializers::fields::DateTimeField;
+/// use chrono::NaiveDateTime;
+///
+/// let field = DateTimeField::new();
+/// let dt = field.parse("2024-01-15 14:30:00").unwrap();
+/// assert_eq!(dt.year(), 2024);
+/// assert_eq!(dt.month(), 1);
+/// assert_eq!(dt.day(), 15);
+/// assert_eq!(dt.hour(), 14);
+/// assert_eq!(dt.minute(), 30);
+/// ```
+#[derive(Debug, Clone)]
+pub struct DateTimeField {
+    pub required: bool,
+    pub allow_null: bool,
+    pub format: String,
+    pub default: Option<NaiveDateTime>,
+}
+
+impl DateTimeField {
+    /// Create a new DateTimeField with default settings (ISO 8601 format)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateTimeField;
+    ///
+    /// let field = DateTimeField::new();
+    /// assert!(field.parse("2024-01-15 14:30:00").is_ok());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            required: true,
+            allow_null: false,
+            format: "%Y-%m-%d %H:%M:%S".to_string(),
+            default: None,
+        }
+    }
+
+    /// Set whether the field is required
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    /// Set whether null values are allowed
+    pub fn allow_null(mut self, allow_null: bool) -> Self {
+        self.allow_null = allow_null;
+        self
+    }
+
+    /// Set custom datetime format (strftime format)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateTimeField;
+    ///
+    /// let field = DateTimeField::new().format("%d/%m/%Y %H:%M");
+    /// assert!(field.parse("15/01/2024 14:30").is_ok());
+    /// ```
+    pub fn format(mut self, format: &str) -> Self {
+        self.format = format.to_string();
+        self
+    }
+
+    /// Set default value
+    pub fn default(mut self, default: NaiveDateTime) -> Self {
+        self.default = Some(default);
+        self
+    }
+
+    /// Parse a datetime string
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateTimeField;
+    ///
+    /// let field = DateTimeField::new();
+    /// let dt = field.parse("2024-01-15 14:30:00").unwrap();
+    /// assert_eq!(dt.hour(), 14);
+    /// ```
+    pub fn parse(&self, value: &str) -> Result<NaiveDateTime, FieldError> {
+        if value.is_empty() {
+            if !self.required {
+                if let Some(default) = self.default {
+                    return Ok(default);
+                }
+            }
+            return Err(FieldError::Required);
+        }
+
+        NaiveDateTime::parse_from_str(value, &self.format)
+            .map_err(|_| FieldError::InvalidDateTime)
+    }
+
+    /// Validate a datetime string
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_serializers::fields::DateTimeField;
+    ///
+    /// let field = DateTimeField::new();
+    /// assert!(field.validate("2024-01-15 14:30:00").is_ok());
+    /// assert!(field.validate("invalid-datetime").is_err());
+    /// ```
+    pub fn validate(&self, value: &str) -> Result<(), FieldError> {
+        self.parse(value)?;
+        Ok(())
+    }
+}
+
+impl Default for DateTimeField {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{Datelike, Timelike};
 
     #[test]
     fn test_char_field_valid() {
@@ -984,5 +1237,59 @@ mod tests {
     fn test_choice_field_invalid() {
         let field = ChoiceField::new(vec!["red".to_string(), "green".to_string()]);
         assert_eq!(field.validate("blue"), Err(FieldError::InvalidChoice));
+    }
+
+    #[test]
+    fn test_date_field_valid() {
+        let field = DateField::new();
+        let date = field.parse("2024-01-15").unwrap();
+        assert_eq!(date.year(), 2024);
+        assert_eq!(date.month(), 1);
+        assert_eq!(date.day(), 15);
+    }
+
+    #[test]
+    fn test_date_field_invalid() {
+        let field = DateField::new();
+        assert_eq!(field.validate("invalid-date"), Err(FieldError::InvalidDate));
+    }
+
+    #[test]
+    fn test_date_field_custom_format() {
+        let field = DateField::new().format("%d/%m/%Y");
+        let date = field.parse("15/01/2024").unwrap();
+        assert_eq!(date.year(), 2024);
+        assert_eq!(date.month(), 1);
+        assert_eq!(date.day(), 15);
+    }
+
+    #[test]
+    fn test_datetime_field_valid() {
+        let field = DateTimeField::new();
+        let dt = field.parse("2024-01-15 14:30:00").unwrap();
+        assert_eq!(dt.year(), 2024);
+        assert_eq!(dt.month(), 1);
+        assert_eq!(dt.day(), 15);
+        assert_eq!(dt.hour(), 14);
+        assert_eq!(dt.minute(), 30);
+        assert_eq!(dt.second(), 0);
+    }
+
+    #[test]
+    fn test_datetime_field_invalid() {
+        let field = DateTimeField::new();
+        assert_eq!(
+            field.validate("invalid-datetime"),
+            Err(FieldError::InvalidDateTime)
+        );
+    }
+
+    #[test]
+    fn test_datetime_field_custom_format() {
+        let field = DateTimeField::new().format("%d/%m/%Y %H:%M");
+        let dt = field.parse("15/01/2024 14:30").unwrap();
+        assert_eq!(dt.year(), 2024);
+        assert_eq!(dt.hour(), 14);
+        assert_eq!(dt.minute(), 30);
     }
 }
