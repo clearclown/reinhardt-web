@@ -1,6 +1,7 @@
 //! String validators
 
 use crate::{ValidationError, ValidationResult, Validator};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use regex::Regex;
 
 /// Minimum length validator
@@ -160,6 +161,503 @@ impl Validator<str> for RegexValidator {
         } else {
             Err(ValidationError::PatternMismatch(self.message.clone()))
         }
+    }
+}
+
+/// Slug validator - validates URL-safe slugs
+///
+/// Slugs can contain lowercase letters, numbers, hyphens, and underscores.
+pub struct SlugValidator {
+    regex: Regex,
+    allow_unicode: bool,
+}
+
+impl SlugValidator {
+    /// Creates a new SlugValidator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{SlugValidator, Validator};
+    ///
+    /// let validator = SlugValidator::new();
+    /// assert!(validator.validate("my-valid-slug").is_ok());
+    /// assert!(validator.validate("my_slug_123").is_ok());
+    /// assert!(validator.validate("invalid slug").is_err());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            regex: Regex::new(r"^[-a-zA-Z0-9_]+$").unwrap(),
+            allow_unicode: false,
+        }
+    }
+
+    /// Allows Unicode characters in the slug.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{SlugValidator, Validator};
+    ///
+    /// let validator = SlugValidator::new().allow_unicode(true);
+    /// assert!(validator.validate("日本語-slug").is_ok());
+    /// ```
+    pub fn allow_unicode(mut self, allow: bool) -> Self {
+        self.allow_unicode = allow;
+        if allow {
+            self.regex = Regex::new(r"^[-\w]+$").unwrap();
+        }
+        self
+    }
+}
+
+impl Default for SlugValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for SlugValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for SlugValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        if value.is_empty() {
+            return Err(ValidationError::InvalidSlug("Slug cannot be empty".to_string()));
+        }
+
+        if self.regex.is_match(value) {
+            Ok(())
+        } else {
+            Err(ValidationError::InvalidSlug(format!(
+                "Slug must contain only letters, numbers, hyphens, and underscores{}",
+                if self.allow_unicode {
+                    " (Unicode allowed)"
+                } else {
+                    ""
+                }
+            )))
+        }
+    }
+}
+
+/// UUID validator - validates UUID formats (v1-v5)
+pub struct UUIDValidator {
+    version: Option<u8>,
+}
+
+impl UUIDValidator {
+    /// Creates a new UUIDValidator that accepts any UUID version.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{UUIDValidator, Validator};
+    ///
+    /// let validator = UUIDValidator::new();
+    /// assert!(validator.validate("550e8400-e29b-41d4-a716-446655440000").is_ok());
+    /// ```
+    pub fn new() -> Self {
+        Self { version: None }
+    }
+
+    /// Specifies the UUID version to validate (1-5).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{UUIDValidator, Validator};
+    ///
+    /// let validator = UUIDValidator::new().version(4);
+    /// assert!(validator.validate("550e8400-e29b-41d4-a716-446655440000").is_ok());
+    /// ```
+    pub fn version(mut self, version: u8) -> Self {
+        self.version = Some(version);
+        self
+    }
+}
+
+impl Default for UUIDValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for UUIDValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for UUIDValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        // UUID format: 8-4-4-4-12 hex digits
+        let uuid_regex = Regex::new(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$").unwrap();
+
+        if !uuid_regex.is_match(&value.to_lowercase()) {
+            return Err(ValidationError::InvalidUUID("Invalid UUID format".to_string()));
+        }
+
+        if let Some(version) = self.version {
+            let parts: Vec<&str> = value.split('-').collect();
+            if parts.len() != 5 {
+                return Err(ValidationError::InvalidUUID("Invalid UUID format".to_string()));
+            }
+
+            let version_part = parts[2];
+            if let Some(first_char) = version_part.chars().next() {
+                let uuid_version = first_char.to_digit(16).unwrap_or(0) as u8;
+                if uuid_version != version {
+                    return Err(ValidationError::InvalidUUID(format!(
+                        "Expected UUID version {}, got version {}",
+                        version, uuid_version
+                    )));
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// IP Address validator - validates IPv4 and IPv6 addresses
+pub struct IPAddressValidator {
+    allow_ipv4: bool,
+    allow_ipv6: bool,
+}
+
+impl IPAddressValidator {
+    /// Creates a new IPAddressValidator that accepts both IPv4 and IPv6.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{IPAddressValidator, Validator};
+    ///
+    /// let validator = IPAddressValidator::new();
+    /// assert!(validator.validate("192.168.1.1").is_ok());
+    /// assert!(validator.validate("2001:0db8:85a3:0000:0000:8a2e:0370:7334").is_ok());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            allow_ipv4: true,
+            allow_ipv6: true,
+        }
+    }
+
+    /// Creates a validator that only accepts IPv4 addresses.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{IPAddressValidator, Validator};
+    ///
+    /// let validator = IPAddressValidator::ipv4_only();
+    /// assert!(validator.validate("192.168.1.1").is_ok());
+    /// assert!(validator.validate("2001:0db8:85a3::8a2e:0370:7334").is_err());
+    /// ```
+    pub fn ipv4_only() -> Self {
+        Self {
+            allow_ipv4: true,
+            allow_ipv6: false,
+        }
+    }
+
+    /// Creates a validator that only accepts IPv6 addresses.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{IPAddressValidator, Validator};
+    ///
+    /// let validator = IPAddressValidator::ipv6_only();
+    /// assert!(validator.validate("2001:0db8:85a3::8a2e:0370:7334").is_ok());
+    /// assert!(validator.validate("192.168.1.1").is_err());
+    /// ```
+    pub fn ipv6_only() -> Self {
+        Self {
+            allow_ipv4: false,
+            allow_ipv6: true,
+        }
+    }
+}
+
+impl Default for IPAddressValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for IPAddressValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for IPAddressValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        let is_ipv4 = value.contains('.');
+        let is_ipv6 = value.contains(':');
+
+        if is_ipv4 && self.allow_ipv4 {
+            // Validate IPv4
+            let parts: Vec<&str> = value.split('.').collect();
+            if parts.len() != 4 {
+                return Err(ValidationError::InvalidIPAddress("Invalid IPv4 format".to_string()));
+            }
+
+            for part in parts {
+                match part.parse::<u8>() {
+                    Ok(_) => {}
+                    Err(_) => {
+                        return Err(ValidationError::InvalidIPAddress("Invalid IPv4 octet".to_string()));
+                    }
+                }
+            }
+            return Ok(());
+        } else if is_ipv6 && self.allow_ipv6 {
+            // Basic IPv6 validation (simplified)
+            let parts: Vec<&str> = value.split(':').collect();
+            if parts.len() < 3 || parts.len() > 8 {
+                return Err(ValidationError::InvalidIPAddress("Invalid IPv6 format".to_string()));
+            }
+
+            for part in parts {
+                if !part.is_empty() && part.len() > 4 {
+                    return Err(ValidationError::InvalidIPAddress("Invalid IPv6 segment".to_string()));
+                }
+                if !part.is_empty() {
+                    for c in part.chars() {
+                        if !c.is_ascii_hexdigit() {
+                            return Err(ValidationError::InvalidIPAddress("Invalid IPv6 character".to_string()));
+                        }
+                    }
+                }
+            }
+            return Ok(());
+        }
+
+        Err(ValidationError::InvalidIPAddress("Invalid IP address".to_string()))
+    }
+}
+
+/// Date validator - validates date strings
+pub struct DateValidator {
+    format: String,
+}
+
+impl DateValidator {
+    /// Creates a new DateValidator with ISO 8601 format (YYYY-MM-DD).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{DateValidator, Validator};
+    ///
+    /// let validator = DateValidator::new();
+    /// assert!(validator.validate("2024-01-15").is_ok());
+    /// assert!(validator.validate("invalid-date").is_err());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            format: "%Y-%m-%d".to_string(),
+        }
+    }
+
+    /// Sets a custom date format (strftime format).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{DateValidator, Validator};
+    ///
+    /// let validator = DateValidator::new().with_format("%d/%m/%Y");
+    /// assert!(validator.validate("15/01/2024").is_ok());
+    /// ```
+    pub fn with_format(mut self, format: &str) -> Self {
+        self.format = format.to_string();
+        self
+    }
+}
+
+impl Default for DateValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for DateValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for DateValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        NaiveDate::parse_from_str(value, &self.format)
+            .map(|_| ())
+            .map_err(|_| ValidationError::InvalidDate(format!("Expected format: {}", self.format)))
+    }
+}
+
+/// Time validator - validates time strings
+pub struct TimeValidator {
+    format: String,
+}
+
+impl TimeValidator {
+    /// Creates a new TimeValidator with 24-hour format (HH:MM:SS).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{TimeValidator, Validator};
+    ///
+    /// let validator = TimeValidator::new();
+    /// assert!(validator.validate("14:30:00").is_ok());
+    /// assert!(validator.validate("invalid-time").is_err());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            format: "%H:%M:%S".to_string(),
+        }
+    }
+
+    /// Sets a custom time format (strftime format).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{TimeValidator, Validator};
+    ///
+    /// let validator = TimeValidator::new().with_format("%H:%M");
+    /// assert!(validator.validate("14:30").is_ok());
+    /// ```
+    pub fn with_format(mut self, format: &str) -> Self {
+        self.format = format.to_string();
+        self
+    }
+}
+
+impl Default for TimeValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for TimeValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for TimeValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        NaiveTime::parse_from_str(value, &self.format)
+            .map(|_| ())
+            .map_err(|_| ValidationError::InvalidTime(format!("Expected format: {}", self.format)))
+    }
+}
+
+/// DateTime validator - validates datetime strings
+pub struct DateTimeValidator {
+    format: String,
+}
+
+impl DateTimeValidator {
+    /// Creates a new DateTimeValidator with ISO 8601 format.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{DateTimeValidator, Validator};
+    ///
+    /// let validator = DateTimeValidator::new();
+    /// assert!(validator.validate("2024-01-15 14:30:00").is_ok());
+    /// assert!(validator.validate("invalid-datetime").is_err());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            format: "%Y-%m-%d %H:%M:%S".to_string(),
+        }
+    }
+
+    /// Sets a custom datetime format (strftime format).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{DateTimeValidator, Validator};
+    ///
+    /// let validator = DateTimeValidator::new().with_format("%d/%m/%Y %H:%M");
+    /// assert!(validator.validate("15/01/2024 14:30").is_ok());
+    /// ```
+    pub fn with_format(mut self, format: &str) -> Self {
+        self.format = format.to_string();
+        self
+    }
+}
+
+impl Default for DateTimeValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for DateTimeValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for DateTimeValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        NaiveDateTime::parse_from_str(value, &self.format)
+            .map(|_| ())
+            .map_err(|_| ValidationError::InvalidDateTime(format!("Expected format: {}", self.format)))
+    }
+}
+
+/// JSON validator - validates JSON structure
+pub struct JSONValidator;
+
+impl JSONValidator {
+    /// Creates a new JSONValidator.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_validators::{JSONValidator, Validator};
+    ///
+    /// let validator = JSONValidator::new();
+    /// assert!(validator.validate(r#"{"key": "value"}"#).is_ok());
+    /// assert!(validator.validate("invalid-json").is_err());
+    /// ```
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Default for JSONValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Validator<String> for JSONValidator {
+    fn validate(&self, value: &String) -> ValidationResult<()> {
+        self.validate(value.as_str())
+    }
+}
+
+impl Validator<str> for JSONValidator {
+    fn validate(&self, value: &str) -> ValidationResult<()> {
+        serde_json::from_str::<serde_json::Value>(value)
+            .map(|_| ())
+            .map_err(|e| ValidationError::InvalidJSON(format!("JSON parse error: {}", e)))
     }
 }
 
