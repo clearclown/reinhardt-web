@@ -42,7 +42,6 @@
 //! TODO: Write-behind - Asynchronous cache updates
 //! TODO: Cache-aside - Application-managed caching
 //! TODO: Read-through - Automatic cache population on miss
-//! TODO: Automatic cleanup - Background task for expired entry removal
 //! TODO: Event hooks - Pre/post cache operations callbacks
 //! TODO: Full Redis integration - Complete implementation of Redis operations
 //! TODO: Connection pooling - Efficient connection management
@@ -248,6 +247,7 @@ pub struct InMemoryCache {
     default_ttl: Option<Duration>,
     hits: Arc<AtomicU64>,
     misses: Arc<AtomicU64>,
+    cleanup_interval: Option<Duration>,
 }
 
 impl InMemoryCache {
@@ -267,6 +267,7 @@ impl InMemoryCache {
             default_ttl: None,
             hits: Arc::new(AtomicU64::new(0)),
             misses: Arc::new(AtomicU64::new(0)),
+            cleanup_interval: None,
         }
     }
     /// Set a default TTL for all cache entries
@@ -448,6 +449,61 @@ impl InMemoryCache {
                 ttl_seconds,
             }
         })
+    }
+
+    /// Start automatic cleanup of expired entries
+    ///
+    /// Spawns a background task that periodically removes expired entries
+    /// from the cache. The task runs at the specified interval.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_cache::InMemoryCache;
+    /// use std::time::Duration;
+    ///
+    /// # async fn example() {
+    /// let cache = InMemoryCache::new();
+    ///
+    /// // Start cleanup every 60 seconds
+    /// cache.start_auto_cleanup(Duration::from_secs(60));
+    ///
+    /// // Cache will now automatically clean up expired entries
+    /// # }
+    /// ```
+    pub fn start_auto_cleanup(&self, interval: Duration) {
+        let cache = self.clone();
+        tokio::spawn(async move {
+            let mut interval_timer = tokio::time::interval(interval);
+            loop {
+                interval_timer.tick().await;
+                cache.cleanup_expired().await;
+            }
+        });
+    }
+
+    /// Set cleanup interval and start automatic cleanup
+    ///
+    /// This is a builder method that sets the cleanup interval
+    /// and immediately starts the background cleanup task.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_cache::InMemoryCache;
+    /// use std::time::Duration;
+    ///
+    /// # async fn example() {
+    /// let cache = InMemoryCache::new()
+    ///     .with_auto_cleanup(Duration::from_secs(60));
+    ///
+    /// // Cache will automatically clean up expired entries every 60 seconds
+    /// # }
+    /// ```
+    pub fn with_auto_cleanup(mut self, interval: Duration) -> Self {
+        self.cleanup_interval = Some(interval);
+        self.start_auto_cleanup(interval);
+        self
     }
 }
 
@@ -991,5 +1047,89 @@ mod tests {
         cache.cleanup_expired().await;
         let info = cache.inspect_entry("key1").await;
         assert!(info.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_start_auto_cleanup() {
+        let cache = InMemoryCache::new();
+
+        // Set some values with short TTL
+        cache
+            .set("key1", &"value1", Some(Duration::from_millis(50)))
+            .await
+            .unwrap();
+        cache
+            .set("key2", &"value2", Some(Duration::from_millis(50)))
+            .await
+            .unwrap();
+
+        // Start auto cleanup with short interval
+        cache.start_auto_cleanup(Duration::from_millis(30));
+
+        // Keys should exist initially
+        assert!(cache.has_key("key1").await.unwrap());
+        assert!(cache.has_key("key2").await.unwrap());
+
+        // Wait for keys to expire and cleanup to run
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Keys should be cleaned up automatically
+        assert!(!cache.has_key("key1").await.unwrap());
+        assert!(!cache.has_key("key2").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_with_auto_cleanup() {
+        let cache = InMemoryCache::new().with_auto_cleanup(Duration::from_millis(30));
+
+        // Set values with short TTL
+        cache
+            .set("key1", &"value1", Some(Duration::from_millis(50)))
+            .await
+            .unwrap();
+        cache
+            .set("key2", &"value2", Some(Duration::from_millis(50)))
+            .await
+            .unwrap();
+
+        // Keys should exist initially
+        assert!(cache.has_key("key1").await.unwrap());
+        assert!(cache.has_key("key2").await.unwrap());
+
+        // Wait for expiration and cleanup
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // Keys should be cleaned up automatically
+        assert!(!cache.has_key("key1").await.unwrap());
+        assert!(!cache.has_key("key2").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_auto_cleanup_preserves_non_expired() {
+        let cache = InMemoryCache::new();
+
+        // Start auto cleanup
+        cache.start_auto_cleanup(Duration::from_millis(30));
+
+        // Set one key with short TTL and one without
+        cache
+            .set("short_lived", &"value1", Some(Duration::from_millis(50)))
+            .await
+            .unwrap();
+        cache
+            .set("long_lived", &"value2", None)
+            .await
+            .unwrap();
+
+        // Both should exist initially
+        assert!(cache.has_key("short_lived").await.unwrap());
+        assert!(cache.has_key("long_lived").await.unwrap());
+
+        // Wait for first key to expire and cleanup to run
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        // short_lived should be gone, long_lived should remain
+        assert!(!cache.has_key("short_lived").await.unwrap());
+        assert!(cache.has_key("long_lived").await.unwrap());
     }
 }
