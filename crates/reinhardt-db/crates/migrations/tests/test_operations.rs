@@ -9,14 +9,8 @@ fn test_create_table_basic() {
     let operation = Operation::CreateTable {
         name: "test_table".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "INTEGER PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "name".to_string(),
-                type_definition: "TEXT NOT NULL".to_string(),
-            },
+            ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
+            ColumnDefinition::new("name", "TEXT NOT NULL"),
         ],
         constraints: vec![],
     };
@@ -35,14 +29,8 @@ fn test_create_table_with_constraints() {
     let operation = Operation::CreateTable {
         name: "test_table".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "INTEGER PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "email".to_string(),
-                type_definition: "TEXT NOT NULL".to_string(),
-            },
+            ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
+            ColumnDefinition::new("email", "TEXT NOT NULL"),
         ],
         constraints: vec!["UNIQUE(email)".to_string()],
     };
@@ -69,10 +57,7 @@ fn test_add_column() {
     // Test AddColumn operation
     let operation = Operation::AddColumn {
         table: "test_table".to_string(),
-        column: ColumnDefinition {
-            name: "new_field".to_string(),
-            type_definition: "TEXT".to_string(),
-        },
+        column: ColumnDefinition::new("new_field", "TEXT"),
     };
 
     let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -86,10 +71,7 @@ fn test_add_column_with_default() {
     // Test AddColumn with default value
     let operation = Operation::AddColumn {
         table: "test_table".to_string(),
-        column: ColumnDefinition {
-            name: "status".to_string(),
-            type_definition: "TEXT DEFAULT 'pending'".to_string(),
-        },
+        column: ColumnDefinition::new("status", "TEXT DEFAULT 'pending'"),
     };
 
     let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -117,10 +99,7 @@ fn test_alter_column() {
     let operation = Operation::AlterColumn {
         table: "test_table".to_string(),
         column: "field_name".to_string(),
-        new_definition: ColumnDefinition {
-            name: "field_name".to_string(),
-            type_definition: "INTEGER NOT NULL".to_string(),
-        },
+        new_definition: ColumnDefinition::new("field_name", "INTEGER NOT NULL"),
     };
 
     // SQLite doesn't support ALTER COLUMN natively
@@ -237,14 +216,8 @@ fn test_postgres_sql_generation() {
     let operation = Operation::CreateTable {
         name: "test_table".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "SERIAL PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "data".to_string(),
-                type_definition: "JSONB".to_string(),
-            },
+            ColumnDefinition::new("id", "SERIAL PRIMARY KEY"),
+            ColumnDefinition::new("data", "JSONB"),
         ],
         constraints: vec![],
     };
@@ -261,14 +234,8 @@ fn test_mysql_sql_generation() {
     let operation = Operation::CreateTable {
         name: "test_table".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "INT AUTO_INCREMENT PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "name".to_string(),
-                type_definition: "VARCHAR(100)".to_string(),
-            },
+            ColumnDefinition::new("id", "INT AUTO_INCREMENT PRIMARY KEY"),
+            ColumnDefinition::new("name", "VARCHAR(100)"),
         ],
         constraints: vec![],
     };
@@ -283,10 +250,7 @@ fn test_operation_reversibility() {
     // Test that operations can be reversed
     let forward_op = Operation::CreateTable {
         name: "test_table".to_string(),
-        columns: vec![ColumnDefinition {
-            name: "id".to_string(),
-            type_definition: "INTEGER PRIMARY KEY".to_string(),
-        }],
+        columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
         constraints: vec![],
     };
 
@@ -307,18 +271,9 @@ fn test_column_definition_with_multiple_constraints() {
     let operation = Operation::CreateTable {
         name: "users".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "INTEGER PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "email".to_string(),
-                type_definition: "TEXT NOT NULL UNIQUE".to_string(),
-            },
-            ColumnDefinition {
-                name: "age".to_string(),
-                type_definition: "INTEGER CHECK(age >= 0)".to_string(),
-            },
+            ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
+            ColumnDefinition::new("email", "TEXT NOT NULL UNIQUE"),
+            ColumnDefinition::new("age", "INTEGER CHECK(age >= 0)"),
         ],
         constraints: vec![],
     };
@@ -335,14 +290,8 @@ fn test_migrations_foreign_key_constraint() {
     let operation = Operation::CreateTable {
         name: "orders".to_string(),
         columns: vec![
-            ColumnDefinition {
-                name: "id".to_string(),
-                type_definition: "INTEGER PRIMARY KEY".to_string(),
-            },
-            ColumnDefinition {
-                name: "user_id".to_string(),
-                type_definition: "INTEGER NOT NULL".to_string(),
-            },
+            ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
+            ColumnDefinition::new("user_id", "INTEGER NOT NULL"),
         ],
         constraints: vec!["FOREIGN KEY (user_id) REFERENCES users(id)".to_string()],
     };
