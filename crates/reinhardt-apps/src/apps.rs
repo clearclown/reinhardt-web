@@ -7,12 +7,14 @@
 //! This module provides both string-based (runtime) and type-safe (compile-time)
 //! application registry mechanisms.
 
+use crate::signals;
 use std::collections::HashMap;
+use std::error::Error;
 use std::sync::{Arc, Mutex, OnceLock};
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 /// Errors that can occur when working with the application registry
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum AppError {
     #[error("Application not found: {0}")]
     NotFound(String),
@@ -118,6 +120,26 @@ impl AppConfig {
             )));
         }
 
+        Ok(())
+    }
+
+    /// Ready hook for the application
+    ///
+    /// This method is called when the application is ready, after all configurations
+    /// have been loaded and models have been registered. Override this method in
+    /// custom application configurations to perform initialization tasks.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_apps::AppConfig;
+    ///
+    /// let config = AppConfig::new("myapp", "myapp");
+    /// config.ready().expect("Ready hook should succeed");
+    /// ```
+    pub fn ready(&self) -> Result<(), Box<dyn Error>> {
+        // Default implementation does nothing
+        // Applications can override this by implementing custom AppConfig structs
         Ok(())
     }
 }
@@ -257,8 +279,21 @@ impl Apps {
                 .insert(app_name.clone(), app_config.label.clone());
         }
 
-        // 2. Call ready() method on each AppConfig (currently no-op)
-        // In the future, this would call custom ready() hooks for each app
+        // 2. Call ready() method on each AppConfig and send signals
+        let configs = self.app_configs.lock().unwrap();
+        for app_config in configs.values() {
+            // Call the ready hook
+            app_config.ready().map_err(|e| {
+                AppError::ConfigError(format!(
+                    "Ready hook failed for app '{}': {}",
+                    app_config.label, e
+                ))
+            })?;
+
+            // Send the app_ready signal
+            signals::app_ready().send(app_config);
+        }
+        drop(configs); // Release lock early
 
         // 3. Load model definitions from global ModelRegistry
         // The models are already registered via #[derive(Model)] macro
