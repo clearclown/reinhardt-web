@@ -1,9 +1,10 @@
 //! Internal cache entry structure
 
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
 /// Cache entry with expiration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct CacheEntry {
     pub(crate) value: Vec<u8>,
     pub(crate) expires_at: Option<SystemTime>,

@@ -5,7 +5,10 @@
 //! ## Features
 //!
 //! - **InMemoryCache**: Simple in-memory cache backend
+//! - **FileCache**: File-based persistent cache backend
 //! - **RedisCache**: Redis-backed cache (requires redis feature)
+//! - **Cache Warming**: Pre-populate cache on startup
+//! - **Cache Tags**: Tag-based invalidation for related entries
 //! - TTL support for automatic expiration
 //! - Async-first API
 //!
@@ -30,14 +33,11 @@
 //! ```
 //!
 //! ## Planned Features
-//! TODO: File-based cache - Persistent file system cache
 //! TODO: Memcached backend - Memcached integration (dependency declared but not implemented)
 //! TODO: Hybrid cache - Multi-tier caching (memory + distributed)
 //! TODO: Per-view caching - View-level cache decorators
 //! TODO: Template fragment caching - Selective template output caching
 //! TODO: QuerySet caching - Automatic ORM query result caching
-//! TODO: Cache warming - Pre-populate cache on startup
-//! TODO: Cache tags - Tag-based invalidation for related entries
 //! TODO: Write-through - Synchronous cache updates
 //! TODO: Write-behind - Asynchronous cache updates
 //! TODO: Cache-aside - Application-managed caching
@@ -54,7 +54,10 @@ mod key_builder;
 mod statistics;
 
 pub mod di_support;
+pub mod file_backend;
 pub mod middleware;
+pub mod tags;
+pub mod warming;
 
 #[cfg(feature = "redis-backend")]
 pub mod redis_backend;
@@ -78,3 +81,12 @@ pub use redis_backend::RedisCache;
 pub use di_support::CacheService;
 #[cfg(feature = "redis-backend")]
 pub use di_support::RedisConfig;
+
+// Re-export file backend
+pub use file_backend::FileCache;
+
+// Re-export cache warming
+pub use warming::{BatchWarmer, CacheWarmer, FunctionWarmer, ParallelWarmer};
+
+// Re-export cache tags
+pub use tags::{TaggedCache, TaggedCacheWrapper};
