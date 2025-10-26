@@ -58,6 +58,15 @@ pub enum ValidationError {
         allowed_types: String,
     },
 
+    #[error("Invalid phone number: {0}")]
+    InvalidPhoneNumber(String),
+
+    #[error("Country code not allowed: {country_code} (allowed: {allowed_countries})")]
+    CountryCodeNotAllowed {
+        country_code: String,
+        allowed_countries: String,
+    },
+
     #[error("Custom validation error: {0}")]
     Custom(String),
 }

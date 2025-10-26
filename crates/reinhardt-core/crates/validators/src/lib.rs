@@ -9,6 +9,7 @@ pub mod email;
 pub mod errors;
 pub mod identifier;
 pub mod numeric;
+pub mod phone_number;
 pub mod reserved;
 pub mod string;
 pub mod uniqueness;
@@ -20,6 +21,7 @@ pub use email::EmailValidator;
 pub use errors::{ValidationError, ValidationResult};
 pub use identifier::{ConstraintName, FieldName, IdentifierValidationError, TableName};
 pub use numeric::{MaxValueValidator, MinValueValidator, RangeValidator};
+pub use phone_number::PhoneNumberValidator;
 pub use string::{
     DateTimeValidator, DateValidator, IPAddressValidator, JSONValidator, MaxLengthValidator,
     MinLengthValidator, RegexValidator, SlugValidator, TimeValidator, UUIDValidator,
@@ -35,6 +37,7 @@ pub mod prelude {
     pub use crate::errors::*;
     pub use crate::identifier::*;
     pub use crate::numeric::*;
+    pub use crate::phone_number::*;
     pub use crate::string::*;
     pub use crate::uniqueness::*;
     pub use crate::url::*;
