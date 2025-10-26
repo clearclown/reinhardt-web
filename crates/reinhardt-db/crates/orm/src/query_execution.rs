@@ -41,7 +41,7 @@ impl QueryCompiler {
 
                 // If field and operator are empty, this is raw SQL
                 if field.is_empty() && operator.is_empty() {
-                    cond = cond.add(Expr::cust(value));
+                    cond = cond.add(Expr::cust(value.clone()));
                     return cond;
                 }
 

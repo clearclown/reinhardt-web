@@ -7,12 +7,6 @@
 //! TODO: Migration dependency resolution (provided by reinhardt-migrations)
 //! TODO: Forward and backward migration execution (provided by reinhardt-migrations)
 //! TODO: Schema introspection and diffing (provided by reinhardt-migrations)
-//! TODO: Two-phase commit support
-//! TODO: Generated fields (started, not complete)
-//! TODO: File fields (started, not complete)
-//! TODO: GIS support (started, not complete)
-//! TODO: Common Table Expressions (CTE) support (started, not complete)
-//! TODO: Lateral joins (started, not complete)
 
 // Core modules - always available
 pub mod aggregation;
@@ -109,6 +103,10 @@ pub use transaction::{
     Atomic, IsolationLevel, Savepoint, Transaction, TransactionScope, TransactionState, atomic,
     atomic_with_isolation,
 };
+pub use two_phase_commit::{
+    Participant, ParticipantStatus, TransactionState as TwoPhaseTransactionState, TwoPhaseCommit,
+    TwoPhaseCoordinator, TwoPhaseError, TwoPhaseParticipant,
+};
 pub use validators::{
     EmailValidator, FieldValidators, MaxLengthValidator, MinLengthValidator, ModelValidators,
     RangeValidator, RegexValidator, RequiredValidator, URLValidator, ValidationError, Validator,
@@ -117,6 +115,13 @@ pub use window::{
     DenseRank, FirstValue, Frame, FrameBoundary, FrameType, Lag, LastValue, Lead, NTile, NthValue,
     Rank, RowNumber, Window, WindowFunction,
 };
+
+// Two-phase commit adapters (feature-gated)
+#[cfg(feature = "postgres")]
+pub use two_phase_commit::PostgresParticipantAdapter;
+
+#[cfg(feature = "mysql")]
+pub use two_phase_commit::MySqlParticipantAdapter;
 
 // PostgreSQL-specific types
 pub use postgres_fields::{
