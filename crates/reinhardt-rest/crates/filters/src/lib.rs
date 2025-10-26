@@ -37,7 +37,7 @@ pub use filter::{FilterBackend, FilterError, FilterResult};
 pub use backend::{CustomFilterBackend, SimpleOrderingBackend, SimpleSearchBackend};
 
 #[cfg(feature = "caching")]
-pub use caching::{generate_cache_key, CacheStats, CachedFilterBackend};
+pub use caching::{CacheStats, CachedFilterBackend, generate_cache_key};
 
 pub use highlighting::{
     HighlightedResult, HtmlHighlighter, MultiFieldHighlighter, PlainTextHighlighter,
@@ -57,6 +57,8 @@ pub use searchable::SearchableModel;
 
 // Advanced filtering exports
 pub use index_hint::{IndexHint, IndexHintFilter, IndexStrategy};
-pub use optimizer::{OptimizationHint, QueryOptimizer, QueryPlan};
+pub use optimizer::{
+    DatabaseType, OptimizationHint, QueryAnalysis, QueryComplexity, QueryOptimizer, QueryPlan,
+};
 pub use relevance::{FieldBoost, RelevanceScorer, ScoredResult, ScoringAlgorithm};
 pub use synonym::{SynonymDictionary, SynonymExpander};

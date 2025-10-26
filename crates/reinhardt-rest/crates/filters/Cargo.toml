@@ -17,6 +17,8 @@ regex = "1.10"
 geo-types = "0.7"
 sha2 = "0.10"
 hex = "0.4"
+sea-query = { workspace = true }
+log = "0.4"
 
 [features]
 default = []
@@ -30,3 +32,4 @@ sqlx = { version = "0.9.0-alpha.1", features = [
   "sqlite",
 ] }
 tempfile = "3.0"
+env_logger = "0.11"
