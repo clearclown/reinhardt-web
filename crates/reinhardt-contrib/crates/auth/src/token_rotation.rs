@@ -459,12 +459,12 @@ mod tests {
         assert_eq!(manager.rotation_count(), 3);
 
         let removed = manager.cleanup_expired(2500);
-        assert_eq!(removed, 1); // Only old1 is expired (1000 + 300 = 1300 < 2500)
-        assert_eq!(manager.rotation_count(), 2);
+        assert_eq!(removed, 2); // old1 (expires 1300) and old2 (expires 2300) are both expired at 2500
+        assert_eq!(manager.rotation_count(), 1);
 
         let removed2 = manager.cleanup_expired(3500);
-        assert_eq!(removed2, 1); // old2 is now expired (2000 + 300 = 2300 < 3500)
-        assert_eq!(manager.rotation_count(), 1);
+        assert_eq!(removed2, 1); // old3 is now expired (3000 + 300 = 3300 < 3500)
+        assert_eq!(manager.rotation_count(), 0);
     }
 
     #[test]
