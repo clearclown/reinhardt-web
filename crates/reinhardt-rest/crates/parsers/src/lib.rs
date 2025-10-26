@@ -11,6 +11,16 @@
 //! - **MultiPartParser**: Handle file uploads (multipart/form-data)
 //! - **FileUploadParser**: Raw file upload handling
 //! - **CompressedParser**: Wrapper for transparent decompression (gzip, brotli, deflate)
+//! - **MessagePackParser**: Parse MessagePack binary format (application/msgpack)
+//! - **ProtobufParser**: Parse Protocol Buffers with dynamic schema support (application/protobuf)
+//! - **StreamingParser**: Memory-efficient parsing for large uploads
+//!
+//! ## Validation
+//!
+//! - **ParserValidator**: Trait for custom validation hooks (before_parse, after_parse)
+//! - **SizeLimitValidator**: Enforce maximum body size limits
+//! - **ContentTypeValidator**: Validate required content types
+//! - **CompositeValidator**: Combine multiple validators
 //!
 //! ## Example
 //!
@@ -20,24 +30,17 @@
 //! let parser = JSONParser::new();
 //! let data = parser.parse(&request).await?;
 //! ```
-//!
-//! ## Planned Features
-//! TODO: MessagePack Parser - For binary message format
-//! TODO: Protobuf Parser - For Protocol Buffers
-//! TODO: Streaming parsing - For large file uploads without loading entire body into memory
-//! TODO: Content negotiation - Automatic parser selection based on Accept header
-//! TODO: Custom validators - Per-parser validation hooks
-//! TODO: Schema validation - JSON Schema, XML Schema support
-//! TODO: Zero-copy parsing - Where possible with current parser implementations
-//! TODO: Parallel multipart processing - Parse multiple files concurrently
-//! TODO: Memory pooling - Reuse buffers for repeated parsing operations
 
 pub mod compressed;
 pub mod file;
 pub mod form;
 pub mod json;
+pub mod msgpack;
 pub mod multipart;
 pub mod parser;
+pub mod protobuf;
+pub mod streaming;
+pub mod validator;
 pub mod xml;
 pub mod yaml;
 
@@ -45,7 +48,13 @@ pub use compressed::{CompressedParser, CompressionEncoding};
 pub use file::FileUploadParser;
 pub use form::FormParser;
 pub use json::JSONParser;
+pub use msgpack::MessagePackParser;
 pub use multipart::MultiPartParser;
 pub use parser::{MediaType, ParseError, ParseResult, Parser};
+pub use protobuf::{ProtobufMessage, ProtobufParser};
+pub use streaming::{StreamChunk, StreamingParser};
+pub use validator::{
+    CompositeValidator, ContentTypeValidator, ParserValidator, SizeLimitValidator,
+};
 pub use xml::{XMLParser, XmlParserConfig, XmlParserConfigBuilder};
 pub use yaml::YamlParser;

@@ -143,6 +143,8 @@ pub enum ParsedData {
         files: Vec<UploadedFile>,
     },
     File(UploadedFile),
+    MessagePack(Value),
+    Protobuf(Value),
 }
 
 /// Uploaded file representation
