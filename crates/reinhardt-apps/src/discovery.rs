@@ -178,13 +178,13 @@ impl RelationMetadata {
 /// build_reverse_relations();
 /// ```
 pub fn build_reverse_relations() {
-    // TODO: Implement reverse relation building
-    // This requires:
-    // 1. Analyzing model metadata to find ForeignKey/ManyToMany fields
-    // 2. Creating reverse relation descriptors
-    // 3. Registering reverse relations in the model registry
-    //
-    // For now, this is a no-op as the ORM relationship system is not fully implemented
+    todo!(
+        "Implement reverse relation building - requires ORM relationship system. \
+        This requires: \
+        1. Analyzing model metadata to find ForeignKey/ManyToMany fields, \
+        2. Creating reverse relation descriptors, \
+        3. Registering reverse relations in the model registry"
+    )
 }
 
 /// Migration metadata
@@ -261,18 +261,16 @@ impl MigrationMetadata {
 /// use reinhardt_apps::discovery::discover_migrations;
 ///
 /// let migrations = discover_migrations("myapp");
-/// // Currently returns an empty vector as migration system is not implemented
-/// assert_eq!(migrations.len(), 0);
+/// // Note: This function will panic with todo!() as migration system is not yet implemented
 /// ```
 pub fn discover_migrations(_app_label: &str) -> Vec<MigrationMetadata> {
-    // TODO: Implement migration discovery
-    // This requires:
-    // 1. Integration with reinhardt-migrations crate
-    // 2. Scanning for migration files or registered migrations
-    // 3. Parsing migration dependencies
-    //
-    // For now, this returns an empty vector
-    vec![]
+    todo!(
+        "Implement migration discovery - requires reinhardt-migrations integration. \
+        This requires: \
+        1. Integration with reinhardt-migrations crate, \
+        2. Scanning for migration files or registered migrations, \
+        3. Parsing migration dependencies"
+    )
 }
 
 #[cfg(test)]
@@ -395,15 +393,14 @@ mod tests {
     }
 
     #[test]
-    fn test_discover_migrations_placeholder() {
-        // Currently returns empty as migration system is not implemented
-        let migrations = discover_migrations("myapp");
-        assert_eq!(migrations.len(), 0);
+    #[should_panic(expected = "not yet implemented")]
+    fn test_discover_migrations_not_implemented() {
+        discover_migrations("myapp");
     }
 
     #[test]
-    fn test_build_reverse_relations_placeholder() {
-        // Should not panic, even though it's a no-op
+    #[should_panic(expected = "not yet implemented")]
+    fn test_build_reverse_relations_not_implemented() {
         build_reverse_relations();
     }
 }
