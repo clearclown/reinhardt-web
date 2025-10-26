@@ -5,6 +5,8 @@
 
 use std::marker::PhantomData;
 
+use crate::reverse::ReverseRelationship;
+
 /// One-to-Many relationship field
 ///
 /// Represents the "many" side of a one-to-many relationship.
@@ -171,6 +173,38 @@ impl<T, K> OneToMany<T, K> {
 impl<T, K> Default for OneToMany<T, K> {
     fn default() -> Self {
         Self::new("items")
+    }
+}
+
+impl<T, K> ReverseRelationship for OneToMany<T, K> {
+    /// Get the reverse accessor name (returns the accessor_name for OneToMany)
+    ///
+    /// Note: For OneToMany, this returns the accessor_name itself since OneToMany
+    /// is already the reverse side of a ForeignKey relationship.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_associations::{OneToMany, ReverseRelationship};
+    ///
+    /// #[derive(Clone)]
+    /// struct Post {
+    ///     id: i64,
+    /// }
+    ///
+    /// let rel: OneToMany<Post, i64> = OneToMany::new("posts");
+    /// // For OneToMany, it returns the accessor_name itself
+    /// assert_eq!(rel.get_or_generate_reverse_name("User"), "posts");
+    /// ```
+    fn get_or_generate_reverse_name(&self, _model_name: &str) -> String {
+        // OneToMany already represents the reverse side of a relationship
+        // So we return the accessor_name directly
+        self.accessor_name.clone()
+    }
+
+    fn explicit_reverse_name(&self) -> Option<&str> {
+        // OneToMany always has an accessor_name, so this always returns Some
+        Some(&self.accessor_name)
     }
 }
 

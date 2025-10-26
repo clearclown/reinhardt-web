@@ -14,8 +14,57 @@
 //! - **FastAPI-inspired ergonomics**: Function-based endpoints with type-safe parameter extraction
 //!
 //! ## Planned Features
-//! TODO: Add more middleware configuration helpers
-//! TODO: Implement additional utility functions
+//!
+//! ### Middleware Configuration Helpers
+//!
+//! Planned middleware configuration utilities:
+//!
+//! ```rust,ignore
+//! use reinhardt_micro::prelude::*;
+//!
+//! let app = App::new()
+//!     .with_cors(CorsConfig::permissive())
+//!     .with_rate_limit(RateLimitConfig::default())
+//!     .with_compression(CompressionConfig::default())
+//!     .with_timeout(Duration::from_secs(30))
+//!     .route("/api/users", handler);
+//! ```
+//!
+//! Planned helper methods:
+//! - `with_cors()`: Quick CORS configuration
+//! - `with_rate_limit()`: Simple rate limiting setup
+//! - `with_compression()`: Response compression
+//! - `with_timeout()`: Request timeout handling
+//! - `with_logging()`: Structured logging configuration
+//! - `with_metrics()`: Metrics collection
+//!
+//! ### Additional Utility Functions
+//!
+//! Planned utility additions:
+//!
+//! ```rust,ignore
+//! use reinhardt_micro::utils::*;
+//!
+//! // Response builders
+//! ok_json(data);              // 200 OK with JSON
+//! created_json(data);         // 201 Created with JSON
+//! no_content();               // 204 No Content
+//! bad_request(message);       // 400 Bad Request
+//! unauthorized(message);      // 401 Unauthorized
+//! not_found(message);         // 404 Not Found
+//! internal_error(message);    // 500 Internal Server Error
+//!
+//! // Request helpers
+//! extract_bearer_token(&request);  // Extract JWT from Authorization header
+//! parse_query_params::<T>(&request); // Parse query string into type T
+//! validate_content_type(&request, "application/json");
+//!
+//! // Testing utilities
+//! test_request(method, path, body);  // Create test request
+//! assert_json_response(response, expected); // Assert JSON response
+//! ```
+//!
+//! For detailed implementation status, see GitHub issues with the `enhancement` label.
 //!
 //! ## Quick Start
 //!

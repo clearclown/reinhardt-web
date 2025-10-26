@@ -9,7 +9,40 @@
 //! - `reinhardt-proxy`: Lazy relationship loading for ORM
 //!
 //! ## Planned Features
-//! TODO: Add route middleware support
+//!
+//! ### Route Middleware Support
+//!
+//! Support for per-route middleware configuration is planned for future releases.
+//! This will allow attaching middleware to specific routes or route groups:
+//!
+//! ```rust,ignore
+//! use reinhardt_urls::prelude::*;
+//!
+//! let router = Router::new()
+//!     .route("/public", handler)
+//!     .route("/protected", handler)
+//!         .with_middleware(AuthMiddleware::new()) // Route-specific middleware
+//!     .group("/admin")
+//!         .with_middleware(AdminAuthMiddleware::new()) // Group middleware
+//!         .route("/users", users_handler)
+//!         .route("/settings", settings_handler);
+//! ```
+//!
+//! **Implementation Status**: Planned
+//!
+//! **Design Considerations**:
+//! - Should middleware be applied at route registration time or dynamically?
+//! - How to handle middleware ordering (global vs route-specific)?
+//! - Should middleware be composable (chain multiple middleware)?
+//! - What's the best API for route groups with shared middleware?
+//!
+//! **Required Changes**:
+//! 1. Extend `Route` struct to store middleware stack
+//! 2. Add `with_middleware()` method to router builders
+//! 3. Implement middleware execution in request handling pipeline
+//! 4. Support middleware inheritance for nested route groups
+//!
+//! See reinhardt-routers crate for the underlying routing implementation.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

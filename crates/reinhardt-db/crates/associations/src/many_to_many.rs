@@ -6,6 +6,7 @@
 use std::marker::PhantomData;
 
 use crate::foreign_key::CascadeAction;
+use crate::reverse::{generate_reverse_accessor, ReverseRelationship};
 
 /// Many-to-Many relationship field
 ///
@@ -319,6 +320,39 @@ impl<T, K> ManyToMany<T, K> {
 impl<T, K> Default for ManyToMany<T, K> {
     fn default() -> Self {
         Self::new("related_items")
+    }
+}
+
+impl<T, K> ReverseRelationship for ManyToMany<T, K> {
+    /// Get the reverse accessor name, generating one if not explicitly set
+    ///
+    /// For many-to-many relationships, generates a plural accessor name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_associations::{ManyToMany, ReverseRelationship};
+    ///
+    /// #[derive(Clone)]
+    /// struct Course {
+    ///     id: i64,
+    /// }
+    ///
+    /// let rel: ManyToMany<Course, i64> = ManyToMany::new("courses");
+    /// assert_eq!(rel.get_or_generate_reverse_name("Student"), "student_set");
+    ///
+    /// let rel_with_name: ManyToMany<Course, i64> = ManyToMany::new("courses")
+    ///     .related_name("students");
+    /// assert_eq!(rel_with_name.get_or_generate_reverse_name("Student"), "students");
+    /// ```
+    fn get_or_generate_reverse_name(&self, model_name: &str) -> String {
+        self.related_name
+            .clone()
+            .unwrap_or_else(|| generate_reverse_accessor(model_name))
+    }
+
+    fn explicit_reverse_name(&self) -> Option<&str> {
+        self.related_name.as_deref()
     }
 }
 

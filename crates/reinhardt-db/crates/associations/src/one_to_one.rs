@@ -3,10 +3,10 @@
 //! Provides One-to-One relationship types for defining bidirectional unique
 //! relationships between models.
 
-use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 use crate::foreign_key::CascadeAction;
+use crate::reverse::{generate_reverse_accessor_singular, ReverseRelationship};
 
 /// One-to-One relationship field
 ///
@@ -298,6 +298,39 @@ impl<T, K> OneToOne<T, K> {
 impl<T, K> Default for OneToOne<T, K> {
     fn default() -> Self {
         Self::new("id")
+    }
+}
+
+impl<T, K> ReverseRelationship for OneToOne<T, K> {
+    /// Get the reverse accessor name, generating one if not explicitly set
+    ///
+    /// For one-to-one relationships, generates a singular accessor name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_associations::{OneToOne, ReverseRelationship};
+    ///
+    /// #[derive(Clone)]
+    /// struct User {
+    ///     id: i64,
+    /// }
+    ///
+    /// let rel: OneToOne<User, i64> = OneToOne::new("user_id");
+    /// assert_eq!(rel.get_or_generate_reverse_name("UserProfile"), "user_profile");
+    ///
+    /// let rel_with_name: OneToOne<User, i64> = OneToOne::new("user_id")
+    ///     .related_name("profile");
+    /// assert_eq!(rel_with_name.get_or_generate_reverse_name("UserProfile"), "profile");
+    /// ```
+    fn get_or_generate_reverse_name(&self, model_name: &str) -> String {
+        self.related_name
+            .clone()
+            .unwrap_or_else(|| generate_reverse_accessor_singular(model_name))
+    }
+
+    fn explicit_reverse_name(&self) -> Option<&str> {
+        self.related_name.as_deref()
     }
 }
 

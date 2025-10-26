@@ -98,10 +98,126 @@
 //! ```
 //!
 //! ## Planned Features
-//! TODO: Renderer chaining
-//! TODO: Response caching
-//! TODO: Streaming support for large responses
-//! TODO: Compression support (gzip, brotli)
+//!
+//! The following advanced features are planned for future releases:
+//!
+//! ### Renderer Chaining
+//!
+//! Support for chaining multiple renderers to transform data through multiple stages:
+//!
+//! ```rust,ignore
+//! use reinhardt_renderers::*;
+//!
+//! let renderer_chain = RendererChain::new()
+//!     .pipe(DataTransformRenderer::new())
+//!     .pipe(JSONRenderer::new())
+//!     .pipe(CompressionRenderer::new("gzip"));
+//!
+//! // Data flows through: Transform -> JSON -> Compression
+//! let result = renderer_chain.render(&data, None).await?;
+//! ```
+//!
+//! **Design Considerations**:
+//! - How to handle errors in the middle of the chain?
+//! - Should each stage be able to modify the RendererContext?
+//! - What's the best way to compose renderers (trait objects vs generics)?
+//!
+//! ### Response Caching
+//!
+//! Cache rendered responses to avoid redundant rendering of identical data:
+//!
+//! ```rust,ignore
+//! use reinhardt_renderers::*;
+//!
+//! let cached_renderer = CachedRenderer::new(
+//!     JSONRenderer::new(),
+//!     CacheConfig {
+//!         ttl: Duration::from_secs(300),
+//!         max_size: 1000,
+//!         key_strategy: KeyStrategy::Hash,
+//!     }
+//! );
+//!
+//! // First call renders and caches
+//! let result1 = cached_renderer.render(&data, None).await?;
+//!
+//! // Second call returns cached result
+//! let result2 = cached_renderer.render(&data, None).await?;
+//! ```
+//!
+//! **Design Considerations**:
+//! - How to generate cache keys from data and context?
+//! - Should caching be renderer-specific or global?
+//! - What eviction strategy to use (LRU, TTL, size-based)?
+//! - How to handle cache invalidation?
+//!
+//! ### Streaming Support
+//!
+//! Stream large responses incrementally instead of buffering entire response:
+//!
+//! ```rust,ignore
+//! use reinhardt_renderers::*;
+//! use futures::stream::Stream;
+//!
+//! let streaming_renderer = StreamingJSONRenderer::new();
+//!
+//! // Returns Stream<Item = Bytes> instead of Bytes
+//! let stream = streaming_renderer.render_stream(&large_dataset, None).await?;
+//!
+//! // Stream can be consumed incrementally
+//! while let Some(chunk) = stream.next().await {
+//!     send_to_client(chunk?).await?;
+//! }
+//! ```
+//!
+//! **Design Considerations**:
+//! - Which renderers should support streaming (JSON arrays, CSV, XML)?
+//! - How to handle streaming errors mid-response?
+//! - Should streaming be opt-in or automatic based on data size?
+//! - What buffer sizes are optimal for different formats?
+//!
+//! ### Compression Support
+//!
+//! Automatic response compression with multiple algorithms:
+//!
+//! ```rust,ignore
+//! use reinhardt_renderers::*;
+//!
+//! let renderer = JSONRenderer::new()
+//!     .with_compression(CompressionAlgorithm::Gzip { level: 6 });
+//!
+//! // Or use content negotiation
+//! let compressed_renderer = CompressionRenderer::new(
+//!     JSONRenderer::new(),
+//!     vec![
+//!         CompressionAlgorithm::Brotli { quality: 4 },
+//!         CompressionAlgorithm::Gzip { level: 6 },
+//!         CompressionAlgorithm::Deflate,
+//!     ]
+//! );
+//!
+//! // Automatically selects best compression based on Accept-Encoding header
+//! let (bytes, content_type, encoding) = compressed_renderer
+//!     .render_compressed(&data, &context)
+//!     .await?;
+//! ```
+//!
+//! **Design Considerations**:
+//! - Which compression algorithms to support (gzip, brotli, zstd, deflate)?
+//! - How to balance compression ratio vs CPU usage?
+//! - Should compression be applied before or after caching?
+//! - What minimum response size should trigger compression?
+//! - How to handle Accept-Encoding negotiation?
+//!
+//! **Implementation Status**: All features are in planning stage
+//!
+//! **Required Changes**:
+//! 1. Extend Renderer trait with optional streaming and compression methods
+//! 2. Implement wrapper renderers (CachedRenderer, CompressedRenderer)
+//! 3. Add RendererChain builder with pipe() method
+//! 4. Integrate with reinhardt-cache for response caching
+//! 5. Add compression crate dependencies (flate2, brotli)
+//! 6. Update RendererContext to include Accept-Encoding information
 
 pub mod admin_renderer;
 pub mod csv_renderer;

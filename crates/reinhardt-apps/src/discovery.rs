@@ -187,9 +187,6 @@ pub fn build_reverse_relations() {
     let mut relations = Vec::new();
 
     for model in models {
-        // TODO: Extract relationship metadata from model
-        // This requires the ORM to expose relationship information through ModelMetadata
-        // For now, we collect placeholder relations for demonstration purposes
         let model_relations = extract_model_relations(model);
         relations.extend(model_relations);
     }
@@ -203,8 +200,7 @@ pub fn build_reverse_relations() {
 /// Extract relationship metadata from a model
 ///
 /// **Current Limitation**: The actual relationship metadata extraction from models
-/// is not yet fully implemented due to architectural constraints. This function
-/// currently returns an empty vector as a placeholder.
+/// is not yet fully implemented due to architectural constraints.
 ///
 /// # Implementation Notes
 ///
@@ -219,9 +215,27 @@ pub fn build_reverse_relations() {
 /// 1. Retrieve relationship metadata from a global registry
 /// 2. Convert relationship information to `RelationMetadata` format
 /// 3. Handle different relationship types (OneToOne, OneToMany, ManyToMany)
+///
+/// # Returns
+///
+/// Currently returns an empty vector. Full implementation pending architectural changes.
+// TODO: Implement relationship metadata extraction from ORM models
+//
+// Required changes:
+// 1. Add relationship metadata to ModelMetadata struct or create a separate registry
+// 2. Implement relationship introspection in reinhardt-orm
+// 3. Ensure no circular dependencies between crates
+// 4. Consider creating reinhardt-models-registry crate for shared relationship types
+//
+// Design considerations:
+// - Should relationship metadata be part of ModelMetadata or a separate registry?
+// - How to handle bidirectional relationship registration without circular deps?
+// - What's the best way to expose field-level relationship information?
+//
+// See docs/IMPLEMENTATION_NOTES.md for detailed architecture discussion.
 fn extract_model_relations(_model: &ModelMetadata) -> Vec<RelationMetadata> {
     // Placeholder implementation - returns empty vector
-    // This will be implemented once the architecture supports it without circular dependencies
+    // Full implementation requires architectural changes described above
     Vec::new()
 }
 
@@ -257,12 +271,34 @@ fn create_reverse_relation(relation: &RelationMetadata) {
         RelationType::OneToOne => RelationType::OneToOne,    // O2O is bidirectional
     };
 
-    // TODO: Register the reverse relation in the model registry
-    // This requires the ORM registry to support adding reverse relations dynamically
-    // The registration should add a reverse accessor to the target model that:
-    // 1. Returns a QuerySet or collection of related objects
-    // 2. Uses the appropriate loading strategy (lazy by default)
-    // 3. Handles the inverse foreign key or junction table
+    // TODO: Register reverse relation in model registry
+    //
+    // Required implementation:
+    // 1. Extend ModelMetadata or create a dynamic relation registry
+    // 2. Add reverse accessor that returns QuerySet/collection
+    // 3. Implement lazy loading strategy (lazy by default, eager via select_related)
+    // 4. Handle inverse foreign keys and junction tables for M2M
+    //
+    // Example usage after implementation:
+    // ```
+    // // For Post.author -> User, creates:
+    // // User.posts (or User.post_set if no related_name)
+    // let user = User::find(1)?;
+    // let posts = user.posts().all()?; // Returns QuerySet<Post>
+    // ```
+    //
+    // Design considerations:
+    // - Should reverse relations be added to ModelMetadata statically or dynamically?
+    // - How to generate accessor methods without derive macros?
+    // - What's the best way to handle lazy vs eager loading?
+    // - Should we use trait objects or generic types for reverse accessors?
+    //
+    // Relation details:
+    // - Reverse name: {reverse_name}
+    // - Relation type: {reverse_type:?}
+    // - From: {from} -> To: {to}
+    //
+    // See docs/IMPLEMENTATION_NOTES.md for detailed design.
 
     let _ = (reverse_name, reverse_type); // Suppress unused warnings until implementation
 }

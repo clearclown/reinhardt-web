@@ -6,6 +6,8 @@
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
+use crate::reverse::{generate_reverse_accessor, ReverseRelationship};
+
 /// Cascade action when the referenced object is deleted or updated
 ///
 /// # Examples
@@ -314,6 +316,37 @@ impl<T, K> ForeignKey<T, K> {
 impl<T, K> Default for ForeignKey<T, K> {
     fn default() -> Self {
         Self::new("id")
+    }
+}
+
+impl<T, K> ReverseRelationship for ForeignKey<T, K> {
+    /// Get the reverse accessor name, generating one if not explicitly set
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_associations::{ForeignKey, ReverseRelationship};
+    ///
+    /// #[derive(Clone)]
+    /// struct User {
+    ///     id: i64,
+    /// }
+    ///
+    /// let fk: ForeignKey<User, i64> = ForeignKey::new("author_id");
+    /// assert_eq!(fk.get_or_generate_reverse_name("Post"), "post_set");
+    ///
+    /// let fk_with_name: ForeignKey<User, i64> = ForeignKey::new("author_id")
+    ///     .related_name("posts");
+    /// assert_eq!(fk_with_name.get_or_generate_reverse_name("Post"), "posts");
+    /// ```
+    fn get_or_generate_reverse_name(&self, model_name: &str) -> String {
+        self.related_name
+            .clone()
+            .unwrap_or_else(|| generate_reverse_accessor(model_name))
+    }
+
+    fn explicit_reverse_name(&self) -> Option<&str> {
+        self.related_name.as_deref()
     }
 }
 

@@ -14,8 +14,67 @@
 //! - **Async-First**: Built on tokio and async/await from the ground up
 //!
 //! ## Planned Features
-//! TODO: Add additional feature flag combinations for specific use cases
-//! TODO: Implement more granular feature control
+//!
+//! ### Additional Feature Flag Combinations
+//!
+//! Planned feature presets for specific use cases:
+//!
+//! ```toml
+//! # API-only (REST without templates/forms)
+//! [dependencies]
+//! reinhardt = { version = "0.1", features = ["api-only"] }
+//! # Includes: routing, serializers, viewsets, auth, but excludes templates, forms
+//!
+//! # GraphQL-focused
+//! [dependencies]
+//! reinhardt = { version = "0.1", features = ["graphql-server"] }
+//! # Includes: GraphQL, subscriptions, DataLoader, but minimal REST features
+//!
+//! # WebSocket-centric
+//! [dependencies]
+//! reinhardt = { version = "0.1", features = ["websocket-server"] }
+//! # Includes: WebSocket, pub/sub, channels, real-time features
+//!
+//! # CLI/Background jobs
+//! [dependencies]
+//! reinhardt = { version = "0.1", features = ["cli-tools"] }
+//! # Includes: commands, migrations, task queue, but no HTTP server
+//!
+//! # Testing utilities
+//! [dependencies]
+//! reinhardt = { version = "0.1", features = ["test-utils"] }
+//! # Includes: test client, fixtures, factories, assertions
+//! ```
+//!
+//! ### More Granular Feature Control
+//!
+//! Planned fine-grained feature flags:
+//!
+//! ```toml
+//! # Fine-grained authentication
+//! reinhardt = { features = ["auth-jwt", "auth-session", "auth-oauth"] }
+//!
+//! # Fine-grained database support
+//! reinhardt = { features = ["db-postgres", "db-mysql", "db-sqlite"] }
+//!
+//! # Fine-grained serialization
+//! reinhardt = { features = ["serialize-json", "serialize-xml", "serialize-yaml"] }
+//!
+//! # Fine-grained middleware
+//! reinhardt = { features = ["middleware-cors", "middleware-compression", "middleware-security"] }
+//! ```
+//!
+//! **Benefits**:
+//! - Smaller binary sizes by excluding unused features
+//! - Faster compilation by reducing dependency tree
+//! - Better tree-shaking for WASM targets
+//! - Clearer dependencies for specific use cases
+//!
+//! **Implementation Status**: Under design
+//!
+//! See [docs/FEATURE_FLAGS.md](docs/FEATURE_FLAGS.md) for current feature flag documentation
+//! and [GitHub Discussions](https://github.com/yourusername/reinhardt/discussions) for
+//! feature flag proposals.
 //!
 //! ## Quick Example
 //!
