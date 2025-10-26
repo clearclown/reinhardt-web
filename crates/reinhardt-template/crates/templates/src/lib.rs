@@ -9,9 +9,11 @@
 //! - Template inheritance: `{% extends %}`, `{% block %}`
 //! - Filters and custom filters
 //! - i18n support: translation and localization
-//!
-//! ## Planned Features
-//! - Enhance i18n support with more localization features
+//!   - Context-aware translations
+//!   - Pluralization with language-specific rules
+//!   - Date/Time formatting for multiple locales
+//!   - Number formatting with locale-specific separators
+//!   - Currency formatting
 //!
 //! ## Example
 //!
@@ -75,8 +77,9 @@ pub use fs_loader::FileSystemTemplateLoader;
 pub use reinhardt_exception::Error as TemplateError;
 pub type TemplateResult<T> = reinhardt_exception::Result<T>;
 pub use i18n_filters::{
-    blocktrans, blocktrans_plural, get_current_language, localize_date_filter,
-    localize_number_filter, trans, trans_with_context,
+    blocktrans, blocktrans_plural, get_current_language, localize_currency_filter,
+    localize_date_filter, localize_date_with_format, localize_integer_filter,
+    localize_number_filter, trans, trans_plural_with_context, trans_with_context,
 };
 pub use static_filters::{init_static_config, static_filter, static_path_join, StaticConfig};
 
