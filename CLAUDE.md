@@ -39,6 +39,13 @@ For details about the Reinhardt project, please refer to README.md.
 
 - **IMMEDIATELY** delete files from `/tmp` directory once they are no longer needed
 - Clean up after each task completion
+- **IMMEDIATELY** delete backup files (`.bak`, `.backup`, `.old`, `~` suffix, etc.) once they are no longer needed
+- Backup files should never be committed to the repository
+- Examples of backup files to delete:
+  - `file.rs.bak`
+  - `module.rs.backup`
+  - `config.toml.old`
+  - `script.sh~`
 
 ### FM-3 (SHOULD): Large File Handling
 
@@ -625,7 +632,9 @@ For detailed commit guidelines including message format, granularity, and execut
 
 - ❌ NO saving files to project directory (use `/tmp`)
 - ❌ NO relative paths with more than one level up (e.g., `../..`)
+- ❌ NO committing backup files (`.bak`, `.backup`, `.old`, `~`, etc.)
 - ✅ DELETE `/tmp` files when done
+- ✅ DELETE backup files immediately when no longer needed
 - ✅ USE absolute paths or single-level relative paths
 
 ### Documentation
