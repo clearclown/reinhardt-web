@@ -17,17 +17,13 @@ tokio = { workspace = true }
 chrono = "0.4"
 uuid = { workspace = true }
 cron = "0.13"
-rand = "0.8"
+rand = { workspace = true }
 
 # Redis backend (optional)
-redis = { version = "0.24", features = [
-  "tokio-comp",
-  "connection-manager",
-], optional = true }
+redis = { workspace = true, optional = true }
 
 # Database backend (optional)
-sqlx = { version = "0.8", features = [
-  "runtime-tokio-native-tls",
+sqlx = { workspace = true, features = [
   "postgres",
   "sqlite",
   "mysql",
