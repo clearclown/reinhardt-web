@@ -43,8 +43,6 @@
 //! TODO: Cache-aside - Application-managed caching
 //! TODO: Read-through - Automatic cache population on miss
 //! TODO: Event hooks - Pre/post cache operations callbacks
-//! TODO: Full Redis integration - Complete implementation of Redis operations
-//! TODO: Connection pooling - Efficient connection management
 //! TODO: Redis Cluster support - Distributed Redis deployments
 //! TODO: Redis Sentinel support - High availability configurations
 //! TODO: Pub/Sub support - Cache invalidation via Redis channels

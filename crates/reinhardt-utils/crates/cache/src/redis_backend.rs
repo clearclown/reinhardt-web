@@ -1,30 +1,33 @@
 //! Redis cache backend
 //!
-//! Provides a Redis-backed cache implementation.
+//! Provides a Redis-backed cache implementation with connection pooling.
 
 #![cfg(feature = "redis-backend")]
 
 use crate::Cache;
 use async_trait::async_trait;
-use redis::aio::ConnectionManager;
-use redis::{AsyncCommands, Client};
+use deadpool_redis::{Config as PoolConfig, Pool, Runtime};
+use redis::AsyncCommands;
 use reinhardt_exception::{Error, Result};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use std::time::Duration;
 
-/// Redis cache backend
+/// Redis cache backend with connection pooling
 ///
 /// Stores cached values in Redis for distributed caching.
+/// Uses deadpool-redis for efficient connection management.
 #[derive(Clone)]
 pub struct RedisCache {
-    connection_manager: Arc<ConnectionManager>,
+    pool: Pool,
     default_ttl: Option<Duration>,
     key_prefix: String,
 }
 
 impl RedisCache {
     /// Create a new Redis cache with the given connection URL
+    ///
+    /// Uses default pool configuration (max_size: 16, timeouts: 5s).
+    /// For custom pool configuration, use `with_pool_config()`.
     ///
     /// # Examples
     ///
@@ -33,23 +36,55 @@ impl RedisCache {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let cache = RedisCache::new("redis://localhost:6379").await?;
-    /// // Redis cache is now configured and ready to use
+    /// // Redis cache with connection pooling is now ready
     /// # Ok(())
     /// # }
     /// ```
     pub async fn new(connection_url: impl Into<String>) -> Result<Self> {
         let url = connection_url.into();
-        let client = Client::open(url.as_str())
-            .map_err(|e| Error::Http(format!("Failed to create Redis client: {}", e)))?;
-        let connection_manager = ConnectionManager::new(client)
-            .await
-            .map_err(|e| Error::Http(format!("Failed to connect to Redis: {}", e)))?;
+        let cfg = PoolConfig::from_url(url);
+        let pool = cfg
+            .create_pool(Some(Runtime::Tokio1))
+            .map_err(|e| Error::Http(format!("Failed to create Redis pool: {}", e)))?;
 
         Ok(Self {
-            connection_manager: Arc::new(connection_manager),
+            pool,
             default_ttl: None,
             key_prefix: String::new(),
         })
+    }
+
+    /// Create a new Redis cache with custom pool configuration
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_cache::RedisCache;
+    /// use deadpool_redis::{Config, Runtime};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut config = Config::from_url("redis://localhost:6379");
+    /// config.pool = Some(deadpool_redis::PoolConfig::new(32)); // 32 connections
+    ///
+    /// let cache = RedisCache::with_pool_config(config)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_pool_config(config: PoolConfig) -> Result<Self> {
+        let pool = config
+            .create_pool(Some(Runtime::Tokio1))
+            .map_err(|e| Error::Http(format!("Failed to create Redis pool: {}", e)))?;
+
+        Ok(Self {
+            pool,
+            default_ttl: None,
+            key_prefix: String::new(),
+        })
+    }
+
+    /// Get the connection pool
+    pub fn pool(&self) -> &Pool {
+        &self.pool
     }
     /// Set default TTL for all cache entries
     ///
@@ -109,7 +144,11 @@ impl Cache for RedisCache {
         T: for<'de> Deserialize<'de> + Send,
     {
         let full_key = self.build_key(key);
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let value: Option<Vec<u8>> = conn
             .get(&full_key)
@@ -133,7 +172,11 @@ impl Cache for RedisCache {
         let full_key = self.build_key(key);
         let serialized =
             serde_json::to_vec(value).map_err(|e| Error::Serialization(e.to_string()))?;
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let effective_ttl = ttl.or(self.default_ttl);
 
@@ -155,7 +198,11 @@ impl Cache for RedisCache {
 
     async fn delete(&self, key: &str) -> Result<()> {
         let full_key = self.build_key(key);
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let _: () = conn
             .del(&full_key)
@@ -167,7 +214,11 @@ impl Cache for RedisCache {
 
     async fn has_key(&self, key: &str) -> Result<bool> {
         let full_key = self.build_key(key);
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let exists: bool = conn
             .exists(&full_key)
@@ -178,12 +229,16 @@ impl Cache for RedisCache {
     }
 
     async fn clear(&self) -> Result<()> {
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         if self.key_prefix.is_empty() {
             // Clear all keys if no prefix
             let _: () = redis::cmd("FLUSHDB")
-                .query_async(&mut conn)
+                .query_async(&mut *conn)
                 .await
                 .map_err(|e| Error::Http(format!("Failed to clear Redis cache: {}", e)))?;
         } else {
@@ -191,7 +246,7 @@ impl Cache for RedisCache {
             let pattern = format!("{}:*", self.key_prefix);
             let keys: Vec<String> = redis::cmd("KEYS")
                 .arg(&pattern)
-                .query_async(&mut conn)
+                .query_async(&mut *conn)
                 .await
                 .map_err(|e| Error::Http(format!("Failed to get keys matching pattern: {}", e)))?;
 
@@ -211,7 +266,11 @@ impl Cache for RedisCache {
         T: for<'de> Deserialize<'de> + Send,
     {
         let full_keys: Vec<String> = keys.iter().map(|k| self.build_key(k)).collect();
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let values: Vec<Option<Vec<u8>>> = conn
             .get(&full_keys)
@@ -238,7 +297,11 @@ impl Cache for RedisCache {
     where
         T: Serialize + Send + Sync,
     {
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
         let effective_ttl = ttl.or(self.default_ttl);
 
         for (key, value) in values.iter() {
@@ -265,7 +328,11 @@ impl Cache for RedisCache {
 
     async fn delete_many(&self, keys: &[&str]) -> Result<()> {
         let full_keys: Vec<String> = keys.iter().map(|k| self.build_key(k)).collect();
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let _: () = conn.del(full_keys).await.map_err(|e| {
             Error::Http(format!(
@@ -279,7 +346,11 @@ impl Cache for RedisCache {
 
     async fn incr(&self, key: &str, delta: i64) -> Result<i64> {
         let full_key = self.build_key(key);
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let result: i64 = conn
             .incr(&full_key, delta)
@@ -291,7 +362,11 @@ impl Cache for RedisCache {
 
     async fn decr(&self, key: &str, delta: i64) -> Result<i64> {
         let full_key = self.build_key(key);
-        let mut conn = (*self.connection_manager).clone();
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| Error::Http(format!("Failed to get connection from pool: {}", e)))?;
 
         let result: i64 = conn
             .decr(&full_key, delta)
