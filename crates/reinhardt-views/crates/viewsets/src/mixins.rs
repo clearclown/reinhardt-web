@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response, Result};
 
+use crate::{BatchRequest, BatchResponse};
+
 /// Mixin traits for ViewSet functionality
 /// These use composition instead of multiple inheritance
 
@@ -42,3 +44,136 @@ pub trait CrudMixin: ListMixin + RetrieveMixin + CreateMixin + UpdateMixin + Des
 // Blanket implementation for any type that implements all mixins
 impl<T> CrudMixin for T where T: ListMixin + RetrieveMixin + CreateMixin + UpdateMixin + DestroyMixin
 {}
+
+/// Bulk create mixin - provides bulk_create() action
+///
+/// # Example
+///
+/// ```
+/// use reinhardt_viewsets::{BulkCreateMixin, BatchRequest, BatchResponse, BatchOperation};
+/// use reinhardt_apps::{Request, Response, Result};
+/// use async_trait::async_trait;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// struct User {
+///     id: i64,
+///     name: String,
+/// }
+///
+/// struct UserViewSet;
+///
+/// #[async_trait]
+/// impl BulkCreateMixin for UserViewSet {
+///     type Item = User;
+///
+///     async fn bulk_create(&self, request: BatchRequest<Self::Item>) -> Result<BatchResponse<Self::Item>> {
+///         // Implementation would create multiple users in a transaction
+///         todo!("Implement bulk creation with database transaction")
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait BulkCreateMixin: Send + Sync {
+    /// The type of item to create
+    type Item: Send + Sync;
+
+    /// Create multiple items in a single request
+    ///
+    /// Implementations should use database transactions to ensure atomicity.
+    async fn bulk_create(
+        &self,
+        request: BatchRequest<Self::Item>,
+    ) -> Result<BatchResponse<Self::Item>>;
+}
+
+/// Bulk update mixin - provides bulk_update() action
+///
+/// # Example
+///
+/// ```
+/// use reinhardt_viewsets::{BulkUpdateMixin, BatchRequest, BatchResponse, BatchOperation};
+/// use reinhardt_apps::{Request, Response, Result};
+/// use async_trait::async_trait;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// struct User {
+///     id: i64,
+///     name: String,
+/// }
+///
+/// struct UserViewSet;
+///
+/// #[async_trait]
+/// impl BulkUpdateMixin for UserViewSet {
+///     type Item = User;
+///
+///     async fn bulk_update(&self, request: BatchRequest<Self::Item>) -> Result<BatchResponse<Self::Item>> {
+///         // Implementation would update multiple users in a transaction
+///         todo!("Implement bulk update with database transaction")
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait BulkUpdateMixin: Send + Sync {
+    /// The type of item to update
+    type Item: Send + Sync;
+
+    /// Update multiple items in a single request
+    ///
+    /// Implementations should use database transactions to ensure atomicity.
+    async fn bulk_update(
+        &self,
+        request: BatchRequest<Self::Item>,
+    ) -> Result<BatchResponse<Self::Item>>;
+}
+
+/// Bulk delete mixin - provides bulk_delete() action
+///
+/// # Example
+///
+/// ```
+/// use reinhardt_viewsets::{BulkDeleteMixin, BatchRequest, BatchResponse, BatchOperation};
+/// use reinhardt_apps::{Request, Response, Result};
+/// use async_trait::async_trait;
+/// use serde::{Serialize, Deserialize};
+///
+/// #[derive(Debug, Clone, Serialize, Deserialize)]
+/// struct User {
+///     id: i64,
+///     name: String,
+/// }
+///
+/// struct UserViewSet;
+///
+/// #[async_trait]
+/// impl BulkDeleteMixin for UserViewSet {
+///     type Item = User;
+///
+///     async fn bulk_delete(&self, request: BatchRequest<Self::Item>) -> Result<BatchResponse<Self::Item>> {
+///         // Implementation would delete multiple users in a transaction
+///         todo!("Implement bulk deletion with database transaction")
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait BulkDeleteMixin: Send + Sync {
+    /// The type of item to delete
+    type Item: Send + Sync;
+
+    /// Delete multiple items in a single request
+    ///
+    /// Implementations should use database transactions to ensure atomicity.
+    async fn bulk_delete(
+        &self,
+        request: BatchRequest<Self::Item>,
+    ) -> Result<BatchResponse<Self::Item>>;
+}
+
+/// Composite trait for all bulk operations
+#[async_trait]
+pub trait BulkOperationsMixin: BulkCreateMixin + BulkUpdateMixin + BulkDeleteMixin {}
+
+// Blanket implementation for any type that implements all bulk mixins
+impl<T> BulkOperationsMixin for T where T: BulkCreateMixin + BulkUpdateMixin + BulkDeleteMixin {}
