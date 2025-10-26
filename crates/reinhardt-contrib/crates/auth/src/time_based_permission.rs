@@ -267,7 +267,7 @@ impl Default for TimeBasedPermission {
 
 #[async_trait]
 impl Permission for TimeBasedPermission {
-    async fn has_permission(&self, _context: &PermissionContext) -> bool {
+    async fn has_permission(&self, _context: &PermissionContext<'_>) -> bool {
         let now = Utc::now();
         self.is_allowed_at(&now)
     }
