@@ -24,11 +24,14 @@ futures = { workspace = true }
 redis = { version = "0.27", features = [
   "tokio-comp",
   "connection-manager",
+  "cluster",
+  "cluster-async",
+  "sentinel",
 ], optional = true }
 deadpool-redis = { version = "0.18", optional = true }
 
 # Memcached support
-memcache = { version = "0.17", optional = true }
+memcache-async = { version = "0.4", optional = true }
 
 # Time utilities
 chrono = { version = "0.4", features = ["serde"] }
@@ -39,8 +42,10 @@ md5 = "0.7"
 [features]
 default = []
 redis-backend = ["redis", "deadpool-redis"]
-memcached-backend = ["memcache"]
-all-backends = ["redis-backend", "memcached-backend"]
+redis-cluster = ["redis-backend"]
+redis-sentinel = ["redis-backend"]
+memcached-backend = ["memcache-async"]
+all-backends = ["redis-backend", "redis-cluster", "redis-sentinel", "memcached-backend"]
 
 [dev-dependencies]
 tokio = { workspace = true }

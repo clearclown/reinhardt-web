@@ -6,7 +6,12 @@
 //!
 //! - **InMemoryCache**: Simple in-memory cache backend
 //! - **FileCache**: File-based persistent cache backend
-//! - **RedisCache**: Redis-backed cache (requires redis feature)
+//! - **RedisCache**: Redis-backed cache (requires redis-backend feature)
+//! - **MemcachedCache**: Memcached-backed cache (requires memcached-backend feature)
+//! - **HybridCache**: Multi-tier caching (memory + distributed)
+//! - **RedisClusterCache**: Redis Cluster support (requires redis-cluster feature)
+//! - **RedisSentinelCache**: Redis Sentinel support (requires redis-sentinel feature)
+//! - **Pub/Sub**: Cache invalidation via Redis channels (requires redis-backend feature)
 //! - **Cache Warming**: Pre-populate cache on startup
 //! - **Cache Tags**: Tag-based invalidation for related entries
 //! - TTL support for automatic expiration
@@ -32,20 +37,6 @@
 //! # }
 //! ```
 //!
-//! ## Planned Features
-//! TODO: Memcached backend - Memcached integration (dependency declared but not implemented)
-//! TODO: Hybrid cache - Multi-tier caching (memory + distributed)
-//! TODO: Per-view caching - View-level cache decorators
-//! TODO: Template fragment caching - Selective template output caching
-//! TODO: QuerySet caching - Automatic ORM query result caching
-//! TODO: Write-through - Synchronous cache updates
-//! TODO: Write-behind - Asynchronous cache updates
-//! TODO: Cache-aside - Application-managed caching
-//! TODO: Read-through - Automatic cache population on miss
-//! TODO: Event hooks - Pre/post cache operations callbacks
-//! TODO: Redis Cluster support - Distributed Redis deployments
-//! TODO: Redis Sentinel support - High availability configurations
-//! TODO: Pub/Sub support - Cache invalidation via Redis channels
 
 mod cache_trait;
 mod entry;
@@ -62,6 +53,20 @@ pub mod warming;
 #[cfg(feature = "redis-backend")]
 pub mod redis_backend;
 
+#[cfg(feature = "memcached-backend")]
+pub mod memcached;
+
+pub mod hybrid;
+
+#[cfg(feature = "redis-cluster")]
+pub mod redis_cluster;
+
+#[cfg(feature = "redis-sentinel")]
+pub mod redis_sentinel;
+
+#[cfg(feature = "redis-backend")]
+pub mod pubsub;
+
 // Re-export exception types
 pub use reinhardt_exception::Result;
 
@@ -76,6 +81,20 @@ pub use middleware::{CacheMiddleware, CacheMiddlewareConfig};
 
 #[cfg(feature = "redis-backend")]
 pub use redis_backend::RedisCache;
+
+#[cfg(feature = "memcached-backend")]
+pub use memcached::MemcachedCache;
+
+pub use hybrid::HybridCache;
+
+#[cfg(feature = "redis-cluster")]
+pub use redis_cluster::RedisClusterCache;
+
+#[cfg(feature = "redis-sentinel")]
+pub use redis_sentinel::RedisSentinelCache;
+
+#[cfg(feature = "redis-backend")]
+pub use pubsub::{CacheInvalidation, CacheInvalidationChannel};
 
 // Re-export DI support
 pub use di_support::CacheService;
