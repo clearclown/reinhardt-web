@@ -1,15 +1,46 @@
 //! Cursor-based pagination implementation
+//!
+//! This module provides cursor-based pagination with support for:
+//! - Custom cursor encoding strategies via [`encoder`]
+//! - Bi-directional pagination
+//! - Relay-style pagination via [`relay`]
+//! - Custom ordering strategies via [`ordering`]
+
+pub mod encoder;
+pub mod ordering;
+pub mod relay;
 
 use async_trait::async_trait;
-use reinhardt_exception::{Error, Result};
+use reinhardt_exception::Result;
 
 use crate::core::{AsyncPaginator, PaginatedResponse, Paginator, SchemaParameter};
+pub use encoder::{Base64CursorEncoder, CursorEncoder};
+pub use ordering::{CreatedAtOrdering, IdOrdering, OrderingStrategy};
+pub use relay::{Connection, Edge, PageInfo, RelayPagination};
+
+use std::sync::Arc;
 
 /// Cursor-based pagination for large datasets
 ///
 /// Provides consistent pagination even when items are added/removed.
 /// Uses opaque cursor tokens instead of page numbers.
-#[derive(Debug, Clone)]
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_pagination::CursorPagination;
+///
+/// let paginator = CursorPagination::new()
+///     .page_size(20)
+///     .max_page_size(100);
+///
+/// // Use with custom encoder
+/// use reinhardt_pagination::cursor::Base64CursorEncoder;
+/// let encoder = Base64CursorEncoder::new();
+/// let paginator = CursorPagination::new()
+///     .with_encoder(encoder);
+/// ```
+#[derive(Clone)]
 pub struct CursorPagination {
     /// Default page size
     pub page_size: usize,
@@ -21,6 +52,10 @@ pub struct CursorPagination {
     pub ordering: Vec<String>,
     /// Maximum allowed page size
     pub max_page_size: Option<usize>,
+    /// Cursor encoder
+    encoder: Arc<dyn CursorEncoder>,
+    /// Enable bi-directional pagination
+    bidirectional: bool,
 }
 
 impl Default for CursorPagination {
@@ -31,6 +66,8 @@ impl Default for CursorPagination {
             page_size_query_param: Some("page_size".to_string()),
             ordering: vec!["-created".to_string()],
             max_page_size: Some(100),
+            encoder: Arc::new(Base64CursorEncoder::new()),
+            bidirectional: false,
         }
     }
 }
@@ -51,6 +88,7 @@ impl CursorPagination {
     pub fn new() -> Self {
         Self::default()
     }
+
     /// Sets the default page size for cursor pagination
     ///
     /// # Examples
@@ -65,6 +103,7 @@ impl CursorPagination {
         self.page_size = size;
         self
     }
+
     /// Sets the maximum allowed page size
     ///
     /// # Examples
@@ -81,6 +120,7 @@ impl CursorPagination {
         self.max_page_size = Some(size);
         self
     }
+
     /// Sets the ordering fields for cursor-based pagination
     ///
     /// # Examples
@@ -97,76 +137,38 @@ impl CursorPagination {
         self
     }
 
-    /// Encode cursor with timestamp and checksum for security
-    /// Format: base64(position:timestamp:checksum)
-    fn encode_cursor(&self, position: usize) -> String {
-        use base64::{Engine as _, engine::general_purpose};
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-
-        // Create checksum to prevent tampering
-        let mut hasher = DefaultHasher::new();
-        position.hash(&mut hasher);
-        timestamp.hash(&mut hasher);
-        let checksum = hasher.finish();
-
-        let cursor_data = format!("{}:{}:{}", position, timestamp, checksum);
-        general_purpose::STANDARD.encode(cursor_data.as_bytes())
+    /// Sets a custom cursor encoder
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_pagination::CursorPagination;
+    /// use reinhardt_pagination::cursor::Base64CursorEncoder;
+    ///
+    /// let encoder = Base64CursorEncoder::new().expiry_seconds(3600);
+    /// let paginator = CursorPagination::new()
+    ///     .with_encoder(encoder);
+    /// ```
+    pub fn with_encoder<E: CursorEncoder + 'static>(mut self, encoder: E) -> Self {
+        self.encoder = Arc::new(encoder);
+        self
     }
 
-    /// Decode and validate cursor
-    fn decode_cursor(&self, cursor: &str) -> Result<usize> {
-        use base64::{Engine as _, engine::general_purpose};
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let decoded = general_purpose::STANDARD
-            .decode(cursor)
-            .map_err(|_| Error::InvalidPage("Invalid cursor".to_string()))?;
-        let cursor_data = String::from_utf8(decoded)
-            .map_err(|_| Error::InvalidPage("Invalid cursor encoding".to_string()))?;
-
-        // Parse cursor components
-        let parts: Vec<&str> = cursor_data.split(':').collect();
-        if parts.len() != 3 {
-            return Err(Error::InvalidPage("Malformed cursor".to_string()));
-        }
-
-        let position: usize = parts[0]
-            .parse()
-            .map_err(|_| Error::InvalidPage("Invalid cursor value".to_string()))?;
-        let timestamp: u64 = parts[1]
-            .parse()
-            .map_err(|_| Error::InvalidPage("Invalid cursor timestamp".to_string()))?;
-        let provided_checksum: u64 = parts[2]
-            .parse()
-            .map_err(|_| Error::InvalidPage("Invalid cursor checksum".to_string()))?;
-
-        // Verify checksum
-        let mut hasher = DefaultHasher::new();
-        position.hash(&mut hasher);
-        timestamp.hash(&mut hasher);
-        let expected_checksum = hasher.finish();
-
-        if provided_checksum != expected_checksum {
-            return Err(Error::InvalidPage("Cursor checksum mismatch".to_string()));
-        }
-
-        // Check if cursor is too old (optional: 24 hour expiry)
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        if now - timestamp > 86400 {
-            return Err(Error::Validation("Cursor expired".to_string()));
-        }
-
-        Ok(position)
+    /// Enable bi-directional cursor pagination
+    ///
+    /// When enabled, both previous and next cursors are provided for navigation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_pagination::CursorPagination;
+    ///
+    /// let paginator = CursorPagination::new()
+    ///     .with_bidirectional();
+    /// ```
+    pub fn with_bidirectional(mut self) -> Self {
+        self.bidirectional = true;
+        self
     }
 
     fn build_url(&self, base_url: &str, cursor: &str) -> String {
@@ -187,6 +189,19 @@ impl CursorPagination {
         }
 
         new_url.to_string()
+    }
+}
+
+impl std::fmt::Debug for CursorPagination {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CursorPagination")
+            .field("page_size", &self.page_size)
+            .field("cursor_query_param", &self.cursor_query_param)
+            .field("page_size_query_param", &self.page_size_query_param)
+            .field("ordering", &self.ordering)
+            .field("max_page_size", &self.max_page_size)
+            .field("bidirectional", &self.bidirectional)
+            .finish()
     }
 }
 
@@ -225,7 +240,7 @@ impl Paginator for CursorPagination {
 
         // Get position from cursor
         let position = if let Some(cursor) = cursor_param {
-            self.decode_cursor(cursor)?
+            self.encoder.decode(cursor)?
         } else {
             0
         };
@@ -239,19 +254,19 @@ impl Paginator for CursorPagination {
 
         // Build next/previous cursors
         let next = if end < total_count {
-            let next_cursor = self.encode_cursor(end);
+            let next_cursor = self.encoder.encode(end)?;
             Some(self.build_url(base_url, &next_cursor))
         } else {
             None
         };
 
-        let previous = if position > 0 {
-            let prev_position = if position >= self.page_size {
-                position - self.page_size
+        let previous = if self.bidirectional && position > 0 {
+            let prev_position = if position >= page_size {
+                position - page_size
             } else {
                 0
             };
-            let prev_cursor = self.encode_cursor(prev_position);
+            let prev_cursor = self.encoder.encode(prev_position)?;
             Some(self.build_url(base_url, &prev_cursor))
         } else {
             None

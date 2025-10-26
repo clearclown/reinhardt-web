@@ -6,7 +6,16 @@
 //!
 //! - **PageNumberPagination**: Simple page number based pagination
 //! - **LimitOffsetPagination**: Limit/offset based pagination
-//! - **CursorPagination**: Cursor-based pagination for large datasets
+//! - **CursorPagination**: Cursor-based pagination for large datasets with custom encoding
+//!
+//! ## Features
+//!
+//! ### Cursor Pagination
+//!
+//! - **Custom cursor encoding strategies**: Base64, JWT (future), or custom implementations
+//! - **Bi-directional pagination**: Navigate forward and backward through datasets
+//! - **Relay-style pagination**: GraphQL Relay Cursor Connections Specification
+//! - **Custom ordering strategies**: Define how items are ordered for stable pagination
 //!
 //! ## Example
 //!
@@ -20,17 +29,25 @@
 //! let page = paginator.paginate(&items, &request)?;
 //! ```
 //!
-//! ## Planned Features
-//! TODO: Database integration for direct QuerySet pagination
-//! TODO: Custom cursor encoding strategies
-//! TODO: Configurable cursor expiry time
-//! TODO: Bi-directional cursor pagination
-//! TODO: Relay-style cursor pagination
-//! TODO: Custom ordering strategies for cursor pagination
-//! TODO: Performance optimizations for very large datasets
+//! ## Cursor Pagination Example
+//!
+//! ```rust,ignore
+//! use reinhardt_pagination::CursorPagination;
+//! use reinhardt_pagination::cursor::{Base64CursorEncoder, RelayPagination};
+//!
+//! // Standard cursor pagination
+//! let paginator = CursorPagination::new()
+//!     .page_size(20)
+//!     .with_bidirectional();
+//!
+//! // Relay-style pagination
+//! let relay = RelayPagination::new()
+//!     .default_page_size(10)
+//!     .max_page_size(100);
+//! ```
 
 mod core;
-mod cursor;
+pub mod cursor;
 mod limit_offset;
 mod page_number;
 
@@ -445,7 +462,7 @@ mod tests {
     #[test]
     fn test_cursor_pagination_navigation() {
         let items: Vec<i32> = (1..=25).collect();
-        let paginator = CursorPagination::new().page_size(10);
+        let paginator = CursorPagination::new().page_size(10).with_bidirectional();
 
         // First page
         let page1 = paginator
@@ -1202,6 +1219,120 @@ mod tests {
                 Some(30)
             ]
         );
+    }
+
+    // ========================================
+    // Advanced Cursor Pagination Tests
+    // ========================================
+
+    #[test]
+    fn test_cursor_pagination_with_custom_encoder() {
+        use crate::cursor::Base64CursorEncoder;
+
+        let items: Vec<i32> = (1..=30).collect();
+        let encoder = Base64CursorEncoder::new().expiry_seconds(3600);
+        let paginator = CursorPagination::new().page_size(10).with_encoder(encoder);
+
+        let page = paginator
+            .paginate(&items, None, "http://api.example.com/items")
+            .unwrap();
+
+        assert_eq!(page.results.len(), 10);
+        assert!(page.next.is_some());
+    }
+
+    #[test]
+    fn test_cursor_pagination_bidirectional() {
+        let items: Vec<i32> = (1..=30).collect();
+        let paginator = CursorPagination::new().page_size(10).with_bidirectional();
+
+        // First page - no previous
+        let page1 = paginator
+            .paginate(&items, None, "http://api.example.com/items")
+            .unwrap();
+        assert!(page1.next.is_some());
+        assert!(page1.previous.is_none());
+
+        // Navigate to second page
+        let next_url = page1.next.unwrap();
+        let url = url::Url::parse(&next_url).unwrap();
+        let cursor = url
+            .query_pairs()
+            .find(|(key, _)| key == "cursor")
+            .map(|(_, value)| value.to_string())
+            .unwrap();
+
+        let page2 = paginator
+            .paginate(&items, Some(&cursor), &next_url)
+            .unwrap();
+
+        // Second page should have both next and previous
+        assert!(page2.next.is_some());
+        assert!(page2.previous.is_some());
+    }
+
+    #[test]
+    fn test_relay_pagination_basic() {
+        use crate::cursor::RelayPagination;
+
+        let items: Vec<i32> = (1..=100).collect();
+        let paginator = RelayPagination::new().default_page_size(10);
+
+        let connection = paginator
+            .paginate(&items, Some(10), None, None, None)
+            .unwrap();
+
+        assert_eq!(connection.edges.len(), 10);
+        assert!(connection.page_info.has_next_page);
+        assert!(!connection.page_info.has_previous_page);
+        assert_eq!(connection.total_count, Some(100));
+    }
+
+    #[test]
+    fn test_relay_pagination_with_after() {
+        use crate::cursor::RelayPagination;
+
+        let items: Vec<i32> = (1..=100).collect();
+        let paginator = RelayPagination::new();
+
+        // First page
+        let page1 = paginator
+            .paginate(&items, Some(10), None, None, None)
+            .unwrap();
+        let after_cursor = page1.page_info.end_cursor.unwrap();
+
+        // Second page
+        let page2 = paginator
+            .paginate(&items, Some(10), Some(&after_cursor), None, None)
+            .unwrap();
+
+        assert_eq!(page2.edges[0].node, 11);
+        assert!(page2.page_info.has_previous_page);
+    }
+
+    #[test]
+    fn test_ordering_strategy_created_at() {
+        use crate::cursor::{CreatedAtOrdering, OrderingStrategy};
+
+        let ordering = CreatedAtOrdering::new();
+        assert_eq!(ordering.fields(), vec!["-created_at", "id"]);
+
+        let custom = CreatedAtOrdering::new().with_fields("created", "pk");
+        assert_eq!(custom.fields(), vec!["-created", "pk"]);
+    }
+
+    #[test]
+    fn test_ordering_strategy_id() {
+        use crate::cursor::{IdOrdering, OrderingStrategy};
+
+        let asc = IdOrdering::new();
+        assert_eq!(asc.fields(), vec!["id"]);
+
+        let desc = IdOrdering::descending();
+        assert_eq!(desc.fields(), vec!["-id"]);
+
+        let custom = IdOrdering::new().with_field("pk");
+        assert_eq!(custom.fields(), vec!["pk"]);
     }
 
     // Tests for async operations are in a separate module
