@@ -11,14 +11,7 @@
 //! - i18n support: translation and localization
 //!
 //! ## Planned Features
-//! TODO: Implement context processors for global context variables
-//! TODO: Add custom template tags beyond filters
-//! TODO: Implement automatic HTML escaping for security
-//! TODO: Add include templates with `{% include %}` tag support
-//! TODO: Enhance i18n support with more localization features
-//! TODO: Add template debugging tools and development mode
-//! TODO: Add additional template filters beyond current set
-//! TODO: Enhance error messages with better diagnostics
+//! - Enhance i18n support with more localization features
 //!
 //! ## Example
 //!
@@ -37,12 +30,16 @@
 //! ```
 
 pub mod advanced_filters;
+pub mod context_processors;
 pub mod custom_filters;
 pub mod debug_tools;
 pub mod error_reporting;
+pub mod escaping;
 pub mod fs_loader;
 pub mod i18n_filters;
+pub mod include_tag;
 pub mod static_filters;
+pub mod tags;
 
 pub use advanced_filters::{
     add, default as default_filter, filesizeformat, first, floatformat, join as join_filter, last,
@@ -54,12 +51,25 @@ pub use custom_filters::{
     capitalize, default, join, length, ljust, lower, replace, reverse, rjust, split, striptags,
     title, trim, truncate, upper,
 };
+pub use context_processors::{
+    debug_context_processor, media_context_processor, request_context_processor,
+    static_context_processor, user_context_processor, ContextProcessorRegistry,
+};
 pub use debug_tools::{
     debug_filter, get_debug_panel, get_debug_panel_mut, init_debug_panel, DebugPanel,
-    TemplateContext, TemplateProfile,
+    PerformanceMetrics, TemplateContext, TemplateProfile, TemplateTrace, TraceEvent,
 };
 pub use error_reporting::{
-    suggest_similar, TemplateError as EnhancedTemplateError, TemplateErrorContext,
+    suggest_similar, EnhancedError, ErrorReporter, ErrorSeverity,
+    TemplateError as EnhancedTemplateError, TemplateErrorContext,
+};
+pub use escaping::{
+    escape, escape_css, escape_html, escape_html_attr, escape_js, unescape, unescape_html,
+    SafeString,
+};
+pub use include_tag::{include_template, process_includes, TemplateIncludeManager};
+pub use tags::{
+    alert_tag, breadcrumb_tag, css_class_tag, image_tag, link_tag, TemplateTagRegistry,
 };
 pub use fs_loader::FileSystemTemplateLoader;
 pub use reinhardt_exception::Error as TemplateError;

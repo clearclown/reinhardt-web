@@ -15,6 +15,7 @@ reinhardt-i18n = { workspace = true }
 reinhardt-exception = { workspace = true }
 chrono = { version = "0.4", features = ["serde"] }
 urlencoding = "2.1"
+regex = "1.11"
 
 [dev-dependencies]
 tempfile = "3.0"

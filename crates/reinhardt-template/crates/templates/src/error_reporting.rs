@@ -442,3 +442,307 @@ mod tests {
         assert!(formatted.contains("line 11"));
     }
 }
+
+// ============================================================================
+// Extended error reporting features
+// ============================================================================
+
+/// Error severity level
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ErrorSeverity {
+    /// Warning - template may still render
+    Warning,
+    /// Error - template cannot render
+    Error,
+    /// Critical - system-level issue
+    Critical,
+}
+
+impl ErrorSeverity {
+    /// Get the severity as a string
+    pub fn as_str(&self) -> &str {
+        match self {
+            ErrorSeverity::Warning => "WARNING",
+            ErrorSeverity::Error => "ERROR",
+            ErrorSeverity::Critical => "CRITICAL",
+        }
+    }
+}
+
+/// Enhanced template error with severity and additional context
+#[derive(Debug, Clone)]
+pub struct EnhancedError {
+    /// Error severity
+    pub severity: ErrorSeverity,
+    /// Error context
+    pub context: TemplateErrorContext,
+    /// Stack trace of template includes
+    pub stack_trace: Vec<String>,
+    /// Related errors
+    pub related_errors: Vec<String>,
+}
+
+impl EnhancedError {
+    /// Create a new enhanced error
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_templates::{EnhancedError, ErrorSeverity, TemplateErrorContext};
+    ///
+    /// let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+    /// let error = EnhancedError::new(ErrorSeverity::Error, context);
+    /// assert_eq!(error.severity, ErrorSeverity::Error);
+    /// ```
+    pub fn new(severity: ErrorSeverity, context: TemplateErrorContext) -> Self {
+        Self {
+            severity,
+            context,
+            stack_trace: Vec::new(),
+            related_errors: Vec::new(),
+        }
+    }
+
+    /// Add a template to the stack trace
+    pub fn with_stack_trace(mut self, templates: Vec<String>) -> Self {
+        self.stack_trace = templates;
+        self
+    }
+
+    /// Add related errors
+    pub fn with_related_errors(mut self, errors: Vec<String>) -> Self {
+        self.related_errors = errors;
+        self
+    }
+
+    /// Format the error for display
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_templates::{EnhancedError, ErrorSeverity, TemplateErrorContext};
+    ///
+    /// let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+    /// let error = EnhancedError::new(ErrorSeverity::Error, context);
+    /// let formatted = error.format();
+    /// assert!(formatted.contains("ERROR"));
+    /// ```
+    pub fn format(&self) -> String {
+        let mut output = format!("[{}] ", self.severity.as_str());
+        output.push_str(&self.context.format());
+
+        if !self.stack_trace.is_empty() {
+            output.push_str("\nStack trace:\n");
+            for (i, template) in self.stack_trace.iter().enumerate() {
+                output.push_str(&format!("  {} {}\n", i + 1, template));
+            }
+        }
+
+        if !self.related_errors.is_empty() {
+            output.push_str("\nRelated errors:\n");
+            for error in &self.related_errors {
+                output.push_str(&format!("  - {}\n", error));
+            }
+        }
+
+        output
+    }
+}
+
+impl std::fmt::Display for EnhancedError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.format())
+    }
+}
+
+/// Error reporter with aggregation capabilities
+pub struct ErrorReporter {
+    errors: Vec<EnhancedError>,
+    warnings: Vec<EnhancedError>,
+}
+
+impl ErrorReporter {
+    /// Create a new error reporter
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_templates::ErrorReporter;
+    ///
+    /// let reporter = ErrorReporter::new();
+    /// assert!(!reporter.has_errors());
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            errors: Vec::new(),
+            warnings: Vec::new(),
+        }
+    }
+
+    /// Add an error
+    pub fn add_error(&mut self, error: EnhancedError) {
+        match error.severity {
+            ErrorSeverity::Warning => self.warnings.push(error),
+            ErrorSeverity::Error | ErrorSeverity::Critical => self.errors.push(error),
+        }
+    }
+
+    /// Check if there are any errors
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    /// Check if there are any warnings
+    pub fn has_warnings(&self) -> bool {
+        !self.warnings.is_empty()
+    }
+
+    /// Get error count
+    pub fn error_count(&self) -> usize {
+        self.errors.len()
+    }
+
+    /// Get warning count
+    pub fn warning_count(&self) -> usize {
+        self.warnings.len()
+    }
+
+    /// Get a summary report
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_templates::{ErrorReporter, EnhancedError, ErrorSeverity, TemplateErrorContext};
+    ///
+    /// let mut reporter = ErrorReporter::new();
+    /// let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+    /// reporter.add_error(EnhancedError::new(ErrorSeverity::Error, context));
+    ///
+    /// let summary = reporter.summary();
+    /// assert!(summary.contains("1 error"));
+    /// ```
+    pub fn summary(&self) -> String {
+        let mut output = String::from("=== Error Report ===\n\n");
+
+        if self.has_errors() {
+            output.push_str(&format!("Errors: {}\n", self.errors.len()));
+            for (i, error) in self.errors.iter().enumerate() {
+                output.push_str(&format!("\n{}. {}\n", i + 1, error.format()));
+            }
+        }
+
+        if self.has_warnings() {
+            output.push_str(&format!("\nWarnings: {}\n", self.warnings.len()));
+            for (i, warning) in self.warnings.iter().enumerate() {
+                output.push_str(&format!("\n{}. {}\n", i + 1, warning.format()));
+            }
+        }
+
+        if !self.has_errors() && !self.has_warnings() {
+            output.push_str("No errors or warnings\n");
+        }
+
+        output
+    }
+
+    /// Clear all errors and warnings
+    pub fn clear(&mut self) {
+        self.errors.clear();
+        self.warnings.clear();
+    }
+}
+
+impl Default for ErrorReporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(test)]
+mod extended_tests {
+    use super::*;
+
+    #[test]
+    fn test_error_severity_as_str() {
+        assert_eq!(ErrorSeverity::Warning.as_str(), "WARNING");
+        assert_eq!(ErrorSeverity::Error.as_str(), "ERROR");
+        assert_eq!(ErrorSeverity::Critical.as_str(), "CRITICAL");
+    }
+
+    #[test]
+    fn test_enhanced_error_new() {
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        let error = EnhancedError::new(ErrorSeverity::Error, context);
+
+        assert_eq!(error.severity, ErrorSeverity::Error);
+        assert!(error.stack_trace.is_empty());
+        assert!(error.related_errors.is_empty());
+    }
+
+    #[test]
+    fn test_enhanced_error_with_stack_trace() {
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        let error = EnhancedError::new(ErrorSeverity::Error, context)
+            .with_stack_trace(vec!["base.html".to_string(), "test.html".to_string()]);
+
+        assert_eq!(error.stack_trace.len(), 2);
+    }
+
+    #[test]
+    fn test_enhanced_error_format() {
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        let error = EnhancedError::new(ErrorSeverity::Error, context);
+
+        let formatted = error.format();
+        assert!(formatted.contains("ERROR"));
+        assert!(formatted.contains("test.html"));
+    }
+
+    #[test]
+    fn test_error_reporter_new() {
+        let reporter = ErrorReporter::new();
+        assert!(!reporter.has_errors());
+        assert!(!reporter.has_warnings());
+    }
+
+    #[test]
+    fn test_error_reporter_add_error() {
+        let mut reporter = ErrorReporter::new();
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        reporter.add_error(EnhancedError::new(ErrorSeverity::Error, context));
+
+        assert!(reporter.has_errors());
+        assert_eq!(reporter.error_count(), 1);
+    }
+
+    #[test]
+    fn test_error_reporter_add_warning() {
+        let mut reporter = ErrorReporter::new();
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test warning");
+        reporter.add_error(EnhancedError::new(ErrorSeverity::Warning, context));
+
+        assert!(reporter.has_warnings());
+        assert_eq!(reporter.warning_count(), 1);
+    }
+
+    #[test]
+    fn test_error_reporter_summary() {
+        let mut reporter = ErrorReporter::new();
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        reporter.add_error(EnhancedError::new(ErrorSeverity::Error, context));
+
+        let summary = reporter.summary();
+        assert!(summary.contains("Errors: 1"));
+    }
+
+    #[test]
+    fn test_error_reporter_clear() {
+        let mut reporter = ErrorReporter::new();
+        let context = TemplateErrorContext::new("test.html", 10, None, "Test error");
+        reporter.add_error(EnhancedError::new(ErrorSeverity::Error, context));
+
+        assert!(reporter.has_errors());
+        reporter.clear();
+        assert!(!reporter.has_errors());
+    }
+}
