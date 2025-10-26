@@ -9,12 +9,9 @@
 //! - **Customization**: Override and extend generated schemas
 //! - **Swagger UI**: Built-in Swagger UI integration
 //! - **YAML/JSON**: Export schemas in both formats
-//!
-//! ## Planned Features
-//! TODO: Implement nested schema generation with $ref references
-//! TODO: Add advanced enum handling (tagged, adjacently tagged, untagged)
-//! TODO: Integrate with serde attributes (#[serde(rename)], #[serde(skip)])
-//! TODO: Implement schema registry for component reuse
+//! - **Schema Registry**: Centralized schema management with $ref references
+//! - **Enum Support**: Tagged, adjacently tagged, and untagged enum handling
+//! - **Serde Integration**: Support for `#[serde(rename)]`, `#[serde(skip)]`, and more
 //!
 //! ## Example
 //!
@@ -32,23 +29,29 @@
 //! ```
 
 pub mod auto_schema;
+pub mod enum_schema;
 pub mod generator;
 pub mod openapi;
 pub mod param_metadata;
+pub mod registry;
+pub mod serde_attrs;
 pub mod swagger;
 pub mod viewset_inspector;
 
 use thiserror::Error;
 
 pub use auto_schema::{SchemaObject, ToSchema};
+pub use enum_schema::{EnumSchemaBuilder, EnumTagging};
 pub use generator::SchemaGenerator;
 pub use openapi::{
     ComponentsExt, Header, Info, MediaType, OpenApiSchema, OpenApiSchemaExt, Operation,
     OperationExt, Parameter, ParameterExt, ParameterIn as ParameterLocation, PathItem, PathItemExt,
-    RequestBody, Required, Response, ResponsesExt, Schema, SchemaExt, Server,
+    RequestBody, RefOr, Required, Response, ResponsesExt, Schema, SchemaExt, Server,
 };
 pub use param_metadata::{CookieParam, HeaderParam, ParameterMetadata, PathParam, QueryParam};
+pub use registry::SchemaRegistry;
 pub use reinhardt_openapi_macros::Schema;
+pub use serde_attrs::{FieldMetadata, RenameAll, SchemaBuilderExt};
 pub use swagger::SwaggerUI;
 pub use viewset_inspector::{InspectorConfig, ViewSetInspector};
 
