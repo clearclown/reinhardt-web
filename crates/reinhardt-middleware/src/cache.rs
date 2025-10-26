@@ -366,7 +366,8 @@ impl CacheMiddleware {
         // Hash with SHA256
         let mut hasher = Sha256::new();
         hasher.update(base.as_bytes());
-        format!("{:x}", hasher.finalize())
+        let result = hasher.finalize();
+        hex::encode(result)
     }
 }
 
