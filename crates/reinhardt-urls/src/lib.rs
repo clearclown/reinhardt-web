@@ -4,45 +4,45 @@
 //! for the Reinhardt web framework. It is a unified interface over the following
 //! internal crates:
 //!
-//! - `reinhardt-routers`: URL routing and pattern matching
+//! - `reinhardt-routers`: URL routing and pattern matching with middleware support
 //! - `reinhardt-routers-macros`: Compile-time URL validation macros
 //! - `reinhardt-proxy`: Lazy relationship loading for ORM
 //!
-//! ## Planned Features
+//! ## Features
 //!
 //! ### Route Middleware Support
 //!
-//! Support for per-route middleware configuration is planned for future releases.
-//! This will allow attaching middleware to specific routes or route groups:
+//! Per-route middleware configuration is now available. You can attach middleware
+//! to specific routes or route groups:
 //!
-//! ```rust,ignore
-//! use reinhardt_urls::prelude::*;
+//! ```rust,no_run
+//! use reinhardt_routers::{UnifiedRouter, RouteGroup};
+//! use reinhardt_middleware::LoggingMiddleware;
+//! use hyper::Method;
+//! use std::sync::Arc;
+//! # use reinhardt_apps::{Request, Response, Result};
 //!
-//! let router = Router::new()
-//!     .route("/public", handler)
-//!     .route("/protected", handler)
-//!         .with_middleware(AuthMiddleware::new()) // Route-specific middleware
-//!     .group("/admin")
-//!         .with_middleware(AdminAuthMiddleware::new()) // Group middleware
-//!         .route("/users", users_handler)
-//!         .route("/settings", settings_handler);
+//! # async fn handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
+//! # async fn users_handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
+//! # async fn settings_handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
+//! let router = UnifiedRouter::new()
+//!     .function("/public", Method::GET, handler)
+//!     .function("/protected", Method::GET, handler)
+//!         .with_route_middleware(Arc::new(LoggingMiddleware)) // Route-specific middleware
+//!     .mount("/admin", RouteGroup::new()
+//!         .with_middleware(Arc::new(LoggingMiddleware)) // Group middleware
+//!         .function("/users", Method::GET, users_handler)
+//!         .function("/settings", Method::GET, settings_handler)
+//!         .build());
 //! ```
 //!
-//! **Implementation Status**: Planned
+//! **Features**:
+//! - Per-route middleware configuration
+//! - Route group middleware with inheritance
+//! - Middleware composition and chaining
+//! - Proper execution order: global → group → route → handler
 //!
-//! **Design Considerations**:
-//! - Should middleware be applied at route registration time or dynamically?
-//! - How to handle middleware ordering (global vs route-specific)?
-//! - Should middleware be composable (chain multiple middleware)?
-//! - What's the best API for route groups with shared middleware?
-//!
-//! **Required Changes**:
-//! 1. Extend `Route` struct to store middleware stack
-//! 2. Add `with_middleware()` method to router builders
-//! 3. Implement middleware execution in request handling pipeline
-//! 4. Support middleware inheritance for nested route groups
-//!
-//! See reinhardt-routers crate for the underlying routing implementation.
+//! See `reinhardt-routers` crate documentation for detailed usage and examples.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -63,6 +63,7 @@ pub use reinhardt_proxy as proxy;
 #[cfg_attr(docsrs, doc(cfg(feature = "routers")))]
 pub mod prelude {
     pub use reinhardt_routers::{
-        clear_script_prefix, get_script_prefix, set_script_prefix, PathPattern, Route, Router,
+        clear_script_prefix, get_script_prefix, set_script_prefix, PathPattern, Route,
+        RouteGroup, Router, UnifiedRouter,
     };
 }

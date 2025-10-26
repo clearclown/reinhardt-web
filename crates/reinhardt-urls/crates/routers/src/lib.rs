@@ -7,6 +7,8 @@
 //! - **Route introspection**: Runtime route analysis and debugging
 //! - **OpenAPI integration**: Automatic OpenAPI schema generation from routes
 //! - **Route visualization**: Generate route maps for documentation (ASCII, DOT, Markdown)
+//! - **Per-route middleware**: Apply middleware to specific routes
+//! - **Route group middleware**: Apply middleware to groups of routes
 //!
 //! # Examples
 //!
@@ -60,6 +62,48 @@
 //! let tree = visualizer.render(VisualizationFormat::Tree);
 //! println!("{}", tree);
 //! ```
+//!
+//! ## Per-Route Middleware
+//!
+//! ```rust,no_run
+//! use reinhardt_routers::UnifiedRouter;
+//! use reinhardt_middleware::LoggingMiddleware;
+//! use hyper::Method;
+//! use std::sync::Arc;
+//! # use reinhardt_apps::{Request, Response, Result};
+//!
+//! # async fn handler(_req: Request) -> Result<Response> {
+//! #     Ok(Response::ok())
+//! # }
+//! let router = UnifiedRouter::new()
+//!     .function("/api/users", Method::GET, handler)
+//!     .with_route_middleware(Arc::new(LoggingMiddleware));
+//! ```
+//!
+//! ## Route Group Middleware
+//!
+//! ```rust,no_run
+//! use reinhardt_routers::RouteGroup;
+//! use reinhardt_middleware::LoggingMiddleware;
+//! use hyper::Method;
+//! use std::sync::Arc;
+//! # use reinhardt_apps::{Request, Response, Result};
+//!
+//! # async fn users_list(_req: Request) -> Result<Response> {
+//! #     Ok(Response::ok())
+//! # }
+//! # async fn users_detail(_req: Request) -> Result<Response> {
+//! #     Ok(Response::ok())
+//! # }
+//! // Create a group with middleware
+//! let group = RouteGroup::new()
+//!     .with_prefix("/api/v1")
+//!     .with_middleware(Arc::new(LoggingMiddleware))
+//!     .function("/users", Method::GET, users_list)
+//!     .function("/users/{id}", Method::GET, users_detail);
+//!
+//! let router = group.build();
+//! ```
 
 pub mod cache;
 pub mod converters;
@@ -70,6 +114,7 @@ pub mod openapi_integration;
 pub mod pattern;
 pub mod reverse;
 pub mod route;
+pub mod route_group;
 pub mod router;
 pub mod script_prefix;
 pub mod simple;
@@ -99,6 +144,7 @@ pub use reverse::{
     UrlReverser,
 };
 pub use route::Route;
+pub use route_group::RouteGroup;
 pub use router::{DefaultRouter, Router};
 pub use script_prefix::{clear_script_prefix, get_script_prefix, set_script_prefix};
 pub use simple::SimpleRouter;

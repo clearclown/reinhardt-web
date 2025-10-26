@@ -121,6 +121,8 @@ pub(crate) struct FunctionRoute {
     pub method: Method,
     pub handler: Arc<dyn Handler>,
     pub name: Option<String>,
+    /// Middleware stack for this route
+    pub middleware: Vec<Arc<dyn Middleware>>,
 }
 
 /// Class-based view route
@@ -128,6 +130,8 @@ pub(crate) struct ViewRoute {
     pub path: String,
     pub handler: Arc<dyn Handler>,
     pub name: Option<String>,
+    /// Middleware stack for this route
+    pub middleware: Vec<Arc<dyn Middleware>>,
 }
 
 impl UnifiedRouter {
@@ -322,6 +326,7 @@ impl UnifiedRouter {
             method,
             handler,
             name: None,
+            middleware: Vec::new(),
         });
         self
     }
@@ -358,6 +363,7 @@ impl UnifiedRouter {
             method,
             handler,
             name: Some(name.to_string()),
+            middleware: Vec::new(),
         });
         self
     }
@@ -416,6 +422,7 @@ impl UnifiedRouter {
             path: path.to_string(),
             handler: Arc::new(view),
             name: None,
+            middleware: Vec::new(),
         });
         self
     }
@@ -453,6 +460,7 @@ impl UnifiedRouter {
             path: path.to_string(),
             handler: Arc::new(view),
             name: Some(name.to_string()),
+            middleware: Vec::new(),
         });
         self
     }
@@ -482,6 +490,35 @@ impl UnifiedRouter {
     pub fn handler(mut self, path: &str, _method: Method, handler: Arc<dyn Handler>) -> Self {
         let route = Route::new(path, handler);
         self.routes.push(route);
+        self
+    }
+
+    /// Add middleware to the last registered function route
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_routers::UnifiedRouter;
+    /// use reinhardt_middleware::LoggingMiddleware;
+    /// use hyper::Method;
+    /// use std::sync::Arc;
+    /// # use reinhardt_apps::{Request, Response, Result};
+    ///
+    /// # async fn health(_req: Request) -> Result<Response> {
+    /// #     Ok(Response::ok())
+    /// # }
+    /// let router = UnifiedRouter::new()
+    ///     .function("/health", Method::GET, health)
+    ///     .with_route_middleware(Arc::new(LoggingMiddleware));
+    /// ```
+    pub fn with_route_middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
+        if let Some(route) = self.functions.last_mut() {
+            route.middleware.push(middleware.clone());
+        } else if let Some(route) = self.views.last_mut() {
+            route.middleware.push(middleware.clone());
+        } else if let Some(route) = self.routes.last_mut() {
+            route.middleware.push(middleware);
+        }
         self
     }
 
@@ -864,11 +901,15 @@ impl UnifiedRouter {
         // Try functions
         for func_route in &self.functions {
             if path_matches(path, &func_route.path) {
+                // Combine router-level and route-level middleware
+                let mut combined_middleware = middleware_stack.clone();
+                combined_middleware.extend(func_route.middleware.iter().cloned());
+
                 return Some(RouteMatch {
                     handler: func_route.handler.clone(),
                     params: extract_params(path, &func_route.path),
                     full_path: full_path.clone(),
-                    middleware_stack: middleware_stack.clone(),
+                    middleware_stack: combined_middleware,
                     di_context: di_context.clone(),
                 });
             }
@@ -877,11 +918,15 @@ impl UnifiedRouter {
         // Try views
         for view_route in &self.views {
             if path_matches(path, &view_route.path) {
+                // Combine router-level and route-level middleware
+                let mut combined_middleware = middleware_stack.clone();
+                combined_middleware.extend(view_route.middleware.iter().cloned());
+
                 return Some(RouteMatch {
                     handler: view_route.handler.clone(),
                     params: extract_params(path, &view_route.path),
                     full_path: full_path.clone(),
-                    middleware_stack: middleware_stack.clone(),
+                    middleware_stack: combined_middleware,
                     di_context: di_context.clone(),
                 });
             }
@@ -891,11 +936,15 @@ impl UnifiedRouter {
         for route in &self.routes {
             if let Ok(pattern) = PathPattern::new(&route.path) {
                 if let Some(params) = pattern.extract_params(path) {
+                    // Combine router-level and route-level middleware
+                    let mut combined_middleware = middleware_stack.clone();
+                    combined_middleware.extend(route.middleware.iter().cloned());
+
                     return Some(RouteMatch {
                         handler: route.handler.clone(),
                         params,
                         full_path: full_path.clone(),
-                        middleware_stack: middleware_stack.clone(),
+                        middleware_stack: combined_middleware,
                         di_context: di_context.clone(),
                     });
                 }

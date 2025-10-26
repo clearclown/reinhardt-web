@@ -1,4 +1,5 @@
 use reinhardt_apps::Handler;
+use reinhardt_middleware::Middleware;
 use std::sync::Arc;
 
 /// Route definition
@@ -12,6 +13,9 @@ pub struct Route {
     /// Namespace for this route (e.g., "users", "api")
     /// When combined with name, forms "namespace:name"
     pub namespace: Option<String>,
+    /// Middleware stack for this route
+    /// Applied in addition to router-level middleware
+    pub middleware: Vec<Arc<dyn Middleware>>,
 }
 
 impl Route {
@@ -44,6 +48,7 @@ impl Route {
             handler,
             name: None,
             namespace: None,
+            middleware: Vec::new(),
         }
     }
     /// Set the name of the route
@@ -100,6 +105,36 @@ impl Route {
         self.namespace = Some(namespace.into());
         self
     }
+
+    /// Add middleware to this route
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::Route;
+    /// use reinhardt_apps::Handler;
+    /// use reinhardt_middleware::LoggingMiddleware;
+    /// use std::sync::Arc;
+    ///
+    /// # use async_trait::async_trait;
+    /// # use reinhardt_apps::{Request, Response, Result};
+    /// # struct DummyHandler;
+    /// # #[async_trait]
+    /// # impl Handler for DummyHandler {
+    /// #     async fn handle(&self, _req: Request) -> Result<Response> {
+    /// #         Ok(Response::ok())
+    /// #     }
+    /// # }
+    /// let handler = Arc::new(DummyHandler);
+    /// let route = Route::new("/users/", handler)
+    ///     .with_middleware(Arc::new(LoggingMiddleware));
+    /// assert_eq!(route.middleware.len(), 1);
+    /// ```
+    pub fn with_middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
+        self.middleware.push(middleware);
+        self
+    }
+
     /// Get the full name including namespace (e.g., "users:list")
     /// Similar to Django's view_name in ResolverMatch
     ///
