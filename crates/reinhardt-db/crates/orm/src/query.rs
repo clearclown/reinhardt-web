@@ -482,8 +482,7 @@ where
 
         for related_field in &self.prefetch_related_fields {
             // Determine if this is a many-to-many relation or one-to-many
-            // For now, we check if junction table name pattern is likely
-            // TODO: Get this from model metadata
+            // by querying the model's relationship metadata
             let is_m2m = self.is_many_to_many_relation(related_field);
 
             let stmt = if is_m2m {
