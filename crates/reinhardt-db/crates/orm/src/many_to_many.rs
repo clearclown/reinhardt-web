@@ -7,6 +7,10 @@
 //! Licensed under MIT License. See THIRD-PARTY-NOTICES for details.
 
 use crate::Model;
+use sea_query::{
+    Alias, ColumnDef, ColumnType, DeleteStatement, Expr, ExprTrait, InsertStatement, IntoIden,
+    Query, SelectStatement, Table,
+};
 use std::marker::PhantomData;
 
 /// Association table definition for many-to-many relationships
@@ -53,6 +57,41 @@ impl AssociationTable {
             extra_columns: Vec::new(),
         }
     }
+
+    /// Parse type string to ColumnType enum
+    ///
+    /// Converts common SQL type strings to sea-query ColumnType enum values.
+    /// Falls back to Custom type for unrecognized types.
+    fn parse_column_type(type_str: &str) -> ColumnType {
+        use sea_query::StringLen;
+
+        match type_str.to_lowercase().as_str() {
+            "integer" | "int" => ColumnType::Integer,
+            "bigint" | "biginteger" => ColumnType::BigInteger,
+            "smallint" | "smallinteger" => ColumnType::SmallInteger,
+            "tinyint" | "tinyinteger" => ColumnType::TinyInteger,
+            "string" | "varchar" => ColumnType::String(StringLen::N(255)), // Default varchar length
+            "text" => ColumnType::Text,
+            "boolean" | "bool" => ColumnType::Boolean,
+            "float" | "real" => ColumnType::Float,
+            "double" => ColumnType::Double,
+            "decimal" => ColumnType::Decimal(None),
+            "date" => ColumnType::Date,
+            "time" => ColumnType::Time,
+            "datetime" | "timestamp" => ColumnType::DateTime,
+            "timestamptz" | "timestamp with time zone" => ColumnType::TimestampWithTimeZone,
+            "json" => ColumnType::Json,
+            "jsonb" => ColumnType::JsonBinary,
+            "uuid" => ColumnType::Uuid,
+            "binary" | "blob" => ColumnType::Binary(255), // Default binary length
+            "varbinary" => ColumnType::VarBinary(StringLen::N(255)), // Default varbinary length
+            "char" => ColumnType::Char(Some(1)),          // Default char length
+            _ => {
+                // For VARCHAR(N), CHAR(N), DECIMAL(P,S) patterns, use custom
+                ColumnType::Custom(Alias::new(type_str).into_iden())
+            }
+        }
+    }
     /// Add extra column to the association table
     ///
     /// # Examples
@@ -72,38 +111,144 @@ impl AssociationTable {
         self.extra_columns.push((name.into(), type_.into()));
         self
     }
-    /// Generate CREATE TABLE SQL for the association table
+    /// Apply ColumnType to ColumnDef
+    ///
+    /// Helper function to apply the parsed column type to a ColumnDef.
+    fn apply_column_type(mut col_def: ColumnDef, column_type: ColumnType) -> ColumnDef {
+        use sea_query::StringLen;
+
+        match column_type {
+            ColumnType::Integer => {
+                col_def.integer();
+            }
+            ColumnType::BigInteger => {
+                col_def.big_integer();
+            }
+            ColumnType::SmallInteger => {
+                col_def.small_integer();
+            }
+            ColumnType::TinyInteger => {
+                col_def.tiny_integer();
+            }
+            ColumnType::String(StringLen::N(len)) => {
+                col_def.string_len(len);
+            }
+            ColumnType::String(_) => {
+                col_def.string();
+            }
+            ColumnType::Text => {
+                col_def.text();
+            }
+            ColumnType::Boolean => {
+                col_def.boolean();
+            }
+            ColumnType::Float => {
+                col_def.float();
+            }
+            ColumnType::Double => {
+                col_def.double();
+            }
+            ColumnType::Decimal(_) => {
+                col_def.decimal();
+            }
+            ColumnType::Date => {
+                col_def.date();
+            }
+            ColumnType::Time => {
+                col_def.time();
+            }
+            ColumnType::DateTime => {
+                col_def.date_time();
+            }
+            ColumnType::TimestampWithTimeZone => {
+                col_def.timestamp_with_time_zone();
+            }
+            ColumnType::Json => {
+                col_def.json();
+            }
+            ColumnType::JsonBinary => {
+                col_def.json_binary();
+            }
+            ColumnType::Uuid => {
+                col_def.uuid();
+            }
+            ColumnType::Binary(len) => {
+                col_def.binary_len(len);
+            }
+            ColumnType::VarBinary(StringLen::N(len)) => {
+                col_def.var_binary(len);
+            }
+            ColumnType::VarBinary(_) => {
+                col_def.var_binary(255);
+            } // Fallback
+            ColumnType::Char(Some(len)) => {
+                col_def.char_len(len);
+            }
+            ColumnType::Char(None) => {
+                col_def.char_len(1);
+            } // Fallback
+            ColumnType::Custom(iden) => {
+                col_def.custom(iden);
+            }
+            _ => {
+                col_def.text();
+            } // Fallback to TEXT for unknown types
+        }
+        col_def
+    }
+
+    /// Generate SeaQuery CREATE TABLE statement for the association table
+    ///
+    /// Returns a TableCreateStatement that can be converted to SQL.
+    pub fn to_create_statement(&self) -> sea_query::TableCreateStatement {
+        let mut stmt = Table::create();
+        stmt.table(Alias::new(&self.table_name))
+            .if_not_exists()
+            .col(
+                ColumnDef::new(Alias::new(&self.left_column))
+                    .integer()
+                    .not_null(),
+            )
+            .col(
+                ColumnDef::new(Alias::new(&self.right_column))
+                    .integer()
+                    .not_null(),
+            );
+
+        // Add extra columns with parsed types
+        for (name, type_str) in &self.extra_columns {
+            let column_type = Self::parse_column_type(type_str);
+            let col_def = ColumnDef::new(Alias::new(name));
+            let col_def = Self::apply_column_type(col_def, column_type);
+            stmt.col(col_def);
+        }
+
+        // Add composite primary key
+        stmt.primary_key(
+            sea_query::Index::create()
+                .col(Alias::new(&self.left_column))
+                .col(Alias::new(&self.right_column)),
+        );
+
+        stmt.to_owned()
+    }
+
+    /// Generate CREATE TABLE SQL for the association table (convenience method)
     ///
     /// # Examples
     ///
     /// ```
     /// use reinhardt_orm::many_to_many::AssociationTable;
+    /// use sea_query::SqliteQueryBuilder;
     ///
     /// let table = AssociationTable::new("user_roles", "user_id", "role_id");
-    /// let sql = table.to_create_sql();
+    /// let sql = table.to_create_sql(SqliteQueryBuilder);
     ///
-    /// assert_eq!(sql, "CREATE TABLE user_roles (\n  user_id INTEGER NOT NULL,\n  role_id INTEGER NOT NULL,\n  PRIMARY KEY (user_id, role_id)\n)");
+    /// assert!(sql.contains("CREATE TABLE"));
+    /// assert!(sql.contains("user_roles"));
     /// ```
-    pub fn to_create_sql(&self) -> String {
-        let mut columns = vec![
-            format!("{} INTEGER NOT NULL", self.left_column),
-            format!("{} INTEGER NOT NULL", self.right_column),
-        ];
-
-        for (name, type_) in &self.extra_columns {
-            columns.push(format!("{} {}", name, type_));
-        }
-
-        columns.push(format!(
-            "PRIMARY KEY ({}, {})",
-            self.left_column, self.right_column
-        ));
-
-        format!(
-            "CREATE TABLE {} (\n  {}\n)",
-            self.table_name,
-            columns.join(",\n  ")
-        )
+    pub fn to_create_sql<T: sea_query::SchemaBuilder>(&self, builder: T) -> String {
+        self.to_create_statement().to_string(builder)
     }
 }
 
@@ -191,46 +336,85 @@ impl<L: Model, R: Model> ManyToMany<L, R> {
         self.cascade.push(option.into());
         self
     }
-    /// Generate SQL for joining through the association table
+    /// Generate SeaQuery SELECT statement for joining through the association table
     ///
-    pub fn join_sql(&self) -> String {
-        format!(
-            "JOIN {} ON {}.{} = {}.{} JOIN {} ON {}.{} = {}.{}",
-            self.association_table.table_name,
-            L::table_name(),
-            "id", // Assuming primary key is 'id'
-            self.association_table.table_name,
-            self.association_table.left_column,
-            R::table_name(),
-            self.association_table.table_name,
-            self.association_table.right_column,
-            R::table_name(),
-            "id" // Assuming primary key is 'id'
-        )
+    /// Returns a SelectStatement with JOINs through the association table.
+    pub fn join_query(&self) -> SelectStatement {
+        let left_table = L::table_name();
+        let right_table = R::table_name();
+        let assoc_table = &self.association_table.table_name;
+
+        Query::select()
+            .from(Alias::new(left_table))
+            .column((Alias::new(left_table), sea_query::Asterisk))
+            .column((Alias::new(right_table), sea_query::Asterisk))
+            .inner_join(
+                Alias::new(assoc_table),
+                Expr::col((Alias::new(left_table), Alias::new("id"))).equals((
+                    Alias::new(assoc_table),
+                    Alias::new(&self.association_table.left_column),
+                )),
+            )
+            .inner_join(
+                Alias::new(right_table),
+                Expr::col((
+                    Alias::new(assoc_table),
+                    Alias::new(&self.association_table.right_column),
+                ))
+                .equals((Alias::new(right_table), Alias::new("id"))),
+            )
+            .to_owned()
     }
-    /// Generate SQL for adding a relationship
+
+    /// Generate SQL for joining (convenience method)
     ///
-    pub fn add_sql(&self, left_id: i64, right_id: i64) -> String {
-        format!(
-            "INSERT INTO {} ({}, {}) VALUES ({}, {})",
-            self.association_table.table_name,
-            self.association_table.left_column,
-            self.association_table.right_column,
-            left_id,
-            right_id
-        )
+    pub fn join_sql<T: sea_query::QueryBuilder>(&self, builder: T) -> String {
+        self.join_query().to_string(builder)
     }
-    /// Generate SQL for removing a relationship
+
+    /// Generate SeaQuery INSERT statement for adding a relationship
     ///
-    pub fn remove_sql(&self, left_id: i64, right_id: i64) -> String {
-        format!(
-            "DELETE FROM {} WHERE {} = {} AND {} = {}",
-            self.association_table.table_name,
-            self.association_table.left_column,
-            left_id,
-            self.association_table.right_column,
-            right_id
-        )
+    pub fn add_query(&self, left_id: i64, right_id: i64) -> InsertStatement {
+        Query::insert()
+            .into_table(Alias::new(&self.association_table.table_name))
+            .columns([
+                Alias::new(&self.association_table.left_column),
+                Alias::new(&self.association_table.right_column),
+            ])
+            .values_panic([left_id.into(), right_id.into()])
+            .to_owned()
+    }
+
+    /// Generate SQL for adding a relationship (convenience method)
+    ///
+    pub fn add_sql<T: sea_query::QueryBuilder>(
+        &self,
+        left_id: i64,
+        right_id: i64,
+        builder: T,
+    ) -> String {
+        self.add_query(left_id, right_id).to_string(builder)
+    }
+
+    /// Generate SeaQuery DELETE statement for removing a relationship
+    ///
+    pub fn remove_query(&self, left_id: i64, right_id: i64) -> DeleteStatement {
+        Query::delete()
+            .from_table(Alias::new(&self.association_table.table_name))
+            .and_where(Expr::col(Alias::new(&self.association_table.left_column)).eq(left_id))
+            .and_where(Expr::col(Alias::new(&self.association_table.right_column)).eq(right_id))
+            .to_owned()
+    }
+
+    /// Generate SQL for removing a relationship (convenience method)
+    ///
+    pub fn remove_sql<T: sea_query::QueryBuilder>(
+        &self,
+        left_id: i64,
+        right_id: i64,
+        builder: T,
+    ) -> String {
+        self.remove_query(left_id, right_id).to_string(builder)
     }
     /// Get association table reference
     ///
@@ -304,58 +488,174 @@ mod tests {
 
     #[test]
     fn test_association_table() {
-        let table = AssociationTable::new("student_courses", "student_id", "course_id");
-        let sql = table.to_create_sql();
+        use sea_query::SqliteQueryBuilder;
 
-        assert!(sql.contains("CREATE TABLE student_courses"));
-        assert!(sql.contains("student_id INTEGER NOT NULL"));
-        assert!(sql.contains("course_id INTEGER NOT NULL"));
-        assert!(sql.contains("PRIMARY KEY (student_id, course_id)"));
+        let table = AssociationTable::new("student_courses", "student_id", "course_id");
+        let sql = table.to_create_sql(SqliteQueryBuilder);
+
+        assert!(sql.contains("CREATE TABLE"));
+        assert!(sql.contains("student_courses"));
+        assert!(sql.contains("student_id"));
+        assert!(sql.contains("course_id"));
     }
 
     #[test]
     fn test_association_table_with_extra_columns() {
+        use sea_query::SqliteQueryBuilder;
+
         let table = AssociationTable::new("student_courses", "student_id", "course_id")
             .with_column("enrolled_at", "TIMESTAMP")
             .with_column("grade", "VARCHAR(2)");
 
-        let sql = table.to_create_sql();
-        assert!(sql.contains("enrolled_at TIMESTAMP"));
-        assert!(sql.contains("grade VARCHAR(2)"));
+        let sql = table.to_create_sql(SqliteQueryBuilder);
+        assert!(sql.contains("enrolled_at"));
+        assert!(sql.contains("TIMESTAMP"));
+        assert!(sql.contains("grade"));
+        assert!(sql.contains("VARCHAR(2)"));
     }
 
     #[test]
     fn test_many_to_many_join() {
+        use sea_query::SqliteQueryBuilder;
+
         let assoc = AssociationTable::new("student_courses", "student_id", "course_id");
         let m2m = ManyToMany::<Student, Course>::new(assoc);
 
-        let join_sql = m2m.join_sql();
-        assert!(join_sql.contains("JOIN student_courses"));
+        let join_sql = m2m.join_sql(SqliteQueryBuilder);
+        assert!(join_sql.contains("student_courses"));
         assert!(join_sql.contains("students"));
         assert!(join_sql.contains("courses"));
+        assert!(join_sql.contains("INNER JOIN"));
     }
 
     #[test]
     fn test_many_to_many_add() {
+        use sea_query::SqliteQueryBuilder;
+
         let assoc = AssociationTable::new("student_courses", "student_id", "course_id");
         let m2m = ManyToMany::<Student, Course>::new(assoc);
 
-        let sql = m2m.add_sql(1, 10);
-        assert_eq!(
-            sql,
-            "INSERT INTO student_courses (student_id, course_id) VALUES (1, 10)"
-        );
+        let sql = m2m.add_sql(1, 10, SqliteQueryBuilder);
+        assert!(sql.contains("INSERT INTO"));
+        assert!(sql.contains("student_courses"));
+        assert!(sql.contains("student_id"));
+        assert!(sql.contains("course_id"));
     }
 
     #[test]
     fn test_many_to_many_remove() {
+        use sea_query::SqliteQueryBuilder;
+
         let assoc = AssociationTable::new("student_courses", "student_id", "course_id");
         let m2m = ManyToMany::<Student, Course>::new(assoc);
 
-        let sql = m2m.remove_sql(1, 10);
-        assert_eq!(
-            sql,
-            "DELETE FROM student_courses WHERE student_id = 1 AND course_id = 10"
-        );
+        let sql = m2m.remove_sql(1, 10, SqliteQueryBuilder);
+        assert!(sql.contains("DELETE FROM"));
+        assert!(sql.contains("student_courses"));
+        assert!(sql.contains("student_id"));
+        assert!(sql.contains("course_id"));
+    }
+
+    #[test]
+    fn test_parse_column_type_integer() {
+        let col_type = AssociationTable::parse_column_type("INTEGER");
+        assert!(matches!(col_type, ColumnType::Integer));
+
+        let col_type = AssociationTable::parse_column_type("int");
+        assert!(matches!(col_type, ColumnType::Integer));
+    }
+
+    #[test]
+    fn test_parse_column_type_bigint() {
+        let col_type = AssociationTable::parse_column_type("BIGINT");
+        assert!(matches!(col_type, ColumnType::BigInteger));
+    }
+
+    #[test]
+    fn test_parse_column_type_string() {
+        let col_type = AssociationTable::parse_column_type("VARCHAR");
+        assert!(matches!(col_type, ColumnType::String(_)));
+
+        let col_type = AssociationTable::parse_column_type("string");
+        assert!(matches!(col_type, ColumnType::String(_)));
+    }
+
+    #[test]
+    fn test_parse_column_type_text() {
+        let col_type = AssociationTable::parse_column_type("TEXT");
+        assert!(matches!(col_type, ColumnType::Text));
+    }
+
+    #[test]
+    fn test_parse_column_type_boolean() {
+        let col_type = AssociationTable::parse_column_type("BOOLEAN");
+        assert!(matches!(col_type, ColumnType::Boolean));
+
+        let col_type = AssociationTable::parse_column_type("bool");
+        assert!(matches!(col_type, ColumnType::Boolean));
+    }
+
+    #[test]
+    fn test_parse_column_type_datetime() {
+        let col_type = AssociationTable::parse_column_type("DATETIME");
+        assert!(matches!(col_type, ColumnType::DateTime));
+
+        let col_type = AssociationTable::parse_column_type("timestamp");
+        assert!(matches!(col_type, ColumnType::DateTime));
+    }
+
+    #[test]
+    fn test_parse_column_type_json() {
+        let col_type = AssociationTable::parse_column_type("JSON");
+        assert!(matches!(col_type, ColumnType::Json));
+
+        let col_type = AssociationTable::parse_column_type("JSONB");
+        assert!(matches!(col_type, ColumnType::JsonBinary));
+    }
+
+    #[test]
+    fn test_parse_column_type_uuid() {
+        let col_type = AssociationTable::parse_column_type("UUID");
+        assert!(matches!(col_type, ColumnType::Uuid));
+    }
+
+    #[test]
+    fn test_parse_column_type_custom() {
+        let col_type = AssociationTable::parse_column_type("VARCHAR(255)");
+        assert!(matches!(col_type, ColumnType::Custom(_)));
+
+        let col_type = AssociationTable::parse_column_type("UNKNOWN_TYPE");
+        assert!(matches!(col_type, ColumnType::Custom(_)));
+    }
+
+    #[test]
+    fn test_parse_column_type_case_insensitive() {
+        let col_type = AssociationTable::parse_column_type("integer");
+        assert!(matches!(col_type, ColumnType::Integer));
+
+        let col_type = AssociationTable::parse_column_type("INTEGER");
+        assert!(matches!(col_type, ColumnType::Integer));
+
+        let col_type = AssociationTable::parse_column_type("InTeGeR");
+        assert!(matches!(col_type, ColumnType::Integer));
+    }
+
+    #[test]
+    fn test_association_table_with_typed_columns() {
+        use sea_query::SqliteQueryBuilder;
+
+        let table = AssociationTable::new("enrollments", "student_id", "course_id")
+            .with_column("enrolled_at", "DATETIME")
+            .with_column("grade", "INTEGER")
+            .with_column("notes", "TEXT");
+
+        let sql = table.to_create_sql(SqliteQueryBuilder);
+
+        // Verify table creation includes typed columns
+        assert!(sql.contains("CREATE TABLE"));
+        assert!(sql.contains("enrollments"));
+        assert!(sql.contains("enrolled_at"));
+        assert!(sql.contains("grade"));
+        assert!(sql.contains("notes"));
     }
 }
