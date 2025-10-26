@@ -23,7 +23,7 @@ reinhardt-orm = { path = "../../crates/reinhardt-db/crates/orm", features = [
   "django-compat",
 ] }
 reinhardt-migrations = { path = "../../crates/reinhardt-db/crates/migrations" }
-reinhardt-database = { path = "../../crates/reinhardt-db/crates/database", features = [
+backends = { path = "../../crates/reinhardt-db/crates/backends", package = "reinhardt-db-backends", features = [
   "postgres",
   "sqlite",
 ] }

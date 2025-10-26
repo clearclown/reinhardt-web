@@ -61,7 +61,6 @@ members = [
   "crates/reinhardt-commands",
   "crates/reinhardt-admin",
   "crates/reinhardt-db",
-  "crates/reinhardt-db/crates/database",
   "crates/reinhardt-db/crates/orm",
   "crates/reinhardt-db/crates/migrations",
   "crates/reinhardt-db/crates/hybrid",
@@ -174,7 +173,6 @@ reinhardt-i18n = { path = "crates/reinhardt-contrib/crates/i18n", version = "0.1
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0" }
 reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0" }
 reinhardt-db = { path = "crates/reinhardt-db", version = "0.1.0" }
-reinhardt-database = { path = "crates/reinhardt-db/crates/database", version = "0.1.0" }
 reinhardt-pool = { path = "crates/reinhardt-db/crates/pool", version = "0.1.0" }
 reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0" }
 reinhardt-events = { path = "crates/reinhardt-events", version = "0.1.0" }

@@ -12,7 +12,6 @@ reinhardt-auth = { workspace = true }
 reinhardt-browsable-api = { workspace = true }
 reinhardt-cache = { workspace = true }
 reinhardt-contrib = { workspace = true }
-reinhardt-database = { workspace = true }
 reinhardt-di = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-filters = { workspace = true }
