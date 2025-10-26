@@ -8,5 +8,5 @@
   "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
   "claudeCode.allowDangerouslySkipPermissions": false,
   "claudeCode.useTerminal": true,
-  "claudeCode.doNotExcludeSearchPatterns": false
+  "claudeCode.doNotExcludeSearchPatterns": true
 }
