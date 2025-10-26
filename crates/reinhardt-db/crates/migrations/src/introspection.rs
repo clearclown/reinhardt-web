@@ -4,7 +4,6 @@
 //! and extract table definitions, column metadata, indexes, and constraints.
 
 use async_trait::async_trait;
-use sea_schema::def::{ColumnDef, ColumnType, IndexDef, Schema, TableDef};
 use std::collections::HashMap;
 
 use crate::{MigrationError, Result};
@@ -109,85 +108,132 @@ impl PostgresIntrospector {
         Self { pool }
     }
 
-    fn convert_column_type(col_type: &ColumnType) -> String {
+    fn convert_column_type(col_type: &sea_schema::postgres::def::Type) -> String {
+        use sea_schema::postgres::def::Type;
         match col_type {
-            ColumnType::Serial => "INTEGER".to_string(),
-            ColumnType::BigSerial => "BIGINT".to_string(),
-            ColumnType::SmallSerial => "SMALLINT".to_string(),
-            ColumnType::Integer => "INTEGER".to_string(),
-            ColumnType::BigInteger => "BIGINT".to_string(),
-            ColumnType::SmallInteger => "SMALLINT".to_string(),
-            ColumnType::Text => "TEXT".to_string(),
-            ColumnType::Varchar(len) => format!("VARCHAR({})", len.unwrap_or(255)),
-            ColumnType::Char(len) => format!("CHAR({})", len.unwrap_or(1)),
-            ColumnType::Boolean => "BOOLEAN".to_string(),
-            ColumnType::Date => "DATE".to_string(),
-            ColumnType::Time => "TIME".to_string(),
-            ColumnType::Timestamp => "TIMESTAMP".to_string(),
-            ColumnType::TimestampWithTimeZone => "TIMESTAMPTZ".to_string(),
-            ColumnType::Decimal(precision, scale) => {
-                format!(
-                    "DECIMAL({}, {})",
-                    precision.unwrap_or(10),
-                    scale.unwrap_or(0)
-                )
+            Type::Serial => "INTEGER".to_string(),
+            Type::BigSerial => "BIGINT".to_string(),
+            Type::SmallSerial => "SMALLINT".to_string(),
+            Type::Integer => "INTEGER".to_string(),
+            Type::BigInt => "BIGINT".to_string(),
+            Type::SmallInt => "SMALLINT".to_string(),
+            Type::Text => "TEXT".to_string(),
+            Type::Varchar(attr) => {
+                if let Some(len) = attr.length {
+                    format!("VARCHAR({})", len)
+                } else {
+                    "VARCHAR".to_string()
+                }
             }
-            ColumnType::Float => "REAL".to_string(),
-            ColumnType::Double => "DOUBLE PRECISION".to_string(),
-            ColumnType::Uuid => "UUID".to_string(),
-            ColumnType::Json => "JSON".to_string(),
-            ColumnType::JsonBinary => "JSONB".to_string(),
-            ColumnType::Binary(len) => format!("BYTEA({})", len.unwrap_or(255)),
+            Type::Char(attr) => {
+                if let Some(len) = attr.length {
+                    format!("CHAR({})", len)
+                } else {
+                    "CHAR".to_string()
+                }
+            }
+            Type::Boolean => "BOOLEAN".to_string(),
+            Type::Date => "DATE".to_string(),
+            Type::Time(_) => "TIME".to_string(),
+            Type::TimeWithTimeZone(_) => "TIME WITH TIME ZONE".to_string(),
+            Type::Timestamp(_) => "TIMESTAMP".to_string(),
+            Type::TimestampWithTimeZone(_) => "TIMESTAMPTZ".to_string(),
+            Type::Numeric(attr) | Type::Decimal(attr) => {
+                if let (Some(precision), Some(scale)) = (attr.precision, attr.scale) {
+                    format!("DECIMAL({}, {})", precision, scale)
+                } else {
+                    "DECIMAL".to_string()
+                }
+            }
+            Type::Real => "REAL".to_string(),
+            Type::DoublePrecision => "DOUBLE PRECISION".to_string(),
+            Type::Uuid => "UUID".to_string(),
+            Type::Json => "JSON".to_string(),
+            Type::JsonBinary => "JSONB".to_string(),
+            Type::Bytea => "BYTEA".to_string(),
             _ => "TEXT".to_string(), // fallback
         }
     }
 
-    fn convert_table_def(table_def: &TableDef) -> Result<TableInfo> {
+    fn convert_table_def(table_def: &sea_schema::postgres::def::TableDef) -> Result<TableInfo> {
+        use sea_schema::postgres::def::Type;
         let mut columns = HashMap::new();
+
+        // Extract primary key from constraints
         let mut primary_key = Vec::new();
+        for pk_constraint in &table_def.primary_key_constraints {
+            primary_key.extend(pk_constraint.columns.clone());
+        }
 
         for column_def in &table_def.columns {
             let is_auto = matches!(
                 column_def.col_type,
-                ColumnType::Serial | ColumnType::BigSerial | ColumnType::SmallSerial
-            );
+                Type::Serial | Type::BigSerial | Type::SmallSerial
+            ) || column_def.is_identity;
 
-            if column_def.key.is_primary() {
-                primary_key.push(column_def.name.clone());
-            }
+            let default_str = column_def.default.as_ref().map(|expr| expr.0.clone());
 
             columns.insert(
                 column_def.name.clone(),
                 ColumnInfo {
                     name: column_def.name.clone(),
                     column_type: Self::convert_column_type(&column_def.col_type),
-                    nullable: column_def.null,
-                    default: column_def.default.clone(),
+                    nullable: column_def.not_null.is_none(),
+                    default: default_str,
                     auto_increment: is_auto,
                 },
             );
         }
 
-        let mut indexes = HashMap::new();
-        for index_def in &table_def.indexes {
-            indexes.insert(
-                index_def.name.clone(),
-                IndexInfo {
-                    name: index_def.name.clone(),
-                    columns: index_def.columns.clone(),
-                    unique: index_def.unique,
-                    index_type: index_def.r#type.clone(),
-                },
-            );
-        }
+        // PostgreSQL doesn't have separate index information in TableDef
+        // Indexes would need to be queried separately
+        let indexes = HashMap::new();
+
+        // Extract foreign keys from reference_constraints
+        let foreign_keys = table_def
+            .reference_constraints
+            .iter()
+            .map(|ref_constraint| {
+                use sea_schema::postgres::def::ForeignKeyAction;
+
+                let convert_action = |action: &Option<ForeignKeyAction>| -> Option<String> {
+                    action.as_ref().map(|a| match a {
+                        ForeignKeyAction::Cascade => "CASCADE".to_string(),
+                        ForeignKeyAction::SetNull => "SET NULL".to_string(),
+                        ForeignKeyAction::SetDefault => "SET DEFAULT".to_string(),
+                        ForeignKeyAction::Restrict => "RESTRICT".to_string(),
+                        ForeignKeyAction::NoAction => "NO ACTION".to_string(),
+                    })
+                };
+
+                ForeignKeyInfo {
+                    name: ref_constraint.name.clone(),
+                    columns: ref_constraint.columns.clone(),
+                    referenced_table: ref_constraint.table.clone(),
+                    referenced_columns: ref_constraint.foreign_columns.clone(),
+                    on_delete: convert_action(&ref_constraint.on_delete),
+                    on_update: convert_action(&ref_constraint.on_update),
+                }
+            })
+            .collect();
+
+        // Extract unique constraints
+        let unique_constraints = table_def
+            .unique_constraints
+            .iter()
+            .map(|unique_constraint| UniqueConstraintInfo {
+                name: unique_constraint.name.clone(),
+                columns: unique_constraint.columns.clone(),
+            })
+            .collect();
 
         Ok(TableInfo {
             name: table_def.info.name.clone(),
             columns,
             indexes,
             primary_key,
-            foreign_keys: Vec::new(), // TODO: Extract from table_def
-            unique_constraints: Vec::new(), // TODO: Extract from table_def
+            foreign_keys,
+            unique_constraints,
         })
     }
 }
@@ -199,7 +245,7 @@ impl DatabaseIntrospector for PostgresIntrospector {
         use sea_schema::postgres::discovery::SchemaDiscovery;
 
         let discovery = SchemaDiscovery::new(self.pool.clone(), "public");
-        let schema: Schema = discovery
+        let schema = discovery
             .discover()
             .await
             .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
@@ -231,51 +277,128 @@ impl MySQLIntrospector {
         Self { pool }
     }
 
-    fn convert_column_type(col_type: &ColumnType) -> String {
+    fn convert_column_type(col_type: &sea_schema::mysql::def::Type) -> String {
+        use sea_schema::mysql::def::Type;
         match col_type {
-            ColumnType::Serial => "INT AUTO_INCREMENT".to_string(),
-            ColumnType::BigSerial => "BIGINT AUTO_INCREMENT".to_string(),
-            ColumnType::SmallSerial => "SMALLINT AUTO_INCREMENT".to_string(),
-            ColumnType::Integer => "INT".to_string(),
-            ColumnType::BigInteger => "BIGINT".to_string(),
-            ColumnType::SmallInteger => "SMALLINT".to_string(),
-            ColumnType::Text => "TEXT".to_string(),
-            ColumnType::Varchar(len) => format!("VARCHAR({})", len.unwrap_or(255)),
-            ColumnType::Char(len) => format!("CHAR({})", len.unwrap_or(1)),
-            ColumnType::Boolean => "BOOLEAN".to_string(),
-            ColumnType::Date => "DATE".to_string(),
-            ColumnType::Time => "TIME".to_string(),
-            ColumnType::Timestamp => "TIMESTAMP".to_string(),
-            ColumnType::TimestampWithTimeZone => "TIMESTAMP".to_string(), // MySQL doesn't have explicit TZ support
-            ColumnType::Decimal(precision, scale) => {
-                format!(
-                    "DECIMAL({}, {})",
-                    precision.unwrap_or(10),
-                    scale.unwrap_or(0)
-                )
+            Type::Serial => "BIGINT UNSIGNED AUTO_INCREMENT".to_string(),
+            Type::TinyInt(_) => "TINYINT".to_string(),
+            Type::Bool => "BOOLEAN".to_string(),
+            Type::SmallInt(_) => "SMALLINT".to_string(),
+            Type::MediumInt(_) => "MEDIUMINT".to_string(),
+            Type::Int(_) => "INT".to_string(),
+            Type::BigInt(_) => "BIGINT".to_string(),
+            Type::Decimal(attr) => {
+                if let (Some(precision), Some(scale)) = (attr.maximum, attr.decimal) {
+                    format!("DECIMAL({}, {})", precision, scale)
+                } else {
+                    "DECIMAL".to_string()
+                }
             }
-            ColumnType::Float => "FLOAT".to_string(),
-            ColumnType::Double => "DOUBLE".to_string(),
-            ColumnType::Json => "JSON".to_string(),
-            ColumnType::JsonBinary => "JSON".to_string(), // MySQL JSON is binary by default
-            ColumnType::Binary(len) => format!("VARBINARY({})", len.unwrap_or(255)),
-            _ => "TEXT".to_string(), // fallback
+            Type::Float(_) => "FLOAT".to_string(),
+            Type::Double(_) => "DOUBLE".to_string(),
+            Type::Char(attr) | Type::NChar(attr) => {
+                if let Some(len) = attr.length {
+                    format!("CHAR({})", len)
+                } else {
+                    "CHAR".to_string()
+                }
+            }
+            Type::Varchar(attr) | Type::NVarchar(attr) => {
+                if let Some(len) = attr.length {
+                    format!("VARCHAR({})", len)
+                } else {
+                    "VARCHAR".to_string()
+                }
+            }
+            Type::Binary(attr) => {
+                if let Some(len) = attr.length {
+                    format!("BINARY({})", len)
+                } else {
+                    "BINARY".to_string()
+                }
+            }
+            Type::Varbinary(attr) => {
+                if let Some(len) = attr.length {
+                    format!("VARBINARY({})", len)
+                } else {
+                    "VARBINARY".to_string()
+                }
+            }
+            Type::Text(_) => "TEXT".to_string(),
+            Type::TinyText(_) => "TINYTEXT".to_string(),
+            Type::MediumText(_) => "MEDIUMTEXT".to_string(),
+            Type::LongText(_) => "LONGTEXT".to_string(),
+            Type::Blob(_) => "BLOB".to_string(),
+            Type::TinyBlob => "TINYBLOB".to_string(),
+            Type::MediumBlob => "MEDIUMBLOB".to_string(),
+            Type::LongBlob => "LONGBLOB".to_string(),
+            Type::Date => "DATE".to_string(),
+            Type::Time(_) => "TIME".to_string(),
+            Type::DateTime(_) => "DATETIME".to_string(),
+            Type::Timestamp(_) => "TIMESTAMP".to_string(),
+            Type::Year => "YEAR".to_string(),
+            Type::Json => "JSON".to_string(),
+            Type::Enum(enum_def) => {
+                let values = enum_def.values.join("','");
+                format!("ENUM('{}')", values)
+            }
+            Type::Set(set_def) => {
+                let members = set_def.members.join("','");
+                format!("SET('{}')", members)
+            }
+            Type::Bit(_) | Type::Geometry(_) | Type::Point(_) | Type::LineString(_)
+            | Type::Polygon(_) | Type::MultiPoint(_) | Type::MultiLineString(_)
+            | Type::MultiPolygon(_) | Type::GeometryCollection(_) => {
+                format!("{:?}", col_type).to_uppercase()
+            }
+            Type::Unknown(s) => s.clone(),
         }
     }
 
-    fn convert_table_def(table_def: &TableDef) -> Result<TableInfo> {
+    fn convert_foreign_key_action(action: &sea_schema::mysql::def::ForeignKeyAction) -> String {
+        use sea_schema::mysql::def::ForeignKeyAction;
+        match action {
+            ForeignKeyAction::Cascade => "CASCADE".to_string(),
+            ForeignKeyAction::SetNull => "SET NULL".to_string(),
+            ForeignKeyAction::Restrict => "RESTRICT".to_string(),
+            ForeignKeyAction::NoAction => "NO ACTION".to_string(),
+            ForeignKeyAction::SetDefault => "SET DEFAULT".to_string(),
+        }
+    }
+
+    fn convert_index_type(idx_type: &sea_schema::mysql::def::IndexType) -> String {
+        use sea_schema::mysql::def::IndexType;
+        match idx_type {
+            IndexType::BTree => "BTREE".to_string(),
+            IndexType::Hash => "HASH".to_string(),
+            IndexType::FullText => "FULLTEXT".to_string(),
+            IndexType::Spatial => "SPATIAL".to_string(),
+            IndexType::RTree => "RTREE".to_string(),
+        }
+    }
+
+    fn convert_table_def(table_def: &sea_schema::mysql::def::TableDef) -> Result<TableInfo> {
         let mut columns = HashMap::new();
         let mut primary_key = Vec::new();
 
         for column_def in &table_def.columns {
-            let is_auto = matches!(
-                column_def.col_type,
-                ColumnType::Serial | ColumnType::BigSerial | ColumnType::SmallSerial
-            );
+            let is_auto = column_def.extra.auto_increment;
 
-            if column_def.key.is_primary() {
+            if column_def.key == sea_schema::mysql::def::ColumnKey::Primary {
                 primary_key.push(column_def.name.clone());
             }
+
+            let default_str = column_def.default.as_ref().map(|def| {
+                use sea_schema::mysql::def::ColumnDefault;
+                match def {
+                    ColumnDefault::Null => "NULL".to_string(),
+                    ColumnDefault::Int(i) => i.to_string(),
+                    ColumnDefault::Real(f) => f.to_string(),
+                    ColumnDefault::String(s) => s.clone(),
+                    ColumnDefault::CustomExpr(s) => s.clone(),
+                    ColumnDefault::CurrentTimestamp => "CURRENT_TIMESTAMP".to_string(),
+                }
+            });
 
             columns.insert(
                 column_def.name.clone(),
@@ -283,32 +406,61 @@ impl MySQLIntrospector {
                     name: column_def.name.clone(),
                     column_type: Self::convert_column_type(&column_def.col_type),
                     nullable: column_def.null,
-                    default: column_def.default.clone(),
+                    default: default_str,
                     auto_increment: is_auto,
                 },
             );
         }
 
+        // Extract unique constraints from indexes
+        let mut unique_constraints = Vec::new();
         let mut indexes = HashMap::new();
         for index_def in &table_def.indexes {
+            let columns: Vec<String> = index_def
+                .parts
+                .iter()
+                .map(|p| p.column.clone())
+                .collect();
+
+            if index_def.unique {
+                unique_constraints.push(UniqueConstraintInfo {
+                    name: index_def.name.clone(),
+                    columns: columns.clone(),
+                });
+            }
+
             indexes.insert(
                 index_def.name.clone(),
                 IndexInfo {
                     name: index_def.name.clone(),
-                    columns: index_def.columns.clone(),
+                    columns,
                     unique: index_def.unique,
-                    index_type: index_def.r#type.clone(),
+                    index_type: Some(Self::convert_index_type(&index_def.idx_type)),
                 },
             );
         }
+
+        // Extract foreign keys
+        let foreign_keys: Vec<ForeignKeyInfo> = table_def
+            .foreign_keys
+            .iter()
+            .map(|fk| ForeignKeyInfo {
+                name: fk.name.clone(),
+                columns: fk.columns.clone(),
+                referenced_table: fk.referenced_table.clone(),
+                referenced_columns: fk.referenced_columns.clone(),
+                on_delete: Some(Self::convert_foreign_key_action(&fk.on_delete)),
+                on_update: Some(Self::convert_foreign_key_action(&fk.on_update)),
+            })
+            .collect();
 
         Ok(TableInfo {
             name: table_def.info.name.clone(),
             columns,
             indexes,
             primary_key,
-            foreign_keys: Vec::new(), // TODO: Extract from table_def
-            unique_constraints: Vec::new(), // TODO: Extract from table_def
+            foreign_keys,
+            unique_constraints,
         })
     }
 }
@@ -319,8 +471,10 @@ impl DatabaseIntrospector for MySQLIntrospector {
     async fn read_schema(&self) -> Result<DatabaseSchema> {
         use sea_schema::mysql::discovery::SchemaDiscovery;
 
-        let discovery = SchemaDiscovery::new(self.pool.clone());
-        let schema: Schema = discovery
+        // MySQL SchemaDiscovery::new requires a schema name (database name)
+        // We use empty string to discover the current database
+        let discovery = SchemaDiscovery::new(self.pool.clone(), "");
+        let schema = discovery
             .discover()
             .await
             .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
@@ -352,42 +506,43 @@ impl SQLiteIntrospector {
         Self { pool }
     }
 
-    fn convert_column_type(col_type: &ColumnType) -> String {
+    fn convert_column_type(col_type: &sea_schema::sea_query::ColumnType) -> String {
+        use sea_schema::sea_query::ColumnType;
         match col_type {
-            ColumnType::Serial | ColumnType::BigSerial | ColumnType::SmallSerial => {
+            ColumnType::TinyInteger | ColumnType::SmallInteger | ColumnType::Integer | ColumnType::BigInteger => {
                 "INTEGER".to_string()
             }
-            ColumnType::Integer | ColumnType::BigInteger | ColumnType::SmallInteger => {
-                "INTEGER".to_string()
-            }
-            ColumnType::Text
-            | ColumnType::Varchar(_)
-            | ColumnType::Char(_)
-            | ColumnType::Uuid
-            | ColumnType::Json
-            | ColumnType::JsonBinary => "TEXT".to_string(),
-            ColumnType::Boolean => "INTEGER".to_string(), // SQLite stores booleans as integers
-            ColumnType::Date | ColumnType::Time | ColumnType::Timestamp => "TEXT".to_string(),
-            ColumnType::TimestampWithTimeZone => "TEXT".to_string(),
-            ColumnType::Decimal(_, _) | ColumnType::Float | ColumnType::Double => {
+            ColumnType::Float | ColumnType::Double | ColumnType::Decimal(_) => {
                 "REAL".to_string()
             }
+            ColumnType::String(_) | ColumnType::Text | ColumnType::Char(_) => {
+                "TEXT".to_string()
+            }
             ColumnType::Binary(_) => "BLOB".to_string(),
+            ColumnType::Boolean => "INTEGER".to_string(), // SQLite uses INTEGER for boolean
             _ => "TEXT".to_string(), // fallback
         }
     }
 
-    fn convert_table_def(table_def: &TableDef) -> Result<TableInfo> {
+    fn convert_foreign_key_action(action: &sea_schema::sqlite::def::ForeignKeyAction) -> String {
+        use sea_schema::sqlite::def::ForeignKeyAction;
+        match action {
+            ForeignKeyAction::Cascade => "CASCADE".to_string(),
+            ForeignKeyAction::SetNull => "SET NULL".to_string(),
+            ForeignKeyAction::SetDefault => "SET DEFAULT".to_string(),
+            ForeignKeyAction::Restrict => "RESTRICT".to_string(),
+            ForeignKeyAction::NoAction => "NO ACTION".to_string(),
+        }
+    }
+
+    fn convert_table_def(table_def: &sea_schema::sqlite::def::TableDef) -> Result<TableInfo> {
         let mut columns = HashMap::new();
         let mut primary_key = Vec::new();
 
         for column_def in &table_def.columns {
-            let is_auto = matches!(
-                column_def.col_type,
-                ColumnType::Serial | ColumnType::BigSerial | ColumnType::SmallSerial
-            );
+            let is_auto = table_def.auto_increment && column_def.primary_key;
 
-            if column_def.key.is_primary() {
+            if column_def.primary_key {
                 primary_key.push(column_def.name.clone());
             }
 
@@ -395,34 +550,57 @@ impl SQLiteIntrospector {
                 column_def.name.clone(),
                 ColumnInfo {
                     name: column_def.name.clone(),
-                    column_type: Self::convert_column_type(&column_def.col_type),
-                    nullable: column_def.null,
-                    default: column_def.default.clone(),
+                    column_type: Self::convert_column_type(&column_def.r#type),
+                    nullable: !column_def.not_null,
+                    default: match &column_def.default_value {
+                        sea_schema::sqlite::def::DefaultType::String(s) => Some(s.clone()),
+                        sea_schema::sqlite::def::DefaultType::Integer(i) => Some(i.to_string()),
+                        sea_schema::sqlite::def::DefaultType::Float(f) => Some(f.to_string()),
+                        sea_schema::sqlite::def::DefaultType::CurrentTimestamp => Some("CURRENT_TIMESTAMP".to_string()),
+                        sea_schema::sqlite::def::DefaultType::Null | sea_schema::sqlite::def::DefaultType::Unspecified => None,
+                    },
                     auto_increment: is_auto,
                 },
             );
         }
 
+        // Extract indexes
         let mut indexes = HashMap::new();
         for index_def in &table_def.indexes {
             indexes.insert(
-                index_def.name.clone(),
+                index_def.index_name.clone(),
                 IndexInfo {
-                    name: index_def.name.clone(),
+                    name: index_def.index_name.clone(),
                     columns: index_def.columns.clone(),
                     unique: index_def.unique,
-                    index_type: index_def.r#type.clone(),
+                    index_type: None,
                 },
             );
         }
 
+        // Extract unique constraints from table_def.constraints
+        let mut unique_constraints = Vec::new();
+        for constraint_def in &table_def.constraints {
+            if constraint_def.unique {
+                unique_constraints.push(UniqueConstraintInfo {
+                    name: constraint_def.index_name.clone(),
+                    columns: constraint_def.columns.clone(),
+                });
+            }
+        }
+
+        // Extract foreign keys
+        // Note: SQLite's ForeignKeysInfo has private fields, so we need to work around this
+        // For now, we return empty foreign_keys until sea-schema provides public accessors
+        let foreign_keys: Vec<ForeignKeyInfo> = Vec::new();
+
         Ok(TableInfo {
-            name: table_def.info.name.clone(),
+            name: table_def.name.clone(),
             columns,
             indexes,
             primary_key,
-            foreign_keys: Vec::new(), // TODO: Extract from table_def
-            unique_constraints: Vec::new(), // TODO: Extract from table_def
+            foreign_keys,
+            unique_constraints,
         })
     }
 }
@@ -434,7 +612,7 @@ impl DatabaseIntrospector for SQLiteIntrospector {
         use sea_schema::sqlite::discovery::SchemaDiscovery;
 
         let discovery = SchemaDiscovery::new(self.pool.clone());
-        let schema: Schema = discovery
+        let schema = discovery
             .discover()
             .await
             .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
@@ -585,5 +763,78 @@ mod tests {
 
         let products_table = &schema.tables["products"];
         assert!(!products_table.indexes.is_empty());
+    }
+
+    #[cfg(feature = "sqlite")]
+    #[tokio::test]
+    async fn test_sqlite_introspector_foreign_keys_and_unique_constraints() {
+        use sqlx::SqlitePool;
+
+        let pool = SqlitePool::connect("sqlite::memory:")
+            .await
+            .expect("Failed to create pool");
+
+        // Create tables with foreign keys and unique constraints
+        sqlx::query(
+            r#"
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                username TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create users table");
+
+        sqlx::query(
+            r#"
+            CREATE TABLE posts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE ON UPDATE CASCADE
+            )
+            "#,
+        )
+        .execute(&pool)
+        .await
+        .expect("Failed to create posts table");
+
+        let introspector = SQLiteIntrospector::new(pool);
+        let schema = introspector
+            .read_schema()
+            .await
+            .expect("Failed to read schema");
+
+        // Check users table
+        assert!(schema.tables.contains_key("users"));
+        let users_table = &schema.tables["users"];
+
+        // Check unique constraints (email and username)
+        assert!(
+            !users_table.unique_constraints.is_empty(),
+            "Users table should have unique constraints"
+        );
+
+        // Check posts table
+        assert!(schema.tables.contains_key("posts"));
+        let posts_table = &schema.tables["posts"];
+
+        // Check foreign keys
+        assert_eq!(
+            posts_table.foreign_keys.len(),
+            1,
+            "Posts table should have 1 foreign key"
+        );
+
+        let fk = &posts_table.foreign_keys[0];
+        assert_eq!(fk.columns, vec!["user_id"]);
+        assert_eq!(fk.referenced_table, "users");
+        assert_eq!(fk.referenced_columns, vec!["id"]);
+        assert_eq!(fk.on_delete, Some("CASCADE".to_string()));
+        assert_eq!(fk.on_update, Some("CASCADE".to_string()));
     }
 }
