@@ -101,6 +101,53 @@ impl Default for HstsConfig {
     }
 }
 
+/// HSTS Middleware
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::hsts::{HstsMiddleware, HstsConfig};
+///
+/// let config = HstsConfig::new(31536000)
+///     .with_subdomains(true)
+///     .with_preload(true);
+/// let middleware = HstsMiddleware::new(config);
+/// assert_eq!(middleware.config().max_age, 31536000);
+/// ```
+pub struct HstsMiddleware {
+    config: HstsConfig,
+}
+
+impl HstsMiddleware {
+    /// Create a new HSTS middleware
+    pub fn new(config: HstsConfig) -> Self {
+        Self { config }
+    }
+
+    /// Create an HSTS middleware with default configuration
+    pub fn default_config() -> Self {
+        Self {
+            config: HstsConfig::default(),
+        }
+    }
+
+    /// Get the configuration
+    pub fn config(&self) -> &HstsConfig {
+        &self.config
+    }
+
+    /// Get HSTS header value
+    pub fn get_header_value(&self) -> String {
+        self.config.build_header()
+    }
+}
+
+impl Default for HstsMiddleware {
+    fn default() -> Self {
+        Self::default_config()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,5 +198,30 @@ mod tests {
         assert_eq!(config.max_age, 31536000);
         assert_eq!(config.include_subdomains, true);
         assert_eq!(config.preload, false);
+    }
+
+    #[test]
+    fn test_hsts_middleware_creation() {
+        let config = HstsConfig::new(3600);
+        let middleware = HstsMiddleware::new(config);
+        assert_eq!(middleware.config().max_age, 3600);
+    }
+
+    #[test]
+    fn test_hsts_middleware_default() {
+        let middleware = HstsMiddleware::default();
+        assert_eq!(middleware.config().max_age, 31536000);
+        assert_eq!(middleware.config().include_subdomains, false);
+        assert_eq!(middleware.config().preload, false);
+    }
+
+    #[test]
+    fn test_hsts_middleware_get_header_value() {
+        let config = HstsConfig::new(3600)
+            .with_subdomains(true)
+            .with_preload(true);
+        let middleware = HstsMiddleware::new(config);
+        let header = middleware.get_header_value();
+        assert_eq!(header, "max-age=3600; includeSubDomains; preload");
     }
 }

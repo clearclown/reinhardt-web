@@ -150,6 +150,9 @@ fn test_security_headers_csp_multiple() {
         object_src: vec!["'none'".to_string()],
         media_src: vec!["'self'".to_string()],
         frame_src: vec!["'self'".to_string()],
+        report_uri: None,
+        report_to: None,
+        auto_nonce: false,
     };
     let header = csp.to_header_value();
     assert!(header.contains("default-src"));
@@ -220,6 +223,9 @@ fn test_csp_empty_src() {
         object_src: vec![],
         media_src: vec![],
         frame_src: vec![],
+        report_uri: None,
+        report_to: None,
+        auto_nonce: false,
     };
     let header = csp.to_header_value();
     // Should be empty or minimal
@@ -237,6 +243,9 @@ fn test_security_headers_all_disabled() {
         content_security_policy: None,
         referrer_policy: None,
         permissions_policy: None,
+        cross_origin_embedder_policy: None,
+        cross_origin_opener_policy: None,
+        cross_origin_resource_policy: None,
     };
     assert!(config.x_frame_options.is_none());
     assert!(!config.x_content_type_options);

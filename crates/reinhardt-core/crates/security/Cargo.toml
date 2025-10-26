@@ -20,5 +20,12 @@ hex = "0.4"
 rand = "0.9"
 url = "2.5"
 
+# IP filtering
+ipnet = "2.10"
+
+# XSS protection
+regex = "1.11"
+urlencoding = "2.1"
+
 [dev-dependencies]
 tokio = { workspace = true }
