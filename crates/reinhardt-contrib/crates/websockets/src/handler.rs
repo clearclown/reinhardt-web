@@ -7,12 +7,43 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Manages WebSocket rooms and client connections with backward compatibility
+///
+/// # Deprecation Notice
+///
+/// This type is deprecated and will be removed in a future version.
+/// Please use [`Room`] directly instead.
+///
+/// ## Migration Guide
+///
+/// ### Before (using RoomManager):
+/// ```ignore
+/// let manager = RoomManager::new();
+/// manager.join_room("chat".to_string(), connection).await;
+/// manager.broadcast_to_room("chat", message).await?;
+/// ```
+///
+/// ### After (using Room directly):
+/// ```ignore
+/// let room = Room::new("chat".to_string());
+/// room.join("user1".to_string(), connection).await?;
+/// room.broadcast(message).await?;
+/// ```
+///
+/// For managing multiple rooms, maintain a `HashMap<String, Arc<Room>>` in your application.
+#[deprecated(
+    since = "0.2.0",
+    note = "Use Room directly instead. See migration guide in documentation."
+)]
 pub struct RoomManager {
     rooms: Arc<RwLock<HashMap<String, Arc<Room>>>>,
 }
 
 impl RoomManager {
     /// Create a new RoomManager
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`Room::new`] instead.
+    #[deprecated(since = "0.2.0", note = "Use Room::new instead")]
     pub fn new() -> Self {
         Self {
             rooms: Arc::new(RwLock::new(HashMap::new())),
@@ -20,6 +51,10 @@ impl RoomManager {
     }
 
     /// Add a connection to a room
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`Room::join`] instead.
+    #[deprecated(since = "0.2.0", note = "Use Room::join instead")]
     pub async fn join_room(&self, room_name: String, connection: Arc<WebSocketConnection>) {
         let room = self.get_or_create_room(&room_name).await;
         let client_id = connection.id().to_string();
@@ -27,6 +62,10 @@ impl RoomManager {
     }
 
     /// Remove a connection from a room
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`Room::leave`] instead.
+    #[deprecated(since = "0.2.0", note = "Use Room::leave instead")]
     pub async fn leave_room(&self, room_name: &str, client_id: &str) {
         if let Some(room) = self.get_room(room_name).await {
             let _ = room.leave(client_id).await;
@@ -37,6 +76,10 @@ impl RoomManager {
     }
 
     /// Broadcast a message to all connections in a room
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`Room::broadcast`] instead.
+    #[deprecated(since = "0.2.0", note = "Use Room::broadcast instead")]
     pub async fn broadcast_to_room(
         &self,
         room_name: &str,
@@ -52,6 +95,13 @@ impl RoomManager {
     }
 
     /// Broadcast a message to all rooms
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Iterate over your rooms manually instead.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Iterate over your rooms manually instead"
+    )]
     pub async fn broadcast_to_all(&self, message: Message) -> WebSocketResult<()> {
         let rooms = self.rooms.read().await;
         for room in rooms.values() {
@@ -64,6 +114,10 @@ impl RoomManager {
     }
 
     /// Get the number of connections in a room
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`Room::client_count`] instead.
+    #[deprecated(since = "0.2.0", note = "Use Room::client_count instead")]
     pub async fn get_room_size(&self, room_name: &str) -> usize {
         if let Some(room) = self.get_room(room_name).await {
             room.client_count().await
@@ -73,6 +127,13 @@ impl RoomManager {
     }
 
     /// Get all room names
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Manage rooms in your application instead.
+    #[deprecated(
+        since = "0.2.0",
+        note = "Manage rooms in your application instead"
+    )]
     pub async fn get_all_rooms(&self) -> Vec<String> {
         let rooms = self.rooms.read().await;
         rooms.keys().cloned().collect()
@@ -130,6 +191,7 @@ mod tests {
     use tokio::sync::mpsc;
 
     #[tokio::test]
+    #[allow(deprecated)]
     async fn test_room_manager_basic() {
         let manager = RoomManager::new();
         let (tx, _rx) = mpsc::unbounded_channel();
@@ -143,6 +205,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[allow(deprecated)]
     async fn test_room_manager_broadcast() {
         let manager = RoomManager::new();
         let (tx1, mut rx1) = mpsc::unbounded_channel();
