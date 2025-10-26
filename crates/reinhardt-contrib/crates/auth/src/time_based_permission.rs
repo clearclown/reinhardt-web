@@ -5,7 +5,7 @@
 
 use crate::{Permission, PermissionContext};
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, NaiveTime, TimeZone, Timelike, Utc, Weekday};
+use chrono::{DateTime, Datelike, NaiveTime, Utc, Weekday};
 
 /// Time-based permission
 ///
