@@ -1,6 +1,8 @@
 //! CSRF (Cross-Site Request Forgery) protection
 
+use hmac::{Hmac, Mac};
 use rand::Rng;
+use sha2::Sha256;
 
 /// CSRF token length (64 characters)
 pub const CSRF_TOKEN_LENGTH: usize = 64;
@@ -64,6 +66,8 @@ impl Default for SameSite {
 }
 
 /// CSRF configuration
+///
+/// All tokens are generated using HMAC-SHA256 for cryptographic security.
 #[derive(Debug, Clone)]
 pub struct CsrfConfig {
     pub cookie_name: String,
@@ -161,108 +165,168 @@ impl CsrfToken {
     }
 }
 
-/// Mask a CSRF secret to create a token
-pub fn mask_cipher_secret(secret: &str) -> String {
+/// HMAC-SHA256 type alias
+type HmacSha256 = Hmac<Sha256>;
+
+/// Generate HMAC-SHA256 based CSRF token
+///
+/// Creates a cryptographically secure token using HMAC-SHA256.
+/// This is more secure than the legacy masking approach.
+///
+/// # Arguments
+///
+/// * `secret` - Secret key for HMAC (should be at least 32 bytes)
+/// * `message` - Message to authenticate (typically timestamp or session ID)
+///
+/// # Returns
+///
+/// Hex-encoded HMAC token (64 characters)
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::csrf::generate_token_hmac;
+///
+/// let secret = b"my-secret-key-at-least-32-bytes-long";
+/// let message = "session-id-12345";
+/// let token = generate_token_hmac(secret, message);
+/// assert_eq!(token.len(), 64); // HMAC-SHA256 produces 32 bytes = 64 hex chars
+/// ```
+pub fn generate_token_hmac(secret: &[u8], message: &str) -> String {
+    let mut mac = HmacSha256::new_from_slice(secret)
+        .expect("HMAC can take key of any size");
+    mac.update(message.as_bytes());
+    let result = mac.finalize();
+    hex::encode(result.into_bytes())
+}
+
+/// Verify HMAC-SHA256 based CSRF token
+///
+/// Verifies that the token was generated with the given secret and message.
+/// Uses constant-time comparison to prevent timing attacks.
+///
+/// # Arguments
+///
+/// * `token` - Hex-encoded HMAC token to verify
+/// * `secret` - Secret key used for HMAC generation
+/// * `message` - Original message that was authenticated
+///
+/// # Returns
+///
+/// `true` if the token is valid, `false` otherwise
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::csrf::{generate_token_hmac, verify_token_hmac};
+///
+/// let secret = b"my-secret-key-at-least-32-bytes-long";
+/// let message = "session-id-12345";
+/// let token = generate_token_hmac(secret, message);
+///
+/// assert!(verify_token_hmac(&token, secret, message));
+/// assert!(!verify_token_hmac(&token, secret, "different-message"));
+/// assert!(!verify_token_hmac("invalid-token", secret, message));
+/// ```
+pub fn verify_token_hmac(token: &str, secret: &[u8], message: &str) -> bool {
+    // Decode hex token
+    let Ok(token_bytes) = hex::decode(token) else {
+        return false;
+    };
+
+    // Generate expected HMAC
+    let mut mac = HmacSha256::new_from_slice(secret)
+        .expect("HMAC can take key of any size");
+    mac.update(message.as_bytes());
+
+    // Constant-time comparison to prevent timing attacks
+    mac.verify_slice(&token_bytes).is_ok()
+}
+
+/// Get CSRF secret as bytes (32 bytes)
+///
+/// Generates a cryptographically secure random secret suitable for HMAC.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::csrf::get_secret_bytes;
+///
+/// let secret = get_secret_bytes();
+/// assert_eq!(secret.len(), 32);
+/// ```
+pub fn get_secret_bytes() -> Vec<u8> {
     let mut rng = rand::rng();
-    let mask: String = (0..CSRF_SECRET_LENGTH)
-        .map(|_| {
-            let idx = rng.random_range(0..CSRF_ALLOWED_CHARS.len());
-            CSRF_ALLOWED_CHARS.chars().nth(idx).unwrap()
-        })
-        .collect();
-
-    let masked: String = secret
-        .chars()
-        .zip(mask.chars())
-        .map(|(s, m)| {
-            let s_idx = CSRF_ALLOWED_CHARS.find(s).unwrap();
-            let m_idx = CSRF_ALLOWED_CHARS.find(m).unwrap();
-            let result_idx = (s_idx + m_idx) % CSRF_ALLOWED_CHARS.len();
-            CSRF_ALLOWED_CHARS.chars().nth(result_idx).unwrap()
-        })
-        .collect();
-
-    format!("{}{}", mask, masked)
+    let mut secret = vec![0u8; 32];
+    rng.fill(&mut secret[..]);
+    secret
 }
 
-/// Unmask a CSRF token to get the secret
-pub fn unmask_cipher_token(token: &str) -> String {
-    let (mask, masked) = token.split_at(CSRF_SECRET_LENGTH);
-
-    mask.chars()
-        .zip(masked.chars())
-        .map(|(m, masked_char)| {
-            let m_idx = CSRF_ALLOWED_CHARS.find(m).unwrap();
-            let masked_idx = CSRF_ALLOWED_CHARS.find(masked_char).unwrap();
-            let secret_idx =
-                (masked_idx + CSRF_ALLOWED_CHARS.len() - m_idx) % CSRF_ALLOWED_CHARS.len();
-            CSRF_ALLOWED_CHARS.chars().nth(secret_idx).unwrap()
-        })
-        .collect()
+/// Get CSRF token using HMAC-SHA256
+///
+/// Generates a CSRF token using the HMAC-SHA256 approach.
+/// This is the recommended method for new implementations.
+///
+/// # Arguments
+///
+/// * `secret_bytes` - 32-byte secret key
+/// * `session_id` - Session identifier or timestamp
+///
+/// # Returns
+///
+/// Hex-encoded HMAC token (64 characters)
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::csrf::{get_secret_bytes, get_token_hmac};
+///
+/// let secret = get_secret_bytes();
+/// let session_id = "user-session-12345";
+/// let token = get_token_hmac(&secret, session_id);
+/// assert_eq!(token.len(), 64);
+/// ```
+pub fn get_token_hmac(secret_bytes: &[u8], session_id: &str) -> String {
+    generate_token_hmac(secret_bytes, session_id)
 }
 
-/// Check token format
-pub fn check_token_format(token: &str) -> Result<(), InvalidTokenFormat> {
-    if token.len() != CSRF_TOKEN_LENGTH {
-        return Err(InvalidTokenFormat {
-            reason: REASON_INCORRECT_LENGTH.to_string(),
-        });
-    }
-
-    if !token.chars().all(|c| CSRF_ALLOWED_CHARS.contains(c)) {
-        return Err(InvalidTokenFormat {
-            reason: REASON_INVALID_CHARACTERS.to_string(),
-        });
-    }
-
-    Ok(())
-}
-
-/// Check if two tokens match
-pub fn does_token_match(token1: &str, token2: &str) -> bool {
-    token1 == token2
-}
-
-/// Check token validity
-pub fn check_token(request_token: &str, secret: &str) -> Result<(), RejectRequest> {
-    check_token_format(request_token)?;
-    let request_secret = unmask_cipher_token(request_token);
-
-    if !does_token_match(&request_secret, secret) {
+/// Check HMAC-based CSRF token validity
+///
+/// Verifies a CSRF token generated with HMAC-SHA256.
+///
+/// # Arguments
+///
+/// * `request_token` - Token from the request
+/// * `secret_bytes` - Secret key used for generation
+/// * `session_id` - Session identifier or timestamp
+///
+/// # Returns
+///
+/// `Ok(())` if valid, `Err(RejectRequest)` if invalid
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_security::csrf::{get_secret_bytes, get_token_hmac, check_token_hmac};
+///
+/// let secret = get_secret_bytes();
+/// let session_id = "user-session-12345";
+/// let token = get_token_hmac(&secret, session_id);
+///
+/// assert!(check_token_hmac(&token, &secret, session_id).is_ok());
+/// assert!(check_token_hmac("invalid", &secret, session_id).is_err());
+/// ```
+pub fn check_token_hmac(
+    request_token: &str,
+    secret_bytes: &[u8],
+    session_id: &str,
+) -> Result<(), RejectRequest> {
+    if !verify_token_hmac(request_token, secret_bytes, session_id) {
         return Err(RejectRequest {
-            reason: "CSRF token mismatch".to_string(),
+            reason: "CSRF token mismatch (HMAC verification failed)".to_string(),
         });
     }
-
     Ok(())
-}
-
-impl From<InvalidTokenFormat> for RejectRequest {
-    fn from(err: InvalidTokenFormat) -> Self {
-        RejectRequest { reason: err.reason }
-    }
-}
-
-/// Get CSRF secret from session
-pub fn get_secret() -> String {
-    let mut rng = rand::rng();
-    (0..CSRF_SECRET_LENGTH)
-        .map(|_| {
-            let idx = rng.random_range(0..CSRF_ALLOWED_CHARS.len());
-            CSRF_ALLOWED_CHARS.chars().nth(idx).unwrap()
-        })
-        .collect()
-}
-
-/// Get CSRF token
-pub fn get_token(secret: &str) -> String {
-    mask_cipher_secret(secret)
-}
-
-/// Rotate CSRF token
-pub fn rotate_token() -> String {
-    let secret = get_secret();
-    mask_cipher_secret(&secret)
 }
 
 /// Check origin header
@@ -309,35 +373,4 @@ pub fn check_referer(
 /// Check if two domains are the same
 pub fn is_same_domain(domain1: &str, domain2: &str) -> bool {
     domain1 == domain2
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mask_unmask() {
-        let secret = "abcdefghijklmnopqrstuvwxyz012345";
-        let masked = mask_cipher_secret(secret);
-        let unmasked = unmask_cipher_token(&masked);
-        assert_eq!(unmasked, secret);
-    }
-
-    #[test]
-    fn test_token_format_valid() {
-        let token = "a".repeat(CSRF_TOKEN_LENGTH);
-        assert!(check_token_format(&token).is_ok());
-    }
-
-    #[test]
-    fn test_token_format_invalid_length() {
-        let token = "a".repeat(CSRF_TOKEN_LENGTH - 1);
-        assert!(check_token_format(&token).is_err());
-    }
-
-    #[test]
-    fn test_does_token_match() {
-        assert!(does_token_match("abc", "abc"));
-        assert!(!does_token_match("abc", "abd"));
-    }
 }

@@ -15,6 +15,7 @@ http = "1.0"
 
 # CSRF protection
 sha2 = "0.10"
+hmac = "0.12"
 hex = "0.4"
 rand = "0.9"
 url = "2.5"

@@ -59,16 +59,17 @@ pub enum SecurityError {
     XssDetected(String),
 }
 
-// Re-export CSRF functions and types
+// Re-export CSRF types and constants
 pub use csrf::{
-    mask_cipher_secret, unmask_cipher_token, InvalidTokenFormat, RejectRequest, CSRF_ALLOWED_CHARS,
-    CSRF_SECRET_LENGTH, CSRF_SESSION_KEY, CSRF_TOKEN_LENGTH, REASON_BAD_ORIGIN, REASON_BAD_REFERER,
-    REASON_CSRF_TOKEN_MISSING, REASON_INCORRECT_LENGTH, REASON_INSECURE_REFERER,
-    REASON_INVALID_CHARACTERS, REASON_MALFORMED_REFERER, REASON_NO_CSRF_COOKIE, REASON_NO_REFERER,
+    RejectRequest, CSRF_SECRET_LENGTH, CSRF_SESSION_KEY, CSRF_TOKEN_LENGTH, REASON_BAD_ORIGIN,
+    REASON_BAD_REFERER, REASON_CSRF_TOKEN_MISSING, REASON_INSECURE_REFERER, REASON_MALFORMED_REFERER,
+    REASON_NO_REFERER,
 };
 
-// Re-export additional CSRF functions and types
+// Re-export CSRF utility functions
+pub use csrf::{check_origin, check_referer, is_same_domain, CsrfMeta};
+
+// Re-export HMAC-based CSRF functions (primary API)
 pub use csrf::{
-    check_origin, check_referer, check_token, check_token_format, does_token_match, get_secret,
-    get_token, is_same_domain, rotate_token, CsrfMeta,
+    check_token_hmac, generate_token_hmac, get_secret_bytes, get_token_hmac, verify_token_hmac,
 };
