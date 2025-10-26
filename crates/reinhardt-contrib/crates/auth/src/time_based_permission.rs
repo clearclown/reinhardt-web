@@ -597,6 +597,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         assert!(permission.has_permission(&context).await);

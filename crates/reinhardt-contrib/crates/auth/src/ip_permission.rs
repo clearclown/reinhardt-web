@@ -137,7 +137,11 @@ impl IpWhitelistPermission {
             }
         }
 
-        // TODO: Extract from connection info when available
+        // Extract from socket address if available
+        if let Some(remote_addr) = context.request.remote_addr {
+            return Some(remote_addr.ip());
+        }
+
         None
     }
 }
@@ -288,7 +292,11 @@ impl IpBlacklistPermission {
             }
         }
 
-        // TODO: Extract from connection info when available
+        // Extract from socket address if available
+        if let Some(remote_addr) = context.request.remote_addr {
+            return Some(remote_addr.ip());
+        }
+
         None
     }
 }
@@ -525,6 +533,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         assert!(permission.has_permission(&context).await);
@@ -582,6 +591,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         assert!(!permission.has_permission(&context1).await);
@@ -602,6 +612,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         assert!(permission.has_permission(&context2).await);

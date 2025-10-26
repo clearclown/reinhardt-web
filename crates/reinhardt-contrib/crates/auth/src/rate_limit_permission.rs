@@ -260,17 +260,18 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
             }
         }
 
-        // TODO: Extract from socket address once available in Request
+        // Extract from socket address if available
+        if let Some(remote_addr) = context.request.remote_addr {
+            return Some(remote_addr.ip().to_string());
+        }
+
         None
     }
 
     /// Extract user ID from context
     fn extract_user_id(&self, context: &PermissionContext) -> Option<String> {
-        // TODO: Extract actual user ID from authenticated user
-        // For now, return None if not authenticated
-        if context.is_authenticated {
-            // Placeholder: would extract from User object
-            Some("authenticated_user".to_string())
+        if let Some(user) = context.user {
+            Some(user.id())
         } else {
             None
         }
@@ -412,6 +413,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         // First two requests should be allowed
@@ -424,17 +426,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_rate_limit_permission_user_strategy() {
+        use crate::user::{SimpleUser, User};
+        use uuid::Uuid;
+
         let backend = Arc::new(MemoryBackend::new());
         let config = RateLimitConfig::new(3, 60, RateLimitKeyStrategy::UserId);
         let permission = RateLimitPermission::new(backend, config);
 
         let headers = HeaderMap::new();
         let request = create_test_request(headers);
+
+        let test_user = SimpleUser {
+            id: Uuid::new_v4(),
+            username: "testuser".to_string(),
+            email: "test@example.com".to_string(),
+            is_active: true,
+            is_admin: false,
+        };
+
         let context = PermissionContext {
             request: &request,
             is_authenticated: true,
             is_admin: false,
             is_active: true,
+            user: Some(&test_user as &dyn User),
         };
 
         // First three requests should be allowed
@@ -459,6 +474,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         // Should be denied for unauthenticated users
@@ -480,6 +496,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         // First two requests should be allowed
@@ -541,6 +558,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         // Should work with scoped keys
@@ -564,6 +582,7 @@ mod tests {
             is_authenticated: false,
             is_admin: false,
             is_active: false,
+            user: None,
         };
 
         // First request allowed
