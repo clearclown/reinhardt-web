@@ -4,6 +4,9 @@
 //! - `IntegerConverter`: Validates and converts integer path parameters
 //! - `UuidConverter`: Validates and converts UUID path parameters
 //! - `SlugConverter`: Validates slug format (lowercase alphanumeric + hyphens)
+//! - `DateConverter`: Validates and converts date parameters (YYYY-MM-DD)
+//! - `PathConverter`: Validates and converts path parameters (with security checks)
+//! - `FloatConverter`: Validates and converts floating-point parameters
 //!
 //! # Examples
 //!
@@ -26,6 +29,7 @@
 //! assert!(!slug_conv.validate("Invalid Slug!"));
 //! ```
 
+use chrono::NaiveDate;
 use regex::Regex;
 use std::sync::OnceLock;
 use thiserror::Error;
@@ -280,9 +284,284 @@ impl Converter for SlugConverter {
     }
 }
 
+/// Date converter for ISO 8601 dates (YYYY-MM-DD)
+///
+/// Validates that path parameters are valid dates in YYYY-MM-DD format
+/// and converts them to `chrono::NaiveDate`.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_routers::converters::{Converter, DateConverter};
+/// use chrono::Datelike;
+///
+/// let conv = DateConverter;
+/// assert!(conv.validate("2024-01-15"));
+/// assert!(conv.validate("2023-12-31"));
+/// assert!(!conv.validate("2024-13-01")); // Invalid month
+/// assert!(!conv.validate("2024-01-32")); // Invalid day
+/// assert!(!conv.validate("24-01-15")); // Wrong format
+/// assert!(!conv.validate("not-a-date"));
+///
+/// // Convert to NaiveDate
+/// let date = conv.convert("2024-01-15").unwrap();
+/// assert_eq!(date.year(), 2024);
+/// assert_eq!(date.month(), 1);
+/// assert_eq!(date.day(), 15);
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct DateConverter;
+
+impl DateConverter {
+    fn regex() -> &'static Regex {
+        static REGEX: OnceLock<Regex> = OnceLock::new();
+        REGEX
+            .get_or_init(|| Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Invalid date regex pattern"))
+    }
+}
+
+impl Converter for DateConverter {
+    type Output = NaiveDate;
+
+    fn validate(&self, value: &str) -> bool {
+        if !Self::regex().is_match(value) {
+            return false;
+        }
+        NaiveDate::parse_from_str(value, "%Y-%m-%d").is_ok()
+    }
+
+    fn convert(&self, value: &str) -> ConverterResult<Self::Output> {
+        NaiveDate::parse_from_str(value, "%Y-%m-%d").map_err(|_| {
+            ConverterError::InvalidFormat(format!(
+                "'{}' is not a valid date (expected YYYY-MM-DD format)",
+                value
+            ))
+        })
+    }
+
+    fn pattern(&self) -> &str {
+        r"\d{4}-\d{2}-\d{2}"
+    }
+}
+
+/// Path converter for file paths with security validation
+///
+/// Validates that path parameters are safe file paths without
+/// directory traversal attempts (e.g., `../`) and converts them to `String`.
+///
+/// # Security
+///
+/// This converter prevents path traversal attacks by rejecting:
+/// - Paths containing `../` (parent directory references)
+/// - Paths containing `..` at the start or end
+/// - Paths with null bytes
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_routers::converters::{Converter, PathConverter};
+///
+/// let conv = PathConverter;
+/// assert!(conv.validate("path/to/file.txt"));
+/// assert!(conv.validate("images/photo.jpg"));
+/// assert!(conv.validate("documents/2024/report.pdf"));
+/// assert!(!conv.validate("../etc/passwd")); // Directory traversal
+/// assert!(!conv.validate("path/../secret")); // Directory traversal
+/// assert!(!conv.validate("path/to/../../file")); // Directory traversal
+///
+/// // Convert to String
+/// let path = conv.convert("documents/report.pdf").unwrap();
+/// assert_eq!(path, "documents/report.pdf");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct PathConverter;
+
+impl PathConverter {
+    /// Check if a path contains directory traversal attempts
+    fn is_safe_path(path: &str) -> bool {
+        // Reject null bytes
+        if path.contains('\0') {
+            return false;
+        }
+
+        // Reject paths containing ../ or /../
+        if path.contains("../") || path.contains("/..") {
+            return false;
+        }
+
+        // Reject paths starting or ending with ..
+        if path.starts_with("..") || path.ends_with("..") {
+            return false;
+        }
+
+        true
+    }
+}
+
+impl Converter for PathConverter {
+    type Output = String;
+
+    fn validate(&self, value: &str) -> bool {
+        !value.is_empty() && Self::is_safe_path(value)
+    }
+
+    fn convert(&self, value: &str) -> ConverterResult<Self::Output> {
+        if value.is_empty() {
+            return Err(ConverterError::InvalidFormat(
+                "Path cannot be empty".to_string(),
+            ));
+        }
+
+        if !Self::is_safe_path(value) {
+            return Err(ConverterError::InvalidFormat(format!(
+                "'{}' contains invalid path components (possible directory traversal attempt)",
+                value
+            )));
+        }
+
+        Ok(value.to_string())
+    }
+
+    fn pattern(&self) -> &str {
+        r"[^/\0]+(?:/[^/\0]+)*"
+    }
+}
+
+/// Float converter with optional range validation
+///
+/// Validates that path parameters are valid floating-point numbers,
+/// optionally within a specified range.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_routers::converters::{Converter, FloatConverter};
+///
+/// // Without range limits
+/// let conv = FloatConverter::new();
+/// assert!(conv.validate("123.45"));
+/// assert!(conv.validate("-67.89"));
+/// assert!(conv.validate("0.0"));
+/// assert!(conv.validate("3.14159"));
+/// assert!(!conv.validate("abc"));
+/// assert!(!conv.validate("12.34.56")); // Invalid format
+///
+/// // With range limits
+/// let conv = FloatConverter::with_range(0.0, 100.0);
+/// assert!(conv.validate("50.5"));
+/// assert!(conv.validate("0.0"));
+/// assert!(conv.validate("100.0"));
+/// assert!(!conv.validate("150.5")); // Out of range
+/// assert!(!conv.validate("-10.0")); // Out of range
+///
+/// // Convert to f64
+/// let value = FloatConverter::new().convert("3.14159").unwrap();
+/// assert!((value - 3.14159).abs() < 1e-6);
+/// ```
+#[derive(Debug, Clone)]
+pub struct FloatConverter {
+    min: Option<f64>,
+    max: Option<f64>,
+}
+
+impl FloatConverter {
+    /// Create a new float converter without range limits
+    pub fn new() -> Self {
+        Self {
+            min: None,
+            max: None,
+        }
+    }
+
+    /// Create a float converter with range limits
+    ///
+    /// # Arguments
+    ///
+    /// * `min` - Minimum allowed value (inclusive)
+    /// * `max` - Maximum allowed value (inclusive)
+    pub fn with_range(min: f64, max: f64) -> Self {
+        Self {
+            min: Some(min),
+            max: Some(max),
+        }
+    }
+}
+
+impl Default for FloatConverter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Converter for FloatConverter {
+    type Output = f64;
+
+    fn validate(&self, value: &str) -> bool {
+        if let Ok(num) = value.parse::<f64>() {
+            if !num.is_finite() {
+                return false;
+            }
+            if let Some(min) = self.min {
+                if num < min {
+                    return false;
+                }
+            }
+            if let Some(max) = self.max {
+                if num > max {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    fn convert(&self, value: &str) -> ConverterResult<Self::Output> {
+        let num = value.parse::<f64>().map_err(|_| {
+            ConverterError::InvalidFormat(format!(
+                "'{}' is not a valid floating-point number",
+                value
+            ))
+        })?;
+
+        if !num.is_finite() {
+            return Err(ConverterError::InvalidFormat(format!(
+                "'{}' is not a finite number",
+                value
+            )));
+        }
+
+        if let Some(min) = self.min {
+            if num < min {
+                return Err(ConverterError::OutOfRange(format!(
+                    "{} is less than minimum {}",
+                    num, min
+                )));
+            }
+        }
+
+        if let Some(max) = self.max {
+            if num > max {
+                return Err(ConverterError::OutOfRange(format!(
+                    "{} is greater than maximum {}",
+                    num, max
+                )));
+            }
+        }
+
+        Ok(num)
+    }
+
+    fn pattern(&self) -> &str {
+        r"-?\d+\.?\d*"
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Datelike;
 
     #[test]
     fn test_integer_converter_basic() {
@@ -395,5 +674,170 @@ mod tests {
             r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
         );
         assert_eq!(slug_conv.pattern(), r"[a-z0-9]+(-[a-z0-9]+)*");
+    }
+
+    #[test]
+    fn test_date_converter_validation() {
+        let conv = DateConverter;
+
+        // Valid dates
+        assert!(conv.validate("2024-01-15"));
+        assert!(conv.validate("2023-12-31"));
+        assert!(conv.validate("2000-02-29")); // Leap year
+
+        // Invalid dates
+        assert!(!conv.validate("2024-13-01")); // Invalid month
+        assert!(!conv.validate("2024-01-32")); // Invalid day
+        assert!(!conv.validate("2023-02-29")); // Not a leap year
+        assert!(!conv.validate("24-01-15")); // Wrong format
+        assert!(!conv.validate("2024/01/15")); // Wrong separator
+        assert!(!conv.validate("not-a-date"));
+        assert!(!conv.validate(""));
+    }
+
+    #[test]
+    fn test_date_converter_convert() {
+        let conv = DateConverter;
+
+        // Valid conversion
+        let date = conv.convert("2024-01-15").unwrap();
+        assert_eq!(date.year(), 2024);
+        assert_eq!(date.month(), 1);
+        assert_eq!(date.day(), 15);
+
+        // Another valid date
+        let date = conv.convert("2023-12-31").unwrap();
+        assert_eq!(date.year(), 2023);
+        assert_eq!(date.month(), 12);
+        assert_eq!(date.day(), 31);
+
+        // Invalid dates
+        assert!(conv.convert("2024-13-01").is_err());
+        assert!(conv.convert("not-a-date").is_err());
+    }
+
+    #[test]
+    fn test_path_converter_validation() {
+        let conv = PathConverter;
+
+        // Valid paths
+        assert!(conv.validate("path/to/file.txt"));
+        assert!(conv.validate("images/photo.jpg"));
+        assert!(conv.validate("documents/2024/report.pdf"));
+        assert!(conv.validate("simple.txt"));
+        assert!(conv.validate("a/b/c/d/e.txt"));
+
+        // Invalid paths - directory traversal
+        assert!(!conv.validate("../etc/passwd"));
+        assert!(!conv.validate("path/../secret"));
+        assert!(!conv.validate("path/to/../../file"));
+        assert!(!conv.validate(".."));
+        assert!(!conv.validate("path/.."));
+        assert!(!conv.validate("../path"));
+
+        // Empty path
+        assert!(!conv.validate(""));
+
+        // Null bytes
+        assert!(!conv.validate("path\0/file"));
+    }
+
+    #[test]
+    fn test_path_converter_convert() {
+        let conv = PathConverter;
+
+        // Valid conversions
+        assert_eq!(
+            conv.convert("documents/report.pdf").unwrap(),
+            "documents/report.pdf"
+        );
+        assert_eq!(conv.convert("file.txt").unwrap(), "file.txt");
+
+        // Invalid paths
+        assert!(conv.convert("../etc/passwd").is_err());
+        assert!(conv.convert("path/../file").is_err());
+        assert!(conv.convert("").is_err());
+    }
+
+    #[test]
+    fn test_float_converter_basic() {
+        let conv = FloatConverter::new();
+
+        // Valid floats
+        assert!(conv.validate("123.45"));
+        assert!(conv.validate("-67.89"));
+        assert!(conv.validate("0.0"));
+        assert!(conv.validate("3.14159"));
+        assert!(conv.validate("100"));
+        assert!(conv.validate("-200"));
+
+        // Invalid values
+        assert!(!conv.validate("abc"));
+        assert!(!conv.validate("12.34.56"));
+        assert!(!conv.validate(""));
+        assert!(!conv.validate("inf"));
+        assert!(!conv.validate("nan"));
+    }
+
+    #[test]
+    fn test_float_converter_with_range() {
+        let conv = FloatConverter::with_range(0.0, 100.0);
+
+        // Within range
+        assert!(conv.validate("50.5"));
+        assert!(conv.validate("0.0"));
+        assert!(conv.validate("100.0"));
+        assert!(conv.validate("0.001"));
+        assert!(conv.validate("99.999"));
+
+        // Out of range
+        assert!(!conv.validate("150.5"));
+        assert!(!conv.validate("-10.0"));
+        assert!(!conv.validate("100.1"));
+        assert!(!conv.validate("-0.001"));
+    }
+
+    #[test]
+    fn test_float_converter_convert() {
+        let conv = FloatConverter::new();
+
+        // Valid conversions
+        let value = conv.convert("3.14159").unwrap();
+        assert!((value - 3.14159).abs() < 1e-6);
+
+        let value = conv.convert("-67.89").unwrap();
+        assert!((value - (-67.89)).abs() < 1e-6);
+
+        let value = conv.convert("100").unwrap();
+        assert_eq!(value, 100.0);
+
+        // Invalid values
+        assert!(conv.convert("abc").is_err());
+        assert!(conv.convert("inf").is_err());
+    }
+
+    #[test]
+    fn test_float_converter_convert_with_range() {
+        let conv = FloatConverter::with_range(0.0, 100.0);
+
+        // Within range
+        assert_eq!(conv.convert("50.5").unwrap(), 50.5);
+        assert_eq!(conv.convert("0.0").unwrap(), 0.0);
+        assert_eq!(conv.convert("100.0").unwrap(), 100.0);
+
+        // Out of range
+        assert!(conv.convert("150.5").is_err());
+        assert!(conv.convert("-10.0").is_err());
+    }
+
+    #[test]
+    fn test_new_converter_patterns() {
+        let date_conv = DateConverter;
+        let path_conv = PathConverter;
+        let float_conv = FloatConverter::new();
+
+        assert_eq!(date_conv.pattern(), r"\d{4}-\d{2}-\d{2}");
+        assert_eq!(path_conv.pattern(), r"[^/\0]+(?:/[^/\0]+)*");
+        assert_eq!(float_conv.pattern(), r"-?\d+\.?\d*");
     }
 }

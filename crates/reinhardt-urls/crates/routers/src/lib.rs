@@ -26,7 +26,8 @@ pub use reinhardt_routers_macros::path;
 
 pub use cache::RouteCache;
 pub use converters::{
-    Converter, ConverterError, ConverterResult, IntegerConverter, SlugConverter, UuidConverter,
+    Converter, ConverterError, ConverterResult, DateConverter, FloatConverter, IntegerConverter,
+    PathConverter, SlugConverter, UuidConverter,
 };
 pub use helpers::{IncludedRouter, include_routes, path, re_path};
 pub use pattern::{PathMatcher, PathPattern};
