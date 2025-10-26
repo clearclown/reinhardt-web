@@ -7,26 +7,6 @@
 //!
 //! The following enhancements are planned for future releases:
 //!
-//! ### Additional Middleware Types
-//!
-//! Planned middleware additions:
-//! - **RateLimitMiddleware**: Per-route or per-user rate limiting
-//! - **CacheMiddleware**: Response caching with various backends
-//! - **ETa gMiddleware**: Automatic ETag generation and validation
-//! - **SessionMiddleware**: Enhanced session management
-//! - **MetricsMiddleware**: Request/response metrics collection
-//! - **CircuitBreakerMiddleware**: Fault tolerance and resilience
-//!
-//! ### Enhanced Security Features
-//!
-//! Planned security enhancements:
-//! - **Content Security Policy (CSP)**: Automatic CSP header management
-//! - **HSTS**: HTTP Strict Transport Security support
-//! - **XSS Protection**: Enhanced cross-site scripting prevention
-//! - **CSRF Token Rotation**: Automatic token refresh
-//! - **IP Filtering**: Whitelist/blacklist IP address ranges
-//! - **Security Headers**: Automatic secure header injection
-//!
 //! ### Additional Validator Types
 //!
 //! Planned validator additions:
