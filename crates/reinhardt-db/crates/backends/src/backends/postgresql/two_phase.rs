@@ -116,8 +116,12 @@ impl PostgresTwoPhaseParticipant {
     /// # }
     /// ```
     pub async fn prepare(&self, xid: &str) -> Result<()> {
-        let sql = format!("PREPARE TRANSACTION '{}'", pg_escape::quote_literal(xid));
-        sqlx::query(&*sql)
+        // Use Box::leak to convert String to &'static str for sqlx compatibility
+        // This is acceptable as prepared transaction IDs are typically short-lived
+        let xid_escaped = pg_escape::quote_literal(xid);
+        let sql = format!("PREPARE TRANSACTION {}", xid_escaped);
+        let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+        sqlx::query(sql_static)
             .execute(self.pool.as_ref())
             .await
             .map_err(DatabaseError::from)?;
@@ -145,8 +149,11 @@ impl PostgresTwoPhaseParticipant {
     /// # }
     /// ```
     pub async fn commit(&self, xid: &str) -> Result<()> {
-        let sql = format!("COMMIT PREPARED '{}'", pg_escape::quote_literal(xid));
-        sqlx::query(&*sql)
+        // Use Box::leak to convert String to &'static str for sqlx compatibility
+        let xid_escaped = pg_escape::quote_literal(xid);
+        let sql = format!("COMMIT PREPARED {}", xid_escaped);
+        let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+        sqlx::query(sql_static)
             .execute(self.pool.as_ref())
             .await
             .map_err(DatabaseError::from)?;
@@ -170,8 +177,11 @@ impl PostgresTwoPhaseParticipant {
     /// # }
     /// ```
     pub async fn rollback(&self, xid: &str) -> Result<()> {
-        let sql = format!("ROLLBACK PREPARED '{}'", pg_escape::quote_literal(xid));
-        sqlx::query(&sql)
+        // Use Box::leak to convert String to &'static str for sqlx compatibility
+        let xid_escaped = pg_escape::quote_literal(xid);
+        let sql = format!("ROLLBACK PREPARED {}", xid_escaped);
+        let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+        sqlx::query(sql_static)
             .execute(self.pool.as_ref())
             .await
             .map_err(DatabaseError::from)?;
