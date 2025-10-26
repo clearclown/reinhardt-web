@@ -940,10 +940,10 @@ impl MigrationAutodetector {
             if let Some(model) = self.to_state.get_model(app_label, model_name) {
                 let mut columns = Vec::new();
                 for (field_name, field_state) in &model.fields {
-                    columns.push(crate::ColumnDefinition {
-                        name: field_name.clone(),
-                        type_definition: field_state.field_type.clone(),
-                    });
+                    columns.push(crate::ColumnDefinition::new(
+                        field_name.clone(),
+                        field_state.field_type.clone(),
+                    ));
                 }
 
                 operations.push(crate::Operation::CreateTable {
@@ -960,10 +960,10 @@ impl MigrationAutodetector {
                 if let Some(field) = model.get_field(field_name) {
                     operations.push(crate::Operation::AddColumn {
                         table: model.name.clone(),
-                        column: crate::ColumnDefinition {
-                            name: field_name.clone(),
-                            type_definition: field.field_type.clone(),
-                        },
+                        column: crate::ColumnDefinition::new(
+                            field_name.clone(),
+                            field.field_type.clone(),
+                        ),
                     });
                 }
             }
@@ -976,10 +976,10 @@ impl MigrationAutodetector {
                     operations.push(crate::Operation::AlterColumn {
                         table: model.name.clone(),
                         column: field_name.clone(),
-                        new_definition: crate::ColumnDefinition {
-                            name: field_name.clone(),
-                            type_definition: field.field_type.clone(),
-                        },
+                        new_definition: crate::ColumnDefinition::new(
+                            field_name.clone(),
+                            field.field_type.clone(),
+                        ),
                     });
                 }
             }
@@ -1058,10 +1058,10 @@ impl MigrationAutodetector {
             if let Some(model) = self.to_state.get_model(app_label, model_name) {
                 let mut columns = Vec::new();
                 for (field_name, field_state) in &model.fields {
-                    columns.push(crate::ColumnDefinition {
-                        name: field_name.clone(),
-                        type_definition: field_state.field_type.clone(),
-                    });
+                    columns.push(crate::ColumnDefinition::new(
+                        field_name.clone(),
+                        field_state.field_type.clone(),
+                    ));
                 }
 
                 migrations_by_app
@@ -1084,10 +1084,10 @@ impl MigrationAutodetector {
                         .or_default()
                         .push(crate::Operation::AddColumn {
                             table: model.name.clone(),
-                            column: crate::ColumnDefinition {
-                                name: field_name.clone(),
-                                type_definition: field.field_type.clone(),
-                            },
+                            column: crate::ColumnDefinition::new(
+                                field_name.clone(),
+                                field.field_type.clone(),
+                            ),
                         });
                 }
             }
@@ -1103,10 +1103,10 @@ impl MigrationAutodetector {
                         .push(crate::Operation::AlterColumn {
                             table: model.name.clone(),
                             column: field_name.clone(),
-                            new_definition: crate::ColumnDefinition {
-                                name: field_name.clone(),
-                                type_definition: field.field_type.clone(),
-                            },
+                            new_definition: crate::ColumnDefinition::new(
+                                field_name.clone(),
+                                field.field_type.clone(),
+                            ),
                         });
                 }
             }

@@ -377,7 +377,7 @@ impl MigrationLoader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::operations::{ColumnDefinition, CreateTable, SqlDialect};
+    use crate::operations::ColumnDefinition;
     use std::fs;
 
     #[test]
@@ -401,6 +401,12 @@ mod tests {
                 columns: vec![ColumnDefinition {
                     name: "id".to_string(),
                     type_definition: "INTEGER PRIMARY KEY".to_string(),
+                    not_null: false,
+                    unique: false,
+                    primary_key: true,
+                    auto_increment: false,
+                    default: None,
+                    max_length: None,
                 }],
                 constraints: vec![],
             });
