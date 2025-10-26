@@ -3,15 +3,19 @@
 //! This crate provides DRF-style content negotiation for selecting
 //! the appropriate renderer and parser based on Accept headers.
 //!
-//! ## Planned Features
-//! TODO: Custom negotiation strategies - Pluggable negotiation logic
-//! TODO: Content-Type detection - Automatic Content-Type detection for request body
-//! TODO: Language negotiation - Support for Accept-Language header
-//! TODO: Encoding negotiation - Support for Accept-Encoding header
-//! TODO: Cache optimization - Caching of negotiation results
-//! TODO: Detailed error information - Detailed feedback on negotiation failure
+//! ## Features
+//!
+//! - **Content negotiation**: Automatic media type selection based on Accept headers
+//! - **Content-Type detection**: Automatic detection of request body format (JSON, XML, YAML, Form)
+//! - **Language negotiation**: Support for Accept-Language header with quality factors
+//! - **Encoding negotiation**: Support for Accept-Encoding header (Gzip, Brotli, Deflate, Identity)
+//! - **Cache optimization**: Caching of negotiation results with TTL support
 
 pub mod accept;
+pub mod cache;
+pub mod detector;
+pub mod encoding;
+pub mod language;
 pub mod media_type;
 pub mod negotiator;
 
@@ -22,6 +26,10 @@ pub use negotiator::{
 
 /// Re-export commonly used types
 pub mod prelude {
+    pub use crate::cache::*;
+    pub use crate::detector::*;
+    pub use crate::encoding::*;
+    pub use crate::language::*;
     pub use crate::media_type::*;
     pub use crate::negotiator::*;
 }
