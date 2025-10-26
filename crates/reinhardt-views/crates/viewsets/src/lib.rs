@@ -1,9 +1,6 @@
 //! ViewSets for Reinhardt framework
 //!
 //! ## Planned Features
-//! TODO: Implement automatic pagination integration for list actions
-//! TODO: Add query parameter-based filtering system
-//! TODO: Implement sortable collections with multiple field ordering support
 //! TODO: Complete bulk operations for batch create/update/delete
 //! TODO: Enhance nested ViewSets for parent-child resource relationships
 //! TODO: Add OpenAPI schema generation from ViewSet definitions
@@ -13,11 +10,13 @@ pub mod actions;
 pub mod batch_operations;
 pub mod builder;
 pub mod di_support;
+pub mod filtering_support;
 pub mod handler;
 pub mod metadata;
 pub mod middleware;
 pub mod mixins;
 pub mod nested_resources;
+pub mod pagination_support;
 pub mod registry;
 pub mod schema_metadata;
 pub mod test_viewset;
@@ -30,6 +29,9 @@ pub use batch_operations::{
 };
 pub use builder::ViewSetBuilder;
 pub use di_support::{DatabaseConnection, DiViewSet, ViewSetFactory};
+pub use filtering_support::{
+    FilterConfig, FilterableViewSet, InMemoryFilter, OrderingConfig,
+};
 pub use handler::{ModelViewSetHandler, ViewError, ViewSetHandler};
 pub use metadata::{ActionHandler, ActionMetadata, ActionRegistryEntry, FunctionActionHandler};
 pub use middleware::{
@@ -39,6 +41,7 @@ pub use mixins::{CreateMixin, DestroyMixin, ListMixin, RetrieveMixin, UpdateMixi
 pub use nested_resources::{
     nested_detail_url, nested_url, NestedResource, NestedResourcePath, NestedViewSet,
 };
+pub use pagination_support::{PaginatedViewSet, PaginationConfig};
 pub use registry::{action, get_registered_actions, register_action};
 pub use schema_metadata::{FieldSchema, ModelSchema, RequestSchema, ResponseSchema, ViewSetSchema};
 pub use test_viewset::{SimpleViewSet, TestViewSet};

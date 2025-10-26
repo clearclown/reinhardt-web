@@ -1,6 +1,8 @@
 use crate::actions::Action;
+use crate::filtering_support::{FilterableViewSet, FilterConfig, OrderingConfig};
 use crate::metadata::{get_actions_for_viewset, ActionMetadata};
 use crate::middleware::ViewSetMiddleware;
+use crate::pagination_support::{PaginatedViewSet, PaginationConfig};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_apps::{Request, Response, Result};
@@ -165,8 +167,26 @@ impl<T: Send + Sync> ViewSet for GenericViewSet<T> {
 pub struct ModelViewSet<M, S> {
     basename: String,
     lookup_field: String,
+    pagination_config: Option<PaginationConfig>,
+    filter_config: Option<FilterConfig>,
+    ordering_config: Option<OrderingConfig>,
     _model: std::marker::PhantomData<M>,
     _serializer: std::marker::PhantomData<S>,
+}
+
+// Implement FilterableViewSet for ModelViewSet
+impl<M, S> FilterableViewSet for ModelViewSet<M, S>
+where
+    M: Send + Sync,
+    S: Send + Sync,
+{
+    fn get_filter_config(&self) -> Option<FilterConfig> {
+        self.filter_config.clone()
+    }
+
+    fn get_ordering_config(&self) -> Option<OrderingConfig> {
+        self.ordering_config.clone()
+    }
 }
 
 impl<M: 'static, S: 'static> ModelViewSet<M, S> {
@@ -199,6 +219,9 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
         Self {
             basename: basename.into(),
             lookup_field: "id".to_string(),
+            pagination_config: Some(PaginationConfig::default()),
+            filter_config: None,
+            ordering_config: None,
             _model: std::marker::PhantomData,
             _serializer: std::marker::PhantomData,
         }
@@ -232,6 +255,83 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
     /// ```
     pub fn with_lookup_field(mut self, field: impl Into<String>) -> Self {
         self.lookup_field = field.into();
+        self
+    }
+
+    /// Set pagination configuration for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_viewsets::{ModelViewSet, PaginationConfig};
+    ///
+    /// // Page number pagination with custom page size
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .with_pagination(PaginationConfig::page_number(20, Some(100)));
+    ///
+    /// // Limit/offset pagination
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .with_pagination(PaginationConfig::limit_offset(25, Some(500)));
+    ///
+    /// // Disable pagination
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .with_pagination(PaginationConfig::none());
+    /// ```
+    pub fn with_pagination(mut self, config: PaginationConfig) -> Self {
+        self.pagination_config = Some(config);
+        self
+    }
+
+    /// Disable pagination for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_viewsets::ModelViewSet;
+    ///
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .without_pagination();
+    /// ```
+    pub fn without_pagination(mut self) -> Self {
+        self.pagination_config = None;
+        self
+    }
+
+    /// Set filter configuration for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_viewsets::{ModelViewSet, FilterConfig};
+    ///
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .with_filters(
+    ///         FilterConfig::new()
+    ///             .with_filterable_fields(vec!["status", "category"])
+    ///             .with_search_fields(vec!["title", "description"])
+    ///     );
+    /// ```
+    pub fn with_filters(mut self, config: FilterConfig) -> Self {
+        self.filter_config = Some(config);
+        self
+    }
+
+    /// Set ordering configuration for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_viewsets::{ModelViewSet, OrderingConfig};
+    ///
+    /// let viewset = ModelViewSet::<(), ()>::new("items")
+    ///     .with_ordering(
+    ///         OrderingConfig::new()
+    ///             .with_ordering_fields(vec!["created_at", "title", "id"])
+    ///             .with_default_ordering(vec!["-created_at"])
+    ///     );
+    /// ```
+    pub fn with_ordering(mut self, config: OrderingConfig) -> Self {
+        self.ordering_config = Some(config);
         self
     }
 
@@ -329,11 +429,25 @@ where
     }
 }
 
+// Implement PaginatedViewSet for ModelViewSet
+impl<M, S> PaginatedViewSet for ModelViewSet<M, S>
+where
+    M: Send + Sync,
+    S: Send + Sync,
+{
+    fn get_pagination_config(&self) -> Option<PaginationConfig> {
+        self.pagination_config.clone()
+    }
+}
+
 /// ReadOnlyModelViewSet - only list and retrieve
 /// Demonstrates selective composition of mixins
 pub struct ReadOnlyModelViewSet<M, S> {
     basename: String,
     lookup_field: String,
+    pagination_config: Option<PaginationConfig>,
+    filter_config: Option<FilterConfig>,
+    ordering_config: Option<OrderingConfig>,
     _model: std::marker::PhantomData<M>,
     _serializer: std::marker::PhantomData<S>,
 }
@@ -368,6 +482,9 @@ impl<M: 'static, S: 'static> ReadOnlyModelViewSet<M, S> {
         Self {
             basename: basename.into(),
             lookup_field: "id".to_string(),
+            pagination_config: Some(PaginationConfig::default()),
+            filter_config: None,
+            ordering_config: None,
             _model: std::marker::PhantomData,
             _serializer: std::marker::PhantomData,
         }
@@ -376,6 +493,56 @@ impl<M: 'static, S: 'static> ReadOnlyModelViewSet<M, S> {
     /// Set custom lookup field for this ViewSet
     pub fn with_lookup_field(mut self, field: impl Into<String>) -> Self {
         self.lookup_field = field.into();
+        self
+    }
+
+    /// Set pagination configuration for this ViewSet
+    pub fn with_pagination(mut self, config: PaginationConfig) -> Self {
+        self.pagination_config = Some(config);
+        self
+    }
+
+    /// Disable pagination for this ViewSet
+    pub fn without_pagination(mut self) -> Self {
+        self.pagination_config = None;
+        self
+    }
+
+    /// Set filter configuration for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use reinhardt_viewsets::{ReadOnlyModelViewSet, FilterConfig};
+    ///
+    /// let viewset = ReadOnlyModelViewSet::<MyModel, MySerializer>::new("items")
+    ///     .with_filters(
+    ///         FilterConfig::new()
+    ///             .with_filterable_fields(vec!["status", "category"])
+    ///             .with_search_fields(vec!["title", "description"])
+    ///     );
+    /// ```
+    pub fn with_filters(mut self, config: FilterConfig) -> Self {
+        self.filter_config = Some(config);
+        self
+    }
+
+    /// Set ordering configuration for this ViewSet
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// use reinhardt_viewsets::{ReadOnlyModelViewSet, OrderingConfig};
+    ///
+    /// let viewset = ReadOnlyModelViewSet::<MyModel, MySerializer>::new("items")
+    ///     .with_ordering(
+    ///         OrderingConfig::new()
+    ///             .with_ordering_fields(vec!["created_at", "title"])
+    ///             .with_default_ordering(vec!["-created_at"])
+    ///     );
+    /// ```
+    pub fn with_ordering(mut self, config: OrderingConfig) -> Self {
+        self.ordering_config = Some(config);
         self
     }
 
@@ -422,5 +589,31 @@ where
                 "Method not allowed".to_string(),
             )),
         }
+    }
+}
+
+// Implement PaginatedViewSet for ReadOnlyModelViewSet
+impl<M, S> PaginatedViewSet for ReadOnlyModelViewSet<M, S>
+where
+    M: Send + Sync,
+    S: Send + Sync,
+{
+    fn get_pagination_config(&self) -> Option<PaginationConfig> {
+        self.pagination_config.clone()
+    }
+}
+
+// Implement FilterableViewSet for ReadOnlyModelViewSet
+impl<M, S> FilterableViewSet for ReadOnlyModelViewSet<M, S>
+where
+    M: Send + Sync,
+    S: Send + Sync,
+{
+    fn get_filter_config(&self) -> Option<FilterConfig> {
+        self.filter_config.clone()
+    }
+
+    fn get_ordering_config(&self) -> Option<OrderingConfig> {
+        self.ordering_config.clone()
     }
 }
