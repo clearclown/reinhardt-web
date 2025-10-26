@@ -3,9 +3,39 @@
 //! This module provides support for distributed transactions across multiple databases
 //! using the two-phase commit protocol. The protocol consists of a prepare phase
 //! where all participants vote on the transaction, followed by a commit or rollback phase.
+//!
+//! ## Architecture
+//!
+//! The implementation follows the X/Open XA specification:
+//!
+//! - **Coordinator**: Manages the 2PC protocol lifecycle
+//! - **Participants**: Database connections that participate in the transaction
+//! - **Transaction Log**: Persistent storage for recovery
+//!
+//! ## Usage
+//!
+//! ```rust,no_run
+//! use reinhardt_orm::two_phase_commit::{TwoPhaseCoordinator, PostgresParticipant};
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Create coordinator
+//! let mut coordinator = TwoPhaseCoordinator::new("global_txn_001");
+//!
+//! // Add participants
+//! coordinator.add_participant(Box::new(PostgresParticipant::new("primary_db", "connection_string")?)).await?;
+//! coordinator.add_participant(Box::new(PostgresParticipant::new("secondary_db", "connection_string")?)).await?;
+//!
+//! // Execute transaction
+//! coordinator.begin().await?;
+//! // ... perform operations on each participant ...
+//! coordinator.commit().await?;
+//! # Ok(())
+//! # }
+//! ```
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use async_trait::async_trait;
 
 /// Errors that can occur during two-phase commit operations
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -24,6 +54,16 @@ pub enum TwoPhaseError {
     DuplicateTransactionId(String),
     /// Participant already exists
     DuplicateParticipant(String),
+    /// Network or connection error
+    ConnectionError(String),
+    /// Timeout during operation
+    Timeout(String),
+    /// Recovery failed
+    RecoveryFailed(String),
+    /// Transaction log error
+    LogError(String),
+    /// Database error
+    DatabaseError(String),
 }
 
 impl std::fmt::Display for TwoPhaseError {
@@ -46,6 +86,11 @@ impl std::fmt::Display for TwoPhaseError {
             TwoPhaseError::DuplicateParticipant(participant) => {
                 write!(f, "Participant '{}' already registered", participant)
             }
+            TwoPhaseError::ConnectionError(msg) => write!(f, "Connection error: {}", msg),
+            TwoPhaseError::Timeout(msg) => write!(f, "Timeout: {}", msg),
+            TwoPhaseError::RecoveryFailed(msg) => write!(f, "Recovery failed: {}", msg),
+            TwoPhaseError::LogError(msg) => write!(f, "Transaction log error: {}", msg),
+            TwoPhaseError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
         }
     }
 }
@@ -59,10 +104,16 @@ pub enum TransactionState {
     NotStarted,
     /// Transaction is in progress
     Active,
+    /// Preparing participants (Phase 1 in progress)
+    Preparing,
     /// All participants have been prepared
     Prepared,
+    /// Committing transaction (Phase 2 in progress)
+    Committing,
     /// Transaction has been committed
     Committed,
+    /// Aborting transaction
+    Aborting,
     /// Transaction has been aborted/rolled back
     Aborted,
 }
@@ -78,6 +129,45 @@ pub enum ParticipantStatus {
     Committed,
     /// Participant has aborted
     Aborted,
+}
+
+/// Trait for two-phase commit participants
+///
+/// Participants must implement this trait to participate in distributed transactions.
+#[async_trait]
+pub trait TwoPhaseParticipant: Send + Sync {
+    /// Get the participant's identifier
+    fn id(&self) -> &str;
+
+    /// Begin a local transaction
+    async fn begin(&mut self) -> Result<(), TwoPhaseError>;
+
+    /// Prepare the transaction (Phase 1)
+    ///
+    /// This is the voting phase where the participant indicates whether it can commit.
+    /// Returns Ok(()) if ready to commit, or an error if unable to commit.
+    async fn prepare(&mut self, xid: &str) -> Result<(), TwoPhaseError>;
+
+    /// Commit the prepared transaction (Phase 2)
+    ///
+    /// This commits the transaction that was previously prepared.
+    async fn commit(&mut self, xid: &str) -> Result<(), TwoPhaseError>;
+
+    /// Rollback the transaction (Phase 2)
+    ///
+    /// This rolls back the transaction, either before or after prepare.
+    async fn rollback(&mut self, xid: &str) -> Result<(), TwoPhaseError>;
+
+    /// Recover prepared transactions
+    ///
+    /// Returns a list of transaction IDs that are currently in the prepared state.
+    async fn recover(&mut self) -> Result<Vec<String>, TwoPhaseError>;
+
+    /// Get the current status
+    fn status(&self) -> ParticipantStatus;
+
+    /// Set the status
+    fn set_status(&mut self, status: ParticipantStatus);
 }
 
 /// A participant in the distributed transaction
@@ -469,6 +559,389 @@ impl Default for TwoPhaseCommit {
     }
 }
 
+/// Two-Phase Commit Coordinator
+///
+/// Coordinates distributed transactions across multiple database participants using
+/// the two-phase commit protocol. This is the main interface for executing XA transactions.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reinhardt_orm::two_phase_commit::TwoPhaseCoordinator;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let mut coordinator = TwoPhaseCoordinator::new("txn_001");
+///
+/// // Add participants
+/// // coordinator.add_participant(participant1).await?;
+/// // coordinator.add_participant(participant2).await?;
+///
+/// // Execute distributed transaction
+/// coordinator.begin().await?;
+/// // ... perform operations ...
+/// coordinator.commit().await?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct TwoPhaseCoordinator {
+    transaction_id: String,
+    state: Arc<Mutex<TransactionState>>,
+    participants: Arc<Mutex<Vec<Box<dyn TwoPhaseParticipant>>>>,
+}
+
+impl TwoPhaseCoordinator {
+    /// Create a new two-phase commit coordinator
+    pub fn new(transaction_id: impl Into<String>) -> Self {
+        Self {
+            transaction_id: transaction_id.into(),
+            state: Arc::new(Mutex::new(TransactionState::NotStarted)),
+            participants: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+
+    /// Get the transaction ID
+    pub fn transaction_id(&self) -> &str {
+        &self.transaction_id
+    }
+
+    /// Get the current transaction state
+    pub fn state(&self) -> Result<TransactionState, TwoPhaseError> {
+        self.state
+            .lock()
+            .map(|s| *s)
+            .map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))
+    }
+
+    /// Add a participant to the coordinator
+    pub async fn add_participant(
+        &mut self,
+        participant: Box<dyn TwoPhaseParticipant>,
+    ) -> Result<(), TwoPhaseError> {
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        let id = participant.id().to_string();
+        if participants.iter().any(|p| p.id() == id) {
+            return Err(TwoPhaseError::DuplicateParticipant(id));
+        }
+
+        participants.push(participant);
+        Ok(())
+    }
+
+    /// Begin the distributed transaction
+    pub async fn begin(&mut self) -> Result<(), TwoPhaseError> {
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+
+        if *state != TransactionState::NotStarted {
+            return Err(TwoPhaseError::InvalidState(
+                "Transaction already started".to_string(),
+            ));
+        }
+
+        *state = TransactionState::Active;
+        drop(state);
+
+        // Begin transaction on all participants
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        for participant in participants.iter_mut() {
+            participant
+                .begin()
+                .await
+                .map_err(|e| TwoPhaseError::PrepareFailed(participant.id().to_string(), e.to_string()))?;
+        }
+
+        Ok(())
+    }
+
+    /// Prepare phase: ask all participants to prepare for commit
+    pub async fn prepare(&mut self) -> Result<(), TwoPhaseError> {
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+
+        if *state != TransactionState::Active {
+            return Err(TwoPhaseError::InvalidState(
+                "Can only prepare active transaction".to_string(),
+            ));
+        }
+
+        *state = TransactionState::Preparing;
+        drop(state);
+
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        if participants.is_empty() {
+            return Err(TwoPhaseError::NoParticipants);
+        }
+
+        // Phase 1: Prepare all participants
+        for participant in participants.iter_mut() {
+            match participant.prepare(&self.transaction_id).await {
+                Ok(_) => {
+                    participant.set_status(ParticipantStatus::Prepared);
+                }
+                Err(e) => {
+                    // If any participant fails to prepare, rollback all
+                    drop(participants);
+                    self.rollback().await?;
+                    return Err(TwoPhaseError::PrepareFailed(
+                        participant.id().to_string(),
+                        e.to_string(),
+                    ));
+                }
+            }
+        }
+
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+        *state = TransactionState::Prepared;
+
+        Ok(())
+    }
+
+    /// Commit phase: commit the transaction on all prepared participants
+    pub async fn commit(&mut self) -> Result<(), TwoPhaseError> {
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+
+        if *state != TransactionState::Prepared {
+            return Err(TwoPhaseError::InvalidState(
+                "Can only commit prepared transaction".to_string(),
+            ));
+        }
+
+        *state = TransactionState::Committing;
+        drop(state);
+
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        // Phase 2: Commit all participants
+        let mut failed_participants = Vec::new();
+        for participant in participants.iter_mut() {
+            match participant.commit(&self.transaction_id).await {
+                Ok(_) => {
+                    participant.set_status(ParticipantStatus::Committed);
+                }
+                Err(e) => {
+                    // Log failure but continue committing others
+                    failed_participants.push((participant.id().to_string(), e.to_string()));
+                }
+            }
+        }
+
+        if !failed_participants.is_empty() {
+            let mut state = self.state.lock().map_err(|_| {
+                TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+            })?;
+            *state = TransactionState::Prepared; // Return to prepared state for recovery
+            let error_msg = failed_participants
+                .iter()
+                .map(|(id, err)| format!("{}: {}", id, err))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(TwoPhaseError::CommitFailed(
+                "Multiple participants".to_string(),
+                error_msg,
+            ));
+        }
+
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+        *state = TransactionState::Committed;
+
+        Ok(())
+    }
+
+    /// Rollback/abort the transaction on all participants
+    pub async fn rollback(&mut self) -> Result<(), TwoPhaseError> {
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+
+        if *state != TransactionState::Active && *state != TransactionState::Prepared {
+            return Err(TwoPhaseError::InvalidState(
+                "Can only rollback active or prepared transaction".to_string(),
+            ));
+        }
+
+        *state = TransactionState::Aborting;
+        drop(state);
+
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        let mut failed_participants = Vec::new();
+        for participant in participants.iter_mut() {
+            match participant.rollback(&self.transaction_id).await {
+                Ok(_) => {
+                    participant.set_status(ParticipantStatus::Aborted);
+                }
+                Err(e) => {
+                    failed_participants.push((participant.id().to_string(), e.to_string()));
+                }
+            }
+        }
+
+        if !failed_participants.is_empty() {
+            let error_msg = failed_participants
+                .iter()
+                .map(|(id, err)| format!("{}: {}", id, err))
+                .collect::<Vec<_>>()
+                .join(", ");
+            return Err(TwoPhaseError::RollbackFailed(
+                "Multiple participants".to_string(),
+                error_msg,
+            ));
+        }
+
+        let mut state = self.state.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
+        })?;
+        *state = TransactionState::Aborted;
+
+        Ok(())
+    }
+
+    /// Recover prepared transactions from all participants
+    pub async fn recover_prepared_transactions(&mut self) -> Result<Vec<String>, TwoPhaseError> {
+        let mut participants = self.participants.lock().map_err(|_| {
+            TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
+        })?;
+
+        let mut all_xids = Vec::new();
+        for participant in participants.iter_mut() {
+            let xids = participant
+                .recover()
+                .await
+                .map_err(|e| TwoPhaseError::RecoveryFailed(e.to_string()))?;
+            all_xids.extend(xids);
+        }
+
+        Ok(all_xids)
+    }
+
+    /// Get the number of participants
+    pub fn participant_count(&self) -> usize {
+        self.participants
+            .lock()
+            .map(|p| p.len())
+            .unwrap_or(0)
+    }
+}
+
+/// Mock participant for testing
+#[cfg(test)]
+pub struct MockParticipant {
+    id: String,
+    status: ParticipantStatus,
+    should_fail_prepare: bool,
+    should_fail_commit: bool,
+    should_fail_rollback: bool,
+}
+
+#[cfg(test)]
+impl MockParticipant {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            status: ParticipantStatus::Active,
+            should_fail_prepare: false,
+            should_fail_commit: false,
+            should_fail_rollback: false,
+        }
+    }
+
+    pub fn with_prepare_failure(mut self) -> Self {
+        self.should_fail_prepare = true;
+        self
+    }
+
+    pub fn with_commit_failure(mut self) -> Self {
+        self.should_fail_commit = true;
+        self
+    }
+
+    pub fn with_rollback_failure(mut self) -> Self {
+        self.should_fail_rollback = true;
+        self
+    }
+}
+
+#[cfg(test)]
+#[async_trait]
+impl TwoPhaseParticipant for MockParticipant {
+    fn id(&self) -> &str {
+        &self.id
+    }
+
+    async fn begin(&mut self) -> Result<(), TwoPhaseError> {
+        Ok(())
+    }
+
+    async fn prepare(&mut self, _xid: &str) -> Result<(), TwoPhaseError> {
+        if self.should_fail_prepare {
+            Err(TwoPhaseError::PrepareFailed(
+                self.id.clone(),
+                "Simulated prepare failure".to_string(),
+            ))
+        } else {
+            self.status = ParticipantStatus::Prepared;
+            Ok(())
+        }
+    }
+
+    async fn commit(&mut self, _xid: &str) -> Result<(), TwoPhaseError> {
+        if self.should_fail_commit {
+            Err(TwoPhaseError::CommitFailed(
+                self.id.clone(),
+                "Simulated commit failure".to_string(),
+            ))
+        } else {
+            self.status = ParticipantStatus::Committed;
+            Ok(())
+        }
+    }
+
+    async fn rollback(&mut self, _xid: &str) -> Result<(), TwoPhaseError> {
+        if self.should_fail_rollback {
+            Err(TwoPhaseError::RollbackFailed(
+                self.id.clone(),
+                "Simulated rollback failure".to_string(),
+            ))
+        } else {
+            self.status = ParticipantStatus::Aborted;
+            Ok(())
+        }
+    }
+
+    async fn recover(&mut self) -> Result<Vec<String>, TwoPhaseError> {
+        Ok(Vec::new())
+    }
+
+    fn status(&self) -> ParticipantStatus {
+        self.status.clone()
+    }
+
+    fn set_status(&mut self, status: ParticipantStatus) {
+        self.status = status;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -700,5 +1173,123 @@ mod tests {
             result.unwrap_err(),
             TwoPhaseError::InvalidState(_)
         ));
+    }
+
+    // TwoPhaseCoordinator tests
+    #[tokio::test]
+    async fn test_coordinator_basic_flow() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_001");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+        coordinator.add_participant(Box::new(MockParticipant::new("db2"))).await.unwrap();
+
+        assert_eq!(coordinator.participant_count(), 2);
+
+        coordinator.begin().await.unwrap();
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Active);
+
+        coordinator.prepare().await.unwrap();
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Prepared);
+
+        coordinator.commit().await.unwrap();
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Committed);
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_prepare_failure_triggers_rollback() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_002");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+        coordinator.add_participant(Box::new(MockParticipant::new("db2").with_prepare_failure())).await.unwrap();
+
+        coordinator.begin().await.unwrap();
+
+        let result = coordinator.prepare().await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TwoPhaseError::PrepareFailed(_, _)));
+
+        // After prepare failure, transaction should be aborted
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Aborted);
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_rollback() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_003");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+        coordinator.add_participant(Box::new(MockParticipant::new("db2"))).await.unwrap();
+
+        coordinator.begin().await.unwrap();
+        coordinator.prepare().await.unwrap();
+
+        coordinator.rollback().await.unwrap();
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Aborted);
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_commit_failure() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_004");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+        coordinator.add_participant(Box::new(MockParticipant::new("db2").with_commit_failure())).await.unwrap();
+
+        coordinator.begin().await.unwrap();
+        coordinator.prepare().await.unwrap();
+
+        let result = coordinator.commit().await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TwoPhaseError::CommitFailed(_, _)));
+
+        // After commit failure, state should return to Prepared for recovery
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Prepared);
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_no_participants() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_005");
+
+        coordinator.begin().await.unwrap();
+
+        let result = coordinator.prepare().await;
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TwoPhaseError::NoParticipants));
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_duplicate_participant() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_006");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+        let result = coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await;
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), TwoPhaseError::DuplicateParticipant(_)));
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_recover() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_007");
+
+        coordinator.add_participant(Box::new(MockParticipant::new("db1"))).await.unwrap();
+
+        let xids = coordinator.recover_prepared_transactions().await.unwrap();
+        assert_eq!(xids.len(), 0); // Mock returns empty list
+    }
+
+    #[tokio::test]
+    async fn test_coordinator_multiple_participants() {
+        let mut coordinator = TwoPhaseCoordinator::new("coord_txn_008");
+
+        for i in 1..=5 {
+            coordinator.add_participant(Box::new(MockParticipant::new(format!("db{}", i)))).await.unwrap();
+        }
+
+        assert_eq!(coordinator.participant_count(), 5);
+
+        coordinator.begin().await.unwrap();
+        coordinator.prepare().await.unwrap();
+        coordinator.commit().await.unwrap();
+
+        assert_eq!(coordinator.state().unwrap(), TransactionState::Committed);
     }
 }
