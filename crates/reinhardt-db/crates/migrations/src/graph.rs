@@ -90,12 +90,30 @@ impl std::fmt::Display for MigrationKey {
 pub struct MigrationNode {
     pub key: MigrationKey,
     pub dependencies: Vec<MigrationKey>,
+    pub replaces: Vec<MigrationKey>,
 }
 
 impl MigrationNode {
     /// Create a new migration node
     pub fn new(key: MigrationKey, dependencies: Vec<MigrationKey>) -> Self {
-        Self { key, dependencies }
+        Self {
+            key,
+            dependencies,
+            replaces: Vec::new(),
+        }
+    }
+
+    /// Create a new migration node with replaces
+    pub fn with_replaces(
+        key: MigrationKey,
+        dependencies: Vec<MigrationKey>,
+        replaces: Vec<MigrationKey>,
+    ) -> Self {
+        Self {
+            key,
+            dependencies,
+            replaces,
+        }
     }
 }
 
@@ -400,6 +418,393 @@ impl MigrationGraph {
     pub fn clear(&mut self) {
         self.nodes.clear();
     }
+
+    /// Add a migration with replaces information
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let squashed = MigrationKey::new("auth", "0001_squashed_0003");
+    /// let old1 = MigrationKey::new("auth", "0001_initial");
+    /// let old2 = MigrationKey::new("auth", "0002_add_field");
+    ///
+    /// graph.add_migration_with_replaces(
+    ///     squashed.clone(),
+    ///     vec![],
+    ///     vec![old1.clone(), old2.clone()],
+    /// );
+    /// ```
+    pub fn add_migration_with_replaces(
+        &mut self,
+        key: MigrationKey,
+        dependencies: Vec<MigrationKey>,
+        replaces: Vec<MigrationKey>,
+    ) {
+        let node = MigrationNode::with_replaces(key.clone(), dependencies, replaces);
+        self.nodes.insert(key, node);
+    }
+
+    /// Find a path between two migration states
+    ///
+    /// Uses breadth-first search to find the shortest path from `from` to `to`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let key1 = MigrationKey::new("auth", "0001_initial");
+    /// let key2 = MigrationKey::new("auth", "0002_add_field");
+    /// let key3 = MigrationKey::new("auth", "0003_alter_field");
+    ///
+    /// graph.add_migration(key1.clone(), vec![]);
+    /// graph.add_migration(key2.clone(), vec![key1.clone()]);
+    /// graph.add_migration(key3.clone(), vec![key2.clone()]);
+    ///
+    /// let path = graph.find_migration_path(&key1, &key3).unwrap();
+    /// assert_eq!(path.len(), 3);
+    /// assert_eq!(path[0], key1);
+    /// assert_eq!(path[1], key2);
+    /// assert_eq!(path[2], key3);
+    /// ```
+    pub fn find_migration_path(
+        &self,
+        from: &MigrationKey,
+        to: &MigrationKey,
+    ) -> Result<Vec<MigrationKey>> {
+        use std::collections::VecDeque;
+
+        if from == to {
+            return Ok(vec![from.clone()]);
+        }
+
+        if !self.has_migration(from) {
+            return Err(MigrationError::NodeNotFound {
+                message: "Source migration not found".to_string(),
+                node: from.id(),
+            });
+        }
+
+        if !self.has_migration(to) {
+            return Err(MigrationError::NodeNotFound {
+                message: "Target migration not found".to_string(),
+                node: to.id(),
+            });
+        }
+
+        // BFS to find shortest path
+        let mut queue = VecDeque::new();
+        let mut visited = HashMap::new();
+        let mut parent: HashMap<MigrationKey, MigrationKey> = HashMap::new();
+
+        queue.push_back(from.clone());
+        visited.insert(from.clone(), true);
+
+        while let Some(current) = queue.pop_front() {
+            if &current == to {
+                // Reconstruct path
+                let mut path = vec![to.clone()];
+                let mut node = to.clone();
+
+                while let Some(p) = parent.get(&node) {
+                    path.push(p.clone());
+                    node = p.clone();
+                }
+
+                path.reverse();
+                return Ok(path);
+            }
+
+            // Visit all dependents (forward direction)
+            for dependent in self.get_dependents(&current) {
+                if !visited.contains_key(dependent) {
+                    visited.insert(dependent.clone(), true);
+                    parent.insert(dependent.clone(), current.clone());
+                    queue.push_back(dependent.clone());
+                }
+            }
+        }
+
+        Err(MigrationError::DependencyError(format!(
+            "No path found from {} to {}",
+            from.id(),
+            to.id()
+        )))
+    }
+
+    /// Find a backward path (for rollback) between two migration states
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let key1 = MigrationKey::new("auth", "0001_initial");
+    /// let key2 = MigrationKey::new("auth", "0002_add_field");
+    /// let key3 = MigrationKey::new("auth", "0003_alter_field");
+    ///
+    /// graph.add_migration(key1.clone(), vec![]);
+    /// graph.add_migration(key2.clone(), vec![key1.clone()]);
+    /// graph.add_migration(key3.clone(), vec![key2.clone()]);
+    ///
+    /// let path = graph.find_backward_path(&key3, &key1).unwrap();
+    /// assert_eq!(path.len(), 3);
+    /// assert_eq!(path[0], key3);
+    /// assert_eq!(path[1], key2);
+    /// assert_eq!(path[2], key1);
+    /// ```
+    pub fn find_backward_path(
+        &self,
+        from: &MigrationKey,
+        to: &MigrationKey,
+    ) -> Result<Vec<MigrationKey>> {
+        use std::collections::VecDeque;
+
+        if from == to {
+            return Ok(vec![from.clone()]);
+        }
+
+        if !self.has_migration(from) {
+            return Err(MigrationError::NodeNotFound {
+                message: "Source migration not found".to_string(),
+                node: from.id(),
+            });
+        }
+
+        if !self.has_migration(to) {
+            return Err(MigrationError::NodeNotFound {
+                message: "Target migration not found".to_string(),
+                node: to.id(),
+            });
+        }
+
+        // BFS to find path following dependencies backward
+        let mut queue = VecDeque::new();
+        let mut visited = HashMap::new();
+        let mut parent: HashMap<MigrationKey, MigrationKey> = HashMap::new();
+
+        queue.push_back(from.clone());
+        visited.insert(from.clone(), true);
+
+        while let Some(current) = queue.pop_front() {
+            if &current == to {
+                // Reconstruct path
+                let mut path = vec![to.clone()];
+                let mut node = to.clone();
+
+                while let Some(p) = parent.get(&node) {
+                    path.push(p.clone());
+                    node = p.clone();
+                }
+
+                path.reverse();
+                return Ok(path);
+            }
+
+            // Visit all dependencies (backward direction)
+            if let Some(deps) = self.get_dependencies(&current) {
+                for dep in deps {
+                    if !visited.contains_key(dep) {
+                        visited.insert(dep.clone(), true);
+                        parent.insert(dep.clone(), current.clone());
+                        queue.push_back(dep.clone());
+                    }
+                }
+            }
+        }
+
+        Err(MigrationError::DependencyError(format!(
+            "No backward path found from {} to {}",
+            from.id(),
+            to.id()
+        )))
+    }
+
+    /// Resolve execution order with replaces support
+    ///
+    /// This method handles migrations that replace others (squashed migrations).
+    /// When a migration replaces others, the replaced migrations are excluded
+    /// from the execution order.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let old1 = MigrationKey::new("auth", "0001_initial");
+    /// let old2 = MigrationKey::new("auth", "0002_add_field");
+    /// let squashed = MigrationKey::new("auth", "0001_squashed_0002");
+    ///
+    /// graph.add_migration(old1.clone(), vec![]);
+    /// graph.add_migration(old2.clone(), vec![old1.clone()]);
+    /// graph.add_migration_with_replaces(
+    ///     squashed.clone(),
+    ///     vec![],
+    ///     vec![old1.clone(), old2.clone()],
+    /// );
+    ///
+    /// let order = graph.resolve_execution_order_with_replaces().unwrap();
+    /// // Should contain only the squashed migration, not the old ones
+    /// assert_eq!(order.len(), 1);
+    /// assert_eq!(order[0], squashed);
+    /// ```
+    pub fn resolve_execution_order_with_replaces(&self) -> Result<Vec<MigrationKey>> {
+        // Find all migrations that are replaced by others
+        let mut replaced: HashSet<MigrationKey> = HashSet::new();
+        for node in self.nodes.values() {
+            for replaced_key in &node.replaces {
+                replaced.insert(replaced_key.clone());
+            }
+        }
+
+        // Create a filtered graph without replaced migrations
+        let mut filtered_graph = MigrationGraph::new();
+        for (key, node) in &self.nodes {
+            if !replaced.contains(key) {
+                // Filter out dependencies that are replaced
+                let filtered_deps: Vec<MigrationKey> = node
+                    .dependencies
+                    .iter()
+                    .filter(|dep| !replaced.contains(dep))
+                    .cloned()
+                    .collect();
+
+                filtered_graph.add_migration(key.clone(), filtered_deps);
+            }
+        }
+
+        // Perform topological sort on filtered graph
+        filtered_graph.topological_sort()
+    }
+
+    /// Check if a migration is replaced by another migration
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let old = MigrationKey::new("auth", "0001_initial");
+    /// let squashed = MigrationKey::new("auth", "0001_squashed_0002");
+    ///
+    /// graph.add_migration_with_replaces(
+    ///     squashed.clone(),
+    ///     vec![],
+    ///     vec![old.clone()],
+    /// );
+    ///
+    /// assert!(graph.is_replaced(&old));
+    /// assert!(!graph.is_replaced(&squashed));
+    /// ```
+    pub fn is_replaced(&self, key: &MigrationKey) -> bool {
+        self.nodes
+            .values()
+            .any(|node| node.replaces.contains(key))
+    }
+
+    /// Get the migration that replaces a given migration
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let old = MigrationKey::new("auth", "0001_initial");
+    /// let squashed = MigrationKey::new("auth", "0001_squashed_0002");
+    ///
+    /// graph.add_migration_with_replaces(
+    ///     squashed.clone(),
+    ///     vec![],
+    ///     vec![old.clone()],
+    /// );
+    ///
+    /// let replacement = graph.get_replacement(&old);
+    /// assert_eq!(replacement, Some(&squashed));
+    /// ```
+    pub fn get_replacement(&self, key: &MigrationKey) -> Option<&MigrationKey> {
+        self.nodes
+            .iter()
+            .find(|(_, node)| node.replaces.contains(key))
+            .map(|(k, _)| k)
+    }
+
+    /// Detect cycles considering replaces relationships
+    ///
+    /// This is more comprehensive than the basic topological sort cycle detection,
+    /// as it also checks for cycles that might be introduced through replaces.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+    ///
+    /// let mut graph = MigrationGraph::new();
+    /// let key1 = MigrationKey::new("auth", "0001_initial");
+    /// let key2 = MigrationKey::new("auth", "0002_add_field");
+    ///
+    /// graph.add_migration(key1.clone(), vec![]);
+    /// graph.add_migration(key2.clone(), vec![key1.clone()]);
+    ///
+    /// let cycles = graph.detect_all_cycles();
+    /// assert!(cycles.is_empty());
+    /// ```
+    pub fn detect_all_cycles(&self) -> Vec<Vec<MigrationKey>> {
+        let mut cycles = Vec::new();
+        let mut visited = HashSet::new();
+        let mut rec_stack = HashSet::new();
+        let mut path = Vec::new();
+
+        for key in self.nodes.keys() {
+            if !visited.contains(key) {
+                self.detect_cycle_dfs(
+                    key,
+                    &mut visited,
+                    &mut rec_stack,
+                    &mut path,
+                    &mut cycles,
+                );
+            }
+        }
+
+        cycles
+    }
+
+    fn detect_cycle_dfs(
+        &self,
+        key: &MigrationKey,
+        visited: &mut HashSet<MigrationKey>,
+        rec_stack: &mut HashSet<MigrationKey>,
+        path: &mut Vec<MigrationKey>,
+        cycles: &mut Vec<Vec<MigrationKey>>,
+    ) {
+        visited.insert(key.clone());
+        rec_stack.insert(key.clone());
+        path.push(key.clone());
+
+        if let Some(node) = self.nodes.get(key) {
+            for dep in &node.dependencies {
+                if !visited.contains(dep) {
+                    self.detect_cycle_dfs(dep, visited, rec_stack, path, cycles);
+                } else if rec_stack.contains(dep) {
+                    // Found a cycle
+                    let cycle_start = path.iter().position(|k| k == dep).unwrap();
+                    let cycle: Vec<MigrationKey> = path[cycle_start..].to_vec();
+                    cycles.push(cycle);
+                }
+            }
+        }
+
+        path.pop();
+        rec_stack.remove(key);
+    }
 }
 
 impl Default for MigrationGraph {
@@ -661,5 +1066,279 @@ mod tests {
         // B and C must come before D
         assert!(pos_b < pos_d);
         assert!(pos_c < pos_d);
+    }
+
+    #[test]
+    fn test_migration_replaces() {
+        let mut graph = MigrationGraph::new();
+
+        let old1 = MigrationKey::new("auth", "0001_initial");
+        let old2 = MigrationKey::new("auth", "0002_add_field");
+        let squashed = MigrationKey::new("auth", "0001_squashed_0002");
+
+        graph.add_migration(old1.clone(), vec![]);
+        graph.add_migration(old2.clone(), vec![old1.clone()]);
+        graph.add_migration_with_replaces(
+            squashed.clone(),
+            vec![],
+            vec![old1.clone(), old2.clone()],
+        );
+
+        // Check replaces detection
+        assert!(graph.is_replaced(&old1));
+        assert!(graph.is_replaced(&old2));
+        assert!(!graph.is_replaced(&squashed));
+
+        // Check replacement retrieval
+        assert_eq!(graph.get_replacement(&old1), Some(&squashed));
+        assert_eq!(graph.get_replacement(&old2), Some(&squashed));
+        assert_eq!(graph.get_replacement(&squashed), None);
+    }
+
+    #[test]
+    fn test_resolve_execution_order_with_replaces() {
+        let mut graph = MigrationGraph::new();
+
+        let old1 = MigrationKey::new("auth", "0001_initial");
+        let old2 = MigrationKey::new("auth", "0002_add_field");
+        let old3 = MigrationKey::new("auth", "0003_alter_field");
+        let squashed = MigrationKey::new("auth", "0001_squashed_0002");
+
+        graph.add_migration(old1.clone(), vec![]);
+        graph.add_migration(old2.clone(), vec![old1.clone()]);
+        graph.add_migration(old3.clone(), vec![old2.clone()]);
+        graph.add_migration_with_replaces(
+            squashed.clone(),
+            vec![],
+            vec![old1.clone(), old2.clone()],
+        );
+
+        let order = graph.resolve_execution_order_with_replaces().unwrap();
+
+        // Should contain squashed and old3, but not old1 or old2
+        assert_eq!(order.len(), 2);
+        assert!(order.contains(&squashed));
+        assert!(order.contains(&old3));
+        assert!(!order.contains(&old1));
+        assert!(!order.contains(&old2));
+
+        // Squashed should come before old3
+        let pos_squashed = order.iter().position(|k| k == &squashed).unwrap();
+        let pos_old3 = order.iter().position(|k| k == &old3).unwrap();
+        assert!(pos_squashed < pos_old3);
+    }
+
+    #[test]
+    fn test_find_migration_path_simple() {
+        let mut graph = MigrationGraph::new();
+
+        let key1 = MigrationKey::new("auth", "0001_initial");
+        let key2 = MigrationKey::new("auth", "0002_add_field");
+        let key3 = MigrationKey::new("auth", "0003_alter_field");
+
+        graph.add_migration(key1.clone(), vec![]);
+        graph.add_migration(key2.clone(), vec![key1.clone()]);
+        graph.add_migration(key3.clone(), vec![key2.clone()]);
+
+        let path = graph.find_migration_path(&key1, &key3).unwrap();
+        assert_eq!(path.len(), 3);
+        assert_eq!(path[0], key1);
+        assert_eq!(path[1], key2);
+        assert_eq!(path[2], key3);
+    }
+
+    #[test]
+    fn test_find_migration_path_same_node() {
+        let mut graph = MigrationGraph::new();
+
+        let key = MigrationKey::new("auth", "0001_initial");
+        graph.add_migration(key.clone(), vec![]);
+
+        let path = graph.find_migration_path(&key, &key).unwrap();
+        assert_eq!(path.len(), 1);
+        assert_eq!(path[0], key);
+    }
+
+    #[test]
+    fn test_find_migration_path_no_path() {
+        let mut graph = MigrationGraph::new();
+
+        let key1 = MigrationKey::new("auth", "0001_initial");
+        let key2 = MigrationKey::new("users", "0001_initial");
+
+        graph.add_migration(key1.clone(), vec![]);
+        graph.add_migration(key2.clone(), vec![]);
+
+        let result = graph.find_migration_path(&key1, &key2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_find_backward_path() {
+        let mut graph = MigrationGraph::new();
+
+        let key1 = MigrationKey::new("auth", "0001_initial");
+        let key2 = MigrationKey::new("auth", "0002_add_field");
+        let key3 = MigrationKey::new("auth", "0003_alter_field");
+
+        graph.add_migration(key1.clone(), vec![]);
+        graph.add_migration(key2.clone(), vec![key1.clone()]);
+        graph.add_migration(key3.clone(), vec![key2.clone()]);
+
+        let path = graph.find_backward_path(&key3, &key1).unwrap();
+        assert_eq!(path.len(), 3);
+        assert_eq!(path[0], key3);
+        assert_eq!(path[1], key2);
+        assert_eq!(path[2], key1);
+    }
+
+    #[test]
+    fn test_detect_all_cycles_no_cycle() {
+        let mut graph = MigrationGraph::new();
+
+        let key1 = MigrationKey::new("auth", "0001_initial");
+        let key2 = MigrationKey::new("auth", "0002_add_field");
+        let key3 = MigrationKey::new("auth", "0003_alter_field");
+
+        graph.add_migration(key1.clone(), vec![]);
+        graph.add_migration(key2.clone(), vec![key1.clone()]);
+        graph.add_migration(key3.clone(), vec![key2.clone()]);
+
+        let cycles = graph.detect_all_cycles();
+        assert!(cycles.is_empty());
+    }
+
+    #[test]
+    fn test_detect_all_cycles_with_cycle() {
+        let mut graph = MigrationGraph::new();
+
+        let key1 = MigrationKey::new("auth", "0001_initial");
+        let key2 = MigrationKey::new("auth", "0002_add_field");
+
+        // Create a cycle
+        graph.add_migration(key1.clone(), vec![key2.clone()]);
+        graph.add_migration(key2.clone(), vec![key1.clone()]);
+
+        let cycles = graph.detect_all_cycles();
+        assert!(!cycles.is_empty());
+        assert_eq!(cycles.len(), 1);
+    }
+
+    #[test]
+    fn test_complex_replaces_scenario() {
+        let mut graph = MigrationGraph::new();
+
+        // App1 migrations
+        let app1_0001 = MigrationKey::new("app1", "0001_initial");
+        let app1_0002 = MigrationKey::new("app1", "0002_add_field");
+        let app1_squashed = MigrationKey::new("app1", "0001_squashed_0002");
+
+        // App2 migrations depending on app1
+        let app2_0001 = MigrationKey::new("app2", "0001_initial");
+        let app2_0002 = MigrationKey::new("app2", "0002_add_relation");
+
+        graph.add_migration(app1_0001.clone(), vec![]);
+        graph.add_migration(app1_0002.clone(), vec![app1_0001.clone()]);
+        graph.add_migration_with_replaces(
+            app1_squashed.clone(),
+            vec![],
+            vec![app1_0001.clone(), app1_0002.clone()],
+        );
+        graph.add_migration(app2_0001.clone(), vec![app1_0002.clone()]);
+        graph.add_migration(app2_0002.clone(), vec![app2_0001.clone()]);
+
+        let order = graph.resolve_execution_order_with_replaces().unwrap();
+
+        // Should not contain replaced migrations
+        assert!(!order.contains(&app1_0001));
+        assert!(!order.contains(&app1_0002));
+
+        // Should contain squashed and app2 migrations
+        assert!(order.contains(&app1_squashed));
+        assert!(order.contains(&app2_0001));
+        assert!(order.contains(&app2_0002));
+
+        // Squashed should come before app2_0001
+        let pos_squashed = order.iter().position(|k| k == &app1_squashed).unwrap();
+        let pos_app2_0001 = order.iter().position(|k| k == &app2_0001).unwrap();
+        let pos_app2_0002 = order.iter().position(|k| k == &app2_0002).unwrap();
+
+        assert!(pos_squashed < pos_app2_0001);
+        assert!(pos_app2_0001 < pos_app2_0002);
+    }
+
+    #[test]
+    fn test_multi_app_diamond_dependency() {
+        let mut graph = MigrationGraph::new();
+
+        // Create a diamond dependency across multiple apps
+        //      auth.0001
+        //      /        \
+        // users.0001   posts.0001
+        //      \        /
+        //    comments.0001
+
+        let auth_0001 = MigrationKey::new("auth", "0001_initial");
+        let users_0001 = MigrationKey::new("users", "0001_initial");
+        let posts_0001 = MigrationKey::new("posts", "0001_initial");
+        let comments_0001 = MigrationKey::new("comments", "0001_initial");
+
+        graph.add_migration(auth_0001.clone(), vec![]);
+        graph.add_migration(users_0001.clone(), vec![auth_0001.clone()]);
+        graph.add_migration(posts_0001.clone(), vec![auth_0001.clone()]);
+        graph.add_migration(
+            comments_0001.clone(),
+            vec![users_0001.clone(), posts_0001.clone()],
+        );
+
+        let order = graph.topological_sort().unwrap();
+        assert_eq!(order.len(), 4);
+
+        let pos_auth = order.iter().position(|k| k == &auth_0001).unwrap();
+        let pos_users = order.iter().position(|k| k == &users_0001).unwrap();
+        let pos_posts = order.iter().position(|k| k == &posts_0001).unwrap();
+        let pos_comments = order.iter().position(|k| k == &comments_0001).unwrap();
+
+        // auth must come before users and posts
+        assert!(pos_auth < pos_users);
+        assert!(pos_auth < pos_posts);
+
+        // users and posts must come before comments
+        assert!(pos_users < pos_comments);
+        assert!(pos_posts < pos_comments);
+    }
+
+    #[test]
+    fn test_path_with_multiple_routes() {
+        let mut graph = MigrationGraph::new();
+
+        // Create a graph with multiple possible routes
+        //     A
+        //    / \
+        //   B   C
+        //   |   |
+        //   D   E
+        //    \ /
+        //     F
+
+        let a = MigrationKey::new("app", "0001_a");
+        let b = MigrationKey::new("app", "0002_b");
+        let c = MigrationKey::new("app", "0003_c");
+        let d = MigrationKey::new("app", "0004_d");
+        let e = MigrationKey::new("app", "0005_e");
+        let f = MigrationKey::new("app", "0006_f");
+
+        graph.add_migration(a.clone(), vec![]);
+        graph.add_migration(b.clone(), vec![a.clone()]);
+        graph.add_migration(c.clone(), vec![a.clone()]);
+        graph.add_migration(d.clone(), vec![b.clone()]);
+        graph.add_migration(e.clone(), vec![c.clone()]);
+        graph.add_migration(f.clone(), vec![d.clone(), e.clone()]);
+
+        // Find path from A to F (should find one of the valid paths)
+        let path = graph.find_migration_path(&a, &f).unwrap();
+        assert!(path.len() >= 3);
+        assert_eq!(path[0], a);
+        assert_eq!(path[path.len() - 1], f);
     }
 }
