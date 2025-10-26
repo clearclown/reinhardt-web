@@ -29,6 +29,11 @@ sea-query-binder = { version = "0.7", features = [
   "sqlx-mysql",
   "sqlx-sqlite",
 ] }
+sea-schema = { version = "0.16", features = [
+  "sqlx-postgres",
+  "sqlx-mysql",
+  "sqlx-sqlite",
+] }
 sqlx = { version = "0.8", features = [
   "runtime-tokio",
   "chrono",
