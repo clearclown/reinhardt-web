@@ -1,14 +1,12 @@
 //! ViewSets for Reinhardt framework
 //!
-//! ## Planned Features
-//! TODO: Complete bulk operations for batch create/update/delete
-//! TODO: Enhance nested ViewSets for parent-child resource relationships
-//! TODO: Add OpenAPI schema generation from ViewSet definitions
-//! TODO: Implement response caching for read-only operations
+//! This crate provides ViewSet functionality for building REST APIs with automatic
+//! routing, pagination, filtering, and caching support.
 
 pub mod actions;
 pub mod batch_operations;
 pub mod builder;
+pub mod cached;
 pub mod di_support;
 pub mod filtering_support;
 pub mod handler;
@@ -28,6 +26,7 @@ pub use batch_operations::{
     BatchStatistics,
 };
 pub use builder::ViewSetBuilder;
+pub use cached::{CacheConfig, CachedResponse, CachedViewSet, CachedViewSetTrait};
 pub use di_support::{DatabaseConnection, DiViewSet, ViewSetFactory};
 pub use filtering_support::{FilterConfig, FilterableViewSet, InMemoryFilter, OrderingConfig};
 pub use handler::{ModelViewSetHandler, ViewError, ViewSetHandler};
@@ -35,7 +34,10 @@ pub use metadata::{ActionHandler, ActionMetadata, ActionRegistryEntry, FunctionA
 pub use middleware::{
     AuthenticationMiddleware, CompositeMiddleware, PermissionMiddleware, ViewSetMiddleware,
 };
-pub use mixins::{CreateMixin, DestroyMixin, ListMixin, RetrieveMixin, UpdateMixin};
+pub use mixins::{
+    BulkCreateMixin, BulkDeleteMixin, BulkOperationsMixin, BulkUpdateMixin, CreateMixin,
+    DestroyMixin, ListMixin, RetrieveMixin, UpdateMixin,
+};
 pub use nested_resources::{
     NestedResource, NestedResourcePath, NestedViewSet, nested_detail_url, nested_url,
 };
