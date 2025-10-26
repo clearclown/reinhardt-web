@@ -27,6 +27,100 @@ pub enum ChunkedUploadError {
     ChecksumMismatch,
 }
 
+use std::time::Instant;
+
+/// Upload progress information
+#[derive(Debug, Clone)]
+pub struct UploadProgress {
+    /// Current number of bytes uploaded
+    pub bytes_uploaded: usize,
+    /// Total file size in bytes
+    pub total_bytes: usize,
+    /// Progress percentage (0.0 - 100.0)
+    pub percentage: f64,
+    /// Number of chunks uploaded
+    pub chunks_uploaded: usize,
+    /// Total number of chunks
+    pub total_chunks: usize,
+    /// Upload start time
+    pub started_at: Instant,
+    /// Estimated time remaining in seconds
+    pub estimated_time_remaining: Option<f64>,
+    /// Upload speed in bytes per second
+    pub upload_speed: f64,
+}
+
+impl UploadProgress {
+    /// Create a new upload progress tracker
+    fn new(total_bytes: usize, total_chunks: usize) -> Self {
+        Self {
+            bytes_uploaded: 0,
+            total_bytes,
+            percentage: 0.0,
+            chunks_uploaded: 0,
+            total_chunks,
+            started_at: Instant::now(),
+            estimated_time_remaining: None,
+            upload_speed: 0.0,
+        }
+    }
+
+    /// Update progress with new chunk
+    fn update(&mut self, chunk_size: usize) {
+        self.chunks_uploaded += 1;
+        self.bytes_uploaded += chunk_size;
+        self.percentage = if self.total_bytes > 0 {
+            (self.bytes_uploaded as f64 / self.total_bytes as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        // Calculate upload speed
+        let elapsed = self.started_at.elapsed().as_secs_f64();
+        if elapsed > 0.0 {
+            self.upload_speed = self.bytes_uploaded as f64 / elapsed;
+
+            // Estimate time remaining
+            let bytes_remaining = self.total_bytes.saturating_sub(self.bytes_uploaded);
+            if self.upload_speed > 0.0 {
+                self.estimated_time_remaining = Some(bytes_remaining as f64 / self.upload_speed);
+            }
+        }
+    }
+
+    /// Check if upload is complete
+    pub fn is_complete(&self) -> bool {
+        self.chunks_uploaded >= self.total_chunks
+    }
+
+    /// Get formatted upload speed (e.g., "1.5 MB/s")
+    pub fn formatted_speed(&self) -> String {
+        if self.upload_speed < 1024.0 {
+            format!("{:.2} B/s", self.upload_speed)
+        } else if self.upload_speed < 1024.0 * 1024.0 {
+            format!("{:.2} KB/s", self.upload_speed / 1024.0)
+        } else {
+            format!("{:.2} MB/s", self.upload_speed / (1024.0 * 1024.0))
+        }
+    }
+
+    /// Get formatted estimated time remaining (e.g., "2m 30s")
+    pub fn formatted_eta(&self) -> String {
+        match self.estimated_time_remaining {
+            Some(seconds) => {
+                let mins = (seconds / 60.0) as u64;
+                let secs = (seconds % 60.0) as u64;
+                if mins > 0 {
+                    format!("{}m {}s", mins, secs)
+                } else {
+                    format!("{}s", secs)
+                }
+            }
+            None => "Unknown".to_string(),
+        }
+    }
+}
+
 /// Metadata for a chunked upload session
 #[derive(Debug, Clone)]
 pub struct ChunkedUploadSession {
@@ -46,6 +140,8 @@ pub struct ChunkedUploadSession {
     pub temp_dir: PathBuf,
     /// Whether the upload is complete
     pub completed: bool,
+    /// Upload progress tracker
+    progress: UploadProgress,
 }
 
 impl ChunkedUploadSession {
@@ -67,16 +163,43 @@ impl ChunkedUploadSession {
             received_chunks: 0,
             temp_dir,
             completed: false,
+            progress: UploadProgress::new(total_size, total_chunks),
         }
     }
 
     /// Get progress percentage
     pub fn progress(&self) -> f64 {
-        if self.total_chunks == 0 {
-            0.0
-        } else {
-            (self.received_chunks as f64 / self.total_chunks as f64) * 100.0
-        }
+        self.progress.percentage
+    }
+
+    /// Get detailed upload progress
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::ChunkedUploadSession;
+    /// use std::path::PathBuf;
+    ///
+    /// let session = ChunkedUploadSession::new(
+    ///     "session1".to_string(),
+    ///     "file.bin".to_string(),
+    ///     1000,
+    ///     100,
+    ///     PathBuf::from("/tmp")
+    /// );
+    /// let progress = session.get_progress();
+    /// assert_eq!(progress.percentage, 0.0);
+    /// ```
+    pub fn get_progress(&self) -> &UploadProgress {
+        &self.progress
+    }
+
+    /// Update progress with a new chunk
+    ///
+    /// This is primarily used internally but exposed for testing purposes.
+    #[doc(hidden)]
+    pub fn update_progress(&mut self, chunk_size: usize) {
+        self.progress.update(chunk_size);
     }
 
     /// Check if upload is complete
@@ -199,6 +322,7 @@ impl ChunkedUploadManager {
         file.write_all(data)?;
 
         session.received_chunks += 1;
+        session.update_progress(data.len());
 
         if session.is_complete() {
             session.completed = true;
@@ -317,10 +441,15 @@ mod tests {
 
         assert_eq!(session.progress(), 0.0);
 
-        session.received_chunks = 5;
+        // Update progress by simulating chunk uploads
+        for _ in 0..5 {
+            session.update_progress(100);
+        }
         assert_eq!(session.progress(), 50.0);
 
-        session.received_chunks = 10;
+        for _ in 0..5 {
+            session.update_progress(100);
+        }
         assert_eq!(session.progress(), 100.0);
     }
 

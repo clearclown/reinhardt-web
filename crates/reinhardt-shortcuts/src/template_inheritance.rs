@@ -26,6 +26,10 @@ static TERA_ENGINE: OnceLock<Arc<Tera>> = OnceLock::new();
 /// environment variable. If not set, defaults to the `templates` directory
 /// relative to the crate root (determined at compile time).
 ///
+/// The engine is initialized with custom filters and functions:
+/// - Filters: `truncate_chars`, `intcomma`, `pluralize`, `default`, `add_class`
+/// - Functions: `range`, `now`, `cycle`, `static`, `url`
+///
 /// # Examples
 ///
 /// ```ignore
@@ -47,7 +51,13 @@ pub fn get_tera_engine() -> &'static Arc<Tera> {
         let glob_pattern = format!("{}/**/*", template_dir.display());
 
         match Tera::new(&glob_pattern) {
-            Ok(tera) => {
+            Ok(mut tera) => {
+                // Register custom filters
+                register_custom_filters(&mut tera);
+
+                // Register custom functions
+                register_custom_functions(&mut tera);
+
                 eprintln!("Tera initialized successfully");
                 eprintln!("Template directory: {}", template_dir.display());
                 eprintln!("Registered templates:");
@@ -60,11 +70,56 @@ pub fn get_tera_engine() -> &'static Arc<Tera> {
                 eprintln!("Warning: Failed to initialize Tera: {}", e);
                 eprintln!("Template directory: {}", template_dir.display());
                 eprintln!("Glob pattern: {}", glob_pattern);
-                // Return empty Tera instance as fallback
-                Arc::new(Tera::default())
+                // Return empty Tera instance with custom filters/functions
+                let mut tera = Tera::default();
+                register_custom_filters(&mut tera);
+                register_custom_functions(&mut tera);
+                Arc::new(tera)
             }
         }
     })
+}
+
+/// Register custom filters to Tera
+///
+/// Registers Django-inspired filters:
+/// - `truncate_chars`: Truncate string to specified length
+/// - `intcomma`: Format numbers with thousand separators
+/// - `pluralize`: Pluralize words based on count
+/// - `default`: Provide default value for empty/null values
+/// - `add_class`: Add CSS class to HTML elements
+#[cfg(feature = "templates")]
+fn register_custom_filters(tera: &mut Tera) {
+    use crate::tera_filters::*;
+
+    tera.register_filter("truncate_chars", TruncateCharsFilter);
+    tera.register_filter("intcomma", IntCommaFilter);
+    tera.register_filter("pluralize", PluralizeFilter);
+    tera.register_filter("default", DefaultFilter);
+    tera.register_filter("add_class", AddClassFilter);
+}
+
+/// Register custom functions to Tera
+///
+/// Registers Django-inspired template functions:
+/// - `range`: Generate a range of numbers
+/// - `now`: Get current date/time with formatting
+/// - `cycle`: Cycle through values in a loop
+/// - `static`: Generate static file URLs
+/// - `url`: Generate URLs from route names
+#[cfg(feature = "templates")]
+fn register_custom_functions(tera: &mut Tera) {
+    use crate::tera_functions::*;
+
+    tera.register_function("range", RangeFunction);
+    tera.register_function("now", NowFunction);
+    tera.register_function("cycle", CycleFunction);
+
+    // Static URL function with configurable base path
+    let static_url = env::var("STATIC_URL").unwrap_or_else(|_| "/static".to_string());
+    tera.register_function("static", StaticFunction::new(static_url));
+
+    tera.register_function("url", UrlFunction);
 }
 
 /// Render a template with inheritance support

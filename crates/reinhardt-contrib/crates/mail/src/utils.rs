@@ -47,7 +47,8 @@ pub async fn send_mail(
     // Use console backend as the default for now
     // In production, this should use backend_from_settings()
     let backend = crate::backends::ConsoleBackend;
-    email.send_with_backend(&backend)
+    backend.send_messages(&[email]).await?;
+    Ok(())
 }
 /// Send a simple email with a specific backend
 ///
@@ -73,7 +74,7 @@ pub async fn send_mail(
 /// # Ok(())
 /// # }
 /// ```
-pub fn send_mail_with_backend(
+pub async fn send_mail_with_backend(
     subject: impl Into<String>,
     message: impl Into<String>,
     from_email: impl Into<String>,
@@ -94,7 +95,8 @@ pub fn send_mail_with_backend(
     }
 
     let email = email.build();
-    email.send_with_backend(backend)
+    backend.send_messages(&[email]).await?;
+    Ok(())
 }
 /// Send multiple emails using the same connection (bulk send)
 ///
@@ -131,11 +133,11 @@ pub fn send_mail_with_backend(
 /// # Ok(())
 /// # }
 /// ```
-pub fn send_mass_mail(
+pub async fn send_mass_mail(
     messages: Vec<EmailMessage>,
     backend: &dyn EmailBackend,
 ) -> EmailResult<usize> {
-    backend.send_messages(&messages)
+    backend.send_messages(&messages).await
 }
 /// Send an email to administrators
 ///
@@ -214,7 +216,7 @@ pub async fn mail_admins(
         admin_emails,
         None,
         backend,
-    );
+    ).await;
 
     if fail_silently {
         Ok(())
@@ -299,7 +301,7 @@ pub async fn mail_managers(
         manager_emails,
         None,
         backend,
-    );
+    ).await;
 
     if fail_silently {
         Ok(())
@@ -324,10 +326,10 @@ mod tests {
             vec!["to@example.com"],
             None,
             &backend,
-        );
+        ).await;
 
         assert!(result.is_ok());
-        assert_eq!(backend.count(), 1);
+        assert_eq!(backend.count().await, 1);
     }
 
     #[tokio::test]
@@ -341,11 +343,11 @@ mod tests {
             vec!["to@example.com"],
             Some("<h1>Test HTML</h1>".to_string()),
             &backend,
-        );
+        ).await;
 
         assert!(result.is_ok());
 
-        let messages = backend.get_messages();
+        let messages = backend.get_messages().await;
         assert!(messages[0].html_body.is_some());
     }
 
@@ -368,9 +370,9 @@ mod tests {
                 .build(),
         ];
 
-        let results = send_mass_mail(messages, &backend).unwrap();
+        let results = send_mass_mail(messages, &backend).await.unwrap();
 
         assert_eq!(results, 2);
-        assert_eq!(backend.count(), 2);
+        assert_eq!(backend.count().await, 2);
     }
 }

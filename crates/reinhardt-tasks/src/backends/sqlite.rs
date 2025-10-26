@@ -1,6 +1,9 @@
 //! SQLite-based task backend implementation
 
-use crate::{Task, TaskExecutionError, TaskId, TaskStatus};
+use crate::{
+    result::{ResultBackend, TaskResultMetadata},
+    Task, TaskExecutionError, TaskId, TaskStatus,
+};
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
@@ -59,6 +62,20 @@ impl SqliteBackend {
                 status TEXT NOT NULL,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
+            )
+        "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS task_results (
+                task_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                result TEXT,
+                error TEXT,
+                created_at INTEGER NOT NULL
             )
         "#,
         )
@@ -185,6 +202,151 @@ impl crate::backend::TaskBackend for SqliteBackend {
     }
 }
 
+/// SQLite-based result backend for task result persistence
+///
+/// # Examples
+///
+/// ```no_run
+/// use reinhardt_tasks::{SqliteResultBackend, ResultBackend, TaskResultMetadata, TaskId, TaskStatus};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let backend = SqliteResultBackend::new("sqlite::memory:").await?;
+///
+/// let metadata = TaskResultMetadata::new(
+///     TaskId::new(),
+///     TaskStatus::Success,
+///     Some("Task completed".to_string()),
+/// );
+///
+/// backend.store_result(metadata).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct SqliteResultBackend {
+    pool: SqlitePool,
+}
+
+impl SqliteResultBackend {
+    /// Create a new SQLite result backend
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_tasks::SqliteResultBackend;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = SqliteResultBackend::new("sqlite::memory:").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
+        let pool = SqlitePool::connect(database_url).await?;
+
+        let backend = Self { pool };
+        backend.create_tables().await?;
+
+        Ok(backend)
+    }
+
+    async fn create_tables(&self) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS task_results (
+                task_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                result TEXT,
+                error TEXT,
+                created_at INTEGER NOT NULL
+            )
+        "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl ResultBackend for SqliteResultBackend {
+    async fn store_result(&self, metadata: TaskResultMetadata) -> Result<(), TaskExecutionError> {
+        let task_id_str = metadata.task_id().to_string();
+        let status_str = match metadata.status() {
+            TaskStatus::Pending => "pending",
+            TaskStatus::Running => "running",
+            TaskStatus::Success => "success",
+            TaskStatus::Failure => "failure",
+            TaskStatus::Retry => "retry",
+        };
+
+        sqlx::query(
+            r#"
+            INSERT OR REPLACE INTO task_results
+            (task_id, status, result, error, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        "#,
+        )
+        .bind(&task_id_str)
+        .bind(status_str)
+        .bind(metadata.result())
+        .bind(metadata.error())
+        .bind(metadata.created_at())
+        .execute(&self.pool)
+        .await
+        .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    async fn get_result(
+        &self,
+        task_id: TaskId,
+    ) -> Result<Option<TaskResultMetadata>, TaskExecutionError> {
+        let task_id_str = task_id.to_string();
+
+        let record: Option<(String, Option<String>, Option<String>, i64)> = sqlx::query_as(
+            "SELECT status, result, error, created_at FROM task_results WHERE task_id = ?",
+        )
+        .bind(&task_id_str)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        match record {
+            Some((status_str, result, error, created_at)) => {
+                let status = match status_str.as_str() {
+                    "pending" => TaskStatus::Pending,
+                    "running" => TaskStatus::Running,
+                    "success" => TaskStatus::Success,
+                    "failure" => TaskStatus::Failure,
+                    "retry" => TaskStatus::Retry,
+                    _ => TaskStatus::Pending,
+                };
+
+                let mut metadata = TaskResultMetadata::new(task_id, status, result);
+                if let Some(err) = error {
+                    metadata = TaskResultMetadata::with_error(task_id, err);
+                }
+
+                Ok(Some(metadata))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn delete_result(&self, task_id: TaskId) -> Result<(), TaskExecutionError> {
+        let task_id_str = task_id.to_string();
+
+        sqlx::query("DELETE FROM task_results WHERE task_id = ?")
+            .bind(&task_id_str)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -263,5 +425,60 @@ mod tests {
         let result = backend.get_status(TaskId::new()).await;
         assert!(result.is_err());
         assert!(matches!(result, Err(TaskExecutionError::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_result_backend_store_and_retrieve() {
+        let backend = SqliteResultBackend::new("sqlite::memory:")
+            .await
+            .expect("Failed to create backend");
+
+        let task_id = TaskId::new();
+        let metadata = TaskResultMetadata::new(
+            task_id,
+            TaskStatus::Success,
+            Some("Test result".to_string()),
+        );
+
+        // Store result
+        backend
+            .store_result(metadata.clone())
+            .await
+            .expect("Failed to store result");
+
+        // Retrieve result
+        let retrieved = backend
+            .get_result(task_id)
+            .await
+            .expect("Failed to get result");
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().result(), Some("Test result"));
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_result_backend_delete() {
+        let backend = SqliteResultBackend::new("sqlite::memory:")
+            .await
+            .expect("Failed to create backend");
+
+        let task_id = TaskId::new();
+        let metadata = TaskResultMetadata::new(task_id, TaskStatus::Success, None);
+
+        // Store and then delete
+        backend
+            .store_result(metadata)
+            .await
+            .expect("Failed to store result");
+        backend
+            .delete_result(task_id)
+            .await
+            .expect("Failed to delete result");
+
+        // Verify deleted
+        let retrieved = backend
+            .get_result(task_id)
+            .await
+            .expect("Failed to get result");
+        assert!(retrieved.is_none());
     }
 }

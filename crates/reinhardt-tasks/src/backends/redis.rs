@@ -1,6 +1,9 @@
 //! Redis-based task backend implementation
 
-use crate::{Task, TaskExecutionError, TaskId, TaskStatus};
+use crate::{
+    result::{ResultBackend, TaskResultMetadata},
+    Task, TaskExecutionError, TaskId, TaskStatus,
+};
 use async_trait::async_trait;
 use redis::{aio::ConnectionManager, AsyncCommands, RedisError};
 use serde::{Deserialize, Serialize};
@@ -213,6 +216,145 @@ impl crate::backend::TaskBackend for RedisBackend {
     }
 }
 
+/// Redis-based result backend for task result persistence
+///
+/// # Examples
+///
+/// ```no_run
+/// use reinhardt_tasks::{RedisResultBackend, ResultBackend, TaskResultMetadata, TaskId, TaskStatus};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let backend = RedisResultBackend::new("redis://127.0.0.1/").await?;
+///
+/// let metadata = TaskResultMetadata::new(
+///     TaskId::new(),
+///     TaskStatus::Success,
+///     Some("Task completed".to_string()),
+/// );
+///
+/// backend.store_result(metadata).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct RedisResultBackend {
+    connection: Arc<ConnectionManager>,
+    key_prefix: String,
+    default_ttl: i64,
+}
+
+impl RedisResultBackend {
+    /// Create a new Redis result backend
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_tasks::RedisResultBackend;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = RedisResultBackend::new("redis://localhost/").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn new(redis_url: &str) -> Result<Self, RedisError> {
+        let client = redis::Client::open(redis_url)?;
+        let connection = ConnectionManager::new(client).await?;
+
+        Ok(Self {
+            connection: Arc::new(connection),
+            key_prefix: "reinhardt:results:".to_string(),
+            default_ttl: 86400, // 24 hours
+        })
+    }
+
+    /// Create a new Redis result backend with custom settings
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_tasks::RedisResultBackend;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = RedisResultBackend::with_config(
+    ///     "redis://localhost/",
+    ///     "myapp:results:".to_string(),
+    ///     3600, // 1 hour TTL
+    /// ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn with_config(
+        redis_url: &str,
+        key_prefix: String,
+        default_ttl: i64,
+    ) -> Result<Self, RedisError> {
+        let client = redis::Client::open(redis_url)?;
+        let connection = ConnectionManager::new(client).await?;
+
+        Ok(Self {
+            connection: Arc::new(connection),
+            key_prefix,
+            default_ttl,
+        })
+    }
+
+    fn result_key(&self, task_id: TaskId) -> String {
+        format!("{}task:{}", self.key_prefix, task_id)
+    }
+}
+
+#[async_trait]
+impl ResultBackend for RedisResultBackend {
+    async fn store_result(&self, metadata: TaskResultMetadata) -> Result<(), TaskExecutionError> {
+        let task_id = metadata.task_id();
+        let metadata_json = serde_json::to_string(&metadata)
+            .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
+        let mut conn = (*self.connection).clone();
+        let key = self.result_key(task_id);
+
+        let _: () = conn
+            .set_ex(&key, metadata_json, self.default_ttl as u64)
+            .await
+            .map_err(|e: RedisError| TaskExecutionError::BackendError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    async fn get_result(
+        &self,
+        task_id: TaskId,
+    ) -> Result<Option<TaskResultMetadata>, TaskExecutionError> {
+        let mut conn = (*self.connection).clone();
+        let key = self.result_key(task_id);
+
+        let metadata_json: Option<String> = conn
+            .get(&key)
+            .await
+            .map_err(|e: RedisError| TaskExecutionError::BackendError(e.to_string()))?;
+
+        match metadata_json {
+            Some(json) => {
+                let metadata: TaskResultMetadata = serde_json::from_str(&json)
+                    .map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+                Ok(Some(metadata))
+            }
+            None => Ok(None),
+        }
+    }
+
+    async fn delete_result(&self, task_id: TaskId) -> Result<(), TaskExecutionError> {
+        let mut conn = (*self.connection).clone();
+        let key = self.result_key(task_id);
+
+        let _: () = conn
+            .del(&key)
+            .await
+            .map_err(|e: RedisError| TaskExecutionError::BackendError(e.to_string()))?;
+
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,5 +535,77 @@ mod tests {
             .await
             .expect("Failed to get status");
         assert_eq!(status, TaskStatus::Success);
+    }
+
+    #[tokio::test]
+    #[serial(redis)]
+    async fn test_redis_result_backend_store_and_retrieve() {
+        let container = setup_redis().await;
+        let port = container
+            .get_host_port_ipv4(6379)
+            .await
+            .expect("Failed to get port");
+        let redis_url = format!("redis://127.0.0.1:{}/", port);
+
+        let backend = RedisResultBackend::new(&redis_url)
+            .await
+            .expect("Failed to connect to Redis");
+
+        let task_id = TaskId::new();
+        let metadata = crate::result::TaskResultMetadata::new(
+            task_id,
+            TaskStatus::Success,
+            Some("Test result".to_string()),
+        );
+
+        // Store result
+        backend
+            .store_result(metadata.clone())
+            .await
+            .expect("Failed to store result");
+
+        // Retrieve result
+        let retrieved = backend
+            .get_result(task_id)
+            .await
+            .expect("Failed to get result");
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().result(), Some("Test result"));
+    }
+
+    #[tokio::test]
+    #[serial(redis)]
+    async fn test_redis_result_backend_delete() {
+        let container = setup_redis().await;
+        let port = container
+            .get_host_port_ipv4(6379)
+            .await
+            .expect("Failed to get port");
+        let redis_url = format!("redis://127.0.0.1:{}/", port);
+
+        let backend = RedisResultBackend::new(&redis_url)
+            .await
+            .expect("Failed to connect to Redis");
+
+        let task_id = TaskId::new();
+        let metadata =
+            crate::result::TaskResultMetadata::new(task_id, TaskStatus::Success, None);
+
+        // Store and then delete
+        backend
+            .store_result(metadata)
+            .await
+            .expect("Failed to store result");
+        backend
+            .delete_result(task_id)
+            .await
+            .expect("Failed to delete result");
+
+        // Verify deleted
+        let retrieved = backend
+            .get_result(task_id)
+            .await
+            .expect("Failed to get result");
+        assert!(retrieved.is_none());
     }
 }

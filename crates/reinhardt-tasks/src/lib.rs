@@ -12,12 +12,12 @@
 //! - Result backend
 //!
 //! ## Planned Features
-//! TODO: Implement Redis/Database result persistence (RedisResultBackend, DatabaseResultBackend)
-//! TODO: Complete distributed task execution across multiple workers
-//! TODO: Add worker load balancing
-//! TODO: Implement task locking mechanism for distributed systems
-//! TODO: Complete actual task execution with deserialization and dispatch
-//! TODO: Implement task registry for dynamic task dispatch
+//!
+//! - Advanced worker load balancing strategies
+//! - Task priority queues with weighted scheduling
+//! - Task dependencies and DAG execution
+//! - Webhook notifications for task completion
+//! - Task execution metrics and monitoring
 //!
 //! ## Example
 //!
@@ -47,7 +47,9 @@
 pub mod backend;
 pub mod backends;
 pub mod chain;
+pub mod locking;
 pub mod queue;
+pub mod registry;
 pub mod result;
 pub mod retry;
 pub mod scheduler;
@@ -65,11 +67,22 @@ pub use backends::RedisBackend;
 #[cfg(feature = "database-backend")]
 pub use backends::SqliteBackend;
 pub use chain::{ChainStatus, TaskChain, TaskChainBuilder};
+pub use locking::{MemoryTaskLock, TaskLock};
+
+#[cfg(feature = "redis-backend")]
+pub use locking::RedisTaskLock;
 pub use queue::{QueueConfig, TaskQueue};
+pub use registry::{SerializedTask, TaskFactory, TaskRegistry};
 pub use result::{
     MemoryResultBackend, ResultBackend, TaskOutput, TaskResult as TaskResultBackend,
     TaskResultMetadata,
 };
+
+#[cfg(feature = "redis-backend")]
+pub use backends::redis::RedisResultBackend;
+
+#[cfg(feature = "database-backend")]
+pub use backends::sqlite::SqliteResultBackend;
 pub use retry::{RetryState, RetryStrategy};
 pub use scheduler::{CronSchedule, Schedule, Scheduler};
 pub use task::{

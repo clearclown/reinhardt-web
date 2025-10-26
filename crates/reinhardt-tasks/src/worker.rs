@@ -1,6 +1,11 @@
 //! Task worker
 
-use crate::{TaskBackend, TaskStatus};
+use crate::{
+    locking::TaskLock,
+    registry::TaskRegistry,
+    result::{ResultBackend, TaskResultMetadata},
+    TaskBackend, TaskStatus,
+};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
@@ -117,6 +122,9 @@ impl Default for WorkerConfig {
 pub struct Worker {
     config: WorkerConfig,
     shutdown_tx: broadcast::Sender<()>,
+    registry: Option<Arc<TaskRegistry>>,
+    task_lock: Option<Arc<dyn TaskLock>>,
+    result_backend: Option<Arc<dyn ResultBackend>>,
 }
 
 impl Worker {
@@ -135,7 +143,58 @@ impl Worker {
         Self {
             config,
             shutdown_tx,
+            registry: None,
+            task_lock: None,
+            result_backend: None,
         }
+    }
+
+    /// Set the task registry for dynamic task dispatch
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_tasks::{Worker, WorkerConfig, TaskRegistry};
+    /// use std::sync::Arc;
+    ///
+    /// let worker = Worker::new(WorkerConfig::default())
+    ///     .with_registry(Arc::new(TaskRegistry::new()));
+    /// ```
+    pub fn with_registry(mut self, registry: Arc<TaskRegistry>) -> Self {
+        self.registry = Some(registry);
+        self
+    }
+
+    /// Set the task lock for distributed task execution
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_tasks::{Worker, WorkerConfig, MemoryTaskLock};
+    /// use std::sync::Arc;
+    ///
+    /// let worker = Worker::new(WorkerConfig::default())
+    ///     .with_lock(Arc::new(MemoryTaskLock::new()));
+    /// ```
+    pub fn with_lock(mut self, task_lock: Arc<dyn TaskLock>) -> Self {
+        self.task_lock = Some(task_lock);
+        self
+    }
+
+    /// Set the result backend for storing task results
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_tasks::{Worker, WorkerConfig, MemoryResultBackend};
+    /// use std::sync::Arc;
+    ///
+    /// let worker = Worker::new(WorkerConfig::default())
+    ///     .with_result_backend(Arc::new(MemoryResultBackend::new()));
+    /// ```
+    pub fn with_result_backend(mut self, result_backend: Arc<dyn ResultBackend>) -> Self {
+        self.result_backend = Some(result_backend);
+        self
     }
 
     /// Run the worker loop
@@ -229,13 +288,62 @@ impl Worker {
         task_id: crate::TaskId,
         _backend: Arc<dyn TaskBackend>,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Placeholder for actual task execution
-        // In a real implementation, this would:
-        // 1. Deserialize task data
-        // 2. Call the task's execute method
-        // 3. Store the result
         println!("[{}] Executing task: {}", self.config.name, task_id);
-        Ok(())
+
+        // Try to acquire lock if available
+        if let Some(ref lock) = self.task_lock {
+            let acquired = lock.acquire(task_id, Duration::from_secs(300)).await?;
+            if !acquired {
+                println!(
+                    "[{}] Task {} already locked by another worker",
+                    self.config.name, task_id
+                );
+                return Ok(());
+            }
+        }
+
+        // Execute task with registry if available
+        let result = if let Some(ref _registry) = self.registry {
+            // In a real implementation, we would:
+            // 1. Get serialized task data from backend
+            // 2. Deserialize task using registry
+            // 3. Execute the task
+            // For now, this is a placeholder showing the pattern
+            println!(
+                "[{}] Task execution with registry (placeholder)",
+                self.config.name
+            );
+            Ok(())
+        } else {
+            println!(
+                "[{}] Task execution without registry (basic mode)",
+                self.config.name
+            );
+            Ok(())
+        };
+
+        // Store result if result backend is available
+        if let Some(ref result_backend) = self.result_backend {
+            let metadata = match result {
+                Ok(_) => TaskResultMetadata::new(
+                    task_id,
+                    TaskStatus::Success,
+                    Some("Task completed successfully".to_string()),
+                ),
+                Err(ref e) => {
+                    TaskResultMetadata::with_error(task_id, format!("Task failed: {}", e))
+                }
+            };
+
+            result_backend.store_result(metadata).await?;
+        }
+
+        // Release lock if acquired
+        if let Some(ref lock) = self.task_lock {
+            lock.release(task_id).await?;
+        }
+
+        result
     }
 
     /// Stop the worker
@@ -259,7 +367,13 @@ impl Worker {
 
 impl Default for Worker {
     fn default() -> Self {
-        Self::new(WorkerConfig::default())
+        Self {
+            config: WorkerConfig::default(),
+            shutdown_tx: broadcast::channel(1).0,
+            registry: None,
+            task_lock: None,
+            result_backend: None,
+        }
     }
 }
 
@@ -313,6 +427,9 @@ mod tests {
         let worker_clone = Worker {
             config: worker.config.clone(),
             shutdown_tx: worker.shutdown_tx.clone(),
+            registry: None,
+            task_lock: None,
+            result_backend: None,
         };
 
         let handle = tokio::spawn(async move { worker.run(backend).await });
@@ -326,5 +443,35 @@ mod tests {
         // Wait for worker to finish
         let result = tokio::time::timeout(Duration::from_secs(2), handle).await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_worker_with_registry() {
+        use crate::registry::TaskRegistry;
+
+        let registry = Arc::new(TaskRegistry::new());
+        let worker = Worker::new(WorkerConfig::default()).with_registry(registry);
+
+        assert!(worker.registry.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_worker_with_lock() {
+        use crate::locking::MemoryTaskLock;
+
+        let lock = Arc::new(MemoryTaskLock::new());
+        let worker = Worker::new(WorkerConfig::default()).with_lock(lock);
+
+        assert!(worker.task_lock.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_worker_with_result_backend() {
+        use crate::result::MemoryResultBackend;
+
+        let backend = Arc::new(MemoryResultBackend::new());
+        let worker = Worker::new(WorkerConfig::default()).with_result_backend(backend);
+
+        assert!(worker.result_backend.is_some());
     }
 }

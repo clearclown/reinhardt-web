@@ -1,13 +1,13 @@
 //! Form processing and validation for Reinhardt
 //!
-//! ## Planned Features
-//! TODO: Enhance CSRF protection with cryptographic token generation
-//! TODO: Implement token rotation for CSRF tokens
-//! TODO: Add same-site cookie support for CSRF protection
-//! TODO: Implement origin validation for CSRF
-//! TODO: Complete chunked upload support
-//! TODO: Add upload progress tracking
-//! TODO: Enhance file handling capabilities
+//! This crate provides comprehensive form processing capabilities including:
+//! - CSRF protection with cryptographic token generation and rotation
+//! - SameSite cookie support for enhanced security
+//! - Origin and referer validation
+//! - Chunked upload support with progress tracking
+//! - File handling with MIME type detection and checksum verification
+//! - XSS protection and honeypot fields
+//! - Form wizards and formsets
 
 pub mod bound_field;
 pub mod chunked_upload;
@@ -26,8 +26,10 @@ pub mod wizard;
 pub mod xss_protection;
 
 pub use bound_field::BoundField;
-pub use chunked_upload::{ChunkedUploadError, ChunkedUploadManager, ChunkedUploadSession};
-pub use csrf::{CsrfError, CsrfToken, CsrfValidator};
+pub use chunked_upload::{
+    ChunkedUploadError, ChunkedUploadManager, ChunkedUploadSession, UploadProgress,
+};
+pub use csrf::{CsrfError, CsrfToken, CsrfValidator, SameSite};
 pub use field::{
     BooleanField,
     CharField,

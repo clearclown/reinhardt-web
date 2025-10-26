@@ -2,6 +2,12 @@
 //!
 //! This module provides security features for forms including CSRF protection,
 //! honeypot fields for bot detection, and rate limiting.
+//!
+//! ## CSRF Protection
+//!
+//! For advanced CSRF protection including origin validation, SameSite cookies,
+//! and cryptographic token generation, see the [`csrf`](crate::csrf) module,
+//! specifically [`CsrfValidator`](crate::csrf::CsrfValidator).
 
 use crate::Form;
 use std::collections::HashMap;

@@ -3,6 +3,7 @@
 //! This module provides file upload processing including handlers,
 //! temporary file management, and memory-based uploads.
 
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -17,6 +18,10 @@ pub enum FileUploadError {
     Io(#[from] io::Error),
     #[error("Upload error: {0}")]
     Upload(String),
+    #[error("Checksum verification failed")]
+    ChecksumMismatch,
+    #[error("MIME type detection failed")]
+    MimeDetectionFailed,
 }
 
 /// FileUploadHandler processes file uploads
@@ -27,6 +32,8 @@ pub struct FileUploadHandler {
     upload_dir: PathBuf,
     max_size: usize,
     allowed_extensions: Option<Vec<String>>,
+    verify_checksum: bool,
+    allowed_mime_types: Option<Vec<String>>,
 }
 
 impl FileUploadHandler {
@@ -50,6 +57,8 @@ impl FileUploadHandler {
             upload_dir,
             max_size: 10 * 1024 * 1024, // 10MB default
             allowed_extensions: None,
+            verify_checksum: false,
+            allowed_mime_types: None,
         }
     }
 
@@ -86,6 +95,41 @@ impl FileUploadHandler {
         self
     }
 
+    /// Enable checksum verification
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"))
+    ///     .with_checksum_verification(true);
+    /// ```
+    pub fn with_checksum_verification(mut self, enabled: bool) -> Self {
+        self.verify_checksum = enabled;
+        self
+    }
+
+    /// Set allowed MIME types
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"))
+    ///     .with_allowed_mime_types(vec![
+    ///         "image/jpeg".to_string(),
+    ///         "image/png".to_string()
+    ///     ]);
+    /// ```
+    pub fn with_allowed_mime_types(mut self, mime_types: Vec<String>) -> Self {
+        self.allowed_mime_types = Some(mime_types);
+        self
+    }
+
     /// Get the maximum file size
     pub fn max_size(&self) -> usize {
         self.max_size
@@ -94,6 +138,119 @@ impl FileUploadHandler {
     /// Get the upload directory
     pub fn upload_dir(&self) -> &Path {
         &self.upload_dir
+    }
+
+    /// Calculate SHA-256 checksum of file content
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"));
+    /// let checksum = handler.calculate_checksum(b"test data");
+    /// assert_eq!(checksum.len(), 64); // SHA-256 produces 64 hex characters
+    /// ```
+    pub fn calculate_checksum(&self, content: &[u8]) -> String {
+        let mut hasher = Sha256::new();
+        hasher.update(content);
+        let result = hasher.finalize();
+        // Convert bytes to hex string
+        result.iter().map(|b| format!("{:02x}", b)).collect()
+    }
+
+    /// Verify file checksum
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"));
+    /// let content = b"test data";
+    /// let checksum = handler.calculate_checksum(content);
+    /// assert!(handler.verify_file_checksum(content, &checksum).is_ok());
+    /// ```
+    pub fn verify_file_checksum(
+        &self,
+        content: &[u8],
+        expected_checksum: &str,
+    ) -> Result<(), FileUploadError> {
+        let actual_checksum = self.calculate_checksum(content);
+        if actual_checksum == expected_checksum {
+            Ok(())
+        } else {
+            Err(FileUploadError::ChecksumMismatch)
+        }
+    }
+
+    /// Detect MIME type from file content
+    ///
+    /// Basic MIME type detection based on file signatures (magic numbers).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"));
+    ///
+    /// // PNG signature
+    /// let png_data = vec![0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+    /// assert_eq!(handler.detect_mime_type(&png_data), Some("image/png".to_string()));
+    ///
+    /// // JPEG signature
+    /// let jpeg_data = vec![0xFF, 0xD8, 0xFF];
+    /// assert_eq!(handler.detect_mime_type(&jpeg_data), Some("image/jpeg".to_string()));
+    /// ```
+    pub fn detect_mime_type(&self, content: &[u8]) -> Option<String> {
+        if content.is_empty() {
+            return None;
+        }
+
+        // Check common file signatures
+        if content.len() >= 8 && content[0..8] == [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        {
+            return Some("image/png".to_string());
+        }
+
+        if content.len() >= 3 && content[0..3] == [0xFF, 0xD8, 0xFF] {
+            return Some("image/jpeg".to_string());
+        }
+
+        if content.len() >= 4 && content[0..4] == [0x47, 0x49, 0x46, 0x38] {
+            return Some("image/gif".to_string());
+        }
+
+        if content.len() >= 4 && content[0..4] == [0x25, 0x50, 0x44, 0x46] {
+            return Some("application/pdf".to_string());
+        }
+
+        if content.len() >= 4
+            && (content[0..4] == [0x50, 0x4B, 0x03, 0x04]
+                || content[0..4] == [0x50, 0x4B, 0x05, 0x06])
+        {
+            return Some("application/zip".to_string());
+        }
+
+        None
+    }
+
+    /// Validate MIME type
+    fn validate_mime_type(&self, content: &[u8]) -> Result<(), FileUploadError> {
+        if let Some(ref allowed) = self.allowed_mime_types {
+            let detected_mime = self
+                .detect_mime_type(content)
+                .ok_or(FileUploadError::MimeDetectionFailed)?;
+
+            if !allowed.contains(&detected_mime) {
+                return Err(FileUploadError::InvalidFileType(detected_mime));
+            }
+        }
+        Ok(())
     }
 
     /// Handle a file upload
@@ -141,6 +298,9 @@ impl FileUploadHandler {
             }
         }
 
+        // Validate MIME type
+        self.validate_mime_type(content)?;
+
         // Create upload directory if it doesn't exist
         fs::create_dir_all(&self.upload_dir)?;
 
@@ -153,6 +313,43 @@ impl FileUploadHandler {
         file.write_all(content)?;
 
         Ok(unique_filename)
+    }
+
+    /// Handle upload with checksum verification
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use reinhardt_forms::FileUploadHandler;
+    /// use std::path::PathBuf;
+    ///
+    /// let handler = FileUploadHandler::new(PathBuf::from("/tmp/uploads"))
+    ///     .with_checksum_verification(true);
+    ///
+    /// let content = b"test data";
+    /// let checksum = handler.calculate_checksum(content);
+    /// let result = handler.handle_upload_with_checksum(
+    ///     "file",
+    ///     "test.txt",
+    ///     content,
+    ///     &checksum
+    /// );
+    /// assert!(result.is_ok());
+    /// ```
+    pub fn handle_upload_with_checksum(
+        &self,
+        field_name: &str,
+        filename: &str,
+        content: &[u8],
+        expected_checksum: &str,
+    ) -> Result<String, FileUploadError> {
+        // Verify checksum if enabled
+        if self.verify_checksum {
+            self.verify_file_checksum(content, expected_checksum)?;
+        }
+
+        // Handle the upload normally
+        self.handle_upload(field_name, filename, content)
     }
 
     /// Generate a unique filename
