@@ -122,8 +122,7 @@ impl Default for ContentTypeRegistry {
 
 use once_cell::sync::Lazy;
 
-pub static CONTENT_TYPE_REGISTRY: Lazy<ContentTypeRegistry> =
-    Lazy::new(|| ContentTypeRegistry::new());
+pub static CONTENT_TYPE_REGISTRY: Lazy<ContentTypeRegistry> = Lazy::new(ContentTypeRegistry::new);
 
 /// Generic foreign key field
 #[derive(Debug, Clone, Serialize, Deserialize)]

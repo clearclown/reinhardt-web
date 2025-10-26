@@ -74,19 +74,51 @@ Useful for building flexible systems like comments, tags, or activity streams th
 
 #### Database Integration
 
-- Automatic ContentType table creation and migration
-- Persistence of ContentType instances to database
-- Database-backed content type lookups
-- Multi-database support for content types
-- Foreign key constraints for GenericForeignKey fields
+- **ContentTypePersistence** - Database-backed content type storage
+  - `new()` - Create persistence backend with database URL
+  - `from_pool()` - Create from existing connection pool
+  - `create_table()` - Automatic table creation with indexes
+  - `get()`, `get_by_id()` - Retrieve content types from database
+  - `get_or_create()` - Get existing or create new content type in database
+  - `save()`, `delete()` - Persist and remove content types
+  - `load_all()` - Load all content types from database
+  - `exists()` - Check content type existence
+  - Supports PostgreSQL, MySQL, and SQLite via sqlx
+
+- **Multi-Database Support**
+  - `MultiDbContentTypeManager` - Manage content types across multiple databases
+  - Per-database content type registries with isolated caching
+  - Cross-database content type searches
+  - Database routing for content type operations
+  - `add_database()` - Register new database connections
+  - `search_all_databases()` - Find content types across all databases
+  - `list_databases()` - Get all registered database names
+
+- **GenericForeignKey Constraints**
+  - Database-level validation for generic foreign keys
+  - `validate_content_type()` - Verify content type exists in database
+  - `get_validated_content_type()` - Retrieve validated content type from database
 
 #### ORM Integration
 
-- Generic relation fields for models (`GenericRelation`)
-- Reverse generic relation queries
-- Prefetch support for generic relations
-- QuerySet integration for efficient generic relation queries
-- Generic relation filtering and ordering
+- **ContentTypeQuery** - ORM-style query builder for content types
+  - `new()` - Create query builder from connection pool
+  - `filter_app_label()`, `filter_model()`, `filter_id()` - Filter by fields
+  - `order_by_app_label()`, `order_by_model()`, `order_by_id()` - Sorting
+  - `order_by_*_desc()` - Descending order variants
+  - `limit()`, `offset()` - Pagination support
+  - `all()` - Execute query and get all results
+  - `first()` - Get first result
+  - `count()` - Count matching records
+  - `exists()` - Check if any records match
+  - Django-inspired QuerySet API with method chaining
+
+- **ContentTypeTransaction** - Transaction-aware content type operations
+  - `new()` - Create transaction context
+  - `query()` - Get query builder for transaction
+  - `create()` - Create content type within transaction
+  - `delete()` - Delete content type within transaction
+  - Full ACID transaction support for content type operations
 
 #### Permission System Integration
 
