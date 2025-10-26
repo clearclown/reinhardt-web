@@ -6,7 +6,6 @@
 //! TODO: Rate limit warmup and cooldown strategies
 //! TODO: Adaptive rate limiting based on system load
 //! TODO: Rate limit analytics and reporting
-//! TODO: Token bucket algorithm implementation
 //! TODO: Leaky bucket algorithm implementation
 //! TODO: Memcached backend support
 //! TODO: Database-backed rate limiting
@@ -25,6 +24,7 @@ pub mod scoped;
 pub mod throttle;
 pub mod tiered;
 pub mod time_provider;
+pub mod token_bucket;
 pub mod user;
 
 pub use anon::AnonRateThrottle;
@@ -34,6 +34,7 @@ pub use scoped::ScopedRateThrottle;
 pub use throttle::{Throttle, ThrottleError, ThrottleResult};
 pub use tiered::{Tier, TieredRateThrottle};
 pub use time_provider::{MockTimeProvider, SystemTimeProvider, TimeProvider};
+pub use token_bucket::{TokenBucket, TokenBucketConfig, TokenBucketConfigBuilder};
 pub use user::UserRateThrottle;
 
 #[cfg(feature = "redis-backend")]
