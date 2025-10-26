@@ -20,6 +20,7 @@ pub mod loader;
 pub mod migration;
 pub mod model_registry;
 pub mod operations;
+pub mod plan;
 pub mod recorder;
 pub mod writer;
 
@@ -32,8 +33,9 @@ pub use di_support::{MigrationConfig, MigrationService};
 pub use executor::{ExecutionResult, MigrationExecutor};
 pub use graph::{MigrationGraph, MigrationKey, MigrationNode};
 pub use loader::MigrationLoader;
-pub use migration::{Migration, MigrationPlan};
+pub use migration::Migration;
 pub use model_registry::{global_registry, FieldMetadata, ModelMetadata, ModelRegistry};
+pub use plan::MigrationPlan;
 pub use operations::{
     AddColumn, AlterColumn, ColumnDefinition, CreateTable, DropColumn, Operation, SqlDialect,
 };
