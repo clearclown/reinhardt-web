@@ -1,6 +1,8 @@
 pub mod auth;
 pub mod broken_link;
 pub mod brotli;
+pub mod cache;
+pub mod circuit_breaker;
 pub mod common;
 pub mod conditional;
 pub mod cors;
@@ -8,6 +10,7 @@ pub mod csp;
 pub mod csp_helpers;
 pub mod csrf;
 pub mod di_support;
+pub mod etag;
 pub mod flatpages;
 pub mod gzip;
 pub mod https_redirect;
@@ -15,9 +18,11 @@ pub mod locale;
 pub mod logging;
 pub mod messages;
 pub mod metrics;
+pub mod rate_limit;
 pub mod redirect_fallback;
 pub mod request_id;
 pub mod security_middleware;
+pub mod session;
 pub mod site;
 pub mod tracing;
 pub mod xframe;
@@ -28,6 +33,8 @@ pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 pub use auth::AuthenticationMiddleware;
 pub use broken_link::{BrokenLinkConfig, BrokenLinkEmailsMiddleware};
 pub use brotli::{BrotliConfig, BrotliMiddleware, BrotliQuality};
+pub use cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware, CacheStore};
+pub use circuit_breaker::{CircuitBreakerConfig, CircuitBreakerMiddleware, CircuitState};
 pub use common::{CommonConfig, CommonMiddleware};
 pub use conditional::ConditionalGetMiddleware;
 pub use cors::CorsMiddleware;
@@ -41,6 +48,7 @@ pub use csrf::{
     REASON_INSECURE_REFERER, REASON_INVALID_CHARACTERS, REASON_MALFORMED_REFERER,
     REASON_NO_CSRF_COOKIE, REASON_NO_REFERER,
 };
+pub use etag::{ETagConfig, ETagMiddleware};
 pub use flatpages::{Flatpage, FlatpageStore, FlatpagesConfig, FlatpagesMiddleware};
 pub use gzip::{GZipConfig, GZipMiddleware};
 pub use https_redirect::{HttpsRedirectConfig, HttpsRedirectMiddleware};
@@ -48,9 +56,11 @@ pub use locale::{LocaleConfig, LocaleMiddleware};
 pub use logging::LoggingMiddleware;
 pub use messages::{CookieStorage, Message, MessageLevel, MessageStorage, SessionStorage};
 pub use metrics::{MetricsConfig, MetricsMiddleware, MetricsStore};
+pub use rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStore, RateLimitStrategy};
 pub use redirect_fallback::{RedirectFallbackMiddleware, RedirectResponseConfig};
 pub use request_id::{RequestIdConfig, RequestIdMiddleware, REQUEST_ID_HEADER};
 pub use security_middleware::{SecurityConfig, SecurityMiddleware};
+pub use session::{SessionConfig, SessionData, SessionMiddleware, SessionStore};
 pub use site::{Site, SiteConfig, SiteMiddleware, SiteRegistry, SITE_ID_HEADER};
 pub use tracing::{
     Span, SpanStatus, TraceStore, TracingConfig, TracingMiddleware, PARENT_SPAN_ID_HEADER,
