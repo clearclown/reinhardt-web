@@ -21,6 +21,7 @@
 
 use crate::ProjectState;
 use backends::schema::BaseDatabaseSchemaEditor;
+use pg_escape::{quote_identifier, quote_literal};
 use serde::{Deserialize, Serialize};
 
 /// Create a PostgreSQL extension
@@ -101,18 +102,18 @@ impl CreateExtension {
     /// assert!(sql[0].contains("CREATE EXTENSION"));
     /// assert!(sql[0].contains("hstore"));
     /// ```
-    pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         let mut parts = vec!["CREATE EXTENSION IF NOT EXISTS".to_string()];
-        parts.push(schema_editor.quote_name(&self.name));
+        parts.push(quote_identifier(&self.name).to_string());
 
         if let Some(ref schema) = self.schema {
             parts.push("SCHEMA".to_string());
-            parts.push(schema_editor.quote_name(schema));
+            parts.push(quote_identifier(schema).to_string());
         }
 
         if let Some(ref version) = self.version {
             parts.push("VERSION".to_string());
-            parts.push(schema_editor.quote_value(version));
+            parts.push(quote_literal(version).to_string());
         }
 
         vec![format!("{};", parts.join(" "))]
@@ -134,10 +135,10 @@ impl CreateExtension {
     /// assert_eq!(sql.len(), 1);
     /// assert!(sql[0].contains("DROP EXTENSION"));
     /// ```
-    pub fn database_backwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         vec![format!(
             "DROP EXTENSION IF EXISTS {};",
-            schema_editor.quote_name(&self.name)
+            quote_identifier(&self.name)
         )]
     }
 }
@@ -181,18 +182,18 @@ impl DropExtension {
     /// assert_eq!(sql.len(), 1);
     /// assert!(sql[0].contains("DROP EXTENSION"));
     /// ```
-    pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         vec![format!(
             "DROP EXTENSION IF EXISTS {};",
-            schema_editor.quote_name(&self.name)
+            quote_identifier(&self.name)
         )]
     }
 
     /// Generate reverse SQL (recreate extension)
-    pub fn database_backwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         vec![format!(
             "CREATE EXTENSION IF NOT EXISTS {};",
-            schema_editor.quote_name(&self.name)
+            quote_identifier(&self.name)
         )]
     }
 }
@@ -261,17 +262,17 @@ impl CreateCollation {
     /// assert!(sql[0].contains("CREATE COLLATION"));
     /// assert!(sql[0].contains("german"));
     /// ```
-    pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         let mut sql = format!(
             "CREATE COLLATION IF NOT EXISTS {} (LOCALE = {}",
-            schema_editor.quote_name(&self.name),
-            schema_editor.quote_value(&self.locale)
+            quote_identifier(&self.name),
+            quote_literal(&self.locale)
         );
 
         if let Some(ref provider) = self.provider {
             sql.push_str(&format!(
                 ", PROVIDER = {}",
-                schema_editor.quote_value(provider)
+                quote_literal(provider)
             ));
         }
 
@@ -280,10 +281,10 @@ impl CreateCollation {
     }
 
     /// Generate reverse SQL
-    pub fn database_backwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         vec![format!(
             "DROP COLLATION IF EXISTS {};",
-            schema_editor.quote_name(&self.name)
+            quote_identifier(&self.name)
         )]
     }
 }

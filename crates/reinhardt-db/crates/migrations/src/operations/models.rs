@@ -31,6 +31,8 @@
 
 use crate::{FieldState, ModelState, ProjectState};
 use backends::schema::BaseDatabaseSchemaEditor;
+use pg_escape::quote_identifier;
+use sea_query::PostgresQueryBuilder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -290,7 +292,8 @@ impl CreateModel {
             .collect();
 
         // Generate CREATE TABLE SQL
-        let mut create_sql = schema_editor.create_table_sql(&self.name, &columns);
+        let stmt = schema_editor.create_table_statement(&self.name, &columns);
+        let mut create_sql = stmt.to_string(PostgresQueryBuilder);
 
         // Add composite primary key constraint if defined
         if let Some(ref pk_fields) = self.composite_primary_key {
@@ -370,7 +373,8 @@ impl DeleteModel {
     /// assert!(sql[0].contains("\"users\""));
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![schema_editor.drop_table_sql(&self.name, false)]
+        let stmt = schema_editor.drop_table_statement(&self.name, false);
+        vec![stmt.to_string(PostgresQueryBuilder)]
     }
 }
 
@@ -437,13 +441,13 @@ impl RenameModel {
     /// assert!(sql[0].contains("\"users\""));
     /// assert!(sql[0].contains("\"customers\""));
     /// ```
-    pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         // Note: BaseDatabaseSchemaEditor doesn't have rename_table_sql yet
         // We'll need to add that method or use a different approach
         vec![format!(
             "ALTER TABLE {} RENAME TO {}",
-            schema_editor.quote_name(&self.old_name),
-            schema_editor.quote_name(&self.new_name)
+            quote_identifier(&self.old_name),
+            quote_identifier(&self.new_name)
         )]
     }
 }

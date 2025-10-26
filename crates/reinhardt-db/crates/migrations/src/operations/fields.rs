@@ -33,6 +33,8 @@
 
 use crate::{FieldState, ProjectState};
 use backends::schema::BaseDatabaseSchemaEditor;
+use pg_escape::quote_identifier;
+use sea_query::PostgresQueryBuilder;
 use serde::{Deserialize, Serialize};
 
 pub use super::models::FieldDefinition;
@@ -120,7 +122,8 @@ impl AddField {
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         let definition = self.field.to_sql_definition();
-        vec![schema_editor.add_column_sql(&self.model_name, &self.field.name, &definition)]
+        let stmt = schema_editor.add_column_statement(&self.model_name, &self.field.name, &definition);
+        vec![stmt.to_string(PostgresQueryBuilder)]
     }
 }
 
@@ -195,7 +198,8 @@ impl RemoveField {
     /// assert!(sql[0].contains("\"email\""));
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![schema_editor.drop_column_sql(&self.model_name, &self.field_name)]
+        let stmt = schema_editor.drop_column_statement(&self.model_name, &self.field_name);
+        vec![stmt.to_string(PostgresQueryBuilder)]
     }
 }
 
@@ -275,7 +279,7 @@ impl AlterField {
     /// let sql = alter.database_forwards(editor.as_ref());
     /// assert!(!sql.is_empty());
     /// ```
-    pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
+    pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         // PostgreSQL: ALTER TABLE table ALTER COLUMN column TYPE type
         // MySQL: ALTER TABLE table MODIFY COLUMN column type
         // SQLite: Requires table recreation
@@ -284,8 +288,8 @@ impl AlterField {
         // A proper implementation would check the database type
         vec![format!(
             "ALTER TABLE {} ALTER COLUMN {} TYPE {}",
-            schema_editor.quote_name(&self.model_name),
-            schema_editor.quote_name(&self.field.name),
+            quote_identifier(&self.model_name),
+            quote_identifier(&self.field.name),
             self.field.field_type
         )]
     }
@@ -369,7 +373,7 @@ impl RenameField {
     /// assert!(sql[0].contains("\"email_address\""));
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![schema_editor.rename_column_sql(&self.model_name, &self.old_name, &self.new_name)]
+        vec![schema_editor.rename_column_statement(&self.model_name, &self.old_name, &self.new_name)]
     }
 }
 
