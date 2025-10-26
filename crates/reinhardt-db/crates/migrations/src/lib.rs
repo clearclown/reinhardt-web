@@ -1,14 +1,6 @@
 //! # Reinhardt Migrations
 //!
 //! Database migration system for Reinhardt framework.
-//!
-//! ## Planned Features
-//! TODO: Implement migration squashing to combine multiple migrations
-//! TODO: Add built-in support for complex data migrations
-//! TODO: Implement zero-downtime migration support
-//! TODO: Add automatic operation reordering and optimization
-//! TODO: Enhance atomic operations with better transaction handling
-//! TODO: Add schema history visualization tools
 
 pub mod autodetector;
 pub mod commands;
@@ -21,7 +13,10 @@ pub mod model_registry;
 pub mod operations;
 pub mod plan;
 pub mod recorder;
+pub mod squash;
+pub mod visualization;
 pub mod writer;
+pub mod zero_downtime;
 
 pub use autodetector::{
     ConstraintDefinition, DetectedChanges, FieldState, IndexDefinition, MigrationAutodetector,
@@ -29,7 +24,9 @@ pub use autodetector::{
 };
 pub use commands::{MakeMigrationsCommand, MakeMigrationsOptions, MigrateCommand, MigrateOptions};
 pub use di_support::{MigrationConfig, MigrationService};
-pub use executor::{ExecutionResult, MigrationExecutor};
+pub use executor::{
+    DatabaseMigrationExecutor, ExecutionResult, MigrationExecutor, OperationOptimizer,
+};
 pub use graph::{MigrationGraph, MigrationKey, MigrationNode};
 pub use loader::MigrationLoader;
 pub use migration::Migration;
@@ -37,16 +34,19 @@ pub use model_registry::{global_registry, FieldMetadata, ModelMetadata, ModelReg
 pub use operations::{
     AddColumn, AlterColumn, ColumnDefinition, CreateTable, DropColumn, Operation, SqlDialect,
 };
-pub use plan::MigrationPlan;
+pub use plan::{MigrationPlan, TransactionMode};
 
 // New operations from refactored modules
 pub use operations::{
-    AddField, AlterField, CreateCollation, CreateExtension, CreateModel, DeleteModel,
-    DropExtension, FieldDefinition, RemoveField, RenameField, RenameModel, RunCode, RunSQL,
-    StateOperation,
+    special::DataMigration, AddField, AlterField, CreateCollation, CreateExtension, CreateModel,
+    DeleteModel, DropExtension, FieldDefinition, RemoveField, RenameField, RenameModel, RunCode,
+    RunSQL, StateOperation,
 };
 pub use recorder::{DatabaseMigrationRecorder, MigrationRecord, MigrationRecorder};
+pub use squash::{MigrationSquasher, SquashOptions};
+pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, OutputFormat};
 pub use writer::MigrationWriter;
+pub use zero_downtime::{MigrationPhase, Strategy, ZeroDowntimeMigration};
 
 use thiserror::Error;
 
