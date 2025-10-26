@@ -10,6 +10,7 @@
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
+use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -87,6 +88,39 @@ pub struct CsrfMiddleware {
 }
 
 impl CsrfMiddleware {
+    /// Get session ID from request
+    ///
+    /// Priority order:
+    /// 1. Session ID from extensions (set by session middleware)
+    /// 2. Session cookie
+    /// 3. Generated from request metadata
+    fn get_session_id(request: &Request) -> String {
+        // Try to get session ID from extensions (set by session middleware)
+        if let Some(session_id) = request.extensions.get::<String>() {
+            return session_id.clone();
+        }
+
+        // Try to get session ID from cookie
+        if let Some(cookie_header) = request.headers.get("Cookie") {
+            if let Ok(cookie_str) = cookie_header.to_str() {
+                for cookie in cookie_str.split(';') {
+                    let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
+                    if parts.len() == 2 && parts[0] == "sessionid" {
+                        return parts[1].to_string();
+                    }
+                }
+            }
+        }
+
+        // Fallback: generate from request metadata
+        // This is not ideal but ensures CSRF protection works without sessions
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(request.uri.to_string().as_bytes());
+        hasher.update(request.headers.get("User-Agent").map(|v| v.as_bytes()).unwrap_or(b""));
+        hex::encode(hasher.finalize())
+    }
+
     /// Create new CSRF middleware with default configuration
     ///
     /// # Examples
@@ -176,22 +210,24 @@ impl CsrfMiddleware {
     }
 
     /// Get or create CSRF secret
-    fn get_or_create_secret(&self, request: &Request) -> (String, bool) {
+    ///
+    /// Returns (secret_bytes, is_new)
+    fn get_or_create_secret(&self, request: &Request) -> (Vec<u8>, bool) {
         // Use test secret if available
         if let Some(ref secret) = self.test_secret {
-            return (secret.clone(), false);
+            return (secret.as_bytes().to_vec(), false);
         }
 
-        // Try to extract existing secret from cookie
-        if let Some(token) = self.extract_token(request) {
-            if check_token_format(&token).is_ok() {
-                let secret = unmask_cipher_token(&token);
-                return (secret, false);
-            }
-        }
+        // For HMAC-based CSRF, we generate a secret based on session_id
+        // This ensures consistency across requests from the same session
+        let session_id = Self::get_session_id(request);
+        let mut hasher = Sha256::new();
+        hasher.update(b"csrf_secret");
+        hasher.update(session_id.as_bytes());
+        let secret_hash = hasher.finalize();
 
-        // Create new secret
-        (get_secret(), true)
+        // Convert to Vec<u8>
+        (secret_hash.to_vec(), false)
     }
 
     /// Build Set-Cookie header
@@ -246,11 +282,12 @@ impl CsrfMiddleware {
             reinhardt_apps::Error::Authorization(REASON_CSRF_TOKEN_MISSING.to_string())
         })?;
 
-        // Get secret from cookie/session
+        // Get secret and session_id
         let (secret, _) = self.get_or_create_secret(request);
+        let session_id = Self::get_session_id(request);
 
-        // Validate token
-        check_token(&token, &secret).map_err(|e| {
+        // Validate token using HMAC
+        check_token(&token, &secret, &session_id).map_err(|e| {
             reinhardt_apps::Error::Authorization(format!(
                 "CSRF token validation failed: {}",
                 e.reason
@@ -277,7 +314,7 @@ impl Middleware for CsrfMiddleware {
         }
 
         // Get or create CSRF secret
-        let (secret, is_new) = self.get_or_create_secret(&request);
+        let (secret, _is_new) = self.get_or_create_secret(&request);
 
         // Safe methods (GET, HEAD, OPTIONS, TRACE) don't require CSRF validation
         let is_safe_method = matches!(
@@ -290,17 +327,16 @@ impl Middleware for CsrfMiddleware {
             self.validate_csrf(&request)?;
         }
 
+        // Generate HMAC-based token using session_id (before moving request)
+        let session_id = Self::get_session_id(&request);
+        let token = get_token(&secret, &session_id);
+
         // Process request
         let mut response = handler.handle(request).await?;
-
-        // Set CSRF cookie if new secret or not present
-        if is_new || !response.headers.contains_key("Set-Cookie") {
-            let token = get_token(&secret);
-            let cookie_header = self.build_set_cookie_header(&token);
-            response
-                .headers
-                .insert("Set-Cookie", cookie_header.parse().unwrap());
-        }
+        let cookie_header = self.build_set_cookie_header(&token);
+        response
+            .headers
+            .insert("Set-Cookie", cookie_header.parse().unwrap());
 
         Ok(response)
     }
@@ -375,11 +411,13 @@ mod tests {
         csrf_middleware.test_secret = Some(secret.to_string());
 
         let handler = Arc::new(TestHandler);
-        let token = get_token(secret);
+        let session_id = "test_session_id";
+        let token = get_token(secret.as_bytes(), session_id);
 
         let mut headers = HeaderMap::new();
         headers.insert("X-CSRFToken", token.parse().unwrap());
-        headers.insert("Cookie", format!("csrftoken={}", token).parse().unwrap());
+        // Add session cookie with session_id
+        headers.insert("Cookie", format!("csrftoken={}; sessionid={}", token, session_id).parse().unwrap());
 
         let request = Request::new(
             Method::POST,
@@ -463,10 +501,12 @@ mod tests {
         csrf_middleware.test_secret = Some(secret.to_string());
 
         let handler = Arc::new(TestHandler);
-        let token = get_token(secret);
+        let session_id = "test_session_id";
+        let token = get_token(secret.as_bytes(), session_id);
 
         let mut headers = HeaderMap::new();
-        headers.insert("Cookie", format!("csrftoken={}", token).parse().unwrap());
+        // Add session cookie with session_id
+        headers.insert("Cookie", format!("csrftoken={}; sessionid={}", token, session_id).parse().unwrap());
         headers.insert("X-CSRFToken", token.parse().unwrap());
 
         let request = Request::new(
