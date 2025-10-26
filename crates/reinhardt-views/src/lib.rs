@@ -9,13 +9,10 @@
 //! - **CreateView**: Handle object creation
 //! - **UpdateView**: Handle object updates
 //! - **DeleteView**: Handle object deletion
-//!
-//! ## Planned Features
-//! TODO: Implement HTML rendering for browsable API exploration
-//! TODO: Add interactive API documentation interface
-//! TODO: Implement form generation for POST/PUT/PATCH methods
-//! TODO: Add syntax highlighting for response rendering
-//! TODO: Enhance schema generation capabilities
+//! - **Browsable API**: HTML rendering for interactive API exploration
+//! - **Interactive Docs**: Swagger UI-like documentation interface
+//! - **Form Generation**: Automatic form generation for POST/PUT/PATCH methods
+//! - **Syntax Highlighting**: JSON response highlighting with customizable color schemes
 //!
 //! ## Example
 //!
