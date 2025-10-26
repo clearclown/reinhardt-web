@@ -4,12 +4,12 @@
 //! the appropriate renderer and parser based on Accept headers.
 //!
 //! ## Planned Features
-//! TODO: カスタムネゴシエーション戦略 - プラグイン可能なネゴシエーションロジック
-//! TODO: Content-Type検出 - リクエストボディのContent-Type自動検出
-//! TODO: 言語ネゴシエーション - Accept-Language headerのサポート
-//! TODO: エンコーディングネゴシエーション - Accept-Encoding headerのサポート
-//! TODO: キャッシュ最適化 - ネゴシエーション結果のキャッシング
-//! TODO: より詳細なエラー情報 - ネゴシエーション失敗時の詳細なフィードバック
+//! TODO: Custom negotiation strategies - Pluggable negotiation logic
+//! TODO: Content-Type detection - Automatic Content-Type detection for request body
+//! TODO: Language negotiation - Support for Accept-Language header
+//! TODO: Encoding negotiation - Support for Accept-Encoding header
+//! TODO: Cache optimization - Caching of negotiation results
+//! TODO: Detailed error information - Detailed feedback on negotiation failure
 
 pub mod accept;
 pub mod media_type;
