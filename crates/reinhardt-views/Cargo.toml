@@ -33,5 +33,6 @@ viewsets = ["dep:reinhardt-viewsets"]
 
 [dev-dependencies]
 tokio = { workspace = true }
+tokio-test = { workspace = true }
 bytes = { workspace = true }
 hyper = { workspace = true }
