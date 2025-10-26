@@ -46,7 +46,7 @@ pub mod reflection;
 pub mod scalar;
 
 pub use builder::ProxyBuilder;
-pub use collection::CollectionProxy;
+pub use collection::{CollectionAggregations, CollectionOperations, CollectionProxy};
 pub use joins::{
     extract_through_path, filter_through_path, traverse_and_extract, traverse_relationships,
     JoinConfig, LoadingStrategy, NestedProxy, RelationshipPath,
