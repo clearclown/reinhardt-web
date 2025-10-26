@@ -968,5 +968,765 @@ fn json_to_sea_value(json: &serde_json::Value) -> sea_query::Value {
     }
 }
 
-// Tests removed - they were testing an obsolete AlterColumn struct
-// TODO: Add new tests for the current Operation enum and its methods
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_table_to_statement() {
+        let op = Operation::CreateTable {
+            name: "users".to_string(),
+            columns: vec![
+                ColumnDefinition {
+                    name: "id".to_string(),
+                    type_definition: "INTEGER".to_string(),
+                    not_null: false,
+                    unique: false,
+                    primary_key: true,
+                    auto_increment: true,
+                    default: None,
+                    max_length: None,
+                },
+                ColumnDefinition {
+                    name: "name".to_string(),
+                    type_definition: "VARCHAR".to_string(),
+                    not_null: true,
+                    unique: false,
+                    primary_key: false,
+                    auto_increment: false,
+                    default: None,
+                    max_length: Some(100),
+                },
+            ],
+            constraints: vec![],
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("CREATE TABLE"));
+        assert!(sql.contains("users"));
+    }
+
+    #[test]
+    fn test_drop_table_to_statement() {
+        let op = Operation::DropTable {
+            name: "users".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("DROP TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("CASCADE"));
+    }
+
+    #[test]
+    fn test_add_column_to_statement() {
+        let op = Operation::AddColumn {
+            table: "users".to_string(),
+            column: ColumnDefinition {
+                name: "email".to_string(),
+                type_definition: "VARCHAR".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: Some("''".to_string()),
+                max_length: Some(255),
+            },
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("ADD COLUMN"));
+        assert!(sql.contains("email"));
+    }
+
+    #[test]
+    fn test_drop_column_to_statement() {
+        let op = Operation::DropColumn {
+            table: "users".to_string(),
+            column: "email".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("DROP COLUMN"));
+        assert!(sql.contains("email"));
+    }
+
+    #[test]
+    fn test_alter_column_to_statement() {
+        let op = Operation::AlterColumn {
+            table: "users".to_string(),
+            column: "age".to_string(),
+            new_definition: ColumnDefinition {
+                name: "age".to_string(),
+                type_definition: "BIGINT".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: None,
+                max_length: None,
+            },
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+    }
+
+    #[test]
+    fn test_rename_table_to_statement() {
+        let op = Operation::RenameTable {
+            old_name: "users".to_string(),
+            new_name: "accounts".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("users"));
+        assert!(sql.contains("accounts"));
+    }
+
+    #[test]
+    fn test_rename_column_to_statement() {
+        let op = Operation::RenameColumn {
+            table: "users".to_string(),
+            old_name: "name".to_string(),
+            new_name: "full_name".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("RENAME COLUMN"));
+        assert!(sql.contains("name"));
+        assert!(sql.contains("full_name"));
+    }
+
+    #[test]
+    fn test_add_constraint_to_statement() {
+        let op = Operation::AddConstraint {
+            table: "users".to_string(),
+            constraint_sql: "CONSTRAINT age_check CHECK (age >= 0)".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("ADD"));
+        assert!(sql.contains("age_check"));
+    }
+
+    #[test]
+    fn test_drop_constraint_to_statement() {
+        let op = Operation::DropConstraint {
+            table: "users".to_string(),
+            constraint_name: "age_check".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("DROP CONSTRAINT"));
+        assert!(sql.contains("age_check"));
+    }
+
+    #[test]
+    fn test_create_index_to_statement() {
+        let op = Operation::CreateIndex {
+            table: "users".to_string(),
+            columns: vec!["email".to_string()],
+            unique: false,
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("CREATE INDEX"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("email"));
+    }
+
+    #[test]
+    fn test_create_unique_index_to_statement() {
+        let op = Operation::CreateIndex {
+            table: "users".to_string(),
+            columns: vec!["email".to_string()],
+            unique: true,
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("CREATE UNIQUE INDEX"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("email"));
+    }
+
+    #[test]
+    fn test_drop_index_to_statement() {
+        let op = Operation::DropIndex {
+            table: "users".to_string(),
+            columns: vec!["email".to_string()],
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("DROP INDEX"));
+        assert!(sql.contains("idx_users_email"));
+    }
+
+    #[test]
+    fn test_run_sql_to_statement() {
+        let op = Operation::RunSQL {
+            sql: "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"".to_string(),
+            reverse_sql: Some("DROP EXTENSION \"uuid-ossp\"".to_string()),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("CREATE EXTENSION"));
+        assert!(sql.contains("uuid-ossp"));
+    }
+
+    #[test]
+    fn test_alter_table_comment_to_statement() {
+        let op = Operation::AlterTableComment {
+            table: "users".to_string(),
+            comment: Some("User accounts table".to_string()),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("COMMENT ON TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("User accounts table"));
+    }
+
+    #[test]
+    fn test_alter_table_comment_null_to_statement() {
+        let op = Operation::AlterTableComment {
+            table: "users".to_string(),
+            comment: None,
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("COMMENT ON TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("NULL"));
+    }
+
+    #[test]
+    fn test_alter_unique_together_to_statement() {
+        let op = Operation::AlterUniqueTogether {
+            table: "users".to_string(),
+            unique_together: vec![vec!["email".to_string(), "username".to_string()]],
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("ADD CONSTRAINT"));
+        assert!(sql.contains("UNIQUE"));
+        assert!(sql.contains("email"));
+        assert!(sql.contains("username"));
+    }
+
+    #[test]
+    fn test_alter_unique_together_empty() {
+        let op = Operation::AlterUniqueTogether {
+            table: "users".to_string(),
+            unique_together: vec![],
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert_eq!(sql, "");
+    }
+
+    #[test]
+    fn test_alter_model_options_to_statement() {
+        let mut options = std::collections::HashMap::new();
+        options.insert("db_table".to_string(), "custom_users".to_string());
+
+        let op = Operation::AlterModelOptions {
+            table: "users".to_string(),
+            options,
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert_eq!(sql, "");
+    }
+
+    #[test]
+    fn test_create_inherited_table_to_statement() {
+        let op = Operation::CreateInheritedTable {
+            name: "admin_users".to_string(),
+            columns: vec![ColumnDefinition {
+                name: "admin_level".to_string(),
+                type_definition: "INTEGER".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: Some("1".to_string()),
+                max_length: None,
+            }],
+            base_table: "users".to_string(),
+            join_column: "user_id".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("CREATE TABLE"));
+        assert!(sql.contains("admin_users"));
+        assert!(sql.contains("user_id"));
+    }
+
+    #[test]
+    fn test_add_discriminator_column_to_statement() {
+        let op = Operation::AddDiscriminatorColumn {
+            table: "users".to_string(),
+            column_name: "user_type".to_string(),
+            default_value: "regular".to_string(),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("ALTER TABLE"));
+        assert!(sql.contains("users"));
+        assert!(sql.contains("ADD COLUMN"));
+        assert!(sql.contains("user_type"));
+    }
+
+    #[test]
+    fn test_state_forwards_create_table() {
+        let mut state = ProjectState::new();
+        let op = Operation::CreateTable {
+            name: "users".to_string(),
+            columns: vec![
+                ColumnDefinition {
+                    name: "id".to_string(),
+                    type_definition: "INTEGER".to_string(),
+                    not_null: false,
+                    unique: false,
+                    primary_key: true,
+                    auto_increment: true,
+                    default: None,
+                    max_length: None,
+                },
+                ColumnDefinition {
+                    name: "name".to_string(),
+                    type_definition: "VARCHAR".to_string(),
+                    not_null: true,
+                    unique: false,
+                    primary_key: false,
+                    auto_increment: false,
+                    default: None,
+                    max_length: Some(100),
+                },
+            ],
+            constraints: vec![],
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users");
+        assert!(model.is_some());
+        let model = model.unwrap();
+        assert_eq!(model.fields.len(), 2);
+        assert!(model.fields.contains_key("id"));
+        assert!(model.fields.contains_key("name"));
+    }
+
+    #[test]
+    fn test_state_forwards_drop_table() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::DropTable {
+            name: "users".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        assert!(state.get_model("myapp", "users").is_none());
+    }
+
+    #[test]
+    fn test_state_forwards_add_column() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::AddColumn {
+            table: "users".to_string(),
+            column: ColumnDefinition {
+                name: "email".to_string(),
+                type_definition: "VARCHAR".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: None,
+                max_length: Some(255),
+            },
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users").unwrap();
+        assert_eq!(model.fields.len(), 2);
+        assert!(model.fields.contains_key("email"));
+    }
+
+    #[test]
+    fn test_state_forwards_drop_column() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new("email".to_string(), "VARCHAR".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::DropColumn {
+            table: "users".to_string(),
+            column: "email".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users").unwrap();
+        assert_eq!(model.fields.len(), 1);
+        assert!(!model.fields.contains_key("email"));
+    }
+
+    #[test]
+    fn test_state_forwards_rename_table() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::RenameTable {
+            old_name: "users".to_string(),
+            new_name: "accounts".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        assert!(state.get_model("myapp", "users").is_none());
+        assert!(state.get_model("myapp", "accounts").is_some());
+    }
+
+    #[test]
+    fn test_state_forwards_rename_column() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("name".to_string(), "VARCHAR".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::RenameColumn {
+            table: "users".to_string(),
+            old_name: "name".to_string(),
+            new_name: "full_name".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users").unwrap();
+        assert!(!model.fields.contains_key("name"));
+        assert!(model.fields.contains_key("full_name"));
+    }
+
+    #[test]
+    fn test_to_reverse_sql_create_table() {
+        let op = Operation::CreateTable {
+            name: "users".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+
+        let reverse = op.to_reverse_sql(&SqlDialect::Postgres);
+        assert!(reverse.is_some());
+        let sql = reverse.unwrap();
+        assert!(sql.contains("DROP TABLE"));
+        assert!(sql.contains("users"));
+    }
+
+    #[test]
+    fn test_to_reverse_sql_drop_table() {
+        let op = Operation::DropTable {
+            name: "users".to_string(),
+        };
+
+        let reverse = op.to_reverse_sql(&SqlDialect::Postgres);
+        assert!(reverse.is_none());
+    }
+
+    #[test]
+    fn test_to_reverse_sql_add_column() {
+        let op = Operation::AddColumn {
+            table: "users".to_string(),
+            column: ColumnDefinition {
+                name: "email".to_string(),
+                type_definition: "VARCHAR".to_string(),
+                not_null: false,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: None,
+                max_length: None,
+            },
+        };
+
+        let reverse = op.to_reverse_sql(&SqlDialect::Postgres);
+        assert!(reverse.is_some());
+        let sql = reverse.unwrap();
+        assert!(sql.contains("DROP COLUMN"));
+        assert!(sql.contains("email"));
+    }
+
+    #[test]
+    fn test_to_reverse_sql_run_sql_with_reverse() {
+        let op = Operation::RunSQL {
+            sql: "CREATE INDEX idx_name ON users(name)".to_string(),
+            reverse_sql: Some("DROP INDEX idx_name".to_string()),
+        };
+
+        let reverse = op.to_reverse_sql(&SqlDialect::Postgres);
+        assert!(reverse.is_some());
+        let sql = reverse.unwrap();
+        assert!(sql.contains("DROP INDEX"));
+    }
+
+    #[test]
+    fn test_to_reverse_sql_run_sql_without_reverse() {
+        let op = Operation::RunSQL {
+            sql: "CREATE INDEX idx_name ON users(name)".to_string(),
+            reverse_sql: None,
+        };
+
+        let reverse = op.to_reverse_sql(&SqlDialect::Postgres);
+        assert!(reverse.is_none());
+    }
+
+    #[test]
+    fn test_column_definition_new() {
+        let col = ColumnDefinition::new("id", "INTEGER");
+        assert_eq!(col.name, "id");
+        assert_eq!(col.type_definition, "INTEGER");
+        assert!(!col.not_null);
+        assert!(!col.unique);
+        assert!(!col.primary_key);
+        assert!(!col.auto_increment);
+        assert!(col.default.is_none());
+        assert!(col.max_length.is_none());
+    }
+
+    #[test]
+    fn test_convert_default_value_null() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let value = op.convert_default_value("null");
+        assert!(matches!(value, sea_query::Value::String(None)));
+    }
+
+    #[test]
+    fn test_convert_default_value_bool() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let value = op.convert_default_value("true");
+        assert!(matches!(value, sea_query::Value::Bool(Some(true))));
+
+        let value = op.convert_default_value("false");
+        assert!(matches!(value, sea_query::Value::Bool(Some(false))));
+    }
+
+    #[test]
+    fn test_convert_default_value_integer() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let value = op.convert_default_value("42");
+        assert!(matches!(value, sea_query::Value::BigInt(Some(42))));
+    }
+
+    #[test]
+    fn test_convert_default_value_float() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let value = op.convert_default_value("3.14");
+        assert!(matches!(value, sea_query::Value::Double(_)));
+    }
+
+    #[test]
+    fn test_convert_default_value_string() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let value = op.convert_default_value("'hello'");
+        match value {
+            sea_query::Value::String(Some(s)) => assert_eq!(s, "hello"),
+            _ => panic!("Expected string value"),
+        }
+    }
+
+    #[test]
+    fn test_apply_column_type_integer() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let mut col = ColumnDef::new(Alias::new("id"));
+        op.apply_column_type(&mut col, "INTEGER", None);
+        // Cannot easily assert internal state, but this verifies no panic
+    }
+
+    #[test]
+    fn test_apply_column_type_varchar_with_length() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let mut col = ColumnDef::new(Alias::new("name"));
+        op.apply_column_type(&mut col, "VARCHAR", Some(100));
+        // Cannot easily assert internal state, but this verifies no panic
+    }
+
+    #[test]
+    fn test_apply_column_type_custom() {
+        let op = Operation::CreateTable {
+            name: "test".to_string(),
+            columns: vec![],
+            constraints: vec![],
+        };
+        let mut col = ColumnDef::new(Alias::new("data"));
+        op.apply_column_type(&mut col, "CUSTOM_TYPE", None);
+        // Cannot easily assert internal state, but this verifies no panic
+    }
+
+    #[test]
+    fn test_create_index_composite() {
+        let op = Operation::CreateIndex {
+            table: "users".to_string(),
+            columns: vec!["first_name".to_string(), "last_name".to_string()],
+            unique: false,
+        };
+
+        let sql = op.to_sql(&SqlDialect::Postgres);
+        assert!(sql.contains("first_name"));
+        assert!(sql.contains("last_name"));
+        assert!(sql.contains("idx_users_first_name_last_name"));
+    }
+
+    #[test]
+    fn test_alter_table_comment_with_quotes() {
+        let op = Operation::AlterTableComment {
+            table: "users".to_string(),
+            comment: Some("User's account table".to_string()),
+        };
+
+        let stmt = op.to_statement();
+        let sql = stmt.to_sql_string();
+        assert!(sql.contains("COMMENT ON TABLE"));
+        assert!(sql.contains("User''s account table"));
+    }
+
+    #[test]
+    fn test_state_forwards_alter_column() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("age".to_string(), "INTEGER".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::AlterColumn {
+            table: "users".to_string(),
+            column: "age".to_string(),
+            new_definition: ColumnDefinition {
+                name: "age".to_string(),
+                type_definition: "BIGINT".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: None,
+                max_length: None,
+            },
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users").unwrap();
+        let field = model.fields.get("age").unwrap();
+        assert_eq!(field.field_type, "BIGINT");
+    }
+
+    #[test]
+    fn test_state_forwards_create_inherited_table() {
+        let mut state = ProjectState::new();
+        let op = Operation::CreateInheritedTable {
+            name: "admin_users".to_string(),
+            columns: vec![ColumnDefinition {
+                name: "admin_level".to_string(),
+                type_definition: "INTEGER".to_string(),
+                not_null: true,
+                unique: false,
+                primary_key: false,
+                auto_increment: false,
+                default: None,
+                max_length: None,
+            }],
+            base_table: "users".to_string(),
+            join_column: "user_id".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "admin_users");
+        assert!(model.is_some());
+        let model = model.unwrap();
+        assert_eq!(model.base_model, Some("users".to_string()));
+        assert_eq!(model.inheritance_type, Some("joined_table".to_string()));
+    }
+
+    #[test]
+    fn test_state_forwards_add_discriminator_column() {
+        let mut state = ProjectState::new();
+        let mut model = ModelState::new("myapp", "users");
+        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        state.add_model(model);
+
+        let op = Operation::AddDiscriminatorColumn {
+            table: "users".to_string(),
+            column_name: "user_type".to_string(),
+            default_value: "regular".to_string(),
+        };
+
+        op.state_forwards("myapp", &mut state);
+        let model = state.get_model("myapp", "users").unwrap();
+        assert_eq!(model.discriminator_column, Some("user_type".to_string()));
+        assert_eq!(model.inheritance_type, Some("single_table".to_string()));
+    }
+}
