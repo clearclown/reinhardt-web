@@ -1183,56 +1183,6 @@ impl MigrationAutodetector {
 
         migrations
     }
-
-    /// Legacy method for backward compatibility
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use reinhardt_migrations::{MigrationAutodetector, ProjectState};
-    ///
-    /// let from_state = ProjectState::new();
-    /// let to_state = ProjectState::new();
-    ///
-    /// let detector = MigrationAutodetector::new(from_state, to_state);
-    /// let changes = detector.changes();
-    /// ```
-    #[deprecated(note = "Use detect_changes() instead")]
-    pub fn changes(&self) -> Vec<String> {
-        let detected = self.detect_changes();
-        let mut result = Vec::new();
-
-        for (app_label, model_name) in &detected.created_models {
-            result.push(format!("Create model {}.{}", app_label, model_name));
-        }
-
-        for (app_label, model_name) in &detected.deleted_models {
-            result.push(format!("Delete model {}.{}", app_label, model_name));
-        }
-
-        for (app_label, model_name, field_name) in &detected.added_fields {
-            result.push(format!(
-                "Add field {} to {}.{}",
-                field_name, app_label, model_name
-            ));
-        }
-
-        for (app_label, model_name, field_name) in &detected.removed_fields {
-            result.push(format!(
-                "Remove field {} from {}.{}",
-                field_name, app_label, model_name
-            ));
-        }
-
-        for (app_label, model_name, field_name) in &detected.altered_fields {
-            result.push(format!(
-                "Alter field {} on {}.{}",
-                field_name, app_label, model_name
-            ));
-        }
-
-        result
-    }
 }
 
 impl ModelState {

@@ -108,10 +108,6 @@ pub trait FormModel: Send + Sync {
     }
 }
 
-/// Type alias for backward compatibility
-#[deprecated(since = "0.1.0", note = "Use `FormModel` instead")]
-pub type Model = dyn FormModel;
-
 /// ModelForm configuration
 #[derive(Debug, Clone)]
 pub struct ModelFormConfig {

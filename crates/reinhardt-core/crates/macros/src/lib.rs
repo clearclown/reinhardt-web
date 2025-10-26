@@ -412,17 +412,6 @@ pub fn derive_query_fields(input: TokenStream) -> TokenStream {
     derive_query_fields_impl(input).into()
 }
 
-/// Deprecated: Use `QueryFields` instead
-///
-/// This is kept for backward compatibility. Will be removed in a future version.
-#[deprecated(since = "0.1.0", note = "Use `QueryFields` instead")]
-#[proc_macro_derive(FieldLookup)]
-pub fn derive_field_lookup(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as syn::DeriveInput);
-
-    derive_query_fields_impl(input).into()
-}
-
 /// Derive macro for automatic OpenAPI schema generation
 ///
 /// Automatically implements the `ToSchema` trait for structs and enums,
