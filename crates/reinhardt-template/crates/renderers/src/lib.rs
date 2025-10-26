@@ -97,59 +97,58 @@
 //! assert_eq!(media_type, Some("application/json"));
 //! ```
 //!
-//! ## Planned Features
-//!
-//! The following advanced features are planned for future releases:
+//! ## Advanced Features
 //!
 //! ### Renderer Chaining
 //!
-//! Support for chaining multiple renderers to transform data through multiple stages:
+//! Chain multiple renderers to transform data through multiple stages:
 //!
-//! ```rust,ignore
-//! use reinhardt_renderers::*;
+//! ```rust
+//! use reinhardt_renderers::{RendererChain, JSONRenderer, Renderer};
+//! use serde_json::json;
 //!
+//! # #[tokio::main]
+//! # async fn main() {
 //! let renderer_chain = RendererChain::new()
-//!     .pipe(DataTransformRenderer::new())
-//!     .pipe(JSONRenderer::new())
-//!     .pipe(CompressionRenderer::new("gzip"));
+//!     .pipe(JSONRenderer::new());
 //!
-//! // Data flows through: Transform -> JSON -> Compression
-//! let result = renderer_chain.render(&data, None).await?;
+//! // Data flows through the renderer pipeline
+//! let data = json!({"message": "hello"});
+//! let result = renderer_chain.render(&data, None).await.unwrap();
+//! # }
 //! ```
-//!
-//! **Design Considerations**:
-//! - How to handle errors in the middle of the chain?
-//! - Should each stage be able to modify the RendererContext?
-//! - What's the best way to compose renderers (trait objects vs generics)?
 //!
 //! ### Response Caching
 //!
 //! Cache rendered responses to avoid redundant rendering of identical data:
 //!
-//! ```rust,ignore
-//! use reinhardt_renderers::*;
+//! ```rust
+//! use reinhardt_renderers::{CachedRenderer, JSONRenderer, CacheConfig, Renderer};
+//! use std::time::Duration;
+//! use serde_json::json;
 //!
+//! # #[tokio::main]
+//! # async fn main() {
 //! let cached_renderer = CachedRenderer::new(
 //!     JSONRenderer::new(),
-//!     CacheConfig {
-//!         ttl: Duration::from_secs(300),
-//!         max_size: 1000,
-//!         key_strategy: KeyStrategy::Hash,
-//!     }
+//!     CacheConfig::new()
+//!         .with_ttl(Duration::from_secs(300))
+//!         .with_max_capacity(1000)
 //! );
 //!
-//! // First call renders and caches
-//! let result1 = cached_renderer.render(&data, None).await?;
+//! let data = json!({"message": "hello"});
 //!
-//! // Second call returns cached result
-//! let result2 = cached_renderer.render(&data, None).await?;
+//! // First call renders and caches
+//! let result1 = cached_renderer.render(&data, None).await.unwrap();
+//!
+//! // Second call returns cached result (no re-rendering)
+//! let result2 = cached_renderer.render(&data, None).await.unwrap();
+//! # }
 //! ```
 //!
-//! **Design Considerations**:
-//! - How to generate cache keys from data and context?
-//! - Should caching be renderer-specific or global?
-//! - What eviction strategy to use (LRU, TTL, size-based)?
-//! - How to handle cache invalidation?
+//! ## Planned Features
+//!
+//! The following advanced features are planned for future releases:
 //!
 //! ### Streaming Support
 //!
@@ -208,18 +207,10 @@
 //! - Should compression be applied before or after caching?
 //! - What minimum response size should trigger compression?
 //! - How to handle Accept-Encoding negotiation?
-//!
-//! **Implementation Status**: All features are in planning stage
-//!
-//! **Required Changes**:
-//! 1. Extend Renderer trait with optional streaming and compression methods
-//! 2. Implement wrapper renderers (CachedRenderer, CompressedRenderer)
-//! 3. Add RendererChain builder with pipe() method
-//! 4. Integrate with reinhardt-cache for response caching
-//! 5. Add compression crate dependencies (flate2, brotli)
-//! 6. Update RendererContext to include Accept-Encoding information
 
 pub mod admin_renderer;
+pub mod cached;
+pub mod chain;
 pub mod csv_renderer;
 pub mod documentation_renderer;
 pub mod format_suffix;
@@ -237,6 +228,8 @@ pub mod yaml_renderer;
 mod tests;
 
 pub use admin_renderer::AdminRenderer;
+pub use cached::{CacheConfig, CachedRenderer};
+pub use chain::RendererChain;
 pub use csv_renderer::CSVRenderer;
 pub use documentation_renderer::DocumentationRenderer;
 pub use json::JSONRenderer;
