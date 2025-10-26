@@ -3,7 +3,6 @@
 //! Authentication and authorization system for Reinhardt framework.
 //!
 //! ## Planned Features
-//! TODO: RateLimitPermission - Request rate limiting by IP or user
 //! TODO: DjangoModelPermissions - Django-style model permissions
 //! TODO: DjangoModelPermissionsOrAnonReadOnly - Anonymous read access
 //! TODO: ModelPermission - CRUD permissions per model
@@ -30,6 +29,7 @@ pub mod model_permissions;
 pub mod oauth2;
 pub mod permission_operators;
 pub mod permissions;
+pub mod rate_limit_permission;
 pub mod remote_user;
 pub mod session;
 pub mod time_based_permission;
@@ -61,6 +61,10 @@ pub use permission_operators::{AndPermission, NotPermission, OrPermission};
 pub use permissions::{
     AllowAny, IsActiveUser, IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly, Permission,
     PermissionContext,
+};
+pub use rate_limit_permission::{
+    RateLimitConfig, RateLimitConfigBuilder, RateLimitKeyStrategy, RateLimitPermission,
+    RateLimitPermissionBuilder,
 };
 pub use remote_user::RemoteUserAuthentication as RemoteUserAuth;
 pub use session::{InMemorySessionStore, Session, SessionId, SessionStore, SESSION_KEY_USER_ID};
