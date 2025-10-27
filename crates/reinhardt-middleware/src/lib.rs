@@ -1,10 +1,12 @@
 pub mod auth;
 pub mod broken_link;
+#[cfg(feature = "compression")]
 pub mod brotli;
 pub mod cache;
 pub mod circuit_breaker;
 pub mod common;
 pub mod conditional;
+#[cfg(feature = "cors")]
 pub mod cors;
 pub mod csp;
 pub mod csp_helpers;
@@ -12,15 +14,18 @@ pub mod csrf;
 pub mod di_support;
 pub mod etag;
 pub mod flatpages;
+#[cfg(feature = "compression")]
 pub mod gzip;
 pub mod https_redirect;
 pub mod locale;
 pub mod logging;
 pub mod messages;
 pub mod metrics;
+#[cfg(feature = "rate-limit")]
 pub mod rate_limit;
 pub mod redirect_fallback;
 pub mod request_id;
+#[cfg(feature = "security")]
 pub mod security_middleware;
 pub mod session;
 pub mod site;
@@ -32,11 +37,13 @@ pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 
 pub use auth::AuthenticationMiddleware;
 pub use broken_link::{BrokenLinkConfig, BrokenLinkEmailsMiddleware};
+#[cfg(feature = "compression")]
 pub use brotli::{BrotliConfig, BrotliMiddleware, BrotliQuality};
 pub use cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware, CacheStore};
 pub use circuit_breaker::{CircuitBreakerConfig, CircuitBreakerMiddleware, CircuitState};
 pub use common::{CommonConfig, CommonMiddleware};
 pub use conditional::ConditionalGetMiddleware;
+#[cfg(feature = "cors")]
 pub use cors::CorsMiddleware;
 pub use csp::{CspConfig, CspMiddleware, CspNonce};
 pub use csp_helpers::{csp_nonce_attr, get_csp_nonce};
@@ -50,15 +57,18 @@ pub use csrf::{
 };
 pub use etag::{ETagConfig, ETagMiddleware};
 pub use flatpages::{Flatpage, FlatpageStore, FlatpagesConfig, FlatpagesMiddleware};
+#[cfg(feature = "compression")]
 pub use gzip::{GZipConfig, GZipMiddleware};
 pub use https_redirect::{HttpsRedirectConfig, HttpsRedirectMiddleware};
 pub use locale::{LocaleConfig, LocaleMiddleware};
 pub use logging::LoggingMiddleware;
 pub use messages::{CookieStorage, Message, MessageLevel, MessageStorage, SessionStorage};
 pub use metrics::{MetricsConfig, MetricsMiddleware, MetricsStore};
+#[cfg(feature = "rate-limit")]
 pub use rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStore, RateLimitStrategy};
 pub use redirect_fallback::{RedirectFallbackMiddleware, RedirectResponseConfig};
 pub use request_id::{RequestIdConfig, RequestIdMiddleware, REQUEST_ID_HEADER};
+#[cfg(feature = "security")]
 pub use security_middleware::{SecurityConfig, SecurityMiddleware};
 pub use session::{SessionConfig, SessionData, SessionMiddleware, SessionStore};
 pub use site::{Site, SiteConfig, SiteMiddleware, SiteRegistry, SITE_ID_HEADER};
