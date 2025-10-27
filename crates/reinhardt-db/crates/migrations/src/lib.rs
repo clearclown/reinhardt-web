@@ -2,6 +2,7 @@
 //!
 //! Database migration system for Reinhardt framework.
 
+pub mod auto_migration;
 pub mod autodetector;
 pub mod commands;
 pub mod di_support;
@@ -14,6 +15,7 @@ pub mod model_registry;
 pub mod operations;
 pub mod plan;
 pub mod recorder;
+pub mod schema_diff;
 pub mod squash;
 pub mod visualization;
 pub mod writer;
@@ -44,6 +46,13 @@ pub use operations::{
     RunSQL, StateOperation,
 };
 pub use recorder::{DatabaseMigrationRecorder, MigrationRecord, MigrationRecorder};
+pub use schema_diff::{
+    ColumnSchema, ConstraintSchema, DatabaseSchema, IndexSchema, SchemaDiff, SchemaDiffResult,
+    TableSchema,
+};
+pub use auto_migration::{
+    AutoMigrationError, AutoMigrationGenerator, AutoMigrationResult, ValidationResult,
+};
 pub use squash::{MigrationSquasher, SquashOptions};
 pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, OutputFormat};
 pub use writer::MigrationWriter;

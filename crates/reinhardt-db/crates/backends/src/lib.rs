@@ -24,6 +24,12 @@ pub use connection::DatabaseConnection;
 pub use query_builder::{InsertBuilder, SelectBuilder, UpdateBuilder};
 pub use types::{DatabaseType, QueryResult, QueryValue, Row};
 
+// Re-export optimization features
+pub use optimization::{
+    BatchInsertBuilder, BatchOperations, BatchUpdateBuilder, CachedQuery, OptimizedPoolBuilder,
+    PoolOptimizationConfig, QueryCache, QueryCacheConfig,
+};
+
 // Re-export database-specific schema editors
 #[cfg(feature = "postgres")]
 pub use backends::postgresql::schema::PostgreSQLSchemaEditor;
