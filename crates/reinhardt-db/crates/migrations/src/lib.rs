@@ -1,6 +1,36 @@
 //! # Reinhardt Migrations
 //!
 //! Database migration system for Reinhardt framework.
+//!
+//! ## Features
+//!
+//! - **Auto-detection**: Detects model changes and generates migrations
+//! - **Migration Graph**: Manages dependencies between migrations
+//! - **AST-Based Entry Points**: Generates Rust 2024 Edition-compliant module files
+//! - **Zero Downtime**: Support for safe schema changes in production
+//!
+//! ## AST-Based Entry Point Generation
+//!
+//! The `makemigrations` command uses Abstract Syntax Tree (AST) parsing to generate
+//! and maintain migration entry point files (`migrations/app_name.rs`). This ensures:
+//!
+//! 1. **Rust 2024 Edition Compliance**: Uses `app_name.rs` instead of deprecated `mod.rs`
+//! 2. **Robust Module Detection**: Structurally identifies existing migration modules
+//! 3. **Consistent Formatting**: Standardized output via `prettyplease`
+//!
+//! ### Generated Entry Point Example
+//!
+//! ```rust,ignore
+//! // migrations/myapp.rs (auto-generated)
+//! pub mod _0001_initial;
+//! pub mod _0002_add_field;
+//!
+//! pub fn all_migrations() -> Vec<fn() -> Migration> {
+//!     vec![_0001_initial::migration, _0002_add_field::migration]
+//! }
+//! ```
+//!
+//! This file is automatically updated when new migrations are created.
 
 pub mod auto_migration;
 pub mod autodetector;

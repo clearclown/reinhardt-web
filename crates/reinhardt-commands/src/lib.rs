@@ -10,6 +10,7 @@
 //! - **Command Registry**: Automatic command discovery
 //! - **Interactive Mode**: Support for interactive prompts
 //! - **Colored Output**: Rich terminal output
+//! - **AST-Based Code Generation**: Robust code generation using Abstract Syntax Trees
 //!
 //! ## Example
 //!
@@ -30,6 +31,42 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## AST-Based Code Generation
+//!
+//! The `startapp` command uses Abstract Syntax Tree (AST) parsing via `syn` and `quote`
+//! for robust code generation and modification. This approach provides several benefits:
+//!
+//! ### Benefits of AST Approach
+//!
+//! 1. **Syntax Awareness**: Understands code structure, not just text patterns
+//!    - Correctly distinguishes `pub mod app;` from `// pub mod app;` (commented)
+//!    - Handles variations in whitespace and formatting automatically
+//!
+//! 2. **Duplicate Detection**: Structurally detects existing declarations
+//!    - Avoids adding duplicate module declarations
+//!    - Works correctly even with complex existing code
+//!
+//! 3. **Consistent Formatting**: Uses `prettyplease` for standardized output
+//!    - Ensures consistent code style across generated files
+//!    - Integrates well with rustfmt
+//!
+//! ### Example: apps.rs Generation
+//!
+//! When you run `startapp myapp`, the command:
+//! 1. Parses existing `src/apps.rs` using `syn::parse_file`
+//! 2. Checks for existing `pub mod myapp;` declaration structurally
+//! 3. Adds new module and use declarations if not present
+//! 4. Formats output with `prettyplease::unparse`
+//!
+//! ```rust,ignore
+//! // Generated apps.rs
+//! pub mod myapp;
+//! pub use myapp::MyappConfig;
+//! ```
+//!
+//! This is more reliable than string-based approaches that can be confused by
+//! comments, unusual formatting, or complex code patterns.
 
 pub mod base;
 pub mod builtin;
