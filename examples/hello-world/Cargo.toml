@@ -1,0 +1,18 @@
+[package]
+name = "example-hello-world"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+# ⚠️ crates.io から最新版を取得
+# TODO: reinhardt が公開されるまでこの依存関係は解決されません
+reinhardt = "*"
+
+[dev-dependencies]
+example-test-macros = { path = "../test-macros" }
+example-common = { path = "../common" }
+tokio = { workspace = true }
+
+[build-dependencies]
+example-common = { path = "../common" }

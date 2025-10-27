@@ -1,0 +1,21 @@
+/target/
+Cargo.lock
+
+# 各 example のビルドアーティファクト
+*/target/
+
+# 環境変数ファイル（実際の値）
+.env
+
+# IDE
+.idea/
+.vscode/
+*.sw
+
+p
+*.swn
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

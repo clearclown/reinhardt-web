@@ -1,0 +1,149 @@
+[config]
+default_to_workspace = false
+
+[env]
+# Podman Compose command (docker-compose compatible)
+COMPOSE = "podman-compose"
+
+[tasks.help]
+description = "Show available commands"
+script = '''
+echo "Available commands:"
+echo "  cargo make setup           - Initial setup (.env file creation)"
+echo "  cargo make up              - Start infrastructure (PostgreSQL only)"
+echo "  cargo make up-all          - Start all services (MySQL, Redis included)"
+echo "  cargo make down            - Stop infrastructure"
+echo "  cargo make down-volumes    - Stop and remove all data"
+echo "  cargo make logs            - Show logs"
+echo "  cargo make logs-postgres   - Show PostgreSQL logs"
+echo "  cargo make test            - Test all examples (start → test → stop)"
+echo "  cargo make test-keep       - Test and keep infrastructure running"
+echo "  cargo make clean           - Clean build artifacts"
+echo "  cargo make status          - Check service status"
+echo "  cargo make check-podman    - Check Podman installation"
+echo "  cargo make test-hello      - Test hello-world example"
+echo "  cargo make test-rest       - Test rest-api example"
+echo "  cargo make test-db         - Test database-integration example"
+'''
+
+[tasks.setup]
+description = "Initial setup (.env file creation)"
+script = '''
+if [ ! -f .env ]; then
+  cp .env.example .env
+  echo "✅ .env file created"
+else
+  echo "⚠️  .env file already exists"
+fi
+'''
+
+[tasks.up]
+description = "Start infrastructure (PostgreSQL only)"
+script = '''
+${COMPOSE} up -d postgres
+echo "⏳ Waiting for PostgreSQL to start..."
+sleep 5
+echo "✅ PostgreSQL started"
+'''
+
+[tasks.up-all]
+description = "Start all services (MySQL, Redis included)"
+script = '''
+${COMPOSE} --profile mysql --profile cache up -d
+echo "⏳ Waiting for all services to start..."
+sleep 10
+echo "✅ All services started"
+'''
+
+[tasks.down]
+description = "Stop infrastructure"
+script = '''
+${COMPOSE} down
+'''
+
+[tasks.down-volumes]
+description = "Stop infrastructure and remove volumes"
+script = '''
+${COMPOSE} down -v
+echo "⚠️  All data has been removed"
+'''
+
+[tasks.logs]
+description = "Show logs"
+script = '''
+${COMPOSE} logs -f
+'''
+
+[tasks.logs-postgres]
+description = "Show PostgreSQL logs"
+script = '''
+${COMPOSE} logs -f postgres
+'''
+
+[tasks.test]
+description = "Test all examples (start → test → stop)"
+dependencies = ["up"]
+script = '''
+echo "🧪 Running tests..."
+cargo test --workspace || (cargo make down && exit 1)
+echo "🛑 Stopping infrastructure..."
+cargo make down
+echo "✅ All tests completed"
+'''
+
+[tasks.test-keep]
+description = "Test and keep infrastructure running"
+dependencies = ["up"]
+script = '''
+echo "🧪 Running tests..."
+cargo test --workspace
+echo "✅ Tests completed (infrastructure is still running)"
+'''
+
+[tasks.clean]
+description = "Clean build artifacts"
+script = '''
+cargo clean
+echo "✅ Build artifacts removed"
+'''
+
+[tasks.status]
+description = "Check service status"
+script = '''
+${COMPOSE} ps
+'''
+
+[tasks.check-podman]
+description = "Check Podman installation"
+script = '''
+if ! command -v podman >/dev/null 2>&1; then
+  echo "❌ Podman is not installed"
+  exit 1
+fi
+if ! command -v podman-compose >/dev/null 2>&1; then
+  echo "❌ podman-compose is not installed"
+  exit 1
+fi
+echo "✅ Podman and podman-compose are installed"
+'''
+
+# Example-specific tasks
+
+[tasks.test-hello]
+description = "Test hello-world example"
+cwd = "hello-world"
+command = "cargo"
+args = ["test"]
+
+[tasks.test-rest]
+description = "Test rest-api example"
+cwd = "rest-api"
+command = "cargo"
+args = ["test"]
+
+[tasks.test-db]
+description = "Test database-integration example (requires DB)"
+dependencies = ["up"]
+cwd = "database-integration"
+command = "cargo"
+args = ["test"]
