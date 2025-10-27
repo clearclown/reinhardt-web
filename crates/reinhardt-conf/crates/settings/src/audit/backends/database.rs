@@ -6,7 +6,7 @@ use crate::audit::{AuditBackend, AuditEvent, ChangeRecord, EventFilter, EventTyp
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde_json;
-use sqlx::{AnyPool, Row};
+use sqlx::{AnyPool, AssertSqlSafe, Row};
 use std::collections::HashMap;
 
 #[cfg(feature = "dynamic-database")]
@@ -69,7 +69,7 @@ impl DatabaseAuditBackend {
             .col(ColumnDef::new(Alias::new("changes")).text().not_null())
             .to_owned();
         let sql = stmt.to_string(SqliteQueryBuilder);
-        sqlx::query(&sql)
+        sqlx::query(AssertSqlSafe(&*sql))
             .execute(&self.pool)
             .await
             .map_err(|e| format!("Failed to create audit_events table: {}", e))?;
@@ -81,7 +81,8 @@ impl DatabaseAuditBackend {
             .table(Alias::new("audit_events"))
             .col(Alias::new("timestamp"))
             .to_owned();
-        let _ = sqlx::query(&idx.to_string(SqliteQueryBuilder))
+        let idx_sql = idx.to_string(SqliteQueryBuilder);
+        let _ = sqlx::query(AssertSqlSafe(&*idx_sql))
             .execute(&self.pool)
             .await;
 
@@ -91,7 +92,8 @@ impl DatabaseAuditBackend {
             .table(Alias::new("audit_events"))
             .col(Alias::new("event_type"))
             .to_owned();
-        let _ = sqlx::query(&idx.to_string(SqliteQueryBuilder))
+        let idx_sql = idx.to_string(SqliteQueryBuilder);
+        let _ = sqlx::query(AssertSqlSafe(&*idx_sql))
             .execute(&self.pool)
             .await;
 
@@ -101,7 +103,8 @@ impl DatabaseAuditBackend {
             .table(Alias::new("audit_events"))
             .col(Alias::new("user"))
             .to_owned();
-        let _ = sqlx::query(&idx.to_string(SqliteQueryBuilder))
+        let idx_sql = idx.to_string(SqliteQueryBuilder);
+        let _ = sqlx::query(AssertSqlSafe(&*idx_sql))
             .execute(&self.pool)
             .await;
 
@@ -138,7 +141,7 @@ impl AuditBackend for DatabaseAuditBackend {
             .to_owned();
         let sql = stmt.to_string(SqliteQueryBuilder);
 
-        sqlx::query(&sql)
+        sqlx::query(AssertSqlSafe(&*sql))
             .execute(&self.pool)
             .await
             .map_err(|e| format!("Failed to log event: {}", e))?;
@@ -177,7 +180,7 @@ impl AuditBackend for DatabaseAuditBackend {
 
         let sql = query.to_string(SqliteQueryBuilder);
 
-        let rows = sqlx::query(&sql)
+        let rows = sqlx::query(AssertSqlSafe(&*sql))
             .fetch_all(&self.pool)
             .await
             .map_err(|e| format!("Failed to fetch events: {}", e))?;
@@ -248,7 +251,7 @@ mod tests {
             .to_owned();
         let sql = stmt.to_string(SqliteQueryBuilder);
 
-        let row = sqlx::query(&sql).fetch_one(&backend.pool).await.unwrap();
+        let row = sqlx::query(AssertSqlSafe(&*sql)).fetch_one(&backend.pool).await.unwrap();
         let count: i64 = row.try_get(0).unwrap();
 
         assert_eq!(count, 0);
