@@ -113,7 +113,7 @@ default-members = [
 version = "0.1.0"
 edition = "2024"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/kent8192/reinhardt"
+repository = "https://github.com/kent8192/reinhardt-rs"
 authors = ["kent8192 <51869472+kent8192@users.noreply.github.com>"]
 
 [workspace.dependencies]
