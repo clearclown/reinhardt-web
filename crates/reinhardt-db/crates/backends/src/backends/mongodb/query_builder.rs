@@ -5,7 +5,7 @@
 //! # Example
 //!
 //! ```rust
-//! use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
 //! use bson::doc;
 //!
 //! let builder = MongoDBQueryBuilder::new("users")
@@ -23,7 +23,7 @@ use bson::{doc, Document};
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+/// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
 /// use bson::doc;
 ///
 /// let builder = MongoDBQueryBuilder::new("users")
@@ -47,7 +47,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users");
     /// assert_eq!(builder.collection_name(), "users");
@@ -68,7 +68,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -84,7 +84,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -100,7 +100,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
     ///     .limit(10);
@@ -115,7 +115,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
     ///     .skip(20);
@@ -130,7 +130,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -146,7 +146,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users");
     /// assert_eq!(builder.collection_name(), "users");
@@ -160,7 +160,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -176,7 +176,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -193,7 +193,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
     ///     .limit(10);
@@ -208,7 +208,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
     ///     .skip(20);
@@ -223,7 +223,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -240,7 +240,7 @@ impl MongoDBQueryBuilder {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
     /// use bson::doc;
     ///
     /// let builder = MongoDBQueryBuilder::new("users")
@@ -299,8 +299,7 @@ mod tests {
 
     #[test]
     fn test_filter() {
-        let builder = MongoDBQueryBuilder::new("users")
-            .filter(doc! { "age": { "$gte": 18 } });
+        let builder = MongoDBQueryBuilder::new("users").filter(doc! { "age": { "$gte": 18 } });
         let filter = builder.build_filter();
         assert!(!filter.is_empty());
         assert!(filter.contains_key("age"));
@@ -308,8 +307,7 @@ mod tests {
 
     #[test]
     fn test_sort() {
-        let builder = MongoDBQueryBuilder::new("users")
-            .sort(doc! { "name": 1 });
+        let builder = MongoDBQueryBuilder::new("users").sort(doc! { "name": 1 });
         let sort = builder.build_sort();
         assert!(sort.is_some());
         let sort = sort.unwrap();
@@ -318,17 +316,14 @@ mod tests {
 
     #[test]
     fn test_limit_and_skip() {
-        let builder = MongoDBQueryBuilder::new("users")
-            .limit(10)
-            .skip(20);
+        let builder = MongoDBQueryBuilder::new("users").limit(10).skip(20);
         assert_eq!(builder.get_limit(), Some(10));
         assert_eq!(builder.get_skip(), Some(20));
     }
 
     #[test]
     fn test_projection() {
-        let builder = MongoDBQueryBuilder::new("users")
-            .projection(doc! { "name": 1, "email": 1 });
+        let builder = MongoDBQueryBuilder::new("users").projection(doc! { "name": 1, "email": 1 });
         let projection = builder.build_projection();
         assert!(projection.is_some());
         let projection = projection.unwrap();
@@ -358,8 +353,7 @@ mod tests {
 
     #[test]
     fn test_aggregation_pipeline_minimal() {
-        let builder = MongoDBQueryBuilder::new("users")
-            .filter(doc! { "active": true });
+        let builder = MongoDBQueryBuilder::new("users").filter(doc! { "active": true });
 
         let pipeline = builder.build_aggregation_pipeline();
         assert_eq!(pipeline.len(), 1); // only match

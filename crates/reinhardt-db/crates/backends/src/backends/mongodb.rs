@@ -8,7 +8,7 @@
 //! # Basic Connection Example
 //!
 //! ```rust,no_run
-//! use reinhardt_database::backends::mongodb::MongoDBBackend;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Connect to MongoDB
@@ -21,7 +21,7 @@
 //! # Query Builder Example
 //!
 //! ```rust
-//! use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
 //! use bson::doc;
 //!
 //! // Build a query
@@ -39,7 +39,7 @@
 //! # Schema Editor Example
 //!
 //! ```rust,no_run
-//! use reinhardt_database::backends::mongodb::MongoDBSchemaEditor;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBSchemaEditor;
 //! use bson::doc;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -65,7 +65,7 @@
 //! # Aggregation Pipeline Example
 //!
 //! ```rust
-//! use reinhardt_database::backends::mongodb::MongoDBQueryBuilder;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBQueryBuilder;
 //! use bson::doc;
 //!
 //! let query = MongoDBQueryBuilder::new("users")
@@ -78,11 +78,63 @@
 //! assert!(!pipeline.is_empty());
 //! assert!(pipeline[0].contains_key("$match"));
 //! ```
+//!
+//! # Connection Pool Configuration
+//!
+//! ```rust,no_run
+//! use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Configure connection pool
+//! let backend = MongoDBBackendBuilder::new()
+//!     .url("mongodb://localhost:27017")
+//!     .database("mydb")
+//!     .max_pool_size(100)
+//!     .min_pool_size(10)
+//!     .max_idle_time_secs(300)
+//!     .build()
+//!     .await?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # Replica Set Connection
+//!
+//! ```rust,no_run
+//! use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Connect to replica set
+//! let backend = MongoDBBackend::builder()
+//!     .url("mongodb://node1:27017,node2:27017,node3:27017/?replicaSet=myReplicaSet")
+//!     .database("mydb")
+//!     .build()
+//!     .await?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # Sharded Cluster Connection
+//!
+//! ```rust,no_run
+//! use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Connect to sharded cluster via mongos
+//! let backend = MongoDBBackend::builder()
+//!     .url("mongodb://mongos1:27017,mongos2:27017")
+//!     .database("mydb")
+//!     .max_pool_size(200) // Higher pool size for sharded clusters
+//!     .build()
+//!     .await?;
+//! # Ok(())
+//! # }
+//! ```
 
 pub mod connection;
 pub mod query_builder;
 pub mod schema_editor;
 
-pub use connection::MongoDBBackend;
+pub use connection::{MongoDBBackend, MongoDBBackendBuilder};
 pub use query_builder::MongoDBQueryBuilder;
 pub use schema_editor::MongoDBSchemaEditor;
