@@ -8,8 +8,9 @@
 
 use crate::{FieldInfo, SerializerError};
 // Note: reinhardt_orm::Model will be needed when database validation is implemented
+use regex::Regex;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, OnceLock};
 use std::time::{Duration, Instant};
 
 /// Internal type for representing unique constraint checks
@@ -862,13 +863,19 @@ impl N1Detector {
     }
 
     /// Normalize SQL query by removing specific values
+    ///
+    /// Uses regex for O(n) performance instead of O(n²) with multiple replacements.
+    /// The regex is compiled once and cached for optimal performance.
     fn normalize_query(&self, sql: &str) -> String {
-        // Simple normalization: replace all numbers with placeholder
-        let mut normalized = sql.to_string();
-        for i in 0..1000 {
-            normalized = normalized.replace(&i.to_string(), "?");
-        }
-        normalized
+        // Cache compiled regex as a static for O(1) access
+        static NUMBER_PATTERN: OnceLock<Regex> = OnceLock::new();
+        let re = NUMBER_PATTERN.get_or_init(|| {
+            // Pattern matches integers and floating point numbers
+            Regex::new(r"\b\d+(\.\d+)?\b").unwrap()
+        });
+
+        // Replace all numbers with placeholder in a single pass: O(n)
+        re.replace_all(sql, "?").to_string()
     }
 
     /// Clear recorded queries
