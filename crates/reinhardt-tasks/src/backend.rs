@@ -1,6 +1,6 @@
 //! Task backend implementations
 
-use crate::{Task, TaskId, TaskStatus};
+use crate::{registry::SerializedTask, Task, TaskId, TaskStatus};
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -29,6 +29,15 @@ pub trait TaskBackend: Send + Sync {
         task_id: TaskId,
         status: TaskStatus,
     ) -> Result<(), TaskExecutionError>;
+
+    /// Get serialized task data by task ID
+    ///
+    /// Returns the task data if found, None otherwise.
+    async fn get_task_data(
+        &self,
+        task_id: TaskId,
+    ) -> Result<Option<SerializedTask>, TaskExecutionError>;
+
     fn backend_name(&self) -> &str;
 }
 
@@ -82,6 +91,14 @@ impl TaskBackend for DummyBackend {
         Ok(())
     }
 
+    async fn get_task_data(
+        &self,
+        _task_id: TaskId,
+    ) -> Result<Option<SerializedTask>, TaskExecutionError> {
+        // DummyBackend doesn't store task data
+        Ok(None)
+    }
+
     fn backend_name(&self) -> &str {
         "dummy"
     }
@@ -121,6 +138,14 @@ impl TaskBackend for ImmediateBackend {
         _status: TaskStatus,
     ) -> Result<(), TaskExecutionError> {
         Ok(())
+    }
+
+    async fn get_task_data(
+        &self,
+        _task_id: TaskId,
+    ) -> Result<Option<SerializedTask>, TaskExecutionError> {
+        // ImmediateBackend doesn't store task data
+        Ok(None)
     }
 
     fn backend_name(&self) -> &str {
