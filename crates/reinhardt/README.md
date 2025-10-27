@@ -19,4 +19,4 @@ This is the main crate that re-exports all the core components of the Reinhardt 
   - Standard (default): Core REST API features
   - Full: All features including admin, GraphQL, WebSockets
 - **Prelude module** - Convenient re-exports for common imports
-- **Feature-based modularity** - Optional features for database, cache, sessions, etc.
+- **Feature-based composability** - Optional features for database, cache, sessions, etc.

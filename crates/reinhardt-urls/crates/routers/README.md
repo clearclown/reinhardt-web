@@ -10,7 +10,7 @@ Automatic URL routing configuration for Reinhardt framework
 
 ### Core Router Types
 
-- **`Router` trait**: Composable router interface for building modular routing systems
+- **`Router` trait**: Composable router interface for building composable routing systems
 - **`DefaultRouter`**: Full-featured router implementation with automatic ViewSet URL generation
   - Automatic list/detail endpoint generation (`/resource/` and `/resource/{id}/`)
   - Support for custom ViewSet actions (both list and detail-level)
