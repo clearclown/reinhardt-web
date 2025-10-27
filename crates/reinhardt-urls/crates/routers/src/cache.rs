@@ -28,7 +28,8 @@
 //! assert!(cached.is_some());
 //! ```
 
-use std::collections::HashMap;
+use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::{Arc, Mutex};
 
 /// Route match result: (handler_id, path_params)
@@ -210,11 +211,12 @@ impl std::fmt::Debug for RouteCache {
 
 /// Internal LRU cache implementation
 ///
-/// This uses a HashMap for O(1) lookups combined with a doubly-linked list
-/// (implemented via Vec indices) for LRU tracking.
+/// This uses a HashMap for O(1) lookups combined with a min-heap (BinaryHeap)
+/// for efficient O(log n) LRU eviction tracking.
 struct LruCache {
     capacity: usize,
     map: HashMap<String, (RouteCacheEntry, usize)>, // (entry, access_order)
+    heap: BinaryHeap<Reverse<(usize, String)>>,     // min-heap of (access_order, key)
     access_counter: usize,
 }
 
@@ -223,6 +225,7 @@ impl LruCache {
         Self {
             capacity,
             map: HashMap::new(),
+            heap: BinaryHeap::new(),
             access_counter: 0,
         }
     }
@@ -232,6 +235,9 @@ impl LruCache {
             // Update access order
             self.access_counter += 1;
             *order = self.access_counter;
+            // Add new access time to heap (old entries will be cleaned up lazily)
+            self.heap
+                .push(Reverse((self.access_counter, path.to_string())));
             Some(entry.clone())
         } else {
             None
@@ -245,23 +251,33 @@ impl LruCache {
         }
 
         self.access_counter += 1;
+        self.heap
+            .push(Reverse((self.access_counter, path.clone())));
         self.map.insert(path, (entry, self.access_counter));
     }
 
+    /// Evict the least recently used entry
+    ///
+    /// Uses a min-heap for O(log n) performance instead of O(n) linear scan.
+    /// Lazy cleanup is used to handle stale heap entries.
     fn evict_lru(&mut self) {
-        // Find the entry with the smallest access_order
-        if let Some((lru_key, _)) = self
-            .map
-            .iter()
-            .min_by_key(|(_, (_, order))| order)
-            .map(|(k, _)| (k.clone(), ()))
-        {
-            self.map.remove(&lru_key);
+        // Pop from heap until we find a valid LRU entry
+        while let Some(Reverse((access_time, key))) = self.heap.pop() {
+            // Check if this entry is still valid (not updated since)
+            if let Some((_, current_access_time)) = self.map.get(&key) {
+                if *current_access_time == access_time {
+                    // This is the true LRU entry
+                    self.map.remove(&key);
+                    return;
+                }
+                // Otherwise, this is a stale heap entry, continue to next
+            }
         }
     }
 
     fn clear(&mut self) {
         self.map.clear();
+        self.heap.clear();
         self.access_counter = 0;
     }
 
