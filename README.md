@@ -5,9 +5,9 @@
 
   <h3>🦀 Polylithic Batteries Included</h3>
 
-  <p><strong>A modular full-stack API framework for Rust</strong></p>
-  <p>All the power of Django's batteries-included philosophy,<br/>
-  with the flexibility to include only what you need.</p>
+  <p><strong>A composable full-stack API framework for Rust</strong></p>
+  <p>Build with <em>all</em> the power of Django's batteries-included philosophy,<br/>
+  or compose <em>only</em> what you need—your choice, your way.</p>
 
 [![Crates.io](https://img.shields.io/crates/v/reinhardt.svg)](https://crates.io/crates/reinhardt)
 [![Documentation](https://docs.rs/reinhardt/badge.svg)](https://docs.rs/reinhardt)
@@ -30,11 +30,14 @@ You may be looking for:
 
 ## Why Reinhardt?
 
+**Polylithic = Poly (many) + Lithic (building blocks)**
+Unlike monolithic frameworks that force you to use everything, Reinhardt lets you compose your perfect stack from independent, well-tested components.
+
 Reinhardt brings together the best of three worlds:
 
 | Inspiration        | What We Borrowed                                       | What We Improved                                     |
 |--------------------|--------------------------------------------------------|------------------------------------------------------|
-| 🐍 **Django**      | Batteries-included philosophy, ORM design, admin panel | Feature flags for modular builds, Rust's type safety |
+| 🐍 **Django**      | Batteries-included philosophy, ORM design, admin panel | Feature flags for composable builds, Rust's type safety |
 | 🎯 **Django REST** | Serializers, ViewSets, permissions                     | Compile-time validation, zero-cost abstractions      |
 | ⚡ **FastAPI**      | DI system, automatic OpenAPI                           | Native Rust performance, no runtime overhead         |
 | 🗄️ **SQLAlchemy** | QuerySet patterns, relationship handling               | Type-safe query builder, compile-time validation     |
@@ -79,7 +82,7 @@ Reinhardt brings together the best of three worlds:
 
 ## Installation
 
-Reinhardt offers three flavors to match your project's scale:
+Compose your perfect framework—Reinhardt offers three ready-made flavors:
 
 ### Reinhardt Micro - For Microservices
 
@@ -109,9 +112,9 @@ All features enabled, Django-style batteries-included:
 reinhardt = { version = "0.1.0", features = ["full"] }
 ```
 
-### Custom Configuration
+### Compose Your Own Configuration
 
-Mix and match features as needed:
+Mix and match features to build your ideal framework:
 
 ```toml
 [dependencies]
@@ -480,6 +483,7 @@ Reinhardt includes the following core components:
 
 - 📚 [Getting Started Guide](docs/GETTING_STARTED.md) - Step-by-step tutorial for beginners
 - 🎛️ [Feature Flags Guide](docs/FEATURE_FLAGS.md) - Optimize your build with granular feature control
+- 🐳 [Podman Setup Guide](docs/PODMAN_SETUP.md) - Use Podman as a Docker Desktop alternative
 - 📖 [API Reference](https://docs.rs/reinhardt) (Coming soon)
 - 📝 [Tutorials](docs/tutorials/) - Learn by building real applications
 
