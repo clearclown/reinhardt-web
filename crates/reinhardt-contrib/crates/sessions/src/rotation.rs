@@ -85,7 +85,7 @@ impl Default for RotationPolicy {
 }
 
 /// Session rotation metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct RotationMetadata {
     /// When the session key was last rotated
     pub last_rotation: DateTime<Utc>,

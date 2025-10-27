@@ -200,31 +200,42 @@ impl SerializationFormat {
         }
     }
 
-    /// Create serializer for this format
+    /// Serialize data using this format
     ///
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_sessions::serialization::{SerializationFormat, Serializer};
+    /// use reinhardt_sessions::serialization::SerializationFormat;
     /// use serde_json::json;
     ///
     /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let format = SerializationFormat::Json;
-    /// let serializer = format.create_serializer();
     ///
     /// let data = json!({"test": true});
-    /// let bytes = serializer.serialize(&data)?;
-    /// let restored: serde_json::Value = serializer.deserialize(&bytes)?;
+    /// let bytes = format.serialize(&data)?;
+    /// let restored: serde_json::Value = format.deserialize(&bytes)?;
     ///
     /// assert_eq!(restored["test"], true);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn create_serializer(&self) -> Box<dyn Serializer> {
+    pub fn serialize<T: Serialize>(&self, data: &T) -> Result<Vec<u8>, SerializationError> {
         match self {
-            SerializationFormat::Json => Box::new(JsonSerializer),
+            SerializationFormat::Json => JsonSerializer.serialize(data),
             #[cfg(feature = "messagepack")]
-            SerializationFormat::MessagePack => Box::new(MessagePackSerializer),
+            SerializationFormat::MessagePack => MessagePackSerializer.serialize(data),
+        }
+    }
+
+    /// Deserialize data using this format
+    pub fn deserialize<T: for<'de> Deserialize<'de>>(
+        &self,
+        bytes: &[u8],
+    ) -> Result<T, SerializationError> {
+        match self {
+            SerializationFormat::Json => JsonSerializer.deserialize(bytes),
+            #[cfg(feature = "messagepack")]
+            SerializationFormat::MessagePack => MessagePackSerializer.deserialize(bytes),
         }
     }
 }
@@ -319,13 +330,12 @@ mod tests {
     }
 
     #[test]
-    fn test_serialization_format_create_serializer() {
+    fn test_serialization_format_serialize_deserialize() {
         let format = SerializationFormat::Json;
-        let serializer = format.create_serializer();
 
         let data = serde_json::json!({"test": "value"});
-        let bytes = serializer.serialize(&data).unwrap();
-        let restored: serde_json::Value = serializer.deserialize(&bytes).unwrap();
+        let bytes = format.serialize(&data).unwrap();
+        let restored: serde_json::Value = format.deserialize(&bytes).unwrap();
 
         assert_eq!(restored["test"], "value");
     }
