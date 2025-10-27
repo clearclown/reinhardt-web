@@ -51,10 +51,18 @@
 //! - **MongoDB**: Full support with connection pooling (✅)
 //! - **CockroachDB**: Distributed transaction support (✅)
 //!
-//! ## Planned Features
+//! ## Optimization Features ✅
 //!
-//! - Additional database backend optimizations
-//! - Enhanced schema migration tools
+//! - **Connection Pool Optimization**: Idle timeout, dynamic sizing, health checks
+//! - **Query Caching**: LRU cache with TTL for prepared statements and results
+//! - **Batch Operations**: Efficient bulk insert, update, and delete operations
+//!
+//! ## Enhanced Migration Tools ✅
+//!
+//! - **Schema Diff Detection**: Automatic detection of schema changes between DB and models
+//! - **Auto-Migration Generation**: Generate migration files from detected differences
+//! - **Migration Validation**: Pre-execution validation with data loss warnings
+//! - **Rollback Script Generation**: Automatic rollback operations for safe migrations
 //!
 //! ## Quick Start
 //!
