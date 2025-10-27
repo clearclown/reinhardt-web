@@ -130,28 +130,29 @@ test-utils = [
   "database",
 ]
 
-# Fine-grained authentication (TODO: Implement in reinhardt-auth crate)
-# auth-jwt = ["reinhardt-auth/jwt"]
-# auth-session = ["reinhardt-auth/session", "sessions"]
-# auth-oauth = ["reinhardt-auth/oauth"]
+# Fine-grained authentication
+auth-jwt = ["auth", "reinhardt-auth/jwt"]
+auth-session = ["auth", "reinhardt-auth/session", "sessions"]
+auth-oauth = ["auth", "reinhardt-auth/oauth"]
+auth-token = ["auth", "reinhardt-auth/token"]
 
-# Fine-grained database support (TODO: Implement in reinhardt-db crate)
-# db-postgres = ["database", "reinhardt-db/postgres"]
-# db-mysql = ["database", "reinhardt-db/mysql"]
-# db-sqlite = ["database", "reinhardt-db/sqlite"]
-# db-mongodb = ["database", "reinhardt-db/mongodb-backend"]
-# db-cockroachdb = ["database", "reinhardt-db/cockroachdb-backend"]
+# Fine-grained database support
+db-postgres = ["database", "reinhardt-db/postgres"]
+db-mysql = ["database", "reinhardt-db/mysql"]
+db-sqlite = ["database", "reinhardt-db/sqlite"]
+db-mongodb = ["database", "reinhardt-db/mongodb-backend"]
+db-cockroachdb = ["database", "reinhardt-db/cockroachdb-backend"]
 
-# Fine-grained serialization (TODO: Implement in reinhardt-serializers crate)
-# serialize-json = ["reinhardt-serializers/json"]
-# serialize-xml = ["reinhardt-serializers/xml"]
-# serialize-yaml = ["reinhardt-serializers/yaml"]
+# Fine-grained serialization
+serialize-json = ["reinhardt-serializers/json"]
+serialize-xml = ["reinhardt-serializers/xml"]
+serialize-yaml = ["reinhardt-serializers/yaml"]
 
-# Fine-grained middleware (TODO: Implement in reinhardt-middleware crate)
-# middleware-cors = ["reinhardt-middleware/cors"]
-# middleware-compression = ["reinhardt-middleware/compression"]
-# middleware-security = ["reinhardt-middleware/security"]
-# middleware-rate-limit = ["reinhardt-middleware/rate-limit"]
+# Fine-grained middleware
+middleware-cors = ["reinhardt-middleware", "reinhardt-middleware/cors"]
+middleware-compression = ["reinhardt-middleware", "reinhardt-middleware/compression"]
+middleware-security = ["reinhardt-middleware", "reinhardt-middleware/security"]
+middleware-rate-limit = ["reinhardt-middleware", "reinhardt-middleware/rate-limit"]
 
 [dependencies]
 # Core dependencies (always included)
