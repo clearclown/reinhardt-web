@@ -1,0 +1,156 @@
+# Reinhardt - cargo-make configuration
+
+[config]
+default_to_workspace = false
+
+# Environment variables
+[env]
+CARGO_TERM_COLOR = "always"
+RUST_BACKTRACE = "1"
+TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/test_db"
+MYSQL_DATABASE_URL = "mysql://root:mysql@localhost:3306/test_db"
+REDIS_URL = "redis://localhost:6379"
+
+# ============================================================================
+# Core Development Tasks
+# ============================================================================
+
+[tasks.check]
+description = "Run cargo check on workspace"
+command = "cargo"
+args = ["check", "--workspace", "--all", "--all-features"]
+
+[tasks.build]
+description = "Build workspace"
+command = "cargo"
+args = ["build", "--workspace", "--all", "--all-features"]
+
+[tasks.build-release]
+description = "Build workspace in release mode"
+command = "cargo"
+args = ["build", "--workspace", "--all", "--all-features", "--release"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+command = "cargo"
+args = ["clean"]
+
+# ============================================================================
+# Code Quality Tasks
+# ============================================================================
+
+[tasks.fmt]
+description = "Check code formatting (CI mode)"
+command = "cargo"
+args = ["fmt", "--check"]
+
+[tasks.fmt-fix]
+description = "Auto-fix code formatting"
+command = "cargo"
+args = ["fmt"]
+
+[tasks.clippy]
+description = "Run clippy linter"
+command = "cargo"
+args = [
+    "clippy",
+    "--workspace",
+    "--all",
+    "--all-features",
+    "--",
+    "-D",
+    "warnings",
+]
+
+# ============================================================================
+# Testing Tasks
+# ============================================================================
+
+[tasks.test-unit]
+description = "Run unit tests and doc tests"
+command = "cargo"
+args = ["test", "--workspace", "--lib", "--doc", "--all-features"]
+
+[tasks.test-integration]
+description = "Run integration tests (requires PostgreSQL, MySQL, Redis)"
+command = "cargo"
+args = ["test", "--package", "tests", "--all-features"]
+env = { "TEST_DATABASE_URL" = "postgres://postgres:postgres@localhost:5432/test_db", "MYSQL_DATABASE_URL" = "mysql://root:mysql@localhost:3306/test_db", "REDIS_URL" = "redis://localhost:6379" }
+
+[tasks.test]
+description = "Run all tests"
+dependencies = ["test-unit", "test-integration"]
+
+[tasks.test-quick]
+description = "Run only unit tests (fast, no external dependencies)"
+command = "cargo"
+args = ["test", "--workspace", "--lib", "--all-features"]
+
+[tasks.test-doc]
+description = "Run only documentation tests"
+command = "cargo"
+args = ["test", "--workspace", "--doc", "--all-features"]
+
+# ============================================================================
+# CI Tasks
+# ============================================================================
+
+[tasks.ci]
+description = "Run all CI checks (check, fmt, clippy, tests)"
+dependencies = ["check", "fmt", "clippy", "test"]
+
+[tasks.ci-local]
+description = "Run CI checks suitable for local development (excludes integration tests)"
+dependencies = ["check", "fmt", "clippy", "test-unit"]
+
+# ============================================================================
+# Documentation Tasks
+# ============================================================================
+
+[tasks.doc]
+description = "Build documentation"
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps"]
+
+[tasks.doc-open]
+description = "Build and open documentation"
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps", "--open"]
+
+# ============================================================================
+# Utility Tasks
+# ============================================================================
+
+[tasks.outdated]
+description = "Check for outdated dependencies"
+command = "cargo"
+args = ["outdated"]
+
+[tasks.update]
+description = "Update dependencies"
+command = "cargo"
+args = ["update"]
+
+[tasks.tree]
+description = "Display dependency tree"
+command = "cargo"
+args = ["tree", "--workspace"]
+
+[tasks.bloat]
+description = "Analyze binary bloat"
+command = "cargo"
+args = ["bloat", "--release"]
+
+# ============================================================================
+# Helper Tasks
+# ============================================================================
+
+[tasks.default]
+description = "Default task - shows help"
+command = "cargo"
+args = ["make", "--list-all-steps"]
+
+[tasks.help]
+description = "Show available tasks"
+command = "cargo"
+args = ["make", "--list-all-steps"]
