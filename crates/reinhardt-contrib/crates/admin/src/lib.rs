@@ -112,12 +112,34 @@ pub mod filters;
 pub mod views;
 pub mod forms;
 
+// Phase 2 modules - Advanced features
+pub mod inline;
+pub mod widgets;
+pub mod bulk_edit;
+pub mod export;
+
+// Phase 3 modules - Integration features
+pub mod templates;
+pub mod auth;
+pub mod database;
+
 // Re-exports
 pub use site::AdminSite;
 pub use model_admin::{ModelAdmin, ModelAdminConfig};
-pub use actions::{AdminAction, ActionResult};
-pub use filters::{ListFilter, FilterSpec};
+pub use actions::{AdminAction, ActionResult, DeleteSelectedAction, ActionRegistry};
+pub use filters::{ListFilter, FilterSpec, BooleanFilter, ChoiceFilter, DateRangeFilter, FilterManager};
 pub use views::{ListView, DetailView, CreateView, UpdateView, DeleteView};
+pub use forms::{AdminForm, FormField, FieldType, FormBuilder};
+pub use inline::{InlineModelAdmin, InlineFormset, InlineForm, InlineType};
+pub use widgets::{Widget, WidgetType, WidgetFactory};
+pub use bulk_edit::{BulkEdit, BulkEditResult, BulkEditForm, BulkEditField, BulkEditConfig};
+pub use export::{ExportFormat, ExportConfig, ExportResult, ExportBuilder, CsvExporter, JsonExporter, TsvExporter};
+pub use templates::{
+    AdminContext, AdminTemplateRenderer, ListViewContext, FormViewContext,
+    DeleteConfirmationContext, DashboardContext, UserContext, PaginationContext,
+};
+pub use auth::{AdminAuthBackend, AdminPermissionChecker, AdminAuthMiddleware, PermissionAction};
+pub use database::AdminDatabase;
 
 /// Admin panel error types
 #[derive(Debug, thiserror::Error)]
