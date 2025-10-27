@@ -5,8 +5,11 @@
 //! - Throttling/Rate limiting
 //! - Caching
 //! - Session storage
+//! - Email sending
 //!
 //! # Architecture
+//!
+//! ## Storage Backends
 //!
 //! The backend system is built around the `Backend` trait, which provides
 //! a simple key-value interface with TTL support. Multiple implementations
@@ -15,7 +18,20 @@
 //! - **MemoryBackend**: In-memory storage with automatic expiration
 //! - **RedisBackend**: Distributed storage using Redis
 //!
+//! ## Email Backends
+//!
+//! The email system is built around the `EmailBackend` trait, which provides
+//! a unified interface for sending emails. Multiple implementations are available:
+//!
+//! - **MemoryEmailBackend**: In-memory storage for testing
+//! - **SmtpBackend**: Direct SMTP server connection
+//! - **SendGridBackend**: SendGrid API integration
+//! - **SesBackend**: AWS Simple Email Service
+//! - **MailgunBackend**: Mailgun API integration
+//!
 //! # Examples
+//!
+//! ## Storage Backend
 //!
 //! ```
 //! use reinhardt_backends::{Backend, MemoryBackend};
@@ -33,6 +49,26 @@
 //!     assert_eq!(value, Some("active".to_string()));
 //! }
 //! ```
+//!
+//! ## Email Backend
+//!
+//! ```
+//! use reinhardt_backends::email::{Email, EmailBackend, MemoryEmailBackend};
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     let backend = MemoryEmailBackend::new();
+//!
+//!     let email = Email::builder()
+//!         .from("sender@example.com")
+//!         .to("recipient@example.com")
+//!         .subject("Hello")
+//!         .text_body("Hello, World!")
+//!         .build();
+//!
+//!     backend.send_email(&email).await.unwrap();
+//! }
+//! ```
 
 use async_trait::async_trait;
 use serde::{de::DeserializeOwned, Serialize};
@@ -44,6 +80,12 @@ pub mod memory;
 
 #[cfg(feature = "redis-backend")]
 pub mod redis_backend;
+
+// Cache backends module
+pub mod cache;
+
+// Email backends module
+pub mod email;
 
 // Re-exports
 pub use adapters::{ThrottleBackend as ThrottleBackendTrait, ThrottleBackendAdapter};
