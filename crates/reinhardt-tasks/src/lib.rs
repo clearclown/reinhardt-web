@@ -9,15 +9,14 @@
 //! - Task retries with exponential backoff
 //! - Task priority
 //! - Task chaining
+//! - Task dependencies and DAG execution
 //! - Result backend
+//! - Task execution metrics and monitoring
+//! - Worker load balancing (Round-robin, Least-connections, Weighted, Random)
 //!
 //! ## Planned Features
 //!
-//! - Advanced worker load balancing strategies
-//! - Task priority queues with weighted scheduling
-//! - Task dependencies and DAG execution
 //! - Webhook notifications for task completion
-//! - Task execution metrics and monitoring
 //!
 //! ## Example
 //!
@@ -47,7 +46,11 @@
 pub mod backend;
 pub mod backends;
 pub mod chain;
+pub mod dag;
+pub mod load_balancer;
 pub mod locking;
+pub mod metrics;
+pub mod priority_queue;
 pub mod queue;
 pub mod registry;
 pub mod result;
@@ -67,10 +70,14 @@ pub use backends::RedisBackend;
 #[cfg(feature = "database-backend")]
 pub use backends::SqliteBackend;
 pub use chain::{ChainStatus, TaskChain, TaskChainBuilder};
+pub use dag::{TaskDAG, TaskNode, TaskNodeStatus};
+pub use load_balancer::{LoadBalancer, LoadBalancingStrategy, WorkerInfo, WorkerId, WorkerMetrics};
 pub use locking::{MemoryTaskLock, TaskLock};
 
 #[cfg(feature = "redis-backend")]
 pub use locking::RedisTaskLock;
+pub use metrics::{MetricsSnapshot, TaskCounts, TaskMetrics, WorkerStats};
+pub use priority_queue::{Priority, PriorityTaskQueue};
 pub use queue::{QueueConfig, TaskQueue};
 pub use registry::{SerializedTask, TaskFactory, TaskRegistry};
 pub use result::{
