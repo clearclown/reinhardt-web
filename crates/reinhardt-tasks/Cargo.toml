@@ -18,6 +18,7 @@ chrono = "0.4"
 uuid = { workspace = true }
 cron = "0.13"
 rand = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }
 
 # Redis backend (optional)
 redis = { workspace = true, optional = true }
@@ -33,6 +34,7 @@ sqlx = { workspace = true, features = [
 tokio = { workspace = true }
 testcontainers = { workspace = true }
 serial_test = { workspace = true }
+mockito = "1.5"
 
 [features]
 default = []

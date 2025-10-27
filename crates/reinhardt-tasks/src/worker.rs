@@ -4,8 +4,10 @@ use crate::{
     locking::TaskLock,
     registry::TaskRegistry,
     result::{ResultBackend, TaskResultMetadata},
+    webhook::{HttpWebhookSender, WebhookConfig, WebhookEvent, WebhookSender},
     TaskBackend, TaskStatus,
 };
+use chrono::Utc;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::broadcast;
@@ -13,7 +15,7 @@ use tokio::time::sleep;
 
 /// Worker configuration
 ///
-/// Controls worker behavior including name, concurrency, and polling interval.
+/// Controls worker behavior including name, concurrency, polling interval, and webhook notifications.
 ///
 /// # Examples
 ///
@@ -33,6 +35,7 @@ pub struct WorkerConfig {
     pub name: String,
     pub concurrency: usize,
     pub poll_interval: Duration,
+    pub webhook_configs: Vec<WebhookConfig>,
 }
 
 impl WorkerConfig {
@@ -52,6 +55,7 @@ impl WorkerConfig {
             name,
             concurrency: 4,
             poll_interval: Duration::from_secs(1),
+            webhook_configs: Vec::new(),
         }
     }
 
@@ -84,6 +88,52 @@ impl WorkerConfig {
     /// ```
     pub fn with_poll_interval(mut self, interval: Duration) -> Self {
         self.poll_interval = interval;
+        self
+    }
+
+    /// Add a webhook configuration
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_tasks::{WorkerConfig, webhook::WebhookConfig};
+    /// use std::time::Duration;
+    ///
+    /// let webhook_config = WebhookConfig {
+    ///     url: "https://example.com/webhook".to_string(),
+    ///     method: "POST".to_string(),
+    ///     headers: Default::default(),
+    ///     timeout: Duration::from_secs(5),
+    ///     retry_config: Default::default(),
+    /// };
+    ///
+    /// let config = WorkerConfig::new("worker".to_string())
+    ///     .with_webhook(webhook_config);
+    /// assert_eq!(config.webhook_configs.len(), 1);
+    /// ```
+    pub fn with_webhook(mut self, webhook_config: WebhookConfig) -> Self {
+        self.webhook_configs.push(webhook_config);
+        self
+    }
+
+    /// Set multiple webhook configurations
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use reinhardt_tasks::{WorkerConfig, webhook::WebhookConfig};
+    ///
+    /// let webhooks = vec![
+    ///     WebhookConfig::default(),
+    ///     WebhookConfig::default(),
+    /// ];
+    ///
+    /// let config = WorkerConfig::new("worker".to_string())
+    ///     .with_webhooks(webhooks);
+    /// assert_eq!(config.webhook_configs.len(), 2);
+    /// ```
+    pub fn with_webhooks(mut self, webhook_configs: Vec<WebhookConfig>) -> Self {
+        self.webhook_configs = webhook_configs;
         self
     }
 }
@@ -125,6 +175,7 @@ pub struct Worker {
     registry: Option<Arc<TaskRegistry>>,
     task_lock: Option<Arc<dyn TaskLock>>,
     result_backend: Option<Arc<dyn ResultBackend>>,
+    webhook_senders: Vec<Arc<dyn WebhookSender>>,
 }
 
 impl Worker {
@@ -136,16 +187,27 @@ impl Worker {
     /// use reinhardt_tasks::{Worker, WorkerConfig};
     ///
     /// let config = WorkerConfig::new("worker-1".to_string());
-    /// let worker = Worker::new(config);
+    /// let worker = Worker::new(config.clone());
     /// ```
     pub fn new(config: WorkerConfig) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
+
+        // Create webhook senders from configuration
+        let webhook_senders: Vec<Arc<dyn WebhookSender>> = config
+            .webhook_configs
+            .iter()
+            .map(|webhook_config| {
+                Arc::new(HttpWebhookSender::new(webhook_config.clone())) as Arc<dyn WebhookSender>
+            })
+            .collect();
+
         Self {
             config,
             shutdown_tx,
             registry: None,
             task_lock: None,
             result_backend: None,
+            webhook_senders,
         }
     }
 
@@ -290,6 +352,8 @@ impl Worker {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         println!("[{}] Executing task: {}", self.config.name, task_id);
 
+        let started_at = Utc::now();
+
         // Try to acquire lock if available
         if let Some(ref lock) = self.task_lock {
             let acquired = lock.acquire(task_id, Duration::from_secs(300)).await?;
@@ -303,7 +367,8 @@ impl Worker {
         }
 
         // Execute task with registry if available
-        let result = if let Some(ref _registry) = self.registry {
+        let result: Result<(), Box<dyn std::error::Error + Send + Sync>> =
+            if let Some(ref _registry) = self.registry {
             // In a real implementation, we would:
             // 1. Get serialized task data from backend
             // 2. Deserialize task using registry
@@ -322,12 +387,21 @@ impl Worker {
             Ok(())
         };
 
+        let completed_at = Utc::now();
+        let duration_ms = (completed_at - started_at).num_milliseconds() as u64;
+
+        // Determine final task status
+        let (task_status, webhook_status) = match &result {
+            Ok(_) => (TaskStatus::Success, crate::webhook::TaskStatus::Success),
+            Err(_) => (TaskStatus::Failure, crate::webhook::TaskStatus::Failed),
+        };
+
         // Store result if result backend is available
         if let Some(ref result_backend) = self.result_backend {
             let metadata = match result {
                 Ok(_) => TaskResultMetadata::new(
                     task_id,
-                    TaskStatus::Success,
+                    task_status,
                     Some("Task completed successfully".to_string()),
                 ),
                 Err(ref e) => {
@@ -336,6 +410,43 @@ impl Worker {
             };
 
             result_backend.store_result(metadata).await?;
+        }
+
+        // Send webhook notifications
+        if !self.webhook_senders.is_empty() {
+            let webhook_event = WebhookEvent {
+                task_id,
+                task_name: "task".to_string(), // TODO: Get actual task name from registry
+                status: webhook_status,
+                result: match webhook_status {
+                    crate::webhook::TaskStatus::Success => {
+                        Some("Task completed successfully".to_string())
+                    }
+                    crate::webhook::TaskStatus::Failed => None,
+                    crate::webhook::TaskStatus::Cancelled => None,
+                },
+                error: match webhook_status {
+                    crate::webhook::TaskStatus::Failed => match &result {
+                        Err(e) => Some(e.to_string()),
+                        _ => Some("Unknown error".to_string()),
+                    },
+                    _ => None,
+                },
+                started_at,
+                completed_at,
+                duration_ms,
+            };
+
+            // Send to all configured webhooks (fire and forget)
+            for sender in &self.webhook_senders {
+                let sender_clone = Arc::clone(sender);
+                let event_clone = webhook_event.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = sender_clone.send(&event_clone).await {
+                        eprintln!("Failed to send webhook notification: {}", e);
+                    }
+                });
+            }
         }
 
         // Release lock if acquired
@@ -373,6 +484,7 @@ impl Default for Worker {
             registry: None,
             task_lock: None,
             result_backend: None,
+            webhook_senders: Vec::new(),
         }
     }
 }
@@ -430,6 +542,7 @@ mod tests {
             registry: None,
             task_lock: None,
             result_backend: None,
+            webhook_senders: Vec::new(),
         };
 
         let handle = tokio::spawn(async move { worker.run(backend).await });

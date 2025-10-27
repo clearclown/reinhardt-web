@@ -13,10 +13,8 @@
 //! - Result backend
 //! - Task execution metrics and monitoring
 //! - Worker load balancing (Round-robin, Least-connections, Weighted, Random)
-//!
-//! ## Planned Features
-//!
 //! - Webhook notifications for task completion
+//!
 //!
 //! ## Example
 //!
@@ -57,6 +55,7 @@ pub mod result;
 pub mod retry;
 pub mod scheduler;
 pub mod task;
+pub mod webhook;
 pub mod worker;
 
 pub use backend::{
@@ -95,6 +94,10 @@ pub use scheduler::{CronSchedule, Schedule, Scheduler};
 pub use task::{
     Task, TaskExecutor, TaskId, TaskPriority, TaskStatus, DEFAULT_TASK_QUEUE_NAME,
     TASK_MAX_PRIORITY, TASK_MIN_PRIORITY,
+};
+pub use webhook::{
+    HttpWebhookSender, RetryConfig, TaskStatus as WebhookTaskStatus, WebhookConfig, WebhookError,
+    WebhookEvent, WebhookSender,
 };
 pub use worker::{Worker, WorkerConfig};
 
