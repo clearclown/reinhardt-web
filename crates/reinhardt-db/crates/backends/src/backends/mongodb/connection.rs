@@ -6,8 +6,8 @@
 //! # Example
 //!
 //! ```rust,no_run
-//! use reinhardt_database::backends::mongodb::MongoDBBackend;
-//! use reinhardt_database::backend::DatabaseBackend;
+//! use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+//! use reinhardt_db_backends::backend::DatabaseBackend;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Connect to MongoDB
@@ -20,7 +20,7 @@
 //! ```
 
 use async_trait::async_trait;
-use bson::{doc, Bson};
+use bson::{Bson, Document};
 use mongodb::{Client, Database};
 use std::sync::Arc;
 
@@ -32,14 +32,26 @@ use crate::{
 
 /// MongoDB backend implementation
 ///
+/// Supports connection pooling, replica sets, and sharded clusters.
+///
 /// # Example
 ///
 /// ```rust,no_run
-/// use reinhardt_database::backends::mongodb::MongoDBBackend;
+/// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Basic connection
 /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?;
 /// let backend = backend.with_database("mydb");
+///
+/// // Connection with options
+/// let backend = MongoDBBackend::builder()
+///     .url("mongodb://localhost:27017")
+///     .database("mydb")
+///     .max_pool_size(100)
+///     .min_pool_size(10)
+///     .build()
+///     .await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -47,6 +59,181 @@ use crate::{
 pub struct MongoDBBackend {
     client: Arc<Client>,
     database_name: String,
+}
+
+/// Builder for configuring MongoDB connections
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let backend = MongoDBBackendBuilder::new()
+///     .url("mongodb://localhost:27017")
+///     .database("mydb")
+///     .max_pool_size(100)
+///     .min_pool_size(10)
+///     .max_idle_time_secs(300)
+///     .build()
+///     .await?;
+/// # Ok(())
+/// # }
+/// ```
+pub struct MongoDBBackendBuilder {
+    url: String,
+    database: String,
+    max_pool_size: Option<u32>,
+    min_pool_size: Option<u32>,
+    max_idle_time_secs: Option<u64>,
+}
+
+impl Default for MongoDBBackendBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MongoDBBackendBuilder {
+    /// Create a new builder with default settings
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new();
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            url: "mongodb://localhost:27017".to_string(),
+            database: "test".to_string(),
+            max_pool_size: None,
+            min_pool_size: None,
+            max_idle_time_secs: None,
+        }
+    }
+
+    /// Set the MongoDB connection URL
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new()
+    ///     .url("mongodb://localhost:27017");
+    /// ```
+    pub fn url(mut self, url: impl Into<String>) -> Self {
+        self.url = url.into();
+        self
+    }
+
+    /// Set the database name
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new()
+    ///     .database("mydb");
+    /// ```
+    pub fn database(mut self, database: impl Into<String>) -> Self {
+        self.database = database.into();
+        self
+    }
+
+    /// Set the maximum connection pool size
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new()
+    ///     .max_pool_size(100);
+    /// ```
+    pub fn max_pool_size(mut self, size: u32) -> Self {
+        self.max_pool_size = Some(size);
+        self
+    }
+
+    /// Set the minimum connection pool size
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new()
+    ///     .min_pool_size(10);
+    /// ```
+    pub fn min_pool_size(mut self, size: u32) -> Self {
+        self.min_pool_size = Some(size);
+        self
+    }
+
+    /// Set the maximum idle time for connections in seconds
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// let builder = MongoDBBackendBuilder::new()
+    ///     .max_idle_time_secs(300);
+    /// ```
+    pub fn max_idle_time_secs(mut self, secs: u64) -> Self {
+        self.max_idle_time_secs = Some(secs);
+        self
+    }
+
+    /// Build the MongoDB backend
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackendBuilder;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackendBuilder::new()
+    ///     .url("mongodb://localhost:27017")
+    ///     .database("mydb")
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn build(self) -> Result<MongoDBBackend> {
+        use mongodb::options::ClientOptions;
+        use std::time::Duration;
+
+        let mut options = ClientOptions::parse(&self.url)
+            .await
+            .map_err(|e| crate::error::DatabaseError::ConnectionError(e.to_string()))?;
+
+        // Configure connection pool
+        if let Some(max_size) = self.max_pool_size {
+            options.max_pool_size = Some(max_size);
+        }
+
+        if let Some(min_size) = self.min_pool_size {
+            options.min_pool_size = Some(min_size);
+        }
+
+        if let Some(idle_time) = self.max_idle_time_secs {
+            options.max_idle_time = Some(Duration::from_secs(idle_time));
+        }
+
+        let client = Client::with_options(options)
+            .map_err(|e| crate::error::DatabaseError::ConnectionError(e.to_string()))?;
+
+        Ok(MongoDBBackend {
+            client: Arc::new(client),
+            database_name: self.database,
+        })
+    }
 }
 
 impl MongoDBBackend {
@@ -59,7 +246,7 @@ impl MongoDBBackend {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use reinhardt_database::backends::mongodb::MongoDBBackend;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?;
@@ -77,12 +264,33 @@ impl MongoDBBackend {
         })
     }
 
+    /// Create a builder for configuring the MongoDB connection
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::builder()
+    ///     .url("mongodb://localhost:27017")
+    ///     .database("mydb")
+    ///     .max_pool_size(100)
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn builder() -> MongoDBBackendBuilder {
+        MongoDBBackendBuilder::new()
+    }
+
     /// Set the database name to use
     ///
     /// # Example
     ///
     /// ```rust,no_run
-    /// use reinhardt_database::backends::mongodb::MongoDBBackend;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?;
@@ -100,7 +308,7 @@ impl MongoDBBackend {
     /// # Example
     ///
     /// ```rust,no_run
-    /// use reinhardt_database::backends::mongodb::MongoDBBackend;
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?;
@@ -110,6 +318,305 @@ impl MongoDBBackend {
     /// ```
     pub fn database(&self) -> Database {
         self.client.database(&self.database_name)
+    }
+
+    /// Insert a document into a collection
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let doc = doc! { "name": "Alice", "age": 30 };
+    /// let id = backend.insert_one("users", doc).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn insert_one(&self, collection: &str, document: Document) -> Result<Bson> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .insert_one(document)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.inserted_id)
+    }
+
+    /// Insert multiple documents into a collection
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let docs = vec![
+    ///     doc! { "name": "Alice", "age": 30 },
+    ///     doc! { "name": "Bob", "age": 25 },
+    /// ];
+    /// let ids = backend.insert_many("users", docs).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn insert_many(
+        &self,
+        collection: &str,
+        documents: Vec<Document>,
+    ) -> Result<Vec<Bson>> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .insert_many(documents)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.inserted_ids.into_values().collect())
+    }
+
+    /// Find one document matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "name": "Alice" };
+    /// if let Some(user) = backend.find_one("users", filter).await? {
+    ///     println!("Found user: {:?}", user);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn find_one(&self, collection: &str, filter: Document) -> Result<Option<Document>> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        coll.find_one(filter)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))
+    }
+
+    /// Find all documents matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "age": { "$gte": 18 } };
+    /// let users = backend.find("users", filter).await?;
+    /// for user in users {
+    ///     println!("User: {:?}", user);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn find(&self, collection: &str, filter: Document) -> Result<Vec<Document>> {
+        use futures::stream::TryStreamExt;
+
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let cursor = coll
+            .find(filter)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        cursor
+            .try_collect()
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))
+    }
+
+    /// Update one document matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "name": "Alice" };
+    /// let update = doc! { "$set": { "age": 31 } };
+    /// let count = backend.update_one("users", filter, update).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn update_one(
+        &self,
+        collection: &str,
+        filter: Document,
+        update: Document,
+    ) -> Result<u64> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .update_one(filter, update)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.modified_count)
+    }
+
+    /// Update all documents matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "age": { "$lt": 18 } };
+    /// let update = doc! { "$set": { "status": "minor" } };
+    /// let count = backend.update_many("users", filter, update).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn update_many(
+        &self,
+        collection: &str,
+        filter: Document,
+        update: Document,
+    ) -> Result<u64> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .update_many(filter, update)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.modified_count)
+    }
+
+    /// Delete one document matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "name": "Alice" };
+    /// let count = backend.delete_one("users", filter).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn delete_one(&self, collection: &str, filter: Document) -> Result<u64> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .delete_one(filter)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.deleted_count)
+    }
+
+    /// Delete all documents matching the filter
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let filter = doc! { "age": { "$lt": 18 } };
+    /// let count = backend.delete_many("users", filter).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn delete_many(&self, collection: &str, filter: Document) -> Result<u64> {
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let result = coll
+            .delete_many(filter)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        Ok(result.deleted_count)
+    }
+
+    /// Execute an aggregation pipeline
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use reinhardt_db_backends::backends::mongodb::MongoDBBackend;
+    /// use bson::doc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?
+    ///     .with_database("mydb");
+    ///
+    /// let pipeline = vec![
+    ///     doc! { "$match": { "age": { "$gte": 18 } } },
+    ///     doc! { "$group": { "_id": "$status", "count": { "$sum": 1 } } },
+    /// ];
+    /// let results = backend.aggregate("users", pipeline).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn aggregate(
+        &self,
+        collection: &str,
+        pipeline: Vec<Document>,
+    ) -> Result<Vec<Document>> {
+        use futures::stream::TryStreamExt;
+
+        let db = self.database();
+        let coll = db.collection::<Document>(collection);
+
+        let cursor = coll
+            .aggregate(pipeline)
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))?;
+
+        cursor
+            .try_collect()
+            .await
+            .map_err(|e| crate::error::DatabaseError::QueryError(e.to_string()))
     }
 
     /// Convert QueryValue to BSON
@@ -146,7 +653,11 @@ impl MongoDBBackend {
             Bson::DateTime(dt) => {
                 // Convert BSON DateTime to chrono DateTime
                 use chrono::TimeZone;
-                QueryValue::Timestamp(chrono::Utc.timestamp_millis_opt(dt.timestamp_millis()).unwrap())
+                QueryValue::Timestamp(
+                    chrono::Utc
+                        .timestamp_millis_opt(dt.timestamp_millis())
+                        .unwrap(),
+                )
             }
             _ => QueryValue::Null, // For unsupported types
         }
@@ -261,5 +772,36 @@ mod tests {
             QueryValue::Int(42) => (),
             _ => panic!("Expected Int(42)"),
         }
+    }
+
+    #[test]
+    fn test_builder_default() {
+        let builder = MongoDBBackendBuilder::new();
+        assert_eq!(builder.url, "mongodb://localhost:27017");
+        assert_eq!(builder.database, "test");
+        assert_eq!(builder.max_pool_size, None);
+        assert_eq!(builder.min_pool_size, None);
+    }
+
+    #[test]
+    fn test_builder_configuration() {
+        let builder = MongoDBBackendBuilder::new()
+            .url("mongodb://example.com:27017")
+            .database("mydb")
+            .max_pool_size(100)
+            .min_pool_size(10)
+            .max_idle_time_secs(300);
+
+        assert_eq!(builder.url, "mongodb://example.com:27017");
+        assert_eq!(builder.database, "mydb");
+        assert_eq!(builder.max_pool_size, Some(100));
+        assert_eq!(builder.min_pool_size, Some(10));
+        assert_eq!(builder.max_idle_time_secs, Some(300));
+    }
+
+    #[test]
+    fn test_backend_builder_method() {
+        let builder = MongoDBBackend::builder();
+        assert_eq!(builder.url, "mongodb://localhost:27017");
     }
 }
