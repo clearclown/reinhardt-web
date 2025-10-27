@@ -450,41 +450,70 @@ fn update_workspace_members(app_name: &str) -> CommandResult<()> {
     Ok(())
 }
 
-/// Update or create apps.rs to export the new app
+/// Update or create apps.rs to export the new app using AST
+///
+/// Uses AST parsing to robustly detect existing module declarations
+/// and add new ones, avoiding issues with comments and formatting.
 fn update_apps_export(app_name: &str) -> CommandResult<()> {
     use std::fs;
+    use syn::{parse_file, File, Item, ItemMod, ItemUse};
 
     let apps_file = PathBuf::from("src/apps.rs");
     let camel_case_name = to_camel_case(app_name);
 
-    // Read existing content if file exists
-    let mut lines = if apps_file.exists() {
-        fs::read_to_string(&apps_file)
-            .map_err(|e| CommandError::ExecutionError(format!("Failed to read apps.rs: {}", e)))?
-            .lines()
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
+    // Parse existing file or create default AST
+    let mut ast: File = if apps_file.exists() {
+        let content = fs::read_to_string(&apps_file)
+            .map_err(|e| CommandError::ExecutionError(format!("Failed to read apps.rs: {}", e)))?;
+        parse_file(&content).map_err(|e| {
+            CommandError::ExecutionError(format!("Failed to parse apps.rs: {}", e))
+        })?
     } else {
-        vec![
-            "//! Apps module - exports all applications".to_string(),
-            String::new(),
-        ]
+        parse_file("//! Apps module - exports all applications\n").map_err(|e| {
+            CommandError::ExecutionError(format!("Failed to create default AST: {}", e))
+        })?
     };
 
-    // Check if this app is already exported
-    let pub_mod_line = format!("pub mod {};", app_name);
-    let pub_use_line = format!("pub use {}::{}Config;", app_name, camel_case_name);
-
-    if !lines.iter().any(|line| line.contains(&pub_mod_line)) {
-        // Add pub mod declaration
-        lines.push(pub_mod_line);
-        // Add pub use declaration
-        lines.push(pub_use_line);
+    // Validate app_name is a valid Rust identifier
+    // syn::Ident::new will panic if the name is not valid, so we check first
+    if !app_name.chars().next().map_or(false, |c| c.is_alphabetic() || c == '_') {
+        return Err(CommandError::InvalidArguments(format!(
+            "App name '{}' is not a valid Rust identifier (must start with a letter or underscore)",
+            app_name
+        )));
     }
 
-    // Write back to file
-    let content = lines.join("\n") + "\n";
-    fs::write(&apps_file, content)
+    if !app_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return Err(CommandError::InvalidArguments(format!(
+            "App name '{}' contains invalid characters (only letters, numbers, and underscores allowed)",
+            app_name
+        )));
+    }
+
+    // Check if module declaration already exists (structurally)
+    let app_ident = syn::Ident::new(app_name, proc_macro2::Span::call_site());
+    let has_mod_declaration = ast.items.iter().any(|item| {
+        matches!(item, Item::Mod(ItemMod { ident, .. }) if ident == &app_ident)
+    });
+
+    if !has_mod_declaration {
+        // Add module declaration: pub mod app_name;
+        let mod_item: ItemMod = syn::parse_quote! {
+            pub mod #app_ident;
+        };
+        ast.items.push(Item::Mod(mod_item));
+
+        // Add use declaration: pub use app_name::AppNameConfig;
+        let config_ident = syn::Ident::new(&camel_case_name, proc_macro2::Span::call_site());
+        let use_item: ItemUse = syn::parse_quote! {
+            pub use #app_ident::#config_ident;
+        };
+        ast.items.push(Item::Use(use_item));
+    }
+
+    // Format and write back to file
+    let formatted = prettyplease::unparse(&ast);
+    fs::write(&apps_file, formatted)
         .map_err(|e| CommandError::ExecutionError(format!("Failed to write apps.rs: {}", e)))?;
 
     Ok(())
