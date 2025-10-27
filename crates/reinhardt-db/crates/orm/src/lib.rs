@@ -39,6 +39,7 @@ pub mod window;
 pub mod absolute_url_overrides;
 pub mod composite_pk;
 pub mod composite_synonym;
+pub mod cross_db_constraints;
 pub mod cte;
 pub mod file_fields;
 pub mod filtered_relation;
