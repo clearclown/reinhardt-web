@@ -3,6 +3,7 @@ name = "reinhardt-contrib"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 # CLI dependencies for bin/reinhardt-admin

@@ -3,6 +3,7 @@ name = "reinhardt-test"
 version = "0.1.0"
 edition = "2024"
 description = "Testing utilities and helpers for Reinhardt framework"
+repository.workspace = true
 
 [features]
 default = []

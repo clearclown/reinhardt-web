@@ -3,6 +3,7 @@ name = "reinhardt-viewsets"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 reinhardt-apps = { workspace = true }

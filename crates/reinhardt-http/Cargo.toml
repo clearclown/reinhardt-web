@@ -3,6 +3,7 @@ name = "reinhardt-http"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 bytes = { workspace = true }
