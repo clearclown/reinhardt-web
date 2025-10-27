@@ -1,8 +1,4 @@
 //! Application configuration and registry for Reinhardt
-//!
-//! ## Planned Features
-//! - Full reverse relation building (requires ORM relationship system integration)
-//! - Migration detection and management (requires reinhardt-migrations crate)
 
 pub mod apps;
 pub mod builder;

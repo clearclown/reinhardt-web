@@ -338,13 +338,19 @@ pub fn create_reverse_relation(relation: &RelationMetadata) {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MigrationMetadata {
     /// The application this migration belongs to
-    pub app_label: &'static str,
+    pub app_label: String,
 
-    /// The migration name (e.g., "0001_initial")
-    pub name: &'static str,
+    /// The migration name (e.g., "initial")
+    pub name: String,
+
+    /// The migration number (e.g., 1 for "0001_initial")
+    pub number: u32,
+
+    /// Path to the migration file
+    pub path: std::path::PathBuf,
 
     /// Dependencies on other migrations
-    pub dependencies: Vec<(&'static str, &'static str)>, // (app_label, migration_name)
+    pub dependencies: Vec<String>,
 }
 
 impl MigrationMetadata {
@@ -354,23 +360,31 @@ impl MigrationMetadata {
     ///
     /// ```rust
     /// use reinhardt_apps::discovery::MigrationMetadata;
+    /// use std::path::PathBuf;
     ///
     /// let migration = MigrationMetadata::new(
-    ///     "myapp",
-    ///     "0001_initial",
+    ///     "myapp".to_string(),
+    ///     "initial".to_string(),
+    ///     1,
+    ///     PathBuf::from("migrations/0001_initial.rs"),
     ///     vec![],
     /// );
     /// assert_eq!(migration.app_label, "myapp");
-    /// assert_eq!(migration.name, "0001_initial");
+    /// assert_eq!(migration.name, "initial");
+    /// assert_eq!(migration.number, 1);
     /// ```
-    pub const fn new(
-        app_label: &'static str,
-        name: &'static str,
-        dependencies: Vec<(&'static str, &'static str)>,
+    pub fn new(
+        app_label: String,
+        name: String,
+        number: u32,
+        path: std::path::PathBuf,
+        dependencies: Vec<String>,
     ) -> Self {
         Self {
             app_label,
             name,
+            number,
+            path,
             dependencies,
         }
     }
@@ -381,134 +395,136 @@ impl MigrationMetadata {
     ///
     /// ```rust
     /// use reinhardt_apps::discovery::MigrationMetadata;
+    /// use std::path::PathBuf;
     ///
     /// let migration = MigrationMetadata::new(
-    ///     "myapp",
-    ///     "0001_initial",
+    ///     "myapp".to_string(),
+    ///     "initial".to_string(),
+    ///     1,
+    ///     PathBuf::from("migrations/0001_initial.rs"),
     ///     vec![],
     /// );
     /// assert_eq!(migration.qualified_name(), "myapp.0001_initial");
     /// ```
     pub fn qualified_name(&self) -> String {
-        format!("{}.{}", self.app_label, self.name)
+        format!("{}.{:04}_{}", self.app_label, self.number, self.name)
     }
 }
 
-/// Discover migrations for a given application
+/// Discover migration files in the project
 ///
-/// This function scans the migration directory for the specified application
-/// and extracts migration metadata including name, app_label, and dependencies.
+/// This function scans all registered applications for migration files in their
+/// `migrations/` directories. It extracts metadata from migration file names.
 ///
-/// # Arguments
+/// # Migration File Naming Convention
 ///
-/// * `app_label` - The application label to discover migrations for
-/// * `migration_root` - The root directory containing migration files
+/// Migration files should follow the pattern: `{number}_{name}.rs`
+/// - `number`: 4-digit migration number (e.g., 0001, 0002)
+/// - `name`: Descriptive name (e.g., initial, add_user_field)
 ///
 /// # Examples
 ///
-/// ```rust
-/// use reinhardt_apps::discovery::discover_migrations;
-/// use std::path::PathBuf;
+/// ```rust,no_run
+/// use reinhardt_apps::discover_migrations;
 ///
-/// let migrations = discover_migrations("myapp", &PathBuf::from("/tmp/migrations"));
-/// for migration in &migrations {
+/// let migrations = discover_migrations().unwrap();
+/// for migration in migrations {
 ///     println!("Found migration: {}", migration.qualified_name());
 /// }
 /// ```
-pub fn discover_migrations(
-    app_label: &str,
-    migration_root: &std::path::Path,
-) -> Vec<MigrationMetadata> {
+pub fn discover_migrations() -> Result<Vec<MigrationMetadata>, String> {
+    use crate::get_apps;
     use std::fs;
+    use std::path::PathBuf;
 
-    let mut result = Vec::new();
-    let app_path = migration_root.join(app_label);
+    let mut migrations = Vec::new();
+    let apps = get_apps();
 
-    // Check if migration directory exists for this app
-    if !app_path.exists() || !app_path.is_dir() {
-        return result;
-    }
-
-    // Scan for migration files
-    let entries = match fs::read_dir(&app_path) {
-        Ok(entries) => entries,
-        Err(_) => return result,
-    };
-
-    for entry in entries.flatten() {
-        let path = entry.path();
-
-        // Skip non-files
-        if !path.is_file() {
-            continue;
-        }
-
-        let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+    for app in apps.get_app_configs() {
+        // Get the app's base path
+        let Some(app_path_str) = app.path else {
             continue;
         };
 
-        // Skip files that don't look like migrations
-        if !file_name.starts_with(|c: char| c.is_ascii_digit()) {
+        let app_path = PathBuf::from(&app_path_str);
+        let migrations_dir = app_path.join("migrations");
+
+        // Check if migrations directory exists
+        if !migrations_dir.exists() || !migrations_dir.is_dir() {
             continue;
         }
 
-        // Skip files starting with _ or ~
-        if file_name.starts_with('_') || file_name.starts_with('~') {
-            continue;
-        }
+        // Read migration files
+        let entries = fs::read_dir(&migrations_dir)
+            .map_err(|e| format!("Failed to read migrations directory: {}", e))?;
 
-        // Parse migration file
-        if let Some(migration_name) = file_name.strip_suffix(".json") {
-            match parse_migration_file(&path, app_label, migration_name) {
-                Ok(metadata) => result.push(metadata),
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+            let path = entry.path();
+
+            // Skip non-files
+            if !path.is_file() {
+                continue;
+            }
+
+            // Only process .rs files
+            if path.extension().and_then(|s| s.to_str()) != Some("rs") {
+                continue;
+            }
+
+            let Some(file_name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+
+            // Skip files that don't start with a digit
+            if !file_name.starts_with(|c: char| c.is_ascii_digit()) {
+                continue;
+            }
+
+            // Parse migration file
+            match parse_migration_file(&path, &app.label) {
+                Ok(migration) => migrations.push(migration),
                 Err(_) => continue,
             }
         }
     }
 
-    result
+    Ok(migrations)
 }
 
 /// Parse a migration file and extract metadata
+///
+/// This function extracts migration information from the file name.
+/// Expected format: `{number}_{name}.rs` (e.g., `0001_initial.rs`)
 fn parse_migration_file(
     path: &std::path::Path,
     app_label: &str,
-    migration_name: &str,
-) -> std::io::Result<MigrationMetadata> {
-    use serde_json::Value;
-    use std::fs;
+) -> Result<MigrationMetadata, String> {
+    let filename = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| "Invalid filename".to_string())?;
 
-    let content = fs::read_to_string(path)?;
-    let parsed: Value = serde_json::from_str(&content)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    // Extract migration number and name
+    // Expected format: {number}_{name}
+    let parts: Vec<&str> = filename.splitn(2, '_').collect();
 
-    // Extract dependencies
-    let mut dependencies = Vec::new();
-    if let Some(deps_array) = parsed["dependencies"].as_array() {
-        for dep in deps_array {
-            if let Some(dep_array) = dep.as_array()
-                && dep_array.len() >= 2
-                && let (Some(dep_app), Some(dep_name)) =
-                    (dep_array[0].as_str(), dep_array[1].as_str())
-            {
-                // Leak strings to get 'static lifetime
-                let dep_app_static: &'static str =
-                    Box::leak(dep_app.to_string().into_boxed_str());
-                let dep_name_static: &'static str =
-                    Box::leak(dep_name.to_string().into_boxed_str());
-                dependencies.push((dep_app_static, dep_name_static));
-            }
-        }
+    if parts.len() != 2 {
+        return Err(format!("Invalid migration filename format: {}", filename));
     }
 
-    // Leak app_label and name to get 'static lifetime
-    let app_label_static: &'static str = Box::leak(app_label.to_string().into_boxed_str());
-    let name_static: &'static str = Box::leak(migration_name.to_string().into_boxed_str());
+    let number = parts[0]
+        .parse::<u32>()
+        .map_err(|_| format!("Invalid migration number: {}", parts[0]))?;
+
+    let name = parts[1].to_string();
 
     Ok(MigrationMetadata::new(
-        app_label_static,
-        name_static,
-        dependencies,
+        app_label.to_string(),
+        name,
+        number,
+        path.to_path_buf(),
+        vec![], // Dependencies are not extracted from file name
     ))
 }
 
@@ -603,189 +619,97 @@ mod tests {
 
     #[test]
     fn test_migration_metadata_new() {
-        let migration = MigrationMetadata::new("myapp", "0001_initial", vec![]);
+        use std::path::PathBuf;
+
+        let migration = MigrationMetadata::new(
+            "myapp".to_string(),
+            "initial".to_string(),
+            1,
+            PathBuf::from("/tmp/migrations/0001_initial.rs"),
+            vec![],
+        );
 
         assert_eq!(migration.app_label, "myapp");
-        assert_eq!(migration.name, "0001_initial");
+        assert_eq!(migration.name, "initial");
+        assert_eq!(migration.number, 1);
         assert_eq!(migration.dependencies.len(), 0);
     }
 
     #[test]
     fn test_migration_metadata_qualified_name() {
-        let migration = MigrationMetadata::new("myapp", "0001_initial", vec![]);
+        use std::path::PathBuf;
+
+        let migration = MigrationMetadata::new(
+            "myapp".to_string(),
+            "initial".to_string(),
+            1,
+            PathBuf::from("/tmp/migrations/0001_initial.rs"),
+            vec![],
+        );
         assert_eq!(migration.qualified_name(), "myapp.0001_initial");
     }
 
     #[test]
     fn test_migration_metadata_with_dependencies() {
+        use std::path::PathBuf;
+
         let migration = MigrationMetadata::new(
-            "myapp",
-            "0002_add_field",
-            vec![("myapp", "0001_initial"), ("auth", "0001_initial")],
+            "myapp".to_string(),
+            "add_field".to_string(),
+            2,
+            PathBuf::from("/tmp/migrations/0002_add_field.rs"),
+            vec![
+                "myapp.0001_initial".to_string(),
+                "auth.0001_initial".to_string(),
+            ],
         );
 
         assert_eq!(migration.dependencies.len(), 2);
-        assert_eq!(migration.dependencies[0], ("myapp", "0001_initial"));
-        assert_eq!(migration.dependencies[1], ("auth", "0001_initial"));
+        assert_eq!(migration.dependencies[0], "myapp.0001_initial");
+        assert_eq!(migration.dependencies[1], "auth.0001_initial");
     }
 
     #[test]
-    fn test_discover_migrations_empty_directory() {
-        use std::fs;
+    fn test_parse_migration_file() {
         use std::path::PathBuf;
 
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_empty");
-        fs::create_dir_all(&temp_dir).ok();
+        let path = PathBuf::from("/tmp/migrations/0001_initial.rs");
+        let result = parse_migration_file(&path, "myapp");
 
-        let migrations = discover_migrations("nonexistent_app", &temp_dir);
-        assert_eq!(migrations.len(), 0);
-
-        fs::remove_dir_all(&temp_dir).ok();
+        assert!(result.is_ok());
+        let migration = result.unwrap();
+        assert_eq!(migration.app_label, "myapp");
+        assert_eq!(migration.name, "initial");
+        assert_eq!(migration.number, 1);
     }
 
     #[test]
-    fn test_discover_migrations_single_migration() {
-        use std::fs;
+    fn test_parse_migration_file_with_underscores() {
         use std::path::PathBuf;
 
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_single");
-        let app_dir = temp_dir.join("testapp");
-        fs::create_dir_all(&app_dir).ok();
+        let path = PathBuf::from("/tmp/migrations/0002_add_user_field.rs");
+        let result = parse_migration_file(&path, "myapp");
 
-        let migration_json = r#"{
-            "app_label": "testapp",
-            "name": "0001_initial",
-            "dependencies": [],
-            "replaces": [],
-            "atomic": true,
-            "operations": []
-        }"#;
-        fs::write(app_dir.join("0001_initial.json"), migration_json).unwrap();
-
-        let migrations = discover_migrations("testapp", &temp_dir);
-        assert_eq!(migrations.len(), 1);
-        assert_eq!(migrations[0].app_label, "testapp");
-        assert_eq!(migrations[0].name, "0001_initial");
-        assert_eq!(migrations[0].dependencies.len(), 0);
-
-        fs::remove_dir_all(&temp_dir).ok();
+        assert!(result.is_ok());
+        let migration = result.unwrap();
+        assert_eq!(migration.app_label, "myapp");
+        assert_eq!(migration.name, "add_user_field");
+        assert_eq!(migration.number, 2);
     }
 
     #[test]
-    fn test_discover_migrations_with_dependencies() {
-        use std::fs;
+    fn test_parse_migration_file_invalid_format() {
         use std::path::PathBuf;
 
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_deps");
-        let app_dir = temp_dir.join("myapp");
-        fs::create_dir_all(&app_dir).ok();
+        // No underscore separator
+        let path = PathBuf::from("/tmp/migrations/0001initial.rs");
+        let result = parse_migration_file(&path, "myapp");
+        assert!(result.is_err());
 
-        let migration_json = r#"{
-            "app_label": "myapp",
-            "name": "0002_add_field",
-            "dependencies": [["myapp", "0001_initial"], ["auth", "0001_initial"]],
-            "replaces": [],
-            "atomic": true,
-            "operations": []
-        }"#;
-        fs::write(app_dir.join("0002_add_field.json"), migration_json).unwrap();
-
-        let migrations = discover_migrations("myapp", &temp_dir);
-        assert_eq!(migrations.len(), 1);
-        assert_eq!(migrations[0].dependencies.len(), 2);
-
-        fs::remove_dir_all(&temp_dir).ok();
-    }
-
-    #[test]
-    fn test_discover_migrations_multiple_files() {
-        use std::fs;
-        use std::path::PathBuf;
-
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_multiple");
-        let app_dir = temp_dir.join("testapp");
-        fs::create_dir_all(&app_dir).ok();
-
-        for i in 1..=3 {
-            let migration_json = format!(
-                r#"{{
-                    "app_label": "testapp",
-                    "name": "000{}_migration",
-                    "dependencies": [],
-                    "replaces": [],
-                    "atomic": true,
-                    "operations": []
-                }}"#,
-                i
-            );
-            fs::write(
-                app_dir.join(format!("000{}_migration.json", i)),
-                migration_json,
-            )
-            .unwrap();
-        }
-
-        let migrations = discover_migrations("testapp", &temp_dir);
-        assert_eq!(migrations.len(), 3);
-
-        fs::remove_dir_all(&temp_dir).ok();
-    }
-
-    #[test]
-    fn test_discover_migrations_skip_invalid_files() {
-        use std::fs;
-        use std::path::PathBuf;
-
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_skip");
-        let app_dir = temp_dir.join("testapp");
-        fs::create_dir_all(&app_dir).ok();
-
-        let valid_migration = r#"{
-            "app_label": "testapp",
-            "name": "0001_initial",
-            "dependencies": [],
-            "replaces": [],
-            "atomic": true,
-            "operations": []
-        }"#;
-        fs::write(app_dir.join("0001_initial.json"), valid_migration).unwrap();
-
-        // Create files that should be skipped
-        fs::write(app_dir.join("__init__.py"), "").unwrap();
-        fs::write(app_dir.join("_helper.json"), "{}").unwrap();
-        fs::write(app_dir.join("~temp.json"), "{}").unwrap();
-        fs::write(app_dir.join("README.md"), "# Migrations").unwrap();
-
-        let migrations = discover_migrations("testapp", &temp_dir);
-        assert_eq!(migrations.len(), 1);
-
-        fs::remove_dir_all(&temp_dir).ok();
-    }
-
-    #[test]
-    fn test_discover_migrations_qualified_name() {
-        use std::fs;
-        use std::path::PathBuf;
-
-        let temp_dir = PathBuf::from("/tmp/reinhardt_test_discover_migrations_qualified");
-        let app_dir = temp_dir.join("myapp");
-        fs::create_dir_all(&app_dir).ok();
-
-        let migration_json = r#"{
-            "app_label": "myapp",
-            "name": "0001_initial",
-            "dependencies": [],
-            "replaces": [],
-            "atomic": true,
-            "operations": []
-        }"#;
-        fs::write(app_dir.join("0001_initial.json"), migration_json).unwrap();
-
-        let migrations = discover_migrations("myapp", &temp_dir);
-        assert_eq!(migrations.len(), 1);
-        assert_eq!(migrations[0].qualified_name(), "myapp.0001_initial");
-
-        fs::remove_dir_all(&temp_dir).ok();
+        // Invalid number
+        let path = PathBuf::from("/tmp/migrations/abc_initial.rs");
+        let result = parse_migration_file(&path, "myapp");
+        assert!(result.is_err());
     }
 
     #[test]
