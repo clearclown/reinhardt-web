@@ -185,6 +185,7 @@ impl MakeMigrationsCommand {
     /// Returns list of successfully created file paths
     fn write_migrations(&self, migrations: &[crate::Migration]) -> Vec<String> {
         let mut created_files = Vec::new();
+        let mut apps = std::collections::HashSet::new();
 
         for migration in migrations {
             let migration_number = self.get_next_migration_number(&migration.app_label);
@@ -206,8 +207,24 @@ impl MakeMigrationsCommand {
                 Ok(_) => {
                     println!("  Created {}", file_path);
                     created_files.push(file_path);
+                    apps.insert(migration.app_label.clone());
                 }
                 Err(e) => eprintln!("Error writing to {}: {}", file_path, e),
+            }
+        }
+
+        // Update entry point files for all affected apps (Rust 2024 Edition style)
+        for app_label in apps {
+            if let Err(e) = self.update_app_entry_point(&app_label) {
+                eprintln!(
+                    "Warning: Failed to update entry point for {}: {}",
+                    app_label, e
+                );
+            } else {
+                println!(
+                    "  Updated entry point: {}/{}.rs",
+                    self.options.migrations_dir, app_label
+                );
             }
         }
 
@@ -341,6 +358,125 @@ impl MakeMigrationsCommand {
             }
             _ => "        // Unsupported operation\n".to_string(),
         }
+    }
+
+    /// Update app entry point file using AST
+    ///
+    /// Generates or updates `migrations/app_name.rs` that exports all migration modules.
+    /// Uses AST to ensure robust parsing and formatting.
+    ///
+    /// This is exposed as public for testing purposes.
+    ///
+    /// # Examples
+    ///
+    /// Generated entry point file structure:
+    /// ```rust
+    /// // migrations/myapp.rs
+    /// pub mod _0001_initial;
+    /// pub mod _0002_add_field;
+    ///
+    /// pub fn all_migrations() -> Vec<fn() -> Migration> {
+    ///     vec![_0001_initial::migration, _0002_add_field::migration]
+    /// }
+    /// ```
+    pub fn update_app_entry_point(&self, app_label: &str) -> Result<(), std::io::Error> {
+        use syn::{parse_file, File, Item, ItemFn, ItemMod};
+
+        let app_dir = format!("{}/{}", self.options.migrations_dir, app_label);
+        let entry_point_path = format!("{}/{}.rs", self.options.migrations_dir, app_label);
+
+        // Scan for all migration files in the app directory
+        let mut migration_modules = Vec::new();
+        if let Ok(entries) = fs::read_dir(&app_dir) {
+            for entry in entries.flatten() {
+                if let Some(file_name) = entry.file_name().to_str() {
+                    if file_name.ends_with(".rs")
+                        && file_name
+                            .chars()
+                            .next()
+                            .map_or(false, |c| c.is_ascii_digit())
+                    {
+                        // Convert filename to valid module name (prefix with _ and replace - with _)
+                        let module_name = format!(
+                            "_{}",
+                            file_name.trim_end_matches(".rs").replace('-', "_")
+                        );
+                        migration_modules.push(module_name);
+                    }
+                }
+            }
+        }
+
+        // Sort migration modules by name to ensure consistent ordering
+        migration_modules.sort();
+
+        // Parse existing file or create default AST
+        let mut ast: File = if Path::new(&entry_point_path).exists() {
+            let content = fs::read_to_string(&entry_point_path)?;
+            parse_file(&content).map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Failed to parse {}: {}", entry_point_path, e),
+                )
+            })?
+        } else {
+            parse_file("//! Migration entry point\n").map_err(|e| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    format!("Failed to create default AST: {}", e),
+                )
+            })?
+        };
+
+        // Track which modules are already declared
+        let mut existing_modules = std::collections::HashSet::new();
+        for item in &ast.items {
+            if let Item::Mod(ItemMod { ident, .. }) = item {
+                existing_modules.insert(ident.to_string());
+            }
+        }
+
+        // Remove old module declarations and all_migrations function
+        ast.items.retain(|item| {
+            match item {
+                Item::Mod(_) => false,
+                Item::Fn(ItemFn { sig, .. }) => sig.ident != "all_migrations",
+                _ => true,
+            }
+        });
+
+        // Add all module declarations
+        for module_name in &migration_modules {
+            let module_ident =
+                syn::Ident::new(module_name, proc_macro2::Span::call_site());
+            let mod_item: ItemMod = syn::parse_quote! {
+                pub mod #module_ident;
+            };
+            ast.items.push(Item::Mod(mod_item));
+        }
+
+        // Generate all_migrations function
+        let migration_calls: Vec<_> = migration_modules
+            .iter()
+            .map(|module_name| {
+                let module_ident =
+                    syn::Ident::new(module_name, proc_macro2::Span::call_site());
+                quote::quote! { #module_ident::migration }
+            })
+            .collect();
+
+        let all_migrations_fn: ItemFn = syn::parse_quote! {
+            pub fn all_migrations() -> Vec<fn() -> Migration> {
+                vec![#(#migration_calls),*]
+            }
+        };
+        ast.items.push(Item::Fn(all_migrations_fn));
+
+        // Format and write back to file
+        let formatted = prettyplease::unparse(&ast);
+        fs::write(&entry_point_path, formatted)?;
+
+        Ok(())
     }
 }
 
