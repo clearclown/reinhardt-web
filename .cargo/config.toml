@@ -1,0 +1,15 @@
+# Cargo configuration for Reinhardt project
+#
+# This file configures environment variables for TestContainers to work with Podman.
+
+[env]
+# Podman socket configuration for Docker-compatible API
+# TestContainers will connect to Podman instead of Docker Desktop
+DOCKER_HOST = "unix:///var/run/podman/podman.sock"
+
+# Override TestContainers Docker socket detection
+TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = "/var/run/podman/podman.sock"
+
+# Disable Ryuk container for Podman compatibility
+# Ryuk is a cleanup container that may have issues with Podman
+TESTCONTAINERS_RYUK_DISABLED = "true"
