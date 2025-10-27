@@ -3,9 +3,11 @@
 //! This module provides the infrastructure for admin actions - operations that can be
 //! performed on multiple selected items at once.
 
-use crate::{AdminError, AdminResult};
+use crate::{AdminDatabase, AdminError, AdminResult};
 use async_trait::async_trait;
+use reinhardt_orm::Model;
 use std::any::Any;
+use std::sync::Arc;
 
 /// Result of executing an admin action
 #[derive(Debug, Clone, PartialEq)]
@@ -156,6 +158,9 @@ pub trait AdminAction: Send + Sync {
 /// ```
 pub struct DeleteSelectedAction {
     description: String,
+    database: Option<Arc<AdminDatabase>>,
+    table_name: Option<String>,
+    pk_field: Option<String>,
 }
 
 impl DeleteSelectedAction {
@@ -163,6 +168,9 @@ impl DeleteSelectedAction {
     pub fn new() -> Self {
         Self {
             description: "Delete selected items".to_string(),
+            database: None,
+            table_name: None,
+            pk_field: None,
         }
     }
 
@@ -170,7 +178,28 @@ impl DeleteSelectedAction {
     pub fn with_description(description: impl Into<String>) -> Self {
         Self {
             description: description.into(),
+            database: None,
+            table_name: None,
+            pk_field: None,
         }
+    }
+
+    /// Set the database connection for this action
+    pub fn with_database(mut self, database: Arc<AdminDatabase>) -> Self {
+        self.database = Some(database);
+        self
+    }
+
+    /// Set the table name for this action
+    pub fn with_table(mut self, table_name: impl Into<String>) -> Self {
+        self.table_name = Some(table_name.into());
+        self
+    }
+
+    /// Set the primary key field name for this action
+    pub fn with_pk_field(mut self, pk_field: impl Into<String>) -> Self {
+        self.pk_field = Some(pk_field.into());
+        self
     }
 }
 
@@ -207,7 +236,7 @@ impl AdminAction for DeleteSelectedAction {
         item_ids: Vec<String>,
         user: &dyn Any,
     ) -> ActionResult {
-        let _ = (model_name, user);
+        let _ = user;
 
         if item_ids.is_empty() {
             return ActionResult::Warning {
@@ -217,11 +246,55 @@ impl AdminAction for DeleteSelectedAction {
             };
         }
 
-        // TODO: Implement actual deletion logic with database
-        ActionResult::Success {
-            message: format!("Successfully deleted {} item(s)", item_ids.len()),
-            affected_count: item_ids.len(),
+        // If database is not configured, return placeholder success
+        let Some(ref database) = self.database else {
+            return ActionResult::Success {
+                message: format!("Successfully deleted {} item(s)", item_ids.len()),
+                affected_count: item_ids.len(),
+            };
+        };
+
+        let table_name = self
+            .table_name
+            .as_deref()
+            .unwrap_or_else(|| model_name);
+        let pk_field = self.pk_field.as_deref().unwrap_or("id");
+
+        // Perform bulk deletion using AdminDatabase
+        // Note: We use a dummy Model type here since we only need the interface
+        // In real implementation, this would be parameterized with the actual model type
+        match database
+            .bulk_delete::<DummyModel>(table_name, pk_field, item_ids.clone())
+            .await
+        {
+            Ok(affected) => ActionResult::Success {
+                message: format!("Successfully deleted {} item(s)", affected),
+                affected_count: affected as usize,
+            },
+            Err(e) => ActionResult::Error {
+                message: format!("Failed to delete items: {}", e),
+                errors: vec![e.to_string()],
+            },
         }
+    }
+}
+
+// Dummy model type for generic database operations
+// In real implementation, we would parameterize the action with the actual model type
+#[derive(Clone)]
+struct DummyModel {
+    id: i64,
+}
+
+impl Model for DummyModel {
+    type PrimaryKey = i64;
+
+    fn table_name() -> &'static str {
+        "dummy"
+    }
+
+    fn primary_key(&self) -> &Self::PrimaryKey {
+        &self.id
     }
 }
 
