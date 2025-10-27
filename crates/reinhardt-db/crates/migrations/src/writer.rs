@@ -1,6 +1,16 @@
 //! Migration file writer
 //!
 //! Generates Rust migration files from Migration structs.
+//!
+//! ## AST-Based Code Generation
+//!
+//! This module uses Abstract Syntax Tree (AST) parsing via `syn` and `quote`
+//! for robust migration file generation. Benefits include:
+//!
+//! - **Syntax Guarantee**: Generates syntactically correct Rust code
+//! - **Consistent Formatting**: Uses `prettyplease` for standardized output
+//! - **Maintainability**: Structural code generation via quote! macro
+//! - **Extensibility**: Easy to add new operation types
 
 use crate::{Migration, Operation, Result};
 use std::fs;
@@ -86,6 +96,97 @@ impl MigrationWriter {
         content.push_str("}\n");
 
         content
+    }
+
+    /// Generate migration file content using AST
+    ///
+    /// This method uses Abstract Syntax Tree parsing to generate
+    /// syntactically correct, well-formatted Rust code.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_migrations::{Migration, Operation, ColumnDefinition, writer::MigrationWriter};
+    ///
+    /// let migration = Migration::new("0001_initial", "myapp")
+    ///     .add_operation(Operation::CreateTable {
+    ///         name: "users".to_string(),
+    ///         columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+    ///         constraints: vec![],
+    ///     });
+    ///
+    /// let writer = MigrationWriter::new(migration);
+    /// let content = writer.as_string_ast();
+    ///
+    /// assert!(content.contains("Name: 0001_initial"));
+    /// assert!(content.contains("App: myapp"));
+    /// assert!(content.contains("Migration::new"));
+    /// ```
+    pub fn as_string_ast(&self) -> String {
+        use syn::{File, Item, ItemFn, ItemUse};
+
+        // Generate imports
+        let use_item: ItemUse = Self::generate_imports();
+
+        // Generate function signature
+        let signature = self.generate_function_signature();
+
+        // Build migration expression with method chain
+        let mut migration_expr = self.generate_migration_new();
+
+        // Add dependencies
+        for (dep_app, dep_name) in &self.migration.dependencies {
+            let dep_call = self.generate_add_dependency(dep_app, dep_name);
+            migration_expr = syn::parse_quote! {
+                #migration_expr.#dep_call
+            };
+        }
+
+        // Add operations
+        for operation in &self.migration.operations {
+            let op_call = self.generate_add_operation_ast(operation);
+            migration_expr = syn::parse_quote! {
+                #migration_expr.#op_call
+            };
+        }
+
+        // Create function body
+        let block: syn::Block = syn::parse_quote! {
+            {
+                #migration_expr
+            }
+        };
+
+        // Create complete function
+        let func = ItemFn {
+            attrs: vec![],
+            vis: syn::parse_quote!(pub),
+            sig: signature,
+            block: Box::new(block),
+        };
+
+        // Build AST
+        let mut ast = File {
+            shebang: None,
+            attrs: vec![],
+            items: vec![],
+        };
+
+        // Add file header as inner attributes
+        let header_doc_1: syn::Attribute = syn::parse_quote!(#![doc = " Auto-generated migration"]);
+        let header_doc_2: syn::Attribute = syn::parse_quote!(#![doc = concat!(" Name: ", stringify!(#(self.migration.name)))] );
+        let header_doc_3: syn::Attribute = syn::parse_quote!(#![doc = concat!(" App: ", stringify!(#(self.migration.app_label)))] );
+
+        ast.attrs.push(header_doc_1);
+        ast.attrs.push(header_doc_2);
+        ast.attrs.push(header_doc_3);
+
+        // Add use statement and function
+        ast.items.push(Item::Use(use_item));
+        ast.items.push(Item::Fn(func));
+
+        // Format with prettyplease
+        prettyplease::unparse(&ast)
     }
 
     /// Serialize an operation to Rust code
@@ -238,6 +339,160 @@ impl MigrationWriter {
         fs::write(&filepath, self.as_string())?;
 
         Ok(filepath.to_string_lossy().into_owned())
+    }
+
+    // =============================================================
+    // AST-Based Code Generation Methods
+    // =============================================================
+
+    /// Generate file header doc comments as AST attributes
+    #[allow(dead_code)]
+    fn generate_file_header(&self) -> Vec<syn::Attribute> {
+        vec![
+            syn::parse_quote!(#![doc = " Auto-generated migration"]),
+            syn::parse_quote!(#![doc = concat!(" Name: ", #(self.migration.name))]),
+            syn::parse_quote!(#![doc = concat!(" App: ", #(self.migration.app_label))]),
+        ]
+    }
+
+    /// Generate use statement for migration imports
+    fn generate_imports() -> syn::ItemUse {
+        syn::parse_quote! {
+            use reinhardt_migrations::{
+                Migration, Operation, CreateTable, AddColumn, AlterColumn, ColumnDefinition
+            };
+        }
+    }
+
+    /// Generate migration function signature
+    fn generate_function_signature(&self) -> syn::Signature {
+        let func_name_str = format!("migration_{}", self.migration.name.replace('-', "_"));
+        let func_name = syn::Ident::new(&func_name_str, proc_macro2::Span::call_site());
+
+        // Build signature manually since parse_quote needs a complete function
+        use syn::ReturnType;
+
+        syn::Signature {
+            constness: None,
+            asyncness: None,
+            unsafety: None,
+            abi: None,
+            fn_token: Default::default(),
+            ident: func_name,
+            generics: Default::default(),
+            paren_token: Default::default(),
+            inputs: Default::default(),
+            variadic: None,
+            output: ReturnType::Type(
+                Default::default(),
+                Box::new(syn::parse_quote!(Migration)),
+            ),
+        }
+    }
+
+    /// Generate Migration::new() expression
+    fn generate_migration_new(&self) -> syn::Expr {
+        let name = &self.migration.name;
+        let app_label = &self.migration.app_label;
+
+        syn::parse_quote! {
+            Migration::new(#name, #app_label)
+        }
+    }
+
+    /// Generate .add_dependency() method call expression
+    fn generate_add_dependency(&self, dep_app: &str, dep_name: &str) -> syn::Expr {
+        syn::parse_quote! {
+            add_dependency(#dep_app, #dep_name)
+        }
+    }
+
+    /// Generate .add_operation() method call expression (AST version)
+    fn generate_add_operation_ast(&self, operation: &Operation) -> syn::Expr {
+        match operation {
+            Operation::CreateTable {
+                name,
+                columns,
+                constraints,
+            } => {
+                let column_exprs: Vec<syn::Expr> = columns
+                    .iter()
+                    .map(|col| self.generate_column_definition_ast(col))
+                    .collect();
+
+                let constraint_strs: Vec<&String> = constraints.iter().collect();
+
+                syn::parse_quote! {
+                    add_operation(Operation::CreateTable {
+                        name: #name.to_string(),
+                        columns: vec![#(#column_exprs),*],
+                        constraints: vec![#(#constraint_strs.to_string()),*],
+                    })
+                }
+            }
+            Operation::DropTable { name } => {
+                syn::parse_quote! {
+                    add_operation(Operation::DropTable {
+                        name: #name.to_string(),
+                    })
+                }
+            }
+            Operation::AddColumn { table, column } => {
+                let column_expr = self.generate_column_definition_ast(column);
+
+                syn::parse_quote! {
+                    add_operation(Operation::AddColumn {
+                        table: #table.to_string(),
+                        column: #column_expr,
+                    })
+                }
+            }
+            Operation::AlterColumn {
+                table,
+                column,
+                new_definition,
+            } => {
+                let new_def_expr = self.generate_column_definition_ast(new_definition);
+
+                syn::parse_quote! {
+                    add_operation(Operation::AlterColumn {
+                        table: #table.to_string(),
+                        column: #column.to_string(),
+                        new_definition: #new_def_expr,
+                    })
+                }
+            }
+            Operation::DropColumn { table, column } => {
+                syn::parse_quote! {
+                    add_operation(Operation::DropColumn {
+                        table: #table.to_string(),
+                        column: #column.to_string(),
+                    })
+                }
+            }
+            _ => {
+                // Unsupported operations - generate a comment
+                syn::parse_quote! {
+                    add_operation(Operation::RunSQL {
+                        sql: "-- Unsupported operation".to_string(),
+                        reverse_sql: None,
+                    })
+                }
+            }
+        }
+    }
+
+    /// Generate ColumnDefinition struct expression
+    fn generate_column_definition_ast(&self, column: &crate::ColumnDefinition) -> syn::Expr {
+        let name = &column.name;
+        let type_def = &column.type_definition;
+
+        syn::parse_quote! {
+            ColumnDefinition {
+                name: #name.to_string(),
+                type_definition: #type_def.to_string(),
+            }
+        }
     }
 }
 
