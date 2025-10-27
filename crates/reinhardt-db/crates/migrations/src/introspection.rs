@@ -536,6 +536,83 @@ impl SQLiteIntrospector {
         }
     }
 
+    /// Extracts foreign key information from SQLite using PRAGMA foreign_key_list.
+    ///
+    /// SQLite's PRAGMA foreign_key_list returns:
+    /// - id: FK constraint ID (for multi-column FKs, same ID for all columns)
+    /// - seq: Column sequence in the FK
+    /// - table: Referenced table name
+    /// - from: Source column name
+    /// - to: Referenced column name
+    /// - on_update: ON UPDATE action
+    /// - on_delete: ON DELETE action
+    /// - match: MATCH clause (usually 'NONE')
+    async fn extract_foreign_keys(
+        pool: &sqlx::SqlitePool,
+        table_name: &str,
+    ) -> Result<Vec<ForeignKeyInfo>> {
+        #[derive(sqlx::FromRow)]
+        struct ForeignKeyRow {
+            id: i64,
+            seq: i64,
+            table: String,
+            from: String,
+            to: String,
+            on_update: String,
+            on_delete: String,
+            #[allow(dead_code)]
+            r#match: String,
+        }
+
+        let query = format!("PRAGMA foreign_key_list({})", table_name);
+        let rows: Vec<ForeignKeyRow> = sqlx::query_as(&query)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
+
+        // Group by FK ID to handle multi-column foreign keys
+        let mut fk_map: HashMap<i64, Vec<ForeignKeyRow>> = HashMap::new();
+        for row in rows {
+            fk_map.entry(row.id).or_insert_with(Vec::new).push(row);
+        }
+
+        // Convert to ForeignKeyInfo
+        let mut foreign_keys = Vec::new();
+        for (fk_id, mut fk_rows) in fk_map {
+            // Sort by sequence to maintain column order
+            fk_rows.sort_by_key(|r| r.seq);
+
+            let referenced_table = fk_rows[0].table.clone();
+            let on_update = fk_rows[0].on_update.clone();
+            let on_delete = fk_rows[0].on_delete.clone();
+
+            let columns: Vec<String> = fk_rows.iter().map(|r| r.from.clone()).collect();
+            let referenced_columns: Vec<String> = fk_rows.iter().map(|r| r.to.clone()).collect();
+
+            // Generate FK constraint name
+            let name = format!("fk_{}_{}", table_name, fk_id);
+
+            foreign_keys.push(ForeignKeyInfo {
+                name,
+                columns,
+                referenced_table,
+                referenced_columns,
+                on_delete: if on_delete == "NO ACTION" {
+                    None
+                } else {
+                    Some(on_delete)
+                },
+                on_update: if on_update == "NO ACTION" {
+                    None
+                } else {
+                    Some(on_update)
+                },
+            });
+        }
+
+        Ok(foreign_keys)
+    }
+
     fn convert_table_def(table_def: &sea_schema::sqlite::def::TableDef) -> Result<TableInfo> {
         let mut columns = HashMap::new();
         let mut primary_key = Vec::new();
@@ -597,10 +674,8 @@ impl SQLiteIntrospector {
             }
         }
 
-        // Extract foreign keys
-        // Note: SQLite's ForeignKeysInfo has private fields in this version of sea-schema.
-        // We need to manually query PRAGMA foreign_key_list to get complete information.
-        // For now, we use a workaround to extract minimal foreign key information.
+        // Foreign keys will be extracted separately using PRAGMA foreign_key_list
+        // in the read_schema method
         let foreign_keys: Vec<ForeignKeyInfo> = Vec::new();
 
         Ok(TableInfo {
@@ -628,7 +703,12 @@ impl DatabaseIntrospector for SQLiteIntrospector {
 
         let mut tables = HashMap::new();
         for table_def in schema.tables {
-            let table_info = Self::convert_table_def(&table_def)?;
+            let mut table_info = Self::convert_table_def(&table_def)?;
+
+            // Extract foreign keys using PRAGMA foreign_key_list
+            let foreign_keys = Self::extract_foreign_keys(&self.pool, &table_info.name).await?;
+            table_info.foreign_keys = foreign_keys;
+
             tables.insert(table_info.name.clone(), table_info);
         }
 
@@ -636,8 +716,27 @@ impl DatabaseIntrospector for SQLiteIntrospector {
     }
 
     async fn read_table(&self, table_name: &str) -> Result<Option<TableInfo>> {
-        let schema = self.read_schema().await?;
-        Ok(schema.tables.get(table_name).cloned())
+        use sea_schema::sqlite::discovery::SchemaDiscovery;
+
+        let discovery = SchemaDiscovery::new(self.pool.clone());
+        let schema = discovery
+            .discover()
+            .await
+            .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
+
+        for table_def in schema.tables {
+            if table_def.name == table_name {
+                let mut table_info = Self::convert_table_def(&table_def)?;
+
+                // Extract foreign keys using PRAGMA foreign_key_list
+                let foreign_keys = Self::extract_foreign_keys(&self.pool, &table_info.name).await?;
+                table_info.foreign_keys = foreign_keys;
+
+                return Ok(Some(table_info));
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -830,14 +929,38 @@ mod tests {
 
         // Check posts table
         assert!(schema.tables.contains_key("posts"));
-        let _posts_table = &schema.tables["posts"];
+        let posts_table = &schema.tables["posts"];
 
-        // NOTE: Foreign key extraction from SQLite is currently limited due to
-        // sea-schema's ForeignKeysInfo having private fields.
-        // This is a known limitation and should be addressed in a future version.
-        // For now, we skip the foreign key assertions.
+        // Verify foreign key on posts table
+        assert!(
+            !posts_table.foreign_keys.is_empty(),
+            "Posts table should have foreign key constraint"
+        );
 
-        // TODO: Implement direct PRAGMA foreign_key_list query to extract FK info
-        // when sea-schema provides public accessors or when we implement a workaround.
+        let fk = &posts_table.foreign_keys[0];
+        assert_eq!(
+            fk.referenced_table, "users",
+            "Foreign key should reference users table"
+        );
+        assert_eq!(
+            fk.columns,
+            vec!["user_id"],
+            "Foreign key should be on user_id column"
+        );
+        assert_eq!(
+            fk.referenced_columns,
+            vec!["id"],
+            "Foreign key should reference id column"
+        );
+        assert_eq!(
+            fk.on_delete,
+            Some("CASCADE".to_string()),
+            "Foreign key should have CASCADE on delete"
+        );
+        assert_eq!(
+            fk.on_update,
+            Some("CASCADE".to_string()),
+            "Foreign key should have CASCADE on update"
+        );
     }
 }
