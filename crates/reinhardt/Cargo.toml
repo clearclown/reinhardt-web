@@ -64,6 +64,7 @@ conf = ["reinhardt-conf"]
 core = ["reinhardt-core"]
 rest = ["reinhardt-rest"]
 di = ["reinhardt-di"]
+di-generator = ["di", "reinhardt-di/generator"]
 test = ["reinhardt-test"]
 
 # Meta features
