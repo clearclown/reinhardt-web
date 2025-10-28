@@ -506,6 +506,95 @@ pub fn auto_source(path: impl AsRef<Path>) -> Result<Box<dyn ConfigSource>, Sour
     }
 }
 
+/// Low-priority environment variable configuration source
+///
+/// This wrapper provides the same functionality as `EnvSource` but with lower priority
+/// than TOML files, allowing TOML configuration to override environment variables.
+///
+/// Priority: 40 (lower than TOML files at 50)
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_settings::sources::LowPriorityEnvSource;
+/// use reinhardt_settings::builder::SettingsBuilder;
+///
+/// let settings = SettingsBuilder::new()
+///     .add_source(LowPriorityEnvSource::new())
+///     .build()
+///     .unwrap();
+/// ```
+pub struct LowPriorityEnvSource {
+    inner: EnvSource,
+}
+
+impl LowPriorityEnvSource {
+    /// Create a new low-priority environment variable configuration source
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_settings::sources::LowPriorityEnvSource;
+    ///
+    /// let source = LowPriorityEnvSource::new();
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            inner: EnvSource::new(),
+        }
+    }
+
+    /// Set a prefix filter for environment variables
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_settings::sources::LowPriorityEnvSource;
+    ///
+    /// let source = LowPriorityEnvSource::new()
+    ///     .with_prefix("REINHARDT_");
+    /// ```
+    pub fn with_prefix(mut self, prefix: impl Into<String>) -> Self {
+        self.inner = self.inner.with_prefix(prefix);
+        self
+    }
+
+    /// Enable variable interpolation for environment values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_settings::sources::LowPriorityEnvSource;
+    ///
+    /// let source = LowPriorityEnvSource::new()
+    ///     .with_interpolation(true);
+    /// ```
+    pub fn with_interpolation(mut self, enabled: bool) -> Self {
+        self.inner = self.inner.with_interpolation(enabled);
+        self
+    }
+}
+
+impl Default for LowPriorityEnvSource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ConfigSource for LowPriorityEnvSource {
+    fn load(&self) -> Result<IndexMap<String, Value>, SourceError> {
+        self.inner.load()
+    }
+
+    fn priority(&self) -> u8 {
+        40 // Lower than TOML files (50), allowing TOML to override env vars
+    }
+
+    fn description(&self) -> String {
+        format!("{} (low priority)", self.inner.description())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

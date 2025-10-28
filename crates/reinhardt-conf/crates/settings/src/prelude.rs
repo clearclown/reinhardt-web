@@ -14,8 +14,8 @@ pub use crate::env_parser::{
 };
 pub use crate::profile::Profile;
 pub use crate::sources::{
-    auto_source, ConfigSource, DefaultSource, DotEnvSource, EnvSource, JsonFileSource, SourceError,
-    TomlFileSource,
+    auto_source, ConfigSource, DefaultSource, DotEnvSource, EnvSource, JsonFileSource,
+    LowPriorityEnvSource, SourceError, TomlFileSource,
 };
 pub use crate::validation::{
     ChoiceValidator, PatternValidator, RangeValidator, RequiredValidator, SecurityValidator,
