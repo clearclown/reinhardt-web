@@ -5,8 +5,8 @@ edition = "2024"
 publish = false
 
 [dependencies]
-# ⚠️ crates.io から最新版を取得
-# TODO: reinhardt が公開されるまでこの依存関係は解決されません
+# ⚠️ Get the latest version from crates.io
+# TODO: This dependency will not resolve until reinhardt is published
 reinhardt = "*"
 
 [dev-dependencies]
