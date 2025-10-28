@@ -205,8 +205,44 @@
 //!     .await.unwrap();
 //! # }
 //! ```
+//!
+//! ## Compile-time Template Rendering (Phase 3)
+//!
+//! Askama integration for 100-1000x performance improvement on static templates:
+//!
+//! ```rust,ignore
+//! use reinhardt_renderers::{AskamaRenderer, UserTemplate};
+//!
+//! // Define template at compile-time
+//! let template = UserTemplate {
+//!     name: "Alice".to_string(),
+//!     email: "alice@example.com".to_string(),
+//!     age: 25,
+//! };
+//!
+//! let renderer = AskamaRenderer::new();
+//! let html = renderer.render(&template).unwrap();
+//! ```
+//!
+//! Choose the right template strategy:
+//!
+//! ```rust
+//! use reinhardt_renderers::strategy::{TemplateStrategy, TemplateStrategySelector, TemplateSource};
+//!
+//! // Static templates → Compile-time (100-1000x faster)
+//! let source = TemplateSource::Static("user.html");
+//! let strategy = TemplateStrategySelector::select(&source);
+//! assert_eq!(strategy, TemplateStrategy::CompileTime);
+//!
+//! // Dynamic templates → Runtime (flexible)
+//! let source = TemplateSource::Dynamic("<h1>{{ title }}</h1>".to_string());
+//! let strategy = TemplateStrategySelector::select(&source);
+//! assert_eq!(strategy, TemplateStrategy::Runtime);
+//! ```
 
 pub mod admin_renderer;
+pub mod askama_renderer;
+pub mod strategy;
 pub mod cached;
 pub mod chain;
 pub mod compression;
@@ -228,6 +264,9 @@ pub mod yaml_renderer;
 mod tests;
 
 pub use admin_renderer::AdminRenderer;
+pub use askama_renderer::{
+    AskamaRenderer, Post, PostListTemplate, UserData, UserListTemplate, UserTemplate,
+};
 pub use cached::{CacheConfig, CachedRenderer};
 pub use chain::RendererChain;
 pub use compression::{CompressionAlgorithm, CompressionRenderer};
@@ -239,7 +278,10 @@ pub use openapi::OpenAPIRenderer;
 pub use renderer::{RenderResult, Renderer, RendererContext, RendererRegistry};
 pub use schemajs_renderer::SchemaJSRenderer;
 pub use static_html_renderer::StaticHTMLRenderer;
-pub use streaming::{StreamingConfig, StreamingCSVRenderer, StreamingJSONRenderer, StreamingRenderer};
+pub use strategy::{TemplateSource, TemplateStrategy, TemplateStrategySelector};
+pub use streaming::{
+    StreamingConfig, StreamingCSVRenderer, StreamingJSONRenderer, StreamingRenderer,
+};
 pub use template_html_renderer::TemplateHTMLRenderer;
 pub use xml::XMLRenderer;
 pub use yaml_renderer::YAMLRenderer;

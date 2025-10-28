@@ -1,0 +1,8 @@
+[general]
+# Template directories relative to this askama.toml file
+dirs = ["templates"]
+
+# Syntax and escaping configuration
+[escaping]
+# File extensions that should use HTML escaping
+extensions = ["html", "htm", "xml"]
