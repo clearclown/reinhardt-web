@@ -274,6 +274,10 @@ impl DatabaseMigrationExecutor {
             DatabaseType::Postgres => SqlDialect::Postgres,
             DatabaseType::Sqlite => SqlDialect::Sqlite,
             DatabaseType::Mysql => SqlDialect::Mysql,
+            DatabaseType::MongoDB => {
+                // TODO: Implement MongoDB migration support
+                return Err(crate::MigrationError::UnsupportedDatabase("MongoDB migrations are not yet supported".to_string()));
+            }
         };
 
         for operation in &migration.operations {
@@ -310,6 +314,10 @@ impl DatabaseMigrationExecutor {
             DatabaseType::Postgres => SqlDialect::Postgres,
             DatabaseType::Sqlite => SqlDialect::Sqlite,
             DatabaseType::Mysql => SqlDialect::Mysql,
+            DatabaseType::MongoDB => {
+                // TODO: Implement MongoDB migration support
+                return Err(crate::MigrationError::UnsupportedDatabase("MongoDB migrations are not yet supported".to_string()));
+            }
         };
 
         for migration in &plan.migrations {

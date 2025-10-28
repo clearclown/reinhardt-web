@@ -37,6 +37,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use async_trait::async_trait;
 
+#[cfg(feature = "postgres")]
+use backends::PostgresTwoPhaseParticipant;
+
+#[cfg(feature = "mysql")]
+use backends::MySqlTwoPhaseParticipant;
+
 /// Errors that can occur during two-phase commit operations
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TwoPhaseError {
@@ -911,7 +917,7 @@ impl TwoPhaseCoordinator {
 #[cfg(feature = "postgres")]
 pub struct PostgresParticipantAdapter {
     id: String,
-    backend: reinhardt_db_backends::backends::postgresql::PostgresTwoPhaseParticipant,
+    backend: PostgresTwoPhaseParticipant,
     status: ParticipantStatus,
 }
 
@@ -934,7 +940,7 @@ impl PostgresParticipantAdapter {
     pub fn new(id: impl Into<String>, pool: sqlx::PgPool) -> Self {
         Self {
             id: id.into(),
-            backend: reinhardt_db_backends::backends::postgresql::PostgresTwoPhaseParticipant::new(pool),
+            backend: PostgresTwoPhaseParticipant::new(pool),
             status: ParticipantStatus::Active,
         }
     }
@@ -943,7 +949,7 @@ impl PostgresParticipantAdapter {
     pub fn from_pool_arc(id: impl Into<String>, pool: std::sync::Arc<sqlx::PgPool>) -> Self {
         Self {
             id: id.into(),
-            backend: reinhardt_db_backends::backends::postgresql::PostgresTwoPhaseParticipant::from_pool_arc(pool),
+            backend: PostgresTwoPhaseParticipant::from_pool_arc(pool),
             status: ParticipantStatus::Active,
         }
     }
@@ -1008,7 +1014,7 @@ impl TwoPhaseParticipant for PostgresParticipantAdapter {
 #[cfg(feature = "mysql")]
 pub struct MySqlParticipantAdapter {
     id: String,
-    backend: reinhardt_db_backends::backends::mysql::MySqlTwoPhaseParticipant,
+    backend: MySqlTwoPhaseParticipant,
     status: ParticipantStatus,
 }
 
@@ -1031,7 +1037,7 @@ impl MySqlParticipantAdapter {
     pub fn new(id: impl Into<String>, pool: sqlx::MySqlPool) -> Self {
         Self {
             id: id.into(),
-            backend: reinhardt_db_backends::backends::mysql::MySqlTwoPhaseParticipant::new(pool),
+            backend: MySqlTwoPhaseParticipant::new(pool),
             status: ParticipantStatus::Active,
         }
     }
@@ -1040,7 +1046,7 @@ impl MySqlParticipantAdapter {
     pub fn from_pool_arc(id: impl Into<String>, pool: std::sync::Arc<sqlx::MySqlPool>) -> Self {
         Self {
             id: id.into(),
-            backend: reinhardt_db_backends::backends::mysql::MySqlTwoPhaseParticipant::from_pool_arc(pool),
+            backend: MySqlTwoPhaseParticipant::from_pool_arc(pool),
             status: ParticipantStatus::Active,
         }
     }

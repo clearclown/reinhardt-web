@@ -381,7 +381,7 @@ impl<L: Model, R: Model> ManyToMany<L, R> {
                 Alias::new(&self.association_table.left_column),
                 Alias::new(&self.association_table.right_column),
             ])
-            .values_panic([left_id.into(), right_id.into()])
+            .values_panic([Expr::val(left_id), Expr::val(right_id)])
             .to_owned()
     }
 

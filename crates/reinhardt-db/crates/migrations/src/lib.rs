@@ -132,6 +132,9 @@ pub enum MigrationError {
 
     #[error("Introspection error: {0}")]
     IntrospectionError(String),
+
+    #[error("Unsupported database: {0}")]
+    UnsupportedDatabase(String),
 }
 
 pub type Result<T> = std::result::Result<T, MigrationError>;

@@ -1,4 +1,4 @@
-use crate::connection::{DatabaseConnection, DatabaseExecutor};
+use crate::connection::DatabaseConnection;
 use crate::{Model, QuerySet};
 use sea_query::{
     Alias, DeleteStatement, Expr, ExprTrait, InsertStatement, Query, SelectStatement,
@@ -90,8 +90,8 @@ impl<M: Model> Manager<M> {
         stmt.into_table(Alias::new(M::table_name()));
 
         let fields: Vec<_> = obj.keys().map(|k| Alias::new(k.as_str())).collect();
-        let values: Vec<sea_query::Value> =
-            obj.values().map(|v| Self::json_to_sea_value(v)).collect();
+        let values: Vec<sea_query::Expr> =
+            obj.values().map(|v| Expr::value(Self::json_to_sea_value(v))).collect();
 
         stmt.columns(fields);
         stmt.values_panic(values);
@@ -122,20 +122,16 @@ impl<M: Model> Manager<M> {
                     sea_query::Value::Int(None)
                 }
             }
-            serde_json::Value::String(s) => sea_query::Value::String(Some(Box::new(s.clone()))),
-            serde_json::Value::Array(arr) => {
-                // Convert JSON array to sea_query array
-                let values: Vec<sea_query::Value> =
-                    arr.iter().map(|v| Self::json_to_sea_value(v)).collect();
-                // Use String representation for PostgreSQL array syntax
-                sea_query::Value::Array(sea_query::ArrayType::String, Some(Box::new(values)))
+            serde_json::Value::String(s) => sea_query::Value::String(Some(s.clone())),
+            serde_json::Value::Array(_arr) => {
+                // Convert JSON array to string representation
+                // TODO: Use proper array type when sea-query v1.0 stabilizes array support
+                sea_query::Value::String(Some(v.to_string()))
             }
             serde_json::Value::Object(_obj) => {
-                // Convert to JSONB for PostgreSQL
-                let json_str = v.to_string();
-                sea_query::Value::Json(Some(Box::new(
-                    serde_json::from_str(&json_str).unwrap_or(serde_json::Value::Null),
-                )))
+                // Convert JSON object to string representation
+                // TODO: Use proper JSON type when sea-query v1.0 stabilizes JSON support
+                sea_query::Value::String(Some(v.to_string()))
             }
         }
     }
@@ -191,7 +187,7 @@ impl<M: Model> Manager<M> {
 
         // Add WHERE clause for primary key
         // Convert primary key to sea_query::Value for type safety
-        let pk_value = sea_query::Value::String(Some(Box::new(pk.to_string())));
+        let pk_value = sea_query::Value::String(Some(pk.to_string()));
         stmt.and_where(Expr::col(Alias::new(M::primary_key_field())).eq(pk_value));
 
         // Add RETURNING * support
@@ -271,12 +267,12 @@ impl<M: Model> Manager<M> {
         // Add value rows for each model
         for val in &json_values {
             if let Some(obj) = val.as_object() {
-                let values: Vec<sea_query::Value> = first_obj
+                let values: Vec<sea_query::Expr> = first_obj
                     .keys()
                     .map(|field| {
                         obj.get(field)
-                            .map(|v| Self::json_to_sea_value(v))
-                            .unwrap_or(sea_query::Value::Int(None))
+                            .map(|v| Expr::value(Self::json_to_sea_value(v)))
+                            .unwrap_or(Expr::value(sea_query::Value::Int(None)))
                     })
                     .collect();
                 stmt.values_panic(values);
@@ -533,9 +529,9 @@ impl<M: Model> Manager<M> {
             .keys()
             .map(|k| Alias::new(k.as_str()))
             .collect();
-        let values: Vec<sea_query::Value> = insert_fields
+        let values: Vec<sea_query::Expr> = insert_fields
             .values()
-            .map(|v| sea_query::Value::String(Some(Box::new(v.clone()))))
+            .map(|v| Expr::val(v.clone()))
             .collect();
 
         insert_stmt.columns(columns);
@@ -619,7 +615,7 @@ impl<M: Model> Manager<M> {
             for (pk, field_map) in updates.iter() {
                 if let Some(value) = field_map.get(field) {
                     // WHEN id = pk THEN 'value'
-                    case_expr.case(
+                    case_expr = case_expr.case(
                         Expr::col(Alias::new("id")).eq(pk.to_string()),
                         Expr::val(value.clone()),
                     );
@@ -627,13 +623,14 @@ impl<M: Model> Manager<M> {
             }
 
             // field = CASE ... END
-            stmt.value(Alias::new(field.as_str()), case_expr);
+            let case_simple_expr: sea_query::SimpleExpr = case_expr.into();
+            stmt.value(Alias::new(field.as_str()), case_simple_expr);
         }
 
         // WHERE id IN (...)
         let ids: Vec<sea_query::Value> = updates
             .iter()
-            .map(|(pk, _)| sea_query::Value::String(Some(Box::new(pk.to_string()))))
+            .map(|(pk, _)| sea_query::Value::String(Some(pk.to_string())))
             .collect();
 
         stmt.and_where(Expr::col(Alias::new("id")).is_in(ids));

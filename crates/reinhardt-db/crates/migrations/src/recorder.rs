@@ -137,6 +137,15 @@ impl DatabaseMigrationRecorder {
             DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
             DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
             DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+            DatabaseType::MongoDB => {
+                // TODO: Implement MongoDB support for migration recording
+                return Err(crate::MigrationError::DatabaseError(
+                    backends::DatabaseError::UnsupportedFeature {
+                        database: "MongoDB".to_string(),
+                        feature: "migrations".to_string(),
+                    }
+                ));
+            }
         };
 
         self.connection

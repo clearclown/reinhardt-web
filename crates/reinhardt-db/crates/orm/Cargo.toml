@@ -62,6 +62,9 @@ phonenumber = { workspace = true }
 # Regular Expression Support
 regex = "1.10"
 
+# Small Vector for stack allocation
+smallvec = "1.13"
+
 [dev-dependencies]
 serial_test = { workspace = true }
 tokio-test = "0.4"

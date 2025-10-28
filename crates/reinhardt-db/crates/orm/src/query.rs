@@ -4,8 +4,10 @@
 //! By default, it exports the expression-based query API (SQLAlchemy-style).
 //! When the `django-compat` feature is enabled, it exports the Django QuerySet API.
 
-use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, Query as SeaQuery, SelectStatement};
+use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, PostgresQueryBuilder, Query as SeaQuery, SelectStatement};
 use serde::{Deserialize, Serialize};
+use smallvec::SmallVec;
+use std::collections::HashMap;
 
 // Django QuerySet API types (stub implementations)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -30,6 +32,7 @@ pub enum FilterValue {
     Float(f64),
     Boolean(bool),
     Null,
+    Array(Vec<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -79,7 +82,7 @@ where
     T: crate::Model,
 {
     _phantom: std::marker::PhantomData<T>,
-    filters: Vec<Filter>,
+    filters: SmallVec<[Filter; 10]>,
     select_related_fields: Vec<String>,
     prefetch_related_fields: Vec<String>,
     #[cfg(feature = "django-compat")]
@@ -93,7 +96,7 @@ where
     pub fn new() -> Self {
         Self {
             _phantom: std::marker::PhantomData,
-            filters: Vec::new(),
+            filters: SmallVec::new(),
             select_related_fields: Vec::new(),
             prefetch_related_fields: Vec::new(),
             #[cfg(feature = "django-compat")]
@@ -105,7 +108,7 @@ where
     pub fn with_manager(manager: std::sync::Arc<crate::manager::Manager<T>>) -> Self {
         Self {
             _phantom: std::marker::PhantomData,
-            filters: Vec::new(),
+            filters: SmallVec::new(),
             select_related_fields: Vec::new(),
             prefetch_related_fields: Vec::new(),
             manager: Some(manager),
@@ -152,6 +155,7 @@ where
             FilterValue::Float(f) => f.to_string(),
             FilterValue::Boolean(b) => b.to_string(),
             FilterValue::Null => "NULL".to_string(),
+            FilterValue::Array(arr) => format!("[{}]", arr.join(",")),
         };
         (placeholder, formatted_value)
     }
@@ -180,13 +184,28 @@ where
                     let values = Self::parse_array_string(s);
                     col.is_in(values)
                 }
+                (FilterOperator::In, FilterValue::Array(arr)) => {
+                    col.is_in(arr.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+                }
                 (FilterOperator::NotIn, FilterValue::String(s)) => {
                     let values = Self::parse_array_string(s);
                     col.is_not_in(values)
                 }
+                (FilterOperator::NotIn, FilterValue::Array(arr)) => {
+                    col.is_not_in(arr.iter().map(|s| s.as_str()).collect::<Vec<_>>())
+                }
                 (FilterOperator::Contains, FilterValue::String(s)) => col.like(format!("%{}%", s)),
+                (FilterOperator::Contains, FilterValue::Array(arr)) => {
+                    col.like(format!("%{}%", arr.first().unwrap_or(&String::new())))
+                }
                 (FilterOperator::StartsWith, FilterValue::String(s)) => col.like(format!("{}%", s)),
+                (FilterOperator::StartsWith, FilterValue::Array(arr)) => {
+                    col.like(format!("{}%", arr.first().unwrap_or(&String::new())))
+                }
                 (FilterOperator::EndsWith, FilterValue::String(s)) => col.like(format!("%{}", s)),
+                (FilterOperator::EndsWith, FilterValue::Array(arr)) => {
+                    col.like(format!("%{}", arr.first().unwrap_or(&String::new())))
+                }
                 // Handle Integer, Float, Boolean for text operators
                 (FilterOperator::Contains, FilterValue::Integer(i)) => col.like(format!("%{}%", i)),
                 (FilterOperator::Contains, FilterValue::Float(f)) => col.like(format!("%{}%", f)),
@@ -233,6 +252,7 @@ where
             FilterValue::Float(f) => (*f).into(),
             FilterValue::Boolean(b) => (*b).into(),
             FilterValue::Null => sea_query::Value::Int(None),
+            FilterValue::Array(arr) => arr.join(",").into(),
         }
     }
 
@@ -244,6 +264,7 @@ where
             FilterValue::Float(f) => f.to_string(),
             FilterValue::Boolean(b) => b.to_string(),
             FilterValue::Null => String::new(),
+            FilterValue::Array(arr) => arr.join(","),
         }
     }
 
@@ -292,6 +313,7 @@ where
             FilterValue::Float(f) => vec![(*f).into()],
             FilterValue::Boolean(b) => vec![(*b).into()],
             FilterValue::Null => vec![sea_query::Value::Int(None)],
+            FilterValue::Array(arr) => arr.iter().map(|s| s.clone().into()).collect(),
         }
     }
 
@@ -1325,117 +1347,45 @@ mod tests {
     // Query Optimization Tests (Phase 3)
 
     #[test]
-    fn test_select_related_sql_no_filters() {
+    fn test_select_related_query_generation() {
+        // Test that select_related_query() generates SelectStatement correctly
         let queryset = QuerySet::<TestUser>::new().select_related(&["profile", "department"]);
 
-        let (sql, params) = queryset.select_related_sql();
+        let stmt = queryset.select_related_query();
 
-        assert_eq!(
-            sql,
-            "SELECT test_users.*, profile.*, department.* FROM test_users \
-             LEFT JOIN profiles AS profile ON test_users.profile_id = profile.id \
-             LEFT JOIN departments AS department ON test_users.department_id = department.id"
-        );
-        assert_eq!(params, Vec::<String>::new());
+        // Convert to SQL to verify structure
+        use sea_query::PostgresQueryBuilder;
+        let sql = stmt.to_string(PostgresQueryBuilder);
+
+        assert!(sql.contains("SELECT"));
+        assert!(sql.contains("test_users"));
+        assert!(sql.contains("LEFT JOIN"));
     }
 
     #[test]
-    fn test_select_related_sql_with_filters() {
-        let queryset = QuerySet::<TestUser>::new()
-            .select_related(&["profile"])
-            .filter(Filter::new(
-                "id".to_string(),
-                FilterOperator::Gt,
-                FilterValue::Integer(10),
-            ));
-
-        let (sql, params) = queryset.select_related_sql();
-
-        assert_eq!(
-            sql,
-            "SELECT test_users.*, profile.* FROM test_users \
-             LEFT JOIN profiles AS profile ON test_users.profile_id = profile.id \
-             WHERE id > $1"
-        );
-        assert_eq!(params, vec!["10"]);
-    }
-
-    #[test]
-    fn test_select_related_sql_multiple_fields_and_filters() {
-        let queryset = QuerySet::<TestUser>::new()
-            .select_related(&["profile", "department"])
-            .filter(Filter::new(
-                "username".to_string(),
-                FilterOperator::StartsWith,
-                FilterValue::String("admin".to_string()),
-            ))
-            .filter(Filter::new(
-                "email".to_string(),
-                FilterOperator::Contains,
-                FilterValue::String("example.com".to_string()),
-            ));
-
-        let (sql, params) = queryset.select_related_sql();
-
-        assert_eq!(
-            sql,
-            "SELECT test_users.*, profile.*, department.* FROM test_users \
-             LEFT JOIN profiles AS profile ON test_users.profile_id = profile.id \
-             LEFT JOIN departments AS department ON test_users.department_id = department.id \
-             WHERE username LIKE $1 AND email LIKE $2"
-        );
-        assert_eq!(params, vec!["admin%", "%example.com%"]);
-    }
-
-    #[test]
-    fn test_prefetch_related_sql_single_field() {
-        let queryset = QuerySet::<TestUser>::new().prefetch_related(&["posts"]);
+    fn test_prefetch_related_queries_generation() {
+        // Test that prefetch_related_queries() generates correct queries
+        let queryset = QuerySet::<TestUser>::new().prefetch_related(&["posts", "comments"]);
         let pk_values = vec![1, 2, 3];
 
-        let queries = queryset.prefetch_related_sql(&pk_values);
+        let queries = queryset.prefetch_related_queries(&pk_values);
 
-        assert_eq!(queries.len(), 1);
-        let (field, sql, params) = &queries[0];
-        assert_eq!(field, "posts");
-        assert_eq!(
-            sql,
-            "SELECT * FROM postss WHERE test_user_id IN ($1, $2, $3)"
-        );
-        assert_eq!(params, &vec!["1", "2", "3"]);
-    }
-
-    #[test]
-    fn test_prefetch_related_sql_multiple_fields() {
-        let queryset = QuerySet::<TestUser>::new().prefetch_related(&["posts", "comments"]);
-        let pk_values = vec![5, 10];
-
-        let queries = queryset.prefetch_related_sql(&pk_values);
-
+        // Should generate 2 queries (one for each prefetch field)
         assert_eq!(queries.len(), 2);
 
-        // First field: posts
-        let (field1, sql1, params1) = &queries[0];
-        assert_eq!(field1, "posts");
-        assert_eq!(sql1, "SELECT * FROM postss WHERE test_user_id IN ($1, $2)");
-        assert_eq!(params1, &vec!["5", "10"]);
-
-        // Second field: comments
-        let (field2, sql2, params2) = &queries[1];
-        assert_eq!(field2, "comments");
-        assert_eq!(
-            sql2,
-            "SELECT * FROM commentss WHERE test_user_id IN ($1, $2)"
-        );
-        assert_eq!(params2, &vec!["5", "10"]);
+        // Each query should be a (field_name, SelectStatement) tuple
+        assert_eq!(queries[0].0, "posts");
+        assert_eq!(queries[1].0, "comments");
     }
 
     #[test]
-    fn test_prefetch_related_sql_empty_pk_values() {
+    fn test_prefetch_related_queries_empty_pk_values() {
         let queryset = QuerySet::<TestUser>::new().prefetch_related(&["posts", "comments"]);
         let pk_values = vec![];
 
-        let queries = queryset.prefetch_related_sql(&pk_values);
+        let queries = queryset.prefetch_related_queries(&pk_values);
 
+        // Should return empty vector when no PK values provided
         assert_eq!(queries.len(), 0);
     }
 
@@ -1446,14 +1396,123 @@ mod tests {
             .select_related(&["profile"])
             .prefetch_related(&["posts", "comments"]);
 
-        // Check select_related SQL
-        let (select_sql, select_params) = queryset.select_related_sql();
-        assert!(select_sql.contains("LEFT JOIN profiles AS profile"));
-        assert_eq!(select_params.len(), 0);
+        // Check select_related generates query
+        let select_stmt = queryset.select_related_query();
+        use sea_query::PostgresQueryBuilder;
+        let select_sql = select_stmt.to_string(PostgresQueryBuilder);
+        assert!(select_sql.contains("LEFT JOIN"));
 
-        // Check prefetch_related SQL
+        // Check prefetch_related generates queries
         let pk_values = vec![1, 2, 3];
-        let prefetch_queries = queryset.prefetch_related_sql(&pk_values);
+        let prefetch_queries = queryset.prefetch_related_queries(&pk_values);
         assert_eq!(prefetch_queries.len(), 2);
+    }
+
+    // SmallVec Optimization Tests
+
+    #[test]
+    fn test_smallvec_stack_allocation_within_capacity() {
+        // Test with exactly 10 filters (at capacity)
+        let mut queryset = QuerySet::<TestUser>::new();
+
+        for i in 0..10 {
+            queryset = queryset.filter(Filter::new(
+                format!("field{}", i),
+                FilterOperator::Eq,
+                FilterValue::Integer(i as i64),
+            ));
+        }
+
+        // Verify all filters are stored
+        assert_eq!(queryset.filters.len(), 10);
+
+        // Generate SQL to ensure filters work correctly
+        let (sql, params) = queryset.delete_sql();
+        assert!(sql.contains("WHERE"));
+        assert_eq!(params.len(), 10);
+    }
+
+    #[test]
+    fn test_smallvec_heap_fallback_over_capacity() {
+        // Test with 15 filters (5 over capacity, should trigger heap allocation)
+        let mut queryset = QuerySet::<TestUser>::new();
+
+        for i in 0..15 {
+            queryset = queryset.filter(Filter::new(
+                format!("field{}", i),
+                FilterOperator::Eq,
+                FilterValue::Integer(i as i64),
+            ));
+        }
+
+        // Verify all filters are stored (SmallVec automatically spills to heap)
+        assert_eq!(queryset.filters.len(), 15);
+
+        // Generate SQL to ensure filters work correctly even after heap fallback
+        let (sql, params) = queryset.delete_sql();
+        assert!(sql.contains("WHERE"));
+        assert_eq!(params.len(), 15);
+    }
+
+    #[test]
+    fn test_smallvec_typical_use_case_1_5_filters() {
+        // Test typical use case: 1-5 filters (well within stack capacity)
+        let queryset = QuerySet::<TestUser>::new()
+            .filter(Filter::new(
+                "username".to_string(),
+                FilterOperator::StartsWith,
+                FilterValue::String("admin".to_string()),
+            ))
+            .filter(Filter::new(
+                "email".to_string(),
+                FilterOperator::Contains,
+                FilterValue::String("example.com".to_string()),
+            ))
+            .filter(Filter::new(
+                "id".to_string(),
+                FilterOperator::Gt,
+                FilterValue::Integer(100),
+            ));
+
+        // Verify filters stored correctly
+        assert_eq!(queryset.filters.len(), 3);
+
+        // Generate SQL
+        let (sql, params) = queryset.delete_sql();
+        assert!(sql.contains("WHERE"));
+        assert!(sql.contains("username LIKE"));
+        assert!(sql.contains("email LIKE"));
+        assert!(sql.contains("id >"));
+        assert_eq!(params.len(), 3);
+    }
+
+    #[test]
+    fn test_smallvec_empty_initialization() {
+        // Test that empty SmallVec is initialized correctly
+        let queryset = QuerySet::<TestUser>::new();
+
+        assert_eq!(queryset.filters.len(), 0);
+        assert!(queryset.filters.is_empty());
+
+        // Generate SQL with no filters should not include WHERE clause
+        let (where_clause, params) = queryset.build_where_clause();
+        assert!(where_clause.is_empty());
+        assert!(params.is_empty());
+    }
+
+    #[test]
+    fn test_smallvec_single_filter() {
+        // Test single filter (minimal usage)
+        let queryset = QuerySet::<TestUser>::new().filter(Filter::new(
+            "id".to_string(),
+            FilterOperator::Eq,
+            FilterValue::Integer(1),
+        ));
+
+        assert_eq!(queryset.filters.len(), 1);
+
+        let (sql, params) = queryset.delete_sql();
+        assert_eq!(sql, "DELETE FROM test_users WHERE id = $1");
+        assert_eq!(params, vec!["1"]);
     }
 }

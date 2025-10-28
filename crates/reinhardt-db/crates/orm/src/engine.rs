@@ -8,8 +8,9 @@
 
 use backends::{DatabaseError, DatabaseType, Row as DbRow, connection::DatabaseConnection};
 
-#[cfg(feature = "pooling")]
-use deadpool_sqlx::{Pool, Runtime};
+// TODO: Implement connection pooling with deadpool_sqlx
+// #[cfg(feature = "pooling")]
+// use deadpool_sqlx::{Pool, Runtime};
 
 use sqlx::{Any, AnyPool};
 
