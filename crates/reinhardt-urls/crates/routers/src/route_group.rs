@@ -118,15 +118,12 @@ impl RouteGroup {
     /// let group = RouteGroup::new()
     ///     .function("/health", Method::GET, health);
     /// ```
-    pub fn function<F, Fut>(
-        mut self,
-        path: &str,
-        method: hyper::Method,
-        func: F,
-    ) -> Self
+    pub fn function<F, Fut>(mut self, path: &str, method: hyper::Method, func: F) -> Self
     where
         F: Fn(reinhardt_apps::Request) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = reinhardt_apps::Result<reinhardt_apps::Response>> + Send + 'static,
+        Fut: std::future::Future<Output = reinhardt_apps::Result<reinhardt_apps::Response>>
+            + Send
+            + 'static,
     {
         self.router = self.router.function(path, method, func);
         self
@@ -156,7 +153,9 @@ impl RouteGroup {
     ) -> Self
     where
         F: Fn(reinhardt_apps::Request) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = reinhardt_apps::Result<reinhardt_apps::Response>> + Send + 'static,
+        Fut: std::future::Future<Output = reinhardt_apps::Result<reinhardt_apps::Response>>
+            + Send
+            + 'static,
     {
         self.router = self.router.function_named(path, method, name, func);
         self
@@ -260,8 +259,8 @@ impl RouteGroup {
     ///     .nest(auth_group);
     /// ```
     pub fn nest(mut self, child: RouteGroup) -> Self {
-        let child_prefix = child.router.prefix();
-        self.router = self.router.mount(child_prefix, child.router);
+        let child_prefix = child.router.prefix().to_string();
+        self.router = self.router.mount(&child_prefix, child.router);
         self
     }
 
@@ -321,29 +320,26 @@ mod tests {
 
     #[test]
     fn test_route_group_with_middleware() {
-        let group = RouteGroup::new()
-            .with_middleware(Arc::new(LoggingMiddleware));
+        let group = RouteGroup::new().with_middleware(Arc::new(LoggingMiddleware));
         let _router = group.build();
         // Middleware is correctly added, verified in integration tests
     }
 
     #[test]
     fn test_route_group_function() {
-        let group = RouteGroup::new()
-            .function("/health", Method::GET, test_handler);
+        let group = RouteGroup::new().function("/health", Method::GET, test_handler);
         let _router = group.build();
         // Routes are correctly added, verified in integration tests
     }
 
     #[test]
     fn test_route_group_nested() {
-        let auth_group = RouteGroup::new()
-            .with_prefix("/auth")
-            .function("/login", Method::POST, test_handler);
+        let auth_group =
+            RouteGroup::new()
+                .with_prefix("/auth")
+                .function("/login", Method::POST, test_handler);
 
-        let group = RouteGroup::new()
-            .with_prefix("/api")
-            .nest(auth_group);
+        let group = RouteGroup::new().with_prefix("/api").nest(auth_group);
 
         let router = group.build();
         assert_eq!(router.children_count(), 1);

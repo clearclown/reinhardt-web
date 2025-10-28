@@ -39,8 +39,8 @@ pub struct RouteInfo {
     /// URL path pattern
     pub path: String,
 
-    /// HTTP methods supported by this route
-    pub methods: Vec<Method>,
+    /// HTTP methods supported by this route (stored as strings for serialization)
+    pub methods: Vec<String>,
 
     /// Full route name including namespace (e.g., "api:v1:users:detail")
     pub name: Option<String>,
@@ -83,6 +83,9 @@ impl RouteInfo {
     ) -> Self {
         let path = path.into();
         let name = name.map(|n| n.into());
+
+        // Convert Methods to strings for serialization
+        let methods: Vec<String> = methods.iter().map(|m| m.as_str().to_string()).collect();
 
         // Extract parameters from path
         let params = crate::namespace::extract_param_names(&path);
@@ -143,7 +146,7 @@ impl RouteInfo {
     /// assert!(!info.supports_method(&Method::DELETE));
     /// ```
     pub fn supports_method(&self, method: &Method) -> bool {
-        self.methods.contains(method)
+        self.methods.contains(&method.as_str().to_string())
     }
 
     /// Get the namespace as a Namespace object
@@ -414,14 +417,17 @@ impl RouteInspector {
     /// assert!(methods.contains(&Method::DELETE));
     /// ```
     pub fn all_methods(&self) -> Vec<Method> {
-        let mut methods: HashSet<Method> = HashSet::new();
+        let mut methods: HashSet<String> = HashSet::new();
         for route in &self.routes {
             for method in &route.methods {
                 methods.insert(method.clone());
             }
         }
 
-        let mut result: Vec<Method> = methods.into_iter().collect();
+        let mut result: Vec<Method> = methods
+            .into_iter()
+            .filter_map(|m| m.parse().ok())
+            .collect();
         result.sort_by(|a, b| a.as_str().cmp(b.as_str()));
         result
     }
@@ -611,9 +617,24 @@ mod tests {
     #[test]
     fn test_route_inspector_find_by_namespace() {
         let mut inspector = RouteInspector::new();
-        inspector.add_route("/users/", vec![Method::GET], Some("api:v1:users:list"), None);
-        inspector.add_route("/posts/", vec![Method::GET], Some("api:v1:posts:list"), None);
-        inspector.add_route("/users/", vec![Method::GET], Some("api:v2:users:list"), None);
+        inspector.add_route(
+            "/users/",
+            vec![Method::GET],
+            Some("api:v1:users:list"),
+            None,
+        );
+        inspector.add_route(
+            "/posts/",
+            vec![Method::GET],
+            Some("api:v1:posts:list"),
+            None,
+        );
+        inspector.add_route(
+            "/users/",
+            vec![Method::GET],
+            Some("api:v2:users:list"),
+            None,
+        );
 
         let routes = inspector.find_by_namespace("api:v1");
         assert_eq!(routes.len(), 2);
@@ -622,8 +643,18 @@ mod tests {
     #[test]
     fn test_route_inspector_all_namespaces() {
         let mut inspector = RouteInspector::new();
-        inspector.add_route("/users/", vec![Method::GET], Some("api:v1:users:list"), None);
-        inspector.add_route("/posts/", vec![Method::GET], Some("api:v2:posts:list"), None);
+        inspector.add_route(
+            "/users/",
+            vec![Method::GET],
+            Some("api:v1:users:list"),
+            None,
+        );
+        inspector.add_route(
+            "/posts/",
+            vec![Method::GET],
+            Some("api:v2:posts:list"),
+            None,
+        );
 
         let namespaces = inspector.all_namespaces();
         assert_eq!(namespaces.len(), 2);

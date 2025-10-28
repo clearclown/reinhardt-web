@@ -473,15 +473,18 @@ impl OpenApiBuilder {
         }
 
         // Add operations for each method
-        for method in &route.methods {
-            let operation_id = route.name.clone();
-            let summary = route
-                .metadata
-                .get("summary")
-                .cloned()
-                .unwrap_or_else(|| format!("{} {}", method.as_str(), route.path));
+        for method_str in &route.methods {
+            // Parse string back to Method
+            if let Ok(method) = method_str.parse::<Method>() {
+                let operation_id = route.name.clone();
+                let summary = route
+                    .metadata
+                    .get("summary")
+                    .cloned()
+                    .unwrap_or_else(|| format!("{} {}", method.as_str(), route.path));
 
-            path_item = path_item.with_method(method.clone(), summary, operation_id);
+                path_item = path_item.with_method(method, summary, operation_id);
+            }
         }
 
         self.paths.insert(route.path.clone(), path_item.build());
@@ -538,7 +541,10 @@ mod tests {
     #[test]
     fn test_openapi_builder_with_server() {
         let mut builder = OpenApiBuilder::new("Test API", "1.0.0");
-        builder.add_server("https://api.example.com", Some("Production server".to_string()));
+        builder.add_server(
+            "https://api.example.com",
+            Some("Production server".to_string()),
+        );
 
         let spec = builder.build();
         assert_eq!(spec.servers.len(), 1);

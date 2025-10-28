@@ -130,11 +130,14 @@ pub use converters::{
     PathConverter, SlugConverter, UuidConverter,
 };
 pub use helpers::{include_routes, path, re_path, IncludedRouter};
-pub use pattern::{PathMatcher, PathPattern};
+pub use pattern::{MatchingMode, PathMatcher, PathPattern, RadixRouter, RadixRouterError};
 pub use reverse::{
+    extract_param_names,
     reverse,
+    reverse_single_pass,
     reverse_typed,
     reverse_typed_with_params,
+    reverse_with_aho_corasick,
     ReverseError,
     ReverseResult,
     UrlParams,

@@ -139,7 +139,11 @@ impl RouteVisualizer {
 
         for (i, ns) in namespaces.iter().enumerate() {
             let is_last_namespace = i == namespaces.len() - 1 && no_namespace.is_empty();
-            let prefix = if is_last_namespace { "└── " } else { "├── " };
+            let prefix = if is_last_namespace {
+                "└── "
+            } else {
+                "├── "
+            };
             let child_prefix = if is_last_namespace { "    " } else { "│   " };
 
             output.push_str(&format!("{}{}\n", prefix, ns));
@@ -425,8 +429,18 @@ mod tests {
     #[test]
     fn test_namespace_tree_building() {
         let mut inspector = RouteInspector::new();
-        inspector.add_route("/users/", vec![Method::GET], Some("api:v1:users:list"), None);
-        inspector.add_route("/posts/", vec![Method::GET], Some("api:v1:posts:list"), None);
+        inspector.add_route(
+            "/users/",
+            vec![Method::GET],
+            Some("api:v1:users:list"),
+            None,
+        );
+        inspector.add_route(
+            "/posts/",
+            vec![Method::GET],
+            Some("api:v1:posts:list"),
+            None,
+        );
 
         let routes = inspector.all_routes().to_vec();
         let tree = NamespaceTree::from_routes(&routes);

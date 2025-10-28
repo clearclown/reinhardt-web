@@ -251,8 +251,7 @@ impl LruCache {
         }
 
         self.access_counter += 1;
-        self.heap
-            .push(Reverse((self.access_counter, path.clone())));
+        self.heap.push(Reverse((self.access_counter, path.clone())));
         self.map.insert(path, (entry, self.access_counter));
     }
 
