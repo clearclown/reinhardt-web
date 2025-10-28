@@ -248,26 +248,48 @@ For a complete step-by-step guide, see [Getting Started](docs/GETTING_STARTED.md
 
 ### With Database
 
-Configure database in `src/config/settings/base.rs`:
+Configure database in `settings/base.toml`:
+
+```toml
+debug = true
+secret_key = "your-secret-key-for-development"
+
+[database]
+engine = "postgresql"
+host = "localhost"
+port = 5432
+name = "mydb"
+user = "postgres"
+password = "postgres"
+```
+
+Settings are automatically loaded in `src/config/settings.rs`:
 
 ```rust
-use reinhardt::prelude::*;
+use reinhardt_settings::prelude::*;
+use reinhardt_core::Settings;
 
-pub struct Settings {
-    pub database_url: String,
-    pub debug: bool,
-}
+pub fn get_settings() -> Settings {
+    let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
+    let profile = Profile::from_str(&profile_str).unwrap_or(Profile::Development);
 
-impl Settings {
-    pub fn new() -> Self {
-        Self {
-            database_url: std::env::var("DATABASE_URL")
-                .unwrap_or_else(|_| "postgres://localhost/mydb".to_string()),
-            debug: true,
-        }
-    }
+    let settings_dir = PathBuf::from("settings");
+
+    SettingsBuilder::new()
+        .profile(profile)
+        .add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+        .add_source(TomlFileSource::new(settings_dir.join("base.toml")))
+        .add_source(TomlFileSource::new(settings_dir.join(format!("{}.toml", profile_str))))
+        .build()
+        .expect("Failed to build settings")
+        .into_typed()
+        .expect("Failed to convert settings")
 }
 ```
+
+**Priority Order**: `{profile}.toml` > `base.toml` > Environment Variables > Defaults
+
+See [Settings Documentation](docs/SETTINGS_DOCUMENT.md) for more details.
 
 Define models in your app (e.g., `users/models.rs`):
 
