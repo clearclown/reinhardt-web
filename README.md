@@ -213,15 +213,11 @@ Edit your app's `urls.rs`:
 ```rust
 use reinhardt_routers::UnifiedRouter;
 use crate::views::UserViewSet;
+use std::sync::Arc;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    // Register ViewSet for automatic CRUD endpoints
-    router.register_viewset("users", UserViewSet::new());
-
-    router
+    UnifiedRouter::new()
+        .viewset("/users", Arc::new(UserViewSet::new()))
 }
 ```
 
@@ -232,11 +228,8 @@ use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    // Include app routers
-    router.include_router("/api/", users::urls::url_patterns(), Some("users".to_string()));
+    let router = UnifiedRouter::new()
+        .mount("/api/", users::urls::url_patterns());
 
     Arc::new(router)
 }
@@ -330,11 +323,12 @@ Add to your app's `views/profile.rs`:
 use reinhardt::prelude::*;
 use crate::models::User;
 
-#[endpoint(GET, "/profile")]
-pub async fn get_profile(
-    user: Authenticated<User>,
-) -> Json<UserProfile> {
-    Json(user.to_profile())
+pub async fn get_profile(req: Request) -> Result<Json<UserProfile>> {
+    // Extract authenticated user from request
+    let user: Authenticated<User> = req.extensions().get().cloned()
+        .ok_or_else(|| Error::Unauthorized("Authentication required".to_string()))?;
+
+    Ok(Json(user.to_profile()))
 }
 ```
 
@@ -349,15 +343,12 @@ Register URL in your app's `urls.rs`:
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
+use hyper::Method;
 use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    router.add_function_route("/profile", Method::GET, views::get_profile);
-
-    router
+    UnifiedRouter::new()
+        .function("/profile", Method::GET, views::get_profile)
 }
 ```
 
@@ -369,15 +360,19 @@ In your app's `views/user.rs`:
 use reinhardt::prelude::*;
 use crate::models::User;
 
-async fn get_db() -> Database {
-    Database::from_env()
-}
+pub async fn get_user(req: Request) -> Result<Json<User>> {
+    // Extract path parameter
+    let id: i64 = req.path_param("id")
+        .ok_or_else(|| Error::BadRequest("Missing id parameter".to_string()))?
+        .parse()
+        .map_err(|_| Error::BadRequest("Invalid id format".to_string()))?;
 
-#[endpoint(GET, "/users/{id}")]
-pub async fn get_user(
-    Path(id): Path<i64>,
-    Depends(db): Depends<Database, get_db>,
-) -> Result<Json<User>> {
+    // Get database from DI context
+    let db = req.di_context()
+        .ok_or_else(|| Error::InternalServerError("DI context not available".to_string()))?
+        .resolve::<Database>()
+        .await?;
+
     let user = User::find_by_id(id, &db).await?;
     Ok(Json(user))
 }
@@ -428,13 +423,18 @@ use reinhardt::prelude::*;
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserSerializer};
 
-#[endpoint(POST, "/users")]
-pub async fn create_user(
-    Json(req): Json<CreateUserRequest>,
-    db: Depends<Database>,
-) -> Result<Json<UserSerializer>> {
-    req.validate()?;
-    let user = User::create(&req, &db).await?;
+pub async fn create_user(req: Request) -> Result<Json<UserSerializer>> {
+    // Parse and validate request body
+    let create_req: CreateUserRequest = req.json().await?;
+    create_req.validate()?;
+
+    // Get database from DI context
+    let db = req.di_context()
+        .ok_or_else(|| Error::InternalServerError("DI context not available".to_string()))?
+        .resolve::<Database>()
+        .await?;
+
+    let user = User::create(&create_req, &db).await?;
     Ok(Json(UserSerializer::from(user)))
 }
 ```
@@ -516,8 +516,8 @@ Reinhardt includes the following core components:
 Reinhardt is a community-driven project. Here's where you can get help:
 
 - 💬 **Discord**: Join our Discord server for real-time chat (coming soon)
-- 💭 **GitHub Discussions**: [Ask questions and share ideas](https://github.com/yourusername/reinhardt/discussions)
-- 🐛 **Issues**: [Report bugs](https://github.com/yourusername/reinhardt/issues)
+- 💭 **GitHub Discussions**: [Ask questions and share ideas](https://github.com/kent8192/reinhardt-rs/discussions)
+- 🐛 **Issues**: [Report bugs](https://github.com/kent8192/reinhardt-rs/issues)
 - 📖 **Documentation**: [Read the guides](docs/)
 
 Before asking, please check:

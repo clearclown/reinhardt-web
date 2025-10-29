@@ -242,7 +242,7 @@ tracing = "0.1.41"
 parking_lot = "0.12"
 
 # Template engine & syntax highlighting
-askama = { version = "0.12", features = ["with-hyper"] }
+askama = { version = "0.14" }
 syntect = "5.2"
 
 # Cryptography & Security
@@ -271,8 +271,7 @@ redis = { version = "1.0.0-rc.2", features = [
 
 # Connection pooling & migrations
 refinery = { version = "0.9.0", features = ["tokio-postgres"] }
-sea-query = "1.0.0-rc.1"
-sea-query-sqlx = { version = "0.8.0-rc.9", features = ["sqlx-postgres", "sqlx-mysql", "sqlx-sqlite"] }
+sea-query = { version = "1.0.0-rc.1", features = ["with-json", "with-chrono", "postgres-array"] }
 
 # Testing
 testcontainers = "0.25.0"
