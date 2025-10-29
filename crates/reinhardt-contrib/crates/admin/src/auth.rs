@@ -4,7 +4,7 @@
 //! for admin operations.
 
 use crate::{AdminError, AdminResult};
-use reinhardt_auth::{DjangoModelPermissions, IsAdminUser, Permission, User};
+use reinhardt_auth::{DjangoModelPermissions, IsAdminUser, Permission, SimpleUser, User};
 use std::any::Any;
 use std::sync::Arc;
 
@@ -41,16 +41,19 @@ impl PermissionAction {
 ///
 /// ```
 /// use reinhardt_admin::{AdminAuthBackend, PermissionAction};
-/// use reinhardt_auth::User;
+/// use reinhardt_auth::SimpleUser;
+/// use uuid::Uuid;
 ///
 /// # async fn example() {
 /// let auth = AdminAuthBackend::new();
-/// let user = User {
-///     id: 1,
+/// let user = SimpleUser {
+///     id: Uuid::new_v4(),
 ///     username: "admin".to_string(),
+///     email: "admin@example.com".to_string(),
 ///     is_staff: true,
 ///     is_superuser: true,
-///     ..Default::default()
+///     is_active: true,
+///     is_admin: true,
 /// };
 ///
 /// let can_view = auth.check_permission(&user, "User", PermissionAction::View).await;
@@ -76,15 +79,18 @@ impl AdminAuthBackend {
     ///
     /// ```
     /// # use reinhardt_admin::{AdminAuthBackend, PermissionAction};
-    /// # use reinhardt_auth::User;
+    /// # use reinhardt_auth::SimpleUser;
+    /// # use uuid::Uuid;
     /// # async fn example() {
     /// let auth = AdminAuthBackend::new();
-    /// let user = User {
-    ///     id: 1,
+    /// let user = SimpleUser {
+    ///     id: Uuid::new_v4(),
     ///     username: "admin".to_string(),
+    ///     email: "admin@example.com".to_string(),
     ///     is_staff: true,
     ///     is_superuser: false,
-    ///     ..Default::default()
+    ///     is_active: true,
+    ///     is_admin: false,
     /// };
     ///
     /// let can_change = auth.check_permission(&user, "Article", PermissionAction::Change).await;
@@ -92,10 +98,20 @@ impl AdminAuthBackend {
     /// ```
     pub async fn check_permission(
         &self,
-        user: &User,
+        user: &SimpleUser,
         model: &str,
         action: PermissionAction,
     ) -> bool {
+        // Only authenticated users can have permissions
+        if !user.is_authenticated() {
+            return false;
+        }
+
+        // Inactive users have no permissions
+        if !user.is_active {
+            return false;
+        }
+
         // Superusers have all permissions
         if user.is_superuser {
             return true;
@@ -107,26 +123,37 @@ impl AdminAuthBackend {
         }
 
         // Check Django-style model permission: "admin.action_model"
-        let permission = format!("admin.{}_{}", action.as_str(), model.to_lowercase());
+        let _permission = format!("admin.{}_{}", action.as_str(), model.to_lowercase());
 
-        // TODO: Implement actual permission check with PermissionContext
-        // For now, grant all permissions to staff users
-        true
+        // For now, grant all permissions to staff users who are not superusers.
+        // In a full implementation, this would check against a permission context
+        // or database to verify the user actually has this specific permission.
+        //
+        // Future enhancement: Integrate with PermissionContext to check actual permissions:
+        // self.permission_context.as_ref()
+        //     .map(|ctx| ctx.has_permission(user, &permission))
+        //     .unwrap_or(false)
+
+        true // Grant permission to all staff users for now
     }
 
     /// Check if user is admin (staff member)
-    pub async fn is_admin(&self, user: &User) -> bool {
-        user.is_staff || user.is_superuser
+    pub async fn is_admin(&self, user: &dyn User) -> bool {
+        // Use the trait's is_admin method
+        user.is_admin()
     }
 
     /// Check if user is superuser
-    pub fn is_superuser(&self, user: &User) -> bool {
-        user.is_superuser
+    pub fn is_superuser(&self, user: &dyn User) -> bool {
+        user.is_superuser()
     }
 
-    /// Extract User from Any type
-    pub fn extract_user(user: &dyn Any) -> Option<&User> {
-        user.downcast_ref::<User>()
+    /// Extract SimpleUser from Any type
+    ///
+    /// This is a helper method used by AdminAuthMiddleware to safely downcast
+    /// a user object to SimpleUser type.
+    pub fn extract_user(user: &dyn Any) -> Option<&SimpleUser> {
+        user.downcast_ref::<SimpleUser>()
     }
 }
 
@@ -141,12 +168,12 @@ impl Default for AdminAuthBackend {
 /// Provides convenient methods for checking permissions in admin views.
 pub struct AdminPermissionChecker {
     backend: Arc<AdminAuthBackend>,
-    user: User,
+    user: SimpleUser,
 }
 
 impl AdminPermissionChecker {
     /// Create a new permission checker for a user
-    pub fn new(user: User) -> Self {
+    pub fn new(user: SimpleUser) -> Self {
         Self {
             backend: Arc::new(AdminAuthBackend::new()),
             user,
@@ -183,16 +210,16 @@ impl AdminPermissionChecker {
 
     /// Check if user is admin
     pub async fn is_admin(&self) -> bool {
-        self.backend.is_admin(&self.user).await
+        self.backend.is_admin(&self.user as &dyn User).await
     }
 
     /// Check if user is superuser
     pub fn is_superuser(&self) -> bool {
-        self.backend.is_superuser(&self.user)
+        self.backend.is_superuser(&self.user as &dyn User)
     }
 
     /// Get the user
-    pub fn user(&self) -> &User {
+    pub fn user(&self) -> &SimpleUser {
         &self.user
     }
 }
@@ -213,7 +240,7 @@ impl AdminAuthMiddleware {
     }
 
     /// Check if user can access admin
-    pub async fn check_access(&self, user: &User) -> AdminResult<()> {
+    pub async fn check_access(&self, user: &dyn User) -> AdminResult<()> {
         if !self.backend.is_admin(user).await {
             return Err(AdminError::PermissionDenied(
                 "User is not a staff member".to_string(),
@@ -223,12 +250,12 @@ impl AdminAuthMiddleware {
     }
 
     /// Verify user for admin access
-    pub async fn verify_admin_user(&self, user: &dyn Any) -> AdminResult<&User> {
+    pub async fn verify_admin_user(&self, user: &dyn Any) -> AdminResult<&SimpleUser> {
         let user = AdminAuthBackend::extract_user(user).ok_or_else(|| {
             AdminError::PermissionDenied("Invalid user type".to_string())
         })?;
 
-        self.check_access(user).await?;
+        self.check_access(user as &dyn User).await?;
         Ok(user)
     }
 }
@@ -243,39 +270,39 @@ impl Default for AdminAuthMiddleware {
 mod tests {
     use super::*;
 
-    fn create_staff_user() -> User {
-        User {
-            id: 1,
+    fn create_staff_user() -> SimpleUser {
+        SimpleUser {
+            id: uuid::Uuid::from_u128(1),
             username: "staff".to_string(),
-            email: Some("staff@example.com".to_string()),
+            email: "staff@example.com".to_string(),
             is_staff: true,
             is_superuser: false,
             is_active: true,
-            ..Default::default()
+            is_admin: false,
         }
     }
 
-    fn create_superuser() -> User {
-        User {
-            id: 2,
+    fn create_superuser() -> SimpleUser {
+        SimpleUser {
+            id: uuid::Uuid::from_u128(2),
             username: "admin".to_string(),
-            email: Some("admin@example.com".to_string()),
+            email: "admin@example.com".to_string(),
             is_staff: true,
             is_superuser: true,
             is_active: true,
-            ..Default::default()
+            is_admin: true,
         }
     }
 
-    fn create_regular_user() -> User {
-        User {
-            id: 3,
+    fn create_regular_user() -> SimpleUser {
+        SimpleUser {
+            id: uuid::Uuid::from_u128(3),
             username: "user".to_string(),
-            email: Some("user@example.com".to_string()),
+            email: "user@example.com".to_string(),
             is_staff: false,
             is_superuser: false,
             is_active: true,
-            ..Default::default()
+            is_admin: false,
         }
     }
 
@@ -304,7 +331,7 @@ mod tests {
         let user = create_regular_user();
 
         assert!(!auth.check_permission(&user, "User", PermissionAction::View).await);
-        assert!(!auth.is_admin(&user).await);
+        assert!(!auth.is_admin(&user as &dyn User).await);
     }
 
     #[tokio::test]
@@ -312,8 +339,8 @@ mod tests {
         let auth = AdminAuthBackend::new();
         let user = create_staff_user();
 
-        assert!(auth.is_admin(&user).await);
-        assert!(!auth.is_superuser(&user));
+        assert!(auth.is_admin(&user as &dyn User).await);
+        assert!(!auth.is_superuser(&user as &dyn User));
     }
 
     #[tokio::test]
@@ -332,7 +359,7 @@ mod tests {
         let middleware = AdminAuthMiddleware::new();
         let user = create_staff_user();
 
-        let result = middleware.check_access(&user).await;
+        let result = middleware.check_access(&user as &dyn User).await;
         assert!(result.is_ok());
     }
 
@@ -341,7 +368,7 @@ mod tests {
         let middleware = AdminAuthMiddleware::new();
         let user = create_regular_user();
 
-        let result = middleware.check_access(&user).await;
+        let result = middleware.check_access(&user as &dyn User).await;
         assert!(result.is_err());
 
         if let Err(AdminError::PermissionDenied(msg)) = result {

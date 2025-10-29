@@ -1,0 +1,12 @@
+[general]
+# Template directory (relative to crate root)
+dirs = ["templates"]
+
+# Disable automatic hyper integration
+[integrations]
+hyper = false
+
+# Custom escaper for .tpl files (HTML escaping)
+[[escaper]]
+path = "askama::filters::Html"
+extensions = ["tpl"]

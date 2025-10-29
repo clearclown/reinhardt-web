@@ -30,6 +30,7 @@ reinhardt-storage = { workspace = true, optional = true }
 # Core dependencies
 tokio = { workspace = true }
 async-trait = { workspace = true }
+futures = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -38,6 +39,9 @@ parking_lot = { workspace = true }
 dashmap = "6.1.0"
 chrono = { workspace = true }
 sea-query = { workspace = true }
+askama = { workspace = true }
+rayon = "1.10"
+csv = "1.3"
 
 [dev-dependencies]
 tokio-test = { workspace = true }

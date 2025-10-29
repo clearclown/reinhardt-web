@@ -98,7 +98,7 @@ impl ActionResult {
 ///         &self,
 ///         model_name: &str,
 ///         item_ids: Vec<String>,
-///         user: &dyn std::any::Any,
+///         user: &(dyn std::any::Any + Send + Sync),
 ///     ) -> ActionResult {
 ///         // Implement publish logic
 ///         ActionResult::Success {
@@ -131,9 +131,18 @@ pub trait AdminAction: Send + Sync {
     }
 
     /// Check if user has permission to execute this action
-    async fn has_permission(&self, user: &dyn Any) -> bool {
-        let _ = user;
-        true // TODO: Implement actual permission check
+    async fn has_permission(&self, user: &(dyn Any + Send + Sync)) -> bool {
+        use crate::auth::AdminAuthBackend;
+        use reinhardt_auth::SimpleUser;
+
+        // Extract SimpleUser from Any
+        if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
+            let auth_backend = AdminAuthBackend::new();
+            // Check if user is admin (staff or superuser)
+            auth_backend.is_admin(simple_user as &dyn reinhardt_auth::User).await
+        } else {
+            false
+        }
     }
 
     /// Execute the action on selected items
@@ -141,7 +150,7 @@ pub trait AdminAction: Send + Sync {
         &self,
         model_name: &str,
         item_ids: Vec<String>,
-        user: &dyn Any,
+        user: &(dyn Any + Send + Sync),
     ) -> ActionResult;
 }
 
@@ -234,7 +243,7 @@ impl AdminAction for DeleteSelectedAction {
         &self,
         model_name: &str,
         item_ids: Vec<String>,
-        user: &dyn Any,
+        user: &(dyn Any + Send + Sync),
     ) -> ActionResult {
         let _ = user;
 
@@ -281,9 +290,9 @@ impl AdminAction for DeleteSelectedAction {
 
 // Dummy model type for generic database operations
 // In real implementation, we would parameterize the action with the actual model type
-#[derive(Clone)]
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DummyModel {
-    id: i64,
+    id: Option<i64>,
 }
 
 impl Model for DummyModel {
@@ -293,8 +302,12 @@ impl Model for DummyModel {
         "dummy"
     }
 
-    fn primary_key(&self) -> &Self::PrimaryKey {
-        &self.id
+    fn primary_key(&self) -> Option<&Self::PrimaryKey> {
+        self.id.as_ref()
+    }
+
+    fn set_primary_key(&mut self, key: Self::PrimaryKey) {
+        self.id = Some(key);
     }
 }
 

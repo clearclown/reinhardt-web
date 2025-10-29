@@ -48,27 +48,63 @@ pub trait ModelAdmin: Send + Sync {
     }
 
     /// Check if user has permission to view this model
-    async fn has_view_permission(&self, user: &dyn std::any::Any) -> bool {
-        let _ = user;
-        true // TODO: Implement actual permission check
+    async fn has_view_permission(&self, user: &(dyn std::any::Any + Send + Sync)) -> bool {
+        use crate::auth::{AdminAuthBackend, PermissionAction};
+        use reinhardt_auth::{SimpleUser, User};
+
+        if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
+            let auth_backend = AdminAuthBackend::new();
+            auth_backend
+                .check_permission(simple_user, self.model_name(), PermissionAction::View)
+                .await
+        } else {
+            false
+        }
     }
 
     /// Check if user has permission to add instances
-    async fn has_add_permission(&self, user: &dyn std::any::Any) -> bool {
-        let _ = user;
-        true
+    async fn has_add_permission(&self, user: &(dyn std::any::Any + Send + Sync)) -> bool {
+        use crate::auth::{AdminAuthBackend, PermissionAction};
+        use reinhardt_auth::{SimpleUser, User};
+
+        if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
+            let auth_backend = AdminAuthBackend::new();
+            auth_backend
+                .check_permission(simple_user, self.model_name(), PermissionAction::Add)
+                .await
+        } else {
+            false
+        }
     }
 
     /// Check if user has permission to change instances
-    async fn has_change_permission(&self, user: &dyn std::any::Any) -> bool {
-        let _ = user;
-        true
+    async fn has_change_permission(&self, user: &(dyn std::any::Any + Send + Sync)) -> bool {
+        use crate::auth::{AdminAuthBackend, PermissionAction};
+        use reinhardt_auth::{SimpleUser, User};
+
+        if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
+            let auth_backend = AdminAuthBackend::new();
+            auth_backend
+                .check_permission(simple_user, self.model_name(), PermissionAction::Change)
+                .await
+        } else {
+            false
+        }
     }
 
     /// Check if user has permission to delete instances
-    async fn has_delete_permission(&self, user: &dyn std::any::Any) -> bool {
-        let _ = user;
-        true
+    async fn has_delete_permission(&self, user: &(dyn std::any::Any + Send + Sync)) -> bool {
+        use crate::auth::{AdminAuthBackend, PermissionAction};
+        use reinhardt_auth::{SimpleUser, User};
+
+        if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
+            let auth_backend = AdminAuthBackend::new();
+            auth_backend
+                .check_permission(simple_user, self.model_name(), PermissionAction::Delete)
+                .await
+        } else {
+            false
+        }
     }
 }
 

@@ -7,7 +7,7 @@ use crate::{AdminError, AdminResult};
 use reinhardt_orm::{
     DatabaseConnection, Filter, FilterOperator, FilterValue, Model,
 };
-use sea_query::{Alias, Asterisk, Condition, Expr, Iden, PostgresQueryBuilder, Query as SeaQuery};
+use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, PostgresQueryBuilder, Query as SeaQuery};
 use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -20,6 +20,7 @@ fn filter_value_to_sea_value(v: &FilterValue) -> sea_query::Value {
         FilterValue::Float(f) => (*f).into(),
         FilterValue::Boolean(b) => (*b).into(),
         FilterValue::Null => sea_query::Value::Int(None),
+        FilterValue::Array(_) => sea_query::Value::String(None),
     }
 }
 
@@ -296,24 +297,26 @@ impl AdminDatabase {
             columns.push(Alias::new(&key));
 
             let sea_value = match value {
-                serde_json::Value::String(s) => sea_query::Value::String(Some(Box::new(s))),
+                serde_json::Value::String(s) => sea_query::Value::String(Some(s)),
                 serde_json::Value::Number(n) => {
                     if let Some(i) = n.as_i64() {
                         sea_query::Value::BigInt(Some(i))
                     } else if let Some(f) = n.as_f64() {
                         sea_query::Value::Double(Some(f))
                     } else {
-                        sea_query::Value::String(Some(Box::new(n.to_string())))
+                        sea_query::Value::String(Some(n.to_string()))
                     }
                 }
                 serde_json::Value::Bool(b) => sea_query::Value::Bool(Some(b)),
                 serde_json::Value::Null => sea_query::Value::Int(None),
-                _ => sea_query::Value::String(Some(Box::new(value.to_string()))),
+                _ => sea_query::Value::String(Some(value.to_string())),
             };
             values.push(sea_value);
         }
 
-        query.columns(columns).values(values).unwrap();
+        // Convert Values to Exprs for sea-query v1.0
+        let expr_values: Vec<sea_query::SimpleExpr> = values.into_iter().map(|v| v.into()).collect();
+        query.columns(columns).values(expr_values).unwrap();
 
         let sql = query.to_string(PostgresQueryBuilder);
         let affected = self
@@ -372,19 +375,19 @@ impl AdminDatabase {
         // Build SET clauses
         for (key, value) in data {
             let sea_value = match value {
-                serde_json::Value::String(s) => sea_query::Value::String(Some(Box::new(s))),
+                serde_json::Value::String(s) => sea_query::Value::String(Some(s)),
                 serde_json::Value::Number(n) => {
                     if let Some(i) = n.as_i64() {
                         sea_query::Value::BigInt(Some(i))
                     } else if let Some(f) = n.as_f64() {
                         sea_query::Value::Double(Some(f))
                     } else {
-                        sea_query::Value::String(Some(Box::new(n.to_string())))
+                        sea_query::Value::String(Some(n.to_string()))
                     }
                 }
                 serde_json::Value::Bool(b) => sea_query::Value::Bool(Some(b)),
                 serde_json::Value::Null => sea_query::Value::Int(None),
-                _ => sea_query::Value::String(Some(Box::new(value.to_string()))),
+                _ => sea_query::Value::String(Some(value.to_string())),
             };
             query.value(Alias::new(&key), sea_value);
         }

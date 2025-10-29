@@ -4,6 +4,7 @@
 //! integrated with reinhardt-templates.
 
 use crate::{AdminError, AdminResult};
+use askama::Template;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -215,6 +216,7 @@ pub struct FormFieldContext {
     pub help_text: Option<String>,
     pub errors: Vec<String>,
     pub is_readonly: bool,
+    pub is_required: bool,
 }
 
 /// Inline formset context
@@ -277,6 +279,83 @@ pub struct RecentActionContext {
     pub timestamp: String,
 }
 
+// ============================================================================
+// Askama Template Structs
+// ============================================================================
+
+/// List view template
+#[derive(Template)]
+#[template(path = "list.tpl")]
+struct ListTemplate<'a> {
+    // Base context fields
+    site_title: &'a str,
+    site_header: &'a str,
+    user: Option<&'a UserContext>,
+    available_apps: &'a [AppContext],
+
+    // List view specific fields
+    model_name: &'a str,
+    model_verbose_name: &'a str,
+    items: &'a [HashMap<String, serde_json::Value>],
+    list_display: &'a [String],
+    field_labels: &'a HashMap<String, String>,
+    filters: &'a [FilterContext],
+    search_query: Option<&'a str>,
+    pagination: &'a PaginationContext,
+    actions: &'a [ActionContext],
+}
+
+/// Form view template
+#[derive(Template)]
+#[template(path = "form.tpl")]
+struct FormTemplate<'a> {
+    // Base context fields
+    site_title: &'a str,
+    site_header: &'a str,
+    user: Option<&'a UserContext>,
+    available_apps: &'a [AppContext],
+
+    // Form view specific fields
+    model_name: &'a str,
+    title: &'a str,
+    fields: &'a [FormFieldContext],
+    inlines: &'a [InlineFormsetContext],
+    object_id: Option<&'a str>,
+    errors: &'a [String],
+}
+
+/// Delete confirmation template
+#[derive(Template)]
+#[template(path = "delete_confirmation.tpl")]
+struct DeleteConfirmationTemplate<'a> {
+    // Base context fields
+    site_title: &'a str,
+    site_header: &'a str,
+    user: Option<&'a UserContext>,
+    available_apps: &'a [AppContext],
+
+    // Delete confirmation specific fields
+    model_name: &'a str,
+    object_repr: &'a str,
+    related_objects: &'a [RelatedObjectContext],
+    total_count: usize,
+}
+
+/// Dashboard template
+#[derive(Template)]
+#[template(path = "dashboard.tpl")]
+struct DashboardTemplate<'a> {
+    // Base context fields
+    site_title: &'a str,
+    site_header: &'a str,
+    user: Option<&'a UserContext>,
+    available_apps: &'a [AppContext],
+
+    // Dashboard specific fields
+    widgets: &'a [WidgetContext],
+    recent_actions: &'a [RecentActionContext],
+}
+
 /// Template renderer
 pub struct AdminTemplateRenderer {
     template_dir: String,
@@ -292,15 +371,49 @@ impl AdminTemplateRenderer {
 
     /// Render list view
     pub fn render_list(&self, context: &ListViewContext) -> AdminResult<String> {
-        // TODO: Implement actual template rendering with Askama
-        // For now, return basic HTML
-        Ok(self.render_list_html(context))
+        let template = ListTemplate {
+            // Base context
+            site_title: &context.admin.site_title,
+            site_header: &context.admin.site_header,
+            user: context.admin.user.as_ref(),
+            available_apps: &context.admin.available_apps,
+            // List view specific
+            model_name: &context.model_name,
+            model_verbose_name: &context.model_verbose_name,
+            items: &context.items,
+            list_display: &context.list_display,
+            field_labels: &context.field_labels,
+            filters: &context.filters,
+            search_query: context.search_query.as_deref(),
+            pagination: &context.pagination,
+            actions: &context.actions,
+        };
+
+        template
+            .render()
+            .map_err(|e| AdminError::TemplateError(e.to_string()))
     }
 
     /// Render form view
     pub fn render_form(&self, context: &FormViewContext) -> AdminResult<String> {
-        // TODO: Implement actual template rendering with Askama
-        Ok(self.render_form_html(context))
+        let template = FormTemplate {
+            // Base context
+            site_title: &context.admin.site_title,
+            site_header: &context.admin.site_header,
+            user: context.admin.user.as_ref(),
+            available_apps: &context.admin.available_apps,
+            // Form view specific
+            model_name: &context.model_name,
+            title: &context.title,
+            fields: &context.fields,
+            inlines: &context.inlines,
+            object_id: context.object_id.as_deref(),
+            errors: &context.errors,
+        };
+
+        template
+            .render()
+            .map_err(|e| AdminError::TemplateError(e.to_string()))
     }
 
     /// Render delete confirmation
@@ -308,250 +421,42 @@ impl AdminTemplateRenderer {
         &self,
         context: &DeleteConfirmationContext,
     ) -> AdminResult<String> {
-        // TODO: Implement actual template rendering with Askama
-        Ok(self.render_delete_html(context))
+        let template = DeleteConfirmationTemplate {
+            // Base context
+            site_title: &context.admin.site_title,
+            site_header: &context.admin.site_header,
+            user: context.admin.user.as_ref(),
+            available_apps: &context.admin.available_apps,
+            // Delete confirmation specific
+            model_name: &context.model_name,
+            object_repr: &context.object_repr,
+            related_objects: &context.related_objects,
+            total_count: context.total_count,
+        };
+
+        template
+            .render()
+            .map_err(|e| AdminError::TemplateError(e.to_string()))
     }
 
     /// Render dashboard
     pub fn render_dashboard(&self, context: &DashboardContext) -> AdminResult<String> {
-        // TODO: Implement actual template rendering with Askama
-        Ok(self.render_dashboard_html(context))
+        let template = DashboardTemplate {
+            // Base context
+            site_title: &context.admin.site_title,
+            site_header: &context.admin.site_header,
+            user: context.admin.user.as_ref(),
+            available_apps: &context.admin.available_apps,
+            // Dashboard specific
+            widgets: &context.widgets,
+            recent_actions: &context.recent_actions,
+        };
+
+        template
+            .render()
+            .map_err(|e| AdminError::TemplateError(e.to_string()))
     }
 
-    // Temporary HTML rendering methods (will be replaced with Askama templates)
-
-    fn render_list_html(&self, ctx: &ListViewContext) -> String {
-        let items_html = ctx
-            .items
-            .iter()
-            .map(|item| {
-                let cells = ctx
-                    .list_display
-                    .iter()
-                    .map(|field| {
-                        let value = item
-                            .get(field)
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
-                        format!("<td>{}</td>", value)
-                    })
-                    .collect::<Vec<_>>()
-                    .join("");
-                format!("<tr>{}</tr>", cells)
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
-        let headers = ctx
-            .list_display
-            .iter()
-            .map(|field| {
-                let label = ctx
-                    .field_labels
-                    .get(field)
-                    .cloned()
-                    .unwrap_or_else(|| field.clone());
-                format!("<th>{}</th>", label)
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>{} - {}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/admin/">{}</a>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h1>{}</h1>
-        <table class="table table-striped">
-            <thead>
-                <tr>{}</tr>
-            </thead>
-            <tbody>
-                {}
-            </tbody>
-        </table>
-    </div>
-</body>
-</html>"#,
-            ctx.model_verbose_name,
-            ctx.admin.site_title,
-            ctx.admin.site_header,
-            ctx.model_verbose_name,
-            headers,
-            items_html
-        )
-    }
-
-    fn render_form_html(&self, ctx: &FormViewContext) -> String {
-        let fields_html = ctx
-            .fields
-            .iter()
-            .map(|field| {
-                let errors_html = if !field.errors.is_empty() {
-                    format!(
-                        r#"<div class="invalid-feedback d-block">{}</div>"#,
-                        field.errors.join(", ")
-                    )
-                } else {
-                    String::new()
-                };
-
-                format!(
-                    r#"<div class="mb-3">
-                    <label class="form-label">{}</label>
-                    {}
-                    {}
-                    {}
-                </div>"#,
-                    field.label,
-                    field.widget_html,
-                    field.help_text.as_ref().map_or(String::new(), |h| format!(
-                        r#"<small class="form-text text-muted">{}</small>"#,
-                        h
-                    )),
-                    errors_html
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>{} - {}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/admin/">{}</a>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h1>{}</h1>
-        <form method="post">
-            {}
-            <button type="submit" class="btn btn-primary">Save</button>
-            <a href="/admin/{}/\" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
-</body>
-</html>"#,
-            ctx.title,
-            ctx.admin.site_title,
-            ctx.admin.site_header,
-            ctx.title,
-            fields_html,
-            ctx.model_name.to_lowercase()
-        )
-    }
-
-    fn render_delete_html(&self, ctx: &DeleteConfirmationContext) -> String {
-        let related_html = ctx
-            .related_objects
-            .iter()
-            .map(|rel| {
-                format!(
-                    "<li>{}: {} items</li>",
-                    rel.model_name, rel.count
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>Delete {} - {}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/admin/">{}</a>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h1>Delete {}</h1>
-        <div class="alert alert-danger">
-            <p>Are you sure you want to delete "{}"?</p>
-            <p>This will also delete:</p>
-            <ul>{}</ul>
-            <p><strong>Total: {} objects</strong></p>
-        </div>
-        <form method="post">
-            <button type="submit" class="btn btn-danger">Yes, delete</button>
-            <a href="/admin/{}/\" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
-</body>
-</html>"#,
-            ctx.model_name,
-            ctx.admin.site_title,
-            ctx.admin.site_header,
-            ctx.model_name,
-            ctx.object_repr,
-            related_html,
-            ctx.total_count,
-            ctx.model_name.to_lowercase()
-        )
-    }
-
-    fn render_dashboard_html(&self, ctx: &DashboardContext) -> String {
-        let widgets_html = ctx
-            .widgets
-            .iter()
-            .map(|w| {
-                format!(
-                    r#"<div class="col-md-4">
-                    <div class="card {}">
-                        <div class="card-header">{}</div>
-                        <div class="card-body">{}</div>
-                    </div>
-                </div>"#,
-                    w.css_class.as_deref().unwrap_or(""),
-                    w.title,
-                    w.content_html
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("");
-
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <title>{}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/admin/">{}</a>
-        </div>
-    </nav>
-    <div class="container mt-4">
-        <h1>Dashboard</h1>
-        <div class="row g-3">
-            {}
-        </div>
-    </div>
-</body>
-</html>"#,
-            ctx.admin.site_title, ctx.admin.site_header, widgets_html
-        )
-    }
 }
 
 impl Default for AdminTemplateRenderer {

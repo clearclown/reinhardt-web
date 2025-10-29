@@ -2,9 +2,273 @@
 //!
 //! This module provides customizable widgets for rendering form fields
 //! with enhanced functionality and styling.
+//!
+//! # Examples
+//!
+//! ## Rich Text Editor
+//!
+//! ```
+//! use reinhardt_admin::widgets::{RichTextEditorConfig, EditorType, Widget, WidgetType};
+//!
+//! // Create a TinyMCE editor
+//! let config = RichTextEditorConfig::new(EditorType::TinyMCE)
+//!     .with_toolbar("bold italic | link image")
+//!     .with_max_length(5000);
+//!
+//! let widget = Widget::new(WidgetType::RichTextEditorWidget { config });
+//! ```
+//!
+//! ## Image Upload
+//!
+//! ```
+//! use reinhardt_admin::widgets::{ImageUploadConfig, ImageFormat, Widget, WidgetType};
+//!
+//! // Create an image upload widget
+//! let config = ImageUploadConfig::new()
+//!     .with_preview_size(400, 300)
+//!     .with_formats(vec![ImageFormat::Jpeg, ImageFormat::Png])
+//!     .with_max_size(10 * 1024 * 1024); // 10MB
+//!
+//! let widget = Widget::new(WidgetType::ImageUploadWidget { config });
+//! ```
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+/// Rich text editor backend type
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum EditorType {
+    /// TinyMCE editor (popular WYSIWYG editor)
+    TinyMCE,
+    /// CKEditor (feature-rich editor)
+    CKEditor,
+    /// Quill (modern WYSIWYG editor)
+    Quill,
+    /// Simple textarea with basic formatting
+    Simple,
+}
+
+/// Configuration for rich text editor widget
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RichTextEditorConfig {
+    /// Editor type to use
+    pub editor_type: EditorType,
+    /// Toolbar configuration (comma-separated list)
+    pub toolbar: String,
+    /// Maximum length of content
+    pub max_length: Option<usize>,
+    /// Allowed HTML tags (e.g., "p,a,strong,em")
+    pub allowed_tags: Option<String>,
+    /// Enable file upload support
+    pub file_upload_enabled: bool,
+    /// Custom CSS classes
+    pub css_class: String,
+}
+
+impl Default for RichTextEditorConfig {
+    fn default() -> Self {
+        Self {
+            editor_type: EditorType::TinyMCE,
+            toolbar: "bold italic underline | link image | bullist numlist".to_string(),
+            max_length: None,
+            allowed_tags: Some("p,a,strong,em,ul,ol,li,br,img".to_string()),
+            file_upload_enabled: false,
+            css_class: "rich-text-editor".to_string(),
+        }
+    }
+}
+
+impl RichTextEditorConfig {
+    /// Create a new rich text editor configuration
+    pub fn new(editor_type: EditorType) -> Self {
+        Self {
+            editor_type,
+            ..Default::default()
+        }
+    }
+
+    /// Set toolbar configuration
+    pub fn with_toolbar(mut self, toolbar: impl Into<String>) -> Self {
+        self.toolbar = toolbar.into();
+        self
+    }
+
+    /// Set maximum content length
+    pub fn with_max_length(mut self, max_length: usize) -> Self {
+        self.max_length = Some(max_length);
+        self
+    }
+
+    /// Set allowed HTML tags
+    pub fn with_allowed_tags(mut self, tags: impl Into<String>) -> Self {
+        self.allowed_tags = Some(tags.into());
+        self
+    }
+
+    /// Enable or disable file upload
+    pub fn with_file_upload(mut self, enabled: bool) -> Self {
+        self.file_upload_enabled = enabled;
+        self
+    }
+
+    /// Add custom CSS class
+    pub fn with_css_class(mut self, css_class: impl Into<String>) -> Self {
+        self.css_class = css_class.into();
+        self
+    }
+}
+
+/// Allowed image formats
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ImageFormat {
+    /// JPEG format
+    Jpeg,
+    /// PNG format
+    Png,
+    /// GIF format
+    Gif,
+    /// WebP format
+    WebP,
+}
+
+impl ImageFormat {
+    /// Get MIME type for the format
+    pub fn mime_type(&self) -> &str {
+        match self {
+            ImageFormat::Jpeg => "image/jpeg",
+            ImageFormat::Png => "image/png",
+            ImageFormat::Gif => "image/gif",
+            ImageFormat::WebP => "image/webp",
+        }
+    }
+
+    /// Get file extension for the format
+    pub fn extension(&self) -> &str {
+        match self {
+            ImageFormat::Jpeg => "jpg",
+            ImageFormat::Png => "png",
+            ImageFormat::Gif => "gif",
+            ImageFormat::WebP => "webp",
+        }
+    }
+}
+
+/// Configuration for image upload widget
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageUploadConfig {
+    /// Preview width in pixels
+    pub preview_width: u32,
+    /// Preview height in pixels
+    pub preview_height: u32,
+    /// Allowed image formats
+    pub allowed_formats: Vec<ImageFormat>,
+    /// Maximum file size in bytes
+    pub max_file_size: usize,
+    /// Enable thumbnail generation
+    pub generate_thumbnail: bool,
+    /// Thumbnail width in pixels
+    pub thumbnail_width: Option<u32>,
+    /// Thumbnail height in pixels
+    pub thumbnail_height: Option<u32>,
+    /// Enable crop functionality
+    pub enable_crop: bool,
+    /// Enable resize functionality
+    pub enable_resize: bool,
+    /// Enable drag & drop
+    pub enable_drag_drop: bool,
+    /// Custom CSS classes
+    pub css_class: String,
+}
+
+impl Default for ImageUploadConfig {
+    fn default() -> Self {
+        Self {
+            preview_width: 300,
+            preview_height: 300,
+            allowed_formats: vec![ImageFormat::Jpeg, ImageFormat::Png, ImageFormat::Gif],
+            max_file_size: 5 * 1024 * 1024, // 5MB
+            generate_thumbnail: true,
+            thumbnail_width: Some(150),
+            thumbnail_height: Some(150),
+            enable_crop: true,
+            enable_resize: true,
+            enable_drag_drop: true,
+            css_class: "image-upload-widget".to_string(),
+        }
+    }
+}
+
+impl ImageUploadConfig {
+    /// Create a new image upload configuration
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set preview dimensions
+    pub fn with_preview_size(mut self, width: u32, height: u32) -> Self {
+        self.preview_width = width;
+        self.preview_height = height;
+        self
+    }
+
+    /// Set allowed image formats
+    pub fn with_formats(mut self, formats: Vec<ImageFormat>) -> Self {
+        self.allowed_formats = formats;
+        self
+    }
+
+    /// Set maximum file size in bytes
+    pub fn with_max_size(mut self, size: usize) -> Self {
+        self.max_file_size = size;
+        self
+    }
+
+    /// Enable or disable thumbnail generation
+    pub fn with_thumbnail(mut self, enabled: bool) -> Self {
+        self.generate_thumbnail = enabled;
+        self
+    }
+
+    /// Set thumbnail dimensions
+    pub fn with_thumbnail_size(mut self, width: u32, height: u32) -> Self {
+        self.thumbnail_width = Some(width);
+        self.thumbnail_height = Some(height);
+        self
+    }
+
+    /// Enable or disable crop functionality
+    pub fn with_crop(mut self, enabled: bool) -> Self {
+        self.enable_crop = enabled;
+        self
+    }
+
+    /// Enable or disable resize functionality
+    pub fn with_resize(mut self, enabled: bool) -> Self {
+        self.enable_resize = enabled;
+        self
+    }
+
+    /// Enable or disable drag & drop
+    pub fn with_drag_drop(mut self, enabled: bool) -> Self {
+        self.enable_drag_drop = enabled;
+        self
+    }
+
+    /// Add custom CSS class
+    pub fn with_css_class(mut self, css_class: impl Into<String>) -> Self {
+        self.css_class = css_class.into();
+        self
+    }
+
+    /// Get accept attribute for HTML input
+    pub fn accept_attribute(&self) -> String {
+        self.allowed_formats
+            .iter()
+            .map(|f| f.mime_type())
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
 
 /// Widget configuration for form fields
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,6 +320,12 @@ impl Widget {
             WidgetType::NumberInput => self.render_number_input(name, value),
             WidgetType::ColorPicker => self.render_color_picker(name, value),
             WidgetType::RichTextEditor => self.render_rich_text_editor(name, value),
+            WidgetType::RichTextEditorWidget { config } => {
+                self.render_rich_text_editor_widget(name, value, config)
+            }
+            WidgetType::ImageUploadWidget { config } => {
+                self.render_image_upload_widget(name, value, config)
+            }
             WidgetType::MultiSelect { choices } => self.render_multi_select(name, value, choices),
         }
     }
@@ -236,6 +506,94 @@ impl Widget {
         )
     }
 
+    fn render_rich_text_editor_widget(
+        &self,
+        name: &str,
+        value: Option<&serde_json::Value>,
+        config: &RichTextEditorConfig,
+    ) -> String {
+        let value_str = value.and_then(|v| v.as_str()).unwrap_or("");
+        let attrs = self.render_attrs();
+
+        let editor_data = serde_json::json!({
+            "type": match config.editor_type {
+                EditorType::TinyMCE => "tinymce",
+                EditorType::CKEditor => "ckeditor",
+                EditorType::Quill => "quill",
+                EditorType::Simple => "simple",
+            },
+            "toolbar": config.toolbar,
+            "maxLength": config.max_length,
+            "allowedTags": config.allowed_tags,
+            "fileUpload": config.file_upload_enabled,
+        });
+
+        format!(
+            "<textarea name=\"{}\" class=\"{}\" data-editor='{}' {}>{}</textarea>",
+            name,
+            config.css_class,
+            editor_data.to_string().replace('\'', "&apos;"),
+            attrs,
+            value_str
+        )
+    }
+
+    fn render_image_upload_widget(
+        &self,
+        name: &str,
+        value: Option<&serde_json::Value>,
+        config: &ImageUploadConfig,
+    ) -> String {
+        let current_url = value.and_then(|v| v.as_str()).unwrap_or("");
+        let attrs = self.render_attrs();
+
+        let widget_data = serde_json::json!({
+            "previewWidth": config.preview_width,
+            "previewHeight": config.preview_height,
+            "maxFileSize": config.max_file_size,
+            "enableCrop": config.enable_crop,
+            "enableResize": config.enable_resize,
+            "enableDragDrop": config.enable_drag_drop,
+            "generateThumbnail": config.generate_thumbnail,
+            "thumbnailWidth": config.thumbnail_width,
+            "thumbnailHeight": config.thumbnail_height,
+        });
+
+        let accept = config.accept_attribute();
+
+        let preview_html = if !current_url.is_empty() {
+            format!(
+                "<div class=\"image-preview\" style=\"max-width: {}px; max-height: {}px;\">\
+                    <img src=\"{}\" alt=\"Preview\" style=\"max-width: 100%; max-height: 100%;\" />\
+                 </div>",
+                config.preview_width, config.preview_height, current_url
+            )
+        } else {
+            format!(
+                "<div class=\"image-preview\" style=\"max-width: {}px; max-height: {}px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center;\">\
+                    <span>No image selected</span>\
+                 </div>",
+                config.preview_width, config.preview_height
+            )
+        };
+
+        format!(
+            "<div class=\"{}\" data-config='{}'>\
+                {}\
+                <input type=\"file\" name=\"{}\" accept=\"{}\" {} />\
+                <input type=\"hidden\" name=\"{}_current\" value=\"{}\" />\
+             </div>",
+            config.css_class,
+            widget_data.to_string().replace('\'', "&apos;"),
+            preview_html,
+            name,
+            accept,
+            attrs,
+            name,
+            current_url
+        )
+    }
+
     fn render_multi_select(
         &self,
         name: &str,
@@ -303,6 +661,10 @@ pub enum WidgetType {
     ColorPicker,
     /// Rich text editor (WYSIWYG)
     RichTextEditor,
+    /// Rich text editor with advanced configuration
+    RichTextEditorWidget { config: RichTextEditorConfig },
+    /// Image upload widget with preview
+    ImageUploadWidget { config: ImageUploadConfig },
     /// Multiple select dropdown
     MultiSelect { choices: Vec<(String, String)> },
 }
@@ -369,6 +731,41 @@ impl WidgetFactory {
     pub fn rich_text_editor() -> Widget {
         Widget::new(WidgetType::RichTextEditor)
             .with_attr("class", "form-control rich-text-editor")
+    }
+
+    /// Create a rich text editor widget with configuration
+    pub fn rich_text_editor_widget(config: RichTextEditorConfig) -> Widget {
+        Widget::new(WidgetType::RichTextEditorWidget { config })
+            .with_attr("class", "form-control")
+    }
+
+    /// Create a TinyMCE rich text editor widget
+    pub fn tinymce_editor() -> Widget {
+        let config = RichTextEditorConfig::new(EditorType::TinyMCE);
+        Self::rich_text_editor_widget(config)
+    }
+
+    /// Create a CKEditor rich text editor widget
+    pub fn ckeditor() -> Widget {
+        let config = RichTextEditorConfig::new(EditorType::CKEditor);
+        Self::rich_text_editor_widget(config)
+    }
+
+    /// Create a Quill rich text editor widget
+    pub fn quill_editor() -> Widget {
+        let config = RichTextEditorConfig::new(EditorType::Quill);
+        Self::rich_text_editor_widget(config)
+    }
+
+    /// Create an image upload widget with configuration
+    pub fn image_upload_widget(config: ImageUploadConfig) -> Widget {
+        Widget::new(WidgetType::ImageUploadWidget { config })
+            .with_attr("class", "form-control")
+    }
+
+    /// Create an image upload widget with default configuration
+    pub fn image_upload() -> Widget {
+        Self::image_upload_widget(ImageUploadConfig::default())
     }
 
     /// Create a multi-select widget
@@ -520,5 +917,185 @@ mod tests {
 
         assert!(html.contains("type=\"color\""));
         assert!(html.contains("value=\"#ff0000\""));
+    }
+
+    #[test]
+    fn test_rich_text_editor_config_default() {
+        let config = RichTextEditorConfig::default();
+        assert_eq!(config.editor_type, EditorType::TinyMCE);
+        assert_eq!(
+            config.toolbar,
+            "bold italic underline | link image | bullist numlist"
+        );
+        assert!(!config.file_upload_enabled);
+    }
+
+    #[test]
+    fn test_rich_text_editor_config_builder() {
+        let config = RichTextEditorConfig::new(EditorType::Quill)
+            .with_toolbar("bold italic | link")
+            .with_max_length(5000)
+            .with_allowed_tags("p,strong,em")
+            .with_file_upload(true);
+
+        assert_eq!(config.editor_type, EditorType::Quill);
+        assert_eq!(config.toolbar, "bold italic | link");
+        assert_eq!(config.max_length, Some(5000));
+        assert_eq!(config.allowed_tags, Some("p,strong,em".to_string()));
+        assert!(config.file_upload_enabled);
+    }
+
+    #[test]
+    fn test_render_rich_text_editor_widget() {
+        let config = RichTextEditorConfig::new(EditorType::CKEditor);
+        let widget = Widget::new(WidgetType::RichTextEditorWidget { config });
+        let html = widget.render("content", Some(&serde_json::Value::String("Hello".to_string())));
+
+        assert!(html.contains("<textarea"));
+        assert!(html.contains("name=\"content\""));
+        assert!(html.contains(">Hello</textarea>"));
+        assert!(html.contains("data-editor"));
+    }
+
+    #[test]
+    fn test_image_format_mime_type() {
+        assert_eq!(ImageFormat::Jpeg.mime_type(), "image/jpeg");
+        assert_eq!(ImageFormat::Png.mime_type(), "image/png");
+        assert_eq!(ImageFormat::Gif.mime_type(), "image/gif");
+        assert_eq!(ImageFormat::WebP.mime_type(), "image/webp");
+    }
+
+    #[test]
+    fn test_image_format_extension() {
+        assert_eq!(ImageFormat::Jpeg.extension(), "jpg");
+        assert_eq!(ImageFormat::Png.extension(), "png");
+        assert_eq!(ImageFormat::Gif.extension(), "gif");
+        assert_eq!(ImageFormat::WebP.extension(), "webp");
+    }
+
+    #[test]
+    fn test_image_upload_config_default() {
+        let config = ImageUploadConfig::default();
+        assert_eq!(config.preview_width, 300);
+        assert_eq!(config.preview_height, 300);
+        assert_eq!(config.max_file_size, 5 * 1024 * 1024);
+        assert!(config.generate_thumbnail);
+        assert!(config.enable_crop);
+        assert!(config.enable_resize);
+        assert!(config.enable_drag_drop);
+    }
+
+    #[test]
+    fn test_image_upload_config_builder() {
+        let config = ImageUploadConfig::new()
+            .with_preview_size(400, 400)
+            .with_formats(vec![ImageFormat::Jpeg, ImageFormat::Png])
+            .with_max_size(10 * 1024 * 1024)
+            .with_thumbnail(false)
+            .with_crop(false)
+            .with_resize(false)
+            .with_drag_drop(false);
+
+        assert_eq!(config.preview_width, 400);
+        assert_eq!(config.preview_height, 400);
+        assert_eq!(config.allowed_formats.len(), 2);
+        assert_eq!(config.max_file_size, 10 * 1024 * 1024);
+        assert!(!config.generate_thumbnail);
+        assert!(!config.enable_crop);
+        assert!(!config.enable_resize);
+        assert!(!config.enable_drag_drop);
+    }
+
+    #[test]
+    fn test_image_upload_config_accept_attribute() {
+        let config = ImageUploadConfig::new()
+            .with_formats(vec![ImageFormat::Jpeg, ImageFormat::Png]);
+
+        let accept = config.accept_attribute();
+        assert!(accept.contains("image/jpeg"));
+        assert!(accept.contains("image/png"));
+    }
+
+    #[test]
+    fn test_render_image_upload_widget() {
+        let config = ImageUploadConfig::default();
+        let widget = Widget::new(WidgetType::ImageUploadWidget { config });
+        let html = widget.render("photo", Some(&serde_json::Value::String("/uploads/photo.jpg".to_string())));
+
+        assert!(html.contains("input type=\"file\""));
+        assert!(html.contains("name=\"photo\""));
+        assert!(html.contains("accept="));
+        assert!(html.contains("image-preview"));
+        assert!(html.contains("/uploads/photo.jpg"));
+    }
+
+    #[test]
+    fn test_render_image_upload_widget_no_value() {
+        let config = ImageUploadConfig::default();
+        let widget = Widget::new(WidgetType::ImageUploadWidget { config });
+        let html = widget.render("photo", None);
+
+        assert!(html.contains("input type=\"file\""));
+        assert!(html.contains("name=\"photo\""));
+        assert!(html.contains("No image selected"));
+    }
+
+    #[test]
+    fn test_widget_factory_tinymce() {
+        let widget = WidgetFactory::tinymce_editor();
+        if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
+            assert_eq!(config.editor_type, EditorType::TinyMCE);
+        } else {
+            panic!("Expected RichTextEditorWidget");
+        }
+    }
+
+    #[test]
+    fn test_widget_factory_ckeditor() {
+        let widget = WidgetFactory::ckeditor();
+        if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
+            assert_eq!(config.editor_type, EditorType::CKEditor);
+        } else {
+            panic!("Expected RichTextEditorWidget");
+        }
+    }
+
+    #[test]
+    fn test_widget_factory_quill() {
+        let widget = WidgetFactory::quill_editor();
+        if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
+            assert_eq!(config.editor_type, EditorType::Quill);
+        } else {
+            panic!("Expected RichTextEditorWidget");
+        }
+    }
+
+    #[test]
+    fn test_widget_factory_image_upload() {
+        let widget = WidgetFactory::image_upload();
+        assert!(matches!(widget.widget_type, WidgetType::ImageUploadWidget { .. }));
+    }
+
+    #[test]
+    fn test_image_upload_max_file_size_validation() {
+        let config = ImageUploadConfig::new()
+            .with_max_size(1024 * 1024); // 1MB
+
+        assert_eq!(config.max_file_size, 1024 * 1024);
+    }
+
+    #[test]
+    fn test_rich_text_editor_different_types() {
+        let types = vec![
+            EditorType::TinyMCE,
+            EditorType::CKEditor,
+            EditorType::Quill,
+            EditorType::Simple,
+        ];
+
+        for editor_type in types {
+            let config = RichTextEditorConfig::new(editor_type.clone());
+            assert_eq!(config.editor_type, editor_type);
+        }
     }
 }

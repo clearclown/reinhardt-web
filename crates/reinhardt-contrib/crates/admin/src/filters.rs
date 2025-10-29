@@ -274,16 +274,126 @@ impl ListFilter for DateRangeFilter {
     }
 
     fn choices(&self) -> Vec<FilterSpec> {
+        use chrono::{Local, Datelike, Duration};
+
+        let now = Local::now();
+        let today = now.date_naive();
+
+        // Calculate date boundaries
+        let week_start = today - Duration::days(today.weekday().num_days_from_monday() as i64);
+        let month_start = today.with_day(1).unwrap();
+        let year_start = today.with_month(1).and_then(|d| d.with_day(1)).unwrap();
+
+        // Last 7 days and last 30 days
+        let last_7_days = today - Duration::days(7);
+        let last_30_days = today - Duration::days(30);
+
         vec![
-            FilterSpec::new(&self.field, "gte", "today", "Today"),
-            FilterSpec::new(&self.field, "gte", "this_week", "This week"),
-            FilterSpec::new(&self.field, "gte", "this_month", "This month"),
-            FilterSpec::new(&self.field, "gte", "this_year", "This year"),
+            FilterSpec::new(&self.field, "gte", today.to_string(), "Today"),
+            FilterSpec::new(&self.field, "gte", week_start.to_string(), "This week"),
+            FilterSpec::new(&self.field, "gte", month_start.to_string(), "This month"),
+            FilterSpec::new(&self.field, "gte", year_start.to_string(), "This year"),
+            FilterSpec::new(&self.field, "gte", last_7_days.to_string(), "Last 7 days"),
+            FilterSpec::new(&self.field, "gte", last_30_days.to_string(), "Last 30 days"),
         ]
     }
 
     fn lookup_type(&self) -> &str {
         "gte" // Greater than or equal to
+    }
+}
+
+/// Number range filter
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_admin::NumberRangeFilter;
+///
+/// let filter = NumberRangeFilter::new("price", "Price Range");
+/// let choices = filter.choices();
+///
+/// // Has options like "Less than 100", "100-1000", "More than 1000"
+/// assert!(!choices.is_empty());
+/// ```
+#[derive(Debug, Clone)]
+pub struct NumberRangeFilter {
+    field: String,
+    title: String,
+    ranges: Vec<(Option<i64>, Option<i64>, String)>, // (min, max, display)
+}
+
+impl NumberRangeFilter {
+    /// Create a new number range filter with default ranges
+    pub fn new(field: impl Into<String>, title: impl Into<String>) -> Self {
+        Self {
+            field: field.into(),
+            title: title.into(),
+            ranges: vec![
+                (Some(0), Some(100), "0-100".to_string()),
+                (Some(100), Some(1000), "100-1,000".to_string()),
+                (Some(1000), Some(10000), "1,000-10,000".to_string()),
+                (Some(10000), None, "10,000+".to_string()),
+            ],
+        }
+    }
+
+    /// Create a number range filter with custom ranges
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_admin::NumberRangeFilter;
+    ///
+    /// let filter = NumberRangeFilter::with_ranges(
+    ///     "price",
+    ///     "Price",
+    ///     vec![
+    ///         (Some(0), Some(50), "Under $50".to_string()),
+    ///         (Some(50), Some(100), "$50-$100".to_string()),
+    ///         (Some(100), None, "Over $100".to_string()),
+    ///     ]
+    /// );
+    /// ```
+    pub fn with_ranges(
+        field: impl Into<String>,
+        title: impl Into<String>,
+        ranges: Vec<(Option<i64>, Option<i64>, String)>,
+    ) -> Self {
+        Self {
+            field: field.into(),
+            title: title.into(),
+            ranges,
+        }
+    }
+}
+
+impl ListFilter for NumberRangeFilter {
+    fn field_name(&self) -> &str {
+        &self.field
+    }
+
+    fn title(&self) -> &str {
+        &self.title
+    }
+
+    fn choices(&self) -> Vec<FilterSpec> {
+        self.ranges
+            .iter()
+            .map(|(min, max, display)| {
+                let value = match (min, max) {
+                    (Some(min_val), Some(max_val)) => format!("{}-{}", min_val, max_val),
+                    (Some(min_val), None) => format!("{}+", min_val),
+                    (None, Some(max_val)) => format!("-{}", max_val),
+                    (None, None) => "all".to_string(),
+                };
+                FilterSpec::new(&self.field, "range", value, display)
+            })
+            .collect()
+    }
+
+    fn lookup_type(&self) -> &str {
+        "range"
     }
 }
 
@@ -306,6 +416,8 @@ impl ListFilter for DateRangeFilter {
 /// ```
 pub struct FilterManager {
     filters: Vec<Box<dyn ListFilter>>,
+    // Cache for filter lookups by field name
+    filter_cache: std::sync::Arc<dashmap::DashMap<String, usize>>,
 }
 
 impl FilterManager {
@@ -313,12 +425,17 @@ impl FilterManager {
     pub fn new() -> Self {
         Self {
             filters: Vec::new(),
+            filter_cache: std::sync::Arc::new(dashmap::DashMap::new()),
         }
     }
 
     /// Add a filter
     pub fn add_filter(mut self, filter: impl ListFilter + 'static) -> Self {
+        let field_name = filter.field_name().to_string();
+        let index = self.filters.len();
         self.filters.push(Box::new(filter));
+        // Update cache with new filter index
+        self.filter_cache.insert(field_name, index);
         self
     }
 
@@ -337,9 +454,22 @@ impl FilterManager {
         self.filters.is_empty()
     }
 
-    /// Get filter by field name
+    /// Get filter by field name (cached lookup)
     pub fn get_filter(&self, field_name: &str) -> Option<&Box<dyn ListFilter>> {
-        self.filters.iter().find(|f| f.field_name() == field_name)
+        // Try cache first
+        if let Some(index) = self.filter_cache.get(field_name) {
+            return self.filters.get(*index);
+        }
+
+        // Fallback to linear search and update cache
+        for (idx, filter) in self.filters.iter().enumerate() {
+            if filter.field_name() == field_name {
+                self.filter_cache.insert(field_name.to_string(), idx);
+                return Some(filter);
+            }
+        }
+
+        None
     }
 
     /// Apply filters to generate query parameters
@@ -433,11 +563,56 @@ mod tests {
         assert_eq!(filter.lookup_type(), "gte");
 
         let choices = filter.choices();
+        assert_eq!(choices.len(), 6); // Now includes "Last 7 days" and "Last 30 days"
+
+        // Verify choice displays (values will be actual dates)
+        assert_eq!(choices[0].display, "Today");
+        assert_eq!(choices[1].display, "This week");
+        assert_eq!(choices[2].display, "This month");
+        assert_eq!(choices[3].display, "This year");
+        assert_eq!(choices[4].display, "Last 7 days");
+        assert_eq!(choices[5].display, "Last 30 days");
+    }
+
+    #[test]
+    fn test_number_range_filter_default() {
+        let filter = NumberRangeFilter::new("price", "Price Range");
+        assert_eq!(filter.field_name(), "price");
+        assert_eq!(filter.title(), "Price Range");
+        assert_eq!(filter.lookup_type(), "range");
+
+        let choices = filter.choices();
         assert_eq!(choices.len(), 4);
-        assert_eq!(choices[0].value, "today");
-        assert_eq!(choices[1].value, "this_week");
-        assert_eq!(choices[2].value, "this_month");
-        assert_eq!(choices[3].value, "this_year");
+        assert_eq!(choices[0].value, "0-100");
+        assert_eq!(choices[0].display, "0-100");
+        assert_eq!(choices[1].value, "100-1000");
+        assert_eq!(choices[2].value, "1000-10000");
+        assert_eq!(choices[3].value, "10000+");
+    }
+
+    #[test]
+    fn test_number_range_filter_custom() {
+        let filter = NumberRangeFilter::with_ranges(
+            "price",
+            "Price",
+            vec![
+                (Some(0), Some(50), "Under $50".to_string()),
+                (Some(50), Some(100), "$50-$100".to_string()),
+                (Some(100), None, "Over $100".to_string()),
+                (None, Some(10), "Less than $10".to_string()),
+            ],
+        );
+
+        let choices = filter.choices();
+        assert_eq!(choices.len(), 4);
+        assert_eq!(choices[0].value, "0-50");
+        assert_eq!(choices[0].display, "Under $50");
+        assert_eq!(choices[1].value, "50-100");
+        assert_eq!(choices[1].display, "$50-$100");
+        assert_eq!(choices[2].value, "100+");
+        assert_eq!(choices[2].display, "Over $100");
+        assert_eq!(choices[3].value, "-10");
+        assert_eq!(choices[3].display, "Less than $10");
     }
 
     #[test]
