@@ -140,15 +140,12 @@ Edit `hello/urls.rs`:
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
+use hyper::Method;
 use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    router.add_function_route("/hello", Method::GET, views::hello_world);
-
-    router
+    UnifiedRouter::new()
+        .function("/hello", Method::GET, views::hello_world)
 }
 ```
 
@@ -161,11 +158,8 @@ use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    // Include hello app routes
-    router.include_router("/", hello::urls::url_patterns(), Some("hello".to_string()));
+    let router = UnifiedRouter::new()
+        .mount("/", hello::urls::url_patterns());
 
     Arc::new(router)
 }
@@ -278,16 +272,13 @@ Edit `todos/urls.rs`:
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
+use std::sync::Arc;
 use crate::views::TodoViewSet;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
     // Register ViewSet - this creates all CRUD endpoints automatically
-    router.register_viewset("todos", TodoViewSet::new());
-
-    router
+    UnifiedRouter::new()
+        .viewset("/todos", Arc::new(TodoViewSet::new()))
 }
 ```
 
@@ -307,10 +298,8 @@ use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    router.include_router("/api/", todos::urls::url_patterns(), Some("todos".to_string()));
+    let router = UnifiedRouter::new()
+        .mount("/api/", todos::urls::url_patterns());
 
     Arc::new(router)
 }
