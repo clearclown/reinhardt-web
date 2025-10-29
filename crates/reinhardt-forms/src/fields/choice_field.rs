@@ -231,4 +231,206 @@ mod tests {
             Err(FieldError::Validation(_))
         ));
     }
+
+    #[test]
+    fn test_choicefield_required() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let field = ChoiceField::new("number".to_string(), choices);
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty string
+        assert!(field.clean(Some(&serde_json::json!(""))).is_err());
+    }
+
+    #[test]
+    fn test_choicefield_not_required() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let mut field = ChoiceField::new("number".to_string(), choices);
+        field.required = false;
+
+        // Not required accepts None
+        assert_eq!(field.clean(None).unwrap(), serde_json::json!(""));
+
+        // Not required accepts empty string
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(""))).unwrap(),
+            serde_json::json!("")
+        );
+    }
+
+    #[test]
+    fn test_choicefield_whitespace_trimming() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let field = ChoiceField::new("number".to_string(), choices);
+
+        // Whitespace should be trimmed before validation
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("  1  "))).unwrap(),
+            serde_json::json!("1")
+        );
+    }
+
+    #[test]
+    fn test_choicefield_multiple_choices() {
+        let choices = vec![
+            ("a".to_string(), "Alpha".to_string()),
+            ("b".to_string(), "Beta".to_string()),
+            ("c".to_string(), "Gamma".to_string()),
+        ];
+        let field = ChoiceField::new("greek".to_string(), choices);
+
+        // All choices should be valid
+        assert!(field.clean(Some(&serde_json::json!("a"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("b"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("c"))).is_ok());
+
+        // Non-existent choice should fail
+        assert!(field.clean(Some(&serde_json::json!("d"))).is_err());
+    }
+
+    #[test]
+    fn test_choicefield_widget_type() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let field = ChoiceField::new("number".to_string(), choices.clone());
+
+        // Widget should be Select with choices
+        match field.widget() {
+            Widget::Select { choices: widget_choices } => {
+                assert_eq!(widget_choices, &choices);
+            }
+            _ => panic!("Expected Select widget"),
+        }
+    }
+
+    #[test]
+    fn test_choicefield_empty_choices() {
+        let choices: Vec<(String, String)> = vec![];
+        let field = ChoiceField::new("empty".to_string(), choices);
+
+        // Any value should be invalid when choices is empty
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("anything"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_choicefield_case_sensitive() {
+        let choices = vec![("abc".to_string(), "ABC".to_string())];
+        let field = ChoiceField::new("text".to_string(), choices);
+
+        // Exact match should work
+        assert!(field.clean(Some(&serde_json::json!("abc"))).is_ok());
+
+        // Different case should fail (choices are case-sensitive)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("ABC"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_multiplechoicefield_required() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let field = MultipleChoiceField::new("numbers".to_string(), choices);
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty array
+        assert!(field.clean(Some(&serde_json::json!([]))).is_err());
+    }
+
+    #[test]
+    fn test_multiplechoicefield_not_required() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let mut field = MultipleChoiceField::new("numbers".to_string(), choices);
+        field.required = false;
+
+        // Not required accepts None
+        assert_eq!(field.clean(None).unwrap(), serde_json::json!([]));
+
+        // Not required accepts empty array
+        assert_eq!(
+            field.clean(Some(&serde_json::json!([]))).unwrap(),
+            serde_json::json!([])
+        );
+    }
+
+    #[test]
+    fn test_multiplechoicefield_single_value() {
+        let choices = vec![
+            ("a".to_string(), "A".to_string()),
+            ("b".to_string(), "B".to_string()),
+        ];
+        let field = MultipleChoiceField::new("letters".to_string(), choices);
+
+        // Single value as string should work
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("a"))).unwrap(),
+            serde_json::json!(["a"])
+        );
+
+        // Invalid single value should fail
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("z"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_multiplechoicefield_multiple_values() {
+        let choices = vec![
+            ("1".to_string(), "One".to_string()),
+            ("2".to_string(), "Two".to_string()),
+            ("3".to_string(), "Three".to_string()),
+        ];
+        let field = MultipleChoiceField::new("numbers".to_string(), choices);
+
+        // Valid multiple values
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(["1", "2"]))).unwrap(),
+            serde_json::json!(["1", "2"])
+        );
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(["1", "2", "3"]))).unwrap(),
+            serde_json::json!(["1", "2", "3"])
+        );
+
+        // One invalid value should fail entire validation
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!(["1", "2", "4"]))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_multiplechoicefield_duplicate_values() {
+        let choices = vec![
+            ("a".to_string(), "A".to_string()),
+            ("b".to_string(), "B".to_string()),
+        ];
+        let field = MultipleChoiceField::new("letters".to_string(), choices);
+
+        // Duplicates should be accepted (validation doesn't remove them)
+        let result = field.clean(Some(&serde_json::json!(["a", "a", "b"]))).unwrap();
+        assert_eq!(result, serde_json::json!(["a", "a", "b"]));
+    }
+
+    #[test]
+    fn test_multiplechoicefield_widget_type() {
+        let choices = vec![("1".to_string(), "One".to_string())];
+        let field = MultipleChoiceField::new("numbers".to_string(), choices.clone());
+
+        // Widget should be Select with choices
+        match field.widget() {
+            Widget::Select { choices: widget_choices } => {
+                assert_eq!(widget_choices, &choices);
+            }
+            _ => panic!("Expected Select widget"),
+        }
+    }
 }

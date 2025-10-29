@@ -189,4 +189,147 @@ mod tests {
             Err(FieldError::Invalid(_))
         ));
     }
+
+    #[test]
+    fn test_floatfield_required() {
+        let field = FloatField::new("value".to_string());
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty string
+        assert!(field.clean(Some(&serde_json::json!(""))).is_err());
+    }
+
+    #[test]
+    fn test_floatfield_not_required() {
+        let mut field = FloatField::new("value".to_string());
+        field.required = false;
+
+        // Not required accepts None
+        assert_eq!(field.clean(None).unwrap(), serde_json::Value::Null);
+
+        // Not required accepts empty string
+        assert_eq!(field.clean(Some(&serde_json::json!(""))).unwrap(), serde_json::Value::Null);
+    }
+
+    #[test]
+    fn test_floatfield_negative_numbers() {
+        let mut field = FloatField::new("value".to_string());
+        field.required = false;
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(-3.14))).unwrap(),
+            serde_json::json!(-3.14)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("-3.14"))).unwrap(),
+            serde_json::json!(-3.14)
+        );
+    }
+
+    #[test]
+    fn test_floatfield_scientific_notation() {
+        let mut field = FloatField::new("value".to_string());
+        field.required = false;
+
+        // Scientific notation as string
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("1.5e2"))).unwrap(),
+            serde_json::json!(150.0)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("1e-3"))).unwrap(),
+            serde_json::json!(0.001)
+        );
+    }
+
+    #[test]
+    fn test_floatfield_infinity() {
+        let field = FloatField::new("value".to_string());
+
+        // Infinity is rejected
+        assert!(field.clean(Some(&serde_json::json!(f64::INFINITY))).is_err());
+        assert!(field.clean(Some(&serde_json::json!(f64::NEG_INFINITY))).is_err());
+    }
+
+    #[test]
+    fn test_floatfield_nan() {
+        let field = FloatField::new("value".to_string());
+
+        // NaN is rejected
+        assert!(field.clean(Some(&serde_json::json!(f64::NAN))).is_err());
+    }
+
+    #[test]
+    fn test_floatfield_very_small_numbers() {
+        let mut field = FloatField::new("value".to_string());
+        field.required = false;
+
+        // Very small numbers
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(0.000001))).unwrap(),
+            serde_json::json!(0.000001)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("0.000001"))).unwrap(),
+            serde_json::json!(0.000001)
+        );
+    }
+
+    #[test]
+    fn test_floatfield_very_large_numbers() {
+        let mut field = FloatField::new("value".to_string());
+        field.required = false;
+
+        // Very large numbers
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(1000000000.0))).unwrap(),
+            serde_json::json!(1000000000.0)
+        );
+    }
+
+    #[test]
+    fn test_floatfield_max_value_boundary() {
+        let mut field = FloatField::new("value".to_string());
+        field.max_value = Some(100.0);
+
+        // Exactly at boundary
+        assert!(field.clean(Some(&serde_json::json!(100.0))).is_ok());
+
+        // Just over boundary
+        assert!(field.clean(Some(&serde_json::json!(100.001))).is_err());
+    }
+
+    #[test]
+    fn test_floatfield_min_value_boundary() {
+        let mut field = FloatField::new("value".to_string());
+        field.min_value = Some(-100.0);
+
+        // Exactly at boundary
+        assert!(field.clean(Some(&serde_json::json!(-100.0))).is_ok());
+
+        // Just under boundary
+        assert!(field.clean(Some(&serde_json::json!(-100.001))).is_err());
+    }
+
+    #[test]
+    fn test_floatfield_zero() {
+        let field = FloatField::new("value".to_string());
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(0.0))).unwrap(),
+            serde_json::json!(0.0)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("0.0"))).unwrap(),
+            serde_json::json!(0.0)
+        );
+    }
+
+    #[test]
+    fn test_floatfield_widget() {
+        let field = FloatField::new("value".to_string());
+        assert!(matches!(field.widget(), &Widget::NumberInput));
+    }
 }

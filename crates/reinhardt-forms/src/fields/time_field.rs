@@ -152,4 +152,213 @@ mod tests {
             serde_json::Value::Null
         );
     }
+
+    #[test]
+    fn test_timefield_required() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty string
+        assert!(field.clean(Some(&serde_json::json!(""))).is_err());
+    }
+
+    #[test]
+    fn test_timefield_24hour_format_with_seconds() {
+        let field = TimeField::new("start_time".to_string());
+
+        let result = field.clean(Some(&serde_json::json!("14:30:00"))).unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+
+        let result = field.clean(Some(&serde_json::json!("09:15:30"))).unwrap();
+        assert_eq!(result, serde_json::json!("09:15:30"));
+    }
+
+    #[test]
+    fn test_timefield_24hour_format_without_seconds() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Without seconds defaults to :00
+        let result = field.clean(Some(&serde_json::json!("14:30"))).unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+
+        let result = field.clean(Some(&serde_json::json!("09:15"))).unwrap();
+        assert_eq!(result, serde_json::json!("09:15:00"));
+    }
+
+    #[test]
+    fn test_timefield_12hour_format_pm() {
+        let field = TimeField::new("start_time".to_string());
+
+        // PM times
+        let result = field
+            .clean(Some(&serde_json::json!("02:30:00 PM")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+
+        let result = field.clean(Some(&serde_json::json!("02:30 PM"))).unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+
+        let result = field
+            .clean(Some(&serde_json::json!("11:59:59 PM")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("23:59:59"));
+    }
+
+    #[test]
+    fn test_timefield_12hour_format_am() {
+        let field = TimeField::new("start_time".to_string());
+
+        // AM times
+        let result = field
+            .clean(Some(&serde_json::json!("09:30:00 AM")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("09:30:00"));
+
+        let result = field.clean(Some(&serde_json::json!("09:30 AM"))).unwrap();
+        assert_eq!(result, serde_json::json!("09:30:00"));
+
+        let result = field
+            .clean(Some(&serde_json::json!("11:59:59 AM")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("11:59:59"));
+    }
+
+    #[test]
+    fn test_timefield_midnight() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Midnight as 00:00:00
+        let result = field.clean(Some(&serde_json::json!("00:00:00"))).unwrap();
+        assert_eq!(result, serde_json::json!("00:00:00"));
+
+        // Midnight as 12:00 AM
+        let result = field.clean(Some(&serde_json::json!("12:00 AM"))).unwrap();
+        assert_eq!(result, serde_json::json!("00:00:00"));
+    }
+
+    #[test]
+    fn test_timefield_noon() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Noon as 12:00:00
+        let result = field.clean(Some(&serde_json::json!("12:00:00"))).unwrap();
+        assert_eq!(result, serde_json::json!("12:00:00"));
+
+        // Noon as 12:00 PM
+        let result = field.clean(Some(&serde_json::json!("12:00 PM"))).unwrap();
+        assert_eq!(result, serde_json::json!("12:00:00"));
+    }
+
+    #[test]
+    fn test_timefield_end_of_day() {
+        let field = TimeField::new("start_time".to_string());
+
+        let result = field.clean(Some(&serde_json::json!("23:59:59"))).unwrap();
+        assert_eq!(result, serde_json::json!("23:59:59"));
+    }
+
+    #[test]
+    fn test_timefield_whitespace_trimming() {
+        let field = TimeField::new("start_time".to_string());
+
+        let result = field
+            .clean(Some(&serde_json::json!("  14:30:00  ")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+    }
+
+    #[test]
+    fn test_timefield_invalid_hour() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Hour 25 is invalid
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("25:00:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Hour 24 is invalid (valid range is 00-23)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("24:00:00"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_timefield_invalid_minute() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Minute 60 is invalid
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("14:60:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Minute 99 is invalid
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("14:99:00"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_timefield_invalid_second() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Second 99 is invalid
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("14:30:99"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Note: Second 60 is accepted by chrono as leap second
+        // So we test with a clearly invalid value like 99 instead
+    }
+
+    #[test]
+    fn test_timefield_invalid_format() {
+        let field = TimeField::new("start_time".to_string());
+
+        // Missing colon
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("1430"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Invalid text
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("not a time"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_timefield_widget_type() {
+        let field = TimeField::new("start_time".to_string());
+        assert!(matches!(field.widget(), &Widget::TextInput));
+    }
+
+    #[test]
+    fn test_timefield_custom_format() {
+        let mut field = TimeField::new("start_time".to_string());
+        // Replace with custom 24-hour format using period
+        field.input_formats.clear();
+        field.input_formats.push("%H.%M.%S".to_string());
+
+        // Custom format with periods should work
+        let result = field.clean(Some(&serde_json::json!("14.30.00"))).unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+    }
+
+    #[test]
+    fn test_timefield_format_precedence() {
+        let field = TimeField::new("start_time".to_string());
+
+        // When multiple formats could match, first matching format is used
+        // "14:30:00" matches "%H:%M:%S" (first format)
+        let result = field.clean(Some(&serde_json::json!("14:30:00"))).unwrap();
+        assert_eq!(result, serde_json::json!("14:30:00"));
+    }
 }

@@ -162,4 +162,217 @@ mod tests {
             serde_json::Value::Null
         );
     }
+
+    #[test]
+    fn test_datetimefield_required() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty string
+        assert!(field.clean(Some(&serde_json::json!(""))).is_err());
+    }
+
+    #[test]
+    fn test_datetimefield_iso_format_with_seconds() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // ISO 8601 with space separator
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+
+        // ISO 8601 with T separator
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15T14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_iso_format_without_seconds() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // ISO 8601 with space separator (no seconds)
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 14:30")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+
+        // ISO 8601 with T separator (no seconds)
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15T14:30")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_us_format_with_seconds() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // US format with 4-digit year
+        let result = field
+            .clean(Some(&serde_json::json!("01/15/2025 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+
+        // US format with 2-digit year (chrono interprets as 00-99 AD)
+        let result = field
+            .clean(Some(&serde_json::json!("01/15/25 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("0025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_us_format_without_seconds() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // US format with 4-digit year (no seconds)
+        let result = field
+            .clean(Some(&serde_json::json!("01/15/2025 14:30")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+
+        // US format with 2-digit year (no seconds)
+        let result = field
+            .clean(Some(&serde_json::json!("01/15/25 14:30")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("0025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_whitespace_trimming() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        let result = field
+            .clean(Some(&serde_json::json!("  2025-01-15 14:30:00  ")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_invalid_date() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // Invalid month (13)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-13-01 14:30:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Invalid day (32)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-01-32 14:30:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Feb 30 (invalid)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-02-30 14:30:00"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_datetimefield_invalid_time() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // Invalid hour (25)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-01-15 25:30:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Invalid minute (61)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-01-15 14:61:00"))),
+            Err(FieldError::Validation(_))
+        ));
+
+        // Invalid second (61)
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-01-15 14:30:61"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_datetimefield_leap_year() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // Feb 29 in leap year 2024 should be valid
+        let result = field
+            .clean(Some(&serde_json::json!("2024-02-29 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2024-02-29 14:30:00"));
+
+        // Feb 29 in non-leap year 2025 should fail
+        assert!(matches!(
+            field.clean(Some(&serde_json::json!("2025-02-29 14:30:00"))),
+            Err(FieldError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn test_datetimefield_midnight() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 00:00:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 00:00:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_end_of_day() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 23:59:59")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 23:59:59"));
+    }
+
+    #[test]
+    fn test_datetimefield_noon() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 12:00:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 12:00:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_widget_type() {
+        let field = DateTimeField::new("created_at".to_string());
+        assert!(matches!(field.widget(), &Widget::TextInput));
+    }
+
+    #[test]
+    fn test_datetimefield_custom_formats() {
+        let mut field = DateTimeField::new("created_at".to_string());
+        // Add custom format
+        field.input_formats.push("%d-%m-%Y %H:%M:%S".to_string());
+
+        // Custom day-first format should work
+        let result = field
+            .clean(Some(&serde_json::json!("15-01-2025 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+    }
+
+    #[test]
+    fn test_datetimefield_format_precedence() {
+        let field = DateTimeField::new("created_at".to_string());
+
+        // When multiple formats could match, first matching format is used
+        // "2025-01-15 14:30:00" matches "%Y-%m-%d %H:%M:%S" (first format)
+        let result = field
+            .clean(Some(&serde_json::json!("2025-01-15 14:30:00")))
+            .unwrap();
+        assert_eq!(result, serde_json::json!("2025-01-15 14:30:00"));
+    }
 }

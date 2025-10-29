@@ -224,4 +224,191 @@ mod tests {
             Err(FieldError::Validation(_))
         ));
     }
+
+    #[test]
+    fn test_decimalfield_required() {
+        let field = DecimalField::new("price".to_string());
+
+        // Required field rejects None
+        assert!(field.clean(None).is_err());
+
+        // Required field rejects empty string
+        assert!(field.clean(Some(&serde_json::json!(""))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_not_required() {
+        let mut field = DecimalField::new("price".to_string());
+        field.required = false;
+
+        // Not required accepts None
+        assert_eq!(field.clean(None).unwrap(), serde_json::Value::Null);
+
+        // Not required accepts empty string
+        assert_eq!(field.clean(Some(&serde_json::json!(""))).unwrap(), serde_json::Value::Null);
+    }
+
+    #[test]
+    fn test_decimalfield_integer_input() {
+        let field = DecimalField::new("amount".to_string());
+
+        // Integer as number
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(42))).unwrap(),
+            serde_json::json!(42.0)
+        );
+
+        // Integer as string
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("42"))).unwrap(),
+            serde_json::json!(42.0)
+        );
+    }
+
+    #[test]
+    fn test_decimalfield_negative_numbers() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.required = false;
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!(-3.14))).unwrap(),
+            serde_json::json!(-3.14)
+        );
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("-3.14"))).unwrap(),
+            serde_json::json!(-3.14)
+        );
+    }
+
+    #[test]
+    fn test_decimalfield_whitespace_trimming() {
+        let field = DecimalField::new("amount".to_string());
+
+        assert_eq!(
+            field.clean(Some(&serde_json::json!("  3.14  "))).unwrap(),
+            serde_json::json!(3.14)
+        );
+    }
+
+    #[test]
+    fn test_decimalfield_invalid_input() {
+        let field = DecimalField::new("amount".to_string());
+
+        // Non-numeric string
+        assert!(field.clean(Some(&serde_json::json!("abc"))).is_err());
+
+        // Multiple decimal points
+        assert!(field.clean(Some(&serde_json::json!("3.14.15"))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_infinity_nan() {
+        let field = DecimalField::new("amount".to_string());
+
+        // Infinity is rejected
+        assert!(field.clean(Some(&serde_json::json!(f64::INFINITY))).is_err());
+
+        // NaN is rejected
+        assert!(field.clean(Some(&serde_json::json!(f64::NAN))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_max_digits_exact() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.max_digits = Some(5);
+
+        // Exactly 5 digits should pass
+        assert!(field.clean(Some(&serde_json::json!("12345"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("123.45"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("12.345"))).is_ok());
+    }
+
+    #[test]
+    fn test_decimalfield_decimal_places_exact() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.decimal_places = Some(2);
+
+        // Exactly 2 decimal places should pass
+        assert!(field.clean(Some(&serde_json::json!("123.45"))).is_ok());
+
+        // 1 decimal place should pass (less than max)
+        assert!(field.clean(Some(&serde_json::json!("123.4"))).is_ok());
+
+        // 3 decimal places should fail
+        assert!(field.clean(Some(&serde_json::json!("123.456"))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_max_value_exact() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.max_value = Some(100.0);
+
+        // Exactly max value should pass
+        assert!(field.clean(Some(&serde_json::json!(100.0))).is_ok());
+
+        // Just above max should fail
+        assert!(field.clean(Some(&serde_json::json!(100.1))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_min_value_exact() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.min_value = Some(0.0);
+
+        // Exactly min value should pass
+        assert!(field.clean(Some(&serde_json::json!(0.0))).is_ok());
+
+        // Just below min should fail
+        assert!(field.clean(Some(&serde_json::json!(-0.1))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_combined_constraints() {
+        let mut field = DecimalField::new("amount".to_string());
+        field.min_value = Some(0.0);
+        field.max_value = Some(999.99);
+        field.max_digits = Some(5);
+        field.decimal_places = Some(2);
+
+        // Valid values
+        assert!(field.clean(Some(&serde_json::json!("0.00"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("123.45"))).is_ok());
+        assert!(field.clean(Some(&serde_json::json!("999.99"))).is_ok());
+
+        // Exceeds max value
+        assert!(field.clean(Some(&serde_json::json!("1000.00"))).is_err());
+
+        // Below min value
+        assert!(field.clean(Some(&serde_json::json!("-0.01"))).is_err());
+
+        // Too many decimal places
+        assert!(field.clean(Some(&serde_json::json!("123.456"))).is_err());
+
+        // Too many total digits
+        assert!(field.clean(Some(&serde_json::json!("1234.56"))).is_err());
+    }
+
+    #[test]
+    fn test_decimalfield_localize_option() {
+        let field = DecimalField::new("amount".to_string()).with_localize(true);
+        assert!(field.localize);
+    }
+
+    #[test]
+    fn test_decimalfield_locale_option() {
+        let field = DecimalField::new("amount".to_string()).with_locale("en_US".to_string());
+        assert_eq!(field.locale, Some("en_US".to_string()));
+    }
+
+    #[test]
+    fn test_decimalfield_thousands_separator() {
+        let field = DecimalField::new("amount".to_string()).with_thousands_separator(true);
+        assert!(field.use_thousands_separator);
+    }
+
+    #[test]
+    fn test_decimalfield_widget() {
+        let field = DecimalField::new("amount".to_string());
+        assert!(matches!(field.widget(), &Widget::NumberInput));
+    }
 }
