@@ -52,11 +52,23 @@ pub mod writer;
 pub mod zero_downtime;
 
 pub use autodetector::{
-    ConstraintDefinition, DetectedChanges, FieldState, IndexDefinition, MigrationAutodetector,
-    ModelState, ProjectState, SimilarityConfig,
     // Phase 2: Pattern Learning and Inference
-    ChangeTracker, PatternMatcher, InferenceEngine, InferredIntent, InferenceRule, RuleCondition,
-    MigrationPrompt, InteractiveAutodetector,
+    ChangeTracker,
+    ConstraintDefinition,
+    DetectedChanges,
+    FieldState,
+    IndexDefinition,
+    InferenceEngine,
+    InferenceRule,
+    InferredIntent,
+    InteractiveAutodetector,
+    MigrationAutodetector,
+    MigrationPrompt,
+    ModelState,
+    PatternMatcher,
+    ProjectState,
+    RuleCondition,
+    SimilarityConfig,
 };
 pub use commands::{MakeMigrationsCommand, MakeMigrationsOptions, MigrateCommand, MigrateOptions};
 pub use di_support::{MigrationConfig, MigrationService};
@@ -66,25 +78,25 @@ pub use executor::{
 pub use graph::{MigrationGraph, MigrationKey, MigrationNode};
 pub use loader::MigrationLoader;
 pub use migration::Migration;
-pub use model_registry::{global_registry, FieldMetadata, ModelMetadata, ModelRegistry};
+pub use model_registry::{FieldMetadata, ModelMetadata, ModelRegistry, global_registry};
 pub use operations::{
     AddColumn, AlterColumn, ColumnDefinition, CreateTable, DropColumn, Operation, SqlDialect,
 };
 pub use plan::{MigrationPlan, TransactionMode};
 
 // New operations from refactored modules
+pub use auto_migration::{
+    AutoMigrationError, AutoMigrationGenerator, AutoMigrationResult, ValidationResult,
+};
 pub use operations::{
-    special::DataMigration, AddField, AlterField, CreateCollation, CreateExtension, CreateModel,
-    DeleteModel, DropExtension, FieldDefinition, MoveModel, RemoveField, RenameField, RenameModel,
-    RunCode, RunSQL, StateOperation,
+    AddField, AlterField, CreateCollation, CreateExtension, CreateModel, DeleteModel,
+    DropExtension, FieldDefinition, MoveModel, RemoveField, RenameField, RenameModel, RunCode,
+    RunSQL, StateOperation, special::DataMigration,
 };
 pub use recorder::{DatabaseMigrationRecorder, MigrationRecord, MigrationRecorder};
 pub use schema_diff::{
     ColumnSchema, ConstraintSchema, DatabaseSchema, IndexSchema, SchemaDiff, SchemaDiffResult,
     TableSchema,
-};
-pub use auto_migration::{
-    AutoMigrationError, AutoMigrationGenerator, AutoMigrationResult, ValidationResult,
 };
 pub use squash::{MigrationSquasher, SquashOptions};
 pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, OutputFormat};
@@ -92,8 +104,7 @@ pub use writer::MigrationWriter;
 pub use zero_downtime::{MigrationPhase, Strategy, ZeroDowntimeMigration};
 
 pub use introspection::{
-    ColumnInfo, DatabaseIntrospector, ForeignKeyInfo, IndexInfo, TableInfo,
-    UniqueConstraintInfo,
+    ColumnInfo, DatabaseIntrospector, ForeignKeyInfo, IndexInfo, TableInfo, UniqueConstraintInfo,
 };
 
 use thiserror::Error;

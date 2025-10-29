@@ -120,6 +120,10 @@ pub enum Operation {
         sql: String,
         reverse_sql: Option<String>,
     },
+    RunRust {
+        code: String,
+        reverse_code: Option<String>,
+    },
     AlterTableComment {
         table: String,
         comment: Option<String>,
@@ -244,6 +248,7 @@ impl Operation {
             | Operation::CreateIndex { .. }
             | Operation::DropIndex { .. }
             | Operation::RunSQL { .. }
+            | Operation::RunRust { .. }
             | Operation::AlterTableComment { .. }
             | Operation::AlterUniqueTogether { .. }
             | Operation::AlterModelOptions { .. } => {}
@@ -346,6 +351,10 @@ impl Operation {
                 format!("DROP INDEX {};", idx_name)
             }
             Operation::RunSQL { sql, .. } => sql.clone(),
+            Operation::RunRust { code, .. } => {
+                // For SQL generation, RunRust is a no-op comment
+                format!("-- RunRust: {}", code.lines().next().unwrap_or(""))
+            }
             Operation::AlterTableComment { table, comment } => match dialect {
                 SqlDialect::Postgres => {
                     if let Some(comment_text) = comment {
@@ -418,6 +427,12 @@ impl Operation {
                 table, column.name
             )),
             Operation::RunSQL { reverse_sql, .. } => reverse_sql.clone(),
+            Operation::RunRust { reverse_code, .. } => reverse_code.as_ref().map(|code| {
+                format!(
+                    "-- RunRust (reverse): {}",
+                    code.lines().next().unwrap_or("")
+                )
+            }),
             _ => None,
         }
     }
@@ -523,24 +538,12 @@ impl OperationStatement {
     /// Convert to SQL string for logging/debugging
     pub fn to_sql_string(&self) -> String {
         match self {
-            OperationStatement::TableCreate(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
-            OperationStatement::TableDrop(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
-            OperationStatement::TableAlter(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
-            OperationStatement::TableRename(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
-            OperationStatement::IndexCreate(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
-            OperationStatement::IndexDrop(stmt) => {
-                stmt.to_string(PostgresQueryBuilder)
-            }
+            OperationStatement::TableCreate(stmt) => stmt.to_string(PostgresQueryBuilder),
+            OperationStatement::TableDrop(stmt) => stmt.to_string(PostgresQueryBuilder),
+            OperationStatement::TableAlter(stmt) => stmt.to_string(PostgresQueryBuilder),
+            OperationStatement::TableRename(stmt) => stmt.to_string(PostgresQueryBuilder),
+            OperationStatement::IndexCreate(stmt) => stmt.to_string(PostgresQueryBuilder),
+            OperationStatement::IndexDrop(stmt) => stmt.to_string(PostgresQueryBuilder),
             OperationStatement::RawSql(sql) => sql.clone(),
         }
     }
@@ -554,7 +557,9 @@ impl Operation {
                 name,
                 columns,
                 constraints,
-            } => OperationStatement::TableCreate(self.build_create_table(name, columns, constraints)),
+            } => {
+                OperationStatement::TableCreate(self.build_create_table(name, columns, constraints))
+            }
             Operation::DropTable { name } => {
                 OperationStatement::TableDrop(self.build_drop_table(name))
             }
@@ -568,7 +573,11 @@ impl Operation {
                 table,
                 column,
                 new_definition,
-            } => OperationStatement::TableAlter(self.build_alter_column(table, column, new_definition)),
+            } => OperationStatement::TableAlter(self.build_alter_column(
+                table,
+                column,
+                new_definition,
+            )),
             Operation::RenameTable { old_name, new_name } => {
                 OperationStatement::TableRename(self.build_rename_table(old_name, new_name))
             }
@@ -608,13 +617,22 @@ impl Operation {
                 unique,
             } => {
                 let idx_name = format!("idx_{}_{}", table, columns.join("_"));
-                OperationStatement::IndexCreate(self.build_create_index(&idx_name, table, columns, *unique))
+                OperationStatement::IndexCreate(
+                    self.build_create_index(&idx_name, table, columns, *unique),
+                )
             }
             Operation::DropIndex { table, columns } => {
                 let idx_name = format!("idx_{}_{}", table, columns.join("_"));
                 OperationStatement::IndexDrop(self.build_drop_index(&idx_name))
             }
             Operation::RunSQL { sql, .. } => OperationStatement::RawSql(sql.clone()),
+            Operation::RunRust { code, .. } => {
+                // RunRust operations don't produce SQL
+                OperationStatement::RawSql(format!(
+                    "-- RunRust: {}",
+                    code.lines().next().unwrap_or("")
+                ))
+            }
             Operation::AlterTableComment { table, comment } => {
                 // PostgreSQL-specific COMMENT ON TABLE
                 OperationStatement::RawSql(if let Some(comment_text) = comment {
@@ -634,8 +652,10 @@ impl Operation {
                 let mut sqls = Vec::new();
                 for (idx, fields) in unique_together.iter().enumerate() {
                     let constraint_name = format!("{}_{}_uniq", table, idx);
-                    let fields_str: Vec<String> =
-                        fields.iter().map(|f| quote_identifier(f).to_string()).collect();
+                    let fields_str: Vec<String> = fields
+                        .iter()
+                        .map(|f| quote_identifier(f).to_string())
+                        .collect();
                     sqls.push(format!(
                         "ALTER TABLE {} ADD CONSTRAINT {} UNIQUE ({})",
                         quote_identifier(table),
@@ -686,8 +706,7 @@ impl Operation {
                 stmt.table(Alias::new(table));
 
                 let mut col = ColumnDef::new(Alias::new(column_name));
-                col.string_len(50)
-                    .default(default_value.clone());
+                col.string_len(50).default(default_value.clone());
                 stmt.add_column(&mut col);
 
                 OperationStatement::TableAlter(stmt.to_owned())
@@ -778,7 +797,11 @@ impl Operation {
         stmt.table(Alias::new(table));
 
         let mut col_def = ColumnDef::new(Alias::new(column));
-        self.apply_column_type(&mut col_def, &new_definition.type_definition, new_definition.max_length);
+        self.apply_column_type(
+            &mut col_def,
+            &new_definition.type_definition,
+            new_definition.max_length,
+        );
 
         if new_definition.not_null {
             col_def.not_null();
@@ -1354,7 +1377,11 @@ mod tests {
     fn test_state_forwards_drop_table() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new(
+            "id".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::DropTable {
@@ -1369,7 +1396,11 @@ mod tests {
     fn test_state_forwards_add_column() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new(
+            "id".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::AddColumn {
@@ -1396,8 +1427,16 @@ mod tests {
     fn test_state_forwards_drop_column() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
-        model.add_field(FieldState::new("email".to_string(), "VARCHAR".to_string(), false));
+        model.add_field(FieldState::new(
+            "id".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
+        model.add_field(FieldState::new(
+            "email".to_string(),
+            "VARCHAR".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::DropColumn {
@@ -1415,7 +1454,11 @@ mod tests {
     fn test_state_forwards_rename_table() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new(
+            "id".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::RenameTable {
@@ -1432,7 +1475,11 @@ mod tests {
     fn test_state_forwards_rename_column() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("name".to_string(), "VARCHAR".to_string(), false));
+        model.add_field(FieldState::new(
+            "name".to_string(),
+            "VARCHAR".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::RenameColumn {
@@ -1660,7 +1707,11 @@ mod tests {
     fn test_state_forwards_alter_column() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("age".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new(
+            "age".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::AlterColumn {
@@ -1715,7 +1766,11 @@ mod tests {
     fn test_state_forwards_add_discriminator_column() {
         let mut state = ProjectState::new();
         let mut model = ModelState::new("myapp", "users");
-        model.add_field(FieldState::new("id".to_string(), "INTEGER".to_string(), false));
+        model.add_field(FieldState::new(
+            "id".to_string(),
+            "INTEGER".to_string(),
+            false,
+        ));
         state.add_model(model);
 
         let op = Operation::AddDiscriminatorColumn {

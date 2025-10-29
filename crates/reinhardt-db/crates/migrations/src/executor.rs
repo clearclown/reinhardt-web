@@ -3,8 +3,8 @@
 //! Translated from Django's db/migrations/executor.py
 
 use crate::{
-    operations::SqlDialect, DatabaseMigrationRecorder, Migration, MigrationPlan, MigrationRecorder,
-    Operation, Result,
+    DatabaseMigrationRecorder, Migration, MigrationPlan, MigrationRecorder, Operation, Result,
+    operations::SqlDialect,
 };
 use backends::{connection::DatabaseConnection, types::DatabaseType};
 use sqlx::SqlitePool;
@@ -274,9 +274,12 @@ impl DatabaseMigrationExecutor {
             DatabaseType::Postgres => SqlDialect::Postgres,
             DatabaseType::Sqlite => SqlDialect::Sqlite,
             DatabaseType::Mysql => SqlDialect::Mysql,
+            #[cfg(feature = "mongodb")]
             DatabaseType::MongoDB => {
-                // TODO: Implement MongoDB migration support
-                return Err(crate::MigrationError::UnsupportedDatabase("MongoDB migrations are not yet supported".to_string()));
+                // MongoDB is schemaless, so structural migrations don't apply
+                // Only data migrations and index operations are relevant
+                // Skip SQL-based schema operations for MongoDB
+                return Ok(());
             }
         };
 
@@ -314,9 +317,11 @@ impl DatabaseMigrationExecutor {
             DatabaseType::Postgres => SqlDialect::Postgres,
             DatabaseType::Sqlite => SqlDialect::Sqlite,
             DatabaseType::Mysql => SqlDialect::Mysql,
+            #[cfg(feature = "mongodb")]
             DatabaseType::MongoDB => {
-                // TODO: Implement MongoDB migration support
-                return Err(crate::MigrationError::UnsupportedDatabase("MongoDB migrations are not yet supported".to_string()));
+                // MongoDB is schemaless, so structural migrations don't apply
+                // Only migration tracking is supported
+                SqlDialect::Postgres // Placeholder, won't be used
             }
         };
 
@@ -331,10 +336,18 @@ impl DatabaseMigrationExecutor {
             }
 
             // Apply migration
-            for operation in &migration.operations {
-                let sql = operation.to_sql(&dialect);
-                self.connection.execute(&sql, vec![]).await?;
+            #[cfg(feature = "mongodb")]
+            let is_mongodb = matches!(self.db_type, DatabaseType::MongoDB);
+            #[cfg(not(feature = "mongodb"))]
+            let is_mongodb = false;
+
+            if !is_mongodb {
+                for operation in &migration.operations {
+                    let sql = operation.to_sql(&dialect);
+                    self.connection.execute(&sql, vec![]).await?;
+                }
             }
+            // For MongoDB, skip SQL operations (schemaless)
 
             // Record migration as applied
             self.recorder

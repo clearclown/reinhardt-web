@@ -1,6 +1,6 @@
 //! Special operations for migrations
 //!
-//! This module provides special operations like RunSQL and RunCode (Rust equivalent of RunPython),
+//! This module provides special operations like RunSQL and RunRust,
 //! inspired by Django's `django/db/migrations/operations/special.py`.
 //!
 //! # Example
@@ -202,7 +202,7 @@ impl StateOperation {
 
 /// Execute Rust code during migration
 ///
-/// This is the Rust equivalent of Django's RunPython. It allows you to execute
+/// This is the Rust equivalent of Django's RunPython operation. It allows you to execute
 /// arbitrary Rust code during migration, useful for data transformations.
 ///
 /// # Example
@@ -552,10 +552,7 @@ impl DataMigration {
     /// ```
     pub fn to_run_sql(&self) -> RunSQL {
         let sql = if self.use_transactions {
-            format!(
-                "BEGIN;\n{}\nCOMMIT;",
-                self.transformations.join(";\n")
-            )
+            format!("BEGIN;\n{}\nCOMMIT;", self.transformations.join(";\n"))
         } else {
             self.transformations.join(";\n")
         };
@@ -579,8 +576,7 @@ mod data_migration_tests {
 
     #[test]
     fn test_data_migration_batch_size() {
-        let migration = DataMigration::new("users", "Migrate")
-            .batch_size(500);
+        let migration = DataMigration::new("users", "Migrate").batch_size(500);
         assert_eq!(migration.batch_size, 500);
     }
 
@@ -595,8 +591,7 @@ mod data_migration_tests {
 
     #[test]
     fn test_data_migration_use_transactions() {
-        let migration = DataMigration::new("users", "Migrate")
-            .use_transactions(false);
+        let migration = DataMigration::new("users", "Migrate").use_transactions(false);
         assert!(!migration.use_transactions);
     }
 

@@ -122,7 +122,8 @@ impl AddField {
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         let definition = self.field.to_sql_definition();
-        let stmt = schema_editor.add_column_statement(&self.model_name, &self.field.name, &definition);
+        let stmt =
+            schema_editor.add_column_statement(&self.model_name, &self.field.name, &definition);
         vec![stmt.to_string(PostgresQueryBuilder)]
     }
 }
@@ -373,7 +374,11 @@ impl RenameField {
     /// assert!(sql[0].contains("\"email_address\""));
     /// ```
     pub fn database_forwards(&self, schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![schema_editor.rename_column_statement(&self.model_name, &self.old_name, &self.new_name)]
+        vec![schema_editor.rename_column_statement(
+            &self.model_name,
+            &self.old_name,
+            &self.new_name,
+        )]
     }
 }
 

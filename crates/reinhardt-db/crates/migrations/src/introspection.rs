@@ -346,11 +346,15 @@ impl MySQLIntrospector {
                 let members = set_def.members.join("','");
                 format!("SET('{}')", members)
             }
-            Type::Bit(_) | Type::Geometry(_) | Type::Point(_) | Type::LineString(_)
-            | Type::Polygon(_) | Type::MultiPoint(_) | Type::MultiLineString(_)
-            | Type::MultiPolygon(_) | Type::GeometryCollection(_) => {
-                format!("{:?}", col_type).to_uppercase()
-            }
+            Type::Bit(_)
+            | Type::Geometry(_)
+            | Type::Point(_)
+            | Type::LineString(_)
+            | Type::Polygon(_)
+            | Type::MultiPoint(_)
+            | Type::MultiLineString(_)
+            | Type::MultiPolygon(_)
+            | Type::GeometryCollection(_) => format!("{:?}", col_type).to_uppercase(),
             Type::Unknown(s) => s.clone(),
         }
     }
@@ -416,11 +420,7 @@ impl MySQLIntrospector {
         let mut unique_constraints = Vec::new();
         let mut indexes = HashMap::new();
         for index_def in &table_def.indexes {
-            let columns: Vec<String> = index_def
-                .parts
-                .iter()
-                .map(|p| p.column.clone())
-                .collect();
+            let columns: Vec<String> = index_def.parts.iter().map(|p| p.column.clone()).collect();
 
             if index_def.unique {
                 unique_constraints.push(UniqueConstraintInfo {
@@ -509,18 +509,15 @@ impl SQLiteIntrospector {
     fn convert_column_type(col_type: &sea_schema::sea_query::ColumnType) -> String {
         use sea_schema::sea_query::ColumnType;
         match col_type {
-            ColumnType::TinyInteger | ColumnType::SmallInteger | ColumnType::Integer | ColumnType::BigInteger => {
-                "INTEGER".to_string()
-            }
-            ColumnType::Float | ColumnType::Double | ColumnType::Decimal(_) => {
-                "REAL".to_string()
-            }
-            ColumnType::String(_) | ColumnType::Text | ColumnType::Char(_) => {
-                "TEXT".to_string()
-            }
+            ColumnType::TinyInteger
+            | ColumnType::SmallInteger
+            | ColumnType::Integer
+            | ColumnType::BigInteger => "INTEGER".to_string(),
+            ColumnType::Float | ColumnType::Double | ColumnType::Decimal(_) => "REAL".to_string(),
+            ColumnType::String(_) | ColumnType::Text | ColumnType::Char(_) => "TEXT".to_string(),
             ColumnType::Binary(_) => "BLOB".to_string(),
             ColumnType::Boolean => "INTEGER".to_string(), // SQLite uses INTEGER for boolean
-            _ => "TEXT".to_string(), // fallback
+            _ => "TEXT".to_string(),                      // fallback
         }
     }
 
@@ -654,10 +651,11 @@ impl SQLiteIntrospector {
         for index_row in index_list {
             // Get columns for this index
             let info_query = format!("PRAGMA index_info({})", index_row.name);
-            let index_info: Vec<IndexInfoRow> = sqlx::query_as(&info_query)
-                .fetch_all(pool)
-                .await
-                .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
+            let index_info: Vec<IndexInfoRow> =
+                sqlx::query_as(&info_query)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| MigrationError::IntrospectionError(e.to_string()))?;
 
             let columns: Vec<String> = index_info
                 .into_iter()
@@ -706,8 +704,11 @@ impl SQLiteIntrospector {
                         sea_schema::sqlite::def::DefaultType::String(s) => Some(s.clone()),
                         sea_schema::sqlite::def::DefaultType::Integer(i) => Some(i.to_string()),
                         sea_schema::sqlite::def::DefaultType::Float(f) => Some(f.to_string()),
-                        sea_schema::sqlite::def::DefaultType::CurrentTimestamp => Some("CURRENT_TIMESTAMP".to_string()),
-                        sea_schema::sqlite::def::DefaultType::Null | sea_schema::sqlite::def::DefaultType::Unspecified => None,
+                        sea_schema::sqlite::def::DefaultType::CurrentTimestamp => {
+                            Some("CURRENT_TIMESTAMP".to_string())
+                        }
+                        sea_schema::sqlite::def::DefaultType::Null
+                        | sea_schema::sqlite::def::DefaultType::Unspecified => None,
                     },
                     auto_increment: is_auto,
                 },

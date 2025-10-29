@@ -137,10 +137,7 @@ impl CreateExtension {
     /// assert!(sql[0].contains("DROP EXTENSION"));
     /// ```
     pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![format!(
-            "DROP EXTENSION IF EXISTS \"{}\";",
-            self.name
-        )]
+        vec![format!("DROP EXTENSION IF EXISTS \"{}\";", self.name)]
     }
 }
 
@@ -184,18 +181,12 @@ impl DropExtension {
     /// assert!(sql[0].contains("DROP EXTENSION"));
     /// ```
     pub fn database_forwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![format!(
-            "DROP EXTENSION IF EXISTS \"{}\";",
-            self.name
-        )]
+        vec![format!("DROP EXTENSION IF EXISTS \"{}\";", self.name)]
     }
 
     /// Generate reverse SQL (recreate extension)
     pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![format!(
-            "CREATE EXTENSION IF NOT EXISTS \"{}\";",
-            self.name
-        )]
+        vec![format!("CREATE EXTENSION IF NOT EXISTS \"{}\";", self.name)]
     }
 }
 
@@ -272,10 +263,7 @@ impl CreateCollation {
         );
 
         if let Some(ref provider) = self.provider {
-            sql.push_str(&format!(
-                ", PROVIDER = {}",
-                quote_literal(provider)
-            ));
+            sql.push_str(&format!(", PROVIDER = {}", quote_literal(provider)));
         }
 
         sql.push_str(");");
@@ -284,10 +272,7 @@ impl CreateCollation {
 
     /// Generate reverse SQL
     pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
-        vec![format!(
-            "DROP COLLATION IF EXISTS \"{}\";",
-            self.name
-        )]
+        vec![format!("DROP COLLATION IF EXISTS \"{}\";", self.name)]
     }
 }
 

@@ -328,7 +328,7 @@ impl MakeMigrationsCommand {
                 code.push_str("        })\n");
                 code
             }
-            crate::Operation::DropTable { name } => {
+            crate::Operation::DropTable { name, .. } => {
                 format!(
                     "        .add_operation(Operation::DropTable {{ name: \"{}\".to_string() }})\n",
                     name
@@ -340,7 +340,7 @@ impl MakeMigrationsCommand {
                     table, column.name, column.type_definition
                 )
             }
-            crate::Operation::DropColumn { table, column } => {
+            crate::Operation::DropColumn { table, column, .. } => {
                 format!(
                     "        .add_operation(Operation::DropColumn {{ table: \"{}\".to_string(), column: \"{}\".to_string() }})\n",
                     table, column
@@ -349,7 +349,7 @@ impl MakeMigrationsCommand {
             crate::Operation::AlterColumn {
                 table,
                 column,
-                new_definition,
+                new_definition, ..
             } => {
                 format!(
                     "        .add_operation(Operation::AlterColumn {{ table: \"{}\".to_string(), column: \"{}\".to_string(), new_definition: ColumnDefinition {{ name: \"{}\".to_string(), type_definition: \"{}\".to_string() }} }})\n",
@@ -380,7 +380,7 @@ impl MakeMigrationsCommand {
     /// }
     /// ```
     pub fn update_app_entry_point(&self, app_label: &str) -> Result<(), std::io::Error> {
-        use syn::{parse_file, File, Item, ItemFn, ItemMod};
+        use syn::{File, Item, ItemFn, ItemMod, parse_file};
 
         let app_dir = format!("{}/{}", self.options.migrations_dir, app_label);
         let entry_point_path = format!("{}/{}.rs", self.options.migrations_dir, app_label);
@@ -397,10 +397,8 @@ impl MakeMigrationsCommand {
                             .map_or(false, |c| c.is_ascii_digit())
                     {
                         // Convert filename to valid module name (prefix with _ and replace - with _)
-                        let module_name = format!(
-                            "_{}",
-                            file_name.trim_end_matches(".rs").replace('-', "_")
-                        );
+                        let module_name =
+                            format!("_{}", file_name.trim_end_matches(".rs").replace('-', "_"));
                         migration_modules.push(module_name);
                     }
                 }
@@ -437,18 +435,15 @@ impl MakeMigrationsCommand {
         }
 
         // Remove old module declarations and all_migrations function
-        ast.items.retain(|item| {
-            match item {
-                Item::Mod(_) => false,
-                Item::Fn(ItemFn { sig, .. }) => sig.ident != "all_migrations",
-                _ => true,
-            }
+        ast.items.retain(|item| match item {
+            Item::Mod(_) => false,
+            Item::Fn(ItemFn { sig, .. }) => sig.ident != "all_migrations",
+            _ => true,
         });
 
         // Add all module declarations
         for module_name in &migration_modules {
-            let module_ident =
-                syn::Ident::new(module_name, proc_macro2::Span::call_site());
+            let module_ident = syn::Ident::new(module_name, proc_macro2::Span::call_site());
             let mod_item: ItemMod = syn::parse_quote! {
                 pub mod #module_ident;
             };
@@ -459,8 +454,7 @@ impl MakeMigrationsCommand {
         let migration_calls: Vec<_> = migration_modules
             .iter()
             .map(|module_name| {
-                let module_ident =
-                    syn::Ident::new(module_name, proc_macro2::Span::call_site());
+                let module_ident = syn::Ident::new(module_name, proc_macro2::Span::call_site());
                 quote::quote! { #module_ident::migration }
             })
             .collect();

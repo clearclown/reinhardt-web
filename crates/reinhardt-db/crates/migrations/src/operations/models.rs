@@ -446,8 +446,7 @@ impl RenameModel {
         // Always use double quotes for PostgreSQL identifier safety
         vec![format!(
             "ALTER TABLE \"{}\" RENAME TO \"{}\"",
-            self.old_name,
-            self.new_name
+            self.old_name, self.new_name
         )]
     }
 }
@@ -619,8 +618,7 @@ impl MoveModel {
                 // Always use double quotes for PostgreSQL identifier safety
                 vec![format!(
                     "ALTER TABLE \"{}\" RENAME TO \"{}\"",
-                    old_table,
-                    new_table
+                    old_table, new_table
                 )]
             } else {
                 vec![]
@@ -632,10 +630,7 @@ impl MoveModel {
     }
 
     /// Generate reverse SQL
-    pub fn database_backwards(
-        &self,
-        _schema_editor: &dyn BaseDatabaseSchemaEditor,
-    ) -> Vec<String> {
+    pub fn database_backwards(&self, _schema_editor: &dyn BaseDatabaseSchemaEditor) -> Vec<String> {
         if self.rename_table {
             if let (Some(old_table), Some(new_table)) = (&self.old_table_name, &self.new_table_name)
             {
@@ -643,8 +638,7 @@ impl MoveModel {
                 // Always use double quotes for PostgreSQL identifier safety
                 vec![format!(
                     "ALTER TABLE \"{}\" RENAME TO \"{}\"",
-                    new_table,
-                    old_table
+                    new_table, old_table
                 )]
             } else {
                 vec![]
@@ -935,7 +929,13 @@ mod tests {
         // Create a model in myapp
         let create = CreateModel::new(
             "User",
-            vec![FieldDefinition::new("id", "INTEGER", true, false, None::<String>)],
+            vec![FieldDefinition::new(
+                "id",
+                "INTEGER",
+                true,
+                false,
+                None::<String>,
+            )],
         );
         create.state_forwards("myapp", &mut state);
         assert!(state.get_model("myapp", "User").is_some());
@@ -987,7 +987,13 @@ mod tests {
         // Create and move model
         let create = CreateModel::new(
             "User",
-            vec![FieldDefinition::new("id", "INTEGER", true, false, None::<String>)],
+            vec![FieldDefinition::new(
+                "id",
+                "INTEGER",
+                true,
+                false,
+                None::<String>,
+            )],
         );
         create.state_forwards("myapp", &mut state);
 
@@ -1024,8 +1030,8 @@ mod tests {
     fn test_move_model_with_table_rename() {
         use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
 
-        let move_op = MoveModel::new("User", "myapp", "auth")
-            .with_table_rename("myapp_user", "auth_user");
+        let move_op =
+            MoveModel::new("User", "myapp", "auth").with_table_rename("myapp_user", "auth_user");
 
         let factory = SchemaEditorFactory::new();
         let editor = factory.create_for_database(DatabaseType::PostgreSQL);
@@ -1042,8 +1048,8 @@ mod tests {
     fn test_move_model_backward_sql() {
         use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
 
-        let move_op = MoveModel::new("User", "myapp", "auth")
-            .with_table_rename("myapp_user", "auth_user");
+        let move_op =
+            MoveModel::new("User", "myapp", "auth").with_table_rename("myapp_user", "auth_user");
 
         let factory = SchemaEditorFactory::new();
         let editor = factory.create_for_database(DatabaseType::PostgreSQL);

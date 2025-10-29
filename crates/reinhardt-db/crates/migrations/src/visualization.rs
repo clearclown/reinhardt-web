@@ -227,7 +227,8 @@ impl MigrationVisualizer {
             output.push_str(&format!("{}\n", "-".repeat(app.len() + 5)));
 
             for migration in app_migrations {
-                output.push_str(&format!("  - {}: {} operations\n",
+                output.push_str(&format!(
+                    "  - {}: {} operations\n",
                     migration.name,
                     migration.operations.len()
                 ));
@@ -263,7 +264,10 @@ impl MigrationVisualizer {
         output.push_str("# Migration Dependency Graph\n\n");
 
         for migration in migrations {
-            output.push_str(&format!("## {}.{}\n\n", migration.app_label, migration.name));
+            output.push_str(&format!(
+                "## {}.{}\n\n",
+                migration.app_label, migration.name
+            ));
 
             if !migration.dependencies.is_empty() {
                 output.push_str("**Dependencies:**\n\n");
@@ -272,7 +276,10 @@ impl MigrationVisualizer {
                 }
             }
 
-            output.push_str(&format!("\n**Operations:** {}\n\n", migration.operations.len()));
+            output.push_str(&format!(
+                "\n**Operations:** {}\n\n",
+                migration.operations.len()
+            ));
         }
 
         output
@@ -460,8 +467,8 @@ mod tests {
     #[test]
     fn test_visualizer_text_graph() {
         let migration1 = Migration::new("0001_initial", "myapp");
-        let migration2 = Migration::new("0002_add_field", "myapp")
-            .add_dependency("myapp", "0001_initial");
+        let migration2 =
+            Migration::new("0002_add_field", "myapp").add_dependency("myapp", "0001_initial");
 
         let migrations = vec![migration1, migration2];
         let visualizer = MigrationVisualizer::new();
@@ -487,8 +494,8 @@ mod tests {
     #[test]
     fn test_visualizer_dot_graph() {
         let migration1 = Migration::new("0001_initial", "myapp");
-        let migration2 = Migration::new("0002_add_field", "myapp")
-            .add_dependency("myapp", "0001_initial");
+        let migration2 =
+            Migration::new("0002_add_field", "myapp").add_dependency("myapp", "0001_initial");
 
         let migrations = vec![migration1, migration2];
         let visualizer = MigrationVisualizer::new();

@@ -42,7 +42,10 @@ impl AutoMigrationGenerator {
     }
 
     /// Generate migration from current database state
-    pub async fn generate(&self, current_schema: DatabaseSchema) -> Result<AutoMigrationResult, AutoMigrationError> {
+    pub async fn generate(
+        &self,
+        current_schema: DatabaseSchema,
+    ) -> Result<AutoMigrationResult, AutoMigrationError> {
         // Detect schema differences
         let diff = SchemaDiff::new(current_schema.clone(), self.target_schema.clone());
         let operations = diff.generate_operations();
@@ -54,7 +57,10 @@ impl AutoMigrationGenerator {
         let has_destructive = diff.has_destructive_changes();
 
         // Generate migration name based on timestamp
-        let migration_name = format!("auto_migration_{}", chrono::Utc::now().format("%Y%m%d_%H%M%S"));
+        let migration_name = format!(
+            "auto_migration_{}",
+            chrono::Utc::now().format("%Y%m%d_%H%M%S")
+        );
 
         // Create migration
         let migration = Migration {
@@ -103,22 +109,68 @@ impl AutoMigrationGenerator {
 
     /// Generate rollback operations
     fn generate_rollback(&self, operations: &[Operation]) -> Vec<Operation> {
-        // TODO: Implement rollback generation once model-level operations are added
-        // Currently, Operation enum only supports table-level operations
         operations
             .iter()
             .rev()
             .filter_map(|op| match op {
-                Operation::CreateTable { name, .. } => Some(Operation::DropTable {
-                    name: name.clone(),
+                // Table operations
+                Operation::CreateTable { name, .. } => {
+                    Some(Operation::DropTable { name: name.clone() })
+                }
+                Operation::DropTable { .. } => None, // Cannot rollback - data is lost
+                Operation::RenameTable { old_name, new_name } => Some(Operation::RenameTable {
+                    old_name: new_name.clone(),
+                    new_name: old_name.clone(),
                 }),
-                Operation::DropTable { .. } => None, // Cannot rollback drop
+
+                // Column operations
                 Operation::AddColumn { table, column } => Some(Operation::DropColumn {
                     table: table.clone(),
                     column: column.name.clone(),
                 }),
-                Operation::DropColumn { .. } => None, // Cannot rollback drop column
-                _ => None,
+                Operation::DropColumn { .. } => None, // Cannot rollback - data is lost
+                Operation::RenameColumn {
+                    table,
+                    old_name,
+                    new_name,
+                } => Some(Operation::RenameColumn {
+                    table: table.clone(),
+                    old_name: new_name.clone(),
+                    new_name: old_name.clone(),
+                }),
+                Operation::AlterColumn { .. } => None, // Cannot safely rollback without old definition
+
+                // Constraint operations
+                Operation::AddConstraint { .. } => None, // Cannot rollback without constraint name
+                Operation::DropConstraint { .. } => None, // Cannot rollback without constraint SQL
+
+                // Index operations
+                Operation::CreateIndex { table, columns, .. } => Some(Operation::DropIndex {
+                    table: table.clone(),
+                    columns: columns.clone(),
+                }),
+                Operation::DropIndex { .. } => None, // Cannot rollback without index definition
+
+                // Special operations
+                Operation::RunSQL { reverse_sql, .. } => {
+                    reverse_sql.as_ref().map(|sql| Operation::RunSQL {
+                        sql: sql.clone(),
+                        reverse_sql: None,
+                    })
+                }
+                Operation::RunRust { reverse_code, .. } => {
+                    reverse_code.as_ref().map(|code| Operation::RunRust {
+                        code: code.clone(),
+                        reverse_code: None,
+                    })
+                }
+
+                // Other operations - no rollback
+                Operation::AlterTableComment { .. }
+                | Operation::AlterUniqueTogether { .. }
+                | Operation::AlterModelOptions { .. }
+                | Operation::CreateInheritedTable { .. }
+                | Operation::AddDiscriminatorColumn { .. } => None,
             })
             .collect()
     }
@@ -241,6 +293,8 @@ mod tests {
                 nullable: true,
                 default: None,
                 primary_key: false,
+                auto_increment: false,
+                max_length: Some(255),
             },
         );
         current.tables.insert("users".to_string(), current_table);
@@ -260,6 +314,8 @@ mod tests {
                 nullable: false, // Changed to non-nullable
                 default: None,
                 primary_key: false,
+                auto_increment: false,
+                max_length: Some(255),
             },
         );
         target.tables.insert("users".to_string(), target_table);

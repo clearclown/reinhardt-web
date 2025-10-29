@@ -704,9 +704,7 @@ impl MigrationGraph {
     /// assert!(!graph.is_replaced(&squashed));
     /// ```
     pub fn is_replaced(&self, key: &MigrationKey) -> bool {
-        self.nodes
-            .values()
-            .any(|node| node.replaces.contains(key))
+        self.nodes.values().any(|node| node.replaces.contains(key))
     }
 
     /// Get the migration that replaces a given migration
@@ -764,13 +762,7 @@ impl MigrationGraph {
 
         for key in self.nodes.keys() {
             if !visited.contains(key) {
-                self.detect_cycle_dfs(
-                    key,
-                    &mut visited,
-                    &mut rec_stack,
-                    &mut path,
-                    &mut cycles,
-                );
+                self.detect_cycle_dfs(key, &mut visited, &mut rec_stack, &mut path, &mut cycles);
             }
         }
 
