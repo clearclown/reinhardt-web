@@ -21,7 +21,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 utoipa = "^5.4.0"
 utoipa-swagger-ui = { version = "^9.0.2", default-features = false }
-askama = "0.12"
+askama = { workspace = true }
 hyper = { workspace = true }
 
 [features]
