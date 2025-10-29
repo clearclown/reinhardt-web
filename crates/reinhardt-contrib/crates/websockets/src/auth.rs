@@ -379,9 +379,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_permission_based_policy_authorized() {
-        let policy = PermissionBasedPolicy::new(vec![
-            ("send_message".to_string(), "chat.write".to_string()),
-        ]);
+        let policy = PermissionBasedPolicy::new(vec![(
+            "send_message".to_string(),
+            "chat.write".to_string(),
+        )]);
 
         let user = SimpleAuthUser::new(
             "user_1".to_string(),
@@ -395,9 +396,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_permission_based_policy_denied() {
-        let policy = PermissionBasedPolicy::new(vec![
-            ("delete_message".to_string(), "chat.admin".to_string()),
-        ]);
+        let policy = PermissionBasedPolicy::new(vec![(
+            "delete_message".to_string(),
+            "chat.admin".to_string(),
+        )]);
 
         let user = SimpleAuthUser::new(
             "user_1".to_string(),
@@ -415,9 +417,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_authenticated_connection_send_with_auth() {
-        let policy = PermissionBasedPolicy::new(vec![
-            ("send_message".to_string(), "chat.write".to_string()),
-        ]);
+        let policy = PermissionBasedPolicy::new(vec![(
+            "send_message".to_string(),
+            "chat.write".to_string(),
+        )]);
 
         let user = SimpleAuthUser::new(
             "user_1".to_string(),
@@ -437,9 +440,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_authenticated_connection_send_with_auth_denied() {
-        let policy = PermissionBasedPolicy::new(vec![
-            ("send_message".to_string(), "chat.admin".to_string()),
-        ]);
+        let policy = PermissionBasedPolicy::new(vec![(
+            "send_message".to_string(),
+            "chat.admin".to_string(),
+        )]);
 
         let user = SimpleAuthUser::new(
             "user_1".to_string(),

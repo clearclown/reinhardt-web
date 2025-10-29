@@ -1,7 +1,7 @@
 //! Comprehensive WebSocket tests based on FastAPI test patterns
 
 use crate::connection::{Message, WebSocketConnection, WebSocketError};
-use crate::handler::RoomManager;
+use crate::room::RoomManager;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{timeout, Duration};
@@ -213,9 +213,10 @@ async fn test_websocket_multiple_clients_with_room() {
     let conn1 = Arc::new(WebSocketConnection::new("1234".to_string(), tx1));
     let conn2 = Arc::new(WebSocketConnection::new("5678".to_string(), tx2));
 
-    // Join room
-    manager.join_room("chat".to_string(), conn1.clone()).await;
-    manager.join_room("chat".to_string(), conn2.clone()).await;
+    // Create room and join
+    let room = manager.get_or_create_room("chat".to_string()).await;
+    room.join("1234".to_string(), conn1.clone()).await.unwrap();
+    room.join("5678".to_string(), conn2.clone()).await.unwrap();
 
     // Client 1 sends message
     conn1
@@ -224,13 +225,11 @@ async fn test_websocket_multiple_clients_with_room() {
         .unwrap();
 
     // Broadcast to room
-    manager
-        .broadcast_to_room(
-            "chat",
-            Message::text("Client #1234 says: Hello from 1234".to_string()),
-        )
-        .await
-        .unwrap();
+    room.broadcast(Message::text(
+        "Client #1234 says: Hello from 1234".to_string(),
+    ))
+    .await
+    .unwrap();
 
     // Verify broadcast received by all clients
     let result = timeout(Duration::from_millis(100), async {
@@ -255,23 +254,20 @@ async fn test_websocket_handle_disconnection() {
     let conn1 = Arc::new(WebSocketConnection::new("1234".to_string(), tx1));
     let conn2 = Arc::new(WebSocketConnection::new("5678".to_string(), tx2));
 
-    // Join room
-    manager.join_room("chat".to_string(), conn1.clone()).await;
-    manager.join_room("chat".to_string(), conn2.clone()).await;
+    // Create room and join
+    let room = manager.get_or_create_room("chat".to_string()).await;
+    room.join("1234".to_string(), conn1.clone()).await.unwrap();
+    room.join("5678".to_string(), conn2.clone()).await.unwrap();
 
     // Verify room size
-    assert_eq!(manager.get_room_size("chat").await, 2);
+    assert_eq!(room.client_count().await, 2);
 
     // Client 2 disconnects
     conn2.close().await.unwrap();
-    manager.leave_room("chat", "5678").await;
+    room.leave("5678").await.unwrap();
 
     // Broadcast disconnect message
-    manager
-        .broadcast_to_room(
-            "chat",
-            Message::text("Client #5678 left the chat".to_string()),
-        )
+    room.broadcast(Message::text("Client #5678 left the chat".to_string()))
         .await
         .unwrap();
 
@@ -283,7 +279,7 @@ async fn test_websocket_handle_disconnection() {
     }
 
     // Verify room size decreased
-    assert_eq!(manager.get_room_size("chat").await, 1);
+    assert_eq!(room.client_count().await, 1);
 }
 
 /// Test: WebSocket binary message support
@@ -369,11 +365,26 @@ async fn test_broadcast_to_all_rooms() {
     let conn1 = Arc::new(WebSocketConnection::new("user1".to_string(), tx1));
     let conn2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
 
-    manager.join_room("room1".to_string(), conn1.clone()).await;
-    manager.join_room("room2".to_string(), conn2.clone()).await;
+    // Create rooms and join
+    let room1 = manager.get_or_create_room("room1".to_string()).await;
+    let room2 = manager.get_or_create_room("room2".to_string()).await;
 
+    room1
+        .join("user1".to_string(), conn1.clone())
+        .await
+        .unwrap();
+    room2
+        .join("user2".to_string(), conn2.clone())
+        .await
+        .unwrap();
+
+    // Broadcast to all rooms manually
     let broadcast_msg = Message::text("Global announcement".to_string());
-    manager.broadcast_to_all(broadcast_msg).await.unwrap();
+    for room_id in manager.room_ids().await {
+        if let Some(room) = manager.get_room(&room_id).await {
+            room.broadcast(broadcast_msg.clone()).await.unwrap();
+        }
+    }
 
     // Both rooms should receive the message
     let msg1 = rx1.try_recv().unwrap();
@@ -394,10 +405,20 @@ async fn test_get_all_rooms() {
     let conn1 = Arc::new(WebSocketConnection::new("user1".to_string(), tx1));
     let conn2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
 
-    manager.join_room("room1".to_string(), conn1.clone()).await;
-    manager.join_room("room2".to_string(), conn2.clone()).await;
+    // Create rooms and join
+    let room1 = manager.get_or_create_room("room1".to_string()).await;
+    let room2 = manager.get_or_create_room("room2".to_string()).await;
 
-    let rooms = manager.get_all_rooms().await;
+    room1
+        .join("user1".to_string(), conn1.clone())
+        .await
+        .unwrap();
+    room2
+        .join("user2".to_string(), conn2.clone())
+        .await
+        .unwrap();
+
+    let rooms = manager.room_ids().await;
     assert_eq!(rooms.len(), 2);
     assert!(rooms.contains(&"room1".to_string()));
     assert!(rooms.contains(&"room2".to_string()));

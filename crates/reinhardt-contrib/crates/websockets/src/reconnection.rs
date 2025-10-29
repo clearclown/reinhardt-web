@@ -285,7 +285,8 @@ impl ReconnectionStrategy {
 
         // Calculate next delay (exponential backoff)
         let next_delay_secs = delay.as_secs_f64() * self.config.backoff_multiplier;
-        let next_delay = Duration::from_secs_f64(next_delay_secs.min(self.config.max_delay.as_secs_f64()));
+        let next_delay =
+            Duration::from_secs_f64(next_delay_secs.min(self.config.max_delay.as_secs_f64()));
         self.current_delay = next_delay;
 
         Some(jitter)

@@ -137,7 +137,10 @@ impl LoggingMiddleware {
 #[async_trait]
 impl ConnectionMiddleware for LoggingMiddleware {
     async fn on_connect(&self, context: &mut ConnectionContext) -> MiddlewareResult<()> {
-        println!("[{}] Connection established from {}", self.prefix, context.ip);
+        println!(
+            "[{}] Connection established from {}",
+            self.prefix, context.ip
+        );
         Ok(())
     }
 

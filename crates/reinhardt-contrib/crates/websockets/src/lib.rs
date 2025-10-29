@@ -117,10 +117,10 @@ pub use consumers::{
     BroadcastConsumer, ConsumerChain, ConsumerContext, EchoConsumer, JsonConsumer,
     WebSocketConsumer,
 };
-pub use handler::{RoomManager, WebSocketHandler};
-pub use metrics::{MetricsCollector, MetricsSnapshot, PeriodicReporter, WebSocketMetrics};
+pub use handler::WebSocketHandler;
 #[cfg(feature = "metrics")]
 pub use metrics::MetricsExporter;
+pub use metrics::{MetricsCollector, MetricsSnapshot, PeriodicReporter, WebSocketMetrics};
 pub use middleware::{
     ConnectionContext, ConnectionMiddleware, IpFilterMiddleware, LoggingMiddleware,
     MessageMiddleware, MessageSizeLimitMiddleware, MiddlewareChain, MiddlewareError,
@@ -129,10 +129,10 @@ pub use middleware::{
 pub use reconnection::{ReconnectionConfig, ReconnectionStrategy};
 #[cfg(feature = "redis-channel")]
 pub use redis_channel::{RedisChannelLayer, RedisConfig};
-pub use room::{Room, RoomError, RoomManager as RoomMgr, RoomResult};
+pub use room::{Room, RoomError, RoomManager, RoomResult};
 pub use routing::{
-    clear_websocket_router, get_websocket_router, register_websocket_router,
-    reverse_websocket_url, RouteError, RouteResult, WebSocketRoute, WebSocketRouter,
+    clear_websocket_router, get_websocket_router, register_websocket_router, reverse_websocket_url,
+    RouteError, RouteResult, WebSocketRoute, WebSocketRouter,
 };
 pub use throttling::{
     CombinedThrottler, ConnectionThrottler, RateLimitConfig, RateLimiter, ThrottleError,

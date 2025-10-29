@@ -333,7 +333,10 @@ mod tests {
 
         fn rpush(&self, key: &str, value: &str) {
             let mut lists = self.lists.lock().unwrap();
-            lists.entry(key.to_string()).or_default().push(value.to_string());
+            lists
+                .entry(key.to_string())
+                .or_default()
+                .push(value.to_string());
         }
 
         fn lpop(&self, key: &str) -> Option<String> {
@@ -348,7 +351,9 @@ mod tests {
 
         fn sadd(&self, key: &str, member: &str) {
             let mut sets = self.sets.lock().unwrap();
-            sets.entry(key.to_string()).or_default().insert(member.to_string());
+            sets.entry(key.to_string())
+                .or_default()
+                .insert(member.to_string());
         }
 
         fn srem(&self, key: &str, member: &str) {

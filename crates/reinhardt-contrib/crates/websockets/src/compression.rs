@@ -348,7 +348,9 @@ mod tests {
         let decompressed = decompress_message(&compressed, CompressionCodec::Gzip).unwrap();
 
         match decompressed {
-            Message::Binary { data: decompressed_data } => {
+            Message::Binary {
+                data: decompressed_data,
+            } => {
                 assert_eq!(decompressed_data, data);
             }
             _ => panic!("Expected binary message"),

@@ -219,13 +219,10 @@ impl WebSocketConsumer for BroadcastConsumer {
         _context: &mut ConsumerContext,
         message: Message,
     ) -> WebSocketResult<()> {
-        self.room
-            .broadcast(message)
-            .await
-            .map_err(|e| match e {
-                crate::room::RoomError::WebSocket(ws_err) => ws_err,
-                _ => crate::connection::WebSocketError::Send(e.to_string()),
-            })
+        self.room.broadcast(message).await.map_err(|e| match e {
+            crate::room::RoomError::WebSocket(ws_err) => ws_err,
+            _ => crate::connection::WebSocketError::Send(e.to_string()),
+        })
     }
 
     async fn on_disconnect(&self, context: &mut ConsumerContext) -> WebSocketResult<()> {
