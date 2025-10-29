@@ -583,20 +583,57 @@ mod tests {
     fn test_dependency_type_serialization() {
         let dep = FieldDependency::requires("country", vec!["address"]);
         let json = serde_json::to_string(&dep).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.contains("country"));
-        assert!(json.contains("requires"));
-        assert!(json.contains("address"));
+        assert_eq!(
+            parsed["field_name"],
+            "country",
+            "Metadata field name mismatch. Expected 'country', got: {:?}",
+            parsed["field_name"]
+        );
+        assert_eq!(
+            parsed["dependency_type"]["type"],
+            "requires",
+            "Dependency type mismatch. Expected 'requires', got: {:?}",
+            parsed["dependency_type"]["type"]
+        );
+        assert_eq!(
+            parsed["dependency_type"]["fields"][0],
+            "address",
+            "Required field mismatch. Expected 'address', got: {:?}",
+            parsed["dependency_type"]["fields"][0]
+        );
     }
 
     #[test]
     fn test_conditional_dependency_serialization() {
         let dep = FieldDependency::conditional("shipping_method", "express", vec!["express_fee"]);
         let json = serde_json::to_string(&dep).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert!(json.contains("shipping_method"));
-        assert!(json.contains("conditional"));
-        assert!(json.contains("express"));
-        assert!(json.contains("express_fee"));
+        assert_eq!(
+            parsed["field_name"],
+            "shipping_method",
+            "Metadata field name mismatch. Expected 'shipping_method', got: {:?}",
+            parsed["field_name"]
+        );
+        assert_eq!(
+            parsed["dependency_type"]["type"],
+            "conditional",
+            "Dependency type mismatch. Expected 'conditional', got: {:?}",
+            parsed["dependency_type"]["type"]
+        );
+        assert_eq!(
+            parsed["dependency_type"]["value"],
+            "express",
+            "Conditional value mismatch. Expected 'express', got: {:?}",
+            parsed["dependency_type"]["value"]
+        );
+        assert_eq!(
+            parsed["dependency_type"]["requires"][0],
+            "express_fee",
+            "Required field mismatch. Expected 'express_fee', got: {:?}",
+            parsed["dependency_type"]["requires"][0]
+        );
     }
 }

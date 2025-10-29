@@ -609,10 +609,42 @@ mod tests {
         let sql = "SELECT id, title FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("relevance_score"));
-        assert!(result.contains("ORDER BY relevance_score DESC"));
-        assert!(result.contains("title"));
-        assert!(result.contains("content"));
+        // Validate SELECT clause includes relevance_score
+        assert!(
+            result.contains(", ") && result.contains(" AS relevance_score"),
+            "Expected ', ... AS relevance_score' in SELECT clause, got: {}",
+            result
+        );
+
+        // Validate ORDER BY clause
+        assert!(
+            result.ends_with(" ORDER BY relevance_score DESC"),
+            "Expected result to end with ' ORDER BY relevance_score DESC', got: {}",
+            result
+        );
+
+        // Validate TF-IDF scoring includes both fields with proper boost factors
+        // TF-IDF formula should include LENGTH, REPLACE, and LOG functions
+        assert!(
+            result.contains("LENGTH(title)") && result.contains("REPLACE"),
+            "Expected TF-IDF formula with LENGTH and REPLACE for title, got: {}",
+            result
+        );
+        assert!(
+            result.contains("LENGTH(content)"),
+            "Expected TF-IDF formula for content field, got: {}",
+            result
+        );
+        assert!(
+            result.contains("* 2"),
+            "Expected boost factor '* 2' for title field, got: {}",
+            result
+        );
+        assert!(
+            result.contains("LOG"),
+            "Expected LOG function in TF-IDF formula, got: {}",
+            result
+        );
     }
 
     #[tokio::test]
@@ -627,8 +659,33 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("relevance_score"));
-        assert!(result.contains("ORDER BY relevance_score DESC"));
+        // Validate SELECT clause includes relevance_score
+        assert!(
+            result.contains(" AS relevance_score"),
+            "Expected ' AS relevance_score' in SELECT clause, got: {}",
+            result
+        );
+
+        // Validate ORDER BY clause
+        assert!(
+            result.ends_with(" ORDER BY relevance_score DESC"),
+            "Expected result to end with ' ORDER BY relevance_score DESC', got: {}",
+            result
+        );
+
+        // Validate BM25 parameters are included in the formula
+        assert!(
+            result.contains("1.5") && result.contains("0.75"),
+            "Expected BM25 parameters k1=1.5 and b=0.75 in formula, got: {}",
+            result
+        );
+
+        // Validate BM25 scoring formula includes field length normalization
+        assert!(
+            result.contains("LENGTH(title)"),
+            "Expected LENGTH(title) in BM25 formula, got: {}",
+            result
+        );
     }
 
     #[tokio::test]
@@ -643,8 +700,19 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("my_score_func"));
-        assert!(result.contains("relevance_score"));
+        // Validate custom function is called correctly
+        assert!(
+            result.contains("my_score_func('test', title)"),
+            "Expected 'my_score_func('test', title)' in result, got: {}",
+            result
+        );
+
+        // Validate SELECT clause includes relevance_score
+        assert!(
+            result.contains(" AS relevance_score"),
+            "Expected ' AS relevance_score' in SELECT clause, got: {}",
+            result
+        );
     }
 
     #[tokio::test]
@@ -660,8 +728,15 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("relevance_score >= 0.5"));
+        // Validate WHERE clause with exact min_score condition
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        assert!(
+            where_clause.starts_with("WHERE relevance_score >= 0.5"),
+            "Expected WHERE clause to start with 'WHERE relevance_score >= 0.5', got: {}",
+            where_clause
+        );
     }
 
     #[tokio::test]
@@ -677,9 +752,32 @@ mod tests {
         let sql = "SELECT * FROM articles WHERE published = true".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("relevance_score >= 0.3"));
-        assert!(result.contains("AND"));
-        assert!(result.contains("published = true"));
+        // Validate the WHERE clause structure combines min_score with existing condition
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        // Structure should be: WHERE relevance_score >= 0.3 AND (published = true)
+        assert!(
+            where_clause.starts_with("WHERE relevance_score >= 0.3 AND"),
+            "Expected WHERE clause to start with 'WHERE relevance_score >= 0.3 AND', got: {}",
+            where_clause
+        );
+
+        assert!(
+            where_clause.contains("published = true"),
+            "Expected 'published = true' in WHERE clause, got: {}",
+            where_clause
+        );
+
+        // Validate order: min_score condition comes before existing condition
+        let score_pos = where_clause.find("relevance_score >= 0.3").unwrap();
+        let and_pos = where_clause.find(" AND ").unwrap();
+        let published_pos = where_clause.find("published = true").unwrap();
+        assert!(
+            score_pos < and_pos && and_pos < published_pos,
+            "Expected order: relevance_score >= 0.3 AND published = true, got: {}",
+            where_clause
+        );
     }
 
     #[tokio::test]
@@ -694,8 +792,25 @@ mod tests {
         let sql = "SELECT * FROM articles ORDER BY created_at DESC".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("ORDER BY relevance_score DESC"));
-        assert!(result.contains("created_at DESC"));
+        // Validate ORDER BY clause structure
+        let order_start = result.find("ORDER BY").expect("ORDER BY clause not found");
+        let order_clause = &result[order_start..];
+
+        // Structure should be: ORDER BY relevance_score DESC, created_at DESC
+        assert!(
+            order_clause.starts_with("ORDER BY relevance_score DESC, created_at DESC"),
+            "Expected 'ORDER BY relevance_score DESC, created_at DESC', got: {}",
+            order_clause
+        );
+
+        // Validate order: relevance_score comes before created_at
+        let relevance_pos = order_clause.find("relevance_score DESC").unwrap();
+        let created_pos = order_clause.find("created_at DESC").unwrap();
+        assert!(
+            relevance_pos < created_pos,
+            "Expected relevance_score DESC before created_at DESC, got: {}",
+            order_clause
+        );
     }
 
     #[tokio::test]
@@ -711,9 +826,35 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("* 3"));
-        assert!(result.contains("title"));
-        assert!(result.contains("content"));
+        // Validate boost factor is applied to title field
+        assert!(
+            result.contains(") * 3"),
+            "Expected boost factor '* 3' for title field, got: {}",
+            result
+        );
+
+        // Validate both fields are included in scoring
+        assert!(
+            result.contains("LENGTH(title)"),
+            "Expected 'LENGTH(title)' in scoring formula, got: {}",
+            result
+        );
+        assert!(
+            result.contains("LENGTH(content)"),
+            "Expected 'LENGTH(content)' in scoring formula, got: {}",
+            result
+        );
+
+        // Validate fields are combined with addition (since multiple fields)
+        // Note: The TF-IDF formula contains multiple + operators internally,
+        // so we just verify that fields are combined somehow
+        let select_clause_end = result.find(" FROM ").expect("FROM clause not found");
+        let select_clause = &result[..select_clause_end];
+        assert!(
+            select_clause.contains(" + "),
+            "Expected '+' operators to combine field scores, got: {}",
+            select_clause
+        );
     }
 
     #[tokio::test]
@@ -730,9 +871,45 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
-        assert!(result.contains("title"));
-        assert!(result.contains("content"));
-        assert!(result.contains("tags"));
+        // Validate all three fields are included in scoring
+        assert!(
+            result.contains("LENGTH(title)"),
+            "Expected 'LENGTH(title)' in scoring formula, got: {}",
+            result
+        );
+        assert!(
+            result.contains("LENGTH(content)"),
+            "Expected 'LENGTH(content)' in scoring formula, got: {}",
+            result
+        );
+        assert!(
+            result.contains("LENGTH(tags)"),
+            "Expected 'LENGTH(tags)' in scoring formula, got: {}",
+            result
+        );
+
+        // Validate boost factors are applied correctly
+        assert!(
+            result.contains(") * 2"),
+            "Expected boost factor '* 2' for title, got: {}",
+            result
+        );
+        assert!(
+            result.contains(") * 1.5"),
+            "Expected boost factor '* 1.5' for tags, got: {}",
+            result
+        );
+
+        // Validate fields are combined with addition
+        // Note: The BM25 formula contains multiple + operators internally,
+        // so we just verify that fields are combined somehow
+        let select_clause_end = result.find(" FROM ").expect("FROM clause not found");
+        let select_clause = &result[..select_clause_end];
+        assert!(
+            select_clause.contains(" + "),
+            "Expected '+' operators to combine field scores, got: {}",
+            select_clause
+        );
     }
 
     #[tokio::test]
@@ -804,9 +981,31 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = scorer.filter_queryset(&params, sql).await.unwrap();
 
+        // Validate SQL injection is prevented by proper escaping
         let escaped_input = malicious_input.replace('\'', "''");
-        assert!(result.contains(&escaped_input));
-        assert!(result.contains("''"));
+        assert!(
+            result.contains(&escaped_input),
+            "Expected properly escaped input '{}' in result, got: {}",
+            escaped_input,
+            result
+        );
+
+        // The escaped malicious input should be within LOWER() function
+        assert!(
+            result.contains(&format!("LOWER('{}')", escaped_input)),
+            "Expected malicious input to be in LOWER('{}') format, got: {}",
+            escaped_input,
+            result
+        );
+
+        // Validate the malicious content is treated as a literal string in the scoring formula
+        // The formula should use the search term in multiple places for TF-IDF calculation
+        // Since it's escaped properly, we just verify it appears in the expected context
+        assert!(
+            result.contains("LENGTH(title)"),
+            "Expected LENGTH(title) in scoring formula, got: {}",
+            result
+        );
     }
 
     #[test]
@@ -816,10 +1015,23 @@ mod tests {
             .with_boost_field("title", 1.0);
 
         let expr = scorer.generate_score_expression("test");
-        assert!(expr.contains("LENGTH"));
-        assert!(expr.contains("REPLACE"));
-        assert!(expr.contains("LOG"));
-        assert!(expr.contains("title"));
+
+        // Validate TF-IDF formula components
+        assert!(
+            expr.contains("LENGTH(title)"),
+            "Expected LENGTH(title) in expression, got: {}",
+            expr
+        );
+        assert!(
+            expr.contains("REPLACE(LOWER(title), LOWER('test'), '')"),
+            "Expected REPLACE function in expression, got: {}",
+            expr
+        );
+        assert!(
+            expr.contains("LOG("),
+            "Expected LOG function in TF-IDF formula, got: {}",
+            expr
+        );
     }
 
     #[test]
@@ -829,9 +1041,18 @@ mod tests {
             .with_boost_field("content", 1.0);
 
         let expr = scorer.generate_score_expression("test");
-        assert!(expr.contains("1.2"));
-        assert!(expr.contains("0.75"));
-        assert!(expr.contains("content"));
+
+        // Validate BM25 parameters are present
+        assert!(
+            expr.contains("1.2") && expr.contains("0.75"),
+            "Expected BM25 parameters k1=1.2 and b=0.75 in expression, got: {}",
+            expr
+        );
+        assert!(
+            expr.contains("LENGTH(content)"),
+            "Expected LENGTH(content) in expression, got: {}",
+            expr
+        );
     }
 
     #[test]
@@ -841,9 +1062,14 @@ mod tests {
             .with_boost_field("title", 1.0);
 
         let expr = scorer.generate_score_expression("test");
-        assert!(expr.contains("custom_score"));
-        assert!(expr.contains("'test'"));
-        assert!(expr.contains("title"));
+
+        // Validate custom function call format
+        assert_eq!(
+            expr,
+            "custom_score('test', title)",
+            "Expected exact format 'custom_score('test', title)', got: {}",
+            expr
+        );
     }
 
     #[test]
@@ -853,7 +1079,13 @@ mod tests {
             .with_boost_field("title", 2.5);
 
         let expr = scorer.generate_score_expression("test");
-        assert!(expr.contains("* 2.5"));
+
+        // Validate boost factor is applied
+        assert!(
+            expr.contains(") * 2.5"),
+            "Expected boost factor '* 2.5' at the end, got: {}",
+            expr
+        );
     }
 
     #[test]
@@ -864,8 +1096,31 @@ mod tests {
             .with_boost_field("content", 1.0);
 
         let expr = scorer.generate_score_expression("test");
-        assert!(expr.contains("title"));
-        assert!(expr.contains("content"));
-        assert!(expr.contains("+"));
+
+        // Validate both fields are present
+        assert!(
+            expr.contains("LENGTH(title)"),
+            "Expected LENGTH(title) in expression, got: {}",
+            expr
+        );
+        assert!(
+            expr.contains("LENGTH(content)"),
+            "Expected LENGTH(content) in expression, got: {}",
+            expr
+        );
+
+        // Validate fields are combined with addition
+        assert!(
+            expr.contains(" + "),
+            "Expected '+' operator to combine fields, got: {}",
+            expr
+        );
+
+        // Validate the expression is wrapped in parentheses
+        assert!(
+            expr.starts_with("(") && expr.ends_with(")"),
+            "Expected expression to be wrapped in parentheses, got: {}",
+            expr
+        );
     }
 }

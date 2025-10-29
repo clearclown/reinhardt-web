@@ -671,12 +671,33 @@ mod tests {
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
         // Should contain WHERE clause with OR conditions
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("OR"));
-        // Should include original term and synonyms
-        assert!(result.contains("fast"));
-        assert!(result.contains("quick"));
-        assert!(result.contains("rapid"));
+        // Extract WHERE clause for validation
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        // Validate structure: WHERE (condition1 OR condition2 OR condition3)
+        assert!(where_clause.starts_with("WHERE ("), "Expected WHERE clause to start with 'WHERE (', got: {}", where_clause);
+
+        // Validate all terms are present in LIKE conditions
+        assert!(
+            where_clause.contains("content LIKE '%fast%'"),
+            "Expected 'content LIKE '%fast%' in WHERE clause, got: {}",
+            where_clause
+        );
+        assert!(
+            where_clause.contains("content LIKE '%quick%'"),
+            "Expected 'content LIKE '%quick%' in WHERE clause, got: {}",
+            where_clause
+        );
+        assert!(
+            where_clause.contains("content LIKE '%rapid%'"),
+            "Expected 'content LIKE '%rapid%' in WHERE clause, got: {}",
+            where_clause
+        );
+
+        // Validate OR connectors
+        let or_count = where_clause.matches(" OR ").count();
+        assert_eq!(or_count, 2, "Expected 2 OR connectors for 3 terms, got: {}", or_count);
     }
 
     #[tokio::test]
@@ -694,11 +715,23 @@ mod tests {
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
         // Should contain WHERE clause with all terms and synonyms
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("fast"));
-        assert!(result.contains("quick"));
-        assert!(result.contains("car"));
-        assert!(result.contains("automobile"));
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        // Validate all expanded terms are present in LIKE conditions
+        let expected_terms = vec!["fast", "quick", "car", "automobile"];
+        for term in expected_terms {
+            assert!(
+                where_clause.contains(&format!("content LIKE '%{}%'", term)),
+                "Expected 'content LIKE '%{}%' in WHERE clause, got: {}",
+                term,
+                where_clause
+            );
+        }
+
+        // Validate OR connectors (4 terms = 3 OR connectors)
+        let or_count = where_clause.matches(" OR ").count();
+        assert_eq!(or_count, 3, "Expected 3 OR connectors for 4 terms, got: {}", or_count);
     }
 
     #[tokio::test]
@@ -715,11 +748,38 @@ mod tests {
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
         // Should preserve existing WHERE clause and add synonym conditions with AND
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("AND"));
-        assert!(result.contains("status = 'published'"));
-        assert!(result.contains("fast"));
-        assert!(result.contains("quick"));
+        // Validate structure: WHERE (synonym_conditions) AND original_conditions
+        assert!(
+            result.starts_with("SELECT * FROM articles WHERE (content LIKE"),
+            "Expected result to start with 'SELECT * FROM articles WHERE (content LIKE', got: {}",
+            result
+        );
+
+        // Validate synonym expansion conditions are present
+        assert!(
+            result.contains("content LIKE '%fast%'"),
+            "Expected 'content LIKE '%fast%' in result, got: {}",
+            result
+        );
+        assert!(
+            result.contains("content LIKE '%quick%'"),
+            "Expected 'content LIKE '%quick%' in result, got: {}",
+            result
+        );
+
+        // Validate original WHERE condition is preserved
+        assert!(
+            result.contains("AND") && result.contains("status = 'published'"),
+            "Expected 'AND status = 'published'' in result, got: {}",
+            result
+        );
+
+        // Validate the order: synonym conditions come first, then AND, then original condition
+        let synonym_pos = result.find("WHERE").unwrap();
+        let and_pos = result.find("AND").unwrap();
+        let status_pos = result.find("status = 'published'").unwrap();
+        assert!(synonym_pos < and_pos && and_pos < status_pos,
+            "Expected order: WHERE (synonyms) AND status, got: {}", result);
     }
 
     #[tokio::test]
@@ -735,9 +795,41 @@ mod tests {
         let sql = "SELECT * FROM articles".to_string();
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
-        // Single quotes should be escaped
-        assert!(result.contains("test''"));
-        assert!(!result.contains("DROP TABLE"));
+        // Single quotes should be escaped to prevent SQL injection
+        // The malicious synonym should be escaped: test'; DROP TABLE -> test''; DROP TABLE
+        let expected_escaped_synonym = "test''; drop table articles; --";
+        assert!(
+            result.contains(&expected_escaped_synonym),
+            "Expected escaped malicious synonym '{}' in result, got: {}",
+            expected_escaped_synonym,
+            result
+        );
+
+        // Ensure the original test term is present
+        assert!(
+            result.contains("content LIKE '%test%'"),
+            "Expected original term 'content LIKE '%test%' in result, got: {}",
+            result
+        );
+
+        // Validate the malicious content is in a LIKE clause (treated as literal string)
+        assert!(
+            result.contains(&format!("content LIKE '%{}%'", expected_escaped_synonym)),
+            "Expected malicious content in LIKE clause 'content LIKE '%{}%', got: {}",
+            expected_escaped_synonym,
+            result
+        );
+
+        // Ensure dangerous SQL is treated as a string pattern, not as SQL command
+        // The WHERE clause should contain both terms connected with OR
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+        let or_count = where_clause.matches(" OR ").count();
+        assert_eq!(
+            or_count, 1,
+            "Expected 1 OR connector for 2 terms (test + malicious synonym), got: {}",
+            or_count
+        );
     }
 
     #[tokio::test]
@@ -754,9 +846,20 @@ mod tests {
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
         // Should work with "search" parameter as well
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("fast"));
-        assert!(result.contains("quick"));
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        // Validate both terms are present in the WHERE clause
+        assert!(
+            where_clause.contains("content LIKE '%fast%'"),
+            "Expected 'content LIKE '%fast%' in WHERE clause, got: {}",
+            where_clause
+        );
+        assert!(
+            where_clause.contains("content LIKE '%quick%'"),
+            "Expected 'content LIKE '%quick%' in WHERE clause, got: {}",
+            where_clause
+        );
     }
 
     #[tokio::test]
@@ -773,8 +876,19 @@ mod tests {
         let result = expander.filter_queryset(&params, sql).await.unwrap();
 
         // Should work with "query" parameter as well
-        assert!(result.contains("WHERE"));
-        assert!(result.contains("fast"));
-        assert!(result.contains("quick"));
+        let where_start = result.find("WHERE").expect("WHERE clause not found");
+        let where_clause = &result[where_start..];
+
+        // Validate both terms are present in the WHERE clause
+        assert!(
+            where_clause.contains("content LIKE '%fast%'"),
+            "Expected 'content LIKE '%fast%' in WHERE clause, got: {}",
+            where_clause
+        );
+        assert!(
+            where_clause.contains("content LIKE '%quick%'"),
+            "Expected 'content LIKE '%quick%' in WHERE clause, got: {}",
+            where_clause
+        );
     }
 }
