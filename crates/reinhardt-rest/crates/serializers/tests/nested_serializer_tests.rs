@@ -344,9 +344,25 @@ mod arena_tests {
         let serialized = arena.serialize_model(&author, 3);
         let json = arena.to_json(serialized);
 
-        assert_eq!(json["id"].as_f64().unwrap(), 1.0);
-        assert_eq!(json["name"], "Alice");
-        assert_eq!(json["email"], "alice@example.com");
+        // Verify JSON structure with detailed error messages
+        assert_eq!(
+            json["id"].as_f64().unwrap() as i64,
+            1,
+            "Expected author id to be 1, but got {:?}",
+            json["id"]
+        );
+        assert_eq!(
+            json["name"].as_str().unwrap(),
+            "Alice",
+            "Expected author name to be 'Alice', but got {:?}",
+            json["name"]
+        );
+        assert_eq!(
+            json["email"].as_str().unwrap(),
+            "alice@example.com",
+            "Expected author email to be 'alice@example.com', but got {:?}",
+            json["email"]
+        );
     }
 
     #[test]
@@ -364,9 +380,25 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Object(outer_map));
         let json = arena.to_json(serialized);
 
-        assert_eq!(json["name"], "Alice");
-        assert_eq!(json["address"]["city"], "Tokyo");
-        assert_eq!(json["address"]["country"], "Japan");
+        // Verify nested structure with detailed error messages
+        assert_eq!(
+            json["name"].as_str().unwrap(),
+            "Alice",
+            "Expected name to be 'Alice', but got {:?}",
+            json["name"]
+        );
+        assert_eq!(
+            json["address"]["city"].as_str().unwrap(),
+            "Tokyo",
+            "Expected city to be 'Tokyo', but got {:?}",
+            json["address"]["city"]
+        );
+        assert_eq!(
+            json["address"]["country"].as_str().unwrap(),
+            "Japan",
+            "Expected country to be 'Japan', but got {:?}",
+            json["address"]["country"]
+        );
     }
 
     #[test]
@@ -392,7 +424,15 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Object(level1));
         let json = arena.to_json(serialized);
 
-        assert_eq!(json["level2"]["level3"]["level4"]["level5"]["value"], "deep");
+        // Verify deeply nested structure with detailed error messages
+        assert_eq!(
+            json["level2"]["level3"]["level4"]["level5"]["value"]
+                .as_str()
+                .unwrap(),
+            "deep",
+            "Expected deeply nested value to be 'deep', but got {:?}",
+            json["level2"]["level3"]["level4"]["level5"]["value"]
+        );
     }
 
     #[test]
@@ -405,10 +445,24 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Array(arr));
         let json = arena.to_json(serialized);
 
-        assert!(json.is_array());
-        assert_eq!(json.as_array().unwrap().len(), 1000);
-        assert_eq!(json[0], 0);
-        assert_eq!(json[999], 999);
+        assert!(json.is_array(), "Expected JSON to be an array");
+        assert_eq!(
+            json.as_array().unwrap().len(),
+            1000,
+            "Expected array to have 1000 elements"
+        );
+        assert_eq!(
+            json[0].as_i64().unwrap(),
+            0,
+            "Expected first element to be 0, but got {:?}",
+            json[0]
+        );
+        assert_eq!(
+            json[999].as_i64().unwrap(),
+            999,
+            "Expected last element to be 999, but got {:?}",
+            json[999]
+        );
     }
 
     #[test]
@@ -429,9 +483,25 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Object(outer_obj));
         let json = arena.to_json(serialized);
 
-        assert_eq!(json["items"][0]["id"], 1);
-        assert_eq!(json["items"][0]["title"], "Post 1");
-        assert_eq!(json["count"], 1);
+        // Verify mixed nested structure with detailed error messages
+        assert_eq!(
+            json["items"][0]["id"].as_i64().unwrap(),
+            1,
+            "Expected item id to be 1, but got {:?}",
+            json["items"][0]["id"]
+        );
+        assert_eq!(
+            json["items"][0]["title"].as_str().unwrap(),
+            "Post 1",
+            "Expected item title to be 'Post 1', but got {:?}",
+            json["items"][0]["title"]
+        );
+        assert_eq!(
+            json["count"].as_i64().unwrap(),
+            1,
+            "Expected count to be 1, but got {:?}",
+            json["count"]
+        );
     }
 
     #[test]
@@ -459,10 +529,31 @@ mod arena_tests {
         let json1 = arena.to_json(serialized1);
         let json2 = arena.to_json(serialized2);
 
-        assert_eq!(json1["id"].as_f64().unwrap(), 1.0);
-        assert_eq!(json1["title"], "First Post");
-        assert_eq!(json2["id"].as_f64().unwrap(), 2.0);
-        assert_eq!(json2["title"], "Second Post");
+        // Verify complex nested models with detailed error messages
+        assert_eq!(
+            json1["id"].as_f64().unwrap() as i64,
+            1,
+            "Expected post1 id to be 1, but got {:?}",
+            json1["id"]
+        );
+        assert_eq!(
+            json1["title"].as_str().unwrap(),
+            "First Post",
+            "Expected post1 title to be 'First Post', but got {:?}",
+            json1["title"]
+        );
+        assert_eq!(
+            json2["id"].as_f64().unwrap() as i64,
+            2,
+            "Expected post2 id to be 2, but got {:?}",
+            json2["id"]
+        );
+        assert_eq!(
+            json2["title"].as_str().unwrap(),
+            "Second Post",
+            "Expected post2 title to be 'Second Post', but got {:?}",
+            json2["title"]
+        );
     }
 
     #[test]
@@ -485,12 +576,17 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Object(current));
         let json = arena.to_json(serialized);
 
-        // Verify the deep nesting
+        // Verify the deep nesting with detailed error messages
         let mut current_json = &json;
         for i in 1..=10 {
             current_json = &current_json[format!("level{}", i)];
         }
-        assert_eq!(current_json["value"], 10);
+        assert_eq!(
+            current_json["value"].as_i64().unwrap(),
+            10,
+            "Expected deeply nested value to be 10, but got {:?}",
+            current_json["value"]
+        );
     }
 
     #[test]
@@ -510,9 +606,25 @@ mod arena_tests {
         let json2 = arena.to_json(serialized2);
         let json3 = arena.to_json(serialized3);
 
-        assert_eq!(json1, "value1");
-        assert_eq!(json2, 42);
-        assert_eq!(json3, true);
+        // Verify multiple allocations with detailed error messages
+        assert_eq!(
+            json1.as_str().unwrap(),
+            "value1",
+            "Expected first allocation to be 'value1', but got {:?}",
+            json1
+        );
+        assert_eq!(
+            json2.as_i64().unwrap(),
+            42,
+            "Expected second allocation to be 42, but got {:?}",
+            json2
+        );
+        assert_eq!(
+            json3.as_bool().unwrap(),
+            true,
+            "Expected third allocation to be true, but got {:?}",
+            json3
+        );
     }
 
     #[test]
@@ -534,11 +646,35 @@ mod arena_tests {
         let serialized = arena.allocate_field(&FieldValue::Array(objects));
         let json = arena.to_json(serialized);
 
-        assert!(json.is_array());
-        assert_eq!(json.as_array().unwrap().len(), 100);
-        assert_eq!(json[0]["id"], 0);
-        assert_eq!(json[0]["name"], "Item 0");
-        assert_eq!(json[99]["id"], 99);
-        assert_eq!(json[99]["name"], "Item 99");
+        assert!(json.is_array(), "Expected JSON to be an array");
+        assert_eq!(
+            json.as_array().unwrap().len(),
+            100,
+            "Expected array to have 100 elements"
+        );
+        assert_eq!(
+            json[0]["id"].as_i64().unwrap(),
+            0,
+            "Expected first item id to be 0, but got {:?}",
+            json[0]["id"]
+        );
+        assert_eq!(
+            json[0]["name"].as_str().unwrap(),
+            "Item 0",
+            "Expected first item name to be 'Item 0', but got {:?}",
+            json[0]["name"]
+        );
+        assert_eq!(
+            json[99]["id"].as_i64().unwrap(),
+            99,
+            "Expected last item id to be 99, but got {:?}",
+            json[99]["id"]
+        );
+        assert_eq!(
+            json[99]["name"].as_str().unwrap(),
+            "Item 99",
+            "Expected last item name to be 'Item 99', but got {:?}",
+            json[99]["name"]
+        );
     }
 }

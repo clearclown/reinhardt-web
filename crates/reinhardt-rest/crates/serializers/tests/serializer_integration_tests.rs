@@ -323,7 +323,7 @@ fn test_validation_with_valid_and_invalid_fields_mixed() {
     match result {
         Err(ValidationError::FieldError { field, message }) => {
             assert_eq!(field, "email");
-            assert!(message.contains("Invalid email"));
+            assert_eq!(message, "Invalid email format");
         }
         _ => panic!("Expected single FieldError"),
     }

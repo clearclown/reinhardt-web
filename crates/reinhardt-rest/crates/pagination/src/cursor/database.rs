@@ -382,7 +382,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(PaginationError::InvalidCursor(msg)) => {
-                assert!(msg.contains("Base64 decode error"));
+                assert!(
+                    msg.starts_with("Base64 decode error:"),
+                    "Cursor decode should return base64 error message. Got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidCursor error"),
         }
@@ -396,7 +400,11 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(PaginationError::InvalidCursor(msg)) => {
-                assert!(msg.contains("JSON parse error"));
+                assert!(
+                    msg.starts_with("JSON parse error:"),
+                    "Cursor decode should return JSON parse error message. Got: {}",
+                    msg
+                );
             }
             _ => panic!("Expected InvalidCursor error"),
         }

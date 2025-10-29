@@ -20,8 +20,10 @@ fn test_validator_error_unique_violation() {
     assert!(!error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("username"));
-    assert!(display.contains("alice"));
+    assert_eq!(
+        display,
+        "Unique violation on field 'username' with value 'alice': Username must be unique"
+    );
 }
 
 #[test]
@@ -45,8 +47,10 @@ fn test_validator_error_unique_together_violation() {
     assert!(!error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("username"));
-    assert!(display.contains("email"));
+    assert_eq!(
+        display,
+        "Unique together violation on fields [username, email] with values (username=alice, email=alice@example.com): Username and email combination must be unique"
+    );
 }
 
 #[test]
@@ -62,8 +66,10 @@ fn test_validator_error_required_field() {
     assert!(!error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("username"));
-    assert!(display.contains("required"));
+    assert_eq!(
+        display,
+        "Required field 'username': This field is required"
+    );
 }
 
 #[test]
@@ -81,9 +87,10 @@ fn test_validator_error_field_validation() {
     assert!(!error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("age"));
-    assert!(display.contains("-5"));
-    assert!(display.contains("positive"));
+    assert_eq!(
+        display,
+        "Field 'age' with value '-5' failed constraint 'must be positive': Age must be a positive number"
+    );
 }
 
 #[test]
@@ -99,8 +106,10 @@ fn test_validator_error_database_error() {
     assert!(error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("Connection refused"));
-    assert!(display.contains("PostgreSQL"));
+    assert_eq!(
+        display,
+        "Database error: Connection refused (source: PostgreSQL)"
+    );
 }
 
 #[test]
@@ -114,8 +123,7 @@ fn test_validator_error_database_error_without_source() {
     assert!(error.is_database_error());
 
     let display = format!("{}", error);
-    assert!(display.contains("Query timeout"));
-    assert!(!display.contains("source"));
+    assert_eq!(display, "Database error: Query timeout");
 }
 
 #[test]
@@ -220,8 +228,7 @@ fn test_serializer_error_serde() {
     assert!(error.as_validator_error().is_none());
 
     let display = format!("{}", error);
-    assert!(display.contains("Serde error"));
-    assert!(display.contains("Invalid JSON"));
+    assert_eq!(display, "Serde error: Invalid JSON format");
 }
 
 #[test]
@@ -244,8 +251,10 @@ fn test_serializer_error_display() {
     let error = SerializerError::Validation(validator_error);
     let display = format!("{}", error);
 
-    assert!(display.contains("email"));
-    assert!(display.contains("test@example.com"));
+    assert_eq!(
+        display,
+        "Unique violation on field 'email' with value 'test@example.com': Email exists"
+    );
 }
 
 #[test]
@@ -342,6 +351,8 @@ fn test_empty_values_in_unique_together() {
     };
 
     let display = format!("{}", error);
-    assert!(display.contains("field1"));
-    assert!(display.contains("field2"));
+    assert_eq!(
+        display,
+        "Unique together violation on fields [field1, field2] with values (): Fields must be unique"
+    );
 }

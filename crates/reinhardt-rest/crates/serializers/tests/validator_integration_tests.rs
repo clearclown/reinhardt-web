@@ -297,9 +297,10 @@ fn test_database_validator_error_unique_constraint_violation() {
     };
 
     let error_message = error.to_string();
-    assert!(error_message.contains("username"));
-    assert!(error_message.contains("alice"));
-    assert!(error_message.contains("users"));
+    assert_eq!(
+        error_message,
+        "Unique constraint violated: username = 'alice' already exists in table users"
+    );
 }
 
 #[test]
@@ -312,9 +313,10 @@ fn test_database_validator_error_unique_together_violation() {
     };
 
     let error_message = error.to_string();
-    assert!(error_message.contains("username"));
-    assert!(error_message.contains("email"));
-    assert!(error_message.contains("users"));
+    assert_eq!(
+        error_message,
+        "Unique together constraint violated: fields ([\"username\", \"email\"]) with values ([\"alice\", \"alice@example.com\"]) already exist in table users"
+    );
 }
 
 #[test]
@@ -325,8 +327,10 @@ fn test_database_validator_error_database_error() {
     };
 
     let error_message = error.to_string();
-    assert!(error_message.contains("Connection timeout"));
-    assert!(error_message.contains("Database error during validation"));
+    assert_eq!(
+        error_message,
+        "Database error during validation: Connection timeout"
+    );
 }
 
 #[test]
@@ -336,8 +340,10 @@ fn test_database_validator_error_field_not_found() {
     };
 
     let error_message = error.to_string();
-    assert!(error_message.contains("unknown_field"));
-    assert!(error_message.contains("not found"));
+    assert_eq!(
+        error_message,
+        "Required field 'unknown_field' not found in validation data"
+    );
 }
 
 #[test]
