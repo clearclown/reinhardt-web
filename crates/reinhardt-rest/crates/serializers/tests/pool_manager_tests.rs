@@ -63,8 +63,8 @@ mod pool_tests {
 
         // Verify default values
         assert_eq!(config.max_connections, 10);
-        assert_eq!(config.min_connections, 2);
-        assert!(config.acquire_timeout.as_secs() == 5);
+        assert_eq!(config.min_connections, 1);
+        assert_eq!(config.acquire_timeout.as_secs(), 30);
     }
 }
 

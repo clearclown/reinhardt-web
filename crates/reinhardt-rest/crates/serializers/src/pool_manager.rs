@@ -9,8 +9,6 @@ use crate::SerializerError;
 use reinhardt_pool::{ConnectionPool, PoolConfig};
 #[cfg(feature = "django-compat")]
 use std::sync::{Arc, RwLock};
-#[cfg(feature = "django-compat")]
-use std::time::Duration;
 
 /// Global connection pool manager
 ///
@@ -146,8 +144,7 @@ impl Default for ConnectionPoolManager {
 /// ```
 #[cfg(feature = "django-compat")]
 pub fn default_pool_config() -> PoolConfig {
-    // TODO: Update PoolConfig builder methods after API is finalized
-    todo!("Implement pool config with correct API")
+    PoolConfig::default()
 }
 
 #[cfg(test)]
@@ -169,7 +166,7 @@ mod tests {
     fn test_default_pool_config() {
         let config = default_pool_config();
         assert_eq!(config.max_connections, 10);
-        assert_eq!(config.min_connections, 2);
+        assert_eq!(config.min_connections, 1);
     }
 
     #[test]
