@@ -480,10 +480,14 @@ mod tests {
         );
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("404"));
-        assert!(body.contains("Not Found"));
+        // Verify HTML structure and content
+        assert_eq!(body.matches("404").count() >= 2, true); // Status code appears at least twice
+        assert_eq!(body.matches("Not Found").count() >= 1, true);
         // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-        assert!(body.contains("&#x2F;test&#x2F;path") || body.contains("/test/path"));
+        assert_eq!(
+            body.contains("&#x2F;test&#x2F;path") || body.contains("/test/path"),
+            true
+        );
     }
 
     #[test]
@@ -494,8 +498,8 @@ mod tests {
         assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("500"));
-        assert!(body.contains("Internal Server Error"));
+        assert_eq!(body.matches("500").count() >= 2, true);
+        assert_eq!(body.matches("Internal Server Error").count() >= 1, true);
     }
 
     #[test]
@@ -506,8 +510,8 @@ mod tests {
         assert_eq!(response.status, StatusCode::FORBIDDEN);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("403"));
-        assert!(body.contains("Forbidden"));
+        assert_eq!(body.matches("403").count() >= 2, true);
+        assert_eq!(body.matches("Forbidden").count() >= 1, true);
     }
 
     #[test]
@@ -518,8 +522,8 @@ mod tests {
         assert_eq!(response.status, StatusCode::BAD_REQUEST);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("400"));
-        assert!(body.contains("Bad Request"));
+        assert_eq!(body.matches("400").count() >= 2, true);
+        assert_eq!(body.matches("Bad Request").count() >= 1, true);
     }
 
     #[test]
@@ -533,7 +537,7 @@ mod tests {
         assert_eq!(response.status, StatusCode::NOT_FOUND);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("404"));
+        assert_eq!(body.matches("404").count() >= 2, true);
     }
 
     #[test]
@@ -543,8 +547,8 @@ mod tests {
 
         // Unknown status codes should still render a page
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("999"));
-        assert!(body.contains("Error"));
+        assert_eq!(body.matches("999").count() >= 2, true);
+        assert_eq!(body.matches("Error").count() >= 1, true);
     }
 
     #[test]
@@ -552,13 +556,17 @@ mod tests {
         let html = render_default_error_page(404, "/test/path");
 
         // Check HTML structure
-        assert!(html.contains("<!DOCTYPE html>") || html.contains("<!doctype html>"));
-        assert!(html.contains("<html") && html.contains("lang=\"en\""));
-        assert!(html.contains("404"));
-        assert!(html.contains("Not Found"));
+        let has_doctype = html.contains("<!DOCTYPE html>") || html.contains("<!doctype html>");
+        assert_eq!(has_doctype, true);
+        assert_eq!(html.contains("<html") && html.contains("lang=\"en\""), true);
+        assert_eq!(html.matches("404").count() >= 2, true);
+        assert_eq!(html.matches("Not Found").count() >= 1, true);
         // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-        assert!(html.contains("&#x2F;test&#x2F;path") || html.contains("/test/path"));
-        assert!(html.contains("Go to Home"));
+        assert_eq!(
+            html.contains("&#x2F;test&#x2F;path") || html.contains("/test/path"),
+            true
+        );
+        assert_eq!(html.matches("Go to Home").count() >= 1, true);
     }
 
     #[test]
@@ -567,9 +575,12 @@ mod tests {
 
         for code in codes {
             let html = render_default_error_page(code, "/test");
-            assert!(html.contains(&code.to_string()));
+            assert_eq!(html.matches(&code.to_string()).count() >= 2, true);
             // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-            assert!(html.contains("&#x2F;test") || html.contains("/test"));
+            assert_eq!(
+                html.contains("&#x2F;test") || html.contains("/test"),
+                true
+            );
         }
     }
 
@@ -586,9 +597,15 @@ mod tests {
         assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("500"));
-        assert!(body.contains("Database connection failed"));
-        assert!(body.contains("Development Mode Debug Page"));
+        assert_eq!(body.matches("500").count() >= 2, true);
+        assert_eq!(
+            body.matches("Database connection failed").count() >= 1,
+            true
+        );
+        assert_eq!(
+            body.matches("Development Mode Debug Page").count() >= 1,
+            true
+        );
     }
 
     #[test]
@@ -602,7 +619,7 @@ mod tests {
         assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains("Critical error"));
+        assert_eq!(body.matches("Critical error").count() >= 1, true);
     }
 
     #[test]
@@ -611,9 +628,12 @@ mod tests {
         let html = render_simple_debug_page(404, "Not found", &request);
 
         // Should include method and path
-        assert!(html.contains("GET"));
-        assert!(html.contains("/test/path") || html.contains("&#x2F;test&#x2F;path"));
-        assert!(html.contains("Request Information"));
-        assert!(html.contains("Request Headers"));
+        assert_eq!(html.matches("GET").count() >= 1, true);
+        assert_eq!(
+            html.contains("/test/path") || html.contains("&#x2F;test&#x2F;path"),
+            true
+        );
+        assert_eq!(html.matches("Request Information").count() >= 1, true);
+        assert_eq!(html.matches("Request Headers").count() >= 1, true);
     }
 }

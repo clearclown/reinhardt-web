@@ -89,11 +89,33 @@ fn test_page_not_found_default() {
     );
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("404"));
-    assert!(body.contains("Not Found"));
+    // Verify exact HTML structure for 404 error page
+    assert!(
+        body.contains("<title>404 - Not Found</title>"),
+        "Error page should have exact title with format '404 - Not Found', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">404</div>"),
+        "Error page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-title\">Not Found</div>"),
+        "Error page should have error-title div with status text, got: {}",
+        &body[..1500.min(body.len())]
+    );
     // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-    assert!(body.contains("&#x2F;missing&#x2F;page") || body.contains("/missing/page"));
-    assert!(body.contains("<!DOCTYPE html>") || body.contains("<!doctype html>"));
+    assert!(
+        body.contains("Path: &#x2F;missing&#x2F;page") || body.contains("Path: /missing/page"),
+        "Error page should contain request path in error-path div, got: {}",
+        &body[..2000.min(body.len())]
+    );
+    assert!(
+        body.contains("<!DOCTYPE html>") || body.contains("<!doctype html>"),
+        "Error page should have DOCTYPE declaration, got: {}",
+        &body[..100.min(body.len())]
+    );
 }
 
 #[test]
@@ -104,10 +126,28 @@ fn test_server_error_default() {
     assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("500"));
-    assert!(body.contains("Internal Server Error"));
+    // Verify exact HTML structure for 500 error page
+    assert!(
+        body.contains("<title>500 - Internal Server Error</title>"),
+        "Error page should have exact title with format '500 - Internal Server Error', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">500</div>"),
+        "Error page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-title\">Internal Server Error</div>"),
+        "Error page should have error-title div with status text, got: {}",
+        &body[..1500.min(body.len())]
+    );
     // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-    assert!(body.contains("&#x2F;api&#x2F;endpoint") || body.contains("/api/endpoint"));
+    assert!(
+        body.contains("Path: &#x2F;api&#x2F;endpoint") || body.contains("Path: /api/endpoint"),
+        "Error page should contain request path in error-path div, got: {}",
+        &body[..2000.min(body.len())]
+    );
 }
 
 #[test]
@@ -118,10 +158,28 @@ fn test_permission_denied_default() {
     assert_eq!(response.status, StatusCode::FORBIDDEN);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("403"));
-    assert!(body.contains("Forbidden"));
+    // Verify exact HTML structure for 403 error page
+    assert!(
+        body.contains("<title>403 - Forbidden</title>"),
+        "Error page should have exact title with format '403 - Forbidden', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">403</div>"),
+        "Error page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-title\">Forbidden</div>"),
+        "Error page should have error-title div with status text, got: {}",
+        &body[..1500.min(body.len())]
+    );
     // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-    assert!(body.contains("&#x2F;admin&#x2F;secret") || body.contains("/admin/secret"));
+    assert!(
+        body.contains("Path: &#x2F;admin&#x2F;secret") || body.contains("Path: /admin/secret"),
+        "Error page should contain request path in error-path div, got: {}",
+        &body[..2000.min(body.len())]
+    );
 }
 
 #[test]
@@ -132,8 +190,22 @@ fn test_bad_request_default() {
     assert_eq!(response.status, StatusCode::BAD_REQUEST);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("400"));
-    assert!(body.contains("Bad Request"));
+    // Verify exact HTML structure for 400 error page
+    assert!(
+        body.contains("<title>400 - Bad Request</title>"),
+        "Error page should have exact title with format '400 - Bad Request', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">400</div>"),
+        "Error page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-title\">Bad Request</div>"),
+        "Error page should have error-title div with status text, got: {}",
+        &body[..1500.min(body.len())]
+    );
 }
 
 #[test]
@@ -148,9 +220,23 @@ fn test_render_error_page_with_custom_context() {
     assert_eq!(response.status, StatusCode::NOT_FOUND);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("404"));
+    // Verify custom context is rendered in error page
+    assert!(
+        body.contains("<title>404 - Not Found</title>"),
+        "Error page with custom context should have exact title with format '404 - Not Found', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">404</div>"),
+        "Error page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
     // Path is HTML-escaped by Tera (/ becomes &#x2F;)
-    assert!(body.contains("&#x2F;test&#x2F;path") || body.contains("/test/path"));
+    assert!(
+        body.contains("Path: &#x2F;test&#x2F;path") || body.contains("Path: /test/path"),
+        "Error page should contain request path in error-path div, got: {}",
+        &body[..2000.min(body.len())]
+    );
 }
 
 #[test]
@@ -174,9 +260,27 @@ fn test_custom_404_template() {
     assert_eq!(response.status, StatusCode::NOT_FOUND);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("Custom 404 Page"));
-    assert!(body.contains("/custom/missing"));
-    assert!(body.contains("This is a custom message"));
+    // Verify custom template elements
+    assert!(
+        body.contains("<title>Custom 404</title>"),
+        "Custom template should have exact title, got: {}",
+        &body[..200.min(body.len())]
+    );
+    assert!(
+        body.contains("<h1>Custom 404 Page</h1>"),
+        "Custom template should have exact h1, got: {}",
+        &body[..500.min(body.len())]
+    );
+    assert!(
+        body.contains("<p>Path: /custom/missing</p>"),
+        "Custom template should have path paragraph, got: {}",
+        &body[..800.min(body.len())]
+    );
+    assert!(
+        body.contains("<p>Message: This is a custom message</p>"),
+        "Custom template should have custom message, got: {}",
+        &body[..800.min(body.len())]
+    );
 
     cleanup_test_templates(&test_dir);
     unsafe {
@@ -205,8 +309,22 @@ fn test_custom_500_template() {
     assert_eq!(response.status, StatusCode::INTERNAL_SERVER_ERROR);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    assert!(body.contains("Custom Server Error"));
-    assert!(body.contains("Stack trace"));
+    // Verify custom 500 template elements
+    assert!(
+        body.contains("<title>Custom 500</title>"),
+        "Custom 500 template should have exact title, got: {}",
+        &body[..200.min(body.len())]
+    );
+    assert!(
+        body.contains("<h1>Custom Server Error</h1>"),
+        "Custom 500 template should have exact h1, got: {}",
+        &body[..500.min(body.len())]
+    );
+    assert!(
+        body.contains("<pre>Stack trace: line 42 in module.rs</pre>"),
+        "Custom 500 template should have debug info in pre tag, got: {}",
+        &body[..800.min(body.len())]
+    );
 
     cleanup_test_templates(&test_dir);
     unsafe {
@@ -230,10 +348,27 @@ fn test_fallback_to_default_when_custom_template_missing() {
     assert_eq!(response.status, StatusCode::FORBIDDEN);
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
-    // Should be default error page
-    assert!(body.contains("403"));
-    assert!(body.contains("Forbidden"));
-    assert!(!body.contains("Custom")); // Not the custom template
+    // Should be default error page, not custom template
+    assert!(
+        body.contains("<title>403 - Forbidden</title>"),
+        "Default 403 page should have exact title with format '403 - Forbidden', got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-code\">403</div>"),
+        "Default 403 page should have error-code div with status code, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        body.contains("<div class=\"error-title\">Forbidden</div>"),
+        "Default 403 page should have error-title div with status text, got: {}",
+        &body[..1500.min(body.len())]
+    );
+    assert!(
+        !body.contains("Custom"),
+        "Should not contain custom template marker, got: {}",
+        &body[..1500.min(body.len())]
+    );
 
     cleanup_test_templates(&test_dir);
     unsafe {
@@ -260,7 +395,14 @@ fn test_multiple_error_types() {
         assert_eq!(response.status, expected_status);
 
         let body = String::from_utf8(response.body.to_vec()).unwrap();
-        assert!(body.contains(&code.to_string()));
+        // Verify error page contains error-code div with status code
+        let expected_div = format!("<div class=\"error-code\">{}</div>", code);
+        assert!(
+            body.contains(&expected_div),
+            "Error page for {} should have error-code div with status code, got: {}",
+            code,
+            &body[..1500.min(body.len())]
+        );
     }
 }
 
@@ -271,17 +413,54 @@ fn test_error_page_html_structure() {
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
 
-    // Check for proper HTML structure
-    assert!(body.contains("<!DOCTYPE html>") || body.contains("<!doctype html>"));
-    assert!(body.contains("<html lang=\"en\">"));
-    assert!(body.contains("<head>"));
+    // Check for proper HTML structure elements
+    assert!(
+        body.contains("<!DOCTYPE html>") || body.contains("<!doctype html>"),
+        "HTML should start with DOCTYPE, got: {}",
+        &body[..100.min(body.len())]
+    );
+    assert!(
+        body.contains("<html lang=\"en\">"),
+        "HTML element should have lang attribute, got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<head>"),
+        "HTML should have head element, got: {}",
+        &body[..400.min(body.len())]
+    );
     // Meta tag can be self-closing: <meta charset="UTF-8" /> or <meta charset="UTF-8">
-    assert!(body.contains("charset=\"UTF-8\""));
-    assert!(body.contains("<meta name=\"viewport\""));
-    assert!(body.contains("</head>"));
-    assert!(body.contains("<body>"));
-    assert!(body.contains("</body>"));
-    assert!(body.contains("</html>"));
+    assert!(
+        body.contains("<meta charset=\"UTF-8\""),
+        "Head should have charset meta tag with exact format, got: {}",
+        &body[..500.min(body.len())]
+    );
+    assert!(
+        body.contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\""),
+        "Head should have viewport meta tag with exact content, got: {}",
+        &body[..600.min(body.len())]
+    );
+    assert!(
+        body.contains("<title>404 - Not Found</title>"),
+        "Head should have exact title, got: {}",
+        &body[..600.min(body.len())]
+    );
+    assert!(
+        body.contains("</head>"),
+        "HTML should close head element, got structure around head closing"
+    );
+    assert!(
+        body.contains("<body>"),
+        "HTML should have body element, got structure around body opening"
+    );
+    assert!(
+        body.contains("</body>"),
+        "HTML should close body element"
+    );
+    assert!(
+        body.contains("</html>"),
+        "HTML should close html element"
+    );
 }
 
 #[test]
@@ -291,9 +470,12 @@ fn test_error_page_responsive_design() {
 
     let body = String::from_utf8(response.body.to_vec()).unwrap();
 
-    // Check for mobile responsiveness
-    assert!(body.contains("viewport"));
-    assert!(body.contains("width=device-width"));
+    // Check for mobile responsiveness meta tag
+    assert!(
+        body.contains("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\""),
+        "HTML should have viewport meta tag with exact content for responsive design, got: {}",
+        &body[..500.min(body.len())]
+    );
 }
 
 #[test]
@@ -304,6 +486,14 @@ fn test_error_page_accessibility() {
     let body = String::from_utf8(response.body.to_vec()).unwrap();
 
     // Check for accessibility features
-    assert!(body.contains("lang=\"en\""));
-    assert!(body.contains("<title>"));
+    assert!(
+        body.contains("<html lang=\"en\">"),
+        "HTML should have lang attribute for accessibility, got: {}",
+        &body[..300.min(body.len())]
+    );
+    assert!(
+        body.contains("<title>404 - Not Found</title>"),
+        "HTML should have descriptive title with format '404 - Not Found' for accessibility, got: {}",
+        &body[..500.min(body.len())]
+    );
 }

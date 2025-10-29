@@ -30,10 +30,27 @@ fn test_askama_user_template_basic() {
 
     let html = template.render_user().expect("Failed to render");
 
-    assert!(html.contains("Integration Test"));
-    assert!(html.contains("integration@test.com"));
-    assert!(html.contains("30"));
-    assert!(html.contains("Adult"));
+    // テンプレート変数の正確な値を検証
+    assert!(
+        html.contains("Integration Test"),
+        "HTML に 'Integration Test' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("integration@test.com"),
+        "HTML に 'integration@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("30"),
+        "HTML に年齢 '30' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("Adult"),
+        "HTML に 'Adult' ステータスが含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -47,13 +64,34 @@ fn test_askama_user_list_template() {
     let template = UserListTemplate::new(users, "Integration Test Users".to_string());
     let html = template.render_list().expect("Failed to render");
 
-    assert!(html.contains("Integration Test Users"));
-    assert!(html.contains("User A"));
-    assert!(html.contains("User B"));
-    assert!(html.contains("User C"));
-    assert!(html.contains("a@test.com"));
-    assert!(html.contains("b@test.com"));
-    assert!(html.contains("c@test.com"));
+    // テンプレート変数の正確な値を検証
+    assert!(
+        html.contains("Integration Test Users"),
+        "HTML にタイトル 'Integration Test Users' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+
+    // 各ユーザーの存在を検証
+    let expected_users = vec![
+        ("User A", "a@test.com"),
+        ("User B", "b@test.com"),
+        ("User C", "c@test.com"),
+    ];
+
+    for (name, email) in expected_users.iter() {
+        assert!(
+            html.contains(name),
+            "HTML にユーザー名 '{}' が含まれている必要があります。実際の HTML: {}",
+            name,
+            html
+        );
+        assert!(
+            html.contains(email),
+            "HTML にメールアドレス '{}' が含まれている必要があります。実際の HTML: {}",
+            email,
+            html
+        );
+    }
 }
 
 #[test]
@@ -93,10 +131,22 @@ fn test_runtime_vs_compile_time_correctness() {
     );
     let askama_html = askama_template.render_user().expect("Failed to render");
 
-    // Verify Askama output contains expected data
-    assert!(askama_html.contains("Test User"));
-    assert!(askama_html.contains("test@example.com"));
-    assert!(askama_html.contains("25"));
+    // Verify Askama output contains expected data with detailed error messages
+    assert!(
+        askama_html.contains("Test User"),
+        "Askama HTML に 'Test User' が含まれている必要があります。実際の HTML: {}",
+        askama_html
+    );
+    assert!(
+        askama_html.contains("test@example.com"),
+        "Askama HTML に 'test@example.com' が含まれている必要があります。実際の HTML: {}",
+        askama_html
+    );
+    assert!(
+        askama_html.contains("25"),
+        "Askama HTML に年齢 '25' が含まれている必要があります。実際の HTML: {}",
+        askama_html
+    );
 
     // Runtime (TemplateHTMLRenderer)
     let mut runtime_context = HashMap::new();
@@ -108,10 +158,22 @@ fn test_runtime_vs_compile_time_correctness() {
     let runtime_html =
         TemplateHTMLRenderer::substitute_variables_single_pass(template_str, &runtime_context);
 
-    // Verify runtime output contains expected data
-    assert!(runtime_html.contains("Test User"));
-    assert!(runtime_html.contains("test@example.com"));
-    assert!(runtime_html.contains("25"));
+    // Verify runtime output contains expected data with detailed error messages
+    assert!(
+        runtime_html.contains("Test User"),
+        "Runtime HTML に 'Test User' が含まれている必要があります。実際の HTML: {}",
+        runtime_html
+    );
+    assert!(
+        runtime_html.contains("test@example.com"),
+        "Runtime HTML に 'test@example.com' が含まれている必要があります。実際の HTML: {}",
+        runtime_html
+    );
+    assert!(
+        runtime_html.contains("25"),
+        "Runtime HTML に年齢 '25' が含まれている必要があります。実際の HTML: {}",
+        runtime_html
+    );
 }
 
 #[test]
@@ -125,9 +187,22 @@ fn test_askama_renderer_direct() {
 
     let html = renderer.render(&template).expect("Failed to render");
 
-    assert!(html.contains("Direct Test"));
-    assert!(html.contains("direct@test.com"));
-    assert!(html.contains("35"));
+    // テンプレート変数の正確な値を検証
+    assert!(
+        html.contains("Direct Test"),
+        "HTML に 'Direct Test' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("direct@test.com"),
+        "HTML に 'direct@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("35"),
+        "HTML に年齢 '35' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -143,8 +218,17 @@ fn test_askama_renderer_with_context() {
         .render_with_context(&template, "user profile page")
         .expect("Failed to render with context");
 
-    assert!(html.contains("Context Test"));
-    assert!(html.contains("context@test.com"));
+    // テンプレート変数の正確な値を検証
+    assert!(
+        html.contains("Context Test"),
+        "HTML に 'Context Test' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("context@test.com"),
+        "HTML に 'context@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -206,8 +290,17 @@ fn test_empty_user_list() {
     let template = UserListTemplate::new(users, "Empty List Test".to_string());
     let html = template.render_list().expect("Failed to render empty list");
 
-    assert!(html.contains("Empty List Test"));
-    assert!(html.contains("No users found"));
+    // 空のリストのレンダリング結果を検証
+    assert!(
+        html.contains("Empty List Test"),
+        "HTML にタイトル 'Empty List Test' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("No users found"),
+        "HTML に 'No users found' メッセージが含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -216,8 +309,17 @@ fn test_single_user_list() {
     let template = UserListTemplate::new(users, "Single User Test".to_string());
     let html = template.render_list().expect("Failed to render");
 
-    assert!(html.contains("Single User"));
-    assert!(html.contains("single@test.com"));
+    // 単一ユーザーのレンダリング結果を検証
+    assert!(
+        html.contains("Single User"),
+        "HTML にユーザー名 'Single User' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("single@test.com"),
+        "HTML にメールアドレス 'single@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -229,11 +331,34 @@ fn test_large_user_list() {
     let template = UserListTemplate::new(users, "Large List Test".to_string());
     let html = template.render_list().expect("Failed to render large list");
 
-    assert!(html.contains("Large List Test"));
-    assert!(html.contains("User 0"));
-    assert!(html.contains("User 99"));
-    assert!(html.contains("user0@test.com"));
-    assert!(html.contains("user99@test.com"));
+    // 大規模リストのレンダリング結果を検証
+    assert!(
+        html.contains("Large List Test"),
+        "HTML にタイトル 'Large List Test' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+
+    // 最初と最後のユーザーを検証
+    assert!(
+        html.contains("User 0"),
+        "HTML に最初のユーザー 'User 0' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("User 99"),
+        "HTML に最後のユーザー 'User 99' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("user0@test.com"),
+        "HTML に最初のユーザーのメール 'user0@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("user99@test.com"),
+        "HTML に最後のユーザーのメール 'user99@test.com' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -252,10 +377,27 @@ fn test_askama_conditional_rendering_adult() {
     );
     let html = adult_template.render_user().expect("Failed to render");
 
-    assert!(html.contains("Adult User"));
-    assert!(html.contains("18"));
-    assert!(html.contains("Adult"));
-    assert!(!html.contains("Minor"));
+    // 成人ユーザーの条件分岐レンダリングを検証
+    assert!(
+        html.contains("Adult User"),
+        "HTML にユーザー名 'Adult User' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("18"),
+        "HTML に年齢 '18' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("Adult"),
+        "HTML に 'Adult' ステータスが含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        !html.contains("Minor"),
+        "HTML に 'Minor' ステータスが含まれていてはいけません。実際の HTML: {}",
+        html
+    );
 }
 
 #[test]
@@ -267,8 +409,25 @@ fn test_askama_conditional_rendering_minor() {
     );
     let html = minor_template.render_user().expect("Failed to render");
 
-    assert!(html.contains("Minor User"));
-    assert!(html.contains("17"));
-    assert!(html.contains("Minor"));
-    assert!(!html.contains("Adult User"));
+    // 未成年ユーザーの条件分岐レンダリングを検証
+    assert!(
+        html.contains("Minor User"),
+        "HTML にユーザー名 'Minor User' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("17"),
+        "HTML に年齢 '17' が含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        html.contains("Minor"),
+        "HTML に 'Minor' ステータスが含まれている必要があります。実際の HTML: {}",
+        html
+    );
+    assert!(
+        !html.contains("Adult User"),
+        "HTML に 'Adult User' が含まれていてはいけません (別のユーザー名なので)。実際の HTML: {}",
+        html
+    );
 }

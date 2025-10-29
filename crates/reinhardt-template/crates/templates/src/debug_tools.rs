@@ -301,13 +301,13 @@ mod tests {
     fn test_debug_filter() {
         let value = "test";
         let result = debug_filter(&value);
-        assert!(result.contains("test"));
+        assert_eq!(result, "\"test\"");
     }
 
     #[test]
     fn test_template_context_new() {
         let context = TemplateContext::new();
-        assert!(context.variables.is_empty());
+        assert_eq!(context.variables.len(), 0);
     }
 
     #[test]
@@ -327,9 +327,9 @@ mod tests {
         context.add_variable("age", 30);
 
         let dump = context.dump();
-        assert!(dump.contains("Template Context:"));
-        assert!(dump.contains("name = Alice"));
-        assert!(dump.contains("age = 30"));
+        assert_eq!(dump.matches("Template Context:").count(), 1);
+        assert_eq!(dump.matches("name = Alice").count(), 1);
+        assert_eq!(dump.matches("age = 30").count(), 1);
     }
 
     #[test]
@@ -347,8 +347,12 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(10));
         profile.stop();
 
-        assert!(profile.duration.is_some());
-        assert!(profile.duration.unwrap().as_millis() >= 10);
+        assert_eq!(profile.duration.is_some(), true);
+        // NOTE: Using range assertion because timing is system-dependent
+        // Verify that duration is at least 10ms but not absurdly large
+        let duration_ms = profile.duration.unwrap().as_millis();
+        assert_eq!(duration_ms >= 10, true);
+        assert_eq!(duration_ms < 1000, true); // Should complete in less than 1 second
     }
 
     #[test]
@@ -370,26 +374,26 @@ mod tests {
         profile.stop();
 
         let summary = profile.summary();
-        assert!(summary.contains("test.html"));
-        assert!(summary.contains("Variables accessed: 1"));
+        assert_eq!(summary.matches("test.html").count(), 1);
+        assert_eq!(summary.matches("Variables accessed: 1").count(), 1);
     }
 
     #[test]
     fn test_debug_panel_new() {
         let panel = DebugPanel::new();
-        assert!(!panel.enabled);
-        assert!(panel.profiles.is_empty());
-        assert!(panel.contexts.is_empty());
+        assert_eq!(panel.enabled, false);
+        assert_eq!(panel.profiles.len(), 0);
+        assert_eq!(panel.contexts.len(), 0);
     }
 
     #[test]
     fn test_debug_panel_enable_disable() {
         let mut panel = DebugPanel::new();
         panel.enable();
-        assert!(panel.enabled);
+        assert_eq!(panel.enabled, true);
 
         panel.disable();
-        assert!(!panel.enabled);
+        assert_eq!(panel.enabled, false);
     }
 
     #[test]
@@ -420,8 +424,8 @@ mod tests {
         panel.add_profile(profile);
 
         let summary = panel.summary();
-        assert!(summary.contains("Templates Rendered: 1"));
-        assert!(summary.contains("test.html"));
+        assert_eq!(summary.matches("Templates Rendered: 1").count(), 1);
+        assert_eq!(summary.matches("test.html").count(), 1);
     }
 
     #[test]
@@ -432,8 +436,9 @@ mod tests {
         panel.add_context("test.html", context);
 
         let dump = panel.get_context("test.html");
-        assert!(dump.is_some());
-        assert!(dump.unwrap().contains("name = Alice"));
+        assert_eq!(dump.is_some(), true);
+        let dump_content = dump.unwrap();
+        assert_eq!(dump_content.matches("name = Alice").count(), 1);
     }
 }
 
@@ -643,7 +648,7 @@ mod extended_tests {
     fn test_template_trace_new() {
         let trace = TemplateTrace::new("test.html");
         assert_eq!(trace.template_name, "test.html");
-        assert!(trace.events.is_empty());
+        assert_eq!(trace.events.len(), 0);
     }
 
     #[test]
@@ -668,9 +673,9 @@ mod extended_tests {
         });
 
         let summary = trace.summary();
-        assert!(summary.contains("test.html"));
-        assert!(summary.contains("Variable access"));
-        assert!(summary.contains("username"));
+        assert_eq!(summary.matches("test.html").count(), 1);
+        assert_eq!(summary.matches("Variable access").count(), 1);
+        assert_eq!(summary.matches("username").count(), 1);
     }
 
     #[test]
@@ -681,9 +686,7 @@ mod extended_tests {
             line: 5,
         };
         let formatted = event.format();
-        assert!(formatted.contains("test"));
-        assert!(formatted.contains("value"));
-        assert!(formatted.contains("line 5"));
+        assert_eq!(formatted, "Variable access: test = value (line 5)");
     }
 
     #[test]
@@ -701,7 +704,7 @@ mod extended_tests {
         metrics.variable_count = 5;
 
         let report = metrics.report();
-        assert!(report.contains("test.html"));
-        assert!(report.contains("Variables: 5"));
+        assert_eq!(report.matches("test.html").count(), 1);
+        assert_eq!(report.matches("Variables: 5").count(), 1);
     }
 }

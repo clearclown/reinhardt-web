@@ -68,9 +68,15 @@ mod json_renderer_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("foo"));
-        assert!(output.contains("bar"));
-        assert!(output.contains("baz"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        assert_eq!(
+            parsed.get("foo"),
+            Some(&json!(["bar", "baz"])),
+            "foo キーの値が期待通りの配列である必要があります"
+        );
     }
 
     #[tokio::test]
@@ -81,8 +87,20 @@ mod json_renderer_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("test"));
-        assert!(output.contains("123"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        assert_eq!(
+            parsed.get("name"),
+            Some(&json!("test")),
+            "name キーの値が 'test' である必要があります"
+        );
+        assert_eq!(
+            parsed.get("value"),
+            Some(&json!(123)),
+            "value キーの値が 123 である必要があります"
+        );
     }
 
     #[tokio::test]
@@ -93,10 +111,25 @@ mod json_renderer_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains(r#""id""#));
-        assert!(output.contains("1"));
-        assert!(output.contains("2"));
-        assert!(output.contains("3"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        let array = parsed.as_array()
+            .expect("出力が配列である必要があります");
+
+        assert_eq!(array.len(), 3, "配列の長さが3である必要があります");
+
+        for (i, item) in array.iter().enumerate() {
+            let expected_id = i + 1;
+            assert_eq!(
+                item.get("id"),
+                Some(&json!(expected_id)),
+                "配列の要素 {} の id が {} である必要があります",
+                i,
+                expected_id
+            );
+        }
     }
 
     #[tokio::test]
@@ -107,7 +140,19 @@ mod json_renderer_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("3.14159"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        let value = parsed.get("value")
+            .and_then(|v| v.as_f64())
+            .expect("value キーが浮動小数点数である必要があります");
+
+        assert!(
+            (value - 3.14159).abs() < 1e-10,
+            "value が 3.14159 である必要があります。実際の値: {}",
+            value
+        );
     }
 
     #[tokio::test]
@@ -179,11 +224,59 @@ mod json_formatting_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("users"));
-        assert!(output.contains("Alice"));
-        assert!(output.contains("Bob"));
-        assert!(output.contains("Charlie"));
-        assert!(output.contains("total"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        // users配列の検証
+        let users = parsed.get("users")
+            .and_then(|v| v.as_array())
+            .expect("users キーが配列である必要があります");
+
+        assert_eq!(users.len(), 3, "users配列の長さが3である必要があります");
+
+        let expected_users = vec![
+            ("Alice", "alice@example.com"),
+            ("Bob", "bob@example.com"),
+            ("Charlie", "charlie@example.com"),
+        ];
+
+        for (i, (expected_name, expected_email)) in expected_users.iter().enumerate() {
+            let user = &users[i];
+            assert_eq!(
+                user.get("id"),
+                Some(&json!(i + 1)),
+                "ユーザー {} の id が {} である必要があります",
+                i,
+                i + 1
+            );
+            assert_eq!(
+                user.get("name"),
+                Some(&json!(expected_name)),
+                "ユーザー {} の name が {} である必要があります",
+                i,
+                expected_name
+            );
+            assert_eq!(
+                user.get("email"),
+                Some(&json!(expected_email)),
+                "ユーザー {} の email が {} である必要があります",
+                i,
+                expected_email
+            );
+        }
+
+        // メタデータの検証
+        assert_eq!(
+            parsed.get("total"),
+            Some(&json!(3)),
+            "total が 3 である必要があります"
+        );
+        assert_eq!(
+            parsed.get("page"),
+            Some(&json!(1)),
+            "page が 1 である必要があります"
+        );
     }
 }
 
@@ -215,8 +308,16 @@ mod renderer_context_tests {
 
         assert!(!result.is_empty());
         let output = String::from_utf8(result.to_vec()).unwrap();
-        assert!(output.contains("test"));
-        assert!(output.contains("data"));
+
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        assert_eq!(
+            parsed.get("test"),
+            Some(&json!("data")),
+            "test キーの値が 'data' である必要があります"
+        );
     }
 }
 
@@ -321,10 +422,23 @@ mod edge_case_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("level1"));
-        assert!(output.contains("level2"));
-        assert!(output.contains("level3"));
-        assert!(output.contains("deep"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        // ネストされた構造を検証
+        let level3_data = parsed
+            .get("level1")
+            .and_then(|v| v.get("level2"))
+            .and_then(|v| v.get("level3"))
+            .and_then(|v| v.get("data"))
+            .expect("ネストされた level1.level2.level3.data が存在する必要があります");
+
+        assert_eq!(
+            level3_data,
+            &json!("deep"),
+            "level3.data の値が 'deep' である必要があります"
+        );
     }
 
     #[tokio::test]
@@ -335,7 +449,19 @@ mod edge_case_tests {
         let result = renderer.render(&data, None).await.unwrap();
         let output = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(output.contains("true"));
-        assert!(output.contains("false"));
+        // 厳密なJSON構造検証
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .expect("出力が有効なJSONである必要があります");
+
+        assert_eq!(
+            parsed.get("true_val"),
+            Some(&json!(true)),
+            "true_val が true である必要があります"
+        );
+        assert_eq!(
+            parsed.get("false_val"),
+            Some(&json!(false)),
+            "false_val が false である必要があります"
+        );
     }
 }

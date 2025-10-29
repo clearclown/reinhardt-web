@@ -554,14 +554,41 @@ mod tests {
 
         let html = template.render_user().expect("Failed to render user template");
 
-        // Verify content is present
-        assert!(html.contains("Alice"), "HTML should contain user name");
+        // Verify HTML structure and content
         assert!(
-            html.contains("alice@example.com"),
-            "HTML should contain email"
+            html.starts_with("<!DOCTYPE html>"),
+            "Rendered template should start with DOCTYPE declaration, got: {}",
+            &html[..100.min(html.len())]
         );
-        assert!(html.contains("25"), "HTML should contain age");
-        assert!(html.contains("Adult"), "Adult status should be shown for age >= 18");
+
+        // Verify exact content presence with structured checks
+        let name_count = html.matches("Alice").count();
+        assert_eq!(
+            name_count, 1,
+            "User name 'Alice' should appear exactly once in template, found {} times",
+            name_count
+        );
+
+        let email_count = html.matches("alice@example.com").count();
+        assert_eq!(
+            email_count, 1,
+            "Email should appear exactly once, found {} times",
+            email_count
+        );
+
+        let age_count = html.matches("25").count();
+        assert_eq!(
+            age_count, 1,
+            "Age should appear exactly once, found {} times",
+            age_count
+        );
+
+        let adult_count = html.matches("Adult").count();
+        assert_eq!(
+            adult_count, 1,
+            "Adult status should be shown exactly once for age >= 18, found {} times",
+            adult_count
+        );
     }
 
     #[test]
@@ -574,11 +601,26 @@ mod tests {
 
         let html = template.render_user().expect("Failed to render user template");
 
-        assert!(html.contains("Charlie"));
-        assert!(html.contains("16"));
-        assert!(
-            html.contains("Minor"),
-            "Minor status should be shown for age < 18"
+        // Verify exact content presence with structured checks
+        let name_count = html.matches("Charlie").count();
+        assert_eq!(
+            name_count, 1,
+            "User name 'Charlie' should appear exactly once, found {} times",
+            name_count
+        );
+
+        let age_count = html.matches("16").count();
+        assert_eq!(
+            age_count, 1,
+            "Age should appear exactly once, found {} times",
+            age_count
+        );
+
+        let minor_count = html.matches("Minor").count();
+        assert_eq!(
+            minor_count, 1,
+            "Minor status should be shown exactly once for age < 18, found {} times",
+            minor_count
         );
     }
 
@@ -593,16 +635,63 @@ mod tests {
         let template = UserListTemplate::new(users, "User Directory".to_string());
         let html = template.render_list().expect("Failed to render list template");
 
-        // Verify title
-        assert!(html.contains("User Directory"));
+        // Verify HTML structure
+        assert!(
+            html.starts_with("<!DOCTYPE html>"),
+            "Template should start with DOCTYPE, got: {}",
+            &html[..50.min(html.len())]
+        );
 
-        // Verify all users are present
-        assert!(html.contains("Alice"));
-        assert!(html.contains("alice@example.com"));
-        assert!(html.contains("Bob"));
-        assert!(html.contains("bob@example.com"));
-        assert!(html.contains("Charlie"));
-        assert!(html.contains("charlie@example.com"));
+        // Verify title appears exactly once
+        let title_count = html.matches("User Directory").count();
+        assert_eq!(
+            title_count, 2,
+            "Title should appear twice (in <title> and <h1>), found {} times",
+            title_count
+        );
+
+        // Verify all users are present exactly once in list
+        let alice_count = html.matches("Alice").count();
+        assert_eq!(
+            alice_count, 1,
+            "User 'Alice' should appear exactly once, found {} times",
+            alice_count
+        );
+
+        let alice_email_count = html.matches("alice@example.com").count();
+        assert_eq!(
+            alice_email_count, 1,
+            "Alice's email should appear exactly once, found {} times",
+            alice_email_count
+        );
+
+        let bob_count = html.matches("Bob").count();
+        assert_eq!(
+            bob_count, 1,
+            "User 'Bob' should appear exactly once, found {} times",
+            bob_count
+        );
+
+        let bob_email_count = html.matches("bob@example.com").count();
+        assert_eq!(
+            bob_email_count, 1,
+            "Bob's email should appear exactly once, found {} times",
+            bob_email_count
+        );
+
+        let charlie_count = html.matches("Charlie").count();
+        assert_eq!(
+            charlie_count, 1,
+            "User 'Charlie' should appear exactly once, found {} times",
+            charlie_count
+        );
+
+        let charlie_email_count = html.matches("charlie@example.com").count();
+        assert_eq!(
+            charlie_email_count, 1,
+            "Charlie's email should appear exactly once, found {} times",
+            charlie_email_count
+        );
     }
 
     #[test]
@@ -612,10 +701,28 @@ mod tests {
         let template = UserListTemplate::new(users, "Empty List".to_string());
         let html = template.render_list().expect("Failed to render empty list");
 
-        // Should still render successfully with empty list
-        assert!(html.contains("Empty List"));
-        // Should show "No users found" message
-        assert!(html.contains("No users found"));
+        // Verify HTML structure for empty list
+        assert!(
+            html.starts_with("<!DOCTYPE html>"),
+            "Empty list template should start with DOCTYPE, got: {}",
+            &html[..50.min(html.len())]
+        );
+
+        // Verify title appears exactly twice (in <title> and <h1>)
+        let title_count = html.matches("Empty List").count();
+        assert_eq!(
+            title_count, 2,
+            "Title should appear twice, found {} times",
+            title_count
+        );
+
+        // Verify "No users found" message appears exactly once
+        let no_users_count = html.matches("No users found").count();
+        assert_eq!(
+            no_users_count, 1,
+            "No users message should appear exactly once, found {} times",
+            no_users_count
+        );
     }
 
     #[test]
@@ -629,9 +736,27 @@ mod tests {
 
         let html = renderer.render(&template).expect("Failed to render");
 
-        assert!(html.contains("Test User"));
-        assert!(html.contains("test@example.com"));
-        assert!(html.contains("30"));
+        // Verify exact content presence
+        let name_count = html.matches("Test User").count();
+        assert_eq!(
+            name_count, 1,
+            "User name should appear exactly once, found {} times",
+            name_count
+        );
+
+        let email_count = html.matches("test@example.com").count();
+        assert_eq!(
+            email_count, 1,
+            "Email should appear exactly once, found {} times",
+            email_count
+        );
+
+        let age_count = html.matches("30").count();
+        assert_eq!(
+            age_count, 1,
+            "Age should appear exactly once, found {} times",
+            age_count
+        );
     }
 
     #[test]
@@ -647,7 +772,13 @@ mod tests {
             .render_with_context(&template, "user profile")
             .expect("Failed to render with context");
 
-        assert!(html.contains("Context Test"));
+        // Verify exact content presence
+        let name_count = html.matches("Context Test").count();
+        assert_eq!(
+            name_count, 1,
+            "User name should appear exactly once, found {} times",
+            name_count
+        );
     }
 
     #[test]
@@ -735,17 +866,72 @@ mod tests {
         let template = PostListTemplate::new(posts);
         let html = template.render_posts().expect("Failed to render posts");
 
-        // Verify title and total
-        assert!(html.contains("Posts (2)"));
-        assert!(html.contains("All Posts"));
+        // Verify HTML structure
+        assert!(
+            html.starts_with("<!DOCTYPE html>"),
+            "Template should start with DOCTYPE, got: {}",
+            &html[..50.min(html.len())]
+        );
 
-        // Verify all posts are present
-        assert!(html.contains("First Post"));
-        assert!(html.contains("Hello World"));
-        assert!(html.contains("Alice"));
-        assert!(html.contains("Second Post"));
-        assert!(html.contains("Goodbye World"));
-        assert!(html.contains("Bob"));
+        // Verify title with count appears exactly once
+        let title_with_count = html.matches("Posts (2)").count();
+        assert_eq!(
+            title_with_count, 1,
+            "Title with count should appear exactly once in <title>, found {} times",
+            title_with_count
+        );
+
+        // Verify "All Posts" header appears exactly once
+        let all_posts_count = html.matches("All Posts").count();
+        assert_eq!(
+            all_posts_count, 1,
+            "All Posts heading should appear exactly once, found {} times",
+            all_posts_count
+        );
+
+        // Verify first post content
+        let first_post_count = html.matches("First Post").count();
+        assert_eq!(
+            first_post_count, 1,
+            "First post title should appear exactly once, found {} times",
+            first_post_count
+        );
+
+        let hello_world_count = html.matches("Hello World").count();
+        assert_eq!(
+            hello_world_count, 1,
+            "First post content should appear exactly once, found {} times",
+            hello_world_count
+        );
+
+        let alice_count = html.matches("Alice").count();
+        assert_eq!(
+            alice_count, 1,
+            "First post author should appear exactly once, found {} times",
+            alice_count
+        );
+
+        // Verify second post content
+        let second_post_count = html.matches("Second Post").count();
+        assert_eq!(
+            second_post_count, 1,
+            "Second post title should appear exactly once, found {} times",
+            second_post_count
+        );
+
+        let goodbye_world_count = html.matches("Goodbye World").count();
+        assert_eq!(
+            goodbye_world_count, 1,
+            "Second post content should appear exactly once, found {} times",
+            goodbye_world_count
+        );
+
+        let bob_count = html.matches("Bob").count();
+        assert_eq!(
+            bob_count, 1,
+            "Second post author should appear exactly once, found {} times",
+            bob_count
+        );
     }
 
     #[test]
@@ -755,10 +941,28 @@ mod tests {
         let template = PostListTemplate::new(posts);
         let html = template.render_posts().expect("Failed to render empty posts");
 
-        // Should still render successfully with empty list
-        assert!(html.contains("Posts (0)"));
-        // Should show "No posts available" message
-        assert!(html.contains("No posts available"));
+        // Verify HTML structure for empty posts list
+        assert!(
+            html.starts_with("<!DOCTYPE html>"),
+            "Empty posts template should start with DOCTYPE, got: {}",
+            &html[..50.min(html.len())]
+        );
+
+        // Verify title with zero count appears exactly once
+        let title_with_count = html.matches("Posts (0)").count();
+        assert_eq!(
+            title_with_count, 1,
+            "Title with zero count should appear exactly once, found {} times",
+            title_with_count
+        );
+
+        // Verify "No posts available" message appears exactly once
+        let no_posts_count = html.matches("No posts available").count();
+        assert_eq!(
+            no_posts_count, 1,
+            "No posts message should appear exactly once, found {} times",
+            no_posts_count
+        );
     }
 
     // Filter tests

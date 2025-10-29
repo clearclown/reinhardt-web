@@ -213,7 +213,14 @@ mod tests {
         let result = chain.render(&data, None).await.unwrap();
         let json_str = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(json_str.contains("test"));
+        // Structural validation: Parse as JSON and verify structure
+        let parsed: Value = serde_json::from_str(&json_str)
+            .expect("Renderer output should be valid JSON");
+        assert_eq!(
+            parsed.get("name").and_then(|v| v.as_str()),
+            Some("test"),
+            "JSON should contain 'name' field with value 'test'"
+        );
     }
 
     #[tokio::test]
@@ -227,11 +234,25 @@ mod tests {
         let result = chain.render(&data, None).await.unwrap();
         let json_str = String::from_utf8(result.to_vec()).unwrap();
 
-        assert!(json_str.contains("original"));
-        assert!(json_str.contains("step1"));
-        assert!(json_str.contains("step2"));
-        assert!(json_str.contains("value1"));
-        assert!(json_str.contains("value2"));
+        // Structural validation: Parse as JSON and verify all expected fields
+        let parsed: Value = serde_json::from_str(&json_str)
+            .expect("Renderer chain output should be valid JSON");
+
+        assert_eq!(
+            parsed.get("original").and_then(|v| v.as_str()),
+            Some("data"),
+            "JSON should contain original 'original' field with value 'data'"
+        );
+        assert_eq!(
+            parsed.get("step1").and_then(|v| v.as_str()),
+            Some("value1"),
+            "JSON should contain 'step1' field added by first transform"
+        );
+        assert_eq!(
+            parsed.get("step2").and_then(|v| v.as_str()),
+            Some("value2"),
+            "JSON should contain 'step2' field added by second transform"
+        );
     }
 
     #[tokio::test]
