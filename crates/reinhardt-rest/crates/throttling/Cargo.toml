@@ -17,13 +17,15 @@ redis = { version = "0.24", features = [
 ], optional = true }
 thiserror = "1.0"
 parking_lot = "0.12"
-memcache-async = { version = "0.8", optional = true }
+memcache-async = { version = "0.9", optional = true }
+bb8 = { version = "0.8", optional = true }
+bb8-memcached = { version = "0.7", optional = true }
 maxminddb = { version = "0.24", optional = true }
 
 [features]
 default = []
 redis-backend = ["redis"]
-memcached-backend = ["memcache-async"]
+memcached-backend = ["memcache-async", "bb8", "bb8-memcached"]
 geo-limiting = ["maxminddb"]
 
 [dev-dependencies]

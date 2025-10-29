@@ -145,8 +145,7 @@ impl ThrottleBackend for RedisBackend {
 
 #[cfg(feature = "memcached-backend")]
 pub struct MemcachedBackend {
-    // TODO: Update memcache_async API usage - Client type has changed
-    _placeholder: std::marker::PhantomData<()>,
+    pool: bb8::Pool<bb8_memcached::MemcacheConnectionManager>,
 }
 
 #[cfg(feature = "memcached-backend")]
@@ -163,9 +162,19 @@ impl MemcachedBackend {
     /// // Backend is now connected to Memcached for distributed rate limiting
     /// # });
     /// ```
-    pub async fn new(_urls: Vec<&str>) -> Result<Self, String> {
-        // TODO: Implement with correct memcache_async API
-        todo!("Update memcache_async::Client API usage")
+    pub async fn new(urls: Vec<&str>) -> Result<Self, String> {
+        if urls.is_empty() {
+            return Err("At least one URL must be provided".to_string());
+        }
+        // bb8-memcached accepts a single URL or comma-separated URLs
+        let url = urls.join(",");
+        let manager = bb8_memcached::MemcacheConnectionManager::new(url)
+            .map_err(|e| format!("Failed to create connection manager: {}", e))?;
+        let pool = bb8::Pool::builder()
+            .build(manager)
+            .await
+            .map_err(|e| format!("Failed to create connection pool: {}", e))?;
+        Ok(Self { pool })
     }
 
     /// Creates a backend from a single URL
@@ -187,14 +196,53 @@ impl MemcachedBackend {
 #[cfg(feature = "memcached-backend")]
 #[async_trait]
 impl ThrottleBackend for MemcachedBackend {
-    async fn increment(&self, _key: &str, _window: u64) -> Result<usize, String> {
-        // TODO: Implement with correct memcache_async API
-        todo!("Update memcache_async::Client API usage")
+    async fn increment(&self, key: &str, window: u64) -> Result<usize, String> {
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| format!("Failed to get connection: {}", e))?;
+
+        // Try to increment the key
+        match conn.increment(&key.to_string(), 1).await {
+            Ok(value) => Ok(value as usize),
+            Err(_) => {
+                // Key doesn't exist, create it with initial value 1 and TTL
+                let value_bytes = b"1";
+                conn.set(&key.to_string(), value_bytes, window as u32)
+                    .await
+                    .map_err(|e| format!("Failed to set key: {}", e))?;
+                Ok(1)
+            }
+        }
     }
 
-    async fn get_count(&self, _key: &str) -> Result<usize, String> {
-        // TODO: Implement with correct memcache_async API
-        todo!("Update memcache_async::Client API usage")
+    async fn get_count(&self, key: &str) -> Result<usize, String> {
+        let mut conn = self
+            .pool
+            .get()
+            .await
+            .map_err(|e| format!("Failed to get connection: {}", e))?;
+
+        match conn.get(&key.to_string()).await {
+            Ok(bytes) => {
+                // Parse bytes as string, then as number
+                let value_str = String::from_utf8(bytes)
+                    .map_err(|e| format!("Failed to parse value as UTF-8: {}", e))?;
+                let value = value_str
+                    .parse::<usize>()
+                    .map_err(|e| format!("Failed to parse value as number: {}", e))?;
+                Ok(value)
+            }
+            Err(e) => {
+                // Key doesn't exist
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    Ok(0)
+                } else {
+                    Err(format!("Failed to get key: {}", e))
+                }
+            }
+        }
     }
 }
 
