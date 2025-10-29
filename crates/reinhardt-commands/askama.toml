@@ -1,5 +1,7 @@
 [general]
 dirs = ["templates"]
 
-[escapers]
-"tpl" = "txt"
+# Custom escaper for .tpl files (HTML escaping)
+[[escaper]]
+path = "askama::filters::Html"
+extensions = ["tpl"]

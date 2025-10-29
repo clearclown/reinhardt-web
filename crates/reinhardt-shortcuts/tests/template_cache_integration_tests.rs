@@ -77,11 +77,11 @@ fn test_template_rendering_with_cache() {
     context.insert("content", "This template should be cached.");
 
     // First render - cache miss
-    let result1 = render_template(&request, "simple.html", context.clone());
+    let result1 = render_template(&request, "simple.tpl", context.clone());
     assert!(result1.is_ok());
 
     // Second render - cache hit (should be faster)
-    let result2 = render_template(&request, "simple.html", context);
+    let result2 = render_template(&request, "simple.tpl", context);
     assert!(result2.is_ok());
 
     match result2 {
@@ -106,10 +106,10 @@ fn test_template_rendering_without_cache() {
     context.insert("content", "Cache disabled in debug mode.");
 
     // Both renders should load from disk
-    let result1 = render_template(&request, "simple.html", context.clone());
+    let result1 = render_template(&request, "simple.tpl", context.clone());
     assert!(result1.is_ok());
 
-    let result2 = render_template(&request, "simple.html", context);
+    let result2 = render_template(&request, "simple.tpl", context);
     assert!(result2.is_ok());
 
     match result2 {
@@ -135,18 +135,18 @@ fn test_multiple_templates_cached() {
     context1.insert("heading", "First");
     context1.insert("content", "Content 1");
 
-    let result1 = render_template(&request, "simple.html", context1);
+    let result1 = render_template(&request, "simple.tpl", context1);
     assert!(result1.is_ok());
 
     let mut context2 = HashMap::new();
     context2.insert("name", "Alice");
     context2.insert("site_name", "Test Site");
 
-    let result2 = render_template(&request, "greeting.html", context2);
+    let result2 = render_template(&request, "greeting.tpl", context2);
     assert!(result2.is_ok());
 
     let context3: HashMap<String, String> = HashMap::new();
-    let result3 = render_template(&request, "static.html", context3);
+    let result3 = render_template(&request, "static.tpl", context3);
     assert!(result3.is_ok());
 
     // All templates should now be cached
@@ -156,7 +156,7 @@ fn test_multiple_templates_cached() {
     context1_again.insert("heading", "First Again");
     context1_again.insert("content", "Content 1 Again");
 
-    let result4 = render_template(&request, "simple.html", context1_again);
+    let result4 = render_template(&request, "simple.tpl", context1_again);
     assert!(result4.is_ok());
 }
 

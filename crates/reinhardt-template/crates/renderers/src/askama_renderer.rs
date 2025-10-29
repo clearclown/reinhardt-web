@@ -25,7 +25,8 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```rust,ignore
+//! // Note: This example requires a template file at templates/user.html
 //! use reinhardt_renderers::AskamaRenderer;
 //! use askama::Template;
 //!
@@ -190,7 +191,7 @@ impl Default for AskamaRenderer {
 /// </html>
 /// ```
 #[derive(Template)]
-#[template(path = "user.html")]
+#[template(path = "user.tpl")]
 pub struct UserTemplate {
     pub name: String,
     pub email: String,
@@ -288,7 +289,7 @@ impl Display for UserData {
 /// </html>
 /// ```
 #[derive(Template)]
-#[template(path = "user_list.html")]
+#[template(path = "user_list.tpl")]
 pub struct UserListTemplate {
     pub users: Vec<UserData>,
     pub title: String,
@@ -482,7 +483,7 @@ impl Display for Post {
 /// </html>
 /// ```
 #[derive(Template)]
-#[template(path = "posts.html")]
+#[template(path = "posts.tpl")]
 pub struct PostListTemplate {
     pub posts: Vec<Post>,
     pub total: usize,

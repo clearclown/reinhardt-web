@@ -70,7 +70,7 @@ impl BrowsableApiMiddleware {
     ///
     /// let config = BrowsableApiConfig {
     ///     enabled: true,
-    ///     template_name: Some("custom_api.html".to_string()),
+    ///     template_name: Some("custom_api.tpl".to_string()),
     ///     custom_css: Some("/static/api.css".to_string()),
     /// };
     ///

@@ -21,7 +21,7 @@ use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 
 #[derive(Template)]
-#[template(path = "welcome.html")]
+#[template(path = "welcome.tpl")]
 struct WelcomeTemplate {
     version: &'static str,
 }

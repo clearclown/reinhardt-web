@@ -141,10 +141,10 @@ fn render_default_error_page(status_code: u16, path: &str) -> String {
     context.insert("message", &message);
     context.insert("path", &path);
 
-    tera.render("error_page.html", &context)
+    tera.render("error_page.tpl", &context)
         .unwrap_or_else(|e| {
             // Fallback in case template cannot be rendered
-            eprintln!("Warning: Failed to render error_page.html template: {}", e);
+            eprintln!("Warning: Failed to render error_page.tpl template: {}", e);
             eprintln!("Using fallback HTML");
             format!(
                 "<!DOCTYPE html><html><head><title>{} - {}</title></head><body><h1>{}</h1><p>{}</p><p>Path: {}</p></body></html>",

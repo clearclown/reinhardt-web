@@ -112,10 +112,10 @@ impl DocumentationRenderer {
         }
 
         // Try to render with template, fallback to hardcoded HTML if fails
-        tera.render("documentation.html", &context)
+        tera.render("documentation.tpl", &context)
             .unwrap_or_else(|e| {
                 eprintln!(
-                    "Warning: Failed to render documentation.html template: {}. Using fallback.",
+                    "Warning: Failed to render documentation.tpl template: {}. Using fallback.",
                     e
                 );
                 self.render_fallback_html(data)

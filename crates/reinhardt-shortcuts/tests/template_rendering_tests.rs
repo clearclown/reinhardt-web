@@ -39,7 +39,7 @@ fn test_render_simple_template() {
     context.insert("heading", "Welcome");
     context.insert("content", "This is a test page with variables.");
 
-    let result = render_template(&request, "simple.html", context);
+    let result = render_template(&request, "simple.tpl", context);
     assert!(result.is_ok());
 
     match result {
@@ -60,7 +60,7 @@ fn test_render_static_template() {
     let request = create_test_request();
     let context: HashMap<String, String> = HashMap::new();
 
-    let result = render_template(&request, "static.html", context);
+    let result = render_template(&request, "static.tpl", context);
     assert!(result.is_ok());
 
     match result {
@@ -84,7 +84,7 @@ fn test_render_greeting_template() {
     context.insert("name", "Alice");
     context.insert("site_name", "Reinhardt Framework");
 
-    let result = render_template(&request, "greeting.html", context);
+    let result = render_template(&request, "greeting.tpl", context);
     assert!(result.is_ok());
 
     match result {
@@ -107,7 +107,7 @@ fn test_render_template_missing_variables() {
     context.insert("name", "Bob");
     // Missing site_name - Tera will error in strict mode
 
-    let result = render_template(&request, "greeting.html", context);
+    let result = render_template(&request, "greeting.tpl", context);
     // Tera returns error for missing variables in strict mode
     assert!(result.is_err());
 
@@ -128,7 +128,7 @@ fn test_render_to_response_allows_customization() {
     context.insert("heading", "Modified");
     context.insert("content", "Test content");
 
-    let result = render_to_response(&request, "simple.html", context);
+    let result = render_to_response(&request, "simple.tpl", context);
     assert!(result.is_ok());
 
     match result {
@@ -173,7 +173,7 @@ fn test_render_template_with_content_type() {
     let request = create_test_request();
     let context: HashMap<String, String> = HashMap::new();
 
-    let result = render_template(&request, "static.html", context);
+    let result = render_template(&request, "static.tpl", context);
     assert!(result.is_ok());
 
     match result {
@@ -198,7 +198,7 @@ fn test_render_template_with_special_characters() {
     context.insert("name", "Alice & Bob");
     context.insert("site_name", "Test <Site>");
 
-    let result = render_template(&request, "greeting.html", context);
+    let result = render_template(&request, "greeting.tpl", context);
     assert!(result.is_ok());
 
     match result {

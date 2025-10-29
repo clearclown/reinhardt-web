@@ -75,7 +75,7 @@ impl BrowsableApiRenderer {
         let mut handlebars = Handlebars::new();
 
         // Register template from external file
-        let template_path = concat!(env!("CARGO_MANIFEST_DIR"), "/templates/api.html");
+        let template_path = concat!(env!("CARGO_MANIFEST_DIR"), "/templates/api.tpl");
         handlebars
             .register_template_file("api", template_path)
             .unwrap_or_else(|e| {

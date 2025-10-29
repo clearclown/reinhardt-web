@@ -182,9 +182,9 @@ impl AdminRenderer {
         }
 
         // Try to render with template, fallback to hardcoded HTML if fails
-        tera.render("admin.html", &context).unwrap_or_else(|e| {
+        tera.render("admin.tpl", &context).unwrap_or_else(|e| {
             eprintln!(
-                "Warning: Failed to render admin.html template: {}. Using fallback.",
+                "Warning: Failed to render admin.tpl template: {}. Using fallback.",
                 e
             );
             self.render_fallback_html(data)

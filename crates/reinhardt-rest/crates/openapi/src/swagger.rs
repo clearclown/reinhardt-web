@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Swagger UI template
 #[derive(Template)]
-#[template(path = "swagger_ui.html")]
+#[template(path = "swagger_ui.tpl")]
 struct SwaggerUITemplate<'a> {
     title: &'a str,
     spec_url: &'a str,
@@ -17,7 +17,7 @@ struct SwaggerUITemplate<'a> {
 
 /// Redoc UI template
 #[derive(Template)]
-#[template(path = "redoc_ui.html")]
+#[template(path = "redoc_ui.tpl")]
 struct RedocUITemplate<'a> {
     title: &'a str,
     spec_url: &'a str,
