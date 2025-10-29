@@ -124,26 +124,32 @@ struct VaultReadResponse {
 #[derive(Debug, Deserialize)]
 struct VaultData {
     data: HashMap<String, String>,
+    #[allow(dead_code)]
     metadata: VaultSecretMetadata,
 }
 
 #[derive(Debug, Deserialize)]
 struct VaultSecretMetadata {
+    #[allow(dead_code)]
     created_time: String,
+    #[allow(dead_code)]
     version: u64,
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 struct VaultWriteRequest {
     data: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct VaultListResponse {
     data: VaultListData,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct VaultListData {
     keys: Vec<String>,
 }
@@ -155,6 +161,7 @@ struct VaultMetadataResponse {
 
 #[derive(Debug, Deserialize)]
 struct VaultMetadataData {
+    #[allow(dead_code)]
     versions: HashMap<String, VaultVersionInfo>,
     created_time: String,
     updated_time: String,
@@ -162,8 +169,11 @@ struct VaultMetadataData {
 
 #[derive(Debug, Deserialize)]
 struct VaultVersionInfo {
+    #[allow(dead_code)]
     created_time: String,
+    #[allow(dead_code)]
     deletion_time: String,
+    #[allow(dead_code)]
     destroyed: bool,
 }
 

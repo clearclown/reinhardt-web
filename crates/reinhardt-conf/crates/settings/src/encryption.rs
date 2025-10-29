@@ -24,6 +24,7 @@ pub struct ConfigEncryptor {
     #[cfg(feature = "encryption")]
     cipher: Aes256Gcm,
     #[cfg(not(feature = "encryption"))]
+    #[allow(dead_code)]
     key: Vec<u8>,
 }
 
