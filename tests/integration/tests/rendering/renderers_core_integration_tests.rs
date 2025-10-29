@@ -16,7 +16,16 @@ async fn test_renderer_registry_default() {
     let (bytes, content_type) = registry.render(&data, None, None).await.unwrap();
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("hello"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("message"),
+        Some(&json!("hello")),
+        "message キーの値が 'hello' である必要があります"
+    );
     assert_eq!(content_type, "application/json; charset=utf-8");
 }
 
@@ -88,12 +97,38 @@ async fn test_render_complex_nested_data() {
     let result = renderer.render(&data, None).await.unwrap();
     let output = String::from_utf8(result.to_vec()).unwrap();
 
-    assert!(output.contains("users"));
-    assert!(output.contains("Alice"));
-    assert!(output.contains("Bob"));
-    assert!(output.contains("Tokyo"));
-    assert!(output.contains("Osaka"));
-    assert!(output.contains("meta"));
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    // users配列の検証
+    let users = parsed.get("users")
+        .and_then(|v| v.as_array())
+        .expect("users キーが配列である必要があります");
+
+    assert_eq!(users.len(), 2, "users配列の長さが2である必要があります");
+
+    // Alice の検証
+    let alice = &users[0];
+    assert_eq!(alice.get("id"), Some(&json!(1)), "Alice の id が 1 である必要があります");
+    assert_eq!(alice.get("name"), Some(&json!("Alice")), "名前が Alice である必要があります");
+    let alice_profile = alice.get("profile").expect("Alice のプロフィールが存在する必要があります");
+    assert_eq!(alice_profile.get("age"), Some(&json!(30)), "Alice の年齢が 30 である必要があります");
+    assert_eq!(alice_profile.get("city"), Some(&json!("Tokyo")), "Alice の都市が Tokyo である必要があります");
+
+    // Bob の検証
+    let bob = &users[1];
+    assert_eq!(bob.get("id"), Some(&json!(2)), "Bob の id が 2 である必要があります");
+    assert_eq!(bob.get("name"), Some(&json!("Bob")), "名前が Bob である必要があります");
+    let bob_profile = bob.get("profile").expect("Bob のプロフィールが存在する必要があります");
+    assert_eq!(bob_profile.get("age"), Some(&json!(25)), "Bob の年齢が 25 である必要があります");
+    assert_eq!(bob_profile.get("city"), Some(&json!("Osaka")), "Bob の都市が Osaka である必要があります");
+
+    // meta の検証
+    let meta = parsed.get("meta").expect("meta が存在する必要があります");
+    assert_eq!(meta.get("total"), Some(&json!(2)), "total が 2 である必要があります");
+    assert_eq!(meta.get("page"), Some(&json!(1)), "page が 1 である必要があります");
+    assert_eq!(meta.get("per_page"), Some(&json!(10)), "per_page が 10 である必要があります");
 }
 
 /// Test renderer context in real-world scenarios
@@ -113,9 +148,18 @@ async fn test_renderer_with_full_context() {
     let result = renderer.render(&data, Some(&context)).await.unwrap();
     let output = String::from_utf8(result.to_vec()).unwrap();
 
-    // The context doesn't affect JSON output, but ensures it works
-    assert!(output.contains("items"));
-    assert!(output.contains("item1"));
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    let items = parsed.get("items")
+        .and_then(|v| v.as_array())
+        .expect("items キーが配列である必要があります");
+
+    assert_eq!(items.len(), 3, "items配列の長さが3である必要があります");
+    assert_eq!(items[0], json!("item1"), "最初の要素が 'item1' である必要があります");
+    assert_eq!(items[1], json!("item2"), "2番目の要素が 'item2' である必要があります");
+    assert_eq!(items[2], json!("item3"), "3番目の要素が 'item3' である必要があります");
 }
 
 /// Test edge cases from DRF
@@ -174,8 +218,29 @@ async fn test_large_data_rendering() {
 
     assert!(!result.is_empty());
     let output = String::from_utf8(result.to_vec()).unwrap();
-    assert!(output.contains("Item 0"));
-    assert!(output.contains("Item 99"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    let items = parsed.get("items")
+        .and_then(|v| v.as_array())
+        .expect("items キーが配列である必要があります");
+
+    assert_eq!(items.len(), 100, "items配列の長さが100である必要があります");
+
+    // 最初と最後の要素を検証
+    let first_item = &items[0];
+    assert_eq!(first_item.get("id"), Some(&json!(0)), "最初の要素の id が 0 である必要があります");
+    assert_eq!(first_item.get("name"), Some(&json!("Item 0")), "最初の要素の name が 'Item 0' である必要があります");
+    assert_eq!(first_item.get("value"), Some(&json!(0)), "最初の要素の value が 0 である必要があります");
+
+    let last_item = &items[99];
+    assert_eq!(last_item.get("id"), Some(&json!(99)), "最後の要素の id が 99 である必要があります");
+    assert_eq!(last_item.get("name"), Some(&json!("Item 99")), "最後の要素の name が 'Item 99' である必要があります");
+    assert_eq!(last_item.get("value"), Some(&json!(990)), "最後の要素の value が 990 である必要があります");
+
+    assert_eq!(parsed.get("total"), Some(&json!(100)), "total が 100 である必要があります");
 }
 
 /// Test special characters and escaping
@@ -212,7 +277,16 @@ async fn test_default_renderer_serializes_content_on_accept_any() {
     assert_eq!(content_type, "application/json; charset=utf-8");
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("hello world"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("message"),
+        Some(&json!("hello world")),
+        "message キーの値が 'hello world' である必要があります"
+    );
 }
 
 /// Test specified renderer serializes content (default case - no Accept header)
@@ -230,8 +304,21 @@ async fn test_specified_renderer_serializes_content_default_case() {
     assert_eq!(content_type, "application/json; charset=utf-8");
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("success"));
-    assert!(output.contains("200"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("status"),
+        Some(&json!("success")),
+        "status キーの値が 'success' である必要があります"
+    );
+    assert_eq!(
+        parsed.get("code"),
+        Some(&json!(200)),
+        "code キーの値が 200 である必要があります"
+    );
 }
 
 /// Test unsatisfiable Accept header returns 406 Not Acceptable
@@ -269,8 +356,16 @@ async fn test_specified_renderer_serializes_content_on_format_query() {
     assert_eq!(content_type, "application/json; charset=utf-8");
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("format"));
-    assert!(output.contains("test"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("format"),
+        Some(&json!("test")),
+        "format キーの値が 'test' である必要があります"
+    );
 }
 
 /// Test specified renderer is used on format query with matching Accept header
@@ -290,7 +385,16 @@ async fn test_specified_renderer_is_used_on_format_query_with_matching_accept() 
     assert_eq!(content_type, "application/json; charset=utf-8");
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("combined"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("combined"),
+        Some(&json!("test")),
+        "combined キーの値が 'test' である必要があります"
+    );
 }
 
 /// Test Accept header with quality values
@@ -310,7 +414,16 @@ async fn test_accept_header_with_quality_values() {
     assert_eq!(content_type, "application/json; charset=utf-8");
 
     let output = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(output.contains("quality"));
+
+    // 厳密なJSON構造検証
+    let parsed: serde_json::Value = serde_json::from_str(&output)
+        .expect("出力が有効なJSONである必要があります");
+
+    assert_eq!(
+        parsed.get("quality"),
+        Some(&json!("test")),
+        "quality キーの値が 'test' である必要があります"
+    );
 }
 
 /// Test format parameter takes precedence over Accept header

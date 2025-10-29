@@ -205,11 +205,31 @@ fn test_pagination_html_generation() {
     let tmpl = PaginationTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("href=\"?page=2\""));
-    assert!(result.contains("href=\"?page=4\""));
-    assert!(result.contains("href=\"?page=3\""));
-    assert!(result.contains("Previous"));
-    assert!(result.contains("Next"));
+    assert!(
+        result.contains("href=\"?page=2\""),
+        "Expected href=\"?page=2\" in pagination HTML, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=4\""),
+        "Expected href=\"?page=4\" in pagination HTML, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=3\""),
+        "Expected href=\"?page=3\" in pagination HTML, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"prev\">Previous</a>"),
+        "Expected 'Previous' link with class='prev', got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"next\">Next</a>"),
+        "Expected 'Next' link with class='next', got: {}",
+        result
+    );
 }
 
 #[test]
@@ -230,9 +250,21 @@ fn test_pagination_html_first_page() {
     let tmpl = PaginationTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(!result.contains("Previous"));
-    assert!(result.contains("Next"));
-    assert!(result.contains("href=\"?page=1\""));
+    assert!(
+        !result.contains("Previous"),
+        "Expected no 'Previous' link on first page, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"next\">Next</a>"),
+        "Expected 'Next' link with class='next', got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=1\""),
+        "Expected href=\"?page=1\" in pagination HTML, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -253,9 +285,21 @@ fn test_pagination_html_last_page() {
     let tmpl = PaginationTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("Previous"));
-    assert!(!result.contains("Next"));
-    assert!(result.contains("href=\"?page=5\""));
+    assert!(
+        result.contains("class=\"prev\">Previous</a>"),
+        "Expected 'Previous' link with class='prev', got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Next"),
+        "Expected no 'Next' link on last page, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=5\""),
+        "Expected href=\"?page=5\" in pagination HTML, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -276,9 +320,21 @@ fn test_pagination_html_single_page() {
     let tmpl = PaginationTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(!result.contains("Previous"));
-    assert!(!result.contains("Next"));
-    assert!(result.contains("href=\"?page=1\""));
+    assert!(
+        !result.contains("Previous"),
+        "Expected no 'Previous' link on single page, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Next"),
+        "Expected no 'Next' link on single page, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=1\""),
+        "Expected href=\"?page=1\" in pagination HTML, got: {}",
+        result
+    );
 }
 
 // ============================================================================
@@ -318,11 +374,31 @@ fn test_paginated_list_rendering() {
 
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("<h2>Items</h2>"));
-    assert!(result.contains("<li>Item 1</li>"));
-    assert!(result.contains("<li>Item 2</li>"));
-    assert!(result.contains("<li>Item 3</li>"));
-    assert!(result.contains("Next"));
+    assert!(
+        result.contains("<h2>Items</h2>"),
+        "Expected '<h2>Items</h2>' heading, got: {}",
+        result
+    );
+    assert!(
+        result.contains("<li>Item 1</li>"),
+        "Expected '<li>Item 1</li>' in rendered list, got: {}",
+        result
+    );
+    assert!(
+        result.contains("<li>Item 2</li>"),
+        "Expected '<li>Item 2</li>' in rendered list, got: {}",
+        result
+    );
+    assert!(
+        result.contains("<li>Item 3</li>"),
+        "Expected '<li>Item 3</li>' in rendered list, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"next\">Next</a>"),
+        "Expected 'Next' link with class='next', got: {}",
+        result
+    );
 }
 
 #[test]
@@ -354,10 +430,26 @@ fn test_paginated_list_empty() {
 
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("<h2>Items</h2>"));
-    assert!(!result.contains("<li>"));
-    assert!(!result.contains("Previous"));
-    assert!(!result.contains("Next"));
+    assert!(
+        result.contains("<h2>Items</h2>"),
+        "Expected '<h2>Items</h2>' heading, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("<li>"),
+        "Expected no list items in empty pagination, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Previous"),
+        "Expected no 'Previous' link in empty pagination, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Next"),
+        "Expected no 'Next' link in empty pagination, got: {}",
+        result
+    );
 }
 
 // ============================================================================
@@ -382,7 +474,11 @@ fn test_pagination_info_rendering() {
     let tmpl = PaginationInfoTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("Showing 2 to 5 of 47 results"));
+    assert!(
+        result.contains("Showing 2 to 5 of 47 results"),
+        "Expected 'Showing 2 to 5 of 47 results' in pagination info, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -403,15 +499,51 @@ fn test_pagination_controls_rendering() {
     let tmpl = PaginationControlsTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("href=\"?page=1\""));
-    assert!(result.contains("href=\"?page=2\""));
-    assert!(result.contains("href=\"?page=4\""));
-    assert!(result.contains("href=\"?page=10\""));
-    assert!(result.contains("Page 3 of 10"));
-    assert!(result.contains("First"));
-    assert!(result.contains("Previous"));
-    assert!(result.contains("Next"));
-    assert!(result.contains("Last"));
+    assert!(
+        result.contains("href=\"?page=1\""),
+        "Expected href=\"?page=1\" for 'First' link, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=2\""),
+        "Expected href=\"?page=2\" for 'Previous' link, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=4\""),
+        "Expected href=\"?page=4\" for 'Next' link, got: {}",
+        result
+    );
+    assert!(
+        result.contains("href=\"?page=10\""),
+        "Expected href=\"?page=10\" for 'Last' link, got: {}",
+        result
+    );
+    assert!(
+        result.contains("Page 3 of 10"),
+        "Expected 'Page 3 of 10' in page info, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"first\">First</a>"),
+        "Expected 'First' link with class='first', got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"prev\">Previous</a>"),
+        "Expected 'Previous' link with class='prev', got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"next\">Next</a>"),
+        "Expected 'Next' link with class='next', got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"last\">Last</a>"),
+        "Expected 'Last' link with class='last', got: {}",
+        result
+    );
 }
 
 // ============================================================================
@@ -515,13 +647,18 @@ fn test_pagination_url_generation() {
 
     // Simulate URL generation with query parameters
     let url = format!("{}?page={}", base_url, page);
-    assert_eq!(url, "https://example.com/api/items?page=2");
+    assert_eq!(
+        url,
+        "https://example.com/api/items?page=2",
+        "Expected URL with page parameter"
+    );
 
     // Test with additional parameters
     let url_with_params = format!("{}?page={}&search=test&sort=name", base_url, page);
     assert_eq!(
         url_with_params,
-        "https://example.com/api/items?page=2&search=test&sort=name"
+        "https://example.com/api/items?page=2&search=test&sort=name",
+        "Expected URL with multiple query parameters"
     );
 }
 
@@ -548,7 +685,11 @@ fn test_pagination_error_handling() {
     let result = tmpl.render().unwrap();
 
     // Should still render, but with invalid page number
-    assert!(result.contains("href=\"?page=1\""));
+    assert!(
+        result.contains("href=\"?page=1\""),
+        "Expected href=\"?page=1\" even with invalid current page, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -570,8 +711,16 @@ fn test_pagination_overflow_handling() {
     let result = tmpl.render().unwrap();
 
     // Should render with current page beyond total
-    assert!(result.contains("href=\"?page=5\""));
-    assert!(!result.contains("Next"));
+    assert!(
+        result.contains("href=\"?page=5\""),
+        "Expected href=\"?page=5\" in overflow pagination, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Next"),
+        "Expected no 'Next' link when current page exceeds total pages, got: {}",
+        result
+    );
 }
 
 // ============================================================================
@@ -592,8 +741,16 @@ fn test_pagination_performance_large_dataset() {
     let duration = start.elapsed();
 
     // Should complete in reasonable time
-    assert!(duration.as_millis() < 100);
-    assert!(result.contains("href=\"?page=100\""));
+    assert!(
+        duration.as_millis() < 100,
+        "Expected rendering to complete in <100ms, took: {}ms",
+        duration.as_millis()
+    );
+    assert!(
+        result.contains("href=\"?page=100\""),
+        "Expected href=\"?page=100\" in large dataset pagination, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -617,8 +774,16 @@ fn test_pagination_performance_many_pages() {
     let duration = start.elapsed();
 
     // Should complete in reasonable time
-    assert!(duration.as_millis() < 100);
-    assert!(result.contains("href=\"?page=500\""));
+    assert!(
+        duration.as_millis() < 100,
+        "Expected rendering to complete in <100ms, took: {}ms",
+        duration.as_millis()
+    );
+    assert!(
+        result.contains("href=\"?page=500\""),
+        "Expected href=\"?page=500\" in many pages pagination, got: {}",
+        result
+    );
 }
 
 // ============================================================================
@@ -646,9 +811,21 @@ fn test_pagination_with_file_system_loader() {
     let loader = FileSystemTemplateLoader::new(temp_dir.path());
     let content = loader.load("pagination.html").unwrap();
 
-    assert!(content.contains("{% if pagination.has_previous %}"));
-    assert!(content.contains("{% if pagination.has_next %}"));
-    assert!(content.contains("{{ pagination.current_page }}"));
+    assert!(
+        content.contains("{% if pagination.has_previous %}"),
+        "Expected '{% if pagination.has_previous %}' in template, got: {}",
+        content
+    );
+    assert!(
+        content.contains("{% if pagination.has_next %}"),
+        "Expected '{% if pagination.has_next %}' in template, got: {}",
+        content
+    );
+    assert!(
+        content.contains("{{ pagination.current_page }}"),
+        "Expected '{{ pagination.current_page }}' in template, got: {}",
+        content
+    );
 }
 
 // ============================================================================
@@ -671,9 +848,21 @@ fn test_integration_with_orm_mock() {
     let tmpl = PaginationTemplate { pagination: info };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("href=\"?page=1\""));
-    assert!(!result.contains("Previous"));
-    assert!(!result.contains("Next"));
+    assert!(
+        result.contains("href=\"?page=1\""),
+        "Expected href=\"?page=1\" in ORM mock pagination, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Previous"),
+        "Expected no 'Previous' link in single page ORM mock, got: {}",
+        result
+    );
+    assert!(
+        !result.contains("Next"),
+        "Expected no 'Next' link in single page ORM mock, got: {}",
+        result
+    );
 }
 
 #[test]
@@ -721,7 +910,19 @@ fn test_integration_with_rest_api_mock() {
     let tmpl = PaginationTemplate { pagination };
     let result = tmpl.render().unwrap();
 
-    assert!(result.contains("href=\"?page=2\""));
-    assert!(result.contains("Previous"));
-    assert!(result.contains("Next"));
+    assert!(
+        result.contains("href=\"?page=2\""),
+        "Expected href=\"?page=2\" in REST API mock pagination, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"prev\">Previous</a>"),
+        "Expected 'Previous' link with class='prev' in REST API mock, got: {}",
+        result
+    );
+    assert!(
+        result.contains("class=\"next\">Next</a>"),
+        "Expected 'Next' link with class='next' in REST API mock, got: {}",
+        result
+    );
 }
