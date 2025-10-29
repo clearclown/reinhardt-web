@@ -13,16 +13,11 @@ use std::sync::Arc;
 pub struct LoggingEngine {
     logger: Arc<Logger>,
     echo: bool,
-    echo_pool: bool,
 }
 
 impl LoggingEngine {
     pub fn new(logger: Arc<Logger>, echo: bool) -> Self {
-        Self {
-            logger,
-            echo,
-            echo_pool: false,
-        }
+        Self { logger, echo }
     }
 
     pub async fn execute(&self, sql: &str) {
@@ -61,8 +56,8 @@ async fn test_engine_echo_flag() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 2);
-    assert!(records[0].message.contains("SELECT * FROM users"));
-    assert!(records[1].message.contains("INSERT INTO users"));
+    assert_eq!(records[0].message, "SQL: SELECT * FROM users");
+    assert_eq!(records[1].message, "SQL: INSERT INTO users VALUES (1, 'test')");
 }
 
 #[tokio::test]
@@ -127,9 +122,10 @@ async fn test_sql_parameter_logging() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
-    assert!(records[0].message.contains("SELECT * FROM users"));
-    assert!(records[0].message.contains("Params:"));
-    assert!(records[0].message.contains("id") || records[0].message.contains("1"));
+    assert_eq!(
+        records[0].message,
+        "SQL: SELECT * FROM users WHERE id = ? AND name = ? | Params: {\"id\": Number(1), \"name\": String(\"test\")}"
+    );
 }
 
 #[tokio::test]
@@ -182,10 +178,10 @@ async fn test_multiple_statements_logged() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 4);
-    assert!(records[0].message.contains("CREATE TABLE"));
-    assert!(records[1].message.contains("INSERT"));
-    assert!(records[2].message.contains("SELECT"));
-    assert!(records[3].message.contains("DROP TABLE"));
+    assert_eq!(records[0].message, "SQL: CREATE TABLE users (id INTEGER)");
+    assert_eq!(records[1].message, "SQL: INSERT INTO users VALUES (1)");
+    assert_eq!(records[2].message, "SQL: SELECT * FROM users");
+    assert_eq!(records[3].message, "SQL: DROP TABLE users");
 }
 
 #[tokio::test]
@@ -240,7 +236,7 @@ async fn test_multiple_engines_different_echo() {
 
     assert_eq!(records1.len(), 1); // Engine 1 logged
     assert_eq!(records2.len(), 0); // Engine 2 didn't log
-    assert!(records1[0].message.contains("SELECT 1"));
+    assert_eq!(records1[0].message, "SQL: SELECT 1");
 }
 
 #[tokio::test]
@@ -262,6 +258,8 @@ async fn test_sql_with_newlines_logged() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
-    assert!(records[0].message.contains("SELECT"));
-    assert!(records[0].message.contains("FROM users"));
+    assert_eq!(
+        records[0].message,
+        "SQL: SELECT id, name, email\nFROM users\nWHERE active = true"
+    );
 }

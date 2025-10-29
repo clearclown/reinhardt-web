@@ -136,12 +136,9 @@ async fn test_pool_connection_logging() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 3);
-    assert!(records[0].message.contains("connection acquired"));
-    assert!(records[0].message.contains("(1/5)"));
-    assert!(records[1].message.contains("connection acquired"));
-    assert!(records[1].message.contains("(2/5)"));
-    assert!(records[2].message.contains("connection released"));
-    assert!(records[2].message.contains("(1/5)"));
+    assert_eq!(records[0].message, "Pool connection acquired (1/5)");
+    assert_eq!(records[1].message, "Pool connection acquired (2/5)");
+    assert_eq!(records[2].message, "Pool connection released (1/5)");
 }
 
 #[tokio::test]
@@ -168,8 +165,10 @@ async fn test_pool_overflow_warnings() {
     let records = memory.get_records();
     assert_eq!(records.len(), 3);
     assert_eq!(records[2].level, LogLevel::Warning);
-    assert!(records[2].message.contains("Pool overflow"));
-    assert!(records[2].message.contains("3 connections"));
+    assert_eq!(
+        records[2].message,
+        "Pool overflow: 3 connections (max: 2, overflow: 3)"
+    );
 }
 
 #[tokio::test]
@@ -198,7 +197,10 @@ async fn test_connection_timeout_logging() {
     let records = memory.get_records();
     let error_record = records.iter().find(|r| r.level == LogLevel::Error);
     assert!(error_record.is_some());
-    assert!(error_record.unwrap().message.contains("timeout"));
+    assert_eq!(
+        error_record.unwrap().message,
+        "Pool connection timeout: max connections exceeded"
+    );
 }
 
 #[tokio::test]
@@ -219,8 +221,10 @@ async fn test_pool_recycle_events() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
-    assert!(records[0].message.contains("Pool recycle event"));
-    assert!(records[0].message.contains("3600s"));
+    assert_eq!(
+        records[0].message,
+        "Pool recycle event: recycling connections older than 3600s"
+    );
 }
 
 #[tokio::test]

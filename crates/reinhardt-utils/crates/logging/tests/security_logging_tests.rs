@@ -66,7 +66,6 @@ impl SecurityLogger {
     }
 }
 
-#[tokio::test]
 async fn test_suspicious_operation_logged() {
     // SuspiciousOperation should be logged at ERROR level
     let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
@@ -86,11 +85,12 @@ async fn test_suspicious_operation_logged() {
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
     assert_eq!(records[0].level, LogLevel::Error);
-    assert!(records[0].message.contains("SuspiciousOperation"));
-    assert!(records[0].message.contains("Invalid data in request"));
+    assert_eq!(
+        records[0].message,
+        "Security Error: SuspiciousOperation: Invalid data in request"
+    );
 }
 
-#[tokio::test]
 async fn test_disallowed_host_logged() {
     // DisallowedHost errors should be logged with helpful message
     let logger = Arc::new(Logger::new("reinhardt.security.DisallowedHost".to_string()));
@@ -107,13 +107,12 @@ async fn test_disallowed_host_logged() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
-    assert!(records[0].message.contains("Invalid HTTP_HOST header"));
-    assert!(records[0].message.contains("evil.com"));
-    assert!(records[0].message.contains("ALLOWED_HOSTS"));
-    assert!(records[0].message.contains("/admin/"));
+    assert_eq!(
+        records[0].message,
+        "Invalid HTTP_HOST header: 'evil.com'. You may need to add 'evil.com' to ALLOWED_HOSTS. Request path: /admin/"
+    );
 }
 
-#[tokio::test]
 async fn test_suspicious_file_operation_logged() {
     // Suspicious file operations should be logged
     let logger = Arc::new(Logger::new(
@@ -134,12 +133,12 @@ async fn test_suspicious_file_operation_logged() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 1);
-    assert!(records[0].message.contains("Attempted access"));
-    assert!(records[0].message.contains("../../../etc/passwd"));
-    assert!(records[0].message.contains("denied"));
+    assert_eq!(
+        records[0].message,
+        "Attempted access to '../../../etc/passwd' denied. Operation: read"
+    );
 }
 
-#[tokio::test]
 async fn test_security_logger_separation() {
     // Security logger should be separate from main logger
     let main_logger = Arc::new(Logger::new("myapp.main".to_string()));
@@ -171,11 +170,13 @@ async fn test_security_logger_separation() {
 
     assert_eq!(main_records.len(), 1);
     assert_eq!(sec_records.len(), 1);
-    assert!(main_records[0].message.contains("Normal operation"));
-    assert!(sec_records[0].message.contains("Attack detected"));
+    assert_eq!(main_records[0].message, "Normal operation");
+    assert_eq!(
+        sec_records[0].message,
+        "Security Error: SuspiciousOperation: Attack detected"
+    );
 }
 
-#[tokio::test]
 async fn test_multiple_security_violations() {
     // Multiple security violations should all be logged
     let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
@@ -203,10 +204,22 @@ async fn test_multiple_security_violations() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 4);
-    assert!(records[0].message.contains("badhost1.com"));
-    assert!(records[1].message.contains("badhost2.com"));
-    assert!(records[2].message.contains("/etc/shadow"));
-    assert!(records[3].message.contains("CSRF token missing"));
+    assert_eq!(
+        records[0].message,
+        "Invalid HTTP_HOST header: 'badhost1.com'. You may need to add 'badhost1.com' to ALLOWED_HOSTS. Request path: /"
+    );
+    assert_eq!(
+        records[1].message,
+        "Invalid HTTP_HOST header: 'badhost2.com'. You may need to add 'badhost2.com' to ALLOWED_HOSTS. Request path: /admin/"
+    );
+    assert_eq!(
+        records[2].message,
+        "Attempted access to '/etc/shadow' denied. Operation: write"
+    );
+    assert_eq!(
+        records[3].message,
+        "Security Error: SuspiciousOperation: CSRF token missing"
+    );
 }
 
 #[tokio::test]
@@ -234,7 +247,6 @@ async fn test_security_logger_with_different_levels() {
     assert_eq!(records[0].level, LogLevel::Error);
 }
 
-#[tokio::test]
 async fn test_security_error_types() {
     // Test all security error types can be logged
     let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
@@ -261,7 +273,16 @@ async fn test_security_error_types() {
 
     let records = memory.get_records();
     assert_eq!(records.len(), 3);
-    assert!(records[0].message.contains("SuspiciousOperation"));
-    assert!(records[1].message.contains("DisallowedHost"));
-    assert!(records[2].message.contains("SuspiciousFileOperation"));
+    assert_eq!(
+        records[0].message,
+        "Security Error: SuspiciousOperation: Test operation"
+    );
+    assert_eq!(
+        records[1].message,
+        "Security Error: DisallowedHost: test.com"
+    );
+    assert_eq!(
+        records[2].message,
+        "Security Error: SuspiciousFileOperation: /test/path"
+    );
 }

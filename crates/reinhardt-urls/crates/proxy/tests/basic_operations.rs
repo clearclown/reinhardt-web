@@ -14,8 +14,18 @@ fn test_constructor() {
     // Based on: test_constructor from SQLAlchemy
 
     let proxy: AssociationProxy<(), ()> = AssociationProxy::new("children", "name");
-    assert_eq!(proxy.relationship, "children");
-    assert_eq!(proxy.attribute, "name");
+    assert_eq!(
+        proxy.relationship,
+        "children",
+        "Proxy relationship should match the constructor argument. Got: {}",
+        proxy.relationship
+    );
+    assert_eq!(
+        proxy.attribute,
+        "name",
+        "Proxy attribute should match the constructor argument. Got: {}",
+        proxy.attribute
+    );
     assert!(proxy.creator.is_none());
 }
 
@@ -29,8 +39,18 @@ fn test_with_creator() {
 
     let proxy = AssociationProxy::<i32, String>::new("children", "name").with_creator(creator);
 
-    assert_eq!(proxy.relationship, "children");
-    assert_eq!(proxy.attribute, "name");
+    assert_eq!(
+        proxy.relationship,
+        "children",
+        "Proxy relationship should match the constructor argument even with creator. Got: {}",
+        proxy.relationship
+    );
+    assert_eq!(
+        proxy.attribute,
+        "name",
+        "Proxy attribute should match the constructor argument even with creator. Got: {}",
+        proxy.attribute
+    );
     assert!(proxy.creator.is_some());
 }
 
@@ -43,8 +63,18 @@ fn test_proxy_builder_basic() {
         .attribute("attr")
         .build();
 
-    assert_eq!(proxy.relationship, "rel");
-    assert_eq!(proxy.attribute, "attr");
+    assert_eq!(
+        proxy.relationship,
+        "rel",
+        "Builder should set relationship correctly. Got: {}",
+        proxy.relationship
+    );
+    assert_eq!(
+        proxy.attribute,
+        "attr",
+        "Builder should set attribute correctly. Got: {}",
+        proxy.attribute
+    );
 }
 
 #[test]
@@ -107,19 +137,39 @@ fn test_proxy_basic_scalar_conversions() {
     // Test: Verify that ScalarValue type conversions work correctly
 
     let s = ScalarValue::String("test".to_string());
-    assert_eq!(s.as_string().unwrap(), "test");
+    assert_eq!(
+        s.as_string().unwrap(),
+        "test",
+        "String ScalarValue should convert to string correctly. Got: {:?}",
+        s.as_string().unwrap()
+    );
     assert!(s.as_integer().is_err());
 
     let i = ScalarValue::Integer(42);
-    assert_eq!(i.as_integer().unwrap(), 42);
+    assert_eq!(
+        i.as_integer().unwrap(),
+        42,
+        "Integer ScalarValue should convert to i64 correctly. Got: {}",
+        i.as_integer().unwrap()
+    );
     assert!(i.as_string().is_err());
 
     let f = ScalarValue::Float(3.14);
-    assert_eq!(f.as_float().unwrap(), 3.14);
+    assert_eq!(
+        f.as_float().unwrap(),
+        3.14,
+        "Float ScalarValue should convert to f64 correctly. Got: {}",
+        f.as_float().unwrap()
+    );
     assert!(f.as_boolean().is_err());
 
     let b = ScalarValue::Boolean(true);
-    assert_eq!(b.as_boolean().unwrap(), true);
+    assert_eq!(
+        b.as_boolean().unwrap(),
+        true,
+        "Boolean ScalarValue should convert to bool correctly. Got: {}",
+        b.as_boolean().unwrap()
+    );
     assert!(b.as_float().is_err());
 
     let n = ScalarValue::Null;
@@ -132,19 +182,44 @@ fn test_scalar_value_from_conversions() {
     // Test: Verify that conversions to ScalarValue work correctly
 
     let s: ScalarValue = "test".into();
-    assert_eq!(s.as_string().unwrap(), "test");
+    assert_eq!(
+        s.as_string().unwrap(),
+        "test",
+        "From<&str> conversion should create valid String ScalarValue. Got: {:?}",
+        s.as_string().unwrap()
+    );
 
     let s: ScalarValue = String::from("test").into();
-    assert_eq!(s.as_string().unwrap(), "test");
+    assert_eq!(
+        s.as_string().unwrap(),
+        "test",
+        "From<String> conversion should create valid String ScalarValue. Got: {:?}",
+        s.as_string().unwrap()
+    );
 
     let i: ScalarValue = 42i64.into();
-    assert_eq!(i.as_integer().unwrap(), 42);
+    assert_eq!(
+        i.as_integer().unwrap(),
+        42,
+        "From<i64> conversion should create valid Integer ScalarValue. Got: {}",
+        i.as_integer().unwrap()
+    );
 
     let f: ScalarValue = 3.14f64.into();
-    assert_eq!(f.as_float().unwrap(), 3.14);
+    assert_eq!(
+        f.as_float().unwrap(),
+        3.14,
+        "From<f64> conversion should create valid Float ScalarValue. Got: {}",
+        f.as_float().unwrap()
+    );
 
     let b: ScalarValue = true.into();
-    assert_eq!(b.as_boolean().unwrap(), true);
+    assert_eq!(
+        b.as_boolean().unwrap(),
+        true,
+        "From<bool> conversion should create valid Boolean ScalarValue. Got: {}",
+        b.as_boolean().unwrap()
+    );
 }
 
 #[test]
@@ -158,8 +233,12 @@ fn test_proxy_basic_scalar_type_mismatch() {
     match result {
         Err(e) => {
             let error_msg = e.to_string();
-            assert!(error_msg.contains("Type mismatch"));
-            assert!(error_msg.contains("Integer"));
+            assert_eq!(
+                error_msg,
+                "Type mismatch: expected Integer, got String(\"test\")",
+                "Proxy type conversion should return exact error format. Expected 'Type mismatch: expected Integer, got String(\"test\")' but got: {}",
+                error_msg
+            );
         }
         Ok(_) => panic!("Expected error"),
     }
@@ -172,6 +251,16 @@ fn test_association_proxy_helper() {
     use reinhardt_proxy::builder::association_proxy;
 
     let proxy: AssociationProxy<(), ()> = association_proxy("users", "name");
-    assert_eq!(proxy.relationship, "users");
-    assert_eq!(proxy.attribute, "name");
+    assert_eq!(
+        proxy.relationship,
+        "users",
+        "association_proxy helper should set relationship correctly. Got: {}",
+        proxy.relationship
+    );
+    assert_eq!(
+        proxy.attribute,
+        "name",
+        "association_proxy helper should set attribute correctly. Got: {}",
+        proxy.attribute
+    );
 }

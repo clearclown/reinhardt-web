@@ -174,12 +174,28 @@ mod tests {
         };
 
         let result = repr_params(&Value::Array(params), &config);
+        eprintln!("LARGE_LIST OUTPUT: {}", result);
 
-        // Should show first few and last few
-        assert!(result.contains("displaying 10 of 100"));
-        // Debug output format may vary, just check for data presence
-        assert!(result.contains("data") && result.contains("0"));
-        assert!(result.contains("99"));
+        // Should show first few and last few with exact message format
+        assert!(
+            result.contains("displaying 10 of 100 total bound parameter sets"),
+            "Expected truncation message not found in: {}",
+            result
+        );
+        // First element should contain "data": "0"
+        assert!(
+            result.contains(r#""data""#) && result.contains(r#""0""#),
+            "Expected first element with data: 0 not found in: {}",
+            result
+        );
+        // Last element should contain "data": "99"
+        assert!(
+            result.contains(r#""99""#),
+            "Expected last element with data: 99 not found in: {}",
+            result
+        );
+        // Should start with "[" and end with "]"
+        assert!(result.starts_with('[') && result.ends_with(']'));
     }
 
     #[test]
@@ -193,11 +209,8 @@ mod tests {
         };
 
         let result = repr_params(&params, &config);
-        // Check for presence of numbers, format may vary
-        assert!(result.contains("1"));
-        assert!(result.contains("2"));
-        assert!(result.contains("3"));
-        assert!(result.contains("5"));
+        // Verify exact debug format output
+        assert_eq!(result, "[Array [Number(1), Number(2), Number(3)], Number(5)]");
     }
 
     #[test]
@@ -212,7 +225,20 @@ mod tests {
         };
 
         let result = repr_params(&params, &config);
-        assert!(result.contains("characters truncated"));
+        // Should be truncated with exact message format
+        assert!(
+            result.contains("characters truncated"),
+            "Expected truncation message not found in: {}",
+            result
+        );
+        // Should have ellipsis pattern: "...  ... (N characters truncated) ...  ..."
+        assert!(
+            result.matches("...").count() >= 2,
+            "Expected ellipsis pattern not found in: {}",
+            result
+        );
+        // Should start with "[" (array format)
+        assert!(result.starts_with('['), "Expected array start not found in: {}", result);
     }
 
     #[test]
@@ -230,7 +256,22 @@ mod tests {
 
         let result = repr_params(&Value::Object(params.clone()), &config);
         // Should fit without truncation
-        assert!(!result.contains("truncated"));
+        assert!(
+            !result.contains("truncated"),
+            "Unexpected truncation in: {}",
+            result
+        );
+        // Should contain all keys
+        for i in 0..10 {
+            assert!(
+                result.contains(&format!(r#""key_{}""#, i)),
+                "Expected key_{}  not found in: {}",
+                i,
+                result
+            );
+        }
+        // Should start with "{" (object format from Debug)
+        assert!(result.starts_with('{'), "Expected object start not found in: {}", result);
     }
 
     #[test]
@@ -247,7 +288,20 @@ mod tests {
         };
 
         let result = repr_params(&Value::Object(params), &config);
-        assert!(result.contains("parameters truncated"));
+        // Should be truncated with exact message format for huge dicts
+        assert!(
+            result.contains("parameters truncated"),
+            "Expected parameters truncation message not found in: {}",
+            result
+        );
+        // Should have ellipsis pattern: "... N parameters truncated ..."
+        assert!(
+            result.matches("...").count() >= 2,
+            "Expected ellipsis pattern not found in: {}",
+            result
+        );
+        // Should start with "{" (object format)
+        assert!(result.starts_with('{'), "Expected object start not found in: {}", result);
     }
 
     #[test]
@@ -264,7 +318,18 @@ mod tests {
         };
 
         let result = repr_params(&Value::Array(params), &config);
-        assert!(result.contains("displaying 5 of 50"));
+        // Should show truncation with exact message format
+        assert!(
+            result.contains("displaying 5 of 50 total bound parameter sets"),
+            "Expected multi-batch truncation message not found in: {}",
+            result
+        );
+        // Should start with "[" and end with "]"
+        assert!(
+            result.starts_with('[') && result.ends_with(']'),
+            "Expected array format not found in: {}",
+            result
+        );
     }
 
     #[test]
@@ -272,10 +337,39 @@ mod tests {
         let large_param = "a".repeat(5000);
         let result = truncate_param(&large_param, 298);
 
-        assert!(result.len() < 5000);
-        assert!(result.contains("characters truncated"));
-        assert!(result.starts_with("aaaa"));
-        assert!(result.ends_with("aaaa"));
+        // Should be truncated to approximately max_chars + overhead
+        assert!(
+            result.len() < 5000,
+            "Expected truncated length, got: {}",
+            result.len()
+        );
+        assert!(
+            result.len() > 298,
+            "Result should be longer than max_chars due to truncation message"
+        );
+        // Should contain exact truncation message format
+        assert!(
+            result.contains("characters truncated"),
+            "Expected truncation message not found in: {}",
+            result
+        );
+        // Should start and end with repeated 'a'
+        assert!(
+            result.starts_with("aaaa"),
+            "Expected start pattern not found in: {}",
+            result
+        );
+        assert!(
+            result.ends_with("aaaa"),
+            "Expected end pattern not found in: {}",
+            result
+        );
+        // Should have ellipsis pattern: "aaa ... (N characters truncated) ... aaa"
+        assert!(
+            result.matches("...").count() == 2,
+            "Expected exactly 2 ellipsis markers, found: {}",
+            result.matches("...").count()
+        );
     }
 
     #[test]
