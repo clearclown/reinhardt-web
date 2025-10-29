@@ -295,9 +295,20 @@ mod tests {
     #[test]
     fn test_new_handler() {
         let handler = DevelopmentErrorHandler::new();
-        assert!(handler.show_stack_trace);
-        assert!(handler.show_source);
-        assert_eq!(handler.source_context_lines, 5);
+        assert!(
+            handler.show_stack_trace,
+            "DevelopmentErrorHandler::new() should enable stack trace by default"
+        );
+        assert!(
+            handler.show_source,
+            "DevelopmentErrorHandler::new() should enable source context by default"
+        );
+        assert_eq!(
+            handler.source_context_lines,
+            5,
+            "DevelopmentErrorHandler::new() should set source_context_lines to 5 by default. Got: {}",
+            handler.source_context_lines
+        );
     }
 
     #[test]
@@ -307,9 +318,22 @@ mod tests {
             .with_source_context(false)
             .with_context_lines(10);
 
-        assert!(!handler.show_stack_trace);
-        assert!(!handler.show_source);
-        assert_eq!(handler.source_context_lines, 10);
+        assert!(
+            !handler.show_stack_trace,
+            "with_stack_trace(false) should disable stack trace. Got: {}",
+            handler.show_stack_trace
+        );
+        assert!(
+            !handler.show_source,
+            "with_source_context(false) should disable source context. Got: {}",
+            handler.show_source
+        );
+        assert_eq!(
+            handler.source_context_lines,
+            10,
+            "with_context_lines(10) should set source_context_lines to 10. Got: {}",
+            handler.source_context_lines
+        );
     }
 
     #[test]
@@ -319,9 +343,53 @@ mod tests {
 
         let html = handler.format_error(&error);
 
-        assert!(html.contains("<!DOCTYPE html>"));
-        assert!(html.contains("Development Error"));
-        assert!(html.contains("File not found"));
+        // HTMLドキュメント構造の検証
+        assert!(
+            html.starts_with("<!DOCTYPE html>\n"),
+            "HTML output should start with DOCTYPE declaration. Got: {}",
+            &html[..100.min(html.len())]
+        );
+        assert!(
+            html.ends_with("</html>\n"),
+            "HTML output should end with </html> tag. Got last 100 chars: {}",
+            &html[html.len().saturating_sub(100)..]
+        );
+
+        // 重要なHTML要素の存在を厳密に検証
+        assert!(
+            html.contains("<title>Development Error</title>"),
+            "HTML should contain <title> element with 'Development Error'. HTML head section: {}",
+            html.split("</head>")
+                .next()
+                .unwrap_or("")
+                .get(..500)
+                .unwrap_or("")
+        );
+        assert!(
+            html.contains("<h1>Development Error</h1>"),
+            "HTML should contain <h1> element with 'Development Error'. HTML body: {}",
+            html.split("<body>")
+                .nth(1)
+                .and_then(|s| s.get(..500))
+                .unwrap_or("")
+        );
+        assert!(
+            html.contains("<div class=\"error-message\">"),
+            "HTML should contain error-message div. Error sections found: {:?}",
+            html.match_indices("<div")
+                .map(|(i, _)| &html[i..i.saturating_add(100).min(html.len())])
+                .collect::<Vec<_>>()
+        );
+
+        // エラーメッセージの正確な検証
+        assert!(
+            html.contains("<strong>Error:</strong> File not found"),
+            "HTML should contain error message with 'File not found'. Error message section: {}",
+            html.split("<div class=\"error-message\">")
+                .nth(1)
+                .and_then(|s| s.split("</div>").next())
+                .unwrap_or("Error message div not found")
+        );
     }
 
     #[test]
@@ -331,8 +399,24 @@ mod tests {
 
         let text = handler.format_error_text(&error);
 
-        assert!(text.contains("Development Error"));
-        assert!(text.contains("Error: File not found"));
+        // プレーンテキストの正確な構造検証
+        assert!(
+            text.starts_with("Development Error\n"),
+            "Text output should start with 'Development Error\\n'. Got: {}",
+            text.lines().next().unwrap_or("")
+        );
+        assert!(
+            text.contains("================\n\n"),
+            "Text output should contain separator line followed by blank line. Got first 100 chars: {}",
+            &text[..100.min(text.len())]
+        );
+
+        // エラーメッセージの正確な検証
+        assert!(
+            text.contains("Error: File not found\n"),
+            "Text output should contain 'Error: File not found\\n'. Lines found: {:?}",
+            text.lines().collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -342,14 +426,36 @@ mod tests {
 
         let html = handler.format_error(&error);
 
-        assert!(!html.contains("Stack Trace"));
+        // スタックトレースセクション全体が存在しないことを厳密に検証
+        assert!(
+            !html.contains("<div class=\"stack-trace\">"),
+            "HTML should NOT contain stack-trace div when stack trace is disabled. Div elements found: {:?}",
+            html.match_indices("<div")
+                .map(|(i, _)| &html[i..i.saturating_add(50).min(html.len())])
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            !html.contains("<h2>Stack Trace</h2>"),
+            "HTML should NOT contain 'Stack Trace' heading when disabled. H2 elements found: {:?}",
+            html.match_indices("<h2>")
+                .map(|(i, _)| &html[i..i.saturating_add(50).min(html.len())])
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn test_dev_server_error_new() {
         let error = DevServerError::new("Test error");
-        assert_eq!(error.to_string(), "Test error");
-        assert!(error.source().is_none());
+        assert_eq!(
+            error.to_string(),
+            "Test error",
+            "DevServerError::to_string() should return the error message. Got: {}",
+            error.to_string()
+        );
+        assert!(
+            error.source().is_none(),
+            "DevServerError created with new() should not have a source error"
+        );
     }
 
     #[test]
@@ -357,8 +463,16 @@ mod tests {
         let source = io::Error::new(io::ErrorKind::NotFound, "File not found");
         let error = DevServerError::with_source("Failed to load file", source);
 
-        assert_eq!(error.to_string(), "Failed to load file");
-        assert!(error.source().is_some());
+        assert_eq!(
+            error.to_string(),
+            "Failed to load file",
+            "DevServerError::to_string() should return the error message. Got: {}",
+            error.to_string()
+        );
+        assert!(
+            error.source().is_some(),
+            "DevServerError created with with_source() should have a source error"
+        );
     }
 
     #[test]
@@ -366,15 +480,84 @@ mod tests {
         let handler = DevelopmentErrorHandler::new();
         let styles = handler.error_page_styles();
 
-        assert!(styles.contains("body"));
-        assert!(styles.contains(".error-container"));
-        assert!(styles.contains(".error-message"));
+        // CSSセレクタの正確な存在を検証
+        assert!(
+            styles.contains("body {"),
+            "CSS should contain 'body' selector. Selectors found: {:?}",
+            styles
+                .match_indices('{')
+                .filter_map(|(i, _)| {
+                    styles[..i]
+                        .rsplit_once('\n')
+                        .or_else(|| styles[..i].rsplit_once(' '))
+                        .map(|(_, selector)| selector.trim())
+                })
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            styles.contains(".error-container {"),
+            "CSS should contain '.error-container' selector. Class selectors found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.trim().starts_with('.'))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            styles.contains(".error-message {"),
+            "CSS should contain '.error-message' selector. Class selectors found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.trim().starts_with('.'))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            styles.contains(".error-chain {"),
+            "CSS should contain '.error-chain' selector. Class selectors found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.trim().starts_with('.'))
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            styles.contains(".stack-trace {"),
+            "CSS should contain '.stack-trace' selector. Class selectors found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.trim().starts_with('.'))
+                .collect::<Vec<_>>()
+        );
+
+        // 重要なスタイルプロパティの検証
+        assert!(
+            styles.contains("font-family:"),
+            "CSS should contain font-family property. Properties found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.contains(':'))
+                .take(10)
+                .collect::<Vec<_>>()
+        );
+        assert!(
+            styles.contains("background:"),
+            "CSS should contain background property. Properties found: {:?}",
+            styles
+                .lines()
+                .filter(|line| line.contains(':'))
+                .take(10)
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]
     fn test_default() {
         let handler = DevelopmentErrorHandler::default();
-        assert!(handler.show_stack_trace);
-        assert!(handler.show_source);
+        assert!(
+            handler.show_stack_trace,
+            "DevelopmentErrorHandler::default() should enable stack trace by default"
+        );
+        assert!(
+            handler.show_source,
+            "DevelopmentErrorHandler::default() should enable source context by default"
+        );
     }
 }

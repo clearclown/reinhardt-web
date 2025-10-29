@@ -4,6 +4,7 @@
 //! - django/tests/humanize_tests/tests.py
 
 use chrono::{Duration, Utc};
+use regex::Regex;
 use reinhardt_contrib::humanize;
 
 #[test]
@@ -87,8 +88,7 @@ fn test_naturaltime_seconds() {
     let now = Utc::now();
     let few_seconds_ago = now - Duration::seconds(3);
     let result = humanize::naturaltime(&few_seconds_ago);
-    assert!(result.contains("second"));
-    assert!(result.contains("ago"));
+    assert_eq!(result, "a few seconds ago");
 }
 
 #[test]
@@ -96,8 +96,7 @@ fn test_naturaltime_minutes() {
     let now = Utc::now();
     let minutes_ago = now - Duration::minutes(5);
     let result = humanize::naturaltime(&minutes_ago);
-    assert!(result.contains("minute"));
-    assert!(result.contains("ago"));
+    assert_eq!(result, "5 minutes ago");
 }
 
 #[test]
@@ -105,8 +104,7 @@ fn test_naturaltime_hours() {
     let now = Utc::now();
     let hours_ago = now - Duration::hours(2);
     let result = humanize::naturaltime(&hours_ago);
-    assert!(result.contains("hour"));
-    assert!(result.contains("ago"));
+    assert_eq!(result, "2 hours ago");
 }
 
 #[test]
@@ -114,8 +112,7 @@ fn test_naturaltime_days() {
     let now = Utc::now();
     let days_ago = now - Duration::days(3);
     let result = humanize::naturaltime(&days_ago);
-    assert!(result.contains("day"));
-    assert!(result.contains("ago"));
+    assert_eq!(result, "3 days ago");
 }
 
 #[test]
@@ -123,8 +120,8 @@ fn test_naturaltime_future() {
     let now = Utc::now();
     let future = now + Duration::minutes(10);
     let result = humanize::naturaltime(&future);
-    assert!(result.contains("in"));
-    assert!(result.contains("minute"));
+    let re = Regex::new(r"^\d+ minutes from now$").unwrap();
+    assert!(re.is_match(&result), "Expected pattern '\\d+ minutes from now', got: {}", result);
 }
 
 #[test]
@@ -132,7 +129,7 @@ fn test_timesince_minutes() {
     let now = Utc::now();
     let past = now - Duration::minutes(30);
     let result = humanize::timesince(&past);
-    assert!(result.contains("30 minutes"));
+    assert_eq!(result, "30 minutes");
 }
 
 #[test]
@@ -140,7 +137,7 @@ fn test_timesince_hours() {
     let now = Utc::now();
     let past = now - Duration::hours(3);
     let result = humanize::timesince(&past);
-    assert!(result.contains("hour"));
+    assert_eq!(result, "3 hours");
 }
 
 #[test]

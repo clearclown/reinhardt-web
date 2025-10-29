@@ -1,3 +1,4 @@
+use regex::Regex;
 use reinhardt_static::storage::HashedFileStorage;
 use std::collections::HashMap;
 use tempfile::TempDir;
@@ -57,10 +58,11 @@ async fn test_css_url_replacement() {
     let saved_css = storage.open("styles.css").await.unwrap();
     let saved_str = String::from_utf8(saved_css).unwrap();
 
-    // Should contain hashed version
+    // Should contain hashed version with pattern: img/logo.[hash].png
+    let hashed_pattern = Regex::new(r"img/logo\.[a-f0-9]{8,}\.png").unwrap();
     assert!(
-        saved_str.contains("img/logo.") && saved_str.contains(".png"),
-        "CSS should contain hashed image reference, got: {}",
+        hashed_pattern.is_match(&saved_str),
+        "CSS should contain hashed image reference matching pattern 'img/logo.[hash].png', got: {}",
         saved_str
     );
     // Should not contain original reference
@@ -187,12 +189,21 @@ async fn test_save_with_dependencies_multiple_css() {
     // Both CSS files should have the hashed logo reference
     let main_css = storage.open("main.css").await.unwrap();
     let main_str = String::from_utf8(main_css).unwrap();
-    assert!(main_str.contains("logo.") && main_str.contains(".png"));
+    let hashed_pattern = Regex::new(r"logo\.[a-f0-9]{8,}\.png").unwrap();
+    assert!(
+        hashed_pattern.is_match(&main_str),
+        "main.css should contain hashed logo reference matching pattern 'logo.[hash].png', got: {}",
+        main_str
+    );
     assert!(!main_str.contains("url(logo.png)"));
 
     let theme_css = storage.open("theme.css").await.unwrap();
     let theme_str = String::from_utf8(theme_css).unwrap();
-    assert!(theme_str.contains("logo.") && theme_str.contains(".png"));
+    assert!(
+        hashed_pattern.is_match(&theme_str),
+        "theme.css should contain hashed logo reference matching pattern 'logo.[hash].png', got: {}",
+        theme_str
+    );
     assert!(!theme_str.contains("url(logo.png)"));
 
     // Cleanup is automatic with TempDir

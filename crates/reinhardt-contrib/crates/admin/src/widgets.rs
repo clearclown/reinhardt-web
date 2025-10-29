@@ -803,10 +803,32 @@ mod tests {
             .with_attr("class", "form-control");
 
         let html = widget.render("username", Some(&serde_json::Value::String("alice".to_string())));
-        assert!(html.contains("type=\"text\""));
-        assert!(html.contains("name=\"username\""));
-        assert!(html.contains("value=\"alice\""));
-        assert!(html.contains("class=\"form-control\""));
+        
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        assert!(
+            html.ends_with("/>"),
+            "HTML should end with self-closing tag />, got: {}",
+            &html[html.len().saturating_sub(10)..]
+        );
+        
+        let expected_parts = [
+            "type=\"text\"",
+            "name=\"username\"",
+            "value=\"alice\"",
+            "class=\"form-control\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -814,10 +836,32 @@ mod tests {
         let widget = Widget::new(WidgetType::TextArea { rows: 5, cols: 40 });
         let html = widget.render("bio", Some(&serde_json::Value::String("Hello".to_string())));
 
-        assert!(html.contains("<textarea"));
-        assert!(html.contains("rows=\"5\""));
-        assert!(html.contains("cols=\"40\""));
-        assert!(html.contains(">Hello</textarea>"));
+        assert!(
+            html.starts_with("<textarea"),
+            "HTML should start with <textarea tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("</textarea>"),
+            "HTML should end with </textarea>, got: {}",
+            &html[html.len().saturating_sub(20)..]
+        );
+        
+        let expected_parts = [
+            "name=\"bio\"",
+            "rows=\"5\"",
+            "cols=\"40\"",
+            ">Hello</textarea>",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -829,9 +873,33 @@ mod tests {
         let widget = Widget::new(WidgetType::Select { choices });
         let html = widget.render("status", Some(&serde_json::Value::String("active".to_string())));
 
-        assert!(html.contains("<select"));
-        assert!(html.contains("value=\"active\" selected"));
-        assert!(html.contains("value=\"inactive\""));
+        assert!(
+            html.starts_with("<select"),
+            "HTML should start with <select tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("</select>"),
+            "HTML should end with </select>, got: {}",
+            &html[html.len().saturating_sub(20)..]
+        );
+        
+        let expected_parts = [
+            "name=\"status\"",
+            "value=\"active\" selected",
+            ">Active</option>",
+            "value=\"inactive\"",
+            ">Inactive</option>",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -839,8 +907,26 @@ mod tests {
         let widget = Widget::new(WidgetType::CheckboxInput);
         let html = widget.render("is_active", Some(&serde_json::Value::Bool(true)));
 
-        assert!(html.contains("type=\"checkbox\""));
-        assert!(html.contains("checked"));
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        let expected_parts = [
+            "type=\"checkbox\"",
+            "name=\"is_active\"",
+            "value=\"true\"",
+            "checked",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -848,8 +934,31 @@ mod tests {
         let widget = Widget::new(WidgetType::DateInput);
         let html = widget.render("birth_date", Some(&serde_json::Value::String("2025-01-01".to_string())));
 
-        assert!(html.contains("type=\"date\""));
-        assert!(html.contains("value=\"2025-01-01\""));
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("/>"),
+            "HTML should end with self-closing tag />, got: {}",
+            &html[html.len().saturating_sub(10)..]
+        );
+        
+        let expected_parts = [
+            "type=\"date\"",
+            "name=\"birth_date\"",
+            "value=\"2025-01-01\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -857,8 +966,31 @@ mod tests {
         let widget = Widget::new(WidgetType::EmailInput);
         let html = widget.render("email", Some(&serde_json::Value::String("test@example.com".to_string())));
 
-        assert!(html.contains("type=\"email\""));
-        assert!(html.contains("value=\"test@example.com\""));
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("/>"),
+            "HTML should end with self-closing tag />, got: {}",
+            &html[html.len().saturating_sub(10)..]
+        );
+        
+        let expected_parts = [
+            "type=\"email\"",
+            "name=\"email\"",
+            "value=\"test@example.com\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -866,8 +998,31 @@ mod tests {
         let widget = Widget::new(WidgetType::HiddenInput);
         let html = widget.render("id", Some(&serde_json::Value::String("123".to_string())));
 
-        assert!(html.contains("type=\"hidden\""));
-        assert!(html.contains("value=\"123\""));
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("/>"),
+            "HTML should end with self-closing tag />, got: {}",
+            &html[html.len().saturating_sub(10)..]
+        );
+        
+        let expected_parts = [
+            "type=\"hidden\"",
+            "name=\"id\"",
+            "value=\"123\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -904,10 +1059,41 @@ mod tests {
         let selected = serde_json::json!(["tag1", "tag3"]);
         let html = widget.render("tags", Some(&selected));
 
-        assert!(html.contains("multiple"));
-        assert!(html.contains("value=\"tag1\" selected"));
-        assert!(html.contains("value=\"tag3\" selected"));
-        assert!(!html.contains("value=\"tag2\" selected"));
+        assert!(
+            html.starts_with("<select"),
+            "HTML should start with <select tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("</select>"),
+            "HTML should end with </select>, got: {}",
+            &html[html.len().saturating_sub(20)..]
+        );
+        
+        let expected_parts = [
+            "name=\"tags\"",
+            "multiple",
+            "value=\"tag1\" selected",
+            "value=\"tag3\" selected",
+            ">Tag 1</option>",
+            ">Tag 2</option>",
+            ">Tag 3</option>",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
+        
+        assert!(
+            !html.contains("value=\"tag2\" selected"),
+            "Tag 2 should not be selected, got: {}",
+            html
+        );
     }
 
     #[test]
@@ -915,8 +1101,31 @@ mod tests {
         let widget = Widget::new(WidgetType::ColorPicker);
         let html = widget.render("color", Some(&serde_json::Value::String("#ff0000".to_string())));
 
-        assert!(html.contains("type=\"color\""));
-        assert!(html.contains("value=\"#ff0000\""));
+        assert!(
+            html.starts_with("<input"),
+            "HTML should start with <input tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("/>"),
+            "HTML should end with self-closing tag />, got: {}",
+            &html[html.len().saturating_sub(10)..]
+        );
+        
+        let expected_parts = [
+            "type=\"color\"",
+            "name=\"color\"",
+            "value=\"#ff0000\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -951,10 +1160,32 @@ mod tests {
         let widget = Widget::new(WidgetType::RichTextEditorWidget { config });
         let html = widget.render("content", Some(&serde_json::Value::String("Hello".to_string())));
 
-        assert!(html.contains("<textarea"));
-        assert!(html.contains("name=\"content\""));
-        assert!(html.contains(">Hello</textarea>"));
-        assert!(html.contains("data-editor"));
+        assert!(
+            html.starts_with("<textarea"),
+            "HTML should start with <textarea tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        assert!(
+            html.ends_with("</textarea>"),
+            "HTML should end with </textarea>, got: {}",
+            &html[html.len().saturating_sub(20)..]
+        );
+        
+        let expected_parts = [
+            "name=\"content\"",
+            ">Hello</textarea>",
+            "data-editor",
+            "class=\"rich-text-editor\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -1012,8 +1243,23 @@ mod tests {
             .with_formats(vec![ImageFormat::Jpeg, ImageFormat::Png]);
 
         let accept = config.accept_attribute();
-        assert!(accept.contains("image/jpeg"));
-        assert!(accept.contains("image/png"));
+        
+        assert!(
+            accept.contains("image/jpeg"),
+            "Accept attribute should contain 'image/jpeg', got: {}",
+            accept
+        );
+        assert!(
+            accept.contains("image/png"),
+            "Accept attribute should contain 'image/png', got: {}",
+            accept
+        );
+        assert_eq!(
+            accept.matches(',').count(),
+            1,
+            "Accept attribute should have exactly one comma separator, got: {}",
+            accept
+        );
     }
 
     #[test]
@@ -1022,11 +1268,31 @@ mod tests {
         let widget = Widget::new(WidgetType::ImageUploadWidget { config });
         let html = widget.render("photo", Some(&serde_json::Value::String("/uploads/photo.jpg".to_string())));
 
-        assert!(html.contains("input type=\"file\""));
-        assert!(html.contains("name=\"photo\""));
-        assert!(html.contains("accept="));
-        assert!(html.contains("image-preview"));
-        assert!(html.contains("/uploads/photo.jpg"));
+        assert!(
+            html.starts_with("<div"),
+            "HTML should start with <div tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        let expected_parts = [
+            "<div class=\"image-upload-widget\"",
+            "data-config",
+            "input type=\"file\"",
+            "name=\"photo\"",
+            "accept=",
+            "image-preview",
+            "/uploads/photo.jpg",
+            "input type=\"hidden\"",
+            "name=\"photo_current\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
@@ -1035,18 +1301,37 @@ mod tests {
         let widget = Widget::new(WidgetType::ImageUploadWidget { config });
         let html = widget.render("photo", None);
 
-        assert!(html.contains("input type=\"file\""));
-        assert!(html.contains("name=\"photo\""));
-        assert!(html.contains("No image selected"));
+        assert!(
+            html.starts_with("<div"),
+            "HTML should start with <div tag, got: {}",
+            &html[..50.min(html.len())]
+        );
+        
+        let expected_parts = [
+            "<div class=\"image-upload-widget\"",
+            "input type=\"file\"",
+            "name=\"photo\"",
+            "No image selected",
+            "border: 2px dashed #ccc",
+            "input type=\"hidden\"",
+        ];
+        for part in &expected_parts {
+            assert!(
+                html.contains(part),
+                "HTML should contain '{}', got: {}",
+                part,
+                html
+            );
+        }
     }
 
     #[test]
     fn test_widget_factory_tinymce() {
         let widget = WidgetFactory::tinymce_editor();
         if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
-            assert_eq!(config.editor_type, EditorType::TinyMCE);
+            assert_eq!(config.editor_type, EditorType::TinyMCE, "Editor type should be TinyMCE");
         } else {
-            panic!("Expected RichTextEditorWidget");
+            panic!("Expected RichTextEditorWidget but got: {:?}", widget.widget_type);
         }
     }
 
@@ -1054,9 +1339,9 @@ mod tests {
     fn test_widget_factory_ckeditor() {
         let widget = WidgetFactory::ckeditor();
         if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
-            assert_eq!(config.editor_type, EditorType::CKEditor);
+            assert_eq!(config.editor_type, EditorType::CKEditor, "Editor type should be CKEditor");
         } else {
-            panic!("Expected RichTextEditorWidget");
+            panic!("Expected RichTextEditorWidget but got: {:?}", widget.widget_type);
         }
     }
 
@@ -1064,16 +1349,17 @@ mod tests {
     fn test_widget_factory_quill() {
         let widget = WidgetFactory::quill_editor();
         if let WidgetType::RichTextEditorWidget { config } = &widget.widget_type {
-            assert_eq!(config.editor_type, EditorType::Quill);
+            assert_eq!(config.editor_type, EditorType::Quill, "Editor type should be Quill");
         } else {
-            panic!("Expected RichTextEditorWidget");
+            panic!("Expected RichTextEditorWidget but got: {:?}", widget.widget_type);
         }
     }
 
     #[test]
     fn test_widget_factory_image_upload() {
         let widget = WidgetFactory::image_upload();
-        assert!(matches!(widget.widget_type, WidgetType::ImageUploadWidget { .. }));
+        assert!(matches!(widget.widget_type, WidgetType::ImageUploadWidget { .. }),
+                "Expected ImageUploadWidget but got: {:?}", widget.widget_type);
     }
 
     #[test]
@@ -1081,7 +1367,8 @@ mod tests {
         let config = ImageUploadConfig::new()
             .with_max_size(1024 * 1024); // 1MB
 
-        assert_eq!(config.max_file_size, 1024 * 1024);
+        assert_eq!(config.max_file_size, 1024 * 1024,
+                   "Max file size should be 1MB (1048576 bytes), got: {}", config.max_file_size);
     }
 
     #[test]
@@ -1095,7 +1382,8 @@ mod tests {
 
         for editor_type in types {
             let config = RichTextEditorConfig::new(editor_type.clone());
-            assert_eq!(config.editor_type, editor_type);
+            assert_eq!(config.editor_type, editor_type,
+                       "Editor type should match the configured type: {:?}", editor_type);
         }
     }
 }

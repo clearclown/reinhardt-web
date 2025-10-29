@@ -23,6 +23,9 @@ reinhardt-i18n = { version = "0.1.0", path = "crates/i18n", optional = true }
 reinhardt-utils = { workspace = true }
 chrono = { workspace = true }
 
+[dev-dependencies]
+regex = { workspace = true }
+
 [features]
 default = []
 
