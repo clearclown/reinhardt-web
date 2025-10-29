@@ -40,10 +40,24 @@ async fn test_viewset_with_filters() {
     assert!(config.is_some());
     let config = config.unwrap();
     assert_eq!(config.filterable_fields.len(), 2);
-    assert!(config.filterable_fields.contains(&"status".to_string()));
-    assert!(config.filterable_fields.contains(&"category".to_string()));
+
+    use std::collections::HashSet;
+    assert_eq!(
+        config.filterable_fields.iter().collect::<HashSet<_>>(),
+        HashSet::from([&"status".to_string(), &"category".to_string()]),
+        "Filterable fields mismatch. Expected fields: {:?}, Got: {:?}",
+        ["status", "category"],
+        config.filterable_fields
+    );
+
     assert_eq!(config.search_fields.len(), 1);
-    assert!(config.search_fields.contains(&"name".to_string()));
+    assert_eq!(
+        config.search_fields.iter().collect::<HashSet<_>>(),
+        HashSet::from([&"name".to_string()]),
+        "Search fields mismatch. Expected fields: {:?}, Got: {:?}",
+        ["name"],
+        config.search_fields
+    );
 }
 
 #[tokio::test]
@@ -102,8 +116,16 @@ async fn test_viewset_with_ordering() {
     assert!(config.is_some());
     let config = config.unwrap();
     assert_eq!(config.ordering_fields.len(), 2);
-    assert!(config.ordering_fields.contains(&"created_at".to_string()));
-    assert!(config.ordering_fields.contains(&"name".to_string()));
+
+    use std::collections::HashSet;
+    assert_eq!(
+        config.ordering_fields.iter().collect::<HashSet<_>>(),
+        HashSet::from([&"created_at".to_string(), &"name".to_string()]),
+        "Ordering fields mismatch. Expected fields: {:?}, Got: {:?}",
+        ["created_at", "name"],
+        config.ordering_fields
+    );
+
     assert_eq!(config.default_ordering.len(), 1);
     assert_eq!(config.default_ordering[0], "-created_at");
 }

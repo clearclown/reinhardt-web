@@ -175,14 +175,20 @@ async fn test_dispatch_head_method() {
 
 #[test]
 fn test_allowed_methods() {
+    use std::collections::HashSet;
+
     let queryset = QuerySet::<TestArticle>::new();
     let view = AdminChangeView::new(queryset);
 
     let methods = view.allowed_methods();
     assert_eq!(methods.len(), 5);
-    assert!(methods.contains(&"GET"));
-    assert!(methods.contains(&"HEAD"));
-    assert!(methods.contains(&"PUT"));
-    assert!(methods.contains(&"PATCH"));
-    assert!(methods.contains(&"OPTIONS"));
+
+    let expected_methods = HashSet::from(["GET", "HEAD", "PUT", "PATCH", "OPTIONS"]);
+    assert_eq!(
+        methods.iter().collect::<HashSet<_>>(),
+        expected_methods.iter().collect::<HashSet<_>>(),
+        "Admin allowed methods mismatch. Expected methods: {:?}, Got: {:?}",
+        expected_methods,
+        methods
+    );
 }

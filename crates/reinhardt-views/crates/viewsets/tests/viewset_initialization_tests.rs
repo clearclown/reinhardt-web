@@ -28,8 +28,18 @@ async fn test_initialize_view_set_with_actions() {
     let response = viewset.dispatch(request, action).await;
 
     // Should successfully handle the request
-    assert!(response.is_ok());
-    assert_eq!(response.unwrap().status, StatusCode::OK);
+    assert!(response.is_ok(), "ViewSet dispatch should succeed");
+    let resp = response.unwrap();
+    assert_eq!(resp.status, StatusCode::OK, "List action should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&resp.body)
+        .expect("Response should be valid JSON");
+    assert!(
+        json_value.is_array(),
+        "List response should be an array, but got: {:?}",
+        json_value
+    );
 }
 
 /// Test HEAD request handling with viewset
@@ -90,8 +100,18 @@ async fn test_viewset_action_types() {
         Bytes::new(),
     );
     let list_response = viewset.dispatch(list_request, Action::list()).await;
-    assert!(list_response.is_ok());
-    assert_eq!(list_response.unwrap().status, StatusCode::OK);
+    assert!(list_response.is_ok(), "List action should succeed");
+    let list_resp = list_response.unwrap();
+    assert_eq!(list_resp.status, StatusCode::OK, "List should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&list_resp.body)
+        .expect("List response should be valid JSON");
+    assert!(
+        json_value.is_array(),
+        "List response should be an array, but got: {:?}",
+        json_value
+    );
 
     // Test retrieve action
     let retrieve_request = Request::new(
@@ -102,8 +122,18 @@ async fn test_viewset_action_types() {
         Bytes::new(),
     );
     let retrieve_response = viewset.dispatch(retrieve_request, Action::retrieve()).await;
-    assert!(retrieve_response.is_ok());
-    assert_eq!(retrieve_response.unwrap().status, StatusCode::OK);
+    assert!(retrieve_response.is_ok(), "Retrieve action should succeed");
+    let retrieve_resp = retrieve_response.unwrap();
+    assert_eq!(retrieve_resp.status, StatusCode::OK, "Retrieve should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&retrieve_resp.body)
+        .expect("Retrieve response should be valid JSON");
+    assert!(
+        json_value.is_object(),
+        "Retrieve response should be an object, but got: {:?}",
+        json_value
+    );
 
     // Test create action
     let create_request = Request::new(
@@ -114,8 +144,18 @@ async fn test_viewset_action_types() {
         Bytes::from(r#"{"name": "test"}"#),
     );
     let create_response = viewset.dispatch(create_request, Action::create()).await;
-    assert!(create_response.is_ok());
-    assert_eq!(create_response.unwrap().status, StatusCode::CREATED);
+    assert!(create_response.is_ok(), "Create action should succeed");
+    let create_resp = create_response.unwrap();
+    assert_eq!(create_resp.status, StatusCode::CREATED, "Create should return 201 Created");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&create_resp.body)
+        .expect("Create response should be valid JSON");
+    assert!(
+        json_value.is_object(),
+        "Create response should be an object, but got: {:?}",
+        json_value
+    );
 
     // Test update action
     let update_request = Request::new(
@@ -126,8 +166,18 @@ async fn test_viewset_action_types() {
         Bytes::from(r#"{"name": "updated"}"#),
     );
     let update_response = viewset.dispatch(update_request, Action::update()).await;
-    assert!(update_response.is_ok());
-    assert_eq!(update_response.unwrap().status, StatusCode::OK);
+    assert!(update_response.is_ok(), "Update action should succeed");
+    let update_resp = update_response.unwrap();
+    assert_eq!(update_resp.status, StatusCode::OK, "Update should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&update_resp.body)
+        .expect("Update response should be valid JSON");
+    assert!(
+        json_value.is_object(),
+        "Update response should be an object, but got: {:?}",
+        json_value
+    );
 
     // Test destroy action
     let destroy_request = Request::new(
@@ -138,8 +188,17 @@ async fn test_viewset_action_types() {
         Bytes::new(),
     );
     let destroy_response = viewset.dispatch(destroy_request, Action::destroy()).await;
-    assert!(destroy_response.is_ok());
-    assert_eq!(destroy_response.unwrap().status, StatusCode::NO_CONTENT);
+    assert!(destroy_response.is_ok(), "Destroy action should succeed");
+    let destroy_resp = destroy_response.unwrap();
+    assert_eq!(destroy_resp.status, StatusCode::NO_CONTENT, "Destroy should return 204 No Content");
+
+    // Verify no content in body for destroy action
+    assert!(
+        destroy_resp.body.is_empty(),
+        "Destroy response should have empty body, but got {} bytes: {:?}",
+        destroy_resp.body.len(),
+        destroy_resp.body
+    );
 }
 
 /// Test readonly viewset restrictions
@@ -157,8 +216,18 @@ async fn test_readonly_viewset_restrictions() {
         Bytes::new(),
     );
     let list_response = viewset.dispatch(list_request, Action::list()).await;
-    assert!(list_response.is_ok());
-    assert_eq!(list_response.unwrap().status, StatusCode::OK);
+    assert!(list_response.is_ok(), "List action should succeed on readonly ViewSet");
+    let list_resp = list_response.unwrap();
+    assert_eq!(list_resp.status, StatusCode::OK, "List should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&list_resp.body)
+        .expect("List response should be valid JSON");
+    assert!(
+        json_value.is_array(),
+        "List response should be an array, but got: {:?}",
+        json_value
+    );
 
     // Retrieve should work
     let retrieve_request = Request::new(
@@ -169,8 +238,18 @@ async fn test_readonly_viewset_restrictions() {
         Bytes::new(),
     );
     let retrieve_response = viewset.dispatch(retrieve_request, Action::retrieve()).await;
-    assert!(retrieve_response.is_ok());
-    assert_eq!(retrieve_response.unwrap().status, StatusCode::OK);
+    assert!(retrieve_response.is_ok(), "Retrieve action should succeed on readonly ViewSet");
+    let retrieve_resp = retrieve_response.unwrap();
+    assert_eq!(retrieve_resp.status, StatusCode::OK, "Retrieve should return 200 OK");
+
+    // Verify JSON response structure
+    let json_value: serde_json::Value = serde_json::from_slice(&retrieve_resp.body)
+        .expect("Retrieve response should be valid JSON");
+    assert!(
+        json_value.is_object(),
+        "Retrieve response should be an object, but got: {:?}",
+        json_value
+    );
 
     // Create should fail
     let create_request = Request::new(
@@ -181,7 +260,7 @@ async fn test_readonly_viewset_restrictions() {
         Bytes::from(r#"{"name": "test"}"#),
     );
     let create_response = viewset.dispatch(create_request, Action::create()).await;
-    assert!(create_response.is_err());
+    assert!(create_response.is_err(), "Create action should fail on readonly ViewSet");
 
     // Delete should fail
     let delete_request = Request::new(
@@ -192,7 +271,7 @@ async fn test_readonly_viewset_restrictions() {
         Bytes::new(),
     );
     let delete_response = viewset.dispatch(delete_request, Action::destroy()).await;
-    assert!(delete_response.is_err());
+    assert!(delete_response.is_err(), "Destroy action should fail on readonly ViewSet");
 }
 
 /// Test custom actions

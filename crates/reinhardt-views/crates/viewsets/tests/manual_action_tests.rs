@@ -3,6 +3,7 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 use reinhardt_apps::{Request, Response};
 use reinhardt_viewsets::{action, register_action, ActionMetadata, FunctionActionHandler, ViewSet};
+use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 struct TestViewSet {
@@ -60,9 +61,15 @@ async fn test_manual_action_registration() {
 
     assert_eq!(actions.len(), 2);
 
-    let names: Vec<String> = actions.iter().map(|a| a.name.clone()).collect();
-    assert!(names.contains(&"custom_list".to_string()));
-    assert!(names.contains(&"custom_detail".to_string()));
+    // Use HashSet for order-independent comparison
+    let actual_names: HashSet<String> = actions.iter().map(|a| a.name.clone()).collect();
+    let expected_names: HashSet<String> =
+        ["custom_list", "custom_detail"].iter().map(|s| s.to_string()).collect();
+    assert_eq!(
+        actual_names, expected_names,
+        "アクション名が期待値と一致しません。期待: {:?}, 実際: {:?}",
+        expected_names, actual_names
+    );
 }
 
 /// Test action metadata properties
