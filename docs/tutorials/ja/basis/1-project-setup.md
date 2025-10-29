@@ -261,15 +261,12 @@ pub async fn index(_request: Request) -> Result<Response, Box<dyn std::error::Er
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
+use hyper::Method;
 use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    router.add_function_route("/", Method::GET, views::index);
-
-    router
+    UnifiedRouter::new()
+        .function("/", Method::GET, views::index)
 }
 ```
 
@@ -282,11 +279,8 @@ use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    // pollsアプリのルーターを含める
-    router.include_router("/polls/", polls::urls::url_patterns(), Some("polls".to_string()));
+    let router = UnifiedRouter::new()
+        .mount("/polls/", polls::urls::url_patterns());
 
     Arc::new(router)
 }

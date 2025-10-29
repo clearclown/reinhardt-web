@@ -149,16 +149,13 @@ impl UserViewSet {
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
+use std::sync::Arc;
 use crate::views::UserViewSet;
 
 pub fn url_patterns() -> UnifiedRouter {
-    let router = UnifiedRouter::builder()
-        .build();
-
     // ViewSetを登録 - CRUD エンドポイントが自動生成されます
-    router.register_viewset("users", UserViewSet::new());
-
-    router
+    UnifiedRouter::new()
+        .viewset("/users", Arc::new(UserViewSet::new()))
 }
 ```
 
@@ -171,11 +168,8 @@ use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder()
-        .build();
-
-    // usersアプリのルーターを含める
-    router.include_router("/api/", users::urls::url_patterns(), Some("users".to_string()));
+    let router = UnifiedRouter::new()
+        .mount("/api/", users::urls::url_patterns());
 
     Arc::new(router)
 }
