@@ -236,6 +236,8 @@ impl Authentication for TokenAuthentication {
                         email: format!("{}@example.com", user_id),
                         is_active: true,
                         is_admin: false,
+                        is_staff: false,
+                        is_superuser: false,
                     })));
                 }
             }
@@ -262,6 +264,8 @@ impl AuthenticationBackend for TokenAuthentication {
                 email: format!("{}@example.com", user_id),
                 is_active: true,
                 is_admin: false,
+                is_staff: false,
+                is_superuser: false,
             })))
         } else {
             Ok(None)
@@ -315,6 +319,8 @@ impl Authentication for RemoteUserAuthentication {
                     email: format!("{}@example.com", username),
                     is_active: true,
                     is_admin: false,
+                    is_staff: false,
+                    is_superuser: false,
                 })));
             }
         }
@@ -384,6 +390,8 @@ impl Authentication for SessionAuthentication {
                         email: "session@example.com".to_string(),
                         is_active: true,
                         is_admin: false,
+                        is_staff: false,
+                        is_superuser: false,
                     })));
                 }
             }

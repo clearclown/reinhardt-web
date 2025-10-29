@@ -45,6 +45,8 @@ use tokio::sync::RwLock;
 ///         email: "alice@example.com".to_string(),
 ///         is_active: true,
 ///         is_admin: false,
+///         is_staff: false,
+///         is_superuser: false,
 ///     };
 ///
 ///     assert!(checker.has_object_permission(&user, "article:123", "change").await);
@@ -96,6 +98,8 @@ pub trait ObjectPermissionChecker: Send + Sync {
 ///         email: "alice@example.com".to_string(),
 ///         is_active: true,
 ///         is_admin: false,
+///         is_staff: false,
+///         is_superuser: false,
 ///     };
 ///
 ///     assert!(manager.has_object_permission(&user, "article:123", "change").await);
@@ -271,6 +275,8 @@ impl ObjectPermissionChecker for ObjectPermissionManager {
 ///         email: "alice@example.com".to_string(),
 ///         is_active: true,
 ///         is_admin: false,
+///         is_staff: false,
+///         is_superuser: false,
 ///     };
 ///
 ///     let request = Request::new(
@@ -361,6 +367,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         assert!(
@@ -396,6 +404,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         manager
@@ -430,6 +440,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         manager
@@ -480,6 +492,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         assert!(
@@ -519,6 +533,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         let request = Request::new(
@@ -575,6 +591,8 @@ mod tests {
             email: "alice@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         let request = Request::new(

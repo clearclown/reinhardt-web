@@ -32,6 +32,8 @@ use async_trait::async_trait;
 ///             email: "admin@example.com".to_string(),
 ///             is_active: true,
 ///             is_admin: true,
+///             is_staff: true,
+///             is_superuser: true,
 ///         };
 ///         let hash = hasher.hash("admin_password").unwrap();
 ///         users.insert("admin".to_string(), (hash, user));
@@ -260,6 +262,8 @@ impl<U: User> CompositeAuthBackend<U> {
     ///             email: "alice@example.com".to_string(),
     ///             is_active: true,
     ///             is_admin: false,
+    ///             is_staff: false,
+    ///             is_superuser: false,
     ///         };
     ///         let hash = hasher.hash("password123").unwrap();
     ///         users.insert("alice".to_string(), (hash, user));
@@ -346,6 +350,8 @@ impl<U: User> CompositeAuthBackend<U> {
     ///     email: "bob@example.com".to_string(),
     ///     is_active: true,
     ///     is_admin: false,
+    ///     is_staff: false,
+    ///     is_superuser: false,
     /// });
     ///
     /// composite.add_backend(Box::new(TestAuthBackend { users }));

@@ -215,6 +215,8 @@ impl Authentication for JwtAuth {
                             email: format!("{}@example.com", claims.username),
                             is_active: true,
                             is_admin: false,
+                            is_staff: false,
+                            is_superuser: false,
                         })));
                     }
                     Err(_) => {

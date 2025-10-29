@@ -117,6 +117,8 @@ impl AuthenticationBackend for RemoteUserAuthentication {
                     email: format!("{}@example.com", username),
                     is_active: true,
                     is_admin: false,
+                    is_staff: false,
+                    is_superuser: false,
                 })))
             }
             _ => {

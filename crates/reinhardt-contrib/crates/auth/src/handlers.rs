@@ -244,6 +244,8 @@ mod tests {
             email: "test@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
         let auth_backend = Arc::new(TestAuthBackend {
             test_user: Some(test_user),

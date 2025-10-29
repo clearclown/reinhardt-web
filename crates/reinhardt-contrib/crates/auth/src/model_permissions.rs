@@ -59,6 +59,7 @@ pub struct DjangoModelPermissions {
     /// User permissions map (username -> list of permissions)
     user_permissions: PermissionMap,
     /// Method to action mapping
+    #[allow(dead_code)]
     method_actions: HashMap<String, String>,
 }
 
@@ -137,6 +138,7 @@ impl DjangoModelPermissions {
     }
 
     /// Get action from HTTP method
+    #[allow(dead_code)]
     fn get_action(&self, method: &str) -> Option<&str> {
         self.method_actions.get(method).map(|s| s.as_str())
     }

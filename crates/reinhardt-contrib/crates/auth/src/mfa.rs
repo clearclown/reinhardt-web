@@ -154,6 +154,8 @@ impl AuthenticationBackend for MFAAuthentication {
                         email: format!("{}@example.com", user),
                         is_active: true,
                         is_admin: false,
+                        is_staff: false,
+                        is_superuser: false,
                     })))
                 } else {
                     Err(AuthenticationError::InvalidCredentials)
@@ -173,6 +175,8 @@ impl AuthenticationBackend for MFAAuthentication {
                 email: format!("{}@example.com", user_id),
                 is_active: true,
                 is_admin: false,
+                is_staff: false,
+                is_superuser: false,
             })))
         } else {
             Ok(None)

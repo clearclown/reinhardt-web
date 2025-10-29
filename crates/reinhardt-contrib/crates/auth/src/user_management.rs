@@ -222,6 +222,8 @@ impl<H: PasswordHasher> UserManager<H> {
             email: data.email,
             is_active: data.is_active,
             is_admin: data.is_admin,
+            is_staff: false,
+            is_superuser: false,
         };
 
         // Store user

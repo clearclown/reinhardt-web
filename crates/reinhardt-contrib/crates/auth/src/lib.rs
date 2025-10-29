@@ -400,6 +400,8 @@ mod tests {
             email: "test@example.com".to_string(),
             is_active: true,
             is_admin: false,
+            is_staff: false,
+            is_superuser: false,
         };
 
         assert!(!user.id().is_empty());
