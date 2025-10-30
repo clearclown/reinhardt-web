@@ -11,6 +11,7 @@ default = ["serializers", "parsers", "renderers"]
 serializers = ["reinhardt-orm"]
 parsers = []
 renderers = []
+jwt = ["rest-core/jwt"]
 
 [dependencies]
 # Core dependencies

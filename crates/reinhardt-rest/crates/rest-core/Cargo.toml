@@ -6,6 +6,10 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = []
+jwt = ["reinhardt-auth/jwt"]
+
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }
