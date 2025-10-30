@@ -11,7 +11,7 @@ use sqlx::{Pool, Sqlite, SqlitePool};
 
 #[cfg(feature = "database")]
 use argon2::{
-    password_hash::{PasswordHasher, SaltString, rand_core::{OsRng, CryptoRng}},
+    password_hash::{PasswordHasher, SaltString},
     Argon2,
 };
 
@@ -108,9 +108,8 @@ async fn create_user_in_database(
 
     // Hash the password if provided
     let password_hash = if let Some(pwd) = password {
-        use rand_core::RngCore;
-        let mut salt_bytes = [0u8; 16];
-        OsRng.fill_bytes(&mut salt_bytes);
+        use rand::Rng;
+        let salt_bytes: [u8; 16] = rand::rng().random();
         let salt = SaltString::encode_b64(&salt_bytes).map_err(|e| format!("Failed to encode salt: {}", e))?;
         let argon2 = Argon2::default();
         let hash = argon2
