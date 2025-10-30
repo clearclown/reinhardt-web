@@ -288,6 +288,7 @@ members = [
   "crates/reinhardt-contrib/crates/i18n",
   "crates/reinhardt-contrib/crates/admin",
   "crates/reinhardt-commands",
+  "crates/reinhardt-admin", # CLI tool
   "crates/reinhardt-db",
   "crates/reinhardt-db/crates/orm",
   "crates/reinhardt-db/crates/migrations",
@@ -396,7 +397,8 @@ reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0" }
 reinhardt-graphql-macros = { path = "crates/reinhardt-graphql-macros", version = "0.1.0" }
 reinhardt-i18n = { path = "crates/reinhardt-contrib/crates/i18n", version = "0.1.0" }
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0" }
-reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0" }
+reinhardt-admin = { path = "crates/reinhardt-contrib/crates/admin", version = "0.1.0" }
+reinhardt-admin-cli = { path = "crates/reinhardt-admin", version = "0.1.0" }
 reinhardt-db = { path = "crates/reinhardt-db", version = "0.1.0" }
 reinhardt-pool = { path = "crates/reinhardt-db/crates/pool", version = "0.1.0" }
 reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0" }

@@ -1,5 +1,5 @@
 [package]
-name = "reinhardt-admin"
+name = "reinhardt-admin-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

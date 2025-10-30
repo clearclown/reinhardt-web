@@ -7,7 +7,7 @@ publish = false
 
 [dependencies]
 # Reinhardt crates
-reinhardt-admin = { path = "../crates/reinhardt-contrib/crates/admin", version = "0.1.0" }
+reinhardt-admin = { workspace = true }
 reinhardt-apps = { workspace = true }
 reinhardt-auth = { workspace = true }
 reinhardt-browsable-api = { workspace = true }
