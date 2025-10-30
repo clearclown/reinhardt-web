@@ -137,7 +137,7 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
         .collect();
 
     serde_urlencoded::from_str(&serde_urlencoded::to_string(&params).unwrap())
-        .map_err(|e| Error::BadRequest(format!("Failed to parse query parameters: {}", e)))
+        .map_err(|e| Error::Http(format!("Failed to parse query parameters: {}", e)))
 }
 
 /// Validate Content-Type header
@@ -220,12 +220,12 @@ pub fn validate_content_type(request: &Request, expected: &str) -> Result<()> {
         .headers
         .get(hyper::header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
-        .ok_or_else(|| Error::BadRequest("Missing Content-Type header".to_string()))?;
+        .ok_or_else(|| Error::Http("Missing Content-Type header".to_string()))?;
 
     if content_type.starts_with(expected) {
         Ok(())
     } else {
-        Err(Error::BadRequest(format!(
+        Err(Error::Http(format!(
             "Invalid Content-Type: expected '{}', got '{}'",
             expected, content_type
         )))
