@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-rest"
 version.workspace = true
+description = "REST API framework aggregator for Reinhardt"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

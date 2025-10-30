@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-logging"
 version.workspace = true
+description = "Logging utilities and handlers"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-tasks"
 version.workspace = true
+description = "Background task execution and scheduling"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

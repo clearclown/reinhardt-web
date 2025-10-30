@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-db-backends"
 version.workspace = true
+description = "Database backend implementations (PostgreSQL, MySQL, SQLite)"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

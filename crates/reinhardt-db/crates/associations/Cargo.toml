@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-associations"
 version.workspace = true
+description = "Database relationship and association management"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

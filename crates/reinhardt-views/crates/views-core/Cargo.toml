@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-views-core"
 version.workspace = true
+description = "Core view functionality and base classes"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

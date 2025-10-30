@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-openapi"
 version.workspace = true
+description = "OpenAPI 3.0 schema generation and documentation"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

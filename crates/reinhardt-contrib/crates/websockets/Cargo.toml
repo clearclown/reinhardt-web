@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-websockets"
 version.workspace = true
+description = "WebSocket support for real-time bidirectional communication"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

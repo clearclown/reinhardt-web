@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-grpc"
 version.workspace = true
+description = "gRPC support for building RPC services"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

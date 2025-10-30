@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-rest-core"
 version.workspace = true
+description = "Core REST API functionality and base classes for Reinhardt"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

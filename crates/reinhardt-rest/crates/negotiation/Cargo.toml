@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-negotiation"
 version.workspace = true
+description = "Content negotiation for REST API responses"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

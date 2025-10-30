@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-graphql"
 version.workspace = true
+description = "GraphQL API support for Reinhardt"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

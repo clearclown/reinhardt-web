@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-storage"
 version.workspace = true
+description = "File storage abstraction with multiple backends"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

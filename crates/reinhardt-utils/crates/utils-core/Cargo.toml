@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-utils-core"
 version.workspace = true
+description = "Core utility functions and helpers"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

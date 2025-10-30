@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-utils"
 version.workspace = true
+description = "Utility functions aggregator for Reinhardt"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

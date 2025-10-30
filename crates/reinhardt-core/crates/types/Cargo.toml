@@ -3,6 +3,7 @@ name = "reinhardt-types"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Core type definitions and common types for the Reinhardt framework"
 repository.workspace = true
 
 [dependencies]

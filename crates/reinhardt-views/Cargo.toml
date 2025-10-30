@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-views"
 version.workspace = true
+description = "View layer aggregator for viewsets and views-core"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

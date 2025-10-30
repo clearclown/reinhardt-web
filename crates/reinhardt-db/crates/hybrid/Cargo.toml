@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-hybrid"
 version.workspace = true
+description = "Hybrid database operations combining sync and async patterns"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

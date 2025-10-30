@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-serializers"
 version.workspace = true
+description = "Data serialization and deserialization for REST APIs"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-proxy"
 version.workspace = true
+description = "HTTP proxy and reverse proxy utilities"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

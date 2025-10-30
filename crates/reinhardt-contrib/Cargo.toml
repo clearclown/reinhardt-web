@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-contrib"
 version.workspace = true
+description = "Django-style contrib applications aggregator"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-db-backends-pool"
 version.workspace = true
+description = "Database connection pooling for various backends"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

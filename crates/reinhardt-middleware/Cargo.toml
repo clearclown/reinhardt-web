@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-middleware"
 version.workspace = true
+description = "Middleware system for request/response processing pipeline"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

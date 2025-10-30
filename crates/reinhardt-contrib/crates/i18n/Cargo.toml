@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-i18n"
 version.workspace = true
+description = "Internationalization and localization support"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-browsable-api"
 version.workspace = true
+description = "HTML interface for browsing and interacting with REST APIs"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-routers"
 version.workspace = true
+description = "URL routing and pattern matching"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

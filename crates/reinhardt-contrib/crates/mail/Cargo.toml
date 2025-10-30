@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-mail"
 version.workspace = true
+description = "Email sending functionality with multiple backends"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

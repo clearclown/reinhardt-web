@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-auth"
 version.workspace = true
+description = "Authentication and authorization system"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

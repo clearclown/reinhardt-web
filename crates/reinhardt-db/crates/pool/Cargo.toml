@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-pool"
 version.workspace = true
+description = "Generic database connection pool interface"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

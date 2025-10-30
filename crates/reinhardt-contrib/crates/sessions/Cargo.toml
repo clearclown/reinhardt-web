@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-sessions"
 version = "0.1.0"
+description = "Session management with various storage backends"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

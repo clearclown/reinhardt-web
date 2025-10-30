@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-orm"
 version.workspace = true
+description = "Object-Relational Mapping (ORM) layer for database operations"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

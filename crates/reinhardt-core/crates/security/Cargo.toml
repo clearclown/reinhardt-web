@@ -3,6 +3,7 @@ name = "reinhardt-security"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Security utilities including password hashing, CSRF protection, and XSS prevention"
 repository.workspace = true
 authors.workspace = true
 

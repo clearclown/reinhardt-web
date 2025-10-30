@@ -1,6 +1,7 @@
 [package]
 name = "reinhardt-cache"
 version.workspace = true
+description = "Caching layer with multiple backend support"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

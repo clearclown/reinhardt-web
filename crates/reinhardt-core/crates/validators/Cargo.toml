@@ -3,6 +3,7 @@ name = "reinhardt-validators"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Data validation utilities with built-in validators for common use cases"
 repository.workspace = true
 
 [dependencies]
