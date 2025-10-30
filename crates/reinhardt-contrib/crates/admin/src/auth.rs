@@ -250,7 +250,7 @@ impl AdminAuthMiddleware {
     }
 
     /// Verify user for admin access
-    pub async fn verify_admin_user(&self, user: &dyn Any) -> AdminResult<&SimpleUser> {
+    pub async fn verify_admin_user<'a>(&self, user: &'a dyn Any) -> AdminResult<&'a SimpleUser> {
         let user = AdminAuthBackend::extract_user(user).ok_or_else(|| {
             AdminError::PermissionDenied("Invalid user type".to_string())
         })?;

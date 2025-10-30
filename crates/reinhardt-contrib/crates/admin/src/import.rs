@@ -123,7 +123,7 @@ impl ImportConfig {
     }
 
     /// Map import field to model field
-    pub fn map_field<'a>(&self, import_field: &'a str) -> &'a str {
+    pub fn map_field<'a>(&'a self, import_field: &'a str) -> &'a str {
         self.field_mappings
             .get(import_field)
             .map(|s| s.as_str())

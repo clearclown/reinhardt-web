@@ -13,7 +13,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 
 /// Type of action performed on a model
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum AuditAction {
     /// Create action
     Create,
