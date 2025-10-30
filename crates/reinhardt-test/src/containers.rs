@@ -3,8 +3,8 @@
 //! Provides automatic Docker container management for testing with real databases.
 //! Containers are automatically started and cleaned up during tests.
 
-use std::sync::Arc;
-use testcontainers::{Container, Image, RunnableImage};
+use testcontainers::{Container, ImageExt};
+use testcontainers::runners::SyncRunner;
 use testcontainers_modules::mysql::Mysql;
 use testcontainers_modules::postgres::Postgres;
 use testcontainers_modules::redis::Redis as RedisImage;
@@ -23,8 +23,8 @@ pub trait TestDatabase: Send + Sync {
 }
 
 /// PostgreSQL test container
-pub struct PostgresContainer<'a> {
-    container: Container<'a, Postgres>,
+pub struct PostgresContainer {
+    container: Container<Postgres>,
     host: String,
     port: u16,
     database: String,
@@ -32,14 +32,13 @@ pub struct PostgresContainer<'a> {
     password: String,
 }
 
-impl<'a> PostgresContainer<'a> {
+impl PostgresContainer {
     /// Create a new PostgreSQL container with default settings
-    pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
-        Self::with_credentials(docker, "postgres", "postgres", "test")
+    pub fn new() -> Self {
+        Self::with_credentials("postgres", "postgres", "test")
     }
     /// Create a PostgreSQL container with custom credentials
     pub fn with_credentials(
-        docker: &'a testcontainers::clients::Cli,
         username: &str,
         password: &str,
         database: &str,
@@ -49,8 +48,8 @@ impl<'a> PostgresContainer<'a> {
             .with_env_var("POSTGRES_PASSWORD", password)
             .with_env_var("POSTGRES_DB", database);
 
-        let container = docker.run(image);
-        let port = container.get_host_port_ipv4(5432);
+        let container = image.start().expect("Failed to start PostgreSQL container");
+        let port = container.get_host_port_ipv4(5432).unwrap();
 
         Self {
             container,
@@ -68,7 +67,7 @@ impl<'a> PostgresContainer<'a> {
 }
 
 #[async_trait::async_trait]
-impl<'a> TestDatabase for PostgresContainer<'a> {
+impl TestDatabase for PostgresContainer {
     fn connection_url(&self) -> String {
         format!(
             "postgres://{}:{}@{}:{}/{}",
@@ -91,8 +90,8 @@ impl<'a> TestDatabase for PostgresContainer<'a> {
 }
 
 /// MySQL test container
-pub struct MySqlContainer<'a> {
-    container: Container<'a, Mysql>,
+pub struct MySqlContainer {
+    container: Container<Mysql>,
     host: String,
     port: u16,
     database: String,
@@ -100,14 +99,13 @@ pub struct MySqlContainer<'a> {
     password: String,
 }
 
-impl<'a> MySqlContainer<'a> {
+impl MySqlContainer {
     /// Create a new MySQL container with default settings
-    pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
-        Self::with_credentials(docker, "root", "test", "test")
+    pub fn new() -> Self {
+        Self::with_credentials("root", "test", "test")
     }
     /// Create a MySQL container with custom credentials
     pub fn with_credentials(
-        docker: &'a testcontainers::clients::Cli,
         username: &str,
         password: &str,
         database: &str,
@@ -116,8 +114,8 @@ impl<'a> MySqlContainer<'a> {
             .with_env_var("MYSQL_ROOT_PASSWORD", password)
             .with_env_var("MYSQL_DATABASE", database);
 
-        let container = docker.run(image);
-        let port = container.get_host_port_ipv4(3306);
+        let container = image.start().expect("Failed to start MySQL container");
+        let port = container.get_host_port_ipv4(3306).unwrap();
 
         Self {
             container,
@@ -135,7 +133,7 @@ impl<'a> MySqlContainer<'a> {
 }
 
 #[async_trait::async_trait]
-impl<'a> TestDatabase for MySqlContainer<'a> {
+impl TestDatabase for MySqlContainer {
     fn connection_url(&self) -> String {
         format!(
             "mysql://{}:{}@{}:{}/{}",
@@ -158,18 +156,18 @@ impl<'a> TestDatabase for MySqlContainer<'a> {
 }
 
 /// Redis test container
-pub struct RedisContainer<'a> {
-    container: Container<'a, RedisImage>,
+pub struct RedisContainer {
+    container: Container<RedisImage>,
     host: String,
     port: u16,
 }
 
-impl<'a> RedisContainer<'a> {
+impl RedisContainer {
     /// Create a new Redis container
-    pub fn new(docker: &'a testcontainers::clients::Cli) -> Self {
+    pub fn new() -> Self {
         let image = RedisImage::default();
-        let container = docker.run(image);
-        let port = container.get_host_port_ipv4(6379);
+        let container = image.start().expect("Failed to start Redis container");
+        let port = container.get_host_port_ipv4(6379).unwrap();
 
         Self {
             container,
@@ -207,8 +205,7 @@ where
     F: FnOnce(PostgresContainer) -> Fut,
     Fut: std::future::Future<Output = Result<(), Box<dyn std::error::Error>>>,
 {
-    let docker = testcontainers::clients::Cli::default();
-    let container = PostgresContainer::new(&docker);
+    let container = PostgresContainer::new();
     container.wait_ready().await?;
     f(container).await
 }
@@ -218,8 +215,7 @@ where
     F: FnOnce(MySqlContainer) -> Fut,
     Fut: std::future::Future<Output = Result<(), Box<dyn std::error::Error>>>,
 {
-    let docker = testcontainers::clients::Cli::default();
-    let container = MySqlContainer::new(&docker);
+    let container = MySqlContainer::new();
     container.wait_ready().await?;
     f(container).await
 }
@@ -229,8 +225,7 @@ where
     F: FnOnce(RedisContainer) -> Fut,
     Fut: std::future::Future<Output = Result<(), Box<dyn std::error::Error>>>,
 {
-    let docker = testcontainers::clients::Cli::default();
-    let container = RedisContainer::new(&docker);
+    let container = RedisContainer::new();
     f(container).await
 }
 
