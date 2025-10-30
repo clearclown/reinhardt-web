@@ -140,8 +140,13 @@ pub use reinhardt_apps::{Error, Handler, Middleware, MiddlewareChain, Request, R
 
 // Re-export ORM
 pub use reinhardt_orm::{
-    DatabaseBackend, DatabaseConnection, Model, SoftDeletable, SoftDelete, Timestamped, Timestamps,
+    DatabaseBackend, DatabaseConnection, Model, QuerySet, SoftDeletable, SoftDelete, Timestamped,
+    Timestamps,
 };
+
+// Re-export database pool
+#[cfg(feature = "database")]
+pub use reinhardt_pool::{ConnectionPool, PoolConfig, PoolError};
 
 // Re-export serializers
 pub use reinhardt_serializers::{Deserializer, JsonSerializer, Serializer};
@@ -167,22 +172,39 @@ pub use reinhardt_auth::{
 // Re-export middleware
 pub use reinhardt_middleware::{AuthenticationMiddleware, CorsMiddleware, LoggingMiddleware};
 
+// Re-export HTTP types (additional commonly used types)
+pub use reinhardt_http::{Extensions, StatusCode};
+
 // Re-export pagination
+#[cfg(any(feature = "standard", feature = "reinhardt-pagination"))]
 pub use reinhardt_pagination::{
     CursorPagination, LimitOffsetPagination, PageNumberPagination, PaginatedResponse, Paginator,
 };
 
 // Re-export filters
+#[cfg(any(feature = "standard", feature = "reinhardt-filters"))]
 pub use reinhardt_filters::{
     FieldOrderingExt, FilterBackend, FilterError, FilterResult, MultiTermSearch,
 };
 
 // Re-export throttling
+#[cfg(any(feature = "standard", feature = "reinhardt-throttling"))]
 pub use reinhardt_throttling::{AnonRateThrottle, ScopedRateThrottle, Throttle, UserRateThrottle};
 
 // Re-export signals
+#[cfg(any(feature = "standard", feature = "reinhardt-signals"))]
 pub use reinhardt_signals::{
     m2m_changed, post_delete, post_save, pre_delete, pre_save, M2MAction, M2MChangeEvent, Signal,
+};
+
+// Re-export core utilities
+#[cfg(feature = "core")]
+pub use reinhardt_types::{ErrorKind, JsonValue};
+
+#[cfg(feature = "core")]
+pub use reinhardt_validators::{
+    CreditCardValidator, EmailValidator, IBANValidator, IPAddressValidator, PhoneNumberValidator,
+    URLValidator, Validator,
 };
 
 // Re-export views
@@ -191,15 +213,18 @@ pub use reinhardt_views::{
 };
 
 // Re-export parsers
+#[cfg(any(feature = "standard", feature = "reinhardt-parsers"))]
 pub use reinhardt_parsers::{
     FileUploadParser, FormParser, JSONParser, MediaType, MultiPartParser, ParseError, ParseResult,
     Parser,
 };
 
 // Re-export renderers
+#[cfg(any(feature = "standard", feature = "reinhardt-renderers"))]
 pub use reinhardt_renderers::{BrowsableAPIRenderer, JSONRenderer, XMLRenderer};
 
 // Re-export versioning
+#[cfg(any(feature = "standard", feature = "reinhardt-versioning"))]
 pub use reinhardt_versioning::{
     AcceptHeaderVersioning, BaseVersioning, HostNameVersioning, NamespaceVersioning,
     QueryParameterVersioning, RequestVersionExt, URLPathVersioning, VersioningError,
@@ -207,16 +232,28 @@ pub use reinhardt_versioning::{
 };
 
 // Re-export metadata
+#[cfg(any(feature = "standard", feature = "reinhardt-metadata"))]
 pub use reinhardt_metadata::{
     ActionMetadata, BaseMetadata, ChoiceInfo, FieldInfo, FieldInfoBuilder, FieldType,
     MetadataOptions, MetadataResponse, SimpleMetadata,
 };
 
 // Re-export negotiation
+#[cfg(any(feature = "standard", feature = "reinhardt-negotiation"))]
 pub use reinhardt_negotiation::*;
 
 // Re-export REST integration
+#[cfg(feature = "rest")]
 pub use reinhardt_rest::*;
+
+// Re-export shortcuts (Django-style convenience functions)
+#[cfg(feature = "shortcuts")]
+pub use reinhardt_shortcuts::{
+    get_list_or_404, get_object_or_404, redirect, render, render_json, render_template,
+};
+
+// Re-export URL utilities
+pub use reinhardt_urls::{include, path, reverse, resolve};
 
 // Re-export database related (database feature)
 #[cfg(feature = "database")]
@@ -252,6 +289,36 @@ pub use reinhardt_sessions::{HttpSessionConfig, SameSite, SessionMiddleware};
 // Re-export contrib modules (contrib feature)
 // Note: reinhardt_contrib exports individual modules (auth, sessions, etc.)
 // rather than a single "contrib" module
+
+// Re-export forms (forms feature)
+#[cfg(feature = "forms")]
+pub use reinhardt_forms::{
+    BoundField, CharField, EmailField, FileField, Form, FormError, FormResult, IntegerField,
+    ModelForm, ValidationError,
+};
+
+// Re-export DI and parameters (FastAPI-style parameter extraction)
+#[cfg(feature = "di")]
+pub use reinhardt_di::{Depends, DIContext, DIError, DIResult};
+
+#[cfg(feature = "minimal")]
+pub use reinhardt_params::{Body, Cookie, Header, Json, Path, Query};
+
+// Re-export templates
+#[cfg(feature = "templates")]
+pub use reinhardt_templates::{Template, TemplateError};
+
+// Re-export tasks
+#[cfg(feature = "tasks")]
+pub use reinhardt_tasks::{Scheduler, Task, TaskExecutor, TaskQueue};
+
+// Re-export test utilities
+#[cfg(feature = "test")]
+pub use reinhardt_test::{APIClient, APIRequestFactory, APITestCase, TestResponse};
+
+// Re-export storage
+#[cfg(feature = "storage")]
+pub use reinhardt_storage::{FileSystemStorage, Storage, StorageError};
 
 // Re-export common external dependencies
 pub use async_trait::async_trait;
@@ -382,6 +449,43 @@ pub mod prelude {
     // Sessions (if enabled)
     #[cfg(feature = "sessions")]
     pub use crate::{InMemorySessionBackend, Session};
+
+    // Forms (if enabled)
+    #[cfg(feature = "forms")]
+    pub use crate::{CharField, EmailField, Form, ModelForm};
+
+    // Shortcuts (if enabled)
+    #[cfg(feature = "shortcuts")]
+    pub use crate::{get_list_or_404, get_object_or_404, redirect, render};
+
+    // DI/Params (if enabled)
+    #[cfg(feature = "minimal")]
+    pub use crate::{Body, Cookie, Header, Json, Path, Query};
+
+    #[cfg(feature = "di")]
+    pub use crate::Depends;
+
+    // Templates (if enabled)
+    #[cfg(feature = "templates")]
+    pub use crate::Template;
+
+    // Tasks (if enabled)
+    #[cfg(feature = "tasks")]
+    pub use crate::{Scheduler, Task, TaskQueue};
+
+    // URL utilities
+    pub use crate::{include, path, reverse};
+
+    // HTTP utilities
+    pub use crate::{Extensions, StatusCode};
+
+    // Core utilities
+    #[cfg(feature = "core")]
+    pub use crate::{EmailValidator, IPAddressValidator, Validator};
+
+    // Test utilities (if enabled)
+    #[cfg(feature = "test")]
+    pub use crate::{APIClient, TestResponse};
 
     pub use std::sync::Arc;
 }
