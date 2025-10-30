@@ -320,7 +320,8 @@ where
                     operator: FilterOperator::Eq,
                     value: filter_value,
                 })
-                .all();
+                .all()
+                .await?;
 
             return results.into_iter().next().ok_or_else(|| {
                 Error::NotFound(format!("Object with pk='{}' not found", pk_value))
@@ -336,7 +337,8 @@ where
                     operator: FilterOperator::Eq,
                     value: FilterValue::String(slug_value.clone()),
                 })
-                .all();
+                .all()
+                .await?;
 
             return results.into_iter().next().ok_or_else(|| {
                 Error::NotFound(format!("Object with slug='{}' not found", slug_value))
