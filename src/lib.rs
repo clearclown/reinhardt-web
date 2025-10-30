@@ -146,7 +146,7 @@ pub use reinhardt_orm::{
 
 // Re-export database pool
 #[cfg(feature = "database")]
-pub use reinhardt_pool::{ConnectionPool, PoolConfig, PoolError};
+pub use reinhardt_db::pool::{ConnectionPool, PoolConfig, PoolError};
 
 // Re-export serializers
 pub use reinhardt_serializers::{Deserializer, JsonSerializer, Serializer};
@@ -170,10 +170,14 @@ pub use reinhardt_auth::{
 };
 
 // Re-export middleware
-pub use reinhardt_middleware::{AuthenticationMiddleware, CorsMiddleware, LoggingMiddleware};
+pub use reinhardt_middleware::{CorsMiddleware, LoggingMiddleware};
+#[cfg(feature = "sessions")]
+pub use reinhardt_middleware::AuthenticationMiddleware;
 
 // Re-export HTTP types (additional commonly used types)
-pub use reinhardt_http::{Extensions, StatusCode};
+pub use reinhardt_http::Extensions;
+// Re-export StatusCode from hyper (already used in reinhardt_http)
+pub use hyper::StatusCode;
 
 // Re-export pagination
 #[cfg(any(feature = "standard", feature = "reinhardt-pagination"))]
@@ -198,13 +202,13 @@ pub use reinhardt_signals::{
 };
 
 // Re-export core utilities
-#[cfg(feature = "core")]
-pub use reinhardt_types::{ErrorKind, JsonValue};
+// Note: reinhardt_types provides Handler, Middleware, etc. which are already re-exported via reinhardt_apps
 
+// Re-export validators
 #[cfg(feature = "core")]
-pub use reinhardt_validators::{
+pub use reinhardt_core::validators::{
     CreditCardValidator, EmailValidator, IBANValidator, IPAddressValidator, PhoneNumberValidator,
-    URLValidator, Validator,
+    UrlValidator, Validator, ValidationError as ValidatorError, ValidationResult,
 };
 
 // Re-export views
@@ -253,7 +257,10 @@ pub use reinhardt_shortcuts::{
 };
 
 // Re-export URL utilities
-pub use reinhardt_urls::{include, path, reverse, resolve};
+pub use reinhardt_routers::{
+    include_routes as include, path, re_path, reverse, UrlPattern, UrlPatternWithParams,
+    UrlReverser,
+};
 
 // Re-export database related (database feature)
 #[cfg(feature = "database")]
@@ -293,20 +300,20 @@ pub use reinhardt_sessions::{HttpSessionConfig, SameSite, SessionMiddleware};
 // Re-export forms (forms feature)
 #[cfg(feature = "forms")]
 pub use reinhardt_forms::{
-    BoundField, CharField, EmailField, FileField, Form, FormError, FormResult, IntegerField,
-    ModelForm, ValidationError,
+    BoundField, CharField, EmailField, FieldError, FileField, Form, FormError, FormResult,
+    IntegerField, ModelForm,
 };
 
 // Re-export DI and parameters (FastAPI-style parameter extraction)
 #[cfg(feature = "di")]
-pub use reinhardt_di::{Depends, DIContext, DIError, DIResult};
+pub use reinhardt_di::{Depends, DiError, DiResult, InjectionContext, RequestContext};
 
 #[cfg(feature = "minimal")]
 pub use reinhardt_params::{Body, Cookie, Header, Json, Path, Query};
 
 // Re-export templates
 #[cfg(feature = "templates")]
-pub use reinhardt_templates::{Template, TemplateError};
+pub use reinhardt_template::{Template, TemplateError};
 
 // Re-export tasks
 #[cfg(feature = "tasks")]
@@ -318,7 +325,7 @@ pub use reinhardt_test::{APIClient, APIRequestFactory, APITestCase, TestResponse
 
 // Re-export storage
 #[cfg(feature = "storage")]
-pub use reinhardt_storage::{FileSystemStorage, Storage, StorageError};
+pub use reinhardt_storage::{InMemoryStorage, LocalStorage, Storage};
 
 // Re-export common external dependencies
 pub use async_trait::async_trait;
@@ -351,7 +358,6 @@ pub mod prelude {
         Apps,
         AuthBackend,
         // Middleware
-        AuthenticationMiddleware,
         BrowsableAPIRenderer,
 
         CorsMiddleware,
@@ -418,6 +424,7 @@ pub mod prelude {
 
         // Signals
         Signal,
+        StatusCode,
         // Metadata
         SimpleMetadata,
         SimpleUser,
@@ -448,11 +455,11 @@ pub mod prelude {
 
     // Sessions (if enabled)
     #[cfg(feature = "sessions")]
-    pub use crate::{InMemorySessionBackend, Session};
+    pub use crate::{AuthenticationMiddleware, InMemorySessionBackend, Session};
 
     // Forms (if enabled)
     #[cfg(feature = "forms")]
-    pub use crate::{CharField, EmailField, Form, ModelForm};
+    pub use crate::{CharField, EmailField, FieldError, Form, FormError, ModelForm};
 
     // Shortcuts (if enabled)
     #[cfg(feature = "shortcuts")]
@@ -463,25 +470,36 @@ pub mod prelude {
     pub use crate::{Body, Cookie, Header, Json, Path, Query};
 
     #[cfg(feature = "di")]
-    pub use crate::Depends;
+    pub use crate::{Depends, DiError, DiResult, InjectionContext, RequestContext};
 
     // Templates (if enabled)
     #[cfg(feature = "templates")]
-    pub use crate::Template;
+    pub use crate::{Template, TemplateError};
 
     // Tasks (if enabled)
     #[cfg(feature = "tasks")]
     pub use crate::{Scheduler, Task, TaskQueue};
 
     // URL utilities
-    pub use crate::{include, path, reverse};
+    pub use crate::{include, path, re_path, reverse, UrlPattern, UrlPatternWithParams, UrlReverser};
 
     // HTTP utilities
-    pub use crate::{Extensions, StatusCode};
+    pub use crate::Extensions;
 
-    // Core utilities
+    // Storage (if enabled)
+    #[cfg(feature = "storage")]
+    pub use crate::{InMemoryStorage, LocalStorage, Storage};
+
+    // Database pool (if enabled)
+    #[cfg(feature = "database")]
+    pub use crate::{ConnectionPool, PoolConfig, PoolError};
+
+    // Core utilities (if enabled)
     #[cfg(feature = "core")]
-    pub use crate::{EmailValidator, IPAddressValidator, Validator};
+    pub use crate::{
+        CreditCardValidator, EmailValidator, IBANValidator, IPAddressValidator,
+        PhoneNumberValidator, UrlValidator, ValidationResult, Validator, ValidatorError,
+    };
 
     // Test utilities (if enabled)
     #[cfg(feature = "test")]
