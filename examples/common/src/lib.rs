@@ -1,5 +1,4 @@
-//! Examples テスト用の共通ユーティリティ
-
+//! Examples Common Utilities for Testing
 pub mod availability;
 pub mod build_check;
 pub mod manage_cli;

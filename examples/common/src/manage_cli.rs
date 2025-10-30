@@ -1,6 +1,6 @@
-//! 共通のmanage CLI実装
+//! Common manage CLI implementation
 //!
-//! examples間で共有されるmanage.rsのロジックを提供します。
+//! Provides the logic in manage.rs shared among examples.
 
 #[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
 pub use available::*;

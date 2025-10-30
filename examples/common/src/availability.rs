@@ -1,23 +1,23 @@
-//! crates.io 可用性チェックユーティリティ
+//! crates.io availability check utilities
 
 use std::sync::OnceLock;
 
 static REINHARDT_AVAILABLE: OnceLock<bool> = OnceLock::new();
 
-/// crates.io から reinhardt が取得可能かチェック
+/// Check if reinhardt is available from crates.io
 pub fn is_reinhardt_available() -> bool {
     *REINHARDT_AVAILABLE.get_or_init(|| check_reinhardt_availability())
 }
 
 fn check_reinhardt_availability() -> bool {
-    // 1. Cargo.lock の存在確認
+    // 1. Check Cargo.lock existence
     let cargo_lock_exists = std::path::Path::new("../Cargo.lock").exists();
     if !cargo_lock_exists {
         eprintln!("⚠️  Cargo.lock not found - dependency resolution may have failed");
         return false;
     }
 
-    // 2. cargo tree で reinhardt の存在を確認
+    // 2. Verify reinhardt existence with cargo tree
     use std::process::Command;
 
     let output = Command::new("cargo")
@@ -53,7 +53,7 @@ fn check_reinhardt_availability() -> bool {
     }
 }
 
-/// テスト前の可用性チェック（1回のみ実行）
+/// Availability check before tests (executed only once)
 pub fn ensure_reinhardt_available() -> Result<(), String> {
     if is_reinhardt_available() {
         Ok(())

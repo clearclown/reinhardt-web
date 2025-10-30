@@ -1,15 +1,15 @@
-//! バージョン検証ユーティリティ
+//! Version verification utilities
 
 use semver::{Version, VersionReq};
 use std::sync::OnceLock;
 
 static REINHARDT_VERSION: OnceLock<Option<String>> = OnceLock::new();
 
-/// reinhardt のバージョンを取得
+/// Get reinhardt version
 pub fn get_reinhardt_version() -> &'static str {
     REINHARDT_VERSION
         .get_or_init(|| {
-            // 複数の方法でバージョンを取得
+            // Get version through multiple methods
             get_version_from_cargo_metadata().or_else(|| get_version_from_cargo_lock())
         })
         .as_ref()
@@ -17,14 +17,14 @@ pub fn get_reinhardt_version() -> &'static str {
         .unwrap_or("unknown")
 }
 
-/// Cargo バージョン指定子でバージョンをチェック
+/// Check version with Cargo version specifier
 ///
-/// Cargo.toml と同じ構文をサポート:
-/// - "0.1.0" - 正確なバージョン
-/// - "^0.1" - キャレット要件 (0.1.x)
-/// - "~0.1.2" - チルダ要件 (0.1.2 <= version < 0.2.0)
-/// - ">=0.1, <0.2" - 範囲指定
-/// - "*" - ワイルドカード (最新)
+/// Supports the same syntax as Cargo.toml:
+/// - "0.1.0" - Exact version
+/// - "^0.1" - Caret requirement (0.1.x)
+/// - "~0.1.2" - Tilde requirement (0.1.2 <= version < 0.2.0)
+/// - ">=0.1, <0.2" - Range specification
+/// - "*" - Wildcard (latest)
 pub fn check_version(version_spec: &str) -> bool {
     let actual_version = get_reinhardt_version();
 
@@ -33,12 +33,12 @@ pub fn check_version(version_spec: &str) -> bool {
         return false;
     }
 
-    // "*" は最新版（常に true）
+    // "*" means latest version (always true)
     if version_spec == "*" {
         return true;
     }
 
-    // セマンティックバージョニングでチェック
+    // Check with semantic versioning
     match (Version::parse(actual_version), VersionReq::parse(version_spec)) {
         (Ok(version), Ok(req)) => {
             let matches = req.matches(&version);
@@ -67,7 +67,7 @@ pub fn check_version(version_spec: &str) -> bool {
     }
 }
 
-/// cargo metadata から reinhardt のバージョンを取得
+/// Get reinhardt version from cargo metadata
 fn get_version_from_cargo_metadata() -> Option<String> {
     use std::process::Command;
 
@@ -92,13 +92,13 @@ fn get_version_from_cargo_metadata() -> Option<String> {
     None
 }
 
-/// Cargo.lock から reinhardt のバージョンを取得
+/// Get reinhardt version from Cargo.lock
 fn get_version_from_cargo_lock() -> Option<String> {
     use std::fs;
 
     let cargo_lock = fs::read_to_string("../Cargo.lock").ok()?;
 
-    // TOML パースを避けて単純な文字列検索
+    // Simple string search to avoid TOML parsing
     let mut found_reinhardt = false;
     for line in cargo_lock.lines() {
         if line.trim() == "name = \"reinhardt\"" {
@@ -112,7 +112,7 @@ fn get_version_from_cargo_lock() -> Option<String> {
                     return Some(version.to_string());
                 }
             }
-            // name の後に version がなければ次の name まで探索
+            // If no version after name, search until next name
             if line.trim().starts_with("name = ") {
                 found_reinhardt = false;
             }
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_version_spec_parsing() {
-        // バージョン指定子のパースが正しく動作するか確認
+        // Verify version specifier parsing works correctly
         let specs = vec!["0.1.0", "^0.1", "~0.1.2", ">=0.1, <0.2", "*"];
 
         for spec in specs {
@@ -144,8 +144,8 @@ mod tests {
 
     #[test]
     fn test_wildcard_always_passes() {
-        // ワイルドカードは常に true を返す
-        // ただし、バージョンが unknown の場合は false
+        // Wildcard always returns true
+        // However, it returns false if version is unknown
         if get_reinhardt_version() != "unknown" {
             assert!(check_version("*"));
         }

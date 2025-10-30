@@ -15,8 +15,8 @@ fn test_reinhardt_version_detection() {
 
 #[test]
 fn test_version_spec_wildcard() {
-    // ワイルドカード "*" は常に true
-    // ただし、バージョンが unknown の場合は false
+    // Wildcard "*" is always true
+    // However, it returns false if version is unknown
     if version::get_reinhardt_version() != "unknown" {
         assert!(version::check_version("*"));
     }
