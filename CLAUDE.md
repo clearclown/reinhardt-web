@@ -102,7 +102,7 @@ See @docs/DOCUMENTATION_STANDARDS.md for comprehensive documentation standards.
 - **NEVER** push without explicit user instruction
 - Split commits by specific intent (NOT feature-level goals)
 - Each commit MUST be small enough to explain in one line
-- Use `git add -e` for partial file commits
+- Use `git apply <patchfile name>.patch` for partial file commits
 - **NEVER** execute batch commits without user confirmation
 
 See @CLAUDE.commit.md for detailed commit guidelines including:

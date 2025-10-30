@@ -269,19 +269,8 @@ fn test_translation() {
 
 When a file contains changes with different purposes, use:
 
-**Method 1: Editor-based Patch Editing (Recommended)**
-
-```bash
-git add -e <file>
-```
-
-**Method 2: Patch File Approach**
-
-```bash
-git diff <file> > /tmp/changes.patch
-# Edit patch file
-git apply --cached /tmp/changes.patch
-```
+**Method: Patch File Approach**
+Use --patch option to apply patch file to the commit.
 
 ### Commit Message Format
 
