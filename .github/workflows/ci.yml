@@ -83,7 +83,7 @@ jobs:
         run: cargo test --workspace --lib --all-features
 
       - name: Run documentation tests
-        run: cargo test --doc --workspace
+        run: cargo test --doc --workspace --all-features
 
   test-integration:
     name: Integration Tests
