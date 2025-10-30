@@ -16,17 +16,11 @@ fn quote_mysql_identifier(name: &str) -> String {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_database::backends::mysql::schema::MySQLSchemaEditor;
-/// use reinhardt_database::schema::BaseDatabaseSchemaEditor;
+/// use reinhardt_db::backends::mysql::schema::MySQLSchemaEditor;
 ///
 /// let editor = MySQLSchemaEditor::new();
-///
-// Create a table
-/// let sql = editor.create_table_sql("users", &[
-///     ("id", "INT PRIMARY KEY AUTO_INCREMENT"),
-///     ("name", "VARCHAR(100)"),
-/// ]);
-/// assert!(sql.contains("CREATE TABLE"));
+/// let sql = editor.rename_table_sql("users", "people");
+/// assert!(sql.contains("ALTER TABLE"));
 /// assert!(sql.contains("`users`"));
 /// ```
 #[derive(Debug, Default, Clone)]
@@ -38,7 +32,7 @@ impl MySQLSchemaEditor {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::mysql::schema::MySQLSchemaEditor;
+    /// use reinhardt_db::backends::mysql::schema::MySQLSchemaEditor;
     ///
     /// let editor = MySQLSchemaEditor::new();
     /// ```

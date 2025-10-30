@@ -23,6 +23,6 @@ pub mod cockroachdb;
 
 #[cfg(feature = "cockroachdb-backend")]
 pub use cockroachdb::{
-    CockroachDBBackend, CockroachDBConnection, CockroachDBConnectionConfig,
-    CockroachDBSchemaEditor, CockroachDBTransactionManager, ClusterInfo,
+	ClusterInfo, CockroachDBBackend, CockroachDBConnection, CockroachDBConnectionConfig,
+	CockroachDBSchemaEditor, CockroachDBTransactionManager,
 };

@@ -25,17 +25,11 @@ fn quote_sqlite_identifier(name: &str) -> String {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_database::backends::sqlite::schema::SQLiteSchemaEditor;
-/// use reinhardt_database::schema::BaseDatabaseSchemaEditor;
+/// use reinhardt_db::backends::sqlite::schema::SQLiteSchemaEditor;
 ///
 /// let editor = SQLiteSchemaEditor::new();
-///
-// Create a table
-/// let sql = editor.create_table_sql("users", &[
-///     ("id", "INTEGER PRIMARY KEY"),
-///     ("name", "TEXT"),
-/// ]);
-/// assert!(sql.contains("CREATE TABLE"));
+/// let sql = editor.rename_table_sql("users", "people");
+/// assert!(sql.contains("ALTER TABLE"));
 /// assert!(sql.contains("\"users\""));
 /// ```
 #[derive(Debug, Default, Clone)]
@@ -47,7 +41,7 @@ impl SQLiteSchemaEditor {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_database::backends::sqlite::schema::SQLiteSchemaEditor;
+    /// use reinhardt_db::backends::sqlite::schema::SQLiteSchemaEditor;
     ///
     /// let editor = SQLiteSchemaEditor::new();
     /// ```

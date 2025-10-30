@@ -45,7 +45,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb");
     /// assert_eq!(config.url, "postgresql://localhost:26257/mydb");
@@ -62,7 +62,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
     ///     .with_max_connections(20);
@@ -78,7 +78,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
     ///     .with_min_connections(5);
@@ -94,7 +94,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     /// use std::time::Duration;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
@@ -111,7 +111,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     /// use std::time::Duration;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
@@ -128,7 +128,7 @@ impl CockroachDBConnectionConfig {
     /// # Example
     ///
     /// ```rust
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
     ///
     /// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
     ///     .with_application_name("my-app");
@@ -147,7 +147,7 @@ impl CockroachDBConnectionConfig {
 /// # Examples
 ///
 /// ```no_run
-/// use reinhardt_db_backends::backends::cockroachdb::connection::{
+/// use reinhardt_db::backends::cockroachdb::connection::{
 ///     CockroachDBConnection, CockroachDBConnectionConfig
 /// };
 ///
@@ -171,7 +171,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// use reinhardt_db::backends::cockroachdb::connection::{
     ///     CockroachDBConnection, CockroachDBConnectionConfig
     /// };
     ///
@@ -201,7 +201,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// use reinhardt_db_backends::backends::cockroachdb::connection::CockroachDBConnection;
+    /// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnection;
     /// use sqlx::PgPool;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -236,7 +236,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -259,7 +259,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -284,7 +284,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -309,7 +309,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -342,7 +342,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -372,7 +372,7 @@ impl CockroachDBConnection {
     /// # Examples
     ///
     /// ```no_run
-    /// # use reinhardt_db_backends::backends::cockroachdb::connection::{
+    /// # use reinhardt_db::backends::cockroachdb::connection::{
     /// #     CockroachDBConnection, CockroachDBConnectionConfig
     /// # };
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
