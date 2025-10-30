@@ -412,6 +412,15 @@ reinhardt-di = { path = "crates/reinhardt-di", version = "0.1.0" }
 reinhardt-shortcuts = { path = "crates/reinhardt-shortcuts", version = "0.1.0" }
 reinhardt-dispatch = { path = "crates/reinhardt-dispatch", version = "0.1.0" }
 reinhardt-browsable-api = { path = "crates/reinhardt-rest/crates/browsable-api", version = "0.1.0" }
+reinhardt-openapi = { path = "crates/reinhardt-rest/crates/openapi", version = "0.1.0" }
+reinhardt-openapi-macros = { path = "crates/reinhardt-rest/crates/openapi-macros", version = "0.1.0" }
+reinhardt-rest-core = { path = "crates/reinhardt-rest/crates/rest-core", version = "0.1.0" }
+reinhardt-server-core = { path = "crates/reinhardt-server/crates/server", version = "0.1.0" }
+reinhardt-views-core = { path = "crates/reinhardt-views/crates/views-core", version = "0.1.0" }
+reinhardt-di-core = { path = "crates/reinhardt-di/crates/di", version = "0.1.0" }
+reinhardt-db-backends = { path = "crates/reinhardt-db/crates/backends", version = "0.1.0" }
+reinhardt-db-backends-pool = { path = "crates/reinhardt-db/crates/backends-pool", version = "0.1.0" }
+reinhardt-backends = { path = "crates/reinhardt-core/crates/backends", version = "0.1.0" }
 
 # Web framework
 tokio = { version = "1.48.0", features = ["full"] }
