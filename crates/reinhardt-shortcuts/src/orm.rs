@@ -6,7 +6,7 @@
 //! This module is only available with the `database` feature enabled.
 
 #[cfg(feature = "database")]
-use reinhardt_db::Model;
+use reinhardt_db::prelude::Model;
 #[cfg(feature = "database")]
 use reinhardt_http::Response;
 
@@ -47,15 +47,16 @@ where
     M: Model + serde::de::DeserializeOwned + 'static,
     M::PrimaryKey: ToString,
 {
+    use reinhardt_db::prelude::Manager;
+    
     // Get the manager for this model
-    let manager = M::objects();
+    let manager = Manager::<M>::new();
 
     // Query by primary key
     let queryset = manager.get(pk);
 
-    // Execute the query (note: current QuerySet is stub, so this returns empty Vec)
-    // In a real implementation, this would execute SQL and return results
-    let results = queryset.all();
+    // Execute the query - await the async result
+    let results = queryset.all().await.map_err(|_| Response::internal_server_error())?;
 
     match results.into_iter().next() {
         Some(obj) => Ok(obj),
@@ -98,12 +99,12 @@ where
 /// Returns `Err(Response)` with HTTP 404 if the result list is empty,
 /// or HTTP 500 if a database error occurs.
 #[cfg(feature = "database")]
-pub async fn get_list_or_404<M>(queryset: reinhardt_db::QuerySet<M>) -> Result<Vec<M>, Response>
+pub async fn get_list_or_404<M>(queryset: reinhardt_db::prelude::QuerySet<M>) -> Result<Vec<M>, Response>
 where
     M: Model + 'static,
 {
-    // Execute the query
-    let results = queryset.all();
+    // Execute the query - await the async result
+    let results = queryset.all().await.map_err(|_| Response::internal_server_error())?;
 
     if results.is_empty() {
         Err(Response::not_found())
@@ -115,7 +116,7 @@ where
 #[cfg(all(test, feature = "database"))]
 mod tests {
     use super::*;
-    use reinhardt_db::{Model, QuerySet};
+    use reinhardt_db::prelude::{Model, QuerySet};
     use serde::{Deserialize, Serialize};
 
     #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
