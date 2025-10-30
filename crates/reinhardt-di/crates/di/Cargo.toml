@@ -9,3 +9,7 @@ repository.workspace = true
 [dependencies]
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+
+[dev-dependencies]
+reinhardt-di = { workspace = true }
+tokio-test = { workspace = true }
