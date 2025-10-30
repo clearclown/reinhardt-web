@@ -18,6 +18,10 @@ params = ["reinhardt-params"]
 di = ["reinhardt-di"]
 # schema = ["reinhardt-openapi"]  # Temporarily disabled - utoipa API compatibility
 database = ["reinhardt-orm"]
+compression = []
+cors = []
+rate-limit = []
+security = []
 
 [dependencies]
 # Core framework

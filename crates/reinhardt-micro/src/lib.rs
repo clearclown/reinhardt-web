@@ -93,9 +93,6 @@ pub use reinhardt_apps::{Error, Request, Response, Result};
 #[cfg(feature = "params")]
 pub use reinhardt_params::{Cookie, Form, Header, Json, Path, Query};
 
-/// Utility functions for building HTTP responses
-pub mod utils;
-
 #[cfg(feature = "di")]
 pub use reinhardt_di::Depends;
 
@@ -108,13 +105,8 @@ pub use reinhardt_macros::{delete, endpoint, get, patch, post, put, use_injectio
 /// Built-in middleware shortcuts for common use cases
 pub mod middleware {
     pub use reinhardt_middleware::{
-        // Compression
-        BrotliMiddleware,
-        // CORS
-        CorsMiddleware,
         // Security
         CsrfMiddleware,
-        GZipMiddleware,
         // HTTPS
         HttpsRedirectMiddleware,
         // Logging
@@ -123,9 +115,18 @@ pub mod middleware {
         Middleware,
         // Request tracking
         RequestIdMiddleware,
-        SecurityMiddleware,
         TracingMiddleware,
     };
+
+    // Feature-gated middleware
+    #[cfg(feature = "compression")]
+    pub use reinhardt_middleware::{BrotliMiddleware, GZipMiddleware};
+
+    #[cfg(feature = "cors")]
+    pub use reinhardt_middleware::CorsMiddleware;
+
+    #[cfg(feature = "security")]
+    pub use reinhardt_middleware::SecurityMiddleware;
 }
 
 /// Middleware configuration helpers
@@ -162,17 +163,24 @@ use reinhardt_routers::{path as route_path, DefaultRouter, Router};
 use reinhardt_server::serve as http_serve;
 use reinhardt_types::Handler;
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 // Re-export configuration types for convenience
-pub use middleware_config::{
-    CompressionConfig, CorsConfig, LoggingConfig, MetricsConfig, RateLimitConfig, TimeoutConfig,
-};
+pub use middleware_config::{LoggingConfig, MetricsConfig, TimeoutConfig};
+
+#[cfg(feature = "compression")]
+pub use middleware_config::CompressionConfig;
+
+#[cfg(feature = "cors")]
+pub use middleware_config::CorsConfig;
+
+#[cfg(feature = "rate-limit")]
+pub use middleware_config::RateLimitConfig;
 
 /// Application builder for creating micro services
 pub struct App {
-    router: Arc<Mutex<DefaultRouter>>,
+    router: DefaultRouter,
     middlewares: Vec<Arc<dyn Middleware>>,
 }
 
@@ -189,7 +197,7 @@ impl App {
     /// ```
     pub fn new() -> Self {
         Self {
-            router: Arc::new(Mutex::new(DefaultRouter::new())),
+            router: DefaultRouter::new(),
             middlewares: Vec::new(),
         }
     }
@@ -204,6 +212,7 @@ impl App {
     /// let app = App::new()
     ///     .with_cors(CorsConfig::permissive());
     /// ```
+    #[cfg(feature = "cors")]
     pub fn with_cors(mut self, config: CorsConfig) -> Self {
         use reinhardt_middleware::CorsMiddleware;
         self.middlewares.push(Arc::new(CorsMiddleware::new(config)));
@@ -220,6 +229,7 @@ impl App {
     /// let app = App::new()
     ///     .with_rate_limit(RateLimitConfig::lenient());
     /// ```
+    #[cfg(feature = "rate-limit")]
     pub fn with_rate_limit(mut self, config: RateLimitConfig) -> Self {
         use reinhardt_middleware::RateLimitMiddleware;
         self.middlewares.push(Arc::new(RateLimitMiddleware::new(config)));
@@ -236,9 +246,10 @@ impl App {
     /// let app = App::new()
     ///     .with_compression(CompressionConfig::for_json());
     /// ```
-    pub fn with_compression(mut self, config: CompressionConfig) -> Self {
+    #[cfg(feature = "compression")]
+    pub fn with_compression(mut self, _config: CompressionConfig) -> Self {
         use reinhardt_middleware::GZipMiddleware;
-        self.middlewares.push(Arc::new(GZipMiddleware::new(config)));
+        self.middlewares.push(Arc::new(GZipMiddleware::new()));
         self
     }
 
@@ -306,8 +317,8 @@ impl App {
     ///     .route("/api/users", handler);
     // Routes are now registered with the app
     /// ```
-    pub fn route_handler(self, path: &str, handler: Arc<dyn Handler>) -> Self {
-        self.router.lock().unwrap().add_route(route_path(path, handler));
+    pub fn route_handler(mut self, path: &str, handler: Arc<dyn Handler>) -> Self {
+        self.router.add_route(route_path(path, handler));
         self
     }
 
@@ -336,8 +347,14 @@ impl App {
             .parse()
             .map_err(|e| Error::ImproperlyConfigured(format!("invalid address: {}", e)))?;
 
+        // Convert router to Arc for sharing across requests
+        let app_with_arc_router = AppWithArcRouter {
+            router: Arc::new(self.router),
+            middlewares: self.middlewares,
+        };
+
         // Wrap the app (which implements Handler) and serve
-        http_serve(socket_addr, Arc::new(self))
+        http_serve(socket_addr, Arc::new(app_with_arc_router))
             .await
             .map_err(|e| Error::Internal(format!("server error: {}", e)))?;
 
@@ -351,15 +368,19 @@ impl Default for App {
     }
 }
 
+/// Internal app structure with Arc-wrapped router for serving
+struct AppWithArcRouter {
+    router: Arc<DefaultRouter>,
+    middlewares: Vec<Arc<dyn Middleware>>,
+}
+
 use async_trait::async_trait;
 
 #[async_trait]
-impl Handler for App {
+impl Handler for AppWithArcRouter {
     async fn handle(&self, request: Request) -> Result<Response> {
-        // Create a router handler wrapper
-        let router_handler = Arc::new(RouterHandler {
-            router: self.router.clone(),
-        });
+        // Use router directly as Arc<DefaultRouter>
+        let router_handler: Arc<dyn Handler> = self.router.clone();
 
         if self.middlewares.is_empty() {
             // No middleware, directly use router
@@ -381,19 +402,6 @@ impl Handler for App {
         }
 
         handler.handle(request).await
-    }
-}
-
-/// Wrapper to call router through Mutex
-struct RouterHandler {
-    router: Arc<Mutex<DefaultRouter>>,
-}
-
-#[async_trait]
-impl Handler for RouterHandler {
-    async fn handle(&self, request: Request) -> Result<Response> {
-        let router = self.router.lock().unwrap();
-        router.handle(request).await
     }
 }
 

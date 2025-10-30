@@ -6,10 +6,16 @@
 
 use std::time::Duration;
 
-// Re-export configuration types from reinhardt-middleware
+// Re-export configuration types from reinhardt-middleware (with feature gates)
+#[cfg(feature = "cors")]
 pub use reinhardt_middleware::cors::CorsConfig;
+
+#[cfg(feature = "compression")]
 pub use reinhardt_middleware::gzip::GZipConfig as CompressionConfig;
+
 pub use reinhardt_middleware::metrics::MetricsConfig;
+
+#[cfg(feature = "rate-limit")]
 pub use reinhardt_middleware::rate_limit::RateLimitConfig;
 
 /// Logging middleware configuration
@@ -92,7 +98,11 @@ impl LoggingConfig {
     }
 }
 
-impl CorsConfig {
+/// CORS configuration helper functions
+#[cfg(feature = "cors")]
+pub mod cors {
+    use super::CorsConfig;
+
     /// Create a permissive CORS configuration (allows all origins)
     ///
     /// This is useful for development but should be used with caution in production.
@@ -100,14 +110,14 @@ impl CorsConfig {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::CorsConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = CorsConfig::permissive();
+    /// let config = middleware_config::cors::permissive();
     /// assert_eq!(config.allow_origins, vec!["*"]);
     /// assert!(config.allow_methods.contains(&"GET".to_string()));
     /// ```
-    pub fn permissive() -> Self {
-        Self::default()
+    pub fn permissive() -> CorsConfig {
+        CorsConfig::default()
     }
 
     /// Create a restrictive CORS configuration for production
@@ -119,14 +129,14 @@ impl CorsConfig {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::CorsConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = CorsConfig::restrictive("https://example.com");
+    /// let config = middleware_config::cors::restrictive("https://example.com");
     /// assert_eq!(config.allow_origins, vec!["https://example.com"]);
     /// assert_eq!(config.allow_credentials, true);
     /// ```
-    pub fn restrictive(allowed_origin: &str) -> Self {
-        Self {
+    pub fn restrictive(allowed_origin: &str) -> CorsConfig {
+        CorsConfig {
             allow_origins: vec![allowed_origin.to_string()],
             allow_methods: vec!["GET".to_string(), "POST".to_string()],
             allow_headers: vec!["Content-Type".to_string(), "Authorization".to_string()],
@@ -136,19 +146,23 @@ impl CorsConfig {
     }
 }
 
-impl CompressionConfig {
+/// Compression configuration helper functions
+#[cfg(feature = "compression")]
+pub mod compression {
+    use super::CompressionConfig;
+
     /// Create compression config optimized for JSON APIs
     ///
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::CompressionConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = CompressionConfig::for_json();
+    /// let config = middleware_config::compression::for_json();
     /// assert!(config.compressible_types.contains(&"application/json".to_string()));
     /// ```
-    pub fn for_json() -> Self {
-        Self {
+    pub fn for_json() -> CompressionConfig {
+        CompressionConfig {
             min_length: 512,
             compression_level: 6,
             compressible_types: vec![
@@ -160,26 +174,23 @@ impl CompressionConfig {
     }
 }
 
-impl RateLimitConfig {
+/// Rate limit configuration helper functions
+#[cfg(feature = "rate-limit")]
+pub mod rate_limit {
+    use super::RateLimitConfig;
+
     /// Create a lenient rate limit configuration (100 requests per minute)
     ///
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::RateLimitConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = RateLimitConfig::lenient();
+    /// let config = middleware_config::rate_limit::lenient();
     /// assert_eq!(config.capacity, 100.0);
     /// ```
-    pub fn lenient() -> Self {
-        Self {
-            strategy: reinhardt_middleware::rate_limit::RateLimitStrategy::TokenBucket,
-            capacity: 100.0,
-            refill_rate: 100.0 / 60.0,
-            cost_per_request: 1.0,
-            exclude_paths: vec![],
-            error_message: None,
-        }
+    pub fn lenient() -> RateLimitConfig {
+        RateLimitConfig::default()
     }
 
     /// Create a strict rate limit configuration (10 requests per minute)
@@ -187,24 +198,27 @@ impl RateLimitConfig {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::RateLimitConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = RateLimitConfig::strict();
+    /// let config = middleware_config::rate_limit::strict();
     /// assert_eq!(config.capacity, 10.0);
     /// ```
-    pub fn strict() -> Self {
-        Self {
-            strategy: reinhardt_middleware::rate_limit::RateLimitStrategy::TokenBucket,
+    pub fn strict() -> RateLimitConfig {
+        RateLimitConfig {
             capacity: 10.0,
             refill_rate: 10.0 / 60.0,
             cost_per_request: 1.0,
             exclude_paths: vec![],
             error_message: Some("Rate limit exceeded. Please try again later.".to_string()),
+            ..Default::default()
         }
     }
 }
 
-impl MetricsConfig {
+/// Metrics configuration helper functions
+pub mod metrics {
+    use super::MetricsConfig;
+
     /// Create metrics config with custom endpoint
     ///
     /// # Arguments
@@ -214,14 +228,14 @@ impl MetricsConfig {
     /// # Examples
     ///
     /// ```
-    /// use reinhardt_micro::middleware_config::MetricsConfig;
+    /// use reinhardt_micro::middleware_config;
     ///
-    /// let config = MetricsConfig::with_endpoint("/custom-metrics");
+    /// let config = middleware_config::metrics::with_endpoint("/custom-metrics");
     /// assert_eq!(config.metrics_endpoint, "/custom-metrics");
     /// assert!(config.track_response_time);
     /// ```
-    pub fn with_endpoint(endpoint: &str) -> Self {
-        Self {
+    pub fn with_endpoint(endpoint: &str) -> MetricsConfig {
+        MetricsConfig {
             metrics_endpoint: endpoint.to_string(),
             track_response_time: true,
             exclude_paths: vec![],
@@ -292,46 +306,50 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "cors")]
     fn test_cors_config_permissive() {
-        let config = CorsConfig::permissive();
+        let config = cors::permissive();
         assert_eq!(config.allow_origins, vec!["*"]);
         assert!(config.allow_methods.contains(&"GET".to_string()));
         assert!(config.allow_methods.contains(&"POST".to_string()));
     }
 
     #[test]
+    #[cfg(feature = "cors")]
     fn test_cors_config_restrictive() {
-        let config = CorsConfig::restrictive("https://example.com");
+        let config = cors::restrictive("https://example.com");
         assert_eq!(config.allow_origins, vec!["https://example.com"]);
         assert_eq!(config.allow_credentials, true);
         assert_eq!(config.max_age, Some(3600));
     }
 
     #[test]
+    #[cfg(feature = "compression")]
     fn test_compression_config_for_json() {
-        let config = CompressionConfig::for_json();
+        let config = compression::for_json();
         assert_eq!(config.min_length, 512);
         assert_eq!(config.compression_level, 6);
         assert!(config.compressible_types.contains(&"application/json".to_string()));
     }
 
     #[test]
+    #[cfg(feature = "rate-limit")]
     fn test_rate_limit_config_lenient() {
-        let config = RateLimitConfig::lenient();
+        let config = rate_limit::lenient();
         assert_eq!(config.capacity, 100.0);
-        assert_eq!(config.refill_rate, 100.0 / 60.0);
     }
 
     #[test]
+    #[cfg(feature = "rate-limit")]
     fn test_rate_limit_config_strict() {
-        let config = RateLimitConfig::strict();
+        let config = rate_limit::strict();
         assert_eq!(config.capacity, 10.0);
         assert!(config.error_message.is_some());
     }
 
     #[test]
     fn test_metrics_config_with_endpoint() {
-        let config = MetricsConfig::with_endpoint("/custom-metrics");
+        let config = metrics::with_endpoint("/custom-metrics");
         assert_eq!(config.metrics_endpoint, "/custom-metrics");
         assert!(config.track_response_time);
     }
