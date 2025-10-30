@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = []
+default = ["django-compat"]
 # Django ORM compatibility layer (optional)
 django-compat = []
 # Connection pooling
