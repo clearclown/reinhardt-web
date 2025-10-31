@@ -52,7 +52,7 @@ pub trait UrlReverser: Send + Sync {
 /// # Examples
 ///
 /// ```no_run
-/// # use reinhardt_serializers::{HyperlinkedModelSerializer, UrlReverser};
+/// # use reinhardt_serializers::{HyperlinkedModelSerializer, UrlReverser, Serializer};
 /// # use reinhardt_orm::Model;
 /// # use serde::{Serialize, Deserialize};
 /// # use std::sync::Arc;
@@ -62,7 +62,7 @@ pub trait UrlReverser: Send + Sync {
 /// # struct User {
 /// #     id: Option<i64>,
 /// #     username: String,
-/// #     email: String;
+/// #     email: String,
 /// # }
 /// #
 /// # impl Model for User {
@@ -171,7 +171,7 @@ impl<M: Model> HyperlinkedModelSerializer<M> {
     /// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
     /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
     /// # }
-    /// let serializer = HyperlinkedModelSerializer::<User>::new("user-detail")
+    /// let serializer = HyperlinkedModelSerializer::<User>::new("user-detail", None)
     ///     .url_field_name("self_link");
     /// ```
     pub fn url_field_name(mut self, name: impl Into<String>) -> Self {

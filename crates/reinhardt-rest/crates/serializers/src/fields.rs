@@ -123,7 +123,7 @@ impl CharField {
     /// ```rust
     /// use reinhardt_serializers::fields::CharField;
     ///
-    /// let field = CharField::new().required(false);
+    /// let field = CharField::new().required(false).allow_blank(true);
     /// assert!(field.validate("").is_ok());
     /// ```
     pub fn required(mut self, required: bool) -> Self {
@@ -891,7 +891,7 @@ impl ChoiceField {
 ///
 /// ```rust
 /// use reinhardt_serializers::fields::DateField;
-/// use chrono::NaiveDate;
+/// use chrono::{NaiveDate, Datelike};
 ///
 /// let field = DateField::new();
 /// let date = field.parse("2024-01-15").unwrap();
@@ -966,6 +966,7 @@ impl DateField {
     ///
     /// ```rust
     /// use reinhardt_serializers::fields::DateField;
+    /// use chrono::Datelike;
     ///
     /// let field = DateField::new();
     /// let date = field.parse("2024-01-15").unwrap();
@@ -1015,7 +1016,7 @@ impl Default for DateField {
 ///
 /// ```rust
 /// use reinhardt_serializers::fields::DateTimeField;
-/// use chrono::NaiveDateTime;
+/// use chrono::{NaiveDateTime, Datelike, Timelike};
 ///
 /// let field = DateTimeField::new();
 /// let dt = field.parse("2024-01-15 14:30:00").unwrap();
@@ -1092,6 +1093,7 @@ impl DateTimeField {
     ///
     /// ```rust
     /// use reinhardt_serializers::fields::DateTimeField;
+    /// use chrono::Timelike;
     ///
     /// let field = DateTimeField::new();
     /// let dt = field.parse("2024-01-15 14:30:00").unwrap();
