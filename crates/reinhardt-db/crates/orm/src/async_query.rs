@@ -32,8 +32,40 @@ impl<T: Model> AsyncQuery<T> {
     ///
     /// # Examples
     ///
-    /// ```
-    /// let instance = Type::new();
+    /// ```no_run
+    /// use reinhardt_orm::{Engine, Model};
+    /// use reinhardt_orm::async_query::AsyncQuery;
+    /// use reinhardt_orm::query_execution::QueryCompiler;
+    /// use reinhardt_orm::types::DatabaseDialect;
+    /// use serde::{Serialize, Deserialize};
+    /// 
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// #[derive(Debug, Serialize, Deserialize)]
+    /// struct User {
+    ///     id: Option<i32>,
+    ///     name: String,
+    /// }
+    /// 
+    /// impl Model for User {
+    ///     type PrimaryKey = i32;
+    ///     fn table_name() -> &'static str {
+    ///         "users"
+    ///     }
+    ///     fn primary_key(&self) -> Option<&Self::PrimaryKey> {
+    ///         self.id.as_ref()
+    ///     }
+    ///     fn set_primary_key(&mut self, value: Self::PrimaryKey) {
+    ///         self.id = Some(value);
+    ///     }
+    /// }
+    /// 
+    /// let engine = Engine::new("sqlite::memory:").await?;
+    /// let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
+    /// let query: AsyncQuery<User> = AsyncQuery::new(engine, compiler);
+    /// // Query is ready to execute
+    /// assert_eq!(User::table_name(), "users");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(engine: Engine, compiler: QueryCompiler) -> Self {
         Self {
@@ -184,8 +216,19 @@ impl AsyncSession {
     ///
     /// # Examples
     ///
-    /// ```
-    /// let instance = Type::new();
+    /// ```no_run
+    /// use reinhardt_orm::Engine;
+    /// use reinhardt_orm::async_query::AsyncSession;
+    /// use reinhardt_orm::query_execution::QueryCompiler;
+    /// use reinhardt_orm::types::DatabaseDialect;
+    /// 
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let engine = Engine::new("sqlite::memory:").await?;
+    /// let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
+    /// let session = AsyncSession::new(engine, compiler);
+    /// // Session is ready to execute queries
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(engine: Engine, compiler: QueryCompiler) -> Self {
         Self { engine, compiler }
