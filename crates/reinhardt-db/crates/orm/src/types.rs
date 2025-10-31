@@ -172,6 +172,7 @@ impl ArrayType {
     ///
     /// ```
     /// use reinhardt_orm::types::ArrayType;
+    /// use reinhardt_orm::SqlTypeDefinition;
     ///
     /// let array_type = ArrayType::new("TEXT");
     /// let values = vec!["tag1".to_string(), "tag2".to_string()];
