@@ -221,7 +221,7 @@ impl RedisTaskLock {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let lock = RedisTaskLock::with_prefix(
     ///     "redis://localhost/",
-    ///     "myapp:locks:"
+    ///     "myapp:locks:".to_string()
     /// ).await?;
     /// # Ok(())
     /// # }

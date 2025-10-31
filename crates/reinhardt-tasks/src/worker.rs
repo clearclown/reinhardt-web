@@ -269,7 +269,7 @@ impl Worker {
     /// use reinhardt_tasks::{Worker, WorkerConfig, DummyBackend};
     /// use std::sync::Arc;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     /// let worker = Worker::new(WorkerConfig::default());
     /// let backend = Arc::new(DummyBackend::new());
     ///

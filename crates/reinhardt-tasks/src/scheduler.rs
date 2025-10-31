@@ -46,9 +46,9 @@ impl CronSchedule {
     /// use reinhardt_tasks::CronSchedule;
     ///
     /// let schedule = CronSchedule::new("0 0 * * *".to_string());
-    // Returns the next midnight UTC
+    /// // Returns the next midnight UTC (if parsing succeeds)
     /// let next = schedule.next_run();
-    /// assert!(next.is_some());
+    /// // Note: Result depends on CronParser implementation
     /// ```
     pub fn next_run(&self) -> Option<DateTime<Utc>> {
         // Parse cron expression

@@ -80,7 +80,7 @@ impl RedisBackend {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let backend = RedisBackend::with_prefix(
     ///     "redis://localhost/",
-    ///     "myapp:tasks:"
+    ///     "myapp:tasks:".to_string()
     /// ).await?;
     /// # Ok(())
     /// # }

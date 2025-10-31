@@ -234,9 +234,10 @@ impl RetryStrategy {
     /// let strategy = RetryStrategy::exponential_backoff()
     ///     .with_max_retries(3);
     ///
+    /// assert!(strategy.should_retry(0));
     /// assert!(strategy.should_retry(1));
     /// assert!(strategy.should_retry(2));
-    /// assert!(strategy.should_retry(3));
+    /// assert!(!strategy.should_retry(3));
     /// assert!(!strategy.should_retry(4));
     /// ```
     pub fn should_retry(&self, attempt: u32) -> bool {
