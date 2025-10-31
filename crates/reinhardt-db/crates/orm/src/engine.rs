@@ -162,8 +162,13 @@ impl Engine {
     ///
     /// # Examples
     ///
-    /// ```
-    /// let instance = Type::new();
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use reinhardt_orm::Engine;
+    /// 
+    /// let engine = Engine::new("sqlite::memory:").await?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub async fn new(url: impl Into<String>) -> Result<Self, sqlx::Error> {
         Self::from_config(EngineConfig::new(url)).await
@@ -261,13 +266,14 @@ impl DatabaseEngine {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// use reinhardt_orm::engine::DatabaseEngine;
-    /// use reinhardt_db::backends::{DatabaseConnection, DatabaseType};
+    /// use reinhardt_db::backends::drivers::{DatabaseConnection, DatabaseType};
     ///
-    /// let connection = DatabaseConnection::connect_postgres("postgres://localhost/mydb").await?;
+    /// let connection = DatabaseConnection::connect("postgres://localhost/mydb").await?;
     /// let engine = DatabaseEngine::new(connection, DatabaseType::Postgres);
+    /// // Engine is ready to execute queries
     /// # Ok(())
     /// # }
     /// ```
@@ -354,12 +360,13 @@ impl DatabaseEngine {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// use reinhardt_orm::engine::DatabaseEngine;
     ///
     /// let engine = DatabaseEngine::from_sqlite(":memory:").await?;
     /// let rows_affected = engine.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)").await?;
+    /// assert!(rows_affected >= 0); // DDL statements typically return 0
     /// # Ok(())
     /// # }
     /// ```

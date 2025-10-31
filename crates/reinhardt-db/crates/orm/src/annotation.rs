@@ -75,13 +75,16 @@ impl When {
     ///
     /// ```
     /// use reinhardt_orm::annotation::{When, AnnotationValue, Value};
-    /// use reinhardt_orm::query::Q;
+    /// use reinhardt_orm::Q;
     ///
     /// let when = When::new(
-    ///     Q::new().filter("status", "active"),
+    ///     Q::new("status", "=", "active"),
     ///     AnnotationValue::Value(Value::Int(1))
     /// );
-    // WHEN status = 'active' THEN 1
+    /// // Verify the WHEN clause was created
+    /// let sql = when.to_sql();
+    /// assert!(sql.contains("WHEN"));
+    /// assert!(sql.contains("THEN"));
     /// ```
     pub fn new(condition: Q, then: AnnotationValue) -> Self {
         Self { condition, then }

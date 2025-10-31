@@ -70,8 +70,9 @@ impl InsertBuilder {
     /// assert!(sql.contains("email"));
     /// assert!(sql.contains(") VALUES (?, ?)"));
     /// assert_eq!(params.len(), 2);
-    /// assert_eq!(params[0], "Alice");
-    /// assert_eq!(params[1], "alice@example.com");
+    /// // HashMap doesn't guarantee order, so check both values are present
+    /// assert!(params.contains(&"Alice".to_string()));
+    /// assert!(params.contains(&"alice@example.com".to_string()));
     /// ```
     pub fn value(mut self, column: &str, value: &str) -> Self {
         self.values
