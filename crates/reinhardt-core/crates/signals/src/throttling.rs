@@ -403,11 +403,13 @@ impl<T: Send + Sync + 'static> SignalThrottle<T> {
     /// ```
     /// # use reinhardt_signals::throttling::{ThrottleConfig, SignalThrottle};
     /// # use reinhardt_signals::{Signal, SignalName};
+    /// # tokio_test::block_on(async {
     /// # let signal = Signal::<String>::new(SignalName::custom("test"));
     /// # let config = ThrottleConfig::new().with_drop_on_limit(false);
     /// # let throttle = SignalThrottle::new(signal, config);
     /// let queued = throttle.queue_length();
     /// assert_eq!(queued, 0);
+    /// # })
     /// ```
     pub fn queue_length(&self) -> usize {
         self.state.lock().queue_len()

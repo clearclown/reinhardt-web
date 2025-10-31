@@ -412,11 +412,13 @@ impl<T: Send + Sync + Clone + 'static> DeadLetterQueue<T> {
     /// # use serde::{Deserialize, Serialize};
     /// # #[derive(Clone, Serialize, Deserialize)]
     /// # struct Event { id: i32 }
+    /// # tokio_test::block_on(async {
     /// # let signal = Signal::<Event>::new(SignalName::custom("events"));
     /// # let dlq = DeadLetterQueue::new(signal, DlqConfig::new());
     /// let stats = dlq.stats();
     /// println!("Queue size: {}", stats.queue_size());
     /// println!("Recovery rate: {:.2}%", stats.recovery_rate());
+    /// # })
     /// ```
     pub fn stats(&self) -> DlqStats {
         self.stats.lock().clone()
