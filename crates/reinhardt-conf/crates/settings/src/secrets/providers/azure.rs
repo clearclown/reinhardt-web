@@ -17,7 +17,8 @@ use azure_security_keyvault::KeyvaultClient;
 /// # Example
 ///
 /// ```no_run
-/// use reinhardt_settings::secrets::providers::AzureKeyVaultProvider;
+/// use reinhardt_settings::secrets::providers::azure::AzureKeyVaultProvider;
+/// use reinhardt_settings::prelude::SecretProvider;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let provider = AzureKeyVaultProvider::new(
@@ -45,7 +46,7 @@ impl AzureKeyVaultProvider {
     ///
     /// ```no_run
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use reinhardt_settings::secrets::providers::AzureKeyVaultProvider;
+    /// use reinhardt_settings::secrets::providers::azure::AzureKeyVaultProvider;
     ///
     /// let provider = AzureKeyVaultProvider::new(
     ///     "https://myvault.vault.azure.net"

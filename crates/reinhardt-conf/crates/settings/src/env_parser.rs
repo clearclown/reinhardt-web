@@ -116,11 +116,11 @@ pub struct DatabaseUrl {
 /// use reinhardt_settings::env_parser::parse_database_url;
 ///
 /// let db = parse_database_url("sqlite::memory:").unwrap();
-/// assert_eq!(db.engine, "django.db.backends.sqlite3");
+/// assert_eq!(db.engine, "reinhardt.db.backends.sqlite3");
 /// assert_eq!(db.name, ":memory:");
 ///
 /// let db = parse_database_url("postgresql://user:pass@localhost:5432/mydb").unwrap();
-/// assert_eq!(db.engine, "django.db.backends.postgresql");
+/// assert_eq!(db.engine, "reinhardt.db.backends.postgresql");
 /// assert_eq!(db.name, "mydb");
 /// assert_eq!(db.user.unwrap(), "user");
 /// ```
