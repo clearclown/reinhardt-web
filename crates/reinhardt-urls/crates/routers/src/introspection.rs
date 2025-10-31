@@ -91,11 +91,21 @@ impl RouteInfo {
         let params = crate::namespace::extract_param_names(&path);
 
         // Split name into namespace and route_name
+        // Django-style: hierarchical namespaces
+        // e.g., "api:v1:users:list" -> namespace = "api:v1", route_name = "users:list"
         let (namespace, route_name) = if let Some(ref n) = name {
-            let parts: Vec<&str> = n.rsplitn(2, ':').collect();
-            if parts.len() == 2 {
-                (Some(parts[1].to_string()), Some(parts[0].to_string()))
+            let parts: Vec<&str> = n.split(':').collect();
+            if parts.len() >= 3 {
+                // At least 3 parts: first N-2 are namespace, last 2 are route_name
+                let namespace_end = parts.len() - 2;
+                let ns = parts[..namespace_end].join(":");
+                let rn = parts[namespace_end..].join(":");
+                (Some(ns), Some(rn))
+            } else if parts.len() == 2 {
+                // Exactly 2 parts: first is namespace, second is route_name
+                (Some(parts[0].to_string()), Some(parts[1].to_string()))
             } else {
+                // Single part: no namespace, just route_name
                 (None, Some(n.clone()))
             }
         } else {
@@ -121,7 +131,7 @@ impl RouteInfo {
     /// use reinhardt_routers::introspection::RouteInfo;
     /// use hyper::Method;
     ///
-    /// let mut info = RouteInfo::new("/users/", vec![Method::GET], None);
+    /// let mut info = RouteInfo::new("/users/", vec![Method::GET], None::<String>);
     /// info.add_metadata("description", "List all users");
     /// info.add_metadata("tags", "users,api");
     ///
@@ -139,7 +149,7 @@ impl RouteInfo {
     /// use reinhardt_routers::introspection::RouteInfo;
     /// use hyper::Method;
     ///
-    /// let info = RouteInfo::new("/users/", vec![Method::GET, Method::POST], None);
+    /// let info = RouteInfo::new("/users/", vec![Method::GET, Method::POST], None::<String>);
     ///
     /// assert!(info.supports_method(&Method::GET));
     /// assert!(info.supports_method(&Method::POST));
@@ -249,8 +259,8 @@ impl RouteInspector {
     /// use hyper::Method;
     ///
     /// let mut inspector = RouteInspector::new();
-    /// inspector.add_route("/users/", vec![Method::GET], None, None);
-    /// inspector.add_route("/posts/", vec![Method::GET], None, None);
+    /// inspector.add_route("/users/", vec![Method::GET], None::<String>, None);
+    /// inspector.add_route("/posts/", vec![Method::GET], None::<String>, None);
     ///
     /// assert_eq!(inspector.all_routes().len(), 2);
     /// ```
@@ -303,9 +313,9 @@ impl RouteInspector {
     /// use hyper::Method;
     ///
     /// let mut inspector = RouteInspector::new();
-    /// inspector.add_route("/api/v1/users/", vec![Method::GET], None, None);
-    /// inspector.add_route("/api/v1/posts/", vec![Method::GET], None, None);
-    /// inspector.add_route("/api/v2/users/", vec![Method::GET], None, None);
+    /// inspector.add_route("/api/v1/users/", vec![Method::GET], None::<String>, None);
+    /// inspector.add_route("/api/v1/posts/", vec![Method::GET], None::<String>, None);
+    /// inspector.add_route("/api/v2/users/", vec![Method::GET], None::<String>, None);
     ///
     /// let routes = inspector.find_by_path_prefix("/api/v1");
     /// assert_eq!(routes.len(), 2);
@@ -355,9 +365,9 @@ impl RouteInspector {
     /// use hyper::Method;
     ///
     /// let mut inspector = RouteInspector::new();
-    /// inspector.add_route("/users/", vec![Method::GET], None, None);
-    /// inspector.add_route("/users/", vec![Method::POST], None, None);
-    /// inspector.add_route("/posts/", vec![Method::GET], None, None);
+    /// inspector.add_route("/users/", vec![Method::GET], None::<String>, None);
+    /// inspector.add_route("/users/", vec![Method::POST], None::<String>, None);
+    /// inspector.add_route("/posts/", vec![Method::GET], None::<String>, None);
     ///
     /// let routes = inspector.find_by_method(&Method::GET);
     /// assert_eq!(routes.len(), 2);
@@ -408,8 +418,8 @@ impl RouteInspector {
     /// use hyper::Method;
     ///
     /// let mut inspector = RouteInspector::new();
-    /// inspector.add_route("/users/", vec![Method::GET, Method::POST], None, None);
-    /// inspector.add_route("/posts/", vec![Method::GET, Method::DELETE], None, None);
+    /// inspector.add_route("/users/", vec![Method::GET, Method::POST], None::<String>, None);
+    /// inspector.add_route("/posts/", vec![Method::GET, Method::DELETE], None::<String>, None);
     ///
     /// let methods = inspector.all_methods();
     /// assert!(methods.contains(&Method::GET));

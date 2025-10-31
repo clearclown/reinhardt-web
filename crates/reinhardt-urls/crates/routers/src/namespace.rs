@@ -283,8 +283,8 @@ impl NamespacedRoute {
     /// use reinhardt_routers::namespace::NamespacedRoute;
     ///
     /// let route = NamespacedRoute::new("api:v1:users:detail", "/api/v1/users/{id}/");
-    /// assert_eq!(route.namespace.full_path(), "api:v1:users");
-    /// assert_eq!(route.route_name, "detail");
+    /// assert_eq!(route.namespace.full_path(), "api:v1");
+    /// assert_eq!(route.route_name, "users:detail");
     /// assert_eq!(route.pattern, "/api/v1/users/{id}/");
     /// ```
     pub fn new(full_name: impl Into<String>, pattern: impl Into<String>) -> Self {
@@ -292,10 +292,20 @@ impl NamespacedRoute {
         let pattern = pattern.into();
 
         // Extract namespace and route name
-        let parts: Vec<&str> = full_name.rsplitn(2, ':').collect();
-        let (route_name, namespace) = if parts.len() == 2 {
-            (parts[0].to_string(), Namespace::new(parts[1]))
+        // Django-style: hierarchical namespaces
+        // e.g., "api:v1:users:list" -> namespace = "api:v1", route_name = "users:list"
+        let parts: Vec<&str> = full_name.split(':').collect();
+        let (route_name, namespace) = if parts.len() >= 3 {
+            // At least 3 parts: first N-2 are namespace, last 2 are route_name
+            let namespace_end = parts.len() - 2;
+            let ns = parts[..namespace_end].join(":");
+            let rn = parts[namespace_end..].join(":");
+            (rn, Namespace::new(ns))
+        } else if parts.len() == 2 {
+            // Exactly 2 parts: first is namespace, second is route_name
+            (parts[1].to_string(), Namespace::new(parts[0]))
         } else {
+            // Single part: no namespace, just route_name
             (full_name.clone(), Namespace::new(""))
         };
 
@@ -544,8 +554,8 @@ impl NamespaceResolver {
     /// resolver.register("api:v2:posts:detail", "/api/v2/posts/{id}/");
     ///
     /// let namespaces = resolver.list_all_namespaces();
-    /// assert!(namespaces.contains(&"api:v1:users".to_string()));
-    /// assert!(namespaces.contains(&"api:v2:posts".to_string()));
+    /// assert!(namespaces.contains(&"api:v1".to_string()));
+    /// assert!(namespaces.contains(&"api:v2".to_string()));
     /// ```
     pub fn list_all_namespaces(&self) -> Vec<String> {
         let mut namespaces: Vec<String> = self.namespace_index.keys().cloned().collect();
