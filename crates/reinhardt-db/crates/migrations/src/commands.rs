@@ -370,7 +370,9 @@ impl MakeMigrationsCommand {
     /// # Examples
     ///
     /// Generated entry point file structure:
-    /// ```rust
+    /// ```rust,ignore
+    /// use reinhardt_migrations::Migration;
+    /// 
     /// // migrations/myapp.rs
     /// pub mod _0001_initial;
     /// pub mod _0002_add_field;
