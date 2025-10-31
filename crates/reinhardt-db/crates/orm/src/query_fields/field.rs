@@ -20,7 +20,31 @@ impl<M: Model, T> Field<M, T> {
     /// # Examples
     ///
     /// ```
-    /// let instance = Type::new();
+    /// use reinhardt_orm::query_fields::Field;
+    /// use reinhardt_orm::Model;
+    /// use serde::{Serialize, Deserialize};
+    /// 
+    /// #[derive(Debug, Serialize, Deserialize)]
+    /// struct User {
+    ///     id: Option<i32>,
+    ///     name: String,
+    /// }
+    /// 
+    /// impl Model for User {
+    ///     type PrimaryKey = i32;
+    ///     fn table_name() -> &'static str {
+    ///         "users"
+    ///     }
+    ///     fn primary_key(&self) -> Option<&Self::PrimaryKey> {
+    ///         self.id.as_ref()
+    ///     }
+    ///     fn set_primary_key(&mut self, value: Self::PrimaryKey) {
+    ///         self.id = Some(value);
+    ///     }
+    /// }
+    /// 
+    /// let field: Field<User, String> = Field::new(vec!["name"]);
+    /// assert_eq!(field.path(), &["name"]);
     /// ```
     pub fn new(path: Vec<&'static str>) -> Self {
         Self {
