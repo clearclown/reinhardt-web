@@ -187,7 +187,7 @@ impl SchemaGenerator {
     ///     .version("1.0.0");
     ///
     /// let json = generator.to_json().unwrap();
-    /// assert!(json.contains("\"title\":\"My API\""));
+    /// assert!(json.contains("\"title\": \"My API\""));
     /// ```
     pub fn to_json(&self) -> Result<String, SchemaError> {
         let schema = self.generate()?;
