@@ -95,3 +95,4 @@ docs/Gemfile.lock
 **/.env*
 !.env.example
 !.env.sample
+.ignore/
