@@ -108,8 +108,20 @@ impl SerializedTask {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_tasks::{TaskFactory, TaskResult, TaskExecutor};
+/// use reinhardt_tasks::{TaskFactory, TaskResult, TaskExecutor, Task, TaskError, TaskId};
 /// use async_trait::async_trait;
+///
+/// struct EmailTask { to: String }
+///
+/// impl Task for EmailTask {
+///     fn name(&self) -> &str { "EmailTask" }
+///     fn id(&self) -> TaskId { TaskId::new() }
+/// }
+///
+/// #[async_trait]
+/// impl TaskExecutor for EmailTask {
+///     async fn execute(&self) -> TaskResult<()> { Ok(()) }
+/// }
 ///
 /// struct EmailTaskFactory;
 ///
@@ -117,7 +129,8 @@ impl SerializedTask {
 /// impl TaskFactory for EmailTaskFactory {
 ///     async fn create(&self, data: &str) -> TaskResult<Box<dyn TaskExecutor>> {
 ///         // Deserialize data and create task executor
-///         let email_data: serde_json::Value = serde_json::from_str(data)?;
+///         let email_data: serde_json::Value = serde_json::from_str(data)
+///             .map_err(|e| TaskError::SerializationError(e.to_string()))?;
 ///         Ok(Box::new(EmailTask { to: email_data["to"].as_str().unwrap().to_string() }))
 ///     }
 /// }
@@ -136,12 +149,16 @@ pub trait TaskFactory: Send + Sync {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_tasks::{TaskRegistry, TaskFactory, TaskResult, TaskExecutor};
+/// use reinhardt_tasks::{TaskRegistry, TaskFactory, TaskResult, TaskExecutor, Task, TaskError, TaskId};
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
 /// # struct EmailTaskFactory;
 /// # struct EmailTask { to: String }
+/// # impl Task for EmailTask {
+/// #     fn name(&self) -> &str { "EmailTask" }
+/// #     fn id(&self) -> TaskId { TaskId::new() }
+/// # }
 /// # #[async_trait]
 /// # impl TaskExecutor for EmailTask {
 /// #     async fn execute(&self) -> TaskResult<()> { Ok(()) }
@@ -149,7 +166,8 @@ pub trait TaskFactory: Send + Sync {
 /// # #[async_trait]
 /// # impl TaskFactory for EmailTaskFactory {
 /// #     async fn create(&self, data: &str) -> TaskResult<Box<dyn TaskExecutor>> {
-/// #         let email_data: serde_json::Value = serde_json::from_str(data)?;
+/// #         let email_data: serde_json::Value = serde_json::from_str(data)
+/// #             .map_err(|e| TaskError::SerializationError(e.to_string()))?;
 /// #         Ok(Box::new(EmailTask { to: email_data["to"].as_str().unwrap().to_string() }))
 /// #     }
 /// # }
@@ -191,11 +209,15 @@ impl TaskRegistry {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use reinhardt_tasks::{TaskRegistry, TaskFactory};
+    /// use reinhardt_tasks::{TaskRegistry, TaskFactory, Task, TaskId};
     /// use std::sync::Arc;
     ///
     /// # struct MyTaskFactory;
     /// # struct MyTask;
+    /// # impl Task for MyTask {
+    /// #     fn name(&self) -> &str { "MyTask" }
+    /// #     fn id(&self) -> TaskId { TaskId::new() }
+    /// # }
     /// # #[async_trait::async_trait]
     /// # impl reinhardt_tasks::TaskExecutor for MyTask {
     /// #     async fn execute(&self) -> reinhardt_tasks::TaskResult<()> { Ok(()) }
