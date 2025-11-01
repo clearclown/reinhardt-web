@@ -258,7 +258,7 @@ impl DocsGenerator {
 		let mut required = Vec::new();
 
 		for group in &self.groups {
-			self.add_group_to_schema(&mut properties, &mut required, group);
+			Self::add_group_to_schema(&mut properties, &mut required, group);
 		}
 
 		serde_json::json!({
@@ -270,7 +270,6 @@ impl DocsGenerator {
 	}
 
 	fn add_group_to_schema(
-		&self,
 		properties: &mut serde_json::Map<String, Value>,
 		required: &mut Vec<String>,
 		group: &SettingsGroup,
@@ -306,7 +305,7 @@ impl DocsGenerator {
 		}
 
 		for subgroup in &group.subgroups {
-			self.add_group_to_schema(properties, required, subgroup);
+			Self::add_group_to_schema(properties, required, subgroup);
 		}
 	}
 

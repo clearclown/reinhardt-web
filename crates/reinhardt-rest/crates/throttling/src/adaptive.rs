@@ -95,6 +95,9 @@ impl AdaptiveConfig {
 		}
 	}
 
+}
+
+impl Default for AdaptiveConfig {
 	/// Create configuration with default values
 	///
 	/// # Examples
@@ -106,7 +109,7 @@ impl AdaptiveConfig {
 	/// assert_eq!(config.min_rate, (10, 60));
 	/// assert_eq!(config.max_rate, (1000, 60));
 	/// ```
-	pub fn default() -> Self {
+	fn default() -> Self {
 		Self {
 			min_rate: (10, 60),
 			max_rate: (1000, 60),

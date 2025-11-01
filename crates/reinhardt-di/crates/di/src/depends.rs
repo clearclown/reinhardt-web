@@ -16,10 +16,10 @@
 //! }
 //!
 //! // Basic usage - with caching (default)
-//! let config = Depends::<Config>::new().resolve(ctx).await?;
+//! let config = Depends::<Config>::builder().resolve(ctx).await?;
 //!
 //! // Without caching - creates new instance every time
-//! let config = Depends::<Config>::no_cache().resolve(ctx).await?;
+//! let config = Depends::<Config>::builder_no_cache().resolve(ctx).await?;
 //! ```
 
 use crate::{DiResult, Injectable, context::InjectionContext};
@@ -39,7 +39,7 @@ impl<T: Injectable> Depends<T>
 where
 	T: Clone,
 {
-	/// Create a new Depends with caching enabled (default behavior).
+	/// Create a new DependsBuilder with caching enabled (default behavior).
 	///
 	/// Similar to FastAPI's `Depends(dependency, use_cache=True)`.
 	///
@@ -53,15 +53,15 @@ where
 	///     value: String,
 	/// }
 	///
-	/// let builder = Depends::<Config>::new();
+	/// let builder = Depends::<Config>::builder();
 	/// ```
-	pub fn new() -> DependsBuilder<T> {
+	pub fn builder() -> DependsBuilder<T> {
 		DependsBuilder {
 			use_cache: true,
 			_phantom: std::marker::PhantomData,
 		}
 	}
-	/// Create a new Depends with caching disabled.
+	/// Create a new DependsBuilder with caching disabled.
 	///
 	/// Similar to FastAPI's `Depends(dependency, use_cache=False)`.
 	/// Each call will create a new instance.
@@ -76,9 +76,9 @@ where
 	///     id: u32,
 	/// }
 	///
-	/// let builder = Depends::<RequestData>::no_cache();
+	/// let builder = Depends::<RequestData>::builder_no_cache();
 	/// ```
-	pub fn no_cache() -> DependsBuilder<T> {
+	pub fn builder_no_cache() -> DependsBuilder<T> {
 		DependsBuilder {
 			use_cache: false,
 			_phantom: std::marker::PhantomData,

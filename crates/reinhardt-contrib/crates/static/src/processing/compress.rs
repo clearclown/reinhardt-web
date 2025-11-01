@@ -144,12 +144,14 @@ impl BrotliCompressor {
 		use brotli::enc::BrotliEncoderParams;
 
 		let mut output = Vec::new();
-		let mut params = BrotliEncoderParams::default();
-		params.quality = self.quality as i32;
-		params.lgwin = self.window_size as i32;
+		let params = BrotliEncoderParams {
+			quality: self.quality as i32,
+			lgwin: self.window_size as i32,
+			..Default::default()
+		};
 
 		brotli::BrotliCompress(&mut std::io::Cursor::new(input), &mut output, &params)
-			.map_err(|e| io::Error::other(e))?;
+			.map_err(io::Error::other)?;
 
 		Ok(output)
 	}

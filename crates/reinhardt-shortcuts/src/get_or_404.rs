@@ -38,14 +38,14 @@ pub enum GetError {
 /// # Returns
 ///
 /// Either the queried object or a 404 Response
-pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Response> {
+pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Box<Response>> {
 	match result {
 		Ok(Some(obj)) => Ok(obj),
-		Ok(None) => Err(Response::not_found()),
+		Ok(None) => Err(Box::new(Response::not_found())),
 		Err(e) => {
 			let mut response = Response::internal_server_error();
 			response.body = bytes::Bytes::from(format!("Database error: {}", e));
-			Err(response)
+			Err(Box::new(response))
 		}
 	}
 }
@@ -68,14 +68,14 @@ pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Re
 /// # Returns
 ///
 /// Either the list of objects or a 404 Response if the list is empty
-pub fn get_list_or_404_response<T>(result: Result<Vec<T>, String>) -> Result<Vec<T>, Response> {
+pub fn get_list_or_404_response<T>(result: Result<Vec<T>, String>) -> Result<Vec<T>, Box<Response>> {
 	match result {
 		Ok(list) if !list.is_empty() => Ok(list),
-		Ok(_) => Err(Response::not_found()),
+		Ok(_) => Err(Box::new(Response::not_found())),
 		Err(e) => {
 			let mut response = Response::internal_server_error();
 			response.body = bytes::Bytes::from(format!("Database error: {}", e));
-			Err(response)
+			Err(Box::new(response))
 		}
 	}
 }
@@ -96,10 +96,10 @@ pub fn get_list_or_404_response<T>(result: Result<Vec<T>, String>) -> Result<Vec
 /// let result = exists_or_404_response(not_exists);
 /// assert!(result.is_err());
 /// ```
-pub fn exists_or_404_response(exists: Option<bool>) -> Result<(), Response> {
+pub fn exists_or_404_response(exists: Option<bool>) -> Result<(), Box<Response>> {
 	match exists {
 		Some(true) => Ok(()),
-		_ => Err(Response::not_found()),
+		_ => Err(Box::new(Response::not_found())),
 	}
 }
 

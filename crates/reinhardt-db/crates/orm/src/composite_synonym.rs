@@ -40,15 +40,14 @@ pub enum FieldValue {
 	Null,
 }
 
-impl FieldValue {
-	/// Converts the field value to a string
-	pub fn to_string(&self) -> String {
+impl std::fmt::Display for FieldValue {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			FieldValue::Integer(i) => i.to_string(),
-			FieldValue::Float(f) => f.to_string(),
-			FieldValue::String(s) => s.clone(),
-			FieldValue::Boolean(b) => b.to_string(),
-			FieldValue::Null => String::new(),
+			FieldValue::Integer(i) => write!(f, "{}", i),
+			FieldValue::Float(fl) => write!(f, "{}", fl),
+			FieldValue::String(s) => write!(f, "{}", s),
+			FieldValue::Boolean(b) => write!(f, "{}", b),
+			FieldValue::Null => Ok(()),
 		}
 	}
 }

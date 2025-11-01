@@ -105,7 +105,7 @@ impl BaseCommand for MigrateCommand {
 			));
 
 			// 3. Check database connection
-			let database_url = std::env::var("DATABASE_URL").map_err(|_| {
+			let _database_url = std::env::var("DATABASE_URL").map_err(|_| {
 				crate::CommandError::ExecutionError(
 					"DATABASE_URL environment variable not set".to_string(),
 				)

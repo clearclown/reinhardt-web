@@ -40,34 +40,6 @@ pub enum CompressionCodec {
 }
 
 impl CompressionCodec {
-	/// Parses a compression codec from a string.
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_websockets::compression::CompressionCodec;
-	///
-	/// let codec = CompressionCodec::from_str("gzip").unwrap();
-	/// assert_eq!(codec, CompressionCodec::Gzip);
-	///
-	/// let codec = CompressionCodec::from_str("deflate").unwrap();
-	/// assert_eq!(codec, CompressionCodec::Deflate);
-	///
-	/// let codec = CompressionCodec::from_str("br").unwrap();
-	/// assert_eq!(codec, CompressionCodec::Brotli);
-	/// ```
-	pub fn from_str(s: &str) -> WebSocketResult<Self> {
-		match s.to_lowercase().as_str() {
-			"gzip" => Ok(Self::Gzip),
-			"deflate" => Ok(Self::Deflate),
-			"br" | "brotli" => Ok(Self::Brotli),
-			_ => Err(WebSocketError::Protocol(format!(
-				"Unknown compression codec: {}",
-				s
-			))),
-		}
-	}
-
 	/// Converts a compression codec to a string.
 	///
 	/// # Examples
@@ -84,6 +56,22 @@ impl CompressionCodec {
 			Self::Gzip => "gzip",
 			Self::Deflate => "deflate",
 			Self::Brotli => "br",
+		}
+	}
+}
+
+impl std::str::FromStr for CompressionCodec {
+	type Err = WebSocketError;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().as_str() {
+			"gzip" => Ok(Self::Gzip),
+			"deflate" => Ok(Self::Deflate),
+			"br" | "brotli" => Ok(Self::Brotli),
+			_ => Err(WebSocketError::Protocol(format!(
+				"Unknown compression codec: {}",
+				s
+			))),
 		}
 	}
 }

@@ -7,6 +7,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
 
+/// Type alias for dependency mapping: (model_name, pk) -> Set of cache keys
+type DependencyMap = Arc<RwLock<HashMap<(String, String), HashSet<String>>>>;
+
 /// Cache invalidation strategy
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InvalidationStrategy {
@@ -43,7 +46,7 @@ pub enum InvalidationStrategy {
 #[derive(Debug, Clone)]
 pub struct CacheInvalidator {
 	/// Map from (model, pk) to set of cache keys
-	dependencies: Arc<RwLock<HashMap<(String, String), HashSet<String>>>>,
+	dependencies: DependencyMap,
 	/// Map from cache key to timestamp
 	timestamps: Arc<RwLock<HashMap<String, Instant>>>,
 	/// Invalidation strategy

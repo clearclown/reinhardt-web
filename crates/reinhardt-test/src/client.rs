@@ -35,6 +35,9 @@ pub enum ClientError {
 
 pub type ClientResult<T> = Result<T, ClientError>;
 
+/// Type alias for request handler function
+pub type RequestHandler = Arc<dyn Fn(Request<Full<Bytes>>) -> Response<Full<Bytes>> + Send + Sync>;
+
 /// Test client for making API requests
 ///
 /// # Example
@@ -58,7 +61,7 @@ pub struct APIClient {
 	user: Arc<RwLock<Option<Value>>>,
 
 	/// Handler function for processing requests
-	handler: Option<Arc<dyn Fn(Request<Full<Bytes>>) -> Response<Full<Bytes>> + Send + Sync>>,
+	handler: Option<RequestHandler>,
 }
 
 impl APIClient {

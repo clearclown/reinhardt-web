@@ -5,7 +5,6 @@ use crate::{BatchRequest, BatchResponse};
 
 /// Mixin traits for ViewSet functionality
 /// These use composition instead of multiple inheritance
-
 /// List mixin - provides list() action
 #[async_trait]
 pub trait ListMixin: Send + Sync {

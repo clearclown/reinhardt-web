@@ -624,6 +624,7 @@ impl DynamicSettings {
 	/// # });
 	/// ```
 	#[cfg(feature = "hot-reload")]
+	#[allow(clippy::await_holding_lock)]
 	pub async fn watch_file(&self, path: &std::path::Path) -> DynamicResult<()> {
 		if let Some(hot_reload) = &self.hot_reload {
 			hot_reload
@@ -658,6 +659,7 @@ impl DynamicSettings {
 	/// # }
 	/// ```
 	#[cfg(feature = "hot-reload")]
+	#[allow(clippy::await_holding_lock)]
 	pub async fn unwatch_file(&self, path: &std::path::Path) -> DynamicResult<()> {
 		if let Some(hot_reload) = &self.hot_reload {
 			hot_reload
@@ -686,6 +688,7 @@ impl DynamicSettings {
 	/// # }
 	/// ```
 	#[cfg(feature = "hot-reload")]
+	#[allow(clippy::await_holding_lock)]
 	pub async fn stop_watching(&self) -> DynamicResult<()> {
 		if let Some(hot_reload) = &self.hot_reload {
 			hot_reload

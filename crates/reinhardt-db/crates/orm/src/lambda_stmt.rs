@@ -209,10 +209,14 @@ pub static QUERY_CACHE: Lazy<QueryCache> = Lazy::new(QueryCache::new);
 pub static CACHE_STATS: Lazy<Arc<RwLock<CacheStatistics>>> =
 	Lazy::new(|| Arc::new(RwLock::new(CacheStatistics::new())));
 
+// Type alias for lambda function
+type LambdaFunction = Box<dyn Fn() -> String + Send + Sync>;
+type LambdaFunctionMap = Arc<RwLock<HashMap<String, LambdaFunction>>>;
+
 // Lambda function registry
 pub struct LambdaRegistry {
 	#[allow(dead_code)]
-	functions: Arc<RwLock<HashMap<String, Box<dyn Fn() -> String + Send + Sync>>>>,
+	functions: LambdaFunctionMap,
 }
 
 impl Default for LambdaRegistry {

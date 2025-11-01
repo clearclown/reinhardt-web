@@ -372,7 +372,7 @@ impl RequestBuilder {
 		}
 
 		// Build request with body
-		let body = self.body.unwrap_or_else(Bytes::new);
+		let body = self.body.unwrap_or_default();
 		let req = request.body(Full::new(body))?;
 
 		Ok(req)

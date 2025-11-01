@@ -26,19 +26,7 @@ impl ApiVersion {
 	pub fn as_str(&self) -> &str {
 		&self.0
 	}
-	/// Get the version string as an owned String
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_versioning::ApiVersion;
-	///
-	/// let version = ApiVersion::new("2.0".to_string());
-	/// assert_eq!(version.to_string(), "2.0");
-	/// ```
-	pub fn to_string(&self) -> String {
-		self.0.clone()
-	}
+
 	/// Create a new ApiVersion with the given version string
 	///
 	/// # Examples
@@ -51,6 +39,12 @@ impl ApiVersion {
 	/// ```
 	pub fn new(version: String) -> Self {
 		Self(version)
+	}
+}
+
+impl std::fmt::Display for ApiVersion {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.0)
 	}
 }
 

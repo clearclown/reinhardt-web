@@ -356,8 +356,21 @@ impl<T: Model + Serialize + for<'de> Deserialize<'de> + Clone> ModelAdmin<T> {
 									serde_json::Value::Bool(b) => {
 										value.to_lowercase() == b.to_string()
 									}
-									serde_json::Value::Number(n) => n.to_string() == *value,
-									_ => v.to_string() == *value,
+									serde_json::Value::Number(n) => {
+										// Create owned string once and compare
+										let n_str = n.to_string();
+										n_str == value.as_str()
+									}
+									_ => {
+										// For other types, compare string representations
+										if let Some(s) = v.as_str() {
+											s == value.as_str()
+										} else {
+											// Create owned string once and compare with borrowed value
+											let v_str = v.to_string();
+											v_str == value.as_str()
+										}
+									}
 								}
 							})
 							.unwrap_or(false)

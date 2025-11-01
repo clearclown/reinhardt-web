@@ -187,6 +187,7 @@ impl ETagMiddleware {
 	}
 
 	/// Check If-None-Match header
+	#[allow(dead_code)]
 	fn check_if_none_match(&self, request: &Request, etag: &str) -> bool {
 		if let Some(if_none_match) = request.headers.get("if-none-match")
 			&& let Ok(value) = if_none_match.to_str()
@@ -204,6 +205,7 @@ impl ETagMiddleware {
 	}
 
 	/// Check If-Match header
+	#[allow(dead_code)]
 	fn check_if_match(&self, request: &Request, etag: &str) -> bool {
 		if let Some(if_match) = request.headers.get("if-match")
 			&& let Ok(value) = if_match.to_str()

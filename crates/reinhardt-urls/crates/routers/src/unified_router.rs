@@ -44,6 +44,9 @@ pub mod global;
 mod handlers;
 mod matching;
 
+/// Route information tuple: (path, name, namespace, methods)
+pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<Method>)>;
+
 /// Handler information stored in matchit router
 #[derive(Clone)]
 struct RouteHandler {
@@ -799,7 +802,7 @@ impl UnifiedRouter {
 	/// let routes = router.get_all_routes();
 	/// // Returns: [("/api/v1/users", None, None, vec![Method::GET])]
 	/// ```
-	pub fn get_all_routes(&self) -> Vec<(String, Option<String>, Option<String>, Vec<Method>)> {
+	pub fn get_all_routes(&self) -> RouteInfo {
 		let mut routes = Vec::new();
 
 		// Collect routes from this router

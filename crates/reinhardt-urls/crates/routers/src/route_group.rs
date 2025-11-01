@@ -6,6 +6,9 @@ use crate::UnifiedRouter;
 use reinhardt_middleware::Middleware;
 use std::sync::Arc;
 
+/// Route information tuple: (path, name, namespace, methods)
+pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Method>)>;
+
 /// Route Group
 ///
 /// Groups multiple routes and applies group-level middleware.
@@ -359,9 +362,7 @@ impl RouteGroup {
 	/// let routes = group.get_all_routes();
 	/// assert!(!routes.is_empty());
 	/// ```
-	pub fn get_all_routes(
-		&self,
-	) -> Vec<(String, Option<String>, Option<String>, Vec<hyper::Method>)> {
+	pub fn get_all_routes(&self) -> RouteInfo {
 		self.router.get_all_routes()
 	}
 

@@ -69,13 +69,13 @@ impl PoolConfig {
 ///
 /// // Send multiple emails efficiently
 /// let messages = vec![
-///     EmailMessage::new()
+///     EmailMessage::builder()
 ///         .from("sender@example.com")
 ///         .to(vec!["recipient1@example.com".to_string()])
 ///         .subject("Test 1")
 ///         .body("Body 1")
 ///         .build(),
-///     EmailMessage::new()
+///     EmailMessage::builder()
 ///         .from("sender@example.com")
 ///         .to(vec!["recipient2@example.com".to_string()])
 ///         .subject("Test 2")

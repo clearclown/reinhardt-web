@@ -114,11 +114,11 @@ impl MigrationPlan {
 	/// use reinhardt_migrations::{Migration, MigrationPlan};
 	///
 	/// let migration = Migration::new("0001_initial", "myapp");
-	/// let plan = MigrationPlan::new().add(migration);
+	/// let plan = MigrationPlan::new().with_migration(migration);
 	///
 	/// assert_eq!(plan.migrations.len(), 1);
 	/// ```
-	pub fn add(mut self, migration: Migration) -> Self {
+	pub fn with_migration(mut self, migration: Migration) -> Self {
 		self.migrations.push(migration);
 		self
 	}

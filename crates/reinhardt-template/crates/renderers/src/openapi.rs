@@ -77,7 +77,7 @@ impl OpenAPIRenderer {
 		// render it in the requested format
 		match self.format.as_str() {
 			"yaml" => serde_yaml::to_string(data).map_err(|e| Error::Serialization(e.to_string())),
-			"json" | _ => if self.pretty {
+			_ => if self.pretty {
 				serde_json::to_string_pretty(data)
 			} else {
 				serde_json::to_string(data)

@@ -58,8 +58,8 @@ impl UniqueValidator {
 	/// # Parameters
 	///
 	/// * `field_name` - Name of the field being validated (for error messages)
-	/// * `check_fn` - Async function that checks if the value exists in the database
-	///                Returns true if the value already exists (excluding the instance if provided)
+	/// * `check_fn` - Async function that checks if the value exists in the database.
+	///   Returns true if the value already exists (excluding the instance if provided)
 	pub fn new(field_name: impl Into<String>, check_fn: UniquenessCheckFn) -> Self {
 		Self {
 			field_name: field_name.into(),
@@ -72,8 +72,8 @@ impl UniqueValidator {
 	/// # Parameters
 	///
 	/// * `value` - The value to check for uniqueness
-	/// * `exclude_id` - Optional ID of the instance to exclude from the check
-	///                  (used during updates to allow keeping the same value)
+	/// * `exclude_id` - Optional ID of the instance to exclude from the check.
+	///   Used during updates to allow keeping the same value
 	///
 	/// # Returns
 	///

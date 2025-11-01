@@ -349,7 +349,7 @@ impl CsvImporter {
 			data_lines
 				.par_iter()
 				.enumerate()
-				.filter_map(|(idx, line)| {
+				.filter_map(|(_idx, line)| {
 					if line.trim().is_empty() {
 						return None;
 					}

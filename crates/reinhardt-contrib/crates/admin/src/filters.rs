@@ -453,17 +453,17 @@ impl FilterManager {
 	}
 
 	/// Get filter by field name (cached lookup)
-	pub fn get_filter(&self, field_name: &str) -> Option<&Box<dyn ListFilter>> {
+	pub fn get_filter(&self, field_name: &str) -> Option<&dyn ListFilter> {
 		// Try cache first
 		if let Some(index) = self.filter_cache.get(field_name) {
-			return self.filters.get(*index);
+			return self.filters.get(*index).map(|b| &**b);
 		}
 
 		// Fallback to linear search and update cache
 		for (idx, filter) in self.filters.iter().enumerate() {
 			if filter.field_name() == field_name {
 				self.filter_cache.insert(field_name.to_string(), idx);
-				return Some(filter);
+				return Some(&**filter);
 			}
 		}
 

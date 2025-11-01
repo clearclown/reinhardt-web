@@ -31,11 +31,9 @@ pub struct PermissionAst {
 	pub permission_codename: String,
 }
 
-impl PermissionAst {
-	/// Get the full permission string in "app.permission" format
-	#[allow(dead_code)]
-	pub fn to_string(&self) -> String {
-		format!("{}.{}", self.app_label, self.permission_codename)
+impl std::fmt::Display for PermissionAst {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}.{}", self.app_label, self.permission_codename)
 	}
 }
 

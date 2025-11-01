@@ -123,9 +123,11 @@ pub fn generate_field_schema(field: &FieldInfo) -> OpenApiSchema {
 		FieldType::MultipleChoice => {
 			schema.schema_type = Some("array".to_string());
 			if let Some(choices) = &field.choices {
-				let mut item_schema = OpenApiSchema::default();
-				item_schema.schema_type = Some("string".to_string());
-				item_schema.enum_values = Some(choices.iter().map(|c| c.value.clone()).collect());
+				let item_schema = OpenApiSchema {
+					schema_type: Some("string".to_string()),
+					enum_values: Some(choices.iter().map(|c| c.value.clone()).collect()),
+					..Default::default()
+				};
 				schema.items = Some(Box::new(item_schema));
 			}
 		}
@@ -242,8 +244,10 @@ pub fn generate_field_schema(field: &FieldInfo) -> OpenApiSchema {
 /// assert_eq!(schema.required, Some(vec!["name".to_string()]));
 /// ```
 pub fn generate_object_schema(fields: &HashMap<String, FieldInfo>) -> OpenApiSchema {
-	let mut schema = OpenApiSchema::default();
-	schema.schema_type = Some("object".to_string());
+	let mut schema = OpenApiSchema {
+		schema_type: Some("object".to_string()),
+		..Default::default()
+	};
 
 	let mut properties = HashMap::new();
 	let mut required_fields = Vec::new();

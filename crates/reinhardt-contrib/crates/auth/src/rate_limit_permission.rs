@@ -10,6 +10,10 @@ use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
 
+// Type alias to simplify custom key extraction function signature
+/// Custom key extraction function that takes a PermissionContext and returns an optional key string
+pub type CustomKeyFn = Arc<dyn Fn(&PermissionContext) -> Option<String> + Send + Sync>;
+
 /// Strategy for generating rate limit keys
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RateLimitKeyStrategy {
@@ -161,7 +165,7 @@ impl RateLimitConfigBuilder {
 pub struct RateLimitPermission<B: ThrottleBackend> {
 	backend: Arc<B>,
 	config: RateLimitConfig,
-	custom_key_fn: Option<Arc<dyn Fn(&PermissionContext) -> Option<String> + Send + Sync>>,
+	custom_key_fn: Option<CustomKeyFn>,
 }
 
 impl<B: ThrottleBackend> RateLimitPermission<B> {
@@ -310,7 +314,7 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 pub struct RateLimitPermissionBuilder<B: ThrottleBackend> {
 	backend: Option<Arc<B>>,
 	config: Option<RateLimitConfig>,
-	custom_key_fn: Option<Arc<dyn Fn(&PermissionContext) -> Option<String> + Send + Sync>>,
+	custom_key_fn: Option<CustomKeyFn>,
 }
 
 impl<B: ThrottleBackend> RateLimitPermissionBuilder<B> {

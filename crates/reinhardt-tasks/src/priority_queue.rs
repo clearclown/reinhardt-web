@@ -5,6 +5,9 @@ use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Type alias for priority queue map
+type PriorityQueueMap = BTreeMap<Priority, VecDeque<Box<dyn Task>>>;
+
 /// Priority level for tasks
 ///
 /// # Example
@@ -78,7 +81,7 @@ impl Priority {
 /// # }
 /// ```
 pub struct PriorityTaskQueue {
-	queues: Arc<RwLock<BTreeMap<Priority, VecDeque<Box<dyn Task>>>>>,
+	queues: Arc<RwLock<PriorityQueueMap>>,
 	weights: HashMap<Priority, u32>,
 }
 

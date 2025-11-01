@@ -769,11 +769,10 @@ impl URLField {
 		}
 
 		// Must have something after the protocol
-		let without_protocol = if value.starts_with("https://") {
-			&value[8..]
-		} else {
-			&value[7..]
-		};
+		let without_protocol = value
+			.strip_prefix("https://")
+			.or_else(|| value.strip_prefix("http://"))
+			.expect("URL must start with http:// or https://");
 
 		if without_protocol.is_empty() {
 			return Err(FieldError::InvalidUrl);

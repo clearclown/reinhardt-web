@@ -498,7 +498,7 @@ impl<T: Clone + PartialEq> EnumType<T> {
 			.ok_or_else(|| TypeError::SerializationError("Unknown enum variant".to_string()))
 	}
 
-	fn from_string(&self, s: &str) -> Result<T, TypeError> {
+	fn parse_string(&self, s: &str) -> Result<T, TypeError> {
 		self.variants
 			.iter()
 			.find(|(_, name)| name == s)
@@ -518,7 +518,7 @@ impl<T: Clone + PartialEq + Send + Sync> TypeDecorator for EnumType<T> {
 	fn process_result_value(&self, value: &[u8]) -> Result<Self::ImplType, TypeError> {
 		let s = String::from_utf8(value.to_vec())
 			.map_err(|e| TypeError::DeserializationError(e.to_string()))?;
-		self.from_string(&s)
+		self.parse_string(&s)
 	}
 
 	fn sql_type_name(&self) -> &str {

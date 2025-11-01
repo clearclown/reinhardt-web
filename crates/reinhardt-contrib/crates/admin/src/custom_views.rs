@@ -158,8 +158,8 @@ pub trait CustomView: Send + Sync {
 
 		// Check user permission
 		if let Some(simple_user) = user.downcast_ref::<SimpleUser>() {
-			let auth_backend = AdminAuthBackend::new();
-			if let Some(permission) = &config.permission {
+			let _auth_backend = AdminAuthBackend::new();
+			if let Some(_permission) = &config.permission {
 				// Check if user has the required permission
 				// For now, check if user is staff
 				simple_user.is_staff()
@@ -194,8 +194,8 @@ impl CustomViewRegistry {
 	}
 
 	/// Find a view by path
-	pub fn find_by_path(&self, path: &str) -> Option<&Box<dyn CustomView>> {
-		self.views.iter().find(|v| v.config().path == path)
+	pub fn find_by_path(&self, path: &str) -> Option<&dyn CustomView> {
+		self.views.iter().find(|v| v.config().path == path).map(|b| &**b)
 	}
 }
 

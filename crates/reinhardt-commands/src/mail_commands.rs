@@ -62,7 +62,7 @@ impl BaseCommand for SendTestEmailCommand {
 		let verbose = ctx.has_option("verbose");
 
 		// Create email message
-		let message = EmailMessage::new()
+		let message = EmailMessage::builder()
 			.subject("Test email from Reinhardt")
 			.body("This is a test email sent from the sendtestemail command.")
 			.from("noreply@example.com")

@@ -286,7 +286,7 @@ pub struct EmailMessage {
 }
 
 impl EmailMessage {
-	pub fn new() -> EmailMessageBuilder {
+	pub fn builder() -> EmailMessageBuilder {
 		EmailMessageBuilder::default()
 	}
 
@@ -344,7 +344,7 @@ impl EmailMessage {
 		&self,
 		backend: &dyn crate::backends::EmailBackend,
 	) -> crate::EmailResult<()> {
-		backend.send_messages(&[self.clone()]).await?;
+		backend.send_messages(std::slice::from_ref(self)).await?;
 		Ok(())
 	}
 
@@ -352,7 +352,7 @@ impl EmailMessage {
 		&self,
 		backend: &dyn crate::backends::EmailBackend,
 	) -> crate::EmailResult<()> {
-		backend.send_messages(&[self.clone()]).await?;
+		backend.send_messages(std::slice::from_ref(self)).await?;
 		Ok(())
 	}
 }

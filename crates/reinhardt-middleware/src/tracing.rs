@@ -333,10 +333,10 @@ impl TracingMiddleware {
 			return false;
 		}
 		use std::collections::hash_map::RandomState;
-		use std::hash::{BuildHasher, Hash, Hasher};
+		use std::hash::BuildHasher;
 		let random_state = RandomState::new();
 
-		let hash = random_state.hash_one(&Instant::now());
+		let hash = random_state.hash_one(Instant::now());
 		(hash as f64 / u64::MAX as f64) < self.config.sample_rate
 	}
 

@@ -96,6 +96,7 @@ where
 		Self::validate_for_create(&data).await?;
 
 		// Deserialize to model
+		#[cfg(feature = "django-compat")]
 		let model: Self::Model =
 			serde_json::from_value(data).map_err(|e| SerializerError::Serde {
 				message: format!("Failed to deserialize: {}", e),

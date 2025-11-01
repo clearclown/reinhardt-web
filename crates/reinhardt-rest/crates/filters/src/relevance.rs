@@ -360,11 +360,7 @@ impl RelevanceScorer {
 
 		let score_expr = self.generate_score_expression(search_terms);
 
-		let new_select = if select_part.trim().eq_ignore_ascii_case("SELECT *") {
-			format!("{}, {} AS relevance_score", select_part, score_expr)
-		} else {
-			format!("{}, {} AS relevance_score", select_part, score_expr)
-		};
+		let new_select = format!("{}, {} AS relevance_score", select_part, score_expr);
 
 		let mut result_sql = format!("{}{}", new_select, rest_part);
 

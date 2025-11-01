@@ -61,13 +61,7 @@ pub fn extract_bearer_token(request: &Request) -> Option<String> {
 		.headers
 		.get(hyper::header::AUTHORIZATION)
 		.and_then(|value| value.to_str().ok())
-		.and_then(|auth_str| {
-			if auth_str.starts_with("Bearer ") {
-				Some(auth_str[7..].to_string())
-			} else {
-				None
-			}
-		})
+		.and_then(|auth_str| auth_str.strip_prefix("Bearer ").map(|s| s.to_string()))
 }
 
 /// Parse query parameters into a typed structure

@@ -291,7 +291,7 @@ mod tests {
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.headers.get(CONTENT_ENCODING).unwrap(), "gzip");
-		assert!(response.body.len() > 0); // Has compressed content
+		assert!(!response.body.is_empty()); // Has compressed content
 	}
 
 	#[tokio::test]

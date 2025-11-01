@@ -181,7 +181,7 @@ impl<C: Cache> BatchWarmer<C> {
 	}
 
 	/// Add a warmer to the batch
-	pub fn add(mut self, warmer: Box<dyn CacheWarmer<C>>) -> Self {
+	pub fn with_warmer(mut self, warmer: Box<dyn CacheWarmer<C>>) -> Self {
 		self.warmers.push(warmer);
 		self
 	}
@@ -256,7 +256,7 @@ impl<C: Cache> ParallelWarmer<C> {
 	}
 
 	/// Add a warmer to run in parallel
-	pub fn add(mut self, warmer: Box<dyn CacheWarmer<C>>) -> Self {
+	pub fn with_warmer(mut self, warmer: Box<dyn CacheWarmer<C>>) -> Self {
 		self.warmers.push(warmer);
 		self
 	}

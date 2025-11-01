@@ -23,7 +23,7 @@ pub enum BrotliQuality {
 }
 
 impl BrotliQuality {
-	fn to_value(&self) -> u32 {
+	fn to_value(self) -> u32 {
 		match self {
 			BrotliQuality::Fast => 1,
 			BrotliQuality::Balanced => 6,
@@ -205,9 +205,11 @@ impl BrotliMiddleware {
 
 	/// Compress data using Brotli
 	fn compress(&self, data: &[u8]) -> std::io::Result<Vec<u8>> {
-		let mut params = BrotliEncoderParams::default();
-		params.quality = self.config.quality.to_value() as i32;
-		params.lgwin = self.config.window_size as i32;
+		let params = BrotliEncoderParams {
+			quality: self.config.quality.to_value() as i32,
+			lgwin: self.config.window_size as i32,
+			..Default::default()
+		};
 
 		let mut output = Vec::new();
 		let mut reader = std::io::Cursor::new(data);

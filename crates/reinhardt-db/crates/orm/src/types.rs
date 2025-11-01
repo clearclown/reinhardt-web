@@ -281,11 +281,14 @@ impl SqlTypeDefinition for InetType {
 	}
 }
 
+// Type alias for coerce function
+type CoerceFunction = Box<dyn Fn(SqlValue) -> Result<SqlValue, TypeError> + Send + Sync>;
+
 /// Type decorator - wraps another type with custom behavior
 pub struct TypeDecorator<T: SqlTypeDefinition> {
 	#[allow(dead_code)]
 	inner: T,
-	coerce_fn: Option<Box<dyn Fn(SqlValue) -> Result<SqlValue, TypeError> + Send + Sync>>,
+	coerce_fn: Option<CoerceFunction>,
 }
 
 impl<T: SqlTypeDefinition> TypeDecorator<T> {

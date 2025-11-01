@@ -126,7 +126,7 @@ impl TemplateEmailBuilder {
 			None
 		};
 
-		let mut builder = EmailMessage::new()
+		let mut builder = EmailMessage::builder()
 			.from(self.from_email)
 			.to(self.to)
 			.subject(subject)

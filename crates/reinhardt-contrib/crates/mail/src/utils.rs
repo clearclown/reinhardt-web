@@ -32,17 +32,17 @@ pub async fn send_mail(
 ) -> EmailResult<()> {
 	let recipients: Vec<String> = recipient_list.into_iter().map(|r| r.into()).collect();
 
-	let mut email = EmailMessage::new()
+	let mut email_builder = EmailMessage::builder()
 		.subject(subject)
 		.body(message)
 		.from(from_email)
 		.to(recipients);
 
 	if let Some(html) = html_message {
-		email = email.html(html);
+		email_builder = email_builder.html(html);
 	}
 
-	let email = email.build();
+	let email = email_builder.build();
 
 	// Use console backend as the default for now
 	// In production, this should use backend_from_settings()
@@ -84,17 +84,17 @@ pub async fn send_mail_with_backend(
 ) -> EmailResult<()> {
 	let recipients: Vec<String> = recipient_list.into_iter().map(|r| r.into()).collect();
 
-	let mut email = EmailMessage::new()
+	let mut email_builder = EmailMessage::builder()
 		.subject(subject)
 		.body(message)
 		.from(from_email)
 		.to(recipients);
 
 	if let Some(html) = html_message {
-		email = email.html(html);
+		email_builder = email_builder.html(html);
 	}
 
-	let email = email.build();
+	let email = email_builder.build();
 	backend.send_messages(&[email]).await?;
 	Ok(())
 }
@@ -113,13 +113,13 @@ pub async fn send_mail_with_backend(
 /// let backend = MemoryBackend::new();
 ///
 /// let messages = vec![
-///     EmailMessage::new()
+///     EmailMessage::builder()
 ///         .subject("Newsletter #1")
 ///         .body("This month's updates")
 ///         .from("newsletter@example.com")
 ///         .to(vec!["user1@example.com"])
 ///         .build()?,
-///     EmailMessage::new()
+///     EmailMessage::builder()
 ///         .subject("Newsletter #1")
 ///         .body("This month's updates")
 ///         .from("newsletter@example.com")
@@ -352,13 +352,13 @@ mod tests {
 		let backend = MemoryBackend::new();
 
 		let messages = vec![
-			EmailMessage::new()
+			EmailMessage::builder()
 				.subject("Test 1")
 				.body("Body 1")
 				.from("from@example.com")
 				.to(vec!["to1@example.com".to_string()])
 				.build(),
-			EmailMessage::new()
+			EmailMessage::builder()
 				.subject("Test 2")
 				.body("Body 2")
 				.from("from@example.com")

@@ -12,6 +12,11 @@ pub type SyncReceiverFn = Arc<
 	dyn Fn(Option<Arc<dyn Any + Send + Sync>>, &HashMap<String, String>) -> String + Send + Sync,
 >;
 
+/// Type alias for signal receiver function
+type ReceiverFn = dyn Fn(Option<Arc<dyn Any + Send + Sync>>, &HashMap<String, String>) -> String
+	+ Send
+	+ Sync;
+
 /// Synchronous signal that mimics Django's Signal class
 #[derive(Clone)]
 pub struct SyncSignal {
@@ -21,11 +26,7 @@ pub struct SyncSignal {
 }
 
 struct SignalReceiver {
-	receiver: Weak<
-		dyn Fn(Option<Arc<dyn Any + Send + Sync>>, &HashMap<String, String>) -> String
-			+ Send
-			+ Sync,
-	>,
+	receiver: Weak<ReceiverFn>,
 	sender_type_id: Option<std::any::TypeId>,
 	dispatch_uid: Option<String>,
 	// Keep a strong reference to prevent premature deallocation (when caller transfers ownership)

@@ -52,10 +52,10 @@ impl<M: Model> QueryFilter<M> {
 	///
 	/// ```rust,ignore
 	/// let filter = QueryFilter::<Post>::new()
-	///     .add(Field::new(vec!["title"]).icontains("rust"))
-	///     .add(Field::new(vec!["age"]).gte(18));
+	///     .with_lookup(Field::new(vec!["title"]).icontains("rust"))
+	///     .with_lookup(Field::new(vec!["age"]).gte(18));
 	/// ```
-	pub fn add(mut self, lookup: Lookup<M>) -> Self {
+	pub fn with_lookup(mut self, lookup: Lookup<M>) -> Self {
 		self.lookups.push(lookup);
 		self
 	}
@@ -307,7 +307,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_single_lookup() {
 		let lookup = Field::<TestPost, String>::new(vec!["title"]).eq("Test".to_string());
-		let filter = QueryFilter::new().add(lookup);
+		let filter = QueryFilter::new().with_lookup(lookup);
 
 		let sql = "SELECT * FROM test_posts".to_string();
 		let result = filter.filter_queryset(&HashMap::new(), sql).await.unwrap();
@@ -319,8 +319,8 @@ mod tests {
 	#[tokio::test]
 	async fn test_multiple_lookups() {
 		let filter = QueryFilter::new()
-			.add(Field::<TestPost, String>::new(vec!["title"]).icontains("rust"))
-			.add(Field::<TestPost, i32>::new(vec!["age"]).gte(18));
+			.with_lookup(Field::<TestPost, String>::new(vec!["title"]).icontains("rust"))
+			.with_lookup(Field::<TestPost, i32>::new(vec!["age"]).gte(18));
 
 		let sql = "SELECT * FROM test_posts".to_string();
 		let result = filter.filter_queryset(&HashMap::new(), sql).await.unwrap();
@@ -350,7 +350,7 @@ mod tests {
 		use crate::field_extensions::FieldOrderingExt;
 
 		let filter = QueryFilter::new()
-			.add(Field::<TestPost, String>::new(vec!["title"]).icontains("rust"))
+			.with_lookup(Field::<TestPost, String>::new(vec!["title"]).icontains("rust"))
 			.order_by(Field::<TestPost, String>::new(vec!["created_at"]).desc());
 
 		let sql = "SELECT * FROM test_posts".to_string();

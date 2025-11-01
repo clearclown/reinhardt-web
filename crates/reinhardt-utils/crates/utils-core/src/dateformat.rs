@@ -4,37 +4,24 @@
 
 use chrono::{DateTime, Datelike, Timelike, Utc, Weekday};
 
-/// Format codes similar to Django/PHP date format
-///
-/// Common format codes:
-/// - Y: 4-digit year (e.g., 2025)
-/// - y: 2-digit year (e.g., 25)
-/// - m: Month with leading zero (01-12)
-/// - n: Month without leading zero (1-12)
-/// - d: Day with leading zero (01-31)
-/// - j: Day without leading zero (1-31)
-/// - H: Hour in 24-hour format with leading zero (00-23)
-/// - i: Minutes with leading zero (00-59)
-/// - s: Seconds with leading zero (00-59)
-/// - A: AM/PM
-/// - l: Full weekday name (e.g., Monday)
-/// - F: Full month name (e.g., January)
-/// Format codes similar to Django/PHP date format
-///
-/// Common format codes:
-/// - Y: 4-digit year (e.g., 2025)
-/// - y: 2-digit year (e.g., 25)
-/// - m: Month with leading zero (01-12)
-/// - n: Month without leading zero (1-12)
-/// - d: Day with leading zero (01-31)
-/// - j: Day without leading zero (1-31)
-/// - H: Hour in 24-hour format with leading zero (00-23)
-/// - i: Minutes with leading zero (00-59)
-/// - s: Seconds with leading zero (00-59)
-/// - A: AM/PM
-/// - l: Full weekday name (e.g., Monday)
-/// - F: Full month name (e.g., January)
 /// Format a datetime using Django-style format string
+///
+/// # Format Codes
+///
+/// Common format codes similar to Django/PHP date format:
+///
+/// - Y: 4-digit year (e.g., 2025)
+/// - y: 2-digit year (e.g., 25)
+/// - m: Month with leading zero (01-12)
+/// - n: Month without leading zero (1-12)
+/// - d: Day with leading zero (01-31)
+/// - j: Day without leading zero (1-31)
+/// - H: Hour in 24-hour format with leading zero (00-23)
+/// - i: Minutes with leading zero (00-59)
+/// - s: Seconds with leading zero (00-59)
+/// - A: AM/PM
+/// - l: Full weekday name (e.g., Monday)
+/// - F: Full month name (e.g., January)
 ///
 /// # Examples
 ///

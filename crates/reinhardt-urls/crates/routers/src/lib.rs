@@ -147,7 +147,7 @@ pub use reverse::{
 	reverse_with_aho_corasick,
 };
 pub use route::Route;
-pub use route_group::RouteGroup;
+pub use route_group::{RouteGroup, RouteInfo};
 pub use router::{DefaultRouter, Router};
 pub use script_prefix::{clear_script_prefix, get_script_prefix, set_script_prefix};
 pub use simple::SimpleRouter;

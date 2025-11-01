@@ -60,9 +60,9 @@ impl Extensions {
 	/// assert_eq!(extensions.get::<u32>(), Some(42));
 	/// assert_eq!(extensions.get::<String>(), None);
 	/// ```
-	pub fn get<T: Send + Sync + 'static>(&self) -> Option<T>
+	pub fn get<T>(&self) -> Option<T>
 	where
-		T: Clone,
+		T: Clone + Send + Sync + 'static,
 	{
 		let map = self.map.lock().unwrap();
 		map.get(&TypeId::of::<T>())
@@ -100,9 +100,9 @@ impl Extensions {
 	/// assert!(!extensions.contains::<u32>());
 	/// assert_eq!(extensions.remove::<u32>(), None);
 	/// ```
-	pub fn remove<T: Send + Sync + 'static>(&self) -> Option<T>
+	pub fn remove<T>(&self) -> Option<T>
 	where
-		T: Clone,
+		T: Clone + Send + Sync + 'static,
 	{
 		let mut map = self.map.lock().unwrap();
 		map.remove(&TypeId::of::<T>())

@@ -250,13 +250,10 @@ impl LocaleMiddleware {
 		languages.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 
 		// Find first supported language
-		for (lang, _) in languages {
-			if self.config.supported_locales.contains(&lang) {
-				return Some(lang);
-			}
-		}
-
-		None
+		languages
+			.into_iter()
+			.map(|(lang, _)| lang)
+			.find(|lang| self.config.supported_locales.contains(lang))
 	}
 
 	/// Detect locale from all available sources

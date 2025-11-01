@@ -2,8 +2,6 @@
 //!
 //! Provides a Redis-backed cache implementation with connection pooling.
 
-#![cfg(feature = "redis-backend")]
-
 use crate::Cache;
 use async_trait::async_trait;
 use deadpool_redis::{Config as PoolConfig, Pool, Runtime};

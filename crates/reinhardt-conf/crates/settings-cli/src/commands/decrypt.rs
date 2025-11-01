@@ -54,12 +54,8 @@ pub async fn execute(args: DecryptArgs) -> anyhow::Result<()> {
 		// Decrypt using the encryption module
 		let encrypted_config: reinhardt_settings::encryption::EncryptedConfig =
 			serde_json::from_slice(&encrypted)?;
-		let encryptor = reinhardt_settings::encryption::ConfigEncryptor::new(
-			key_bytes
-				.try_into()
-				.map_err(|_| anyhow::anyhow!("Invalid key length"))?,
-		)
-		.map_err(|e| anyhow::anyhow!(e))?;
+		let encryptor = reinhardt_settings::encryption::ConfigEncryptor::new(key_bytes)
+			.map_err(|e| anyhow::anyhow!(e))?;
 		let decrypted = encryptor
 			.decrypt(&encrypted_config)
 			.map_err(|e| anyhow::anyhow!(e))?;

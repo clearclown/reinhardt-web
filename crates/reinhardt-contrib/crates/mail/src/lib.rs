@@ -66,7 +66,7 @@
 //!
 //! let attachment = Attachment::new("report.pdf", pdf_data);
 //!
-//! let email = EmailMessage::new()
+//! let email = EmailMessage::builder()
 //!     .from("reports@example.com")
 //!     .to(vec!["user@example.com".to_string()])
 //!     .subject("Monthly Report")
@@ -82,7 +82,7 @@
 //!
 //! let logo = Attachment::inline("logo.png", logo_data, "logo-cid");
 //!
-//! let email = EmailMessage::new()
+//! let email = EmailMessage::builder()
 //!     .from("marketing@example.com")
 //!     .to(vec!["customer@example.com".to_string()])
 //!     .subject("Newsletter")
@@ -124,7 +124,7 @@
 //!
 //! let backend = SmtpBackend::new(config)?;
 //!
-//! let email = EmailMessage::new()
+//! let email = EmailMessage::builder()
 //!     .from("sender@gmail.com")
 //!     .to(vec!["recipient@example.com".to_string()])
 //!     .subject("Test")
@@ -146,7 +146,7 @@
 //! let pool = EmailPool::new(smtp_config, pool_config)?;
 //!
 //! let messages = vec![
-//!     EmailMessage::new()
+//!     EmailMessage::builder()
 //!         .from("sender@example.com")
 //!         .to(vec!["user1@example.com".to_string()])
 //!         .subject("Newsletter")

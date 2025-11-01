@@ -3,6 +3,12 @@
 //! Provides SQLAlchemy-style association collections for simplifying access
 //! to attributes of related objects in collections.
 
+/// Type alias for collection getter function
+type CollectionGetterFn<S, C> = Box<dyn Fn(&S) -> &Vec<C>>;
+
+/// Type alias for attribute getter function
+type AttributeGetterFn<C, T> = Box<dyn Fn(&C) -> &T>;
+
 /// Association collection proxy for accessing collection attributes
 ///
 /// This allows accessing attributes of items in a collection through a proxy,
@@ -14,8 +20,8 @@
 /// * `C` - Collection item type
 /// * `T` - Target attribute type
 pub struct AssociationCollection<S, C, T> {
-	collection_getter: Box<dyn Fn(&S) -> &Vec<C>>,
-	attribute_getter: Box<dyn Fn(&C) -> &T>,
+	collection_getter: CollectionGetterFn<S, C>,
+	attribute_getter: AttributeGetterFn<C, T>,
 }
 
 impl<S, C, T> AssociationCollection<S, C, T> {

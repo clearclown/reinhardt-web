@@ -6,9 +6,12 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+/// Type alias for URL override function
+type UrlOverrideFn = Arc<dyn Fn(&dyn std::any::Any) -> Option<String> + Send + Sync>;
+
 lazy_static::lazy_static! {
 	/// Global registry for absolute URL overrides
-	static ref URL_OVERRIDES: RwLock<HashMap<String, Arc<dyn Fn(&dyn std::any::Any) -> Option<String> + Send + Sync>>> = {
+	static ref URL_OVERRIDES: RwLock<HashMap<String, UrlOverrideFn>> = {
 		RwLock::new(HashMap::new())
 	};
 }

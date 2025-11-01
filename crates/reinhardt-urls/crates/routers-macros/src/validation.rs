@@ -33,7 +33,7 @@ pub fn validate_path_syntax(path: &str) -> Result<(), PathValidationError> {
 	let mut param_start: Option<usize> = None;
 	let mut prev_char: Option<char> = None;
 
-	for (i, ch) in path.chars().enumerate() {
+	for (i, ch) in path.char_indices() {
 		// Check for double slashes
 		if ch == '/' && prev_char == Some('/') {
 			return Err(PathValidationError::DoubleSlash(i));

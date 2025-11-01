@@ -157,7 +157,8 @@ impl FormSecurityMiddleware {
 			&& let Some(value) = data.get(field)
 		{
 			// Honeypot should be empty
-			if !value.is_null() && !(value.is_string() && value.as_str().unwrap_or("").is_empty()) {
+			let is_empty = value.is_string() && value.as_str().unwrap_or("").is_empty();
+			if !value.is_null() && !is_empty {
 				return Err(SecurityError::BotDetected(
 					"Honeypot field was filled".to_string(),
 				));

@@ -125,7 +125,7 @@ impl MultiTermSearch {
 		let mut terms = Vec::new();
 		let mut current_term = String::new();
 		let mut in_quotes = false;
-		let mut chars = search.chars().peekable();
+		let chars = search.chars().peekable();
 
 		for c in chars {
 			match c {

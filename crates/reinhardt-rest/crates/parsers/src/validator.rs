@@ -230,6 +230,7 @@ impl CompositeValidator {
 	/// let validator = CompositeValidator::new()
 	///     .add(SizeLimitValidator::new(1024));
 	/// ```
+	#[allow(clippy::should_implement_trait)]
 	pub fn add<V: ParserValidator + 'static>(mut self, validator: V) -> Self {
 		self.validators.push(Box::new(validator));
 		self

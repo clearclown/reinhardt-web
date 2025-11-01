@@ -2,7 +2,6 @@
 ///
 /// This module contains database-specific implementations of schema editors
 /// and other backend-specific functionality.
-
 #[cfg(feature = "postgres")]
 pub mod postgresql;
 

@@ -13,10 +13,10 @@ pub enum OutputFormat {
 }
 
 impl OutputFormat {
-	/// Documentation for `from_str`
+	/// Parse an OutputFormat from a string
 	///
 	#[allow(dead_code)]
-	pub fn from_str(s: &str) -> Self {
+	pub fn parse(s: &str) -> Self {
 		match s.to_lowercase().as_str() {
 			"json" => Self::Json,
 			"toml" => Self::Toml,

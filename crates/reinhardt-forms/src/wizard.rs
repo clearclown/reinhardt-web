@@ -1,11 +1,17 @@
 use crate::form::{Form, FormError};
 use std::collections::HashMap;
 
+/// Type alias for wizard session data
+type WizardSessionData = HashMap<String, HashMap<String, serde_json::Value>>;
+
+/// Type alias for wizard step condition function
+type WizardConditionFn = Box<dyn Fn(&WizardSessionData) -> bool + Send + Sync>;
+
 /// FormWizard manages multi-step forms
 pub struct FormWizard {
 	steps: Vec<WizardStep>,
 	current_step: usize,
-	session_data: HashMap<String, HashMap<String, serde_json::Value>>,
+	session_data: WizardSessionData,
 	#[allow(dead_code)]
 	prefix: String,
 }
@@ -14,9 +20,7 @@ pub struct FormWizard {
 pub struct WizardStep {
 	pub name: String,
 	pub form: Form,
-	pub condition: Option<
-		Box<dyn Fn(&HashMap<String, HashMap<String, serde_json::Value>>) -> bool + Send + Sync>,
-	>,
+	pub condition: Option<WizardConditionFn>,
 }
 
 impl WizardStep {
@@ -57,15 +61,12 @@ impl WizardStep {
 	/// ```
 	pub fn with_condition<F>(mut self, condition: F) -> Self
 	where
-		F: Fn(&HashMap<String, HashMap<String, serde_json::Value>>) -> bool + Send + Sync + 'static,
+		F: Fn(&WizardSessionData) -> bool + Send + Sync + 'static,
 	{
 		self.condition = Some(Box::new(condition));
 		self
 	}
-	pub fn is_available(
-		&self,
-		session_data: &HashMap<String, HashMap<String, serde_json::Value>>,
-	) -> bool {
+	pub fn is_available(&self, session_data: &WizardSessionData) -> bool {
 		if let Some(condition) = &self.condition {
 			condition(session_data)
 		} else {

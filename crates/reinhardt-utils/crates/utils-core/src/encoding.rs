@@ -177,15 +177,13 @@ pub fn truncate_chars(text: &str, max_length: usize) -> String {
 	}
 
 	let mut result = String::new();
-	let mut char_count = 0;
 
-	for ch in text.chars() {
+	for (char_count, ch) in text.chars().enumerate() {
 		if char_count >= max_length - 3 {
 			result.push_str("...");
 			break;
 		}
 		result.push(ch);
-		char_count += 1;
 	}
 
 	result

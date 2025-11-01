@@ -576,6 +576,12 @@ pub struct MigrationAutodetector {
 	similarity_config: SimilarityConfig,
 }
 
+/// Type alias for moved model information: (from_app, to_app, model_name, rename_table, old_table, new_table)
+type MovedModelInfo = (String, String, String, bool, Option<String>, Option<String>);
+
+/// Type alias for model match result: ((deleted_app, deleted_model), (created_app, created_model), similarity_score)
+type ModelMatchResult = ((String, String), (String, String), f64);
+
 /// Detected changes between two project states
 #[derive(Debug, Clone, Default)]
 pub struct DetectedChanges {
@@ -592,7 +598,7 @@ pub struct DetectedChanges {
 	/// Models that were renamed: (app_label, old_name, new_name)
 	pub renamed_models: Vec<(String, String, String)>,
 	/// Models that were moved between apps: (from_app, to_app, model_name, rename_table, old_table, new_table)
-	pub moved_models: Vec<(String, String, String, bool, Option<String>, Option<String>)>,
+	pub moved_models: Vec<MovedModelInfo>,
 	/// Fields that were renamed: (app_label, model_name, old_name, new_name)
 	pub renamed_fields: Vec<(String, String, String, String)>,
 	/// Indexes that were added: (app_label, model_name, IndexDefinition)
@@ -2857,7 +2863,7 @@ impl MigrationAutodetector {
 		&self,
 		deleted: &[&(String, String)],
 		created: &[&(String, String)],
-	) -> Vec<((String, String), (String, String), f64)> {
+	) -> Vec<ModelMatchResult> {
 		let mut graph = Graph::<(), f64, Undirected>::new_undirected();
 		let mut deleted_nodes = Vec::new();
 		let mut created_nodes = Vec::new();

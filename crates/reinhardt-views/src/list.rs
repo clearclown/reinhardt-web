@@ -313,8 +313,8 @@ where
 		if let Some(ordering_fields) = self.get_ordering() {
 			// Sort by each field in reverse order (last field is primary sort)
 			for field in ordering_fields.iter().rev() {
-				let (field_name, descending) = if field.starts_with('-') {
-					(&field[1..], true)
+				let (field_name, descending) = if let Some(stripped) = field.strip_prefix('-') {
+					(stripped, true)
 				} else {
 					(field.as_str(), false)
 				};

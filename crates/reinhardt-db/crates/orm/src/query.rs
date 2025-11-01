@@ -489,8 +489,8 @@ where
 
 		// Apply ORDER BY
 		for order_field in &self.order_by_fields {
-			let (field, is_desc) = if order_field.starts_with('-') {
-				(&order_field[1..], true)
+			let (field, is_desc) = if let Some(stripped) = order_field.strip_prefix('-') {
+				(stripped, true)
 			} else {
 				(order_field.as_str(), false)
 			};
@@ -1177,8 +1177,8 @@ where
 
 			// Apply ORDER BY
 			for order_field in &self.order_by_fields {
-				let (field, is_desc) = if order_field.starts_with('-') {
-					(&order_field[1..], true)
+				let (field, is_desc) = if let Some(stripped) = order_field.strip_prefix('-') {
+					(stripped, true)
 				} else {
 					(order_field.as_str(), false)
 				};

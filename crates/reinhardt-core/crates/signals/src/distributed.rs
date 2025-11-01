@@ -118,6 +118,12 @@ pub trait MessageBroker: Send + Sync {
 
 /// In-memory message broker for testing and local development
 ///
+/// Type alias for channel subscriber function
+type SubscriberFn = Arc<dyn Fn(Vec<u8>) -> Result<(), SignalError> + Send + Sync>;
+
+/// Type alias for channels map
+type ChannelsMap = std::collections::HashMap<String, Vec<SubscriberFn>>;
+
 /// # Examples
 ///
 /// ```
@@ -126,14 +132,7 @@ pub trait MessageBroker: Send + Sync {
 /// let broker = InMemoryBroker::new();
 /// ```
 pub struct InMemoryBroker {
-	channels: Arc<
-		RwLock<
-			std::collections::HashMap<
-				String,
-				Vec<Arc<dyn Fn(Vec<u8>) -> Result<(), SignalError> + Send + Sync>>,
-			>,
-		>,
-	>,
+	channels: Arc<RwLock<ChannelsMap>>,
 }
 
 impl InMemoryBroker {

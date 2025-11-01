@@ -39,6 +39,19 @@ pub struct FormField {
 	help_text: Option<String>,
 }
 
+/// Options for configuring a form field
+#[derive(Debug, Clone, Default)]
+pub struct FieldOptions {
+	/// Field label (defaults to field name if not provided)
+	pub label: Option<String>,
+	/// Placeholder text
+	pub placeholder: Option<String>,
+	/// Default value
+	pub default_value: Option<String>,
+	/// Help text to display below the field
+	pub help_text: Option<String>,
+}
+
 impl FormGenerator {
 	/// Create a new form generator
 	///
@@ -94,19 +107,16 @@ impl FormGenerator {
 		name: impl Into<String>,
 		field_type: impl Into<String>,
 		required: bool,
-		label: Option<String>,
-		placeholder: Option<String>,
-		default_value: Option<String>,
-		help_text: Option<String>,
+		options: FieldOptions,
 	) -> &mut Self {
 		self.fields.push(FormField {
 			name: name.into(),
 			field_type: field_type.into(),
 			required,
-			label,
-			placeholder,
-			default_value,
-			help_text,
+			label: options.label,
+			placeholder: options.placeholder,
+			default_value: options.default_value,
+			help_text: options.help_text,
 		});
 		self
 	}

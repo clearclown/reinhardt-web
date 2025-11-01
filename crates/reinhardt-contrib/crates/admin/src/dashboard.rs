@@ -707,16 +707,17 @@ impl QuickLink {
 }
 
 /// Table widget for displaying tabular data
+/// Type alias for table data function
+pub type TableDataFn = Arc<
+	dyn Fn() -> futures::future::BoxFuture<'static, AdminResult<Vec<Vec<String>>>> + Send + Sync,
+>;
+
 pub struct TableWidget {
 	title: String,
 	icon: Option<String>,
 	position: WidgetPosition,
 	columns: Vec<String>,
-	data_fn: Arc<
-		dyn Fn() -> futures::future::BoxFuture<'static, AdminResult<Vec<Vec<String>>>>
-			+ Send
-			+ Sync,
-	>,
+	data_fn: TableDataFn,
 }
 
 impl TableWidget {

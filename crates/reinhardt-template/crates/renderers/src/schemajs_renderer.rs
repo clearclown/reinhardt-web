@@ -58,6 +58,7 @@ impl SchemaJSRenderer {
 	}
 
 	/// Converts a JSON value to JavaScript notation
+	#[allow(clippy::only_used_in_recursion)]
 	fn value_to_js(&self, value: &Value, indent: usize) -> String {
 		let indent_str = "  ".repeat(indent);
 		let next_indent_str = "  ".repeat(indent + 1);

@@ -483,6 +483,10 @@ impl Q {
 	}
 	/// Negate this Q object
 	///
+	/// Note: This method consumes `self` and returns a new `Q` object,
+	/// which is incompatible with the `std::ops::Not` trait that requires
+	/// returning a reference. Therefore, we keep this as a regular method.
+	#[allow(clippy::should_implement_trait)]
 	pub fn not(self) -> Self {
 		Q::Combined {
 			operator: QOperator::Not,

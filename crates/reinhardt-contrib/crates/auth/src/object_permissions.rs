@@ -9,6 +9,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+// Type alias to simplify complex permission map type
+/// Permission map keyed by (username, object_id) tuple, storing a list of permission strings
+pub type PermissionMap = Arc<RwLock<HashMap<(String, String), Vec<String>>>>;
+
 /// Object permission checker trait
 ///
 /// Allows for custom permission logic on specific object instances.
@@ -112,7 +116,7 @@ pub trait ObjectPermissionChecker: Send + Sync {
 /// ```
 pub struct ObjectPermissionManager {
 	/// Permissions map: (username, object_id) -> list of permissions
-	permissions: Arc<RwLock<HashMap<(String, String), Vec<String>>>>,
+	permissions: PermissionMap,
 }
 
 impl ObjectPermissionManager {

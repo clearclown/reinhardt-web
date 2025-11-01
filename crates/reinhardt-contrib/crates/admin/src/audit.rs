@@ -46,7 +46,7 @@ impl AuditAction {
 	}
 
 	/// Parse action from string
-	pub fn from_str(s: &str) -> Option<Self> {
+	pub fn parse(s: &str) -> Option<Self> {
 		match s.to_lowercase().as_str() {
 			"create" => Some(AuditAction::Create),
 			"update" => Some(AuditAction::Update),
@@ -1059,7 +1059,7 @@ impl AuditLogger for DatabaseAuditLogger {
 				.and_then(|v| v.as_str())
 				.ok_or("Missing or invalid action field")?;
 			let action =
-				AuditAction::from_str(action_str).ok_or("Invalid action value in database")?;
+				AuditAction::parse(action_str).ok_or("Invalid action value in database")?;
 
 			// Extract timestamp
 			let timestamp_str = row
@@ -1211,17 +1211,17 @@ mod tests {
 
 	#[test]
 	fn test_audit_action_from_str() {
-		assert_eq!(AuditAction::from_str("create"), Some(AuditAction::Create));
-		assert_eq!(AuditAction::from_str("update"), Some(AuditAction::Update));
-		assert_eq!(AuditAction::from_str("delete"), Some(AuditAction::Delete));
-		assert_eq!(AuditAction::from_str("view"), Some(AuditAction::View));
+		assert_eq!(AuditAction::parse("create"), Some(AuditAction::Create));
+		assert_eq!(AuditAction::parse("update"), Some(AuditAction::Update));
+		assert_eq!(AuditAction::parse("delete"), Some(AuditAction::Delete));
+		assert_eq!(AuditAction::parse("view"), Some(AuditAction::View));
 		assert_eq!(
-			AuditAction::from_str("bulk_delete"),
+			AuditAction::parse("bulk_delete"),
 			Some(AuditAction::BulkDelete)
 		);
-		assert_eq!(AuditAction::from_str("export"), Some(AuditAction::Export));
-		assert_eq!(AuditAction::from_str("import"), Some(AuditAction::Import));
-		assert_eq!(AuditAction::from_str("invalid"), None);
+		assert_eq!(AuditAction::parse("export"), Some(AuditAction::Export));
+		assert_eq!(AuditAction::parse("import"), Some(AuditAction::Import));
+		assert_eq!(AuditAction::parse("invalid"), None);
 	}
 
 	#[test]

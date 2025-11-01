@@ -37,8 +37,6 @@
 //! # }
 //! ```
 
-#![cfg(feature = "redis-cluster")]
-
 use crate::Cache;
 use async_trait::async_trait;
 use redis::AsyncCommands;

@@ -68,7 +68,7 @@ pub fn render_template<K, V>(
 	_request: &Request,
 	template_name: &str,
 	context: HashMap<K, V>,
-) -> Result<Response, Response>
+) -> Result<Response, Box<Response>>
 where
 	K: AsRef<str>,
 	V: Serialize,
@@ -92,11 +92,11 @@ where
 		if error_msg.contains("not found") || error_msg.contains("doesn't exist") {
 			let mut response = Response::not_found();
 			response.body = bytes::Bytes::from(format!("Template not found: {}", template_name));
-			response
+			Box::new(response)
 		} else {
 			let mut response = Response::internal_server_error();
 			response.body = bytes::Bytes::from(format!("Template rendering failed: {}", error_msg));
-			response
+			Box::new(response)
 		}
 	})?;
 
@@ -160,7 +160,7 @@ pub fn render_to_response<K, V>(
 	request: &Request,
 	template_name: &str,
 	context: HashMap<K, V>,
-) -> Result<Response, Response>
+) -> Result<Response, Box<Response>>
 where
 	K: AsRef<str>,
 	V: Serialize,

@@ -294,6 +294,7 @@ impl<'a> SerializationArena<'a> {
 	/// let json = arena.to_json(&value);
 	/// assert_eq!(json, "test");
 	/// ```
+	#[allow(clippy::only_used_in_recursion)]
 	pub fn to_json(&self, value: &SerializedValue) -> JsonValue {
 		match value {
 			SerializedValue::Object(map) => {

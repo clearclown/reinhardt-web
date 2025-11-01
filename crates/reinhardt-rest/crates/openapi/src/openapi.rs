@@ -190,7 +190,7 @@ impl SchemaExt for Schema {
 /// Extension trait for OpenApiSchema to provide convenient methods
 pub trait OpenApiSchemaExt {
 	/// Create a new OpenApiSchema with title and version
-	fn new(title: impl Into<String>, version: impl Into<String>) -> OpenApiSchema;
+	fn create(title: impl Into<String>, version: impl Into<String>) -> OpenApiSchema;
 
 	/// Add a path to the schema
 	fn add_path(&mut self, path: String, item: PathItem);
@@ -200,7 +200,7 @@ pub trait OpenApiSchemaExt {
 }
 
 impl OpenApiSchemaExt for OpenApiSchema {
-	fn new(title: impl Into<String>, version: impl Into<String>) -> OpenApiSchema {
+	fn create(title: impl Into<String>, version: impl Into<String>) -> OpenApiSchema {
 		OpenApiBuilder::new()
 			.info(InfoBuilder::new().title(title).version(version).build())
 			.build()
@@ -229,7 +229,7 @@ impl OpenApiSchemaExt for OpenApiSchema {
 /// Extension trait for Operation to provide convenient methods
 pub trait OperationExt {
 	/// Create a new Operation with default values
-	fn new() -> Operation;
+	fn create() -> Operation;
 
 	/// Add a parameter to the operation
 	fn add_parameter(&mut self, parameter: Parameter);
@@ -239,7 +239,7 @@ pub trait OperationExt {
 }
 
 impl OperationExt for Operation {
-	fn new() -> Operation {
+	fn create() -> Operation {
 		// Operation is non-exhaustive, so we must use Default
 		Default::default()
 	}
@@ -301,11 +301,11 @@ impl ComponentsExt for Components {
 /// Extension trait for PathItem to provide constructor
 pub trait PathItemExt {
 	/// Create a new PathItem
-	fn new() -> PathItem;
+	fn create() -> PathItem;
 }
 
 impl PathItemExt for PathItem {
-	fn new() -> PathItem {
+	fn create() -> PathItem {
 		PathItem::default()
 	}
 }

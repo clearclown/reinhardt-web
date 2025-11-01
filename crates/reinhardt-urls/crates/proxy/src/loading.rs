@@ -258,9 +258,9 @@ impl RelationshipCache {
 	}
 
 	/// Get a cached relationship
-	pub fn get<T: 'static>(&self, key: &str) -> Option<T>
+	pub fn get<T>(&self, key: &str) -> Option<T>
 	where
-		T: Clone,
+		T: 'static + Clone,
 	{
 		let cache = self.cache.read().unwrap();
 		cache.get(key).and_then(|v| v.downcast_ref::<T>().cloned())

@@ -569,7 +569,7 @@ impl AdminDatabase {
 		}
 
 		let sql = query.to_string(PostgresQueryBuilder);
-		let row = self
+		let _row = self
 			.connection
 			.query_one(&sql)
 			.await

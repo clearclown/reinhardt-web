@@ -5,11 +5,30 @@
 //! - `SlugRelatedField` with slug-based queries
 //! - Query optimization with select_related/prefetch_related
 
-use crate::{SerializerError, ValidatorError};
+use crate::SerializerError;
+#[cfg(feature = "django-compat")]
+use crate::ValidatorError;
 use async_trait::async_trait;
 use reinhardt_orm::{Model, query::*};
 use serde::{Serialize, de::DeserializeOwned};
+use std::future::Future;
 use std::marker::PhantomData;
+use std::pin::Pin;
+use std::sync::Arc;
+
+// Type aliases to simplify complex function pointer types
+
+/// Type alias for async many-to-many relation resolver function
+pub type ManyRelationResolverFn<T, RelatedItem> = Arc<
+	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
+		+ Send
+		+ Sync,
+>;
+
+/// Type alias for async one-to-one/foreign-key relation resolver function
+pub type SingleRelationResolverFn<T, RelatedItem> = Arc<
+	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>> + Send + Sync,
+>;
 
 /// Primary key related field with ORM query support
 ///
@@ -480,7 +499,7 @@ where
 		let mut queryset = QuerySet::<T>::new();
 
 		// Filter by slug field IN (slugs)
-		let slug_values: Vec<String> = slugs.iter().cloned().collect();
+		let slug_values: Vec<String> = slugs.to_vec();
 
 		let filter = Filter::new(
 			self.slug_field.clone(),

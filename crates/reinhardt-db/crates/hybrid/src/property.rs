@@ -2,10 +2,16 @@
 
 use std::marker::PhantomData;
 
+/// Type alias for instance getter function
+type InstanceGetterFn<T, R> = Box<dyn Fn(&T) -> R + Send + Sync>;
+
+/// Type alias for expression getter function
+type ExpressionGetterFn = Box<dyn Fn() -> String + Send + Sync>;
+
 /// A hybrid property that works at both instance and class level
 pub struct HybridProperty<T, R> {
-	instance_getter: Box<dyn Fn(&T) -> R + Send + Sync>,
-	expression_getter: Option<Box<dyn Fn() -> String + Send + Sync>>,
+	instance_getter: InstanceGetterFn<T, R>,
+	expression_getter: Option<ExpressionGetterFn>,
 	_phantom: PhantomData<T>,
 }
 
@@ -108,10 +114,16 @@ impl<T, R> HybridProperty<T, R> {
 	}
 }
 
+/// Type alias for instance method function
+type InstanceMethodFn<T, A, R> = Box<dyn Fn(&T, A) -> R + Send + Sync>;
+
+/// Type alias for expression method function
+type ExpressionMethodFn<A> = Box<dyn Fn(A) -> String + Send + Sync>;
+
 /// A hybrid method that works at both instance and class level
 pub struct HybridMethod<T, A, R> {
-	instance_method: Box<dyn Fn(&T, A) -> R + Send + Sync>,
-	expression_method: Option<Box<dyn Fn(A) -> String + Send + Sync>>,
+	instance_method: InstanceMethodFn<T, A, R>,
+	expression_method: Option<ExpressionMethodFn<A>>,
 	_phantom: PhantomData<(T, A)>,
 }
 
