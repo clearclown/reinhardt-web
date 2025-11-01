@@ -893,7 +893,7 @@ impl FieldValidators {
 	/// use reinhardt_orm::validators::{FieldValidators, RequiredValidator};
 	///
 	/// let validators = FieldValidators::new()
-	///     .add(Box::new(RequiredValidator::new()));
+	///     .with_validator(Box::new(RequiredValidator::new()));
 	/// // Verify validator was added (type check passes)
 	/// let _: FieldValidators = validators;
 	/// ```
@@ -910,13 +910,13 @@ impl FieldValidators {
 	/// use reinhardt_orm::validators::{FieldValidators, RequiredValidator, MaxLengthValidator};
 	///
 	/// let validators = FieldValidators::new()
-	///     .add(Box::new(RequiredValidator::new()))
-	///     .add(Box::new(MaxLengthValidator::new(100)));
+	///     .with_validator(Box::new(RequiredValidator::new()))
+	///     .with_validator(Box::new(MaxLengthValidator::new(100)));
 	/// // Verify both validators were added successfully
 	/// assert!(validators.validate("hello").is_ok());
 	/// assert!(validators.validate("").is_err()); // Fails RequiredValidator
 	/// ```
-	pub fn add(mut self, validator: Box<dyn Validator>) -> Self {
+	pub fn with_validator(mut self, validator: Box<dyn Validator>) -> Self {
 		self.validators.push(validator);
 		self
 	}
@@ -928,8 +928,8 @@ impl FieldValidators {
 	/// use reinhardt_orm::validators::{FieldValidators, RequiredValidator, MaxLengthValidator, Validator};
 	///
 	/// let validators = FieldValidators::new()
-	///     .add(Box::new(RequiredValidator::new()))
-	///     .add(Box::new(MaxLengthValidator::new(10)));
+	///     .with_validator(Box::new(RequiredValidator::new()))
+	///     .with_validator(Box::new(MaxLengthValidator::new(10)));
 	///
 	/// assert!(validators.validate("hello").is_ok());
 	/// assert!(validators.validate("").is_err()); // Required
@@ -979,7 +979,7 @@ impl ModelValidators {
 	///
 	/// let mut model_validators = ModelValidators::new();
 	/// let email_validators = FieldValidators::new()
-	///     .add(Box::new(EmailValidator::new()));
+	///     .with_validator(Box::new(EmailValidator::new()));
 	/// model_validators.add_field_validator("email".to_string(), email_validators);
 	/// assert_eq!(model_validators.field_validators.len(), 1);
 	/// assert!(model_validators.field_validators.contains_key("email"));
@@ -996,7 +996,7 @@ impl ModelValidators {
 	///
 	/// let mut model_validators = ModelValidators::new();
 	/// let email_validators = FieldValidators::new()
-	///     .add(Box::new(EmailValidator::new()));
+	///     .with_validator(Box::new(EmailValidator::new()));
 	/// model_validators.add_field_validator("email".to_string(), email_validators);
 	///
 	/// assert!(model_validators.validate("email", "test@example.com").is_ok());
@@ -1019,9 +1019,9 @@ impl ModelValidators {
 	/// let mut model_validators = ModelValidators::new();
 	///
 	/// let username_validators = FieldValidators::new()
-	///     .add(Box::new(MinLengthValidator::new(3)));
+	///     .with_validator(Box::new(MinLengthValidator::new(3)));
 	/// let email_validators = FieldValidators::new()
-	///     .add(Box::new(EmailValidator::new()));
+	///     .with_validator(Box::new(EmailValidator::new()));
 	///
 	/// model_validators.add_field_validator("username".to_string(), username_validators);
 	/// model_validators.add_field_validator("email".to_string(), email_validators);
@@ -1245,8 +1245,8 @@ mod tests {
 	#[test]
 	fn test_field_validators() {
 		let validators = FieldValidators::new()
-			.add(Box::new(RequiredValidator::new()))
-			.add(Box::new(MaxLengthValidator::new(10)));
+			.with_validator(Box::new(RequiredValidator::new()))
+			.with_validator(Box::new(MaxLengthValidator::new(10)));
 
 		assert!(validators.validate("test").is_ok());
 		assert!(validators.validate("").is_err());
@@ -1258,8 +1258,8 @@ mod tests {
 		let mut model_validators = ModelValidators::new();
 
 		let email_validators = FieldValidators::new()
-			.add(Box::new(RequiredValidator::new()))
-			.add(Box::new(EmailValidator::new()));
+			.with_validator(Box::new(RequiredValidator::new()))
+			.with_validator(Box::new(EmailValidator::new()));
 
 		model_validators.add_field_validator("email".to_string(), email_validators);
 
@@ -1276,8 +1276,8 @@ mod tests {
 		let mut model_validators = ModelValidators::new();
 
 		let username_validators = FieldValidators::new()
-			.add(Box::new(MinLengthValidator::new(3)))
-			.add(Box::new(MaxLengthValidator::new(20)));
+			.with_validator(Box::new(MinLengthValidator::new(3)))
+			.with_validator(Box::new(MaxLengthValidator::new(20)));
 
 		let email_validators = FieldValidators::new().add(Box::new(EmailValidator::new()));
 
