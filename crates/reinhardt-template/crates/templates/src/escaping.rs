@@ -234,9 +234,11 @@ mod tests {
 
     #[test]
     fn test_escape_filter() {
+        let value = Value::String("<div>".to_string());
+        let args = HashMap::new();
         assert_eq!(
-            escape("<div>").unwrap(),
-            "&lt;div&gt;"
+            escape(&value, &args).unwrap(),
+            Value::String("&lt;div&gt;".to_string())
         );
     }
 
@@ -251,9 +253,11 @@ mod tests {
 
     #[test]
     fn test_unescape_filter() {
+        let value = Value::String("&lt;div&gt;".to_string());
+        let args = HashMap::new();
         assert_eq!(
-            unescape("&lt;div&gt;").unwrap(),
-            "<div>"
+            unescape(&value, &args).unwrap(),
+            Value::String("<div>".to_string())
         );
     }
 

@@ -16,10 +16,19 @@ use chrono::{DateTime, Duration, Utc};
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::truncate_filter;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::truncate;
 ///
-/// assert_eq!(truncate_filter("Hello World", 5).unwrap(), "He...");
-/// assert_eq!(truncate_filter("Hi", 5).unwrap(), "Hi");
+/// let value = Value::String("Hello World".to_string());
+/// let mut args = HashMap::new();
+/// args.insert("length".to_string(), Value::Number(5.into()));
+/// assert_eq!(truncate(&value, &args).unwrap(), Value::String("He...".to_string()));
+///
+/// let value2 = Value::String("Hi".to_string());
+/// let mut args2 = HashMap::new();
+/// args2.insert("length".to_string(), Value::Number(5.into()));
+/// assert_eq!(truncate(&value2, &args2).unwrap(), Value::String("Hi".to_string()));
 /// ```
 pub fn truncate(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().ok_or_else(|| {
@@ -46,10 +55,16 @@ pub fn truncate(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Valu
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::slugify;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::slugify;
 ///
-/// assert_eq!(slugify("Hello World!").unwrap(), "hello-world");
-/// assert_eq!(slugify("Django REST Framework").unwrap(), "django-rest-framework");
+/// let value = Value::String("Hello World!".to_string());
+/// let args = HashMap::new();
+/// assert_eq!(slugify(&value, &args).unwrap(), Value::String("hello-world".to_string()));
+///
+/// let value2 = Value::String("Django REST Framework".to_string());
+/// assert_eq!(slugify(&value2, &args).unwrap(), Value::String("django-rest-framework".to_string()));
 /// ```
 pub fn slugify(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().ok_or_else(|| {
@@ -85,10 +100,16 @@ pub fn slugify(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Valu
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::title_filter;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::title;
 ///
-/// assert_eq!(title_filter("hello world").unwrap(), "Hello World");
-/// assert_eq!(title_filter("django-rest-framework").unwrap(), "Django Rest Framework");
+/// let value = Value::String("hello world".to_string());
+/// let args = HashMap::new();
+/// assert_eq!(title(&value, &args).unwrap(), Value::String("Hello World".to_string()));
+///
+/// let value2 = Value::String("django-rest-framework".to_string());
+/// assert_eq!(title(&value2, &args).unwrap(), Value::String("Django Rest Framework".to_string()));
 /// ```
 pub fn title(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().ok_or_else(|| {
@@ -113,10 +134,16 @@ pub fn title(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value>
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::filesizeformat;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::filesizeformat;
 ///
-/// assert_eq!(filesizeformat(1024).unwrap(), "1.00 KB");
-/// assert_eq!(filesizeformat(1048576).unwrap(), "1.00 MB");
+/// let value = Value::Number(1024.into());
+/// let args = HashMap::new();
+/// assert_eq!(filesizeformat(&value, &args).unwrap(), Value::String("1.00 KB".to_string()));
+///
+/// let value2 = Value::Number(1048576.into());
+/// assert_eq!(filesizeformat(&value2, &args).unwrap(), Value::String("1.00 MB".to_string()));
 /// ```
 pub fn filesizeformat(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let bytes = value.as_i64().ok_or_else(|| {
@@ -144,10 +171,19 @@ pub fn filesizeformat(value: &Value, _args: &HashMap<String, Value>) -> TeraResu
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::floatformat;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::floatformat;
 ///
-/// assert_eq!(floatformat(3.14159, 2).unwrap(), "3.14");
-/// assert_eq!(floatformat(2.0, 2).unwrap(), "2.00");
+/// let value = Value::Number(tera::Number::from_f64(3.14159).unwrap());
+/// let mut args = HashMap::new();
+/// args.insert("places".to_string(), Value::Number(2.into()));
+/// assert_eq!(floatformat(&value, &args).unwrap(), Value::String("3.14".to_string()));
+///
+/// let value2 = Value::Number(tera::Number::from_f64(2.0).unwrap());
+/// let mut args2 = HashMap::new();
+/// args2.insert("places".to_string(), Value::Number(2.into()));
+/// assert_eq!(floatformat(&value2, &args2).unwrap(), Value::String("2.00".to_string()));
 /// ```
 pub fn floatformat(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let num = value.as_f64().ok_or_else(|| {
@@ -166,10 +202,17 @@ pub fn floatformat(value: &Value, args: &HashMap<String, Value>) -> TeraResult<V
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::first;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::first;
 ///
-/// let items = vec!["a", "b", "c"];
-/// assert_eq!(first(&items).unwrap(), "a");
+/// let value = Value::Array(vec![
+///     Value::String("a".to_string()),
+///     Value::String("b".to_string()),
+///     Value::String("c".to_string()),
+/// ]);
+/// let args = HashMap::new();
+/// assert_eq!(first(&value, &args).unwrap(), Value::String("a".to_string()));
 /// ```
 pub fn first(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let list = value.as_array().ok_or_else(|| {
@@ -185,10 +228,17 @@ pub fn first(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value>
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::last;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::last;
 ///
-/// let items = vec!["a", "b", "c"];
-/// assert_eq!(last(&items).unwrap(), "c");
+/// let value = Value::Array(vec![
+///     Value::String("a".to_string()),
+///     Value::String("b".to_string()),
+///     Value::String("c".to_string()),
+/// ]);
+/// let args = HashMap::new();
+/// assert_eq!(last(&value, &args).unwrap(), Value::String("c".to_string()));
 /// ```
 pub fn last(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let list = value.as_array().ok_or_else(|| {
@@ -204,10 +254,18 @@ pub fn last(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> 
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::join;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::join;
 ///
-/// let items = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-/// assert_eq!(join(&items, ", ").unwrap(), "a, b, c");
+/// let value = Value::Array(vec![
+///     Value::String("a".to_string()),
+///     Value::String("b".to_string()),
+///     Value::String("c".to_string()),
+/// ]);
+/// let mut args = HashMap::new();
+/// args.insert("sep".to_string(), Value::String(", ".to_string()));
+/// assert_eq!(join(&value, &args).unwrap(), Value::String("a, b, c".to_string()));
 /// ```
 pub fn join(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let list = value.as_array().ok_or_else(|| {
@@ -237,10 +295,16 @@ pub fn join(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::urlencode;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::urlencode;
 ///
-/// assert_eq!(urlencode("hello world").unwrap(), "hello%20world");
-/// assert_eq!(urlencode("a+b=c").unwrap(), "a%2Bb%3Dc");
+/// let value = Value::String("hello world".to_string());
+/// let args = HashMap::new();
+/// assert_eq!(urlencode(&value, &args).unwrap(), Value::String("hello%20world".to_string()));
+///
+/// let value2 = Value::String("a+b=c".to_string());
+/// assert_eq!(urlencode(&value2, &args).unwrap(), Value::String("a%2Bb%3Dc".to_string()));
 /// ```
 pub fn urlencode(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().ok_or_else(|| {
@@ -254,12 +318,16 @@ pub fn urlencode(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Va
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::timesince;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::timesince;
 /// use chrono::{Utc, Duration};
 ///
 /// let past = Utc::now() - Duration::hours(2);
-/// let result = timesince(&past).unwrap();
-/// assert!(result.contains("hour"));
+/// let value = Value::String(past.to_rfc3339());
+/// let args = HashMap::new();
+/// let result = timesince(&value, &args).unwrap();
+/// assert!(result.as_str().unwrap().contains("hour"));
 /// ```
 pub fn timesince(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     // Assume value is a UTC timestamp string (ISO 8601 format)
@@ -325,10 +393,17 @@ pub fn timesince(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Va
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::default;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::default;
 ///
-/// assert_eq!(default("", "N/A").unwrap(), "N/A");
-/// assert_eq!(default("Hello", "N/A").unwrap(), "Hello");
+/// let value = Value::String("".to_string());
+/// let mut args = HashMap::new();
+/// args.insert("value".to_string(), Value::String("N/A".to_string()));
+/// assert_eq!(default(&value, &args).unwrap(), Value::String("N/A".to_string()));
+///
+/// let value2 = Value::String("Hello".to_string());
+/// assert_eq!(default(&value2, &args).unwrap(), Value::String("Hello".to_string()));
 /// ```
 pub fn default(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().unwrap_or("");
@@ -350,10 +425,18 @@ pub fn default(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::wordcount;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::wordcount;
 ///
-/// assert_eq!(wordcount("hello world").unwrap(), "2");
-/// assert_eq!(wordcount("one two three").unwrap(), "3");
+/// let value = Value::String("hello world".to_string());
+/// let args = HashMap::new();
+/// let result = wordcount(&value, &args).unwrap();
+/// assert_eq!(result.as_u64().unwrap(), 2);
+///
+/// let value2 = Value::String("one two three".to_string());
+/// let result2 = wordcount(&value2, &args).unwrap();
+/// assert_eq!(result2.as_u64().unwrap(), 3);
 /// ```
 pub fn wordcount(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = value.as_str().ok_or_else(|| {
@@ -368,10 +451,21 @@ pub fn wordcount(value: &Value, _args: &HashMap<String, Value>) -> TeraResult<Va
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::add;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::add;
 ///
-/// assert_eq!(add(5, 3).unwrap(), 8);
-/// assert_eq!(add(10, -5).unwrap(), 5);
+/// let value = Value::Number(5.into());
+/// let mut args = HashMap::new();
+/// args.insert("value".to_string(), Value::Number(3.into()));
+/// let result = add(&value, &args).unwrap();
+/// assert_eq!(result.as_i64().unwrap(), 8);
+///
+/// let value2 = Value::Number(10.into());
+/// let mut args2 = HashMap::new();
+/// args2.insert("value".to_string(), Value::Number((-5).into()));
+/// let result2 = add(&value2, &args2).unwrap();
+/// assert_eq!(result2.as_i64().unwrap(), 5);
 /// ```
 pub fn add(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let num = value.as_i64().ok_or_else(|| {
@@ -390,11 +484,24 @@ pub fn add(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::pluralize;
+/// use tera::Value;
+/// use std::collections::HashMap;
+/// use reinhardt_templates::advanced_filters::pluralize;
 ///
-/// assert_eq!(pluralize(1, "s").unwrap(), "");
-/// assert_eq!(pluralize(2, "s").unwrap(), "s");
-/// assert_eq!(pluralize(0, "s").unwrap(), "s");
+/// let value = Value::Number(1.into());
+/// let mut args = HashMap::new();
+/// args.insert("suffix".to_string(), Value::String("s".to_string()));
+/// assert_eq!(pluralize(&value, &args).unwrap(), Value::String("".to_string()));
+///
+/// let value2 = Value::Number(2.into());
+/// let mut args2 = HashMap::new();
+/// args2.insert("suffix".to_string(), Value::String("s".to_string()));
+/// assert_eq!(pluralize(&value2, &args2).unwrap(), Value::String("s".to_string()));
+///
+/// let value3 = Value::Number(0.into());
+/// let mut args3 = HashMap::new();
+/// args3.insert("suffix".to_string(), Value::String("s".to_string()));
+/// assert_eq!(pluralize(&value3, &args3).unwrap(), Value::String("s".to_string()));
 /// ```
 pub fn pluralize(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let count = value.as_i64().ok_or_else(|| {
@@ -416,109 +523,196 @@ pub fn pluralize(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Val
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tera::Number;
 
     #[test]
     fn test_truncate() {
-        assert_eq!(truncate("Hello World", 5).unwrap(), "He...");
-        assert_eq!(truncate("Hi", 10).unwrap(), "Hi");
-        assert_eq!(truncate("Hello", 5).unwrap(), "Hello");
+        let value = Value::String("Hello World".to_string());
+        let mut args = HashMap::new();
+        args.insert("length".to_string(), Value::Number(5.into()));
+        assert_eq!(truncate(&value, &args).unwrap(), Value::String("He...".to_string()));
+
+        let value2 = Value::String("Hi".to_string());
+        let mut args2 = HashMap::new();
+        args2.insert("length".to_string(), Value::Number(10.into()));
+        assert_eq!(truncate(&value2, &args2).unwrap(), Value::String("Hi".to_string()));
+
+        let value3 = Value::String("Hello".to_string());
+        let mut args3 = HashMap::new();
+        args3.insert("length".to_string(), Value::Number(5.into()));
+        assert_eq!(truncate(&value3, &args3).unwrap(), Value::String("Hello".to_string()));
     }
 
     #[test]
     fn test_slugify() {
-        assert_eq!(slugify("Hello World!").unwrap(), "hello-world");
-        assert_eq!(
-            slugify("Django REST Framework").unwrap(),
-            "django-rest-framework"
-        );
-        assert_eq!(slugify("test___slug").unwrap(), "test-slug");
+        let value = Value::String("Hello World!".to_string());
+        let args = HashMap::new();
+        assert_eq!(slugify(&value, &args).unwrap(), Value::String("hello-world".to_string()));
+
+        let value2 = Value::String("Django REST Framework".to_string());
+        assert_eq!(slugify(&value2, &args).unwrap(), Value::String("django-rest-framework".to_string()));
+
+        let value3 = Value::String("test___slug".to_string());
+        assert_eq!(slugify(&value3, &args).unwrap(), Value::String("test-slug".to_string()));
     }
 
     #[test]
     fn test_title() {
-        assert_eq!(title("hello world").unwrap(), "Hello World");
-        assert_eq!(
-            title("django-rest-framework").unwrap(),
-            "Django Rest Framework"
-        );
+        let value = Value::String("hello world".to_string());
+        let args = HashMap::new();
+        assert_eq!(title(&value, &args).unwrap(), Value::String("Hello World".to_string()));
+
+        let value2 = Value::String("django-rest-framework".to_string());
+        assert_eq!(title(&value2, &args).unwrap(), Value::String("Django Rest Framework".to_string()));
     }
 
     #[test]
     fn test_filesizeformat() {
-        assert_eq!(filesizeformat(1024).unwrap(), "1.00 KB");
-        assert_eq!(filesizeformat(1048576).unwrap(), "1.00 MB");
-        assert_eq!(filesizeformat(512).unwrap(), "512 B");
+        let value = Value::Number(1024.into());
+        let args = HashMap::new();
+        assert_eq!(filesizeformat(&value, &args).unwrap(), Value::String("1.00 KB".to_string()));
+
+        let value2 = Value::Number(1048576.into());
+        assert_eq!(filesizeformat(&value2, &args).unwrap(), Value::String("1.00 MB".to_string()));
+
+        let value3 = Value::Number(512.into());
+        assert_eq!(filesizeformat(&value3, &args).unwrap(), Value::String("512 B".to_string()));
     }
 
     #[test]
     fn test_floatformat() {
-        assert_eq!(floatformat(3.14159, 2).unwrap(), "3.14");
-        assert_eq!(floatformat(2.0, 2).unwrap(), "2.00");
-        assert_eq!(floatformat(1.5, 0).unwrap(), "2");
+        let value = Value::Number(Number::from_f64(3.14159).unwrap());
+        let mut args = HashMap::new();
+        args.insert("places".to_string(), Value::Number(2.into()));
+        assert_eq!(floatformat(&value, &args).unwrap(), Value::String("3.14".to_string()));
+
+        let value2 = Value::Number(Number::from_f64(2.0).unwrap());
+        let mut args2 = HashMap::new();
+        args2.insert("places".to_string(), Value::Number(2.into()));
+        assert_eq!(floatformat(&value2, &args2).unwrap(), Value::String("2.00".to_string()));
+
+        let value3 = Value::Number(Number::from_f64(1.5).unwrap());
+        let mut args3 = HashMap::new();
+        args3.insert("places".to_string(), Value::Number(0.into()));
+        assert_eq!(floatformat(&value3, &args3).unwrap(), Value::String("2".to_string()));
     }
 
     #[test]
     fn test_first_last() {
-        let items = vec!["a", "b", "c"];
-        assert_eq!(first(&items).unwrap(), "a");
-        assert_eq!(last(&items).unwrap(), "c");
+        let items = vec![Value::String("a".to_string()), Value::String("b".to_string()), Value::String("c".to_string())];
+        let value = Value::Array(items);
+        let args = HashMap::new();
+        assert_eq!(first(&value, &args).unwrap(), Value::String("a".to_string()));
+        assert_eq!(last(&value, &args).unwrap(), Value::String("c".to_string()));
     }
 
     #[test]
     fn test_first_last_empty() {
-        let items: Vec<String> = vec![];
-        assert!(first(&items).is_err());
-        assert!(last(&items).is_err());
+        let items: Vec<Value> = vec![];
+        let value = Value::Array(items);
+        let args = HashMap::new();
+        assert!(first(&value, &args).is_err());
+        assert!(last(&value, &args).is_err());
     }
 
     #[test]
     fn test_join() {
-        let items = vec!["a", "b", "c"];
-        assert_eq!(join(&items, ", ").unwrap(), "a, b, c");
-        assert_eq!(join(&items, "-").unwrap(), "a-b-c");
+        let items = vec![Value::String("a".to_string()), Value::String("b".to_string()), Value::String("c".to_string())];
+        let value = Value::Array(items);
+        let mut args = HashMap::new();
+        args.insert("sep".to_string(), Value::String(", ".to_string()));
+        assert_eq!(join(&value, &args).unwrap(), Value::String("a, b, c".to_string()));
+
+        let mut args2 = HashMap::new();
+        args2.insert("sep".to_string(), Value::String("-".to_string()));
+        assert_eq!(join(&value, &args2).unwrap(), Value::String("a-b-c".to_string()));
     }
 
     #[test]
     fn test_urlencode() {
-        assert_eq!(urlencode("hello world").unwrap(), "hello%20world");
-        assert_eq!(urlencode("a+b=c").unwrap(), "a%2Bb%3Dc");
+        let value = Value::String("hello world".to_string());
+        let args = HashMap::new();
+        assert_eq!(urlencode(&value, &args).unwrap(), Value::String("hello%20world".to_string()));
+
+        let value2 = Value::String("a+b=c".to_string());
+        assert_eq!(urlencode(&value2, &args).unwrap(), Value::String("a%2Bb%3Dc".to_string()));
     }
 
     #[test]
     fn test_timesince() {
         let past = Utc::now() - Duration::hours(2);
-        let result = timesince(&past).unwrap();
-        assert!(result.contains("hour"));
+        let value = Value::String(past.to_rfc3339());
+        let args = HashMap::new();
+        let result = timesince(&value, &args).unwrap();
+        if let Value::String(s) = result {
+            assert!(s.contains("hour"));
+        } else {
+            panic!("Expected String value");
+        }
 
         let past_days = Utc::now() - Duration::days(5);
-        let result = timesince(&past_days).unwrap();
-        assert!(result.contains("day"));
+        let value2 = Value::String(past_days.to_rfc3339());
+        let result = timesince(&value2, &args).unwrap();
+        if let Value::String(s) = result {
+            assert!(s.contains("day"));
+        } else {
+            panic!("Expected String value");
+        }
     }
 
     #[test]
     fn test_default() {
-        assert_eq!(default("", "N/A").unwrap(), "N/A");
-        assert_eq!(default("Hello", "N/A").unwrap(), "Hello");
+        let value = Value::String("".to_string());
+        let mut args = HashMap::new();
+        args.insert("value".to_string(), Value::String("N/A".to_string()));
+        assert_eq!(default(&value, &args).unwrap(), Value::String("N/A".to_string()));
+
+        let value2 = Value::String("Hello".to_string());
+        assert_eq!(default(&value2, &args).unwrap(), Value::String("Hello".to_string()));
     }
 
     #[test]
     fn test_wordcount() {
-        assert_eq!(wordcount("hello world").unwrap(), "2");
-        assert_eq!(wordcount("one two three").unwrap(), "3");
-        assert_eq!(wordcount("").unwrap(), "0");
+        let value = Value::String("hello world".to_string());
+        let args = HashMap::new();
+        assert_eq!(wordcount(&value, &args).unwrap(), Value::Number(2.into()));
+
+        let value2 = Value::String("one two three".to_string());
+        assert_eq!(wordcount(&value2, &args).unwrap(), Value::Number(3.into()));
+
+        let value3 = Value::String("".to_string());
+        assert_eq!(wordcount(&value3, &args).unwrap(), Value::Number(0.into()));
     }
 
     #[test]
     fn test_add() {
-        assert_eq!(add(5, 3).unwrap(), 8);
-        assert_eq!(add(10, -5).unwrap(), 5);
-        assert_eq!(add(-3, -2).unwrap(), -5);
+        let value = Value::Number(5.into());
+        let mut args = HashMap::new();
+        args.insert("value".to_string(), Value::Number(3.into()));
+        assert_eq!(add(&value, &args).unwrap(), Value::Number(8.into()));
+
+        let value2 = Value::Number(10.into());
+        let mut args2 = HashMap::new();
+        args2.insert("value".to_string(), Value::Number((-5).into()));
+        assert_eq!(add(&value2, &args2).unwrap(), Value::Number(5.into()));
+
+        let value3 = Value::Number((-3).into());
+        let mut args3 = HashMap::new();
+        args3.insert("value".to_string(), Value::Number((-2).into()));
+        assert_eq!(add(&value3, &args3).unwrap(), Value::Number((-5).into()));
     }
 
     #[test]
     fn test_pluralize() {
-        assert_eq!(pluralize(1, "s").unwrap(), "");
-        assert_eq!(pluralize(2, "s").unwrap(), "s");
-        assert_eq!(pluralize(0, "s").unwrap(), "s");
+        let value = Value::Number(1.into());
+        let mut args = HashMap::new();
+        args.insert("suffix".to_string(), Value::String("s".to_string()));
+        assert_eq!(pluralize(&value, &args).unwrap(), Value::String("".to_string()));
+
+        let value2 = Value::Number(2.into());
+        assert_eq!(pluralize(&value2, &args).unwrap(), Value::String("s".to_string()));
+
+        let value3 = Value::Number(0.into());
+        assert_eq!(pluralize(&value3, &args).unwrap(), Value::String("s".to_string()));
     }
 }

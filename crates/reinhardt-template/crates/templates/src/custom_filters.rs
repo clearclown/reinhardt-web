@@ -332,103 +332,208 @@ mod tests {
 
     #[test]
     fn test_upper() {
-        assert_eq!(upper("hello").unwrap(), "HELLO");
-        assert_eq!(upper("").unwrap(), "");
-        assert_eq!(upper("HeLLo").unwrap(), "HELLO");
+        let value = Value::String("hello".to_string());
+        let args = HashMap::new();
+        assert_eq!(upper(&value, &args).unwrap(), Value::String("HELLO".to_string()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(upper(&value2, &args).unwrap(), Value::String("".to_string()));
+
+        let value3 = Value::String("HeLLo".to_string());
+        assert_eq!(upper(&value3, &args).unwrap(), Value::String("HELLO".to_string()));
     }
 
     #[test]
     fn test_lower() {
-        assert_eq!(lower("HELLO").unwrap(), "hello");
-        assert_eq!(lower("").unwrap(), "");
-        assert_eq!(lower("HeLLo").unwrap(), "hello");
+        let value = Value::String("HELLO".to_string());
+        let args = HashMap::new();
+        assert_eq!(lower(&value, &args).unwrap(), Value::String("hello".to_string()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(lower(&value2, &args).unwrap(), Value::String("".to_string()));
+
+        let value3 = Value::String("HeLLo".to_string());
+        assert_eq!(lower(&value3, &args).unwrap(), Value::String("hello".to_string()));
     }
 
     #[test]
     fn test_trim() {
-        assert_eq!(trim("  hello  ").unwrap(), "hello");
-        assert_eq!(trim("hello").unwrap(), "hello");
-        assert_eq!(trim("  ").unwrap(), "");
+        let value = Value::String("  hello  ".to_string());
+        let args = HashMap::new();
+        assert_eq!(trim(&value, &args).unwrap(), Value::String("hello".to_string()));
+
+        let value2 = Value::String("hello".to_string());
+        assert_eq!(trim(&value2, &args).unwrap(), Value::String("hello".to_string()));
+
+        let value3 = Value::String("  ".to_string());
+        assert_eq!(trim(&value3, &args).unwrap(), Value::String("".to_string()));
     }
 
     #[test]
     fn test_reverse() {
-        assert_eq!(reverse("hello").unwrap(), "olleh");
-        assert_eq!(reverse("").unwrap(), "");
-        assert_eq!(reverse("abc").unwrap(), "cba");
+        let value = Value::String("hello".to_string());
+        let args = HashMap::new();
+        assert_eq!(reverse(&value, &args).unwrap(), Value::String("olleh".to_string()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(reverse(&value2, &args).unwrap(), Value::String("".to_string()));
+
+        let value3 = Value::String("abc".to_string());
+        assert_eq!(reverse(&value3, &args).unwrap(), Value::String("cba".to_string()));
     }
 
     #[test]
     fn test_truncate() {
-        assert_eq!(truncate("Hello World", 5).unwrap(), "Hello...");
-        assert_eq!(truncate("Hi", 5).unwrap(), "Hi");
-        assert_eq!(truncate("", 5).unwrap(), "");
+        let value = Value::String("Hello World".to_string());
+        let mut args = HashMap::new();
+        args.insert("length".to_string(), Value::Number(5.into()));
+        assert_eq!(truncate(&value, &args).unwrap(), Value::String("Hello...".to_string()));
+
+        let value2 = Value::String("Hi".to_string());
+        let mut args2 = HashMap::new();
+        args2.insert("length".to_string(), Value::Number(5.into()));
+        assert_eq!(truncate(&value2, &args2).unwrap(), Value::String("Hi".to_string()));
+
+        let value3 = Value::String("".to_string());
+        let mut args3 = HashMap::new();
+        args3.insert("length".to_string(), Value::Number(5.into()));
+        assert_eq!(truncate(&value3, &args3).unwrap(), Value::String("".to_string()));
     }
 
     #[test]
     fn test_join() {
-        let items = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-        assert_eq!(join(&items, ", ").unwrap(), "a, b, c");
-        assert_eq!(join(&[], ", ").unwrap(), "");
+        let items = vec![Value::String("a".to_string()), Value::String("b".to_string()), Value::String("c".to_string())];
+        let value = Value::Array(items);
+        let mut args = HashMap::new();
+        args.insert("sep".to_string(), Value::String(", ".to_string()));
+        assert_eq!(join(&value, &args).unwrap(), Value::String("a, b, c".to_string()));
+
+        let empty_items: Vec<Value> = vec![];
+        let value2 = Value::Array(empty_items);
+        assert_eq!(join(&value2, &args).unwrap(), Value::String("".to_string()));
     }
 
     #[test]
     fn test_default() {
-        assert_eq!(default("hello", "N/A").unwrap(), "hello");
-        assert_eq!(default("", "N/A").unwrap(), "N/A");
+        let value = Value::String("hello".to_string());
+        let mut args = HashMap::new();
+        args.insert("value".to_string(), Value::String("N/A".to_string()));
+        assert_eq!(default(&value, &args).unwrap(), Value::String("hello".to_string()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(default(&value2, &args).unwrap(), Value::String("N/A".to_string()));
     }
 
     #[test]
     fn test_capitalize() {
-        assert_eq!(capitalize("hello").unwrap(), "Hello");
-        assert_eq!(capitalize("HELLO").unwrap(), "HELLO");
-        assert_eq!(capitalize("").unwrap(), "");
+        let value = Value::String("hello".to_string());
+        let args = HashMap::new();
+        assert_eq!(capitalize(&value, &args).unwrap(), Value::String("Hello".to_string()));
+
+        let value2 = Value::String("HELLO".to_string());
+        assert_eq!(capitalize(&value2, &args).unwrap(), Value::String("HELLO".to_string()));
+
+        let value3 = Value::String("".to_string());
+        assert_eq!(capitalize(&value3, &args).unwrap(), Value::String("".to_string()));
     }
 
     #[test]
     fn test_title() {
-        assert_eq!(title("hello world").unwrap(), "Hello World");
-        assert_eq!(title("").unwrap(), "");
-        assert_eq!(title("a b c").unwrap(), "A B C");
+        let value = Value::String("hello world".to_string());
+        let args = HashMap::new();
+        assert_eq!(title(&value, &args).unwrap(), Value::String("Hello World".to_string()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(title(&value2, &args).unwrap(), Value::String("".to_string()));
+
+        let value3 = Value::String("a b c".to_string());
+        assert_eq!(title(&value3, &args).unwrap(), Value::String("A B C".to_string()));
     }
 
     #[test]
     fn test_length() {
-        assert_eq!(length("hello").unwrap(), 5);
-        assert_eq!(length("").unwrap(), 0);
+        let value = Value::String("hello".to_string());
+        let args = HashMap::new();
+        assert_eq!(length(&value, &args).unwrap(), Value::Number(5.into()));
+
+        let value2 = Value::String("".to_string());
+        assert_eq!(length(&value2, &args).unwrap(), Value::Number(0.into()));
     }
 
     #[test]
     fn test_ljust() {
-        assert_eq!(ljust("42", 5, "0").unwrap(), "42000");
-        assert_eq!(ljust("hello", 3, "0").unwrap(), "hello");
+        let value = Value::String("42".to_string());
+        let mut args = HashMap::new();
+        args.insert("width".to_string(), Value::Number(5.into()));
+        args.insert("fill".to_string(), Value::String("0".to_string()));
+        assert_eq!(ljust(&value, &args).unwrap(), Value::String("42000".to_string()));
+
+        let value2 = Value::String("hello".to_string());
+        let mut args2 = HashMap::new();
+        args2.insert("width".to_string(), Value::Number(3.into()));
+        args2.insert("fill".to_string(), Value::String("0".to_string()));
+        assert_eq!(ljust(&value2, &args2).unwrap(), Value::String("hello".to_string()));
     }
 
     #[test]
     fn test_rjust() {
-        assert_eq!(rjust("42", 5, "0").unwrap(), "00042");
-        assert_eq!(rjust("hello", 3, "0").unwrap(), "hello");
+        let value = Value::String("42".to_string());
+        let mut args = HashMap::new();
+        args.insert("width".to_string(), Value::Number(5.into()));
+        args.insert("fill".to_string(), Value::String("0".to_string()));
+        assert_eq!(rjust(&value, &args).unwrap(), Value::String("00042".to_string()));
+
+        let value2 = Value::String("hello".to_string());
+        let mut args2 = HashMap::new();
+        args2.insert("width".to_string(), Value::Number(3.into()));
+        args2.insert("fill".to_string(), Value::String("0".to_string()));
+        assert_eq!(rjust(&value2, &args2).unwrap(), Value::String("hello".to_string()));
     }
 
     #[test]
     fn test_replace() {
-        assert_eq!(
-            replace("hello world", "world", "rust").unwrap(),
-            "hello rust"
-        );
-        assert_eq!(replace("", "a", "b").unwrap(), "");
+        let value = Value::String("hello world".to_string());
+        let mut args = HashMap::new();
+        args.insert("from".to_string(), Value::String("world".to_string()));
+        args.insert("to".to_string(), Value::String("rust".to_string()));
+        assert_eq!(replace(&value, &args).unwrap(), Value::String("hello rust".to_string()));
+
+        let value2 = Value::String("".to_string());
+        let mut args2 = HashMap::new();
+        args2.insert("from".to_string(), Value::String("a".to_string()));
+        args2.insert("to".to_string(), Value::String("b".to_string()));
+        assert_eq!(replace(&value2, &args2).unwrap(), Value::String("".to_string()));
     }
 
     #[test]
     fn test_split() {
-        assert_eq!(split("a,b,c", ",").unwrap(), vec!["a", "b", "c"]);
-        assert_eq!(split("hello", ",").unwrap(), vec!["hello"]);
+        let value = Value::String("a,b,c".to_string());
+        let mut args = HashMap::new();
+        args.insert("sep".to_string(), Value::String(",".to_string()));
+        let result = split(&value, &args).unwrap();
+        let expected = Value::Array(vec![
+            Value::String("a".to_string()),
+            Value::String("b".to_string()),
+            Value::String("c".to_string()),
+        ]);
+        assert_eq!(result, expected);
+
+        let value2 = Value::String("hello".to_string());
+        let result2 = split(&value2, &args).unwrap();
+        let expected2 = Value::Array(vec![Value::String("hello".to_string())]);
+        assert_eq!(result2, expected2);
     }
 
     #[test]
     fn test_striptags() {
-        assert_eq!(striptags("<p>Hello</p>").unwrap(), "Hello");
-        assert_eq!(striptags("No tags").unwrap(), "No tags");
-        assert_eq!(striptags("<div><p>Nested</p></div>").unwrap(), "Nested");
+        let value = Value::String("<p>Hello</p>".to_string());
+        let args = HashMap::new();
+        assert_eq!(striptags(&value, &args).unwrap(), Value::String("Hello".to_string()));
+
+        let value2 = Value::String("No tags".to_string());
+        assert_eq!(striptags(&value2, &args).unwrap(), Value::String("No tags".to_string()));
+
+        let value3 = Value::String("<div><p>Nested</p></div>".to_string());
+        assert_eq!(striptags(&value3, &args).unwrap(), Value::String("Nested".to_string()));
     }
 }
