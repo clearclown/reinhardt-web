@@ -13,9 +13,8 @@ pub type SyncReceiverFn = Arc<
 >;
 
 /// Type alias for signal receiver function
-type ReceiverFn = dyn Fn(Option<Arc<dyn Any + Send + Sync>>, &HashMap<String, String>) -> String
-	+ Send
-	+ Sync;
+type ReceiverFn =
+	dyn Fn(Option<Arc<dyn Any + Send + Sync>>, &HashMap<String, String>) -> String + Send + Sync;
 
 /// Synchronous signal that mimics Django's Signal class
 #[derive(Clone)]

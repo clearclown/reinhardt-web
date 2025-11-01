@@ -7,9 +7,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 /// Type alias for async handler function
-type AsyncHandlerFn = dyn Fn(Request) -> Pin<Box<dyn Future<Output = Result<Response>> + Send>>
-	+ Send
-	+ Sync;
+type AsyncHandlerFn =
+	dyn Fn(Request) -> Pin<Box<dyn Future<Output = Result<Response>> + Send>> + Send + Sync;
 
 /// Custom action handler trait
 #[async_trait]

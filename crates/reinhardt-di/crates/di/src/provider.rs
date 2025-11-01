@@ -7,7 +7,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 /// Type alias for the future returned by providers
-pub type ProviderFuture = Pin<Box<dyn Future<Output = DiResult<Box<dyn Any + Send + Sync>>> + Send>>;
+pub type ProviderFuture =
+	Pin<Box<dyn Future<Output = DiResult<Box<dyn Any + Send + Sync>>> + Send>>;
 
 pub type ProviderFn = Arc<dyn Fn() -> ProviderFuture + Send + Sync>;
 
