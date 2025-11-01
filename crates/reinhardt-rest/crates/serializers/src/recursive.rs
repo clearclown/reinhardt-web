@@ -24,6 +24,7 @@ impl SerializationContext {
     /// use reinhardt_serializers::recursive::SerializationContext;
     ///
     /// let context = SerializationContext::new(3);
+    /// // Verify context is initialized with correct depth settings
     /// assert_eq!(context.current_depth(), 0);
     /// assert_eq!(context.max_depth(), 3);
     /// ```
@@ -53,6 +54,7 @@ impl SerializationContext {
     /// use reinhardt_serializers::recursive::SerializationContext;
     ///
     /// let context = SerializationContext::new(2);
+    /// // Verify depth check works correctly
     /// assert!(context.can_go_deeper());
     /// ```
     pub fn can_go_deeper(&self) -> bool {
@@ -73,6 +75,7 @@ impl SerializationContext {
     /// let user = User { id: 1 };
     ///
     /// let mut context = SerializationContext::new(5);
+    /// // Verify circular reference detection
     /// assert!(context.visit(&user));
     /// assert!(!context.visit(&user)); // Already visited
     /// ```
@@ -100,6 +103,7 @@ impl SerializationContext {
     /// let mut context = SerializationContext::new(5);
     /// context.visit(&user);
     /// context.leave(&user);
+    /// // Verify object can be visited again after leaving
     /// assert!(context.visit(&user)); // Can visit again after leaving
     /// ```
     pub fn leave<T>(&mut self, obj: &T) {
@@ -117,6 +121,7 @@ impl SerializationContext {
     /// let context = SerializationContext::new(3);
     /// let child = context.child();
     ///
+    /// // Verify child context has incremented depth
     /// assert_eq!(child.current_depth(), 1);
     /// assert_eq!(child.max_depth(), 3);
     /// ```
@@ -141,6 +146,7 @@ impl SerializationContext {
     ///
     /// let mut reset_context = child;
     /// reset_context.reset();
+    /// // Verify context resets to initial state
     /// assert_eq!(reset_context.current_depth(), 0);
     /// ```
     pub fn reset(&mut self) {
@@ -156,6 +162,7 @@ impl SerializationContext {
     /// use reinhardt_serializers::recursive::SerializationContext;
     ///
     /// let context = SerializationContext::new(3);
+    /// // Verify remaining depth calculation
     /// assert_eq!(context.remaining_depth(), 3);
     ///
     /// let child = context.child();
@@ -247,7 +254,7 @@ pub mod circular {
     /// });
     ///
     /// assert_eq!(result.unwrap(), 42);
-    /// // Object is automatically unmarked after the function completes
+    /// // Verify automatic cleanup after function completion
     /// assert!(context.visit(&user)); // Can visit again
     /// ```
     pub fn visit_with<T, F, R>(
@@ -299,6 +306,7 @@ pub mod depth {
     /// use reinhardt_serializers::recursive::{SerializationContext, depth};
     ///
     /// let context = SerializationContext::new(2);
+    /// // Verify descent check works correctly
     /// assert!(depth::can_descend(&context));
     /// ```
     pub fn can_descend(context: &SerializationContext) -> bool {
@@ -315,6 +323,7 @@ pub mod depth {
     /// let context = SerializationContext::new(2);
     /// assert!(depth::try_descend(&context).is_ok());
     ///
+    /// // Verify error when max depth is reached
     /// let child = context.child().child();
     /// assert!(depth::try_descend(&child).is_err());
     /// ```
@@ -338,6 +347,7 @@ pub mod depth {
     /// let context = SerializationContext::new(3);
     ///
     /// let result = depth::descend_with(&context, |child_ctx| {
+    ///     // Verify child context depth in callback
     ///     assert_eq!(child_ctx.current_depth(), 1);
     ///     Ok(())
     /// });

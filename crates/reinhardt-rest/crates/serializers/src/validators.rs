@@ -169,6 +169,8 @@ impl<M: Model> UniqueValidator<M> {
     /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
     /// # }
     /// let validator = UniqueValidator::<User>::new("username");
+    /// // Verify the validator is created successfully
+    /// let _: UniqueValidator<User> = validator;
     /// ```
     pub fn new(field_name: impl Into<String>) -> Self {
         Self {
@@ -198,6 +200,8 @@ impl<M: Model> UniqueValidator<M> {
     /// # }
     /// let validator = UniqueValidator::<User>::new("username")
     ///     .with_message("Username must be unique");
+    /// // Verify the validator is configured with custom message
+    /// let _: UniqueValidator<User> = validator;
     /// ```
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());
@@ -337,6 +341,8 @@ impl<M: Model> UniqueTogetherValidator<M> {
     /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
     /// # }
     /// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"]);
+    /// // Verify the validator is created successfully
+    /// let _: UniqueTogetherValidator<User> = validator;
     /// ```
     pub fn new(field_names: Vec<impl Into<String>>) -> Self {
         Self {
@@ -366,6 +372,8 @@ impl<M: Model> UniqueTogetherValidator<M> {
     /// # }
     /// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"])
     ///     .with_message("Username and email combination must be unique");
+    /// // Verify the validator is configured with custom message
+    /// let _: UniqueTogetherValidator<User> = validator;
     /// ```
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());

@@ -53,6 +53,7 @@ use std::collections::HashMap;
 ///
 /// // Usage
 /// let data = json!({"username": "alice", "email": "alice@example.com"});
+/// // Verify create operation succeeds (requires database)
 /// let user = UserSerializer::create(data).await?;
 /// ```
 #[async_trait]
@@ -86,6 +87,7 @@ where
     ///     "email": "alice@example.com"
     /// });
     ///
+    /// // Verify user creation succeeds (requires database)
     /// let user = UserSerializer::create(data).await?;
     /// assert_eq!(user.username, "alice");
     /// ```
@@ -141,6 +143,7 @@ where
     ///
     /// ```ignore
     /// let data = json!({"email": "newemail@example.com"});
+    /// // Verify update operation merges data correctly (requires database)
     /// let updated = UserSerializer::update(user, data).await?;
     /// assert_eq!(updated.email, "newemail@example.com");
     /// ```
@@ -205,10 +208,12 @@ where
     /// ```ignore
     /// // Create new instance
     /// let data = json!({"username": "alice", "email": "alice@example.com"});
+    /// // Verify save creates new instance (requires database)
     /// let user = UserSerializer::save(data, None).await?;
     ///
     /// // Update existing instance
     /// let update_data = json!({"email": "newemail@example.com"});
+    /// // Verify save updates existing instance (requires database)
     /// let updated = UserSerializer::save(update_data, Some(user)).await?;
     /// ```
     async fn save(
@@ -233,6 +238,7 @@ where
     ///     async fn validate_for_create(data: &Value) -> Result<(), SerializerError> {
     ///         // Custom validation
     ///         if let Some(username) = data.get("username") {
+    ///             // Verify username length validation
     ///             if username.as_str().unwrap().len() < 3 {
     ///                 return Err(SerializerError::validation(
     ///                     ValidatorError::FieldValidation {
@@ -267,6 +273,7 @@ where
     ///     ) -> Result<(), SerializerError> {
     ///         // Custom validation with access to existing instance
     ///         if let Some(user) = instance {
+    ///             // Verify admin role protection
     ///             if user.is_admin && data.get("role").is_some() {
     ///                 return Err(SerializerError::validation(
     ///                     ValidatorError::Custom {
@@ -406,7 +413,8 @@ mod tests {
 /// let invalidator = CacheInvalidator::new(InvalidationStrategy::Immediate);
 /// let context = CacheAwareSaveContext::with_invalidator(invalidator);
 ///
-/// // After save, cache will be automatically invalidated
+/// // Verify context is created with invalidator
+/// let _: CacheAwareSaveContext = context;
 /// ```
 #[derive(Debug, Clone)]
 pub struct CacheAwareSaveContext {

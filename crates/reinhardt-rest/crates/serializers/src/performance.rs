@@ -59,9 +59,9 @@ impl UniqueCheckQuery {
 ///     cache.set("User".to_string(), fields.clone());
 /// }
 ///
-/// // Cache hit - retrieve
+/// // Cache hit - retrieve and verify
 /// if let Some(fields) = cache.get("User") {
-///     println!("Found {} cached fields", fields.len());
+///     assert_eq!(fields.len(), 0); // Empty vec in this example
 /// }
 /// ```
 #[derive(Debug, Clone)]
@@ -417,9 +417,10 @@ impl Default for BatchValidator {
 /// // Cache a query result
 /// cache.set("user:123".to_string(), serde_json::json!({"id": 123, "name": "Alice"}));
 ///
-/// // Retrieve cached result
+/// // Retrieve cached result and verify
 /// if let Some(user) = cache.get("user:123") {
-///     println!("Found cached user: {}", user);
+///     assert_eq!(user["id"], 123);
+///     assert_eq!(user["name"], "Alice");
 /// }
 /// ```
 #[derive(Debug)]
@@ -512,10 +513,10 @@ impl QueryCache {
 /// metrics.record_serialization(50); // 50ms
 /// metrics.record_serialization(30); // 30ms
 ///
-/// // Get statistics
+/// // Get statistics and verify
 /// let stats = metrics.get_stats();
-/// println!("Average serialization time: {}ms", stats.avg_serialization_ms);
-/// println!("Total operations: {}", stats.total_serializations);
+/// assert_eq!(stats.total_serializations, 2);
+/// assert_eq!(stats.avg_serialization_ms, 40.0); // (50 + 30) / 2
 /// ```
 #[derive(Debug, Clone)]
 pub struct PerformanceMetrics {
@@ -799,9 +800,10 @@ mod tests {
 ///     detector.record_query("SELECT * FROM users WHERE id = ?", &[i.to_string()]);
 /// }
 ///
-/// // Check for N+1 pattern
+/// // Check for N+1 pattern and verify detection
 /// if let Some(warning) = detector.check_n_plus_1() {
-///     eprintln!("Warning: {}", warning);
+///     assert!(warning.contains("N+1 query detected"));
+///     assert!(warning.contains("executed 100 times"));
 /// }
 /// ```
 #[derive(Debug, Clone)]

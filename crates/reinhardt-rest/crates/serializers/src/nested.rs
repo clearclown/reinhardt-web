@@ -45,7 +45,7 @@ use std::marker::PhantomData;
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```
 /// # use reinhardt_serializers::NestedSerializer;
 /// # use reinhardt_orm::Model;
 /// # use serde::{Serialize, Deserialize};
@@ -80,6 +80,8 @@ use std::marker::PhantomData;
 /// # fn example() {
 /// // Serialize a post with its author nested
 /// let serializer = NestedSerializer::<Post, Author>::new("author");
+/// // Verify the serializer is created successfully
+/// let _: NestedSerializer<Post, Author> = serializer;
 /// # }
 /// ```
 pub struct NestedSerializer<M: Model, R: Model> {
@@ -122,6 +124,8 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
     /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
     /// # }
     /// let serializer = NestedSerializer::<Post, Author>::new("author");
+    /// // Verify the serializer is created successfully
+    /// let _: NestedSerializer<Post, Author> = serializer;
     /// ```
     pub fn new(relationship_field: impl Into<String>) -> Self {
         Self {
@@ -166,6 +170,8 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
     /// # }
     /// let serializer = NestedSerializer::<Post, Author>::new("author")
     ///     .depth(2); // Serialize author and author's relationships
+    /// // Verify depth configuration
+    /// let _: NestedSerializer<Post, Author> = serializer;
     /// ```
     pub fn depth(mut self, depth: usize) -> Self {
         self.depth = depth;
@@ -204,6 +210,8 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
     /// # }
     /// let serializer = NestedSerializer::<Post, Author>::new("author")
     ///     .without_arena(); // Disable arena allocation
+    /// // Verify arena allocation is disabled
+    /// let _: NestedSerializer<Post, Author> = serializer;
     /// ```
     pub fn without_arena(mut self) -> Self {
         self.use_arena = false;
@@ -292,6 +300,8 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 /// # }
 /// let serializer = ListSerializer::<User>::new();
+/// // Verify the serializer is created successfully
+/// let _: ListSerializer<User> = serializer;
 /// ```
 pub struct ListSerializer<M: Model> {
     _phantom: PhantomData<M>,
@@ -426,7 +436,7 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```
 /// # use reinhardt_serializers::WritableNestedSerializer;
 /// # use reinhardt_orm::Model;
 /// # use serde::{Serialize, Deserialize};
@@ -454,6 +464,8 @@ impl<M: Model> Serializer for ListSerializer<M> {
 /// // Create a post and its comments in one operation
 /// let serializer = WritableNestedSerializer::<Post, Comment>::new("comments")
 ///     .allow_create(true);
+/// // Verify the serializer is created with create permission
+/// let _: WritableNestedSerializer<Post, Comment> = serializer;
 /// # }
 /// ```
 pub struct WritableNestedSerializer<M: Model, R: Model> {
@@ -498,7 +510,7 @@ impl<M: Model, R: Model> WritableNestedSerializer<M, R> {
     /// let json = r#"{"id": 1, "title": "Post", "author": {"id": 2, "name": "Alice"}}"#;
     ///
     /// if let Some(nested_data) = serializer.extract_nested_data(json)? {
-    ///     // Process nested_data as needed
+    ///     // Verify nested data extraction succeeds
     ///     let author: Author = serde_json::from_value(nested_data)?;
     /// }
     /// ```
@@ -523,9 +535,11 @@ impl<M: Model, R: Model> WritableNestedSerializer<M, R> {
     ///
     /// ```ignore
     /// let create_data = serde_json::json!({"id": null, "name": "New Author"});
+    /// // Verify create operation detection
     /// assert!(WritableNestedSerializer::<Post, Author>::is_create_operation(&create_data));
     ///
     /// let update_data = serde_json::json!({"id": 42, "name": "Existing Author"});
+    /// // Verify update operation detection
     /// assert!(!WritableNestedSerializer::<Post, Author>::is_create_operation(&update_data));
     /// ```
     pub fn is_create_operation(nested_value: &Value) -> bool {

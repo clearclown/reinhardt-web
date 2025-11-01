@@ -28,8 +28,10 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author");
+    /// // Verify the config is created with correct defaults
     /// assert_eq!(config.field_name, "author");
     /// assert_eq!(config.depth, 1);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn new(field_name: impl Into<String>) -> Self {
         Self {
@@ -49,7 +51,9 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author").depth(2);
+    /// // Verify the depth is set correctly
     /// assert_eq!(config.depth, 2);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn depth(mut self, depth: usize) -> Self {
         self.depth = depth;
@@ -64,7 +68,9 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author").read_only();
+    /// // Verify read_only flag is set
     /// assert!(config.read_only);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn read_only(mut self) -> Self {
         self.read_only = true;
@@ -79,7 +85,9 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author").allow_create();
+    /// // Verify allow_create flag is set
     /// assert!(config.allow_create);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn allow_create(mut self) -> Self {
         self.allow_create = true;
@@ -94,7 +102,9 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author").allow_update();
+    /// // Verify allow_update flag is set
     /// assert!(config.allow_update);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn allow_update(mut self) -> Self {
         self.allow_update = true;
@@ -109,8 +119,10 @@ impl NestedFieldConfig {
     /// use reinhardt_serializers::nested_config::NestedFieldConfig;
     ///
     /// let config = NestedFieldConfig::new("author").writable();
+    /// // Verify both allow_create and allow_update flags are set
     /// assert!(config.allow_create);
     /// assert!(config.allow_update);
+    /// let _: NestedFieldConfig = config;
     /// ```
     pub fn writable(mut self) -> Self {
         self.allow_create = true;
@@ -135,6 +147,8 @@ impl NestedSerializerConfig {
     /// use reinhardt_serializers::nested_config::NestedSerializerConfig;
     ///
     /// let config = NestedSerializerConfig::new();
+    /// // Verify the config is created successfully
+    /// let _: NestedSerializerConfig = config;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -151,6 +165,8 @@ impl NestedSerializerConfig {
     ///
     /// let mut config = NestedSerializerConfig::new();
     /// config.add_nested_field(NestedFieldConfig::new("author").depth(2));
+    /// // Verify the nested field is added successfully
+    /// assert!(config.is_nested_field("author"));
     /// ```
     pub fn add_nested_field(&mut self, field_config: NestedFieldConfig) {
         self.nested_fields
@@ -167,6 +183,7 @@ impl NestedSerializerConfig {
     /// let mut config = NestedSerializerConfig::new();
     /// config.add_nested_field(NestedFieldConfig::new("author"));
     ///
+    /// // Verify the nested field is retrieved correctly
     /// let author_config = config.get_nested_field("author");
     /// assert!(author_config.is_some());
     /// ```
@@ -184,6 +201,7 @@ impl NestedSerializerConfig {
     /// let mut config = NestedSerializerConfig::new();
     /// config.add_nested_field(NestedFieldConfig::new("author"));
     ///
+    /// // Verify nested field presence
     /// assert!(config.is_nested_field("author"));
     /// assert!(!config.is_nested_field("title"));
     /// ```
@@ -202,6 +220,7 @@ impl NestedSerializerConfig {
     /// config.add_nested_field(NestedFieldConfig::new("author"));
     /// config.add_nested_field(NestedFieldConfig::new("category"));
     ///
+    /// // Verify all nested field names are retrieved
     /// let fields = config.nested_field_names();
     /// assert_eq!(fields.len(), 2);
     /// ```
@@ -220,6 +239,7 @@ impl NestedSerializerConfig {
     /// config.add_nested_field(NestedFieldConfig::new("author"));
     /// assert!(config.is_nested_field("author"));
     ///
+    /// // Verify nested field is removed correctly
     /// config.remove_nested_field("author");
     /// assert!(!config.is_nested_field("author"));
     /// ```
@@ -237,6 +257,7 @@ impl NestedSerializerConfig {
     /// let mut config = NestedSerializerConfig::new();
     /// config.add_nested_field(NestedFieldConfig::new("author").depth(3));
     ///
+    /// // Verify depth is retrieved correctly
     /// assert_eq!(config.get_depth("author"), Some(3));
     /// assert_eq!(config.get_depth("title"), None);
     /// ```

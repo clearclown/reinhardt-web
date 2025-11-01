@@ -122,9 +122,9 @@ pub enum FieldValue {
 /// fields.insert("name".to_string(), FieldValue::String("Alice".to_string()));
 /// fields.insert("age".to_string(), FieldValue::Integer(30));
 ///
+/// // Verify arena allocation and JSON conversion work correctly
 /// let serialized = arena.allocate_field(&FieldValue::Object(fields));
 /// let json = arena.to_json(&serialized);
-///
 /// assert_eq!(json["name"], "Alice");
 /// assert_eq!(json["age"], 30);
 /// ```
@@ -148,6 +148,8 @@ impl<'a> SerializationArena<'a> {
     /// use reinhardt_serializers::arena::SerializationArena;
     ///
     /// let arena = SerializationArena::new();
+    /// // Verify the arena is created successfully
+    /// let _: SerializationArena = arena;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -166,7 +168,10 @@ impl<'a> SerializationArena<'a> {
     /// use reinhardt_serializers::arena::{SerializationArena, FieldValue};
     ///
     /// let arena = SerializationArena::new();
+    /// // Verify field allocation works correctly
     /// let value = arena.allocate_field(&FieldValue::String("test".to_string()));
+    /// let json = arena.to_json(&value);
+    /// assert_eq!(json, "test");
     /// ```
     pub fn allocate_field(&'a self, field: &FieldValue) -> &'a SerializedValue<'a> {
         match field {
@@ -221,9 +226,9 @@ impl<'a> SerializationArena<'a> {
     /// let arena = SerializationArena::new();
     /// let user = User { id: Some(1), name: "Alice".to_string() };
     ///
+    /// // Verify model serialization works correctly
     /// let serialized = arena.serialize_model(&user, 3);
     /// let json = arena.to_json(&serialized);
-    ///
     /// assert_eq!(json["id"], 1);
     /// assert_eq!(json["name"], "Alice");
     /// ```
@@ -282,8 +287,8 @@ impl<'a> SerializationArena<'a> {
     ///
     /// let arena = SerializationArena::new();
     /// let value = arena.allocate_field(&FieldValue::String("test".to_string()));
+    /// // Verify JSON conversion produces correct output
     /// let json = arena.to_json(&value);
-    ///
     /// assert_eq!(json, "test");
     /// ```
     pub fn to_json(&self, value: &SerializedValue) -> JsonValue {

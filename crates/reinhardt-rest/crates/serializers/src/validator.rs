@@ -33,6 +33,8 @@ impl ValidationError {
     /// use reinhardt_serializers::ValidationError;
     ///
     /// let error = ValidationError::field_error("email", "Invalid email format");
+    /// // Verify the error is created successfully
+    /// let _: ValidationError = error;
     /// ```
     pub fn field_error(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::FieldError {
@@ -49,6 +51,8 @@ impl ValidationError {
     /// use reinhardt_serializers::ValidationError;
     ///
     /// let error = ValidationError::object_error("Password and confirmation do not match");
+    /// // Verify the error is created successfully
+    /// let _: ValidationError = error;
     /// ```
     pub fn object_error(message: impl Into<String>) -> Self {
         Self::ObjectError(message.into())
@@ -66,6 +70,8 @@ impl ValidationError {
     ///     ValidationError::field_error("age", "Must be positive"),
     /// ];
     /// let combined = ValidationError::multiple(errors);
+    /// // Verify the combined error is created successfully
+    /// let _: ValidationError = combined;
     /// ```
     pub fn multiple(errors: Vec<ValidationError>) -> Self {
         Self::MultipleErrors(errors)
@@ -80,7 +86,7 @@ impl ValidationError {
 ///
 /// ```
 /// use reinhardt_serializers::{FieldValidator, ValidationResult, ValidationError};
-/// use serde_json::Value;
+/// use serde_json::{Value, json};
 ///
 /// struct EmailValidator;
 ///
@@ -97,6 +103,11 @@ impl ValidationError {
 ///         }
 ///     }
 /// }
+///
+/// // Verify the validator implementation works correctly
+/// let validator = EmailValidator;
+/// assert!(validator.validate(&json!("test@example.com")).is_ok());
+/// assert!(validator.validate(&json!("invalid")).is_err());
 /// ```
 pub trait FieldValidator {
     /// Validate a field value
@@ -128,6 +139,13 @@ pub trait FieldValidator {
 ///         }
 ///     }
 /// }
+///
+/// // Verify the validator implementation works correctly
+/// let validator = PasswordMatchValidator;
+/// let mut data = HashMap::new();
+/// data.insert("password".to_string(), json!("secret"));
+/// data.insert("password_confirm".to_string(), json!("secret"));
+/// assert!(validator.validate(&data).is_ok());
 /// ```
 pub trait ObjectValidator {
     /// Validate an entire object
@@ -191,6 +209,7 @@ pub trait ObjectLevelValidation {
 /// let mut data = HashMap::new();
 /// data.insert("age".to_string(), json!(25));
 ///
+/// // Verify field validation succeeds for valid data
 /// let result = validate_fields(&data, &validators);
 /// assert!(result.is_ok());
 /// ```

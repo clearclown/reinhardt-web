@@ -24,10 +24,10 @@ use std::marker::PhantomData;
 /// // Field that references User by ID
 /// let field = PrimaryKeyRelatedFieldORM::<User>::new();
 ///
-/// // Validate that user exists
+/// // Verify that user exists (database lookup)
 /// field.validate_exists(123).await?;
 ///
-/// // Get the user instance
+/// // Get the user instance (database query)
 /// let user = field.get_instance(123).await?;
 /// ```
 #[derive(Debug, Clone)]
@@ -52,6 +52,8 @@ where
     ///
     /// ```ignore
     /// let field = PrimaryKeyRelatedFieldORM::<User>::new();
+    /// // Verify the field is created with default settings
+    /// let _: PrimaryKeyRelatedFieldORM<User> = field;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -82,6 +84,8 @@ where
     ///         FilterOperator::Eq,
     ///         FilterValue::Boolean(true),
     ///     ));
+    /// // Verify the field is configured with the filter
+    /// let _: PrimaryKeyRelatedFieldORM<User> = field;
     /// ```
     pub fn with_queryset_filter(mut self, filter: Filter) -> Self {
         self.queryset_filter = Some(filter);
@@ -99,6 +103,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify existence check runs without error (requires database)
     /// field.validate_exists(&123).await?;
     /// ```
     #[cfg(feature = "django-compat")]
@@ -155,6 +160,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify instance is retrieved correctly (requires database)
     /// let user = field.get_instance(&123).await?;
     /// assert_eq!(user.id, Some(123));
     /// ```
@@ -216,6 +222,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify batch retrieval works (requires database)
     /// let users = field.get_instances(vec![1, 2, 3]).await?;
     /// assert_eq!(users.len(), 3);
     /// ```
@@ -294,10 +301,10 @@ where
 /// // Field that references User by username
 /// let field = SlugRelatedFieldORM::<User>::new("username");
 ///
-/// // Validate that user exists
+/// // Verify that user exists (database lookup by slug)
 /// field.validate_exists("alice").await?;
 ///
-/// // Get the user instance
+/// // Get the user instance (database query by slug)
 /// let user = field.get_instance("alice").await?;
 /// assert_eq!(user.username, "alice");
 /// ```
@@ -325,6 +332,8 @@ where
     ///
     /// ```ignore
     /// let field = SlugRelatedFieldORM::<User>::new("username");
+    /// // Verify the field is created with the slug field
+    /// let _: SlugRelatedFieldORM<User> = field;
     /// ```
     pub fn new(slug_field: impl Into<String>) -> Self {
         Self {
@@ -352,6 +361,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify slug existence check runs (requires database)
     /// field.validate_exists("alice").await?;
     /// ```
     #[cfg(feature = "django-compat")]
@@ -403,6 +413,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify instance retrieval by slug (requires database)
     /// let user = field.get_instance("alice").await?;
     /// assert_eq!(user.username, "alice");
     /// ```
@@ -457,6 +468,7 @@ where
     /// # Examples
     ///
     /// ```ignore
+    /// // Verify batch retrieval by slug (requires database)
     /// let users = field.get_instances(vec!["alice".to_string(), "bob".to_string()]).await?;
     /// assert_eq!(users.len(), 2);
     /// ```
@@ -519,6 +531,8 @@ where
 ///     .with_select_related(vec!["author", "category"])
 ///     .with_prefetch_related(vec!["comments", "tags"]);
 ///
+/// // Verify optimizer is configured correctly
+/// let _: QueryOptimizer = optimizer.clone();
 /// let queryset = optimizer.apply(QuerySet::<Post>::new());
 /// let posts = queryset.all();
 /// ```

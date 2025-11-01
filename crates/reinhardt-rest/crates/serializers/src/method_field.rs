@@ -19,13 +19,13 @@ use std::collections::HashMap;
 /// use serde_json::{json, Value};
 /// use std::collections::HashMap;
 ///
-// Define a method context with computed values
+/// // Define a method context with computed values
 /// let mut context = HashMap::new();
 /// context.insert("full_name".to_string(), json!("John Doe"));
 ///
 /// let field = SerializerMethodField::new("full_name");
+/// // Verify the field retrieves the correct value from context
 /// let value = field.get_value(&context).unwrap();
-///
 /// assert_eq!(value, json!("John Doe"));
 /// ```
 #[derive(Debug, Clone)]
@@ -53,6 +53,8 @@ impl SerializerMethodField {
     /// use reinhardt_serializers::SerializerMethodField;
     ///
     /// let field = SerializerMethodField::new("get_full_name");
+    /// // Verify the field is created successfully
+    /// let _: SerializerMethodField = field;
     /// ```
     pub fn new(method_name: impl Into<String>) -> Self {
         Self {
@@ -71,6 +73,8 @@ impl SerializerMethodField {
     ///
     /// let field = SerializerMethodField::new("full_name")
     ///     .method_name("compute_full_name");
+    /// // Verify the custom method name is set correctly
+    /// assert_eq!(field.get_method_name(), "compute_full_name");
     /// ```
     pub fn method_name(mut self, name: impl Into<String>) -> Self {
         self.custom_method_name = Some(name.into());
@@ -163,6 +167,8 @@ impl MethodFieldRegistry {
     /// use reinhardt_serializers::method_field::MethodFieldRegistry;
     ///
     /// let registry = MethodFieldRegistry::new();
+    /// // Verify the registry is created successfully
+    /// let _: MethodFieldRegistry = registry;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -180,6 +186,8 @@ impl MethodFieldRegistry {
     /// let mut registry = MethodFieldRegistry::new();
     /// let field = SerializerMethodField::new("full_name");
     /// registry.register("full_name", field);
+    /// // Verify the field is registered successfully
+    /// assert!(registry.contains("full_name"));
     /// ```
     pub fn register(&mut self, name: impl Into<String>, field: SerializerMethodField) {
         self.fields.insert(name.into(), field);

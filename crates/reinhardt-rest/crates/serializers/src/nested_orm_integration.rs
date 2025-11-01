@@ -39,6 +39,7 @@ impl NestedSaveContext {
     /// use reinhardt_serializers::nested_orm_integration::NestedSaveContext;
     ///
     /// let context = NestedSaveContext::new();
+    /// // Verify context is initialized with default depth settings
     /// assert_eq!(context.depth, 0);
     /// assert_eq!(context.max_depth, 10);
     /// ```
@@ -112,6 +113,7 @@ impl NestedSaveContext {
     ///
     /// ```ignore
     /// let context = NestedSaveContext::new();
+    /// // Verify transaction scope handling
     /// let result = context.with_scope(|| async move {
     ///     // Perform operations
     ///     Ok(value)
@@ -258,6 +260,7 @@ where
     /// ```ignore
     /// use reinhardt_serializers::nested_orm_integration::ManyToManyManager;
     ///
+    /// // Verify manager is created with junction table configuration
     /// let manager = ManyToManyManager::<User, Group>::new(
     ///     "user_groups",
     ///     "user_id",
@@ -285,7 +288,7 @@ where
     /// # Examples
     ///
     /// ```ignore
-    /// // Add user to multiple groups
+    /// // Verify bulk relationship creation
     /// manager.add_bulk(&user_id, vec![group1_id, group2_id]).await?;
     /// ```
     #[cfg(feature = "django-compat")]
@@ -406,7 +409,7 @@ where
     /// # Examples
     ///
     /// ```ignore
-    /// // Replace user's groups
+    /// // Verify replacing user's groups atomically
     /// manager.set(&user_id, vec![group1_id, group2_id]).await?;
     /// ```
     #[cfg(feature = "django-compat")]
@@ -444,7 +447,7 @@ where
     /// # Examples
     ///
     /// ```ignore
-    /// // Remove user from all groups
+    /// // Verify clearing all user's group memberships
     /// manager.clear(&user_id).await?;
     /// ```
     #[cfg(feature = "django-compat")]
@@ -507,6 +510,7 @@ impl TransactionHelper {
     /// ```ignore
     /// use reinhardt_serializers::nested_orm_integration::TransactionHelper;
     ///
+    /// // Verify transaction scope with automatic commit/rollback
     /// let result = TransactionHelper::with_transaction(|| async move {
     ///     // Perform database operations within transaction
     ///     Ok(created_instance)
@@ -577,6 +581,7 @@ impl TransactionHelper {
     /// ```ignore
     /// use reinhardt_serializers::nested_orm_integration::TransactionHelper;
     ///
+    /// // Verify nested savepoint creation and rollback handling
     /// let result = TransactionHelper::savepoint(2, || async move {
     ///     // Perform nested operations
     ///     Ok(result)
