@@ -41,3 +41,5 @@ serde_yaml = { version = "0.9", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
+reinhardt-auth = { path = "../../../reinhardt-contrib/crates/auth" }
+uuid = { workspace = true }
