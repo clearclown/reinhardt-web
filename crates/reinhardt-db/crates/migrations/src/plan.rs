@@ -12,8 +12,7 @@ use crate::{Migration, Result};
 /// let mode = TransactionMode::PerMigration;
 /// assert_eq!(mode.name(), "Per Migration");
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TransactionMode {
 	/// Each migration in its own transaction
 	PerMigration,
@@ -23,7 +22,7 @@ pub enum TransactionMode {
 	None,
 	/// Respect individual migration atomic flags
 	#[default]
- RespectMigrationFlags,
+	RespectMigrationFlags,
 }
 
 impl TransactionMode {
@@ -46,7 +45,6 @@ impl TransactionMode {
 		}
 	}
 }
-
 
 /// Migration execution plan
 #[derive(Debug, Clone)]

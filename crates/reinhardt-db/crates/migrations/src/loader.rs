@@ -117,11 +117,7 @@ impl MigrationLoader {
 			};
 
 			// Skip files that don't look like migrations (must start with digit)
-			if !file_name
-				.chars()
-				.next()
-				.is_some_and(|c| c.is_ascii_digit())
-			{
+			if !file_name.chars().next().is_some_and(|c| c.is_ascii_digit()) {
 				continue;
 			}
 

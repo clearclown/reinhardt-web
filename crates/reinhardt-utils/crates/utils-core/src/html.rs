@@ -55,10 +55,11 @@ pub fn unescape(text: &str) -> String {
 				_ if entity.starts_with('#') => {
 					if let Some(code_str) = entity.strip_prefix('#')
 						&& let Ok(code) = code_str.parse::<u32>()
-							&& let Some(unicode_char) = char::from_u32(code) {
-								result.push(unicode_char);
-								continue;
-							}
+						&& let Some(unicode_char) = char::from_u32(code)
+					{
+						result.push(unicode_char);
+						continue;
+					}
 					result.push('&');
 					result.push_str(&entity);
 					result.push(';');

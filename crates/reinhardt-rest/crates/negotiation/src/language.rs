@@ -82,9 +82,10 @@ impl Language {
 			let param = param.trim();
 			if let Some((key, value)) = param.split_once('=')
 				&& key.trim() == "q"
-					&& let Ok(q) = value.trim().parse::<f32>() {
-						quality = q.clamp(0.0, 1.0);
-					}
+				&& let Ok(q) = value.trim().parse::<f32>()
+			{
+				quality = q.clamp(0.0, 1.0);
+			}
 		}
 
 		Some(Self {

@@ -102,10 +102,11 @@ impl AwsSecretsProvider {
 			// If it's a JSON object with a single key, return that value
 			if let Some(obj) = json_value.as_object()
 				&& obj.len() == 1
-					&& let Some(value) = obj.values().next()
-						&& let Some(string_value) = value.as_str() {
-							return Ok(string_value.to_string());
-						}
+				&& let Some(value) = obj.values().next()
+				&& let Some(string_value) = value.as_str()
+			{
+				return Ok(string_value.to_string());
+			}
 		}
 
 		// Otherwise, return the raw string

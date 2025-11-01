@@ -338,16 +338,17 @@ impl DynamicSettings {
 		// Check cache first
 		#[cfg(feature = "caching")]
 		if let Some(cache) = &self.cache
-			&& let Some(cached) = cache.get(key).await {
-				if !cached.is_expired() {
-					return serde_json::from_value(cached.value.clone())
-						.map(Some)
-						.map_err(DynamicError::from);
-				} else {
-					// Remove expired entry
-					cache.invalidate(key).await;
-				}
+			&& let Some(cached) = cache.get(key).await
+		{
+			if !cached.is_expired() {
+				return serde_json::from_value(cached.value.clone())
+					.map(Some)
+					.map_err(DynamicError::from);
+			} else {
+				// Remove expired entry
+				cache.invalidate(key).await;
 			}
+		}
 
 		// Fetch from backend
 		let value = self.backend.get(key).await?;
@@ -400,8 +401,7 @@ impl DynamicSettings {
 		// Update cache
 		#[cfg(feature = "caching")]
 		if let Some(cache) = &self.cache {
-			let cached_value =
-				CachedValue::new(json_value.clone(), ttl.map(Duration::from_secs));
+			let cached_value = CachedValue::new(json_value.clone(), ttl.map(Duration::from_secs));
 			cache.insert(key.to_string(), cached_value).await;
 		}
 

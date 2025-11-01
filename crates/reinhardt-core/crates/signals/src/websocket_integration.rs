@@ -287,9 +287,10 @@ impl WebSocketSignalBridge {
 
 		for client in clients.values() {
 			if client.is_connected()
-				&& let Err(e) = client.send_message(message.clone()) {
-					errors.push(e);
-				}
+				&& let Err(e) = client.send_message(message.clone())
+			{
+				errors.push(e);
+			}
 		}
 
 		if !errors.is_empty() {

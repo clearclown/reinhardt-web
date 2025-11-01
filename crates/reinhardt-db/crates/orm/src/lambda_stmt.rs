@@ -216,9 +216,9 @@ pub struct LambdaRegistry {
 }
 
 impl Default for LambdaRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl LambdaRegistry {

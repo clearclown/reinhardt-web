@@ -219,9 +219,10 @@ impl<C: Cache> CacheMiddleware<C> {
 			let directive = directive.trim();
 			if directive.starts_with("max-age=") {
 				if let Some(age_str) = directive.strip_prefix("max-age=")
-					&& let Ok(seconds) = age_str.parse::<u64>() {
-						return Some(Duration::from_secs(seconds));
-					}
+					&& let Ok(seconds) = age_str.parse::<u64>()
+				{
+					return Some(Duration::from_secs(seconds));
+				}
 			} else if directive == "no-cache" || directive == "no-store" {
 				// If no-cache or no-store is set, return None to indicate
 				// that this response should not be cached

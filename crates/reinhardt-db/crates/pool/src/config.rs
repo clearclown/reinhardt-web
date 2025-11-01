@@ -92,12 +92,10 @@ impl PoolConfig {
 	}
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct PoolOptions {
 	pub config: PoolConfig,
 }
-
 
 impl PoolOptions {
 	pub fn new() -> Self {

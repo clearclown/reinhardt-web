@@ -27,9 +27,10 @@ impl SignalRegistry {
 		{
 			let signals = self.signals.read();
 			if let Some(signal_any) = signals.get(&key)
-				&& let Some(signal) = signal_any.downcast_ref::<Signal<T>>() {
-					return signal.clone();
-				}
+				&& let Some(signal) = signal_any.downcast_ref::<Signal<T>>()
+			{
+				return signal.clone();
+			}
 		}
 
 		// Create new signal
@@ -52,9 +53,10 @@ impl SignalRegistry {
 		{
 			let signals = self.signals.read();
 			if let Some(signal_any) = signals.get(&key)
-				&& let Some(signal) = signal_any.downcast_ref::<Signal<T>>() {
-					return signal.clone();
-				}
+				&& let Some(signal) = signal_any.downcast_ref::<Signal<T>>()
+			{
+				return signal.clone();
+			}
 		}
 
 		// Create new signal (need to leak string for SignalName)

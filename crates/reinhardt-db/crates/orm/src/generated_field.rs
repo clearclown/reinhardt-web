@@ -10,8 +10,7 @@ use crate::fields::{BaseField, Field, FieldDeconstruction, FieldKwarg};
 use serde::{Deserialize, Serialize};
 
 /// Storage type for generated columns
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum StorageType {
 	/// Column value is computed and stored on disk (persistent)
 	/// Provides better read performance but uses more disk space
@@ -19,7 +18,7 @@ pub enum StorageType {
 	/// Column value is computed on-the-fly when queried (ephemeral)
 	/// Saves disk space but requires computation on every read
 	#[default]
- Virtual,
+	Virtual,
 }
 
 impl StorageType {
@@ -40,7 +39,6 @@ impl StorageType {
 		}
 	}
 }
-
 
 /// GeneratedField - a database column with auto-computed value
 ///

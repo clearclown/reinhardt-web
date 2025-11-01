@@ -133,9 +133,7 @@ impl GcsStorage {
 
 			// Write service account key to temporary file
 			std::fs::write(&key_file_path, key_json).map_err(|e| {
-				io::Error::other(
-					format!("Failed to write service account key file: {}", e),
-				)
+				io::Error::other(format!("Failed to write service account key file: {}", e))
 			})?;
 
 			// Set environment variable for GCS client

@@ -832,14 +832,16 @@ impl Validator for RangeValidator {
 			.map_err(|_| reinhardt_apps::Error::Validation("Invalid number".to_string()))?;
 
 		if let Some(min) = self.min
-			&& num < min {
-				return Err(reinhardt_apps::Error::Validation(self.message.clone()));
-			}
+			&& num < min
+		{
+			return Err(reinhardt_apps::Error::Validation(self.message.clone()));
+		}
 
 		if let Some(max) = self.max
-			&& num > max {
-				return Err(reinhardt_apps::Error::Validation(self.message.clone()));
-			}
+			&& num > max
+		{
+			return Err(reinhardt_apps::Error::Validation(self.message.clone()));
+		}
 
 		Ok(())
 	}
@@ -856,14 +858,16 @@ impl validators_crate::Validator<str> for RangeValidator {
 			.map_err(|_| BaseValidationError::Custom("Invalid number".to_string()))?;
 
 		if let Some(min) = self.min
-			&& num < min {
-				return Err(BaseValidationError::Custom(self.message.clone()));
-			}
+			&& num < min
+		{
+			return Err(BaseValidationError::Custom(self.message.clone()));
+		}
 
 		if let Some(max) = self.max
-			&& num > max {
-				return Err(BaseValidationError::Custom(self.message.clone()));
-			}
+			&& num > max
+		{
+			return Err(BaseValidationError::Custom(self.message.clone()));
+		}
 
 		Ok(())
 	}
@@ -1034,13 +1038,14 @@ impl ModelValidators {
 
 		for (field, validators) in &self.field_validators {
 			if let Some(value) = data.get(field)
-				&& let Err(e) = validators.validate(value) {
-					errors.push(ValidationError::new(
-						field,
-						e.to_string(),
-						"validation_error",
-					));
-				}
+				&& let Err(e) = validators.validate(value)
+			{
+				errors.push(ValidationError::new(
+					field,
+					e.to_string(),
+					"validation_error",
+				));
+			}
 		}
 
 		errors

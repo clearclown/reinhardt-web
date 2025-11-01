@@ -408,9 +408,10 @@ impl<T: Send + Sync + 'static> Signal<T> {
 
 			// Check predicate condition
 			if let Some(ref predicate) = receiver_info.predicate
-				&& !predicate(&instance) {
-					continue; // Predicate failed, skip this receiver
-				}
+				&& !predicate(&instance)
+			{
+				continue; // Predicate failed, skip this receiver
+			}
 
 			// Execute before_receiver middleware hooks
 			let dispatch_uid_ref = receiver_info.dispatch_uid.as_deref();
@@ -480,9 +481,10 @@ impl<T: Send + Sync + 'static> Signal<T> {
 		// Execute before_send middleware hooks (ignore errors in robust mode)
 		for middleware in &middlewares {
 			if let Ok(should_continue) = middleware.before_send(&instance).await
-				&& !should_continue {
-					return results; // Middleware stopped signal propagation
-				}
+				&& !should_continue
+			{
+				return results; // Middleware stopped signal propagation
+			}
 		}
 
 		for receiver_info in receivers {
@@ -499,9 +501,10 @@ impl<T: Send + Sync + 'static> Signal<T> {
 
 			// Check predicate condition
 			if let Some(ref predicate) = receiver_info.predicate
-				&& !predicate(&instance) {
-					continue; // Predicate failed, skip this receiver
-				}
+				&& !predicate(&instance)
+			{
+				continue; // Predicate failed, skip this receiver
+			}
 
 			// Execute before_receiver middleware hooks
 			let dispatch_uid_ref = receiver_info.dispatch_uid.as_deref();
@@ -509,11 +512,11 @@ impl<T: Send + Sync + 'static> Signal<T> {
 			for middleware in &middlewares {
 				if let Ok(can_execute) = middleware
 					.before_receiver(&instance, dispatch_uid_ref)
-					.await
-					&& !can_execute {
-						should_execute = false;
-						break;
-					}
+					.await && !can_execute
+				{
+					should_execute = false;
+					break;
+				}
 			}
 
 			if !should_execute {

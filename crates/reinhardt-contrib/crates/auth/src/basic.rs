@@ -121,21 +121,23 @@ impl AuthenticationBackend for BasicAuthentication {
 			.and_then(|h| h.to_str().ok());
 
 		if let Some(header) = auth_header
-			&& let Some((username, password)) = self.parse_auth_header(header) {
-				if let Some(stored_password) = self.users.get(&username)
-					&& stored_password == &password {
-						return Ok(Some(Box::new(SimpleUser {
-							id: Uuid::new_v4(),
-							username: username.clone(),
-							email: format!("{}@example.com", username),
-							is_active: true,
-							is_admin: false,
-							is_staff: false,
-							is_superuser: false,
-						})));
-					}
-				return Err(AuthenticationError::InvalidCredentials);
+			&& let Some((username, password)) = self.parse_auth_header(header)
+		{
+			if let Some(stored_password) = self.users.get(&username)
+				&& stored_password == &password
+			{
+				return Ok(Some(Box::new(SimpleUser {
+					id: Uuid::new_v4(),
+					username: username.clone(),
+					email: format!("{}@example.com", username),
+					is_active: true,
+					is_admin: false,
+					is_staff: false,
+					is_superuser: false,
+				})));
 			}
+			return Err(AuthenticationError::InvalidCredentials);
+		}
 
 		Ok(None)
 	}

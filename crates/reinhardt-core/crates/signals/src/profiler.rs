@@ -376,12 +376,13 @@ impl<T: Send + Sync + 'static> SignalProfiler<T> {
 		report.push_str("\nRecommendations:\n");
 
 		if let Some(slowest) = self.slowest_receivers(1).first()
-			&& slowest.avg_duration.as_millis() > 100 {
-				report.push_str(&format!(
-					"  ⚠ Receiver '{}' is slow (avg: {:?}). Consider optimization.\n",
-					slowest.dispatch_uid, slowest.avg_duration
-				));
-			}
+			&& slowest.avg_duration.as_millis() > 100
+		{
+			report.push_str(&format!(
+				"  ⚠ Receiver '{}' is slow (avg: {:?}). Consider optimization.\n",
+				slowest.dispatch_uid, slowest.avg_duration
+			));
+		}
 
 		let unreliable = self.most_unreliable_receivers(3);
 		for profile in unreliable {
@@ -470,17 +471,18 @@ impl<T: Send + Sync + 'static> SignalMiddleware<T> for SignalProfiler<T> {
 		result: &Result<(), SignalError>,
 	) -> Result<(), SignalError> {
 		if let Some(uid) = dispatch_uid
-			&& let Some(start) = self.current_receiver_start.write().remove(uid) {
-				let duration = start.elapsed();
-				let success = result.is_ok();
+			&& let Some(start) = self.current_receiver_start.write().remove(uid)
+		{
+			let duration = start.elapsed();
+			let success = result.is_ok();
 
-				let mut profiles = self.receiver_profiles.write();
-				let profile = profiles
-					.entry(uid.to_string())
-					.or_insert_with(|| ReceiverProfile::new(uid.to_string()));
+			let mut profiles = self.receiver_profiles.write();
+			let profile = profiles
+				.entry(uid.to_string())
+				.or_insert_with(|| ReceiverProfile::new(uid.to_string()));
 
-				profile.record_execution(duration, success);
-			}
+			profile.record_execution(duration, success);
+		}
 
 		Ok(())
 	}

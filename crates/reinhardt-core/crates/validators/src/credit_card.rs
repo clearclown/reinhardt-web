@@ -170,17 +170,18 @@ impl CreditCardValidator {
 
 		// Check if card type is allowed
 		if let Some(ref allowed) = self.allowed_types
-			&& !allowed.contains(&card_type) {
-				let allowed_str = allowed
-					.iter()
-					.map(|t| t.as_str())
-					.collect::<Vec<_>>()
-					.join(", ");
-				return Err(ValidationError::CardTypeNotAllowed {
-					card_type: card_type.to_string(),
-					allowed_types: allowed_str,
-				});
-			}
+			&& !allowed.contains(&card_type)
+		{
+			let allowed_str = allowed
+				.iter()
+				.map(|t| t.as_str())
+				.collect::<Vec<_>>()
+				.join(", ");
+			return Err(ValidationError::CardTypeNotAllowed {
+				card_type: card_type.to_string(),
+				allowed_types: allowed_str,
+			});
+		}
 
 		Ok(card_type)
 	}

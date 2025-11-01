@@ -74,7 +74,8 @@ impl QueryFieldCompiler {
 	/// Compile field path without transforms (raw)
 	fn compile_field_path_raw(path: &[&str]) -> String {
 		path.iter()
-			.filter(|&&segment| !Self::is_transform(segment)).copied()
+			.filter(|&&segment| !Self::is_transform(segment))
+			.copied()
 			.collect::<Vec<_>>()
 			.join(".")
 	}

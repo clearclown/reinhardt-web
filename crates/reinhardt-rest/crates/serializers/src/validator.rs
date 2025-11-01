@@ -221,9 +221,10 @@ pub fn validate_fields(
 
 	for (field_name, validator) in validators {
 		if let Some(value) = data.get(field_name)
-			&& let Err(e) = validator.validate(value) {
-				errors.push(e);
-			}
+			&& let Err(e) = validator.validate(value)
+		{
+			errors.push(e);
+		}
 	}
 
 	if errors.is_empty() {

@@ -232,9 +232,10 @@ impl CacheBackend for DynamoDbCache {
 			// Check TTL expiration
 			if let Some(AttributeValue::N(ttl_str)) = item.get(&self.config.ttl_attribute)
 				&& let Ok(ttl) = ttl_str.parse::<i64>()
-					&& self.is_expired(ttl) {
-						return Ok(None);
-					}
+				&& self.is_expired(ttl)
+			{
+				return Ok(None);
+			}
 
 			// Extract value
 			if let Some(AttributeValue::B(value)) = item.get(&self.config.value_attribute) {
@@ -360,31 +361,32 @@ impl CacheBackend for DynamoDbCache {
 				})?;
 
 			if let Some(responses) = result.responses
-				&& let Some(items) = responses.get(&self.config.table_name) {
-					for item in items {
-						if let Some(AttributeValue::S(key)) = item.get(&self.config.key_attribute) {
-							// Check TTL
-							let is_valid = if let Some(AttributeValue::N(ttl_str)) =
-								item.get(&self.config.ttl_attribute)
-							{
-								if let Ok(ttl) = ttl_str.parse::<i64>() {
-									!self.is_expired(ttl)
-								} else {
-									true
-								}
+				&& let Some(items) = responses.get(&self.config.table_name)
+			{
+				for item in items {
+					if let Some(AttributeValue::S(key)) = item.get(&self.config.key_attribute) {
+						// Check TTL
+						let is_valid = if let Some(AttributeValue::N(ttl_str)) =
+							item.get(&self.config.ttl_attribute)
+						{
+							if let Ok(ttl) = ttl_str.parse::<i64>() {
+								!self.is_expired(ttl)
 							} else {
 								true
-							};
+							}
+						} else {
+							true
+						};
 
-							if is_valid
-								&& let Some(AttributeValue::B(value)) =
-									item.get(&self.config.value_attribute)
-								{
-									all_results.insert(key.clone(), value.clone().into_inner());
-								}
+						if is_valid
+							&& let Some(AttributeValue::B(value)) =
+								item.get(&self.config.value_attribute)
+						{
+							all_results.insert(key.clone(), value.clone().into_inner());
 						}
 					}
 				}
+			}
 		}
 
 		// Preserve order - map results back to original key order

@@ -292,9 +292,10 @@ impl TaskDAG {
 
 		// Add to dependents adjacency list
 		if let Some(deps) = self.dependents.get_mut(&depends_on)
-			&& !deps.contains(&task_id) {
-				deps.push(task_id);
-			}
+			&& !deps.contains(&task_id)
+		{
+			deps.push(task_id);
+		}
 
 		// Verify no cycles were created
 		self.detect_cycle()?;

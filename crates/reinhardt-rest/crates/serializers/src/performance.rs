@@ -450,9 +450,10 @@ impl QueryCache {
 	pub fn get(&self, key: &str) -> Option<serde_json::Value> {
 		if let Ok(cache) = self.cache.read()
 			&& let Some(entry) = cache.get(key)
-				&& entry.inserted_at.elapsed() < self.ttl {
-					return Some(entry.data.clone());
-				}
+			&& entry.inserted_at.elapsed() < self.ttl
+		{
+			return Some(entry.data.clone());
+		}
 		None
 	}
 

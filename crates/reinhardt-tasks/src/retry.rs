@@ -214,7 +214,6 @@ impl RetryStrategy {
 		let delay_secs = base_delay_secs.min(self.max_delay.as_secs_f64());
 
 		// Add jitter if enabled (random value between 0% and 100% of delay)
-		
 
 		if self.jitter {
 			let jitter_factor = rand::random::<f64>();

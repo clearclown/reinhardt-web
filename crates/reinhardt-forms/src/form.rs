@@ -147,7 +147,6 @@ impl Form {
 		}
 	}
 	pub fn media(&self) -> Media {
-		
 		// Collect media from all fields' widgets
 		// This is a simplified implementation
 		// In a full implementation, widgets would define their own media

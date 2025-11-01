@@ -153,9 +153,10 @@ impl RoleBasedPermission {
 	/// ```
 	pub fn user_has_permission(&self, username: &str, permission: &str) -> bool {
 		if let Some(role) = self.user_roles.get(username)
-			&& let Some(perms) = self.roles.get(role) {
-				return perms.iter().any(|p| p == permission);
-			}
+			&& let Some(perms) = self.roles.get(role)
+		{
+			return perms.iter().any(|p| p == permission);
+		}
 		false
 	}
 }

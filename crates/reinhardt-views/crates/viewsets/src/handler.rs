@@ -107,9 +107,10 @@ impl<V: ViewSet + 'static> Handler for ViewSetHandler<V> {
 
 		// Process middleware before ViewSet
 		if let Some(middleware) = self.viewset.get_middleware()
-			&& let Some(response) = middleware.process_request(&mut request).await? {
-				return Ok(response);
-			}
+			&& let Some(response) = middleware.process_request(&mut request).await?
+		{
+			return Ok(response);
+		}
 
 		// Resolve action from HTTP method
 		let action_name = self.action_map.get(&request.method).ok_or_else(|| {

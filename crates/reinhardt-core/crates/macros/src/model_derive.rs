@@ -213,11 +213,12 @@ fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<String> {
 fn extract_option_type(ty: &Type) -> (bool, &Type) {
 	if let Type::Path(type_path) = ty
 		&& let Some(last_segment) = type_path.path.segments.last()
-			&& last_segment.ident == "Option"
-				&& let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
-					&& let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-						return (true, inner_ty);
-					}
+		&& last_segment.ident == "Option"
+		&& let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+	{
+		return (true, inner_ty);
+	}
 	(false, ty)
 }
 
@@ -501,23 +502,25 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 
 		// Add validator attributes
 		if let Some(email) = config.email
-			&& email {
-				attrs.push(quote! {
-					attributes.insert(
-						"email".to_string(),
-						::reinhardt_orm::fields::FieldKwarg::Bool(true)
-					);
-				});
-			}
+			&& email
+		{
+			attrs.push(quote! {
+				attributes.insert(
+					"email".to_string(),
+					::reinhardt_orm::fields::FieldKwarg::Bool(true)
+				);
+			});
+		}
 		if let Some(url) = config.url
-			&& url {
-				attrs.push(quote! {
-					attributes.insert(
-						"url".to_string(),
-						::reinhardt_orm::fields::FieldKwarg::Bool(true)
-					);
-				});
-			}
+			&& url
+		{
+			attrs.push(quote! {
+				attributes.insert(
+					"url".to_string(),
+					::reinhardt_orm::fields::FieldKwarg::Bool(true)
+				);
+			});
+		}
 		if let Some(min_length) = config.min_length {
 			attrs.push(quote! {
 				attributes.insert(
@@ -607,9 +610,10 @@ fn generate_registration_code(
 			params.push(quote! { .with_param("null", #null_str) });
 		}
 		if let Some(unique) = config.unique
-			&& unique {
-				params.push(quote! { .with_param("unique", "true") });
-			}
+			&& unique
+		{
+			params.push(quote! { .with_param("unique", "true") });
+		}
 
 		field_registrations.push(quote! {
 			metadata.add_field(

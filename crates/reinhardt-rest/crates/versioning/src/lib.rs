@@ -91,8 +91,7 @@ pub trait BaseVersioning: Send + Sync {
 			if allowed.is_empty() {
 				return true;
 			}
-			return allowed.contains(version)
-				|| (self.default_version() == Some(version));
+			return allowed.contains(version) || (self.default_version() == Some(version));
 		}
 		true
 	}
@@ -202,17 +201,17 @@ impl BaseVersioning for AcceptHeaderVersioning {
 				for param in params.split(';') {
 					let param = param.trim();
 					if let Some((key, value)) = param.split_once('=')
-						&& key.trim() == self.version_param {
-							let version = value.trim().trim_matches('"');
-							if self.is_allowed_version(version) {
-								return Ok(version.to_string());
-							} else {
-								return Err(Error::Validation(
-									VersioningError::VersionNotAllowed(version.to_string())
-										.to_string(),
-								));
-							}
+						&& key.trim() == self.version_param
+					{
+						let version = value.trim().trim_matches('"');
+						if self.is_allowed_version(version) {
+							return Ok(version.to_string());
+						} else {
+							return Err(Error::Validation(
+								VersioningError::VersionNotAllowed(version.to_string()).to_string(),
+							));
 						}
+					}
 				}
 			}
 		}
@@ -367,16 +366,17 @@ impl BaseVersioning for URLPathVersioning {
 
 		// Try to extract version from path using regex
 		if let Some(captures) = self.path_regex.captures(path)
-			&& let Some(version_match) = captures.get(1) {
-				let version = version_match.as_str();
-				if self.is_allowed_version(version) {
-					return Ok(version.to_string());
-				} else {
-					return Err(Error::Validation(
-						VersioningError::VersionNotAllowed(version.to_string()).to_string(),
-					));
-				}
+			&& let Some(version_match) = captures.get(1)
+		{
+			let version = version_match.as_str();
+			if self.is_allowed_version(version) {
+				return Ok(version.to_string());
+			} else {
+				return Err(Error::Validation(
+					VersioningError::VersionNotAllowed(version.to_string()).to_string(),
+				));
 			}
+		}
 
 		// Return default version if no version in path
 		Ok(self
@@ -539,12 +539,13 @@ impl BaseVersioning for HostNameVersioning {
 
 			// Try to extract version from hostname
 			if let Some(captures) = self.hostname_regex.captures(hostname)
-				&& let Some(version_match) = captures.get(1) {
-					let version = version_match.as_str();
-					if self.is_allowed_version(version) {
-						return Ok(version.to_string());
-					}
+				&& let Some(version_match) = captures.get(1)
+			{
+				let version = version_match.as_str();
+				if self.is_allowed_version(version) {
+					return Ok(version.to_string());
 				}
+			}
 		}
 
 		// Return default version if no version in hostname
@@ -654,15 +655,16 @@ impl BaseVersioning for QueryParameterVersioning {
 		if let Some(query) = request.uri.query() {
 			for param in query.split('&') {
 				if let Some((key, value)) = param.split_once('=')
-					&& key == self.version_param {
-						if self.is_allowed_version(value) {
-							return Ok(value.to_string());
-						} else {
-							return Err(Error::Validation(
-								VersioningError::VersionNotAllowed(value.to_string()).to_string(),
-							));
-						}
+					&& key == self.version_param
+				{
+					if self.is_allowed_version(value) {
+						return Ok(value.to_string());
+					} else {
+						return Err(Error::Validation(
+							VersioningError::VersionNotAllowed(value.to_string()).to_string(),
+						));
 					}
+				}
 			}
 		}
 
@@ -804,9 +806,10 @@ impl BaseVersioning for NamespaceVersioning {
 
 		// Use the configured pattern to extract version
 		if let Some(version) = self.extract_version_from_path(path)
-			&& self.is_allowed_version(&version) {
-				return Ok(version);
-			}
+			&& self.is_allowed_version(&version)
+		{
+			return Ok(version);
+		}
 
 		// Fallback to default version
 		Ok(self
@@ -836,9 +839,10 @@ impl NamespaceVersioning {
 
 		if let Ok(regex) = regex::Regex::new(&full_pattern)
 			&& let Some(captures) = regex.captures(path)
-				&& let Some(version_match) = captures.get(1) {
-					return Some(version_match.as_str().to_string());
-				}
+			&& let Some(version_match) = captures.get(1)
+		{
+			return Some(version_match.as_str().to_string());
+		}
 		None
 	}
 

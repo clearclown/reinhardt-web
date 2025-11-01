@@ -285,16 +285,18 @@ impl CacheControlConfig {
 	fn get_policy(&self, path: &str) -> &CachePolicy {
 		// Try extension-based matching first
 		if let Some(extension) = path.rsplit('.').next()
-			&& let Some(policy) = self.type_policies.get(extension) {
-				return policy;
-			}
+			&& let Some(policy) = self.type_policies.get(extension)
+		{
+			return policy;
+		}
 
 		// Try pattern-based matching
 		for (pattern, policy) in &self.pattern_policies {
 			if let Ok(regex) = regex::Regex::new(pattern)
-				&& regex.is_match(path) {
-					return policy;
-				}
+				&& regex.is_match(path)
+			{
+				return policy;
+			}
 		}
 
 		// Return default policy

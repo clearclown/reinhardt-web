@@ -22,14 +22,13 @@ use tokio::sync::RwLock;
 /// let custom = Priority::Custom(75);
 /// assert!(custom > high);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub enum Priority {
 	/// Low priority (weight: 10)
 	Low,
 	/// Normal priority (weight: 50)
 	#[default]
- Normal,
+	Normal,
 	/// High priority (weight: 100)
 	High,
 	/// Custom priority with specified weight
@@ -58,7 +57,6 @@ impl Priority {
 		}
 	}
 }
-
 
 /// Priority task queue with weighted scheduling
 ///
@@ -212,9 +210,10 @@ impl PriorityTaskQueue {
 
 		// Dequeue from the selected priority
 		if let Some(queue) = queues.get_mut(&selected_priority)
-			&& let Some(task) = queue.pop_front() {
-				return Ok(Some(task));
-			}
+			&& let Some(task) = queue.pop_front()
+		{
+			return Ok(Some(task));
+		}
 
 		Ok(None)
 	}

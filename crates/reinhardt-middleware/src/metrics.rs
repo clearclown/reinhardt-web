@@ -40,10 +40,7 @@ impl MetricsStore {
 	pub fn record_response_time(&self, method: &str, path: &str, duration_ms: f64) {
 		let key = format!("{}:{}", method, path);
 		let mut buckets = self.response_time_buckets.write().unwrap();
-		buckets
-			.entry(key)
-			.or_default()
-			.push(duration_ms);
+		buckets.entry(key).or_default().push(duration_ms);
 	}
 
 	/// Record status code

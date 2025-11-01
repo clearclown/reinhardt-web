@@ -224,16 +224,17 @@ pub fn parse_and_validate(pattern: &str) -> std::result::Result<UrlPatternAst, S
 
 	// Check for invalid type specifiers
 	if let Some(type_start) = pattern.find("<")
-		&& let Some(type_end) = pattern[type_start..].find(":") {
-			let type_spec = &pattern[type_start + 1..type_start + type_end];
-			if TypeSpec::from_str(type_spec).is_none() {
-				return Err(format!(
-					"Invalid type specifier '{}'. Valid types are: {}",
-					type_spec,
-					TypeSpec::valid_types().join(", ")
-				));
-			}
+		&& let Some(type_end) = pattern[type_start..].find(":")
+	{
+		let type_spec = &pattern[type_start + 1..type_start + type_end];
+		if TypeSpec::from_str(type_spec).is_none() {
+			return Err(format!(
+				"Invalid type specifier '{}'. Valid types are: {}",
+				type_spec,
+				TypeSpec::valid_types().join(", ")
+			));
 		}
+	}
 
 	match url_pattern(pattern) {
 		Ok((remaining, ast)) => {

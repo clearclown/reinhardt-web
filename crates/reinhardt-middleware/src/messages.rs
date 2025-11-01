@@ -265,9 +265,10 @@ impl MessageMiddleware {
 				for cookie in cookies.split(';') {
 					let cookie = cookie.trim();
 					if let Some((name, value)) = cookie.split_once('=')
-						&& name == "sessionid" {
-							return Some(value.to_string());
-						}
+						&& name == "sessionid"
+					{
+						return Some(value.to_string());
+					}
 				}
 				None
 			})

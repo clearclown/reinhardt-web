@@ -89,20 +89,22 @@ impl FormField for RegexField {
 
 				// Length validation
 				if let Some(max) = self.max_length
-					&& s.len() > max {
-						return Err(FieldError::validation(
-							None,
-							&format!("Ensure this value has at most {} characters", max),
-						));
-					}
+					&& s.len() > max
+				{
+					return Err(FieldError::validation(
+						None,
+						&format!("Ensure this value has at most {} characters", max),
+					));
+				}
 
 				if let Some(min) = self.min_length
-					&& s.len() < min {
-						return Err(FieldError::validation(
-							None,
-							&format!("Ensure this value has at least {} characters", min),
-						));
-					}
+					&& s.len() < min
+				{
+					return Err(FieldError::validation(
+						None,
+						&format!("Ensure this value has at least {} characters", min),
+					));
+				}
 
 				// Regex validation
 				if !self.regex.is_match(s) {
@@ -195,12 +197,13 @@ impl FormField for SlugField {
 				}
 
 				if let Some(max) = self.max_length
-					&& s.len() > max {
-						return Err(FieldError::validation(
-							None,
-							&format!("Ensure this value has at most {} characters", max),
-						));
-					}
+					&& s.len() > max
+				{
+					return Err(FieldError::validation(
+						None,
+						&format!("Ensure this value has at most {} characters", max),
+					));
+				}
 
 				if !self.is_valid_slug(s) {
 					let msg = if self.allow_unicode {

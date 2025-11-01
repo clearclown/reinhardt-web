@@ -240,11 +240,12 @@ impl DatabaseBackend {
 
 				if let Some(expire_date_str) = expire_date_str
 					&& let Ok(expire_date) = DateTime::parse_from_rfc3339(&expire_date_str)
-						&& expire_date.with_timezone(&Utc) < Utc::now() {
-							// Setting expired, delete it
-							let _ = self.delete(key).await;
-							return Ok(None);
-						}
+					&& expire_date.with_timezone(&Utc) < Utc::now()
+				{
+					// Setting expired, delete it
+					let _ = self.delete(key).await;
+					return Ok(None);
+				}
 
 				let value: String = row
 					.try_get("value")

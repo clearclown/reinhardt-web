@@ -109,9 +109,10 @@ impl MediaType {
 		// Check parameter matching (excluding quality)
 		for (key, value) in &self.parameters {
 			if let Some(other_value) = other.parameters.iter().find(|(k, _)| k == key)
-				&& other_value.1 != *value {
-					return false;
-				}
+				&& other_value.1 != *value
+			{
+				return false;
+			}
 		}
 
 		true

@@ -284,27 +284,29 @@ impl crate::backend::TaskBackend for SqsBackend {
 			.map_err(|e| TaskExecutionError::BackendError(format!("SQS receive error: {}", e)))?;
 
 		if let Some(messages) = result.messages
-			&& let Some(message) = messages.into_iter().next() {
-				// Extract task_id from message attributes
-				if let Some(attributes) = message.message_attributes
-					&& let Some(task_id_attr) = attributes.get("task_id")
-						&& let Some(task_id_str) = task_id_attr.string_value() {
-							let task_id = task_id_str.parse().map_err(|e: uuid::Error| {
-								TaskExecutionError::BackendError(e.to_string())
-							})?;
+			&& let Some(message) = messages.into_iter().next()
+		{
+			// Extract task_id from message attributes
+			if let Some(attributes) = message.message_attributes
+				&& let Some(task_id_attr) = attributes.get("task_id")
+				&& let Some(task_id_str) = task_id_attr.string_value()
+			{
+				let task_id = task_id_str
+					.parse()
+					.map_err(|e: uuid::Error| TaskExecutionError::BackendError(e.to_string()))?;
 
-							// Store receipt handle for later deletion
-							if let Some(receipt_handle) = message.receipt_handle {
-								let mut handles = self.receipt_handles.write().await;
-								handles.insert(task_id, receipt_handle);
-							}
+				// Store receipt handle for later deletion
+				if let Some(receipt_handle) = message.receipt_handle {
+					let mut handles = self.receipt_handles.write().await;
+					handles.insert(task_id, receipt_handle);
+				}
 
-							// Update status to Running
-							self.update_status(task_id, TaskStatus::Running).await?;
+				// Update status to Running
+				self.update_status(task_id, TaskStatus::Running).await?;
 
-							return Ok(Some(task_id));
-						}
+				return Ok(Some(task_id));
 			}
+		}
 
 		Ok(None)
 	}

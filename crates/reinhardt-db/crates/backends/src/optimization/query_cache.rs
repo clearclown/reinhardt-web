@@ -97,9 +97,9 @@ impl QueryCache {
 				.iter()
 				.min_by_key(|(_, v)| v.cached_at)
 				.map(|(k, v)| (k.clone(), v.cached_at))
-			{
-				cache.remove(&oldest_key);
-			}
+		{
+			cache.remove(&oldest_key);
+		}
 
 		let cached = CachedQuery {
 			sql: sql.clone(),
@@ -115,9 +115,10 @@ impl QueryCache {
 	/// Increment hit count for a cached query
 	pub fn record_hit(&self, sql: &str) {
 		if let Ok(mut cache) = self.cache.write()
-			&& let Some(cached) = cache.get_mut(sql) {
-				cached.hit_count += 1;
-			}
+			&& let Some(cached) = cache.get_mut(sql)
+		{
+			cached.hit_count += 1;
+		}
 	}
 
 	/// Clear all cached queries

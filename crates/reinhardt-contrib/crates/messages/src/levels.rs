@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub enum Level {
 	Debug = 10,
 	#[default]
- Info = 20,
+	Info = 20,
 	Success = 25,
 	Warning = 30,
 	Error = 40,
@@ -119,7 +119,6 @@ impl Ord for Level {
 		self.value().cmp(&other.value())
 	}
 }
-
 
 #[cfg(test)]
 mod tests {

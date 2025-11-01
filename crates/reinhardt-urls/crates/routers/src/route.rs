@@ -250,9 +250,10 @@ impl Route {
 
 		if let Ok(regex) = regex::Regex::new(&full_pattern)
 			&& let Some(captures) = regex.captures(&self.path)
-				&& let Some(version_match) = captures.get(1) {
-					return Some(version_match.as_str());
-				}
+			&& let Some(version_match) = captures.get(1)
+		{
+			return Some(version_match.as_str());
+		}
 		None
 	}
 }

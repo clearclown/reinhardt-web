@@ -293,26 +293,27 @@ impl AuthenticationBackend for OAuth2Authentication {
 			.and_then(|h| h.to_str().ok());
 
 		if let Some(header) = auth_header
-			&& let Some(token) = header.strip_prefix("Bearer ") {
-				// Query the token store asynchronously
-				match self.token_store.get_token(token).await {
-					Ok(Some(user_id)) => {
-						// Token is valid, get the user
-						return self.get_user(&user_id).await;
-					}
-					Ok(None) => {
-						// Token not found or expired
-						return Ok(None);
-					}
-					Err(e) => {
-						// Error querying token store
-						return Err(AuthenticationError::Unknown(format!(
-							"Token store error: {}",
-							e
-						)));
-					}
+			&& let Some(token) = header.strip_prefix("Bearer ")
+		{
+			// Query the token store asynchronously
+			match self.token_store.get_token(token).await {
+				Ok(Some(user_id)) => {
+					// Token is valid, get the user
+					return self.get_user(&user_id).await;
+				}
+				Ok(None) => {
+					// Token not found or expired
+					return Ok(None);
+				}
+				Err(e) => {
+					// Error querying token store
+					return Err(AuthenticationError::Unknown(format!(
+						"Token store error: {}",
+						e
+					)));
 				}
 			}
+		}
 
 		Ok(None)
 	}

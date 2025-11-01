@@ -242,9 +242,10 @@ impl DependencyGraph {
 			if !visited.contains(dep) {
 				self.dfs_detect_cycles(dep, visited, rec_stack, path, cycles);
 			} else if rec_stack.contains(dep)
-				&& let Some(cycle_start) = path.iter().position(|p| p == dep) {
-					cycles.push(path[cycle_start..].to_vec());
-				}
+				&& let Some(cycle_start) = path.iter().position(|p| p == dep)
+			{
+				cycles.push(path[cycle_start..].to_vec());
+			}
 		}
 
 		path.pop();

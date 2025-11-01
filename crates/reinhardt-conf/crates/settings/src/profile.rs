@@ -14,7 +14,7 @@ use std::fmt;
 pub enum Profile {
 	/// Development environment (default)
 	#[default]
- Development,
+	Development,
 	/// Staging/testing environment
 	Staging,
 	/// Production environment
@@ -155,7 +155,6 @@ impl Profile {
 		}
 	}
 }
-
 
 impl fmt::Display for Profile {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

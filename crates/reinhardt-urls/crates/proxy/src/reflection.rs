@@ -245,10 +245,7 @@ pub fn extract_collection_values<T>(
 	collection: &[T],
 	attribute_extractor: impl Fn(&T) -> ProxyResult<ScalarValue>,
 ) -> ProxyResult<Vec<ScalarValue>> {
-	collection
-		.iter()
-		.map(attribute_extractor)
-		.collect()
+	collection.iter().map(attribute_extractor).collect()
 }
 
 #[cfg(test)]

@@ -19,15 +19,14 @@ use std::marker::PhantomData;
 /// let select_in = LoadingStrategy::SelectIn;
 /// let joined = LoadingStrategy::Joined;
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum LoadingStrategy {
 	/// Load related objects only when accessed (default)
 	///
 	/// Generates a separate query when the relationship is accessed.
 	/// Can lead to N+1 query problem if not careful.
 	#[default]
- Lazy,
+	Lazy,
 
 	/// Load related objects immediately with the parent
 	///
@@ -52,7 +51,6 @@ pub enum LoadingStrategy {
 	/// Useful for complex filtering scenarios.
 	Subquery,
 }
-
 
 /// Lazy loader for relationships
 ///

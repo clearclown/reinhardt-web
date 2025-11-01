@@ -17,8 +17,7 @@ use std::marker::PhantomData;
 /// let jaro_winkler = FuzzyAlgorithm::JaroWinkler;
 /// let trigram = FuzzyAlgorithm::Trigram;
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FuzzyAlgorithm {
 	/// Levenshtein distance
 	///
@@ -26,7 +25,7 @@ pub enum FuzzyAlgorithm {
 	/// (insertions, deletions, or substitutions) required to
 	/// change one string into another.
 	#[default]
- Levenshtein,
+	Levenshtein,
 
 	/// Damerau-Levenshtein distance
 	///
@@ -59,7 +58,6 @@ pub enum FuzzyAlgorithm {
 	/// Better handles consonant sounds and pronunciation.
 	Metaphone,
 }
-
 
 /// Fuzzy search filter
 ///

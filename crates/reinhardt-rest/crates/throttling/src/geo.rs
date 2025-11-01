@@ -177,9 +177,10 @@ impl<B: ThrottleBackend> GeoRateThrottle<B> {
 	/// Get rate limit for the given key
 	async fn get_rate_for_key(&self, key: &str) -> (usize, u64) {
 		if let Some(ip) = self.extract_ip(key)
-			&& let Some(country_code) = self.get_country_code(ip) {
-				return self.config.get_rate(&country_code);
-			}
+			&& let Some(country_code) = self.get_country_code(ip)
+		{
+			return self.config.get_rate(&country_code);
+		}
 		self.config.default_rate
 	}
 }

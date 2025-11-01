@@ -45,8 +45,7 @@ use std::time::Duration;
 /// let lax = SameSite::Lax;        // Balanced (default)
 /// let none = SameSite::None;      // Least restrictive
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SameSite {
 	/// Cookies are only sent in a first-party context
 	///
@@ -59,7 +58,7 @@ pub enum SameSite {
 	/// Balanced setting. Provides CSRF protection while allowing cookies
 	/// to be sent when users navigate to your site from external links.
 	#[default]
- Lax,
+	Lax,
 
 	/// Cookies are sent with both first-party and cross-site requests
 	///
@@ -87,7 +86,6 @@ impl SameSite {
 		}
 	}
 }
-
 
 /// Session configuration
 ///

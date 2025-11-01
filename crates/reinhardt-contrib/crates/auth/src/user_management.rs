@@ -505,8 +505,7 @@ impl<H: PasswordHasher> UserManager<H> {
 			.get(&uuid)
 			.ok_or(UserManagementError::UserNotFound)?;
 
-		self
-			.hasher
+		self.hasher
 			.verify(password, hash)
 			.map_err(|e| UserManagementError::Other(e.to_string()))
 	}

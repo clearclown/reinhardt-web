@@ -287,11 +287,11 @@ impl MultiTermSearch {
 								current_term.push(next_ch);
 							}
 						} else if next_ch == ' ' {
-      								// End of unquoted value
-      								break;
-      							} else {
-      								current_term.push(next_ch);
-      							}
+							// End of unquoted value
+							break;
+						} else {
+							current_term.push(next_ch);
+						}
 					}
 
 					terms.push(SearchTerm {

@@ -109,8 +109,7 @@ pub trait FormModel: Send + Sync {
 }
 
 /// ModelForm configuration
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct ModelFormConfig {
 	/// Fields to include in the form (None = all fields)
 	pub fields: Option<Vec<String>>,
@@ -123,7 +122,6 @@ pub struct ModelFormConfig {
 	/// Custom help text for specific fields
 	pub help_texts: HashMap<String, String>,
 }
-
 
 impl ModelFormConfig {
 	pub fn new() -> Self {
@@ -362,9 +360,10 @@ impl<T: FormModel> ModelForm<T> {
 	pub fn is_valid(&mut self) -> bool {
 		// Validate the model if instance exists
 		if let Some(ref instance) = self.instance
-			&& let Err(_errors) = instance.validate() {
-				return false;
-			}
+			&& let Err(_errors) = instance.validate()
+		{
+			return false;
+		}
 
 		true
 	}

@@ -161,12 +161,9 @@ impl DocumentationRenderer {
 							if let Some(op_obj) = operation.as_object()
 								&& let Some(desc) =
 									op_obj.get("description").and_then(|d| d.as_str())
-								{
-									html.push_str(&format!(
-										"<p class=\"description\">{}</p>\n",
-										desc
-									));
-								}
+							{
+								html.push_str(&format!("<p class=\"description\">{}</p>\n", desc));
+							}
 							html.push_str("</div>\n");
 						}
 					}
@@ -204,9 +201,9 @@ impl DocumentationRenderer {
 							if let Some(op_obj) = operation.as_object()
 								&& let Some(desc) =
 									op_obj.get("description").and_then(|d| d.as_str())
-								{
-									md.push_str(&format!("{}\n\n", desc));
-								}
+							{
+								md.push_str(&format!("{}\n\n", desc));
+							}
 						}
 					}
 				}

@@ -67,10 +67,7 @@ impl DependencyGraph {
 	pub fn add_dependency(&mut self, from: String, to: String) {
 		self.add_file(from.clone());
 		self.add_file(to.clone());
-		self.dependencies
-			.entry(from)
-			.or_default()
-			.insert(to);
+		self.dependencies.entry(from).or_default().insert(to);
 	}
 
 	/// Resolve the processing order using topological sort

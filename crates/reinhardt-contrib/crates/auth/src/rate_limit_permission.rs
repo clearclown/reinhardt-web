@@ -241,20 +241,23 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	fn extract_ip(&self, context: &PermissionContext) -> Option<String> {
 		// Try X-Forwarded-For header first
 		if let Some(forwarded) = context.request.headers.get("X-Forwarded-For")
-			&& let Ok(forwarded_str) = forwarded.to_str() {
-				// Take the first IP in the chain
-				if let Some(first_ip) = forwarded_str.split(',').next()
-					&& let Ok(ip) = IpAddr::from_str(first_ip.trim()) {
-						return Some(ip.to_string());
-					}
+			&& let Ok(forwarded_str) = forwarded.to_str()
+		{
+			// Take the first IP in the chain
+			if let Some(first_ip) = forwarded_str.split(',').next()
+				&& let Ok(ip) = IpAddr::from_str(first_ip.trim())
+			{
+				return Some(ip.to_string());
 			}
+		}
 
 		// Try X-Real-IP header
 		if let Some(real_ip) = context.request.headers.get("X-Real-IP")
 			&& let Ok(ip_str) = real_ip.to_str()
-				&& let Ok(ip) = IpAddr::from_str(ip_str.trim()) {
-					return Some(ip.to_string());
-				}
+			&& let Ok(ip) = IpAddr::from_str(ip_str.trim())
+		{
+			return Some(ip.to_string());
+		}
 
 		// Extract from socket address if available
 		if let Some(remote_addr) = context.request.remote_addr {

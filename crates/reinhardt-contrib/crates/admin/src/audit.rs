@@ -6,9 +6,7 @@
 use crate::AdminDatabase;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sea_query::{
-	ExprTrait, Query as SeaQuery,
-};
+use sea_query::{ExprTrait, Query as SeaQuery};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -673,34 +671,40 @@ impl AuditLogger for MemoryAuditLogger {
 				.filter(|log| {
 					// Apply remaining filters
 					if let Some(ref user_id) = query.user_id
-						&& log.user_id != *user_id {
-							return false;
-						}
+						&& log.user_id != *user_id
+					{
+						return false;
+					}
 
 					if let Some(ref model_name) = query.model_name
-						&& log.model_name != *model_name {
-							return false;
-						}
+						&& log.model_name != *model_name
+					{
+						return false;
+					}
 
 					if let Some(ref object_id) = query.object_id
-						&& log.object_id != *object_id {
-							return false;
-						}
+						&& log.object_id != *object_id
+					{
+						return false;
+					}
 
 					if let Some(action) = query.action
-						&& log.action != action {
-							return false;
-						}
+						&& log.action != action
+					{
+						return false;
+					}
 
 					if let Some(start_date) = query.start_date
-						&& log.timestamp < start_date {
-							return false;
-						}
+						&& log.timestamp < start_date
+					{
+						return false;
+					}
 
 					if let Some(end_date) = query.end_date
-						&& log.timestamp > end_date {
-							return false;
-						}
+						&& log.timestamp > end_date
+					{
+						return false;
+					}
 
 					true
 				})
@@ -711,34 +715,40 @@ impl AuditLogger for MemoryAuditLogger {
 				.filter(|log| {
 					// Apply all filters
 					if let Some(ref user_id) = query.user_id
-						&& log.user_id != *user_id {
-							return false;
-						}
+						&& log.user_id != *user_id
+					{
+						return false;
+					}
 
 					if let Some(ref model_name) = query.model_name
-						&& log.model_name != *model_name {
-							return false;
-						}
+						&& log.model_name != *model_name
+					{
+						return false;
+					}
 
 					if let Some(ref object_id) = query.object_id
-						&& log.object_id != *object_id {
-							return false;
-						}
+						&& log.object_id != *object_id
+					{
+						return false;
+					}
 
 					if let Some(action) = query.action
-						&& log.action != action {
-							return false;
-						}
+						&& log.action != action
+					{
+						return false;
+					}
 
 					if let Some(start_date) = query.start_date
-						&& log.timestamp < start_date {
-							return false;
-						}
+						&& log.timestamp < start_date
+					{
+						return false;
+					}
 
 					if let Some(end_date) = query.end_date
-						&& log.timestamp > end_date {
-							return false;
-						}
+						&& log.timestamp > end_date
+					{
+						return false;
+					}
 
 					true
 				})
@@ -769,34 +779,40 @@ impl AuditLogger for MemoryAuditLogger {
 			.filter(|log| {
 				// Same filtering logic as query()
 				if let Some(ref user_id) = query.user_id
-					&& log.user_id != *user_id {
-						return false;
-					}
+					&& log.user_id != *user_id
+				{
+					return false;
+				}
 
 				if let Some(ref model_name) = query.model_name
-					&& log.model_name != *model_name {
-						return false;
-					}
+					&& log.model_name != *model_name
+				{
+					return false;
+				}
 
 				if let Some(ref object_id) = query.object_id
-					&& log.object_id != *object_id {
-						return false;
-					}
+					&& log.object_id != *object_id
+				{
+					return false;
+				}
 
 				if let Some(action) = query.action
-					&& log.action != action {
-						return false;
-					}
+					&& log.action != action
+				{
+					return false;
+				}
 
 				if let Some(start_date) = query.start_date
-					&& log.timestamp < start_date {
-						return false;
-					}
+					&& log.timestamp < start_date
+				{
+					return false;
+				}
 
 				if let Some(end_date) = query.end_date
-					&& log.timestamp > end_date {
-						return false;
-					}
+					&& log.timestamp > end_date
+				{
+					return false;
+				}
 
 				true
 			})
@@ -914,9 +930,10 @@ impl AuditLogger for DatabaseAuditLogger {
 		// Note: In a real implementation, we would properly parse the row data
 		// For now, we'll use a placeholder approach
 		if let Some(id_value) = row.data.get("id")
-			&& let Some(id) = id_value.as_i64() {
-				entry.set_id(id);
-			}
+			&& let Some(id) = id_value.as_i64()
+		{
+			entry.set_id(id);
+		}
 
 		Ok(entry)
 	}

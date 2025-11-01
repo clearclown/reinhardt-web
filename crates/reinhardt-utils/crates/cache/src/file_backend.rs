@@ -126,9 +126,10 @@ impl FileCache {
 		for (key, path) in index.iter() {
 			if let Ok(data) = fs::read(path).await
 				&& let Ok(entry) = serde_json::from_slice::<CacheEntry>(&data)
-					&& entry.is_expired() {
-						to_remove.push((key.clone(), path.clone()));
-					}
+				&& entry.is_expired()
+			{
+				to_remove.push((key.clone(), path.clone()));
+			}
 		}
 
 		for (key, path) in to_remove {
@@ -164,10 +165,11 @@ impl FileCache {
 			let path = entry.path();
 			if path.is_file()
 				&& let Ok(data) = fs::read(&path).await
-					&& let Ok(cache_entry) = serde_json::from_slice::<StoredEntry>(&data)
-						&& !cache_entry.entry.is_expired() {
-							index.insert(cache_entry.key.clone(), path);
-						}
+				&& let Ok(cache_entry) = serde_json::from_slice::<StoredEntry>(&data)
+				&& !cache_entry.entry.is_expired()
+			{
+				index.insert(cache_entry.key.clone(), path);
+			}
 		}
 
 		Ok(())

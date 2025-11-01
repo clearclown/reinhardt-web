@@ -285,9 +285,10 @@ impl LayeredCacheStore {
 			let store = self.store.read().await;
 			for key in &sample {
 				if let Some(entry) = store.get(key)
-					&& entry.is_expired() {
-						expired_keys.push(key.clone());
-					}
+					&& entry.is_expired()
+				{
+					expired_keys.push(key.clone());
+				}
 			}
 		}
 

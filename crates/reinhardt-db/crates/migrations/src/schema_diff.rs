@@ -157,14 +157,15 @@ impl SchemaDiff {
 				// Column modifications
 				for (col_name, target_col) in &target_table.columns {
 					if let Some(current_col) = current_table.columns.get(col_name)
-						&& current_col != target_col {
-							result.columns_to_modify.push((
-								table_name.clone(),
-								col_name.clone(),
-								current_col.clone(),
-								target_col.clone(),
-							));
-						}
+						&& current_col != target_col
+					{
+						result.columns_to_modify.push((
+							table_name.clone(),
+							col_name.clone(),
+							current_col.clone(),
+							target_col.clone(),
+						));
+					}
 				}
 
 				// Index changes
@@ -240,25 +241,26 @@ impl SchemaDiff {
 		// Add columns
 		for (table_name, col_name) in diff.columns_to_add {
 			if let Some(table_schema) = self.target_schema.tables.get(&table_name)
-				&& let Some(col_schema) = table_schema.columns.get(&col_name) {
-					let unique = self.extract_column_constraints(&table_name, &col_name);
-					let auto_increment = Self::is_auto_increment(col_schema);
-					let max_length = Self::extract_max_length(&col_schema.data_type);
+				&& let Some(col_schema) = table_schema.columns.get(&col_name)
+			{
+				let unique = self.extract_column_constraints(&table_name, &col_name);
+				let auto_increment = Self::is_auto_increment(col_schema);
+				let max_length = Self::extract_max_length(&col_schema.data_type);
 
-					operations.push(Operation::AddColumn {
-						table: table_name.clone(),
-						column: ColumnDefinition {
-							name: col_name.clone(),
-							type_definition: col_schema.data_type.clone(),
-							not_null: !col_schema.nullable,
-							default: col_schema.default.clone(),
-							unique,
-							primary_key: col_schema.primary_key,
-							auto_increment,
-							max_length,
-						},
-					});
-				}
+				operations.push(Operation::AddColumn {
+					table: table_name.clone(),
+					column: ColumnDefinition {
+						name: col_name.clone(),
+						type_definition: col_schema.data_type.clone(),
+						not_null: !col_schema.nullable,
+						default: col_schema.default.clone(),
+						unique,
+						primary_key: col_schema.primary_key,
+						auto_increment,
+						max_length,
+					},
+				});
+			}
 		}
 
 		// Remove columns
@@ -308,20 +310,21 @@ impl SchemaDiff {
 		// Match VARCHAR(N), CHAR(N) patterns
 		if (upper_type.contains("VARCHAR") || upper_type.contains("CHAR"))
 			&& let Some(start) = data_type.find('(')
-				&& let Some(end) = data_type.find(')')
-					&& let Ok(length) = data_type[start + 1..end].parse::<u32>() {
-						return Some(length);
-					}
+			&& let Some(end) = data_type.find(')')
+			&& let Ok(length) = data_type[start + 1..end].parse::<u32>()
+		{
+			return Some(length);
+		}
 
 		// Match DECIMAL(P, S), NUMERIC(P, S) patterns - extract precision (P)
 		if (upper_type.contains("DECIMAL") || upper_type.contains("NUMERIC"))
 			&& let Some(start) = data_type.find('(')
-				&& let Some(comma_pos) = data_type.find(',')
-					&& comma_pos > start + 1
-						&& let Ok(precision) = data_type[start + 1..comma_pos].trim().parse::<u32>()
-						{
-							return Some(precision);
-						}
+			&& let Some(comma_pos) = data_type.find(',')
+			&& comma_pos > start + 1
+			&& let Ok(precision) = data_type[start + 1..comma_pos].trim().parse::<u32>()
+		{
+			return Some(precision);
+		}
 
 		None
 	}

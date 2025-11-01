@@ -134,13 +134,15 @@ impl Converter for IntegerConverter {
 	fn validate(&self, value: &str) -> bool {
 		if let Ok(num) = value.parse::<i64>() {
 			if let Some(min) = self.min
-				&& num < min {
-					return false;
-				}
+				&& num < min
+			{
+				return false;
+			}
 			if let Some(max) = self.max
-				&& num > max {
-					return false;
-				}
+				&& num > max
+			{
+				return false;
+			}
 			true
 		} else {
 			false
@@ -153,20 +155,22 @@ impl Converter for IntegerConverter {
 		})?;
 
 		if let Some(min) = self.min
-			&& num < min {
-				return Err(ConverterError::OutOfRange(format!(
-					"{} is less than minimum {}",
-					num, min
-				)));
-			}
+			&& num < min
+		{
+			return Err(ConverterError::OutOfRange(format!(
+				"{} is less than minimum {}",
+				num, min
+			)));
+		}
 
 		if let Some(max) = self.max
-			&& num > max {
-				return Err(ConverterError::OutOfRange(format!(
-					"{} is greater than maximum {}",
-					num, max
-				)));
-			}
+			&& num > max
+		{
+			return Err(ConverterError::OutOfRange(format!(
+				"{} is greater than maximum {}",
+				num, max
+			)));
+		}
 
 		Ok(num)
 	}
@@ -498,13 +502,15 @@ impl Converter for FloatConverter {
 				return false;
 			}
 			if let Some(min) = self.min
-				&& num < min {
-					return false;
-				}
+				&& num < min
+			{
+				return false;
+			}
 			if let Some(max) = self.max
-				&& num > max {
-					return false;
-				}
+				&& num > max
+			{
+				return false;
+			}
 			true
 		} else {
 			false
@@ -527,20 +533,22 @@ impl Converter for FloatConverter {
 		}
 
 		if let Some(min) = self.min
-			&& num < min {
-				return Err(ConverterError::OutOfRange(format!(
-					"{} is less than minimum {}",
-					num, min
-				)));
-			}
+			&& num < min
+		{
+			return Err(ConverterError::OutOfRange(format!(
+				"{} is less than minimum {}",
+				num, min
+			)));
+		}
 
 		if let Some(max) = self.max
-			&& num > max {
-				return Err(ConverterError::OutOfRange(format!(
-					"{} is greater than maximum {}",
-					num, max
-				)));
-			}
+			&& num > max
+		{
+			return Err(ConverterError::OutOfRange(format!(
+				"{} is greater than maximum {}",
+				num, max
+			)));
+		}
 
 		Ok(num)
 	}

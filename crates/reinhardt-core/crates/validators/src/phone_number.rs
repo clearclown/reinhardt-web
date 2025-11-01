@@ -133,12 +133,13 @@ impl PhoneNumberValidator {
 
 		// Validate country code if whitelist exists
 		if let Some(ref allowed_codes) = self.country_codes
-			&& !allowed_codes.contains(&country_code) {
-				return Err(ValidationError::CountryCodeNotAllowed {
-					country_code,
-					allowed_countries: allowed_codes.join(", "),
-				});
-			}
+			&& !allowed_codes.contains(&country_code)
+		{
+			return Err(ValidationError::CountryCodeNotAllowed {
+				country_code,
+				allowed_countries: allowed_codes.join(", "),
+			});
+		}
 
 		// Validate total length (E.164 allows max 15 digits including country code)
 		let digit_count = base_number.chars().filter(|c| c.is_ascii_digit()).count();

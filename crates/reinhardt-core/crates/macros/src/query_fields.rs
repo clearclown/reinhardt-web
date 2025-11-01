@@ -80,10 +80,11 @@ fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
 				"Option" => {
 					// Handle Option<T>
 					if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
-						&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-							let inner_lookup = map_type_to_lookup_type(inner_type);
-							return quote! { Option<#inner_lookup> };
-						}
+						&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+					{
+						let inner_lookup = map_type_to_lookup_type(inner_type);
+						return quote! { Option<#inner_lookup> };
+					}
 					quote! { #ty }
 				}
 				_ => {

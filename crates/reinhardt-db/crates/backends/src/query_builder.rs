@@ -153,10 +153,11 @@ impl UpdateBuilder {
 		// Add SET clauses
 		for (col, val) in &self.sets {
 			if let QueryValue::String(s) = val
-				&& s == "__NOW__" {
-					stmt.value(Alias::new(col), Expr::cust("NOW()"));
-					continue;
-				}
+				&& s == "__NOW__"
+			{
+				stmt.value(Alias::new(col), Expr::cust("NOW()"));
+				continue;
+			}
 			stmt.value(Alias::new(col), query_value_to_sea_value(val));
 		}
 

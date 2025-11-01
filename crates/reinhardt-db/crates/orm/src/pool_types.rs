@@ -519,9 +519,9 @@ pub struct PoolStatistics {
 }
 
 impl Default for PoolStatistics {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl PoolStatistics {

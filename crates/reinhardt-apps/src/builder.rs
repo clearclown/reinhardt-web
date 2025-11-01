@@ -425,12 +425,13 @@ impl ApplicationBuilder {
 		let mut route_names = std::collections::HashSet::new();
 		for pattern in &self.url_patterns {
 			if let Some(full_name) = pattern.full_name()
-				&& !route_names.insert(full_name.clone()) {
-					return Err(BuildError::RouteError(format!(
-						"Duplicate route name: {}",
-						full_name
-					)));
-				}
+				&& !route_names.insert(full_name.clone())
+			{
+				return Err(BuildError::RouteError(format!(
+					"Duplicate route name: {}",
+					full_name
+				)));
+			}
 		}
 
 		Ok(())

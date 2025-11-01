@@ -367,8 +367,7 @@ impl Session {
 
 		// Rollback transaction if active
 		if let Some(mut tx) = self.transaction.take() {
-			tx.rollback()
-				.map_err(SessionError::TransactionError)?;
+			tx.rollback().map_err(SessionError::TransactionError)?;
 		}
 
 		Ok(())

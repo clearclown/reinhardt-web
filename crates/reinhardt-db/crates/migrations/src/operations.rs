@@ -952,9 +952,10 @@ impl Operation {
 		// JSON array/object
 		if ((trimmed.starts_with('[') && trimmed.ends_with(']'))
 			|| (trimmed.starts_with('{') && trimmed.ends_with('}')))
-			&& let Ok(json) = serde_json::from_str::<serde_json::Value>(trimmed) {
-				return json_to_sea_value(&json);
-			}
+			&& let Ok(json) = serde_json::from_str::<serde_json::Value>(trimmed)
+		{
+			return json_to_sea_value(&json);
+		}
 
 		// SQL function calls (e.g., NOW(), CURRENT_TIMESTAMP)
 		if trimmed.ends_with("()") || trimmed.contains('(') {

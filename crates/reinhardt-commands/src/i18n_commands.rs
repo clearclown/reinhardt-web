@@ -237,9 +237,10 @@ impl MakeMessagesCommand {
 
 			if path.is_dir()
 				&& let Some(name) = path.file_name()
-					&& let Some(name_str) = name.to_str() {
-						locales.push(name_str.to_string());
-					}
+				&& let Some(name_str) = name.to_str()
+			{
+				locales.push(name_str.to_string());
+			}
 		}
 
 		Ok(locales)
@@ -368,9 +369,10 @@ impl MakeMessagesCommand {
 	fn extract_po_header(content: &str) -> String {
 		// Extract header (everything up to the first real msgid)
 		if let Some(pos) = content.find("\nmsgid \"")
-			&& pos > 0 {
-				return content[..pos].to_string() + "\n";
-			}
+			&& pos > 0
+		{
+			return content[..pos].to_string() + "\n";
+		}
 
 		// Default header if not found
 		String::new()
@@ -686,9 +688,10 @@ impl CompileMessagesCommand {
 				let po_file = path.join("LC_MESSAGES").join("reinhardt.po");
 				if po_file.exists()
 					&& let Some(name) = path.file_name()
-						&& let Some(name_str) = name.to_str() {
-							locales.push(name_str.to_string());
-						}
+					&& let Some(name_str) = name.to_str()
+				{
+					locales.push(name_str.to_string());
+				}
 			}
 		}
 

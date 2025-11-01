@@ -29,10 +29,10 @@ impl<T, S> Default for ListView<T, S>
 where
 	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
 	S: Serializer<Input = T, Output = String> + Send + Sync,
- {
-    fn default() -> Self {
-        Self::new()
-    }
+{
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl<T, S> ListView<T, S>

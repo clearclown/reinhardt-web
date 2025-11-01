@@ -246,13 +246,15 @@ impl MakeMigrationsCommand {
 		if let Ok(entries) = fs::read_dir(&dir_path) {
 			for entry in entries.flatten() {
 				if let Some(file_name) = entry.file_name().to_str()
-					&& file_name.ends_with(".rs") {
-						// Extract number from filename (e.g., "0001_initial.rs" -> "0001")
-						if let Some(number_str) = file_name.split('_').next()
-							&& let Ok(number) = number_str.parse::<u32>() {
-								max_number = max_number.max(number);
-							}
+					&& file_name.ends_with(".rs")
+				{
+					// Extract number from filename (e.g., "0001_initial.rs" -> "0001")
+					if let Some(number_str) = file_name.split('_').next()
+						&& let Ok(number) = number_str.parse::<u32>()
+					{
+						max_number = max_number.max(number);
 					}
+				}
 			}
 		}
 
@@ -393,16 +395,13 @@ impl MakeMigrationsCommand {
 			for entry in entries.flatten() {
 				if let Some(file_name) = entry.file_name().to_str()
 					&& file_name.ends_with(".rs")
-						&& file_name
-							.chars()
-							.next()
-							.is_some_and(|c| c.is_ascii_digit())
-					{
-						// Convert filename to valid module name (prefix with _ and replace - with _)
-						let module_name =
-							format!("_{}", file_name.trim_end_matches(".rs").replace('-', "_"));
-						migration_modules.push(module_name);
-					}
+					&& file_name.chars().next().is_some_and(|c| c.is_ascii_digit())
+				{
+					// Convert filename to valid module name (prefix with _ and replace - with _)
+					let module_name =
+						format!("_{}", file_name.trim_end_matches(".rs").replace('-', "_"));
+					migration_modules.push(module_name);
+				}
 			}
 		}
 

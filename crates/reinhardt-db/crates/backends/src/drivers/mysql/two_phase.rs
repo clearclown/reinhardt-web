@@ -342,10 +342,9 @@ impl MySqlTwoPhaseParticipant {
 		let mut cleaned = 0;
 
 		for txn in all_txns {
-			if txn.xid.starts_with(prefix)
-				&& self.rollback(&txn.xid).await.is_ok() {
-					cleaned += 1;
-				}
+			if txn.xid.starts_with(prefix) && self.rollback(&txn.xid).await.is_ok() {
+				cleaned += 1;
+			}
 		}
 
 		Ok(cleaned)

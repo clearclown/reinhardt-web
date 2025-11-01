@@ -149,10 +149,7 @@ impl DependencyProfiler {
 				cached,
 			};
 
-			self.records
-				.entry(name)
-				.or_default()
-				.push(record);
+			self.records.entry(name).or_default().push(record);
 		}
 	}
 
@@ -176,10 +173,7 @@ impl DependencyProfiler {
 			cached,
 		};
 
-		self.records
-			.entry(name)
-			.or_default()
-			.push(record);
+		self.records.entry(name).or_default().push(record);
 	}
 
 	/// Generate a profiling report

@@ -84,12 +84,13 @@ impl DecimalField {
 		if let Some(decimal_places) = self.decimal_places {
 			let parts: Vec<&str> = s.split('.').collect();
 			if let Some(decimals) = parts.get(1)
-				&& decimals.len() > decimal_places {
-					return Err(format!(
-						"Ensure that there are no more than {} decimal places",
-						decimal_places
-					));
-				}
+				&& decimals.len() > decimal_places
+			{
+				return Err(format!(
+					"Ensure that there are no more than {} decimal places",
+					decimal_places
+				));
+			}
 		}
 
 		Ok(num)
@@ -139,8 +140,7 @@ impl FormField for DecimalField {
 						return Ok(serde_json::Value::Null);
 					}
 
-					self.validate_decimal(s)
-						.map_err(FieldError::Validation)?
+					self.validate_decimal(s).map_err(FieldError::Validation)?
 				} else if let Some(i) = v.as_i64() {
 					i as f64
 				} else {
@@ -149,20 +149,22 @@ impl FormField for DecimalField {
 
 				// Validate range
 				if let Some(max) = self.max_value
-					&& num > max {
-						return Err(FieldError::Validation(format!(
-							"Ensure this value is less than or equal to {}",
-							max
-						)));
-					}
+					&& num > max
+				{
+					return Err(FieldError::Validation(format!(
+						"Ensure this value is less than or equal to {}",
+						max
+					)));
+				}
 
 				if let Some(min) = self.min_value
-					&& num < min {
-						return Err(FieldError::Validation(format!(
-							"Ensure this value is greater than or equal to {}",
-							min
-						)));
-					}
+					&& num < min
+				{
+					return Err(FieldError::Validation(format!(
+						"Ensure this value is greater than or equal to {}",
+						min
+					)));
+				}
 
 				Ok(serde_json::json!(num))
 			}

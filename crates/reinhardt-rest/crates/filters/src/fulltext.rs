@@ -17,15 +17,14 @@ use std::marker::PhantomData;
 /// let boolean = FullTextSearchMode::Boolean;
 /// let phrase = FullTextSearchMode::Phrase;
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FullTextSearchMode {
 	/// Natural language search
 	///
 	/// Interprets the search string as a natural language phrase.
 	/// Best for user-facing search.
 	#[default]
- Natural,
+	Natural,
 
 	/// Boolean search
 	///
@@ -45,7 +44,6 @@ pub enum FullTextSearchMode {
 	/// Useful for finding related content.
 	QueryExpansion,
 }
-
 
 /// Full-text search filter
 ///

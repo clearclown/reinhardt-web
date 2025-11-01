@@ -202,9 +202,9 @@ pub struct ProjectState {
 }
 
 impl Default for ProjectState {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl ProjectState {
@@ -694,12 +694,13 @@ impl DetectedChanges {
 			// So we need to find all models that have `model` in their dependencies
 			for (dependent, dependencies) in &self.model_dependencies {
 				if dependencies.contains(&model)
-					&& let Some(degree) = in_degree.get_mut(dependent) {
-						*degree -= 1;
-						if *degree == 0 {
-							queue.push_back(dependent.clone());
-						}
+					&& let Some(degree) = in_degree.get_mut(dependent)
+				{
+					*degree -= 1;
+					if *degree == 0 {
+						queue.push_back(dependent.clone());
 					}
+				}
 			}
 		}
 
@@ -806,8 +807,8 @@ impl DetectedChanges {
 					&mut rec_stack,
 					&mut path,
 				) {
-					return Err(cycle);
-				}
+				return Err(cycle);
+			}
 		}
 
 		Ok(())
@@ -1096,22 +1097,23 @@ impl ChangeTracker {
 				if let Ok(diff) = self.history[j]
 					.timestamp
 					.duration_since(self.history[i].timestamp)
-					&& diff <= window {
-						let pattern1 = format!(
-							"{}:{}",
-							self.history[i].change_type, self.history[i].model_name
-						);
-						let pattern2 = format!(
-							"{}:{}",
-							self.history[j].change_type, self.history[j].model_name
-						);
-						let key = if pattern1 < pattern2 {
-							(pattern1, pattern2)
-						} else {
-							(pattern2, pattern1)
-						};
-						*cooccurrences.entry(key).or_insert(0) += 1;
-					}
+					&& diff <= window
+				{
+					let pattern1 = format!(
+						"{}:{}",
+						self.history[i].change_type, self.history[i].model_name
+					);
+					let pattern2 = format!(
+						"{}:{}",
+						self.history[j].change_type, self.history[j].model_name
+					);
+					let key = if pattern1 < pattern2 {
+						(pattern1, pattern2)
+					} else {
+						(pattern2, pattern1)
+					};
+					*cooccurrences.entry(key).or_insert(0) += 1;
+				}
 			}
 		}
 
@@ -1449,9 +1451,9 @@ pub struct InferenceEngine {
 }
 
 impl Default for InferenceEngine {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl InferenceEngine {
@@ -2905,11 +2907,13 @@ impl MigrationAutodetector {
 			let target_idx = created_nodes.iter().position(|&n| n == target);
 
 			if let (Some(i), Some(j)) = (source_idx, target_idx)
-				&& !used_deleted.contains(&i) && !used_created.contains(&j) {
-					matches.push((deleted[i].clone(), created[j].clone(), weight));
-					used_deleted.insert(i);
-					used_created.insert(j);
-				}
+				&& !used_deleted.contains(&i)
+				&& !used_created.contains(&j)
+			{
+				matches.push((deleted[i].clone(), created[j].clone(), weight));
+				used_deleted.insert(i);
+				used_created.insert(j);
+			}
 		}
 
 		matches
@@ -3081,30 +3085,32 @@ impl MigrationAutodetector {
 		// Generate AddColumn operations for new fields
 		for (app_label, model_name, field_name) in &changes.added_fields {
 			if let Some(model) = self.to_state.get_model(app_label, model_name)
-				&& let Some(field) = model.get_field(field_name) {
-					operations.push(crate::Operation::AddColumn {
-						table: model.name.clone(),
-						column: crate::ColumnDefinition::new(
-							field_name.clone(),
-							field.field_type.clone(),
-						),
-					});
-				}
+				&& let Some(field) = model.get_field(field_name)
+			{
+				operations.push(crate::Operation::AddColumn {
+					table: model.name.clone(),
+					column: crate::ColumnDefinition::new(
+						field_name.clone(),
+						field.field_type.clone(),
+					),
+				});
+			}
 		}
 
 		// Generate AlterColumn operations for changed fields
 		for (app_label, model_name, field_name) in &changes.altered_fields {
 			if let Some(model) = self.to_state.get_model(app_label, model_name)
-				&& let Some(field) = model.get_field(field_name) {
-					operations.push(crate::Operation::AlterColumn {
-						table: model.name.clone(),
-						column: field_name.clone(),
-						new_definition: crate::ColumnDefinition::new(
-							field_name.clone(),
-							field.field_type.clone(),
-						),
-					});
-				}
+				&& let Some(field) = model.get_field(field_name)
+			{
+				operations.push(crate::Operation::AlterColumn {
+					table: model.name.clone(),
+					column: field_name.clone(),
+					new_definition: crate::ColumnDefinition::new(
+						field_name.clone(),
+						field.field_type.clone(),
+					),
+				});
+			}
 		}
 
 		// Generate DropColumn operations for removed fields
@@ -3209,36 +3215,38 @@ impl MigrationAutodetector {
 		// Group added fields by app
 		for (app_label, model_name, field_name) in &changes.added_fields {
 			if let Some(model) = self.to_state.get_model(app_label, model_name)
-				&& let Some(field) = model.get_field(field_name) {
-					migrations_by_app
-						.entry(app_label.clone())
-						.or_default()
-						.push(crate::Operation::AddColumn {
-							table: model.name.clone(),
-							column: crate::ColumnDefinition::new(
-								field_name.clone(),
-								field.field_type.clone(),
-							),
-						});
-				}
+				&& let Some(field) = model.get_field(field_name)
+			{
+				migrations_by_app
+					.entry(app_label.clone())
+					.or_default()
+					.push(crate::Operation::AddColumn {
+						table: model.name.clone(),
+						column: crate::ColumnDefinition::new(
+							field_name.clone(),
+							field.field_type.clone(),
+						),
+					});
+			}
 		}
 
 		// Group altered fields by app
 		for (app_label, model_name, field_name) in &changes.altered_fields {
 			if let Some(model) = self.to_state.get_model(app_label, model_name)
-				&& let Some(field) = model.get_field(field_name) {
-					migrations_by_app
-						.entry(app_label.clone())
-						.or_default()
-						.push(crate::Operation::AlterColumn {
-							table: model.name.clone(),
-							column: field_name.clone(),
-							new_definition: crate::ColumnDefinition::new(
-								field_name.clone(),
-								field.field_type.clone(),
-							),
-						});
-				}
+				&& let Some(field) = model.get_field(field_name)
+			{
+				migrations_by_app
+					.entry(app_label.clone())
+					.or_default()
+					.push(crate::Operation::AlterColumn {
+						table: model.name.clone(),
+						column: field_name.clone(),
+						new_definition: crate::ColumnDefinition::new(
+							field_name.clone(),
+							field.field_type.clone(),
+						),
+					});
+			}
 		}
 
 		// Group removed fields by app

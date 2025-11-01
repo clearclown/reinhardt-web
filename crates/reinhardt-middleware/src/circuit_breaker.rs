@@ -322,10 +322,11 @@ impl CircuitBreakerMiddleware {
 			CircuitState::Open => {
 				// Transition to half-open state after timeout
 				if let Some(opened_at) = state.opened_at
-					&& opened_at.elapsed() >= self.config.timeout {
-						drop(state);
-						self.transition_to_half_open();
-					}
+					&& opened_at.elapsed() >= self.config.timeout
+				{
+					drop(state);
+					self.transition_to_half_open();
+				}
 			}
 			CircuitState::HalfOpen => {
 				// Close the circuit if successes exceed threshold

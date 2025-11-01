@@ -17,13 +17,14 @@ impl Handler for ViewSetHandler {
 	async fn handle(&self, req: Request) -> Result<Response> {
 		// Check if ViewSet supports DI
 		if self.viewset.supports_di()
-			&& let Some(di_ctx) = req.get_di_context::<InjectionContext>() {
-				// Use DI-aware dispatch
-				return self
-					.viewset
-					.dispatch_with_context(req, self.action, &di_ctx)
-					.await;
-			}
+			&& let Some(di_ctx) = req.get_di_context::<InjectionContext>()
+		{
+			// Use DI-aware dispatch
+			return self
+				.viewset
+				.dispatch_with_context(req, self.action, &di_ctx)
+				.await;
+		}
 
 		// Fallback to regular dispatch
 		self.viewset.dispatch(req, self.action).await

@@ -71,11 +71,11 @@ impl LocalStorage {
 		let path_obj = Path::new(path);
 		for component in path_obj.components() {
 			if component == std::path::Component::ParentDir {
-   					return Err(StorageError::InvalidPath(format!(
-   						"Detected path traversal attempt in '{}'",
-   						path
-   					)));
-   				}
+				return Err(StorageError::InvalidPath(format!(
+					"Detected path traversal attempt in '{}'",
+					path
+				)));
+			}
 		}
 
 		// Check if path is just current dir or empty

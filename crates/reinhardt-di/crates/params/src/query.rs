@@ -121,9 +121,10 @@ fn string_to_json_value(s: &str) -> serde_json::Value {
 	}
 	// Try parsing as float
 	if let Ok(f) = s.parse::<f64>()
-		&& let Some(num) = serde_json::Number::from_f64(f) {
-			return serde_json::Value::Number(num);
-		}
+		&& let Some(num) = serde_json::Number::from_f64(f)
+	{
+		return serde_json::Value::Number(num);
+	}
 	// Try parsing as boolean
 	if let Ok(b) = s.parse::<bool>() {
 		return serde_json::Value::Bool(b);

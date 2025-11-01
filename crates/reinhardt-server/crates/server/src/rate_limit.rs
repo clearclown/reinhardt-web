@@ -204,21 +204,24 @@ impl RateLimitHandler {
 	fn extract_client_ip(&self, request: &Request) -> IpAddr {
 		// 1. Check X-Forwarded-For header
 		if let Some(xff) = request.headers.get("X-Forwarded-For")
-			&& let Ok(xff_str) = xff.to_str() {
-				// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-				// Take the first (leftmost) IP as the original client IP
-				if let Some(first_ip) = xff_str.split(',').next()
-					&& let Ok(ip) = first_ip.trim().parse() {
-						return ip;
-					}
+			&& let Ok(xff_str) = xff.to_str()
+		{
+			// X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+			// Take the first (leftmost) IP as the original client IP
+			if let Some(first_ip) = xff_str.split(',').next()
+				&& let Ok(ip) = first_ip.trim().parse()
+			{
+				return ip;
 			}
+		}
 
 		// 2. Check X-Real-IP header
 		if let Some(xri) = request.headers.get("X-Real-IP")
 			&& let Ok(ip_str) = xri.to_str()
-				&& let Ok(ip) = ip_str.parse() {
-					return ip;
-				}
+			&& let Ok(ip) = ip_str.parse()
+		{
+			return ip;
+		}
 
 		// 3. Fallback to localhost
 		// Note: In a real implementation with actual socket access,

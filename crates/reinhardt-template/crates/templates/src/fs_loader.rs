@@ -145,12 +145,13 @@ impl FileSystemTemplateLoader {
 		// Note: This requires the base_dir to exist
 		if let Ok(canonical_full) = full_path.canonicalize()
 			&& let Ok(canonical_base) = self.base_dir.canonicalize()
-				&& !canonical_full.starts_with(&canonical_base) {
-					return Err(TemplateError::TemplateNotFound(format!(
-						"Path escapes base directory: {}",
-						name
-					)));
-				}
+			&& !canonical_full.starts_with(&canonical_base)
+		{
+			return Err(TemplateError::TemplateNotFound(format!(
+				"Path escapes base directory: {}",
+				name
+			)));
+		}
 
 		Ok(full_path)
 	}

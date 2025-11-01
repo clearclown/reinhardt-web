@@ -254,19 +254,20 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 		// This follows Django REST Framework's approach where related data is loaded
 		// by the ORM layer (e.g., using select_related/prefetch_related) before serialization
 		if self.depth > 0
-			&& let Some(obj) = parent_value.as_object_mut() {
-				// Check if the relationship field already has data
-				if let Some(related_data) = obj.get(&self.relationship_field) {
-					// If the data is not null, it means the relationship was already loaded
-					// by the ORM (e.g., via Joined or Selectin loading strategy)
-					if !related_data.is_null() {
-						// The relationship data is already present in the serialized JSON
-						// This works because reinhardt-orm's Model trait implementations
-						// include relationship fields in their Serialize implementation
-						// when those relationships are loaded
-					}
+			&& let Some(obj) = parent_value.as_object_mut()
+		{
+			// Check if the relationship field already has data
+			if let Some(related_data) = obj.get(&self.relationship_field) {
+				// If the data is not null, it means the relationship was already loaded
+				// by the ORM (e.g., via Joined or Selectin loading strategy)
+				if !related_data.is_null() {
+					// The relationship data is already present in the serialized JSON
+					// This works because reinhardt-orm's Model trait implementations
+					// include relationship fields in their Serialize implementation
+					// when those relationships are loaded
 				}
 			}
+		}
 
 		// Convert the value back to string
 		serde_json::to_string(&parent_value)
@@ -519,9 +520,10 @@ impl<M: Model, R: Model> WritableNestedSerializer<M, R> {
 
 		if let Value::Object(ref map) = value
 			&& let Some(nested_value) = map.get(&self.relationship_field)
-				&& !nested_value.is_null() {
-					return Ok(Some(nested_value.clone()));
-				}
+			&& !nested_value.is_null()
+		{
+			return Ok(Some(nested_value.clone()));
+		}
 
 		Ok(None)
 	}
@@ -566,11 +568,26 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 
 		// Check for nested data at relationship_field
 		if let Value::Object(ref map) = value
-			&& let Some(nested_value) = map.get(&self.relationship_field) {
-				// Validate permissions
-				if nested_value.is_object() {
-					// Single related object
-					if let Some(pk) = nested_value.get(M::primary_key_field()) {
+			&& let Some(nested_value) = map.get(&self.relationship_field)
+		{
+			// Validate permissions
+			if nested_value.is_object() {
+				// Single related object
+				if let Some(pk) = nested_value.get(M::primary_key_field()) {
+					if pk.is_null() && !self.allow_create {
+						return Err(SerializerError::new(
+							"Creating nested instances is not allowed".to_string(),
+						));
+					} else if !pk.is_null() && !self.allow_update {
+						return Err(SerializerError::new(
+							"Updating nested instances is not allowed".to_string(),
+						));
+					}
+				}
+			} else if nested_value.is_array() {
+				// Multiple related objects
+				for item in nested_value.as_array().unwrap() {
+					if let Some(pk) = item.get(M::primary_key_field()) {
 						if pk.is_null() && !self.allow_create {
 							return Err(SerializerError::new(
 								"Creating nested instances is not allowed".to_string(),
@@ -581,46 +598,32 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 							));
 						}
 					}
-				} else if nested_value.is_array() {
-					// Multiple related objects
-					for item in nested_value.as_array().unwrap() {
-						if let Some(pk) = item.get(M::primary_key_field()) {
-							if pk.is_null() && !self.allow_create {
-								return Err(SerializerError::new(
-									"Creating nested instances is not allowed".to_string(),
-								));
-							} else if !pk.is_null() && !self.allow_update {
-								return Err(SerializerError::new(
-									"Updating nested instances is not allowed".to_string(),
-								));
-							}
-						}
-					}
 				}
-
-				// Nested data validation passed
-				// The actual database operations (create/update) are handled by the caller
-				// using ORM methods like QuerySet::create() or Model::save()
-				//
-				// This design follows the separation of concerns principle:
-				// - Serializer: Validates structure and permissions
-				// - ORM Layer: Performs database operations
-				// - Transaction: Ensures atomicity
-				//
-				// Example usage pattern:
-				// ```
-				// let serializer = WritableNestedSerializer::new("author").allow_create(true);
-				// let post: Post = serializer.deserialize(&json)?;
-				//
-				// // Caller handles database operations within transaction:
-				// let mut tx = Transaction::new();
-				// tx.begin()?;
-				// let author = Author::objects().create(&post.author).await?;
-				// post.author_id = author.id;
-				// let saved_post = Post::objects().create(&post).await?;
-				// tx.commit()?;
-				// ```
 			}
+
+			// Nested data validation passed
+			// The actual database operations (create/update) are handled by the caller
+			// using ORM methods like QuerySet::create() or Model::save()
+			//
+			// This design follows the separation of concerns principle:
+			// - Serializer: Validates structure and permissions
+			// - ORM Layer: Performs database operations
+			// - Transaction: Ensures atomicity
+			//
+			// Example usage pattern:
+			// ```
+			// let serializer = WritableNestedSerializer::new("author").allow_create(true);
+			// let post: Post = serializer.deserialize(&json)?;
+			//
+			// // Caller handles database operations within transaction:
+			// let mut tx = Transaction::new();
+			// tx.begin()?;
+			// let author = Author::objects().create(&post.author).await?;
+			// post.author_id = author.id;
+			// let saved_post = Post::objects().create(&post).await?;
+			// tx.commit()?;
+			// ```
+		}
 
 		// For now, deserialize parent model only
 		serde_json::from_str(output)

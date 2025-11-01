@@ -64,15 +64,13 @@ impl FilterConfig {
 }
 
 /// Ordering configuration for ViewSets
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct OrderingConfig {
 	/// Fields that can be used for ordering
 	pub ordering_fields: Vec<String>,
 	/// Default ordering (field name with optional '-' prefix for descending)
 	pub default_ordering: Vec<String>,
 }
-
 
 impl OrderingConfig {
 	/// Create a new ordering configuration
@@ -150,9 +148,10 @@ pub trait FilterableViewSet: Send + Sync {
 
 		// Validate against filterable fields if configured
 		if let Some(config) = self.get_filter_config()
-			&& !config.filterable_fields.is_empty() {
-				filters.retain(|key, _| config.filterable_fields.contains(key));
-			}
+			&& !config.filterable_fields.is_empty()
+		{
+			filters.retain(|key, _| config.filterable_fields.contains(key));
+		}
 
 		filters
 	}
@@ -164,9 +163,10 @@ pub trait FilterableViewSet: Send + Sync {
 		for pair in query_string.split('&') {
 			if let Some((key, value)) = pair.split_once('=')
 				&& key == "search"
-					&& let Ok(decoded_value) = urlencoding::decode(value) {
-						return Some(decoded_value.into_owned());
-					}
+				&& let Ok(decoded_value) = urlencoding::decode(value)
+			{
+				return Some(decoded_value.into_owned());
+			}
 		}
 
 		None
@@ -182,40 +182,42 @@ pub trait FilterableViewSet: Send + Sync {
 		for pair in query_string.split('&') {
 			if let Some((key, value)) = pair.split_once('=')
 				&& key == "ordering"
-					&& let Ok(decoded_value) = urlencoding::decode(value) {
-						let requested_fields: Vec<String> = decoded_value
-							.split(',')
-							.map(|s| s.trim().to_string())
+				&& let Ok(decoded_value) = urlencoding::decode(value)
+			{
+				let requested_fields: Vec<String> = decoded_value
+					.split(',')
+					.map(|s| s.trim().to_string())
+					.collect();
+
+				// Validate against orderable fields if configured
+				if let Some(config) = self.get_ordering_config() {
+					if !config.ordering_fields.is_empty() {
+						let validated_fields: Vec<String> = requested_fields
+							.into_iter()
+							.filter(|field| {
+								let field_name = field.trim_start_matches('-');
+								config.ordering_fields.contains(&field_name.to_string())
+							})
 							.collect();
 
-						// Validate against orderable fields if configured
-						if let Some(config) = self.get_ordering_config() {
-							if !config.ordering_fields.is_empty() {
-								let validated_fields: Vec<String> = requested_fields
-									.into_iter()
-									.filter(|field| {
-										let field_name = field.trim_start_matches('-');
-										config.ordering_fields.contains(&field_name.to_string())
-									})
-									.collect();
-
-								if !validated_fields.is_empty() {
-									return validated_fields;
-								}
-							} else {
-								return requested_fields;
-							}
-						} else {
-							return requested_fields;
+						if !validated_fields.is_empty() {
+							return validated_fields;
 						}
+					} else {
+						return requested_fields;
 					}
+				} else {
+					return requested_fields;
+				}
+			}
 		}
 
 		// Return default ordering if configured
 		if let Some(config) = self.get_ordering_config()
-			&& !config.default_ordering.is_empty() {
-				return config.default_ordering.clone();
-			}
+			&& !config.default_ordering.is_empty()
+		{
+			return config.default_ordering.clone();
+		}
 
 		Vec::new()
 	}

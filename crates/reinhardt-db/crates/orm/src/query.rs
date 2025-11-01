@@ -315,26 +315,28 @@ where
 		let trimmed = s.trim();
 
 		// Try parsing as JSON array first
-		if trimmed.starts_with('[') && trimmed.ends_with(']')
-			&& let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(trimmed) {
-				return arr
-					.iter()
-					.map(|v| match v {
-						serde_json::Value::String(s) => s.clone().into(),
-						serde_json::Value::Number(n) => {
-							if let Some(i) = n.as_i64() {
-								i.into()
-							} else if let Some(f) = n.as_f64() {
-								f.into()
-							} else {
-								n.to_string().into()
-							}
+		if trimmed.starts_with('[')
+			&& trimmed.ends_with(']')
+			&& let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(trimmed)
+		{
+			return arr
+				.iter()
+				.map(|v| match v {
+					serde_json::Value::String(s) => s.clone().into(),
+					serde_json::Value::Number(n) => {
+						if let Some(i) = n.as_i64() {
+							i.into()
+						} else if let Some(f) = n.as_f64() {
+							f.into()
+						} else {
+							n.to_string().into()
 						}
-						serde_json::Value::Bool(b) => (*b).into(),
-						_ => v.to_string().into(),
-					})
-					.collect();
-			}
+					}
+					serde_json::Value::Bool(b) => (*b).into(),
+					_ => v.to_string().into(),
+				})
+				.collect();
+		}
 
 		// Fallback to comma-separated parsing
 		trimmed
@@ -845,9 +847,10 @@ where
 		if let Some(row) = rows.first() {
 			// Extract count from first row
 			if let Some(count_value) = row.data.get("count")
-				&& let Some(count) = count_value.as_i64() {
-					return Ok(count as usize);
-				}
+				&& let Some(count) = count_value.as_i64()
+			{
+				return Ok(count as usize);
+			}
 		}
 
 		Ok(0)
@@ -1073,10 +1076,8 @@ where
 					query.and_where(condition);
 				}
 				crate::composite_pk::PkValue::String(v) => {
-					let condition = Expr::col(col_alias).binary(
-						BinOper::Equal,
-						Expr::value(Value::String(Some(v.clone()))),
-					);
+					let condition = Expr::col(col_alias)
+						.binary(BinOper::Equal, Expr::value(Value::String(Some(v.clone()))));
 					query.and_where(condition);
 				}
 				&crate::composite_pk::PkValue::Bool(v) => {

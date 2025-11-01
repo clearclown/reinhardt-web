@@ -23,13 +23,11 @@ use serde_json::Value;
 /// let result = parser.parse(Some("application/yaml"), yaml).await.unwrap();
 /// # });
 /// ```
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct YamlParser {
 	/// Whether to allow empty bodies (returns null)
 	pub allow_empty: bool,
 }
-
 
 impl YamlParser {
 	/// Create a new YamlParser with default settings (empty not allowed).

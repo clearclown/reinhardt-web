@@ -416,12 +416,11 @@ fn update_workspace_members(app_name: &str) -> CommandResult<()> {
 				continue;
 			}
 
-			if in_members_array
-				&& trimmed == "]" {
-					// Found end of members array, insert before this line
-					insert_index = Some(i);
-					break;
-				}
+			if in_members_array && trimmed == "]" {
+				// Found end of members array, insert before this line
+				insert_index = Some(i);
+				break;
+			}
 		}
 	}
 

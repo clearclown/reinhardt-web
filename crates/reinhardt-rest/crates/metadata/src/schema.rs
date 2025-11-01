@@ -9,8 +9,7 @@ use serde_json::json;
 use std::collections::HashMap;
 
 /// OpenAPI 3.0 schema representation
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct OpenApiSchema {
 	#[serde(rename = "type", skip_serializing_if = "Option::is_none")]
 	pub schema_type: Option<String>,
@@ -45,7 +44,6 @@ pub struct OpenApiSchema {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub nullable: Option<bool>,
 }
-
 
 /// Generates an OpenAPI schema from field metadata
 ///
@@ -206,10 +204,11 @@ pub fn generate_field_schema(field: &FieldInfo) -> OpenApiSchema {
 		for validator in validators {
 			if validator.validator_type == "regex"
 				&& let Some(options) = &validator.options
-					&& let Some(pattern) = options.get("pattern")
-						&& let Some(pattern_str) = pattern.as_str() {
-							schema.pattern = Some(pattern_str.to_string());
-						}
+				&& let Some(pattern) = options.get("pattern")
+				&& let Some(pattern_str) = pattern.as_str()
+			{
+				schema.pattern = Some(pattern_str.to_string());
+			}
 		}
 	}
 

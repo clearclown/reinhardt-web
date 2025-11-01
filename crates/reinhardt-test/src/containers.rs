@@ -34,9 +34,9 @@ pub struct PostgresContainer {
 }
 
 impl Default for PostgresContainer {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl PostgresContainer {
@@ -104,9 +104,9 @@ pub struct MySqlContainer {
 }
 
 impl Default for MySqlContainer {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl MySqlContainer {
@@ -170,9 +170,9 @@ pub struct RedisContainer {
 }
 
 impl Default for RedisContainer {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl RedisContainer {

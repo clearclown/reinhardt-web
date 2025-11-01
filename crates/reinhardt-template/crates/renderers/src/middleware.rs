@@ -129,16 +129,18 @@ impl<'a> RendererSelector<'a> {
 		if let Some(path) = url_path {
 			let (_, format_suffix) = extract_format_suffix(path);
 			if let Some(format) = format_suffix
-				&& let Some(renderer) = self.registry.get_renderer(Some(format)) {
-					return Ok(renderer);
-				}
+				&& let Some(renderer) = self.registry.get_renderer(Some(format))
+			{
+				return Ok(renderer);
+			}
 		}
 
 		// Priority 3: Accept header negotiation
 		if let Some(accept) = accept_header
-			&& let Ok((renderer, _)) = self.registry.select_renderer(Some(accept)) {
-				return Ok(renderer);
-			}
+			&& let Ok((renderer, _)) = self.registry.select_renderer(Some(accept))
+		{
+			return Ok(renderer);
+		}
 
 		// Priority 4: Default to first registered renderer
 		self.registry

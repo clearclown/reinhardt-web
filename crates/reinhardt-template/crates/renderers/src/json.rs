@@ -6,15 +6,13 @@ use serde_json::Value;
 use crate::renderer::{RenderResult, Renderer, RendererContext};
 
 /// JSON renderer with pretty printing support
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct JSONRenderer {
 	/// Whether to pretty print the output
 	pub pretty: bool,
 	/// Custom JSON encoder settings
 	pub ensure_ascii: bool,
 }
-
 
 impl JSONRenderer {
 	/// Creates a new JSON renderer with default settings

@@ -146,20 +146,21 @@ impl FileSessionBackend {
 	fn is_expired(&self, file_path: &Path) -> bool {
 		if let Ok(metadata) = fs::metadata(file_path)
 			&& let Ok(modified) = metadata.modified()
-				&& let Ok(duration) = SystemTime::now().duration_since(modified) {
-					// Read the stored TTL from the file
-					if let Ok(mut file) = File::open(file_path) {
-						let _ = file.lock_shared();
-						let mut contents = String::new();
-						if file.read_to_string(&mut contents).is_ok()
-							&& let Ok(stored_data) =
-								serde_json::from_str::<StoredSession>(&contents)
-								&& let Some(ttl) = stored_data.ttl {
-									return duration.as_secs() > ttl;
-								}
-						let _ = file.unlock();
-					}
+			&& let Ok(duration) = SystemTime::now().duration_since(modified)
+		{
+			// Read the stored TTL from the file
+			if let Ok(mut file) = File::open(file_path) {
+				let _ = file.lock_shared();
+				let mut contents = String::new();
+				if file.read_to_string(&mut contents).is_ok()
+					&& let Ok(stored_data) = serde_json::from_str::<StoredSession>(&contents)
+					&& let Some(ttl) = stored_data.ttl
+				{
+					return duration.as_secs() > ttl;
 				}
+				let _ = file.unlock();
+			}
+		}
 		false
 	}
 }

@@ -145,9 +145,10 @@ pub fn get_models_for_app(app_label: &str) -> Vec<&'static ModelMetadata> {
 	{
 		let cache = MODEL_CACHE.read().unwrap();
 		if let Some(ref cache_map) = *cache
-			&& let Some(models) = cache_map.get(app_label) {
-				return models.clone();
-			}
+			&& let Some(models) = cache_map.get(app_label)
+		{
+			return models.clone();
+		}
 	}
 
 	// Initialize cache if needed
@@ -310,7 +311,10 @@ impl RelationshipMetadata {
 	/// assert_eq!(relationship.from_model_name(), "Post");
 	/// ```
 	pub fn from_model_name(&self) -> &str {
-		self.from_model.split('.').next_back().unwrap_or(self.from_model)
+		self.from_model
+			.split('.')
+			.next_back()
+			.unwrap_or(self.from_model)
 	}
 
 	/// Get the target model name without app label
@@ -332,7 +336,10 @@ impl RelationshipMetadata {
 	/// assert_eq!(relationship.to_model_name(), "User");
 	/// ```
 	pub fn to_model_name(&self) -> &str {
-		self.to_model.split('.').next_back().unwrap_or(self.to_model)
+		self.to_model
+			.split('.')
+			.next_back()
+			.unwrap_or(self.to_model)
 	}
 }
 

@@ -40,15 +40,17 @@ where
 		// Add variables if present
 		if let Some(variables) = req.variables
 			&& !variables.is_empty()
-				&& let Ok(vars) = serde_json::from_str::<serde_json::Value>(&variables) {
-					gql_req = gql_req.variables(async_graphql::Variables::from_json(vars));
-				}
+			&& let Ok(vars) = serde_json::from_str::<serde_json::Value>(&variables)
+		{
+			gql_req = gql_req.variables(async_graphql::Variables::from_json(vars));
+		}
 
 		// Add operation name if present
 		if let Some(operation_name) = req.operation_name
-			&& !operation_name.is_empty() {
-				gql_req = gql_req.operation_name(operation_name);
-			}
+			&& !operation_name.is_empty()
+		{
+			gql_req = gql_req.operation_name(operation_name);
+		}
 
 		gql_req
 	}
@@ -106,9 +108,10 @@ where
 
 					// Convert extensions
 					if err.extensions.is_some()
-						&& let Ok(ext_str) = serde_json::to_string(&err.extensions) {
-							grpc_err.extensions = Some(ext_str);
-						}
+						&& let Ok(ext_str) = serde_json::to_string(&err.extensions)
+					{
+						grpc_err.extensions = Some(ext_str);
+					}
 
 					grpc_err
 				})
@@ -117,9 +120,10 @@ where
 
 		// Convert extensions
 		if !resp.extensions.is_empty()
-			&& let Ok(ext_str) = serde_json::to_string(&resp.extensions) {
-				grpc_resp.extensions = Some(ext_str);
-			}
+			&& let Ok(ext_str) = serde_json::to_string(&resp.extensions)
+		{
+			grpc_resp.extensions = Some(ext_str);
+		}
 
 		grpc_resp
 	}

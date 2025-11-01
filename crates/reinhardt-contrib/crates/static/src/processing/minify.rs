@@ -218,11 +218,14 @@ impl JsMinifier {
 				if ch == '\n' && !result.ends_with('\n') {
 					result.push('\n');
 				} else if !prev_char.is_whitespace()
-					&& result.chars().last().is_some_and(|c| {
-						c.is_alphanumeric() || c == ')' || c == ']' || c == '}'
-					}) && chars.peek().is_some_and(|&next| {
-					next.is_alphanumeric() || next == '(' || next == '{'
-				}) {
+					&& result
+						.chars()
+						.last()
+						.is_some_and(|c| c.is_alphanumeric() || c == ')' || c == ']' || c == '}')
+					&& chars
+						.peek()
+						.is_some_and(|&next| next.is_alphanumeric() || next == '(' || next == '{')
+				{
 					result.push(' ');
 				}
 				prev_char = ' ';

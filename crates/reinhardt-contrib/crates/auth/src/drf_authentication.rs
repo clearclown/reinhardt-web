@@ -229,17 +229,18 @@ impl Authentication for TokenAuthentication {
 		if let Some(header) = auth_header {
 			let prefix = format!("{} ", self.config.prefix);
 			if let Some(token) = header.strip_prefix(&prefix)
-				&& let Some(user_id) = self.tokens.get(token) {
-					return Ok(Some(Box::new(SimpleUser {
-						id: uuid::Uuid::new_v4(),
-						username: user_id.clone(),
-						email: format!("{}@example.com", user_id),
-						is_active: true,
-						is_admin: false,
-						is_staff: false,
-						is_superuser: false,
-					})));
-				}
+				&& let Some(user_id) = self.tokens.get(token)
+			{
+				return Ok(Some(Box::new(SimpleUser {
+					id: uuid::Uuid::new_v4(),
+					username: user_id.clone(),
+					email: format!("{}@example.com", user_id),
+					is_active: true,
+					is_admin: false,
+					is_staff: false,
+					is_superuser: false,
+				})));
+			}
 		}
 
 		Ok(None)
@@ -311,17 +312,18 @@ impl Authentication for RemoteUserAuthentication {
 			.and_then(|v| v.to_str().ok());
 
 		if let Some(username) = header_value
-			&& !username.is_empty() {
-				return Ok(Some(Box::new(SimpleUser {
-					id: uuid::Uuid::new_v4(),
-					username: username.to_string(),
-					email: format!("{}@example.com", username),
-					is_active: true,
-					is_admin: false,
-					is_staff: false,
-					is_superuser: false,
-				})));
-			}
+			&& !username.is_empty()
+		{
+			return Ok(Some(Box::new(SimpleUser {
+				id: uuid::Uuid::new_v4(),
+				username: username.to_string(),
+				email: format!("{}@example.com", username),
+				is_active: true,
+				is_admin: false,
+				is_staff: false,
+				is_superuser: false,
+			})));
+		}
 
 		Ok(None)
 	}

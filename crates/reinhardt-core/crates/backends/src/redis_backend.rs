@@ -179,11 +179,12 @@ impl Backend for RedisBackend {
 
 		// Set TTL if provided and this is the first increment
 		if let Some(duration) = ttl
-			&& new_value == 1 {
-				conn.expire::<_, ()>(key, duration.as_secs() as i64)
-					.await
-					.map_err(|e| BackendError::Internal(format!("Redis EXPIRE error: {}", e)))?;
-			}
+			&& new_value == 1
+		{
+			conn.expire::<_, ()>(key, duration.as_secs() as i64)
+				.await
+				.map_err(|e| BackendError::Internal(format!("Redis EXPIRE error: {}", e)))?;
+		}
 
 		Ok(new_value)
 	}

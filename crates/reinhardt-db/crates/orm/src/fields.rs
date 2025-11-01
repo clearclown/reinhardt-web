@@ -186,9 +186,9 @@ pub struct AutoField {
 }
 
 impl Default for AutoField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl AutoField {
@@ -243,9 +243,9 @@ pub struct BigIntegerField {
 }
 
 impl Default for BigIntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl BigIntegerField {
@@ -294,9 +294,9 @@ pub struct BooleanField {
 }
 
 impl Default for BooleanField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl BooleanField {
@@ -445,9 +445,9 @@ pub struct IntegerField {
 }
 
 impl Default for IntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl IntegerField {
@@ -496,7 +496,7 @@ impl IntegerField {
 	/// ```
 	pub fn with_callable_choices(_callable_name: &str) -> Self {
 		// Store callable as a special marker in base
-		
+
 		// We'll handle callable differently in deconstruct
 		Self::new()
 	}
@@ -530,9 +530,9 @@ pub struct DateField {
 }
 
 impl Default for DateField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl DateField {
@@ -610,9 +610,9 @@ pub struct DateTimeField {
 }
 
 impl Default for DateTimeField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl DateTimeField {
@@ -766,9 +766,9 @@ pub struct EmailField {
 }
 
 impl Default for EmailField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl EmailField {
@@ -835,9 +835,9 @@ pub struct FloatField {
 }
 
 impl Default for FloatField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl FloatField {
@@ -884,9 +884,9 @@ pub struct TextField {
 }
 
 impl Default for TextField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl TextField {
@@ -936,9 +936,9 @@ pub struct TimeField {
 }
 
 impl Default for TimeField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl TimeField {
@@ -1013,9 +1013,9 @@ pub struct URLField {
 }
 
 impl Default for URLField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl URLField {
@@ -1076,9 +1076,9 @@ pub struct BinaryField {
 }
 
 impl Default for BinaryField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl BinaryField {
@@ -1150,9 +1150,9 @@ pub struct SlugField {
 }
 
 impl Default for SlugField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl SlugField {
@@ -1219,9 +1219,9 @@ pub struct SmallIntegerField {
 }
 
 impl Default for SmallIntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl SmallIntegerField {
@@ -1268,9 +1268,9 @@ pub struct PositiveIntegerField {
 }
 
 impl Default for PositiveIntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl PositiveIntegerField {
@@ -1317,9 +1317,9 @@ pub struct PositiveSmallIntegerField {
 }
 
 impl Default for PositiveSmallIntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl PositiveSmallIntegerField {
@@ -1366,9 +1366,9 @@ pub struct PositiveBigIntegerField {
 }
 
 impl Default for PositiveBigIntegerField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl PositiveBigIntegerField {
@@ -1417,9 +1417,9 @@ pub struct GenericIPAddressField {
 }
 
 impl Default for GenericIPAddressField {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl GenericIPAddressField {

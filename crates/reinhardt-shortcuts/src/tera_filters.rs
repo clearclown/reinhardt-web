@@ -211,10 +211,10 @@ impl Filter for PluralizeFilter {
 				Ok(Value::String(String::new()))
 			}
 		} else if let Some(plural) = args.get("plural").and_then(|v| v.as_str()) {
-  				Ok(Value::String(plural.to_string()))
-  			} else {
-  				Ok(Value::String("s".to_string()))
-  			}
+			Ok(Value::String(plural.to_string()))
+		} else {
+			Ok(Value::String("s".to_string()))
+		}
 	}
 }
 
