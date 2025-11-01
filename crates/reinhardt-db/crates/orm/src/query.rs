@@ -4,7 +4,7 @@
 //! By default, it exports the expression-based query API (SQLAlchemy-style).
 //! When the `django-compat` feature is enabled, it exports the Django QuerySet API.
 
-use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, PostgresQueryBuilder, Query as SeaQuery, SelectStatement};
+use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, Order, PostgresQueryBuilder, Query as SeaQuery, SelectStatement};
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 use std::collections::HashMap;
@@ -29,8 +29,12 @@ pub enum FilterOperator {
 pub enum FilterValue {
     String(String),
     Integer(i64),
+    /// Alias for Integer (for compatibility with test code)
+    Int(i64),
     Float(f64),
     Boolean(bool),
+    /// Alias for Boolean (for compatibility with test code)
+    Bool(bool),
     Null,
     Array(Vec<String>),
 }
@@ -85,6 +89,11 @@ where
     filters: SmallVec<[Filter; 10]>,
     select_related_fields: Vec<String>,
     prefetch_related_fields: Vec<String>,
+    order_by_fields: Vec<String>,
+    distinct_enabled: bool,
+    selected_fields: Option<Vec<String>>,
+    deferred_fields: Vec<String>,
+    annotations: Vec<crate::annotation::Annotation>,
     #[cfg(feature = "django-compat")]
     manager: Option<std::sync::Arc<crate::manager::Manager<T>>>,
 }
@@ -99,6 +108,11 @@ where
             filters: SmallVec::new(),
             select_related_fields: Vec::new(),
             prefetch_related_fields: Vec::new(),
+            order_by_fields: Vec::new(),
+            distinct_enabled: false,
+            selected_fields: None,
+            deferred_fields: Vec::new(),
+            annotations: Vec::new(),
             #[cfg(feature = "django-compat")]
             manager: None,
         }
@@ -111,6 +125,11 @@ where
             filters: SmallVec::new(),
             select_related_fields: Vec::new(),
             prefetch_related_fields: Vec::new(),
+            order_by_fields: Vec::new(),
+            distinct_enabled: false,
+            selected_fields: None,
+            deferred_fields: Vec::new(),
+            annotations: Vec::new(),
             manager: Some(manager),
         }
     }
@@ -153,9 +172,9 @@ where
                 FilterOperator::EndsWith => format!("%{}", s),
                 _ => s.clone(),
             },
-            FilterValue::Integer(i) => i.to_string(),
+            FilterValue::Integer(i) | FilterValue::Int(i) => i.to_string(),
             FilterValue::Float(f) => f.to_string(),
-            FilterValue::Boolean(b) => b.to_string(),
+            FilterValue::Boolean(b) | FilterValue::Bool(b) => b.to_string(),
             FilterValue::Null => "NULL".to_string(),
             FilterValue::Array(arr) => format!("[{}]", arr.join(",")),
         };
@@ -209,32 +228,32 @@ where
                     col.like(format!("%{}", arr.first().unwrap_or(&String::new())))
                 }
                 // Handle Integer, Float, Boolean for text operators
-                (FilterOperator::Contains, FilterValue::Integer(i)) => col.like(format!("%{}%", i)),
+                (FilterOperator::Contains, FilterValue::Integer(i) | FilterValue::Int(i)) => col.like(format!("%{}%", i)),
                 (FilterOperator::Contains, FilterValue::Float(f)) => col.like(format!("%{}%", f)),
-                (FilterOperator::Contains, FilterValue::Boolean(b)) => col.like(format!("%{}%", b)),
+                (FilterOperator::Contains, FilterValue::Boolean(b) | FilterValue::Bool(b)) => col.like(format!("%{}%", b)),
                 (FilterOperator::Contains, FilterValue::Null) => col.like("%"),
-                (FilterOperator::StartsWith, FilterValue::Integer(i)) => {
+                (FilterOperator::StartsWith, FilterValue::Integer(i) | FilterValue::Int(i)) => {
                     col.like(format!("{}%", i))
                 }
                 (FilterOperator::StartsWith, FilterValue::Float(f)) => col.like(format!("{}%", f)),
-                (FilterOperator::StartsWith, FilterValue::Boolean(b)) => {
+                (FilterOperator::StartsWith, FilterValue::Boolean(b) | FilterValue::Bool(b)) => {
                     col.like(format!("{}%", b))
                 }
                 (FilterOperator::StartsWith, FilterValue::Null) => col.like("%"),
-                (FilterOperator::EndsWith, FilterValue::Integer(i)) => col.like(format!("%{}", i)),
+                (FilterOperator::EndsWith, FilterValue::Integer(i) | FilterValue::Int(i)) => col.like(format!("%{}", i)),
                 (FilterOperator::EndsWith, FilterValue::Float(f)) => col.like(format!("%{}", f)),
-                (FilterOperator::EndsWith, FilterValue::Boolean(b)) => col.like(format!("%{}", b)),
+                (FilterOperator::EndsWith, FilterValue::Boolean(b) | FilterValue::Bool(b)) => col.like(format!("%{}", b)),
                 (FilterOperator::EndsWith, FilterValue::Null) => col.like("%"),
                 // Handle In/NotIn for non-String types
-                (FilterOperator::In, FilterValue::Integer(i)) => col.is_in(vec![*i]),
+                (FilterOperator::In, FilterValue::Integer(i) | FilterValue::Int(i)) => col.is_in(vec![*i]),
                 (FilterOperator::In, FilterValue::Float(f)) => col.is_in(vec![*f]),
-                (FilterOperator::In, FilterValue::Boolean(b)) => col.is_in(vec![*b]),
+                (FilterOperator::In, FilterValue::Boolean(b) | FilterValue::Bool(b)) => col.is_in(vec![*b]),
                 (FilterOperator::In, FilterValue::Null) => {
                     col.is_in(vec![sea_query::Value::Int(None)])
                 }
-                (FilterOperator::NotIn, FilterValue::Integer(i)) => col.is_not_in(vec![*i]),
+                (FilterOperator::NotIn, FilterValue::Integer(i) | FilterValue::Int(i)) => col.is_not_in(vec![*i]),
                 (FilterOperator::NotIn, FilterValue::Float(f)) => col.is_not_in(vec![*f]),
-                (FilterOperator::NotIn, FilterValue::Boolean(b)) => col.is_not_in(vec![*b]),
+                (FilterOperator::NotIn, FilterValue::Boolean(b) | FilterValue::Bool(b)) => col.is_not_in(vec![*b]),
                 (FilterOperator::NotIn, FilterValue::Null) => {
                     col.is_not_in(vec![sea_query::Value::Int(None)])
                 }
@@ -250,9 +269,9 @@ where
     fn filter_value_to_sea_value(v: &FilterValue) -> sea_query::Value {
         match v {
             FilterValue::String(s) => s.clone().into(),
-            FilterValue::Integer(i) => (*i).into(),
+            FilterValue::Integer(i) | FilterValue::Int(i) => (*i).into(),
             FilterValue::Float(f) => (*f).into(),
-            FilterValue::Boolean(b) => (*b).into(),
+            FilterValue::Boolean(b) | FilterValue::Bool(b) => (*b).into(),
             FilterValue::Null => sea_query::Value::Int(None),
             FilterValue::Array(arr) => arr.join(",").into(),
         }
@@ -263,9 +282,9 @@ where
     fn value_to_string(v: &FilterValue) -> String {
         match v {
             FilterValue::String(s) => s.clone(),
-            FilterValue::Integer(i) => i.to_string(),
+            FilterValue::Integer(i) | FilterValue::Int(i) => i.to_string(),
             FilterValue::Float(f) => f.to_string(),
-            FilterValue::Boolean(b) => b.to_string(),
+            FilterValue::Boolean(b) | FilterValue::Bool(b) => b.to_string(),
             FilterValue::Null => String::new(),
             FilterValue::Array(arr) => arr.join(","),
         }
@@ -313,9 +332,9 @@ where
     fn value_to_array(v: &FilterValue) -> Vec<sea_query::Value> {
         match v {
             FilterValue::String(s) => Self::parse_array_string(s),
-            FilterValue::Integer(i) => vec![(*i).into()],
+            FilterValue::Integer(i) | FilterValue::Int(i) => vec![(*i).into()],
             FilterValue::Float(f) => vec![(*f).into()],
-            FilterValue::Boolean(b) => vec![(*b).into()],
+            FilterValue::Boolean(b) | FilterValue::Bool(b) => vec![(*b).into()],
             FilterValue::Null => vec![sea_query::Value::Int(None)],
             FilterValue::Array(arr) => arr.iter().map(|s| s.clone().into()).collect(),
         }
@@ -416,6 +435,11 @@ where
         let mut stmt = SeaQuery::select();
         stmt.from(Alias::new(table_name));
 
+        // Apply DISTINCT if enabled
+        if self.distinct_enabled {
+            stmt.distinct();
+        }
+
         // Add main table columns
         stmt.column((Alias::new(table_name), Asterisk));
 
@@ -441,6 +465,22 @@ where
         // Apply WHERE conditions
         if let Some(cond) = self.build_where_condition() {
             stmt.cond_where(cond);
+        }
+
+        // Apply ORDER BY
+        for order_field in &self.order_by_fields {
+            let (field, is_desc) = if order_field.starts_with('-') {
+                (&order_field[1..], true)
+            } else {
+                (order_field.as_str(), false)
+            };
+
+            let col = Alias::new(field);
+            if is_desc {
+                stmt.order_by(col, Order::Desc);
+            } else {
+                stmt.order_by(col, Order::Asc);
+            }
         }
 
         stmt.to_owned()
@@ -1060,6 +1100,241 @@ where
 
         serde_json::from_value(value)
             .map_err(|e| reinhardt_apps::Error::Database(format!("Deserialization error: {}", e)))
+    }
+
+    /// Add an annotation to the QuerySet
+    ///
+    /// # Note
+    ///
+    /// This feature is not yet implemented. Tests are currently ignored.
+    /// See `annotation.rs` for test cases that will be enabled when this is implemented.
+    pub fn annotate(mut self, annotation: crate::annotation::Annotation) -> Self {
+        self.annotations.push(annotation);
+        self
+    }
+
+    /// Perform an aggregation on the QuerySet
+    ///
+    /// # Note
+    ///
+    /// This feature is not yet implemented. Tests are currently ignored.
+    pub fn aggregate(mut self, aggregate: crate::aggregation::Aggregate) -> Self {
+        // Convert Aggregate to Annotation and add to annotations list
+        let alias = aggregate.alias.clone().unwrap_or_else(|| aggregate.func.to_string().to_lowercase());
+        let annotation = crate::annotation::Annotation {
+            alias,
+            value: crate::annotation::AnnotationValue::Aggregate(aggregate),
+        };
+        self.annotations.push(annotation);
+        self
+    }
+
+    pub fn to_sql(&self) -> String {
+        let stmt = if self.select_related_fields.is_empty() {
+            // Simple SELECT without JOINs
+            let mut stmt = SeaQuery::select();
+            stmt.from(Alias::new(T::table_name()));
+
+            // Apply DISTINCT if enabled
+            if self.distinct_enabled {
+                stmt.distinct();
+            }
+
+            // Select columns
+            if let Some(ref fields) = self.selected_fields {
+                for field in fields {
+                    stmt.column(Alias::new(field));
+                }
+            } else {
+                stmt.column(Asterisk);
+            }
+
+            // Apply WHERE conditions
+            if let Some(cond) = self.build_where_condition() {
+                stmt.cond_where(cond);
+            }
+
+            // Apply ORDER BY
+            for order_field in &self.order_by_fields {
+                let (field, is_desc) = if order_field.starts_with('-') {
+                    (&order_field[1..], true)
+                } else {
+                    (order_field.as_str(), false)
+                };
+
+                let col = Alias::new(field);
+                if is_desc {
+                    stmt.order_by(col, Order::Desc);
+                } else {
+                    stmt.order_by(col, Order::Asc);
+                }
+            }
+
+            stmt.to_owned()
+        } else {
+            // SELECT with JOINs for select_related
+            self.select_related_query()
+        };
+
+        use sea_query::PostgresQueryBuilder;
+        let mut sql = stmt.to_string(PostgresQueryBuilder);
+
+        // Add annotations to SELECT clause if any
+        if !self.annotations.is_empty() {
+            // Find the position to insert annotations (after SELECT ... FROM table_name)
+            if let Some(from_pos) = sql.find(" FROM ") {
+                let mut annotation_sql = String::new();
+                for annotation in &self.annotations {
+                    annotation_sql.push_str(", ");
+                    annotation_sql.push_str(&annotation.to_sql());
+                }
+                sql.insert_str(from_pos, &annotation_sql);
+            }
+        }
+
+        sql
+    }
+
+    /// Select specific values from the QuerySet
+    ///
+    /// Returns only the specified fields instead of all columns.
+    /// Useful for optimizing queries when you don't need all model fields.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Select only specific fields
+    /// let users = User::objects()
+    ///     .values(&["id", "username", "email"])
+    ///     .all()
+    ///     .await?;
+    /// // Generates: SELECT id, username, email FROM users
+    ///
+    /// // Combine with filters
+    /// let active_user_names = User::objects()
+    ///     .filter(Filter::new("is_active".to_string(), FilterOperator::Eq, FilterValue::Bool(true)))
+    ///     .values(&["username"])
+    ///     .all()
+    ///     .await?;
+    /// ```
+    pub fn values(mut self, fields: &[&str]) -> Self {
+        self.selected_fields = Some(fields.iter().map(|s| s.to_string()).collect());
+        self
+    }
+
+    /// Select specific values as a list
+    ///
+    /// Alias for `values()` - returns tuple-like results with specified fields.
+    /// In Django, this returns tuples instead of dictionaries, but in Rust
+    /// the behavior is the same as `values()` due to type safety.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Same as values()
+    /// let user_data = User::objects()
+    ///     .values_list(&["id", "username"])
+    ///     .all()
+    ///     .await?;
+    /// ```
+    pub fn values_list(self, fields: &[&str]) -> Self {
+        self.values(fields)
+    }
+
+    /// Order the QuerySet by specified fields
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Ascending order
+    /// User::objects().order_by(&["name"]);
+    ///
+    /// // Descending order (prefix with '-')
+    /// User::objects().order_by(&["-created_at"]);
+    ///
+    /// // Multiple fields
+    /// User::objects().order_by(&["department", "-salary"]);
+    /// ```
+    pub fn order_by(mut self, fields: &[&str]) -> Self {
+        self.order_by_fields = fields.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    /// Return only distinct results
+    pub fn distinct(mut self) -> Self {
+        self.distinct_enabled = true;
+        self
+    }
+
+    /// Convert QuerySet to a subquery
+    ///
+    /// Returns the QuerySet as a SQL subquery wrapped in parentheses,
+    /// suitable for use in IN clauses, EXISTS clauses, or as a derived table.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Use in IN clause
+    /// let active_user_ids = User::objects()
+    ///     .filter(Filter::new("is_active".to_string(), FilterOperator::Eq, FilterValue::Bool(true)))
+    ///     .values(vec!["id"])
+    ///     .as_subquery();
+    /// // Generates: (SELECT id FROM users WHERE is_active = $1)
+    ///
+    /// // Use as derived table
+    /// let subquery = Post::objects()
+    ///     .filter(Filter::new("published".to_string(), FilterOperator::Eq, FilterValue::Bool(true)))
+    ///     .as_subquery();
+    /// // Generates: (SELECT * FROM posts WHERE published = $1)
+    /// ```
+    pub fn as_subquery(self) -> String {
+        format!("({})", self.to_sql())
+    }
+
+    /// Defer loading of specific fields
+    ///
+    /// Marks specific fields for deferred loading (lazy loading).
+    /// The specified fields will be excluded from the initial query.
+    ///
+    /// # Note
+    ///
+    /// In the current implementation, deferred fields are simply stored
+    /// but not yet used in query generation. Full deferred loading support
+    /// will be implemented in a future version.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Defer large text fields
+    /// let users = User::objects()
+    ///     .defer(&["bio", "profile_picture"])
+    ///     .all()
+    ///     .await?;
+    /// // Future: SELECT id, username, email FROM users (excluding bio, profile_picture)
+    /// ```
+    pub fn defer(mut self, fields: &[&str]) -> Self {
+        self.deferred_fields = fields.iter().map(|s| s.to_string()).collect();
+        self
+    }
+
+    /// Load only specific fields
+    ///
+    /// Alias for `values()` - specifies which fields to load immediately.
+    /// In Django, this is used for deferred loading optimization, but in Rust
+    /// it behaves the same as `values()`.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Load only specific fields
+    /// let users = User::objects()
+    ///     .only(&["id", "username"])
+    ///     .all()
+    ///     .await?;
+    /// // Generates: SELECT id, username FROM users
+    /// ```
+    pub fn only(self, fields: &[&str]) -> Self {
+        self.values(fields)
     }
 }
 
