@@ -42,6 +42,7 @@ reinhardt-serializers = { workspace = true }
 reinhardt-server = { workspace = true }
 reinhardt-sessions = { workspace = true }
 reinhardt-settings = { workspace = true }
+reinhardt-shortcuts = { workspace = true }
 reinhardt-signals = { workspace = true }
 reinhardt-static = { workspace = true }
 reinhardt-storage = { workspace = true }
@@ -306,9 +307,19 @@ path = "bench/template_compile_time_vs_runtime.rs"
 name = "cache_pubsub_integration"
 path = "integration/tests/cache_pubsub_integration.rs"
 
+# Newly migrated integration tests
 [[test]]
 name = "contrib_contenttypes_integration_tests"
 path = "integration/tests/contrib/contenttypes_integration_tests.rs"
 
 [[test]]
+name = "shortcuts_error_pages_integration_tests"
+path = "integration/tests/shortcuts/error_pages_integration_tests.rs"
+
+[[test]]
+name = "shortcuts_template_cache_integration_tests"
+path = "integration/tests/shortcuts/template_cache_integration_tests.rs"
+
+[[test]]
 name = "orm_loading_strategy_integration_tests"
+path = "integration/tests/orm/loading_strategy_integration_tests.rs"
