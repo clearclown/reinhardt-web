@@ -179,7 +179,7 @@ where
 	/// # tokio_test::block_on(async {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
 	/// let ctx = InjectionContext::new(singleton_scope);
-	/// let builder = Depends::<Config>::new();
+	/// let builder = Depends::<Config>::builder();
 	/// let result = builder.resolve(&ctx).await;
 	/// assert!(result.is_ok());
 	/// # });
