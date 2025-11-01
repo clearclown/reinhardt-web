@@ -17,7 +17,7 @@ impl BasicAuthentication {
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```
 	/// use reinhardt_auth::{HttpBasicAuth, AuthenticationBackend};
 	/// use bytes::Bytes;
 	/// use hyper::{HeaderMap, Method, Uri, Version};
@@ -39,6 +39,7 @@ impl BasicAuthentication {
 	/// let result = auth.authenticate(&request).await.unwrap();
 	/// assert!(result.is_none());
 	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -49,7 +50,7 @@ impl BasicAuthentication {
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```
 	/// use reinhardt_auth::{HttpBasicAuth, AuthenticationBackend};
 	/// use bytes::Bytes;
 	/// use hyper::{HeaderMap, Method, Uri, Version};
@@ -60,8 +61,8 @@ impl BasicAuthentication {
 	/// auth.add_user("alice", "secret123");
 	/// auth.add_user("bob", "password456");
 	///
-	// Create a request with valid Basic auth credentials
-	// "alice:secret123" in base64 is "YWxpY2U6c2VjcmV0MTIz"
+	/// // Create a request with valid Basic auth credentials
+	/// // "alice:secret123" in base64 is "YWxpY2U6c2VjcmV0MTIz"
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert("Authorization", "Basic YWxpY2U6c2VjcmV0MTIz".parse().unwrap());
 	/// let request = Request::new(
@@ -72,11 +73,12 @@ impl BasicAuthentication {
 	///     Bytes::new(),
 	/// );
 	///
-	// Authentication should succeed
+	/// // Authentication should succeed
 	/// let result = auth.authenticate(&request).await.unwrap();
 	/// assert!(result.is_some());
 	/// assert_eq!(result.unwrap().get_username(), "alice");
 	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub fn add_user(&mut self, username: impl Into<String>, password: impl Into<String>) {
 		self.users.insert(username.into(), password.into());

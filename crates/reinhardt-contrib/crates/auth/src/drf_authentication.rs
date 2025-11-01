@@ -419,11 +419,13 @@ impl AuthenticationBackend for SessionAuthentication {
 mod tests {
     use super::*;
     use crate::basic::BasicAuthentication;
-    use crate::JwtAuth;
+    #[cfg(feature = "jwt")]
+    use crate::jwt::JwtAuth;
     use bytes::Bytes;
     use hyper::{HeaderMap, Method, Uri, Version};
 
     #[tokio::test]
+    #[cfg(feature = "jwt")]
     async fn test_composite_authentication() {
         let mut composite = CompositeAuthentication::new();
 
@@ -458,6 +460,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "jwt")]
     async fn test_composite_authentication_with_jwt() {
         let mut composite = CompositeAuthentication::new();
 

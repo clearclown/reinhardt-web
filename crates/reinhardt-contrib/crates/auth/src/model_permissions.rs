@@ -430,7 +430,7 @@ mod tests {
         assert!(!perm.user_has_permission("alice", "blog.add_article").await);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_django_model_permissions_add_permission() {
         let mut perm = DjangoModelPermissions::new();
         perm.add_user_permission("alice", "blog.add_article");
@@ -441,7 +441,7 @@ mod tests {
         assert!(!perm.user_has_permission("alice", "blog.delete_article").await);
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_django_model_permissions_different_users() {
         let mut perm = DjangoModelPermissions::new();
         perm.add_user_permission("alice", "blog.add_article");

@@ -416,6 +416,7 @@ impl DateRange {
 mod tests {
     use super::*;
     use bytes::Bytes;
+    use chrono::Timelike;
     use hyper::{HeaderMap, Method, Uri, Version};
     use reinhardt_types::Request;
 
