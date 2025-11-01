@@ -37,7 +37,7 @@ impl LogRecord {
 
 pub struct Logger {
 	name: String,
-	handlers: Arc<Mutex<Vec<Box<dyn Handler>>>>,
+	handlers: Arc<Mutex<Vec<Arc<dyn Handler>>>>,
 	level: Arc<Mutex<LogLevel>>,
 }
 
@@ -50,7 +50,7 @@ impl Logger {
 		}
 	}
 
-	pub async fn add_handler(&self, handler: Box<dyn Handler>) {
+	pub async fn add_handler(&self, handler: Arc<dyn Handler>) {
 		self.handlers.lock().unwrap().push(handler);
 	}
 
@@ -59,17 +59,15 @@ impl Logger {
 	}
 
 	pub async fn log_record(&self, record: &LogRecord) {
-		let num_handlers = {
+		// Clone Arc references to handlers before releasing the lock
+		let handlers: Vec<Arc<dyn Handler>> = {
 			let handlers_guard = self.handlers.lock().unwrap();
-			handlers_guard.len()
+			handlers_guard.clone()
 		};
 
-		for i in 0..num_handlers {
-			let handlers_guard = self.handlers.lock().unwrap();
-			if let Some(handler) = handlers_guard.get(i) {
-				handler.handle(record).await;
-			}
-			drop(handlers_guard);
+		// Now we can iterate and await without holding the lock
+		for handler in handlers {
+			handler.handle(record).await;
 		}
 	}
 
@@ -81,20 +79,15 @@ impl Logger {
 
 		let record = LogRecord::new(level, self.name.clone(), message);
 
-		// Create a scoped block to release the lock before awaiting
-		let handlers_guard = self.handlers.lock().unwrap();
-		let num_handlers = handlers_guard.len();
-		drop(handlers_guard);
-
-		// Process handlers one by one
-		for i in 0..num_handlers {
+		// Clone Arc references to handlers before releasing the lock
+		let handlers: Vec<Arc<dyn Handler>> = {
 			let handlers_guard = self.handlers.lock().unwrap();
-			if let Some(handler) = handlers_guard.get(i) {
-				// We can't store a reference across await, so we need to handle this differently
-				// For now, we'll just handle the record directly without storing references
-				handler.handle(&record).await;
-			}
-			drop(handlers_guard);
+			handlers_guard.clone()
+		};
+
+		// Now we can iterate and await without holding the lock
+		for handler in handlers {
+			handler.handle(&record).await;
 		}
 	}
 
@@ -136,8 +129,13 @@ impl Logger {
 
 		let record = LogRecord::new(level, self.name.clone(), message);
 
+		// Clone Arc references to handlers before releasing the lock
+		let handlers: Vec<Arc<dyn Handler>> = {
+			let handlers_guard = self.handlers.lock().unwrap();
+			handlers_guard.clone()
+		};
+
 		// Synchronously process handlers using tokio runtime
-		let handlers_guard = self.handlers.lock().unwrap();
 		let rt = tokio::runtime::Handle::try_current().ok().or_else(|| {
 			// If no runtime exists, create a temporary one
 			tokio::runtime::Runtime::new()
@@ -146,7 +144,7 @@ impl Logger {
 		});
 
 		if let Some(handle) = rt {
-			for handler in handlers_guard.iter() {
+			for handler in handlers.iter() {
 				// Block on async handler using tokio runtime
 				handle.block_on(handler.handle(&record));
 			}
