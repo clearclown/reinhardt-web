@@ -313,7 +313,7 @@ pub use reinhardt_params::{Body, Cookie, Header, Json, Path, Query};
 
 // Re-export templates
 #[cfg(feature = "templates")]
-pub use reinhardt_template::{Template, TemplateError};
+pub use reinhardt_template::TemplateError;
 
 // Re-export tasks
 #[cfg(feature = "tasks")]
@@ -474,7 +474,7 @@ pub mod prelude {
 
     // Templates (if enabled)
     #[cfg(feature = "templates")]
-    pub use crate::{Template, TemplateError};
+    pub use crate::TemplateError;
 
     // Tasks (if enabled)
     #[cfg(feature = "tasks")]

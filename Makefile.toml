@@ -79,8 +79,7 @@ args = ["test", "--workspace", "--lib", "--all-features"]
 [tasks.integration-test]
 description = "Run integration tests (requires PostgreSQL, MySQL, Redis)"
 command = "cargo"
-args = ["test", "--package", "tests", "--all-features"]
-env = { "TEST_DATABASE_URL" = "postgres://postgres:postgres@localhost:5432/test_db", "MYSQL_DATABASE_URL" = "mysql://root:mysql@localhost:3306/test_db", "REDIS_URL" = "redis://localhost:6379" }
+args = ["test", "--package", "reinhardt-integration-tests", "--all-features"]
 
 [tasks.test]
 description = "Run all tests"
@@ -96,7 +95,7 @@ dependencies = ["check", "fmt", "clippy", "test"]
 
 [tasks.ci-local]
 description = "Run CI checks suitable for local development (excludes integration tests)"
-dependencies = ["check", "fmt", "clippy", "test-unit"]
+dependencies = ["check", "fmt", "clippy", "unit-test"]
 
 # ============================================================================
 # Documentation Tasks
