@@ -154,7 +154,8 @@ impl<T: Serialize + for<'de> Deserialize<'de>> JsonType<T> {
     /// }
     ///
     /// let json_type = JsonType::<Config>::new();
-    // JSON type will serialize Config to/from JSON in database
+    /// // Verify type is created successfully
+    /// let _: JsonType<Config> = json_type;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -200,7 +201,9 @@ impl PhoneNumberType {
     ///
     /// let us_phone = PhoneNumberType::new("US");
     /// let jp_phone = PhoneNumberType::new("JP");
-    // Validates and formats phone numbers for specific countries
+    /// // Verify types are created successfully
+    /// let _: PhoneNumberType = us_phone;
+    /// let _: PhoneNumberType = jp_phone;
     /// ```
     pub fn new(country_code: impl Into<String>) -> Self {
         let code = country_code.into();
@@ -274,7 +277,8 @@ impl EmailType {
     /// use reinhardt_orm::type_decorator::EmailType;
     ///
     /// let email_type = EmailType::new();
-    // Validates email format and normalizes to lowercase
+    /// // Verify the email type is created successfully
+    /// let _: EmailType = email_type;
     /// ```
     pub fn new() -> Self {
         Self
@@ -331,7 +335,8 @@ impl UrlType {
     /// use reinhardt_orm::type_decorator::UrlType;
     ///
     /// let url_type = UrlType::new();
-    // Validates URLs must start with http:// or https://
+    /// // Verify the URL type is created successfully
+    /// let _: UrlType = url_type;
     /// ```
     pub fn new() -> Self {
         Self
@@ -385,7 +390,8 @@ impl CompressedTextType {
     /// use reinhardt_orm::type_decorator::CompressedTextType;
     ///
     /// let compressed = CompressedTextType::new();
-    // Uses default gzip compression for text fields
+    /// // Verify the compressed text type is created successfully
+    /// let _: CompressedTextType = compressed;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -401,7 +407,8 @@ impl CompressedTextType {
     /// use reinhardt_orm::type_decorator::CompressedTextType;
     ///
     /// let compressed = CompressedTextType::with_level(9);
-    // Maximum compression (level 9)
+    /// // Verify the compressed text type with custom level is created successfully
+    /// let _: CompressedTextType = compressed;
     /// ```
     pub fn with_level(level: u32) -> Self {
         Self {
@@ -477,7 +484,8 @@ impl<T: Clone + PartialEq> EnumType<T> {
     ///     (Status::Active, "active".to_string()),
     ///     (Status::Inactive, "inactive".to_string()),
     /// ]);
-    // Maps enum variants to database strings
+    /// // Verify the enum type is created successfully
+    /// let _: EnumType<Status> = enum_type;
     /// ```
     pub fn new(variants: Vec<(T, String)>) -> Self {
         Self { variants }

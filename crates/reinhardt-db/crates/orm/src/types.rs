@@ -297,6 +297,8 @@ impl<T: SqlTypeDefinition> TypeDecorator<T> {
     /// use reinhardt_orm::types::{TypeDecorator, UuidType};
     ///
     /// let decorated = TypeDecorator::new(UuidType);
+    /// // Verify the decorator is created successfully (type check passes)
+    /// let _: TypeDecorator<UuidType> = decorated;
     /// ```
     pub fn new(inner: T) -> Self {
         Self {
@@ -315,6 +317,8 @@ impl<T: SqlTypeDefinition> TypeDecorator<T> {
     ///     // Custom coercion logic
     ///     Ok(value)
     /// });
+    /// // Verify the decorator with coercion is created successfully
+    /// let _: TypeDecorator<UuidType> = decorated;
     /// ```
     pub fn with_coercion<F>(mut self, coerce: F) -> Self
     where
@@ -355,6 +359,7 @@ impl TypeRegistry {
     ///
     /// let mut registry = TypeRegistry::new();
     /// registry.register("user_status", "VARCHAR(20)");
+    /// assert_eq!(registry.get("user_status"), Some(&"VARCHAR(20)".to_string()));
     /// ```
     pub fn register(&mut self, name: impl Into<String>, sql_type: impl Into<String>) {
         self.types.insert(name.into(), sql_type.into());

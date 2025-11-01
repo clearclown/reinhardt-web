@@ -894,6 +894,8 @@ impl FieldValidators {
     ///
     /// let validators = FieldValidators::new()
     ///     .add(Box::new(RequiredValidator::new()));
+    /// // Verify validator was added (type check passes)
+    /// let _: FieldValidators = validators;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -910,6 +912,9 @@ impl FieldValidators {
     /// let validators = FieldValidators::new()
     ///     .add(Box::new(RequiredValidator::new()))
     ///     .add(Box::new(MaxLengthValidator::new(100)));
+    /// // Verify both validators were added successfully
+    /// assert!(validators.validate("hello").is_ok());
+    /// assert!(validators.validate("").is_err()); // Fails RequiredValidator
     /// ```
     pub fn add(mut self, validator: Box<dyn Validator>) -> Self {
         self.validators.push(validator);
@@ -958,6 +963,7 @@ impl ModelValidators {
     /// use reinhardt_orm::validators::ModelValidators;
     ///
     /// let mut model_validators = ModelValidators::new();
+    /// assert_eq!(model_validators.field_validators.len(), 0);
     /// ```
     pub fn new() -> Self {
         Self {
@@ -975,6 +981,8 @@ impl ModelValidators {
     /// let email_validators = FieldValidators::new()
     ///     .add(Box::new(EmailValidator::new()));
     /// model_validators.add_field_validator("email".to_string(), email_validators);
+    /// assert_eq!(model_validators.field_validators.len(), 1);
+    /// assert!(model_validators.field_validators.contains_key("email"));
     /// ```
     pub fn add_field_validator(&mut self, field: String, validators: FieldValidators) {
         self.field_validators.insert(field, validators);

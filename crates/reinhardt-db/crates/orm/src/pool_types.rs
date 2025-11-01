@@ -464,7 +464,10 @@ impl AssertionPool {
     ///
     /// let pool = AssertionPool::new();
     /// let conn_id = pool.get_connection();
+    /// assert_eq!(pool.active_count(), 1);
     /// pool.return_connection(conn_id); // OK
+    /// // Verify the connection was returned successfully
+    /// assert_eq!(pool.active_count(), 0);
     /// ```
     ///
     /// ```should_panic

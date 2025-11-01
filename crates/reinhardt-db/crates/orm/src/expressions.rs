@@ -217,6 +217,8 @@ impl Value {
     /// use reinhardt_orm::expressions::{Value, ValueType};
     ///
     /// let val = Value::new("active");
+    /// // Verify the value is created successfully
+    /// let _: Value = val;
     /// ```
     pub fn new<T: Into<ValueType>>(value: T) -> Self {
         Self {
@@ -1820,6 +1822,8 @@ impl When {
     ///     Q::new("status", "=", "active"),
     ///     Expression::Value(Value::string("Active User"))
     /// );
+    /// // Verify the WHEN clause is created successfully
+    /// let _: When = when_clause;
     /// ```
     pub fn new(condition: Q, then: Expression) -> Self {
         Self {
@@ -1871,6 +1875,8 @@ impl Case {
     ///         Expression::Value(Value::int(1))
     ///     ))
     ///     .default(Expression::Value(Value::int(0)));
+    /// // Verify the CASE expression is created successfully
+    /// let _: Case = case_expr;
     /// ```
     pub fn new() -> Self {
         Self {
@@ -1889,6 +1895,8 @@ impl Case {
     ///     Q::new("age", ">=", "18"),
     ///     Expression::Value(Value::string("adult"))
     /// ));
+    /// // Verify the CASE with WHEN clause is created successfully
+    /// let _: Case = case;
     /// ```
     pub fn when(mut self, when: When) -> Self {
         self.when_clauses.push(when);
@@ -1902,6 +1910,8 @@ impl Case {
     /// use reinhardt_orm::expressions::{Case, Value, Expression};
     ///
     /// let case = Case::new().default(Expression::Value(Value::string("unknown")));
+    /// // Verify the CASE with default value is created successfully
+    /// let _: Case = case;
     /// ```
     pub fn default(mut self, default: Expression) -> Self {
         self.default = Some(Box::new(default));

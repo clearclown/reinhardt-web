@@ -286,6 +286,10 @@ mod tests {
 ///     const NAME: &'static str = "User";
 ///     const TABLE_NAME: &'static str = "users";
 /// }
+///
+/// // Verify the trait implementation works correctly
+/// assert_eq!(User::NAME, "User");
+/// assert_eq!(User::TABLE_NAME, "users");
 /// ```
 pub trait EntityType {
     /// The entity name
@@ -313,6 +317,8 @@ impl MapperRegistry {
     ///
     /// let registry = MapperRegistry::new();
     /// let mapper = registry.get_typed::<User>();
+    /// // Verify the get method executes successfully (returns None for unregistered entity)
+    /// assert!(mapper.is_none());
     /// ```
     pub fn get_typed<E: EntityType>(&self) -> Option<EntityMapper> {
         self.get(E::NAME)
@@ -336,6 +342,8 @@ impl MapperRegistry {
     /// let registry = MapperRegistry::new();
     /// let mapper = EntityMapper::new(Post::TABLE_NAME);
     /// registry.register_typed::<Post>(mapper);
+    /// // Verify the register method executed successfully
+    /// assert!(registry.get_typed::<Post>().is_some());
     /// ```
     pub fn register_typed<E: EntityType>(&self, mapper: EntityMapper) {
         self.register(E::NAME, mapper);
