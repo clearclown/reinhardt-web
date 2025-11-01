@@ -393,7 +393,7 @@ impl ActionRegistry {
 	pub fn get_action(
 		&self,
 		name: &str,
-	) -> AdminResult<dashmap::mapref::one::Ref<String, Box<dyn AdminAction>>> {
+	) -> AdminResult<dashmap::mapref::one::Ref<'_, String, Box<dyn AdminAction>>> {
 		self.actions
 			.get(name)
 			.ok_or_else(|| AdminError::InvalidAction(format!("Action '{}' not found", name)))
@@ -452,7 +452,7 @@ mod tests {
 			&self,
 			_model_name: &str,
 			item_ids: Vec<String>,
-			_user: &dyn Any,
+			_user: &(dyn Any + Send + Sync),
 		) -> ActionResult {
 			if self.should_fail {
 				ActionResult::Error {

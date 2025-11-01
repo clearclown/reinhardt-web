@@ -3,21 +3,41 @@
 //! Provides Swagger UI for browsing generated OpenAPI schemas.
 
 use crate::{OpenApiSchema, SchemaResult};
-use askama::Template;
+use once_cell::sync::Lazy;
 use reinhardt_apps::{Request, Response, Result};
+use serde::Serialize;
 use std::sync::Arc;
+use tera::Tera;
 
-/// Swagger UI template
-#[derive(Template)]
-#[template(path = "swagger_ui.tpl")]
+/// Lazy-initialized Tera instance
+static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
+    let mut tera = Tera::default();
+
+    // Add embedded templates
+    tera.add_raw_template(
+        "swagger_ui.tpl",
+        include_str!("../templates/swagger_ui.tpl"),
+    )
+    .expect("Failed to add swagger_ui.tpl template");
+
+    tera.add_raw_template(
+        "redoc_ui.tpl",
+        include_str!("../templates/redoc_ui.tpl"),
+    )
+    .expect("Failed to add redoc_ui.tpl template");
+
+    tera
+});
+
+/// Swagger UI template data
+#[derive(Serialize)]
 struct SwaggerUITemplate<'a> {
     title: &'a str,
     spec_url: &'a str,
 }
 
-/// Redoc UI template
-#[derive(Template)]
-#[template(path = "redoc_ui.tpl")]
+/// Redoc UI template data
+#[derive(Serialize)]
 struct RedocUITemplate<'a> {
     title: &'a str,
     spec_url: &'a str,
@@ -57,14 +77,18 @@ impl SwaggerUI {
     /// let html = swagger_ui.render_html().unwrap();
     /// ```ignore
     pub fn render_html(&self) -> SchemaResult<String> {
-        // Render Swagger UI HTML using askama template
-        let template = SwaggerUITemplate {
+        // Render Swagger UI HTML using Tera template
+        let context = SwaggerUITemplate {
             title: &self.openapi_spec.info.title,
             spec_url: "/api-docs/openapi.json",
         };
 
-        template
-            .render()
+        let mut tera_context = tera::Context::new();
+        tera_context.insert("title", &context.title);
+        tera_context.insert("spec_url", &context.spec_url);
+
+        TEMPLATES
+            .render("swagger_ui.tpl", &tera_context)
             .map_err(|e| crate::SchemaError::InvalidSchema(format!("Template error: {}", e)))
     }
     /// Handle Swagger UI request
@@ -171,14 +195,18 @@ impl RedocUI {
     /// let html = redoc_ui.render_html().unwrap();
     /// ```ignore
     pub fn render_html(&self) -> SchemaResult<String> {
-        // Render Redoc UI HTML using askama template
-        let template = RedocUITemplate {
+        // Render Redoc UI HTML using Tera template
+        let context = RedocUITemplate {
             title: &self.openapi_spec.info.title,
             spec_url: "/api-docs/openapi.json",
         };
 
-        template
-            .render()
+        let mut tera_context = tera::Context::new();
+        tera_context.insert("title", &context.title);
+        tera_context.insert("spec_url", &context.spec_url);
+
+        TEMPLATES
+            .render("redoc_ui.tpl", &tera_context)
             .map_err(|e| crate::SchemaError::InvalidSchema(format!("Template error: {}", e)))
     }
 

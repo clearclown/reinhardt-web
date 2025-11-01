@@ -19,27 +19,6 @@
 //! let response = render_template(&request, "index.html", context)?;
 //! ```
 //!
-//! ### Rendering Templates (Askama)
-//!
-//! ```rust,ignore
-//! use reinhardt_shortcuts::render_askama;
-//! use askama::Template;
-//!
-//! #[derive(Template)]
-//! #[template(path = "user_profile.html")]
-//! struct UserProfile {
-//!     username: String,
-//!     email: String,
-//! }
-//!
-//! let template = UserProfile {
-//!     username: "alice".to_string(),
-//!     email: "alice@example.com".to_string(),
-//! };
-//!
-//! let response = render_askama(&request, template)?;
-//! ```
-//!
 //! ### Custom Error Pages
 //!
 //! ```rust,ignore
@@ -124,7 +103,6 @@
 //! - ✅ Custom error pages (404, 500, 403, 400, etc.)
 //! - ✅ Error page templates with Tera
 //! - ✅ Debug error pages for development environments
-//! - ✅ Full Askama template engine integration for compile-time type-safe templates
 //! - ✅ Template inheritance and includes (Tera-based)
 //! - ✅ Custom template filters (truncate_chars, intcomma, pluralize, default, add_class)
 //! - ✅ Custom template functions/tags (range, now, cycle, static, url)
@@ -153,10 +131,6 @@ pub mod template_inheritance;
 #[cfg(feature = "templates")]
 pub mod error_pages;
 
-// Askama template integration (feature-gated)
-#[cfg(feature = "templates")]
-pub mod askama_templates;
-
 // Custom Tera filters (feature-gated)
 #[cfg(feature = "templates")]
 pub mod tera_filters;
@@ -179,10 +153,6 @@ pub use orm::{get_list_or_404, get_object_or_404};
 // Re-export template functions (feature-gated)
 #[cfg(feature = "templates")]
 pub use template::{render_template, render_to_response};
-
-// Re-export Askama template functions (feature-gated)
-#[cfg(feature = "templates")]
-pub use askama_templates::{render_askama, render_askama_to_string};
 
 // Re-export error page functions (feature-gated)
 #[cfg(feature = "templates")]

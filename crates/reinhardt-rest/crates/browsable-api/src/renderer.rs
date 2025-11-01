@@ -1,18 +1,24 @@
-use handlebars::Handlebars;
 use serde::Serialize;
 use serde_json::Value;
 use std::sync::Arc;
+use tera::Tera;
 
 #[derive(Debug, thiserror::Error)]
 pub enum BrowsableApiError {
     #[error("Template render error: {0}")]
-    Render(#[from] handlebars::RenderError),
+    Render(String),
     #[error("Template error: {0}")]
-    Template(#[from] handlebars::TemplateError),
+    Template(String),
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
     #[error("{0}")]
     Other(String),
+}
+
+impl From<tera::Error> for BrowsableApiError {
+    fn from(err: tera::Error) -> Self {
+        BrowsableApiError::Render(err.to_string())
+    }
 }
 
 pub type BrowsableApiResult<T> = Result<T, BrowsableApiError>;
@@ -59,7 +65,7 @@ pub struct SelectOption {
 
 /// Renderer for browsable API HTML responses
 pub struct BrowsableApiRenderer {
-    handlebars: Arc<Handlebars<'static>>,
+    tera: Arc<Tera>,
 }
 
 impl BrowsableApiRenderer {
@@ -72,48 +78,44 @@ impl BrowsableApiRenderer {
     /// let renderer = BrowsableApiRenderer::new();
     /// ```
     pub fn new() -> Self {
-        let mut handlebars = Handlebars::new();
+        let mut tera = Tera::default();
 
         // Register template from external file
         let template_path = concat!(env!("CARGO_MANIFEST_DIR"), "/templates/api.tpl");
-        handlebars
-            .register_template_file("api", template_path)
-            .unwrap_or_else(|e| {
-                // Fallback to default template if file cannot be read
-                eprintln!(
-                    "Warning: Failed to load template file: {}. Using default template.",
-                    e
-                );
-                handlebars
-                    .register_template_string("api", Self::default_template())
-                    .expect("Failed to register default template");
-            });
+        if let Err(e) = tera.add_template_file(template_path, Some("api")) {
+            // Fallback to default template if file cannot be read
+            eprintln!(
+                "Warning: Failed to load template file: {}. Using default template.",
+                e
+            );
+            tera.add_raw_template("api", Self::default_template())
+                .expect("Failed to register default template");
+        }
 
         Self {
-            handlebars: Arc::new(handlebars),
+            tera: Arc::new(tera),
         }
     }
     /// Render API context as HTML
     ///
     pub fn render(&self, context: &ApiContext) -> BrowsableApiResult<String> {
-        // Convert the context to a Value and add formatted JSON
-        let mut template_data = serde_json::to_value(context)?;
-        if let Some(obj) = template_data.as_object_mut() {
-            let formatted_json = serde_json::to_string_pretty(&context.response_data)?;
-            obj.insert(
-                "response_data_formatted".to_string(),
-                serde_json::Value::String(formatted_json),
-            );
-        }
-        Ok(self.handlebars.render("api", &template_data)?)
+        // Convert the context to a Tera Context
+        let mut tera_context = tera::Context::from_serialize(context)?;
+
+        // Add formatted JSON
+        let formatted_json = serde_json::to_string_pretty(&context.response_data)?;
+        tera_context.insert("response_data_formatted", &formatted_json);
+
+        Ok(self.tera.render("api", &tera_context)?)
     }
     /// Register a custom template
     ///
     pub fn register_template(&mut self, name: &str, template: &str) -> BrowsableApiResult<()> {
-        let registry = Arc::get_mut(&mut self.handlebars).ok_or_else(|| {
+        let tera_mut = Arc::get_mut(&mut self.tera).ok_or_else(|| {
             BrowsableApiError::Other("Cannot modify shared template registry".to_string())
         })?;
-        registry.register_template_string(name, template)?;
+        tera_mut.add_raw_template(name, template)
+            .map_err(|e| BrowsableApiError::Template(e.to_string()))?;
         Ok(())
     }
 
@@ -125,7 +127,7 @@ impl BrowsableApiRenderer {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}} - Reinhardt API</title>
+    <title>{{ title }} - Reinhardt API</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
@@ -161,61 +163,61 @@ impl BrowsableApiRenderer {
 <body>
     <div class="container">
         <div class="header">
-            <h1>{{title}}</h1>
-            {{#if description}}<p>{{description}}</p>{{/if}}
+            <h1>{{ title }}</h1>
+            {% if description %}<p>{{ description }}</p>{% endif %}
         </div>
-        
+
         <div class="content">
             <div class="allowed-methods">
                 <strong>Allowed methods:</strong>
-                {{#each allowed_methods}}
-                <span class="method-badge method-{{this}}">{{this}}</span>
-                {{/each}}
+                {% for method_name in allowed_methods %}
+                <span class="method-badge method-{{ method_name | lower }}">{{ method_name }}</span>
+                {% endfor %}
             </div>
-            
+
             <div class="endpoint">
-                <span class="method-badge method-{{method}}">{{method}}</span>
-                {{endpoint}}
+                <span class="method-badge method-{{ method | lower }}">{{ method }}</span>
+                {{ endpoint }}
             </div>
-            
-            <h2>Response ({{response_status}})</h2>
+
+            <h2>Response ({{ response_status }})</h2>
             <div class="response">
-                <pre>{{response_data_formatted}}</pre>
+                <pre>{{ response_data_formatted }}</pre>
             </div>
-            
-            {{#if request_form}}
+
+            {% if request_form %}
             <div class="form-section">
                 <h2>Make a Request</h2>
-                <form method="{{request_form.submit_method}}" action="{{request_form.submit_url}}">
-                    {{#each request_form.fields}}
+                <form method="{{ request_form.submit_method }}" action="{{ request_form.submit_url }}">
+                    {% for field in request_form.fields %}
                     <div class="form-field">
-                        <label for="{{name}}">
-                            {{label}}
-                            {{#if required}}<span style="color: red;">*</span>{{/if}}
+                        <label for="{{ field.name }}">
+                            {{ field.label }}
+                            {% if field.required %}<span style="color: red;">*</span>{% endif %}
                         </label>
-                        {{#if (eq field_type "select")}}
-                        <select id="{{name}}" name="{{name}}" {{#if required}}required{{/if}}>
-                            {{#if initial_label}}
-                            <option value="" selected>{{initial_label}}</option>
-                            {{/if}}
-                            {{#each options}}
-                            <option value="{{value}}" {{#if (eq value ../initial_value)}}selected{{/if}}>{{label}}</option>
-                            {{/each}}
+                        {% if field.field_type == "select" %}
+                        <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                            {% if field.initial_label %}
+                            <option value="" selected>{{ field.initial_label }}</option>
+                            {% endif %}
+                            {% for option in field.options %}
+                            <option value="{{ option.value }}" {% if option.value == field.initial_value %}selected{% endif %}>{{ option.label }}</option>
+                            {% endfor %}
                         </select>
-                        {{else if (eq field_type "textarea")}}
-                        <textarea id="{{name}}" name="{{name}}" {{#if required}}required{{/if}}>{{#if initial_value}}{{initial_value}}{{/if}}</textarea>
-                        {{else}}
-                        <input type="{{field_type}}" id="{{name}}" name="{{name}}" {{#if required}}required{{/if}} {{#if initial_value}}value="{{initial_value}}"{{/if}}>
-                        {{/if}}
-                        {{#if help_text}}<div class="help-text">{{help_text}}</div>{{/if}}
+                        {% elif field.field_type == "textarea" %}
+                        <textarea id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>{% if field.initial_value %}{{ field.initial_value }}{% endif %}</textarea>
+                        {% else %}
+                        <input type="{{ field.field_type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if field.initial_value %}value="{{ field.initial_value }}"{% endif %}>
+                        {% endif %}
+                        {% if field.help_text %}<div class="help-text">{{ field.help_text }}</div>{% endif %}
                     </div>
-                    {{/each}}
+                    {% endfor %}
                     <button type="submit" class="submit-btn">Submit</button>
                 </form>
             </div>
-            {{/if}}
-            
-            {{#if headers}}
+            {% endif %}
+
+            {% if headers %}
             <div class="headers">
                 <h2>Response Headers</h2>
                 <table>
@@ -226,16 +228,16 @@ impl BrowsableApiRenderer {
                         </tr>
                     </thead>
                     <tbody>
-                        {{#each headers}}
+                        {% for header in headers %}
                         <tr>
-                            <td><strong>{{this.0}}</strong></td>
-                            <td>{{this.1}}</td>
+                            <td><strong>{{ header.0 }}</strong></td>
+                            <td>{{ header.1 }}</td>
                         </tr>
-                        {{/each}}
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {{/if}}
+            {% endif %}
         </div>
     </div>
 </body>
