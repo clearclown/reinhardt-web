@@ -43,7 +43,8 @@
 
 use async_trait::async_trait;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::sync::Mutex as TokioMutex;
 
 #[cfg(feature = "postgres")]
 use backends::PostgresTwoPhaseParticipant;
@@ -234,8 +235,8 @@ impl Participant {
 #[derive(Debug)]
 pub struct TwoPhaseCommit {
 	transaction_id: String,
-	state: Arc<Mutex<TransactionState>>,
-	participants: Arc<Mutex<HashMap<String, Participant>>>,
+	state: Arc<StdMutex<TransactionState>>,
+	participants: Arc<StdMutex<HashMap<String, Participant>>>,
 }
 
 impl TwoPhaseCommit {
@@ -253,8 +254,8 @@ impl TwoPhaseCommit {
 	pub fn new(transaction_id: impl Into<String>) -> Self {
 		Self {
 			transaction_id: transaction_id.into(),
-			state: Arc::new(Mutex::new(TransactionState::NotStarted)),
-			participants: Arc::new(Mutex::new(HashMap::new())),
+			state: Arc::new(StdMutex::new(TransactionState::NotStarted)),
+			participants: Arc::new(StdMutex::new(HashMap::new())),
 		}
 	}
 
@@ -599,8 +600,8 @@ impl Default for TwoPhaseCommit {
 /// ```
 pub struct TwoPhaseCoordinator {
 	transaction_id: String,
-	state: Arc<Mutex<TransactionState>>,
-	participants: Arc<Mutex<Vec<Box<dyn TwoPhaseParticipant>>>>,
+	state: Arc<TokioMutex<TransactionState>>,
+	participants: Arc<TokioMutex<Vec<Box<dyn TwoPhaseParticipant>>>>,
 	transaction_log: Option<Arc<dyn super::transaction_log::TransactionLog>>,
 }
 
@@ -609,8 +610,8 @@ impl TwoPhaseCoordinator {
 	pub fn new(transaction_id: impl Into<String>) -> Self {
 		Self {
 			transaction_id: transaction_id.into(),
-			state: Arc::new(Mutex::new(TransactionState::NotStarted)),
-			participants: Arc::new(Mutex::new(Vec::new())),
+			state: Arc::new(TokioMutex::new(TransactionState::NotStarted)),
+			participants: Arc::new(TokioMutex::new(Vec::new())),
 			transaction_log: None,
 		}
 	}
@@ -622,18 +623,16 @@ impl TwoPhaseCoordinator {
 	) -> Self {
 		Self {
 			transaction_id: transaction_id.into(),
-			state: Arc::new(Mutex::new(TransactionState::NotStarted)),
-			participants: Arc::new(Mutex::new(Vec::new())),
+			state: Arc::new(TokioMutex::new(TransactionState::NotStarted)),
+			participants: Arc::new(TokioMutex::new(Vec::new())),
 			transaction_log: Some(log),
 		}
 	}
 
 	/// Record transaction state to log
-	fn log_state(&self, state: TransactionState) -> Result<(), TwoPhaseError> {
+	async fn log_state(&self, state: TransactionState) -> Result<(), TwoPhaseError> {
 		if let Some(log) = &self.transaction_log {
-			let participants = self.participants.lock().map_err(|_| {
-				TwoPhaseError::LogError("Failed to acquire participants lock".to_string())
-			})?;
+			let participants = self.participants.lock().await;
 			let participant_ids: Vec<String> =
 				participants.iter().map(|p| p.id().to_string()).collect();
 
@@ -653,11 +652,9 @@ impl TwoPhaseCoordinator {
 	}
 
 	/// Get the current transaction state
-	pub fn state(&self) -> Result<TransactionState, TwoPhaseError> {
-		self.state
-			.lock()
-			.map(|s| *s)
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))
+	pub async fn state(&self) -> Result<TransactionState, TwoPhaseError> {
+		let state = self.state.lock().await;
+		Ok(*state)
 	}
 
 	/// Add a participant to the coordinator
@@ -665,9 +662,7 @@ impl TwoPhaseCoordinator {
 		&mut self,
 		participant: Box<dyn TwoPhaseParticipant>,
 	) -> Result<(), TwoPhaseError> {
-		let mut participants = self.participants.lock().map_err(|_| {
-			TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-		})?;
+		let mut participants = self.participants.lock().await;
 
 		let id = participant.id().to_string();
 		if participants.iter().any(|p| p.id() == id) {
@@ -680,32 +675,30 @@ impl TwoPhaseCoordinator {
 
 	/// Begin the distributed transaction
 	pub async fn begin(&mut self) -> Result<(), TwoPhaseError> {
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
+		{
+			let mut state = self.state.lock().await;
 
-		if *state != TransactionState::NotStarted {
-			return Err(TwoPhaseError::InvalidState(
-				"Transaction already started".to_string(),
-			));
+			if *state != TransactionState::NotStarted {
+				return Err(TwoPhaseError::InvalidState(
+					"Transaction already started".to_string(),
+				));
+			}
+
+			*state = TransactionState::Active;
 		}
 
-		*state = TransactionState::Active;
-		drop(state);
-
 		// Log state change
-		self.log_state(TransactionState::Active)?;
+		self.log_state(TransactionState::Active).await?;
 
 		// Begin transaction on all participants
-		let mut participants = self.participants.lock().map_err(|_| {
-			TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-		})?;
+		{
+			let mut participants = self.participants.lock().await;
 
-		for participant in participants.iter_mut() {
-			participant.begin().await.map_err(|e| {
-				TwoPhaseError::PrepareFailed(participant.id().to_string(), e.to_string())
-			})?;
+			for participant in participants.iter_mut() {
+				participant.begin().await.map_err(|e| {
+					TwoPhaseError::PrepareFailed(participant.id().to_string(), e.to_string())
+				})?;
+			}
 		}
 
 		Ok(())
@@ -713,25 +706,21 @@ impl TwoPhaseCoordinator {
 
 	/// Prepare phase: ask all participants to prepare for commit
 	pub async fn prepare(&mut self) -> Result<(), TwoPhaseError> {
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
+		{
+			let mut state = self.state.lock().await;
 
-		if *state != TransactionState::Active {
-			return Err(TwoPhaseError::InvalidState(
-				"Can only prepare active transaction".to_string(),
-			));
+			if *state != TransactionState::Active {
+				return Err(TwoPhaseError::InvalidState(
+					"Can only prepare active transaction".to_string(),
+				));
+			}
+
+			*state = TransactionState::Preparing;
 		}
-
-		*state = TransactionState::Preparing;
-		drop(state);
 
 		// Phase 1: Prepare all participants
 		{
-			let mut participants = self.participants.lock().map_err(|_| {
-				TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-			})?;
+			let mut participants = self.participants.lock().await;
 
 			if participants.is_empty() {
 				return Err(TwoPhaseError::NoParticipants);
@@ -755,57 +744,51 @@ impl TwoPhaseCoordinator {
 			// Lock is automatically released here
 		}
 
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
-		*state = TransactionState::Prepared;
-		drop(state);
+		{
+			let mut state = self.state.lock().await;
+			*state = TransactionState::Prepared;
+		}
 
 		// Log state change
-		self.log_state(TransactionState::Prepared)?;
+		self.log_state(TransactionState::Prepared).await?;
 
 		Ok(())
 	}
 
 	/// Commit phase: commit the transaction on all prepared participants
 	pub async fn commit(&mut self) -> Result<(), TwoPhaseError> {
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
+		{
+			let mut state = self.state.lock().await;
 
-		if *state != TransactionState::Prepared {
-			return Err(TwoPhaseError::InvalidState(
-				"Can only commit prepared transaction".to_string(),
-			));
+			if *state != TransactionState::Prepared {
+				return Err(TwoPhaseError::InvalidState(
+					"Can only commit prepared transaction".to_string(),
+				));
+			}
+
+			*state = TransactionState::Committing;
 		}
 
-		*state = TransactionState::Committing;
-		drop(state);
-
-		let mut participants = self.participants.lock().map_err(|_| {
-			TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-		})?;
-
-		// Phase 2: Commit all participants
 		let mut failed_participants = Vec::new();
-		for participant in participants.iter_mut() {
-			match participant.commit(&self.transaction_id).await {
-				Ok(_) => {
-					participant.set_status(ParticipantStatus::Committed);
-				}
-				Err(e) => {
-					// Log failure but continue committing others
-					failed_participants.push((participant.id().to_string(), e.to_string()));
+		{
+			let mut participants = self.participants.lock().await;
+
+			// Phase 2: Commit all participants
+			for participant in participants.iter_mut() {
+				match participant.commit(&self.transaction_id).await {
+					Ok(_) => {
+						participant.set_status(ParticipantStatus::Committed);
+					}
+					Err(e) => {
+						// Log failure but continue committing others
+						failed_participants.push((participant.id().to_string(), e.to_string()));
+					}
 				}
 			}
 		}
 
 		if !failed_participants.is_empty() {
-			let mut state = self.state.lock().map_err(|_| {
-				TwoPhaseError::InvalidState("Failed to acquire state lock".to_string())
-			})?;
+			let mut state = self.state.lock().await;
 			*state = TransactionState::Prepared; // Return to prepared state for recovery
 			let error_msg = failed_participants
 				.iter()
@@ -818,15 +801,13 @@ impl TwoPhaseCoordinator {
 			));
 		}
 
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
-		*state = TransactionState::Committed;
-		drop(state);
+		{
+			let mut state = self.state.lock().await;
+			*state = TransactionState::Committed;
+		}
 
 		// Log state change
-		self.log_state(TransactionState::Committed)?;
+		self.log_state(TransactionState::Committed).await?;
 
 		// Remove completed transaction from log
 		if let Some(log) = &self.transaction_log {
@@ -838,32 +819,30 @@ impl TwoPhaseCoordinator {
 
 	/// Rollback/abort the transaction on all participants
 	pub async fn rollback(&mut self) -> Result<(), TwoPhaseError> {
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
+		{
+			let mut state = self.state.lock().await;
 
-		if *state != TransactionState::Active && *state != TransactionState::Prepared {
-			return Err(TwoPhaseError::InvalidState(
-				"Can only rollback active or prepared transaction".to_string(),
-			));
+			if *state != TransactionState::Active && *state != TransactionState::Prepared {
+				return Err(TwoPhaseError::InvalidState(
+					"Can only rollback active or prepared transaction".to_string(),
+				));
+			}
+
+			*state = TransactionState::Aborting;
 		}
 
-		*state = TransactionState::Aborting;
-		drop(state);
-
-		let mut participants = self.participants.lock().map_err(|_| {
-			TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-		})?;
-
 		let mut failed_participants = Vec::new();
-		for participant in participants.iter_mut() {
-			match participant.rollback(&self.transaction_id).await {
-				Ok(_) => {
-					participant.set_status(ParticipantStatus::Aborted);
-				}
-				Err(e) => {
-					failed_participants.push((participant.id().to_string(), e.to_string()));
+		{
+			let mut participants = self.participants.lock().await;
+
+			for participant in participants.iter_mut() {
+				match participant.rollback(&self.transaction_id).await {
+					Ok(_) => {
+						participant.set_status(ParticipantStatus::Aborted);
+					}
+					Err(e) => {
+						failed_participants.push((participant.id().to_string(), e.to_string()));
+					}
 				}
 			}
 		}
@@ -880,15 +859,13 @@ impl TwoPhaseCoordinator {
 			));
 		}
 
-		let mut state = self
-			.state
-			.lock()
-			.map_err(|_| TwoPhaseError::InvalidState("Failed to acquire state lock".to_string()))?;
-		*state = TransactionState::Aborted;
-		drop(state);
+		{
+			let mut state = self.state.lock().await;
+			*state = TransactionState::Aborted;
+		}
 
 		// Log state change
-		self.log_state(TransactionState::Aborted)?;
+		self.log_state(TransactionState::Aborted).await?;
 
 		// Remove aborted transaction from log
 		if let Some(log) = &self.transaction_log {
@@ -900,25 +877,25 @@ impl TwoPhaseCoordinator {
 
 	/// Recover prepared transactions from all participants
 	pub async fn recover_prepared_transactions(&mut self) -> Result<Vec<String>, TwoPhaseError> {
-		let mut participants = self.participants.lock().map_err(|_| {
-			TwoPhaseError::InvalidState("Failed to acquire participants lock".to_string())
-		})?;
-
 		let mut all_xids = Vec::new();
-		for participant in participants.iter_mut() {
-			let xids = participant
-				.recover()
-				.await
-				.map_err(|e| TwoPhaseError::RecoveryFailed(e.to_string()))?;
-			all_xids.extend(xids);
+		{
+			let mut participants = self.participants.lock().await;
+
+			for participant in participants.iter_mut() {
+				let xids = participant
+					.recover()
+					.await
+					.map_err(|e| TwoPhaseError::RecoveryFailed(e.to_string()))?;
+				all_xids.extend(xids);
+			}
 		}
 
 		Ok(all_xids)
 	}
 
 	/// Get the number of participants
-	pub fn participant_count(&self) -> usize {
-		self.participants.lock().map(|p| p.len()).unwrap_or(0)
+	pub async fn participant_count(&self) -> usize {
+		self.participants.lock().await.len()
 	}
 }
 
