@@ -177,7 +177,7 @@ impl<'a> BoundField<'a> {
 	/// assert!(matches!(bound.widget(), Widget::TextInput));
 	///
 	/// let email_field: Box<dyn FormField> = Box::new(EmailField::new("email".to_string()));
-	/// let email_bound = BoundField::new("form".to_string(), &email_field, None, &[], "");
+	/// let email_bound = BoundField::new("form".to_string(), email_field.as_ref(), None, &[], "");
 	/// assert!(matches!(email_bound.widget(), Widget::EmailInput));
 	/// ```
 	pub fn widget(&self) -> &Widget {
@@ -218,7 +218,7 @@ impl<'a> BoundField<'a> {
 	/// optional_field.required = false;
 	/// let optional_box: Box<dyn FormField> = Box::new(optional_field);
 	///
-	/// let optional_bound = BoundField::new("form".to_string(), &optional_box, None, &[], "");
+	/// let optional_bound = BoundField::new("form".to_string(), optional_box.as_ref(), None, &[], "");
 	/// assert!(!optional_bound.is_required());
 	/// ```
 	pub fn is_required(&self) -> bool {
@@ -425,7 +425,13 @@ mod tests {
 		let data = serde_json::json!("John Doe");
 		let errors = vec![];
 
-		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
+		let bound = BoundField::new(
+			"test_form".to_string(),
+			field.as_ref(),
+			Some(&data),
+			&errors,
+			"",
+		);
 
 		assert_eq!(bound.name(), "name");
 		assert_eq!(bound.html_name(), "name");
@@ -458,7 +464,13 @@ mod tests {
 		let data = serde_json::json!("");
 		let errors = vec!["This field is required.".to_string()];
 
-		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
+		let bound = BoundField::new(
+			"test_form".to_string(),
+			field.as_ref(),
+			Some(&data),
+			&errors,
+			"",
+		);
 
 		assert!(bound.has_errors());
 		assert_eq!(bound.errors().len(), 1);
@@ -477,7 +489,13 @@ mod tests {
 		let data = serde_json::json!("Test Value");
 		let errors = vec![];
 
-		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
+		let bound = BoundField::new(
+			"test_form".to_string(),
+			field.as_ref(),
+			Some(&data),
+			&errors,
+			"",
+		);
 		let html = bound.as_widget();
 
 		assert!(html.contains("type=\"text\""));
