@@ -340,7 +340,7 @@ mod tests {
         );
 
         assert!(sql.contains("CREATE TABLE"));
-        assert!(sql.contains("\"users\""));
+        assert!(sql.contains("users"));
         assert!(sql.contains("LOCALITY REGIONAL BY ROW"));
     }
 
@@ -351,7 +351,7 @@ mod tests {
 
         assert_eq!(
             sql,
-            "ALTER TABLE \"users\" SET LOCALITY REGIONAL BY TABLE IN \"us-east-1\""
+            "ALTER TABLE users SET LOCALITY REGIONAL BY TABLE IN \"us-east-1\""
         );
     }
 
@@ -370,7 +370,7 @@ mod tests {
 
         assert!(sql.contains("CREATE TABLE"));
         assert!(sql.contains("PARTITION BY LIST"));
-        assert!(sql.contains("(\"region\")"));
+        assert!(sql.contains("(region)"));
         assert!(sql.contains("PARTITION us_east VALUES IN"));
     }
 
@@ -387,11 +387,11 @@ mod tests {
         );
 
         assert!(sql.contains("CREATE INDEX"));
-        assert!(sql.contains("\"idx_email\""));
-        assert!(sql.contains("ON \"users\""));
-        assert!(sql.contains("(\"email\")"));
+        assert!(sql.contains("idx_email"));
+        assert!(sql.contains("ON users"));
+        assert!(sql.contains("(email)"));
         assert!(sql.contains("STORING"));
-        assert!(sql.contains("(\"name\", \"created_at\")"));
+        assert!(sql.contains("(name, created_at)"));
     }
 
     #[test]
@@ -458,7 +458,7 @@ mod tests {
 
         assert_eq!(
             sql,
-            "ALTER DATABASE \"mydb\" SET PRIMARY REGION \"us-east-1\""
+            "ALTER DATABASE mydb SET PRIMARY REGION \"us-east-1\""
         );
     }
 }

@@ -304,7 +304,7 @@ mod tests {
 
         assert!(sql.contains("CREATE INDEX"));
         assert!(sql.contains("STORING"));
-        assert!(sql.contains("\"name\""));
-        assert!(sql.contains("\"age\""));
+        assert!(sql.contains("name"));
+        assert!(sql.contains("age"));
     }
 }

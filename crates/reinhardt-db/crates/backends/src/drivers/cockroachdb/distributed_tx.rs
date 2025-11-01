@@ -389,8 +389,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn test_with_max_retries() {
+    #[tokio::test]
+    async fn test_with_max_retries() {
         let pool = Arc::new(
             PgPool::connect_lazy("postgresql://localhost:26257/testdb")
                 .expect("Failed to create lazy pool"),
@@ -401,8 +401,8 @@ mod tests {
         assert_eq!(tx_manager.max_retries, 10);
     }
 
-    #[test]
-    fn test_with_base_backoff() {
+    #[tokio::test]
+    async fn test_with_base_backoff() {
         let pool = Arc::new(
             PgPool::connect_lazy("postgresql://localhost:26257/testdb")
                 .expect("Failed to create lazy pool"),
@@ -413,8 +413,8 @@ mod tests {
         assert_eq!(tx_manager.base_backoff, Duration::from_millis(200));
     }
 
-    #[test]
-    fn test_calculate_backoff() {
+    #[tokio::test]
+    async fn test_calculate_backoff() {
         let pool = Arc::new(
             PgPool::connect_lazy("postgresql://localhost:26257/testdb")
                 .expect("Failed to create lazy pool"),

@@ -454,8 +454,8 @@ mod tests {
         assert_eq!(config.application_name, Some("my-app".to_string()));
     }
 
-    #[test]
-    fn test_connection_from_pool() {
+    #[tokio::test]
+    async fn test_connection_from_pool() {
         let pool = PgPool::connect_lazy("postgresql://localhost:26257/testdb")
             .expect("Failed to create lazy pool");
         let conn = CockroachDBConnection::from_pool(pool);
@@ -463,8 +463,8 @@ mod tests {
         assert!(Arc::strong_count(&conn.pool) >= 1);
     }
 
-    #[test]
-    fn test_connection_clone() {
+    #[tokio::test]
+    async fn test_connection_clone() {
         let pool = Arc::new(
             PgPool::connect_lazy("postgresql://localhost:26257/testdb")
                 .expect("Failed to create lazy pool"),
