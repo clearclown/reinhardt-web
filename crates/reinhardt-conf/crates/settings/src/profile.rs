@@ -41,12 +41,12 @@ impl Profile {
 	pub fn from_env() -> Option<Self> {
 		// Try REINHARDT_ENV first
 		if let Ok(env_val) = env::var("REINHARDT_ENV") {
-			return Self::from_str(&env_val);
+			return Some(Self::parse(&env_val));
 		}
 
 		// Try ENVIRONMENT
 		if let Ok(env_val) = env::var("ENVIRONMENT") {
-			return Self::from_str(&env_val);
+			return Some(Self::parse(&env_val));
 		}
 
 		// Try to detect from REINHARDT_SETTINGS_MODULE
@@ -64,21 +64,24 @@ impl Profile {
 	}
 	/// Parse profile from string
 	///
+	/// Returns Custom for unknown profile names.
+	///
 	/// # Examples
 	///
 	/// ```
 	/// use reinhardt_settings::profile::Profile;
 	///
-	/// assert_eq!(Profile::from_str("production"), Some(Profile::Production));
-	/// assert_eq!(Profile::from_str("dev"), Some(Profile::Development));
-	/// assert_eq!(Profile::from_str("staging"), Some(Profile::Staging));
+	/// assert_eq!(Profile::parse("production"), Profile::Production);
+	/// assert_eq!(Profile::parse("dev"), Profile::Development);
+	/// assert_eq!(Profile::parse("staging"), Profile::Staging);
+	/// assert_eq!(Profile::parse("unknown"), Profile::Custom);
 	/// ```
-	pub fn from_str(s: &str) -> Option<Self> {
+	pub fn parse(s: &str) -> Self {
 		match s.to_lowercase().as_str() {
-			"development" | "dev" | "develop" => Some(Profile::Development),
-			"staging" | "stage" | "test" => Some(Profile::Staging),
-			"production" | "prod" => Some(Profile::Production),
-			_ => Some(Profile::Custom),
+			"development" | "dev" | "develop" => Profile::Development,
+			"staging" | "stage" | "test" => Profile::Staging,
+			"production" | "prod" => Profile::Production,
+			_ => Profile::Custom,
 		}
 	}
 	/// Get the profile name as a string
@@ -167,20 +170,14 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn test_profile_from_str() {
-		assert_eq!(
-			Profile::from_str("development").unwrap(),
-			Profile::Development
-		);
-		assert_eq!(Profile::from_str("dev").unwrap(), Profile::Development);
-		assert_eq!(Profile::from_str("staging").unwrap(), Profile::Staging);
-		assert_eq!(Profile::from_str("stage").unwrap(), Profile::Staging);
-		assert_eq!(
-			Profile::from_str("production").unwrap(),
-			Profile::Production
-		);
-		assert_eq!(Profile::from_str("prod").unwrap(), Profile::Production);
-		assert_eq!(Profile::from_str("custom").unwrap(), Profile::Custom);
+	fn test_profile_parse() {
+		assert_eq!(Profile::parse("development"), Profile::Development);
+		assert_eq!(Profile::parse("dev"), Profile::Development);
+		assert_eq!(Profile::parse("staging"), Profile::Staging);
+		assert_eq!(Profile::parse("stage"), Profile::Staging);
+		assert_eq!(Profile::parse("production"), Profile::Production);
+		assert_eq!(Profile::parse("prod"), Profile::Production);
+		assert_eq!(Profile::parse("unknown"), Profile::Custom);
 	}
 
 	#[test]
