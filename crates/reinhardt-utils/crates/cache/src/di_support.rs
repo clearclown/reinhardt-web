@@ -138,7 +138,7 @@ impl CacheService {
     /// ```
     pub async fn get<T>(&self, key: &str) -> crate::Result<Option<T>>
     where
-        T: for<'de> serde::Deserialize<'de> + Send,
+        T: for<'de> serde::Deserialize<'de> + serde::Serialize + Send + Sync,
     {
         let full_key = self.key_builder.build(key);
         self.cache.get(&full_key).await

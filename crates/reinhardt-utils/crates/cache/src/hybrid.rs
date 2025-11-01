@@ -153,7 +153,7 @@ where
 {
     async fn get<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         // Try L1 first (fast path)
         if let Some(value) = self.l1.get::<T>(key).await? {
@@ -164,8 +164,7 @@ where
         if let Some(value) = self.l2.get::<T>(key).await? {
             // Promote to L1 for faster subsequent access
             // Use None for TTL to let L1 handle its own expiration policy
-            // Note: This requires T: Serialize + Sync for promote, but we can't add that here
-            // So we skip promotion for now
+            self.l1.set(key, &value, None).await?;
             return Ok(Some(value));
         }
 
@@ -208,7 +207,7 @@ where
 
     async fn get_many<T>(&self, keys: &[&str]) -> Result<HashMap<String, T>>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         let mut results = HashMap::new();
 
@@ -227,8 +226,10 @@ where
             // Try L2 for missing keys
             let l2_results = self.l2.get_many::<T>(&missing_keys).await?;
 
-            // Note: We skip promotion here because T doesn't have Serialize + Sync bounds
-            // in the trait definition for get_many
+            // Promote L2 results to L1 for faster subsequent access
+            for (key, value) in &l2_results {
+                self.l1.set(key, value, None).await?;
+            }
 
             results.extend(l2_results);
         }

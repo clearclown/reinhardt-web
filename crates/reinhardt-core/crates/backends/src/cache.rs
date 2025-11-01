@@ -94,23 +94,26 @@ pub type CacheResult<T> = Result<T, CacheError>;
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```rust
 /// use reinhardt_backends::cache::CacheBackend;
+/// use reinhardt_test::mock::DummyCache;
 /// use std::time::Duration;
 ///
-/// async fn cache_example<C: CacheBackend>(cache: &C) {
-///     // Basic operations
-///     cache.set("key", b"value", Some(Duration::from_secs(60))).await.unwrap();
-///     let value = cache.get("key").await.unwrap();
-///     assert_eq!(value, Some(b"value".to_vec()));
+/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+/// let cache = DummyCache::new();
 ///
-///     // Batch operations
-///     let items = vec![
-///         ("key1".to_string(), b"value1".to_vec()),
-///         ("key2".to_string(), b"value2".to_vec()),
-///     ];
-///     cache.set_many(&items, Some(Duration::from_secs(60))).await.unwrap();
-/// }
+/// // Basic operations
+/// cache.set("key", b"value", Some(Duration::from_secs(60))).await.unwrap();
+/// let value = cache.get("key").await.unwrap();
+/// assert_eq!(value, Some(b"value".to_vec()));
+///
+/// // Batch operations
+/// let items = vec![
+///     ("key1".to_string(), b"value1".to_vec()),
+///     ("key2".to_string(), b"value2".to_vec()),
+/// ];
+/// cache.set_many(&items, Some(Duration::from_secs(60))).await.unwrap();
+/// # });
 /// ```
 #[async_trait]
 pub trait CacheBackend: Send + Sync {
@@ -124,14 +127,18 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("user:123", b"data", None).await.unwrap();
     /// let value = cache.get("user:123").await.unwrap();
     /// if let Some(data) = value {
-    ///     println!("Found: {:?}", data);
+    ///     assert_eq!(data, b"data");
     /// }
-    /// # }
+    /// # });
     /// ```
     async fn get(&self, key: &str) -> CacheResult<Option<Vec<u8>>>;
 
@@ -145,16 +152,19 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # use std::time::Duration;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    /// use std::time::Duration;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
     /// // Store with TTL
     /// cache.set("session:abc", b"user_data", Some(Duration::from_secs(3600))).await.unwrap();
     ///
     /// // Store without TTL (cache-dependent behavior)
     /// cache.set("permanent", b"data", None).await.unwrap();
-    /// # }
+    /// # });
     /// ```
     async fn set(&self, key: &str, value: &[u8], ttl: Option<Duration>) -> CacheResult<()>;
 
@@ -164,14 +174,16 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("old_key", b"data", None).await.unwrap();
     /// let deleted = cache.delete("old_key").await.unwrap();
-    /// if deleted {
-    ///     println!("Key was deleted");
-    /// }
-    /// # }
+    /// assert!(deleted);
+    /// # });
     /// ```
     async fn delete(&self, key: &str) -> CacheResult<bool>;
 
@@ -181,13 +193,15 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
-    /// if cache.exists("user:123").await.unwrap() {
-    ///     println!("User is in cache");
-    /// }
-    /// # }
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("user:123", b"data", None).await.unwrap();
+    /// assert!(cache.exists("user:123").await.unwrap());
+    /// # });
     /// ```
     async fn exists(&self, key: &str) -> CacheResult<bool>;
 
@@ -197,12 +211,16 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("key1", b"val1", None).await.unwrap();
     /// cache.clear().await.unwrap();
-    /// println!("Cache cleared");
-    /// # }
+    /// assert!(!cache.exists("key1").await.unwrap());
+    /// # });
     /// ```
     async fn clear(&self) -> CacheResult<()>;
 
@@ -217,19 +235,20 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("key1", b"val1", None).await.unwrap();
+    /// # cache.set("key2", b"val2", None).await.unwrap();
     /// let keys = vec!["key1".to_string(), "key2".to_string(), "key3".to_string()];
     /// let values = cache.get_many(&keys).await.unwrap();
-    ///
-    /// for (key, value) in keys.iter().zip(values.iter()) {
-    ///     match value {
-    ///         Some(data) => println!("{}: found", key),
-    ///         None => println!("{}: not found", key),
-    ///     }
-    /// }
-    /// # }
+    /// assert_eq!(values[0], Some(b"val1".to_vec()));
+    /// assert_eq!(values[1], Some(b"val2".to_vec()));
+    /// assert_eq!(values[2], None);
+    /// # });
     /// ```
     async fn get_many(&self, keys: &[String]) -> CacheResult<Vec<Option<Vec<u8>>>>;
 
@@ -244,10 +263,13 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # use std::time::Duration;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    /// use std::time::Duration;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
     /// let items = vec![
     ///     ("user:1".to_string(), b"Alice".to_vec()),
     ///     ("user:2".to_string(), b"Bob".to_vec()),
@@ -255,7 +277,9 @@ pub trait CacheBackend: Send + Sync {
     /// ];
     ///
     /// cache.set_many(&items, Some(Duration::from_secs(3600))).await.unwrap();
-    /// # }
+    /// assert!(cache.exists("user:1").await.unwrap());
+    /// assert!(cache.exists("user:2").await.unwrap());
+    /// # });
     /// ```
     async fn set_many(&self, items: &[(String, Vec<u8>)], ttl: Option<Duration>)
         -> CacheResult<()>;
@@ -270,13 +294,18 @@ pub trait CacheBackend: Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```no_run
-    /// # use reinhardt_backends::cache::CacheBackend;
-    /// # async fn example<C: CacheBackend>(cache: &C) {
+    /// ```rust
+    /// use reinhardt_backends::cache::CacheBackend;
+    /// use reinhardt_test::mock::DummyCache;
+    ///
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+    /// # let cache = DummyCache::new();
+    /// # cache.set("old:1", b"val1", None).await.unwrap();
+    /// # cache.set("old:2", b"val2", None).await.unwrap();
     /// let keys = vec!["old:1".to_string(), "old:2".to_string()];
     /// let deleted = cache.delete_many(&keys).await.unwrap();
-    /// println!("Deleted {} keys", deleted);
-    /// # }
+    /// assert_eq!(deleted, 2);
+    /// # });
     /// ```
     async fn delete_many(&self, keys: &[String]) -> CacheResult<usize>;
 }
@@ -295,51 +324,74 @@ mod tests {
         Ok(())
     }
 
-    // Dummy implementation for trait validation
-    struct DummyCache;
+    struct DummyCache {
+    storage: std::sync::Arc<std::sync::Mutex<std::collections::HashMap<String, Vec<u8>>>>,
+}
+
+impl DummyCache {
+    fn new() -> Self {
+        Self {
+            storage: std::sync::Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+        }
+    }
+}
 
     #[async_trait]
     impl CacheBackend for DummyCache {
-        async fn get(&self, _key: &str) -> CacheResult<Option<Vec<u8>>> {
-            Ok(None)
-        }
+        async fn get(&self, key: &str) -> CacheResult<Option<Vec<u8>>> {
+        Ok(self.storage.lock().unwrap().get(key).cloned())
+    }
 
-        async fn set(&self, _key: &str, _value: &[u8], _ttl: Option<Duration>) -> CacheResult<()> {
-            Ok(())
-        }
+        async fn set(&self, key: &str, value: &[u8], _ttl: Option<Duration>) -> CacheResult<()> {
+        self.storage.lock().unwrap().insert(key.to_string(), value.to_vec());
+        Ok(())
+    }
 
-        async fn delete(&self, _key: &str) -> CacheResult<bool> {
-            Ok(false)
-        }
+        async fn delete(&self, key: &str) -> CacheResult<bool> {
+        Ok(self.storage.lock().unwrap().remove(key).is_some())
+    }
 
-        async fn exists(&self, _key: &str) -> CacheResult<bool> {
-            Ok(false)
-        }
+        async fn exists(&self, key: &str) -> CacheResult<bool> {
+        Ok(self.storage.lock().unwrap().contains_key(key))
+    }
 
         async fn clear(&self) -> CacheResult<()> {
-            Ok(())
-        }
+        self.storage.lock().unwrap().clear();
+        Ok(())
+    }
 
         async fn get_many(&self, keys: &[String]) -> CacheResult<Vec<Option<Vec<u8>>>> {
-            Ok(vec![None; keys.len()])
-        }
+        let storage = self.storage.lock().unwrap();
+        Ok(keys.iter().map(|k| storage.get(k).cloned()).collect())
+    }
 
         async fn set_many(
             &self,
-            _items: &[(String, Vec<u8>)],
+            items: &[(String, Vec<u8>)],
             _ttl: Option<Duration>,
         ) -> CacheResult<()> {
-            Ok(())
+        let mut storage = self.storage.lock().unwrap();
+        for (key, value) in items {
+            storage.insert(key.clone(), value.clone());
         }
+        Ok(())
+    }
 
-        async fn delete_many(&self, _keys: &[String]) -> CacheResult<usize> {
-            Ok(0)
+        async fn delete_many(&self, keys: &[String]) -> CacheResult<usize> {
+        let mut storage = self.storage.lock().unwrap();
+        let mut count = 0;
+        for key in keys {
+            if storage.remove(key).is_some() {
+                count += 1;
+            }
         }
+        Ok(count)
+    }
     }
 
     #[tokio::test]
     async fn test_cache_trait_usage() {
-        let cache = DummyCache;
+        let cache = DummyCache::new();
         test_cache_generic(&cache).await.unwrap();
     }
 }

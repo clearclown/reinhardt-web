@@ -12,7 +12,7 @@ pub trait Cache: Send + Sync {
     /// Get a value from the cache
     async fn get<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: for<'de> Deserialize<'de> + Send;
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync;
 
     /// Set a value in the cache with optional TTL
     async fn set<T>(&self, key: &str, value: &T, ttl: Option<Duration>) -> Result<()>
@@ -31,7 +31,7 @@ pub trait Cache: Send + Sync {
     /// Get multiple values at once
     async fn get_many<T>(&self, keys: &[&str]) -> Result<HashMap<String, T>>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         let mut results = HashMap::new();
         for key in keys {

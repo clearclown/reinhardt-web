@@ -69,7 +69,7 @@ pub trait TaggedCache: Send + Sync {
     /// Get a value from the cache (delegates to underlying cache)
     async fn get<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: for<'de> Deserialize<'de> + Send;
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync;
 
     /// Delete a value from the cache (delegates to underlying cache)
     async fn delete(&self, key: &str) -> Result<()>;
@@ -244,7 +244,7 @@ impl<C: Cache> TaggedCache for TaggedCacheWrapper<C> {
 
     async fn get<T>(&self, key: &str) -> Result<Option<T>>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         self.cache.get(key).await
     }
