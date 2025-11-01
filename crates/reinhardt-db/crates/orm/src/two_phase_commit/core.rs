@@ -1444,7 +1444,7 @@ mod tests {
 			.await
 			.unwrap();
 
-		assert_eq!(coordinator.participant_count(), 2);
+		assert_eq!(coordinator.participant_count().await, 2);
 
 		coordinator.begin().await.unwrap();
 		assert_eq!(coordinator.state().unwrap(), TransactionState::Active);
