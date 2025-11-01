@@ -2,7 +2,6 @@
 //!
 //! Starts the development server.
 
-use askama::Template;
 use clap::Parser;
 use colored::Colorize;
 use hyper::server::conn::http1;
@@ -17,14 +16,9 @@ use std::io::BufReader;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tera::{Context, Tera};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
-
-#[derive(Template)]
-#[template(path = "welcome.tpl")]
-struct WelcomeTemplate {
-    version: &'static str,
-}
 
 #[derive(Parser, Debug)]
 #[command(name = "runserver")]
@@ -60,11 +54,19 @@ struct Args {
 }
 
 async fn handle_request(_req: Request<Incoming>) -> Result<Response<String>, Infallible> {
-    // Render the welcome page template
-    let template = WelcomeTemplate {
-        version: env!("CARGO_PKG_VERSION"),
-    };
-    let html = template.render().unwrap_or_else(|e| {
+    // Render the welcome page template using Tera
+    let template_str = include_str!("../../templates/welcome.tpl");
+
+    let mut tera = Tera::default();
+    tera.add_raw_template("welcome.tpl", template_str)
+        .unwrap_or_else(|e| {
+            eprintln!("Error adding template: {}", e);
+        });
+
+    let mut context = Context::new();
+    context.insert("version", env!("CARGO_PKG_VERSION"));
+
+    let html = tera.render("welcome.tpl", &context).unwrap_or_else(|e| {
         format!(
             "<html><body><h1>Error rendering template: {}</h1></body></html>",
             e

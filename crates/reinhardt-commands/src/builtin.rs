@@ -884,11 +884,53 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial_test::serial(runserver)]
     async fn test_runserver_command() {
-        let cmd = RunServerCommand;
-        let ctx = CommandContext::default();
+        // Test without server feature - should show warnings
+        #[cfg(not(feature = "server"))]
+        {
+            let cmd = RunServerCommand;
+            let ctx = CommandContext::default();
+            let result = cmd.execute(&ctx).await;
+            assert!(result.is_ok());
+        }
 
-        let result = cmd.execute(&ctx).await;
-        assert!(result.is_ok());
+        // Test with server feature - spawn server with timeout
+        // Server blocks indefinitely, so timeout is expected
+        #[cfg(feature = "server")]
+        {
+            use reinhardt_routers::UnifiedRouter;
+            use std::sync::Arc;
+            use std::time::Duration;
+
+            // Register a dummy router for the test
+            let router = Arc::new(UnifiedRouter::new());
+            reinhardt_routers::register_router(router);
+
+            // Create context with noreload option to disable autoreload
+            let mut ctx = CommandContext::default();
+            ctx.set_option("noreload".to_string(), "true".to_string());
+
+            // Spawn server in background task
+            let server_task = tokio::spawn(async move {
+                let cmd = RunServerCommand;
+                cmd.execute(&ctx).await
+            });
+
+            // Wait a short time for server to start
+            tokio::time::sleep(Duration::from_millis(200)).await;
+
+            // Abort the server task (server blocks, so we need to abort)
+            server_task.abort();
+
+            // Wait for task to be aborted
+            let result = server_task.await;
+
+            // Cleanup: clear the registered router
+            reinhardt_routers::clear_router();
+
+            // Task should have been cancelled
+            assert!(result.is_err(), "Server task should have been cancelled");
+        }
     }
 }

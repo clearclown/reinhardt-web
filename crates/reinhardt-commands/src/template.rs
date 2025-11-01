@@ -160,23 +160,31 @@ impl TemplateCommand {
             CommandError::ExecutionError(format!("Failed to compute relative path: {}", e))
         })?;
 
-        // Determine output file name (remove .tpl extension if present)
-        let output_path = if let Some(stem) = relative_path.to_str() {
-            if stem.ends_with(".tpl") {
-                output_base.join(&stem[..stem.len() - 4])
-            } else {
-                output_base.join(relative_path)
-            }
-        } else {
-            output_base.join(relative_path)
-        };
+        // Determine output file names
+        // We'll process .tpl extension and potentially create two files for .example files
+        let file_path_str = relative_path.to_str().ok_or_else(|| {
+            CommandError::ExecutionError("Invalid UTF-8 in file path".to_string())
+        })?;
+
+        let mut processed_name = file_path_str.to_string();
+
+        // Remove .tpl extension if present
+        if processed_name.ends_with(".tpl") {
+            processed_name = processed_name[..processed_name.len() - 4].to_string();
+        }
+
+        // Check if this is an .example file
+        let has_example_suffix = processed_name.contains(".example.");
+
+        // Create the file with .example (original name after .tpl removal)
+        let output_path_with_example = output_base.join(&processed_name);
 
         // Ensure parent directory exists
-        if let Some(parent) = output_path.parent() {
+        if let Some(parent) = output_path_with_example.parent() {
             fs::create_dir_all(parent).map_err(|e| {
                 CommandError::ExecutionError(format!(
                     "Failed to create parent directory for '{}': {}",
-                    output_path.display(),
+                    output_path_with_example.display(),
                     e
                 ))
             })?;
@@ -194,11 +202,11 @@ impl TemplateCommand {
         // Replace template variables
         let rendered_content = self.render_template(&template_content, context);
 
-        // Write to output file
-        let mut output_file = fs::File::create(&output_path).map_err(|e| {
+        // Write the file with .example suffix (if it has one)
+        let mut output_file = fs::File::create(&output_path_with_example).map_err(|e| {
             CommandError::ExecutionError(format!(
                 "Failed to create output file '{}': {}",
-                output_path.display(),
+                output_path_with_example.display(),
                 e
             ))
         })?;
@@ -208,18 +216,60 @@ impl TemplateCommand {
             .map_err(|e| {
                 CommandError::ExecutionError(format!(
                     "Failed to write to output file '{}': {}",
-                    output_path.display(),
+                    output_path_with_example.display(),
                     e
                 ))
             })?;
 
         ctx.verbose(&format!(
             "Created: {}",
-            output_path
+            output_path_with_example
                 .strip_prefix(output_base)
-                .unwrap_or(&output_path)
+                .unwrap_or(&output_path_with_example)
                 .display()
         ));
+
+        // If file has .example suffix, also create a version without it
+        if has_example_suffix {
+            let processed_name_without_example = if let Some(pos) = processed_name.rfind(".example.") {
+                format!(
+                    "{}{}",
+                    &processed_name[..pos],
+                    &processed_name[pos + 8..] // ".example" is 8 characters
+                )
+            } else {
+                processed_name.clone()
+            };
+
+            let output_path_without_example = output_base.join(processed_name_without_example);
+
+            // Write the same content to the file without .example
+            let mut output_file_no_example = fs::File::create(&output_path_without_example).map_err(|e| {
+                CommandError::ExecutionError(format!(
+                    "Failed to create output file '{}': {}",
+                    output_path_without_example.display(),
+                    e
+                ))
+            })?;
+
+            output_file_no_example
+                .write_all(rendered_content.as_bytes())
+                .map_err(|e| {
+                    CommandError::ExecutionError(format!(
+                        "Failed to write to output file '{}': {}",
+                        output_path_without_example.display(),
+                        e
+                    ))
+                })?;
+
+            ctx.verbose(&format!(
+                "Created: {}",
+                output_path_without_example
+                    .strip_prefix(output_base)
+                    .unwrap_or(&output_path_without_example)
+                    .display()
+            ));
+        }
 
         Ok(())
     }

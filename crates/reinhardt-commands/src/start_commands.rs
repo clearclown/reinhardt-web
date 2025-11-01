@@ -534,4 +534,95 @@ mod tests {
         let cmd = StartAppCommand;
         assert_eq!(cmd.name(), "startapp");
     }
+
+    #[test]
+    fn test_example_file_duplication() {
+        use crate::template::TemplateCommand;
+        use std::fs;
+        use tempfile::tempdir;
+
+        // Create temporary directories
+        let template_dir = tempdir().unwrap();
+        let output_dir = tempdir().unwrap();
+
+        // Create a mock template file with .example.toml
+        let settings_dir = template_dir.path().join("settings");
+        fs::create_dir_all(&settings_dir).unwrap();
+        let example_file = settings_dir.join("base.example.toml");
+        fs::write(&example_file, "debug = true\n").unwrap();
+
+        // Process the template
+        let cmd = TemplateCommand::new();
+        let context = crate::template::TemplateContext::new();
+        let ctx = crate::CommandContext::new(vec![]);
+
+        cmd.handle("test", Some(output_dir.path()), template_dir.path(), context, &ctx)
+            .unwrap();
+
+        // Verify that both files exist
+        let output_file_with_example = output_dir.path().join("settings").join("base.example.toml");
+        let output_file_without_example = output_dir.path().join("settings").join("base.toml");
+
+        assert!(
+            output_file_with_example.exists(),
+            "Expected base.example.toml to exist"
+        );
+        assert!(
+            output_file_without_example.exists(),
+            "Expected base.toml to exist"
+        );
+
+        // Verify both files have the same content
+        let content_with_example = fs::read_to_string(&output_file_with_example).unwrap();
+        let content_without_example = fs::read_to_string(&output_file_without_example).unwrap();
+
+        assert_eq!(content_with_example, "debug = true\n");
+        assert_eq!(content_without_example, "debug = true\n");
+    }
+
+    #[test]
+    fn test_tpl_and_example_file_duplication() {
+        use crate::template::TemplateCommand;
+        use std::fs;
+        use tempfile::tempdir;
+
+        // Create temporary directories
+        let template_dir = tempdir().unwrap();
+        let output_dir = tempdir().unwrap();
+
+        // Create a mock template file with both .example and .tpl
+        let settings_dir = template_dir.path().join("settings");
+        fs::create_dir_all(&settings_dir).unwrap();
+        let example_file = settings_dir.join("base.example.toml.tpl");
+        fs::write(&example_file, "debug = {{debug_value}}\n").unwrap();
+
+        // Process the template with context
+        let cmd = TemplateCommand::new();
+        let mut context = crate::template::TemplateContext::new();
+        context.insert("debug_value", "false");
+        let ctx = crate::CommandContext::new(vec![]);
+
+        cmd.handle("test", Some(output_dir.path()), template_dir.path(), context, &ctx)
+            .unwrap();
+
+        // Verify that both files exist (without .tpl but with/without .example)
+        let output_file_with_example = output_dir.path().join("settings").join("base.example.toml");
+        let output_file_without_example = output_dir.path().join("settings").join("base.toml");
+
+        assert!(
+            output_file_with_example.exists(),
+            "Expected base.example.toml to exist"
+        );
+        assert!(
+            output_file_without_example.exists(),
+            "Expected base.toml to exist"
+        );
+
+        // Verify both files have the same rendered content
+        let content_with_example = fs::read_to_string(&output_file_with_example).unwrap();
+        let content_without_example = fs::read_to_string(&output_file_without_example).unwrap();
+
+        assert_eq!(content_with_example, "debug = false\n");
+        assert_eq!(content_without_example, "debug = false\n");
+    }
 }

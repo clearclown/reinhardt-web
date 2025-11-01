@@ -10,7 +10,7 @@ reinhardt-routers = { workspace = true }
 reinhardt-template = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
-askama = "0.14.0"
+tera = { workspace = true }
 
 [lib]
 name = "{{ app_name }}"
