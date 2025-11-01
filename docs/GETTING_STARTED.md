@@ -119,7 +119,7 @@ hello/
 Edit `hello/views.rs`:
 
 ```rust
-use reinhardt::prelude::*;
+use reinhardt_http::{Request, Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -127,10 +127,13 @@ pub struct HelloResponse {
     message: String,
 }
 
-pub async fn hello_world() -> Result<JsonResponse<HelloResponse>, Error> {
-    Ok(JsonResponse::new(HelloResponse {
+pub async fn hello_world(_req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+    let response_data = HelloResponse {
         message: "Hello, Reinhardt!".to_string(),
-    }))
+    };
+
+    let json = serde_json::to_string(&response_data)?;
+    Ok(Response::new(StatusCode::OK, json.into()))
 }
 ```
 

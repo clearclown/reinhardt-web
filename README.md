@@ -48,23 +48,23 @@ Reinhardt brings together the best of three worlds:
 
 ### 🎯 Core Framework
 
-- **Type-Safe ORM**: QuerySet API with compile-time query validation
-- **Powerful Serializers**: Automatic validation and transformation
-- **Flexible ViewSets**: DRY principle for CRUD operations
-- **Smart Routing**: Automatic URL configuration from ViewSets
-- **Multi-Auth Support**: JWT, Token, Session, and Basic authentication
+- **Type-Safe ORM**: QuerySet API with compile-time query validation (using SeaQuery v1.0.0-rc1)
+- **Powerful Serializers**: Automatic validation and transformation with serde and validator
+- **Smart Routing**: Function-based and class-based route registration
+- **Multi-Auth Support**: JWT, Token, Session, and Basic authentication with BaseUser/FullUser traits
+- **ViewSets**: DRY principle for CRUD operations (planned for future release)
 
 ### 🚀 FastAPI-Inspired Ergonomics
 
-- **Parameter Extraction**: Type-safe `Path<T>`, `Query<T>`, `Header<T>`, `Cookie<T>`, `Json<T>`, `Form<T>` extractors
-- **Dependency Injection**: FastAPI-style DI system with `Depends<T>`, request scoping, and caching
+- **Parameter Extraction**: Access path and query parameters via `Request` fields
+- **Dependency Injection**: DI system for managing application dependencies (coming soon)
 - **Auto OpenAPI**: Generate OpenAPI 3.0 schemas from Rust types with `#[derive(Schema)]`
-- **Function-based Endpoints**: Ergonomic `#[endpoint]` macro for defining API routes (coming soon)
+- **Function-based Endpoints**: Register functions as route handlers
 - **Background Tasks**: Simple async task execution
 
 ### 🔋 Batteries Included
 
-- **Admin Panel**: Django-style auto-generated admin interface (coming soon)
+- **Admin Panel**: Django-style auto-generated admin interface with model management, filtering, and custom actions
 - **Middleware System**: Request/response processing pipeline
 - **Management Commands**: CLI tools for migrations, static files, and more
 - **Pagination**: PageNumber, LimitOffset, and Cursor strategies
@@ -74,8 +74,8 @@ Reinhardt brings together the best of three worlds:
 
 ### 🌍 Advanced Features
 
-- **GraphQL Support**: Build GraphQL APIs alongside REST (coming soon)
-- **WebSocket Support**: Real-time bidirectional communication (coming soon)
+- **GraphQL Support**: Build GraphQL APIs alongside REST with schema generation and subscriptions
+- **WebSocket Support**: Real-time bidirectional communication with channels, rooms, and authentication
 - **Internationalization**: Multi-language support
 - **Static Files**: CDN integration, hashed storage, and compression
 - **Browsable API**: HTML interface for API exploration
@@ -206,25 +206,27 @@ users/
 └── tests.rs
 ```
 
-### 5. Register ViewSets
+### 5. Register Routes
 
 Edit your app's `urls.rs`:
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
-use crate::views::UserViewSet;
-use std::sync::Arc;
+use hyper::Method;
+use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
     UnifiedRouter::new()
-        .viewset("/users", Arc::new(UserViewSet::new()))
+        .function("/users", Method::GET, views::list_users)
+        .function("/users/:id", Method::GET, views::get_user)
+        .function("/users", Method::POST, views::create_user)
 }
 ```
 
 Include in `src/config/urls.rs`:
 
 ```rust
-use reinhardt::prelude::*;
+use reinhardt_routers::UnifiedRouter;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
@@ -287,17 +289,36 @@ See [Settings Documentation](docs/SETTINGS_DOCUMENT.md) for more details.
 Define models in your app (e.g., `users/models.rs`):
 
 ```rust
-use reinhardt::prelude::*;
+use serde::{Serialize, Deserialize};
 
-#[derive(Model, Serialize, Deserialize)]
-#[reinhardt(table_name = "users")]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct User {
-    #[reinhardt(primary_key)]
     pub id: i64,
     pub email: String,
-    pub name: String,
+    pub username: String,
+    pub is_active: bool,
+}
+
+impl User {
+    pub async fn find_by_id(id: i64) -> Result<Self, Box<dyn std::error::Error>> {
+        // Query database using SeaQuery
+        // This is a simplified example
+        todo!("Implement database query with SeaQuery")
+    }
+
+    pub async fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Insert or update using SeaQuery
+        todo!("Implement database save with SeaQuery")
+    }
+
+    pub async fn delete(&self) -> Result<(), Box<dyn std::error::Error>> {
+        // Delete from database
+        todo!("Implement database delete with SeaQuery")
+    }
 }
 ```
+
+**Note**: Reinhardt uses [SeaQuery v1.0.0-rc1](https://crates.io/crates/sea-query) for SQL operations. The `#[derive(Model)]` macro is planned for future release to reduce boilerplate.
 
 Register in `src/config/apps.rs`:
 
@@ -317,29 +338,123 @@ pub fn get_installed_apps() -> Vec<String> {
 
 ### With Authentication
 
-Add to your app's `views/profile.rs`:
+Reinhardt provides Django-style user models with `BaseUser` and `FullUser` traits.
+
+Define your user model in `users/models.rs`:
 
 ```rust
-use reinhardt::prelude::*;
-use crate::models::User;
+use reinhardt_auth::{BaseUser, FullUser, PermissionsMixin};
+use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use serde::{Serialize, Deserialize};
 
-pub async fn get_profile(req: Request) -> Result<Json<UserProfile>> {
-    // Extract authenticated user from request
-    let user: Authenticated<User> = req.extensions().get().cloned()
-        .ok_or_else(|| Error::Unauthorized("Authentication required".to_string()))?;
+#[derive(Serialize, Deserialize, Clone)]
+pub struct User {
+    pub id: Uuid,
+    pub username: String,
+    pub email: String,
+    pub password_hash: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
+    pub is_active: bool,
+    pub is_staff: bool,
+    pub is_superuser: bool,
+    pub last_login: Option<DateTime<Utc>>,
+    pub date_joined: DateTime<Utc>,
+}
 
-    Ok(Json(user.to_profile()))
+impl BaseUser for User {
+    type PrimaryKey = Uuid;
+
+    fn get_username_field() -> &'static str { "username" }
+    fn get_username(&self) -> &str { &self.username }
+    fn password_hash(&self) -> Option<&str> { self.password_hash.as_deref() }
+    fn set_password_hash(&mut self, hash: String) { self.password_hash = Some(hash); }
+    fn last_login(&self) -> Option<DateTime<Utc>> { self.last_login }
+    fn set_last_login(&mut self, time: DateTime<Utc>) { self.last_login = Some(time); }
+    fn is_active(&self) -> bool { self.is_active }
+}
+
+impl FullUser for User {
+    fn username(&self) -> &str { &self.username }
+    fn email(&self) -> &str { &self.email }
+    fn first_name(&self) -> &str { &self.first_name }
+    fn last_name(&self) -> &str { &self.last_name }
+    fn is_staff(&self) -> bool { self.is_staff }
+    fn is_superuser(&self) -> bool { self.is_superuser }
+    fn date_joined(&self) -> DateTime<Utc> { self.date_joined }
 }
 ```
 
-Re-export in your app's `views.rs`:
+Use JWT authentication in your app's `views/profile.rs`:
 
 ```rust
-mod profile;
-pub use profile::*;
+use reinhardt_auth::{JwtAuth, BaseUser};
+use reinhardt_http::{Request, Response, StatusCode};
+use crate::models::User;
+
+pub async fn get_profile(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+    // Extract JWT token from Authorization header
+    let auth_header = req.headers.get("authorization")
+        .and_then(|h| h.to_str().ok())
+        .ok_or("Missing Authorization header")?;
+
+    let token = auth_header.strip_prefix("Bearer ")
+        .ok_or("Invalid Authorization header format")?;
+
+    // Verify token and get user ID
+    let jwt_auth = JwtAuth::new(b"your-secret-key");
+    let claims = jwt_auth.verify_token(token)?;
+
+    // Load user from database using claims.user_id
+    let user = User::find_by_id(&claims.user_id).await?;
+
+    // Check if user is active
+    if !user.is_active() {
+        return Err("User account is inactive".into());
+    }
+
+    // Return user profile as JSON
+    let json = serde_json::to_string(&user)?;
+    Ok(Response::new(StatusCode::OK, json.into()))
+}
 ```
 
-Register URL in your app's `urls.rs`:
+### With Parameter Extraction
+
+In your app's `views/user.rs`:
+
+```rust
+use reinhardt_http::{Request, Response, StatusCode};
+use crate::models::User;
+
+pub async fn get_user(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+    // Extract path parameter from request
+    let id = req.path_params.get("id")
+        .ok_or("Missing id parameter")?
+        .parse::<i64>()
+        .map_err(|_| "Invalid id format")?;
+
+    // Extract query parameters (e.g., ?include_inactive=true)
+    let include_inactive = req.query_params.get("include_inactive")
+        .and_then(|v| v.parse::<bool>().ok())
+        .unwrap_or(false);
+
+    // Fetch user from database
+    let user = User::find_by_id(id).await?;
+
+    // Check active status if needed
+    if !include_inactive && !user.is_active {
+        return Err("User is inactive".into());
+    }
+
+    // Return as JSON
+    let json = serde_json::to_string(&user)?;
+    Ok(Response::new(StatusCode::OK, json.into()))
+}
+```
+
+Register route with path parameter in `urls.rs`:
 
 ```rust
 use reinhardt_routers::UnifiedRouter;
@@ -348,41 +463,8 @@ use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
     UnifiedRouter::new()
-        .function("/profile", Method::GET, views::get_profile)
+        .function("/users/:id", Method::GET, views::get_user)
 }
-```
-
-### With Dependency Injection
-
-In your app's `views/user.rs`:
-
-```rust
-use reinhardt::prelude::*;
-use crate::models::User;
-
-pub async fn get_user(req: Request) -> Result<Json<User>> {
-    // Extract path parameter
-    let id: i64 = req.path_param("id")
-        .ok_or_else(|| Error::BadRequest("Missing id parameter".to_string()))?
-        .parse()
-        .map_err(|_| Error::BadRequest("Invalid id format".to_string()))?;
-
-    // Get database from DI context
-    let db = req.di_context()
-        .ok_or_else(|| Error::InternalServerError("DI context not available".to_string()))?
-        .resolve::<Database>()
-        .await?;
-
-    let user = User::find_by_id(id, &db).await?;
-    Ok(Json(user))
-}
-```
-
-Re-export in your app's `views.rs`:
-
-```rust
-mod user;
-pub use user::*;
 ```
 
 ### With Serializers and Validation
@@ -390,52 +472,76 @@ pub use user::*;
 In your app's `serializers/user.rs`:
 
 ```rust
-use reinhardt::prelude::*;
+use serde::{Serialize, Deserialize};
+use validator::Validate;
 
 #[derive(Serialize, Deserialize, Validate)]
 pub struct CreateUserRequest {
     #[validate(email)]
     pub email: String,
     #[validate(length(min = 3, max = 50))]
-    pub name: String,
+    pub username: String,
+    #[validate(length(min = 8))]
+    pub password: String,
 }
 
-#[derive(Serializer)]
-#[serializer(model = "User")]
-pub struct UserSerializer {
+#[derive(Serialize, Deserialize)]
+pub struct UserResponse {
     pub id: i64,
+    pub username: String,
     pub email: String,
-    pub name: String,
+    pub is_active: bool,
 }
-```
 
-Re-export in your app's `serializers.rs`:
-
-```rust
-mod user;
-pub use user::*;
+impl From<User> for UserResponse {
+    fn from(user: User) -> Self {
+        UserResponse {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            is_active: user.is_active,
+        }
+    }
+}
 ```
 
 In your app's `views/user.rs`:
 
 ```rust
-use reinhardt::prelude::*;
+use reinhardt_http::{Request, Response, StatusCode};
 use crate::models::User;
-use crate::serializers::{CreateUserRequest, UserSerializer};
+use crate::serializers::{CreateUserRequest, UserResponse};
+use validator::Validate;
 
-pub async fn create_user(req: Request) -> Result<Json<UserSerializer>> {
-    // Parse and validate request body
-    let create_req: CreateUserRequest = req.json().await?;
+pub async fn create_user(mut req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+    // Parse request body
+    let body_bytes = std::mem::take(&mut req.body);
+    let create_req: CreateUserRequest = serde_json::from_slice(&body_bytes)?;
+
+    // Validate request
     create_req.validate()?;
 
-    // Get database from DI context
-    let db = req.di_context()
-        .ok_or_else(|| Error::InternalServerError("DI context not available".to_string()))?
-        .resolve::<Database>()
-        .await?;
+    // Create user
+    let mut user = User {
+        id: 0, // Will be set by database
+        username: create_req.username,
+        email: create_req.email,
+        password_hash: None,
+        is_active: true,
+        // ... other fields
+    };
 
-    let user = User::create(&create_req, &db).await?;
-    Ok(Json(UserSerializer::from(user)))
+    // Hash password using BaseUser trait
+    user.set_password(&create_req.password)?;
+
+    // Save to database
+    user.save().await?;
+
+    // Convert to response
+    let response_data = UserResponse::from(user);
+    let json = serde_json::to_string(&response_data)?;
+
+    Ok(Response::new(StatusCode::CREATED, json.into()))
 }
 ```
 
@@ -448,11 +554,9 @@ pub async fn create_user(req: Request) -> Result<Json<UserSerializer>> {
 | **Core Features**     |
 | Routing               | ✅       | ✅        | ✅      |
 | Parameter Extraction  | ✅       | ✅        | ✅      |
-| Dependency Injection  | ✅       | ✅        | ✅      |
 | **Standard Features** |
-| ORM                   | Optional | ✅        | ✅      |
+| ORM (SeaQuery)        | Optional | ✅        | ✅      |
 | Serializers           | ❌       | ✅        | ✅      |
-| ViewSets              | ❌       | ✅        | ✅      |
 | Authentication        | ❌       | ✅        | ✅      |
 | Pagination            | ❌       | ✅        | ✅      |
 | **Advanced Features** |
@@ -460,6 +564,10 @@ pub async fn create_user(req: Request) -> Result<Json<UserSerializer>> {
 | GraphQL               | ❌       | ❌        | ✅      |
 | WebSockets            | ❌       | ❌        | ✅      |
 | i18n                  | ❌       | ❌        | ✅      |
+| **Planned Features**  |
+| ViewSets              | ❌       | 🔜       | 🔜      |
+| FastAPI-style DI      | ❌       | 🔜       | 🔜      |
+| #[derive(Model)]      | ❌       | 🔜       | 🔜      |
 | **Use Case**          |
 | Microservices         | ✅       | ⚠️        | ❌      |
 | REST APIs             | ✅       | ✅        | ✅      |
@@ -474,18 +582,16 @@ Reinhardt includes the following core components:
 
 ### Core Framework
 
-- **ORM**: Database abstraction layer with QuerySet API
-- **Serializers**: Type-safe data serialization and validation
-- **ViewSets**: Composable views for API endpoints
-- **Routers**: Automatic URL routing configuration
-- **Authentication**: JWT auth, permissions system
+- **ORM**: Database abstraction layer using SeaQuery v1.0.0-rc1 for SQL operations
+- **Serializers**: Type-safe data serialization and validation with serde and validator crates
+- **Routers**: Function-based and class-based URL routing
+- **Authentication**: JWT, Token, Session, and Basic authentication with BaseUser/FullUser traits
 - **Middleware**: Request/response processing pipeline
-- **Management Commands**: Django-style CLI for project management (`reinhardt-commands`)
+- **Management Commands**: Django-style CLI for project management (`reinhardt-admin`)
 
 ### REST API Features (reinhardt-rest)
 
 - **Authentication**: JWT, Token, Session, and Basic authentication
-- **Routing**: Automatic URL routing for ViewSets
 - **Browsable API**: HTML interface for API exploration
 - **Schema Generation**: OpenAPI/Swagger documentation
 - **Pagination**: PageNumber, LimitOffset, and Cursor pagination
@@ -493,13 +599,13 @@ Reinhardt includes the following core components:
 - **Throttling**: Rate limiting (AnonRateThrottle, UserRateThrottle, ScopedRateThrottle)
 - **Signals**: Event-driven hooks (pre_save, post_save, pre_delete, post_delete, m2m_changed)
 
-### FastAPI Inspired Features
+### Advanced Features
 
-- **Parameter Extraction**: Type-safe `Path<T>`, `Query<T>`, `Header<T>`, `Cookie<T>`, `Json<T>`, `Form<T>` extractors
-- **Dependency Injection**: FastAPI-style DI system with `Depends<T>`, request scoping, and caching
-- **Auto Schema Generation**: Derive OpenAPI schemas from Rust types with `#[derive(Schema)]`
-- **Function-based Endpoints**: Ergonomic `#[endpoint]` macro for defining API routes (coming soon)
-- **Background Tasks**: Simple background task execution
+- **Admin Panel**: Fully-featured admin interface (`reinhardt-admin`) with model management, filtering, bulk actions, and audit logging
+- **GraphQL**: Complete GraphQL support (`reinhardt-graphql`) with schema generation and subscription support
+- **WebSockets**: Real-time communication (`reinhardt-websockets`) with channels, rooms, authentication, and Redis integration
+- **Internationalization**: Multi-language support with translation catalogs
+- **Static Files**: CDN integration, hashed storage, and compression
 
 ## Documentation
 

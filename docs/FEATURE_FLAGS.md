@@ -38,15 +38,13 @@ reinhardt = { version = "0.1.0", features = ["full"] }
 | **Compile Time**                   | Fast     | Medium    | Slower  |
 | **Core Features**                  |
 | Routing & Views                    | ✅       | ✅        | ✅      |
-| Parameters (`Path`, `Query`, etc.) | ✅       | ✅        | ✅      |
-| Dependency Injection               | ✅       | ✅        | ✅      |
+| Request Parameters (path, query)   | ✅       | ✅        | ✅      |
 | **Database**                       |
-| ORM                                | ❌       | ✅        | ✅      |
+| ORM (SeaQuery)                     | ❌       | ✅        | ✅      |
 | Migrations                         | ❌       | ❌        | ✅      |
 | Content Types                      | ❌       | ❌        | ✅      |
 | **REST API**                       |
 | Serializers                        | ❌       | ✅        | ✅      |
-| ViewSets                           | ❌       | ✅        | ✅      |
 | Parsers                            | ❌       | ✅        | ✅      |
 | Renderers                          | ❌       | ✅        | ✅      |
 | Pagination                         | ❌       | ✅        | ✅      |
@@ -54,12 +52,12 @@ reinhardt = { version = "0.1.0", features = ["full"] }
 | Throttling                         | ❌       | ✅        | ✅      |
 | Versioning                         | ❌       | ✅        | ✅      |
 | **Security**                       |
-| Authentication                     | ❌       | ✅        | ✅      |
+| Authentication (JWT, Session)      | ❌       | ✅        | ✅      |
 | Permissions                        | ❌       | ✅        | ✅      |
 | **Advanced**                       |
 | Admin Panel                        | ❌       | ❌        | ✅      |
 | Forms                              | ❌       | ❌        | ✅      |
-| Templates                          | ❌       | ❌        | ✅      |
+| Templates (Tera)                   | ❌       | ❌        | ✅      |
 | GraphQL                            | ❌       | ❌        | ✅      |
 | WebSockets                         | ❌       | ❌        | ✅      |
 | Internationalization               | ❌       | ❌        | ✅      |
@@ -67,6 +65,10 @@ reinhardt = { version = "0.1.0", features = ["full"] }
 | Sessions                           | ❌       | ❌        | ✅      |
 | Static Files                       | ❌       | ❌        | ✅      |
 | Storage                            | ❌       | ❌        | ✅      |
+| **Planned Features**               |
+| ViewSets                           | 🔜       | 🔜        | 🔜      |
+| FastAPI-style DI (`Depends<T>`)    | 🔜       | 🔜        | 🔜      |
+| Type-safe extractors (`Path<T>`)   | 🔜       | 🔜        | 🔜      |
 
 ## Individual Feature Flags
 
@@ -77,15 +79,17 @@ For custom configurations, you can mix and match individual features:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0", default-features = false, features = [
-    "minimal",      # Views, params, and DI
+    "minimal",      # Views and routing
 ] }
 ```
 
 **Included in `minimal`:**
 
 - `reinhardt-views` - View functions and classes
-- `reinhardt-params` - Path, Query, Header, Cookie, Json, Form extractors
-- `reinhardt-di` - Dependency injection system
+- `reinhardt-http` - Request/Response types with path_params and query_params access
+- `reinhardt-routers` - URL routing system
+
+**Note**: FastAPI-style extractors (`Path<T>`, `Query<T>`, etc.) and `Depends<T>` DI are planned for future release.
 
 ### Database Features
 
@@ -110,14 +114,19 @@ reinhardt = { version = "0.1.0", features = [
 [dependencies]
 reinhardt = { version = "0.1.0", features = [
     "minimal",
-    "api",          # Serializers and ViewSets
+    "api",          # Serializers and REST utilities
 ] }
 ```
 
 **`api` includes:**
 
 - `reinhardt-serializers` - Data serialization and validation
-- `reinhardt-viewsets` - CRUD views for models
+- `reinhardt-parsers` - Request parsing (JSON, form data, etc.)
+- `reinhardt-renderers` - Response rendering (JSON, HTML, etc.)
+- `reinhardt-pagination` - Pagination strategies
+- `reinhardt-filters` - Query filtering and search
+
+**Note**: `reinhardt-viewsets` (CRUD views for models) is planned for future release.
 
 ### Authentication & Security
 
@@ -144,9 +153,9 @@ reinhardt = { version = "0.1.0", features = ["admin"] }
 
 **Includes:**
 
+- `reinhardt-admin` - Fully-featured admin interface with model management, filtering, bulk actions, and audit logging
 - `reinhardt-forms` - Form handling and validation
-- `reinhardt-templates` - Template rendering
-- (Note: `reinhardt-admin` is planned for future release)
+- `reinhardt-templates` - Template rendering with Tera engine
 
 #### Forms
 
@@ -168,7 +177,7 @@ reinhardt = { version = "0.1.0", features = ["graphql"] }
 
 **Includes:**
 
-- `reinhardt-graphql` - GraphQL schema and resolvers
+- `reinhardt-graphql` - Complete GraphQL support with schema generation, subscriptions, and GRPC integration
 
 #### Templates
 
@@ -179,8 +188,8 @@ reinhardt = { version = "0.1.0", features = ["templates"] }
 
 **Includes:**
 
-- `reinhardt-templates` - Template engine
-- `reinhardt-template` - Template utilities
+- `reinhardt-templates` - Tera template engine with Django-style filters and tags
+- `reinhardt-template` - Template utilities and renderers
 
 #### WebSockets
 
@@ -191,7 +200,7 @@ reinhardt = { version = "0.1.0", features = ["websockets"] }
 
 **Includes:**
 
-- `reinhardt-websockets` - WebSocket support
+- `reinhardt-websockets` - Real-time communication with channels, rooms, authentication, compression, and Redis integration
 
 #### Caching
 

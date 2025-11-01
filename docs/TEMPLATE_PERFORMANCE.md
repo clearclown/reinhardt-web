@@ -2,150 +2,83 @@
 
 ## Overview
 
-Reinhardt offers two template rendering strategies with different performance characteristics:
+Reinhardt uses Tera for runtime template rendering, providing a flexible and powerful template system with Jinja2-compatible syntax.
 
-1. **Runtime Rendering (Phase 2)** - Optimized single-pass variable substitution
-2. **Compile-time Rendering (Phase 3)** - Askama-based compile-time template compilation
+## Tera Template Engine
 
-## Performance Comparison
+### Performance Characteristics
 
-### Benchmark Results
-
-Based on our performance tests with 1,000 iterations:
-
-| Scenario | Runtime (Phase 2) | Compile-time (Askama) | Speedup |
-|----------|-------------------|------------------------|---------|
-| Simple template (10 variables) | 3.16ms | 549μs | **5.8x faster** |
-| End-to-end (10K iterations) | 47.21ms | 4.81ms | **9.8x faster** |
-
-### Complexity Analysis
-
-#### Runtime Rendering (TemplateHTMLRenderer)
-
-**Time Complexity**: O(n + m)
-- n = template length
-- m = number of variables
+**Time Complexity**: O(n)
+- n = template length and complexity
+- Runtime template parsing and rendering
 
 **Characteristics**:
-- Single-pass algorithm (Phase 2 optimization)
-- Linear performance scaling
-- HashMap-based O(1) variable lookup
-
-**Performance by variable count** (1,000 iterations):
-
-| Variables | Time |
-|-----------|------|
-| 10 | 9.66ms |
-| 50 | 47.57ms |
-| 100 | 90.14ms |
-| 500 | 464.93ms |
-| 1000 | 938.53ms |
-
-#### Compile-time Rendering (Askama)
-
-**Time Complexity**: O(1)
-- Templates compiled to native Rust code
-- Zero runtime template parsing overhead
-
-**Characteristics**:
-- Constant-time performance regardless of complexity
-- Templates embedded in binary
-- Type-safe variable substitution
-
-**Performance by list size** (1,000 iterations):
-
-| List Items | Time |
-|------------|------|
-| 10 | 4.34ms |
-| 50 | 16.74ms |
-| 100 | 33.39ms |
-| 500 | 172.40ms |
-| 1000 | 344.47ms |
+- Runtime template compilation with caching
+- Full Jinja2-compatible syntax
+- Template inheritance and includes
+- Custom filters and functions
+- Context-based variable rendering
 
 ## Memory Characteristics
 
-### Compile-time (Askama)
+### Tera Runtime Rendering
 
-**Binary size impact**: Templates compiled into executable
-- Template structure: Part of binary code
-- Runtime memory: Only data fields (56 bytes for UserTemplate)
-- No template parsing structures needed
+**Memory usage**: Template cache + context data
+- Templates cached after first compilation
+- Context data serialized for rendering
+- Efficient memory usage with lazy loading
+- Template reuse across requests
 
-### Runtime (TemplateHTMLRenderer)
+## Use Cases for Tera
 
-**Memory usage**: Template strings + context data
-- Template string: 65 bytes (example)
-- Context HashMap: 48 bytes (example)
-- **Total**: 113 bytes per template instance
+### ✅ Ideal Use Cases
 
-## When to Use Each Strategy
-
-### Use Compile-time (Askama) for:
-
-✅ **View Templates**
+**View Templates**
 - HTML pages served by the application
 - Admin panel templates
 - API documentation pages
 
-✅ **Email Templates**
+**Email Templates**
 - Transactional emails
 - Notification emails
 - Marketing emails
 
-✅ **Static Response Templates**
+**Dynamic Response Templates**
 - Error pages (404, 500, etc.)
 - Status pages
 - OAuth consent pages
 
-✅ **Developer-Managed Templates**
-- Templates in version control
-- Templates that rarely change
-- Templates requiring compile-time validation
-
-**Advantages**:
-- 5-10x faster rendering
-- Type-safe variable substitution
-- Compile-time syntax validation
-- Zero runtime overhead
-
-**Limitations**:
-- Must be known at compile time
-- Requires recompilation for changes
-- Cannot load from database
-
-### Use Runtime (TemplateHTMLRenderer) for:
-
-✅ **User-Provided Templates**
+**User-Provided Templates**
 - User-customizable email templates
 - User-defined report templates
 - Configurable notification formats
 
-✅ **Dynamic Templates**
+**Dynamic Templates**
 - Templates loaded from database
 - Templates generated programmatically
 - A/B testing variants
 
-✅ **Configuration Templates**
+**Configuration Templates**
 - Config file templates
 - Environment-specific templates
 - Feature flag-based templates
 
-**Advantages**:
+### Advantages
+
 - Complete flexibility
 - No recompilation needed
 - Database/file-based templates
 - Runtime template generation
-
-**Limitations**:
-- Slower than compile-time (but optimized)
-- No compile-time type checking
-- Higher memory usage
+- Full Jinja2 syntax compatibility
+- Template inheritance and includes
+- Custom filters and functions
+- Powerful template debugging
 
 ## Implementation Examples
 
-### Compile-time Template (Askama)
+### Tera Template Rendering
 
-**Template File**: `templates/user.html`
+**Template File**: `templates/user.tpl`
 
 ```html
 <!DOCTYPE html>
@@ -169,239 +102,186 @@ Based on our performance tests with 1,000 iterations:
 
 **Rust Code**:
 
-```rust
-use reinhardt_renderers::{AskamaRenderer, UserTemplate};
+```rust,ignore
+use reinhardt_renderers::TeraRenderer;
+use serde_json::json;
 
-// Define template struct
-let template = UserTemplate {
-    name: "Alice".to_string(),
-    email: "alice@example.com".to_string(),
-    age: 25,
-};
+// Create renderer
+let renderer = TeraRenderer::new();
 
-// Render (compile-time optimized)
-let renderer = AskamaRenderer::new();
-let html = renderer.render(&template)?;
+// Prepare context
+let context = json!({
+    "name": "Alice",
+    "email": "alice@example.com",
+    "age": 25
+});
+
+// Render template
+let html = renderer.render_template("user.tpl", &context)?;
 ```
 
-**Performance**: ~0.5μs per render (after compilation)
+### Dynamic Template from Database
 
-### Runtime Template (TemplateHTMLRenderer)
+```rust,ignore
+use tera::{Context, Tera};
 
-**Template String** (in code or loaded from DB):
+// Load template from database
+let template_str = db.get_template("user_email")?;
 
-```rust
-let template_str = r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <title>User Profile</title>
-</head>
-<body>
-    <h1>{{ name }}</h1>
-    <p>Email: {{ email }}</p>
-    <p>Age: {{ age }}</p>
-</body>
-</html>
-"#;
+// Create Tera instance
+let mut tera = Tera::default();
+tera.add_raw_template("user_email", &template_str)?;
+
+// Prepare context
+let mut context = Context::new();
+context.insert("user_name", "Alice");
+context.insert("activation_link", "https://example.com/activate/token");
+
+// Render
+let email_html = tera.render("user_email", &context)?;
 ```
 
-**Rust Code**:
+## Template Loading Strategies
 
-```rust
-use reinhardt_renderers::TemplateHTMLRenderer;
-use std::collections::HashMap;
+### File-based Templates
 
-let mut context = HashMap::new();
-context.insert("name".to_string(), "Alice".to_string());
-context.insert("email".to_string(), "alice@example.com".to_string());
-context.insert("age".to_string(), "25".to_string());
+```rust,ignore
+use tera::Tera;
 
-// Render (single-pass optimization)
-let html = TemplateHTMLRenderer::substitute_variables_single_pass(
-    template_str,
-    &context
-);
+// Load all templates from directory
+let tera = Tera::new("templates/**/*.tpl")?;
+
+// Render specific template
+let context = json!({"title": "Welcome"});
+let html = tera.render("index.tpl", &context)?;
 ```
 
-**Performance**: ~3μs per render (Phase 2 optimized)
+### Dynamic Templates
 
-## Strategy Selection
+```rust,ignore
+use tera::Tera;
 
-### Automatic Selection
+// Add template at runtime
+let mut tera = Tera::default();
+tera.add_raw_template("dynamic", "Hello {{ name }}!")?;
 
-Use `TemplateStrategySelector` for automatic strategy selection:
-
-```rust
-use reinhardt_renderers::strategy::{
-    TemplateStrategy,
-    TemplateStrategySelector,
-    TemplateSource
-};
-
-// Static template → Compile-time
-let source = TemplateSource::Static("user.html");
-let strategy = TemplateStrategySelector::select(&source);
-assert_eq!(strategy, TemplateStrategy::CompileTime);
-
-// Dynamic template → Runtime
-let source = TemplateSource::Dynamic("<h1>{{ title }}</h1>".to_string());
-let strategy = TemplateStrategySelector::select(&source);
-assert_eq!(strategy, TemplateStrategy::Runtime);
-
-// File-based selection by extension
-let source = TemplateSource::File("template.askama.html".to_string());
-let strategy = TemplateStrategySelector::select(&source);
-assert_eq!(strategy, TemplateStrategy::CompileTime);
+// Render
+let context = json!({"name": "World"});
+let result = tera.render("dynamic", &context)?;
 ```
 
-### Use Case Recommendations
+### Database Templates
 
-```rust
-// View templates
-let strategy = TemplateStrategySelector::recommend_for_use_case("view template");
-assert_eq!(strategy, TemplateStrategy::CompileTime);
+```rust,ignore
+use tera::Tera;
 
-// User templates
-let strategy = TemplateStrategySelector::recommend_for_use_case("user template");
-assert_eq!(strategy, TemplateStrategy::Runtime);
+// Load from database
+let template_content = db.get_template("email_notification")?;
+
+let mut tera = Tera::default();
+tera.add_raw_template("email", &template_content)?;
+
+// Render with user data
+let context = json!({
+    "user_name": user.name,
+    "notification_text": notification.text
+});
+
+let email_body = tera.render("email", &context)?;
 ```
-
-## Migration Guide
-
-### From Runtime to Compile-time
-
-**Before** (Runtime):
-
-```rust
-let mut context = HashMap::new();
-context.insert("name".to_string(), "Alice".to_string());
-context.insert("email".to_string(), "alice@example.com".to_string());
-
-let template_str = "<h1>{{ name }}</h1><p>{{ email }}</p>";
-let html = TemplateHTMLRenderer::substitute_variables_single_pass(
-    template_str,
-    &context
-);
-```
-
-**After** (Compile-time):
-
-1. Create template file `templates/user.html`:
-
-```html
-<h1>{{ name }}</h1>
-<p>{{ email }}</p>
-```
-
-2. Define template struct:
-
-```rust
-use askama::Template;
-
-#[derive(Template)]
-#[template(path = "user.html")]
-struct UserTemplate {
-    name: String,
-    email: String,
-}
-```
-
-3. Use template:
-
-```rust
-let template = UserTemplate {
-    name: "Alice".to_string(),
-    email: "alice@example.com".to_string(),
-};
-
-let renderer = AskamaRenderer::new();
-let html = renderer.render(&template)?;
-```
-
-**Result**: 5-10x performance improvement
 
 ## Best Practices
 
 ### Do's ✅
 
-1. **Use compile-time for static templates**
-   - View templates
-   - Email templates
-   - Static pages
+1. **Leverage template caching**
+   - Tera caches compiled templates automatically
+   - Reuse Tera instances across requests
+   - Load templates once at startup when possible
 
-2. **Use runtime for dynamic templates**
-   - User-provided templates
-   - Database templates
-   - Runtime-generated templates
+2. **Use structured contexts**
+   - Use `serde_json::json!` macro for clean context creation
+   - Prepare complex data structures before rendering
+   - Keep template logic simple
 
 3. **Profile before optimizing**
-   - Measure actual performance
+   - Measure actual performance impact
    - Consider total request time
-   - Balance flexibility vs speed
+   - Balance flexibility vs complexity
 
-4. **Leverage type safety**
-   - Compile-time templates catch errors early
-   - Use strongly-typed template structs
-   - Validate at compile time
+4. **Utilize template inheritance**
+   - Create base templates for common layouts
+   - Use `{% extends %}` and `{% block %}` effectively
+   - Reduce code duplication
+
+5. **Validate templates early**
+   - Test templates during development
+   - Use Tera's built-in error reporting
+   - Catch syntax errors before production
 
 ### Don'ts ❌
 
-1. **Don't use compile-time for user templates**
-   - Cannot compile user-provided templates
-   - Security risk with arbitrary code
+1. **Don't recreate Tera instances**
+   - Creating Tera instances is expensive
+   - Reuse instances across requests
+   - Consider using a global Tera instance
 
-2. **Don't over-optimize**
-   - Runtime is already fast (Phase 2)
-   - Consider other bottlenecks first
-   - Balance development time
+2. **Don't over-complicate templates**
+   - Keep business logic in Rust code
+   - Use templates for presentation only
+   - Avoid complex calculations in templates
 
-3. **Don't mix strategies unnecessarily**
-   - Pick one strategy per template type
-   - Keep architecture simple
-   - Document your choices
+3. **Don't ignore template errors**
+   - Handle rendering errors gracefully
+   - Provide fallback content when appropriate
+   - Log template errors for debugging
 
 ## Performance Optimization Tips
 
-### For Compile-time Templates
+### Template Loading
 
-1. **Keep templates simple**
-   - Minimize conditional logic
-   - Reduce nesting depth
-   - Use includes sparingly
+1. **Load templates at startup**
+   - Use `Tera::new("templates/**/*.tpl")` at initialization
+   - Avoid loading templates on every request
+   - Consider lazy loading for rarely-used templates
 
-2. **Pre-compute when possible**
+2. **Use template inheritance**
+   - Reduce duplication with base templates
+   - Share common layouts across pages
+   - Improve maintainability
+
+### Context Preparation
+
+1. **Pre-compute values**
+   - Calculate complex values in Rust
    - Format data before passing to template
-   - Calculate derived values in Rust
-   - Use template for presentation only
+   - Keep template logic simple
 
-### For Runtime Templates
+2. **Use efficient data structures**
+   - Serialize data efficiently
+   - Avoid unnecessary cloning
+   - Use references where possible
 
-1. **Reuse context objects**
-   - Pool HashMap instances
-   - Avoid repeated allocations
-   - Pre-size HashMap capacity
+### Caching Strategies
 
-2. **Minimize variable count**
-   - Use nested structures when appropriate
-   - Pre-format complex data
-   - Combine related variables
-
-3. **Cache rendered output**
+1. **Cache rendered output**
    - Cache frequently-used templates
-   - Use content hash as key
-   - Invalidate on data changes
+   - Use content hash as cache key
+   - Implement cache invalidation
+
+2. **Cache template compilation**
+   - Tera handles this automatically
+   - Templates compiled once and reused
+   - No manual intervention needed
 
 ## Summary
 
-| Aspect | Runtime (Phase 2) | Compile-time (Askama) |
-|--------|-------------------|-----------------------|
-| **Performance** | O(n + m), optimized | O(1), zero-cost |
-| **Speedup** | Baseline | 5-10x faster |
-| **Flexibility** | High | Low |
-| **Type Safety** | Runtime | Compile-time |
-| **Use Case** | Dynamic | Static |
-| **Memory** | Higher | Lower |
-| **Development** | Faster | Requires compilation |
+Reinhardt uses Tera for flexible, powerful template rendering with Jinja2-compatible syntax. Tera provides:
 
-**Recommendation**: Use compile-time (Askama) for static templates (views, emails) and runtime (TemplateHTMLRenderer) for dynamic templates (user-provided, database). This combination provides optimal performance while maintaining flexibility where needed.
+- **Runtime flexibility**: Load templates from files, database, or memory
+- **Rich feature set**: Template inheritance, includes, filters, functions
+- **Good performance**: Template caching and efficient rendering
+- **Developer-friendly**: Familiar Jinja2 syntax, excellent error messages
+- **Production-ready**: Battle-tested in many Rust applications
+
+**Recommendation**: Use Tera for all template rendering needs in Reinhardt applications. It provides the best balance of flexibility, features, and performance for modern web applications.
