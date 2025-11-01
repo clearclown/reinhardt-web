@@ -268,16 +268,6 @@ impl Default for DependencyProfiler {
 
 #[cfg(feature = "dev-tools")]
 impl ProfileReport {
-	/// Format the report as a human-readable string
-	///
-	/// # Example
-	///
-	/// ```rust
-	/// use reinhardt_di::profiling::DependencyProfiler;
-	/// use std::time::Duration;
-	///
-	/// let mut profiler = DependencyProfiler::new();
-	/// profiler.record("Database", Duration::from_millis(10), false);
 	/// Get the slowest dependencies
 	///
 	/// # Example
