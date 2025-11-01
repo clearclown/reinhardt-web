@@ -30,7 +30,7 @@ Automatic OpenAPI 3.0 schema generation from API endpoints, serializers, and vie
 
 #### Documentation UI
 
-- **Swagger UI Integration**: Built-in Swagger UI via `utoipa-swagger-ui` and `askama` templates
+- **Swagger UI Integration**: Built-in Swagger UI via `utoipa-swagger-ui`
   - HTML rendering with customizable title and spec URL
   - Request handler for serving Swagger UI pages
   - Automatic OpenAPI spec serving at `/api-docs/openapi.json`
@@ -192,7 +192,7 @@ When using SwaggerUI, the following endpoints are automatically available:
 
 This version uses `utoipa-swagger-ui` instead of custom templates. The API remains largely compatible, but some internal implementation details have changed:
 
-- Templates are no longer used (askama dependency removed)
+- Templates are no longer used
 - Swagger UI assets are served directly from `utoipa-swagger-ui`
 - OpenAPI schemas are converted to `utoipa` format internally
 - All existing public APIs remain unchanged

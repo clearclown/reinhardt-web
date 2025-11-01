@@ -1,10 +1,10 @@
 # reinhardt-templates
 
-Template engine for Reinhardt framework using Askama
+Template engine for Reinhardt framework using Tera
 
 ## Overview
 
-Template engine integration for rendering HTML responses. Provides a flexible template system built on Askama (Jinja-like template engine for Rust) with Django-inspired features including custom filters, file system loading, static file handling, and internationalization support.
+Template engine integration for rendering HTML responses. Provides a flexible template system built on Tera (Jinja2-like template engine for Rust) with Django-inspired features including custom filters, file system loading, static file handling, and internationalization support.
 
 ## Features
 
@@ -15,7 +15,7 @@ Template engine integration for rendering HTML responses. Provides a flexible te
 - **Variable substitution**: `{{ variable }}` syntax for inserting dynamic content
 - **Control structures**: `{% if %}`, `{% for %}` tags for conditional rendering and loops
 - **Template inheritance**: `{% extends %}` and `{% block %}` for template composition
-- **Basic filters**: Built-in Askama filters for data transformation
+- **Basic filters**: Built-in Tera filters for data transformation
 
 #### Template Management
 
@@ -33,7 +33,7 @@ Template engine integration for rendering HTML responses. Provides a flexible te
 
 #### Custom Filters (Django-compatible)
 
-All filters return `AskamaResult<T>` for error handling and can be used in Askama templates:
+All filters are available in Tera templates for data transformation:
 
 **String Transformation**
 
@@ -126,18 +126,17 @@ Basic i18n support with placeholder implementations:
 
 ### Basic Template Usage
 
-```rust
-use reinhardt_templates::Template;
-use askama::Template as AskamaTemplate;
+```rust,ignore
+use tera::{Context, Tera};
 
-#[derive(Template)]
-#[template(source = "Hello {{ name }}!", ext = "txt")]
-struct HelloTemplate {
-    name: String,
-}
+let mut tera = Tera::default();
+tera.add_raw_template("hello", "Hello {{ name }}!")?;
 
-let tmpl = HelloTemplate { name: "World".to_string() };
-assert_eq!(tmpl.render().unwrap(), "Hello World!");
+let mut context = Context::new();
+context.insert("name", "World");
+
+let result = tera.render("hello", &context)?;
+assert_eq!(result, "Hello World!");
 ```
 
 ### Template Loader
@@ -196,7 +195,7 @@ init_static_config(StaticConfig {
 
 ## Dependencies
 
-- **askama**: Jinja-like template engine for Rust
+- **tera**: Jinja2-like template engine for Rust
 - **serde**: Serialization support for template context
 - **thiserror**: Error handling
 - **reinhardt-i18n**: Internationalization support

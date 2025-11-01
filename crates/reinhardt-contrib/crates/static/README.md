@@ -179,7 +179,7 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
   - `init_template_static_config()` - Initialize from `StaticFilesConfig`
   - `init_template_static_config_with_manifest()` - Initialize with manifest support
   - Automatic hashed filename resolution via manifest
-  - Works with Askama's `{{ "path/to/file.css"|static }}` filter syntax
+  - Works with Tera's `{{ "path/to/file.css"|static }}` filter syntax
   - Supports custom static URLs (CDN, etc.)
   - Feature flag: `templates-integration` (optional)
 
@@ -393,7 +393,7 @@ let config = StaticFilesConfig {
 init_template_static_config(&config);
 ```
 
-Now in your Askama templates, you can use the `static` filter:
+Now in your Tera templates, you can use the `static` filter:
 
 ```html
 <!DOCTYPE html>
