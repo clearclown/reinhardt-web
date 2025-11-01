@@ -4,7 +4,7 @@ use crate::field::{FormField, Widget};
 pub struct BoundField<'a> {
 	#[allow(dead_code)]
 	form_name: String,
-	field: &'a Box<dyn FormField>,
+	field: &'a dyn FormField,
 	data: Option<&'a serde_json::Value>,
 	errors: &'a [String],
 	prefix: &'a str,
@@ -22,13 +22,13 @@ impl<'a> BoundField<'a> {
 	/// let data = serde_json::json!("John");
 	/// let errors = vec![];
 	///
-	/// let bound = BoundField::new("my_form".to_string(), &field, Some(&data), &errors, "");
+	/// let bound = BoundField::new("my_form".to_string(), field.as_ref(), Some(&data), &errors, "");
 	/// assert_eq!(bound.name(), "name");
 	/// assert_eq!(bound.value(), Some(&data));
 	/// ```
 	pub fn new(
 		form_name: String,
-		field: &'a Box<dyn FormField>,
+		field: &'a dyn FormField,
 		data: Option<&'a serde_json::Value>,
 		errors: &'a [String],
 		prefix: &'a str,
@@ -49,7 +49,7 @@ impl<'a> BoundField<'a> {
 	/// use reinhardt_forms::{BoundField, CharField, FormField};
 	///
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("email".to_string()));
-	/// let bound = BoundField::new("form".to_string(), &field, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), None, &[], "");
 	/// assert_eq!(bound.name(), "email");
 	/// ```
 	pub fn name(&self) -> &str {
@@ -65,11 +65,11 @@ impl<'a> BoundField<'a> {
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("email".to_string()));
 	///
 	// Without prefix
-	/// let bound = BoundField::new("form".to_string(), &field, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), None, &[], "");
 	/// assert_eq!(bound.html_name(), "email");
 	///
 	// With prefix
-	/// let bound_prefixed = BoundField::new("form".to_string(), &field, None, &[], "user");
+	/// let bound_prefixed = BoundField::new("form".to_string(), field.as_ref(), None, &[], "user");
 	/// assert_eq!(bound_prefixed.html_name(), "user-email");
 	/// ```
 	pub fn html_name(&self) -> String {
@@ -87,7 +87,7 @@ impl<'a> BoundField<'a> {
 	/// use reinhardt_forms::{BoundField, CharField, FormField};
 	///
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("username".to_string()));
-	/// let bound = BoundField::new("form".to_string(), &field, None, &[], "profile");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), None, &[], "profile");
 	///
 	/// assert_eq!(bound.id_for_label(), "id_profile-username");
 	/// ```
@@ -105,7 +105,7 @@ impl<'a> BoundField<'a> {
 	/// field.label = Some("Full Name".to_string());
 	/// let field_box: Box<dyn FormField> = Box::new(field);
 	///
-	/// let bound = BoundField::new("form".to_string(), &field_box, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field_box.as_ref(), None, &[], "");
 	/// assert_eq!(bound.label(), Some("Full Name"));
 	/// ```
 	pub fn label(&self) -> Option<&str> {
@@ -121,7 +121,7 @@ impl<'a> BoundField<'a> {
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("name".to_string()));
 	/// let data = serde_json::json!("Alice");
 	///
-	/// let bound = BoundField::new("form".to_string(), &field, Some(&data), &[], "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), Some(&data), &[], "");
 	/// assert_eq!(bound.value(), Some(&data));
 	/// ```
 	pub fn value(&self) -> Option<&serde_json::Value> {
@@ -137,7 +137,7 @@ impl<'a> BoundField<'a> {
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("email".to_string()));
 	/// let errors = vec!["Invalid email format".to_string(), "Email is required".to_string()];
 	///
-	/// let bound = BoundField::new("form".to_string(), &field, None, &errors, "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), None, &errors, "");
 	/// assert_eq!(bound.errors().len(), 2);
 	/// assert_eq!(bound.errors()[0], "Invalid email format");
 	/// ```
@@ -154,12 +154,12 @@ impl<'a> BoundField<'a> {
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("username".to_string()));
 	///
 	// Without errors
-	/// let bound_ok = BoundField::new("form".to_string(), &field, None, &[], "");
+	/// let bound_ok = BoundField::new("form".to_string(), field.as_ref(), None, &[], "");
 	/// assert!(!bound_ok.has_errors());
 	///
 	// With errors
 	/// let errors = vec!["Username is required".to_string()];
-	/// let bound_err = BoundField::new("form".to_string(), &field, None, &errors, "");
+	/// let bound_err = BoundField::new("form".to_string(), field.as_ref(), None, &errors, "");
 	/// assert!(bound_err.has_errors());
 	/// ```
 	pub fn has_errors(&self) -> bool {
@@ -173,7 +173,7 @@ impl<'a> BoundField<'a> {
 	/// use reinhardt_forms::{BoundField, CharField, EmailField, FormField, Widget};
 	///
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("name".to_string()));
-	/// let bound = BoundField::new("form".to_string(), &field, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), None, &[], "");
 	/// assert!(matches!(bound.widget(), Widget::TextInput));
 	///
 	/// let email_field: Box<dyn FormField> = Box::new(EmailField::new("email".to_string()));
@@ -194,7 +194,7 @@ impl<'a> BoundField<'a> {
 	/// field.help_text = Some("Must be at least 8 characters".to_string());
 	/// let field_box: Box<dyn FormField> = Box::new(field);
 	///
-	/// let bound = BoundField::new("form".to_string(), &field_box, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field_box.as_ref(), None, &[], "");
 	/// assert_eq!(bound.help_text(), Some("Must be at least 8 characters"));
 	/// ```
 	pub fn help_text(&self) -> Option<&str> {
@@ -211,7 +211,7 @@ impl<'a> BoundField<'a> {
 	/// field.required = true;
 	/// let field_box: Box<dyn FormField> = Box::new(field);
 	///
-	/// let bound = BoundField::new("form".to_string(), &field_box, None, &[], "");
+	/// let bound = BoundField::new("form".to_string(), field_box.as_ref(), None, &[], "");
 	/// assert!(bound.is_required());
 	///
 	/// let mut optional_field = CharField::new("nickname".to_string());
@@ -234,7 +234,7 @@ impl<'a> BoundField<'a> {
 	/// let field: Box<dyn FormField> = Box::new(CharField::new("username".to_string()));
 	/// let data = serde_json::json!("john_doe");
 	///
-	/// let bound = BoundField::new("form".to_string(), &field, Some(&data), &[], "");
+	/// let bound = BoundField::new("form".to_string(), field.as_ref(), Some(&data), &[], "");
 	/// let html = bound.as_widget();
 	///
 	/// assert!(html.contains(r#"type="text""#));
@@ -370,7 +370,7 @@ impl<'a> BoundField<'a> {
 	/// let field_box: Box<dyn FormField> = Box::new(field);
 	///
 	/// let data = serde_json::json!("test@example.com");
-	/// let bound = BoundField::new("form".to_string(), &field_box, Some(&data), &[], "");
+	/// let bound = BoundField::new("form".to_string(), field_box.as_ref(), Some(&data), &[], "");
 	/// let html = bound.as_field();
 	///
 	/// assert!(html.contains(r#"<label for="id_email">Email Address *</label>"#));
@@ -425,7 +425,7 @@ mod tests {
 		let data = serde_json::json!("John Doe");
 		let errors = vec![];
 
-		let bound = BoundField::new("test_form".to_string(), &field, Some(&data), &errors, "");
+		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
 
 		assert_eq!(bound.name(), "name");
 		assert_eq!(bound.html_name(), "name");
@@ -442,7 +442,7 @@ mod tests {
 
 		let bound = BoundField::new(
 			"test_form".to_string(),
-			&field,
+			field.as_ref(),
 			Some(&data),
 			&errors,
 			"profile",
@@ -458,7 +458,7 @@ mod tests {
 		let data = serde_json::json!("");
 		let errors = vec!["This field is required.".to_string()];
 
-		let bound = BoundField::new("test_form".to_string(), &field, Some(&data), &errors, "");
+		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
 
 		assert!(bound.has_errors());
 		assert_eq!(bound.errors().len(), 1);
@@ -477,7 +477,7 @@ mod tests {
 		let data = serde_json::json!("Test Value");
 		let errors = vec![];
 
-		let bound = BoundField::new("test_form".to_string(), &field, Some(&data), &errors, "");
+		let bound = BoundField::new("test_form".to_string(), field.as_ref(), Some(&data), &errors, "");
 		let html = bound.as_widget();
 
 		assert!(html.contains("type=\"text\""));
