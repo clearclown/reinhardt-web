@@ -406,8 +406,10 @@ mod tests {
 	#[tokio::test]
 	async fn test_csrf_middleware_post_with_valid_token_succeeds() {
 		let secret = "abcdefghijklmnopqrstuvwxyz012345";
-		let mut config = CsrfMiddlewareConfig::default();
-		config.check_referer_header = false;
+		let config = CsrfMiddlewareConfig {
+			check_referer_header: false,
+			..Default::default()
+		};
 
 		let mut csrf_middleware = CsrfMiddleware::with_config(config);
 		csrf_middleware.test_secret = Some(secret.to_string());
@@ -501,8 +503,10 @@ mod tests {
 	#[tokio::test]
 	async fn test_csrf_middleware_token_from_cookie() {
 		let secret = "abcdefghijklmnopqrstuvwxyz012345";
-		let mut config = CsrfMiddlewareConfig::default();
-		config.check_referer_header = false;
+		let config = CsrfMiddlewareConfig {
+			check_referer_header: false,
+			..Default::default()
+		};
 
 		let mut csrf_middleware = CsrfMiddleware::with_config(config);
 		csrf_middleware.test_secret = Some(secret.to_string());
@@ -635,9 +639,11 @@ mod tests {
 	#[tokio::test]
 	async fn test_csrf_middleware_referer_validation_success() {
 		let secret = "abcdefghijklmnopqrstuvwxyz012345";
-		let mut config = CsrfMiddlewareConfig::default();
-		config.check_referer_header = true;
-		config.trusted_origins = vec!["https://example.com".to_string()];
+		let config = CsrfMiddlewareConfig {
+			check_referer_header: true,
+			trusted_origins: vec!["https://example.com".to_string()],
+			..Default::default()
+		};
 
 		let mut middleware = CsrfMiddleware::with_config(config);
 		middleware.test_secret = Some(secret.to_string());
@@ -669,9 +675,11 @@ mod tests {
 	#[tokio::test]
 	async fn test_csrf_middleware_referer_validation_cross_origin_fails() {
 		let secret = "abcdefghijklmnopqrstuvwxyz012345";
-		let mut config = CsrfMiddlewareConfig::default();
-		config.check_referer_header = true;
-		config.trusted_origins = vec!["https://example.com".to_string()];
+		let config = CsrfMiddlewareConfig {
+			check_referer_header: true,
+			trusted_origins: vec!["https://example.com".to_string()],
+			..Default::default()
+		};
 
 		let mut middleware = CsrfMiddleware::with_config(config);
 		middleware.test_secret = Some(secret.to_string());
