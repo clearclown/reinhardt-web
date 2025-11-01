@@ -11,7 +11,8 @@ This document provides comprehensive, step-by-step procedures for releasing Rein
 - [Overview](#overview)
 - [Version Selection Guidelines](#version-selection-guidelines)
 - [Pre-Release Checklist](#pre-release-checklist)
-- [Release Workflow](#release-workflow)
+- [Manual Publishing Process (Without CI/CD)](#manual-publishing-process-without-cicd)
+- [Automated Publishing with CI/CD](#automated-publishing-with-cicd)
 - [CHANGELOG Management](#changelog-management)
 - [Multi-Crate Releases](#multi-crate-releases)
 - [Rollback Procedures](#rollback-procedures)
@@ -205,7 +206,11 @@ Common metadata issues:
 
 ---
 
-## Release Workflow
+## Manual Publishing Process (Without CI/CD)
+
+This section is preserved as a reference for cases where CI/CD automation is unavailable or when you need to perform completely manual publishing.
+
+**Recommended**: Normally, use the procedures in the "Automated Publishing with CI/CD" section.
 
 ### Step-by-Step Release Process
 
@@ -439,6 +444,244 @@ git push origin --tags
 Verify on GitHub:
 - Commit appears in history
 - Tag appears in "Releases" or "Tags" section
+
+---
+
+## Automated Publishing with CI/CD
+
+The Reinhardt project automatically publishes crates to crates.io when Git tags are pushed to the main branch.
+
+### Prerequisites
+
+#### GitHub Repository Setup
+
+Before using the automated publishing system, configure the following:
+
+**1. GitHub Secrets**
+
+Add `CARGO_REGISTRY_TOKEN` to repository secrets:
+- Navigate to Settings → Secrets and variables → Actions
+- Click "New repository secret"
+- Name: `CARGO_REGISTRY_TOKEN`
+- Value: Your crates.io API token (obtain from https://crates.io/settings/tokens)
+
+**2. GitHub Labels**
+
+Create a `release` label:
+- Navigate to Issues → Labels → New label
+- Name: `release`
+- Description: `Trigger automatic crates.io publishing`
+- Color: `#0e8a16` (green)
+
+**3. Branch Protection Rules (Optional but Recommended)**
+
+Configure main branch protection:
+- Navigate to Settings → Branches → Branch protection rules → Add rule
+- Branch name pattern: `main`
+- Enable:
+  - ✅ Require pull request reviews before merging
+  - ✅ Require status checks to pass before merging
+  - Select `Publish Dry-Run` (this check appears after first workflow run)
+  - ✅ Require branches to be up to date before merging
+
+#### Development Prerequisites
+
+- PR has been merged and changes are reflected in the main branch
+- Cargo.toml version has been updated
+- CHANGELOG.md has been updated
+- Dry-run checks passed during PR review
+
+### Publishing Workflow
+
+#### Step 1-4: Normal Development Process
+
+Follow the normal development process to create and merge a PR.
+
+```bash
+# 1. Develop on feature branch
+git checkout -b feature/update-reinhardt-orm
+
+# 2. Update Cargo.toml
+vim crates/reinhardt-orm/Cargo.toml  # version = "0.2.0"
+
+# 3. Update CHANGELOG.md
+vim crates/reinhardt-orm/CHANGELOG.md
+
+# 4. Create commit
+git add crates/reinhardt-orm/Cargo.toml crates/reinhardt-orm/CHANGELOG.md
+git commit -m "feat(orm): Add support for async connection pooling
+
+..."
+
+# 5. Create PR
+git push origin feature/update-reinhardt-orm
+
+# 6. Create PR on GitHub and add `release` label
+# 7. Verify dry-run check passes → Merge PR
+```
+
+#### Step 5: PR Merge (Auto-tag Generation Trigger)
+
+**Important**: Automatic tag generation only occurs on merge if the PR has the `release` label.
+
+After PR merge, the `publish-on-merge.yml` workflow automatically executes:
+
+1. Detects changed Cargo.toml files from the merged PR
+2. Extracts crate name and version from each Cargo.toml
+3. Compares with existing tags and creates only new tags
+4. Pushes Git tags to remote (sequentially with 30-second intervals)
+
+**Tag Creation Example**:
+- Crate name: `reinhardt-orm`
+- Version: `0.2.0`
+- Generated tag: `reinhardt-orm-v0.2.0`
+
+#### Step 6: Automatic Publishing on Tag Push
+
+When a tag is pushed, the `publish-on-tag.yml` workflow automatically executes:
+
+1. Verifies tag exists on main branch
+2. Extracts crate name and version from tag name
+3. Verifies version matches Cargo.toml
+4. Runs final dry-run
+5. Executes `cargo ws publish -p <crate-name>`
+6. Extracts release notes from CHANGELOG.md
+7. Creates GitHub Release automatically
+
+**Progress Monitoring**:
+- Check workflow execution in GitHub Actions tab
+- Completes in approximately 3-5 minutes (depending on crate size)
+
+#### Step 7: Verify Publication
+
+After successful publication:
+- ✅ **crates.io**: https://crates.io/crates/reinhardt-orm
+- ✅ **GitHub Releases**: Release automatically created on tag page
+- ✅ **docs.rs**: Documentation automatically builds within a few minutes
+
+### Using the `release` Label
+
+Trigger automatic publishing by adding the `release` label to the PR:
+
+1. **Add label to new PR**:
+   - GitHub PR screen, right-side "Labels" section
+   - Select `release` label
+
+2. **Add label to existing PR**:
+   - Click "Labels" on PR screen
+   - Check `release` label
+
+3. **Verification**:
+   - Confirm green `release` label appears on PR
+   - Dry-run workflow automatically executes
+
+### Troubleshooting
+
+#### Issue: "Tag is NOT on main branch" Error
+
+**Cause**: Tag does not exist on main branch
+
+**Solution**:
+```bash
+# Check current branch
+git branch
+
+# If not on main, switch to main and recreate tag
+git checkout main
+git pull origin main
+```
+
+Normally, `publish-on-merge.yml` automatically creates tags from the main branch, so this error should not occur.
+
+#### Issue: "Version mismatch" Error
+
+**Cause**: Cargo.toml version does not match tag version
+
+**Solution**:
+```bash
+# Delete tag (if error occurred on GitHub Actions)
+git tag -d reinhardt-orm-v0.2.0
+git push origin :refs/tags/reinhardt-orm-v0.2.0
+
+# Verify Cargo.toml version
+cargo metadata --no-deps --format-version 1 | jq '.packages[] | select(.name == "reinhardt-orm") | .version'
+
+# Create new PR with correct version
+```
+
+#### Issue: Publishing Failed
+
+**Check**:
+1. Is `CARGO_REGISTRY_TOKEN` correctly configured?
+2. Is Cargo.toml metadata (description, license, repository) complete?
+3. Are all dependency crates already published?
+
+**Solution**:
+```bash
+# Delete failed tag
+git tag -d reinhardt-orm-v0.2.0
+git push origin :refs/tags/reinhardt-orm-v0.2.0
+
+# Fix issues, create PR → merge → auto-generate tags again
+```
+
+**Automatic Retry**: `publish-on-tag.yml` automatically retries up to 3 times with exponential backoff.
+
+#### Issue: Dry-run Check Not Executing
+
+**Cause**: PR does not have `release` label
+
+**Solution**:
+1. Add `release` label to PR
+2. Manually trigger `publish-dry-run` workflow from GitHub Actions tab
+
+#### Issue: Dependency Error During Multi-Crate Publishing
+
+**Cause**: Crates.io index update time lag
+
+**Solution**: Tags are automatically pushed at 30-second intervals, so this usually isn't an issue. If errors occur, `publish-on-tag.yml` automatically retries.
+
+### Recommended Multi-Crate Release Process
+
+The process is the same even when releasing multiple crates with dependencies:
+
+```bash
+# Update multiple Cargo.toml files
+vim crates/reinhardt-types/Cargo.toml  # version = "0.2.0"
+vim crates/reinhardt-orm/Cargo.toml    # version = "0.3.0" (depends on reinhardt-types v0.2.0)
+
+# Update both CHANGELOG.md files
+vim crates/reinhardt-types/CHANGELOG.md
+vim crates/reinhardt-orm/CHANGELOG.md
+
+# Create PR + add `release` label + merge
+# → Both tags automatically created at 30-second intervals
+# → Auto-publish following dependency order (reinhardt-types → reinhardt-orm)
+```
+
+**Reason**: `publish-on-merge.yml` automatically detects changed Cargo.toml files and pushes tags sequentially considering dependencies.
+
+### Manual Tag Creation (Emergency)
+
+If automatic tag generation fails, you can manually create and push tags:
+
+```bash
+# Switch to main branch
+git checkout main
+git pull origin main
+
+# Create tag
+TAG="reinhardt-orm-v0.2.0"
+git tag "$TAG" -m "Release reinhardt-orm v0.2.0"
+
+# Verify tag is on main branch
+git merge-base --is-ancestor "$TAG" main && echo "✅ Tag is on main" || echo "❌ Tag is NOT on main"
+
+# Push tag → automatic publishing starts
+git push origin "$TAG"
+```
+
+**Note**: Even with manual tag creation, automatic publishing via `publish-on-tag.yml` still executes.
 
 ---
 
