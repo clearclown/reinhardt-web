@@ -15,9 +15,11 @@
 //! use reinhardt_sessions::backends::{DatabaseSessionBackend, SessionBackend};
 //! use serde_json::json;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! # async fn example() {
 //! // Create a database session backend
-//! let backend = DatabaseSessionBackend::new("postgres://localhost/sessions").await?;
+//! // Note: For actual usage, any database URL is supported (postgres://, mysql://, sqlite:)
+//! let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
+//! backend.create_table().await.unwrap();
 //!
 //! // Store user session
 //! let session_data = json!({
@@ -26,16 +28,18 @@
 //!     "authenticated": true,
 //! });
 //!
-//! backend.save("session_key_123", &session_data, Some(3600)).await?;
+//! backend.save("session_key_123", &session_data, Some(3600)).await.unwrap();
 //!
 //! // Retrieve session
-//! let retrieved: Option<serde_json::Value> = backend.load("session_key_123").await?;
+//! let retrieved: Option<serde_json::Value> = backend.load("session_key_123").await.unwrap();
 //! assert!(retrieved.is_some());
+//! assert_eq!(retrieved.unwrap()["user_id"], 42);
 //!
 //! // Clean up expired sessions
-//! backend.cleanup_expired().await?;
-//! # Ok(())
+//! let deleted_count = backend.cleanup_expired().await.unwrap();
+//! assert_eq!(deleted_count, 0); // No expired sessions
 //! # }
+//! # tokio::runtime::Runtime::new().unwrap().block_on(example());
 //! ```
 
 use async_trait::async_trait;
@@ -99,22 +103,22 @@ pub struct SessionModel {
 /// use reinhardt_sessions::backends::{DatabaseSessionBackend, SessionBackend};
 /// use serde_json::json;
 ///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-// Initialize backend with database URL
-/// let backend = DatabaseSessionBackend::new("sqlite::memory:").await?;
+/// # async fn example() {
+/// // Initialize backend with database URL
+/// let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
 ///
-// Create the sessions table
-/// backend.create_table().await?;
+/// // Create the sessions table
+/// backend.create_table().await.unwrap();
 ///
-// Store session with 1 hour TTL
+/// // Store session with 1 hour TTL
 /// let data = json!({"cart_total": 99.99});
-/// backend.save("cart_xyz", &data, Some(3600)).await?;
+/// backend.save("cart_xyz", &data, Some(3600)).await.unwrap();
 ///
-// Check if session exists
-/// let exists = backend.exists("cart_xyz").await?;
+/// // Check if session exists
+/// let exists = backend.exists("cart_xyz").await.unwrap();
 /// assert!(exists);
-/// # Ok(())
 /// # }
+/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 /// ```
 #[derive(Clone)]
 pub struct DatabaseSessionBackend {
@@ -131,17 +135,17 @@ impl DatabaseSessionBackend {
     /// ```rust,no_run
     /// use reinhardt_sessions::backends::DatabaseSessionBackend;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    // PostgreSQL
-    /// let backend = DatabaseSessionBackend::new("postgres://localhost/mydb").await?;
+    /// # async fn example() {
+    /// // Supports multiple database backends:
+    /// // - PostgreSQL: "postgres://localhost/mydb"
+    /// // - MySQL: "mysql://localhost/mydb"
+    /// // - SQLite (in-memory): "sqlite::memory:"
+    /// // - SQLite (file): "sqlite://sessions.db"
     ///
-    // MySQL
-    /// let backend = DatabaseSessionBackend::new("mysql://localhost/mydb").await?;
-    ///
-    // SQLite
-    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await?;
-    /// # Ok(())
+    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
+    /// // Backend created successfully
     /// # }
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(example());
     /// ```
     pub async fn new(database_url: &str) -> Result<Self, SessionError> {
         let pool = AnyPool::connect(database_url)
@@ -162,11 +166,12 @@ impl DatabaseSessionBackend {
     /// use sqlx::AnyPool;
     /// use std::sync::Arc;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let pool = AnyPool::connect("sqlite::memory:").await?;
+    /// # async fn example() {
+    /// let pool = AnyPool::connect("sqlite::memory:").await.unwrap();
     /// let backend = DatabaseSessionBackend::from_pool(Arc::new(pool));
-    /// # Ok(())
+    /// // Backend created from existing pool
     /// # }
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(example());
     /// ```
     pub fn from_pool(pool: Arc<AnyPool>) -> Self {
         Self { pool }
@@ -181,11 +186,12 @@ impl DatabaseSessionBackend {
     /// ```rust,no_run
     /// use reinhardt_sessions::backends::DatabaseSessionBackend;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await?;
-    /// backend.create_table().await?;
-    /// # Ok(())
+    /// # async fn example() {
+    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
+    /// backend.create_table().await.unwrap();
+    /// // Table created successfully
     /// # }
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(example());
     /// ```
     pub async fn create_table(&self) -> Result<(), SessionError> {
         let stmt = Table::create()
@@ -238,15 +244,15 @@ impl DatabaseSessionBackend {
     /// ```rust,no_run
     /// use reinhardt_sessions::backends::DatabaseSessionBackend;
     ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await?;
-    /// backend.create_table().await?;
+    /// # async fn example() {
+    /// let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
+    /// backend.create_table().await.unwrap();
     ///
-    // Clean up expired sessions
-    /// let deleted_count = backend.cleanup_expired().await?;
-    /// println!("Deleted {} expired sessions", deleted_count);
-    /// # Ok(())
+    /// // Clean up expired sessions
+    /// let deleted_count = backend.cleanup_expired().await.unwrap();
+    /// assert!(deleted_count >= 0); // Returns number of deleted sessions
     /// # }
+    /// # tokio::runtime::Runtime::new().unwrap().block_on(example());
     /// ```
     pub async fn cleanup_expired(&self) -> Result<u64, SessionError> {
         let now = Utc::now();

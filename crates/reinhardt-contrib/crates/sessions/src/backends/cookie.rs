@@ -119,12 +119,12 @@ impl CookieSessionBackend {
         // Generate random nonce
         let mut nonce_bytes = [0u8; NONCE_SIZE];
         OsRng.fill_bytes(&mut nonce_bytes);
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = Nonce::from(nonce_bytes);
 
         // Encrypt data
         let encrypted = self
             .cipher
-            .encrypt(nonce, data)
+            .encrypt(&nonce, data)
             .map_err(|e| SessionError::SerializationError(format!("Encryption failed: {}", e)))?;
 
         // Combine nonce and encrypted data
@@ -166,12 +166,15 @@ impl CookieSessionBackend {
 
         // Extract nonce and encrypted data
         let (nonce_bytes, encrypted) = data_with_nonce.split_at(NONCE_SIZE);
-        let nonce = Nonce::from_slice(nonce_bytes);
+        // SAFETY: We checked the length above, nonce_bytes is exactly NONCE_SIZE bytes
+        let nonce_array: [u8; NONCE_SIZE] = nonce_bytes.try_into()
+            .map_err(|_| SessionError::SerializationError("Invalid nonce size".to_string()))?;
+        let nonce = Nonce::from(nonce_array);
 
         // Decrypt data
         let decrypted = self
             .cipher
-            .decrypt(nonce, encrypted)
+            .decrypt(&nonce, encrypted)
             .map_err(|e| SessionError::SerializationError(format!("Decryption failed: {}", e)))?;
 
         Ok(decrypted)
@@ -270,7 +273,7 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    const TEST_ENCRYPTION_KEY: &[u8; 32] = b"test_encryption_key_32_bytes_12";
+    const TEST_ENCRYPTION_KEY: &[u8; 32] = b"test_encryption_key_32bytes_ok!!";
     const TEST_SIGNING_SECRET: &[u8] = b"test_signing_secret_key";
 
     #[tokio::test]

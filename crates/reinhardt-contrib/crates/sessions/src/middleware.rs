@@ -445,7 +445,7 @@ mod tests {
         let backend = InMemorySessionBackend::new();
 
         // Pre-create a session
-        let mut session = Session::new(&backend);
+        let mut session = Session::new(backend.clone());
         session.set("existing_data", "test_value").unwrap();
         session.save().await.unwrap();
         let session_key = session.session_key().unwrap().to_string();

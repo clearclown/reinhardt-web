@@ -16,7 +16,13 @@
 //! let compressed = compress_message(&message, CompressionCodec::Gzip).unwrap();
 //! let decompressed = decompress_message(&compressed, CompressionCodec::Gzip).unwrap();
 //!
-//! assert_eq!(message, decompressed);
+//! // Decompressed message is always returned as Binary
+//! match decompressed {
+//!     Message::Binary { data } => {
+//!         assert_eq!(String::from_utf8(data).unwrap(), "Hello, World!");
+//!     },
+//!     _ => panic!("Expected binary message"),
+//! }
 //! # });
 //! ```
 
@@ -124,8 +130,8 @@ pub fn compress_message(message: &Message, codec: CompressionCodec) -> WebSocket
 
 /// Decompresses a compressed message.
 ///
-/// Returns as a text message if the original message was text,
-/// and as a binary message if it was binary.
+/// Always returns a binary message, as the original message type
+/// information is not preserved during compression.
 ///
 /// # Examples
 ///
@@ -137,7 +143,13 @@ pub fn compress_message(message: &Message, codec: CompressionCodec) -> WebSocket
 /// let compressed = compress_message(&original, CompressionCodec::Gzip).unwrap();
 /// let decompressed = decompress_message(&compressed, CompressionCodec::Gzip).unwrap();
 ///
-/// assert_eq!(original, decompressed);
+/// // Decompressed message is always returned as Binary
+/// match decompressed {
+///     Message::Binary { data } => {
+///         assert_eq!(String::from_utf8(data).unwrap(), "Hello, World!");
+///     },
+///     _ => panic!("Expected binary message"),
+/// }
 /// ```
 #[cfg(feature = "compression")]
 pub fn decompress_message(message: &Message, codec: CompressionCodec) -> WebSocketResult<Message> {

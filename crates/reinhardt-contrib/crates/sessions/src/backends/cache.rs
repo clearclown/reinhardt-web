@@ -50,7 +50,7 @@ pub trait SessionBackend: Send + Sync + Clone {
     /// Load session data by key
     async fn load<T>(&self, session_key: &str) -> Result<Option<T>, SessionError>
     where
-        T: for<'de> Deserialize<'de> + Send;
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync;
 
     /// Save session data with optional TTL (in seconds)
     async fn save<T>(
@@ -120,7 +120,7 @@ impl Default for InMemorySessionBackend {
 impl SessionBackend for InMemorySessionBackend {
     async fn load<T>(&self, session_key: &str) -> Result<Option<T>, SessionError>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         self.cache
             .get(session_key)
@@ -206,7 +206,7 @@ impl<C: Cache + Clone> CacheSessionBackend<C> {
 impl<C: Cache + Clone + 'static> SessionBackend for CacheSessionBackend<C> {
     async fn load<T>(&self, session_key: &str) -> Result<Option<T>, SessionError>
     where
-        T: for<'de> Deserialize<'de> + Send,
+        T: for<'de> Deserialize<'de> + Serialize + Send + Sync,
     {
         self.cache
             .get(session_key)

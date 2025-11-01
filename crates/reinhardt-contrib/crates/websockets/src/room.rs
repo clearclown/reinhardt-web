@@ -695,6 +695,204 @@ impl RoomManager {
             rooms.remove(&id);
         }
     }
+
+    /// Add a client to a specific room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    /// use reinhardt_websockets::WebSocketConnection;
+    /// use tokio::sync::mpsc;
+    /// use std::sync::Arc;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("game".to_string()).await;
+    ///
+    /// let (tx, _rx) = mpsc::unbounded_channel();
+    /// let conn = Arc::new(WebSocketConnection::new("player1".to_string(), tx));
+    ///
+    /// manager.join_room("game".to_string(), conn).await.unwrap();
+    /// # });
+    /// ```
+    pub async fn join_room(
+        &self,
+        room_id: String,
+        connection: Arc<WebSocketConnection>,
+    ) -> RoomResult<()> {
+        let room = self
+            .get_room(&room_id)
+            .await
+            .ok_or_else(|| RoomError::RoomNotFound(room_id.clone()))?;
+
+        let client_id = connection.id().to_string();
+        room.join(client_id, connection).await
+    }
+
+    /// Remove a client from a specific room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    /// use reinhardt_websockets::WebSocketConnection;
+    /// use tokio::sync::mpsc;
+    /// use std::sync::Arc;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("chat".to_string()).await;
+    ///
+    /// let (tx, _rx) = mpsc::unbounded_channel();
+    /// let conn = Arc::new(WebSocketConnection::new("user1".to_string(), tx));
+    ///
+    /// manager.join_room("chat".to_string(), conn).await.unwrap();
+    /// manager.leave_room("chat", "user1").await.unwrap();
+    /// # });
+    /// ```
+    pub async fn leave_room(&self, room_id: &str, user_id: &str) -> RoomResult<()> {
+        let room = self
+            .get_room(room_id)
+            .await
+            .ok_or_else(|| RoomError::RoomNotFound(room_id.to_string()))?;
+
+        room.leave(user_id).await
+    }
+
+    /// Get the number of clients in a specific room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    /// use reinhardt_websockets::WebSocketConnection;
+    /// use tokio::sync::mpsc;
+    /// use std::sync::Arc;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("lobby".to_string()).await;
+    ///
+    /// let (tx, _rx) = mpsc::unbounded_channel();
+    /// let conn = Arc::new(WebSocketConnection::new("user1".to_string(), tx));
+    ///
+    /// manager.join_room("lobby".to_string(), conn).await.unwrap();
+    /// assert_eq!(manager.get_room_size("lobby").await, 1);
+    /// # });
+    /// ```
+    pub async fn get_room_size(&self, room_id: &str) -> usize {
+        if let Some(room) = self.get_room(room_id).await {
+            room.client_count().await
+        } else {
+            0
+        }
+    }
+
+    /// Broadcast a message to all clients in a specific room
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    /// use reinhardt_websockets::{WebSocketConnection, Message};
+    /// use tokio::sync::mpsc;
+    /// use std::sync::Arc;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("announcement".to_string()).await;
+    ///
+    /// let (tx, mut rx) = mpsc::unbounded_channel();
+    /// let conn = Arc::new(WebSocketConnection::new("listener".to_string(), tx));
+    ///
+    /// manager.join_room("announcement".to_string(), conn).await.unwrap();
+    ///
+    /// let msg = Message::text("Hello everyone!".to_string());
+    /// manager.broadcast_to_room("announcement", msg).await.unwrap();
+    /// # });
+    /// ```
+    pub async fn broadcast_to_room(&self, room_id: &str, message: Message) -> RoomResult<()> {
+        let room = self
+            .get_room(room_id)
+            .await
+            .ok_or_else(|| RoomError::RoomNotFound(room_id.to_string()))?;
+
+        room.broadcast(message).await
+    }
+
+    /// Broadcast a message to all clients in all rooms
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    /// use reinhardt_websockets::{WebSocketConnection, Message};
+    /// use tokio::sync::mpsc;
+    /// use std::sync::Arc;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("room1".to_string()).await;
+    /// manager.create_room("room2".to_string()).await;
+    ///
+    /// let (tx1, _rx1) = mpsc::unbounded_channel();
+    /// let (tx2, _rx2) = mpsc::unbounded_channel();
+    ///
+    /// let conn1 = Arc::new(WebSocketConnection::new("user1".to_string(), tx1));
+    /// let conn2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
+    ///
+    /// manager.join_room("room1".to_string(), conn1).await.unwrap();
+    /// manager.join_room("room2".to_string(), conn2).await.unwrap();
+    ///
+    /// let msg = Message::text("System message".to_string());
+    /// manager.broadcast_to_all(msg).await.unwrap();
+    /// # });
+    /// ```
+    pub async fn broadcast_to_all(&self, message: Message) -> RoomResult<()> {
+        let rooms = self.rooms.read().await;
+
+        let mut any_success = false;
+        let mut last_error = None;
+
+        for room in rooms.values() {
+            match room.broadcast(message.clone()).await {
+                Ok(_) => any_success = true,
+                Err(e) => last_error = Some(e),
+            }
+        }
+
+        // If at least one room received the message successfully, consider it a success
+        if any_success || rooms.is_empty() {
+            Ok(())
+        } else if let Some(err) = last_error {
+            Err(err)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Get all room IDs (alias for room_ids for compatibility)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_websockets::room::RoomManager;
+    ///
+    /// # tokio_test::block_on(async {
+    /// let manager = RoomManager::new();
+    /// manager.create_room("alpha".to_string()).await;
+    /// manager.create_room("beta".to_string()).await;
+    ///
+    /// let rooms = manager.get_all_rooms().await;
+    /// assert_eq!(rooms.len(), 2);
+    /// assert!(rooms.contains(&"alpha".to_string()));
+    /// assert!(rooms.contains(&"beta".to_string()));
+    /// # });
+    /// ```
+    pub async fn get_all_rooms(&self) -> Vec<String> {
+        self.room_ids().await
+    }
 }
 
 impl Default for RoomManager {
