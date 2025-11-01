@@ -234,6 +234,7 @@ impl StaticFilesFinder {
 	}
 
 	/// Recursively walk a directory and collect all file paths
+	#[allow(clippy::only_used_in_recursion)]
 	fn walk_directory(&self, base_dir: &PathBuf, current_dir: &PathBuf) -> io::Result<Vec<String>> {
 		let mut files = Vec::new();
 
@@ -362,12 +363,13 @@ impl HashedFileStorage {
 	}
 
 	pub async fn open(&self, name: &str) -> io::Result<Vec<u8>> {
-		let hashed_files = self.hashed_files.read().unwrap();
-		let hashed_name = hashed_files
-			.get(name)
-			.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "File not found in mapping"))?
-			.clone();
-		drop(hashed_files);
+		let hashed_name = {
+			let hashed_files = self.hashed_files.read().unwrap();
+			hashed_files
+				.get(name)
+				.ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "File not found in mapping"))?
+				.clone()
+		};
 
 		let file_path = self.location.join(&hashed_name);
 		tokio::fs::read(file_path).await
@@ -517,11 +519,15 @@ impl ManifestStaticFilesStorage {
 	}
 
 	async fn save_manifest(&self) -> io::Result<()> {
-		let hashed_files = self.hashed_files.read().unwrap();
-		let manifest_path = self.normalize_path(&self.manifest_name);
+		let (manifest_path, manifest_json) = {
+			let hashed_files = self.hashed_files.read().unwrap();
+			let manifest_path = self.normalize_path(&self.manifest_name);
 
-		let manifest_json =
-			serde_json::to_string_pretty(&*hashed_files).map_err(|e| io::Error::other(e))?;
+			let manifest_json =
+				serde_json::to_string_pretty(&*hashed_files).map_err(io::Error::other)?;
+
+			(manifest_path, manifest_json)
+		};
 
 		tokio::fs::write(manifest_path, manifest_json).await
 	}
@@ -539,9 +545,10 @@ impl ManifestStaticFilesStorage {
 
 	/// Open a file by its original name
 	pub async fn open(&self, name: &str) -> io::Result<Vec<u8>> {
-		let hashed_files = self.hashed_files.read().unwrap();
-		let actual_name = hashed_files.get(name).unwrap_or(&name.to_string()).clone();
-		drop(hashed_files);
+		let actual_name = {
+			let hashed_files = self.hashed_files.read().unwrap();
+			hashed_files.get(name).unwrap_or(&name.to_string()).clone()
+		};
 
 		let file_path = self.normalize_path(&actual_name);
 		tokio::fs::read(file_path).await
