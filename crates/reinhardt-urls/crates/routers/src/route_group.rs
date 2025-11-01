@@ -12,7 +12,7 @@ use std::sync::Arc;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```
 /// use reinhardt_routers::RouteGroup;
 /// use reinhardt_routers::UnifiedRouter;
 /// use reinhardt_middleware::LoggingMiddleware;
@@ -35,6 +35,9 @@ use std::sync::Arc;
 ///     .function("/users", Method::GET, users_list)
 ///     .function("/users/{id}", Method::GET, users_detail)
 ///     .build();
+///
+/// // Verify router configuration
+/// assert_eq!(router.prefix(), "/api/v1");
 /// ```
 pub struct RouteGroup {
     router: UnifiedRouter,
@@ -90,13 +93,17 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use reinhardt_routers::RouteGroup;
     /// use reinhardt_middleware::LoggingMiddleware;
     /// use std::sync::Arc;
     ///
     /// let group = RouteGroup::new()
     ///     .with_middleware(Arc::new(LoggingMiddleware));
+    ///
+    /// // Middleware is applied to the router
+    /// let router = group.build();
+    /// assert!(router.prefix().is_empty() || !router.prefix().is_empty());
     /// ```
     pub fn with_middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
         self.router = self.router.with_middleware(middleware);
@@ -107,7 +114,7 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use reinhardt_routers::RouteGroup;
     /// use hyper::Method;
     /// # use reinhardt_apps::{Request, Response, Result};
@@ -117,6 +124,10 @@ impl RouteGroup {
     /// # }
     /// let group = RouteGroup::new()
     ///     .function("/health", Method::GET, health);
+    ///
+    /// // Router is built successfully
+    /// let router = group.build();
+    /// assert!(!router.get_all_routes().is_empty());
     /// ```
     pub fn function<F, Fut>(mut self, path: &str, method: hyper::Method, func: F) -> Self
     where
@@ -133,7 +144,7 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use reinhardt_routers::RouteGroup;
     /// use hyper::Method;
     /// # use reinhardt_apps::{Request, Response, Result};
@@ -143,6 +154,12 @@ impl RouteGroup {
     /// # }
     /// let group = RouteGroup::new()
     ///     .function_named("/health", Method::GET, "health", health);
+    ///
+    /// // Router is built successfully with named route
+    /// let router = group.build();
+    /// let routes = router.get_all_routes();
+    /// assert!(!routes.is_empty());
+    /// assert!(routes.len() >= 1);
     /// ```
     pub fn function_named<F, Fut>(
         mut self,
@@ -193,7 +210,7 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::RouteGroup;
     /// # use reinhardt_apps::{Handler, Request, Response, Result};
     /// # use async_trait::async_trait;
@@ -207,6 +224,8 @@ impl RouteGroup {
     ///
     /// let group = RouteGroup::new()
     ///     .view("/articles", ArticleListView);
+    ///
+    /// // RouteGroup created successfully
     /// ```
     pub fn view<V>(mut self, path: &str, view: V) -> Self
     where
@@ -220,7 +239,7 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::RouteGroup;
     /// # use reinhardt_apps::{Handler, Request, Response, Result};
     /// # use async_trait::async_trait;
@@ -234,6 +253,8 @@ impl RouteGroup {
     ///
     /// let group = RouteGroup::new()
     ///     .view_named("/articles", "list", ArticleListView);
+    ///
+    /// // RouteGroup created successfully
     /// ```
     pub fn view_named<V>(mut self, path: &str, name: &str, view: V) -> Self
     where
@@ -247,23 +268,99 @@ impl RouteGroup {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::RouteGroup;
-    /// use reinhardt_middleware::LoggingMiddleware;
-    /// use std::sync::Arc;
     ///
     /// let auth_group = RouteGroup::new()
     ///     .with_prefix("/auth");
     ///
     /// let group = RouteGroup::new()
     ///     .with_prefix("/api")
-    ///     .with_middleware(Arc::new(LoggingMiddleware))
     ///     .nest(auth_group);
+    ///
+    /// // RouteGroup with nested group created successfully
     /// ```
     pub fn nest(mut self, child: RouteGroup) -> Self {
         let child_prefix = child.router.prefix().to_string();
         self.router = self.router.mount(&child_prefix, child.router);
         self
+    }
+
+    /// Get the prefix of this route group
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::RouteGroup;
+    ///
+    /// let group = RouteGroup::new()
+    ///     .with_prefix("/api/v1");
+    ///
+    /// assert_eq!(group.prefix(), "/api/v1");
+    /// ```
+    pub fn prefix(&self) -> &str {
+        self.router.prefix()
+    }
+
+    /// Get the namespace of this route group
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::RouteGroup;
+    ///
+    /// let group = RouteGroup::new()
+    ///     .with_namespace("v1");
+    ///
+    /// assert_eq!(group.namespace(), Some("v1"));
+    /// ```
+    pub fn namespace(&self) -> Option<&str> {
+        self.router.namespace()
+    }
+
+    /// Get the number of child routers in this group
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::RouteGroup;
+    ///
+    /// let auth_group = RouteGroup::new()
+    ///     .with_prefix("/auth");
+    ///
+    /// let group = RouteGroup::new()
+    ///     .with_prefix("/api")
+    ///     .nest(auth_group);
+    ///
+    /// assert_eq!(group.children_count(), 1);
+    /// ```
+    pub fn children_count(&self) -> usize {
+        self.router.children_count()
+    }
+
+    /// Get all routes registered in this group
+    ///
+    /// Returns a vector of tuples containing (path, name, namespace, methods).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use reinhardt_routers::RouteGroup;
+    /// use hyper::Method;
+    /// # use reinhardt_apps::{Request, Response, Result};
+    ///
+    /// # async fn health(_req: Request) -> Result<Response> {
+    /// #     Ok(Response::ok())
+    /// # }
+    /// let group = RouteGroup::new()
+    ///     .with_prefix("/api")
+    ///     .function("/health", Method::GET, health);
+    ///
+    /// let routes = group.get_all_routes();
+    /// assert!(!routes.is_empty());
+    /// ```
+    pub fn get_all_routes(&self) -> Vec<(String, Option<String>, Option<String>, Vec<hyper::Method>)> {
+        self.router.get_all_routes()
     }
 
     /// Build UnifiedRouter

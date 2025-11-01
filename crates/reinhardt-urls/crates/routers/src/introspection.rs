@@ -568,7 +568,7 @@ mod tests {
 
     #[test]
     fn test_route_info_supports_method() {
-        let info = RouteInfo::new("/users/", vec![Method::GET, Method::POST], None);
+        let info = RouteInfo::new("/users/", vec![Method::GET, Method::POST], None::<String>);
 
         assert!(info.supports_method(&Method::GET));
         assert!(info.supports_method(&Method::POST));
@@ -577,7 +577,7 @@ mod tests {
 
     #[test]
     fn test_route_info_metadata() {
-        let mut info = RouteInfo::new("/users/", vec![Method::GET], None);
+        let mut info = RouteInfo::new("/users/", vec![Method::GET], None::<String>);
         info.add_metadata("description", "List users");
 
         assert_eq!(
@@ -589,8 +589,8 @@ mod tests {
     #[test]
     fn test_route_inspector_add_and_count() {
         let mut inspector = RouteInspector::new();
-        inspector.add_route("/users/", vec![Method::GET], None, None);
-        inspector.add_route("/posts/", vec![Method::GET], None, None);
+        inspector.add_route("/users/", vec![Method::GET], None::<String>, None::<std::collections::HashMap<String, String>>);
+        inspector.add_route("/posts/", vec![Method::GET], None::<String>, None::<std::collections::HashMap<String, String>>);
 
         assert_eq!(inspector.route_count(), 2);
     }
@@ -616,9 +616,9 @@ mod tests {
     #[test]
     fn test_route_inspector_find_by_prefix() {
         let mut inspector = RouteInspector::new();
-        inspector.add_route("/api/v1/users/", vec![Method::GET], None, None);
-        inspector.add_route("/api/v1/posts/", vec![Method::GET], None, None);
-        inspector.add_route("/api/v2/users/", vec![Method::GET], None, None);
+        inspector.add_route("/api/v1/users/", vec![Method::GET], None::<String>, None::<std::collections::HashMap<String, String>>);
+        inspector.add_route("/api/v1/posts/", vec![Method::GET], None::<String>, None::<std::collections::HashMap<String, String>>);
+        inspector.add_route("/api/v2/users/", vec![Method::GET], None::<String>, None::<std::collections::HashMap<String, String>>);
 
         let routes = inspector.find_by_path_prefix("/api/v1");
         assert_eq!(routes.len(), 2);

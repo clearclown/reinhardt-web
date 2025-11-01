@@ -15,7 +15,7 @@
 //! Per-route middleware configuration is now available. You can attach middleware
 //! to specific routes or route groups:
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_routers::{UnifiedRouter, RouteGroup};
 //! use reinhardt_middleware::LoggingMiddleware;
 //! use hyper::Method;

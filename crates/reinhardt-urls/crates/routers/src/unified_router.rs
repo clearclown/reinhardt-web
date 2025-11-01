@@ -23,7 +23,7 @@
 //! - Routes are compiled lazily on first access (thread-safe with RwLock)
 //! - Parameters are extracted directly from matchit's Params
 
-use crate::{PathMatcher, PathPattern, Route, UrlReverser};
+use crate::{PathMatcher, Route, UrlReverser};
 use async_trait::async_trait;
 use hyper::Method;
 use matchit::Router as MatchitRouter;
@@ -83,7 +83,7 @@ pub(crate) struct RouteMatch {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```
 /// use reinhardt_routers::UnifiedRouter;
 /// use hyper::Method;
 /// # use reinhardt_apps::{Request, Response, Result};
@@ -94,6 +94,9 @@ pub(crate) struct RouteMatch {
 ///     .with_namespace("users")
 ///     .function("/export", Method::GET, |_req| async { Ok(Response::ok()) });
 ///
+/// // Verify users router has namespace
+/// assert_eq!(users_router.namespace(), Some("users"));
+///
 /// // Create root router
 /// let router = UnifiedRouter::new()
 ///     .with_prefix("/api/v1")
@@ -101,11 +104,16 @@ pub(crate) struct RouteMatch {
 ///     .function("/health", Method::GET, |_req| async { Ok(Response::ok()) })
 ///     .mount("/users", users_router);
 ///
+/// // Verify root router configuration
+/// assert_eq!(router.prefix(), "/api/v1");
+/// assert_eq!(router.namespace(), Some("v1"));
+///
 /// // Generated URLs:
 /// // /api/v1/health
 /// // /api/v1/users/export
 /// # Ok(())
 /// # }
+/// # tokio::runtime::Runtime::new().unwrap().block_on(example()).unwrap();
 /// ```
 pub struct UnifiedRouter {
     /// Router's prefix path
@@ -289,7 +297,7 @@ impl UnifiedRouter {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::UnifiedRouter;
     ///
     /// let users_router = UnifiedRouter::new()
@@ -299,8 +307,8 @@ impl UnifiedRouter {
     ///     .with_prefix("/api")
     ///     .mount("/users", users_router);
     ///
-    /// // Generated URL structure:
-    /// // /api/users/...
+    /// // Verify the router was created successfully
+    /// assert_eq!(router.prefix(), "/api");
     /// ```
     pub fn mount(mut self, prefix: &str, mut child: UnifiedRouter) -> Self {
         // Set prefix if not already set
@@ -343,7 +351,7 @@ impl UnifiedRouter {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::UnifiedRouter;
     ///
     /// let users = UnifiedRouter::new().with_prefix("/users");
@@ -351,6 +359,9 @@ impl UnifiedRouter {
     ///
     /// let router = UnifiedRouter::new()
     ///     .group(vec![users, posts]);
+    ///
+    /// // Verify the router was created successfully
+    /// assert_eq!(router.prefix(), "");
     /// ```
     pub fn group(mut self, routers: Vec<UnifiedRouter>) -> Self {
         for router in routers {
@@ -395,15 +406,14 @@ impl UnifiedRouter {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::UnifiedRouter;
     /// use hyper::Method;
     /// # use reinhardt_apps::{Request, Response, Result};
     ///
-    /// async fn health_check(_req: Request) -> Result<Response> {
-    ///     Ok(Response::ok())
-    /// }
-    ///
+    /// # async fn health_check(_req: Request) -> Result<Response> {
+    /// #     Ok(Response::ok())
+    /// # }
     /// let mut router = UnifiedRouter::new()
     ///     .with_namespace("api")
     ///     .function_named("/health", Method::GET, "health", health_check);
@@ -493,7 +503,7 @@ impl UnifiedRouter {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```rust
     /// use reinhardt_routers::UnifiedRouter;
     /// # use reinhardt_apps::{Handler, Request, Response, Result};
     /// # use async_trait::async_trait;

@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 /// Path pattern for URL matching
 /// Similar to Django's URL patterns but using composition
+#[derive(Clone)]
 pub struct PathPattern {
     pattern: String,
     regex: Regex,
