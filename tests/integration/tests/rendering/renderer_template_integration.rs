@@ -15,65 +15,82 @@ use reinhardt_exception::Result;
 use reinhardt_http::{Request, Response};
 use reinhardt_types::Handler;
 use std::sync::Arc;
-
-// Template integration tests
-//
-// These tests verify the integration of:
-// 1. reinhardt-templates: Template rendering engine with Askama
-// 2. reinhardt-forms: Form rendering with HTML widgets
-// 3. reinhardt-views: View layer with template support
-// 4. reinhardt-renderers: TemplateHTMLRenderer for HTML responses
+use tera::{Context, Tera};
 
 #[cfg(test)]
 mod template_exception_tests {
-    use askama::Template;
-    use async_trait::async_trait;
-    use bytes::Bytes;
-    use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-    use reinhardt_exception::Result;
-    use reinhardt_http::{Request, Response};
-    use reinhardt_types::Handler;
-    use std::sync::Arc;
+    use super::*;
 
-    // Custom error templates
-    #[derive(Template, Clone)]
-    #[template(
-        source = "<html><body><h1>404 Not Found</h1><p>{{ message }}</p></body></html>",
-        ext = "html"
-    )]
+    #[derive(Clone)]
     struct NotFoundTemplate {
         message: String,
     }
 
-    #[derive(Template, Clone)]
-    #[template(
-        source = "<html><body><h1>403 Forbidden</h1><p>{{ message }}</p></body></html>",
-        ext = "html"
-    )]
+    impl NotFoundTemplate {
+        fn render(&self) -> String {
+            let mut context = Context::new();
+            context.insert("message", &self.message);
+
+            Tera::one_off(
+                "<html><body><h1>404 Not Found</h1><p>{{ message }}</p></body></html>",
+                &context,
+                true,
+            )
+            .unwrap()
+        }
+    }
+
+    #[derive(Clone)]
     struct ForbiddenTemplate {
         message: String,
     }
 
-    // Error handler with template
+    impl ForbiddenTemplate {
+        fn render(&self) -> String {
+            let mut context = Context::new();
+            context.insert("message", &self.message);
+
+            Tera::one_off(
+                "<html><body><h1>403 Forbidden</h1><p>{{ message }}</p></body></html>",
+                &context,
+                true,
+            )
+            .unwrap()
+        }
+    }
+
     #[derive(Clone)]
-    struct ErrorTemplateHandler<T: Template + Clone> {
+    struct ErrorTemplateHandler<T> {
         template: T,
         status: StatusCode,
     }
 
-    impl<T: Template + Clone> ErrorTemplateHandler<T> {
+    impl<T> ErrorTemplateHandler<T> {
         fn new(template: T, status: StatusCode) -> Self {
             Self { template, status }
         }
     }
 
+    trait RenderTemplate {
+        fn render(&self) -> String;
+    }
+
+    impl RenderTemplate for NotFoundTemplate {
+        fn render(&self) -> String {
+            NotFoundTemplate::render(self)
+        }
+    }
+
+    impl RenderTemplate for ForbiddenTemplate {
+        fn render(&self) -> String {
+            ForbiddenTemplate::render(self)
+        }
+    }
+
     #[async_trait]
-    impl<T: Template + Clone + Send + Sync> Handler for ErrorTemplateHandler<T> {
+    impl<T: RenderTemplate + Clone + Send + Sync> Handler for ErrorTemplateHandler<T> {
         async fn handle(&self, _request: Request) -> Result<Response> {
-            let rendered = self
-                .template
-                .render()
-                .map_err(|e| reinhardt_exception::Error::Internal(e.to_string()))?;
+            let rendered = self.template.render();
 
             Ok(Response::new(self.status)
                 .with_body(Bytes::from(rendered))
@@ -83,14 +100,12 @@ mod template_exception_tests {
 
     #[tokio::test]
     async fn test_not_found_html_view_with_template() {
-        // Create custom 404 template
         let template = NotFoundTemplate {
             message: "The requested resource could not be found.".to_string(),
         };
 
         let handler = Arc::new(ErrorTemplateHandler::new(template, StatusCode::NOT_FOUND));
 
-        // Create a test request
         let request = Request::new(
             Method::GET,
             "/nonexistent".parse::<Uri>().unwrap(),
@@ -99,10 +114,8 @@ mod template_exception_tests {
             Bytes::new(),
         );
 
-        // Handle the request
         let response = handler.handle(request).await.unwrap();
 
-        // Verify response
         assert_eq!(response.status, StatusCode::NOT_FOUND);
 
         let body_str = String::from_utf8(response.body.to_vec()).unwrap();
@@ -112,14 +125,12 @@ mod template_exception_tests {
 
     #[tokio::test]
     async fn test_permission_denied_html_view_with_template() {
-        // Create custom 403 template
         let template = ForbiddenTemplate {
             message: "You do not have permission to access this resource.".to_string(),
         };
 
         let handler = Arc::new(ErrorTemplateHandler::new(template, StatusCode::FORBIDDEN));
 
-        // Create a test request
         let request = Request::new(
             Method::GET,
             "/admin/secret".parse::<Uri>().unwrap(),
@@ -128,10 +139,8 @@ mod template_exception_tests {
             Bytes::new(),
         );
 
-        // Handle the request
         let response = handler.handle(request).await.unwrap();
 
-        // Verify response
         assert_eq!(response.status, StatusCode::FORBIDDEN);
 
         let body_str = String::from_utf8(response.body.to_vec()).unwrap();
@@ -142,18 +151,10 @@ mod template_exception_tests {
 
 #[cfg(test)]
 mod form_rendering_tests {
-    use askama::Template;
-    use async_trait::async_trait;
-    use bytes::Bytes;
-    use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-    use reinhardt_exception::Result;
-    use reinhardt_http::{Request, Response};
-    use reinhardt_types::Handler;
+    use super::*;
     use serde::{Deserialize, Serialize};
     use serde_json;
-    use std::sync::Arc;
 
-    // Test data structure
     #[derive(Debug, Clone, Serialize, Deserialize)]
     struct FormData {
         name: String,
@@ -161,10 +162,14 @@ mod form_rendering_tests {
         age: i32,
     }
 
-    // HTML form template
-    #[derive(Template, Clone)]
-    #[template(
-        source = r#"<html><body><h1>Submit Data</h1>
+    struct FormTemplate;
+
+    impl FormTemplate {
+        fn render() -> String {
+            let context = Context::new();
+
+            Tera::one_off(
+                r#"<html><body><h1>Submit Data</h1>
 <form method="post">
   <label>Name: <input type="text" name="name" /></label><br/>
   <label>Email: <input type="email" name="email" /></label><br/>
@@ -172,11 +177,13 @@ mod form_rendering_tests {
   <button type="submit">Submit</button>
 </form>
 </body></html>"#,
-        ext = "html"
-    )]
-    struct FormTemplate;
+                &context,
+                true,
+            )
+            .unwrap()
+        }
+    }
 
-    // Form handler that supports both JSON and HTML
     #[derive(Clone)]
     struct FormHandler {
         render_html: bool,
@@ -184,19 +191,14 @@ mod form_rendering_tests {
 
     #[async_trait]
     impl Handler for FormHandler {
-        async fn handle(&self, request: Request) -> Result<Response> {
+        async fn handle(&self, _request: Request) -> Result<Response> {
             if self.render_html {
-                // Render HTML form for browsable API
-                let template = FormTemplate;
-                let rendered = template
-                    .render()
-                    .map_err(|e| reinhardt_exception::Error::Internal(e.to_string()))?;
+                let rendered = FormTemplate::render();
 
                 Ok(Response::ok()
                     .with_body(Bytes::from(rendered))
                     .with_header("content-type", "text/html; charset=utf-8"))
             } else {
-                // Return JSON response
                 let form_data = FormData {
                     name: "John Doe".to_string(),
                     email: "john@example.com".to_string(),
@@ -215,7 +217,6 @@ mod form_rendering_tests {
 
     #[tokio::test]
     async fn test_renderer_template_json_response() {
-        // Test JSON serialization of form data
         let handler = Arc::new(FormHandler { render_html: false });
 
         let request = Request::new(
@@ -228,7 +229,6 @@ mod form_rendering_tests {
 
         let response = handler.handle(request).await.unwrap();
 
-        // Verify JSON response
         assert_eq!(response.status, StatusCode::OK);
 
         let body_str = String::from_utf8(response.body.to_vec()).unwrap();
@@ -241,7 +241,6 @@ mod form_rendering_tests {
 
     #[tokio::test]
     async fn test_browsable_api() {
-        // Test HTML form rendering for browsable API
         let handler = Arc::new(FormHandler { render_html: true });
 
         let request = Request::new(
@@ -254,7 +253,6 @@ mod form_rendering_tests {
 
         let response = handler.handle(request).await.unwrap();
 
-        // Verify HTML response
         assert_eq!(response.status, StatusCode::OK);
 
         let body_str = String::from_utf8(response.body.to_vec()).unwrap();
@@ -267,9 +265,6 @@ mod form_rendering_tests {
 
     #[tokio::test]
     async fn test_post_many_related_view() {
-        // Test handling of many-to-many relationships in forms
-        // This is a simplified version that tests the concept
-
         #[derive(Debug, Clone, Serialize, Deserialize)]
         struct ManyToManyFormData {
             user_id: i32,
@@ -308,7 +303,6 @@ mod form_rendering_tests {
 
         let response = handler.handle(request).await.unwrap();
 
-        // Verify response
         assert_eq!(response.status, StatusCode::OK);
 
         let body_str = String::from_utf8(response.body.to_vec()).unwrap();

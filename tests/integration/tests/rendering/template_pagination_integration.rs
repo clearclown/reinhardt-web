@@ -9,7 +9,6 @@
 //! - Integration with reinhardt-pagination
 //! - Error handling in paginated templates
 
-use askama::Template as AskamaTemplate;
 use reinhardt_templates::{
     custom_filters::*, FileSystemTemplateLoader, Template, TemplateError, TemplateLoader,
     TemplateResult,
@@ -17,6 +16,7 @@ use reinhardt_templates::{
 use std::collections::HashMap;
 use std::path::Path;
 use tempfile::TempDir;
+use tera::{Context, Tera};
 
 // ============================================================================
 // Pagination Data Structures
@@ -108,33 +108,40 @@ impl PaginationInfo {
 }
 
 // ============================================================================
-// Test Templates
+// Helper Functions for Template Rendering
 // ============================================================================
 
-#[derive(AskamaTemplate)]
-#[template(
-    source = r#"<div class="pagination">
-{% if pagination.has_previous %}
-<a href="?page={{ pagination.previous_page.unwrap() }}" class="prev">Previous</a>
+fn render_pagination_template(pagination: &PaginationInfo) -> String {
+    let mut context = Context::new();
+    context.insert("has_previous", &pagination.has_previous);
+    context.insert("has_next", &pagination.has_next);
+    context.insert("previous_page", &pagination.previous_page);
+    context.insert("next_page", &pagination.next_page);
+    context.insert("page_range", &pagination.page_range);
+
+    let template = r#"<div class="pagination">
+{% if has_previous %}
+<a href="?page={{ previous_page }}" class="prev">Previous</a>
 {% endif %}
 
-{% for page in pagination.page_range %}
+{% for page in page_range %}
 <a href="?page={{ page }}">{{ page }}</a>
 {% endfor %}
 
-{% if pagination.has_next %}
-<a href="?page={{ pagination.next_page.unwrap() }}" class="next">Next</a>
+{% if has_next %}
+<a href="?page={{ next_page }}" class="next">Next</a>
 {% endif %}
-</div>"#,
-    ext = "html"
-)]
-struct PaginationTemplate {
-    pagination: PaginationInfo,
+</div>"#;
+
+    Tera::one_off(template, &context, true).unwrap()
 }
 
-#[derive(AskamaTemplate)]
-#[template(
-    source = r#"<div class="paginated-list">
+fn render_paginated_list(items: Vec<String>, pagination_html: String) -> String {
+    let mut context = Context::new();
+    context.insert("items", &items);
+    context.insert("pagination_html", &pagination_html);
+
+    let template = r#"<div class="paginated-list">
 <h2>Items</h2>
 <ul>
 {% for item in items %}
@@ -143,44 +150,49 @@ struct PaginationTemplate {
 </ul>
 
 {{ pagination_html }}
-</div>"#,
-    ext = "html"
-)]
-struct PaginatedListTemplate {
-    items: Vec<String>,
-    pagination_html: String,
+</div>"#;
+
+    Tera::one_off(template, &context, true).unwrap()
 }
 
-#[derive(AskamaTemplate)]
-#[template(
-    source = r#"<div class="pagination-info">
-Showing {{ pagination.current_page }} to {{ pagination.total_pages }} of {{ pagination.total_items }} results
-</div>"#,
-    ext = "html"
-)]
-struct PaginationInfoTemplate {
-    pagination: PaginationInfo,
+fn render_pagination_info(pagination: &PaginationInfo) -> String {
+    let mut context = Context::new();
+    context.insert("current_page", &pagination.current_page);
+    context.insert("total_pages", &pagination.total_pages);
+    context.insert("total_items", &pagination.total_items);
+
+    let template =
+        r#"<div class="pagination-info">
+Showing {{ current_page }} to {{ total_pages }} of {{ total_items }} results
+</div>"#;
+
+    Tera::one_off(template, &context, true).unwrap()
 }
 
-#[derive(AskamaTemplate)]
-#[template(
-    source = r#"<div class="pagination-controls">
-{% if pagination.has_previous %}
+fn render_pagination_controls(pagination: &PaginationInfo) -> String {
+    let mut context = Context::new();
+    context.insert("has_previous", &pagination.has_previous);
+    context.insert("has_next", &pagination.has_next);
+    context.insert("previous_page", &pagination.previous_page);
+    context.insert("next_page", &pagination.next_page);
+    context.insert("current_page", &pagination.current_page);
+    context.insert("total_pages", &pagination.total_pages);
+
+    let template = r#"<div class="pagination-controls">
+{% if has_previous %}
 <a href="?page=1" class="first">First</a>
-<a href="?page={{ pagination.previous_page.unwrap() }}" class="prev">Previous</a>
+<a href="?page={{ previous_page }}" class="prev">Previous</a>
 {% endif %}
 
-<span class="page-info">Page {{ pagination.current_page }} of {{ pagination.total_pages }}</span>
+<span class="page-info">Page {{ current_page }} of {{ total_pages }}</span>
 
-{% if pagination.has_next %}
-<a href="?page={{ pagination.next_page.unwrap() }}" class="next">Next</a>
-<a href="?page={{ pagination.total_pages }}" class="last">Last</a>
+{% if has_next %}
+<a href="?page={{ next_page }}" class="next">Next</a>
+<a href="?page={{ total_pages }}" class="last">Last</a>
 {% endif %}
-</div>"#,
-    ext = "html"
-)]
-struct PaginationControlsTemplate {
-    pagination: PaginationInfo,
+</div>"#;
+
+    Tera::one_off(template, &context, true).unwrap()
 }
 
 // ============================================================================
@@ -189,7 +201,6 @@ struct PaginationControlsTemplate {
 
 #[test]
 fn test_pagination_html_generation() {
-    // Test basic pagination HTML generation
     let pagination = PaginationInfo {
         current_page: 3,
         total_pages: 10,
@@ -202,8 +213,7 @@ fn test_pagination_html_generation() {
         page_range: vec![1, 2, 3, 4, 5],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
     assert!(
         result.contains("href=\"?page=2\""),
@@ -234,7 +244,6 @@ fn test_pagination_html_generation() {
 
 #[test]
 fn test_pagination_html_first_page() {
-    // Test pagination HTML for first page
     let pagination = PaginationInfo {
         current_page: 1,
         total_pages: 5,
@@ -247,8 +256,7 @@ fn test_pagination_html_first_page() {
         page_range: vec![1, 2, 3],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
     assert!(
         !result.contains("Previous"),
@@ -269,7 +277,6 @@ fn test_pagination_html_first_page() {
 
 #[test]
 fn test_pagination_html_last_page() {
-    // Test pagination HTML for last page
     let pagination = PaginationInfo {
         current_page: 5,
         total_pages: 5,
@@ -282,8 +289,7 @@ fn test_pagination_html_last_page() {
         page_range: vec![3, 4, 5],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
     assert!(
         result.contains("class=\"prev\">Previous</a>"),
@@ -304,7 +310,6 @@ fn test_pagination_html_last_page() {
 
 #[test]
 fn test_pagination_html_single_page() {
-    // Test pagination HTML for single page
     let pagination = PaginationInfo {
         current_page: 1,
         total_pages: 1,
@@ -317,8 +322,7 @@ fn test_pagination_html_single_page() {
         page_range: vec![1],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
     assert!(
         !result.contains("Previous"),
@@ -343,7 +347,6 @@ fn test_pagination_html_single_page() {
 
 #[test]
 fn test_paginated_list_rendering() {
-    // Test rendering paginated list with pagination HTML
     let items = vec![
         "Item 1".to_string(),
         "Item 2".to_string(),
@@ -362,17 +365,8 @@ fn test_paginated_list_rendering() {
         page_range: vec![1, 2, 3],
     };
 
-    let pagination_tmpl = PaginationTemplate {
-        pagination: pagination.clone(),
-    };
-    let pagination_html = pagination_tmpl.render().unwrap();
-
-    let tmpl = PaginatedListTemplate {
-        items,
-        pagination_html,
-    };
-
-    let result = tmpl.render().unwrap();
+    let pagination_html = render_pagination_template(&pagination);
+    let result = render_paginated_list(items, pagination_html);
 
     assert!(
         result.contains("<h2>Items</h2>"),
@@ -403,7 +397,6 @@ fn test_paginated_list_rendering() {
 
 #[test]
 fn test_paginated_list_empty() {
-    // Test rendering empty paginated list
     let items = vec![];
 
     let pagination = PaginationInfo {
@@ -418,17 +411,8 @@ fn test_paginated_list_empty() {
         page_range: vec![],
     };
 
-    let pagination_tmpl = PaginationTemplate {
-        pagination: pagination.clone(),
-    };
-    let pagination_html = pagination_tmpl.render().unwrap();
-
-    let tmpl = PaginatedListTemplate {
-        items,
-        pagination_html,
-    };
-
-    let result = tmpl.render().unwrap();
+    let pagination_html = render_pagination_template(&pagination);
+    let result = render_paginated_list(items, pagination_html);
 
     assert!(
         result.contains("<h2>Items</h2>"),
@@ -458,7 +442,6 @@ fn test_paginated_list_empty() {
 
 #[test]
 fn test_pagination_info_rendering() {
-    // Test pagination info rendering
     let pagination = PaginationInfo {
         current_page: 2,
         total_pages: 5,
@@ -471,8 +454,7 @@ fn test_pagination_info_rendering() {
         page_range: vec![1, 2, 3, 4, 5],
     };
 
-    let tmpl = PaginationInfoTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_info(&pagination);
 
     assert!(
         result.contains("Showing 2 to 5 of 47 results"),
@@ -483,7 +465,6 @@ fn test_pagination_info_rendering() {
 
 #[test]
 fn test_pagination_controls_rendering() {
-    // Test pagination controls rendering
     let pagination = PaginationInfo {
         current_page: 3,
         total_pages: 10,
@@ -496,8 +477,7 @@ fn test_pagination_controls_rendering() {
         page_range: vec![1, 2, 3, 4, 5],
     };
 
-    let tmpl = PaginationControlsTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_controls(&pagination);
 
     assert!(
         result.contains("href=\"?page=1\""),
@@ -552,7 +532,6 @@ fn test_pagination_controls_rendering() {
 
 #[test]
 fn test_paginated_data_generation() {
-    // Test paginated data generation
     let items = vec![
         "Item 1".to_string(),
         "Item 2".to_string(),
@@ -575,7 +554,6 @@ fn test_paginated_data_generation() {
 
 #[test]
 fn test_paginated_data_single_page() {
-    // Test paginated data for single page
     let items = vec!["Item 1".to_string(), "Item 2".to_string()];
     let paginated = PaginatedData::new(items, 1, 2, 10);
 
@@ -591,7 +569,6 @@ fn test_paginated_data_single_page() {
 
 #[test]
 fn test_pagination_info_from_data() {
-    // Test pagination info generation from paginated data
     let items = vec!["Item 1".to_string(), "Item 2".to_string()];
     let paginated = PaginatedData::new(items, 2, 5, 2);
     let info = PaginationInfo::from_paginated_data(&paginated);
@@ -613,7 +590,6 @@ fn test_pagination_info_from_data() {
 
 #[test]
 fn test_pagination_with_filters() {
-    // Test pagination with filter integration
     let pagination = PaginationInfo {
         current_page: 1,
         total_pages: 3,
@@ -626,12 +602,10 @@ fn test_pagination_with_filters() {
         page_range: vec![1, 2, 3],
     };
 
-    // Test with title case filter
     let title_text = "page 1 of 3";
     let formatted_title = title(title_text).unwrap();
     assert_eq!(formatted_title, "Page 1 Of 3");
 
-    // Test with number formatting
     let page_info = format!(
         "Page {} of {}",
         pagination.current_page, pagination.total_pages
@@ -641,11 +615,9 @@ fn test_pagination_with_filters() {
 
 #[test]
 fn test_pagination_url_generation() {
-    // Test pagination URL generation with filters
     let base_url = "https://example.com/api/items";
     let page = 2;
 
-    // Simulate URL generation with query parameters
     let url = format!("{}?page={}", base_url, page);
     assert_eq!(
         url,
@@ -653,7 +625,6 @@ fn test_pagination_url_generation() {
         "Expected URL with page parameter"
     );
 
-    // Test with additional parameters
     let url_with_params = format!("{}?page={}&search=test&sort=name", base_url, page);
     assert_eq!(
         url_with_params,
@@ -668,9 +639,8 @@ fn test_pagination_url_generation() {
 
 #[test]
 fn test_pagination_error_handling() {
-    // Test pagination error handling
     let pagination = PaginationInfo {
-        current_page: 0, // Invalid page
+        current_page: 0,
         total_pages: 5,
         total_items: 50,
         items_per_page: 10,
@@ -681,10 +651,8 @@ fn test_pagination_error_handling() {
         page_range: vec![1, 2, 3],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
-    // Should still render, but with invalid page number
     assert!(
         result.contains("href=\"?page=1\""),
         "Expected href=\"?page=1\" even with invalid current page, got: {}",
@@ -694,9 +662,8 @@ fn test_pagination_error_handling() {
 
 #[test]
 fn test_pagination_overflow_handling() {
-    // Test pagination overflow handling
     let pagination = PaginationInfo {
-        current_page: 10, // Beyond total pages
+        current_page: 10,
         total_pages: 5,
         total_items: 50,
         items_per_page: 10,
@@ -707,10 +674,8 @@ fn test_pagination_overflow_handling() {
         page_range: vec![3, 4, 5],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
-    // Should render with current page beyond total
     assert!(
         result.contains("href=\"?page=5\""),
         "Expected href=\"?page=5\" in overflow pagination, got: {}",
@@ -729,18 +694,15 @@ fn test_pagination_overflow_handling() {
 
 #[test]
 fn test_pagination_performance_large_dataset() {
-    // Test pagination performance with large dataset
     let large_items: Vec<String> = (0..10000).map(|i| format!("Item {}", i)).collect();
 
     let paginated = PaginatedData::new(large_items, 100, 10000, 100);
     let info = PaginationInfo::from_paginated_data(&paginated);
 
     let start = std::time::Instant::now();
-    let tmpl = PaginationTemplate { pagination: info };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&info);
     let duration = start.elapsed();
 
-    // Should complete in reasonable time
     assert!(
         duration.as_millis() < 100,
         "Expected rendering to complete in <100ms, took: {}ms",
@@ -755,7 +717,6 @@ fn test_pagination_performance_large_dataset() {
 
 #[test]
 fn test_pagination_performance_many_pages() {
-    // Test pagination performance with many pages
     let pagination = PaginationInfo {
         current_page: 500,
         total_pages: 1000,
@@ -769,11 +730,9 @@ fn test_pagination_performance_many_pages() {
     };
 
     let start = std::time::Instant::now();
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
     let duration = start.elapsed();
 
-    // Should complete in reasonable time
     assert!(
         duration.as_millis() < 100,
         "Expected rendering to complete in <100ms, took: {}ms",
@@ -792,7 +751,6 @@ fn test_pagination_performance_many_pages() {
 
 #[test]
 fn test_pagination_with_file_system_loader() {
-    // Test pagination with file system loader
     let temp_dir = TempDir::new().unwrap();
     let template_path = temp_dir.path().join("pagination.html");
 
@@ -834,8 +792,6 @@ fn test_pagination_with_file_system_loader() {
 
 #[test]
 fn test_integration_with_orm_mock() {
-    // Mock test for integration with ORM (when available)
-    // This would test pagination with database queries
     let mock_items = vec![
         "Database Item 1".to_string(),
         "Database Item 2".to_string(),
@@ -845,8 +801,7 @@ fn test_integration_with_orm_mock() {
     let paginated = PaginatedData::new(mock_items, 1, 3, 10);
     let info = PaginationInfo::from_paginated_data(&paginated);
 
-    let tmpl = PaginationTemplate { pagination: info };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&info);
 
     assert!(
         result.contains("href=\"?page=1\""),
@@ -867,8 +822,6 @@ fn test_integration_with_orm_mock() {
 
 #[test]
 fn test_integration_with_rest_api_mock() {
-    // Mock test for integration with REST API (when available)
-    // This would test pagination in API responses
     let api_response = HashMap::from([
         ("page".to_string(), "2".to_string()),
         ("total_pages".to_string(), "5".to_string()),
@@ -907,8 +860,7 @@ fn test_integration_with_rest_api_mock() {
         page_range: vec![1, 2, 3, 4, 5],
     };
 
-    let tmpl = PaginationTemplate { pagination };
-    let result = tmpl.render().unwrap();
+    let result = render_pagination_template(&pagination);
 
     assert!(
         result.contains("href=\"?page=2\""),

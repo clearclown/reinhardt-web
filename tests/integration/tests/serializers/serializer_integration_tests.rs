@@ -468,7 +468,8 @@ fn test_pk_reverse_foreign_key() {
     // Verify reverse SQL generation
     // NOTE: Using contains() for SQL validation is acceptable because SQL formatting
     // (whitespace, clause order for some DB engines) may vary
-    let sql = reverse_rel.load_sql("1");
+    use reinhardt_orm::DatabaseDialect;
+    let sql = reverse_rel.load_sql("1", DatabaseDialect::PostgreSQL);
     assert!(
         sql.contains("SELECT * FROM books"),
         "SQL should contain SELECT clause. Actual: {}",
@@ -658,7 +659,8 @@ fn test_pk_reverse_many_to_many() {
     // Verify association table SQL generation
     // NOTE: Using contains() for SQL validation is acceptable because SQL formatting
     // (whitespace, clause order for some DB engines) may vary
-    let sql = assoc_table.to_create_sql();
+    use sea_query::PostgresQueryBuilder;
+    let sql = assoc_table.to_create_sql(PostgresQueryBuilder);
     assert!(
         sql.contains("CREATE TABLE article_tags"),
         "SQL should contain CREATE TABLE clause. Actual: {}",
@@ -682,7 +684,7 @@ fn test_pk_reverse_many_to_many() {
 
     // Test ManyToMany relationship helper
     let m2m = ManyToMany::<Article, Tag>::new(assoc_table);
-    let join_sql = m2m.join_sql();
+    let join_sql = m2m.join_sql(PostgresQueryBuilder);
     assert!(
         join_sql.contains("JOIN article_tags"),
         "JOIN SQL should contain JOIN clause. Actual: {}",
@@ -778,7 +780,8 @@ fn test_pk_reverse_through() {
     // Verify association table SQL generation
     // NOTE: Using contains() for SQL validation is acceptable because SQL formatting
     // (whitespace, clause order for some DB engines) may vary
-    let sql = assoc_table.to_create_sql();
+    use sea_query::PostgresQueryBuilder;
+    let sql = assoc_table.to_create_sql(PostgresQueryBuilder);
     assert!(
         sql.contains("CREATE TABLE student_courses"),
         "SQL should contain CREATE TABLE clause. Actual: {}",
@@ -811,7 +814,7 @@ fn test_pk_reverse_through() {
     );
 
     // Verify join SQL generation
-    let join_sql = m2m.join_sql();
+    let join_sql = m2m.join_sql(PostgresQueryBuilder);
     assert!(
         join_sql.contains("JOIN student_courses"),
         "JOIN SQL should contain JOIN clause. Actual: {}",

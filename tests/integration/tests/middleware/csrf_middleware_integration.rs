@@ -7,7 +7,7 @@ use hyper::header::{HeaderName, HeaderValue, COOKIE, SET_COOKIE};
 use reinhardt_apps::{Handler, Request, Response, Result};
 use reinhardt_integration_tests::security_test_helpers::*;
 use reinhardt_security::csrf::SameSite;
-use reinhardt_security::{check_token, mask_cipher_secret, CsrfConfig};
+use reinhardt_security::{generate_token_hmac, verify_token_hmac, CsrfConfig};
 
 // Mock handler for testing
 struct MockHandler;
@@ -61,32 +61,34 @@ fn extract_csrf_token_from_response(response: &Response) -> Option<String> {
 #[tokio::test]
 async fn test_csrf_middleware_integration_token_generation() {
     // Test: CSRF token is generated and set in cookie for GET requests
-    let secret = "abcdefghijklmnopqrstuvwxyz012345";
-    let token = mask_cipher_secret(secret);
+    let secret = b"abcdefghijklmnopqrstuvwxyz012345";
+    let token = generate_token_hmac(secret, "test-session");
 
-    assert_eq!(token.len(), 64); // CSRF_TOKEN_LENGTH
+    assert_eq!(token.len(), 64); // HMAC-SHA256 produces 32 bytes = 64 hex chars
 }
 
 #[tokio::test]
 async fn test_csrf_token_validation_success() {
     // Test: Valid CSRF token passes validation
-    let secret = "abcdefghijklmnopqrstuvwxyz012345";
-    let token = mask_cipher_secret(secret);
+    let secret = b"abcdefghijklmnopqrstuvwxyz012345";
+    let message = "test-session";
+    let token = generate_token_hmac(secret, message);
 
     // Simulate validation
-    let result = check_token(&token, secret);
-    assert!(result.is_ok());
+    let result = verify_token_hmac(&token, secret, message);
+    assert!(result);
 }
 
 #[tokio::test]
 async fn test_csrf_token_validation_failure() {
     // Test: Invalid CSRF token fails validation
-    let secret1 = "abcdefghijklmnopqrstuvwxyz012345";
-    let secret2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
-    let token = mask_cipher_secret(secret1);
+    let secret1 = b"abcdefghijklmnopqrstuvwxyz012345";
+    let secret2 = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
+    let message = "test-session";
+    let token = generate_token_hmac(secret1, message);
 
-    let result = check_token(&token, secret2);
-    assert!(result.is_err());
+    let result = verify_token_hmac(&token, secret2, message);
+    assert!(!result);
 }
 
 #[tokio::test]
@@ -118,7 +120,7 @@ async fn test_csrf_unsafe_methods_require_token() {
 fn test_csrf_token_in_cookie() {
     // Test: CSRF token can be extracted from cookie
     let secret = "abcdefghijklmnopqrstuvwxyz012345";
-    let token = mask_cipher_secret(secret);
+    let token = generate_token_hmac(secret.as_bytes(), "test-session");
 
     let request = create_request_with_csrf_cookie("POST", "/api", &token);
 
@@ -130,7 +132,7 @@ fn test_csrf_token_in_cookie() {
 fn test_csrf_token_in_header() {
     // Test: CSRF token can be provided in X-CSRFToken header
     let secret = "abcdefghijklmnopqrstuvwxyz012345";
-    let token = mask_cipher_secret(secret);
+    let token = generate_token_hmac(secret.as_bytes(), "test-session");
 
     let request = create_request_with_csrf_header("POST", "/api", &token, &token);
 
@@ -142,8 +144,8 @@ fn test_csrf_token_mismatch() {
     // Test: Mismatched CSRF tokens should be detected
     let secret1 = "abcdefghijklmnopqrstuvwxyz012345";
     let secret2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
-    let token1 = mask_cipher_secret(secret1);
-    let token2 = mask_cipher_secret(secret2);
+    let token1 = generate_token_hmac(secret1.as_bytes(), "test-session");
+    let token2 = generate_token_hmac(secret2.as_bytes(), "test-session");
 
     assert_ne!(token1, token2);
 }
@@ -263,7 +265,7 @@ fn test_csrf_cookie_samesite() {
 fn test_double_submit_cookie_pattern() {
     // Test: Double submit cookie pattern validation
     let secret = "abcdefghijklmnopqrstuvwxyz012345";
-    let token = mask_cipher_secret(secret);
+    let token = generate_token_hmac(secret.as_bytes(), "test-session");
 
     // Cookie value and header value should match
     let request = create_request_with_csrf_header("POST", "/api", &token, &token);
@@ -291,8 +293,8 @@ async fn test_csrf_rotation() {
     let secret1 = "abcdefghijklmnopqrstuvwxyz012345";
     let secret2 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345";
 
-    let token1 = mask_cipher_secret(secret1);
-    let token2 = mask_cipher_secret(secret2);
+    let token1 = generate_token_hmac(secret1.as_bytes(), "test-session");
+    let token2 = generate_token_hmac(secret2.as_bytes(), "test-session");
 
     // Tokens should be different
     assert_ne!(token1, token2);

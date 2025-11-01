@@ -3,34 +3,30 @@
 //! Tests the integration between reinhardt-templates and reinhardt-i18n crates.
 //! Covers multilingual template rendering, translation filters, and localization.
 
-use askama::Template;
 use reinhardt_i18n::{
     activate, deactivate, get_locale, gettext, ngettext, pgettext, MessageCatalog,
 };
 use reinhardt_templates::{blocktrans, localize_date_filter, localize_number_filter};
+use tera::{Context, Tera};
 
-// Test template with translation filters
-#[derive(Template)]
-#[template(source = "Welcome: {{ message }}", ext = "txt")]
-struct TranslationTemplate {
-    message: String,
+fn render_translation_template(message: &str) -> String {
+    let mut context = Context::new();
+    context.insert("message", message);
+
+    Tera::one_off("Welcome: {{ message }}", &context, true).unwrap()
 }
 
 #[test]
 fn test_template_with_simple_translation() {
-    // Create message catalog
     let mut catalog = MessageCatalog::new("ja");
     catalog.add_translation("Hello", "こんにちは");
     catalog.add_translation("Welcome", "ようこそ");
 
-    // Set up i18n
     activate("ja", catalog);
 
-    // Use real i18n function instead of template stub
     let message = gettext("Hello");
-    let template = TranslationTemplate { message };
+    let rendered = render_translation_template(&message);
 
-    let rendered = template.render().unwrap();
     assert_eq!(rendered, "Welcome: こんにちは");
 
     deactivate();
@@ -44,7 +40,6 @@ fn test_template_with_context_translation() {
 
     activate("es", catalog);
 
-    // Test different contexts using real i18n function
     let button_save = pgettext("button", "Save");
     let menu_save = pgettext("menu", "Save");
 
@@ -74,7 +69,6 @@ fn test_template_with_plural_translation() {
 
     activate("de", catalog);
 
-    // Test using real i18n plural function
     let result_singular = ngettext("item", "items", 1);
     assert_eq!(result_singular, "Artikel");
 
@@ -86,14 +80,11 @@ fn test_template_with_plural_translation() {
 
 #[test]
 fn test_template_number_localization() {
-    // Create empty catalog for French
     let catalog = MessageCatalog::new("fr");
 
-    // Test with French locale (uses comma as decimal separator)
     activate("fr", catalog);
 
     let result = localize_number_filter(1234.56).unwrap();
-    // Template stub just returns the number as string
     assert!(result.contains("1234"));
 
     deactivate();
@@ -107,7 +98,6 @@ fn test_template_date_localization() {
     let date_str = "2025-10-16";
     let result = localize_date_filter(date_str).unwrap();
 
-    // Template stub just returns the input string
     assert!(result.contains("2025"));
     assert!(result.contains("10"));
     assert!(result.contains("16"));
@@ -117,11 +107,9 @@ fn test_template_date_localization() {
 
 #[test]
 fn test_language_detection_in_template() {
-    // Test that i18n can detect current language
     let catalog1 = MessageCatalog::new("it");
     activate("it", catalog1);
 
-    // Use real i18n function instead of template stub
     let lang = get_locale();
     assert_eq!(lang, "it");
 
@@ -137,7 +125,6 @@ fn test_language_detection_in_template() {
 
 #[test]
 fn test_multilingual_template_rendering() {
-    // Test rendering the same template in multiple languages
     let languages = vec![
         ("en", "Hello", "Hello"),
         ("ja", "Hello", "こんにちは"),
@@ -151,13 +138,13 @@ fn test_multilingual_template_rendering() {
 
         activate(lang, catalog);
 
-        // Use real i18n function for actual translation
         let translated = gettext(key);
         assert_eq!(translated, expected, "Failed for language: {}", lang);
 
         deactivate();
     }
 }
+
 #[test]
 fn test_template_with_missing_translation() {
     let mut catalog = MessageCatalog::new("zh");
@@ -165,11 +152,9 @@ fn test_template_with_missing_translation() {
 
     activate("zh", catalog);
 
-    // Translation exists - use real i18n function
     let existing = gettext("Existing");
     assert_eq!(existing, "存在");
 
-    // Translation missing - should return original key
     let missing = gettext("NonExistent");
     assert_eq!(missing, "NonExistent");
 
@@ -178,11 +163,9 @@ fn test_template_with_missing_translation() {
 
 #[test]
 fn test_template_fallback_to_default_language() {
-    // Test fallback behavior when translation is not available
     let catalog = MessageCatalog::new("unknown_lang");
     activate("unknown_lang", catalog);
 
-    // Use real i18n function - should return original when no translation exists
     let result = gettext("Hello");
     assert_eq!(result, "Hello");
 
