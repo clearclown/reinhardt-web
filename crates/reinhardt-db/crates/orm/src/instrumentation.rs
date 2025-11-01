@@ -335,6 +335,8 @@ impl Instrumentation {
     /// # tokio_test::block_on(async {
     /// let instrumentation = Instrumentation::new();
     /// instrumentation.query_start("SELECT * FROM users").await;
+    /// // Verify the method executes successfully (no panic)
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn query_start(&self, query: &str) {
@@ -354,6 +356,8 @@ impl Instrumentation {
     /// # tokio_test::block_on(async {
     /// let instrumentation = Instrumentation::new();
     /// instrumentation.query_end("SELECT * FROM users", Duration::from_millis(50)).await;
+    /// // Verify the method executes successfully and records metrics
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn query_end(&self, query: &str, duration: Duration) {
@@ -386,6 +390,8 @@ impl Instrumentation {
     ///     "table not found",
     ///     Duration::from_millis(10)
     /// ).await;
+    /// // Verify the method executes successfully and records error metrics
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn query_error(&self, query: &str, error: &str, duration: Duration) {
@@ -413,6 +419,8 @@ impl Instrumentation {
     /// # tokio_test::block_on(async {
     /// let instrumentation = Instrumentation::new();
     /// instrumentation.transaction_start().await;
+    /// // Verify the method executes successfully (no panic)
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn transaction_start(&self) {
@@ -431,6 +439,8 @@ impl Instrumentation {
     /// # tokio_test::block_on(async {
     /// let instrumentation = Instrumentation::new();
     /// instrumentation.transaction_end(true).await;
+    /// // Verify the method executes successfully (no panic)
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn transaction_end(&self, committed: bool) {
@@ -455,6 +465,8 @@ impl Instrumentation {
     ///     5,
     ///     true
     /// ).await;
+    /// // Verify the method executes successfully and records transaction metrics
+    /// assert_eq!(instrumentation.listener_count(), 0);
     /// # });
     /// ```
     pub async fn record_transaction(

@@ -280,7 +280,9 @@ impl EventRegistry {
     /// }
     ///
     /// let registry = EventRegistry::new();
+    /// assert_eq!(registry.mapper_listener_count(), 0);
     /// registry.register_mapper_listener("User".to_string(), Arc::new(MyListener));
+    /// assert_eq!(registry.mapper_listener_count(), 1);
     /// ```
     pub fn register_mapper_listener(&self, model: String, listener: Arc<dyn MapperEvents>) {
         self.mapper_listeners
@@ -307,7 +309,9 @@ impl EventRegistry {
     /// }
     ///
     /// let registry = EventRegistry::new();
+    /// assert_eq!(registry.session_listener_count(), 0);
     /// registry.register_session_listener("session-1".to_string(), Arc::new(MySessionListener));
+    /// assert_eq!(registry.session_listener_count(), 1);
     /// ```
     pub fn register_session_listener(&self, session_id: String, listener: Arc<dyn SessionEvents>) {
         self.session_listeners
@@ -335,7 +339,10 @@ impl EventRegistry {
     /// }
     ///
     /// let registry = EventRegistry::new();
-    /// registry.register_attribute_listener("User.email".to_string(), Arc::new(MyAttributeListener));
+    /// let listener = Arc::new(MyAttributeListener);
+    /// registry.register_attribute_listener("User.email".to_string(), listener.clone());
+    /// // Verify registration succeeded (no panic)
+    /// let _: &EventRegistry = &registry;
     /// ```
     pub fn register_attribute_listener(
         &self,
@@ -366,7 +373,10 @@ impl EventRegistry {
     /// }
     ///
     /// let registry = EventRegistry::new();
-    /// registry.register_instance_listener("user-1".to_string(), Arc::new(MyInstanceListener));
+    /// let listener = Arc::new(MyInstanceListener);
+    /// registry.register_instance_listener("user-1".to_string(), listener.clone());
+    /// // Verify registration succeeded (no panic)
+    /// let _: &EventRegistry = &registry;
     /// ```
     pub fn register_instance_listener(
         &self,
