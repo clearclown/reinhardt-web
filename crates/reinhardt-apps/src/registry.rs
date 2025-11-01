@@ -384,33 +384,8 @@ pub fn get_registered_relationships() -> &'static [RelationshipMetadata] {
     &RELATIONSHIPS
 }
 
-/// Get relationships for a specific model
-///
-/// This function returns all relationships that originate from the specified model.
-/// Results are cached for performance on subsequent calls.
-///
-/// # Examples
-///
-/// ```rust
-/// use reinhardt_apps::registry::get_relationships_for_model;
-///
-/// let post_relationships = get_relationships_for_model("blog.Post");
-/// for rel in post_relationships {
-///     println!("Relationship: {} -> {}", rel.field_name, rel.to_model);
-/// }
-/// ```
 pub fn get_relationships_for_model(model: &str) -> Vec<&'static RelationshipMetadata> {
-    // Check if cache is initialized
-    {
-        let cache = RELATIONSHIP_CACHE.read().unwrap();
-        if let Some(ref cache_map) = *cache {
-            if let Some(relationships) = cache_map.get(model) {
-                return relationships.clone();
-            }
-        }
-    }
-
-    // Initialize cache if needed
+    // Initialize cache if needed (with write lock)
     {
         let mut cache = RELATIONSHIP_CACHE.write().unwrap();
         if cache.is_none() {
@@ -425,11 +400,11 @@ pub fn get_relationships_for_model(model: &str) -> Vec<&'static RelationshipMeta
         }
     }
 
-    // Retrieve from cache
+    // Retrieve from cache (with read lock)
     let cache = RELATIONSHIP_CACHE.read().unwrap();
     cache
         .as_ref()
-        .unwrap()
+        .expect("Cache should be initialized at this point")
         .get(model)
         .cloned()
         .unwrap_or_default()

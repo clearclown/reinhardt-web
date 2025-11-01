@@ -1,9 +1,17 @@
+#[cfg(feature = "session")]
 use async_trait::async_trait;
-use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
+#[cfg(feature = "session")]
+use std::sync::Arc;
+
+#[cfg(feature = "session")]
+use reinhardt_apps::{Handler, Request, Response, Result};
+#[cfg(feature = "session")]
+use reinhardt_types::Middleware;
+
 #[cfg(feature = "session")]
 use reinhardt_auth::session::{SessionStore, SESSION_KEY_USER_ID};
+#[cfg(feature = "session")]
 use reinhardt_auth::{AnonymousUser, AuthenticationBackend, User};
-use std::sync::Arc;
 
 /// Authentication middleware
 /// Extracts user information from session and attaches it to request extensions

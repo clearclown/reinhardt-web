@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 
 /// Cache Entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct CacheEntry {
+pub struct CacheEntry {
     /// Status code
     status: u16,
     /// Headers

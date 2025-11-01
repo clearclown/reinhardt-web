@@ -354,8 +354,8 @@ mod tests {
         };
         let response = ok_json(data).unwrap();
         assert_eq!(response.status, 200);
-        assert!(response.body().contains(r#""id":1"#));
-        assert!(response.body().contains(r#""name":"test""#));
+        assert!(String::from_utf8_lossy(&response.body).contains(r#""id":1"#));
+        assert!(String::from_utf8_lossy(&response.body).contains(r#""name":"test""#));
     }
 
     #[test]
@@ -366,86 +366,86 @@ mod tests {
         };
         let response = created_json(data).unwrap();
         assert_eq!(response.status, 201);
-        assert!(response.body().contains(r#""id":2"#));
-        assert!(response.body().contains(r#""name":"created""#));
+        assert!(String::from_utf8_lossy(&response.body).contains(r#""id":2"#));
+        assert!(String::from_utf8_lossy(&response.body).contains(r#""name":"created""#));
     }
 
     #[test]
     fn test_no_content() {
         let response = no_content();
         assert_eq!(response.status, 204);
-        assert!(response.body().is_empty());
+        assert!(response.body.is_empty());
     }
 
     #[test]
     fn test_bad_request() {
         let response = bad_request("Invalid input");
         assert_eq!(response.status, 400);
-        assert!(response.body().contains("Invalid input"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Invalid input"));
     }
 
     #[test]
     fn test_unauthorized() {
         let response = unauthorized("Token expired");
         assert_eq!(response.status, 401);
-        assert!(response.body().contains("Token expired"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Token expired"));
     }
 
     #[test]
     fn test_not_found() {
         let response = not_found("Resource not found");
         assert_eq!(response.status, 404);
-        assert!(response.body().contains("Resource not found"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Resource not found"));
     }
 
     #[test]
     fn test_internal_error() {
         let response = internal_error("Database error");
         assert_eq!(response.status, 500);
-        assert!(response.body().contains("Database error"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Database error"));
     }
 
     #[test]
     fn test_error_message_into_string() {
         let response = bad_request("test");
-        assert!(response.body().contains("test"));
+        assert!(String::from_utf8_lossy(&response.body).contains("test"));
 
         let response = unauthorized(String::from("auth failed"));
-        assert!(response.body().contains("auth failed"));
+        assert!(String::from_utf8_lossy(&response.body).contains("auth failed"));
     }
 
     #[test]
     fn test_accepted() {
         let response = accepted();
         assert_eq!(response.status, 202);
-        assert!(response.body().is_empty());
+        assert!(response.body.is_empty());
     }
 
     #[test]
     fn test_forbidden() {
         let response = forbidden("Access denied");
         assert_eq!(response.status, 403);
-        assert!(response.body().contains("Access denied"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Access denied"));
     }
 
     #[test]
     fn test_conflict() {
         let response = conflict("Resource already exists");
         assert_eq!(response.status, 409);
-        assert!(response.body().contains("Resource already exists"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Resource already exists"));
     }
 
     #[test]
     fn test_unprocessable_entity() {
         let response = unprocessable_entity("Validation failed");
         assert_eq!(response.status, 422);
-        assert!(response.body().contains("Validation failed"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Validation failed"));
     }
 
     #[test]
     fn test_service_unavailable() {
         let response = service_unavailable("Under maintenance");
         assert_eq!(response.status, 503);
-        assert!(response.body().contains("Under maintenance"));
+        assert!(String::from_utf8_lossy(&response.body).contains("Under maintenance"));
     }
 }

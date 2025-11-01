@@ -714,7 +714,11 @@ mod tests {
     }
 
     #[test]
+    #[serial_test::serial(reverse_relations)]
     fn test_build_reverse_relations_basic() {
+        use crate::registry::clear_reverse_relations;
+
+        clear_reverse_relations();
         // Should not panic - basic implementation exists
         build_reverse_relations();
     }

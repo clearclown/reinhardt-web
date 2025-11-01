@@ -22,7 +22,7 @@ pub enum CircuitState {
 
 /// Circuit breaker statistics
 #[derive(Debug, Clone)]
-struct CircuitStats {
+pub struct CircuitStats {
     /// Total number of requests
     total_requests: u64,
     /// Number of failed requests
@@ -505,7 +505,7 @@ mod tests {
     async fn test_circuit_half_open_transition() {
         let config = CircuitBreakerConfig::new(0.5, 5, Duration::from_millis(100));
         let middleware = Arc::new(CircuitBreakerMiddleware::new(config));
-        let handler = Arc::new(TestHandler::new(10));
+        let handler = Arc::new(TestHandler::new(5));
 
         // Open the circuit
         for _ in 0..5 {

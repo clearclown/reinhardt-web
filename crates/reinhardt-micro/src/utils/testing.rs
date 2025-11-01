@@ -213,7 +213,7 @@ mod tests {
         let request = test_request(Method::GET, "/test", None);
         assert_eq!(request.method, Method::GET);
         assert_eq!(request.uri.path(), "/test");
-        assert!(request.body.is_empty());
+        assert!(request.body().is_empty());
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
         let body = "test body";
         let request = test_request(Method::POST, "/test", Some(body.to_string()));
         assert_eq!(request.method, Method::POST);
-        assert_eq!(request.body, Bytes::from(body));
+        assert_eq!(*request.body(), Bytes::from(body));
     }
 
     #[test]

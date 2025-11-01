@@ -113,9 +113,10 @@
 //! // Create base handler with router
 //! let base_handler: Arc<dyn Handler> = Arc::new(BaseHandler::with_router(Arc::new(router)));
 //!
-//! // Wrap with middleware using reinhardt_types::MiddlewareChain
-//! let handler = reinhardt_types::MiddlewareChain::new(base_handler)
-//!     .with_middleware(Arc::new(LoggingMiddleware));
+//! // Wrap with middleware
+//! let handler = MiddlewareChain::new(base_handler)
+//!     .add_middleware(Arc::new(LoggingMiddleware))
+//!     .build();
 //!
 //! // Use the handler
 //! let request = Request::new(

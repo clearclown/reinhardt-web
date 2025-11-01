@@ -5,6 +5,7 @@ use serde::Serialize;
 use std::pin::Pin;
 
 /// HTTP Response representation
+#[derive(Debug)]
 pub struct Response {
     pub status: StatusCode,
     pub headers: HeaderMap,
@@ -538,20 +539,20 @@ impl<S> StreamingResponse<S> {
     ///
     /// # Examples
     ///
-    /// ```no_run
+    /// ```
     /// use reinhardt_http::StreamingResponse;
     /// use futures::stream::{self, StreamExt};
     /// use bytes::Bytes;
     ///
-    /// async fn example() {
-    ///     let data = vec![Ok(Bytes::from("chunk1")), Ok(Bytes::from("chunk2"))];
-    ///     let stream = stream::iter(data);
-    ///     let response = StreamingResponse::new(stream);
+    /// # futures::executor::block_on(async {
+    /// let data = vec![Ok(Bytes::from("chunk1")), Ok(Bytes::from("chunk2"))];
+    /// let stream = stream::iter(data);
+    /// let response = StreamingResponse::new(stream);
     ///
-    ///     let mut extracted_stream = response.into_stream();
-    ///     let first_chunk = extracted_stream.next().await.unwrap().unwrap();
-    ///     assert_eq!(first_chunk, Bytes::from("chunk1"));
-    /// }
+    /// let mut extracted_stream = response.into_stream();
+    /// let first_chunk = extracted_stream.next().await.unwrap().unwrap();
+    /// assert_eq!(first_chunk, Bytes::from("chunk1"));
+    /// # });
     /// ```
     pub fn into_stream(self) -> S {
         self.stream
