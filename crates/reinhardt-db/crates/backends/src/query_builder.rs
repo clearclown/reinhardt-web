@@ -433,6 +433,10 @@ mod tests {
         ) -> Result<Option<Row>> {
             Ok(None)
         }
+
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
     }
 
     #[test]

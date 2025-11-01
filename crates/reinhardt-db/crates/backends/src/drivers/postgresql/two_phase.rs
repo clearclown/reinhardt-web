@@ -349,8 +349,8 @@ mod tests {
         assert_eq!(info.database, "testdb");
     }
 
-    #[test]
-    fn test_participant_clone() {
+    #[tokio::test]
+    async fn test_participant_clone() {
         // Test that PostgresTwoPhaseParticipant can be cloned
         // This is important for use in multi-threaded contexts
         let pool = Arc::new(

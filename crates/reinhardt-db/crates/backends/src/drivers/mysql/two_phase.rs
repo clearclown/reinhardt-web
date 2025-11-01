@@ -409,8 +409,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_participant_clone() {
+    #[tokio::test]
+    async fn test_participant_clone() {
         // Test that MySqlTwoPhaseParticipant can be cloned
         let pool = Arc::new(
             MySqlPool::connect_lazy("mysql://localhost/testdb")
