@@ -3,7 +3,6 @@
 //! Tests for template rendering inspired by Django's test_engine.py and test_extends.py
 
 use crate::TemplateLoader;
-use serde::Serialize;
 use tera::{Context, Tera};
 
 #[test]

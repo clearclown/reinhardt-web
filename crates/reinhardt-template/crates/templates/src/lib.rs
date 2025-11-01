@@ -274,12 +274,7 @@ mod basic_tests {
     #[test]
     fn test_template_loader() {
         let mut loader = TemplateLoader::new();
-        loader.register("hello", || {
-            let tmpl = HelloTemplate {
-                name: "World".to_string(),
-            };
-            tmpl.render().unwrap()
-        });
+        loader.register("hello", || "Hello World!".to_string());
 
         assert_eq!(loader.render("hello").unwrap(), "Hello World!");
     }
