@@ -57,14 +57,17 @@ where
 
 	/// Convert async-graphql response to gRPC response
 	fn convert_response(&self, resp: async_graphql::Response) -> GraphQlResponse {
-		let mut grpc_resp = GraphQlResponse::default();
-
 		// Convert data to JSON string
-		if matches!(resp.data, async_graphql::Value::Null) {
-			grpc_resp.data = None;
+		let data = if matches!(resp.data, async_graphql::Value::Null) {
+			None
 		} else {
-			grpc_resp.data = Some(resp.data.to_string());
-		}
+			Some(resp.data.to_string())
+		};
+
+		let mut grpc_resp = GraphQlResponse {
+			data,
+			..Default::default()
+		};
 
 		// Convert errors
 		if !resp.errors.is_empty() {
@@ -72,11 +75,8 @@ where
 				.errors
 				.into_iter()
 				.map(|err| {
-					let mut grpc_err = reinhardt_grpc::proto::graphql::GraphQlError::default();
-					grpc_err.message = err.message;
-
 					// Convert locations
-					grpc_err.locations = err
+					let locations = err
 						.locations
 						.into_iter()
 						.map(|loc| reinhardt_grpc::proto::graphql::GraphQlLocation {
@@ -86,7 +86,7 @@ where
 						.collect();
 
 					// Convert path
-					grpc_err.path = err
+					let path = err
 						.path
 						.into_iter()
 						.map(|segment| {
@@ -107,13 +107,20 @@ where
 						.collect();
 
 					// Convert extensions
-					if err.extensions.is_some()
+					let extensions = if err.extensions.is_some()
 						&& let Ok(ext_str) = serde_json::to_string(&err.extensions)
 					{
-						grpc_err.extensions = Some(ext_str);
-					}
+						Some(ext_str)
+					} else {
+						None
+					};
 
-					grpc_err
+					reinhardt_grpc::proto::graphql::GraphQlError {
+						message: err.message,
+						locations,
+						path,
+						extensions,
+					}
 				})
 				.collect();
 		}
@@ -202,11 +209,8 @@ where
 						Some(resp.data.to_string())
 					},
 					errors: resp.errors.into_iter().map(|err| {
-						let mut grpc_err = reinhardt_grpc::proto::graphql::GraphQlError::default();
-						grpc_err.message = err.message;
-
 						// Convert locations
-						grpc_err.locations = err
+						let locations = err
 							.locations
 							.into_iter()
 							.map(|loc| reinhardt_grpc::proto::graphql::GraphQlLocation {
@@ -216,7 +220,7 @@ where
 							.collect();
 
 						// Convert path
-						grpc_err.path = err
+						let path = err
 							.path
 							.into_iter()
 							.map(|segment| {
@@ -237,12 +241,19 @@ where
 							.collect();
 
 						// Convert extensions
-						if err.extensions.is_some()
+						let extensions = if err.extensions.is_some()
 							&& let Ok(ext_str) = serde_json::to_string(&err.extensions) {
-								grpc_err.extensions = Some(ext_str);
-							}
+								Some(ext_str)
+							} else {
+								None
+							};
 
-						grpc_err
+						reinhardt_grpc::proto::graphql::GraphQlError {
+							message: err.message,
+							locations,
+							path,
+							extensions,
+						}
 					}).collect(),
 					extensions: if !resp.extensions.is_empty() {
 						serde_json::to_string(&resp.extensions).ok()
