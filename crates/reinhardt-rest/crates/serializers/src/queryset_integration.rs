@@ -12,9 +12,7 @@
 
 use crate::SerializerError;
 use async_trait::async_trait;
-use reinhardt_orm::Model;
-#[cfg(feature = "django-compat")]
-use reinhardt_orm::QuerySet;
+use reinhardt_orm::{Model, QuerySet};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -96,32 +94,20 @@ where
 		Self::validate_for_create(&data).await?;
 
 		// Deserialize to model
-		#[cfg(feature = "django-compat")]
-		let model: Self::Model = serde_json::from_value(data).map_err(|e| SerializerError::Serde {
-			message: format!("Failed to deserialize: {}", e),
-		})?;
+		let model: Self::Model =
+			serde_json::from_value(data).map_err(|e| SerializerError::Serde {
+				message: format!("Failed to deserialize: {}", e),
+			})?;
 
 		// Save to database
-		#[cfg(feature = "django-compat")]
-		{
-			let queryset = QuerySet::<Self::Model>::new();
-			let created = queryset
-				.create(model)
-				.await
-				.map_err(|e| SerializerError::Other {
-					message: format!("Failed to create: {}", e),
-				})?;
-			Ok(created)
-		}
-
-		#[cfg(not(feature = "django-compat"))]
-		{
-			// Without django-compat feature, we cannot use QuerySet.create()
-			// Return error indicating feature is required
-			Err(SerializerError::Other {
-				message: "django-compat feature is required for save operations".to_string(),
-			})
-		}
+		let queryset = QuerySet::<Self::Model>::new();
+		let created = queryset
+			.create(model)
+			.await
+			.map_err(|e| SerializerError::Other {
+				message: format!("Failed to create: {}", e),
+			})?;
+		Ok(created)
 	}
 
 	/// Update an existing instance in the database
@@ -175,27 +161,17 @@ where
 		}
 
 		// Integrate with Manager.update()
-		#[cfg(feature = "django-compat")]
-		{
-			use reinhardt_orm::manager::Manager;
+		use reinhardt_orm::manager::Manager;
 
-			let manager = Manager::<Self::Model>::new();
-			let updated = manager
-				.update(&instance)
-				.await
-				.map_err(|e| SerializerError::Other {
-					message: format!("Failed to update instance: {}", e),
-				})?;
+		let manager = Manager::<Self::Model>::new();
+		let updated = manager
+			.update(&instance)
+			.await
+			.map_err(|e| SerializerError::Other {
+				message: format!("Failed to update instance: {}", e),
+			})?;
 
-			Ok(updated)
-		}
-
-		#[cfg(not(feature = "django-compat"))]
-		{
-			// Without django-compat, return the merged instance
-			// (in-memory update only, no database persistence)
-			Ok(instance)
-		}
+		Ok(updated)
 	}
 
 	/// Save the instance to database (create or update)

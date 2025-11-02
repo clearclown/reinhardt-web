@@ -47,9 +47,7 @@ pub use performance::{
 	BatchValidator, IntrospectionCache, N1Detector, PerformanceMetrics, PerformanceStats,
 	QueryCache,
 };
-pub use pool_manager::ConnectionPoolManager;
-#[cfg(feature = "django-compat")]
-pub use pool_manager::default_pool_config;
+pub use pool_manager::{ConnectionPoolManager, default_pool_config};
 pub use queryset_integration::{CacheAwareSaveContext, SaveContext, SerializerSaveMixin};
 pub use recursive::{RecursiveError, RecursiveResult, SerializationContext};
 pub use relation_fields_orm::{

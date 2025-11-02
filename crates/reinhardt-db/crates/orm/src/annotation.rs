@@ -154,6 +154,17 @@ impl AnnotationValue {
 			AnnotationValue::Subquery(sql) => sql.clone(),
 		}
 	}
+
+	/// Convert to SQL expression without alias (for use in SELECT with expr_as)
+	pub fn to_sql_expr(&self) -> String {
+		match self {
+			AnnotationValue::Value(v) => v.to_sql(),
+			AnnotationValue::Field(f) => f.to_sql(),
+			AnnotationValue::Aggregate(a) => a.to_sql_expr(), // Use to_sql_expr() for aggregates
+			AnnotationValue::Expression(e) => e.to_sql(),
+			AnnotationValue::Subquery(sql) => sql.clone(),
+		}
+	}
 }
 
 impl Expression {
@@ -311,7 +322,7 @@ mod tests {
 // Translated from Django/SQLAlchemy test suite
 // Total available: 110 | Included: 100
 
-#[cfg(all(test, feature = "django-compat"))]
+#[cfg(test)]
 mod annotation_extended_tests {
 	use super::*;
 	use crate::Filter;
@@ -420,7 +431,7 @@ mod annotation_extended_tests {
 		);
 		// Should contain SUM aggregation
 		assert!(
-			sql.starts_with("SUM") || sql.contains(" SUM "),
+			sql.contains("SUM("),
 			"SQL should contain SUM clause. Got: {}",
 			sql
 		);
@@ -850,7 +861,7 @@ mod annotation_extended_tests {
 		let sql = qs.to_sql();
 
 		assert!(
-			sql.starts_with("COUNT") || sql.contains(" COUNT "),
+			sql.contains("COUNT("),
 			"SQL should contain COUNT clause. Got: {}",
 			sql
 		);
@@ -871,7 +882,7 @@ mod annotation_extended_tests {
 		let sql = qs.to_sql();
 
 		assert!(
-			sql.starts_with("SUM") || sql.contains(" SUM "),
+			sql.contains("SUM("),
 			"SQL should contain SUM clause. Got: {}",
 			sql
 		);

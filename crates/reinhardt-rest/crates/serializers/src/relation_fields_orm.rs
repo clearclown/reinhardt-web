@@ -5,9 +5,7 @@
 //! - `SlugRelatedField` with slug-based queries
 //! - Query optimization with select_related/prefetch_related
 
-use crate::SerializerError;
-#[cfg(feature = "django-compat")]
-use crate::ValidatorError;
+use crate::{SerializerError, ValidatorError};
 use async_trait::async_trait;
 use reinhardt_orm::{Model, query::*};
 use serde::{Serialize, de::DeserializeOwned};
@@ -125,7 +123,6 @@ where
 	/// // Verify existence check runs without error (requires database)
 	/// field.validate_exists(&123).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn validate_exists(&self, pk: &T::PrimaryKey) -> Result<(), SerializerError>
 	where
 		T: Model + Serialize + DeserializeOwned + Clone + Send + Sync,
@@ -163,17 +160,6 @@ where
 		Ok(())
 	}
 
-	/// Validate existence (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn validate_exists(&self, _pk: &T::PrimaryKey) -> Result<(), SerializerError>
-	where
-		T::PrimaryKey: std::fmt::Display + Clone,
-	{
-		Err(SerializerError::Other {
-			message: "django-compat feature required for database operations".to_string(),
-		})
-	}
-
 	/// Get the related instance by primary key
 	///
 	/// # Examples
@@ -183,7 +169,6 @@ where
 	/// let user = field.get_instance(&123).await?;
 	/// assert_eq!(user.id, Some(123));
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn get_instance(&self, pk: &T::PrimaryKey) -> Result<T, SerializerError>
 	where
 		T: Model + Serialize + DeserializeOwned + Clone + Send + Sync,
@@ -223,17 +208,6 @@ where
 		Ok(instance)
 	}
 
-	/// Get instance (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn get_instance(&self, pk: &T::PrimaryKey) -> Result<T, SerializerError>
-	where
-		T::PrimaryKey: std::fmt::Display + Clone,
-	{
-		Err(SerializerError::Other {
-			message: format!("django-compat feature required. Looking for pk: {}", pk),
-		})
-	}
-
 	/// Get multiple instances by primary keys (batch lookup)
 	///
 	/// More efficient than calling `get_instance` multiple times.
@@ -245,7 +219,6 @@ where
 	/// let users = field.get_instances(vec![1, 2, 3]).await?;
 	/// assert_eq!(users.len(), 3);
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn get_instances(&self, pks: Vec<T::PrimaryKey>) -> Result<Vec<T>, SerializerError>
 	where
 		T: Model + Serialize + DeserializeOwned + Clone + Send + Sync,
@@ -281,17 +254,6 @@ where
 		})?;
 
 		Ok(instances)
-	}
-
-	/// Get instances (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn get_instances(&self, _pks: Vec<T::PrimaryKey>) -> Result<Vec<T>, SerializerError>
-	where
-		T::PrimaryKey: std::fmt::Display + Clone,
-	{
-		Err(SerializerError::Other {
-			message: "django-compat feature required for database operations".to_string(),
-		})
 	}
 }
 
@@ -380,7 +342,6 @@ where
 	/// // Verify slug existence check runs (requires database)
 	/// field.validate_exists("alice").await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn validate_exists(&self, slug: &str) -> Result<(), SerializerError> {
 		use reinhardt_orm::QuerySet;
 
@@ -416,14 +377,6 @@ where
 		Ok(())
 	}
 
-	/// Validate existence (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn validate_exists(&self, _slug: &str) -> Result<(), SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for database operations".to_string(),
-		})
-	}
-
 	/// Get the related instance by slug
 	///
 	/// # Examples
@@ -433,7 +386,6 @@ where
 	/// let user = field.get_instance("alice").await?;
 	/// assert_eq!(user.username, "alice");
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn get_instance(&self, slug: &str) -> Result<T, SerializerError> {
 		use reinhardt_orm::QuerySet;
 
@@ -468,17 +420,6 @@ where
 		Ok(instance)
 	}
 
-	/// Get instance (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn get_instance(&self, slug: &str) -> Result<T, SerializerError> {
-		Err(SerializerError::Other {
-			message: format!(
-				"django-compat feature required. Looking for {}: {}",
-				self.slug_field, slug
-			),
-		})
-	}
-
 	/// Get multiple instances by slugs (batch lookup)
 	///
 	/// # Examples
@@ -488,7 +429,6 @@ where
 	/// let users = field.get_instances(vec!["alice".to_string(), "bob".to_string()]).await?;
 	/// assert_eq!(users.len(), 2);
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn get_instances(&self, slugs: Vec<String>) -> Result<Vec<T>, SerializerError> {
 		use reinhardt_orm::QuerySet;
 
@@ -519,14 +459,6 @@ where
 		})?;
 
 		Ok(instances)
-	}
-
-	/// Get instances (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn get_instances(&self, _slugs: Vec<String>) -> Result<Vec<T>, SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for database operations".to_string(),
-		})
 	}
 }
 

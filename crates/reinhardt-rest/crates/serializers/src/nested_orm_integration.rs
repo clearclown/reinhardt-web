@@ -8,11 +8,9 @@
 
 use crate::{SerializerError, ValidatorError};
 use async_trait::async_trait;
-#[cfg(feature = "django-compat")]
-use reinhardt_orm::transaction::transaction;
 use reinhardt_orm::{
 	Model,
-	transaction::{Transaction, TransactionScope},
+	transaction::{Transaction, TransactionScope, transaction},
 };
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
@@ -124,7 +122,6 @@ impl NestedSaveContext {
 	///     Ok(value)
 	/// }).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn with_scope<F, Fut, T>(&self, f: F) -> Result<T, SerializerError>
 	where
 		F: FnOnce(&TransactionScope) -> Fut,
@@ -137,19 +134,6 @@ impl NestedSaveContext {
 			// Nested transaction (savepoint)
 			TransactionHelper::savepoint(self.depth, f).await
 		}
-	}
-
-	/// Execute nested operation within transaction scope (non-django-compat)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn with_scope<F, Fut, T>(&self, _f: F) -> Result<T, SerializerError>
-	where
-		F: FnOnce(&TransactionScope) -> Fut,
-		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
-	{
-		// Without django-compat, feature is not available
-		Err(SerializerError::Other {
-			message: "with_scope requires django-compat feature to be enabled".to_string(),
-		})
 	}
 }
 
@@ -298,7 +282,6 @@ where
 	/// // Verify bulk relationship creation
 	/// manager.add_bulk(&user_id, vec![group1_id, group2_id]).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn add_bulk(
 		&self,
 		source_id: &T::PrimaryKey,
@@ -341,22 +324,9 @@ where
 		Ok(())
 	}
 
-	/// Add relationships in bulk (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn add_bulk(
-		&self,
-		_source_id: &T::PrimaryKey,
-		_target_ids: Vec<R::PrimaryKey>,
-	) -> Result<(), SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for M2M operations".to_string(),
-		})
-	}
-
 	/// Remove relationships in bulk
 	///
 	/// Deletes junction table entries for provided target IDs.
-	#[cfg(feature = "django-compat")]
 	pub async fn remove_bulk(
 		&self,
 		source_id: &T::PrimaryKey,
@@ -397,18 +367,6 @@ where
 		Ok(())
 	}
 
-	/// Remove relationships in bulk (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn remove_bulk(
-		&self,
-		_source_id: &T::PrimaryKey,
-		_target_ids: Vec<R::PrimaryKey>,
-	) -> Result<(), SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for M2M operations".to_string(),
-		})
-	}
-
 	/// Set relationships (replace all existing)
 	///
 	/// Removes all existing relationships and creates new ones in a single operation.
@@ -419,7 +377,6 @@ where
 	/// // Verify replacing user's groups atomically
 	/// manager.set(&user_id, vec![group1_id, group2_id]).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn set(
 		&self,
 		source_id: &T::PrimaryKey,
@@ -435,18 +392,6 @@ where
 		Ok(())
 	}
 
-	/// Set relationships (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn set(
-		&self,
-		_source_id: &T::PrimaryKey,
-		_target_ids: Vec<R::PrimaryKey>,
-	) -> Result<(), SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for M2M operations".to_string(),
-		})
-	}
-
 	/// Clear all relationships for source instance
 	///
 	/// Deletes all junction table entries for the given source ID.
@@ -457,7 +402,6 @@ where
 	/// // Verify clearing all user's group memberships
 	/// manager.clear(&user_id).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn clear(&self, source_id: &T::PrimaryKey) -> Result<(), SerializerError>
 	where
 		T::PrimaryKey: std::fmt::Display,
@@ -480,14 +424,6 @@ where
 			})?;
 
 		Ok(())
-	}
-
-	/// Clear all relationships (non-django-compat version)
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn clear(&self, _source_id: &T::PrimaryKey) -> Result<(), SerializerError> {
-		Err(SerializerError::Other {
-			message: "django-compat feature required for M2M operations".to_string(),
-		})
 	}
 }
 
@@ -523,7 +459,6 @@ impl TransactionHelper {
 	///     Ok(created_instance)
 	/// }).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn with_transaction<F, Fut, T>(f: F) -> Result<T, SerializerError>
 	where
 		F: FnOnce(&TransactionScope) -> Fut,
@@ -555,19 +490,6 @@ impl TransactionHelper {
 			})
 	}
 
-	/// Execute function within a database transaction (non-django-compat version)
-	///
-	/// This is a stub implementation for when django-compat feature is not enabled.
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn with_transaction<F, Fut, T>(_f: F) -> Result<T, SerializerError>
-	where
-		F: FnOnce(&TransactionScope) -> Fut,
-		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
-	{
-		// Without django-compat, create a dummy TransactionScope and execute function
-		todo!("TransactionScope requires django-compat feature to be enabled")
-	}
-
 	/// Create a savepoint for nested transaction using RAII pattern
 	///
 	/// This method uses `TransactionScope::begin_nested()` which automatically handles:
@@ -586,7 +508,6 @@ impl TransactionHelper {
 	///     Ok(result)
 	/// }).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn savepoint<F, Fut, T>(depth: usize, f: F) -> Result<T, SerializerError>
 	where
 		F: FnOnce(&TransactionScope) -> Fut,
@@ -623,21 +544,6 @@ impl TransactionHelper {
 				Err(format!("{}", e)).map_err(|msg| SerializerError::Other { message: msg })
 			}
 		}
-	}
-
-	/// Create a savepoint for nested transaction (non-django-compat version)
-	///
-	/// This is a stub implementation for when django-compat feature is not enabled.
-	#[cfg(not(feature = "django-compat"))]
-	pub async fn savepoint<F, Fut, T>(_depth: usize, _f: F) -> Result<T, SerializerError>
-	where
-		F: FnOnce(&TransactionScope) -> Fut,
-		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
-	{
-		// Without django-compat, feature is not available
-		Err(SerializerError::Other {
-			message: "savepoint requires django-compat feature to be enabled".to_string(),
-		})
 	}
 }
 

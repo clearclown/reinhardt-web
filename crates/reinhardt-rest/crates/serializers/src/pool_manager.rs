@@ -3,11 +3,8 @@
 //! This module provides connection pool integration for ORM operations
 //! in serializers, enabling efficient database access in high-concurrency scenarios.
 
-#[cfg(feature = "django-compat")]
 use crate::SerializerError;
-#[cfg(feature = "django-compat")]
 use reinhardt_pool::{ConnectionPool, PoolConfig};
-#[cfg(feature = "django-compat")]
 use std::sync::{Arc, RwLock};
 
 /// Global connection pool manager
@@ -32,7 +29,6 @@ use std::sync::{Arc, RwLock};
 /// let conn = ConnectionPoolManager::acquire().await?;
 /// ```
 pub struct ConnectionPoolManager {
-	#[cfg(feature = "django-compat")]
 	pool: Option<Arc<ConnectionPool<sqlx::Postgres>>>,
 }
 
@@ -47,14 +43,10 @@ impl std::fmt::Debug for ConnectionPoolManager {
 impl ConnectionPoolManager {
 	/// Create a new connection pool manager
 	pub fn new() -> Self {
-		Self {
-			#[cfg(feature = "django-compat")]
-			pool: None,
-		}
+		Self { pool: None }
 	}
 
 	/// Get the global instance
-	#[cfg(feature = "django-compat")]
 	fn instance() -> &'static RwLock<ConnectionPoolManager> {
 		static INSTANCE: once_cell::sync::Lazy<RwLock<ConnectionPoolManager>> =
 			once_cell::sync::Lazy::new(|| RwLock::new(ConnectionPoolManager::new()));
@@ -69,7 +61,6 @@ impl ConnectionPoolManager {
 	/// let pool = ConnectionPool::new_postgres(url, config).await?;
 	/// ConnectionPoolManager::set_pool(Arc::new(pool));
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub fn set_pool(pool: Arc<ConnectionPool<sqlx::Postgres>>) {
 		let instance = Self::instance();
 		let mut manager = instance.write().expect("Failed to acquire write lock");
@@ -77,7 +68,6 @@ impl ConnectionPoolManager {
 	}
 
 	/// Get the current connection pool
-	#[cfg(feature = "django-compat")]
 	pub fn get_pool() -> Option<Arc<ConnectionPool<sqlx::Postgres>>> {
 		let instance = Self::instance();
 		let manager = instance.read().expect("Failed to acquire read lock");
@@ -99,7 +89,6 @@ impl ConnectionPoolManager {
 	/// // Use the connection...
 	/// // Connection is automatically returned to pool when dropped
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn acquire()
 	-> Result<reinhardt_pool::PooledConnection<sqlx::Postgres>, SerializerError> {
 		let pool = Self::get_pool().ok_or_else(|| SerializerError::Other {
@@ -112,7 +101,6 @@ impl ConnectionPoolManager {
 	}
 
 	/// Check if the pool is initialized
-	#[cfg(feature = "django-compat")]
 	pub fn is_initialized() -> bool {
 		Self::get_pool().is_some()
 	}
@@ -120,7 +108,6 @@ impl ConnectionPoolManager {
 	/// Clear the connection pool
 	///
 	/// Useful for testing or reconfiguration scenarios.
-	#[cfg(feature = "django-compat")]
 	pub fn clear() {
 		let instance = Self::instance();
 		let mut manager = instance.write().expect("Failed to acquire write lock");
@@ -142,7 +129,6 @@ impl Default for ConnectionPoolManager {
 /// let config = default_pool_config();
 /// let pool = ConnectionPool::new_postgres(url, config).await?;
 /// ```
-#[cfg(feature = "django-compat")]
 pub fn default_pool_config() -> PoolConfig {
 	PoolConfig::default()
 }
@@ -152,7 +138,6 @@ mod tests {
 	use super::*;
 
 	#[test]
-	#[cfg(feature = "django-compat")]
 	fn test_pool_manager_not_initialized() {
 		// Clear any existing pool
 		ConnectionPoolManager::clear();
@@ -162,7 +147,6 @@ mod tests {
 	}
 
 	#[test]
-	#[cfg(feature = "django-compat")]
 	fn test_default_pool_config() {
 		let config = default_pool_config();
 		assert_eq!(config.max_connections, 10);

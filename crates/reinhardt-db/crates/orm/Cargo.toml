@@ -7,9 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [features]
-default = ["django-compat"]
-# Django ORM compatibility layer (optional)
-django-compat = []
+default = []
 # Connection pooling
 pooling = []
 # Migration support
@@ -19,9 +17,9 @@ advanced-queries = []
 # Integration tests with real database
 integration-tests = []
 # Database driver features
-postgres = ["backends/postgres"]
-sqlite = ["backends/sqlite"]
-mysql = ["backends/mysql"]
+postgres = ["backends/postgres", "sqlx/postgres"]
+sqlite = ["backends/sqlite", "sqlx/sqlite"]
+mysql = ["backends/mysql", "sqlx/mysql"]
 
 [dependencies]
 reinhardt-apps = { workspace = true }
@@ -68,3 +66,4 @@ smallvec = "1.13"
 [dev-dependencies]
 serial_test = { workspace = true }
 tokio-test = "0.4"
+testcontainers = { workspace = true }

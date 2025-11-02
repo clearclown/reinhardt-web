@@ -391,7 +391,6 @@ impl Transaction {
 	}
 
 	/// Execute transaction begin on database
-	#[cfg(feature = "django-compat")]
 	/// Documentation for `begin_db`
 	///
 	pub async fn begin_db(&mut self) -> reinhardt_apps::Result<()> {
@@ -402,7 +401,6 @@ impl Transaction {
 	}
 
 	/// Execute transaction commit on database
-	#[cfg(feature = "django-compat")]
 	/// Documentation for `commit_db`
 	///
 	pub async fn commit_db(&mut self) -> reinhardt_apps::Result<()> {
@@ -413,7 +411,6 @@ impl Transaction {
 	}
 
 	/// Execute transaction rollback on database
-	#[cfg(feature = "django-compat")]
 	/// Documentation for `rollback_db`
 	///
 	pub async fn rollback_db(&mut self) -> reinhardt_apps::Result<()> {
@@ -1347,7 +1344,6 @@ mod tests {
 		}
 	}
 
-	#[cfg(feature = "django-compat")]
 	async fn setup_transaction_test_db() -> reinhardt_apps::Result<()> {
 		use sqlx::SqlitePool;
 		use tokio::sync::OnceCell;
@@ -1387,8 +1383,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[cfg(feature = "django-compat")]
-	#[cfg(feature = "django-compat")]
 	#[ignore] // TODO: Requires global database manager initialization
 	async fn test_begin_db_execution() {
 		setup_transaction_test_db().await.unwrap();
@@ -1402,8 +1396,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[cfg(feature = "django-compat")]
-	#[cfg(feature = "django-compat")]
 	async fn test_commit_db_sql_generation() {
 		// Test that commit_db() generates and attempts to execute correct SQL
 		// Note: Full transaction semantics require a dedicated connection
@@ -1425,8 +1417,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[cfg(feature = "django-compat")]
-	#[cfg(feature = "django-compat")]
 	async fn test_rollback_db_sql_generation() {
 		// Test that rollback_db() generates and attempts to execute correct SQL
 		setup_transaction_test_db().await.unwrap();
@@ -1446,8 +1436,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[cfg(feature = "django-compat")]
-	#[cfg(feature = "django-compat")]
 	async fn test_nested_transaction_sql_generation() {
 		// Test nested transaction (savepoint) SQL generation
 		setup_transaction_test_db().await.unwrap();
@@ -1478,8 +1466,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[cfg(feature = "django-compat")]
-	#[cfg(feature = "django-compat")]
 	async fn test_transaction_isolation_level_sql() {
 		// Test that isolation level is properly included in BEGIN statement
 		setup_transaction_test_db().await.unwrap();

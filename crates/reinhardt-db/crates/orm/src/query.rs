@@ -2,7 +2,6 @@
 //!
 //! This module provides a unified entry point for querying functionality.
 //! By default, it exports the expression-based query API (SQLAlchemy-style).
-//! When the `django-compat` feature is enabled, it exports the Django QuerySet API.
 
 use sea_query::{
 	Alias, Asterisk, Condition, Expr, ExprTrait, Order, PostgresQueryBuilder, Query as SeaQuery,
@@ -97,7 +96,6 @@ where
 	selected_fields: Option<Vec<String>>,
 	deferred_fields: Vec<String>,
 	annotations: Vec<crate::annotation::Annotation>,
-	#[cfg(feature = "django-compat")]
 	manager: Option<std::sync::Arc<crate::manager::Manager<T>>>,
 }
 
@@ -116,12 +114,10 @@ where
 			selected_fields: None,
 			deferred_fields: Vec::new(),
 			annotations: Vec::new(),
-			#[cfg(feature = "django-compat")]
 			manager: None,
 		}
 	}
 
-	#[cfg(feature = "django-compat")]
 	pub fn with_manager(manager: std::sync::Arc<crate::manager::Manager<T>>) -> Self {
 		Self {
 			_phantom: std::marker::PhantomData,
@@ -684,7 +680,6 @@ where
 	/// - Database connection fails
 	/// - SQL execution fails
 	/// - Deserialization of results fails
-	#[cfg(feature = "django-compat")]
 	pub async fn all(&self) -> reinhardt_apps::Result<Vec<T>>
 	where
 		T: serde::de::DeserializeOwned,
@@ -723,14 +718,6 @@ where
 			.collect()
 	}
 
-	/// Execute the queryset and return all matching records (without django-compat feature)
-	///
-	/// Returns empty vector when django-compat feature is not enabled.
-	#[cfg(not(feature = "django-compat"))]
-	pub fn all(&self) -> Vec<T> {
-		Vec::new()
-	}
-
 	/// Execute the queryset and return the first matching record
 	///
 	/// Returns `None` if no records match the query.
@@ -753,7 +740,6 @@ where
 	///     None => println!("No active users found"),
 	/// }
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn first(&self) -> reinhardt_apps::Result<Option<T>>
 	where
 		T: serde::de::DeserializeOwned,
@@ -786,7 +772,6 @@ where
 	/// - No records match the query
 	/// - Multiple records match the query
 	/// - Database connection fails
-	#[cfg(feature = "django-compat")]
 	pub async fn get(&self) -> reinhardt_apps::Result<T>
 	where
 		T: serde::de::DeserializeOwned,
@@ -823,7 +808,6 @@ where
 	///
 	/// println!("Active users: {}", count);
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn count(&self) -> reinhardt_apps::Result<usize> {
 		use sea_query::{Func, PostgresQueryBuilder};
 
@@ -877,7 +861,6 @@ where
 	///     println!("Admin users exist");
 	/// }
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn exists(&self) -> reinhardt_apps::Result<bool> {
 		let count = self.count().await?;
 		Ok(count > 0)
@@ -895,7 +878,6 @@ where
 	/// };
 	/// let created = User::objects().create(user).await?;
 	/// ```
-	#[cfg(feature = "django-compat")]
 	pub async fn create(&self, object: T) -> reinhardt_apps::Result<T>
 	where
 		T: crate::Model + Clone,
@@ -1058,7 +1040,6 @@ where
 	/// - Required primary key fields are missing from the provided values
 	/// - No matching record is found in the database
 	/// - Multiple records match (should not happen with a valid composite PK)
-	#[cfg(feature = "django-compat")]
 	pub async fn get_composite(
 		&self,
 		pk_values: &HashMap<String, crate::composite_pk::PkValue>,
@@ -1180,7 +1161,7 @@ where
 	}
 
 	pub fn to_sql(&self) -> String {
-		let stmt = if self.select_related_fields.is_empty() {
+		let mut stmt = if self.select_related_fields.is_empty() {
 			// Simple SELECT without JOINs
 			let mut stmt = SeaQuery::select();
 			stmt.from(Alias::new(T::table_name()));
@@ -1226,23 +1207,21 @@ where
 			self.select_related_query()
 		};
 
-		use sea_query::PostgresQueryBuilder;
-		let mut sql = stmt.to_string(PostgresQueryBuilder);
+		// Add annotations to SELECT clause if any using SeaQuery API
+		// Collect annotation SQL strings first to handle lifetime issues
+		// Note: Use to_sql_expr() to get expression without alias (SeaQuery adds alias via expr_as)
+		let annotation_exprs: Vec<_> = self
+			.annotations
+			.iter()
+			.map(|a| (a.value.to_sql_expr(), a.alias.clone()))
+			.collect();
 
-		// Add annotations to SELECT clause if any
-		if !self.annotations.is_empty() {
-			// Find the position to insert annotations (after SELECT ... FROM table_name)
-			if let Some(from_pos) = sql.find(" FROM ") {
-				let mut annotation_sql = String::new();
-				for annotation in &self.annotations {
-					annotation_sql.push_str(", ");
-					annotation_sql.push_str(&annotation.to_sql());
-				}
-				sql.insert_str(from_pos, &annotation_sql);
-			}
+		for (value_sql, alias) in annotation_exprs {
+			stmt.expr_as(Expr::cust(value_sql), Alias::new(alias));
 		}
 
-		sql
+		use sea_query::PostgresQueryBuilder;
+		stmt.to_string(PostgresQueryBuilder)
 	}
 
 	/// Select specific values from the QuerySet
@@ -1397,11 +1376,7 @@ where
 	}
 }
 
-// Export expression-based query API by default
-#[cfg(not(feature = "django-compat"))]
-pub use crate::sqlalchemy_query::*;
-
-#[cfg(all(test, feature = "django-compat"))]
+#[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::Model;

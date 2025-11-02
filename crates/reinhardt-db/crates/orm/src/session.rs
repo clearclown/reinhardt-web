@@ -587,6 +587,7 @@ impl Session {
 mod tests {
 	use super::*;
 	use serde::{Deserialize, Serialize};
+	use sqlx::Any;
 
 	#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 	struct TestUser {
@@ -613,9 +614,13 @@ mod tests {
 
 	// Create test pool using SQLite in-memory database
 	async fn create_test_pool() -> Arc<AnyPool> {
-		// Connect directly using AnyPool with sqlite: URL scheme
-		let pool = AnyPool::connect("sqlite::memory:")
-			.await
+		use sqlx::pool::PoolOptions;
+
+		// For in-memory databases, use connect_lazy to avoid pool initialization issues
+		let pool = PoolOptions::<Any>::new()
+			.min_connections(0)
+			.max_connections(5)
+			.connect_lazy("sqlite::memory:")
 			.expect("Failed to create test pool");
 
 		Arc::new(pool)

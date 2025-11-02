@@ -459,7 +459,7 @@ let stats = metrics.get_stats();
 println!("Average: {}ms", stats.avg_serialization_ms);
 ```
 
-**Note**: ORM integration features require the `django-compat` feature flag to be enabled. Without this flag, stub implementations will return appropriate errors.
+**Note**: ORM integration features (Django-like QuerySet API and SQLAlchemy-like query builder) are available by default. Both patterns can be used interchangeably for database operations.
 
 #### Additional Field Types
 

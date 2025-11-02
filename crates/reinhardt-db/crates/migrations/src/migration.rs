@@ -2925,7 +2925,6 @@ mod migrations_extended_tests {
 		// Model managers are application-level constructs that don't affect database schema.
 		// They define custom query methods and default querysets for models.
 		// Migrations don't need to handle manager changes since they're runtime-only.
-		// Note: reinhardt-orm has manager support in src/manager.rs (django-compat feature)
 		//
 		// Use reinhardt-migrations types
 		use crate::operations::Operation;

@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 /// Internal type for representing unique constraint checks
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Fields are used in django-compat feature
+#[allow(dead_code)] // Fields are used in database validation
 enum UniqueCheckQuery {
 	/// Single field uniqueness check
 	Single {
@@ -280,108 +280,98 @@ impl BatchValidator {
 		table: &str,
 		queries: &[UniqueCheckQuery],
 	) -> Result<HashMap<String, String>, SerializerError> {
-		#[cfg(feature = "django-compat")]
-		{
-			use reinhardt_orm::manager::get_connection;
+		use reinhardt_orm::manager::get_connection;
 
-			let mut failed_checks = HashMap::new();
+		let mut failed_checks = HashMap::new();
 
-			// Get database connection
-			let conn = get_connection().await.map_err(|e| SerializerError::Other {
-				message: format!("Failed to get database connection: {}", e),
+		// Get database connection
+		let conn = get_connection().await.map_err(|e| SerializerError::Other {
+			message: format!("Failed to get database connection: {}", e),
+		})?;
+
+		// Build UNION ALL query combining all checks
+		let mut union_queries = Vec::new();
+
+		for query in queries {
+			match query {
+				UniqueCheckQuery::Single {
+					check_id,
+					field,
+					value,
+				} => {
+					// Escape single quotes in value
+					let escaped_value = value.replace('\'', "''");
+					let subquery = format!(
+						"SELECT '{}' as check_id, COUNT(*) as cnt FROM {} WHERE {} = '{}'",
+						check_id, table, field, escaped_value
+					);
+					union_queries.push(subquery);
+				}
+				UniqueCheckQuery::Together {
+					check_id,
+					fields,
+					values,
+				} => {
+					// Build WHERE conditions for all fields
+					let conditions: Vec<String> = fields
+						.iter()
+						.zip(values.iter())
+						.map(|(field, value)| {
+							let escaped_value = value.replace('\'', "''");
+							format!("{} = '{}'", field, escaped_value)
+						})
+						.collect();
+
+					let where_clause = conditions.join(" AND ");
+					let subquery = format!(
+						"SELECT '{}' as check_id, COUNT(*) as cnt FROM {} WHERE {}",
+						check_id, table, where_clause
+					);
+					union_queries.push(subquery);
+				}
+			}
+		}
+
+		// Combine all subqueries with UNION ALL
+		let final_query = union_queries.join(" UNION ALL ");
+
+		// Execute query
+		let rows = conn
+			.query(&final_query)
+			.await
+			.map_err(|e| SerializerError::Other {
+				message: format!("Failed to execute batch validation query: {}", e),
 			})?;
 
-			// Build UNION ALL query combining all checks
-			let mut union_queries = Vec::new();
+		// Parse results and identify failed checks
+		for row in rows {
+			// Extract check_id and count from the row
+			// The row.data should be a JSON object with "check_id" and "cnt" fields
+			if let Some(obj) = row.data.as_object() {
+				let check_id = obj
+					.get("check_id")
+					.and_then(|v| v.as_str())
+					.unwrap_or("unknown");
+				let count = obj.get("cnt").and_then(|v| v.as_i64()).unwrap_or(0);
 
-			for query in queries {
-				match query {
-					UniqueCheckQuery::Single {
-						check_id,
-						field,
-						value,
-					} => {
-						// Escape single quotes in value
-						let escaped_value = value.replace('\'', "''");
-						let subquery = format!(
-							"SELECT '{}' as check_id, COUNT(*) as cnt FROM {} WHERE {} = '{}'",
-							check_id, table, field, escaped_value
-						);
-						union_queries.push(subquery);
-					}
-					UniqueCheckQuery::Together {
-						check_id,
-						fields,
-						values,
-					} => {
-						// Build WHERE conditions for all fields
-						let conditions: Vec<String> = fields
-							.iter()
-							.zip(values.iter())
-							.map(|(field, value)| {
-								let escaped_value = value.replace('\'', "''");
-								format!("{} = '{}'", field, escaped_value)
-							})
-							.collect();
+				if count > 0 {
+					// Extract field name from check_id for error message
+					// Format: "table:field:value" or "table:field1+field2:value1+value2"
+					let parts: Vec<&str> = check_id.split(':').collect();
+					let field_info = if parts.len() >= 2 { parts[1] } else { "field" };
 
-						let where_clause = conditions.join(" AND ");
-						let subquery = format!(
-							"SELECT '{}' as check_id, COUNT(*) as cnt FROM {} WHERE {}",
-							check_id, table, where_clause
-						);
-						union_queries.push(subquery);
-					}
+					let error_msg = if field_info.contains('+') {
+						format!("Combination of {} already exists", field_info)
+					} else {
+						format!("{} already exists", field_info)
+					};
+
+					failed_checks.insert(check_id.to_string(), error_msg);
 				}
 			}
-
-			// Combine all subqueries with UNION ALL
-			let final_query = union_queries.join(" UNION ALL ");
-
-			// Execute query
-			let rows = conn
-				.query(&final_query)
-				.await
-				.map_err(|e| SerializerError::Other {
-					message: format!("Failed to execute batch validation query: {}", e),
-				})?;
-
-			// Parse results and identify failed checks
-			for row in rows {
-				// Extract check_id and count from the row
-				// The row.data should be a JSON object with "check_id" and "cnt" fields
-				if let Some(obj) = row.data.as_object() {
-					let check_id = obj
-						.get("check_id")
-						.and_then(|v| v.as_str())
-						.unwrap_or("unknown");
-					let count = obj.get("cnt").and_then(|v| v.as_i64()).unwrap_or(0);
-
-					if count > 0 {
-						// Extract field name from check_id for error message
-						// Format: "table:field:value" or "table:field1+field2:value1+value2"
-						let parts: Vec<&str> = check_id.split(':').collect();
-						let field_info = if parts.len() >= 2 { parts[1] } else { "field" };
-
-						let error_msg = if field_info.contains('+') {
-							format!("Combination of {} already exists", field_info)
-						} else {
-							format!("{} already exists", field_info)
-						};
-
-						failed_checks.insert(check_id.to_string(), error_msg);
-					}
-				}
-			}
-
-			Ok(failed_checks)
 		}
 
-		#[cfg(not(feature = "django-compat"))]
-		{
-			// Without django-compat feature, return empty result (no validation)
-			let _ = (table, queries); // Suppress unused warnings
-			Ok(HashMap::new())
-		}
+		Ok(failed_checks)
 	}
 
 	/// Get number of pending checks
@@ -641,26 +631,6 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_batch_validator_basic() {
-		let mut validator = BatchValidator::new();
-		assert_eq!(validator.pending_count(), 0);
-
-		validator.add_unique_check("users", "email", "test@example.com");
-		validator.add_unique_check("users", "username", "alice");
-
-		assert_eq!(validator.pending_count(), 2);
-
-		// Test execute
-		let result = validator.execute().await;
-		assert!(result.is_ok());
-		let failures = result.unwrap();
-		assert_eq!(failures.len(), 0); // Stub implementation returns no failures
-
-		validator.clear();
-		assert_eq!(validator.pending_count(), 0);
-	}
-
-	#[tokio::test]
 	async fn test_batch_validator_unique_together() {
 		let mut validator = BatchValidator::new();
 
@@ -752,27 +722,6 @@ mod tests {
 		let stats = metrics.get_stats();
 		assert_eq!(stats.total_serializations, 0);
 		assert_eq!(stats.total_validations, 0);
-	}
-
-	#[tokio::test]
-	async fn test_batch_validator_mixed_checks() {
-		let mut validator = BatchValidator::new();
-
-		// Add both single and together checks across multiple tables
-		validator.add_unique_check("users", "email", "alice@example.com");
-		validator.add_unique_together_check(
-			"users",
-			vec!["first_name".to_string(), "last_name".to_string()],
-			vec!["Alice".to_string(), "Smith".to_string()],
-		);
-		validator.add_unique_check("products", "sku", "PROD-123");
-
-		assert_eq!(validator.pending_count(), 3);
-
-		let result = validator.execute().await;
-		assert!(result.is_ok());
-		let failures = result.unwrap();
-		assert_eq!(failures.len(), 0); // Stub implementation returns no failures
 	}
 
 	#[test]

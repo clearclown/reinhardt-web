@@ -149,14 +149,12 @@ pub mod session;
 pub mod sqlalchemy_query;
 pub mod types;
 
-// Django ORM compatibility - optional feature
-#[cfg(feature = "django-compat")]
+// Django ORM compatibility layer
 pub mod manager;
 
 // Unified query interface facade
 pub mod query;
 
-#[cfg(feature = "django-compat")]
 pub use manager::{get_connection, init_database};
 
 // Core exports - always available
@@ -253,10 +251,9 @@ pub use engine::{Engine, EngineConfig, create_engine, create_engine_with_config}
 pub use many_to_many::{AssociationTable, ManyToMany, association_table};
 pub use query_execution::{ExecutableQuery, QueryCompiler};
 
-// Django ORM compatibility layer (optional)
-#[cfg(feature = "django-compat")]
+// Django ORM compatibility layer
 pub use manager::Manager;
-// Query types are always available (not feature-gated)
+// Query types are always available
 pub use query::{Filter, FilterOperator, FilterValue, Query, QuerySet};
 
 // Advanced ORM features

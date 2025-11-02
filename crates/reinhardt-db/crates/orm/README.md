@@ -83,7 +83,7 @@ A powerful Object-Relational Mapping system inspired by Django's ORM and SQLAlch
 - **FilterValue** - Type-safe filter value handling (String, Integer, Float, Boolean, Null)
 - **select_related** - Eagerly load related objects using JOIN queries
 - **prefetch_related** - Eagerly load related objects using separate queries
-- **create()** - Create new record (requires `django-compat` feature)
+- **create()** - Create new record
 
 ### Database Manager (Django-compatible)
 
