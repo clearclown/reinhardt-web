@@ -631,6 +631,7 @@ mod tests {
 	}
 
 	#[test]
+	#[serial]
 	fn test_model_reflector_primary_key_fields() {
 		setup_test_registry();
 		let reflector = ModelReflector::new("TestUser").unwrap();
