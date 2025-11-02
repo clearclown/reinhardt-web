@@ -122,8 +122,8 @@ See @CLAUDE.commit.md for detailed commit guidelines including:
 - Pre-1.0.0 versions (0.x.x) may have breaking changes in MINOR versions (per SemVer spec)
 
 **Tagging Strategy (Per-Crate Tagging):**
-- **MUST** use format: `[crate-name]-v[version]`
-  - Examples: `reinhardt-core-v0.2.0`, `reinhardt-orm-v0.1.1`, `reinhardt-v1.0.0`
+- **MUST** use format: `[crate-name]@v[version]`
+  - Examples: `reinhardt-core@v0.2.0`, `reinhardt-orm@v0.1.1`, `reinhardt@v1.0.0`
 - **MUST** tag each crate individually when published to crates.io
 - Tag message MUST include brief changelog summary
 - Tag MUST be created AFTER committing version changes, not before
@@ -147,7 +147,7 @@ See @CLAUDE.commit.md for detailed commit guidelines including:
 6. Run `cargo publish --dry-run -p <crate-name>`
 7. Wait for user confirmation after dry-run
 8. Run `cargo publish -p <crate-name>`
-9. Create and push tag: `git tag [crate-name]-v[version] -m "Release [crate-name] v[version]"`
+9. Create and push tag: `git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"`
 10. Push: `git push && git push --tags`
 
 **Why This Approach:**
@@ -254,7 +254,7 @@ Before submitting code:
 - Use `#[serial(group_name)]` for global state tests
 - Split commits by specific intent, not features
 - Follow Semantic Versioning 2.0.0 strictly for all crates
-- Use `[crate-name]-v[version]` format for Git tags
+- Use `[crate-name]@v[version]` format for Git tags
 - Verify with `--dry-run` before publishing to crates.io
 - Commit version bump before creating tags
 - Update crate's CHANGELOG.md with version changes

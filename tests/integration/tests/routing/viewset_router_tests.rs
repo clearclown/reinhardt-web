@@ -2,7 +2,8 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 use reinhardt_apps::{Handler, Request};
 use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, TestViewSet, ViewSet};
+use reinhardt_test::TestViewSet;
+use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -596,7 +597,8 @@ async fn test_args_kwargs_request_action_map_on_self() {
 #[tokio::test]
 async fn test_login_required_middleware_compat() {
 	use hyper::{Method, Uri, Version};
-	use reinhardt_viewsets::{TestViewSet, viewset_actions};
+	use reinhardt_test::TestViewSet;
+	use reinhardt_viewsets::viewset_actions;
 	use std::collections::HashMap;
 
 	// Test ViewSet without login required

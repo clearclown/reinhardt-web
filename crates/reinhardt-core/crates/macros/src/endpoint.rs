@@ -115,7 +115,7 @@ pub fn endpoint_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 
 		let injection_code = if arg.use_cache {
 			quote! {
-				let #pat = ::reinhardt_di::Depends::<#ty>::new()
+				let #pat = ::reinhardt_di::Depends::<#ty>::builder()
 					.resolve(__di_ctx)
 					.await
 					.map_err(|e| {
@@ -125,7 +125,7 @@ pub fn endpoint_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 			}
 		} else {
 			quote! {
-				let #pat = ::reinhardt_di::Depends::<#ty>::no_cache()
+				let #pat = ::reinhardt_di::Depends::<#ty>::builder_no_cache()
 					.resolve(__di_ctx)
 					.await
 					.map_err(|e| {

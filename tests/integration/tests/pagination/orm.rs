@@ -1,6 +1,6 @@
 //! ORM Integration Tests for Pagination
 //!
-//! These tests require reinhardt-orm with django-compat feature and reinhardt-postgres crates.
+//! These tests work with reinhardt-orm and database backends.
 //! They test pagination with database querysets.
 
 use reinhardt_orm::Model;

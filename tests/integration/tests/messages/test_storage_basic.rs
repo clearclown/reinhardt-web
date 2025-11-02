@@ -6,6 +6,7 @@
 #[cfg(test)]
 mod tests {
 	use reinhardt_messages::{Level, MemoryStorage, Message, MessageStorage};
+	use std::str::FromStr;
 
 	#[test]
 	fn test_memory_storage_add_and_get() {
@@ -155,18 +156,18 @@ mod tests {
 
 	#[test]
 	fn test_messages_integration_level_from_str() {
-		assert_eq!(Level::from_str("debug"), Some(Level::Debug));
-		assert_eq!(Level::from_str("info"), Some(Level::Info));
-		assert_eq!(Level::from_str("success"), Some(Level::Success));
-		assert_eq!(Level::from_str("warning"), Some(Level::Warning));
-		assert_eq!(Level::from_str("error"), Some(Level::Error));
+		assert_eq!(Level::from_str("debug"), Ok(Level::Debug));
+		assert_eq!(Level::from_str("info"), Ok(Level::Info));
+		assert_eq!(Level::from_str("success"), Ok(Level::Success));
+		assert_eq!(Level::from_str("warning"), Ok(Level::Warning));
+		assert_eq!(Level::from_str("error"), Ok(Level::Error));
 
 		// Case insensitive
-		assert_eq!(Level::from_str("DEBUG"), Some(Level::Debug));
-		assert_eq!(Level::from_str("INFO"), Some(Level::Info));
+		assert_eq!(Level::from_str("DEBUG"), Ok(Level::Debug));
+		assert_eq!(Level::from_str("INFO"), Ok(Level::Info));
 
 		// Invalid
-		assert_eq!(Level::from_str("invalid"), None);
+		assert!(Level::from_str("invalid").is_err());
 	}
 
 	#[test]

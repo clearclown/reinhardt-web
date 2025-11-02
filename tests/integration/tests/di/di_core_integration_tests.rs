@@ -73,7 +73,7 @@ async fn test_depends_wrapper() {
 	let singleton = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::new(singleton);
 
-	let db = Depends::<Database>::new().resolve(&ctx).await.unwrap();
+	let db = Depends::<Database>::builder().resolve(&ctx).await.unwrap();
 	assert_eq!(db.connection_string, "postgres://localhost/test");
 }
 
@@ -156,7 +156,7 @@ async fn test_di_integration_depends_clone() {
 	let singleton = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::new(singleton);
 
-	let db1 = Depends::<Database>::new().resolve(&ctx).await.unwrap();
+	let db1 = Depends::<Database>::builder().resolve(&ctx).await.unwrap();
 	let db2 = db1.clone();
 
 	// Both should point to the same underlying data

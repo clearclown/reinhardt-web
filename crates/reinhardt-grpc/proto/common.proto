@@ -14,7 +14,7 @@ message Error {
   map<string, string> metadata = 3;
 }
 
-// ページネーション情報
+// Pagination information
 message PageInfo {
   int32 page = 1;
   int32 per_page = 2;
@@ -23,7 +23,7 @@ message PageInfo {
   bool has_prev = 5;
 }
 
-// バッチ操作結果
+// Batch operation results
 message BatchResult {
   int32 success_count = 1;
   int32 failure_count = 2;

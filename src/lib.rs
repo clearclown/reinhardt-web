@@ -165,14 +165,20 @@ pub use reinhardt_routers::{
 
 // Re-export auth
 pub use reinhardt_auth::{
-	AllowAny, AnonymousUser, Argon2Hasher, AuthBackend, Claims, IsAdminUser, IsAuthenticated,
-	JwtAuth, PasswordHasher, Permission, SimpleUser, User,
+	AllowAny, AnonymousUser, Argon2Hasher, AuthBackend, IsAdminUser, IsAuthenticated,
+	PasswordHasher, Permission, SimpleUser, User,
 };
+
+#[cfg(feature = "auth-jwt")]
+pub use reinhardt_auth::{Claims, JwtAuth};
 
 // Re-export middleware
 #[cfg(feature = "sessions")]
 pub use reinhardt_middleware::AuthenticationMiddleware;
-pub use reinhardt_middleware::{CorsMiddleware, LoggingMiddleware};
+pub use reinhardt_middleware::LoggingMiddleware;
+
+#[cfg(feature = "middleware-cors")]
+pub use reinhardt_middleware::CorsMiddleware;
 
 // Re-export HTTP types (additional commonly used types)
 pub use reinhardt_http::Extensions;
@@ -348,7 +354,6 @@ pub mod prelude {
 		// Middleware
 		BrowsableAPIRenderer,
 
-		CorsMiddleware,
 		CursorPagination,
 		DatabaseConnection,
 
@@ -371,7 +376,6 @@ pub mod prelude {
 		// Renderers
 		JSONRenderer,
 		JsonSerializer,
-		JwtAuth,
 		LimitOffsetPagination,
 		ListView,
 		LoggingMiddleware,
@@ -460,6 +464,14 @@ pub mod prelude {
 	// Forms (if enabled)
 	#[cfg(feature = "forms")]
 	pub use crate::{CharField, EmailField, FieldError, Form, FormError, ModelForm};
+
+	// JWT Auth (if enabled)
+	#[cfg(feature = "auth-jwt")]
+	pub use crate::{Claims, JwtAuth};
+
+	// CORS Middleware (if enabled)
+	#[cfg(feature = "middleware-cors")]
+	pub use crate::CorsMiddleware;
 
 	// Shortcuts (if enabled)
 	#[cfg(feature = "shortcuts")]

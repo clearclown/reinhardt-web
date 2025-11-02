@@ -167,7 +167,7 @@ After committing the version bump:
 2. Run verification: `cargo publish --dry-run -p [crate-name]`
 3. Wait for user confirmation after dry-run results
 4. Publish: `cargo publish -p [crate-name]`
-5. Create Git tag: `git tag [crate-name]-v[version] -m "Release [crate-name] v[version]"`
+5. Create Git tag: `git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"`
 6. Push commits and tags: `git push && git push --tags`
 
 **Critical Rules:**

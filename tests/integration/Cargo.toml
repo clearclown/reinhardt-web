@@ -20,9 +20,7 @@ reinhardt-routers = { path = "../../crates/reinhardt-urls/crates/routers" }
 reinhardt-viewsets = { path = "../../crates/reinhardt-views/crates/viewsets" }
 reinhardt-openapi = { path = "../../crates/reinhardt-rest/crates/openapi" }
 reinhardt-graphql = { path = "../../crates/reinhardt-contrib/crates/graphql" }
-reinhardt-orm = { path = "../../crates/reinhardt-db/crates/orm", features = [
-  "django-compat",
-] }
+reinhardt-orm = { path = "../../crates/reinhardt-db/crates/orm" }
 reinhardt-migrations = { path = "../../crates/reinhardt-db/crates/migrations" }
 backends = { path = "../../crates/reinhardt-db/crates/backends", package = "reinhardt-db-backends", features = [
   "postgres",

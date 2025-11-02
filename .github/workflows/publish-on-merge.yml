@@ -79,7 +79,7 @@ jobs:
               continue
             fi
 
-            TAG_NAME="$CRATE_NAME-v$VERSION"
+            TAG_NAME="$CRATE_NAME@v$VERSION"
 
             # Check if tag already exists
             if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then

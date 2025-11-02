@@ -3,7 +3,7 @@ name: Publish to crates.io
 on:
   push:
     tags:
-      - '*-v*.*.*'  # Matches: reinhardt-orm-v0.1.0, etc.
+      - '*@v*.*.*'  # Matches: reinhardt-orm@v0.1.0, etc.
 
 env:
   CARGO_TERM_COLOR: always
@@ -30,11 +30,11 @@ jobs:
           TAG_NAME="${GITHUB_REF#refs/tags/}"
           echo "Tag: $TAG_NAME"
 
-          # Extract crate name (everything before -vX.Y.Z)
-          CRATE_NAME=$(echo "$TAG_NAME" | sed 's/-v[0-9].*//')
+          # Extract crate name (everything before @vX.Y.Z)
+          CRATE_NAME=$(echo "$TAG_NAME" | sed 's/@v[0-9].*//')
 
-          # Extract version (everything after -v)
-          VERSION=$(echo "$TAG_NAME" | sed 's/.*-v//')
+          # Extract version (everything after @v)
+          VERSION=$(echo "$TAG_NAME" | sed 's/.*@v//')
 
           echo "Crate: $CRATE_NAME"
           echo "Version: $VERSION"
@@ -205,15 +205,21 @@ jobs:
             NOTES=$(awk "/## \[$VERSION\]/,/## \[/" "$CHANGELOG_PATH" | head -n -1)
 
             if [ -z "$NOTES" ]; then
-              NOTES="Release $CRATE_NAME v$VERSION
+              NOTES=$(cat <<EOF
+          Release $CRATE_NAME v$VERSION
 
-No CHANGELOG entry found for this version."
+          No CHANGELOG entry found for this version.
+          EOF
+              )
             fi
           else
             echo "No CHANGELOG.md found"
-            NOTES="Release $CRATE_NAME v$VERSION
+            NOTES=$(cat <<EOF
+          Release $CRATE_NAME v$VERSION
 
-Published to crates.io"
+          Published to crates.io
+          EOF
+            )
           fi
 
           # Save to file

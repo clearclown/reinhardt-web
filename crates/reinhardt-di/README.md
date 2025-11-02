@@ -191,13 +191,13 @@ struct Config {
 
 #[tokio::main]
 async fn main() {
-    // シングルトンスコープの作成
+    // Creating a singleton scope
     let singleton = Arc::new(SingletonScope::new());
 
-    // リクエストコンテキストの作成
+    // Creating the request context
     let ctx = InjectionContext::new(singleton);
 
-    // 依存性の解決（キャッシュ有効）
+    // Dependency Resolution (Cache Enabled)
     let config = Depends::<Config>::new()
         .resolve(&ctx)
         .await

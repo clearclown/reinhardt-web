@@ -220,7 +220,7 @@ Based on the [Version Selection Guidelines](#version-selection-guidelines):
 
 ```bash
 # Review changes since last release
-git log [crate-name]-v[last-version]..HEAD -- crates/[crate-name]/
+git log [crate-name]@v[last-version]..HEAD -- crates/[crate-name]/
 
 # Determine version type
 # MAJOR: Breaking changes
@@ -230,7 +230,7 @@ git log [crate-name]-v[last-version]..HEAD -- crates/[crate-name]/
 
 **Example:**
 ```bash
-git log reinhardt-orm-v0.1.0..HEAD -- crates/reinhardt-orm/
+git log reinhardt-orm@v0.1.0..HEAD -- crates/reinhardt-orm/
 # Review commits to determine if changes are breaking, features, or fixes
 ```
 
@@ -421,17 +421,17 @@ cargo publish -p <crate-name>
 After successful publication:
 
 ```bash
-git tag [crate-name]-v[version] -m "Release [crate-name] v[version]"
+git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"
 ```
 
 **Example:**
 ```bash
-git tag reinhardt-orm-v0.2.0 -m "Release reinhardt-orm v0.2.0"
+git tag reinhardt-orm@v0.2.0 -m "Release reinhardt-orm v0.2.0"
 ```
 
 Verify tag creation:
 ```bash
-git tag -l "[crate-name]-v*"
+git tag -l "[crate-name]@v*"
 ```
 
 #### Step 10: Push Commits and Tags
@@ -534,7 +534,7 @@ After PR merge, the `publish-on-merge.yml` workflow automatically executes:
 **Tag Creation Example**:
 - Crate name: `reinhardt-orm`
 - Version: `0.2.0`
-- Generated tag: `reinhardt-orm-v0.2.0`
+- Generated tag: `reinhardt-orm@v0.2.0`
 
 #### Step 6: Automatic Publishing on Tag Push
 
@@ -600,8 +600,8 @@ Normally, `publish-on-merge.yml` automatically creates tags from the main branch
 **Solution**:
 ```bash
 # Delete tag (if error occurred on GitHub Actions)
-git tag -d reinhardt-orm-v0.2.0
-git push origin :refs/tags/reinhardt-orm-v0.2.0
+git tag -d reinhardt-orm@v0.2.0
+git push origin :refs/tags/reinhardt-orm@v0.2.0
 
 # Verify Cargo.toml version
 cargo metadata --no-deps --format-version 1 | jq '.packages[] | select(.name == "reinhardt-orm") | .version'
@@ -619,8 +619,8 @@ cargo metadata --no-deps --format-version 1 | jq '.packages[] | select(.name == 
 **Solution**:
 ```bash
 # Delete failed tag
-git tag -d reinhardt-orm-v0.2.0
-git push origin :refs/tags/reinhardt-orm-v0.2.0
+git tag -d reinhardt-orm@v0.2.0
+git push origin :refs/tags/reinhardt-orm@v0.2.0
 
 # Fix issues, create PR → merge → auto-generate tags again
 ```
@@ -671,7 +671,7 @@ git checkout main
 git pull origin main
 
 # Create tag
-TAG="reinhardt-orm-v0.2.0"
+TAG="reinhardt-orm@v0.2.0"
 git tag "$TAG" -m "Release reinhardt-orm v0.2.0"
 
 # Verify tag is on main branch
@@ -922,10 +922,10 @@ If publication failed but tag was created:
 
 ```bash
 # Delete local tag
-git tag -d [crate-name]-v[version]
+git tag -d [crate-name]@v[version]
 
 # Delete remote tag (if pushed)
-git push origin :refs/tags/[crate-name]-v[version]
+git push origin :refs/tags/[crate-name]@v[version]
 ```
 
 ### Commit Rollback
@@ -999,13 +999,13 @@ description = "ORM layer for Reinhardt framework"  # Add this
 **Solution:**
 ```bash
 # Delete local tag
-git tag -d [crate-name]-v[version]
+git tag -d [crate-name]@v[version]
 
 # Delete remote tag (if pushed)
-git push origin :refs/tags/[crate-name]-v[version]
+git push origin :refs/tags/[crate-name]@v[version]
 
 # Recreate tag after fixing
-git tag [crate-name]-v[version] -m "Release [crate-name] v[version]"
+git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"
 ```
 
 #### Issue: CI/CD failures after release
@@ -1070,7 +1070,7 @@ cargo publish --dry-run -p <crate-name>
 cargo publish -p <crate-name>
 
 # Tagging
-git tag [crate-name]-v[version] -m "Release [crate-name] v[version]"
+git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"
 git push origin main
 git push origin --tags
 

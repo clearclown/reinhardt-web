@@ -1,27 +1,27 @@
-# GraphQL facade over gRPC
+# GraphQL Facade over gRPC
 
-reinhardt-graphql は、gRPC サービスを GraphQL API として公開する機能を提供します。
+reinhardt-graphql provides functionality to expose gRPC services as GraphQL APIs.
 
 ## Feature Flags
 
 ```toml
 [dependencies]
 reinhardt-graphql = { version = "0.1.0", features = ["full"] }
-# または個別に有効化
+# Or enable individually
 reinhardt-graphql = { version = "0.1.0", features = ["graphql-grpc", "subscription"] }
 ```
 
 ### Available Features
 
-- `graphql-grpc`: Query/Mutation の gRPC 統合
-- `subscription`: Subscription の gRPC 統合（Rust 2024 対応）
-- `full`: 全機能有効化
+- `graphql-grpc`: Query/Mutation gRPC integration
+- `subscription`: Subscription gRPC integration (Rust 2024 compatible)
+- `full`: Enable all features
 
-## 使用方法
+## Usage
 
-### 1. Protobuf 型と GraphQL 型の自動変換
+### 1. Automatic Conversion between Protobuf and GraphQL Types
 
-`#[derive(GrpcGraphQLConvert)]` を使用すると、Protobuf 型と GraphQL 型の間の変換が自動生成されます:
+Using `#[derive(GrpcGraphQLConvert)]` automatically generates conversions between Protobuf and GraphQL types:
 
 ```rust
 use reinhardt_graphql::GrpcGraphQLConvert;
@@ -35,14 +35,14 @@ struct User {
     email: Option<String>,
 }
 
-// 自動生成される:
+// Automatically generated:
 // - From<proto::User> for User
 // - From<User> for proto::User
 ```
 
-### 2. Query/Mutation の gRPC 統合
+### 2. Query/Mutation gRPC Integration
 
-`GrpcServiceAdapter` trait を実装してリゾルバーを作成:
+Create resolvers by implementing the `GrpcServiceAdapter` trait:
 
 ```rust
 use reinhardt_graphql::GrpcServiceAdapter;
@@ -54,18 +54,18 @@ struct UserServiceAdapter {
 
 #[async_trait]
 impl GrpcServiceAdapter for UserServiceAdapter {
-    type Input = String; // ユーザーID
-    type Output = User;  // GraphQL User 型
+    type Input = String; // User ID
+    type Output = User;  // GraphQL User type
     type Error = anyhow::Error;
 
     async fn call(&self, user_id: Self::Input) -> Result<Self::Output, Self::Error> {
         let request = proto::GetUserRequest { id: user_id };
         let response = self.grpc_client.get_user(request).await?;
-        Ok(response.into_inner().into()) // proto → GraphQL 変換
+        Ok(response.into_inner().into()) // proto → GraphQL conversion
     }
 }
 
-// GraphQL リゾルバー
+// GraphQL resolver
 struct Query;
 
 #[Object]
@@ -77,9 +77,9 @@ impl Query {
 }
 ```
 
-### 3. Subscription の gRPC 統合
+### 3. Subscription gRPC Integration
 
-`#[derive(GrpcSubscription)]` を使用すると、gRPC Server Streaming を GraphQL Subscription に自動マッピングします:
+Using `#[derive(GrpcSubscription)]` automatically maps gRPC Server Streaming to GraphQL Subscriptions:
 
 ```rust
 use reinhardt_graphql::GrpcSubscription;
@@ -89,7 +89,7 @@ use reinhardt_graphql::GrpcSubscription;
 #[graphql(filter = "event_type == Created")]
 struct UserCreatedSubscription;
 
-// 自動生成される GraphQL Subscription:
+// Automatically generated GraphQL Subscription:
 // subscription {
 //   userCreated {
 //     id
@@ -99,11 +99,11 @@ struct UserCreatedSubscription;
 // }
 ```
 
-**Rust 2024 対応:** このマクロは、Rust 2024 の lifetime キャプチャ問題を解決するため、`Box::pin` と明示的な lifetime アノテーションを使用します。
+**Rust 2024 Compatible:** This macro uses `Box::pin` and explicit lifetime annotations to solve Rust 2024's lifetime capture issues.
 
-### 4. 手動実装（高度なユースケース）
+### 4. Manual Implementation (Advanced Use Cases)
 
-より細かい制御が必要な場合は、`GrpcSubscriptionAdapter` を手動実装:
+For finer control, manually implement `GrpcSubscriptionAdapter`:
 
 ```rust
 use reinhardt_graphql::GrpcSubscriptionAdapter;
@@ -116,7 +116,7 @@ impl GrpcSubscriptionAdapter for UserEventsAdapter {
     type Error = anyhow::Error;
 
     fn map_event(&self, proto: Self::Proto) -> Option<Self::GraphQL> {
-        // イベントタイプでフィルタ
+        // Filter by event type
         if proto.event_type == proto::EventType::Created as i32 {
             proto.user.map(|u| u.into())
         } else {
@@ -142,7 +142,7 @@ impl Subscription {
             .unwrap()
             .into_inner();
 
-        // Rust 2024 対応: Box::pin でラップ
+        // Rust 2024 compatible: Wrapped with Box::pin
         Box::pin(stream.filter_map(move |result| async move {
             match result {
                 Ok(proto_event) => adapter.map_event(proto_event),
@@ -153,7 +153,7 @@ impl Subscription {
 }
 ```
 
-## アーキテクチャ
+## Architecture
 
 ```
 ┌─────────────────┐
@@ -182,27 +182,27 @@ impl Subscription {
 └─────────────────────────────────────┘
 ```
 
-## Rust 2024 Subscription 問題の解決
+## Solving Rust 2024 Subscription Issues
 
-async-graphql 7.0 は Rust 2024 の新しい lifetime キャプチャルールと互換性がありません。この問題は、gRPC Server Streaming を使用することで解決されます:
+async-graphql 7.0 is not compatible with Rust 2024's new lifetime capture rules. This issue is resolved by using gRPC Server Streaming:
 
-**従来の async-graphql Subscription（動作しない）:**
+**Traditional async-graphql Subscription (doesn't work):**
 
 ```rust
-// Rust 2024 でコンパイルエラー
+// Compilation error in Rust 2024
 async fn user_created<'ctx>(&self, ctx: &Context<'ctx>)
     -> impl Stream<Item = User> + 'ctx
 {
     async_stream::stream! {
-        // lifetime キャプチャ問題
+        // lifetime capture issue
     }
 }
 ```
 
-**gRPC ベースの Subscription（動作する）:**
+**gRPC-based Subscription (works):**
 
 ```rust
-// Rust 2024 対応
+// Rust 2024 compatible
 async fn user_created<'ctx>(&self, ctx: &Context<'ctx>)
     -> impl Stream<Item = User> + 'ctx
 {
@@ -211,21 +211,21 @@ async fn user_created<'ctx>(&self, ctx: &Context<'ctx>)
 }
 ```
 
-## パフォーマンス
+## Performance
 
 - **Direct GraphQL**: ~3-4 µs/query
 - **GraphQL over gRPC**: ~4-5 µs/query
-- **オーバーヘッド**: 5-21% (+0.2-0.8 µs)
+- **Overhead**: 5-21% (+0.2-0.8 µs)
 
-詳細は [PERFORMANCE.md](PERFORMANCE.md) を参照してください。
+See [PERFORMANCE.md](PERFORMANCE.md) for details.
 
-## サンプルコード
+## Sample Code
 
-完全な実装例は `tests/` ディレクトリを参照:
+See the `tests/` directory for complete implementation examples:
 
-- `tests/grpc_services/` - gRPC サービスの実装例
-- `tests/proto/` - Protobuf 定義例
+- `tests/grpc_services/` - gRPC service implementation examples
+- `tests/proto/` - Protobuf definition examples
 
-## ライセンス
+## License
 
 MIT OR Apache-2.0

@@ -753,6 +753,7 @@ mod tests {
 	}
 
 	#[test]
+	#[serial_test::serial(relationship_cache)]
 	fn test_extract_model_relations_no_relationships() {
 		use crate::registry::clear_relationship_cache;
 
@@ -765,6 +766,7 @@ mod tests {
 	}
 
 	#[test]
+	#[serial_test::serial(relationship_cache)]
 	fn test_extract_model_relations_different_models() {
 		use crate::registry::clear_relationship_cache;
 
@@ -786,6 +788,7 @@ mod tests {
 	}
 
 	#[test]
+	#[serial_test::serial(relationship_cache)]
 	fn test_extract_model_relations_no_panic() {
 		use crate::registry::clear_relationship_cache;
 
