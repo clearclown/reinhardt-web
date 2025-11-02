@@ -1,6 +1,6 @@
 # reinhardt-signals
 
-Event-driven hooks for model lifecycle events - Django signals の上位互換実装
+Event-driven hooks for model lifecycle events - Enhanced implementation compatible with Django signals
 
 ## Overview
 
