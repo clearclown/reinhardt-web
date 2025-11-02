@@ -4,96 +4,96 @@ FastAPI-inspired dependency injection system for Reinhardt.
 
 ## Overview
 
-FastAPI-styleの依存性注入システムを提供します。リクエストスコープ、シングルトンスコープの依存性キャッシング、ネストされた依存性の自動解決、認証やデータベース接続との統合をサポートします。
+Provides a FastAPI-style dependency injection system with support for request-scoped and singleton-scoped dependency caching, automatic resolution of nested dependencies, and integration with authentication and database connections.
 
-型安全で非同期ファーストな設計により、FastAPIの開発体験をRustで実現します。
+Delivers the FastAPI development experience in Rust with type-safe and async-first design.
 
 ## Core Concepts
 
 ### Dependency Scopes
 
-- **Request Scope**: リクエストごとにキャッシュされる依存性（デフォルト）
-- **Singleton Scope**: アプリケーション全体で共有される依存性
+- **Request Scope**: Dependencies cached per request (default)
+- **Singleton Scope**: Dependencies shared across the entire application
 
 ### Automatic Injection
 
-`Default + Clone + Send + Sync + 'static`を実装する型は、自動的に`Injectable`トレイトが実装され、依存性として使用できます。
+Types implementing `Default + Clone + Send + Sync + 'static` automatically implement the `Injectable` trait and can be used as dependencies.
 
 ## Implemented Features ✓
 
 ### Core Dependency Injection
 
-- ✓ **`Depends<T>` Wrapper**: FastAPI-styleの依存性注入ラッパー
-  - `Depends::<T>::new()` - キャッシュ有効（デフォルト）
-  - `Depends::<T>::no_cache()` - キャッシュ無効
-  - `resolve(&ctx)` - 依存性の解決
-  - `from_value(value)` - テスト用の値からの生成
+- ✓ **`Depends<T>` Wrapper**: FastAPI-style dependency injection wrapper
+  - `Depends::<T>::new()` - Cache enabled (default)
+  - `Depends::<T>::no_cache()` - Cache disabled
+  - `resolve(&ctx)` - Dependency resolution
+  - `from_value(value)` - Generate from value for testing
 
-- ✓ **Injectable Trait**: 依存性として注入可能な型を定義
-  - 自動実装: `Default + Clone + Send + Sync + 'static`型に対して
-  - カスタム実装: 複雑な初期化ロジックが必要な場合
+- ✓ **Injectable Trait**: Define types that can be injected as dependencies
+  - Auto-implementation: For types implementing `Default + Clone + Send + Sync + 'static`
+  - Custom implementation: When complex initialization logic is needed
 
-- ✓ **InjectionContext**: 依存性解決のためのコンテキスト
-  - `get_request<T>()` / `set_request<T>()` - リクエストスコープ
-  - `get_singleton<T>()` / `set_singleton<T>()` - シングルトンスコープ
-  - リクエストごとに新しいコンテキストを生成
+- ✓ **InjectionContext**: Context for dependency resolution
+  - `get_request<T>()` / `set_request<T>()` - Request scope
+  - `get_singleton<T>()` / `set_singleton<T>()` - Singleton scope
+  - Generate new context per request
 
-- ✓ **RequestScope**: リクエスト内でのキャッシング
-  - 型ベースのキャッシュ（`TypeId`をキーとして使用）
-  - スレッドセーフな実装（`Arc<RwLock<HashMap>>`）
+- ✓ **RequestScope**: Caching within requests
+  - Type-based cache (using `TypeId` as key)
+  - Thread-safe implementation (`Arc<RwLock<HashMap>>`)
 
-- ✓ **SingletonScope**: アプリケーション全体でのキャッシング
-  - すべてのリクエスト間で共有される依存性
-  - スレッドセーフな実装
+- ✓ **SingletonScope**: Application-wide caching
+  - Dependencies shared across all requests
+  - Thread-safe implementation
 
 ### Advanced Features
 
-- ✓ **Dependency Caching**: リクエストスコープ内での自動キャッシング
-  - 同じ依存性を複数回要求しても1回だけ生成される
-  - ネストされた依存性間でキャッシュが共有される
-  - キャッシュの有効/無効を制御可能
+- ✓ **Dependency Caching**: Automatic caching within request scope
+  - Same dependency is generated only once even when requested multiple times
+  - Cache is shared between nested dependencies
+  - Cache enable/disable control available
 
-- ✓ **Nested Dependencies**: 依存性が他の依存性に依存できる
-  - 依存性グラフの自動解決
-  - 循環依存の検出とエラー処理
+- ✓ **Nested Dependencies**: Dependencies can depend on other dependencies
+  - Automatic dependency graph resolution
+  - Circular dependency detection and error handling
 
-- ✓ **Dependency Overrides**: テスト用の依存性オーバーライド
-  - 本番とテストで異なる実装を使用可能
-  - アプリケーションレベルでのオーバーライド管理
-  - サブ依存性を持つオーバーライドのサポート
+- ✓ **Dependency Overrides**: Dependency overrides for testing
+  - Use different implementations for production and testing
+  - Application-level override management
+  - Support for overrides with sub-dependencies
 
-- ✓ **Provider System**: 非同期ファクトリーパターン
-  - `Provider` trait - 依存性を提供するための汎用インターフェース
-  - `ProviderFn` - 関数ベースのプロバイダー
-  - 任意の非同期クロージャをプロバイダーとして使用可能
+- ✓ **Provider System**: Async factory pattern
+  - `Provider` trait - Generic interface for providing dependencies
+  - `ProviderFn` - Function-based provider
+  - Any async closure can be used as a provider
 
 ### Error Handling
 
-- ✓ **DiError**: 包括的なエラー型
-  - `NotFound` - 依存性が見つからない
-  - `CircularDependency` - 循環依存の検出
-  - `ProviderError` - プロバイダーのエラー
-  - `TypeMismatch` - 型の不一致
-  - `ScopeError` - スコープ関連のエラー
+- ✓ **DiError**: Comprehensive error type
+  - `NotFound` - Dependency not found
+  - `CircularDependency` - Circular dependency detection
+  - `ProviderError` - Provider errors
+  - `TypeMismatch` - Type mismatch
+  - `ScopeError` - Scope-related errors
 
 ### Integration Support
 
-- ✓ **HTTP Integration**: HTTPリクエスト/レスポンスとの統合
-  - リクエストからの依存性注入
-  - 接続情報の注入サポート
+- ✓ **HTTP Integration**: Integration with HTTP requests/responses
+  - Dependency injection from requests
+  - Support for connection info injection
 
-- ✓ **WebSocket Support**: WebSocket接続への依存性注入
-  - WebSocketハンドラーでの`Depends<T>`使用
+- ✓ **WebSocket Support**: Dependency injection into WebSocket connections
+  - Use `Depends<T>` in WebSocket handlers
 
 ### Advanced Dependency Patterns ✓
 
-#### Generator-based Dependencies (yieldパターン)
+#### Generator-based Dependencies (yield pattern)
 
-- **Lifecycle Management**: セットアップ/ティアダウンパターン
-- **Context Manager**: 自動リソースクリーンアップ
-- **Error Handling**: エラー時でもクリーンアップ実行
-- **Streaming Support**: ストリーミングレスポンス対応
-- **WebSocket Support**: WebSocketハンドラーとの統合
+- **Lifecycle Management**: Setup/teardown pattern
+- **Context Manager**: Automatic resource cleanup
+- **Error Handling**: Cleanup execution even on errors
+- **Streaming Support**: Streaming response support
+- **WebSocket Support**: Integration with WebSocket handlers
 
 ```rust
 use reinhardt_di::{Injectable, InjectionContext};
@@ -115,12 +115,12 @@ impl DatabaseConnection {
 }
 ```
 
-#### Dependency Classes（クラスベース依存性）
+#### Dependency Classes (Class-based dependencies)
 
-- **Callable Dependencies**: callメソッドを持つ構造体ベースの依存性
-- **Async Callables**: 非同期依存性メソッドのサポート
-- **Stateful Dependencies**: 内部状態を持つ依存性
-- **Method-based Injection**: 柔軟な依存性構築
+- **Callable Dependencies**: Struct-based dependencies with call methods
+- **Async Callables**: Async dependency method support
+- **Stateful Dependencies**: Dependencies with internal state
+- **Method-based Injection**: Flexible dependency construction
 
 ```rust
 #[derive(Clone)]
@@ -135,11 +135,11 @@ impl CallableDependency {
 }
 ```
 
-#### Parametrized Dependencies（パラメータ化依存性）
+#### Parametrized Dependencies (Parameterized dependencies)
 
-- **Path Parameter Integration**: 依存性からパスパラメータへのアクセス
-- **Shared Parameters**: エンドポイントと依存性でパスパラメータを共有
-- **Type-safe Extraction**: コンパイル時に検証されたパラメータ渡し
+- **Path Parameter Integration**: Access to path parameters from dependencies
+- **Shared Parameters**: Share path parameters between endpoints and dependencies
+- **Type-safe Extraction**: Compile-time validated parameter passing
 
 ```rust
 // Path parameter accessible in dependency
@@ -152,17 +152,17 @@ impl Injectable for UserValidator {
 }
 ```
 
-#### Schema Generation（スキーマ生成）
+#### Schema Generation (Schema generation)
 
-- **Dependency Deduplication**: 共有依存性はスキーマに1度だけ出現
-- **Transitive Dependencies**: ネストされた依存性の自動キャッシング
-- **Schema Optimization**: 効率的な依存性グラフ表現
+- **Dependency Deduplication**: Shared dependencies appear only once in schema
+- **Transitive Dependencies**: Automatic caching of nested dependencies
+- **Schema Optimization**: Efficient dependency graph representation
 
-#### Security Overrides（セキュリティオーバーライド）
+#### Security Overrides (Security overrides)
 
-- **Security Dependencies**: OAuth2、JWT、その他の認証スキーム
-- **Security Scopes**: スコープベースのアクセス制御
-- **Override Support**: テストフレンドリーなセキュリティ依存性の置き換え
+- **Security Dependencies**: OAuth2, JWT, and other authentication schemes
+- **Security Scopes**: Scope-based access control
+- **Override Support**: Test-friendly replacement of security dependencies
 
 ```rust
 // Security dependency with scopes
@@ -219,7 +219,7 @@ struct Database {
 #[async_trait::async_trait]
 impl Injectable for Database {
     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-        // カスタム初期化ロジック
+        // Custom initialization logic
         let config = Config::inject(ctx).await?;
         let pool = create_pool(&config.database_url).await?;
 
@@ -239,7 +239,7 @@ struct ServiceA {
 #[async_trait::async_trait]
 impl Injectable for ServiceA {
     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-        // Databaseに依存
+        // Depends on Database
         let db = Database::inject(ctx).await?;
         Ok(ServiceA { db: Arc::new(db) })
     }
@@ -254,7 +254,7 @@ struct ServiceB {
 #[async_trait::async_trait]
 impl Injectable for ServiceB {
     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-        // ServiceAとConfigに依存（ネストされた依存性）
+        // Depends on ServiceA and Config (nested dependencies)
         let service_a = ServiceA::inject(ctx).await?;
         let config = Config::inject(ctx).await?;
 
@@ -275,7 +275,7 @@ mod tests {
 
     #[derive(Clone)]
     struct MockDatabase {
-        // テスト用のモック実装
+        // Mock implementation for testing
     }
 
     #[tokio::test]
@@ -283,11 +283,11 @@ mod tests {
         let singleton = Arc::new(SingletonScope::new());
         let ctx = InjectionContext::new(singleton);
 
-        // テスト用のモックをセット
+        // Set mock for testing
         let mock_db = MockDatabase { /* ... */ };
         ctx.set_request(mock_db);
 
-        // テストコード
+        // Test code
     }
 }
 ```
@@ -295,72 +295,72 @@ mod tests {
 ### Cache Control
 
 ```rust
-// キャッシュ有効（デフォルト） - 同じインスタンスを返す
+// Cache enabled (default) - Returns the same instance
 let config1 = Depends::<Config>::new().resolve(&ctx).await?;
 let config2 = Depends::<Config>::new().resolve(&ctx).await?;
-// config1とconfig2は同じインスタンス
+// config1 and config2 are the same instance
 
-// キャッシュ無効 - 毎回新しいインスタンスを作成
+// Cache disabled - Creates new instance each time
 let config3 = Depends::<Config>::no_cache().resolve(&ctx).await?;
 let config4 = Depends::<Config>::no_cache().resolve(&ctx).await?;
-// config3とconfig4は異なるインスタンス
+// config3 and config4 are different instances
 ```
 
 ## Architecture
 
 ### Type-Based Caching
 
-依存性のキャッシュは型（`TypeId`）をキーとして管理されます。これにより、同じ型の依存性は自動的にキャッシュされます。
+Dependency caching is managed using type (`TypeId`) as the key. This allows dependencies of the same type to be automatically cached.
 
 ### Scope Hierarchy
 
 ```
-SingletonScope (アプリケーションレベル)
-    ↓ 共有
-InjectionContext (リクエストレベル)
-    ↓ 保持
-RequestScope (リクエスト内キャッシュ)
+SingletonScope (Application level)
+    ↓ Shared
+InjectionContext (Request level)
+    ↓ Holds
+RequestScope (In-request cache)
 ```
 
 ### Thread Safety
 
-- すべてのスコープは`Arc<RwLock<HashMap>>`を使用してスレッドセーフ
-- `Injectable` traitは`Send + Sync`を要求
-- 非同期コードで安全に使用可能
+- All scopes are thread-safe using `Arc<RwLock<HashMap>>`
+- `Injectable` trait requires `Send + Sync`
+- Safe to use in async code
 
 ## Testing Support
 
-テストフレームワークには包括的なテストスイートが含まれています：
+The testing framework includes a comprehensive test suite:
 
-- **Unit Tests**: 各コンポーネントの単体テスト
-- **Integration Tests**: FastAPIのテストケースを移植した統合テスト
+- **Unit Tests**: Unit tests for each component
+- **Integration Tests**: Integration tests ported from FastAPI test cases
 - **Feature Tests**:
-  - 自動Injectable実装のテスト
-  - 循環依存の検出テスト
-  - キャッシュ動作のテスト
-  - 依存性オーバーライドのテスト
-  - ネストされた依存性のテスト
+  - Automatic Injectable implementation tests
+  - Circular dependency detection tests
+  - Cache behavior tests
+  - Dependency override tests
+  - Nested dependency tests
 
 ## Performance Considerations
 
-- **Lazy Initialization**: 依存性は必要になるまで生成されません
-- **Cache Efficiency**: リクエストスコープ内で同じ依存性は1回だけ生成されます
-- **Zero-Cost Abstractions**: Rustの型システムを活用したオーバーヘッドの少ない設計
-- **Arc-based Sharing**: `Arc`を使用した効率的なインスタンス共有
+- **Lazy Initialization**: Dependencies are not generated until needed
+- **Cache Efficiency**: Same dependency is generated only once within request scope
+- **Zero-Cost Abstractions**: Low-overhead design leveraging Rust's type system
+- **Arc-based Sharing**: Efficient instance sharing using `Arc`
 
 ## Comparison with FastAPI
 
-| Feature              | FastAPI (Python) | reinhardt-di (Rust) |
-| -------------------- | ---------------- | ------------------- |
-| 基本的なDI           | ✓                | ✓                   |
-| リクエストスコープ   | ✓                | ✓                   |
-| シングルトンスコープ | ✓                | ✓                   |
-| 依存性キャッシング   | ✓                | ✓                   |
-| ネストされた依存性   | ✓                | ✓                   |
-| 依存性オーバーライド | ✓                | ✓                   |
-| `yield`パターン      | ✓                | ✓                   |
-| 型安全性             | Runtime          | **Compile-time**    |
-| パフォーマンス       | 動的             | **静的・高速**      |
+| Feature                  | FastAPI (Python) | reinhardt-di (Rust) |
+| ------------------------ | ---------------- | ------------------- |
+| Basic DI                 | ✓                | ✓                   |
+| Request Scope            | ✓                | ✓                   |
+| Singleton Scope          | ✓                | ✓                   |
+| Dependency Caching       | ✓                | ✓                   |
+| Nested Dependencies      | ✓                | ✓                   |
+| Dependency Overrides     | ✓                | ✓                   |
+| `yield` Pattern          | ✓                | ✓                   |
+| Type Safety              | Runtime          | **Compile-time**    |
+| Performance              | Dynamic          | **Static & Fast**   |
 
 ## License
 

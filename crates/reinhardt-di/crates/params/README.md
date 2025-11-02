@@ -8,92 +8,93 @@ FastAPI-inspired parameter extraction system for Reinhardt.
 
 #### Core Extraction System
 
-- **`FromRequest` trait**: 非同期パラメータ抽出のコア抽象化
-- **`ParamContext`**: パスパラメータとヘッダー/クッキー名の管理
-- **型安全なパラメータ抽出**: コンパイル時の型チェック付きリクエストからの抽出
-- **エラーハンドリング**: `ParamError`を用いた詳細なエラーメッセージ
+- **`FromRequest` trait**: Core abstraction for asynchronous parameter extraction
+- **`ParamContext`**: Management of path parameters and header/cookie names
+- **Type-safe parameter extraction**: Extraction from requests with compile-time type checking
+- **Error handling**: Detailed error messages via `ParamError`
 
 #### Path Parameters (`path.rs`)
 
-- **`Path<T>`**: URLパスから単一の値を抽出
-  - 全てのプリミティブ型のサポート: `i8`, `i16`, `i32`, `i64`, `i128`, `u8`, `u16`, `u32`, `u64`, `u128`, `f32`, `f64`, `bool`, `String`
-  - `Deref`による透過的なアクセス: `*path` または `path.0`
-  - `into_inner()`メソッドによる値の取り出し
-- **`PathStruct<T>`**: 複数のパスパラメータを構造体に抽出
-  - `DeserializeOwned`を実装した任意の構造体をサポート
-  - URL-encodedフォーマットを用いた自動型変換 (`"42"` → `42`)
+- **`Path<T>`**: Extract single value from URL path
+  - Support for all primitive types: `i8`, `i16`, `i32`, `i64`, `i128`, `u8`, `u16`, `u32`, `u64`, `u128`, `f32`, `f64`, `bool`, `String`
+  - Transparent access via `Deref`: `*path` or `path.0`
+  - Value extraction via `into_inner()` method
+- **`PathStruct<T>`**: Extract multiple path parameters into struct
+  - Supports any struct implementing `DeserializeOwned`
+  - Automatic type conversion using URL-encoded format (`"42"` → `42`)
 
 #### Query Parameters (`query.rs`)
 
-- **`Query<T>`**: URLクエリ文字列からパラメータを抽出
-  - `serde`を用いた柔軟な逆シリアル化
-  - オプショナルフィールド (`Option<T>`) のサポート
-- **マルチ値クエリパラメータ** (`multi-value-arrays` feature):
+- **`Query<T>`**: Extract parameters from URL query string
+  - Flexible deserialization using `serde`
+  - Support for optional fields (`Option<T>`)
+- **Multi-value query parameters** (`multi-value-arrays` feature):
   - `?q=5&q=6` → `Vec<i32>`
-  - 自動型変換: 文字列 → 数値、真偽値など
-  - JSON値ベースのデシリアライゼーション
+  - Automatic type conversion: string → numeric, boolean, etc.
+  - JSON value-based deserialization
 
 #### Headers (`header.rs`, `header_named.rs`)
 
-- **`Header<T>`**: リクエストヘッダーから値を抽出
-  - `String`と`Option<String>`のサポート
-  - `ParamContext`を用いた実行時ヘッダー名指定
-- **`HeaderStruct<T>`**: 複数のヘッダーを構造体に抽出
-  - ヘッダー名の小文字正規化
-  - URL-encodedを用いた自動型変換
-- **`HeaderNamed<N, T>`**: コンパイル時のヘッダー名指定
-  - マーカー型による型安全なヘッダー名: `Authorization`, `ContentType`
-  - `String`と`Option<String>`のサポート
-  - `HeaderName` trait によるカスタムヘッダー名の定義
+- **`Header<T>`**: Extract value from request headers
+  - Support for `String` and `Option<String>`
+  - Runtime header name specification via `ParamContext`
+- **`HeaderStruct<T>`**: Extract multiple headers into struct
+  - Header name lowercase normalization
+  - Automatic type conversion using URL-encoded
+- **`HeaderNamed<N, T>`**: Compile-time header name specification
+  - Type-safe header names via marker types: `Authorization`, `ContentType`
+  - Support for `String` and `Option<String>`
+  - Custom header name definition via `HeaderName` trait
 
 #### Cookies (`cookie.rs`, `cookie_named.rs`)
 
-- **`Cookie<T>`**: クッキーから値を抽出
-  - `String`と`Option<String>`のサポート
-  - `ParamContext`を用いた実行時クッキー名指定
-- **`CookieStruct<T>`**: 複数のクッキーを構造体に抽出
-  - RFC 6265準拠のクッキーパース
-  - URL-decodingサポート
-- **`CookieNamed<N, T>`**: コンパイル時のクッキー名指定
-  - マーカー型による型安全なクッキー名: `SessionId`, `CsrfToken`
-  - `String`と`Option<String>`のサポート
-  - `CookieName` trait によるカスタムクッキー名の定義
+- **`Cookie<T>`**: Extract value from cookies
+  - Support for `String` and `Option<String>`
+  - Runtime cookie name specification via `ParamContext`
+- **`CookieStruct<T>`**: Extract multiple cookies into struct
+  - RFC 6265-compliant cookie parsing
+  - URL-decoding support
+- **`CookieNamed<N, T>`**: Compile-time cookie name specification
+  - Type-safe cookie names via marker types: `SessionId`, `CsrfToken`
+  - Support for `String` and `Option<String>`
+  - Custom cookie name definition via `CookieName` trait
 
 #### Body Extraction (`body.rs`, `json.rs`, `form.rs`)
 
-- **`Body`**: 生のリクエストボディをバイト列として抽出
-- **`Json<T>`**: JSONボディのデシリアライゼーション
-  - `serde_json`を用いた型安全なデシリアライゼーション
-  - `Deref`と`into_inner()`によるアクセス
-- **`Form<T>`**: application/x-www-form-urlencodedフォームデータの抽出
-  - Content-Typeの検証
-  - `serde_urlencoded`を用いたデシリアライゼーション
+- **`Body`**: Extract raw request body as bytes
+- **`Json<T>`**: JSON body deserialization
+  - Type-safe deserialization using `serde_json`
+  - Access via `Deref` and `into_inner()`
+- **`Form<T>`**: Extract application/x-www-form-urlencoded form data
+  - Content-Type validation
+  - Deserialization using `serde_urlencoded`
 
 #### Multipart Support (`multipart.rs`, requires `multipart` feature)
 
-- **`Multipart`**: multipart/form-dataのサポート
-  - `multer`クレートを用いたストリーミング解析
-  - ファイルアップロード対応
-  - `next_field()`による反復処理
+- **`Multipart`**: Multipart/form-data support
+  - Streaming parsing using `multer` crate
+  - File upload support
+  - Iteration via `next_field()`
 
 #### Validation Support (`validation.rs`, requires `validation` feature)
 
-- **`Validated<T, V>`**: 検証済みパラメータラッパー
-- **`WithValidation` trait**: 検証制約の流暢なAPI
-  - **長さ制約**: `min_length()`, `max_length()`
-  - **数値範囲**: `min_value()`, `max_value()`
-  - **パターンマッチング**: `regex()`
-  - **フォーマット検証**: `email()`, `url()`
-- **`ValidationConstraints<T>`**: チェーン可能な検証ビルダー
-  - `validate_string()`: 文字列値の検証
-  - `validate_number()`: 数値の検証
-  - 複数制約の組み合わせサポート
-- **型エイリアス**: `ValidatedPath<T>`, `ValidatedQuery<T>`, `ValidatedForm<T>`
-- **`reinhardt-validators`との統合**
+- **`Validated<T, V>`**: Validated parameter wrapper
+- **`WithValidation` trait**: Fluent API for validation constraints
+  - **Length constraints**: `min_length()`, `max_length()`
+  - **Numeric ranges**: `min_value()`, `max_value()`
+  - **Pattern matching**: `regex()`
+  - **Format validation**: `email()`, `url()`
+- **`ValidationConstraints<T>`**: Chainable validation builder
+  - `validate_string()`: String value validation
+  - `validate_number()`: Numeric validation
+  - Support for combining multiple constraints
+- **Type aliases**: `ValidatedPath<T>`, `ValidatedQuery<T>`, `ValidatedForm<T>`
+- **Integration with `reinhardt-validators`**
 
 ## Quick Start
 
-```rustuse reinhardt_params::{Path, Query, Json};
+```rust
+use reinhardt_params::{Path, Query, Json};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -195,7 +196,8 @@ async fn upload(mut multipart: Multipart) -> Result<()> {
 ## Feature Flags
 
 ```toml
-[dependencies]reinhardt-params = { version = "0.1", features = ["multipart", "validation"] }
+[dependencies]
+reinhardt-params = { version = "0.1", features = ["multipart", "validation"] }
 ```
 
 - `multi-value-arrays` (default): Multi-value query parameters
