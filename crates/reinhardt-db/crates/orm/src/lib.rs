@@ -2,6 +2,81 @@
 //!
 //! Object-Relational Mapping for Reinhardt framework.
 //!
+//! ## Transaction Management
+//!
+//! Reinhardt ORM provides a closure-based API for automatic transaction management:
+//!
+//! ### Basic Usage
+//!
+//! ```rust
+//! use reinhardt_orm::connection::DatabaseConnection;
+//! use reinhardt_orm::transaction::transaction;
+//!
+//! # async fn example() -> Result<(), anyhow::Error> {
+//! let conn = DatabaseConnection::connect("sqlite::memory:").await?;
+//!
+//! // Automatic commit on success, rollback on error
+//! let user_id = transaction(&conn, |_tx| async move {
+//!     // Your database operations here
+//!     // let id = insert_user("Alice").await?;
+//!     Ok(42)
+//! }).await?;
+//!
+//! assert_eq!(user_id, 42);
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### With Isolation Level
+//!
+//! ```rust
+//! use reinhardt_orm::transaction::{transaction_with_isolation, IsolationLevel};
+//! # use reinhardt_orm::connection::DatabaseConnection;
+//!
+//! # async fn example() -> Result<(), anyhow::Error> {
+//! # let conn = DatabaseConnection::connect("sqlite::memory:").await?;
+//! transaction_with_isolation(&conn, IsolationLevel::Serializable, |_tx| async move {
+//!     // Critical operations requiring serializable isolation
+//!     Ok(())
+//! }).await?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Error Handling
+//!
+//! ```rust
+//! use reinhardt_orm::transaction::transaction;
+//! # use reinhardt_orm::connection::DatabaseConnection;
+//!
+//! # async fn example() -> Result<(), anyhow::Error> {
+//! # let conn = DatabaseConnection::connect("sqlite::memory:").await?;
+//! # let some_condition = true;
+//! let result = transaction(&conn, |_tx| async move {
+//!     // Simulate an error
+//!     if some_condition {
+//!         return Err(anyhow::anyhow!("Operation failed"));
+//!     }
+//!     Ok(42)
+//! }).await;
+//!
+//! match result {
+//!     Ok(value) => println!("Transaction committed: {}", value),
+//!     Err(e) => println!("Transaction rolled back: {}", e),
+//! }
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! **Key Features:**
+//! - ✅ **Automatic commit** on successful closure completion
+//! - ✅ **Automatic rollback** on error or panic
+//! - ✅ **RAII-style cleanup** with Drop implementation
+//! - ✅ **Nested transactions** support via savepoints (TransactionScope API)
+//! - ✅ **Isolation level** control with `transaction_with_isolation()`
+//!
+//! See [`transaction`](transaction/index.html) module for detailed documentation.
+//!
 //! ## Migration System
 //!
 //! The reinhardt-migrations crate provides comprehensive migration support:

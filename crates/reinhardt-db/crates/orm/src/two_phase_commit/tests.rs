@@ -4,10 +4,7 @@
 
 #[cfg(test)]
 mod integration_tests {
-	use super::super::*;
-	use crate::two_phase_commit::core::{
-		MockParticipant, TransactionState, TwoPhaseCoordinator, TwoPhaseError,
-	};
+	use crate::two_phase_commit::core::{MockParticipant, TransactionState, TwoPhaseCoordinator};
 	use crate::two_phase_commit::transaction_log::{InMemoryTransactionLog, TransactionLog};
 	use std::sync::Arc;
 
@@ -118,7 +115,10 @@ mod integration_tests {
 		assert!(result.is_err());
 
 		// On prepare failure, automatically rolled back
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Aborted);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Aborted
+		);
 	}
 
 	#[tokio::test]

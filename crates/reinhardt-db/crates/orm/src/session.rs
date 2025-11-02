@@ -622,7 +622,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_creation() {
 		let pool = create_test_pool().await;
 		let session = Session::new(pool).await;
@@ -635,7 +635,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_add_object() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -653,7 +653,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_get_from_identity_map() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -672,7 +672,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_flush_clears_dirty() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -692,7 +692,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_delete_object() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -714,7 +714,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_transaction_begin() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -726,7 +726,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_transaction_commit() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -747,7 +747,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_transaction_rollback() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -770,7 +770,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_close() {
 		let pool = create_test_pool().await;
 		let session = Session::new(pool).await.unwrap();
@@ -781,7 +781,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_operations_after_close() {
 		let pool = create_test_pool().await;
 		let session = Session::new(pool).await.unwrap();
@@ -799,7 +799,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_multiple_objects() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -818,7 +818,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_delete_removes_from_dirty() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -837,7 +837,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_query_creation() {
 		let pool = create_test_pool().await;
 		let session = Session::new(pool).await.unwrap();
@@ -846,7 +846,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_double_begin_fails() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();
@@ -858,7 +858,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_session_add_without_pk_fails() {
 		let pool = create_test_pool().await;
 		let mut session = Session::new(pool).await.unwrap();

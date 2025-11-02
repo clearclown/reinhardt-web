@@ -490,9 +490,12 @@ impl TwoPhaseCommit {
 	/// ```
 	pub fn rollback(&mut self) -> Result<Vec<String>, TwoPhaseError> {
 		let state = self.state().unwrap();
-		if state != TransactionState::Active && state != TransactionState::Prepared {
+		if state != TransactionState::Active
+			&& state != TransactionState::Prepared
+			&& state != TransactionState::Preparing
+		{
 			return Err(TwoPhaseError::InvalidState(
-				"Can only rollback active or prepared transaction".to_string(),
+				"Can only rollback active, prepared, or preparing transaction".to_string(),
 			));
 		}
 
@@ -822,9 +825,12 @@ impl TwoPhaseCoordinator {
 		{
 			let mut state = self.state.lock().await;
 
-			if *state != TransactionState::Active && *state != TransactionState::Prepared {
+			if *state != TransactionState::Active
+				&& *state != TransactionState::Prepared
+				&& *state != TransactionState::Preparing
+			{
 				return Err(TwoPhaseError::InvalidState(
-					"Can only rollback active or prepared transaction".to_string(),
+					"Can only rollback active, prepared, or preparing transaction".to_string(),
 				));
 			}
 
@@ -1447,13 +1453,19 @@ mod tests {
 		assert_eq!(coordinator.participant_count().await, 2);
 
 		coordinator.begin().await.unwrap();
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Active);
+		assert_eq!(coordinator.state().await.unwrap(), TransactionState::Active);
 
 		coordinator.prepare().await.unwrap();
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Prepared);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Prepared
+		);
 
 		coordinator.commit().await.unwrap();
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Committed);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Committed
+		);
 	}
 
 	#[tokio::test]
@@ -1479,7 +1491,10 @@ mod tests {
 		));
 
 		// After prepare failure, transaction should be aborted
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Aborted);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Aborted
+		);
 	}
 
 	#[tokio::test]
@@ -1499,7 +1514,10 @@ mod tests {
 		coordinator.prepare().await.unwrap();
 
 		coordinator.rollback().await.unwrap();
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Aborted);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Aborted
+		);
 	}
 
 	#[tokio::test]
@@ -1526,7 +1544,10 @@ mod tests {
 		));
 
 		// After commit failure, state should return to Prepared for recovery
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Prepared);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Prepared
+		);
 	}
 
 	#[tokio::test]
@@ -1583,12 +1604,15 @@ mod tests {
 				.unwrap();
 		}
 
-		assert_eq!(coordinator.participant_count(), 5);
+		assert_eq!(coordinator.participant_count().await, 5);
 
 		coordinator.begin().await.unwrap();
 		coordinator.prepare().await.unwrap();
 		coordinator.commit().await.unwrap();
 
-		assert_eq!(coordinator.state().unwrap(), TransactionState::Committed);
+		assert_eq!(
+			coordinator.state().await.unwrap(),
+			TransactionState::Committed
+		);
 	}
 }

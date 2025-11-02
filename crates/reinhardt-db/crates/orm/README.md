@@ -141,16 +141,100 @@ A powerful Object-Relational Mapping system inspired by Django's ORM and SQLAlch
 - **CombinedQuery** - Combined query results
 - **SetOperationBuilder** - Fluent API for set operations
 
-### Transactions
+### Transaction Management
 
-- **Transaction** - Database transaction management with SQL generation
-- **TransactionScope** - RAII transaction guard with automatic rollback on drop
-- **IsolationLevel** - Transaction isolation levels (ReadUncommitted, ReadCommitted, RepeatableRead, Serializable)
-- **TransactionState** - Transaction state tracking (NotStarted, Active, Committed, RolledBack)
-- **Savepoint** - Nested transaction savepoints with SQL generation
-- **atomic()** - Helper function for executing code within a transaction
-- **atomic_with_isolation()** - Atomic execution with specific isolation level
-- **Atomic** - Atomic transaction context (legacy)
+**Recommended API (Closure-based):**
+- `transaction()` - Execute closure with automatic commit/rollback ✅ **Recommended**
+- `transaction_with_isolation()` - Transaction with specific isolation level ✅ **Recommended**
+- `TransactionScope::execute()` - Execute closure on existing transaction scope
+
+**Low-level API:**
+- `TransactionScope` - RAII transaction guard with automatic rollback on drop
+- `TransactionScope::begin()` - Start a new transaction
+- `TransactionScope::begin_with_isolation()` - Start transaction with isolation level
+- `TransactionScope::begin_nested()` - Start nested transaction (savepoint)
+- `TransactionScope::commit()` - Explicitly commit a transaction
+- `TransactionScope::rollback()` - Explicitly rollback a transaction
+
+**Alternative API (Legacy):**
+- `atomic()` - Helper function for executing code within a transaction (use `transaction()` instead)
+- `atomic_with_isolation()` - Atomic execution with specific isolation level (use `transaction_with_isolation()` instead)
+- `Atomic` - Atomic transaction context (deprecated)
+
+**Supporting Types:**
+- `Transaction` - Database transaction management with SQL generation
+- `Savepoint` - Nested transaction savepoints with SQL generation
+- `IsolationLevel` - Transaction isolation level specification
+
+### Transaction Usage Examples
+
+#### Basic Transaction
+```rust
+use reinhardt_orm::transaction::transaction;
+use reinhardt_orm::connection::DatabaseConnection;
+
+async fn create_user(conn: &DatabaseConnection, name: &str) -> Result<i64, anyhow::Error> {
+    transaction(conn, |_tx| async move {
+        let id = insert_user(name).await?;
+        update_user_count().await?;
+        Ok(id)  // Auto-commit on success
+    }).await  // Auto-rollback on error
+}
+```
+
+#### Transaction with Isolation Level
+```rust
+use reinhardt_orm::transaction::{transaction_with_isolation, IsolationLevel};
+
+async fn update_inventory(conn: &DatabaseConnection) -> Result<(), anyhow::Error> {
+    transaction_with_isolation(conn, IsolationLevel::Serializable, |_tx| async move {
+        let stock = get_current_stock().await?;
+        if stock > 0 {
+            decrement_stock().await?;
+        }
+        Ok(())
+    }).await
+}
+```
+
+#### Error Handling
+```rust
+use reinhardt_orm::transaction::transaction;
+
+async fn transfer_money(
+    conn: &DatabaseConnection,
+    from: &str,
+    to: &str,
+    amount: i64,
+) -> Result<(), anyhow::Error> {
+    transaction(conn, |_tx| async move {
+        debit_account(from, amount).await?;   // Error → auto-rollback
+        credit_account(to, amount).await?;    // Error → auto-rollback
+        Ok(())  // Success → auto-commit
+    }).await
+}
+```
+
+#### Using TransactionScope directly (advanced)
+```rust
+use reinhardt_orm::transaction::TransactionScope;
+
+async fn complex_operation(conn: &DatabaseConnection) -> Result<(), anyhow::Error> {
+    let tx = TransactionScope::begin(conn).await?;
+
+    // Perform operations
+    insert_record().await?;
+
+    // Conditionally commit or rollback
+    if some_condition {
+        tx.commit().await?;
+    } else {
+        tx.rollback().await?;
+    }
+
+    Ok(())
+}
+```
 
 ### Database Connection
 
