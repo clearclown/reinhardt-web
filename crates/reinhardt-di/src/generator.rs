@@ -268,7 +268,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_async_operations_in_generator() {
-		let mut generator = DependencyGenerator::new(|co| {
+		let generator = DependencyGenerator::new(|co| {
 			Box::pin(async move {
 				// Simulate async database connection
 				tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;

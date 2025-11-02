@@ -260,6 +260,7 @@ mod tests {
 	use std::collections::HashMap;
 
 	/// Custom test struct for HashMap value testing
+	#[allow(dead_code)]
 	struct User {
 		id: i64,
 		name: String,

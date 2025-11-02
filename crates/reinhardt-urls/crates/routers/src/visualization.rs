@@ -325,7 +325,7 @@ impl NamespaceTree {
 						});
 				}
 
-				// Add route to leaf node
+				// Add route to leaf node (the namespace itself, not the full route name)
 				if let Some(node) = nodes.get_mut(ns_str) {
 					node.routes.push(route.clone());
 				}

@@ -290,6 +290,7 @@ mod tests {
 	use super::*;
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct Article {
 		id: i64,
 		title: String,

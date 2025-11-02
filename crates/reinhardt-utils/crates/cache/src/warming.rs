@@ -351,8 +351,8 @@ mod tests {
 		};
 
 		let batch = BatchWarmer::new()
-			.add(Box::new(warmer1))
-			.add(Box::new(warmer2));
+			.with_warmer(Box::new(warmer1))
+			.with_warmer(Box::new(warmer2));
 
 		batch.warm(cache.clone()).await.unwrap();
 
@@ -376,8 +376,8 @@ mod tests {
 		};
 
 		let parallel = ParallelWarmer::new()
-			.add(Box::new(warmer1))
-			.add(Box::new(warmer2));
+			.with_warmer(Box::new(warmer1))
+			.with_warmer(Box::new(warmer2));
 
 		parallel.warm(cache.clone()).await.unwrap();
 

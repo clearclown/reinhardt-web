@@ -17,7 +17,6 @@ pub mod nested_resources;
 pub mod pagination_support;
 pub mod registry;
 pub mod schema_metadata;
-pub mod test_viewset;
 pub mod viewset;
 
 pub use actions::{Action, ActionType};
@@ -44,7 +43,6 @@ pub use nested_resources::{
 pub use pagination_support::{PaginatedViewSet, PaginationConfig};
 pub use registry::{action, get_registered_actions, register_action};
 pub use schema_metadata::{FieldSchema, ModelSchema, RequestSchema, ResponseSchema, ViewSetSchema};
-pub use test_viewset::{SimpleViewSet, TestViewSet};
 pub use viewset::{GenericViewSet, ModelViewSet, ReadOnlyModelViewSet, ViewSet};
 
 #[cfg(test)]

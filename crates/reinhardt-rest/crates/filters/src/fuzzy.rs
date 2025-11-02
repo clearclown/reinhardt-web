@@ -591,6 +591,7 @@ mod tests {
 	use super::*;
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct User {
 		id: i64,
 		name: String,

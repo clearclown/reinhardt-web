@@ -526,7 +526,7 @@ impl RadixRouter {
 	/// router.add_route(path!("/users/{id}/"), "users_detail".to_string()).unwrap();
 	///
 	/// // Catch-all wildcard
-	/// router.add_route(path!("/files/*path"), "serve_file".to_string()).unwrap();
+	/// router.add_route(path!("/files/{file_path}"), "serve_file".to_string()).unwrap();
 	/// ```
 	pub fn add_route(&mut self, pattern: &str, handler_id: String) -> Result<(), RadixRouterError> {
 		self.router
@@ -878,7 +878,7 @@ mod tests {
 	fn test_radix_router_wildcard() {
 		let mut router = RadixRouter::new();
 		router
-			.add_route("/files/*path", "serve_file".to_string())
+			.add_route("/files/{*path}", "serve_file".to_string())
 			.unwrap();
 
 		let result = router.match_path("/files/images/logo.png");

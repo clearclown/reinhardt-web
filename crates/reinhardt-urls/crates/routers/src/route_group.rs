@@ -390,9 +390,8 @@ impl Default for RouteGroup {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use async_trait::async_trait;
 	use hyper::Method;
-	use reinhardt_apps::{Handler, Request, Response, Result};
+	use reinhardt_apps::{Request, Response, Result};
 	use reinhardt_middleware::LoggingMiddleware;
 
 	async fn test_handler(_req: Request) -> Result<Response> {

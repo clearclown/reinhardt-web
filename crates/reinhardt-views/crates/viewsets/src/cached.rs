@@ -299,7 +299,7 @@ where
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::StatusCode;
 	use reinhardt_cache::InMemoryCache;
 
 	#[test]

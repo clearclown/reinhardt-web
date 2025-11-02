@@ -8,7 +8,12 @@
 
 use crate::{SerializerError, ValidatorError};
 use async_trait::async_trait;
-use reinhardt_orm::{Model, transaction::Transaction};
+#[cfg(feature = "django-compat")]
+use reinhardt_orm::transaction::transaction;
+use reinhardt_orm::{
+	Model,
+	transaction::{Transaction, TransactionScope},
+};
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -114,7 +119,7 @@ impl NestedSaveContext {
 	/// ```ignore
 	/// let context = NestedSaveContext::new();
 	/// // Verify transaction scope handling
-	/// let result = context.with_scope(|| async move {
+	/// let result = context.with_scope(|_tx| async move {
 	///     // Perform operations
 	///     Ok(value)
 	/// }).await?;
@@ -122,8 +127,8 @@ impl NestedSaveContext {
 	#[cfg(feature = "django-compat")]
 	pub async fn with_scope<F, Fut, T>(&self, f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
 		if self.depth == 0 {
 			// Top-level transaction
@@ -136,13 +141,15 @@ impl NestedSaveContext {
 
 	/// Execute nested operation within transaction scope (non-django-compat)
 	#[cfg(not(feature = "django-compat"))]
-	pub async fn with_scope<F, Fut, T>(&self, f: F) -> Result<T, SerializerError>
+	pub async fn with_scope<F, Fut, T>(&self, _f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
-		// Without django-compat, just execute the function
-		f().await
+		// Without django-compat, feature is not available
+		Err(SerializerError::Other {
+			message: "with_scope requires django-compat feature to be enabled".to_string(),
+		})
 	}
 }
 
@@ -511,7 +518,7 @@ impl TransactionHelper {
 	/// use reinhardt_serializers::nested_orm_integration::TransactionHelper;
 	///
 	/// // Verify transaction scope with automatic commit/rollback
-	/// let result = TransactionHelper::with_transaction(|| async move {
+	/// let result = TransactionHelper::with_transaction(|_tx| async move {
 	///     // Perform database operations within transaction
 	///     Ok(created_instance)
 	/// }).await?;
@@ -519,54 +526,46 @@ impl TransactionHelper {
 	#[cfg(feature = "django-compat")]
 	pub async fn with_transaction<F, Fut, T>(f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
 		use reinhardt_orm::manager::get_connection;
-		use reinhardt_orm::transaction::TransactionScope;
 
 		// Get database connection
 		let conn = get_connection().await.map_err(|e| SerializerError::Other {
 			message: format!("Failed to get connection: {}", e),
 		})?;
 
-		// Begin transaction (TransactionScope handles BEGIN automatically)
-		let tx = TransactionScope::begin(&conn)
+		// Wrap the closure to convert Box<dyn Error> to anyhow::Error
+		let wrapped_f = |tx: &TransactionScope| {
+			let fut = f(tx);
+			async move {
+				match fut.await {
+					Ok(value) => Ok(value),
+					Err(e) => Err(anyhow::anyhow!("{}", e)),
+				}
+			}
+		};
+
+		// Use the transaction helper function for automatic commit/rollback
+		transaction(&conn, wrapped_f)
 			.await
 			.map_err(|e| SerializerError::Other {
-				message: format!("Failed to begin transaction: {}", e),
-			})?;
-
-		// Execute function
-		let result = f().await;
-
-		match result {
-			Ok(value) => {
-				// Commit transaction explicitly
-				tx.commit().await.map_err(|e| SerializerError::Other {
-					message: format!("Failed to commit transaction: {}", e),
-				})?;
-				Ok(value)
-			}
-			Err(e) => {
-				// TransactionScope::drop() handles automatic rollback
-				// No explicit rollback needed - RAII pattern
-				Err(e)
-			}
-		}
+				message: format!("Transaction failed: {}", e),
+			})
 	}
 
 	/// Execute function within a database transaction (non-django-compat version)
 	///
 	/// This is a stub implementation for when django-compat feature is not enabled.
 	#[cfg(not(feature = "django-compat"))]
-	pub async fn with_transaction<F, Fut, T>(f: F) -> Result<T, SerializerError>
+	pub async fn with_transaction<F, Fut, T>(_f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
-		// Without django-compat, just execute the function without transaction
-		f().await
+		// Without django-compat, create a dummy TransactionScope and execute function
+		todo!("TransactionScope requires django-compat feature to be enabled")
 	}
 
 	/// Create a savepoint for nested transaction using RAII pattern
@@ -582,7 +581,7 @@ impl TransactionHelper {
 	/// use reinhardt_serializers::nested_orm_integration::TransactionHelper;
 	///
 	/// // Verify nested savepoint creation and rollback handling
-	/// let result = TransactionHelper::savepoint(2, || async move {
+	/// let result = TransactionHelper::savepoint(2, |_tx| async move {
 	///     // Perform nested operations
 	///     Ok(result)
 	/// }).await?;
@@ -590,11 +589,10 @@ impl TransactionHelper {
 	#[cfg(feature = "django-compat")]
 	pub async fn savepoint<F, Fut, T>(depth: usize, f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
 		use reinhardt_orm::manager::get_connection;
-		use reinhardt_orm::transaction::TransactionScope;
 
 		// Get database connection
 		let conn = get_connection().await.map_err(|e| SerializerError::Other {
@@ -609,7 +607,7 @@ impl TransactionHelper {
 			})?;
 
 		// Execute function
-		let result = f().await;
+		let result = f(&tx).await;
 
 		match result {
 			Ok(value) => {
@@ -622,7 +620,7 @@ impl TransactionHelper {
 			Err(e) => {
 				// TransactionScope::drop() handles automatic rollback to savepoint
 				// No explicit rollback needed - RAII pattern
-				Err(e)
+				Err(format!("{}", e)).map_err(|msg| SerializerError::Other { message: msg })
 			}
 		}
 	}
@@ -631,13 +629,15 @@ impl TransactionHelper {
 	///
 	/// This is a stub implementation for when django-compat feature is not enabled.
 	#[cfg(not(feature = "django-compat"))]
-	pub async fn savepoint<F, Fut, T>(_depth: usize, f: F) -> Result<T, SerializerError>
+	pub async fn savepoint<F, Fut, T>(_depth: usize, _f: F) -> Result<T, SerializerError>
 	where
-		F: FnOnce() -> Fut,
-		Fut: std::future::Future<Output = Result<T, SerializerError>>,
+		F: FnOnce(&TransactionScope) -> Fut,
+		Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
 	{
-		// Without django-compat, just execute the function without savepoint
-		f().await
+		// Without django-compat, feature is not available
+		Err(SerializerError::Other {
+			message: "savepoint requires django-compat feature to be enabled".to_string(),
+		})
 	}
 }
 

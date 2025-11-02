@@ -91,19 +91,16 @@ impl RouteInfo {
 		let params = crate::namespace::extract_param_names(&path);
 
 		// Split name into namespace and route_name
-		// Django-style: hierarchical namespaces
-		// e.g., "api:v1:users:list" -> namespace = "api:v1", route_name = "users:list"
+		// Django-style: "api:v1:users:detail" -> namespace = "api:v1:users", route_name = "detail"
+		// The last component is the route name, all others form the namespace
 		let (namespace, route_name) = if let Some(ref n) = name {
 			let parts: Vec<&str> = n.split(':').collect();
-			if parts.len() >= 3 {
-				// At least 3 parts: first N-2 are namespace, last 2 are route_name
-				let namespace_end = parts.len() - 2;
+			if parts.len() >= 2 {
+				// At least 2 parts: last 1 is route_name, all others are namespace
+				let namespace_end = parts.len() - 1;
 				let ns = parts[..namespace_end].join(":");
-				let rn = parts[namespace_end..].join(":");
+				let rn = parts[namespace_end].to_string();
 				(Some(ns), Some(rn))
-			} else if parts.len() == 2 {
-				// Exactly 2 parts: first is namespace, second is route_name
-				(Some(parts[0].to_string()), Some(parts[1].to_string()))
 			} else {
 				// Single part: no namespace, just route_name
 				(None, Some(n.clone()))
@@ -329,6 +326,8 @@ impl RouteInspector {
 
 	/// Find routes by namespace
 	///
+	/// Finds all routes in the specified namespace or any of its child namespaces.
+	///
 	/// # Examples
 	///
 	/// ```
@@ -350,7 +349,10 @@ impl RouteInspector {
 				route
 					.namespace
 					.as_ref()
-					.map(|ns| ns == namespace)
+					.map(|ns| {
+						// Match exact namespace or child namespaces
+						ns == namespace || ns.starts_with(&format!("{}:", namespace))
+					})
 					.unwrap_or(false)
 			})
 			.collect()
@@ -379,7 +381,11 @@ impl RouteInspector {
 			.collect()
 	}
 
-	/// Get all unique namespaces
+	/// Get all unique namespaces at all hierarchy levels
+	///
+	/// Returns all namespace prefixes found in routes, including parent namespaces.
+	/// For example, if routes have namespaces "api:v1:users" and "api:v1:posts",
+	/// this will return ["api", "api:v1", "api:v1:posts", "api:v1:users"].
 	///
 	/// # Examples
 	///
@@ -393,18 +399,29 @@ impl RouteInspector {
 	/// inspector.add_route("/users/", vec![Method::GET], Some("api:v2:users:list"), None);
 	///
 	/// let namespaces = inspector.all_namespaces();
-	/// assert_eq!(namespaces.len(), 2);
+	/// assert!(namespaces.contains(&"api".to_string()));
 	/// assert!(namespaces.contains(&"api:v1".to_string()));
 	/// assert!(namespaces.contains(&"api:v2".to_string()));
 	/// ```
 	pub fn all_namespaces(&self) -> Vec<String> {
-		let mut namespaces: HashSet<String> = self
-			.routes
-			.iter()
-			.filter_map(|route| route.namespace.clone())
-			.collect();
+		let mut namespaces = HashSet::new();
 
-		let mut result: Vec<String> = namespaces.drain().collect();
+		for route in &self.routes {
+			if let Some(ref ns_str) = route.namespace {
+				// Add all levels of the namespace hierarchy
+				let parts: Vec<&str> = ns_str.split(':').collect();
+				let mut current_path = String::new();
+				for part in parts {
+					if !current_path.is_empty() {
+						current_path.push(':');
+					}
+					current_path.push_str(part);
+					namespaces.insert(current_path.clone());
+				}
+			}
+		}
+
+		let mut result: Vec<String> = namespaces.into_iter().collect();
 		result.sort();
 		result
 	}
@@ -453,7 +470,7 @@ impl RouteInspector {
 	///
 	/// let stats = inspector.statistics();
 	/// assert_eq!(stats.total_routes, 2);
-	/// assert_eq!(stats.total_namespaces, 1);
+	/// assert_eq!(stats.total_namespaces, 3);
 	/// ```
 	pub fn statistics(&self) -> RouteStatistics {
 		let total_routes = self.routes.len();
@@ -689,9 +706,13 @@ mod tests {
 		);
 
 		let namespaces = inspector.all_namespaces();
-		assert_eq!(namespaces.len(), 2);
+		// Should return all hierarchy levels: api, api:v1, api:v1:users, api:v2, api:v2:posts
+		assert_eq!(namespaces.len(), 5);
+		assert!(namespaces.contains(&"api".to_string()));
 		assert!(namespaces.contains(&"api:v1".to_string()));
+		assert!(namespaces.contains(&"api:v1:users".to_string()));
 		assert!(namespaces.contains(&"api:v2".to_string()));
+		assert!(namespaces.contains(&"api:v2:posts".to_string()));
 	}
 
 	#[test]

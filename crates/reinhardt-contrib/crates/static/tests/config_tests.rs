@@ -1,6 +1,4 @@
-mod common;
-
-use common::config_helpers;
+use reinhardt_test::static_files::config_helpers;
 use std::path::PathBuf;
 
 #[test]
