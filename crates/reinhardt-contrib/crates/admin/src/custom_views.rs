@@ -427,6 +427,7 @@ mod tests {
 	use super::*;
 
 	// Test model for reordering
+	#[allow(dead_code)]
 	struct TestModel {
 		id: i64,
 		name: String,

@@ -195,6 +195,7 @@ mod tests {
 	use super::*;
 	use serde::Deserialize;
 
+	#[allow(dead_code)]
 	#[derive(Debug, Deserialize, PartialEq)]
 	struct TestQuery {
 		page: Option<i32>,

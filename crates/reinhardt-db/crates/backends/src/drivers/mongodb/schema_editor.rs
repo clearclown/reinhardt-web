@@ -361,8 +361,6 @@ impl BaseDatabaseSchemaEditor for MongoDBSchemaEditor {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-
 	#[test]
 	fn test_schema_editor_requires_connection() {
 		// This test just verifies that the types compile correctly

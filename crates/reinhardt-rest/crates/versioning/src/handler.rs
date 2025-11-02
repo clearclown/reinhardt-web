@@ -446,7 +446,10 @@ mod tests {
 		// Test with Accept header versioning
 		let request = crate::test_utils::create_test_request(
 			"/test",
-			vec![("accept", "application/json; version=2.0")],
+			vec![(
+				"accept".to_string(),
+				"application/json; version=2.0".to_string(),
+			)],
 		);
 		let response = handler.handle(request).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();

@@ -550,6 +550,7 @@ mod tests {
 	use reinhardt_viewsets::ModelViewSet;
 
 	#[derive(Debug, Clone)]
+	#[allow(dead_code)]
 	struct TestModel {
 		id: i64,
 		name: String,

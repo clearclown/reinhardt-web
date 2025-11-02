@@ -389,7 +389,7 @@ mod tests {
 
 	#[test]
 	fn test_lazy_loader_creation() {
-		let loader: LazyLoader<Post> = LazyLoader::new();
+		let _loader: LazyLoader<Post> = LazyLoader::new();
 		let _loader2: LazyLoader<Post> = LazyLoader::default();
 		// LazyLoader is just a marker type
 	}

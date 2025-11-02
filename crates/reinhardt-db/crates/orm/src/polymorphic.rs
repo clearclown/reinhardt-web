@@ -518,12 +518,14 @@ mod tests {
 		}
 	}
 
+	#[allow(dead_code)]
 	#[derive(Debug, Clone, Serialize, Deserialize)]
 	struct Post {
 		id: Option<i64>,
 		title: String,
 	}
 
+	#[allow(dead_code)]
 	const POST_TABLE: TableName = TableName::new_const("posts");
 
 	impl Model for Post {

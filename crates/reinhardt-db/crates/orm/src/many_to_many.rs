@@ -513,9 +513,10 @@ mod tests {
 			.with_column("grade", "VARCHAR(2)");
 
 		let sql = table.to_create_sql(SqliteQueryBuilder);
+		// SQLite uses datetime_text for TIMESTAMP/DATETIME columns
 		assert_eq!(
 			sql,
-			"CREATE TABLE IF NOT EXISTS \"student_courses\" ( \"student_id\" integer NOT NULL, \"course_id\" integer NOT NULL, \"enrolled_at\" datetime, \"grade\" VARCHAR(2), PRIMARY KEY (\"student_id\", \"course_id\") )",
+			"CREATE TABLE IF NOT EXISTS \"student_courses\" ( \"student_id\" integer NOT NULL, \"course_id\" integer NOT NULL, \"enrolled_at\" datetime_text, \"grade\" VARCHAR(2), PRIMARY KEY (\"student_id\", \"course_id\") )",
 			"Expected exact CREATE TABLE with extra columns SQL, got: {}",
 			sql
 		);
@@ -662,9 +663,10 @@ mod tests {
 
 		let sql = table.to_create_sql(SqliteQueryBuilder);
 
+		// SQLite uses datetime_text for TIMESTAMP/DATETIME columns
 		assert_eq!(
 			sql,
-			"CREATE TABLE IF NOT EXISTS \"enrollments\" ( \"student_id\" integer NOT NULL, \"course_id\" integer NOT NULL, \"enrolled_at\" datetime, \"grade\" integer, \"notes\" text, PRIMARY KEY (\"student_id\", \"course_id\") )",
+			"CREATE TABLE IF NOT EXISTS \"enrollments\" ( \"student_id\" integer NOT NULL, \"course_id\" integer NOT NULL, \"enrolled_at\" datetime_text, \"grade\" integer, \"notes\" text, PRIMARY KEY (\"student_id\", \"course_id\") )",
 			"Expected exact CREATE TABLE with typed columns SQL, got: {}",
 			sql
 		);

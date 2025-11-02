@@ -918,36 +918,14 @@ impl NamespaceVersioning {
 	}
 }
 
-/// Test utilities for versioning tests
 #[cfg(test)]
 pub mod test_utils {
-	use super::*;
 	use bytes::Bytes;
-	use hyper::header::{HeaderName, HeaderValue};
+	use hyper::header::HeaderName;
 	use hyper::{HeaderMap, Method, Uri, Version};
-
-	pub fn create_test_request(uri: &str, headers: Vec<(&str, &str)>) -> Request {
-		let uri = uri.parse::<Uri>().unwrap();
-		let mut header_map = HeaderMap::new();
-		for (key, value) in headers {
-			let header_name: HeaderName = key.parse().unwrap();
-			let header_value: HeaderValue = value.parse().unwrap();
-			header_map.insert(header_name, header_value);
-		}
-		Request::new(Method::GET, uri, Version::HTTP_11, header_map, Bytes::new())
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
 	use reinhardt_apps::Request;
 
-	fn create_test_request(uri: &str, headers: Vec<(String, String)>) -> Request {
-		use bytes::Bytes;
-		use hyper::header::HeaderName;
-		use hyper::{HeaderMap, Method, Uri, Version};
-
+	pub fn create_test_request(uri: &str, headers: Vec<(String, String)>) -> Request {
 		let uri = uri.parse::<Uri>().unwrap();
 		let mut header_map = HeaderMap::new();
 		for (key, value) in headers {
@@ -957,6 +935,12 @@ mod tests {
 
 		Request::new(Method::GET, uri, Version::HTTP_11, header_map, Bytes::new())
 	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use test_utils::create_test_request;
 
 	#[tokio::test]
 	async fn test_accept_header_versioning() {

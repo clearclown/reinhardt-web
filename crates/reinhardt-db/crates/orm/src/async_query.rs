@@ -283,7 +283,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_async_query_builder() {
 		let engine = create_engine("sqlite::memory:")
 			.await
@@ -302,7 +302,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_async_query_execution() {
 		let engine = create_engine("sqlite::memory:")
 			.await
@@ -326,7 +326,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires sqlx database driver to be installed"]
+
 	async fn test_async_session() {
 		let engine = create_engine("sqlite::memory:")
 			.await

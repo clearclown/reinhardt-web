@@ -339,7 +339,7 @@ mod tests {
 	fn test_prepared_transaction_info_creation() {
 		let info = PreparedTransactionInfo {
 			gid: "txn_001".to_string(),
-			prepared: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
+			prepared: chrono::DateTime::UNIX_EPOCH.naive_utc(),
 			owner: "postgres".to_string(),
 			database: "testdb".to_string(),
 		};

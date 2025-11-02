@@ -233,6 +233,7 @@ mod tests {
 	use std::sync::atomic::{AtomicUsize, Ordering};
 
 	#[derive(Debug, Clone)]
+	#[allow(dead_code)]
 	struct TestModel {
 		id: i32,
 		name: String,
@@ -240,9 +241,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_orm_signal_adapter_creation() {
-		let adapter = OrmSignalAdapter::<TestModel>::new();
-		// Signal count may be non-zero if other tests have registered receivers
-		assert!(adapter.signal_count() >= 0);
+		let _adapter = OrmSignalAdapter::<TestModel>::new();
+		// Adapter creation test - verifies compilation and instantiation
 	}
 
 	#[tokio::test]

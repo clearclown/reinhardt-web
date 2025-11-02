@@ -421,6 +421,7 @@ mod tests {
 	use crate::{Signal, SignalName};
 
 	#[derive(Debug, Clone)]
+	#[allow(dead_code)]
 	struct TestData {
 		value: String,
 	}

@@ -322,7 +322,7 @@ mod tests {
 		let factory = SchemaEditorFactory::new();
 		let editor = factory.create_shared(DatabaseType::PostgreSQL);
 
-		let editor_clone = Arc::clone(&editor);
+		let _editor_clone = Arc::clone(&editor);
 		assert_eq!(Arc::strong_count(&editor), 2);
 	}
 }

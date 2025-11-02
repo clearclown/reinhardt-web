@@ -951,8 +951,33 @@ where
 	pub fn update_sql(&self, updates: &[(&str, &str)]) -> (String, Vec<String>) {
 		let stmt = self.update_query(updates);
 		use sea_query::PostgresQueryBuilder;
-		let sql = stmt.to_string(PostgresQueryBuilder);
-		(sql, Vec::new())
+		let (sql, values) = stmt.build(PostgresQueryBuilder);
+		let params: Vec<String> = values
+			.iter()
+			.map(|v| Self::sea_value_to_string(v))
+			.collect();
+		(sql, params)
+	}
+
+	/// Convert SeaQuery Value to String without SQL quoting
+	fn sea_value_to_string(value: &sea_query::Value) -> String {
+		use sea_query::Value;
+		match value {
+			Value::Bool(Some(b)) => b.to_string(),
+			Value::TinyInt(Some(i)) => i.to_string(),
+			Value::SmallInt(Some(i)) => i.to_string(),
+			Value::Int(Some(i)) => i.to_string(),
+			Value::BigInt(Some(i)) => i.to_string(),
+			Value::TinyUnsigned(Some(i)) => i.to_string(),
+			Value::SmallUnsigned(Some(i)) => i.to_string(),
+			Value::Unsigned(Some(i)) => i.to_string(),
+			Value::BigUnsigned(Some(i)) => i.to_string(),
+			Value::Float(Some(f)) => f.to_string(),
+			Value::Double(Some(f)) => f.to_string(),
+			Value::String(Some(s)) => s.to_string(),
+			Value::Bytes(Some(b)) => String::from_utf8_lossy(b).to_string(),
+			_ => String::new(),
+		}
 	}
 
 	/// Generate DELETE SQL with WHERE clause and parameter binding
@@ -1000,8 +1025,12 @@ where
 	pub fn delete_sql(&self) -> (String, Vec<String>) {
 		let stmt = self.delete_query();
 		use sea_query::PostgresQueryBuilder;
-		let sql = stmt.to_string(PostgresQueryBuilder);
-		(sql, Vec::new())
+		let (sql, values) = stmt.build(PostgresQueryBuilder);
+		let params: Vec<String> = values
+			.iter()
+			.map(|v| Self::sea_value_to_string(v))
+			.collect();
+		(sql, params)
 	}
 
 	/// Retrieve a single object by composite primary key
@@ -1521,7 +1550,10 @@ mod tests {
 
 		let (sql, params) = queryset.update_sql(&[("username", "alice")]);
 
-		assert_eq!(sql, "UPDATE test_users SET username = $1 WHERE id = $2");
+		assert_eq!(
+			sql,
+			"UPDATE \"test_users\" SET \"username\" = $1 WHERE \"id\" = $2"
+		);
 		assert_eq!(params, vec!["alice", "1"]);
 	}
 
@@ -1543,7 +1575,7 @@ mod tests {
 
 		assert_eq!(
 			sql,
-			"UPDATE test_users SET username = $1, email = $2 WHERE id > $3 AND email LIKE $4"
+			"UPDATE \"test_users\" SET \"username\" = $1, \"email\" = $2 WHERE \"id\" > $3 AND \"email\" LIKE $4"
 		);
 		assert_eq!(params, vec!["bob", "bob@test.com", "10", "%example.com%"]);
 	}
@@ -1558,7 +1590,7 @@ mod tests {
 
 		let (sql, params) = queryset.delete_sql();
 
-		assert_eq!(sql, "DELETE FROM test_users WHERE id = $1");
+		assert_eq!(sql, "DELETE FROM \"test_users\" WHERE \"id\" = $1");
 		assert_eq!(params, vec!["1"]);
 	}
 
@@ -1580,7 +1612,7 @@ mod tests {
 
 		assert_eq!(
 			sql,
-			"DELETE FROM test_users WHERE username = $1 AND email LIKE $2"
+			"DELETE FROM \"test_users\" WHERE \"username\" = $1 AND \"email\" LIKE $2"
 		);
 		assert_eq!(params, vec!["alice", "alice@%"]);
 	}
@@ -1612,7 +1644,7 @@ mod tests {
 
 		assert_eq!(
 			sql,
-			"DELETE FROM test_users WHERE id >= $1 AND username != $2"
+			"DELETE FROM \"test_users\" WHERE \"id\" >= $1 AND \"username\" <> $2"
 		);
 		assert_eq!(params, vec!["5", "admin"]);
 	}
@@ -1627,7 +1659,7 @@ mod tests {
 
 		let (sql, params) = queryset.delete_sql();
 
-		assert_eq!(sql, "DELETE FROM test_users WHERE email IS NULL");
+		assert_eq!(sql, "DELETE FROM \"test_users\" WHERE \"email\" IS NULL");
 		assert_eq!(params, Vec::<String>::new());
 	}
 
@@ -1641,7 +1673,10 @@ mod tests {
 
 		let (sql, params) = queryset.delete_sql();
 
-		assert_eq!(sql, "DELETE FROM test_users WHERE email IS NOT NULL");
+		assert_eq!(
+			sql,
+			"DELETE FROM \"test_users\" WHERE \"email\" IS NOT NULL"
+		);
 		assert_eq!(params, Vec::<String>::new());
 	}
 
@@ -1781,9 +1816,9 @@ mod tests {
 		// Generate SQL
 		let (sql, params) = queryset.delete_sql();
 		assert!(sql.contains("WHERE"));
-		assert!(sql.contains("username LIKE"));
-		assert!(sql.contains("email LIKE"));
-		assert!(sql.contains("id >"));
+		assert!(sql.contains("\"username\" LIKE"));
+		assert!(sql.contains("\"email\" LIKE"));
+		assert!(sql.contains("\"id\" >"));
 		assert_eq!(params.len(), 3);
 	}
 
@@ -1813,7 +1848,7 @@ mod tests {
 		assert_eq!(queryset.filters.len(), 1);
 
 		let (sql, params) = queryset.delete_sql();
-		assert_eq!(sql, "DELETE FROM test_users WHERE id = $1");
+		assert_eq!(sql, "DELETE FROM \"test_users\" WHERE \"id\" = $1");
 		assert_eq!(params, vec!["1"]);
 	}
 }

@@ -76,6 +76,7 @@ mod tests {
 	#[derive(Debug)]
 	struct TestA {
 		pk: i32,
+		#[allow(dead_code)]
 		name: String,
 	}
 
@@ -101,6 +102,7 @@ mod tests {
 	#[derive(Debug)]
 	struct TestB {
 		pk: i32,
+		#[allow(dead_code)]
 		name: String,
 	}
 
@@ -126,6 +128,7 @@ mod tests {
 	#[derive(Debug)]
 	struct TestC {
 		pk: i32,
+		#[allow(dead_code)]
 		name: String,
 	}
 

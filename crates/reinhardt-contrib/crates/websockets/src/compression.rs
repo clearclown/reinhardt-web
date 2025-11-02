@@ -265,6 +265,7 @@ pub fn decompress_message(
 #[cfg(all(test, feature = "compression"))]
 mod tests {
 	use super::*;
+	use std::str::FromStr;
 
 	#[test]
 	fn test_compression_codec_from_str() {
