@@ -186,9 +186,9 @@ After committing the version bump:
 
 Commit messages consist of three parts:
 
-1. **Subject line** (タイトル行)
-2. **Body** (本文)
-3. **Footer** (フッター)
+1. **Subject line**
+2. **Body**
+3. **Footer**
 
 ### CM-1 (MUST): Subject Line Format
 
