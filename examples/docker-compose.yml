@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL データベース
+  # PostgreSQL database
   postgres:
     image: postgres:16-alpine
     container_name: reinhardt-examples-postgres
@@ -22,7 +22,7 @@ services:
     networks:
       - reinhardt-examples
 
-  # MySQL データベース（オプション）
+  # MySQL database (optional)
   mysql:
     image: mysql:8.0
     container_name: reinhardt-examples-mysql
@@ -43,9 +43,9 @@ services:
     networks:
       - reinhardt-examples
     profiles:
-      - mysql  # デフォルトでは起動しない
+      - mysql  # Not started by default
 
-  # Redis キャッシュ（オプション）
+  # Redis cache (optional)
   redis:
     image: redis:7-alpine
     container_name: reinhardt-examples-redis
@@ -61,7 +61,7 @@ services:
     networks:
       - reinhardt-examples
     profiles:
-      - cache  # デフォルトでは起動しない
+      - cache  # Not started by default
 
 volumes:
   postgres_data:
