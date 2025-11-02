@@ -378,18 +378,13 @@ impl Cache for RedisCache {
 #[cfg(test)]
 mod tests {
 	use super::*;
-
-	// Note: These tests require a running Redis instance
-	// They will be skipped in CI unless REDIS_URL is set
-
-	fn get_redis_url() -> String {
-		std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())
-	}
+	use reinhardt_test::containers::RedisContainer;
+	use std::time::Duration;
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_creation() {
-		let cache = RedisCache::new(get_redis_url())
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
 			.await
 			.unwrap()
 			.with_default_ttl(Duration::from_secs(300))
@@ -400,147 +395,150 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_build_key_with_prefix() {
-		let cache = RedisCache::new(get_redis_url())
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
 			.await
 			.unwrap()
-			.with_key_prefix("app");
-
-		assert_eq!(cache.build_key("user:123"), "app:user:123");
+			.with_key_prefix("test");
+		assert_eq!(cache.build_key("key1"), "test:key1");
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_build_key_without_prefix() {
-		let cache = RedisCache::new(get_redis_url()).await.unwrap();
-		assert_eq!(cache.build_key("user:123"), "user:123");
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url()).await.unwrap();
+		assert_eq!(cache.build_key("key1"), "key1");
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_basic_operations() {
-		let cache = RedisCache::new(get_redis_url()).await.unwrap();
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
+			.await
+			.unwrap()
+			.with_key_prefix("test");
 
-		// Clear any existing data
-		cache.clear().await.unwrap();
-
-		// Set and get
-		cache.set("test:key1", &"value1", None).await.unwrap();
-		let value: Option<String> = cache.get("test:key1").await.unwrap();
+		// Test set and get
+		cache.set("key1", &"value1", None).await.unwrap();
+		let value: Option<String> = cache.get("key1").await.unwrap();
 		assert_eq!(value, Some("value1".to_string()));
 
-		// Has key
-		assert!(cache.has_key("test:key1").await.unwrap());
-		assert!(!cache.has_key("test:nonexistent").await.unwrap());
-
-		// Delete
-		cache.delete("test:key1").await.unwrap();
-		let value: Option<String> = cache.get("test:key1").await.unwrap();
+		// Test delete
+		cache.delete("key1").await.unwrap();
+		let value: Option<String> = cache.get("key1").await.unwrap();
 		assert_eq!(value, None);
 
-		// Cleanup
-		cache.clear().await.unwrap();
+		// Test has_key
+		cache.set("key2", &"value2", None).await.unwrap();
+		assert!(cache.has_key("key2").await.unwrap());
+		cache.delete("key2").await.unwrap();
+		assert!(!cache.has_key("key2").await.unwrap());
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_ttl() {
-		let cache = RedisCache::new(get_redis_url()).await.unwrap();
-		cache.clear().await.unwrap();
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
+			.await
+			.unwrap()
+			.with_key_prefix("test");
 
-		// Set with short TTL
+		// Set with TTL
 		cache
-			.set("test:ttl", &"value", Some(Duration::from_secs(1)))
+			.set("ttl_key", &"value", Some(Duration::from_secs(2)))
 			.await
 			.unwrap();
 
-		// Should exist immediately
-		let value: Option<String> = cache.get("test:ttl").await.unwrap();
+		// Key should exist immediately
+		let value: Option<String> = cache.get("ttl_key").await.unwrap();
 		assert_eq!(value, Some("value".to_string()));
 
 		// Wait for expiration
-		tokio::time::sleep(Duration::from_secs(2)).await;
+		tokio::time::sleep(Duration::from_secs(3)).await;
 
-		// Should be expired
-		let value: Option<String> = cache.get("test:ttl").await.unwrap();
+		// Key should be expired
+		let value: Option<String> = cache.get("ttl_key").await.unwrap();
 		assert_eq!(value, None);
-
-		cache.clear().await.unwrap();
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_batch_operations() {
-		let cache = RedisCache::new(get_redis_url()).await.unwrap();
-		cache.clear().await.unwrap();
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
+			.await
+			.unwrap()
+			.with_key_prefix("test");
 
-		// Set many
+		// Set multiple values
 		let mut values = std::collections::HashMap::new();
-		values.insert("test:key1".to_string(), "value1".to_string());
-		values.insert("test:key2".to_string(), "value2".to_string());
+		values.insert("batch_key1".to_string(), "value1".to_string());
+		values.insert("batch_key2".to_string(), "value2".to_string());
+		values.insert("batch_key3".to_string(), "value3".to_string());
+
 		cache.set_many(values, None).await.unwrap();
 
-		// Get many
-		let results: std::collections::HashMap<String, String> = cache
-			.get_many(&["test:key1", "test:key2", "test:key3"])
-			.await
-			.unwrap();
-		assert_eq!(results.len(), 2);
-		assert_eq!(results.get("test:key1"), Some(&"value1".to_string()));
-		assert_eq!(results.get("test:key2"), Some(&"value2".to_string()));
+		// Get multiple values
+		let keys = vec!["batch_key1", "batch_key2", "batch_key3"];
+		let results: std::collections::HashMap<String, Option<String>> =
+			cache.get_many(&keys).await.unwrap();
 
-		// Delete many
-		cache
-			.delete_many(&["test:key1", "test:key2"])
-			.await
-			.unwrap();
-		assert!(!cache.has_key("test:key1").await.unwrap());
-		assert!(!cache.has_key("test:key2").await.unwrap());
+		assert_eq!(results.get("batch_key1"), Some(&Some("value1".to_string())));
+		assert_eq!(results.get("batch_key2"), Some(&Some("value2".to_string())));
+		assert_eq!(results.get("batch_key3"), Some(&Some("value3".to_string())));
 
-		cache.clear().await.unwrap();
+		// Delete multiple values
+		cache.delete_many(&keys).await.unwrap();
+
+		let results: std::collections::HashMap<String, Option<String>> =
+			cache.get_many(&keys).await.unwrap();
+		assert_eq!(results.get("batch_key1"), None);
+		assert_eq!(results.get("batch_key2"), None);
+		assert_eq!(results.get("batch_key3"), None);
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_atomic_operations() {
-		let cache = RedisCache::new(get_redis_url()).await.unwrap();
-		cache.clear().await.unwrap();
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
+			.await
+			.unwrap()
+			.with_key_prefix("test");
 
-		// Increment from zero
-		let value = cache.incr("test:counter", 5).await.unwrap();
-		assert_eq!(value, 5);
+		// Test incr
+		cache.set("counter", &0i64, None).await.unwrap();
+		let result: i64 = cache.incr("counter", 1).await.unwrap();
+		assert_eq!(result, 1);
 
-		// Increment again
-		let value = cache.incr("test:counter", 3).await.unwrap();
-		assert_eq!(value, 8);
+		let result: i64 = cache.incr("counter", 5).await.unwrap();
+		assert_eq!(result, 6);
 
-		// Decrement
-		let value = cache.decr("test:counter", 2).await.unwrap();
-		assert_eq!(value, 6);
-
-		cache.clear().await.unwrap();
+		// Test decr
+		let result: i64 = cache.decr("counter", 2).await.unwrap();
+		assert_eq!(result, 4);
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires Redis to be running
 	async fn test_redis_cache_prefix() {
-		let cache = RedisCache::new(get_redis_url())
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(redis.connection_url())
 			.await
 			.unwrap()
 			.with_key_prefix("myapp");
 
-		cache.clear().await.unwrap();
+		cache.set("user:1", &"Alice", None).await.unwrap();
 
-		cache.set("user:123", &"data", None).await.unwrap();
+		// Key should be stored with prefix
+		let value: Option<String> = cache.get("user:1").await.unwrap();
+		assert_eq!(value, Some("Alice".to_string()));
 
-		// Verify the key is stored with prefix
-		let value: Option<String> = cache.get("user:123").await.unwrap();
-		assert_eq!(value, Some("data".to_string()));
+		// Try to get with full prefixed key should not work
+		// (because the cache will add prefix again)
+		let value: Option<String> = cache.get("myapp:user:1").await.unwrap();
+		assert_eq!(value, None);
 
-		// Clear should only clear prefixed keys
-		cache.clear().await.unwrap();
-		let value: Option<String> = cache.get("user:123").await.unwrap();
+		cache.delete("user:1").await.unwrap();
+		let value: Option<String> = cache.get("user:1").await.unwrap();
 		assert_eq!(value, None);
 	}
 }

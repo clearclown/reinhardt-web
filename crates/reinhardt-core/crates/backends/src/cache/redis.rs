@@ -267,19 +267,17 @@ impl CacheBackend for RedisCache {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_test::containers::RedisContainer;
 
-	fn get_redis_url() -> String {
-		std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string())
-	}
-
-	async fn create_test_cache() -> CacheResult<RedisCache> {
-		RedisCache::new(&get_redis_url()).await
+	async fn create_test_cache() -> CacheResult<(RedisContainer, RedisCache)> {
+		let redis = RedisContainer::new().await;
+		let cache = RedisCache::new(&redis.connection_url()).await?;
+		Ok((redis, cache))
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_set_get() {
-		let cache = create_test_cache().await.unwrap();
+		let (_container, cache) = create_test_cache().await.unwrap();
 
 		cache
 			.set("test_key", b"test_value", Some(Duration::from_secs(60)))
@@ -293,9 +291,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_delete() {
-		let cache = create_test_cache().await.unwrap();
+		let (_container, cache) = create_test_cache().await.unwrap();
 
 		cache.set("delete_key", b"value", None).await.unwrap();
 
@@ -307,9 +304,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_exists() {
-		let cache = create_test_cache().await.unwrap();
+		let (_container, cache) = create_test_cache().await.unwrap();
 
 		cache.set("exists_key", b"value", None).await.unwrap();
 
@@ -323,9 +319,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_ttl() {
-		let cache = create_test_cache().await.unwrap();
+		let (_container, cache) = create_test_cache().await.unwrap();
 
 		cache
 			.set("ttl_key", b"value", Some(Duration::from_secs(1)))
@@ -342,9 +337,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_batch_operations() {
-		let cache = create_test_cache().await.unwrap();
+		let (_container, cache) = create_test_cache().await.unwrap();
 
 		let items = vec![
 			("batch_key1".to_string(), b"value1".to_vec()),
@@ -374,9 +368,9 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore = "Requires Redis server"]
 	async fn test_redis_cache_custom_pool_size() {
-		let cache = RedisCache::with_pool_size(&get_redis_url(), 5)
+		let _redis = RedisContainer::new().await;
+		let cache = RedisCache::with_pool_size(&_redis.connection_url(), 5)
 			.await
 			.unwrap();
 

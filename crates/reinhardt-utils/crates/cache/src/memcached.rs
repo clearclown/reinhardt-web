@@ -70,15 +70,16 @@
 use crate::Result;
 use crate::cache_trait::Cache;
 use async_trait::async_trait;
-use futures::io::AllowStdIo;
 use memcache_async::ascii::Protocol;
 use reinhardt_exception::Error;
 use serde::{Deserialize, Serialize};
-use std::net::TcpStream as StdTcpStream;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
+use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+
+// Type alias for the memcached protocol with tokio TcpStream
+type MemcachedProtocol = Protocol<Compat<TcpStream>>;
 
 /// Memcached configuration with multi-server support.
 ///
@@ -129,8 +130,7 @@ impl Default for MemcachedConfig {
 
 /// Memcached-based cache backend with multi-server support.
 pub struct MemcachedCache {
-	servers: Vec<Mutex<Protocol<AllowStdIo<StdTcpStream>>>>,
-	current_index: Arc<AtomicUsize>,
+	servers: Vec<Mutex<MemcachedProtocol>>,
 	#[allow(dead_code)]
 	config: MemcachedConfig,
 }
@@ -153,7 +153,7 @@ impl MemcachedCache {
 
 		// Attempt to connect to all servers
 		for server_addr in &config.servers {
-			match Self::connect_to_server(server_addr) {
+			match Self::connect_to_server(server_addr).await {
 				Ok(protocol) => {
 					protocols.push(Mutex::new(protocol));
 				}
@@ -177,33 +177,38 @@ impl MemcachedCache {
 
 		Ok(Self {
 			servers: protocols,
-			current_index: Arc::new(AtomicUsize::new(0)),
 			config,
 		})
 	}
 
 	/// Helper method to connect to a single Memcached server.
-	fn connect_to_server(server_addr: &str) -> Result<Protocol<AllowStdIo<StdTcpStream>>> {
-		// Use std TcpStream wrapped in AllowStdIo for compatibility
-		let stream = StdTcpStream::connect(server_addr)
+	async fn connect_to_server(server_addr: &str) -> Result<MemcachedProtocol> {
+		// Use tokio TcpStream for native async support
+		let stream = TcpStream::connect(server_addr)
+			.await
 			.map_err(|e| Error::Http(format!("Failed to connect to Memcached: {}", e)))?;
 
-		// Set non-blocking mode for async operations
-		stream
-			.set_nonblocking(true)
-			.map_err(|e| Error::Http(format!("Failed to set non-blocking mode: {}", e)))?;
+		// Convert tokio TcpStream to futures-compatible stream
+		let compat_stream = stream.compat();
 
-		Ok(Protocol::new(AllowStdIo::new(stream)))
+		Ok(Protocol::new(compat_stream))
 	}
 
-	/// Get the next server using round-robin selection.
-	fn get_server_index(&self) -> usize {
-		let index = self.current_index.fetch_add(1, Ordering::Relaxed);
-		index % self.servers.len()
+	/// Get a consistent server index for a given key using hashing.
+	/// This ensures the same key always maps to the same server.
+	fn get_server_index_for_key(&self, key: &str) -> usize {
+		use std::collections::hash_map::DefaultHasher;
+		use std::hash::{Hash, Hasher};
+
+		let mut hasher = DefaultHasher::new();
+		key.hash(&mut hasher);
+		let hash = hasher.finish();
+
+		(hash as usize) % self.servers.len()
 	}
 
 	/// Helper method to get a server for operation.
-	fn get_server(&self, index: usize) -> &Mutex<Protocol<AllowStdIo<StdTcpStream>>> {
+	fn get_server(&self, index: usize) -> &Mutex<MemcachedProtocol> {
 		&self.servers[index % self.servers.len()]
 	}
 
@@ -224,7 +229,7 @@ impl Cache for MemcachedCache {
 	where
 		T: for<'de> Deserialize<'de> + Send,
 	{
-		let start_index = self.get_server_index();
+		let start_index = self.get_server_index_for_key(key);
 		let server_count = self.servers.len();
 
 		// Try all servers starting from the selected one
@@ -235,6 +240,11 @@ impl Cache for MemcachedCache {
 
 			match protocol.get(&key).await {
 				Ok(value) => {
+					// Check if the value is empty (key not found)
+					if value.is_empty() {
+						return Ok(None);
+					}
+
 					let deserialized: T = serde_json::from_slice(&value).map_err(|e| {
 						Error::Serialization(format!("Failed to deserialize value: {}", e))
 					})?;
@@ -265,7 +275,7 @@ impl Cache for MemcachedCache {
 			.map_err(|e| Error::Serialization(format!("Failed to serialize value: {}", e)))?;
 
 		let expiration = ttl.map(|d| d.as_secs() as u32).unwrap_or(0);
-		let start_index = self.get_server_index();
+		let start_index = self.get_server_index_for_key(key);
 		let server_count = self.servers.len();
 
 		// Try all servers starting from the selected one
@@ -293,7 +303,7 @@ impl Cache for MemcachedCache {
 	}
 
 	async fn delete(&self, key: &str) -> Result<()> {
-		let start_index = self.get_server_index();
+		let start_index = self.get_server_index_for_key(key);
 		let server_count = self.servers.len();
 
 		// Try all servers starting from the selected one
@@ -323,7 +333,7 @@ impl Cache for MemcachedCache {
 	}
 
 	async fn has_key(&self, key: &str) -> Result<bool> {
-		let start_index = self.get_server_index();
+		let start_index = self.get_server_index_for_key(key);
 		let server_count = self.servers.len();
 
 		// Try all servers starting from the selected one
@@ -333,7 +343,10 @@ impl Cache for MemcachedCache {
 			let mut protocol = server.lock().await;
 
 			match protocol.get(&key).await {
-				Ok(_) => return Ok(true),
+				Ok(value) => {
+					// Check if the value is empty (key not found)
+					return Ok(!value.is_empty());
+				}
 				Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
 				Err(e) => {
 					if attempt < server_count - 1 {
@@ -382,9 +395,9 @@ mod tests {
 	use super::*;
 
 	#[tokio::test]
-	#[ignore] // Requires running Memcached server
 	async fn test_memcached_basic_operations() {
-		let cache = MemcachedCache::from_url("127.0.0.1:11211")
+		let (_container, url) = reinhardt_test::containers::start_memcached().await;
+		let cache = MemcachedCache::from_url(&url)
 			.await
 			.expect("Failed to connect to Memcached");
 
@@ -409,7 +422,6 @@ mod tests {
 		cache.delete("test_key").await.expect("Failed to delete");
 
 		// Wait a moment for expiration
-		tokio::time::sleep(Duration::from_secs(2)).await;
 
 		let value: Option<String> = cache
 			.get("test_key")
@@ -426,14 +438,14 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires multiple running Memcached servers
 	async fn test_multiple_servers_connection() {
+		// Start 3 Memcached containers
+		let (_container1, url1) = reinhardt_test::containers::start_memcached().await;
+		let (_container2, url2) = reinhardt_test::containers::start_memcached().await;
+		let (_container3, url3) = reinhardt_test::containers::start_memcached().await;
+
 		let config = MemcachedConfig {
-			servers: vec![
-				"127.0.0.1:11211".to_string(),
-				"127.0.0.1:11212".to_string(),
-				"127.0.0.1:11213".to_string(),
-			],
+			servers: vec![url1, url2, url3],
 			..Default::default()
 		};
 
@@ -456,10 +468,13 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires multiple running Memcached servers
 	async fn test_round_robin_distribution() {
+		// Start 2 Memcached containers
+		let (_container1, url1) = reinhardt_test::containers::start_memcached().await;
+		let (_container2, url2) = reinhardt_test::containers::start_memcached().await;
+
 		let config = MemcachedConfig {
-			servers: vec!["127.0.0.1:11211".to_string(), "127.0.0.1:11212".to_string()],
+			servers: vec![url1, url2],
 			..Default::default()
 		};
 
@@ -476,6 +491,8 @@ mod tests {
 				.expect(&format!("Failed to set key {}", i));
 		}
 
+		// Wait a moment for writes to propagate
+
 		// Verify all keys can be retrieved
 		for i in 0..10 {
 			let key = format!("round_robin_key_{}", i);
@@ -489,16 +506,13 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires multiple Memcached servers with ability to test failover
 	async fn test_server_failover() {
-		// This test requires manual setup:
-		// 1. Start multiple Memcached servers
-		// 2. Set a key while all servers are running
-		// 3. Stop one server
-		// 4. Verify operations still succeed with remaining servers
+		// Start 2 Memcached containers
+		let (_container1, url1) = reinhardt_test::containers::start_memcached().await;
+		let (_container2, url2) = reinhardt_test::containers::start_memcached().await;
 
 		let config = MemcachedConfig {
-			servers: vec!["127.0.0.1:11211".to_string(), "127.0.0.1:11212".to_string()],
+			servers: vec![url1, url2],
 			..Default::default()
 		};
 
@@ -513,7 +527,8 @@ mod tests {
 			.expect("Failed to set");
 
 		// Note: In a real failover scenario, one server would be stopped here
-		// and the operation below should still succeed via the remaining server
+		// In TestContainers, both servers continue running, so we just verify
+		// that operations succeed with multiple servers available
 
 		let value: Option<String> = cache
 			.get("failover_test")
@@ -524,10 +539,13 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires multiple running Memcached servers
 	async fn test_clear_all_servers() {
+		// Start 2 Memcached containers
+		let (_container1, url1) = reinhardt_test::containers::start_memcached().await;
+		let (_container2, url2) = reinhardt_test::containers::start_memcached().await;
+
 		let config = MemcachedConfig {
-			servers: vec!["127.0.0.1:11211".to_string(), "127.0.0.1:11212".to_string()],
+			servers: vec![url1, url2],
 			..Default::default()
 		};
 
@@ -545,6 +563,8 @@ mod tests {
 			.set("clear_test_2", &"value2", Some(Duration::from_secs(60)))
 			.await
 			.expect("Failed to set key 2");
+
+		// Wait a moment for writes to propagate
 
 		// Clear all servers
 		cache.clear().await.expect("Failed to clear cache");

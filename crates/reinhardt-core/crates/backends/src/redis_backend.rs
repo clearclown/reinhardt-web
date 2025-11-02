@@ -204,26 +204,26 @@ impl Backend for RedisBackend {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_test::containers::RedisContainer;
 
 	// Helper function to create a test backend
-	async fn create_test_backend() -> RedisBackend {
-		let redis_url =
-			std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+	// Returns both the container and backend to ensure container stays alive
+	async fn create_test_backend() -> (RedisContainer, RedisBackend) {
+		let redis = RedisContainer::new().await;
+		let redis_url = redis.connection_url();
 
 		match RedisBackend::new(&redis_url).await {
-			Ok(backend) => backend,
+			Ok(backend) => (redis, backend),
 			Err(e) => {
-				eprintln!("Skipping Redis tests: {}", e);
-				panic!("Redis not available");
+				eprintln!("Failed to create Redis backend: {}", e);
+				panic!("Redis backend creation failed");
 			}
 		}
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_set_and_get() {
-		let backend = create_test_backend().await;
-		backend.clear().await.unwrap();
+		let (_container, backend) = create_test_backend().await;
 
 		backend.set("test:key1", "value1", None).await.unwrap();
 		backend.set("test:key2", vec![1, 2, 3], None).await.unwrap();
@@ -236,10 +236,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_ttl_expiration() {
-		let backend = create_test_backend().await;
-		backend.clear().await.unwrap();
+		let (_container, backend) = create_test_backend().await;
 
 		backend
 			.set("test:short_lived", "value", Some(Duration::from_secs(1)))
@@ -259,10 +257,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_delete() {
-		let backend = create_test_backend().await;
-		backend.clear().await.unwrap();
+		let (_container, backend) = create_test_backend().await;
 
 		backend.set("test:key", "value", None).await.unwrap();
 
@@ -278,10 +274,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_increment() {
-		let backend = create_test_backend().await;
-		backend.clear().await.unwrap();
+		let (_container, backend) = create_test_backend().await;
 
 		let count1 = backend.increment("test:counter", None).await.unwrap();
 		assert_eq!(count1, 1);
@@ -294,10 +288,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_increment_with_ttl() {
-		let backend = create_test_backend().await;
-		backend.clear().await.unwrap();
+		let (_container, backend) = create_test_backend().await;
 
 		backend
 			.increment("test:counter_ttl", Some(Duration::from_secs(1)))
@@ -324,9 +316,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Run only when Redis is available
 	async fn test_clear() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 
 		backend.set("test:key1", "value1", None).await.unwrap();
 		backend.set("test:key2", "value2", None).await.unwrap();

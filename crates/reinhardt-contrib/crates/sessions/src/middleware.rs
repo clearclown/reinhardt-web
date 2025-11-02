@@ -44,6 +44,8 @@ use reinhardt_types::{Handler, Middleware};
 use std::sync::Arc;
 #[cfg(feature = "middleware")]
 use std::time::Duration;
+#[cfg(feature = "middleware")]
+use tokio::sync::RwLock;
 
 #[cfg(feature = "middleware")]
 /// SameSite cookie attribute
@@ -250,7 +252,7 @@ impl<B: SessionBackend + 'static> Middleware for SessionMiddleware<B> {
 		// Load session from cookie
 		let session_key = self.get_session_key_from_cookie(&request);
 
-		let mut session: Session<B> = if let Some(key) = session_key {
+		let session: Session<B> = if let Some(key) = session_key {
 			Session::from_key(self.backend.clone(), key)
 				.await
 				.unwrap_or_else(|_| Session::new(self.backend.clone()))
@@ -258,20 +260,29 @@ impl<B: SessionBackend + 'static> Middleware for SessionMiddleware<B> {
 			Session::new(self.backend.clone())
 		};
 
-		// Store session in request extensions
-		request.extensions.insert(session.clone());
+		// Store session in request extensions wrapped in Arc<RwLock> for shared access
+		let shared_session = Arc::new(RwLock::new(session));
+		request.extensions.insert(shared_session.clone());
 
 		// Process the request
 		let mut response = next.handle(request).await?;
 
 		// Save session if modified
-		if session.is_modified() {
-			session.save().await.map_err(|e| {
+		// Acquire read lock to check if modified
+		let is_modified = {
+			let session_read = shared_session.read().await;
+			session_read.is_modified()
+		};
+
+		if is_modified {
+			// Acquire write lock to save
+			let mut session_mut = shared_session.write().await;
+			session_mut.save().await.map_err(|e| {
 				reinhardt_exception::Error::Internal(format!("Failed to save session: {}", e))
 			})?;
 
 			// Add Set-Cookie header
-			let session_key_str = session.get_or_create_key();
+			let session_key_str = session_mut.get_or_create_key();
 			let cookie_value = self.build_set_cookie_header(session_key_str);
 
 			response = response.with_header("Set-Cookie", &cookie_value);
@@ -305,10 +316,15 @@ mod tests {
 	#[async_trait]
 	impl Handler for SessionModifyingHandler {
 		async fn handle(&self, request: Request) -> Result<Response> {
-			if let Some(mut session) = request.extensions.get::<Session<InMemorySessionBackend>>() {
+			// Get the shared session from extensions
+			if let Some(shared_session) = request
+				.extensions
+				.get::<Arc<RwLock<Session<InMemorySessionBackend>>>>()
+			{
+				// Acquire write lock to modify the session
+				let mut session = shared_session.write().await;
 				session.set("user_id", 42).unwrap();
-				// Re-insert the modified session back into extensions
-				request.extensions.insert(session);
+				// Lock is automatically released when session goes out of scope
 			}
 			Ok(Response::new(StatusCode::OK))
 		}

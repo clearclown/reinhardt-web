@@ -68,3 +68,4 @@ messagepack = ["rmp-serde"]
 [dev-dependencies]
 tokio = { workspace = true }
 hyper = { workspace = true }
+sqlx = { workspace = true, features = ["any", "sqlite", "runtime-tokio"] }

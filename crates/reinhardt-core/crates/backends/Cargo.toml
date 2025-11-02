@@ -47,7 +47,7 @@ parking_lot = "0.12"
 tokio = { workspace = true, features = ["full", "test-util"] }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true, features = ["redis", "localstack"] }
-reinhardt-test = { workspace = true }
+reinhardt-test = { workspace = true, features = ["testcontainers"] }
 
 [features]
 default = ["memory"]

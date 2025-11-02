@@ -361,23 +361,19 @@ mod tests_no_feature {
 #[cfg(all(test, feature = "dynamic-redis"))]
 mod tests {
 	use super::*;
+	use reinhardt_test::containers::RedisContainer;
 
-	// Note: These tests require a running Redis instance
-	// They are marked as integration tests and should be run with
-	// TestContainers in the integration test suite
-
-	async fn create_test_backend() -> RedisBackend {
-		// This will fail without a running Redis instance
-		// Use TestContainers in integration tests instead
-		RedisBackend::new("redis://localhost:6379")
+	async fn create_test_backend() -> (RedisContainer, RedisBackend) {
+		let redis = RedisContainer::new().await;
+		let backend = RedisBackend::new(&redis.connection_url())
 			.await
-			.expect("Failed to create test backend")
+			.expect("Failed to create test backend");
+		(redis, backend)
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_set_and_get_setting() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 		let key = "test_setting_1";
 		let value = "test_value";
 
@@ -397,9 +393,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_setting_exists() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 		let key = "test_setting_2";
 		let value = "test_value";
 
@@ -428,9 +423,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_delete_setting() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 		let key = "test_setting_3";
 		let value = "test_value";
 
@@ -461,9 +455,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_setting_without_ttl() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 		let key = "permanent_setting";
 		let value = "permanent_value";
 
@@ -490,9 +483,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_keys() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 
 		// Set some settings
 		backend
@@ -522,9 +514,8 @@ mod tests {
 	}
 
 	#[tokio::test]
-	#[ignore] // Requires running Redis instance
 	async fn test_overwrite_existing_setting() {
-		let backend = create_test_backend().await;
+		let (_container, backend) = create_test_backend().await;
 		let key = "overwrite_test";
 
 		// Set initial value
