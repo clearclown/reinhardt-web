@@ -179,7 +179,7 @@ impl DatabaseBackend {
             CREATE TABLE IF NOT EXISTS settings (
                 key VARCHAR(255) PRIMARY KEY,
                 value TEXT NOT NULL,
-                expire_date TIMESTAMP
+                expire_date TEXT
             )
         "#;
 
@@ -511,7 +511,7 @@ mod tests_no_feature {
 
 	#[tokio::test]
 	async fn test_database_backend_disabled() {
-		let result = DatabaseBackend::new("sqlite::memory:").await;
+		let result = DatabaseBackend::new("sqlite::memory:?mode=rwc&cache=shared").await;
 		assert!(result.is_err());
 		assert!(result.unwrap_err().contains("Database backend not enabled"));
 	}
@@ -521,11 +521,32 @@ mod tests_no_feature {
 mod tests {
 	use super::*;
 	use serde_json::json;
+	use std::sync::Once;
+
+	static INIT_DRIVERS: Once = Once::new();
+
+	fn init_drivers() {
+		INIT_DRIVERS.call_once(|| {
+			sqlx::any::install_default_drivers();
+		});
+	}
 
 	async fn create_test_backend() -> DatabaseBackend {
-		let backend = DatabaseBackend::new("sqlite::memory:")
+		init_drivers();
+		// Use in-memory SQLite with shared cache mode
+		// This allows multiple connections from the pool to share the same in-memory database
+		let db_url = "sqlite::memory:?mode=rwc&cache=shared";
+
+		// Create backend with minimal connection pool for tests
+		use sqlx::any::AnyPoolOptions;
+		let pool = AnyPoolOptions::new()
+			.min_connections(1)
+			.max_connections(1)
+			.connect(db_url)
 			.await
-			.expect("Failed to create test backend");
+			.expect("Failed to connect to test database");
+
+		let backend = DatabaseBackend::from_pool(Arc::new(pool));
 		backend
 			.create_table()
 			.await
