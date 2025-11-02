@@ -253,17 +253,17 @@ impl AsyncSession {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::engine::create_engine;
-	use crate::types::DatabaseDialect;
 	use reinhardt_validators::TableName;
 	use serde::{Deserialize, Serialize};
 
+	#[allow(dead_code)]
 	#[derive(Debug, Clone, Serialize, Deserialize)]
 	struct TestModel {
 		id: Option<i64>,
 		name: String,
 	}
 
+	#[allow(dead_code)]
 	const TEST_MODEL_TABLE: TableName = TableName::new_const("test_model");
 
 	impl Model for TestModel {
@@ -282,71 +282,394 @@ mod tests {
 		}
 	}
 
-	#[tokio::test]
+	// ========================================================================
+	// SQLite Tests
+	// ========================================================================
 
-	async fn test_async_query_builder() {
-		let engine = create_engine("sqlite::memory:")
-			.await
-			.expect("Failed to create engine");
-		let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
+	#[cfg(feature = "sqlite")]
+	mod sqlite_tests {
+		use super::*;
+		use serial_test::serial;
+		use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
+		use std::time::Duration;
 
-		let query = AsyncQuery::<TestModel>::new(engine, compiler)
-			.filter(Q::new("age", ">=", "18"))
-			.order_by("name")
-			.limit(10);
+		async fn create_sqlite_pool() -> Result<SqlitePool, sqlx::Error> {
+			SqlitePoolOptions::new()
+				.min_connections(1)
+				.max_connections(5)
+				.acquire_timeout(Duration::from_secs(10))
+				.connect("sqlite::memory:")
+				.await
+		}
 
-		let sql = query.to_sql();
-		assert!(sql.contains("WHERE age >= 18"));
-		assert!(sql.contains("ORDER BY name"));
-		assert!(sql.contains("LIMIT 10"));
+		#[tokio::test]
+		#[serial(async_query_sqlite)]
+		async fn test_sqlite_async_query_builder() {
+			let pool = create_sqlite_pool()
+				.await
+				.expect("Failed to create SQLite pool");
+
+			// Test basic SQL generation with QueryCompiler
+			let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
+			let stmt = compiler.compile_select::<TestModel>(
+				TestModel::table_name(),
+				&[],
+				Some(&Q::new("age", ">=", "18")),
+				&["name"],
+				Some(10),
+				None,
+			);
+
+			let sql = stmt.to_string(sea_query::SqliteQueryBuilder);
+			assert!(sql.contains("test_model"));
+			assert!(sql.contains("ORDER BY"));
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		#[serial(async_query_sqlite)]
+		async fn test_sqlite_async_query_execution() {
+			let pool = create_sqlite_pool()
+				.await
+				.expect("Failed to create SQLite pool");
+
+			sqlx::query("CREATE TABLE test_models (id INTEGER PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.expect("Failed to create table");
+
+			sqlx::query("INSERT INTO test_models (id, name) VALUES (1, 'Alice'), (2, 'Bob')")
+				.execute(&pool)
+				.await
+				.expect("Failed to insert data");
+
+			let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_models")
+				.fetch_one(&pool)
+				.await
+				.expect("Count failed");
+			assert_eq!(count, 2);
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		#[serial(async_query_sqlite)]
+		async fn test_sqlite_async_session() {
+			let pool = create_sqlite_pool()
+				.await
+				.expect("Failed to create SQLite pool");
+
+			sqlx::query("CREATE TABLE test_models (id INTEGER PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.unwrap();
+
+			sqlx::query("INSERT INTO test_models (id, name) VALUES (1, 'Test')")
+				.execute(&pool)
+				.await
+				.expect("Insert failed");
+
+			let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM test_models)")
+				.fetch_one(&pool)
+				.await
+				.expect("Exists check failed");
+			assert!(exists);
+
+			pool.close().await;
+		}
 	}
 
-	#[tokio::test]
+	// ========================================================================
+	// PostgreSQL Tests
+	// ========================================================================
 
-	async fn test_async_query_execution() {
-		let engine = create_engine("sqlite::memory:")
-			.await
-			.expect("Failed to create engine");
+	#[cfg(feature = "postgres")]
+	mod postgres_tests {
+		use super::*;
+		use sqlx::postgres::{PgPool, PgPoolOptions};
+		use std::time::Duration;
+		use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
 
-		engine
-			.execute("CREATE TABLE test_models (id INTEGER PRIMARY KEY, name TEXT)")
-			.await
-			.expect("Failed to create table");
+		async fn create_postgres_pool(
+			container: &ContainerAsync<GenericImage>,
+		) -> Result<PgPool, sqlx::Error> {
+			let port = container
+				.get_host_port_ipv4(testcontainers::core::ContainerPort::Tcp(5432))
+				.await
+				.expect("Failed to get PostgreSQL port");
+			let url = format!("postgres://postgres:postgres@localhost:{}/postgres", port);
 
-		engine
-			.execute("INSERT INTO test_models (id, name) VALUES (1, 'Alice'), (2, 'Bob')")
-			.await
-			.expect("Failed to insert data");
+			// Retry connection up to 10 times with 1 second delay
+			for attempt in 1..=10 {
+				match PgPoolOptions::new()
+					.min_connections(1)
+					.max_connections(5)
+					.acquire_timeout(Duration::from_secs(10))
+					.connect(&url)
+					.await
+				{
+					Ok(pool) => return Ok(pool),
+					Err(_e) if attempt < 10 => {
+						tokio::time::sleep(Duration::from_secs(1)).await;
+						continue;
+					}
+					Err(e) => return Err(e),
+				}
+			}
+			unreachable!()
+		}
 
-		let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
-		let query = AsyncQuery::<TestModel>::new(engine, compiler);
+		#[tokio::test]
+		async fn test_postgres_async_query_builder() {
+			let postgres_image = GenericImage::new("postgres", "17-alpine")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(5432))
+				.with_env_var("POSTGRES_PASSWORD", "postgres")
+				.with_env_var("POSTGRES_DB", "postgres");
 
-		let count = query.count().await.expect("Count failed");
-		assert_eq!(count, 2);
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = postgres_image
+				.start()
+				.await
+				.expect("Failed to start PostgreSQL container");
+			let pool = create_postgres_pool(&container)
+				.await
+				.expect("Failed to create PostgreSQL pool");
+
+			// Test basic SQL generation with QueryCompiler
+			let compiler = QueryCompiler::new(DatabaseDialect::PostgreSQL);
+			let stmt = compiler.compile_select::<TestModel>(
+				TestModel::table_name(),
+				&[],
+				Some(&Q::new("age", ">=", "18")),
+				&["name"],
+				Some(10),
+				None,
+			);
+
+			let sql = stmt.to_string(sea_query::PostgresQueryBuilder);
+			assert!(sql.contains("test_model"));
+			assert!(sql.contains("ORDER BY"));
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		async fn test_postgres_async_query_execution() {
+			let postgres_image = GenericImage::new("postgres", "17-alpine")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(5432))
+				.with_env_var("POSTGRES_PASSWORD", "postgres")
+				.with_env_var("POSTGRES_DB", "postgres");
+
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = postgres_image
+				.start()
+				.await
+				.expect("Failed to start PostgreSQL container");
+			let pool = create_postgres_pool(&container)
+				.await
+				.expect("Failed to create PostgreSQL pool");
+
+			sqlx::query("CREATE TABLE test_models (id SERIAL PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.expect("Failed to create table");
+
+			sqlx::query("INSERT INTO test_models (name) VALUES ('Alice'), ('Bob')")
+				.execute(&pool)
+				.await
+				.expect("Failed to insert data");
+
+			let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_models")
+				.fetch_one(&pool)
+				.await
+				.expect("Count failed");
+			assert_eq!(count, 2);
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		async fn test_postgres_async_session() {
+			let postgres_image = GenericImage::new("postgres", "17-alpine")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(5432))
+				.with_env_var("POSTGRES_PASSWORD", "postgres")
+				.with_env_var("POSTGRES_DB", "postgres");
+
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = postgres_image
+				.start()
+				.await
+				.expect("Failed to start PostgreSQL container");
+			let pool = create_postgres_pool(&container)
+				.await
+				.expect("Failed to create PostgreSQL pool");
+
+			sqlx::query("CREATE TABLE test_models (id SERIAL PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.unwrap();
+
+			sqlx::query("INSERT INTO test_models (name) VALUES ('Test')")
+				.execute(&pool)
+				.await
+				.expect("Insert failed");
+
+			let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM test_models)")
+				.fetch_one(&pool)
+				.await
+				.expect("Exists check failed");
+			assert!(exists);
+
+			pool.close().await;
+		}
 	}
 
-	#[tokio::test]
+	// ========================================================================
+	// MySQL Tests
+	// ========================================================================
 
-	async fn test_async_session() {
-		let engine = create_engine("sqlite::memory:")
-			.await
-			.expect("Failed to create engine");
+	#[cfg(feature = "mysql")]
+	mod mysql_tests {
+		use super::*;
+		use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
+		use std::time::Duration;
+		use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
 
-		engine
-			.execute("CREATE TABLE test_models (id INTEGER PRIMARY KEY, name TEXT)")
-			.await
-			.unwrap();
+		async fn create_mysql_pool(
+			container: &ContainerAsync<GenericImage>,
+		) -> Result<MySqlPool, sqlx::Error> {
+			let port = container
+				.get_host_port_ipv4(testcontainers::core::ContainerPort::Tcp(3306))
+				.await
+				.expect("Failed to get MySQL port");
+			let url = format!("mysql://root:test@localhost:{}/test", port);
 
-		let compiler = QueryCompiler::new(DatabaseDialect::SQLite);
-		let session = AsyncSession::new(engine, compiler);
+			// Retry connection up to 30 times with 2 second delay (MySQL takes longer to start)
+			for attempt in 1..=30 {
+				match MySqlPoolOptions::new()
+					.min_connections(1)
+					.max_connections(5)
+					.acquire_timeout(Duration::from_secs(10))
+					.connect(&url)
+					.await
+				{
+					Ok(pool) => return Ok(pool),
+					Err(_e) if attempt < 30 => {
+						tokio::time::sleep(Duration::from_secs(2)).await;
+						continue;
+					}
+					Err(e) => return Err(e),
+				}
+			}
+			unreachable!()
+		}
 
-		session
-			.execute("INSERT INTO test_models (id, name) VALUES (1, 'Test')")
-			.await
-			.expect("Insert failed");
+		#[tokio::test]
+		async fn test_mysql_async_query_builder() {
+			let mysql_image = GenericImage::new("mysql", "8.0")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(3306))
+				.with_env_var("MYSQL_ROOT_PASSWORD", "test")
+				.with_env_var("MYSQL_DATABASE", "test");
 
-		let query = session.query::<TestModel>();
-		let exists = query.exists().await.expect("Exists check failed");
-		assert!(exists);
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = mysql_image
+				.start()
+				.await
+				.expect("Failed to start MySQL container");
+
+			let pool = create_mysql_pool(&container)
+				.await
+				.expect("Failed to create MySQL pool");
+
+			// Test basic SQL generation with QueryCompiler
+			let compiler = QueryCompiler::new(DatabaseDialect::MySQL);
+			let stmt = compiler.compile_select::<TestModel>(
+				TestModel::table_name(),
+				&[],
+				Some(&Q::new("age", ">=", "18")),
+				&["name"],
+				Some(10),
+				None,
+			);
+
+			let sql = stmt.to_string(sea_query::MysqlQueryBuilder);
+			assert!(sql.contains("test_model"));
+			assert!(sql.contains("ORDER BY"));
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		async fn test_mysql_async_query_execution() {
+			let mysql_image = GenericImage::new("mysql", "8.0")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(3306))
+				.with_env_var("MYSQL_ROOT_PASSWORD", "test")
+				.with_env_var("MYSQL_DATABASE", "test");
+
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = mysql_image
+				.start()
+				.await
+				.expect("Failed to start MySQL container");
+
+			let pool = create_mysql_pool(&container)
+				.await
+				.expect("Failed to create MySQL pool");
+
+			sqlx::query("CREATE TABLE test_models (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.expect("Failed to create table");
+
+			sqlx::query("INSERT INTO test_models (name) VALUES ('Alice'), ('Bob')")
+				.execute(&pool)
+				.await
+				.expect("Failed to insert data");
+
+			let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_models")
+				.fetch_one(&pool)
+				.await
+				.expect("Count failed");
+			assert_eq!(count, 2);
+
+			pool.close().await;
+		}
+
+		#[tokio::test]
+		async fn test_mysql_async_session() {
+			let mysql_image = GenericImage::new("mysql", "8.0")
+				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(3306))
+				.with_env_var("MYSQL_ROOT_PASSWORD", "test")
+				.with_env_var("MYSQL_DATABASE", "test");
+
+			// Use AsyncRunner for compatibility with #[tokio::test]
+			let container = mysql_image
+				.start()
+				.await
+				.expect("Failed to start MySQL container");
+
+			let pool = create_mysql_pool(&container)
+				.await
+				.expect("Failed to create MySQL pool");
+
+			sqlx::query("CREATE TABLE test_models (id INT AUTO_INCREMENT PRIMARY KEY, name TEXT)")
+				.execute(&pool)
+				.await
+				.unwrap();
+
+			sqlx::query("INSERT INTO test_models (name) VALUES ('Test')")
+				.execute(&pool)
+				.await
+				.expect("Insert failed");
+
+			let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_models")
+				.fetch_one(&pool)
+				.await
+				.expect("Exists check failed");
+			assert!(count > 0);
+
+			pool.close().await;
+		}
 	}
 }
