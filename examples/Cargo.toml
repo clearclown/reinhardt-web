@@ -8,11 +8,11 @@ members = [
     "database-integration",
 ]
 
-# ⚠️ workspace.dependencies に reinhardt を含めない
-# 各 example が独立して crates.io から取得するため
+# ⚠️ Do not include reinhardt in workspace.dependencies
+# Each example should independently fetch from crates.io
 
 [workspace.dependencies]
-# Examples 専用の共通依存のみ
+# Common dependencies for examples only
 tokio = { version = "1", features = ["full", "rt-multi-thread", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

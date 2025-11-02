@@ -17,11 +17,11 @@ toml = "0.9.8"
 reinhardt-exception = { workspace = true }
 reinhardt-validators = { workspace = true }
 
-# 環境変数とURL処理
+# Environment variables and URL handling
 dotenv = "0.15"
 url = "2.5"
 
-# セキュリティと型安全性
+# Security and type safety
 secrecy = "0.10.3"
 zeroize = { version = "1.7", features = ["derive"] }
 subtle = "2.5"
@@ -31,11 +31,11 @@ regex = "1.10"
 chrono = { version = "0.4", features = ["serde"] }
 tempfile = "3.8"
 
-# 非同期サポート（オプショナル）
+# Async support (optional)
 async-trait = { version = "0.1", optional = true }
 tokio = { workspace = true, features = ["sync"], optional = true }
 
-# バックエンド（オプショナル）
+# Backends (optional)
 redis = { version = "0.32.7", features = [
   "tokio-comp",
   "connection-manager",
@@ -52,33 +52,33 @@ sea-query-binder = { version = "0.7", features = [
   "sqlx-sqlite",
 ], optional = true }
 
-# シークレット管理（オプショナル）
+# Secret management (optional)
 reqwest = { version = "0.12", features = ["json"], optional = true }
 rand = { version = "0.9.2", optional = true }
 
-# AWS Secrets Manager（オプショナル）
+# AWS Secrets Manager (optional)
 aws-config = { version = "1.5", optional = true }
 aws-sdk-secretsmanager = { version = "1.52", optional = true }
 
-# Azure Key Vault（オプショナル）
+# Azure Key Vault (optional)
 azure_core = { version = "0.21", optional = true }
 azure_identity = { version = "0.21", optional = true }
 azure_security_keyvault = { version = "0.21", optional = true }
 futures = { workspace = true, optional = true }
 
-# 暗号化（オプショナル）
+# Encryption (optional)
 aes-gcm = { version = "0.10", optional = true }
 base64 = { version = "0.22", optional = true }
 pbkdf2 = { version = "0.12", features = ["simple"], optional = true }
 sha2 = { version = "0.10", optional = true }
 
-# Hot Reload（オプショナル）
+# Hot reload (optional)
 notify = { version = "7.0", optional = true }
 
-# キャッシング（オプショナル）
+# Caching (optional)
 moka = { version = "0.12", features = ["future"], optional = true }
 
-# その他
+# Other dependencies
 uuid = { version = "1.6", features = ["v4"] }
 
 [features]

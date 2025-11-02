@@ -11,12 +11,12 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
-# manage_cli用の依存関係（reinhardt利用可能時のみ）
+# Dependencies for manage_cli (only when reinhardt is available)
 reinhardt-commands = { version = "^0.1", optional = true }
 console = { version = "0.15", optional = true }
 
 [features]
-# manage_cli機能を有効にする
+# Enable manage_cli feature
 manage = ["reinhardt-commands", "console"]
 
 # Note: example-common is also used as build-dependency by example build.rs scripts

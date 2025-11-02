@@ -10,7 +10,7 @@ readme = "README.md"
 repository.workspace = true
 
 [dependencies]
-# 内部クレート - optional でre-exportできるようにする
+# Internal crates - made optional for re-export
 reinhardt-settings = { path = "crates/settings", version = "0.1.0", optional = true }
 reinhardt-settings-cli = { path = "crates/settings-cli", version = "0.1.0", optional = true }
 
@@ -19,7 +19,7 @@ default = ["settings"]
 settings = ["reinhardt-settings"]
 settings-cli = ["reinhardt-settings-cli"]
 
-# 内部クレートの機能をそのまま公開
+# Expose internal crate features as-is
 async = ["reinhardt-settings?/async"]
 dynamic-redis = ["reinhardt-settings?/dynamic-redis"]
 dynamic-database = ["reinhardt-settings?/dynamic-database"]
