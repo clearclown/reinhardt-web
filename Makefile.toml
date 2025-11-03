@@ -71,6 +71,7 @@ args = [
     "--workspace",
     "--all",
     "--all-features",
+    "--allow-dirty",
     "--",
     "-D",
     "warnings",
