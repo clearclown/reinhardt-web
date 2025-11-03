@@ -371,8 +371,8 @@ if report.is_healthy() {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["templates-integration"] }
-reinhardt-templates = "0.1.0"
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["templates-integration"] }
+reinhardt-templates = "0.1.0-alpha.1"
 ```
 
 #### Basic Template Integration
@@ -516,7 +516,7 @@ reinhardt_templates::init_static_config(static_config);
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["processing"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["processing"] }
 ```
 
 #### Basic CSS/JS Minification
@@ -664,7 +664,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["compression"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["compression"] }
 ```
 
 ```rust
@@ -706,7 +706,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["source-maps"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["source-maps"] }
 ```
 
 ```rust
@@ -758,7 +758,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["image-optimization"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["image-optimization"] }
 ```
 
 ```rust
@@ -793,7 +793,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["advanced-minification"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["advanced-minification"] }
 ```
 
 Advanced minification using OXC provides production-grade optimization including variable renaming, dead code elimination, and advanced compression.
@@ -902,7 +902,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0", features = ["dev-server"] }
+reinhardt-static = { version = "0.1.0-alpha.1", features = ["dev-server"] }
 ```
 
 #### File Watching and Auto-Reload

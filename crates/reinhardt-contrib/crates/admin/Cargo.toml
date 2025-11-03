@@ -17,13 +17,13 @@ file-uploads = ["reinhardt-storage"]
 
 [dependencies]
 # Reinhardt dependencies
-reinhardt-auth = { path = "../auth", version = "0.1.0" }
+reinhardt-auth = { path = "../auth", version = "0.1.0-alpha.1" }
 reinhardt-http = { workspace = true }
 reinhardt-types = { workspace = true }
-reinhardt-orm = { path = "../../../reinhardt-db/crates/orm", version = "0.1.0" }
+reinhardt-orm = { path = "../../../reinhardt-db/crates/orm", version = "0.1.0-alpha.1" }
 reinhardt-routers = { workspace = true }
-reinhardt-pagination = { path = "../../../reinhardt-rest/crates/pagination", version = "0.1.0" }
-reinhardt-filters = { path = "../../../reinhardt-rest/crates/filters", version = "0.1.0" }
+reinhardt-pagination = { path = "../../../reinhardt-rest/crates/pagination", version = "0.1.0-alpha.1" }
+reinhardt-filters = { path = "../../../reinhardt-rest/crates/filters", version = "0.1.0-alpha.1" }
 reinhardt-templates = { workspace = true, optional = true }
 reinhardt-storage = { workspace = true, optional = true }
 

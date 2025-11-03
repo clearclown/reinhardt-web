@@ -6,9 +6,9 @@ reinhardt-graphql provides functionality to expose gRPC services as GraphQL APIs
 
 ```toml
 [dependencies]
-reinhardt-graphql = { version = "0.1.0", features = ["full"] }
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["full"] }
 # Or enable individually
-reinhardt-graphql = { version = "0.1.0", features = ["graphql-grpc", "subscription"] }
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc", "subscription"] }
 ```
 
 ### Available Features

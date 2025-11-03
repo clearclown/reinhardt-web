@@ -99,13 +99,13 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-settings = "0.1.0"
+reinhardt-settings = "0.1.0-alpha.1"
 
 # With all features
-reinhardt-settings = { version = "0.1.0", features = ["full"] }
+reinhardt-settings = { version = "0.1.0-alpha.1", features = ["full"] }
 
 # With specific features
-reinhardt-settings = { version = "0.1.0", features = ["async", "encryption", "vault"] }
+reinhardt-settings = { version = "0.1.0-alpha.1", features = ["async", "encryption", "vault"] }
 ```
 
 ## Feature Flags
@@ -134,13 +134,13 @@ reinhardt-settings = { version = "0.1.0", features = ["async", "encryption", "va
 
 ```toml
 # Full async features with all secret providers
-reinhardt-settings = { version = "0.1.0", features = ["async", "vault", "aws-secrets", "azure-keyvault", "encryption"] }
+reinhardt-settings = { version = "0.1.0-alpha.1", features = ["async", "vault", "aws-secrets", "azure-keyvault", "encryption"] }
 
 # Dynamic settings with Redis
-reinhardt-settings = { version = "0.1.0", features = ["dynamic-redis", "encryption"] }
+reinhardt-settings = { version = "0.1.0-alpha.1", features = ["dynamic-redis", "encryption"] }
 
 # Minimal with encryption only
-reinhardt-settings = { version = "0.1.0", features = ["encryption"] }
+reinhardt-settings = { version = "0.1.0-alpha.1", features = ["encryption"] }
 ```
 
 ## Quick Start

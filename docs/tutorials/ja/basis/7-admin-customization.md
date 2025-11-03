@@ -10,7 +10,7 @@ Reinhardt管理画面は、アプリケーションのデータを管理する�
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["admin"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
 ```
 
 ## 管理者ユーザーの作成

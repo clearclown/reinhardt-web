@@ -25,15 +25,15 @@ reinhardt-orm = { workspace = true, optional = true }
 reinhardt-exception = { workspace = true }
 
 # Internal crates (now part of reinhardt-rest)
-rest-core = { version = "0.1.0", path = "crates/rest-core", package = "reinhardt-rest-core" }
-reinhardt-serializers = { version = "0.1.0", path = "crates/serializers" }
-reinhardt-parsers = { version = "0.1.0", path = "crates/parsers" }
-reinhardt-pagination = { version = "0.1.0", path = "crates/pagination" }
-reinhardt-filters = { version = "0.1.0", path = "crates/filters" }
-reinhardt-throttling = { version = "0.1.0", path = "crates/throttling" }
-reinhardt-versioning = { version = "0.1.0", path = "crates/versioning" }
-reinhardt-metadata = { version = "0.1.0", path = "crates/metadata" }
-reinhardt-negotiation = { version = "0.1.0", path = "crates/negotiation" }
+rest-core = { version = "0.1.0-alpha.1", path = "crates/rest-core", package = "reinhardt-rest-core" }
+reinhardt-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers" }
+reinhardt-parsers = { version = "0.1.0-alpha.1", path = "crates/parsers" }
+reinhardt-pagination = { version = "0.1.0-alpha.1", path = "crates/pagination" }
+reinhardt-filters = { version = "0.1.0-alpha.1", path = "crates/filters" }
+reinhardt-throttling = { version = "0.1.0-alpha.1", path = "crates/throttling" }
+reinhardt-versioning = { version = "0.1.0-alpha.1", path = "crates/versioning" }
+reinhardt-metadata = { version = "0.1.0-alpha.1", path = "crates/metadata" }
+reinhardt-negotiation = { version = "0.1.0-alpha.1", path = "crates/negotiation" }
 
 # Serialization
 serde = { workspace = true }

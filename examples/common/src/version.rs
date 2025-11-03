@@ -129,7 +129,18 @@ mod tests {
     #[test]
     fn test_version_spec_parsing() {
         // Verify version specifier parsing works correctly
-        let specs = vec!["0.1.0", "^0.1", "~0.1.2", ">=0.1, <0.2", "*"];
+        let specs = vec![
+            // Stable version patterns
+            "^0.1",
+            "~0.1.2",
+            ">=0.1, <0.2",
+            "*",
+            // Pre-release version patterns (alpha)
+            "0.1.0-alpha.1",
+            ">=0.1.0-alpha.1",
+            ">=0.1.0-alpha.1, <0.1.0",
+            "^0.1.0-alpha",
+        ];
 
         for spec in specs {
             if spec != "*" {

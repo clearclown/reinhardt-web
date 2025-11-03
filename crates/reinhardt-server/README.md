@@ -43,7 +43,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-server = "0.1.0"
+reinhardt-server = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -52,7 +52,7 @@ Enable specific features based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-server = { version = "0.1.0", features = ["websocket", "graphql"] }
+reinhardt-server = { version = "0.1.0-alpha.1", features = ["websocket", "graphql"] }
 ```
 
 Available features:

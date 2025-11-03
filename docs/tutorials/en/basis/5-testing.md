@@ -103,7 +103,7 @@ Add the test dependency to `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.1.0", features = ["test"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["test"] }
 ```
 
 Create tests for the index view in `src/polls.rs`:

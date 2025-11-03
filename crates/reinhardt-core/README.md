@@ -65,7 +65,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-core = "0.1.0"
+reinhardt-core = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -74,7 +74,7 @@ Enable specific sub-crates based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-core = { version = "0.1.0", features = ["signals", "macros", "security"] }
+reinhardt-core = { version = "0.1.0-alpha.1", features = ["signals", "macros", "security"] }
 ```
 
 Available features:

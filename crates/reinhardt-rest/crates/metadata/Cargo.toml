@@ -1,6 +1,6 @@
 [package]
 name = "reinhardt-metadata"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Metadata API for OPTIONS requests in Reinhardt framework"
@@ -8,7 +8,7 @@ repository.workspace = true
 
 [dependencies]
 reinhardt-apps = { workspace = true }
-reinhardt-serializers = { version = "0.1.0", path = "../serializers" }
+reinhardt-serializers = { version = "0.1.0-alpha.1", path = "../serializers" }
 async-trait = "0.1"
 regex = "1.11"
 serde = { version = "1.0", features = ["derive"] }

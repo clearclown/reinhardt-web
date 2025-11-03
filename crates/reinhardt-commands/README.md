@@ -14,7 +14,7 @@ Add to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-commands = "0.1.0"
+reinhardt-commands = "0.1.0-alpha.1"
 ```
 
 ### As a global CLI tool

@@ -103,7 +103,7 @@ Reinhardtテストクライアントを使用してビューをテストしま�
 
 ```toml
 [dev-dependencies]
-reinhardt = { version = "0.1.0", features = ["test"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["test"] }
 ```
 
 `src/polls.rs`にindexビューのテストを作成します：

@@ -128,7 +128,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```toml
 [dependencies]
-reinhardt-grpc = "0.1.0"
+reinhardt-grpc = "0.1.0-alpha.1"
 tonic = "0.12"
 prost = "0.13"
 

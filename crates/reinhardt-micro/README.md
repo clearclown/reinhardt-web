@@ -26,7 +26,7 @@ Add Reinhardt Micro to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-micro = "0.1.0"
+reinhardt-micro = "0.1.0-alpha.1"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -94,7 +94,7 @@ async fn list_users() -> &'static str {
 Reinhardt Micro uses feature flags to keep the core lightweight:
 
 ```toml
-[dependencies]reinhardt-micro = { version = "0.1.0", default-features = false, features = ["routing", "params"] }
+[dependencies]reinhardt-micro = { version = "0.1.0-alpha.1", default-features = false, features = ["routing", "params"] }
 ```
 
 Available features:
@@ -142,13 +142,13 @@ Start with Reinhardt Micro and upgrade to full Reinhardt as your needs grow:
 
 ```toml
 # Start micro
-[dependencies]reinhardt-micro = "0.1.0"
+[dependencies]reinhardt-micro = "0.1.0-alpha.1"
 
 # Upgrade to standard
-[dependencies]reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+[dependencies]reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 
 # Full framework
-[dependencies]reinhardt = "0.1.0"  # or features = ["full"]
+[dependencies]reinhardt = "0.1.0-alpha.1"  # or features = ["full"]
 ```
 
 ## Examples

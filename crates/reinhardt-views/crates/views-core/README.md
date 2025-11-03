@@ -19,7 +19,7 @@ Core view abstractions for Reinhardt framework
 
 ```toml
 [dependencies]
-views-core = "0.1.0"
+views-core = "0.1.0-alpha.1"
 ```
 
 ## License

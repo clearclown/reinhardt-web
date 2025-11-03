@@ -21,9 +21,9 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 reinhardt-types = { workspace = true }
-reinhardt-http = { version = "0.1.0", path = "../reinhardt-http" }
+reinhardt-http = { version = "0.1.0-alpha.1", path = "../reinhardt-http" }
 reinhardt-exception = { workspace = true }
-reinhardt-contrib = { version = "0.1.0", path = "../reinhardt-contrib" }
+reinhardt-contrib = { version = "0.1.0-alpha.1", path = "../reinhardt-contrib" }
 reinhardt-apps = { workspace = true }
 reinhardt-security = { workspace = true }
 reinhardt-auth = { workspace = true, features = ["session"] }

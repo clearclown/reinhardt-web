@@ -9,13 +9,13 @@ description = "Core components for Reinhardt framework"
 
 [dependencies]
 # Re-export all internal crates
-reinhardt-types = { version = "0.1.0", path = "crates/types", optional = true }
-reinhardt-exception = { version = "0.1.0", path = "crates/exception", optional = true }
-reinhardt-signals = { version = "0.1.0", path = "crates/signals", optional = true }
-reinhardt-macros = { version = "0.1.0", path = "crates/macros", optional = true }
-reinhardt-security = { version = "0.1.0", path = "crates/security", optional = true }
-reinhardt-validators = { version = "0.1.0", path = "crates/validators", optional = true }
-reinhardt-backends = { version = "0.1.0", path = "crates/backends", optional = true }
+reinhardt-types = { version = "0.1.0-alpha.1", path = "crates/types", optional = true }
+reinhardt-exception = { version = "0.1.0-alpha.1", path = "crates/exception", optional = true }
+reinhardt-signals = { version = "0.1.0-alpha.1", path = "crates/signals", optional = true }
+reinhardt-macros = { version = "0.1.0-alpha.1", path = "crates/macros", optional = true }
+reinhardt-security = { version = "0.1.0-alpha.1", path = "crates/security", optional = true }
+reinhardt-validators = { version = "0.1.0-alpha.1", path = "crates/validators", optional = true }
+reinhardt-backends = { version = "0.1.0-alpha.1", path = "crates/backends", optional = true }
 
 [features]
 default = [

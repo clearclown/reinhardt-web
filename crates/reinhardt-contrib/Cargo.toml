@@ -9,15 +9,15 @@ repository.workspace = true
 [dependencies]
 
 # Re-export internal crates as optional dependencies
-reinhardt-auth = { version = "0.1.0", path = "crates/auth", optional = true }
-reinhardt-contenttypes = { version = "0.1.0", path = "crates/contenttypes", optional = true }
-reinhardt-sessions = { version = "0.1.0", path = "crates/sessions", optional = true }
-reinhardt-messages = { version = "0.1.0", path = "crates/messages", optional = true }
-reinhardt-static = { version = "0.1.0", path = "crates/static", optional = true }
-reinhardt-mail = { version = "0.1.0", path = "crates/mail", optional = true }
-reinhardt-graphql = { version = "0.1.0", path = "crates/graphql", optional = true }
-reinhardt-websockets = { version = "0.1.0", path = "crates/websockets", optional = true }
-reinhardt-i18n = { version = "0.1.0", path = "crates/i18n", optional = true }
+reinhardt-auth = { version = "0.1.0-alpha.1", path = "crates/auth", optional = true }
+reinhardt-contenttypes = { version = "0.1.0-alpha.1", path = "crates/contenttypes", optional = true }
+reinhardt-sessions = { version = "0.1.0-alpha.1", path = "crates/sessions", optional = true }
+reinhardt-messages = { version = "0.1.0-alpha.1", path = "crates/messages", optional = true }
+reinhardt-static = { version = "0.1.0-alpha.1", path = "crates/static", optional = true }
+reinhardt-mail = { version = "0.1.0-alpha.1", path = "crates/mail", optional = true }
+reinhardt-graphql = { version = "0.1.0-alpha.1", path = "crates/graphql", optional = true }
+reinhardt-websockets = { version = "0.1.0-alpha.1", path = "crates/websockets", optional = true }
+reinhardt-i18n = { version = "0.1.0-alpha.1", path = "crates/i18n", optional = true }
 reinhardt-utils = { workspace = true }
 chrono = { workspace = true }
 

@@ -14,8 +14,8 @@ reinhardt-http = { workspace = true }
 reinhardt-exception = { workspace = true }
 
 # Internal crates
-di = { path = "crates/di", version = "0.1.0", package = "reinhardt-di-core" }
-reinhardt-params = { path = "crates/params", version = "0.1.0", optional = true }
+di = { path = "crates/di", version = "0.1.0-alpha.1", package = "reinhardt-di-core" }
+reinhardt-params = { path = "crates/params", version = "0.1.0-alpha.1", optional = true }
 
 tokio = { workspace = true }
 async-trait = { workspace = true }

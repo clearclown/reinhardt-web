@@ -10,7 +10,7 @@ Add the admin dependency if not already present:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["admin"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
 ```
 
 ## Creating an Admin User

@@ -9,16 +9,16 @@ description = "Django-style database layer for Reinhardt framework"
 
 [dependencies]
 # Internal crates (optional)
-backends = { path = "crates/backends", version = "0.1.0", package = "reinhardt-db-backends", optional = true }
-backends-pool = { path = "crates/backends-pool", version = "0.1.0", package = "reinhardt-db-backends-pool", optional = true }
-reinhardt-pool = { path = "crates/pool", version = "0.1.0", optional = true }
-reinhardt-orm = { path = "crates/orm", version = "0.1.0", optional = true }
-reinhardt-migrations = { path = "crates/migrations", version = "0.1.0", optional = true }
-reinhardt-hybrid = { path = "crates/hybrid", version = "0.1.0", optional = true }
-reinhardt-associations = { path = "crates/associations", version = "0.1.0", optional = true }
+backends = { path = "crates/backends", version = "0.1.0-alpha.1", package = "reinhardt-db-backends", optional = true }
+backends-pool = { path = "crates/backends-pool", version = "0.1.0-alpha.1", package = "reinhardt-db-backends-pool", optional = true }
+reinhardt-pool = { path = "crates/pool", version = "0.1.0-alpha.1", optional = true }
+reinhardt-orm = { path = "crates/orm", version = "0.1.0-alpha.1", optional = true }
+reinhardt-migrations = { path = "crates/migrations", version = "0.1.0-alpha.1", optional = true }
+reinhardt-hybrid = { path = "crates/hybrid", version = "0.1.0-alpha.1", optional = true }
+reinhardt-associations = { path = "crates/associations", version = "0.1.0-alpha.1", optional = true }
 
 # DI support for connection pooling
-reinhardt-di = { path = "../reinhardt-di", version = "0.1.0", optional = true }
+reinhardt-di = { path = "../reinhardt-di", version = "0.1.0-alpha.1", optional = true }
 
 # Database drivers and query builders
 sqlx = { version = "0.8", features = [

@@ -16,9 +16,9 @@ yaml = ["serde_yaml"]
 
 [dependencies]
 reinhardt-apps = { workspace = true }
-reinhardt-parsers = { version = "0.1.0", path = "../parsers" }
+reinhardt-parsers = { version = "0.1.0-alpha.1", path = "../parsers" }
 reinhardt-renderers = { workspace = true }
-reinhardt-negotiation = { version = "0.1.0", path = "../negotiation" }
+reinhardt-negotiation = { version = "0.1.0-alpha.1", path = "../negotiation" }
 reinhardt-orm = { workspace = true }
 reinhardt-pool = { workspace = true }
 serde = { workspace = true }

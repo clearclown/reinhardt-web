@@ -1,13 +1,13 @@
 [package]
 name = "example-hello-world"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2024"
 publish = false
 
 [dependencies]
 # ⚠️ Get the latest version from crates.io
 # TODO: This dependency will not resolve until reinhardt is published
-reinhardt = "*"
+reinhardt = "^0.1.0-alpha.1"
 
 [dev-dependencies]
 example-test-macros = { path = "../test-macros" }

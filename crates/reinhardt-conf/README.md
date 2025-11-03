@@ -29,7 +29,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-conf = "0.1.0"
+reinhardt-conf = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -38,7 +38,7 @@ Enable specific features based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-conf = { version = "0.1.0", features = ["async", "encryption"] }
+reinhardt-conf = { version = "0.1.0-alpha.1", features = ["async", "encryption"] }
 ```
 
 Available features:

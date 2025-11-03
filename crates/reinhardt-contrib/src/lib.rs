@@ -21,14 +21,14 @@
 //!
 //! ```toml
 //! [dependencies]
-//! reinhardt-contrib = { version = "0.1.0", features = ["auth", "sessions"] }
+//! reinhardt-contrib = { version = "0.1.0-alpha.1", features = ["auth", "sessions"] }
 //! ```
 //!
 //! Or enable all modules:
 //!
 //! ```toml
 //! [dependencies]
-//! reinhardt-contrib = { version = "0.1.0", features = ["full"] }
+//! reinhardt-contrib = { version = "0.1.0-alpha.1", features = ["full"] }
 //! ```
 
 #![forbid(unsafe_code)]

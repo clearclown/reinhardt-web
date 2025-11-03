@@ -12,7 +12,7 @@ First, add the static files dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["static"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["static"] }
 ```
 
 Create a directory structure for static files:

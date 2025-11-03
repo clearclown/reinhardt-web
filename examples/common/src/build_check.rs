@@ -174,12 +174,17 @@ mod tests {
     fn test_version_requirement_parsing() {
         // Test that common version specs parse correctly
         let specs = vec![
-            "0.1.0",
+            // Stable version patterns
             "^0.1",
             "~0.1.2",
             ">=0.1.0, <0.2.0",
             ">=0.1",
             "*",
+            // Pre-release version patterns (alpha)
+            "0.1.0-alpha.1",
+            ">=0.1.0-alpha.1",
+            ">=0.1.0-alpha.1, <0.1.0",
+            "^0.1.0-alpha",
         ];
 
         for spec in specs {

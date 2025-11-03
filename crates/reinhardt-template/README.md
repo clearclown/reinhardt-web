@@ -53,7 +53,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-template = "0.1.0"
+reinhardt-template = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -62,7 +62,7 @@ Enable specific features based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-template = { version = "0.1.0", features = ["templates", "renderers"] }
+reinhardt-template = { version = "0.1.0-alpha.1", features = ["templates", "renderers"] }
 ```
 
 Available features:

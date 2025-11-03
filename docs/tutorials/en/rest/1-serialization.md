@@ -8,8 +8,8 @@ First, add Reinhardt to your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "serializers"] }
-# Or for minimal setup: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal", "serializers"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "serializers"] }
+# Or for minimal setup: reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "serializers"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }

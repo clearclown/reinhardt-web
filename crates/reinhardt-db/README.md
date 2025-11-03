@@ -88,7 +88,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-db = "0.1.0"
+reinhardt-db = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -97,7 +97,7 @@ Enable specific features based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-db = { version = "0.1.0", features = ["postgres", "orm", "migrations"] }
+reinhardt-db = { version = "0.1.0-alpha.1", features = ["postgres", "orm", "migrations"] }
 ```
 
 Available features:

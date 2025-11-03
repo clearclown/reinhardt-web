@@ -90,7 +90,7 @@ Lightweight and fast, perfect for simple APIs and microservices:
 
 ```toml
 [dependencies]
-reinhardt-micro = "0.1.0"
+reinhardt-micro = "0.1.0-alpha.1"
 ```
 
 ### Reinhardt Standard - Balanced Approach
@@ -99,8 +99,8 @@ The default configuration, suitable for most projects:
 
 ```toml
 [dependencies]
-reinhardt = "0.1.0"
-# Equivalent to: reinhardt = { version = "0.1.0", features = ["standard"] }
+reinhardt = "0.1.0-alpha.1"
+# Equivalent to: reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }
 ```
 
 ### Reinhardt Full - Everything Included
@@ -109,7 +109,7 @@ All features enabled, Django-style batteries-included:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
 ### Compose Your Own Configuration
@@ -119,13 +119,13 @@ Mix and match features to build your ideal framework:
 ```toml
 [dependencies]
 # Minimal setup with just routing and params
-reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 
 # Add database support
-reinhardt = { version = "0.1.0", default-features = false, features = ["minimal", "database"] }
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "database"] }
 
 # Standard with extra features
-reinhardt = { version = "0.1.0", features = ["standard", "websockets", "graphql"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "websockets", "graphql"] }
 ```
 
 ## Quick Start

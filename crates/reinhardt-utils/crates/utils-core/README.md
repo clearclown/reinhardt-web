@@ -20,7 +20,7 @@ Core utilities for Reinhardt framework
 
 ```toml
 [dependencies]
-utils-core = "0.1.0"
+utils-core = "0.1.0-alpha.1"
 ```
 
 ## License

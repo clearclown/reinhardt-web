@@ -52,7 +52,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-urls = "0.1.0"
+reinhardt-urls = "0.1.0-alpha.1"
 ```
 
 ### Optional Features
@@ -61,7 +61,7 @@ Enable specific sub-crates based on your needs:
 
 ```toml
 [dependencies]
-reinhardt-urls = { version = "0.1.0", features = ["routers", "proxy"] }
+reinhardt-urls = { version = "0.1.0-alpha.1", features = ["routers", "proxy"] }
 ```
 
 Available features:

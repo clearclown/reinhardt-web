@@ -989,7 +989,7 @@ description = "ORM layer for Reinhardt framework"  # Add this
   [dependencies]
   reinhardt-types = { workspace = true }  # Use workspace version
   # OR
-  reinhardt-types = "0.1.0"  # Explicit version from crates.io
+  reinhardt-types = "0.1.0-alpha.1"  # Explicit version from crates.io
   ```
 
 #### Issue: Tag already exists

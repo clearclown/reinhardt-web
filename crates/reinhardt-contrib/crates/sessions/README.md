@@ -102,10 +102,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-sessions = "0.1.0"
+reinhardt-sessions = "0.1.0-alpha.1"
 
 # With optional features
-reinhardt-sessions = { version = "0.1.0", features = ["database", "file", "cookie", "middleware"] }
+reinhardt-sessions = { version = "0.1.0-alpha.1", features = ["database", "file", "cookie", "middleware"] }
 ```
 
 ## Quick Start

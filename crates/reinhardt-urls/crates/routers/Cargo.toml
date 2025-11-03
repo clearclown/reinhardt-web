@@ -10,7 +10,7 @@ repository.workspace = true
 reinhardt-apps = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-viewsets = { workspace = true }
-reinhardt-routers-macros = { path = "../routers-macros", version = "0.1.0" }
+reinhardt-routers-macros = { path = "../routers-macros", version = "0.1.0-alpha.1" }
 reinhardt-di = { workspace = true, optional = true }
 reinhardt-middleware = { workspace = true, optional = true }
 regex = { workspace = true }

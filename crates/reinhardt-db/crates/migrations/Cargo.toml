@@ -1,6 +1,6 @@
 [package]
 name = "reinhardt-migrations"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Database migration system for Reinhardt framework"
@@ -9,7 +9,7 @@ repository.workspace = true
 [dependencies]
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-backends = { path = "../backends", version = "0.1.0", package = "reinhardt-db-backends", features = [
+backends = { path = "../backends", version = "0.1.0-alpha.1", package = "reinhardt-db-backends", features = [
   "sqlite",
 ] }
 mongodb = { version = "3.0", optional = true }

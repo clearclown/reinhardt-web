@@ -1,6 +1,6 @@
 [package]
 name = "example-common"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 edition = "2024"
 publish = false
 
@@ -12,7 +12,7 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 
 # Dependencies for manage_cli (only when reinhardt is available)
-reinhardt-commands = { version = "^0.1", optional = true }
+reinhardt-commands = { version = "^0.1.0-alpha.1", optional = true }
 console = { version = "0.15", optional = true }
 
 [features]

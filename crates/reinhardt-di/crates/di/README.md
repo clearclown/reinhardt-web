@@ -19,7 +19,7 @@ Core dependency injection system for Reinhardt framework
 
 ```toml
 [dependencies]
-di = "0.1.0"
+di = "0.1.0-alpha.1"
 ```
 
 ## License

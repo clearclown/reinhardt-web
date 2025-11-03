@@ -110,7 +110,7 @@ This crate is designed to work with `reinhardt-templates` and can be used standa
 
 ```toml
 [dependencies]
-reinhardt-templates-macros = "0.1.0"
+reinhardt-templates-macros = "0.1.0-alpha.1"
 ```
 
 ## License

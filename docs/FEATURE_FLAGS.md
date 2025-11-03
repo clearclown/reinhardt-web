@@ -17,17 +17,17 @@ Reinhardt provides three pre-configured feature sets plus individual flags for c
 ```toml
 # Minimal (microservices)
 [dependencies]
-reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 
 # Standard (default - most common)
 [dependencies]
-reinhardt = "0.1.0"
+reinhardt = "0.1.0-alpha.1"
 # Or explicitly:
-# reinhardt = { version = "0.1.0", features = ["standard"] }
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }
 
 # Full (all features)
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
 ## Feature Set Comparison
@@ -78,7 +78,7 @@ For custom configurations, you can mix and match individual features:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", default-features = false, features = [
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = [
     "minimal",      # Views and routing
 ] }
 ```
@@ -95,7 +95,7 @@ reinhardt = { version = "0.1.0", default-features = false, features = [
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = [
+reinhardt = { version = "0.1.0-alpha.1", features = [
     "standard",
     "database",     # Adds ORM, migrations, and content types
 ] }
@@ -112,7 +112,7 @@ reinhardt = { version = "0.1.0", features = [
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = [
+reinhardt = { version = "0.1.0-alpha.1", features = [
     "minimal",
     "api",          # Serializers and REST utilities
 ] }
@@ -132,7 +132,7 @@ reinhardt = { version = "0.1.0", features = [
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = [
+reinhardt = { version = "0.1.0-alpha.1", features = [
     "standard",
     "auth",         # JWT, Token, Session authentication
 ] }
@@ -148,7 +148,7 @@ reinhardt = { version = "0.1.0", features = [
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["admin"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
 ```
 
 **Includes:**
@@ -161,7 +161,7 @@ reinhardt = { version = "0.1.0", features = ["admin"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["forms"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["forms"] }
 ```
 
 **Includes:**
@@ -172,7 +172,7 @@ reinhardt = { version = "0.1.0", features = ["forms"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["graphql"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["graphql"] }
 ```
 
 **Includes:**
@@ -183,7 +183,7 @@ reinhardt = { version = "0.1.0", features = ["graphql"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["templates"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["templates"] }
 ```
 
 **Includes:**
@@ -195,7 +195,7 @@ reinhardt = { version = "0.1.0", features = ["templates"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["websockets"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["websockets"] }
 ```
 
 **Includes:**
@@ -206,7 +206,7 @@ reinhardt = { version = "0.1.0", features = ["websockets"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["cache"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["cache"] }
 ```
 
 **Includes:**
@@ -217,7 +217,7 @@ reinhardt = { version = "0.1.0", features = ["cache"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["i18n"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["i18n"] }
 ```
 
 **Includes:**
@@ -228,7 +228,7 @@ reinhardt = { version = "0.1.0", features = ["i18n"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["mail"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["mail"] }
 ```
 
 **Includes:**
@@ -239,7 +239,7 @@ reinhardt = { version = "0.1.0", features = ["mail"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["sessions"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["sessions"] }
 ```
 
 **Includes:**
@@ -250,7 +250,7 @@ reinhardt = { version = "0.1.0", features = ["sessions"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["static-files"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["static-files"] }
 ```
 
 **Includes:**
@@ -261,7 +261,7 @@ reinhardt = { version = "0.1.0", features = ["static-files"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["storage"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["storage"] }
 ```
 
 **Includes:**
@@ -272,7 +272,7 @@ reinhardt = { version = "0.1.0", features = ["storage"] }
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["contrib"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["contrib"] }
 ```
 
 **Includes:**
@@ -285,7 +285,7 @@ These provide access to major subsystems:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = [
+reinhardt = { version = "0.1.0-alpha.1", features = [
     "conf",         # Configuration system
     "core",         # Core utilities
     "rest",         # REST framework
@@ -302,7 +302,7 @@ Lightweight, fast, minimal dependencies:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -313,7 +313,7 @@ Standard REST API with database support:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "database"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "database"] }
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls"] }
 ```
 
@@ -323,7 +323,7 @@ Everything included:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls"] }
 ```
 
@@ -333,7 +333,7 @@ Pick exactly what you need:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", default-features = false, features = [
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = [
     "minimal",      # Core routing and DI
     "database",     # Database support
     "api",          # Serializers and ViewSets
@@ -382,7 +382,7 @@ For the smallest possible binary:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 ```
 
 Then use `cargo tree` to verify:

@@ -19,7 +19,7 @@ Database backend implementations for Reinhardt ORM
 
 ```toml
 [dependencies]
-backends = "0.1.0"
+backends = "0.1.0-alpha.1"
 ```
 
 ### Features

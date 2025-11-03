@@ -12,7 +12,7 @@ First, add the database dependencies to `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls"] }
@@ -298,7 +298,7 @@ Add the admin dependency to `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "admin"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "admin"] }
 ```
 
 The admin interface will be covered in more detail in Part 7, but for now, know that you can register your models to make them editable through a web interface.

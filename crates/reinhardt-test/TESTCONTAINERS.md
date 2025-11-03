@@ -23,7 +23,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dev-dependencies]
-reinhardt-test = { version = "0.1.0", features = ["testcontainers"] }
+reinhardt-test = { version = "0.1.0-alpha.1", features = ["testcontainers"] }
 ```
 
 ### 2. Basic Usage

@@ -83,13 +83,13 @@ GraphQL API support with schema generation from models, query and mutation resol
 ```toml
 [dependencies]
 # Basic GraphQL support
-reinhardt-graphql = "0.1.0"
+reinhardt-graphql = "0.1.0-alpha.1"
 
 # With gRPC transport
-reinhardt-graphql = { version = "0.1.0", features = ["graphql-grpc"] }
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc"] }
 
 # All features
-reinhardt-graphql = { version = "0.1.0", features = ["full"] }
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
 ## Examples

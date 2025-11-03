@@ -19,7 +19,7 @@ Procedural macros for URL routing in Reinhardt framework
 
 ```toml
 [dependencies]
-reinhardt-routers-macros = "0.1.0"
+reinhardt-routers-macros = "0.1.0-alpha.1"
 ```
 
 ## License

@@ -19,7 +19,7 @@ Database connection pool backend abstractions
 
 ```toml
 [dependencies]
-backends-pool = "0.1.0"
+backends-pool = "0.1.0-alpha.1"
 ```
 
 ### Features

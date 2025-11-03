@@ -12,7 +12,7 @@
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["static"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["static"] }
 ```
 
 静的ファイル用のディレクトリ構造を作成します：

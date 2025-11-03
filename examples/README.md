@@ -308,7 +308,7 @@ pub fn migration() -> Migration {
    publish = false
 
    [dependencies]
-   reinhardt = "^0.1"
+   reinhardt = "^0.1.0-alpha.1"
    ```
 
 3. **Add to workspace**

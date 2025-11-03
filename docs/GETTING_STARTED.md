@@ -47,7 +47,7 @@ For microservices and simple APIs:
 
 ```toml
 [dependencies]
-reinhardt-micro = "0.1.0"
+reinhardt-micro = "0.1.0-alpha.1"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -58,7 +58,7 @@ Balanced setup for most projects:
 
 ```toml
 [dependencies]
-reinhardt = "0.1.0"  # or: { version = "0.1.0", features = ["standard"] }
+reinhardt = "0.1.0-alpha.1"  # or: { version = "0.1.0-alpha.1", features = ["standard"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -69,7 +69,7 @@ All features enabled:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
@@ -411,7 +411,7 @@ To use a database instead of in-memory storage:
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "database"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "database"] }
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-native-tls"] }
 ```
 

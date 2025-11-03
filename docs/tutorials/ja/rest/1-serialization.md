@@ -19,8 +19,8 @@ cd tutorial
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "rest", "serializers"] }
-# または、最小限の場合: reinhardt = { version = "0.1.0", default-features = false, features = ["minimal"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "rest", "serializers"] }
+# または、最小限の場合: reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }

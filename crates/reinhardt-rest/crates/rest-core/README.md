@@ -19,7 +19,7 @@ Core abstractions for REST API functionality in Reinhardt framework
 
 ```toml
 [dependencies]
-rest-core = "0.1.0"
+rest-core = "0.1.0-alpha.1"
 ```
 
 ## License

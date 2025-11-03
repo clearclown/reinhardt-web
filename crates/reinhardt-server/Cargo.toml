@@ -9,7 +9,7 @@ description = "HTTP server implementation for Reinhardt framework"
 
 [dependencies]
 # Internal crates (optional)
-server = { path = "crates/server", version = "0.1.0", package = "reinhardt-server-core", optional = true }
+server = { path = "crates/server", version = "0.1.0-alpha.1", package = "reinhardt-server-core", optional = true }
 
 [features]
 default = ["server"]

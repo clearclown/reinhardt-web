@@ -12,7 +12,7 @@ ReinhardtはPostgreSQL、MySQL、SQLiteなど複数のデータベースをサ�
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "database", "migrations"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "database", "migrations"] }
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio-rustls"] }
@@ -298,7 +298,7 @@ Reinhardt管理画面は、データを管理するための自動生成イン�
 
 ```toml
 [dependencies]
-reinhardt = { version = "0.1.0", features = ["standard", "database", "migrations", "admin"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "database", "migrations", "admin"] }
 ```
 
 管理画面インターフェースについては、パート7で詳しく説明しますが、今のところ、モデルを登録してWebインターフェースから編集可能にできることを知っておいてください。
