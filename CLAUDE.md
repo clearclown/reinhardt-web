@@ -285,6 +285,7 @@ For comprehensive guidelines, see:
 - **Testing**: @docs/TESTING_STANDARDS.md
 - **Anti-Patterns**: @docs/ANTI_PATTERNS.md
 - **Documentation**: @docs/DOCUMENTATION_STANDARDS.md
+- **Feature Flags**: @docs/FEATURE_FLAGS.md
 - **Git Commits**: @CLAUDE.commit.md
 - **Release Process**: @docs/RELEASE_PROCESS.md
 - **Project Overview**: @README.md

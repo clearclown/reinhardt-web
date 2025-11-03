@@ -634,6 +634,8 @@ pub struct Settings {
 
 ### Example 2: Feature Flag Management
 
+**Note:** This example shows runtime feature flags (application settings). For compile-time feature flags (Cargo features), see the [Feature Flags Guide](FEATURE_FLAGS.md).
+
 ```toml
 # base.toml
 [features]

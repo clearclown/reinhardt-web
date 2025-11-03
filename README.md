@@ -128,6 +128,8 @@ reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "websockets", "graphql"] }
 ```
 
+**📖 For a complete list of available feature flags and detailed configuration options, see the [Feature Flags Guide](docs/FEATURE_FLAGS.md).**
+
 ## Quick Start
 
 ### 1. Install Reinhardt Admin Tool
@@ -585,6 +587,8 @@ pub async fn create_user(mut req: Request) -> Result<Response, Box<dyn std::erro
 | Complex Systems       | ❌       | ⚠️        | ✅      |
 
 **Legend**: ✅ Recommended • ⚠️ Possible but not optimal • ❌ Not recommended
+
+**Need more granular control?** The [Feature Flags Guide](docs/FEATURE_FLAGS.md) provides detailed documentation on 70+ individual feature flags, allowing you to fine-tune your build beyond these presets.
 
 ## Components
 
