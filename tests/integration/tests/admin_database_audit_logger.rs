@@ -10,12 +10,15 @@ use reinhardt_admin::audit::{
 	AuditAction, AuditLog, AuditLogQuery, AuditLogger, DatabaseAuditLogger,
 };
 use reinhardt_orm::DatabaseConnection;
+use rstest::*;
 use serde_json::json;
+use serial_test::serial;
 use std::net::IpAddr;
 use std::sync::Arc;
 use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
 
-/// Set up test database and create audit_logs table
+/// Fixture providing test database with audit_logs table
+#[fixture]
 async fn setup_test_db() -> (
 	testcontainers::ContainerAsync<GenericImage>,
 	DatabaseAuditLogger,
@@ -67,9 +70,16 @@ async fn setup_test_db() -> (
 	(postgres, logger)
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_log() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_log(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Create AuditLog
 	let log = AuditLog::builder()
@@ -102,9 +112,16 @@ async fn test_database_audit_logger_log() {
 	assert_eq!(inserted_log.user_agent(), Some("Mozilla/5.0"));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_log_minimal() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_log_minimal(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Create AuditLog with minimal fields (no changes, ip_address, user_agent)
 	let log = AuditLog::builder()
@@ -129,9 +146,16 @@ async fn test_database_audit_logger_log_minimal() {
 	assert_eq!(inserted_log.user_agent(), None);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_by_user_id() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_by_user_id(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert multiple logs
 	let log1 = AuditLog::builder()
@@ -172,9 +196,16 @@ async fn test_database_audit_logger_query_by_user_id() {
 	}
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_by_model_name() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_by_model_name(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert logs for different models
 	let log1 = AuditLog::builder()
@@ -204,9 +235,16 @@ async fn test_database_audit_logger_query_by_model_name() {
 	assert_eq!(results[0].model_name(), "User");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_by_action() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_by_action(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert logs with different actions
 	let log1 = AuditLog::builder()
@@ -242,9 +280,16 @@ async fn test_database_audit_logger_query_by_action() {
 	assert_eq!(results[0].action(), AuditAction::Update);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_by_timestamp_range() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_by_timestamp_range(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert logs at different times
 	let now = Utc::now();
@@ -282,9 +327,16 @@ async fn test_database_audit_logger_query_by_timestamp_range() {
 	assert_eq!(results_empty.len(), 0, "Should return 0 logs outside range");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_pagination() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_pagination(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert multiple logs
 	for i in 1..=10 {
@@ -324,9 +376,16 @@ async fn test_database_audit_logger_query_pagination() {
 	}
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_ordering() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_ordering(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert logs with delays to ensure different timestamps
 	for i in 1..=3 {
@@ -355,9 +414,16 @@ async fn test_database_audit_logger_query_ordering() {
 	}
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_count() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_count(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert multiple logs
 	for i in 1..=5 {
@@ -376,9 +442,16 @@ async fn test_database_audit_logger_count() {
 	assert_eq!(count, 5, "Should count 5 logs");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_count_with_filters() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_count_with_filters(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert logs for different users
 	for i in 1..=3 {
@@ -432,9 +505,16 @@ async fn test_database_audit_logger_count_with_filters() {
 	assert_eq!(count_all, 7, "Should count 7 total logs");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_count_empty() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_count_empty(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Count when no logs exist
 	let query = AuditLogQuery::builder().build();
@@ -442,9 +522,16 @@ async fn test_database_audit_logger_count_empty() {
 	assert_eq!(count, 0, "Should count 0 logs when empty");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_database_audit_logger_query_combined_filters() {
-	let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_database_audit_logger_query_combined_filters(
+	#[future] setup_test_db: (
+		testcontainers::ContainerAsync<GenericImage>,
+		DatabaseAuditLogger,
+	),
+) {
+	let (_container, logger) = setup_test_db.await;
 
 	// Insert diverse logs
 	let log1 = AuditLog::builder()

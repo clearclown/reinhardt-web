@@ -10,23 +10,26 @@ use reinhardt_admin::audit::{
 };
 use reinhardt_admin::AdminDatabase;
 use reinhardt_orm::DatabaseConnection;
+use rstest::*;
 use serde_json::json;
+use serial_test::serial;
 use std::net::IpAddr;
 use std::sync::Arc;
-use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 
-/// Setup test database and create audit_logs table
+/// Fixture providing test database with audit_logs table
+#[fixture]
 async fn setup_test_db() -> (
     testcontainers::ContainerAsync<GenericImage>,
     DatabaseAuditLogger,
 ) {
     // Start PostgreSQL container
     let postgres = GenericImage::new("postgres", "16-alpine")
-        .with_env_var("POSTGRES_PASSWORD", "test")
-        .with_env_var("POSTGRES_DB", "test_db")
         .with_wait_for(WaitFor::message_on_stderr(
             "database system is ready to accept connections",
         ))
+        .with_env_var("POSTGRES_PASSWORD", "test")
+        .with_env_var("POSTGRES_DB", "test_db")
         .start()
         .await
         .expect("Failed to start PostgreSQL container");
@@ -67,9 +70,11 @@ async fn setup_test_db() -> (
     (postgres, logger)
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_create_action() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_create_action(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Create log for Create action
     let changes = json!({
@@ -111,9 +116,11 @@ async fn test_admin_audit_create_action() {
     );
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_update_action() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_update_action(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Create log for Update action (record before/after values)
     let changes = json!({
@@ -147,9 +154,11 @@ async fn test_admin_audit_update_action() {
     assert_eq!(inserted_log.changes(), Some(&changes));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_delete_action() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_delete_action(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Create log for Delete action (record deleted data information)
     let changes = json!({
@@ -179,9 +188,11 @@ async fn test_admin_audit_delete_action() {
     assert_eq!(inserted_log.changes(), Some(&changes));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_query_by_user() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_query_by_user(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record logs for multiple users
     for i in 1..=5 {
@@ -209,9 +220,11 @@ async fn test_admin_audit_query_by_user() {
     }
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_query_by_model() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_query_by_model(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record logs for different models
     let models = vec!["User", "Article", "Comment"];
@@ -237,9 +250,11 @@ async fn test_admin_audit_query_by_model() {
     assert_eq!(results[0].model_name(), "Article");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_query_by_date_range() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_query_by_date_range(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record logs with past, present, and future timestamps
     let now = Utc::now();
@@ -290,9 +305,11 @@ async fn test_admin_audit_query_by_date_range() {
     );
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_count() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_count(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record multiple logs
     for i in 1..=10 {
@@ -312,9 +329,11 @@ async fn test_admin_audit_count() {
     assert_eq!(count_all, 10, "Should count 10 total logs");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_complex_query() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_complex_query(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record diverse logs
     let scenarios = vec![
@@ -354,9 +373,11 @@ async fn test_admin_audit_complex_query() {
     assert_eq!(results[0].action(), AuditAction::Update);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_pagination() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_pagination(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record 20 logs
     for i in 1..=20 {
@@ -394,9 +415,11 @@ async fn test_admin_audit_pagination() {
     }
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_action_variety() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_action_variety(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record logs for various action types
     let actions = vec![
@@ -430,9 +453,11 @@ async fn test_admin_audit_action_variety() {
     }
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_bulk_operations() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_bulk_operations(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Log for BulkDelete action (bulk deletion of multiple records)
     let changes = json!({
@@ -467,9 +492,11 @@ async fn test_admin_audit_bulk_operations() {
     assert_eq!(results.len(), 1, "Should return 1 bulk delete log");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_export_import_actions() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_export_import_actions(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Log for Export action
     let export_changes = json!({
@@ -529,9 +556,11 @@ async fn test_admin_audit_export_import_actions() {
     assert_eq!(import_results.len(), 1, "Should return 1 import log");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_audit_ordering() {
-    let (_container, logger) = setup_test_db().await;
+#[serial(admin_audit)]
+async fn test_admin_audit_ordering(#[future] setup_test_db: (testcontainers::ContainerAsync<GenericImage>, DatabaseAuditLogger)) {
+    let (_container, logger) = setup_test_db.await;
 
     // Record logs with different timestamps
     for i in 1..=5 {

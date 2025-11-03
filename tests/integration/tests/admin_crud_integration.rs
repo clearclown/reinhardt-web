@@ -15,6 +15,7 @@ use reinhardt_admin::{
 	ListFilter, ListView, ModelAdminConfig, UpdateView,
 };
 use reinhardt_orm::{DatabaseConnection, Filter, FilterOperator, FilterValue, Model};
+use rstest::*;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -46,19 +47,11 @@ impl Model for TestUser {
 	}
 }
 
-impl TestUser {
-	fn new(username: impl Into<String>, email: impl Into<String>, is_active: bool) -> Self {
-		Self {
-			id: None,
-			username: username.into(),
-			email: email.into(),
-			is_active,
-		}
-	}
-}
-
-/// Setup test database with PostgreSQL container
-async fn setup_test_db() -> (
+/// rstest fixture providing a PostgreSQL container and AdminDatabase
+///
+/// The container is automatically cleaned up when the test ends.
+#[fixture]
+async fn postgres_fixture() -> (
 	testcontainers::ContainerAsync<GenericImage>,
 	Arc<AdminDatabase>,
 ) {
@@ -103,7 +96,28 @@ async fn setup_test_db() -> (
 }
 
 /// Helper to insert test user data directly
-async fn insert_test_user(db: &AdminDatabase, username: &str, email: &str, is_active: bool) -> i64 {
+async fn insert_test_user(db: &AdminDatabase, username: &str, email: &str, is_active: bool) {
+	let mut data = HashMap::new();
+	data.insert("username".to_string(), json!(username));
+	data.insert("email".to_string(), json!(email));
+	data.insert("is_active".to_string(), json!(is_active));
+
+	db.create::<TestUser>("test_users", data)
+		.await
+		.expect("Failed to insert test user");
+}
+
+/// Helper to insert test user and get the inserted ID
+///
+/// This function uses a workaround to get the ID: it queries for the most recently
+/// inserted row based on SERIAL ID ordering. This is necessary because db.create()
+/// returns the row count, not the inserted ID.
+async fn insert_test_user_with_id(
+	db: &AdminDatabase,
+	username: &str,
+	email: &str,
+	is_active: bool,
+) -> i64 {
 	let mut data = HashMap::new();
 	data.insert("username".to_string(), json!(username));
 	data.insert("email".to_string(), json!(email));
@@ -113,22 +127,42 @@ async fn insert_test_user(db: &AdminDatabase, username: &str, email: &str, is_ac
 		.await
 		.expect("Failed to insert test user");
 
-	// Query to get the inserted ID
-	let rows = db
-		.list::<TestUser>("test_users", vec![], 0, 1)
+	// Query all users and get the one with the matching username
+	// This works because we just inserted it
+	let all_users = db
+		.list::<TestUser>("test_users", vec![], 0, 1000)
 		.await
-		.expect("Failed to query user");
+		.expect("Failed to query users");
 
-	// Extract ID from the first row
-	rows.first()
-		.and_then(|row| row.get("id"))
+	// Find the user we just inserted by username
+	// Note: db.list() returns rows with structure {"data": {...}}
+	all_users
+		.iter()
+		.find(|row| {
+			row.get("data")
+				.and_then(|data| data.get("username"))
+				.and_then(|v| v.as_str())
+				.map(|s| s == username)
+				.unwrap_or(false)
+		})
+		.and_then(|row| row.get("data"))
+		.and_then(|data| data.get("id"))
 		.and_then(|v| v.as_i64())
-		.expect("Failed to get inserted user ID")
+		.expect(&format!(
+			"Failed to get inserted user ID for username '{}'",
+			username
+		))
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_site_model_registration() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_site_model_registration(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	// Create AdminSite
 	let admin = AdminSite::new("Test Admin");
@@ -158,9 +192,15 @@ async fn test_admin_site_model_registration() {
 	assert_eq!(retrieved_admin.model_name(), "TestUser");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_basic() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_list_view_basic(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test data
 	insert_test_user(&db, "alice", "alice@example.com", true).await;
@@ -182,9 +222,15 @@ async fn test_admin_list_view_basic() {
 	assert_eq!(users.len(), 3);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_with_filters() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_list_view_with_filters(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test data
 	insert_test_user(&db, "active_user1", "active1@example.com", true).await;
@@ -207,9 +253,15 @@ async fn test_admin_list_view_with_filters() {
 	assert_eq!(active_users.len(), 2);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_with_search() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_list_view_with_search(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test data
 	insert_test_user(&db, "john_smith", "john@example.com", true).await;
@@ -237,9 +289,15 @@ async fn test_admin_list_view_with_search() {
 	assert_eq!(search_results.len(), 2);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_with_pagination() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_list_view_with_pagination(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert 10 test users
 	for i in 1..=10 {
@@ -253,7 +311,7 @@ async fn test_admin_list_view_with_pagination() {
 	}
 
 	// Create ListView with pagination
-	let list_view = ListView::new("TestUser").with_page_size(3);
+	let _list_view = ListView::new("TestUser").with_page_size(3);
 
 	// Page 1 (0-2)
 	let page1 = db
@@ -284,9 +342,15 @@ async fn test_admin_list_view_with_pagination() {
 	assert_eq!(page4.len(), 1);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_with_ordering() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_list_view_with_ordering(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test data in random order
 	insert_test_user(&db, "charlie", "charlie@example.com", true).await;
@@ -308,9 +372,15 @@ async fn test_admin_list_view_with_ordering() {
 	assert_eq!(users.len(), 3);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_create_view() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_create_view(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Create CreateView
 	let create_view = CreateView::new("TestUser")
@@ -353,9 +423,15 @@ async fn test_admin_create_view() {
 	assert_eq!(users.len(), 1);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_update_view() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_update_view(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test user
 	insert_test_user(&db, "old_username", "old@example.com", true).await;
@@ -381,12 +457,18 @@ async fn test_admin_update_view() {
 	assert!(result.is_ok());
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_delete_view() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_delete_view(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test user
-	let user_id = insert_test_user(&db, "to_delete", "delete@example.com", true).await;
+	let user_id = insert_test_user_with_id(&db, "to_delete", "delete@example.com", true).await;
 
 	// Create DeleteView
 	let delete_view = DeleteView::new("TestUser", user_id.to_string());
@@ -411,9 +493,15 @@ async fn test_admin_delete_view() {
 	assert_eq!(users.len(), 0);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_filtering_with_boolean_filter() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_filtering_with_boolean_filter(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert mixed data
 	insert_test_user(&db, "active1", "active1@example.com", true).await;
@@ -444,9 +532,15 @@ async fn test_admin_filtering_with_boolean_filter() {
 	assert_eq!(active_users.len(), 2);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_filtering_with_choice_filter() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_filtering_with_choice_filter(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	// Create ChoiceFilter
 	let filter = ChoiceFilter::new("status", "Status")
@@ -464,9 +558,15 @@ async fn test_admin_filtering_with_choice_filter() {
 	assert_eq!(choices[2].value, "pending");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_filter_manager() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_filter_manager(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	// Create FilterManager with multiple filters
 	let manager = FilterManager::new()
@@ -494,9 +594,15 @@ async fn test_admin_filter_manager() {
 	assert_eq!(params.len(), 2);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_count_with_filters() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_count_with_filters(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert test data
 	insert_test_user(&db, "user1", "user1@example.com", true).await;
@@ -522,9 +628,15 @@ async fn test_admin_count_with_filters() {
 	assert!(active_count.is_ok());
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_bulk_delete() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_bulk_delete(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert multiple users
 	for i in 1..=5 {
@@ -555,9 +667,15 @@ async fn test_admin_bulk_delete() {
 	assert!(result.is_ok());
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_list_view_context_building() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_list_view_context_building(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	let list_view = ListView::new("TestUser");
 	let context = list_view.build_context();
@@ -566,9 +684,15 @@ async fn test_admin_list_view_context_building() {
 	assert_eq!(context.title, "TestUser List");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_create_view_context_building() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_create_view_context_building(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	let create_view = CreateView::new("TestUser");
 	let context = create_view.build_context();
@@ -577,9 +701,15 @@ async fn test_admin_create_view_context_building() {
 	assert_eq!(context.title, "Add TestUser");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_update_view_context_building() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_update_view_context_building(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	let update_view = UpdateView::new("TestUser", "123");
 	let context = update_view.build_context();
@@ -588,9 +718,15 @@ async fn test_admin_update_view_context_building() {
 	assert_eq!(context.title, "Change TestUser");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_delete_view_context_building() {
-	let (_container, _db) = setup_test_db().await;
+async fn test_admin_delete_view_context_building(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, _db) = postgres_fixture.await;
 
 	let delete_view = DeleteView::new("TestUser", "123");
 	let context = delete_view.build_context();
@@ -599,9 +735,15 @@ async fn test_admin_delete_view_context_building() {
 	assert_eq!(context.title, "Delete TestUser");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_admin_combined_filters_and_pagination() {
-	let (_container, db) = setup_test_db().await;
+async fn test_admin_combined_filters_and_pagination(
+	#[future] postgres_fixture: (
+		testcontainers::ContainerAsync<GenericImage>,
+		Arc<AdminDatabase>,
+	),
+) {
+	let (_container, db) = postgres_fixture.await;
 
 	// Insert mixed data
 	for i in 1..=15 {
