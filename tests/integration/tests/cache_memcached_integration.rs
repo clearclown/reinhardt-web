@@ -3,19 +3,22 @@
 //! Tests the MemcachedCache backend with a real Memcached container using TestContainers.
 
 use reinhardt_cache::{Cache, MemcachedCache, MemcachedConfig};
+use rstest::*;
 use std::time::Duration;
-use testcontainers::core::{IntoContainerPort, WaitFor};
+use testcontainers::core::IntoContainerPort;
 use testcontainers::{GenericImage, runners::AsyncRunner};
 
 /// Default Memcached port
 const MEMCACHED_PORT: u16 = 11211;
 
-/// Helper function to start a Memcached container and return the connection string
-async fn setup_memcached() -> (testcontainers::ContainerAsync<GenericImage>, String) {
+/// rstest fixture providing a Memcached container and connection string
+///
+/// The container is automatically cleaned up when the test ends.
+#[fixture]
+async fn memcached_fixture() -> (testcontainers::ContainerAsync<GenericImage>, String) {
 	// Create a generic Memcached container
-	let memcached_image = GenericImage::new("memcached", "1.6-alpine")
-		.with_exposed_port(MEMCACHED_PORT.tcp())
-		.with_wait_for(WaitFor::message_on_stdout("server listening"));
+	let memcached_image =
+		GenericImage::new("memcached", "1.6-alpine").with_exposed_port(MEMCACHED_PORT.tcp());
 
 	// Start the container
 	let container = memcached_image
@@ -35,9 +38,12 @@ async fn setup_memcached() -> (testcontainers::ContainerAsync<GenericImage>, Str
 	(container, connection_string)
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_basic_operations() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_basic_operations(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let config = MemcachedConfig {
 		servers: vec![connection_string],
@@ -79,9 +85,12 @@ async fn test_memcached_basic_operations() {
 	assert!(!exists);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_delete_operation() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_delete_operation(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -123,9 +132,12 @@ async fn test_memcached_delete_operation() {
 	assert!(!exists);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_ttl_expiration() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_ttl_expiration(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -152,9 +164,12 @@ async fn test_memcached_ttl_expiration() {
 	assert_eq!(value, None);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_clear() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_clear(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -188,9 +203,12 @@ async fn test_memcached_clear() {
 	assert!(!cache.has_key("key3").await.unwrap());
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_complex_types() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_complex_types(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -221,9 +239,12 @@ async fn test_memcached_complex_types() {
 	assert_eq!(retrieved_user, Some(user));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_error_handling() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_error_handling(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -244,9 +265,12 @@ async fn test_memcached_error_handling() {
 	assert!(!exists);
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_overwrite() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_overwrite(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
@@ -281,9 +305,12 @@ async fn test_memcached_overwrite() {
 	assert_eq!(value, Some("new_value".to_string()));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_memcached_no_ttl() {
-	let (_container, connection_string) = setup_memcached().await;
+async fn test_memcached_no_ttl(
+	#[future] memcached_fixture: (testcontainers::ContainerAsync<GenericImage>, String),
+) {
+	let (_container, connection_string) = memcached_fixture.await;
 
 	let cache = MemcachedCache::from_url(&connection_string)
 		.await
