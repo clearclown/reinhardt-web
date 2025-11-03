@@ -29,7 +29,7 @@ reinhardt-metadata = { workspace = true }
 reinhardt-middleware = { workspace = true }
 reinhardt-migrations = { workspace = true }
 reinhardt-negotiation = { workspace = true }
-reinhardt-orm = { workspace = true }
+reinhardt-orm = { path = "../crates/reinhardt-db/crates/orm", features = ["postgres", "sqlite"] }
 reinhardt-pagination = { workspace = true }
 reinhardt-params = { workspace = true }
 reinhardt-parsers = { workspace = true }
@@ -40,7 +40,7 @@ reinhardt-routers = { workspace = true }
 reinhardt-security = { workspace = true }
 reinhardt-serializers = { workspace = true }
 reinhardt-server = { workspace = true }
-reinhardt-sessions = { workspace = true }
+reinhardt-sessions = { workspace = true, features = ["database"] }
 reinhardt-settings = { workspace = true }
 reinhardt-shortcuts = { workspace = true }
 reinhardt-signals = { workspace = true }
@@ -76,8 +76,10 @@ uuid = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 serial_test = { workspace = true }
+rstest = "0.24"
 sqlx = { workspace = true }
 sea-query = { workspace = true }
+ctor = "0.6.0"
 
 # gRPC integration dependencies
 reinhardt-grpc = { workspace = true }
@@ -97,6 +99,10 @@ path = "integration/src/lib.rs"
 [[test]]
 name = "admin_crud_integration"
 path = "integration/tests/admin_crud_integration.rs"
+
+[[test]]
+name = "sessions_database_backend_integration"
+path = "integration/tests/sessions/database_backend_integration.rs"
 
 [[test]]
 name = "admin_database_audit_logger"
@@ -323,3 +329,7 @@ path = "integration/tests/shortcuts/template_cache_integration_tests.rs"
 [[test]]
 name = "orm_loading_strategy_integration_tests"
 path = "integration/tests/orm/loading_strategy_integration_tests.rs"
+
+[[test]]
+name = "orm_composite_pk_query_tests"
+path = "integration/tests/orm/composite_pk_query_tests.rs"
