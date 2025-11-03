@@ -350,6 +350,65 @@ fn test_url_override() {
 
 **ALWAYS** call cleanup functions (e.g., `deactivate()`, `clear_url_overrides()`) in test teardown.
 
+#### Using TeardownGuard for Automatic Cleanup
+
+For guaranteed cleanup even when tests panic, use `TeardownGuard` from `reinhardt-test`:
+
+**Benefits:**
+- Cleanup is guaranteed via RAII (Drop trait)
+- Works even if test panics or fails assertions
+- Reduces boilerplate code
+
+**Setup:**
+```rust
+use reinhardt_test::resource::{TestResource, TeardownGuard};
+use rstest::*;
+use serial_test::serial;
+
+/// Guard for global registry cleanup
+struct RegistryGuard;
+
+impl TestResource for RegistryGuard {
+    fn setup() -> Self {
+        // Clear before test
+        GLOBAL_REGISTRY.clear();
+        Self
+    }
+
+    fn teardown(&mut self) {
+        // Clear after test (guaranteed even on panic)
+        GLOBAL_REGISTRY.clear();
+    }
+}
+
+#[fixture]
+fn registry_guard() -> TeardownGuard<RegistryGuard> {
+    TeardownGuard::new()
+}
+```
+
+**Usage in tests:**
+```rust
+#[rstest]
+#[serial(registry)]
+#[tokio::test]
+async fn test_with_global_state(
+    _registry_guard: TeardownGuard<RegistryGuard>,
+) {
+    // Test code that modifies GLOBAL_REGISTRY
+    GLOBAL_REGISTRY.insert("key", "value");
+
+    // No manual cleanup needed - TeardownGuard handles it
+}
+```
+
+**When to use TeardownGuard:**
+- ✅ Tests that modify global static variables
+- ✅ Tests that need guaranteed cleanup on panic
+- ✅ Tests with complex setup/teardown logic
+- ❌ Tests with no global state (use regular fixtures)
+- ❌ Tests with RAII resources (TestContainers, temp dirs)
+
 ### TI-5 (MUST): Assertion Strictness
 
 **Use strict assertions with exact value comparisons instead of loose pattern matching.**
@@ -509,6 +568,271 @@ async fn test_database_integration() {
 
 ---
 
+## rstest Best Practices
+
+### TF-1 (SHOULD): rstest Fixture Pattern
+
+Use **rstest** fixtures for reusable test setup and dependency injection.
+
+#### Basic Fixture
+
+```rust
+use rstest::*;
+
+#[fixture]
+fn test_data() -> Vec<String> {
+    vec!["item1".to_string(), "item2".to_string()]
+}
+
+#[rstest]
+fn test_with_fixture(test_data: Vec<String>) {
+    assert_eq!(test_data.len(), 2);
+}
+```
+
+#### Async Fixture
+
+For async fixtures, use `#[future]` attribute on the parameter:
+
+```rust
+#[fixture]
+async fn postgres_fixture() -> (ContainerAsync<GenericImage>, Arc<AdminDatabase>) {
+    // Setup PostgreSQL container and database
+    // ...
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_with_async_fixture(
+    #[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<AdminDatabase>)
+) {
+    let (_container, db) = postgres_fixture.await;  // Don't forget .await!
+    // Test code
+}
+```
+
+**IMPORTANT**: Always include `#[future]` for async fixtures, and `.await` them in the test body.
+
+#### Shared Fixtures
+
+Define shared fixtures in `reinhardt-test/src/fixtures.rs` for use across multiple test files:
+
+```rust
+// In reinhardt-test/src/fixtures.rs
+#[fixture]
+pub async fn postgres_container() -> (ContainerAsync<Postgres>, String) {
+    // ...
+}
+
+// In test file
+use reinhardt_test::fixtures::*;
+
+#[rstest]
+#[tokio::test]
+async fn test_with_shared_fixture(#[future] postgres_container: (ContainerAsync<Postgres>, String)) {
+    let (_container, url) = postgres_container.await;
+    // ...
+}
+```
+
+---
+
+### TF-2 (SHOULD): TestContainers with rstest
+
+Combine rstest fixtures with TestContainers for database/cache testing:
+
+#### PostgreSQL Example
+
+```rust
+#[fixture]
+async fn postgres_db() -> (ContainerAsync<GenericImage>, Arc<AdminDatabase>) {
+    let postgres = GenericImage::new("postgres", "16-alpine")
+        .with_wait_for(WaitFor::message_on_stderr("database system is ready"))
+        .with_env_var("POSTGRES_PASSWORD", "test")
+        .start()
+        .await
+        .expect("Failed to start PostgreSQL");
+
+    let port = postgres.get_host_port_ipv4(5432).await.unwrap();
+    let url = format!("postgres://postgres:test@localhost:{}/test_db", port);
+
+    let conn = DatabaseConnection::connect(&url).await.unwrap();
+    let admin_db = Arc::new(AdminDatabase::new(Arc::new(conn)));
+
+    (postgres, admin_db)
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_database_operations(
+    #[future] postgres_db: (ContainerAsync<GenericImage>, Arc<AdminDatabase>)
+) {
+    let (_container, db) = postgres_db.await;
+
+    // Test database operations
+    let result = db.list::<User>("users", vec![], 0, 100).await;
+    assert!(result.is_ok());
+
+    // Container is automatically cleaned up when dropped
+}
+```
+
+**Benefits:**
+- Automatic container lifecycle management
+- Isolation between tests
+- Real infrastructure for higher confidence
+
+---
+
+### TF-3 (OPTIONAL): TeardownGuard Pattern
+
+For tests that need guaranteed cleanup (especially on panic), use the TeardownGuard pattern:
+
+#### When to Use
+
+- Modifying global state (environment variables, singleton instances)
+- Creating external resources (files, directories)
+- Tests that MUST cleanup even if they panic
+
+#### Implementation Example
+
+```rust
+struct TeardownGuard<F: FnOnce()> {
+    cleanup: Option<F>,
+}
+
+impl<F: FnOnce()> TeardownGuard<F> {
+    fn new(cleanup: F) -> Self {
+        Self {
+            cleanup: Some(cleanup),
+        }
+    }
+}
+
+impl<F: FnOnce()> Drop for TeardownGuard<F> {
+    fn drop(&mut self) {
+        if let Some(cleanup) = self.cleanup.take() {
+            cleanup();
+        }
+    }
+}
+
+#[test]
+fn test_with_guaranteed_cleanup() {
+    // Set up global state
+    std::env::set_var("TEST_VAR", "value");
+
+    // Create guard to ensure cleanup
+    let _guard = TeardownGuard::new(|| {
+        std::env::remove_var("TEST_VAR");
+    });
+
+    // Test code - cleanup happens even if this panics
+    assert_eq!(std::env::var("TEST_VAR").unwrap(), "value");
+
+    // _guard is dropped here, cleanup() is called
+}
+```
+
+**Note**: Most Reinhardt integration tests use TestContainers, which handle cleanup automatically, so TeardownGuard is rarely needed.
+
+---
+
+### TF-4: Common Pitfalls and Solutions
+
+#### Pitfall 1: Forgetting `.await` on Async Fixtures
+
+❌ **BAD:**
+```rust
+#[rstest]
+#[tokio::test]
+async fn test_bad(#[future] postgres_fixture: DbFixture) {
+    let result = postgres_fixture.query(...);  // ❌ Missing .await
+}
+```
+
+✅ **GOOD:**
+```rust
+#[rstest]
+#[tokio::test]
+async fn test_good(#[future] postgres_fixture: DbFixture) {
+    let db = postgres_fixture.await;  // ✅ Correct
+    let result = db.query(...);
+}
+```
+
+#### Pitfall 2: JSON Nested Structure Access
+
+When using `db.list()` or similar methods that return JSON, be aware of nested structures:
+
+❌ **BAD:**
+```rust
+let users = db.list::<User>("users", vec![], 0, 100).await?;
+let username = users[0].get("username");  // ❌ Wrong structure
+```
+
+✅ **GOOD:**
+```rust
+let users = db.list::<User>("users", vec![], 0, 100).await?;
+// db.list() returns: {"data": {"username": "...", "id": ...}}
+let username = users[0].get("data")
+    .and_then(|data| data.get("username"));  // ✅ Correct
+```
+
+#### Pitfall 3: Fixture Parameter Order
+
+Fixture parameters must match the exact type signature, including `#[future]`:
+
+❌ **BAD:**
+```rust
+#[fixture]
+async fn my_fixture() -> (Container, Database) { ... }
+
+#[rstest]
+#[tokio::test]
+async fn test(my_fixture: (Container, Database)) {  // ❌ Missing #[future]
+    // ...
+}
+```
+
+✅ **GOOD:**
+```rust
+#[rstest]
+#[tokio::test]
+async fn test(#[future] my_fixture: (Container, Database)) {  // ✅ Correct
+    let (container, db) = my_fixture.await;
+    // ...
+}
+```
+
+#### Pitfall 4: Serial Tests Without Cleanup
+
+Tests using `#[serial]` MUST clean up global state:
+
+❌ **BAD:**
+```rust
+#[test]
+#[serial(global_state)]
+fn test_modifies_state() {
+    set_global_state(42);
+    assert_eq!(get_global_state(), 42);
+    // ❌ No cleanup
+}
+```
+
+✅ **GOOD:**
+```rust
+#[test]
+#[serial(global_state)]
+fn test_modifies_state() {
+    set_global_state(42);
+    assert_eq!(get_global_state(), 42);
+    clear_global_state();  // ✅ Cleanup
+}
+```
+
+---
+
 ## Quick Reference
 
 ### Testing Checklist
@@ -527,6 +851,11 @@ Before submitting a PR with tests:
 - [ ] Assertions use strict value comparisons (`assert_eq!`) instead of loose matching (`contains`)
 - [ ] Loose assertions are justified with comments when necessary
 - [ ] Infrastructure tests use TestContainers where appropriate
+- [ ] Async fixtures use `#[future]` attribute on parameters
+- [ ] Async fixtures are `.await`ed in test body
+- [ ] Fixture types match exactly including `#[future]` annotation
+- [ ] Shared fixtures are defined in reinhardt-test/src/fixtures.rs when used across multiple files
+- [ ] JSON nested structures are accessed correctly (e.g., `db.list()` returns `{"data": {...}}`)
 
 ### Common Test Patterns
 
@@ -571,6 +900,100 @@ async fn test_with_infrastructure() {
     let docker = clients::Cli::default();
     let container = docker.run(images::postgres::Postgres::default());
     // Test with real infrastructure
+}
+```
+
+#### Pattern: rstest Basic Fixture
+```rust
+use rstest::*;
+
+#[fixture]
+fn test_data() -> TestData {
+    TestData::new("test")
+}
+
+#[rstest]
+fn test_with_fixture(test_data: TestData) {
+    assert_eq!(test_data.name, "test");
+}
+```
+
+#### Pattern: rstest Async Fixture
+```rust
+use rstest::*;
+
+#[fixture]
+async fn database_pool() -> Arc<AnyPool> {
+    let pool = AnyPool::connect("sqlite::memory:").await.unwrap();
+    Arc::new(pool)
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_with_async_fixture(#[future] database_pool: Arc<AnyPool>) {
+    let pool = database_pool.await;
+    // Use pool in test
+}
+```
+
+#### Pattern: rstest with TeardownGuard
+```rust
+use rstest::*;
+use reinhardt_test::resource::{TestResource, TeardownGuard};
+
+struct RegistryGuard;
+
+impl TestResource for RegistryGuard {
+    fn setup() -> Self {
+        GLOBAL_REGISTRY.clear();
+        Self
+    }
+    fn teardown(&mut self) {
+        GLOBAL_REGISTRY.clear();
+    }
+}
+
+#[fixture]
+fn registry_guard() -> TeardownGuard<RegistryGuard> {
+    TeardownGuard::new()
+}
+
+#[rstest]
+#[serial(registry)]
+fn test_with_cleanup(_registry_guard: TeardownGuard<RegistryGuard>) {
+    // Test code - cleanup guaranteed even on panic
+}
+```
+
+#### Pattern: rstest Serial Test
+```rust
+use rstest::*;
+use serial_test::serial;
+
+#[fixture]
+fn init_drivers() {
+    sqlx::any::install_default_drivers();
+}
+
+#[rstest]
+#[serial(database)]
+#[tokio::test]
+async fn test_serial_with_fixture(_init_drivers: ()) {
+    // Test code that modifies global state
+}
+```
+
+#### Pattern: rstest Parameterized Test
+```rust
+use rstest::*;
+
+#[rstest]
+#[case("valid@email.com", true)]
+#[case("invalid-email", false)]
+#[case("", false)]
+fn test_email_validation(#[case] email: &str, #[case] expected: bool) {
+    let result = validate_email(email);
+    assert_eq!(result.is_ok(), expected);
 }
 ```
 
