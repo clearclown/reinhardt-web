@@ -4,7 +4,8 @@
 //! They test pagination with database querysets.
 
 use reinhardt_orm::Model;
-use reinhardt_pagination::{Page, PageNumberPagination, PaginatedResponse};
+use reinhardt_pagination::PageNumberPagination;
+use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Sqlite, sqlite::SqlitePoolOptions};
 
@@ -39,16 +40,16 @@ impl Model for TestArticle {
 }
 
 // ============================================================================
-// Database Setup Helpers
+// rstest Fixtures
 // ============================================================================
 
-async fn setup_test_database() -> Pool<Sqlite> {
-	setup_test_database_with_url("sqlite::memory:").await
-}
-
-async fn setup_test_database_with_url(url: &str) -> Pool<Sqlite> {
+/// Fixture providing an SQLite in-memory database pool with test_articles table
+///
+/// The pool is automatically cleaned up when the test ends (Drop).
+#[fixture]
+async fn db_pool() -> Pool<Sqlite> {
 	let pool = SqlitePoolOptions::new()
-		.connect(url)
+		.connect("sqlite::memory:")
 		.await
 		.expect("Failed to create database pool");
 
@@ -72,6 +73,9 @@ async fn setup_test_database_with_url(url: &str) -> Pool<Sqlite> {
 	pool
 }
 
+/// Helper function to seed test data
+///
+/// This is still needed as a helper because different tests need different counts.
 async fn seed_test_data(pool: &Pool<Sqlite>, count: usize) {
 	for i in 1..=count {
 		sqlx::query(
@@ -88,18 +92,14 @@ async fn seed_test_data(pool: &Pool<Sqlite>, count: usize) {
 	}
 }
 
-async fn teardown_database(pool: Pool<Sqlite>) {
-	// SQLite in-memory database is automatically cleaned up when pool is dropped
-	drop(pool);
-}
-
 // ============================================================================
 // ORM Pagination Tests
 // ============================================================================
 
+#[rstest]
 #[tokio::test]
-async fn test_first_page_with_queryset() {
-	let pool = setup_test_database().await;
+async fn test_first_page_with_queryset(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	seed_test_data(&pool, 25).await;
 
 	// Fetch all data for pagination (simulating QuerySet behavior)
@@ -127,12 +127,13 @@ async fn test_first_page_with_queryset() {
 	assert_eq!(page.start_index(), 1);
 	assert_eq!(page.end_index(), 10);
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_last_page_with_queryset() {
-	let pool = setup_test_database().await;
+async fn test_last_page_with_queryset(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	seed_test_data(&pool, 25).await;
 
 	// Fetch all data for pagination (simulating QuerySet behavior)
@@ -160,12 +161,13 @@ async fn test_last_page_with_queryset() {
 	assert_eq!(page.start_index(), 21);
 	assert_eq!(page.end_index(), 25);
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_page_getitem_with_queryset() {
-	let pool = setup_test_database().await;
+async fn test_page_getitem_with_queryset(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	seed_test_data(&pool, 15).await;
 
 	// Test indexing into results using direct SQL
@@ -193,12 +195,13 @@ async fn test_page_getitem_with_queryset() {
 	// All our test data is published, so we should get 5 results
 	assert_eq!(filtered_results.len(), 5);
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_paginating_unordered_queryset_raises_warning() {
-	let pool = setup_test_database().await;
+async fn test_paginating_unordered_queryset_raises_warning(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	seed_test_data(&pool, 10).await;
 
 	// Fetch results without ORDER BY (unordered) using direct SQL
@@ -216,12 +219,13 @@ async fn test_paginating_unordered_queryset_raises_warning() {
 	// "UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list"
 	// For this test, we just verify the functionality works
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_paginating_empty_queryset_does_not_warn() {
-	let pool = setup_test_database().await;
+async fn test_paginating_empty_queryset_does_not_warn(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	// Don't seed any data - empty table
 
 	// Fetch from empty table using direct SQL
@@ -243,12 +247,13 @@ async fn test_paginating_empty_queryset_does_not_warn() {
 
 	assert_eq!(total_count, 0);
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_paginating_unordered_object_list_raises_warning() {
-	let pool = setup_test_database().await;
+async fn test_paginating_unordered_object_list_raises_warning(#[future] db_pool: Pool<Sqlite>) {
+	let pool = db_pool.await;
 	seed_test_data(&pool, 10).await;
 
 	// Create a mock object list with .ordered attribute set to false
@@ -267,5 +272,5 @@ async fn test_paginating_unordered_object_list_raises_warning() {
 	// "UnorderedObjectListWarning: Pagination may yield inconsistent results with an unordered object_list"
 	// The warning would be raised when the Paginator is created with an unordered object list
 
-	teardown_database(pool).await;
+	// pool は自動的にドロップされる
 }

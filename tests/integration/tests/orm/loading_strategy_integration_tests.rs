@@ -11,6 +11,7 @@ mod integration_tests {
 		subqueryload,
 	};
 	use reinhardt_validators::TableName;
+	use rstest::*;
 	use serde::{Deserialize, Serialize};
 	use sqlx::{Row, SqlitePool, sqlite::SqlitePoolOptions};
 	use std::sync::Arc;
@@ -36,37 +37,6 @@ mod integration_tests {
 		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
 			self.id = Some(value);
 		}
-	}
-
-	#[derive(Debug, Clone, Serialize, Deserialize)]
-	struct Book {
-		id: Option<i64>,
-		title: String,
-		author_id: i64,
-		pages: i32,
-	}
-
-	const BOOK_TABLE: TableName = TableName::new_const("book");
-
-	impl Model for Book {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			BOOK_TABLE.as_str()
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
-
-	#[derive(Debug, Clone)]
-	struct Review {
-		id: Option<i64>,
-		content: String,
-		book_id: i64,
-		rating: i32,
 	}
 
 	// Query counter wrapper
@@ -118,8 +88,12 @@ mod integration_tests {
 		}
 	}
 
-	// Setup test database
-	async fn setup_test_db() -> QueryCounter {
+	/// Setup test database fixture with QueryCounter
+	///
+	/// Creates an in-memory SQLite database with authors, books, and reviews tables,
+	/// populated with test data. The QueryCounter tracks the number of queries executed.
+	#[fixture]
+	async fn sqlite_fixture() -> QueryCounter {
 		let counter = QueryCounter::new().await;
 
 		// Create schema
@@ -200,9 +174,10 @@ mod integration_tests {
 	}
 
 	// Test 1: Joinedload generates LEFT JOIN
+	#[rstest]
 	#[tokio::test]
-	async fn test_joinedload_generates_left_join() {
-		let counter = setup_test_db().await;
+	async fn test_joinedload_generates_left_join(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Simulate joinedload query with LEFT JOIN
 		let query = "SELECT authors.*, books.id as book_id, books.title, books.pages
@@ -228,9 +203,10 @@ mod integration_tests {
 	}
 
 	// Test 2: Selectinload generates IN clause
+	#[rstest]
 	#[tokio::test]
-	async fn test_selectinload_generates_in_clause() {
-		let counter = setup_test_db().await;
+	async fn test_selectinload_generates_in_clause(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Step 1: Get authors
 		let authors = counter.fetch_all("SELECT * FROM authors").await.unwrap();
@@ -250,9 +226,10 @@ mod integration_tests {
 	}
 
 	// Test 3: Subqueryload generates subquery
+	#[rstest]
 	#[tokio::test]
-	async fn test_subqueryload_generates_subquery() {
-		let counter = setup_test_db().await;
+	async fn test_subqueryload_generates_subquery(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Simulate subqueryload: books WHERE author_id IN (SELECT id FROM authors)
 		let query = "SELECT * FROM books WHERE author_id IN (SELECT id FROM authors WHERE id <= 2)";
@@ -271,9 +248,10 @@ mod integration_tests {
 	}
 
 	// Test 4: Real N+1 detection with lazy loading
+	#[rstest]
 	#[tokio::test]
-	async fn test_real_n_plus_one_detection() {
-		let counter = setup_test_db().await;
+	async fn test_real_n_plus_one_detection(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Step 1: Get authors (1 query)
 		let authors = counter.fetch_all("SELECT * FROM authors").await.unwrap();
@@ -295,9 +273,10 @@ mod integration_tests {
 	}
 
 	// Test 5: Joinedload uses single query
+	#[rstest]
 	#[tokio::test]
-	async fn test_joinedload_query_count() {
-		let counter = setup_test_db().await;
+	async fn test_joinedload_query_count(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Single query with JOIN
 		let _rows = counter
@@ -313,9 +292,10 @@ mod integration_tests {
 	}
 
 	// Test 6: Selectinload uses parent + one SELECT IN query
+	#[rstest]
 	#[tokio::test]
-	async fn test_selectinload_query_count() {
-		let counter = setup_test_db().await;
+	async fn test_selectinload_query_count(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Query 1: Get authors
 		let _authors = counter.fetch_all("SELECT * FROM authors").await.unwrap();
@@ -334,9 +314,10 @@ mod integration_tests {
 	}
 
 	// Test 7: Lazy loading creates N queries
+	#[rstest]
 	#[tokio::test]
-	async fn test_lazy_load_creates_n_queries() {
-		let counter = setup_test_db().await;
+	async fn test_lazy_load_creates_n_queries(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Get authors
 		let authors = counter.fetch_all("SELECT * FROM authors").await.unwrap();
@@ -362,9 +343,12 @@ mod integration_tests {
 	}
 
 	// Test 8: Joinedload with multiple collections creates cartesian product
+	#[rstest]
 	#[tokio::test]
-	async fn test_joinedload_cartesian_product_with_multiple_collections() {
-		let counter = setup_test_db().await;
+	async fn test_joinedload_cartesian_product_with_multiple_collections(
+		#[future] sqlite_fixture: QueryCounter,
+	) {
+		let counter = sqlite_fixture.await;
 
 		// JOIN both books and reviews creates cartesian product
 		let query = "SELECT authors.*, books.id as book_id, reviews.id as review_id
@@ -386,9 +370,10 @@ mod integration_tests {
 	}
 
 	// Test 9: Selectinload avoids cartesian product
+	#[rstest]
 	#[tokio::test]
-	async fn test_selectinload_avoids_cartesian_product() {
-		let counter = setup_test_db().await;
+	async fn test_selectinload_avoids_cartesian_product(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Query 1: Authors
 		let authors = counter.fetch_all("SELECT * FROM authors").await.unwrap();
@@ -415,9 +400,10 @@ mod integration_tests {
 	}
 
 	// Test 10: LoadContext integration with database
+	#[rstest]
 	#[tokio::test]
-	async fn test_loading_strategy_with_load_context() {
-		let counter = setup_test_db().await;
+	async fn test_loading_strategy_with_load_context(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 		let mut ctx = LoadContext::new();
 
 		// Mark paths as loaded
@@ -438,9 +424,10 @@ mod integration_tests {
 	}
 
 	// Test 11: Multiple relationships loading
+	#[rstest]
 	#[tokio::test]
-	async fn test_multiple_relationships_loading() {
-		let counter = setup_test_db().await;
+	async fn test_multiple_relationships_loading(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		let options = LoadOptionBuilder::<Author>::new()
 			.joinedload("books")
@@ -476,9 +463,10 @@ mod integration_tests {
 	}
 
 	// Test 12: Performance comparison - eager vs lazy
+	#[rstest]
 	#[tokio::test]
-	async fn test_loading_strategy_performance_comparison() {
-		let counter = setup_test_db().await;
+	async fn test_loading_strategy_performance_comparison(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Measure eager loading (joinedload)
 		let start = std::time::Instant::now();
@@ -530,9 +518,10 @@ mod integration_tests {
 	}
 
 	// Test 13: Empty results handling
+	#[rstest]
 	#[tokio::test]
-	async fn test_loading_strategy_with_empty_results() {
-		let counter = setup_test_db().await;
+	async fn test_loading_strategy_with_empty_results(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Query non-existent author
 		let rows = counter
@@ -550,9 +539,10 @@ mod integration_tests {
 	}
 
 	// Test 14: Nested loading with NULL values
+	#[rstest]
 	#[tokio::test]
-	async fn test_nested_loading_with_nulls() {
-		let counter = setup_test_db().await;
+	async fn test_nested_loading_with_nulls(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Add author without books
 		counter
@@ -579,9 +569,10 @@ mod integration_tests {
 	}
 
 	// Test 15: Large dataset simulation
+	#[rstest]
 	#[tokio::test]
-	async fn test_loading_strategy_with_large_dataset() {
-		let counter = setup_test_db().await;
+	async fn test_loading_strategy_with_large_dataset(#[future] sqlite_fixture: QueryCounter) {
+		let counter = sqlite_fixture.await;
 
 		// Insert many books for Author 1
 		for i in 4..=50 {
@@ -607,14 +598,5 @@ mod integration_tests {
 			1,
 			"Selectinload handles large datasets efficiently"
 		);
-	}
-}
-
-// Stub tests for when integration-tests feature is disabled
-#[cfg(not(feature = "integration-tests"))]
-mod stub_tests {
-	#[test]
-	fn integration_tests_disabled() {
-		println!("Integration tests require --features integration-tests");
 	}
 }
