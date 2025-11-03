@@ -1,3 +1,4 @@
+use rstest::*;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -303,4 +304,258 @@ mod tests {
 		let batch = factory.build_batch(3);
 		assert_eq!(batch.len(), 3);
 	}
+}
+
+// ============================================================================
+// rstest integration: Fixtures for common test resources
+// ============================================================================
+
+/// Fixture providing a FixtureLoader instance
+///
+/// Use this fixture in tests that need to load JSON fixture data.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::{FixtureLoader, fixture_loader};
+/// use rstest::*;
+///
+/// #[rstest]
+/// async fn test_with_fixtures(#[future] fixture_loader: FixtureLoader) {
+///     let loader = fixture_loader.await;
+///     loader.load_from_json("test".to_string(), r#"{"id": 1}"#).await.unwrap();
+///     // ...
+/// }
+/// ```
+#[fixture]
+pub fn fixture_loader() -> FixtureLoader {
+	FixtureLoader::new()
+}
+
+/// Fixture providing an APIClient instance
+///
+/// Use this fixture in tests that need to make test HTTP requests.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::api_client;
+/// use reinhardt_test::client::APIClient;
+/// use rstest::*;
+///
+/// #[rstest]
+/// async fn test_api_request(#[future] api_client: APIClient) {
+///     let client = api_client.await;
+///     // Make requests with client
+/// }
+/// ```
+#[fixture]
+pub fn api_client() -> crate::client::APIClient {
+	crate::client::APIClient::new()
+}
+
+/// Fixture providing a temporary directory that is automatically cleaned up
+///
+/// # Examples
+///
+/// ```rust
+/// use reinhardt_test::fixtures::temp_dir;
+/// use rstest::*;
+///
+/// #[rstest]
+/// fn test_with_temp_dir(temp_dir: tempfile::TempDir) {
+///     let path = temp_dir.path();
+///     std::fs::write(path.join("test.txt"), "data").unwrap();
+///     // temp_dir is automatically cleaned up when test ends
+/// }
+/// ```
+#[fixture]
+pub fn temp_dir() -> tempfile::TempDir {
+	tempfile::tempdir().expect("Failed to create temporary directory")
+}
+
+// ============================================================================
+// TestContainers fixtures (optional, requires "testcontainers" feature)
+// ============================================================================
+
+#[cfg(feature = "testcontainers")]
+use testcontainers::{ContainerAsync, GenericImage, runners::AsyncRunner};
+#[cfg(feature = "testcontainers")]
+use testcontainers_modules::{postgres::Postgres, redis::Redis};
+
+/// Fixture providing a PostgreSQL TestContainer
+///
+/// Returns a tuple of (container, connection_url).
+/// The container is automatically cleaned up when the test ends.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::postgres_container;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_postgres(#[future] postgres_container: (ContainerAsync<Postgres>, String)) {
+///     let (_container, url) = postgres_container.await;
+///     // Use PostgreSQL database at `url`
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn postgres_container() -> (ContainerAsync<Postgres>, String) {
+	let container = Postgres::default()
+		.start()
+		.await
+		.expect("Failed to start PostgreSQL container");
+
+	let port = container
+		.get_host_port_ipv4(5432)
+		.await
+		.expect("Failed to get PostgreSQL port");
+
+	let url = format!("postgres://postgres:postgres@localhost:{}/postgres", port);
+
+	(container, url)
+}
+
+/// Fixture providing a Redis TestContainer
+///
+/// Returns a tuple of (container, connection_url).
+/// The container is automatically cleaned up when the test ends.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::redis_container;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_redis(#[future] redis_container: (ContainerAsync<Redis>, String)) {
+///     let (_container, url) = redis_container.await;
+///     // Use Redis at `url`
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn redis_container() -> (ContainerAsync<Redis>, String) {
+	let container = Redis::default()
+		.start()
+		.await
+		.expect("Failed to start Redis container");
+
+	let port = container
+		.get_host_port_ipv4(6379)
+		.await
+		.expect("Failed to get Redis port");
+
+	let url = format!("redis://localhost:{}", port);
+
+	(container, url)
+}
+
+/// Fixture providing a Memcached TestContainer
+///
+/// Returns a tuple of (container, connection_url).
+/// The container is automatically cleaned up when the test ends.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::memcached_container;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_memcached(#[future] memcached_container: (ContainerAsync<GenericImage>, String)) {
+///     let (_container, url) = memcached_container.await;
+///     // Use Memcached at `url`
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn memcached_container() -> (ContainerAsync<GenericImage>, String) {
+	let container = GenericImage::new("memcached", "1.6-alpine")
+		.with_exposed_port(11211.into())
+		.start()
+		.await
+		.expect("Failed to start Memcached container");
+
+	let port = container
+		.get_host_port_ipv4(11211)
+		.await
+		.expect("Failed to get Memcached port");
+
+	let url = format!("localhost:{}", port);
+
+	(container, url)
+}
+
+/// Fixture providing an SQLite in-memory database pool
+///
+/// Returns a connection pool that can be used for testing.
+/// The database is automatically cleaned up when the pool is dropped.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::sqlite_pool;
+/// use rstest::*;
+/// use sqlx::SqlitePool;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_sqlite(#[future] sqlite_pool: SqlitePool) {
+///     let pool = sqlite_pool.await;
+///     // Use SQLite pool
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn sqlite_pool() -> sqlx::SqlitePool {
+	use sqlx::sqlite::SqlitePoolOptions;
+
+	SqlitePoolOptions::new()
+		.max_connections(5)
+		.connect(":memory:")
+		.await
+		.expect("Failed to create SQLite pool")
+}
+
+/// Fixture providing a PostgreSQL connection pool (with TestContainer)
+///
+/// This combines the postgres_container fixture with a connection pool.
+/// Both the pool and the container are automatically cleaned up.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::postgres_pool;
+/// use rstest::*;
+/// use sqlx::PgPool;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_postgres_pool(
+///     #[future] postgres_pool: (ContainerAsync<testcontainers_modules::postgres::Postgres>, PgPool)
+/// ) {
+///     let (_container, pool) = postgres_pool.await;
+///     // Use PostgreSQL pool
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn postgres_pool() -> (ContainerAsync<Postgres>, sqlx::PgPool) {
+	use sqlx::postgres::PgPoolOptions;
+
+	let (container, url) = postgres_container().await;
+
+	let pool = PgPoolOptions::new()
+		.max_connections(5)
+		.connect(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL");
+
+	(container, pool)
 }

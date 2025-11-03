@@ -19,6 +19,7 @@ pub mod http;
 pub mod logging;
 pub mod messages;
 pub mod mock;
+pub mod resource;
 pub mod response;
 pub mod server;
 pub mod testcase;
@@ -39,6 +40,11 @@ pub use fixtures::{
 	Factory, FactoryBuilder, FixtureError, FixtureLoader, FixtureResult, random_test_key,
 	test_config_value,
 };
+
+#[cfg(feature = "testcontainers")]
+pub use fixtures::{
+	memcached_container, postgres_container, postgres_pool, redis_container, sqlite_pool,
+};
 pub use http::{
 	assert_has_header, assert_header_contains, assert_header_equals, assert_no_header,
 	assert_status, create_insecure_request, create_request, create_response_with_headers,
@@ -51,6 +57,7 @@ pub use messages::{
 	assert_message_tags, assert_messages,
 };
 pub use mock::{CallRecord, DummyCache, MockFunction, SimpleHandler, Spy};
+pub use resource::{SuiteGuard, SuiteResource, TeardownGuard, TestResource, acquire_suite};
 pub use response::{ResponseExt, TestResponse};
 pub use server::{
 	BodyEchoHandler, DelayedHandler, EchoPathHandler, LargeResponseHandler, MethodEchoHandler,
@@ -82,6 +89,11 @@ pub mod prelude {
 	pub use super::fixtures::{
 		Factory, FactoryBuilder, FixtureLoader, random_test_key, test_config_value,
 	};
+
+	#[cfg(feature = "testcontainers")]
+	pub use super::fixtures::{
+		memcached_container, postgres_container, postgres_pool, redis_container, sqlite_pool,
+	};
 	pub use super::http::{
 		assert_has_header, assert_header_contains, assert_header_equals, assert_no_header,
 		assert_status, create_insecure_request, create_request, create_response_with_headers,
@@ -93,6 +105,9 @@ pub mod prelude {
 		MessagesTestMixin, assert_message_count, assert_message_exists, assert_messages,
 	};
 	pub use super::mock::{MockFunction, SimpleHandler, Spy};
+	pub use super::resource::{
+		SuiteGuard, SuiteResource, TeardownGuard, TestResource, acquire_suite,
+	};
 	pub use super::response::TestResponse;
 	pub use super::server::{
 		BodyEchoHandler, DelayedHandler, EchoPathHandler, LargeResponseHandler, MethodEchoHandler,
