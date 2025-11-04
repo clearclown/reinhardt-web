@@ -25,6 +25,7 @@
 //! assert_eq!(metadata_field.sql_type(), "JSONB");
 //! ```
 
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -316,8 +317,7 @@ impl Default for BigIntegerRangeField {
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateRangeField {
-	// In a real implementation, this would use a proper Date type
-	default: Option<(Option<String>, Option<String>)>,
+	default: Option<(Option<NaiveDate>, Option<NaiveDate>)>,
 }
 
 impl DateRangeField {
@@ -325,7 +325,7 @@ impl DateRangeField {
 		Self { default: None }
 	}
 
-	pub fn with_default(mut self, lower: Option<String>, upper: Option<String>) -> Self {
+	pub fn with_default(mut self, lower: Option<NaiveDate>, upper: Option<NaiveDate>) -> Self {
 		self.default = Some((lower, upper));
 		self
 	}
@@ -355,8 +355,7 @@ impl Default for DateRangeField {
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateTimeRangeField {
-	// In a real implementation, this would use a proper DateTime type
-	default: Option<(Option<String>, Option<String>)>,
+	default: Option<(Option<NaiveDateTime>, Option<NaiveDateTime>)>,
 }
 
 impl DateTimeRangeField {
@@ -364,7 +363,11 @@ impl DateTimeRangeField {
 		Self { default: None }
 	}
 
-	pub fn with_default(mut self, lower: Option<String>, upper: Option<String>) -> Self {
+	pub fn with_default(
+		mut self,
+		lower: Option<NaiveDateTime>,
+		upper: Option<NaiveDateTime>,
+	) -> Self {
 		self.default = Some((lower, upper));
 		self
 	}

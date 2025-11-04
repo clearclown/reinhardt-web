@@ -1799,7 +1799,7 @@ GROUP BY user_id",
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct When {
 	pub condition: Q,
-	pub then: Box<Expression>,
+	then: Box<Expression>,
 }
 
 impl When {
@@ -1823,6 +1823,17 @@ impl When {
 			then: Box::new(then),
 		}
 	}
+
+	/// Get a reference to the THEN expression
+	pub fn then(&self) -> &Expression {
+		&self.then
+	}
+
+	/// Convert into the THEN expression
+	pub fn into_then(self) -> Expression {
+		*self.then
+	}
+
 	/// Generate SQL for the WHEN clause
 	///
 	/// # Examples
@@ -1850,7 +1861,7 @@ impl When {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Case {
 	pub when_clauses: Vec<When>,
-	pub default: Option<Box<Expression>>,
+	default: Option<Box<Expression>>,
 }
 
 impl Case {
@@ -1876,6 +1887,17 @@ impl Case {
 			default: None,
 		}
 	}
+
+	/// Get a reference to the default ELSE expression
+	pub fn default_value(&self) -> Option<&Expression> {
+		self.default.as_deref()
+	}
+
+	/// Convert into the default ELSE expression
+	pub fn into_default(self) -> Option<Expression> {
+		self.default.map(|b| *b)
+	}
+
 	/// Add a WHEN clause to the CASE expression
 	///
 	/// # Examples
@@ -1894,6 +1916,7 @@ impl Case {
 		self.when_clauses.push(when);
 		self
 	}
+
 	/// Set the default ELSE value for the CASE expression
 	///
 	/// # Examples
@@ -1909,6 +1932,7 @@ impl Case {
 		self.default = Some(Box::new(default));
 		self
 	}
+
 	/// Generate SQL for the CASE expression
 	///
 	/// # Examples

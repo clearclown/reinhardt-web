@@ -10,7 +10,7 @@ pub trait DatabaseFunction {
 /// Cast expression - convert a value to a specific type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cast {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 	pub target_type: SqlType,
 }
 
@@ -104,6 +104,44 @@ impl Cast {
 			expression: Box::new(expression),
 			target_type,
 		}
+	}
+
+	/// Get a reference to the expression
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_orm::functions::{Cast, SqlType};
+	/// use reinhardt_orm::annotation::AnnotationValue;
+	/// use reinhardt_orm::expressions::F;
+	///
+	/// let cast = Cast::new(
+	///     AnnotationValue::Field(F::new("price")),
+	///     SqlType::Integer
+	/// );
+	/// let expr = cast.expression();
+	/// ```
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the inner expression, consuming self
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_orm::functions::{Cast, SqlType};
+	/// use reinhardt_orm::annotation::AnnotationValue;
+	/// use reinhardt_orm::expressions::F;
+	///
+	/// let cast = Cast::new(
+	///     AnnotationValue::Field(F::new("price")),
+	///     SqlType::Integer
+	/// );
+	/// let expr = cast.into_expression();
+	/// ```
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
 	}
 	/// Generate SQL for CAST expression
 	///
@@ -200,8 +238,8 @@ impl Least {
 /// NullIf - return NULL if two expressions are equal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NullIf {
-	pub expr1: Box<AnnotationValue>,
-	pub expr2: Box<AnnotationValue>,
+	expr1: Box<AnnotationValue>,
+	expr2: Box<AnnotationValue>,
 }
 
 impl NullIf {
@@ -229,6 +267,26 @@ impl NullIf {
 	///
 	pub fn to_sql(&self) -> String {
 		format!("NULLIF({}, {})", self.expr1.to_sql(), self.expr2.to_sql())
+	}
+
+	/// Get a reference to the first expression
+	pub fn expr1(&self) -> &AnnotationValue {
+		&self.expr1
+	}
+
+	/// Get a reference to the second expression
+	pub fn expr2(&self) -> &AnnotationValue {
+		&self.expr2
+	}
+
+	/// Convert into the first expression, consuming self
+	pub fn into_expr1(self) -> AnnotationValue {
+		*self.expr1
+	}
+
+	/// Convert into the second expression, consuming self
+	pub fn into_expr2(self) -> AnnotationValue {
+		*self.expr2
 	}
 }
 
@@ -287,7 +345,7 @@ impl Concat {
 /// Upper - convert string to uppercase
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Upper {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Upper {
@@ -323,12 +381,22 @@ impl Upper {
 	pub fn to_sql(&self) -> String {
 		format!("UPPER({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Lower - convert string to lowercase
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Lower {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Lower {
@@ -354,12 +422,22 @@ impl Lower {
 	pub fn to_sql(&self) -> String {
 		format!("LOWER({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Length - return the length of a string
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Length {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Length {
@@ -385,12 +463,22 @@ impl Length {
 	pub fn to_sql(&self) -> String {
 		format!("LENGTH({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Trim - remove leading and trailing whitespace
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Trim {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 	pub trim_type: TrimType,
 }
 
@@ -441,14 +529,24 @@ impl Trim {
 			TrimType::Trailing => format!("RTRIM({})", self.expression.to_sql()),
 		}
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Substr - extract a substring
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Substr {
-	pub expression: Box<AnnotationValue>,
-	pub start: Box<AnnotationValue>,
-	pub length: Option<Box<AnnotationValue>>,
+	expression: Box<AnnotationValue>,
+	start: Box<AnnotationValue>,
+	length: Option<Box<AnnotationValue>>,
 }
 
 impl Substr {
@@ -497,6 +595,36 @@ impl Substr {
 			)
 		}
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Get a reference to the start position
+	pub fn start(&self) -> &AnnotationValue {
+		&self.start
+	}
+
+	/// Get a reference to the length (if provided)
+	pub fn length(&self) -> Option<&AnnotationValue> {
+		self.length.as_deref()
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
+
+	/// Convert into the start position, consuming self
+	pub fn into_start(self) -> AnnotationValue {
+		*self.start
+	}
+
+	/// Convert into the length (if provided), consuming self
+	pub fn into_length(self) -> Option<AnnotationValue> {
+		self.length.map(|b| *b)
+	}
 }
 
 // Math functions
@@ -504,7 +632,7 @@ impl Substr {
 /// Abs - absolute value
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Abs {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Abs {
@@ -530,12 +658,22 @@ impl Abs {
 	pub fn to_sql(&self) -> String {
 		format!("ABS({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Ceil - round up to nearest integer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Ceil {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Ceil {
@@ -561,12 +699,22 @@ impl Ceil {
 	pub fn to_sql(&self) -> String {
 		format!("CEIL({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Floor - round down to nearest integer
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Floor {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Floor {
@@ -592,12 +740,22 @@ impl Floor {
 	pub fn to_sql(&self) -> String {
 		format!("FLOOR({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Round - round to specified decimal places
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Round {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 	pub decimals: Option<i32>,
 }
 
@@ -629,13 +787,23 @@ impl Round {
 			format!("ROUND({})", self.expression.to_sql())
 		}
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 /// Mod - modulo operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mod {
-	pub dividend: Box<AnnotationValue>,
-	pub divisor: Box<AnnotationValue>,
+	dividend: Box<AnnotationValue>,
+	divisor: Box<AnnotationValue>,
 }
 
 impl Mod {
@@ -664,13 +832,33 @@ impl Mod {
 	pub fn to_sql(&self) -> String {
 		format!("MOD({}, {})", self.dividend.to_sql(), self.divisor.to_sql())
 	}
+
+	/// Get a reference to the dividend
+	pub fn dividend(&self) -> &AnnotationValue {
+		&self.dividend
+	}
+
+	/// Get a reference to the divisor
+	pub fn divisor(&self) -> &AnnotationValue {
+		&self.divisor
+	}
+
+	/// Convert into the dividend, consuming self
+	pub fn into_dividend(self) -> AnnotationValue {
+		*self.dividend
+	}
+
+	/// Convert into the divisor, consuming self
+	pub fn into_divisor(self) -> AnnotationValue {
+		*self.divisor
+	}
 }
 
 /// Power - raise to a power
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Power {
-	pub base: Box<AnnotationValue>,
-	pub exponent: Box<AnnotationValue>,
+	base: Box<AnnotationValue>,
+	exponent: Box<AnnotationValue>,
 }
 
 impl Power {
@@ -699,12 +887,32 @@ impl Power {
 	pub fn to_sql(&self) -> String {
 		format!("POWER({}, {})", self.base.to_sql(), self.exponent.to_sql())
 	}
+
+	/// Get a reference to the base
+	pub fn base(&self) -> &AnnotationValue {
+		&self.base
+	}
+
+	/// Get a reference to the exponent
+	pub fn exponent(&self) -> &AnnotationValue {
+		&self.exponent
+	}
+
+	/// Convert into the base, consuming self
+	pub fn into_base(self) -> AnnotationValue {
+		*self.base
+	}
+
+	/// Convert into the exponent, consuming self
+	pub fn into_exponent(self) -> AnnotationValue {
+		*self.exponent
+	}
 }
 
 /// Sqrt - square root
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Sqrt {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 }
 
 impl Sqrt {
@@ -730,6 +938,16 @@ impl Sqrt {
 	pub fn to_sql(&self) -> String {
 		format!("SQRT({})", self.expression.to_sql())
 	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
+	}
 }
 
 // Date/Time functions
@@ -737,7 +955,7 @@ impl Sqrt {
 /// Extract component from date/time
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Extract {
-	pub expression: Box<AnnotationValue>,
+	expression: Box<AnnotationValue>,
 	pub component: ExtractComponent,
 }
 
@@ -906,6 +1124,16 @@ impl Extract {
 			self.component.to_sql(),
 			self.expression.to_sql()
 		)
+	}
+
+	/// Get a reference to the expression
+	pub fn expression(&self) -> &AnnotationValue {
+		&self.expression
+	}
+
+	/// Convert into the expression, consuming self
+	pub fn into_expression(self) -> AnnotationValue {
+		*self.expression
 	}
 }
 
