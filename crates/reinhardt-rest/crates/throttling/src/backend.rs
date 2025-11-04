@@ -91,20 +91,20 @@ impl<T: TimeProvider> ThrottleBackend for MemoryBackend<T> {
 }
 
 #[cfg(feature = "redis-backend")]
-pub struct RedisBackend {
+pub struct RedisThrottleBackend {
 	client: redis::Client,
 }
 
 #[cfg(feature = "redis-backend")]
-impl RedisBackend {
-	/// Creates a new `RedisBackend` connected to the specified Redis URL.
+impl RedisThrottleBackend {
+	/// Creates a new `RedisThrottleBackend` connected to the specified Redis URL.
 	///
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_throttling::RedisBackend;
+	/// use reinhardt_throttling::RedisThrottleBackend;
 	///
-	/// let backend = RedisBackend::new("redis://127.0.0.1:6379").unwrap();
+	/// let backend = RedisThrottleBackend::new("redis://127.0.0.1:6379").unwrap();
 	// Backend is now connected to Redis for distributed rate limiting
 	/// ```
 	pub fn new(url: &str) -> Result<Self, String> {
@@ -115,7 +115,7 @@ impl RedisBackend {
 
 #[cfg(feature = "redis-backend")]
 #[async_trait]
-impl ThrottleBackend for RedisBackend {
+impl ThrottleBackend for RedisThrottleBackend {
 	async fn increment(&self, key: &str, window: u64) -> Result<usize, String> {
 		use redis::AsyncCommands;
 		let mut conn = self

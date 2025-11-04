@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use multer::Multipart as MulterMultipart;
 use std::collections::HashMap;
 
@@ -132,7 +133,12 @@ impl Parser for MultiPartParser {
 		vec!["multipart/form-data".to_string()]
 	}
 
-	async fn parse(&self, content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		let content_type = content_type.ok_or(ParseError::MissingContentType)?;
 
 		let media_type = MediaType::parse(content_type)?;

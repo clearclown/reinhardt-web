@@ -5,6 +5,7 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use reinhardt_exception::Error;
 use serde_json::{Value, json};
 use std::collections::HashMap;
@@ -245,7 +246,12 @@ impl Parser for ProtobufParser {
 		]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		// For dynamic parsing, we convert to a generic representation
 		let value = self.parse_wire_format(&body)?;
 

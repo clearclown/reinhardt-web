@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Type alias for dependency mapping: (model_name, pk) -> Set of cache keys
 type DependencyMap = Arc<RwLock<HashMap<(String, String), HashSet<String>>>>;
@@ -195,21 +195,54 @@ impl CacheInvalidator {
 		Vec::new()
 	}
 
-	fn delayed_invalidate(&self, key: &(String, String), _seconds: u64) -> Vec<String> {
-		// In a real implementation, would schedule invalidation after delay
-		// For now, just mark timestamps for delayed processing
-		if let Ok(deps) = self.dependencies.read()
-			&& let Some(cache_keys) = deps.get(key)
-		{
-			if let Ok(mut timestamps) = self.timestamps.write() {
-				let now = Instant::now();
-				for cache_key in cache_keys {
-					timestamps.insert(cache_key.clone(), now);
+	/// Schedule delayed cache invalidation
+	///
+	/// Spawns a background task that will invalidate the cache keys after the specified delay.
+	/// Returns the list of cache keys that will be invalidated.
+	///
+	/// # Arguments
+	///
+	/// * `key` - The model instance key (model_name, pk)
+	/// * `seconds` - Delay in seconds before invalidation
+	///
+	/// # Returns
+	///
+	/// Vector of cache keys scheduled for invalidation
+	fn delayed_invalidate(&self, key: &(String, String), seconds: u64) -> Vec<String> {
+		// Get the list of cache keys to invalidate
+		let cache_keys = if let Ok(deps) = self.dependencies.read() {
+			deps.get(key)
+				.map(|keys| keys.iter().cloned().collect::<Vec<_>>())
+		} else {
+			None
+		};
+
+		if let Some(keys) = cache_keys {
+			// Clone necessary data for the async task
+			let invalidator = self.clone();
+			let key_clone = key.clone();
+
+			// Spawn a background task to invalidate after delay
+			tokio::spawn(async move {
+				tokio::time::sleep(Duration::from_secs(seconds)).await;
+
+				// Perform immediate invalidation after delay
+				if let Ok(mut deps) = invalidator.dependencies.write()
+					&& let Some(cache_keys) = deps.remove(&key_clone)
+				{
+					// Remove timestamps
+					if let Ok(mut timestamps) = invalidator.timestamps.write() {
+						for cache_key in &cache_keys {
+							timestamps.remove(cache_key);
+						}
+					}
 				}
-			}
-			return cache_keys.iter().cloned().collect();
+			});
+
+			keys
+		} else {
+			Vec::new()
 		}
-		Vec::new()
 	}
 
 	fn lazy_invalidate(&self, key: &(String, String)) -> Vec<String> {
@@ -285,17 +318,23 @@ mod tests {
 		assert!(keys.contains(&"user:456:profile".to_string()));
 	}
 
-	#[test]
-	fn test_cache_invalidator_delayed_strategy() {
-		let invalidator = CacheInvalidator::new(InvalidationStrategy::Delayed(5));
+	#[tokio::test]
+	async fn test_cache_invalidator_delayed_strategy() {
+		let invalidator = CacheInvalidator::new(InvalidationStrategy::Delayed(1));
 
 		invalidator.add_dependency("user:123:profile", "User", "123");
 
 		let keys = invalidator.invalidate("User", "123");
 		assert_eq!(keys.len(), 1);
 
-		// Delayed strategy marks but doesn't remove immediately
+		// Delayed strategy returns keys immediately but doesn't remove
 		assert_eq!(invalidator.dependency_count("User", "123"), 1);
+
+		// Wait for delayed invalidation to complete
+		tokio::time::sleep(Duration::from_secs(2)).await;
+
+		// After delay, dependencies should be removed
+		assert_eq!(invalidator.dependency_count("User", "123"), 0);
 	}
 
 	#[test]

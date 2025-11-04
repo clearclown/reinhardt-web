@@ -6,6 +6,7 @@
 use crate::parser::{ParseResult, ParsedData, Parser};
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use quick_xml::Reader;
 use quick_xml::events::{Event, attributes::Attributes};
 use reinhardt_exception::Error;
@@ -380,7 +381,12 @@ impl Parser for XMLParser {
 		vec!["application/xml".to_string(), "text/xml".to_string()]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		let value = self.parse_xml(&body)?;
 		Ok(ParsedData::Xml(value))
 	}

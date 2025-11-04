@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use futures_util::StreamExt;
 use futures_util::stream::Stream;
+use http::HeaderMap;
 use reinhardt_exception::Error;
 use std::pin::Pin;
 
@@ -161,7 +162,12 @@ impl Parser for StreamingParser {
 		vec!["application/octet-stream".to_string(), "*/*".to_string()]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		// For direct Bytes input, we still support it but process in chunks
 		let total_size = body.len();
 

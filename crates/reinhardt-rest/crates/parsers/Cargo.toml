@@ -26,6 +26,7 @@ flate2 = { workspace = true }
 brotli = { workspace = true }
 rmp-serde = { workspace = true }
 prost = { workspace = true }
+http = { workspace = true }
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["full"] }

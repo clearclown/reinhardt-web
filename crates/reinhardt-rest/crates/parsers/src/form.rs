@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use std::collections::HashMap;
 
 use crate::parser::{ParseError, ParseResult, ParsedData, Parser};
@@ -29,7 +30,12 @@ impl Parser for FormParser {
 		vec!["application/x-www-form-urlencoded".to_string()]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		if body.is_empty() {
 			return Ok(ParsedData::Form(HashMap::new()));
 		}
@@ -49,9 +55,10 @@ mod tests {
 	async fn test_form_parser_valid() {
 		let parser = FormParser::new();
 		let body = Bytes::from("name=test&value=123&active=true");
+		let headers = HeaderMap::new();
 
 		let result = parser
-			.parse(Some("application/x-www-form-urlencoded"), body)
+			.parse(Some("application/x-www-form-urlencoded"), body, &headers)
 			.await
 			.unwrap();
 
@@ -69,9 +76,10 @@ mod tests {
 	async fn test_form_parser_empty() {
 		let parser = FormParser::new();
 		let body = Bytes::new();
+		let headers = HeaderMap::new();
 
 		let result = parser
-			.parse(Some("application/x-www-form-urlencoded"), body)
+			.parse(Some("application/x-www-form-urlencoded"), body, &headers)
 			.await
 			.unwrap();
 

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 
 use crate::parser::{ParseError, ParseResult, ParsedData, Parser, UploadedFile};
 
@@ -147,7 +148,12 @@ impl Parser for FileUploadParser {
 		vec!["application/octet-stream".to_string(), "*/*".to_string()]
 	}
 
-	async fn parse(&self, content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		let size = body.len();
 
 		// Check file size limit

@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use brotli::Decompressor;
 use bytes::Bytes;
 use flate2::read::{DeflateDecoder, GzDecoder};
+use http::HeaderMap;
 use reinhardt_exception::Error;
 use std::io::Read;
 use std::sync::Arc;
@@ -138,10 +139,25 @@ impl CompressedParser {
 	/// use reinhardt_parsers::json::JSONParser;
 	/// use bytes::Bytes;
 	/// use std::sync::Arc;
+	/// use flate2::write::GzEncoder;
+	/// use flate2::Compression;
+	/// use std::io::Write;
 	///
+	/// // Create sample JSON data
+	/// let json_data = b"{\"test\":\"data\"}";
+	///
+	/// // Compress with gzip
+	/// let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+	/// encoder.write_all(json_data).unwrap();
+	/// let compressed = encoder.finish().unwrap();
+	///
+	/// // Decompress using CompressedParser
 	/// let parser = CompressedParser::new(Arc::new(JSONParser::new()));
-	/// let body = Bytes::from(vec![/* gzip compressed data */]);
+	/// let body = Bytes::from(compressed);
 	/// let decompressed = parser.decompress_if_needed(Some("gzip"), body).unwrap();
+	///
+	/// // Verify decompression succeeded
+	/// assert_eq!(decompressed.as_ref(), json_data);
 	/// ```
 	pub fn decompress_if_needed(
 		&self,
@@ -164,41 +180,35 @@ impl Parser for CompressedParser {
 		self.inner.media_types()
 	}
 
-	async fn parse(&self, content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
-		// Note: In a real implementation, we would extract Content-Encoding from request headers
-		// For now, we try to detect compression from the body itself
-		// This is a simplified version - in production, you should pass content_encoding explicitly
+	async fn parse(
+		&self,
+		content_type: Option<&str>,
+		body: Bytes,
+		headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
+		// Extract Content-Encoding from headers
+		let encoding = headers
+			.get("content-encoding")
+			.and_then(|v| v.to_str().ok())
+			.unwrap_or("identity");
 
-		// Try to decompress with each algorithm
-		// If decompression succeeds AND the decompressed data is valid, use it
-		// Otherwise, treat as uncompressed
+		// Decompress based on Content-Encoding header
+		let decompressed = match encoding {
+			"gzip" => CompressionEncoding::Gzip
+				.decompress(&body)
+				.map(Bytes::from)?,
+			"deflate" => CompressionEncoding::Deflate
+				.decompress(&body)
+				.map(Bytes::from)?,
+			"br" => CompressionEncoding::Brotli
+				.decompress(&body)
+				.map(Bytes::from)?,
+			// "identity" or any other unknown encoding - return body as-is
+			_ => body,
+		};
 
-		// Try gzip
-		if let Ok(data) = CompressionEncoding::Gzip.decompress(&body) {
-			let decompressed = Bytes::from(data);
-			if let Ok(result) = self.inner.parse(content_type, decompressed.clone()).await {
-				return Ok(result);
-			}
-		}
-
-		// Try brotli
-		if let Ok(data) = CompressionEncoding::Brotli.decompress(&body) {
-			let decompressed = Bytes::from(data);
-			if let Ok(result) = self.inner.parse(content_type, decompressed.clone()).await {
-				return Ok(result);
-			}
-		}
-
-		// Try deflate
-		if let Ok(data) = CompressionEncoding::Deflate.decompress(&body) {
-			let decompressed = Bytes::from(data);
-			if let Ok(result) = self.inner.parse(content_type, decompressed.clone()).await {
-				return Ok(result);
-			}
-		}
-
-		// Not compressed or unknown compression - parse as-is
-		self.inner.parse(content_type, body).await
+		// Parse decompressed data
+		self.inner.parse(content_type, decompressed, headers).await
 	}
 }
 
@@ -233,6 +243,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_compressed_parser_gzip() {
+		use http::HeaderMap;
+
 		let json_data = r#"{"name":"John","age":30}"#;
 
 		// Compress with gzip
@@ -240,9 +252,13 @@ mod tests {
 		encoder.write_all(json_data.as_bytes()).unwrap();
 		let compressed = encoder.finish().unwrap();
 
+		// Create headers with Content-Encoding
+		let mut headers = HeaderMap::new();
+		headers.insert("content-encoding", "gzip".parse().unwrap());
+
 		let parser = CompressedParser::new(Arc::new(JSONParser::new()));
 		let result = parser
-			.parse(Some("application/json"), Bytes::from(compressed))
+			.parse(Some("application/json"), Bytes::from(compressed), &headers)
 			.await
 			.unwrap();
 
@@ -257,6 +273,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_compressed_parser_deflate() {
+		use http::HeaderMap;
+
 		let json_data = r#"{"name":"Alice","city":"NYC"}"#;
 
 		// Compress with deflate
@@ -264,9 +282,13 @@ mod tests {
 		encoder.write_all(json_data.as_bytes()).unwrap();
 		let compressed = encoder.finish().unwrap();
 
+		// Create headers with Content-Encoding
+		let mut headers = HeaderMap::new();
+		headers.insert("content-encoding", "deflate".parse().unwrap());
+
 		let parser = CompressedParser::new(Arc::new(JSONParser::new()));
 		let result = parser
-			.parse(Some("application/json"), Bytes::from(compressed))
+			.parse(Some("application/json"), Bytes::from(compressed), &headers)
 			.await
 			.unwrap();
 
@@ -281,6 +303,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_compressed_parser_brotli() {
+		use http::HeaderMap;
+
 		let json_data = r#"{"product":"widget","price":19.99}"#;
 
 		// Compress with brotli
@@ -295,9 +319,13 @@ mod tests {
 			encoder.write_all(json_data.as_bytes()).unwrap();
 		}
 
+		// Create headers with Content-Encoding
+		let mut headers = HeaderMap::new();
+		headers.insert("content-encoding", "br".parse().unwrap());
+
 		let parser = CompressedParser::new(Arc::new(JSONParser::new()));
 		let result = parser
-			.parse(Some("application/json"), Bytes::from(compressed))
+			.parse(Some("application/json"), Bytes::from(compressed), &headers)
 			.await
 			.unwrap();
 
@@ -312,11 +340,16 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_compressed_parser_uncompressed() {
+		use http::HeaderMap;
+
 		let json_data = r#"{"uncompressed":true}"#;
+
+		// No Content-Encoding header (identity)
+		let headers = HeaderMap::new();
 
 		let parser = CompressedParser::new(Arc::new(JSONParser::new()));
 		let result = parser
-			.parse(Some("application/json"), Bytes::from(json_data))
+			.parse(Some("application/json"), Bytes::from(json_data), &headers)
 			.await
 			.unwrap();
 

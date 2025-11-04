@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use serde_json::Value;
 
 use crate::parser::{ParseError, ParseResult, ParsedData, Parser};
@@ -74,7 +75,12 @@ impl Parser for JSONParser {
 		]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		if body.is_empty() {
 			if self.allow_empty {
 				return Ok(ParsedData::Json(Value::Null));

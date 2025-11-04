@@ -46,7 +46,7 @@ pub use token_bucket::{TokenBucket, TokenBucketConfig, TokenBucketConfigBuilder}
 pub use user::UserRateThrottle;
 
 #[cfg(feature = "redis-backend")]
-pub use backend::RedisBackend;
+pub use backend::RedisThrottleBackend;
 
 #[cfg(feature = "memcached-backend")]
 pub use backend::MemcachedBackend;

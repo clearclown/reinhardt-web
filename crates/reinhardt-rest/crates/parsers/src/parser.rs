@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use reinhardt_exception::{Error, Result};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -216,7 +217,12 @@ pub trait Parser: Send + Sync {
 	fn media_types(&self) -> Vec<String>;
 
 	/// Parse the request body
-	async fn parse(&self, content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData>;
+	async fn parse(
+		&self,
+		content_type: Option<&str>,
+		body: Bytes,
+		headers: &HeaderMap,
+	) -> ParseResult<ParsedData>;
 
 	/// Check if this parser can handle the given content type
 	fn can_parse(&self, content_type: Option<&str>) -> bool {
@@ -271,23 +277,30 @@ impl ParserRegistry {
 	///
 	/// ```
 	/// use bytes::Bytes;
+	/// use http::HeaderMap;
 	/// use reinhardt_parsers::parser::{ParserRegistry, ParsedData};
 	/// use reinhardt_parsers::json::JSONParser;
 	///
 	/// # tokio_test::block_on(async {
 	/// let registry = ParserRegistry::new().register(JSONParser::new());
 	/// let body = Bytes::from(r#"{"key":"value"}"#);
-	/// let result = registry.parse(Some("application/json"), body).await.unwrap();
+	/// let headers = HeaderMap::new();
+	/// let result = registry.parse(Some("application/json"), body, &headers).await.unwrap();
 	/// match result {
 	///     ParsedData::Json(_) => {},
 	///     _ => panic!("Expected JSON"),
 	/// }
 	/// # });
 	/// ```
-	pub async fn parse(&self, content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	pub async fn parse(
+		&self,
+		content_type: Option<&str>,
+		body: Bytes,
+		headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		for parser in &self.parsers {
 			if parser.can_parse(content_type) {
-				return parser.parse(content_type, body).await;
+				return parser.parse(content_type, body, headers).await;
 			}
 		}
 

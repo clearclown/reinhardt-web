@@ -5,6 +5,7 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
 use reinhardt_exception::Error;
 use serde_json::Value;
 
@@ -65,7 +66,12 @@ impl Parser for MessagePackParser {
 		]
 	}
 
-	async fn parse(&self, _content_type: Option<&str>, body: Bytes) -> ParseResult<ParsedData> {
+	async fn parse(
+		&self,
+		_content_type: Option<&str>,
+		body: Bytes,
+		_headers: &HeaderMap,
+	) -> ParseResult<ParsedData> {
 		let value: Value = rmp_serde::from_slice(&body)
 			.map_err(|e| Error::Validation(format!("Failed to parse MessagePack data: {}", e)))?;
 

@@ -28,7 +28,7 @@
 //! use reinhardt_parsers::{JSONParser, Parser};
 //!
 //! let parser = JSONParser::new();
-//! let data = parser.parse(&request).await?;
+//! let data = parser.parse(&request, &headers).await?;
 //! ```
 
 pub mod compressed;

@@ -80,7 +80,7 @@ Comprehensive rate limiting system to prevent API abuse and ensure fair resource
 
 #### Redis Backend
 
-- **`RedisBackend`**: Distributed rate limiting (feature-gated: `redis-backend`)
+- **`RedisThrottleBackend`**: Distributed rate limiting (feature-gated: `redis-backend`)
   - Constructor: `new(url)` with Redis connection URL
   - Uses Redis INCR and EXPIRE commands
   - Supports distributed rate limiting across multiple servers
