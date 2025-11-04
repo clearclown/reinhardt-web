@@ -171,6 +171,7 @@ pub enum ViewError {
 	NotFound(String),
 	BadRequest(String),
 	Internal(String),
+	DatabaseError(String),
 }
 
 impl std::fmt::Display for ViewError {
@@ -181,6 +182,7 @@ impl std::fmt::Display for ViewError {
 			ViewError::NotFound(msg) => write!(f, "Not found: {}", msg),
 			ViewError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
 			ViewError::Internal(msg) => write!(f, "Internal error: {}", msg),
+			ViewError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
 		}
 	}
 }
@@ -225,6 +227,7 @@ where
 	permission_classes: Vec<Arc<dyn Permission>>,
 	filter_backends: Vec<Arc<dyn FilterBackend>>,
 	pagination_class: Option<reinhardt_pagination::PaginatorImpl>,
+	pool: Option<Arc<sqlx::AnyPool>>,
 	_phantom: PhantomData<T>,
 }
 
@@ -262,6 +265,7 @@ where
 			permission_classes: Vec::new(),
 			filter_backends: Vec::new(),
 			pagination_class: None,
+			pool: None,
 			_phantom: PhantomData,
 		}
 	}
@@ -331,6 +335,41 @@ where
 		serializer: Arc<dyn Serializer<Input = T, Output = String> + Send + Sync>,
 	) -> Self {
 		self.serializer_class = Some(serializer);
+		self
+	}
+
+	/// Set the database connection pool for this handler
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # use reinhardt_viewsets::ModelViewSetHandler;
+	/// # use reinhardt_orm::Model;
+	/// # use serde::{Serialize, Deserialize};
+	/// # use sqlx::AnyPool;
+	/// # use std::sync::Arc;
+	/// #
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User {
+	/// #     id: Option<i64>,
+	/// #     username: String,
+	/// # }
+	/// #
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// # }
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = Arc::new(AnyPool::connect("postgres://localhost/mydb").await?);
+	/// let handler = ModelViewSetHandler::<User>::new()
+	///     .with_pool(pool);
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub fn with_pool(mut self, pool: Arc<sqlx::AnyPool>) -> Self {
+		self.pool = Some(pool);
 		self
 	}
 
@@ -588,12 +627,42 @@ where
 			.map_err(|e| ViewError::BadRequest(format!("Invalid UTF-8: {}", e)))?;
 
 		// Deserialize into model
-		let _item = serializer
+		let item = serializer
 			.deserialize(&body_str)
 			.map_err(|e| ViewError::Serialization(e.to_string()))?;
 
-		// In a real implementation, would save to database here
-		// For now, just return the created object
+		// Save to database if pool is available
+		if let Some(pool) = &self.pool {
+			// Create a new session for this request
+			let mut session = reinhardt_orm::session::Session::new(pool.clone())
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
+
+			// Begin transaction
+			session.begin().await.map_err(|e| {
+				ViewError::DatabaseError(format!("Failed to begin transaction: {}", e))
+			})?;
+
+			// Add object to session
+			session
+				.add(item.clone())
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to add object: {}", e)))?;
+
+			// Flush changes to database (generates and executes INSERT)
+			session
+				.flush()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to flush: {}", e)))?;
+
+			// Commit transaction
+			session
+				.commit()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to commit: {}", e)))?;
+		}
 
 		Ok(Response::created().with_body(body_str))
 	}
@@ -655,11 +724,42 @@ where
 			.map_err(|e| ViewError::BadRequest(format!("Invalid UTF-8: {}", e)))?;
 
 		// Deserialize into model
-		let _item = serializer
+		let item = serializer
 			.deserialize(&body_str)
 			.map_err(|e| ViewError::Serialization(e.to_string()))?;
 
-		// In a real implementation, would update database here
+		// Update database if pool is available
+		if let Some(pool) = &self.pool {
+			// Create a new session for this request
+			let mut session = reinhardt_orm::session::Session::new(pool.clone())
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
+
+			// Begin transaction
+			session.begin().await.map_err(|e| {
+				ViewError::DatabaseError(format!("Failed to begin transaction: {}", e))
+			})?;
+
+			// Add updated object to session (marks as dirty for UPDATE)
+			session
+				.add(item.clone())
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to add object: {}", e)))?;
+
+			// Flush changes to database (generates and executes UPDATE)
+			session
+				.flush()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to flush: {}", e)))?;
+
+			// Commit transaction
+			session
+				.commit()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to commit: {}", e)))?;
+		}
 
 		Ok(Response::ok().with_body(body_str))
 	}
@@ -711,10 +811,51 @@ where
 	) -> std::result::Result<Response, ViewError> {
 		self.check_permissions(request).await?;
 
-		// Verify object exists
-		let _ = self.retrieve(request, pk).await?;
+		let serializer = self.get_serializer();
 
-		// In a real implementation, would delete from database here
+		// Verify object exists and get it for deletion
+		let response = self.retrieve(request, pk).await?;
+
+		// Extract the object from response body
+		let body_str = String::from_utf8(response.body.to_vec())
+			.map_err(|e| ViewError::BadRequest(format!("Invalid UTF-8: {}", e)))?;
+
+		// Deserialize into model
+		let item = serializer
+			.deserialize(&body_str)
+			.map_err(|e| ViewError::Serialization(e.to_string()))?;
+
+		// Delete from database if pool is available
+		if let Some(pool) = &self.pool {
+			// Create a new session for this request
+			let mut session = reinhardt_orm::session::Session::new(pool.clone())
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
+
+			// Begin transaction
+			session.begin().await.map_err(|e| {
+				ViewError::DatabaseError(format!("Failed to begin transaction: {}", e))
+			})?;
+
+			// Mark object for deletion
+			session.delete(item).await.map_err(|e| {
+				ViewError::DatabaseError(format!("Failed to mark object for deletion: {}", e))
+			})?;
+
+			// Flush changes to database (generates and executes DELETE)
+			session
+				.flush()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to flush: {}", e)))?;
+
+			// Commit transaction
+			session
+				.commit()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to commit: {}", e)))?;
+		}
 
 		Ok(Response::no_content())
 	}
