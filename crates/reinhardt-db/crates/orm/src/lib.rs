@@ -155,7 +155,7 @@ pub mod manager;
 // Unified query interface facade
 pub mod query;
 
-pub use manager::{get_connection, init_database};
+pub use manager::{get_connection, init_database, reinitialize_database};
 
 // Core exports - always available
 pub use aggregation::{Aggregate, AggregateFunc, AggregateResult, AggregateValue};

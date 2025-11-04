@@ -17,6 +17,25 @@ pub async fn init_database(url: &str) -> reinhardt_apps::Result<()> {
 	Ok(())
 }
 
+/// Reinitialize the global database connection (for testing)
+///
+/// This function replaces the existing database connection with a new one.
+/// Useful for test scenarios where each test needs a fresh connection pool.
+pub async fn reinitialize_database(url: &str) -> reinhardt_apps::Result<()> {
+	let conn = DatabaseConnection::connect(url).await?;
+
+	if let Some(db_cell) = DB.get() {
+		// Replace existing connection
+		let mut guard = db_cell.write().await;
+		*guard = Some(conn);
+	} else {
+		// First time initialization
+		DB.get_or_init(|| Arc::new(RwLock::new(Some(conn))));
+	}
+
+	Ok(())
+}
+
 /// Get a reference to the global database connection
 pub async fn get_connection() -> reinhardt_apps::Result<DatabaseConnection> {
 	let db = DB
