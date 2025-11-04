@@ -15,6 +15,7 @@ reinhardt-static = { workspace = true }
 reinhardt-utils-core = { workspace = true }
 reinhardt-routers = { workspace = true, optional = true }
 reinhardt-migrations = { workspace = true, optional = true }
+reinhardt-db = { workspace = true, optional = true }
 reinhardt-server = { workspace = true, optional = true }
 clap = { version = "4.5", features = ["derive", "cargo"] }
 tokio = { workspace = true }
@@ -33,6 +34,7 @@ regex = { workspace = true }
 rust-embed = "8.5"
 glob = "0.3"
 notify = { version = "6.0", optional = true }
+rustyline = { version = "13.0", optional = true }
 
 # AST dependencies for robust code generation
 syn = { version = "2.0", features = ["full", "parsing"] }
@@ -53,6 +55,7 @@ tempfile = "3.13"
 regex = { workspace = true }
 reinhardt-i18n = { workspace = true }
 serial_test = { workspace = true }
+rstest = { workspace = true }
 
 [features]
 default = []
@@ -60,3 +63,6 @@ migrations = ["dep:reinhardt-migrations"]
 routers = ["dep:reinhardt-routers"]
 server = ["dep:reinhardt-server", "routers"]
 autoreload = ["dep:notify", "server"]
+shell = ["dep:rustyline"]
+reinhardt-db = ["dep:reinhardt-db"]
+mongodb-backend = ["reinhardt-db?/mongodb-backend"]

@@ -5,6 +5,12 @@
 use crate::{BaseCommand, CommandArgument, CommandContext, CommandOption, CommandResult};
 use async_trait::async_trait;
 
+#[cfg(feature = "migrations")]
+use reinhardt_migrations::DatabaseMigrationExecutor;
+
+#[cfg(feature = "migrations")]
+use reinhardt_db::backends::{DatabaseConnection, DatabaseType};
+
 /// Database migration command
 pub struct MigrateCommand;
 
@@ -87,11 +93,11 @@ impl BaseCommand for MigrateCommand {
 			let migrations_to_apply: Vec<_> = if let Some(ref app) = app_label {
 				all_migrations
 					.iter()
-					.filter(|m| &m.app_label == app)
-					.cloned()
+					.filter(|&&m| &m.app_label == app)
+					.map(|&m| m.clone())
 					.collect()
 			} else {
-				all_migrations
+				all_migrations.iter().map(|&m| m.clone()).collect()
 			};
 
 			if migrations_to_apply.is_empty() {
@@ -122,16 +128,67 @@ impl BaseCommand for MigrateCommand {
 				}
 			} else {
 				ctx.info("Applying migrations:");
-				for migration in &migrations_to_apply {
-					ctx.info(&format!(
-						"  Applying {}:{}...",
-						migration.app_label, migration.name
-					));
-					// In a real implementation, this would:
-					// - Use DatabaseMigrationExecutor::apply_migrations()
-					// - Execute SQL operations
-					// - Update migration history table
-					ctx.success("    OK");
+
+				// Determine database type from URL
+				let db_type = if _database_url.starts_with("postgres://")
+					|| _database_url.starts_with("postgresql://")
+				{
+					DatabaseType::Postgres
+				} else if _database_url.starts_with("sqlite://") {
+					DatabaseType::Sqlite
+				} else {
+					return Err(crate::CommandError::ExecutionError(format!(
+						"Unsupported database URL scheme: {}",
+						_database_url
+					)));
+				};
+
+				// Connect to database
+				let connection = match db_type {
+					DatabaseType::Postgres => {
+						DatabaseConnection::connect_postgres(&_database_url).await
+					}
+					DatabaseType::Sqlite => {
+						DatabaseConnection::connect_sqlite(&_database_url).await
+					}
+					#[cfg(feature = "mongodb-backend")]
+					DatabaseType::MongoDB => {
+						// MongoDB requires separate database name
+						// Extract database name from URL or use default
+						let db_name = _database_url.split('/').next_back().unwrap_or("reinhardt");
+						DatabaseConnection::connect_mongodb(&_database_url, db_name).await
+					}
+					#[allow(unreachable_patterns)]
+					_ => {
+						return Err(crate::CommandError::ExecutionError(format!(
+							"Database type {:?} is not supported in this feature configuration",
+							db_type
+						)));
+					}
+				}
+				.map_err(|e| {
+					crate::CommandError::ExecutionError(format!(
+						"Failed to connect to database: {:?}",
+						e
+					))
+				})?;
+
+				// Create migration executor
+				let mut executor = DatabaseMigrationExecutor::new(connection, db_type);
+
+				// Apply migrations
+				match executor.apply_migrations(&migrations_to_apply[..]).await {
+					Ok(result) => {
+						for applied_id in &result.applied {
+							ctx.success(&format!("  ✓ Applied: {}", applied_id));
+						}
+					}
+					Err(e) => {
+						return Err(crate::CommandError::ExecutionError(format!(
+							"Failed to apply migrations: {:?}",
+							e
+						)));
+					}
 				}
 			}
 
@@ -273,11 +330,81 @@ impl BaseCommand for ShellCommand {
 		ctx.info("Starting interactive shell...");
 		ctx.info("Type 'exit' or press Ctrl+D to quit");
 
-		// In a real implementation, this would start a REPL
-		// For now, just show a message
-		ctx.warning("REPL not implemented yet");
+		#[cfg(feature = "shell")]
+		{
+			use rustyline::DefaultEditor;
+			use rustyline::error::ReadlineError;
 
-		Ok(())
+			let mut rl = DefaultEditor::new().map_err(|e| {
+				crate::CommandError::ExecutionError(format!("Failed to create REPL: {}", e))
+			})?;
+
+			loop {
+				let readline = rl.readline(">>> ");
+				match readline {
+					Ok(line) => {
+						let trimmed = line.trim();
+						if trimmed == "exit" || trimmed == "quit" {
+							ctx.info("Goodbye!");
+							break;
+						}
+
+						if !trimmed.is_empty() {
+							let _ = rl.add_history_entry(line.as_str());
+
+							// TODO: Implement code evaluation
+							//
+							// Full implementation requires choosing one of these approaches:
+							//
+							// 1. **Embedded Rust Interpreter** (recommended):
+							//    - Use `evcxr` crate for Rust code evaluation
+							//    - Maintains context between evaluations
+							//    - Example:
+							//      ```
+							//      use evcxr::EvalContext;
+							//      let mut eval_context = EvalContext::new()?;
+							//      let result = eval_context.eval(trimmed)?;
+							//      ctx.info(&format!("=> {}", result));
+							//      ```
+							//
+							// 2. **Compile-and-Run**:
+							//    - Write code to temporary file
+							//    - Compile with `rustc`
+							//    - Execute binary
+							//    - Slower but more flexible
+							//
+							// 3. **Python-style Shell**:
+							//    - Create Python shell with Reinhardt bindings
+							//    - Use PyO3 for Rust-Python interop
+							//    - Allows dynamic imports and introspection
+							//
+							// Current placeholder just echoes input:
+							ctx.info(&format!("Executed: {}", trimmed));
+						}
+					}
+					Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
+						ctx.info("Goodbye!");
+						break;
+					}
+					Err(err) => {
+						return Err(crate::CommandError::ExecutionError(format!(
+							"REPL error: {}",
+							err
+						)));
+					}
+				}
+			}
+
+			Ok(())
+		}
+
+		#[cfg(not(feature = "shell"))]
+		{
+			ctx.warning("Shell feature not enabled");
+			ctx.info("To use shell, enable the 'shell' feature in Cargo.toml:");
+			ctx.info("  reinhardt-commands = { version = \"*\", features = [\"shell\"] }");
+			Ok(())
+		}
 	}
 }
 
@@ -736,12 +863,43 @@ impl BaseCommand for CheckCommand {
 impl CheckCommand {
 	/// Check database connectivity
 	async fn check_database(database_url: &str) -> Result<(), String> {
-		// Basic connection test
-		// In a real implementation, this would use DatabaseConnection::connect_*
 		if database_url.is_empty() {
 			return Err("Empty database URL".to_string());
 		}
-		Ok(())
+
+		#[cfg(feature = "migrations")]
+		{
+			// Actually connect to database and verify connectivity
+			match connect_database(database_url).await {
+				Ok((db_type, connection)) => {
+					// Execute a simple query to verify connection
+					match db_type {
+						DatabaseType::Postgres | DatabaseType::Sqlite => {
+							connection
+								.execute("SELECT 1", vec![])
+								.await
+								.map_err(|e| format!("Query failed: {}", e))?;
+						}
+						#[cfg(feature = "mongodb-backend")]
+						DatabaseType::MongoDB => {
+							// MongoDB connection is verified at connection time
+						}
+						#[allow(unreachable_patterns)]
+						_ => {
+							// MySQL or other database types that don't have SQL execution support yet
+						}
+					}
+					Ok(())
+				}
+				Err(e) => Err(format!("Connection failed: {:?}", e)),
+			}
+		}
+
+		#[cfg(not(feature = "migrations"))]
+		{
+			// Basic URL validation only
+			Ok(())
+		}
 	}
 
 	/// Check settings configuration
@@ -777,11 +935,56 @@ impl CheckCommand {
 
 	/// Check migrations status
 	async fn check_migrations() -> Result<u32, String> {
-		// In a real implementation, this would:
-		// 1. Load MigrationLoader
-		// 2. Check DatabaseMigrationRecorder for applied migrations
-		// 3. Return count of unapplied migrations
-		Ok(0)
+		#[cfg(feature = "migrations")]
+		{
+			use reinhardt_migrations::{DatabaseMigrationRecorder, MigrationLoader};
+			use std::path::PathBuf;
+
+			// 1. Load migration files from disk
+			let migrations_dir = PathBuf::from("migrations");
+			let mut loader = MigrationLoader::new(migrations_dir);
+			loader
+				.load_disk()
+				.map_err(|e| format!("Failed to load migrations: {:?}", e))?;
+
+			let all_migrations = loader.get_all_migrations();
+
+			// 2. Connect to database
+			let database_url =
+				std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL not set".to_string())?;
+
+			let (_db_type, connection) = connect_database(&database_url)
+				.await
+				.map_err(|e| format!("Database connection failed: {:?}", e))?;
+
+			// 3. Check applied migrations
+			let recorder = DatabaseMigrationRecorder::new(connection);
+			recorder
+				.ensure_schema_table()
+				.await
+				.map_err(|e| format!("Failed to create migration table: {}", e))?;
+
+			// 4. Count unapplied migrations
+			let mut unapplied_count = 0;
+			for migration in &all_migrations {
+				let is_applied = recorder
+					.is_applied(&migration.app_label, &migration.name)
+					.await
+					.map_err(|e| format!("Failed to check migration: {}", e))?;
+
+				if !is_applied {
+					unapplied_count += 1;
+				}
+			}
+
+			Ok(unapplied_count)
+		}
+
+		#[cfg(not(feature = "migrations"))]
+		{
+			// Without migrations feature, assume no unapplied migrations
+			Ok(0)
+		}
 	}
 
 	/// Check security settings
@@ -932,4 +1135,54 @@ mod tests {
 			assert!(result.is_err(), "Server task should have been cancelled");
 		}
 	}
+}
+
+/// Helper function to connect to database
+#[cfg(feature = "migrations")]
+async fn connect_database(url: &str) -> CommandResult<(DatabaseType, DatabaseConnection)> {
+	let db_type = if url.starts_with("postgres://") || url.starts_with("postgresql://") {
+		DatabaseType::Postgres
+	} else if url.starts_with("sqlite://") || url.starts_with(":memory:") {
+		DatabaseType::Sqlite
+	} else if url.starts_with("mongodb://") {
+		#[cfg(feature = "mongodb-backend")]
+		{
+			DatabaseType::MongoDB
+		}
+		#[cfg(not(feature = "mongodb-backend"))]
+		{
+			return Err(crate::CommandError::ExecutionError(
+				"MongoDB backend not enabled. Enable 'mongodb-backend' feature.".to_string(),
+			));
+		}
+	} else {
+		return Err(crate::CommandError::ExecutionError(format!(
+			"Unsupported database URL: {}",
+			url
+		)));
+	};
+
+	let connection = match db_type {
+		DatabaseType::Postgres => DatabaseConnection::connect_postgres(url).await,
+		DatabaseType::Sqlite => DatabaseConnection::connect_sqlite(url).await,
+		#[cfg(feature = "mongodb-backend")]
+		DatabaseType::MongoDB => {
+			// MongoDB URL format: mongodb://host:port/database
+			let database = url.split('/').next_back().unwrap_or("test");
+			DatabaseConnection::connect_mongodb(url, database).await
+		}
+		#[allow(unreachable_patterns)]
+		_ => {
+			// MySQL or other database types
+			return Err(crate::CommandError::ExecutionError(format!(
+				"Database type {:?} is not yet supported in this feature configuration",
+				db_type
+			)));
+		}
+	}
+	.map_err(|e| {
+		crate::CommandError::ExecutionError(format!("Database connection failed: {}", e))
+	})?;
+
+	Ok((db_type, connection))
 }
