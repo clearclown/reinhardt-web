@@ -151,27 +151,31 @@ impl Attachment {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_mail::Attachment;
 	/// use std::path::PathBuf;
 	///
+	/// # fn main() -> std::io::Result<()> {
 	/// let path = PathBuf::from("/tmp/test.txt");
-	/// let attachment = Attachment::from_path(path, "report.txt");
+	/// let attachment = Attachment::from_path(path, "report.txt")?;
 	/// assert_eq!(attachment.filename(), "report.txt");
+	/// # Ok(())
+	/// # }
 	/// ```
-	pub fn from_path(_path: PathBuf, filename: impl Into<String>) -> Self {
-		// In a real implementation, we would read the file here
-		// For now, we create an empty attachment with the correct metadata
+	pub fn from_path(path: PathBuf, filename: impl Into<String>) -> std::io::Result<Self> {
+		// Read file contents from disk
+		let content = std::fs::read(&path)?;
+
 		let filename_str = filename.into();
 		let mime_type = Self::detect_mime_type(&filename_str);
 
-		Self {
+		Ok(Self {
 			filename: filename_str,
-			content: Vec::new(),
+			content,
 			mime_type,
 			content_id: None,
 			inline: false,
-		}
+		})
 	}
 
 	/// Create an inline attachment (for embedded images, etc.)
