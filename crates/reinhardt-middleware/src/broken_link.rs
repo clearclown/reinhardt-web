@@ -2,12 +2,20 @@
 //!
 //! Detects and logs 404 errors that originate from internal links (same domain).
 //! Useful for identifying broken links on your site before users encounter them.
+//!
+//! ## Email Notifications
+//!
+//! This middleware can send email notifications to managers when broken links are detected.
+//! Managers are loaded from `Settings::managers` (via `REINHARDT_SETTINGS` environment variable),
+//! or from the `BrokenLinkConfig::email_addresses` if settings are not available.
 
 use async_trait::async_trait;
 use hyper::StatusCode;
 use hyper::header::{REFERER, USER_AGENT};
 use regex::Regex;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
+use reinhardt_mail;
+use reinhardt_settings;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -235,11 +243,70 @@ impl BrokenLinkEmailsMiddleware {
 		}
 	}
 
-	/// Log a broken link
-	fn log_broken_link(&self, path: &str, referer: &str) {
-		// In a real implementation, this would send emails or log to a database
-		// For now, we use standard logging
+	/// Log a broken link and send email notifications
+	async fn log_broken_link(&self, path: &str, referer: &str) {
+		// Log to standard logging system
 		log::warn!("Broken link detected: {} (from: {})", path, referer);
+
+		// Load Settings to get managers list
+		// Try to read from default settings location
+		// In production, this should be configured via environment or config file
+		let managers = if let Ok(settings_json) = std::env::var("REINHARDT_SETTINGS") {
+			// Attempt to parse settings from environment variable
+			if let Ok(settings) =
+				serde_json::from_str::<reinhardt_settings::Settings>(&settings_json)
+			{
+				settings.managers
+			} else {
+				Vec::new()
+			}
+		} else {
+			// Fallback to config email_addresses if settings not available
+			self.config
+				.email_addresses
+				.iter()
+				.map(|email| reinhardt_settings::Contact::new("", email.clone()))
+				.collect()
+		};
+
+		// Send email notifications to managers
+		if !managers.is_empty() {
+			let subject = format!("Broken link detected: {}", path);
+			let body = format!(
+				"A broken link was detected on your site:\n\n\
+				 Broken URL: {}\n\
+				 Referrer: {}\n\n\
+				 Please check and fix this link.",
+				path, referer
+			);
+
+			// Send to all managers asynchronously (non-blocking)
+			for manager in &managers {
+				let email = manager.email.clone();
+				let subject_clone = subject.clone();
+				let body_clone = body.clone();
+
+				// Schedule email sending in a separate task to avoid blocking
+				tokio::spawn(async move {
+					match reinhardt_mail::send_mail(
+						subject_clone,
+						body_clone,
+						"noreply@example.com", // Default sender
+						vec![email.clone()],
+						None,
+					)
+					.await
+					{
+						Ok(_) => {
+							log::info!("Broken link email notification sent to: {}", email);
+						}
+						Err(e) => {
+							log::error!("Failed to send broken link email to {}: {}", email, e);
+						}
+					}
+				});
+			}
+		}
 	}
 }
 
@@ -294,7 +361,7 @@ impl Middleware for BrokenLinkEmailsMiddleware {
 		if let (Some(referer_str), Some(host_str)) = (referer, host) {
 			// Only log if it's an internal referrer
 			if self.is_internal_referrer(&referer_str, &host_str) {
-				self.log_broken_link(&path, &referer_str);
+				self.log_broken_link(&path, &referer_str).await;
 			}
 		}
 

@@ -278,7 +278,7 @@ impl Default for RateLimitConfig {
 /// ```
 pub struct RateLimitMiddleware {
 	config: RateLimitConfig,
-	pub store: Arc<RateLimitStore>,
+	store: Arc<RateLimitStore>,
 }
 
 impl RateLimitMiddleware {
@@ -302,6 +302,68 @@ impl RateLimitMiddleware {
 	/// Create with default configuration
 	pub fn with_defaults() -> Self {
 		Self::new(RateLimitConfig::default())
+	}
+
+	/// Create a new RateLimitMiddleware from an Arc-wrapped RateLimitStore
+	///
+	/// This allows sharing the same rate limit store across multiple middleware instances.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::sync::Arc;
+	/// use reinhardt_middleware::rate_limit::{RateLimitMiddleware, RateLimitConfig, RateLimitStore, RateLimitStrategy};
+	///
+	/// let store = Arc::new(RateLimitStore::new());
+	/// let config = RateLimitConfig::new(RateLimitStrategy::PerRoute, 100.0, 10.0);
+	/// let middleware = RateLimitMiddleware::from_arc(config, store);
+	/// ```
+	pub fn from_arc(config: RateLimitConfig, store: Arc<RateLimitStore>) -> Self {
+		Self { config, store }
+	}
+
+	/// Get a reference to the rate limit store
+	///
+	/// This is the preferred method for accessing the store when you only need
+	/// to read data or call methods that don't require ownership.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_middleware::rate_limit::{RateLimitMiddleware, RateLimitConfig, RateLimitStrategy};
+	/// use std::time::Duration;
+	///
+	/// let middleware = RateLimitMiddleware::new(
+	///     RateLimitConfig::new(RateLimitStrategy::PerRoute, 100.0, 10.0)
+	/// );
+	/// let count = middleware.store().get_request_count("route:/api/data", Duration::from_secs(60));
+	/// println!("Request count: {}", count);
+	/// ```
+	pub fn store(&self) -> &RateLimitStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the rate limit store
+	///
+	/// Use this when you need ownership of the Arc, for example when passing
+	/// the store to another component that requires `Arc<RateLimitStore>`.
+	///
+	/// In most cases, you should prefer `store()` which returns a reference.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::sync::Arc;
+	/// use reinhardt_middleware::rate_limit::{RateLimitMiddleware, RateLimitConfig, RateLimitStore, RateLimitStrategy};
+	///
+	/// let middleware = RateLimitMiddleware::new(
+	///     RateLimitConfig::new(RateLimitStrategy::PerRoute, 100.0, 10.0)
+	/// );
+	/// let store_arc: Arc<RateLimitStore> = middleware.store_arc();
+	/// // Now you can pass store_arc to other components
+	/// ```
+	pub fn store_arc(&self) -> Arc<RateLimitStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Check if a path should be excluded

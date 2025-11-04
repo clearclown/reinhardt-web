@@ -297,7 +297,7 @@ impl Default for MetricsConfig {
 /// ```
 pub struct MetricsMiddleware {
 	config: MetricsConfig,
-	pub store: Arc<MetricsStore>,
+	store: Arc<MetricsStore>,
 }
 
 impl MetricsMiddleware {
@@ -321,6 +321,63 @@ impl MetricsMiddleware {
 	/// Create a new MetricsMiddleware with default configuration
 	pub fn with_defaults() -> Self {
 		Self::new(MetricsConfig::default())
+	}
+
+	/// Create a new MetricsMiddleware from an Arc-wrapped MetricsStore
+	///
+	/// This allows sharing the same metrics store across multiple middleware instances.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::sync::Arc;
+	/// use reinhardt_middleware::{MetricsMiddleware, MetricsConfig, MetricsStore};
+	///
+	/// let store = Arc::new(MetricsStore::new());
+	/// let config = MetricsConfig::new();
+	/// let middleware = MetricsMiddleware::from_arc(config, store);
+	/// ```
+	pub fn from_arc(config: MetricsConfig, store: Arc<MetricsStore>) -> Self {
+		Self { config, store }
+	}
+
+	/// Get a reference to the metrics store
+	///
+	/// This is the preferred method for accessing the store when you only need
+	/// to read data or call methods that don't require ownership.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_middleware::{MetricsMiddleware, MetricsConfig};
+	///
+	/// let middleware = MetricsMiddleware::new(MetricsConfig::new());
+	/// let total = middleware.store().total_requests();
+	/// println!("Total requests: {}", total);
+	/// ```
+	pub fn store(&self) -> &MetricsStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the metrics store
+	///
+	/// Use this when you need ownership of the Arc, for example when passing
+	/// the store to another component that requires `Arc<MetricsStore>`.
+	///
+	/// In most cases, you should prefer `store()` which returns a reference.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::sync::Arc;
+	/// use reinhardt_middleware::{MetricsMiddleware, MetricsConfig, MetricsStore};
+	///
+	/// let middleware = MetricsMiddleware::new(MetricsConfig::new());
+	/// let store_arc: Arc<MetricsStore> = middleware.store_arc();
+	/// // Now you can pass store_arc to other components
+	/// ```
+	pub fn store_arc(&self) -> Arc<MetricsStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Check if path should be excluded from metrics

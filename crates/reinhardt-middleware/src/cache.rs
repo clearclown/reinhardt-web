@@ -282,7 +282,7 @@ impl Default for CacheConfig {
 /// ```
 pub struct CacheMiddleware {
 	config: CacheConfig,
-	pub store: Arc<CacheStore>,
+	store: Arc<CacheStore>,
 }
 
 impl CacheMiddleware {
@@ -307,6 +307,41 @@ impl CacheMiddleware {
 	/// Create with default configuration
 	pub fn with_defaults() -> Self {
 		Self::new(CacheConfig::default())
+	}
+
+	/// Create from an existing Arc-wrapped cache store
+	///
+	/// This is provided for cases where you already have an `Arc<CacheStore>`.
+	/// In most cases, you should use `new()` instead, which creates the store internally.
+	pub fn from_arc(config: CacheConfig, store: Arc<CacheStore>) -> Self {
+		Self { config, store }
+	}
+
+	/// Get a reference to the cache store
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::time::Duration;
+	/// use reinhardt_middleware::cache::{CacheMiddleware, CacheConfig, CacheKeyStrategy};
+	///
+	/// let middleware = CacheMiddleware::new(
+	///     CacheConfig::new(Duration::from_secs(300), CacheKeyStrategy::UrlOnly)
+	/// );
+	///
+	/// // Access the store
+	/// let store = middleware.store();
+	/// assert_eq!(store.len(), 0);
+	/// ```
+	pub fn store(&self) -> &CacheStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the store (for cases where you need ownership)
+	///
+	/// In most cases, you should use `store()` instead to get a reference.
+	pub fn store_arc(&self) -> Arc<CacheStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Check if path should be excluded

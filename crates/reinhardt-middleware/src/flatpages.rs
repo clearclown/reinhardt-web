@@ -225,7 +225,7 @@ impl Default for FlatpagesConfig {
 /// ```
 pub struct FlatpagesMiddleware {
 	config: FlatpagesConfig,
-	pub store: Arc<FlatpageStore>,
+	store: Arc<FlatpageStore>,
 }
 
 impl FlatpagesMiddleware {
@@ -237,9 +237,40 @@ impl FlatpagesMiddleware {
 		}
 	}
 
-	/// Create with store
-	pub fn with_store(config: FlatpagesConfig, store: Arc<FlatpageStore>) -> Self {
+	/// Create from an existing Arc-wrapped flatpage store
+	///
+	/// This is provided for cases where you already have an `Arc<FlatpageStore>`.
+	/// In most cases, you should use `new()` instead, which creates the store internally.
+	pub fn from_arc(config: FlatpagesConfig, store: Arc<FlatpageStore>) -> Self {
 		Self { config, store }
+	}
+
+	/// Get a reference to the flatpage store
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_middleware::{FlatpagesMiddleware, FlatpagesConfig, Flatpage};
+	///
+	/// let middleware = FlatpagesMiddleware::new(FlatpagesConfig::new());
+	///
+	/// // Register a page using the store accessor
+	/// let page = Flatpage::new(
+	///     "/about/".to_string(),
+	///     "About".to_string(),
+	///     "<h1>About</h1>".to_string(),
+	/// );
+	/// middleware.store().register(page);
+	/// ```
+	pub fn store(&self) -> &FlatpageStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the store (for cases where you need ownership)
+	///
+	/// In most cases, you should use `store()` instead to get a reference.
+	pub fn store_arc(&self) -> Arc<FlatpageStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Try to get flatpage with various URL transformations

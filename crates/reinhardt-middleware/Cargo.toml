@@ -28,6 +28,7 @@ reinhardt-apps = { workspace = true }
 reinhardt-security = { workspace = true }
 reinhardt-auth = { workspace = true, features = ["session"] }
 reinhardt-mail = { workspace = true }
+reinhardt-settings = { workspace = true }
 reinhardt-di = { workspace = true }
 async-trait = { workspace = true }
 chrono = { workspace = true }
@@ -45,7 +46,7 @@ regex = "1.10"
 log = "0.4"
 url = "2.5"
 uuid = { workspace = true }
+tokio = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
 tokio-test = "0.4"

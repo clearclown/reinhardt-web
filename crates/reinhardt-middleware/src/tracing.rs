@@ -290,7 +290,7 @@ impl Default for TracingConfig {
 /// ```
 pub struct TracingMiddleware {
 	config: TracingConfig,
-	pub store: Arc<TraceStore>,
+	store: Arc<TraceStore>,
 }
 
 impl TracingMiddleware {
@@ -314,6 +314,38 @@ impl TracingMiddleware {
 	/// Create a new TracingMiddleware with default configuration
 	pub fn with_defaults() -> Self {
 		Self::new(TracingConfig::default())
+	}
+
+	/// Create from an existing Arc-wrapped trace store
+	///
+	/// This is provided for cases where you already have an `Arc<TraceStore>`.
+	/// In most cases, you should use `new()` instead, which creates the store internally.
+	pub fn from_arc(config: TracingConfig, store: Arc<TraceStore>) -> Self {
+		Self { config, store }
+	}
+
+	/// Get a reference to the trace store
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_middleware::{TracingMiddleware, TracingConfig};
+	///
+	/// let middleware = TracingMiddleware::new(TracingConfig::new());
+	///
+	/// // Access the store
+	/// let store = middleware.store();
+	/// let completed = store.get_completed_spans();
+	/// ```
+	pub fn store(&self) -> &TraceStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the store (for cases where you need ownership)
+	///
+	/// In most cases, you should use `store()` instead to get a reference.
+	pub fn store_arc(&self) -> Arc<TraceStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Check if path should be excluded

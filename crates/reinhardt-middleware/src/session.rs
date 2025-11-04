@@ -320,7 +320,7 @@ impl Default for SessionConfig {
 /// ```
 pub struct SessionMiddleware {
 	config: SessionConfig,
-	pub store: Arc<SessionStore>,
+	store: Arc<SessionStore>,
 }
 
 impl SessionMiddleware {
@@ -345,6 +345,41 @@ impl SessionMiddleware {
 	/// Create with default configuration
 	pub fn with_defaults() -> Self {
 		Self::new(SessionConfig::default())
+	}
+
+	/// Create from an existing Arc-wrapped session store
+	///
+	/// This is provided for cases where you already have an `Arc<SessionStore>`.
+	/// In most cases, you should use `new()` instead, which creates the store internally.
+	pub fn from_arc(config: SessionConfig, store: Arc<SessionStore>) -> Self {
+		Self { config, store }
+	}
+
+	/// Get a reference to the session store
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::time::Duration;
+	/// use reinhardt_middleware::session::{SessionMiddleware, SessionConfig};
+	///
+	/// let middleware = SessionMiddleware::new(
+	///     SessionConfig::new("sessionid".to_string(), Duration::from_secs(3600))
+	/// );
+	///
+	/// // Access the store
+	/// let store = middleware.store();
+	/// assert_eq!(store.len(), 0);
+	/// ```
+	pub fn store(&self) -> &SessionStore {
+		&self.store
+	}
+
+	/// Get a cloned Arc of the store (for cases where you need ownership)
+	///
+	/// In most cases, you should use `store()` instead to get a reference.
+	pub fn store_arc(&self) -> Arc<SessionStore> {
+		Arc::clone(&self.store)
 	}
 
 	/// Get session ID from request
