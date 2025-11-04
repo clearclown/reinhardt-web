@@ -60,6 +60,64 @@ impl SimpleMetadata {
 		self.include_actions = include;
 		self
 	}
+	/// Convert serializer field information to metadata field information
+	///
+	/// This method transforms serializer field metadata into the format expected
+	/// by the metadata system, using type inference to determine field types.
+	///
+	/// # Arguments
+	///
+	/// * `serializer_fields` - Map of field names to serializer field information
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_metadata::{SimpleMetadata, SerializerFieldInfo};
+	/// use std::collections::HashMap;
+	///
+	/// let metadata = SimpleMetadata::new();
+	/// let mut serializer_fields = HashMap::new();
+	/// serializer_fields.insert(
+	///     "username".to_string(),
+	///     SerializerFieldInfo {
+	///         name: "username".to_string(),
+	///         type_name: "String".to_string(),
+	///         is_optional: false,
+	///         is_read_only: false,
+	///         is_write_only: false,
+	///     }
+	/// );
+	///
+	/// let fields = metadata.convert_serializer_fields(&serializer_fields);
+	/// assert_eq!(fields.len(), 1);
+	/// ```
+	pub fn convert_serializer_fields(
+		&self,
+		serializer_fields: &HashMap<String, crate::options::SerializerFieldInfo>,
+	) -> HashMap<String, FieldInfo> {
+		use crate::inferencer::SchemaInferencer;
+
+		let inferencer = SchemaInferencer::new();
+		let mut fields = HashMap::new();
+
+		for (field_name, serializer_field) in serializer_fields {
+			// Use type inference to determine field type
+			let mut field_info = inferencer.infer_from_type_name(&serializer_field.type_name);
+
+			// Override required status based on is_optional
+			field_info.required = !serializer_field.is_optional;
+
+			// Set read_only and write_only flags
+			field_info.read_only = Some(serializer_field.is_read_only);
+			// Note: metadata FieldInfo doesn't have write_only field yet
+			// This could be added in the future if needed
+
+			fields.insert(field_name.clone(), field_info);
+		}
+
+		fields
+	}
+
 	/// Determine which actions should be available based on allowed methods
 	///
 	/// # Examples
@@ -124,9 +182,13 @@ impl BaseMetadata for SimpleMetadata {
 		};
 
 		if self.include_actions {
-			// For now, we'll return empty actions
-			// In a real implementation, this would inspect the serializer
-			let fields = HashMap::new();
+			// Inspect serializer fields to get field metadata
+			let fields = if let Some(serializer_fields) = &options.serializer_fields {
+				self.convert_serializer_fields(serializer_fields)
+			} else {
+				HashMap::new()
+			};
+
 			let actions = self.determine_actions(&options.allowed_methods, &fields);
 			if !actions.is_empty() {
 				response.actions = Some(actions);
@@ -185,6 +247,7 @@ mod tests {
 				"application/x-www-form-urlencoded".to_string(),
 				"multipart/form-data".to_string(),
 			],
+			serializer_fields: None,
 		};
 
 		let response = metadata
@@ -345,6 +408,7 @@ mod tests {
 			allowed_methods: vec!["GET".to_string(), "POST".to_string()],
 			renders: vec!["application/json".to_string()],
 			parses: vec!["application/json".to_string()],
+			serializer_fields: None,
 		};
 
 		let response = metadata
@@ -356,5 +420,95 @@ mod tests {
 		assert_eq!(response.description, "List all users");
 		assert_eq!(response.renders, Some(vec!["application/json".to_string()]));
 		assert_eq!(response.parses, Some(vec!["application/json".to_string()]));
+	}
+
+	// DRF test: test_metadata_with_serializer_inspection
+	// Test that serializer fields are properly inspected and converted to metadata
+	#[tokio::test]
+	async fn test_metadata_with_serializer_inspection() {
+		use crate::options::SerializerFieldInfo;
+
+		let metadata = SimpleMetadata::new();
+		let request = create_test_request();
+
+		// Simulate serializer field introspection
+		let mut serializer_fields = HashMap::new();
+		serializer_fields.insert(
+			"username".to_string(),
+			SerializerFieldInfo {
+				name: "username".to_string(),
+				type_name: "String".to_string(),
+				is_optional: false,
+				is_read_only: false,
+				is_write_only: false,
+			},
+		);
+		serializer_fields.insert(
+			"email".to_string(),
+			SerializerFieldInfo {
+				name: "email".to_string(),
+				type_name: "String".to_string(),
+				is_optional: false,
+				is_read_only: false,
+				is_write_only: false,
+			},
+		);
+		serializer_fields.insert(
+			"age".to_string(),
+			SerializerFieldInfo {
+				name: "age".to_string(),
+				type_name: "i32".to_string(),
+				is_optional: true,
+				is_read_only: false,
+				is_write_only: false,
+			},
+		);
+
+		let options = MetadataOptions {
+			name: "User Create".to_string(),
+			description: "Create a new user".to_string(),
+			allowed_methods: vec!["POST".to_string()],
+			renders: vec!["application/json".to_string()],
+			parses: vec!["application/json".to_string()],
+			serializer_fields: Some(serializer_fields),
+		};
+
+		let response = metadata
+			.determine_metadata(&request, &options)
+			.await
+			.unwrap();
+
+		// Verify basic metadata
+		assert_eq!(response.name, "User Create");
+		assert_eq!(response.description, "Create a new user");
+
+		// Verify actions were generated
+		assert!(response.actions.is_some());
+		let actions = response.actions.unwrap();
+		assert!(actions.contains_key("POST"));
+
+		// Verify POST action fields
+		let post_fields = &actions["POST"];
+		assert_eq!(post_fields.len(), 3);
+
+		// Verify username field
+		assert!(post_fields.contains_key("username"));
+		let username_field = &post_fields["username"];
+		assert_eq!(username_field.field_type, FieldType::String);
+		assert_eq!(username_field.required, true);
+		assert_eq!(username_field.read_only, Some(false));
+
+		// Verify email field
+		assert!(post_fields.contains_key("email"));
+		let email_field = &post_fields["email"];
+		assert_eq!(email_field.field_type, FieldType::String);
+		assert_eq!(email_field.required, true);
+
+		// Verify age field (optional)
+		assert!(post_fields.contains_key("age"));
+		let age_field = &post_fields["age"];
+		assert_eq!(age_field.field_type, FieldType::Integer);
+		assert_eq!(age_field.required, false); // is_optional: true
+		assert_eq!(age_field.read_only, Some(false));
 	}
 }

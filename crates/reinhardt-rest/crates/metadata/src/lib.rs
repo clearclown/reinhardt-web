@@ -87,7 +87,7 @@ pub use base::{BaseMetadata, SimpleMetadata};
 pub use dependencies::{DependencyManager, DependencyType, FieldDependency};
 pub use fields::{FieldInfo, FieldInfoBuilder};
 pub use inferencer::SchemaInferencer;
-pub use options::MetadataOptions;
+pub use options::{MetadataOptions, SerializerFieldInfo};
 pub use patterns::ValidationPattern;
 pub use response::{ActionMetadata, MetadataResponse};
 pub use schema::{OpenApiSchema, generate_field_schema, generate_object_schema};
