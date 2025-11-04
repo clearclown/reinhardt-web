@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 #[async_trait::async_trait]
-pub trait Handler: Send + Sync {
+pub trait LogHandler: Send + Sync {
 	async fn handle(&self, record: &LogRecord);
 	fn level(&self) -> LogLevel;
 	fn set_level(&mut self, level: LogLevel);
@@ -37,7 +37,7 @@ impl LogRecord {
 
 pub struct Logger {
 	name: String,
-	handlers: Arc<Mutex<Vec<Arc<dyn Handler>>>>,
+	handlers: Arc<Mutex<Vec<Arc<dyn LogHandler>>>>,
 	level: Arc<Mutex<LogLevel>>,
 }
 
@@ -50,7 +50,7 @@ impl Logger {
 		}
 	}
 
-	pub async fn add_handler(&self, handler: Arc<dyn Handler>) {
+	pub async fn add_handler(&self, handler: Arc<dyn LogHandler>) {
 		self.handlers.lock().unwrap().push(handler);
 	}
 
@@ -60,7 +60,7 @@ impl Logger {
 
 	pub async fn log_record(&self, record: &LogRecord) {
 		// Clone Arc references to handlers before releasing the lock
-		let handlers: Vec<Arc<dyn Handler>> = {
+		let handlers: Vec<Arc<dyn LogHandler>> = {
 			let handlers_guard = self.handlers.lock().unwrap();
 			handlers_guard.clone()
 		};
@@ -80,7 +80,7 @@ impl Logger {
 		let record = LogRecord::new(level, self.name.clone(), message);
 
 		// Clone Arc references to handlers before releasing the lock
-		let handlers: Vec<Arc<dyn Handler>> = {
+		let handlers: Vec<Arc<dyn LogHandler>> = {
 			let handlers_guard = self.handlers.lock().unwrap();
 			handlers_guard.clone()
 		};
@@ -130,7 +130,7 @@ impl Logger {
 		let record = LogRecord::new(level, self.name.clone(), message);
 
 		// Clone Arc references to handlers before releasing the lock
-		let handlers: Vec<Arc<dyn Handler>> = {
+		let handlers: Vec<Arc<dyn LogHandler>> = {
 			let handlers_guard = self.handlers.lock().unwrap();
 			handlers_guard.clone()
 		};

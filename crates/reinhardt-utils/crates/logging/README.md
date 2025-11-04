@@ -16,7 +16,7 @@ Includes request logging, error logging, and integration with external logging s
 
 - **Logger System**: Core logger implementation with handler attachment support
   - `Logger` struct with warning level logging
-  - Handler trait for extensible log processing
+  - LogHandler trait for extensible log processing
   - Thread-safe handler management
 - **Log Levels**: Support for Debug, Info, Warn, and Error severity levels
 - **Log Records**: Structured log record representation

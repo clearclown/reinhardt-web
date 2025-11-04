@@ -1,4 +1,4 @@
-use crate::logger::{Handler, LogLevel, LogRecord};
+use crate::logger::{LogHandler, LogLevel, LogRecord};
 use std::sync::{Arc, Mutex};
 
 pub struct ConsoleHandler;
@@ -29,7 +29,7 @@ impl MemoryHandler {
 }
 
 #[async_trait::async_trait]
-impl Handler for MemoryHandler {
+impl LogHandler for MemoryHandler {
 	async fn handle(&self, record: &LogRecord) {
 		if record.level >= self.level {
 			self.records.lock().unwrap().push(record.clone());

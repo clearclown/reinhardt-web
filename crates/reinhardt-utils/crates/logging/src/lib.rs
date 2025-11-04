@@ -11,7 +11,7 @@ pub use config::{HandlerConfig, LoggerConfig, LoggingConfig, LoggingManager};
 pub use filters::{CallbackFilter, Filter, RequireDebugFalse, RequireDebugTrue};
 pub use formatters::{Formatter, ServerFormatter, StandardFormatter, escape_control_chars};
 pub use handlers::{ConsoleHandler, FileHandler, JsonHandler, MemoryHandler};
-pub use logger::{Handler, LogLevel, LogRecord, Logger};
+pub use logger::{LogHandler, LogLevel, LogRecord, Logger};
 pub use params::{ReprParamsConfig, repr_params, truncate_param};
 
 // ----------------------------------------------------------------------------

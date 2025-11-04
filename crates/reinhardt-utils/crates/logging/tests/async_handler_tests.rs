@@ -4,7 +4,7 @@
 //! Based on Python's logging.handlers.QueueHandler.
 
 use reinhardt_logging::handlers::MemoryHandler;
-use reinhardt_logging::{Handler, LogLevel, LogRecord, Logger};
+use reinhardt_logging::{LogHandler, LogLevel, LogRecord, Logger};
 use std::sync::Arc;
 use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::mpsc;
@@ -23,7 +23,7 @@ impl QueueHandler {
 }
 
 #[async_trait::async_trait]
-impl Handler for QueueHandler {
+impl LogHandler for QueueHandler {
 	async fn handle(&self, record: &LogRecord) {
 		// Non-blocking send - if the channel is full or closed, just drop the record
 		let _ = self.sender.send(record.clone());
