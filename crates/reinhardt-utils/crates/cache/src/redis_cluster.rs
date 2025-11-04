@@ -393,24 +393,21 @@ impl Cache for RedisClusterCache {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_test::fixtures::*;
+	use rstest::*;
+	use testcontainers::ContainerAsync;
 
-	// Note: These tests require a running Redis Cluster
-	// They will be skipped in CI unless REDIS_CLUSTER_URLS is set
-
-	fn get_redis_cluster_urls() -> Vec<String> {
-		std::env::var("REDIS_CLUSTER_URLS")
-			.unwrap_or_else(|_| {
-				"redis://localhost:7000,redis://localhost:7001,redis://localhost:7002".to_string()
-			})
-			.split(',')
-			.map(|s| s.to_string())
-			.collect()
-	}
-
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_redis_cluster_cache_creation() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
+	async fn test_redis_cluster_cache_creation(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls)
 			.await
 			.unwrap()
 			.with_default_ttl(Duration::from_secs(300))
@@ -420,10 +417,17 @@ mod tests {
 		assert!(cache.default_ttl.is_some());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_build_key_with_prefix() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
+	async fn test_build_key_with_prefix(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls)
 			.await
 			.unwrap()
 			.with_key_prefix("app");
@@ -431,21 +435,31 @@ mod tests {
 		assert_eq!(cache.build_key("user:123"), "app:user:123");
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_build_key_without_prefix() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
-			.await
-			.unwrap();
+	async fn test_build_key_without_prefix(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls).await.unwrap();
 		assert_eq!(cache.build_key("user:123"), "user:123");
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_redis_cluster_cache_basic_operations() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
-			.await
-			.unwrap();
+	async fn test_redis_cluster_cache_basic_operations(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls).await.unwrap();
 
 		// Clear any existing data
 		cache.clear().await.unwrap();
@@ -468,12 +482,17 @@ mod tests {
 		cache.clear().await.unwrap();
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_redis_cluster_cache_ttl() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
-			.await
-			.unwrap();
+	async fn test_redis_cluster_cache_ttl(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls).await.unwrap();
 		cache.clear().await.unwrap();
 
 		// Set with short TTL
@@ -496,12 +515,17 @@ mod tests {
 		cache.clear().await.unwrap();
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_redis_cluster_cache_batch_operations() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
-			.await
-			.unwrap();
+	async fn test_redis_cluster_cache_batch_operations(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls).await.unwrap();
 		cache.clear().await.unwrap();
 
 		// Set many
@@ -530,12 +554,17 @@ mod tests {
 		cache.clear().await.unwrap();
 	}
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires Redis Cluster to be running
-	async fn test_redis_cluster_cache_atomic_operations() {
-		let cache = RedisClusterCache::new(get_redis_cluster_urls())
-			.await
-			.unwrap();
+	async fn test_redis_cluster_cache_atomic_operations(
+		#[future] redis_cluster_fixture: (
+			Vec<ContainerAsync<testcontainers::GenericImage>>,
+			Vec<String>,
+		),
+	) {
+		let (_containers, urls) = redis_cluster_fixture.await;
+
+		let cache = RedisClusterCache::new(urls).await.unwrap();
 		cache.clear().await.unwrap();
 
 		// Increment from zero

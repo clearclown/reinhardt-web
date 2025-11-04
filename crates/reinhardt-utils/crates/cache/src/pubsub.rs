@@ -164,18 +164,26 @@ impl CacheInvalidationSubscriber {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_test::fixtures::*;
+	use rstest::*;
+	use testcontainers::ContainerAsync;
+	use testcontainers::core::ImageExt;
 
+	#[rstest]
 	#[tokio::test]
-	#[ignore] // Requires running Redis server
-	async fn test_pubsub_invalidation() {
-		let channel = CacheInvalidationChannel::new("redis://127.0.0.1:6379")
+	async fn test_pubsub_invalidation(
+		#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
+	) {
+		let (_container, redis_url) = redis_fixture.await;
+
+		let channel = CacheInvalidationChannel::new(&redis_url)
 			.await
 			.expect("Failed to create channel");
 
 		let mut subscriber = channel.subscribe().await.expect("Failed to subscribe");
 
 		// Publish in background task
-		let channel_clone = CacheInvalidationChannel::new("redis://127.0.0.1:6379")
+		let channel_clone = CacheInvalidationChannel::new(&redis_url)
 			.await
 			.expect("Failed to create channel");
 
