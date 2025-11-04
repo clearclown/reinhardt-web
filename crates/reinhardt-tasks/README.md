@@ -37,7 +37,7 @@ Supports task scheduling, retries, task priorities, and multiple worker processe
   - Simple implementation that always succeeds
 - **ImmediateBackend**: Backend for immediate execution
   - For synchronous task execution
-- **RedisBackend** (feature: `redis-backend`): Redis-based distributed task queue
+- **RedisTaskBackend** (feature: `redis-backend`): Redis-based distributed task queue
   - Task metadata storage using Redis
   - Queue-based task distribution
   - Customizable key prefix

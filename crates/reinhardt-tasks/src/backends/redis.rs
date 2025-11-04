@@ -26,19 +26,19 @@ struct TaskMetadata {
 /// # Examples
 ///
 /// ```no_run
-/// use reinhardt_tasks::RedisBackend;
+/// use reinhardt_tasks::RedisTaskBackend;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let backend = RedisBackend::new("redis://127.0.0.1/").await?;
+/// let backend = RedisTaskBackend::new("redis://127.0.0.1/").await?;
 /// # Ok(())
 /// # }
 /// ```
-pub struct RedisBackend {
+pub struct RedisTaskBackend {
 	connection: Arc<ConnectionManager>,
 	key_prefix: String,
 }
 
-impl RedisBackend {
+impl RedisTaskBackend {
 	/// Create a new Redis backend
 	///
 	/// # Arguments
@@ -48,10 +48,10 @@ impl RedisBackend {
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_tasks::RedisBackend;
+	/// use reinhardt_tasks::RedisTaskBackend;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let backend = RedisBackend::new("redis://localhost/").await?;
+	/// let backend = RedisTaskBackend::new("redis://localhost/").await?;
 	/// # Ok(())
 	/// # }
 	/// ```
@@ -75,10 +75,10 @@ impl RedisBackend {
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_tasks::RedisBackend;
+	/// use reinhardt_tasks::RedisTaskBackend;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let backend = RedisBackend::with_prefix(
+	/// let backend = RedisTaskBackend::with_prefix(
 	///     "redis://localhost/",
 	///     "myapp:tasks:".to_string()
 	/// ).await?;
@@ -107,7 +107,7 @@ impl RedisBackend {
 }
 
 #[async_trait]
-impl crate::backend::TaskBackend for RedisBackend {
+impl crate::backend::TaskBackend for RedisTaskBackend {
 	async fn enqueue(&self, task: Box<dyn Task>) -> Result<TaskId, TaskExecutionError> {
 		let task_id = task.id();
 		let task_name = task.name().to_string();
@@ -248,10 +248,10 @@ impl crate::backend::TaskBackend for RedisBackend {
 /// # Examples
 ///
 /// ```no_run
-/// use reinhardt_tasks::{RedisResultBackend, ResultBackend, TaskResultMetadata, TaskId, TaskStatus};
+/// use reinhardt_tasks::{RedisTaskResultBackend, ResultBackend, TaskResultMetadata, TaskId, TaskStatus};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let backend = RedisResultBackend::new("redis://127.0.0.1/").await?;
+/// let backend = RedisTaskResultBackend::new("redis://127.0.0.1/").await?;
 ///
 /// let metadata = TaskResultMetadata::new(
 ///     TaskId::new(),
@@ -263,22 +263,22 @@ impl crate::backend::TaskBackend for RedisBackend {
 /// # Ok(())
 /// # }
 /// ```
-pub struct RedisResultBackend {
+pub struct RedisTaskResultBackend {
 	connection: Arc<ConnectionManager>,
 	key_prefix: String,
 	default_ttl: i64,
 }
 
-impl RedisResultBackend {
+impl RedisTaskResultBackend {
 	/// Create a new Redis result backend
 	///
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_tasks::RedisResultBackend;
+	/// use reinhardt_tasks::RedisTaskResultBackend;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let backend = RedisResultBackend::new("redis://localhost/").await?;
+	/// let backend = RedisTaskResultBackend::new("redis://localhost/").await?;
 	/// # Ok(())
 	/// # }
 	/// ```
@@ -298,10 +298,10 @@ impl RedisResultBackend {
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_tasks::RedisResultBackend;
+	/// use reinhardt_tasks::RedisTaskResultBackend;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let backend = RedisResultBackend::with_config(
+	/// let backend = RedisTaskResultBackend::with_config(
 	///     "redis://localhost/",
 	///     "myapp:results:".to_string(),
 	///     3600, // 1 hour TTL
@@ -330,7 +330,7 @@ impl RedisResultBackend {
 }
 
 #[async_trait]
-impl ResultBackend for RedisResultBackend {
+impl ResultBackend for RedisTaskResultBackend {
 	async fn store_result(&self, metadata: TaskResultMetadata) -> Result<(), TaskExecutionError> {
 		let task_id = metadata.task_id();
 		let metadata_json = serde_json::to_string(&metadata)
@@ -434,7 +434,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisBackend::new(&redis_url)
+		let backend = RedisTaskBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -459,7 +459,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisBackend::new(&redis_url)
+		let backend = RedisTaskBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -488,7 +488,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisBackend::new(&redis_url)
+		let backend = RedisTaskBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -507,7 +507,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisBackend::new(&redis_url)
+		let backend = RedisTaskBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -538,7 +538,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisBackend::new(&redis_url)
+		let backend = RedisTaskBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -574,7 +574,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisResultBackend::new(&redis_url)
+		let backend = RedisTaskResultBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 
@@ -610,7 +610,7 @@ mod tests {
 			.expect("Failed to get port");
 		let redis_url = format!("redis://127.0.0.1:{}/", port);
 
-		let backend = RedisResultBackend::new(&redis_url)
+		let backend = RedisTaskResultBackend::new(&redis_url)
 			.await
 			.expect("Failed to connect to Redis");
 

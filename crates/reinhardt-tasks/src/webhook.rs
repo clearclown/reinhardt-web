@@ -378,15 +378,15 @@ impl HttpWebhookSender {
 		let backoff_ms = retry_config.initial_backoff.as_millis() as f64
 			* retry_config.backoff_multiplier.powi(retry_count as i32);
 
-		// Cap at max backoff
-		let backoff_ms = backoff_ms.min(retry_config.max_backoff.as_millis() as f64);
-
 		// Add jitter (±25%)
 		let mut rng = rand::rng();
 		let jitter = rng.random_range(-0.25..=0.25);
 		let backoff_with_jitter = backoff_ms * (1.0 + jitter);
 
-		Duration::from_millis(backoff_with_jitter.max(0.0) as u64)
+		// Cap at max backoff (AFTER jitter)
+		let capped_backoff = backoff_with_jitter.min(retry_config.max_backoff.as_millis() as f64);
+
+		Duration::from_millis(capped_backoff.max(0.0) as u64)
 	}
 
 	/// Send webhook request with retry logic

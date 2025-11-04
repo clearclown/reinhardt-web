@@ -375,7 +375,7 @@ impl crate::backend::TaskBackend for SqsBackend {
 /// AWS SQS-based result backend
 ///
 /// This is a simple in-memory result backend. For production use,
-/// consider using `RedisResultBackend` or a DynamoDB-based implementation.
+/// consider using `RedisTaskResultBackend` or a DynamoDB-based implementation.
 ///
 /// # Examples
 ///

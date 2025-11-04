@@ -13,7 +13,7 @@ pub mod sqs;
 pub mod rabbitmq;
 
 #[cfg(feature = "redis-backend")]
-pub use redis::RedisBackend;
+pub use redis::RedisTaskBackend;
 
 #[cfg(feature = "database-backend")]
 pub use sqlite::SqliteBackend;

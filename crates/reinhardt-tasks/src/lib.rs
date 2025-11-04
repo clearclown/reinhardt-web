@@ -64,7 +64,7 @@ pub use backend::{
 };
 
 #[cfg(feature = "redis-backend")]
-pub use backends::RedisBackend;
+pub use backends::RedisTaskBackend;
 
 #[cfg(feature = "database-backend")]
 pub use backends::SqliteBackend;
@@ -91,7 +91,7 @@ pub use result::{
 };
 
 #[cfg(feature = "redis-backend")]
-pub use backends::redis::RedisResultBackend;
+pub use backends::redis::RedisTaskResultBackend;
 
 #[cfg(feature = "database-backend")]
 pub use backends::sqlite::SqliteResultBackend;
