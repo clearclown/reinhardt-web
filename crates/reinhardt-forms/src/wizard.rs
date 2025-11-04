@@ -320,7 +320,7 @@ impl FormWizard {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::field::CharField;
+	use crate::fields::CharField;
 
 	#[test]
 	fn test_wizard_basic() {

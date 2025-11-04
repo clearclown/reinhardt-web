@@ -636,7 +636,7 @@ impl Index<&str> for Form {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::field::CharField;
+	use crate::fields::CharField;
 
 	#[test]
 	fn test_form_validation() {
@@ -675,7 +675,7 @@ mod tests {
 	#[test]
 	fn test_form_basic() {
 		// Test based on Django FormsTestCase.test_form
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form = Form::new();
 		form.add_field(Box::new(CharField::new("first_name".to_string())));
@@ -706,7 +706,7 @@ mod tests {
 	#[test]
 	fn test_form_missing_required_fields() {
 		// Form with missing required fields should have errors
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form = Form::new();
 		form.add_field(Box::new(CharField::new("username".to_string())));
@@ -725,7 +725,7 @@ mod tests {
 	#[test]
 	fn test_form_optional_fields() {
 		// Form with optional fields should validate even if they're missing
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form = Form::new();
 
@@ -750,7 +750,7 @@ mod tests {
 	#[test]
 	fn test_form_unbound() {
 		// Unbound form (no data provided)
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form = Form::new();
 		form.add_field(Box::new(CharField::new("name".to_string())));
@@ -762,7 +762,7 @@ mod tests {
 	#[test]
 	fn test_form_extra_data() {
 		// Form should ignore extra data not defined in fields
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form = Form::new();
 		form.add_field(Box::new(CharField::new("name".to_string())));
@@ -786,7 +786,7 @@ mod tests {
 	#[test]
 	fn test_forms_form_multiple_fields() {
 		// Test form with multiple field types
-		use crate::field::{CharField, IntegerField};
+		use crate::fields::{CharField, IntegerField};
 
 		let mut form = Form::new();
 		form.add_field(Box::new(CharField::new("username".to_string())));
@@ -809,7 +809,7 @@ mod tests {
 	#[test]
 	fn test_form_multiple_fields_invalid() {
 		// Test form with multiple field types, some invalid
-		use crate::field::{CharField, IntegerField};
+		use crate::fields::{CharField, IntegerField};
 
 		let mut form = Form::new();
 
@@ -836,7 +836,7 @@ mod tests {
 	#[test]
 	fn test_form_multiple_instances() {
 		// Multiple form instances should be independent
-		use crate::field::CharField;
+		use crate::fields::CharField;
 
 		let mut form1 = Form::new();
 		form1.add_field(Box::new(CharField::new("name".to_string())));

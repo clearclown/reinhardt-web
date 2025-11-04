@@ -124,7 +124,7 @@ impl<T: FormModel> ModelChoiceField<T> {
 	}
 
 	/// Get choices from queryset
-	/// In a real implementation, this would convert model instances to (id, label) pairs
+	/// Converts model instances to (value, label) pairs for display in select widget
 	#[allow(dead_code)]
 	fn get_choices(&self) -> Vec<(String, String)> {
 		let mut choices = Vec::new();

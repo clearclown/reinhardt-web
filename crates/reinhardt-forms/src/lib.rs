@@ -31,22 +31,19 @@ pub use chunked_upload::{
 };
 pub use csrf::{CsrfError, CsrfToken, CsrfValidator, SameSite};
 pub use field::{
-	BooleanField,
-	CharField,
-	EmailField,
 	ErrorType,
 	FieldError,
 	FieldResult,
 	FormField as Field, // Alias for compatibility
 	FormField,
-	IntegerField,
 	Widget,
 };
 pub use fields::{
-	ChoiceField, ComboField, DateField, DateTimeField, DecimalField, DurationField, FileField,
-	FloatField, GenericIPAddressField, IPProtocol, ImageField, JSONField, ModelChoiceField,
-	ModelMultipleChoiceField, MultiValueField, MultipleChoiceField, RegexField, SlugField,
-	SplitDateTimeField, TimeField, URLField, UUIDField,
+	BooleanField, CharField, ChoiceField, ComboField, DateField, DateTimeField, DecimalField,
+	DurationField, EmailField, FileField, FloatField, GenericIPAddressField, IPProtocol,
+	ImageField, IntegerField, JSONField, ModelChoiceField, ModelMultipleChoiceField,
+	MultiValueField, MultipleChoiceField, RegexField, SlugField, SplitDateTimeField, TimeField,
+	URLField, UUIDField,
 };
 pub use file_handling::{
 	FileUploadError, FileUploadHandler, MemoryFileUpload, TemporaryFileUpload,

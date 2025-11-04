@@ -252,7 +252,7 @@ impl FormField for SplitDateTimeField {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::field::{CharField, IntegerField};
+	use crate::fields::{CharField, IntegerField};
 
 	#[test]
 	fn test_multi_value_field() {

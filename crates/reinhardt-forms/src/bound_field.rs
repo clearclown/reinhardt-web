@@ -417,7 +417,7 @@ fn html_escape(s: &str) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::field::CharField;
+	use crate::fields::CharField;
 
 	#[test]
 	fn test_bound_field_basic() {

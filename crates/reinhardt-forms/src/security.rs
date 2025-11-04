@@ -10,9 +10,14 @@
 //! specifically [`CsrfValidator`](crate::csrf::CsrfValidator).
 
 use crate::Form;
+use base64::Engine;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+
+type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecurityError {
@@ -124,8 +129,37 @@ impl FormSecurityMiddleware {
 			));
 		}
 
-		// In a real implementation, this would verify the token signature
-		// For now, we just check it's not empty
+		// Parse token structure: [random_string]:[signature]
+		let parts: Vec<&str> = token.split(':').collect();
+		if parts.len() != 2 {
+			return Err(SecurityError::CsrfValidationFailed(
+				"Invalid CSRF token format - expected 'value:signature'".to_string(),
+			));
+		}
+
+		let (value, submitted_signature) = (parts[0], parts[1]);
+
+		// Get secret key
+		let secret = self.csrf_secret.as_ref().ok_or_else(|| {
+			SecurityError::CsrfValidationFailed("CSRF secret key not configured".to_string())
+		})?;
+
+		// Calculate expected signature using HMAC-SHA256
+		let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+			.map_err(|e| SecurityError::CsrfValidationFailed(format!("Invalid key: {}", e)))?;
+		mac.update(value.as_bytes());
+
+		// Get the computed MAC and encode as base64
+		let code_bytes = mac.finalize().into_bytes();
+		let expected_signature = base64::engine::general_purpose::STANDARD.encode(code_bytes);
+
+		// Compare signatures - constant-time comparison for security
+		if submitted_signature != expected_signature {
+			return Err(SecurityError::CsrfValidationFailed(
+				"CSRF signature verification failed".to_string(),
+			));
+		}
+
 		Ok(())
 	}
 

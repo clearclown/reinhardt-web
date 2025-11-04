@@ -1,3 +1,10 @@
+// Basic fields
+pub mod boolean_field;
+pub mod char_field;
+pub mod email_field;
+pub mod integer_field;
+
+// Advanced fields
 pub mod advanced_fields;
 pub mod choice_field;
 pub mod date_field;
@@ -12,6 +19,13 @@ pub mod regex_field;
 pub mod time_field;
 pub mod url_field;
 
+// Re-exports for basic fields
+pub use boolean_field::BooleanField;
+pub use char_field::CharField;
+pub use email_field::EmailField;
+pub use integer_field::IntegerField;
+
+// Re-exports for advanced fields
 pub use advanced_fields::{ColorField, ComboField, DurationField, PasswordField, UUIDField};
 pub use choice_field::{ChoiceField, MultipleChoiceField};
 pub use date_field::DateField;
