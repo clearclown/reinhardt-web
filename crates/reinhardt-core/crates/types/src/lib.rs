@@ -12,6 +12,15 @@ pub trait Handler: Send + Sync {
 	async fn handle(&self, request: Request) -> Result<Response>;
 }
 
+/// Blanket implementation for Arc<T> where T: Handler
+/// This allows Arc<dyn Handler> to be used as a Handler
+#[async_trait]
+impl<T: Handler + ?Sized> Handler for Arc<T> {
+	async fn handle(&self, request: Request) -> Result<Response> {
+		(**self).handle(request).await
+	}
+}
+
 /// Middleware trait for request/response processing
 /// Uses composition pattern instead of inheritance
 #[async_trait]

@@ -181,6 +181,137 @@ impl Attachment {
 			content,
 		}
 	}
+
+	/// Create an attachment from a file path
+	///
+	/// Reads the file from disk, determines its MIME type, and creates an attachment.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use reinhardt_backends::email::Attachment;
+	///
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(async {
+	/// let attachment = Attachment::from_path("/path/to/document.pdf").await.unwrap();
+	/// assert_eq!(attachment.filename, "document.pdf");
+	/// assert_eq!(attachment.content_type, "application/pdf");
+	/// # });
+	/// ```
+	pub async fn from_path(path: impl AsRef<std::path::Path>) -> EmailResult<Self> {
+		use tokio::fs;
+
+		let path_ref = path.as_ref();
+
+		// Extract filename
+		let filename = path_ref
+			.file_name()
+			.and_then(|n| n.to_str())
+			.ok_or_else(|| EmailError::Validation("Invalid file path".to_string()))?
+			.to_string();
+
+		// Read file content
+		let content = fs::read(path_ref)
+			.await
+			.map_err(|e| EmailError::Internal(format!("Failed to read file: {}", e)))?;
+
+		// Determine MIME type from extension
+		let content_type = path_ref
+			.extension()
+			.and_then(|ext| ext.to_str())
+			.map(|ext| match ext.to_lowercase().as_str() {
+				"pdf" => "application/pdf",
+				"txt" => "text/plain",
+				"html" | "htm" => "text/html",
+				"jpg" | "jpeg" => "image/jpeg",
+				"png" => "image/png",
+				"gif" => "image/gif",
+				"svg" => "image/svg+xml",
+				"zip" => "application/zip",
+				"json" => "application/json",
+				"xml" => "application/xml",
+				"csv" => "text/csv",
+				"doc" => "application/msword",
+				"docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"xls" => "application/vnd.ms-excel",
+				"xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"ppt" => "application/vnd.ms-powerpoint",
+				"pptx" => {
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
+				}
+				_ => "application/octet-stream",
+			})
+			.unwrap_or("application/octet-stream")
+			.to_string();
+
+		Ok(Self {
+			filename,
+			content_type,
+			content,
+		})
+	}
+
+	/// Create an attachment from a file path (synchronous version)
+	///
+	/// Reads the file from disk, determines its MIME type, and creates an attachment.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use reinhardt_backends::email::Attachment;
+	///
+	/// let attachment = Attachment::from_path_sync("/path/to/document.pdf").unwrap();
+	/// assert_eq!(attachment.filename, "document.pdf");
+	/// assert_eq!(attachment.content_type, "application/pdf");
+	/// ```
+	pub fn from_path_sync(path: impl AsRef<std::path::Path>) -> EmailResult<Self> {
+		let path_ref = path.as_ref();
+
+		// Extract filename
+		let filename = path_ref
+			.file_name()
+			.and_then(|n| n.to_str())
+			.ok_or_else(|| EmailError::Validation("Invalid file path".to_string()))?
+			.to_string();
+
+		// Read file content
+		let content = std::fs::read(path_ref)
+			.map_err(|e| EmailError::Internal(format!("Failed to read file: {}", e)))?;
+
+		// Determine MIME type from extension
+		let content_type = path_ref
+			.extension()
+			.and_then(|ext| ext.to_str())
+			.map(|ext| match ext.to_lowercase().as_str() {
+				"pdf" => "application/pdf",
+				"txt" => "text/plain",
+				"html" | "htm" => "text/html",
+				"jpg" | "jpeg" => "image/jpeg",
+				"png" => "image/png",
+				"gif" => "image/gif",
+				"svg" => "image/svg+xml",
+				"zip" => "application/zip",
+				"json" => "application/json",
+				"xml" => "application/xml",
+				"csv" => "text/csv",
+				"doc" => "application/msword",
+				"docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+				"xls" => "application/vnd.ms-excel",
+				"xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"ppt" => "application/vnd.ms-powerpoint",
+				"pptx" => {
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
+				}
+				_ => "application/octet-stream",
+			})
+			.unwrap_or("application/octet-stream")
+			.to_string();
+
+		Ok(Self {
+			filename,
+			content_type,
+			content,
+		})
+	}
 }
 
 /// Email message structure
