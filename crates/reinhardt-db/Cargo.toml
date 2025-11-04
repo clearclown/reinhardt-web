@@ -76,12 +76,33 @@ hybrid = ["dep:reinhardt-hybrid"]
 associations = ["dep:reinhardt-associations"]
 
 # Database-specific features
-postgres = ["sqlx/postgres"]
-sqlite = ["sqlx/sqlite"]
-mysql = ["sqlx/mysql"]
+postgres = [
+  "sqlx/postgres",
+  "reinhardt-orm?/postgres",
+  "reinhardt-migrations?/postgres",
+  "backends?/postgres",
+]
+sqlite = [
+  "sqlx/sqlite",
+  "reinhardt-orm?/sqlite",
+  "reinhardt-migrations?/sqlite",
+  "backends?/sqlite",
+]
+mysql = [
+  "sqlx/mysql",
+  "reinhardt-orm?/mysql",
+  "reinhardt-migrations?/mysql",
+  "backends?/mysql",
+]
 mongodb-backend = []
-cockroachdb-backend = ["postgres"]  # CockroachDB uses PostgreSQL protocol
-all-databases = ["postgres", "sqlite", "mysql", "mongodb-backend", "cockroachdb-backend"]
+cockroachdb-backend = ["postgres"] # CockroachDB uses PostgreSQL protocol
+all-databases = [
+  "postgres",
+  "sqlite",
+  "mysql",
+  "mongodb-backend",
+  "cockroachdb-backend",
+]
 
 [dev-dependencies]
 tokio-test = "0.4"
