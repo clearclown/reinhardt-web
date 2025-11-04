@@ -3,6 +3,7 @@
 //! Provides detailed error pages during development with stack traces,
 //! source code context, and helpful debugging information.
 
+use std::backtrace::{Backtrace, BacktraceStatus};
 use std::error::Error;
 use std::fmt;
 
@@ -158,11 +159,12 @@ impl DevelopmentErrorHandler {
 		html.push_str("      <h2>Stack Trace</h2>\n");
 		html.push_str("      <pre>\n");
 
-		// Note: Rust doesn't provide built-in backtrace capture for arbitrary errors
-		// In a real implementation, you would use the backtrace crate or
-		// std::backtrace::Backtrace when it's stabilized
-		html.push_str("Stack trace capture not available\n");
-		html.push_str("Hint: Enable RUST_BACKTRACE=1 environment variable to capture backtraces\n");
+		let backtrace = Backtrace::capture();
+		if backtrace.status() == BacktraceStatus::Captured {
+			html.push_str(&format!("{}\n", backtrace));
+		} else {
+			html.push_str("Stack trace not available (compile with RUST_BACKTRACE=1)\n");
+		}
 
 		html.push_str("      </pre>\n");
 		html.push_str("    </div>\n");

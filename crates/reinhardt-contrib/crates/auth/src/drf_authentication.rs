@@ -164,8 +164,28 @@ impl AuthenticationBackend for CompositeAuthentication {
 	}
 
 	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		// For composite auth, we can't determine which backend to use
-		// In a real implementation, we'd need to track which backend authenticated the user
+		// TODO: Track which backend authenticated the user
+		// This requires:
+		// 1. Store backend identifier when user is authenticated
+		// 2. Use that identifier to select the correct backend for get_user
+		//
+		// Example implementation:
+		// ```
+		// // In authenticate():
+		// for (backend_id, backend) in &self.backends {
+		//     if let Some(user) = backend.authenticate(request).await? {
+		//         request.set_meta("auth_backend", backend_id);
+		//         return Ok(Some(user));
+		//     }
+		// }
+		//
+		// // In get_user():
+		// let backend_id = request.get_meta("auth_backend")?;
+		// let backend = self.backends.get(backend_id).ok_or(...)?;
+		// backend.get_user(user_id).await
+		// ```
+		//
+		// For now, return None as we can't determine which backend to use
 		Ok(None)
 	}
 }
@@ -382,17 +402,22 @@ impl Authentication for SessionAuthentication {
 			for cookie in cookies.split(';') {
 				let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
 				if parts.len() == 2 && parts[0] == self.config.cookie_name {
-					// In a real implementation, we'd validate the session
-					// For now, just return a user if session exists
-					return Ok(Some(Box::new(SimpleUser {
-						id: uuid::Uuid::new_v4(),
-						username: "session_user".to_string(),
-						email: "session@example.com".to_string(),
-						is_active: true,
-						is_admin: false,
-						is_staff: false,
-						is_superuser: false,
-					})));
+					let _session_key = parts[1];
+
+					// TODO: Complete implementation requires SessionBackend and UserBackend
+					//
+					// Full implementation requires:
+					// 1. Add SessionBackend field to SessionAuthentication struct
+					// 2. Add AuthenticationBackend field for user lookup
+					// 3. Load session: `Session::from_key(backend, session_key).await?`
+					// 4. Get user ID: `session.get("_auth_user_id")?.ok_or(...)?`
+					// 5. Load user: `user_backend.get_user(&user_id).await?`
+					//
+					// This requires architectural changes to SessionAuthentication structure.
+					// Marked with todo!() for future implementation.
+					todo!(
+						"SessionAuthentication requires SessionBackend and UserBackend integration"
+					)
 				}
 			}
 		}
