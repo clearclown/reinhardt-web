@@ -78,7 +78,7 @@ fn build_filter_condition(filters: &[Filter]) -> Option<Condition> {
 /// use serde::{Serialize, Deserialize};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 /// let db = AdminDatabase::new(Arc::new(conn));
 ///
 /// // List items with filters
@@ -106,13 +106,33 @@ pub struct AdminDatabase {
 
 impl AdminDatabase {
 	/// Create a new admin database interface
-	pub fn new(connection: Arc<DatabaseConnection>) -> Self {
+	///
+	/// This method accepts a DatabaseConnection directly without requiring `Arc` wrapping.
+	/// The `Arc` wrapping is handled internally for you.
+	pub fn new(connection: DatabaseConnection) -> Self {
+		Self {
+			connection: Arc::new(connection),
+		}
+	}
+
+	/// Create a new admin database interface from an Arc-wrapped connection
+	///
+	/// This is provided for cases where you already have an `Arc<DatabaseConnection>`.
+	/// In most cases, you should use `new()` instead.
+	pub fn from_arc(connection: Arc<DatabaseConnection>) -> Self {
 		Self { connection }
 	}
 
 	/// Get a reference to the underlying database connection
 	pub fn connection(&self) -> &DatabaseConnection {
 		&self.connection
+	}
+
+	/// Get a cloned Arc of the connection (for cases where you need ownership)
+	///
+	/// In most cases, you should use `connection()` instead to get a reference.
+	pub fn connection_arc(&self) -> Arc<DatabaseConnection> {
+		Arc::clone(&self.connection)
 	}
 
 	/// List items with filters, ordering, and pagination
@@ -126,7 +146,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let filters = vec![
@@ -181,12 +201,16 @@ impl AdminDatabase {
 		// Convert QueryRow to HashMap
 		Ok(rows
 			.into_iter()
-			.map(|row| {
-				let mut map = HashMap::new();
-				// Note: This is a simplified conversion
-				// In a real implementation, we would extract actual column values
-				map.insert("data".to_string(), row.data);
-				map
+			.filter_map(|row| {
+				// row.data is already a serde_json::Value, typically an Object
+				if let serde_json::Value::Object(map) = row.data {
+					Some(
+						map.into_iter()
+							.collect::<HashMap<String, serde_json::Value>>(),
+					)
+				} else {
+					None
+				}
 			})
 			.collect())
 	}
@@ -202,7 +226,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let item = db.get::<User>("users", "id", "1").await?;
@@ -241,10 +265,16 @@ impl AdminDatabase {
 			.await
 			.map_err(AdminError::DatabaseError)?;
 
-		Ok(row.map(|r| {
-			let mut map = HashMap::new();
-			map.insert("data".to_string(), r.data);
-			map
+		Ok(row.and_then(|r| {
+			// r.data is already a serde_json::Value, typically an Object
+			if let serde_json::Value::Object(map) = r.data {
+				Some(
+					map.into_iter()
+						.collect::<HashMap<String, serde_json::Value>>(),
+				)
+			} else {
+				None
+			}
 		}))
 	}
 
@@ -260,7 +290,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let mut data = HashMap::new();
@@ -345,7 +375,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let mut data = HashMap::new();
@@ -420,7 +450,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// db.delete::<User>("users", "id", "1").await?;
@@ -472,7 +502,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let ids = vec!["1".to_string(), "2".to_string(), "3".to_string()];
@@ -529,7 +559,7 @@ impl AdminDatabase {
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-	/// let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
+	/// let conn = DatabaseConnection::connect("postgres://localhost/test").await?;
 	/// let db = AdminDatabase::new(Arc::new(conn));
 	///
 	/// let filters = vec![
@@ -592,7 +622,66 @@ impl AdminDatabase {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::error::Result;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
 	use reinhardt_orm::DatabaseBackend;
+	use rstest::*;
+
+	// Mock backend for testing
+	struct MockBackend;
+
+	#[async_trait::async_trait]
+	impl BackendTrait for MockBackend {
+		fn database_type(&self) -> DatabaseType {
+			DatabaseType::Postgres
+		}
+
+		fn placeholder(&self, index: usize) -> String {
+			format!("${}", index)
+		}
+
+		fn supports_returning(&self) -> bool {
+			true
+		}
+
+		fn supports_on_conflict(&self) -> bool {
+			true
+		}
+
+		async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 0 })
+		}
+
+		async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		fn as_any(&self) -> &dyn std::any::Any {
+			self
+		}
+	}
+
+	// Fixture for creating a mock database connection
+	#[fixture]
+	fn mock_connection() -> DatabaseConnection {
+		let mock_backend = Arc::new(MockBackend);
+		let backends_conn = BackendsConnection::new(mock_backend);
+		DatabaseConnection::new(DatabaseBackend::Postgres, backends_conn)
+	}
 
 	// Mock User model for testing
 	#[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -617,18 +706,18 @@ mod tests {
 		}
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_admin_database_new() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_admin_database_new(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		assert_eq!(db.connection().backend(), DatabaseBackend::Postgres);
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_bulk_delete_empty() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_bulk_delete_empty(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let result = db.bulk_delete::<User>("users", "id", vec![]).await;
 
@@ -636,10 +725,10 @@ mod tests {
 		assert_eq!(result.unwrap(), 0);
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_list_with_filters() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_list_with_filters(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let filters = vec![Filter::new(
 			"is_active".to_string(),
@@ -651,19 +740,19 @@ mod tests {
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_get_by_id() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_get_by_id(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let result = db.get::<User>("users", "id", "1").await;
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_create() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_create(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let mut data = HashMap::new();
 		data.insert("name".to_string(), serde_json::json!("Alice"));
@@ -673,10 +762,10 @@ mod tests {
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_update() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_update(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let mut data = HashMap::new();
 		data.insert("name".to_string(), serde_json::json!("Alice Updated"));
@@ -685,29 +774,29 @@ mod tests {
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_delete() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_delete(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let result = db.delete::<User>("users", "id", "1").await;
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_count() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_count(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let filters = vec![];
 		let result = db.count::<User>("users", filters).await;
 		assert!(result.is_ok());
 	}
 
+	#[rstest]
 	#[tokio::test]
-	async fn test_bulk_delete_multiple_ids() {
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = AdminDatabase::new(Arc::new(conn));
+	async fn test_bulk_delete_multiple_ids(mock_connection: DatabaseConnection) {
+		let db = AdminDatabase::new(Arc::new(mock_connection));
 
 		let ids = vec!["1".to_string(), "2".to_string(), "3".to_string()];
 		let result = db.bulk_delete::<User>("users", "id", ids).await;

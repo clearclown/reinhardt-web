@@ -64,8 +64,11 @@
 //! ```
 
 use async_trait::async_trait;
+use reinhardt_orm::DatabaseConnection;
+use sea_query::{Alias, Expr, ExprTrait, PostgresQueryBuilder, Query};
 use std::collections::HashMap;
 use std::fmt;
+use std::sync::Arc;
 
 /// Configuration for a custom admin view
 #[derive(Debug, Clone)]
@@ -331,12 +334,32 @@ impl ReorderResult {
 /// Handler for drag-and-drop reorder requests
 pub struct ReorderHandler {
 	config: DragDropConfig,
+	connection: Arc<DatabaseConnection>,
+	table_name: String,
+	id_field: String,
 }
 
 impl ReorderHandler {
-	/// Create a new reorder handler with the given config
-	pub fn new(config: DragDropConfig) -> Self {
-		Self { config }
+	/// Create a new reorder handler with the given config, database connection, and table info
+	///
+	/// # Arguments
+	///
+	/// * `config` - Drag-and-drop configuration
+	/// * `connection` - Database connection
+	/// * `table_name` - Name of the table to reorder
+	/// * `id_field` - Name of the primary key field (e.g., "id")
+	pub fn new(
+		config: DragDropConfig,
+		connection: Arc<DatabaseConnection>,
+		table_name: impl Into<String>,
+		id_field: impl Into<String>,
+	) -> Self {
+		Self {
+			config,
+			connection,
+			table_name: table_name.into(),
+			id_field: id_field.into(),
+		}
 	}
 
 	/// Validate that the new order values are valid
@@ -379,6 +402,8 @@ impl ReorderHandler {
 	///
 	/// Takes a list of (id, new_order) pairs and validates them.
 	/// Returns the number of items that need to be updated.
+	///
+	/// This method updates the database using sea-query for each item.
 	pub async fn process_reorder(&self, items: Vec<(String, i32)>) -> ReorderResult {
 		if !self.config.enabled {
 			return ReorderResult::failure("Reordering is not enabled");
@@ -389,9 +414,31 @@ impl ReorderHandler {
 			return ReorderResult::failure(e);
 		}
 
-		// In a real implementation, this would update the database
-		// For now, we just return success
-		ReorderResult::success(items.len())
+		// Update database for each item
+		let mut updated_count = 0;
+		for (id, new_order) in &items {
+			// Build UPDATE query using sea-query
+			let query = Query::update()
+				.table(Alias::new(&self.table_name))
+				.value(Alias::new(&self.config.order_field), *new_order)
+				.and_where(Expr::col(Alias::new(&self.id_field)).eq(Expr::val(id.clone())))
+				.to_string(PostgresQueryBuilder);
+
+			// Execute the query
+			match self.connection.execute(&query).await {
+				Ok(_) => {
+					updated_count += 1;
+				}
+				Err(e) => {
+					return ReorderResult::failure(format!(
+						"Failed to update order for item {}: {}",
+						id, e
+					));
+				}
+			}
+		}
+
+		ReorderResult::success(updated_count)
 	}
 
 	/// Reorder adjacent items (swap order values)
@@ -425,6 +472,18 @@ impl ReorderHandler {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_backends::{BackendsConnection, MockBackend};
+	use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
+
+	/// Create a mock database connection for testing
+	fn create_mock_connection() -> Arc<DatabaseConnection> {
+		let mock_backend = Arc::new(MockBackend);
+		let backends_conn = BackendsConnection::new(mock_backend);
+		Arc::new(DatabaseConnection::new(
+			DatabaseBackend::Postgres,
+			backends_conn,
+		))
+	}
 
 	// Test model for reordering
 	#[allow(dead_code)]
@@ -558,7 +617,8 @@ mod tests {
 	#[test]
 	fn test_validate_order_success() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), 0),
@@ -572,7 +632,8 @@ mod tests {
 	#[test]
 	fn test_validate_order_negative() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), -1),
@@ -588,7 +649,8 @@ mod tests {
 	#[test]
 	fn test_validate_order_duplicates() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), 0),
@@ -604,7 +666,8 @@ mod tests {
 	#[test]
 	fn test_validate_order_gap() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), 0),
@@ -620,7 +683,8 @@ mod tests {
 	#[tokio::test]
 	async fn test_process_reorder_success() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), 0),
@@ -640,7 +704,8 @@ mod tests {
 			.order_field("order")
 			.enabled(false)
 			.build();
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![("1".to_string(), 0), ("2".to_string(), 1)];
 
@@ -653,7 +718,8 @@ mod tests {
 	#[tokio::test]
 	async fn test_process_reorder_invalid() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let items = vec![
 			("1".to_string(), 0),
@@ -668,7 +734,8 @@ mod tests {
 	#[tokio::test]
 	async fn test_reorder_adjacent() {
 		let config = DragDropConfig::new("order");
-		let handler = ReorderHandler::new(config);
+		let conn = create_mock_connection();
+		let handler = ReorderHandler::new(config, conn, "test_table", "id");
 
 		let mut model1 = TestModel {
 			id: 1,

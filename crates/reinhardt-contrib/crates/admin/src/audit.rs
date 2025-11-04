@@ -1195,6 +1195,56 @@ impl AuditLogger for DatabaseAuditLogger {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::error::Result;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
+	use rstest::*;
+
+	struct MockBackend;
+
+	#[async_trait::async_trait]
+	impl BackendTrait for MockBackend {
+		fn database_type(&self) -> DatabaseType {
+			DatabaseType::Postgres
+		}
+		fn placeholder(&self, index: usize) -> String {
+			format!("${}", index)
+		}
+		fn supports_returning(&self) -> bool {
+			true
+		}
+		fn supports_on_conflict(&self) -> bool {
+			true
+		}
+		async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 1 })
+		}
+		async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+		async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+		async fn fetch_optional(
+			&self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+		fn as_any(&self) -> &dyn std::any::Any {
+			self
+		}
+	}
+
+	#[fixture]
+	fn mock_connection() -> DatabaseConnection {
+		let mock_backend = Arc::new(MockBackend);
+		let backends_conn = BackendsConnection::new(mock_backend);
+		DatabaseConnection::new(DatabaseBackend::Postgres, backends_conn)
+	}
 
 	#[test]
 	fn test_audit_action_as_str() {
@@ -1494,13 +1544,11 @@ mod tests {
 		assert!(logger.is_empty());
 	}
 
+	#[rstest]
 	#[test]
-	fn test_database_audit_logger_creation() {
+	fn test_database_audit_logger_creation(mock_connection: DatabaseConnection) {
 		// Create a dummy database for testing
-		use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
-
-		let conn = DatabaseConnection::new(DatabaseBackend::Postgres);
-		let db = Arc::new(AdminDatabase::new(Arc::new(conn)));
+		let db = Arc::new(AdminDatabase::new(Arc::new(mock_connection)));
 		let logger = DatabaseAuditLogger::new(db, "audit_logs".to_string());
 
 		assert_eq!(logger.table_name(), "audit_logs");
