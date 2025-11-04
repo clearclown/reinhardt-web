@@ -3,15 +3,18 @@
 //! These tests verify the integration between reinhardt-websockets and other crates.
 //! Based on FastAPI WebSocket test patterns.
 
+use reinhardt_test::fixtures::websocket_manager;
 use reinhardt_websockets::{Message, RoomManager, WebSocketConnection};
+use rstest::*;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, timeout};
 
 /// Integration test: WebSocket with room manager and multiple connections
+#[rstest]
 #[tokio::test]
-async fn test_websocket_room_manager_integration() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_room_manager_integration(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	// Create multiple connections
 	let (tx1, mut rx1) = mpsc::unbounded_channel();
@@ -22,10 +25,23 @@ async fn test_websocket_room_manager_integration() {
 	let conn2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
 	let conn3 = Arc::new(WebSocketConnection::new("user3".to_string(), tx3));
 
+	// Create rooms
+	manager.create_room("room1".to_string()).await;
+	manager.create_room("room2".to_string()).await;
+
 	// Join different rooms
-	manager.join_room("room1".to_string(), conn1.clone()).await;
-	manager.join_room("room1".to_string(), conn2.clone()).await;
-	manager.join_room("room2".to_string(), conn3.clone()).await;
+	manager
+		.join_room("room1".to_string(), conn1.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("room1".to_string(), conn2.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("room2".to_string(), conn3.clone())
+		.await
+		.unwrap();
 
 	// Verify room sizes
 	assert_eq!(manager.get_room_size("room1").await, 2);
@@ -59,9 +75,10 @@ async fn test_websocket_room_manager_integration() {
 }
 
 /// Integration test: WebSocket chat room with disconnect notifications
+#[rstest]
 #[tokio::test]
-async fn test_websocket_chat_room_with_disconnections() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_chat_room_with_disconnections(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 	let room_name = "chat_room";
 
 	// Create three connections
@@ -73,22 +90,28 @@ async fn test_websocket_chat_room_with_disconnections() {
 	let conn2 = Arc::new(WebSocketConnection::new("bob".to_string(), tx2));
 	let conn3 = Arc::new(WebSocketConnection::new("charlie".to_string(), tx3));
 
+	// Create the chat room
+	manager.create_room(room_name.to_string()).await;
+
 	// All join the chat room
 	manager
 		.join_room(room_name.to_string(), conn1.clone())
-		.await;
+		.await
+		.unwrap();
 	manager
 		.join_room(room_name.to_string(), conn2.clone())
-		.await;
+		.await
+		.unwrap();
 	manager
 		.join_room(room_name.to_string(), conn3.clone())
-		.await;
+		.await
+		.unwrap();
 
 	assert_eq!(manager.get_room_size(room_name).await, 3);
 
 	// Charlie disconnects
 	conn3.close().await.unwrap();
-	manager.leave_room(room_name, "charlie").await;
+	manager.leave_room(room_name, "charlie").await.unwrap();
 
 	// Broadcast disconnect notification
 	manager
@@ -121,9 +144,10 @@ async fn test_websocket_chat_room_with_disconnections() {
 }
 
 /// Integration test: WebSocket broadcast to all rooms
+#[rstest]
 #[tokio::test]
-async fn test_websocket_global_broadcast_integration() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_global_broadcast_integration(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	// Create connections in different rooms
 	let (tx1, mut rx1) = mpsc::unbounded_channel();
@@ -134,9 +158,23 @@ async fn test_websocket_global_broadcast_integration() {
 	let conn2 = Arc::new(WebSocketConnection::new("user2".to_string(), tx2));
 	let conn3 = Arc::new(WebSocketConnection::new("user3".to_string(), tx3));
 
-	manager.join_room("room_a".to_string(), conn1.clone()).await;
-	manager.join_room("room_b".to_string(), conn2.clone()).await;
-	manager.join_room("room_c".to_string(), conn3.clone()).await;
+	// Create rooms
+	manager.create_room("room_a".to_string()).await;
+	manager.create_room("room_b".to_string()).await;
+	manager.create_room("room_c".to_string()).await;
+
+	manager
+		.join_room("room_a".to_string(), conn1.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("room_b".to_string(), conn2.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("room_c".to_string(), conn3.clone())
+		.await
+		.unwrap();
 
 	// Global broadcast
 	let global_message = Message::text("Server maintenance in 5 minutes".to_string());
@@ -165,8 +203,9 @@ async fn test_websocket_global_broadcast_integration() {
 }
 
 /// Integration test: WebSocket with JSON message serialization
+#[rstest]
 #[tokio::test]
-async fn test_websocket_json_integration() {
+async fn test_websocket_json_integration(websocket_manager: Arc<RoomManager>) {
 	#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq, Clone)]
 	struct ChatMessage {
 		user: String,
@@ -174,7 +213,7 @@ async fn test_websocket_json_integration() {
 		timestamp: u64,
 	}
 
-	let manager = Arc::new(RoomManager::new());
+	let manager = websocket_manager;
 
 	let (tx1, mut rx1) = mpsc::unbounded_channel();
 	let (tx2, mut rx2) = mpsc::unbounded_channel();
@@ -182,8 +221,17 @@ async fn test_websocket_json_integration() {
 	let conn1 = Arc::new(WebSocketConnection::new("sender".to_string(), tx1));
 	let conn2 = Arc::new(WebSocketConnection::new("receiver".to_string(), tx2));
 
-	manager.join_room("chat".to_string(), conn1.clone()).await;
-	manager.join_room("chat".to_string(), conn2.clone()).await;
+	// Create chat room
+	manager.create_room("chat".to_string()).await;
+
+	manager
+		.join_room("chat".to_string(), conn1.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("chat".to_string(), conn2.clone())
+		.await
+		.unwrap();
 
 	// Send JSON message
 	let chat_msg = ChatMessage {
@@ -216,9 +264,10 @@ async fn test_websocket_json_integration() {
 }
 
 /// Integration test: WebSocket with binary data transfer
+#[rstest]
 #[tokio::test]
-async fn test_websocket_binary_integration() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_binary_integration(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	let (tx1, mut rx1) = mpsc::unbounded_channel();
 	let (tx2, mut rx2) = mpsc::unbounded_channel();
@@ -226,12 +275,17 @@ async fn test_websocket_binary_integration() {
 	let conn1 = Arc::new(WebSocketConnection::new("uploader".to_string(), tx1));
 	let conn2 = Arc::new(WebSocketConnection::new("downloader".to_string(), tx2));
 
+	// Create the file transfer room
+	manager.create_room("file_transfer".to_string()).await;
+
 	manager
 		.join_room("file_transfer".to_string(), conn1.clone())
-		.await;
+		.await
+		.unwrap();
 	manager
 		.join_room("file_transfer".to_string(), conn2.clone())
-		.await;
+		.await
+		.unwrap();
 
 	// Simulate file transfer with binary data
 	let file_data = vec![0xFF, 0xD8, 0xFF, 0xE0]; // JPEG header simulation
@@ -262,17 +316,22 @@ async fn test_websocket_binary_integration() {
 }
 
 /// Integration test: WebSocket connection lifecycle
+#[rstest]
 #[tokio::test]
-async fn test_websocket_connection_lifecycle() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_connection_lifecycle(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	let (tx, mut rx) = mpsc::unbounded_channel();
 	let conn = Arc::new(WebSocketConnection::new("lifecycle_test".to_string(), tx));
 
+	// Create test room
+	manager.create_room("test_room".to_string()).await;
+
 	// Connect
 	manager
 		.join_room("test_room".to_string(), conn.clone())
-		.await;
+		.await
+		.unwrap();
 	assert_eq!(manager.get_room_size("test_room").await, 1);
 	assert!(!conn.is_closed().await);
 
@@ -288,7 +347,10 @@ async fn test_websocket_connection_lifecycle() {
 
 	// Disconnect
 	conn.close().await.unwrap();
-	manager.leave_room("test_room", "lifecycle_test").await;
+	manager
+		.leave_room("test_room", "lifecycle_test")
+		.await
+		.unwrap();
 
 	// Verify closed state
 	assert!(conn.is_closed().await);
@@ -300,9 +362,10 @@ async fn test_websocket_connection_lifecycle() {
 }
 
 /// Integration test: Multiple rooms management
+#[rstest]
 #[tokio::test]
-async fn test_websocket_multiple_rooms_management() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_multiple_rooms_management(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	// Create connections
 	let connections: Vec<_> = (0..5)
@@ -313,10 +376,15 @@ async fn test_websocket_multiple_rooms_management() {
 		})
 		.collect();
 
+	// Create rooms first
+	manager.create_room("room0".to_string()).await;
+	manager.create_room("room1".to_string()).await;
+	manager.create_room("room2".to_string()).await;
+
 	// Distribute users across rooms
 	for (i, (conn, _rx)) in connections.iter().enumerate() {
 		let room = format!("room{}", i % 3); // 3 rooms
-		manager.join_room(room, conn.clone()).await;
+		manager.join_room(room, conn.clone()).await.unwrap();
 	}
 
 	// Verify room distribution
@@ -329,9 +397,10 @@ async fn test_websocket_multiple_rooms_management() {
 }
 
 /// Integration test: Error handling in broadcast scenarios
+#[rstest]
 #[tokio::test]
-async fn test_websocket_broadcast_error_handling() {
-	let manager = Arc::new(RoomManager::new());
+async fn test_websocket_broadcast_error_handling(websocket_manager: Arc<RoomManager>) {
+	let manager = websocket_manager;
 
 	let (tx1, mut rx1) = mpsc::unbounded_channel();
 	let (tx2, _rx2) = mpsc::unbounded_channel();
@@ -339,8 +408,17 @@ async fn test_websocket_broadcast_error_handling() {
 	let conn1 = Arc::new(WebSocketConnection::new("active".to_string(), tx1));
 	let conn2 = Arc::new(WebSocketConnection::new("closed".to_string(), tx2));
 
-	manager.join_room("mixed".to_string(), conn1.clone()).await;
-	manager.join_room("mixed".to_string(), conn2.clone()).await;
+	// Create the mixed room
+	manager.create_room("mixed".to_string()).await;
+
+	manager
+		.join_room("mixed".to_string(), conn1.clone())
+		.await
+		.unwrap();
+	manager
+		.join_room("mixed".to_string(), conn2.clone())
+		.await
+		.unwrap();
 
 	// Close one connection
 	conn2.close().await.unwrap();

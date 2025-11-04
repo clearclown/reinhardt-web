@@ -6,7 +6,7 @@ use reinhardt_cache::{Cache, MemcachedCache, MemcachedConfig};
 use rstest::*;
 use std::time::Duration;
 use testcontainers::core::IntoContainerPort;
-use testcontainers::{GenericImage, runners::AsyncRunner};
+use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
 
 /// Default Memcached port
 const MEMCACHED_PORT: u16 = 11211;
@@ -16,9 +16,13 @@ const MEMCACHED_PORT: u16 = 11211;
 /// The container is automatically cleaned up when the test ends.
 #[fixture]
 async fn memcached_fixture() -> (testcontainers::ContainerAsync<GenericImage>, String) {
-	// Create a generic Memcached container
-	let memcached_image =
-		GenericImage::new("memcached", "1.6-alpine").with_exposed_port(MEMCACHED_PORT.tcp());
+	// Create a generic Memcached container with verbose mode enabled
+	let memcached_image = GenericImage::new("memcached", "1.6-alpine")
+		.with_exposed_port(MEMCACHED_PORT.tcp())
+		.with_wait_for(testcontainers::core::WaitFor::message_on_stderr(
+			"listening",
+		))
+		.with_cmd(vec!["-vv"]); // Enable verbose mode for startup logs
 
 	// Start the container
 	let container = memcached_image
