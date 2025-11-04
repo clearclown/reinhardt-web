@@ -85,6 +85,7 @@
 //! }
 //! ```
 
+use async_dropper::{AsyncDrop, AsyncDropper};
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, OnceLock, Weak};
 
@@ -250,7 +251,6 @@ pub trait SuiteResource: Send + Sync + 'static {
 /// ```
 pub struct SuiteGuard<T: SuiteResource> {
 	arc: Arc<T>,
-	_cell: &'static OnceLock<Mutex<Weak<T>>>,
 }
 
 impl<T: SuiteResource> Deref for SuiteGuard<T> {
@@ -293,21 +293,154 @@ impl<T: SuiteResource> Deref for SuiteGuard<T> {
 /// ```
 pub fn acquire_suite<T: SuiteResource>(cell: &'static OnceLock<Mutex<Weak<T>>>) -> SuiteGuard<T> {
 	let mutex = cell.get_or_init(|| Mutex::new(Weak::new()));
-	let mut weak = mutex.lock().unwrap();
+	let mut weak = mutex
+		.lock()
+		.expect("Suite resource mutex poisoned - a test panicked while holding the lock");
 
 	// Try to upgrade existing Weak reference
 	if let Some(existing) = weak.upgrade() {
-		return SuiteGuard {
-			arc: existing,
-			_cell: cell,
-		};
+		return SuiteGuard { arc: existing };
 	}
 
 	// Initialize new resource
 	let arc = Arc::new(T::init());
 	*weak = Arc::downgrade(&arc);
 
-	SuiteGuard { arc, _cell: cell }
+	SuiteGuard { arc }
+}
+
+/// Async version of TestResource for async setup/teardown
+///
+/// Implement this trait for test resources that require
+/// asynchronous initialization or cleanup.
+///
+/// # Examples
+///
+/// ```rust
+/// use reinhardt_test::resource::AsyncTestResource;
+///
+/// struct AsyncTestEnv {
+///     connection: String,
+/// }
+///
+/// #[async_trait::async_trait]
+/// impl AsyncTestResource for AsyncTestEnv {
+///     async fn setup() -> Self {
+///         // Async initialization
+///         Self { connection: "test_db".to_string() }
+///     }
+///
+///     async fn teardown(self) {
+///         // Async cleanup
+///     }
+/// }
+/// ```
+#[async_trait::async_trait]
+pub trait AsyncTestResource: Sized + Send {
+	/// Async setup hook called before each test
+	async fn setup() -> Self;
+
+	/// Async teardown hook called after each test
+	///
+	/// Takes ownership of self to ensure cleanup.
+	async fn teardown(self);
+}
+
+// Internal wrapper for async drop implementation
+struct AsyncResourceWrapper<F: AsyncTestResource> {
+	resource: Option<F>,
+}
+
+impl<F: AsyncTestResource> Default for AsyncResourceWrapper<F> {
+	fn default() -> Self {
+		Self { resource: None }
+	}
+}
+
+#[async_trait::async_trait]
+impl<F: AsyncTestResource> AsyncDrop for AsyncResourceWrapper<F> {
+	async fn async_drop(&mut self) {
+		if let Some(resource) = self.resource.take() {
+			resource.teardown().await;
+		}
+	}
+}
+
+/// RAII guard for async test resource cleanup using async-dropper
+///
+/// This guard automatically calls `teardown()` when dropped, using the `async-dropper` crate
+/// to properly handle async cleanup in Drop.
+///
+/// # Important
+///
+/// **Requires multi-threaded tokio runtime.** Use `#[tokio::test(flavor = "multi_thread")]`
+/// instead of `#[tokio::test]` because async-dropper uses blocking operations internally.
+///
+/// # Examples
+///
+/// ```rust
+/// use reinhardt_test::resource::{AsyncTestResource, AsyncTeardownGuard};
+///
+/// struct AsyncTestEnv {
+///     value: i32,
+/// }
+///
+/// #[async_trait::async_trait]
+/// impl AsyncTestResource for AsyncTestEnv {
+///     async fn setup() -> Self {
+///         Self { value: 42 }
+///     }
+///     async fn teardown(self) {
+///         // Cleanup code here
+///     }
+/// }
+///
+/// #[tokio::test(flavor = "multi_thread")]
+/// async fn test_example() {
+///     let guard = AsyncTeardownGuard::<AsyncTestEnv>::new().await;
+///     assert_eq!(guard.value, 42);
+///     // Cleanup automatically called when guard is dropped
+/// }
+/// ```
+pub struct AsyncTeardownGuard<F: AsyncTestResource + 'static> {
+	inner: AsyncDropper<AsyncResourceWrapper<F>>,
+}
+
+impl<F: AsyncTestResource + 'static> AsyncTeardownGuard<F> {
+	/// Create a new async teardown guard with resource setup
+	pub async fn new() -> Self {
+		let resource = F::setup().await;
+		let wrapper = AsyncResourceWrapper {
+			resource: Some(resource),
+		};
+		Self {
+			inner: AsyncDropper::new(wrapper),
+		}
+	}
+}
+
+impl<F: AsyncTestResource + 'static> Deref for AsyncTeardownGuard<F> {
+	type Target = F;
+
+	fn deref(&self) -> &F {
+		// Access resource through AsyncDropper -> AsyncResourceWrapper -> F
+		self.inner
+			.inner()
+			.resource
+			.as_ref()
+			.expect("Resource already dropped")
+	}
+}
+
+impl<F: AsyncTestResource + 'static> DerefMut for AsyncTeardownGuard<F> {
+	fn deref_mut(&mut self) -> &mut F {
+		// Access resource through AsyncDropper -> AsyncResourceWrapper -> F
+		self.inner
+			.inner_mut()
+			.resource
+			.as_mut()
+			.expect("Resource already dropped")
+	}
 }
 
 #[cfg(test)]
@@ -365,5 +498,33 @@ mod tests {
 
 		// Both guards should point to the same instance
 		assert!(Arc::ptr_eq(&guard1.arc, &guard2.arc));
+	}
+
+	struct AsyncCounter {
+		value: i32,
+	}
+
+	#[async_trait::async_trait]
+	impl AsyncTestResource for AsyncCounter {
+		async fn setup() -> Self {
+			tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+			Self { value: 42 }
+		}
+
+		async fn teardown(self) {
+			tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+			// Cleanup
+		}
+	}
+
+	#[tokio::test(flavor = "multi_thread")]
+	async fn test_async_teardown_guard_auto_cleanup() {
+		// Test automatic cleanup when guard is dropped in tokio runtime
+		{
+			let guard = AsyncTeardownGuard::<AsyncCounter>::new().await;
+			assert_eq!(guard.value, 42);
+			// Guard is automatically cleaned up when dropped
+		}
+		// async-dropper ensures cleanup completes before continuing
 	}
 }

@@ -317,13 +317,13 @@ mod tests {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_test::fixtures::{FixtureLoader, fixture_loader};
+/// use reinhardt_test::fixtures::fixture_loader;
 /// use rstest::*;
 ///
 /// #[rstest]
-/// async fn test_with_fixtures(#[future] fixture_loader: FixtureLoader) {
-///     let loader = fixture_loader.await;
-///     loader.load_from_json("test".to_string(), r#"{"id": 1}"#).await.unwrap();
+/// #[tokio::test]
+/// async fn test_with_fixtures(fixture_loader: reinhardt_test::fixtures::FixtureLoader) {
+///     fixture_loader.load_from_json("test".to_string(), r#"{"id": 1}"#).await.unwrap();
 ///     // ...
 /// }
 /// ```
@@ -340,12 +340,11 @@ pub fn fixture_loader() -> FixtureLoader {
 ///
 /// ```rust,no_run
 /// use reinhardt_test::fixtures::api_client;
-/// use reinhardt_test::client::APIClient;
 /// use rstest::*;
 ///
 /// #[rstest]
-/// async fn test_api_request(#[future] api_client: APIClient) {
-///     let client = api_client.await;
+/// #[tokio::test]
+/// async fn test_api_request(api_client: reinhardt_test::client::APIClient) {
 ///     // Make requests with client
 /// }
 /// ```
@@ -379,7 +378,7 @@ pub fn temp_dir() -> tempfile::TempDir {
 // ============================================================================
 
 #[cfg(feature = "testcontainers")]
-use testcontainers::{ContainerAsync, GenericImage, runners::AsyncRunner};
+use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
 #[cfg(feature = "testcontainers")]
 use testcontainers_modules::{postgres::Postgres, redis::Redis};
 
@@ -453,6 +452,150 @@ pub async fn redis_container() -> (ContainerAsync<Redis>, String) {
 	let url = format!("redis://localhost:{}", port);
 
 	(container, url)
+}
+
+/// Fixture providing a Redis Cluster TestContainer setup
+///
+/// Returns a tuple of (containers, connection_urls) for the 3 cluster nodes.
+/// The containers are automatically cleaned up when the test ends.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::redis_cluster_fixture;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_redis_cluster(
+///     #[future] redis_cluster_fixture: (Vec<testcontainers::ContainerAsync<testcontainers::GenericImage>>, Vec<String>)
+/// ) {
+///     let (_containers, urls) = redis_cluster_fixture.await;
+///     // Use Redis Cluster at `urls`
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn redis_cluster_fixture() -> (
+	Vec<testcontainers::ContainerAsync<testcontainers::GenericImage>>,
+	Vec<String>,
+) {
+	use testcontainers::GenericImage;
+	use testcontainers::core::{ExecCommand, WaitFor};
+
+	// Start 3 Redis nodes with cluster mode enabled
+	let node1 = GenericImage::new("redis", "7-alpine")
+		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
+		.with_cmd(vec![
+			"redis-server",
+			"--cluster-enabled",
+			"yes",
+			"--cluster-config-file",
+			"nodes.conf",
+			"--cluster-node-timeout",
+			"5000",
+			"--appendonly",
+			"no",
+		])
+		.start()
+		.await
+		.expect("Failed to start Redis node 1");
+
+	let node2 = GenericImage::new("redis", "7-alpine")
+		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
+		.with_cmd(vec![
+			"redis-server",
+			"--cluster-enabled",
+			"yes",
+			"--cluster-config-file",
+			"nodes.conf",
+			"--cluster-node-timeout",
+			"5000",
+			"--appendonly",
+			"no",
+		])
+		.start()
+		.await
+		.expect("Failed to start Redis node 2");
+
+	let node3 = GenericImage::new("redis", "7-alpine")
+		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
+		.with_cmd(vec![
+			"redis-server",
+			"--cluster-enabled",
+			"yes",
+			"--cluster-config-file",
+			"nodes.conf",
+			"--cluster-node-timeout",
+			"5000",
+			"--appendonly",
+			"no",
+		])
+		.start()
+		.await
+		.expect("Failed to start Redis node 3");
+
+	let port1 = node1
+		.get_host_port_ipv4(6379)
+		.await
+		.expect("Failed to get Redis node 1 port");
+	let port2 = node2
+		.get_host_port_ipv4(6379)
+		.await
+		.expect("Failed to get Redis node 2 port");
+	let port3 = node3
+		.get_host_port_ipv4(6379)
+		.await
+		.expect("Failed to get Redis node 3 port");
+
+	let url1 = format!("redis://localhost:{}", port1);
+	let url2 = format!("redis://localhost:{}", port2);
+	let url3 = format!("redis://localhost:{}", port3);
+
+	// Initialize cluster by creating cluster meet connections
+	let meet_cmd2 = format!("redis-cli -p 6379 CLUSTER MEET 127.0.0.1 {}", port2);
+	let meet_cmd3 = format!("redis-cli -p 6379 CLUSTER MEET 127.0.0.1 {}", port3);
+
+	node1
+		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd2]))
+		.await
+		.ok();
+	tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+	node1
+		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd3]))
+		.await
+		.ok();
+	tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+	// Assign slots to each node
+	// Node 1: slots 0-5460
+	let slots1_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 0 5460)";
+	node1
+		.exec(ExecCommand::new(vec!["sh", "-c", slots1_cmd]))
+		.await
+		.ok();
+
+	// Node 2: slots 5461-10922
+	let slots2_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 5461 10922)";
+	node2
+		.exec(ExecCommand::new(vec!["sh", "-c", slots2_cmd]))
+		.await
+		.ok();
+
+	// Node 3: slots 10923-16383
+	let slots3_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 10923 16383)";
+	node3
+		.exec(ExecCommand::new(vec!["sh", "-c", slots3_cmd]))
+		.await
+		.ok();
+
+	// Wait for cluster to be ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+	// Return containers and URLs
+	// Containers will be automatically cleaned up when they go out of scope
+	(vec![node1, node2, node3], vec![url1, url2, url3])
 }
 
 /// Fixture providing a Memcached TestContainer
@@ -558,4 +701,115 @@ pub async fn postgres_pool() -> (ContainerAsync<Postgres>, sqlx::PgPool) {
 		.expect("Failed to connect to PostgreSQL");
 
 	(container, pool)
+}
+
+// ============================================================================
+// WebSocket fixtures
+// ============================================================================
+
+/// Fixture providing a WebSocket RoomManager for testing
+///
+/// Returns an Arc-wrapped RoomManager that can be used across test functions.
+/// The manager is automatically cleaned up when dropped.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::websocket_manager;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_websocket(websocket_manager: std::sync::Arc<reinhardt_websockets::RoomManager>) {
+///     // Create rooms as needed
+///     websocket_manager.create_room("test_room".to_string()).await;
+///     // Use RoomManager for testing
+/// }
+/// ```
+#[cfg(feature = "websockets")]
+#[fixture]
+pub fn websocket_manager() -> std::sync::Arc<reinhardt_websockets::RoomManager> {
+	std::sync::Arc::new(reinhardt_websockets::RoomManager::new())
+}
+
+// ============================================================================
+// テスト用モデル構造体
+// ============================================================================
+//
+// これらは`reinhardt-associations`のテストで使用される汎用モデルです。
+// テストユーティリティとして意図的に定義されているため、
+// 一部フィールドが未使用でも許容されます。
+
+/// 注文モデル（collection.rsテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Order {
+	pub id: u32,
+	pub product_name: String,
+}
+
+/// ユーザーモデル（複数テスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct User {
+	pub id: i64,
+	pub name: String,
+}
+
+/// ユーザーモデル（collectionテスト用、Orderリレーション付き）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct UserWithOrders {
+	pub id: u32,
+	pub orders: Vec<Order>,
+}
+
+/// 投稿モデル（foreign_key/loadingテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Post {
+	pub id: i64,
+	pub title: String,
+	pub author_id: i64,
+}
+
+/// 学生モデル（many_to_manyテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Student {
+	pub id: i64,
+	pub name: String,
+}
+
+/// コースモデル（many_to_manyテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Course {
+	pub id: i64,
+	pub name: String,
+}
+
+/// ユーザープロフィールモデル（one_to_oneテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct UserProfile {
+	pub id: i64,
+	pub user_id: i64,
+	pub bio: String,
+}
+
+/// 住所モデル（proxyテスト用）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct Address {
+	pub city: String,
+	pub country: String,
+}
+
+/// ユーザーモデル（proxyテスト用、Address付き）
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct UserWithAddress {
+	pub id: u32,
+	pub address: Address,
 }

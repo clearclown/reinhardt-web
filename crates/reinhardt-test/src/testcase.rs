@@ -3,6 +3,7 @@
 //! Similar to DRF's APITestCase
 
 use crate::client::APIClient;
+use crate::resource::AsyncTestResource;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -10,65 +11,36 @@ use tokio::sync::RwLock;
 ///
 /// Provides:
 /// - Pre-configured APIClient
-/// - Common setup/teardown hooks
+/// - Automatic setup/teardown via AsyncTestResource
 /// - Assertion helpers
 /// - Optional TestContainer database integration
 ///
 /// # Example
 /// ```ignore
-/// struct MyTest {
-///     case: APITestCase,
+/// use reinhardt_test::testcase::APITestCase;
+/// use reinhardt_test::resource::AsyncTeardownGuard;
+/// use rstest::*;
+///
+/// #[fixture]
+/// async fn api_test() -> AsyncTeardownGuard<APITestCase> {
+///     AsyncTeardownGuard::new().await
 /// }
 ///
-/// impl MyTest {
-///     async fn test_list_users(&self) {
-///         let response = self.case.client().get("/api/users/").await.unwrap();
-///         response.assert_ok();
-///     }
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_list_users(#[future] api_test: AsyncTeardownGuard<APITestCase>) {
+///     let case = api_test.await;
+///     let response = case.client().await.get("/api/users/").await.unwrap();
+///     response.assert_ok();
 /// }
 /// ```
 pub struct APITestCase {
 	client: Arc<RwLock<APIClient>>,
-	setup_called: Arc<RwLock<bool>>,
-	teardown_called: Arc<RwLock<bool>>,
 	#[cfg(feature = "testcontainers")]
 	database_url: Arc<RwLock<Option<String>>>,
 }
 
 impl APITestCase {
-	/// Create a new test case
-	pub fn new() -> Self {
-		Self {
-			client: Arc::new(RwLock::new(APIClient::new())),
-			setup_called: Arc::new(RwLock::new(false)),
-			teardown_called: Arc::new(RwLock::new(false)),
-			#[cfg(feature = "testcontainers")]
-			database_url: Arc::new(RwLock::new(None)),
-		}
-	}
-
-	/// Create a test case with a custom client
-	pub fn with_client(client: APIClient) -> Self {
-		Self {
-			client: Arc::new(RwLock::new(client)),
-			setup_called: Arc::new(RwLock::new(false)),
-			teardown_called: Arc::new(RwLock::new(false)),
-			#[cfg(feature = "testcontainers")]
-			database_url: Arc::new(RwLock::new(None)),
-		}
-	}
-
-	/// Create a test case with a database connection URL
-	#[cfg(feature = "testcontainers")]
-	pub fn with_database_url(url: String) -> Self {
-		Self {
-			client: Arc::new(RwLock::new(APIClient::new())),
-			setup_called: Arc::new(RwLock::new(false)),
-			teardown_called: Arc::new(RwLock::new(false)),
-			database_url: Arc::new(RwLock::new(Some(url))),
-		}
-	}
-
 	/// Get the database connection URL (if configured)
 	#[cfg(feature = "testcontainers")]
 	pub async fn database_url(&self) -> Option<String> {
@@ -85,40 +57,32 @@ impl APITestCase {
 		self.client.write().await
 	}
 
-	/// Setup method called before each test
-	pub async fn setup(&self) {
-		let mut setup = self.setup_called.write().await;
-		*setup = true;
+	/// Set the database URL (useful for TestContainers integration)
+	#[cfg(feature = "testcontainers")]
+	pub async fn set_database_url(&self, url: String) {
+		let mut db_url = self.database_url.write().await;
+		*db_url = Some(url);
+	}
+}
+
+#[async_trait::async_trait]
+impl AsyncTestResource for APITestCase {
+	async fn setup() -> Self {
+		Self {
+			client: Arc::new(RwLock::new(APIClient::new())),
+			#[cfg(feature = "testcontainers")]
+			database_url: Arc::new(RwLock::new(None)),
+		}
 	}
 
-	/// Teardown method called after each test
-	pub async fn teardown(&self) {
-		let mut teardown = self.teardown_called.write().await;
-		*teardown = true;
-
+	async fn teardown(self) {
 		// Clean up client state
 		let client = self.client.read().await;
 		let _ = client.logout().await;
 	}
-
-	/// Check if setup was called
-	pub async fn is_setup_called(&self) -> bool {
-		*self.setup_called.read().await
-	}
-
-	/// Check if teardown was called
-	pub async fn is_teardown_called(&self) -> bool {
-		*self.teardown_called.read().await
-	}
 }
 
-impl Default for APITestCase {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-/// Helper macro for defining test cases
+/// Helper macro for defining test cases with automatic setup/teardown
 ///
 /// # Example
 /// ```ignore
@@ -132,20 +96,24 @@ impl Default for APITestCase {
 /// ```
 #[macro_export]
 macro_rules! test_case {
-    (
+	(
         async fn $name:ident($case:ident: &APITestCase) $body:block
     ) => {
-        #[tokio::test]
-        async fn $name() {
-            let $case = APITestCase::new();
-            $case.setup().await;
+		#[rstest::rstest]
+		#[tokio::test]
+		async fn $name() {
+			use $crate::resource::AsyncTeardownGuard;
+			use $crate::testcase::APITestCase;
 
-            // Run test
-            $body
+			let guard = AsyncTeardownGuard::<APITestCase>::new().await;
+			let $case = &*guard;
 
-            $case.teardown().await;
-        }
-    };
+			// Run test
+			$body
+
+			// guard is dropped here, teardown() is automatically called
+		}
+	};
 }
 
 /// Helper macro for defining authenticated test cases
@@ -154,10 +122,14 @@ macro_rules! authenticated_test_case {
     (
         async fn $name:ident($case:ident: &APITestCase, $user:ident: serde_json::Value) $body:block
     ) => {
+        #[rstest::rstest]
         #[tokio::test]
         async fn $name() {
-            let $case = APITestCase::new();
-            $case.setup().await;
+            use $crate::resource::AsyncTeardownGuard;
+            use $crate::testcase::APITestCase;
+
+            let guard = AsyncTeardownGuard::<APITestCase>::new().await;
+            let $case = &*guard;
 
             // Setup authentication
             let $user = serde_json::json!({
@@ -172,7 +144,7 @@ macro_rules! authenticated_test_case {
             // Run test
             $body
 
-            $case.teardown().await;
+            // guard is dropped here, teardown() is automatically called
         }
     };
 }
@@ -181,13 +153,43 @@ macro_rules! authenticated_test_case {
 ///
 /// Requires `testcontainers` feature to be enabled.
 ///
-/// # Example
-/// ```ignore
+/// This macro automatically sets up a PostgreSQL or MySQL container via TestContainers,
+/// initializes an `APITestCase` with the database URL, and ensures proper cleanup.
+///
+/// # Examples
+///
+/// ## PostgreSQL Example
+///
+/// ```no_run
+/// use reinhardt_test::test_case_with_db;
+/// use reinhardt_test::testcase::APITestCase;
+///
 /// test_case_with_db! {
 ///     postgres,
-///     async fn test_users_with_db(case: &APITestCase) {
+///     async fn test_users_with_postgres(case: &APITestCase) {
 ///         let db_url = case.database_url().await.unwrap();
-///         // Use database...
+///         // Database URL is automatically set
+///         assert!(db_url.starts_with("postgres://"));
+///
+///         // Perform database operations...
+///     }
+/// }
+/// ```
+///
+/// ## MySQL Example
+///
+/// ```no_run
+/// use reinhardt_test::test_case_with_db;
+/// use reinhardt_test::testcase::APITestCase;
+///
+/// test_case_with_db! {
+///     mysql,
+///     async fn test_users_with_mysql(case: &APITestCase) {
+///         let db_url = case.database_url().await.unwrap();
+///         // Database URL is automatically set
+///         assert!(db_url.starts_with("mysql://"));
+///
+///         // Perform database operations...
 ///     }
 /// }
 /// ```
@@ -198,19 +200,22 @@ macro_rules! test_case_with_db {
         postgres,
         async fn $name:ident($case:ident: &APITestCase) $body:block
     ) => {
+        #[rstest::rstest]
         #[tokio::test]
-        #[ignore] // Requires Docker
         async fn $name() {
             use $crate::containers::{with_postgres, PostgresContainer};
+            use $crate::resource::AsyncTeardownGuard;
+            use $crate::testcase::APITestCase;
 
             with_postgres(|db| async move {
-                let $case = APITestCase::with_database_url(db.connection_url());
-                $case.setup().await;
+                let guard = AsyncTeardownGuard::<APITestCase>::new().await;
+                let $case = &*guard;
+                $case.set_database_url(db.connection_url()).await;
 
                 // Run test
                 $body
 
-                $case.teardown().await;
+                // guard is dropped here, teardown() is automatically called
                 Ok(())
             })
             .await
@@ -221,19 +226,22 @@ macro_rules! test_case_with_db {
         mysql,
         async fn $name:ident($case:ident: &APITestCase) $body:block
     ) => {
+        #[rstest::rstest]
         #[tokio::test]
-        #[ignore] // Requires Docker
         async fn $name() {
             use $crate::containers::{with_mysql, MySqlContainer};
+            use $crate::resource::AsyncTeardownGuard;
+            use $crate::testcase::APITestCase;
 
             with_mysql(|db| async move {
-                let $case = APITestCase::with_database_url(db.connection_url());
-                $case.setup().await;
+                let guard = AsyncTeardownGuard::<APITestCase>::new().await;
+                let $case = &*guard;
+                $case.set_database_url(db.connection_url()).await;
 
                 // Run test
                 $body
 
-                $case.teardown().await;
+                // guard is dropped here, teardown() is automatically called
                 Ok(())
             })
             .await
