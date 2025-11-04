@@ -11,7 +11,7 @@ pub mod database;
 pub use memory::MemoryBackend;
 
 #[cfg(feature = "dynamic-redis")]
-pub use redis_backend::RedisBackend;
+pub use redis_backend::RedisSettingsBackend;
 
 #[cfg(feature = "dynamic-database")]
 pub use database::DatabaseBackend;

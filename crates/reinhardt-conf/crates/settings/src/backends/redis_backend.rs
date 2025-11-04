@@ -53,9 +53,9 @@ use async_trait::async_trait;
 /// ```rust,no_run
 /// # #[cfg(feature = "dynamic-redis")]
 /// # async fn example() -> Result<(), String> {
-/// use reinhardt_settings::backends::RedisBackend;
+/// use reinhardt_settings::backends::RedisSettingsBackend;
 ///
-/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 ///
 /// // Store configuration
 /// backend.set("feature_flags", r#"{"new_ui": true}"#, None).await?;
@@ -66,14 +66,14 @@ use async_trait::async_trait;
 /// # }
 /// ```
 #[derive(Clone)]
-pub struct RedisBackend {
+pub struct RedisSettingsBackend {
 	#[cfg(feature = "dynamic-redis")]
 	conn: ConnectionManager,
 	#[cfg(not(feature = "dynamic-redis"))]
 	_phantom: std::marker::PhantomData<()>,
 }
 
-impl RedisBackend {
+impl RedisSettingsBackend {
 	/// Create a new Redis backend
 	///
 	/// Initializes a connection manager to the specified Redis URL.
@@ -87,11 +87,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
-	/// # Ok(())
-	/// # }
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	/// ```
 	#[cfg(feature = "dynamic-redis")]
 	pub async fn new(url: &str) -> Result<Self, String> {
@@ -127,9 +125,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	///
 	/// backend.set("key", "value", None).await?;
 	/// let value = backend.get("key").await?;
@@ -160,9 +158,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	///
 	/// // Set with 1 hour TTL
 	/// backend.set("temp_config", r#"{"enabled": true}"#, Some(3600)).await?;
@@ -199,9 +197,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	///
 	/// backend.set("key", "value", None).await?;
 	/// backend.delete("key").await?;
@@ -229,9 +227,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	///
 	/// assert!(!backend.exists("nonexistent").await?);
 	///
@@ -259,9 +257,9 @@ impl RedisBackend {
 	/// ```rust,no_run
 	/// # #[cfg(feature = "dynamic-redis")]
 	/// # async fn example() -> Result<(), String> {
-	/// use reinhardt_settings::backends::RedisBackend;
+	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
-	/// let backend = RedisBackend::new("redis://localhost:6379").await?;
+	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 	///
 	/// backend.set("key1", "value1", None).await?;
 	/// backend.set("key2", "value2", None).await?;
@@ -295,10 +293,10 @@ impl RedisBackend {
 // DynamicBackend trait implementation
 #[cfg(feature = "dynamic-redis")]
 #[async_trait]
-impl DynamicBackend for RedisBackend {
+impl DynamicBackend for RedisSettingsBackend {
 	async fn get(&self, key: &str) -> DynamicResult<Option<serde_json::Value>> {
 		// Call existing method and convert result
-		let result = RedisBackend::get(self, key)
+		let result = RedisSettingsBackend::get(self, key)
 			.await
 			.map_err(DynamicError::Backend)?;
 
@@ -322,25 +320,25 @@ impl DynamicBackend for RedisBackend {
 		let value_str = serde_json::to_string(value).map_err(DynamicError::from)?;
 
 		// Call existing method
-		RedisBackend::set(self, key, &value_str, ttl)
+		RedisSettingsBackend::set(self, key, &value_str, ttl)
 			.await
 			.map_err(DynamicError::Backend)
 	}
 
 	async fn delete(&self, key: &str) -> DynamicResult<()> {
-		RedisBackend::delete(self, key)
+		RedisSettingsBackend::delete(self, key)
 			.await
 			.map_err(DynamicError::Backend)
 	}
 
 	async fn exists(&self, key: &str) -> DynamicResult<bool> {
-		RedisBackend::exists(self, key)
+		RedisSettingsBackend::exists(self, key)
 			.await
 			.map_err(DynamicError::Backend)
 	}
 
 	async fn keys(&self) -> DynamicResult<Vec<String>> {
-		RedisBackend::keys(self)
+		RedisSettingsBackend::keys(self)
 			.await
 			.map_err(DynamicError::Backend)
 	}
@@ -352,7 +350,7 @@ mod tests_no_feature {
 
 	#[tokio::test]
 	async fn test_redis_backend_disabled() {
-		let result = RedisBackend::new("redis://localhost:6379").await;
+		let result = RedisSettingsBackend::new("redis://localhost:6379").await;
 		assert!(result.is_err());
 		assert!(result.unwrap_err().contains("Redis backend not enabled"));
 	}
@@ -363,9 +361,9 @@ mod tests {
 	use super::*;
 	use reinhardt_test::containers::RedisContainer;
 
-	async fn create_test_backend() -> (RedisContainer, RedisBackend) {
+	async fn create_test_backend() -> (RedisContainer, RedisSettingsBackend) {
 		let redis = RedisContainer::new().await;
-		let backend = RedisBackend::new(&redis.connection_url())
+		let backend = RedisSettingsBackend::new(&redis.connection_url())
 			.await
 			.expect("Failed to create test backend");
 		(redis, backend)
