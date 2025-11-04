@@ -40,6 +40,47 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+/// Contact information for administrators and managers
+///
+/// Used for error notifications, broken link notifications, etc.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_settings::Contact;
+///
+/// let admin = Contact::new("John Doe", "john@example.com");
+/// assert_eq!(admin.name, "John Doe");
+/// assert_eq!(admin.email, "john@example.com");
+/// ```
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Contact {
+	/// Person's name
+	pub name: String,
+	/// Email address
+	pub email: String,
+}
+
+impl Contact {
+	/// Create a new contact
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::Contact;
+	///
+	/// let contact = Contact::new("Alice Smith", "alice@example.com");
+	/// assert_eq!(contact.name, "Alice Smith");
+	/// assert_eq!(contact.email, "alice@example.com");
+	/// ```
+	pub fn new(name: impl Into<String>, email: impl Into<String>) -> Self {
+		Self {
+			name: name.into(),
+			email: email.into(),
+		}
+	}
+}
+
 // Re-export from advanced module
 pub use advanced::{
 	AdvancedSettings, CacheSettings, CorsSettings, DatabaseSettings as AdvancedDatabaseSettings,
@@ -128,6 +169,14 @@ pub struct Settings {
 
 	/// Automatically append trailing slashes to URLs
 	pub append_slash: bool,
+
+	/// List of administrators who receive error notifications
+	/// Django equivalent: ADMINS = [('name', 'email'), ...]
+	pub admins: Vec<Contact>,
+
+	/// List of managers who receive broken link notifications, etc.
+	/// Django equivalent: MANAGERS = [('name', 'email'), ...]
+	pub managers: Vec<Contact>,
 }
 
 impl Settings {
@@ -197,6 +246,8 @@ impl Settings {
 			session_cookie_secure: false,
 			csrf_cookie_secure: false,
 			append_slash: true,
+			admins: vec![],
+			managers: vec![],
 		}
 	}
 	/// Set the root URL configuration
@@ -277,6 +328,102 @@ impl Settings {
 	/// ```
 	pub fn add_middleware(&mut self, middleware: impl Into<String>) {
 		self.middleware.push(middleware.into());
+	}
+
+	/// Add an administrator
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::{Settings, Contact};
+	///
+	/// let mut settings = Settings::default();
+	/// settings.add_admin("John Doe", "john@example.com");
+	///
+	/// assert_eq!(settings.admins.len(), 1);
+	/// assert_eq!(settings.admins[0].name, "John Doe");
+	/// assert_eq!(settings.admins[0].email, "john@example.com");
+	/// ```
+	pub fn add_admin(&mut self, name: impl Into<String>, email: impl Into<String>) {
+		self.admins.push(Contact::new(name, email));
+	}
+
+	/// Add a manager
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::{Settings, Contact};
+	///
+	/// let mut settings = Settings::default();
+	/// settings.add_manager("Jane Smith", "jane@example.com");
+	///
+	/// assert_eq!(settings.managers.len(), 1);
+	/// assert_eq!(settings.managers[0].name, "Jane Smith");
+	/// assert_eq!(settings.managers[0].email, "jane@example.com");
+	/// ```
+	pub fn add_manager(&mut self, name: impl Into<String>, email: impl Into<String>) {
+		self.managers.push(Contact::new(name, email));
+	}
+
+	/// Set managers to be the same as administrators
+	///
+	/// This is a common pattern in Django projects where MANAGERS = ADMINS
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::Settings;
+	///
+	/// let mut settings = Settings::default();
+	/// settings.add_admin("John Doe", "john@example.com");
+	/// settings.add_admin("Jane Smith", "jane@example.com");
+	/// settings.managers_from_admins();
+	///
+	/// assert_eq!(settings.managers.len(), 2);
+	/// assert_eq!(settings.managers, settings.admins);
+	/// ```
+	pub fn managers_from_admins(&mut self) {
+		self.managers = self.admins.clone();
+	}
+
+	/// Set administrators with a fluent API
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::{Settings, Contact};
+	///
+	/// let settings = Settings::default()
+	///     .with_admins(vec![
+	///         Contact::new("John Doe", "john@example.com"),
+	///         Contact::new("Jane Smith", "jane@example.com"),
+	///     ]);
+	///
+	/// assert_eq!(settings.admins.len(), 2);
+	/// ```
+	pub fn with_admins(mut self, admins: Vec<Contact>) -> Self {
+		self.admins = admins;
+		self
+	}
+
+	/// Set managers with a fluent API
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_settings::{Settings, Contact};
+	///
+	/// let settings = Settings::default()
+	///     .with_managers(vec![
+	///         Contact::new("Alice Brown", "alice@example.com"),
+	///     ]);
+	///
+	/// assert_eq!(settings.managers.len(), 1);
+	/// ```
+	pub fn with_managers(mut self, managers: Vec<Contact>) -> Self {
+		self.managers = managers;
+		self
 	}
 }
 
@@ -586,5 +733,69 @@ mod tests {
 			middleware.options.get("enabled"),
 			Some(&serde_json::json!(true))
 		);
+	}
+
+	#[test]
+	fn test_contact_creation() {
+		let contact = Contact::new("Alice Smith", "alice@example.com");
+		assert_eq!(contact.name, "Alice Smith");
+		assert_eq!(contact.email, "alice@example.com");
+	}
+
+	#[test]
+	fn test_settings_admins() {
+		let mut settings = Settings::default();
+		assert_eq!(settings.admins.len(), 0);
+
+		settings.add_admin("John Doe", "john@example.com");
+		assert_eq!(settings.admins.len(), 1);
+		assert_eq!(settings.admins[0].name, "John Doe");
+		assert_eq!(settings.admins[0].email, "john@example.com");
+	}
+
+	#[test]
+	fn test_settings_managers() {
+		let mut settings = Settings::default();
+		assert_eq!(settings.managers.len(), 0);
+
+		settings.add_manager("Jane Smith", "jane@example.com");
+		assert_eq!(settings.managers.len(), 1);
+		assert_eq!(settings.managers[0].name, "Jane Smith");
+		assert_eq!(settings.managers[0].email, "jane@example.com");
+	}
+
+	#[test]
+	fn test_managers_from_admins() {
+		let mut settings = Settings::default();
+		settings.add_admin("John Doe", "john@example.com");
+		settings.add_admin("Jane Smith", "jane@example.com");
+
+		assert_eq!(settings.managers.len(), 0);
+
+		settings.managers_from_admins();
+
+		assert_eq!(settings.managers.len(), 2);
+		assert_eq!(settings.managers, settings.admins);
+	}
+
+	#[test]
+	fn test_with_admins_fluent_api() {
+		let settings = Settings::default().with_admins(vec![
+			Contact::new("Alice", "alice@example.com"),
+			Contact::new("Bob", "bob@example.com"),
+		]);
+
+		assert_eq!(settings.admins.len(), 2);
+		assert_eq!(settings.admins[0].name, "Alice");
+		assert_eq!(settings.admins[1].name, "Bob");
+	}
+
+	#[test]
+	fn test_with_managers_fluent_api() {
+		let settings =
+			Settings::default().with_managers(vec![Contact::new("Charlie", "charlie@example.com")]);
+
+		assert_eq!(settings.managers.len(), 1);
+		assert_eq!(settings.managers[0].name, "Charlie");
 	}
 }
