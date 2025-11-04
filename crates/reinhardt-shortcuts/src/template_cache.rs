@@ -244,6 +244,17 @@ impl TemplateCache {
 #[cfg(all(test, feature = "templates"))]
 mod tests {
 	use super::*;
+	use rstest::*;
+
+	#[fixture]
+	fn cache() -> TemplateCache {
+		TemplateCache::new(10)
+	}
+
+	#[fixture]
+	fn small_cache() -> TemplateCache {
+		TemplateCache::new(2)
+	}
 
 	#[test]
 	fn test_cache_new() {
@@ -252,10 +263,8 @@ mod tests {
 		assert!(cache.is_empty());
 	}
 
-	#[test]
-	fn test_cache_put_and_get() {
-		let cache = TemplateCache::new(10);
-
+	#[rstest]
+	fn test_cache_put_and_get(cache: TemplateCache) {
 		cache.put("template1".to_string(), "<h1>Hello</h1>".to_string());
 
 		let result = cache.get("template1");
@@ -263,18 +272,14 @@ mod tests {
 		assert_eq!(result.unwrap(), "<h1>Hello</h1>");
 	}
 
-	#[test]
-	fn test_cache_miss() {
-		let cache = TemplateCache::new(10);
-
+	#[rstest]
+	fn test_cache_miss(cache: TemplateCache) {
 		let result = cache.get("nonexistent");
 		assert!(result.is_none());
 	}
 
-	#[test]
-	fn test_cache_stats() {
-		let cache = TemplateCache::new(10);
-
+	#[rstest]
+	fn test_cache_stats(cache: TemplateCache) {
 		cache.put("template1".to_string(), "content1".to_string());
 
 		// Hit
@@ -289,29 +294,25 @@ mod tests {
 		assert_eq!(stats.hit_rate(), 50.0);
 	}
 
-	#[test]
-	fn test_cache_eviction() {
-		let cache = TemplateCache::new(2);
-
-		cache.put("template1".to_string(), "content1".to_string());
-		cache.put("template2".to_string(), "content2".to_string());
+	#[rstest]
+	fn test_cache_eviction(small_cache: TemplateCache) {
+		small_cache.put("template1".to_string(), "content1".to_string());
+		small_cache.put("template2".to_string(), "content2".to_string());
 
 		// This should evict template1 (LRU)
-		let evicted = cache.put("template3".to_string(), "content3".to_string());
+		let evicted = small_cache.put("template3".to_string(), "content3".to_string());
 
 		assert!(evicted.is_some());
-		assert_eq!(cache.len(), 2);
+		assert_eq!(small_cache.len(), 2);
 
 		// template1 should be evicted
-		assert!(cache.get("template1").is_none());
-		assert!(cache.get("template2").is_some());
-		assert!(cache.get("template3").is_some());
+		assert!(small_cache.get("template1").is_none());
+		assert!(small_cache.get("template2").is_some());
+		assert!(small_cache.get("template3").is_some());
 	}
 
-	#[test]
-	fn test_cache_clear() {
-		let cache = TemplateCache::new(10);
-
+	#[rstest]
+	fn test_cache_clear(cache: TemplateCache) {
 		cache.put("template1".to_string(), "content1".to_string());
 		cache.put("template2".to_string(), "content2".to_string());
 
@@ -323,10 +324,8 @@ mod tests {
 		assert!(cache.is_empty());
 	}
 
-	#[test]
-	fn test_stats_reset() {
-		let cache = TemplateCache::new(10);
-
+	#[rstest]
+	fn test_stats_reset(cache: TemplateCache) {
 		cache.put("template1".to_string(), "content1".to_string());
 		let _ = cache.get("template1");
 		let _ = cache.get("template2");

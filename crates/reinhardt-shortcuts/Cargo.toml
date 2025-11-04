@@ -12,6 +12,7 @@ reinhardt-http = { workspace = true }
 reinhardt-views = { workspace = true }
 reinhardt-template = { workspace = true, optional = true }
 reinhardt-db = { workspace = true, optional = true }
+reinhardt-routers = { path = "../reinhardt-urls/crates/routers", version = "0.1.0-alpha.1" }
 
 bytes = { workspace = true }
 thiserror = { workspace = true }
@@ -25,7 +26,14 @@ lru = { version = "0.12", optional = true }
 [features]
 default = ["templates"]
 templates = ["reinhardt-template", "lru", "tera", "chrono"]
-database = ["reinhardt-db"]
+database = ["reinhardt-db", "reinhardt-db/backends", "reinhardt-db/pool", "reinhardt-db/orm", "reinhardt-db/postgres"]
 
 [dev-dependencies]
 tokio = { workspace = true }
+rstest = { workspace = true }
+reinhardt-test = { path = "../reinhardt-test", features = ["testcontainers"] }
+sqlx = { workspace = true }
+serial_test = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+async-trait = { workspace = true }

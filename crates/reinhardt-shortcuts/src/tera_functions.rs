@@ -10,6 +10,9 @@ use std::collections::HashMap;
 #[cfg(feature = "templates")]
 use tera::{Function, Result as TeraResult};
 
+#[cfg(feature = "templates")]
+use reinhardt_routers::get_router;
+
 /// Generate a range of numbers
 ///
 /// Similar to Django's `{% for i in range(10) %}` tag.
@@ -211,10 +214,38 @@ impl Function for StaticFunction {
 ///
 /// Similar to Django's `{% url %}` tag.
 ///
+/// Uses the globally registered `UnifiedRouter` to reverse URLs.
+/// Make sure to call `register_router()` in your application setup.
+///
 /// # Usage in templates
 ///
 /// ```jinja
 /// <a href="{{ url(name="user_profile", id=user.id) }}">Profile</a>
+/// ```
+///
+/// # Examples
+///
+/// ```ignore
+/// use reinhardt_routers::{UnifiedRouter, register_router};
+/// use reinhardt_shortcuts::tera_functions::UrlFunction;
+/// use tera::Function;
+/// use serde_json::json;
+/// use std::collections::HashMap;
+/// use hyper::Method;
+///
+/// // Setup router
+/// let router = UnifiedRouter::new()
+///     .function_named("/users/:id", Method::GET, dummy_handler, "user_profile");
+/// register_router(router);
+///
+/// // Use in template function
+/// let func = UrlFunction;
+/// let mut args = HashMap::new();
+/// args.insert("name".to_string(), json!("user_profile"));
+/// args.insert("id".to_string(), json!(42));
+///
+/// let result = func.call(&args).unwrap();
+/// assert_eq!(result, json!("/users/42"));
 /// ```
 #[cfg(feature = "templates")]
 #[derive(Debug, Clone)]
@@ -228,20 +259,42 @@ impl Function for UrlFunction {
 			.and_then(|v| v.as_str())
 			.ok_or_else(|| tera::Error::msg("Function `url` requires `name` argument"))?;
 
-		// For now, return a placeholder URL with the route name
-		// In a real implementation, this would use the router to generate URLs
-		let mut url = format!("/{}", name);
+		// Get global router
+		let router = get_router().ok_or_else(|| {
+			tera::Error::msg(
+				"Router not registered. Call register_router() in your application setup.",
+			)
+		})?;
 
-		// Add query parameters if provided
-		for (key, value) in args.iter() {
-			if key != "name" {
-				if let Some(v) = value.as_str() {
-					url = url.replace(&format!("{{{}}}", key), v);
-				} else if let Some(v) = value.as_i64() {
-					url = url.replace(&format!("{{{}}}", key), &v.to_string());
-				}
-			}
-		}
+		// Convert template arguments to URL parameters
+		// First, collect owned strings to ensure proper lifetime
+		let params_owned: Vec<(String, String)> = args
+			.iter()
+			.filter(|(k, _)| k.as_str() != "name")
+			.map(|(k, v)| {
+				let value_str = match v {
+					Value::String(s) => s.clone(),
+					Value::Number(n) => n.to_string(),
+					Value::Bool(b) => b.to_string(),
+					_ => v.to_string(),
+				};
+				(k.clone(), value_str)
+			})
+			.collect();
+
+		// Convert to borrowed references for reverse()
+		let params_ref: Vec<(&str, &str)> = params_owned
+			.iter()
+			.map(|(k, v)| (k.as_str(), v.as_str()))
+			.collect();
+
+		// Use router to generate URL
+		let url = router.reverse(name, &params_ref).ok_or_else(|| {
+			tera::Error::msg(format!(
+				"Failed to reverse URL for route '{}'. Route may not exist or parameters may be invalid.",
+				name
+			))
+		})?;
 
 		Ok(Value::String(url))
 	}

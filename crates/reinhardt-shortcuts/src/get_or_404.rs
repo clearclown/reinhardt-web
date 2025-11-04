@@ -16,19 +16,40 @@ pub enum GetError {
 	DatabaseError(String),
 }
 
-/// Get a single object or return a 404 response
+impl From<GetError> for Response {
+	fn from(error: GetError) -> Self {
+		match error {
+			GetError::NotFound => Response::not_found(),
+			GetError::MultipleObjectsReturned => {
+				let mut response = Response::bad_request();
+				response.body = bytes::Bytes::from("Multiple objects returned");
+				response
+			}
+			GetError::DatabaseError(msg) => {
+				let mut response = Response::internal_server_error();
+				response.body = bytes::Bytes::from(format!("Database error: {}", msg));
+				response
+			}
+		}
+	}
+}
+
+/// Get a single object or return a 404 error
 ///
 /// This is a simplified version that works with any query result.
 /// In a full implementation, this would integrate with the ORM QuerySet.
+///
+/// The error can be automatically converted to a Response using the `?` operator
+/// or explicitly via `.into()`.
 ///
 /// # Examples
 ///
 /// ```ignore
 /// use reinhardt_shortcuts::get_or_404_response;
 ///
-// In a view handler:
+/// // In a view handler:
 /// let result = query_database(id);
-/// let response = get_or_404_response(result)?;
+/// let object = get_or_404_response(result)?;  // GetError converts to Response automatically
 /// ```
 ///
 /// # Arguments
@@ -37,20 +58,19 @@ pub enum GetError {
 ///
 /// # Returns
 ///
-/// Either the queried object or a 404 Response
-pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Box<Response>> {
+/// Either the queried object or a GetError (NotFound or DatabaseError)
+pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, GetError> {
 	match result {
 		Ok(Some(obj)) => Ok(obj),
-		Ok(None) => Err(Box::new(Response::not_found())),
-		Err(e) => {
-			let mut response = Response::internal_server_error();
-			response.body = bytes::Bytes::from(format!("Database error: {}", e));
-			Err(Box::new(response))
-		}
+		Ok(None) => Err(GetError::NotFound),
+		Err(e) => Err(GetError::DatabaseError(e)),
 	}
 }
 
-/// Get a list of objects or return a 404 response if empty
+/// Get a list of objects or return a 404 error if empty
+///
+/// The error can be automatically converted to a Response using the `?` operator
+/// or explicitly via `.into()`.
 ///
 /// # Examples
 ///
@@ -58,7 +78,7 @@ pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Bo
 /// use reinhardt_shortcuts::get_list_or_404_response;
 ///
 /// let results = query_database_list(filters);
-/// let list = get_list_or_404_response(results)?;
+/// let list = get_list_or_404_response(results)?;  // GetError converts to Response automatically
 /// ```
 ///
 /// # Arguments
@@ -67,29 +87,26 @@ pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Bo
 ///
 /// # Returns
 ///
-/// Either the list of objects or a 404 Response if the list is empty
-pub fn get_list_or_404_response<T>(
-	result: Result<Vec<T>, String>,
-) -> Result<Vec<T>, Box<Response>> {
+/// Either the list of objects or a GetError (NotFound if empty, or DatabaseError)
+pub fn get_list_or_404_response<T>(result: Result<Vec<T>, String>) -> Result<Vec<T>, GetError> {
 	match result {
 		Ok(list) if !list.is_empty() => Ok(list),
-		Ok(_) => Err(Box::new(Response::not_found())),
-		Err(e) => {
-			let mut response = Response::internal_server_error();
-			response.body = bytes::Bytes::from(format!("Database error: {}", e));
-			Err(Box::new(response))
-		}
+		Ok(_) => Err(GetError::NotFound),
+		Err(e) => Err(GetError::DatabaseError(e)),
 	}
 }
 
-/// Check if a query result exists, returning a 404 response if not
+/// Check if a query result exists, returning a 404 error if not
+///
+/// The error can be automatically converted to a Response using the `?` operator
+/// or explicitly via `.into()`.
 ///
 /// # Examples
 ///
 /// ```
 /// use reinhardt_shortcuts::exists_or_404_response;
 ///
-// Simulate a database query
+/// // Simulate a database query
 /// let exists = Some(true);
 /// let result = exists_or_404_response(exists);
 /// assert!(result.is_ok());
@@ -98,10 +115,10 @@ pub fn get_list_or_404_response<T>(
 /// let result = exists_or_404_response(not_exists);
 /// assert!(result.is_err());
 /// ```
-pub fn exists_or_404_response(exists: Option<bool>) -> Result<(), Box<Response>> {
+pub fn exists_or_404_response(exists: Option<bool>) -> Result<(), GetError> {
 	match exists {
 		Some(true) => Ok(()),
-		_ => Err(Box::new(Response::not_found())),
+		_ => Err(GetError::NotFound),
 	}
 }
 
@@ -139,7 +156,8 @@ mod tests {
 		let response = get_or_404_response(result);
 		assert!(response.is_err());
 
-		let error_response = response.unwrap_err();
+		let error = response.unwrap_err();
+		let error_response: Response = error.into();
 		assert_eq!(error_response.status, StatusCode::NOT_FOUND);
 	}
 
@@ -150,7 +168,8 @@ mod tests {
 		let response = get_or_404_response(result);
 		assert!(response.is_err());
 
-		let error_response = response.unwrap_err();
+		let error = response.unwrap_err();
+		let error_response: Response = error.into();
 		assert_eq!(error_response.status, StatusCode::INTERNAL_SERVER_ERROR);
 	}
 
@@ -183,7 +202,8 @@ mod tests {
 		let response = get_list_or_404_response(result);
 		assert!(response.is_err());
 
-		let error_response = response.unwrap_err();
+		let error = response.unwrap_err();
+		let error_response: Response = error.into();
 		assert_eq!(error_response.status, StatusCode::NOT_FOUND);
 	}
 
@@ -194,7 +214,8 @@ mod tests {
 		let response = get_list_or_404_response(result);
 		assert!(response.is_err());
 
-		let error_response = response.unwrap_err();
+		let error = response.unwrap_err();
+		let error_response: Response = error.into();
 		assert_eq!(error_response.status, StatusCode::INTERNAL_SERVER_ERROR);
 	}
 
@@ -209,7 +230,8 @@ mod tests {
 		let result = exists_or_404_response(Some(false));
 		assert!(result.is_err());
 
-		let error_response = result.unwrap_err();
+		let error = result.unwrap_err();
+		let error_response: Response = error.into();
 		assert_eq!(error_response.status, StatusCode::NOT_FOUND);
 	}
 
@@ -217,5 +239,9 @@ mod tests {
 	fn test_exists_or_404_none() {
 		let result = exists_or_404_response(None);
 		assert!(result.is_err());
+
+		let error = result.unwrap_err();
+		let error_response: Response = error.into();
+		assert_eq!(error_response.status, StatusCode::NOT_FOUND);
 	}
 }

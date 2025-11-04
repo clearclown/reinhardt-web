@@ -10,6 +10,8 @@ use reinhardt_http::{Request, Response};
 #[cfg(feature = "templates")]
 use serde::Serialize;
 #[cfg(feature = "templates")]
+use std::backtrace::{Backtrace, BacktraceStatus};
+#[cfg(feature = "templates")]
 use std::collections::HashMap;
 #[cfg(feature = "templates")]
 use tera::Context;
@@ -155,8 +157,12 @@ fn render_default_error_page(status_code: u16, path: &str) -> String {
 
 /// Render a debug error page for development environments
 ///
-/// This function provides detailed error information including stack traces
-/// and request details, similar to Django's debug error page.
+/// This function provides detailed error information including automatically
+/// captured stack traces and request details, similar to Django's debug error page.
+///
+/// **Note**: Stack traces are automatically captured using `std::backtrace::Backtrace`.
+/// For stack traces to work, you must compile with `RUST_BACKTRACE=1` or
+/// `RUST_BACKTRACE=full` environment variable.
 ///
 /// **Warning**: Only use this in development. Never expose detailed error
 /// information in production as it may leak sensitive data.
@@ -176,9 +182,9 @@ fn render_default_error_page(status_code: u16, path: &str) -> String {
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
 ///     let mut context = HashMap::new();
-///     context.insert("stack_trace", format!("{:?}", backtrace));
 ///     context.insert("local_vars", debug_info);
 ///
+///     // Stack trace is automatically captured
 ///     Err(render_debug_error_page(
 ///         &request,
 ///         500,
@@ -225,6 +231,15 @@ where
 		}
 	}
 
+	// Capture and add stack trace
+	let backtrace = Backtrace::capture();
+	let stack_trace = if backtrace.status() == BacktraceStatus::Captured {
+		format!("{}", backtrace)
+	} else {
+		"Stack trace not available (compile with RUST_BACKTRACE=1)".to_string()
+	};
+	tera_context.insert("stack_trace", &stack_trace);
+
 	// Try to render debug template
 	let html = match tera.render(template_name, &tera_context) {
 		Ok(html) => html,
@@ -262,6 +277,14 @@ fn render_simple_debug_page(status_code: u16, error_message: &str, request: &Req
 		})
 		.collect::<Vec<_>>()
 		.join("\n");
+
+	// Capture stack trace
+	let backtrace = Backtrace::capture();
+	let stack_trace_html = if backtrace.status() == BacktraceStatus::Captured {
+		format!("{}", backtrace)
+	} else {
+		"Stack trace not available (compile with RUST_BACKTRACE=1)".to_string()
+	};
 
 	format!(
 		r#"<!DOCTYPE html>
@@ -351,6 +374,10 @@ fn render_simple_debug_page(status_code: u16, error_message: &str, request: &Req
             <h2>Request Headers</h2>
             <table>{}</table>
         </div>
+        <div class="debug-section">
+            <h2>Stack Trace</h2>
+            <pre style="background: #1a1a1a; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 12px; line-height: 1.5;">{}</pre>
+        </div>
     </div>
 </body>
 </html>"#,
@@ -360,7 +387,8 @@ fn render_simple_debug_page(status_code: u16, error_message: &str, request: &Req
 		error_message,
 		request.method.as_str(),
 		request.uri.path(),
-		headers_html
+		headers_html,
+		stack_trace_html
 	)
 }
 
