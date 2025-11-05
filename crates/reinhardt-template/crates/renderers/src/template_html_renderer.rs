@@ -27,6 +27,8 @@ use crate::renderer::{RenderResult, Renderer, RendererContext};
 pub struct TemplateHTMLRenderer {
 	/// Default charset for HTML responses
 	charset: String,
+	/// Template directory path (optional)
+	template_dir: Option<std::path::PathBuf>,
 }
 
 impl TemplateHTMLRenderer {
@@ -43,6 +45,7 @@ impl TemplateHTMLRenderer {
 	pub fn new() -> Self {
 		Self {
 			charset: "utf-8".to_string(),
+			template_dir: None,
 		}
 	}
 
@@ -58,7 +61,41 @@ impl TemplateHTMLRenderer {
 	pub fn with_charset(charset: impl Into<String>) -> Self {
 		Self {
 			charset: charset.into(),
+			template_dir: None,
 		}
+	}
+
+	/// Creates a new TemplateHTMLRenderer with a custom template directory
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_renderers::TemplateHTMLRenderer;
+	/// use std::path::PathBuf;
+	///
+	/// let renderer = TemplateHTMLRenderer::with_template_dir(PathBuf::from("templates"));
+	/// ```
+	pub fn with_template_dir(template_dir: std::path::PathBuf) -> Self {
+		Self {
+			charset: "utf-8".to_string(),
+			template_dir: Some(template_dir),
+		}
+	}
+
+	/// Set the template directory for this renderer
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_renderers::TemplateHTMLRenderer;
+	/// use std::path::PathBuf;
+	///
+	/// let renderer = TemplateHTMLRenderer::new()
+	///     .set_template_dir(PathBuf::from("templates"));
+	/// ```
+	pub fn set_template_dir(mut self, template_dir: std::path::PathBuf) -> Self {
+		self.template_dir = Some(template_dir);
+		self
 	}
 
 	/// Performs single-pass variable substitution in a template string
@@ -206,12 +243,49 @@ impl TemplateHTMLRenderer {
 			let output = Self::substitute_variables_single_pass(template_str, &var_context);
 			Ok(output)
 		} else if let Some(template_name) = context.get("template_name").and_then(|v| v.as_str()) {
-			// Template file loading would go here
-			// For now, return an error indicating feature not yet implemented
-			Err(Error::Internal(format!(
-				"File-based template loading not yet implemented: {}",
-				template_name
-			)))
+			// Load template from file system
+			let template_dir = self.template_dir.as_ref().ok_or_else(|| {
+				Error::Internal(
+					"Template directory not configured. Use set_template_dir() or with_template_dir()."
+						.to_string(),
+				)
+			})?;
+
+			let template_path = template_dir.join(template_name);
+
+			// Read template file
+			let template_str = std::fs::read_to_string(&template_path).map_err(|e| {
+				Error::Internal(format!(
+					"Failed to read template file '{}': {}",
+					template_path.display(),
+					e
+				))
+			})?;
+
+			// Build context HashMap for single-pass substitution
+			let mut var_context = HashMap::new();
+
+			if let Value::Object(map) = context {
+				for (key, value) in map {
+					if key == "template_string" || key == "template_name" {
+						continue;
+					}
+
+					let replacement = match value {
+						Value::String(s) => s.clone(),
+						Value::Number(n) => n.to_string(),
+						Value::Bool(b) => b.to_string(),
+						Value::Null => String::new(),
+						_ => serde_json::to_string(value).unwrap_or_default(),
+					};
+
+					var_context.insert(key.clone(), replacement);
+				}
+			}
+
+			// Single-pass variable substitution
+			let output = Self::substitute_variables_single_pass(&template_str, &var_context);
+			Ok(output)
 		} else {
 			Err(Error::Internal(
 				"No template_string or template_name provided in context".to_string(),
