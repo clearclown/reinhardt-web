@@ -584,12 +584,8 @@ impl Session {
 
 	/// Get database backend type from pool
 	fn get_backend(&self) -> DbBackend {
-		// Determine backend from the pool's connection string
-		// This is a workaround since AnyKind is deprecated
-		// We'll check the pool's database type by attempting a test query
-		// For now, default to Postgres (most common)
-		// TODO: Implement proper backend detection
-		DbBackend::Postgres
+		// Return the backend type that was provided during Session creation
+		self.db_backend
 	}
 
 	/// Execute SQL with sea_query values

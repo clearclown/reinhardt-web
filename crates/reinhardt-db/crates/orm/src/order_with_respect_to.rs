@@ -75,6 +75,8 @@ pub struct OrderedModel {
 	table_name: String,
 	/// Database connection pool
 	pool: Arc<AnyPool>,
+	/// Database backend type
+	db_backend: DbBackend,
 }
 
 impl OrderedModel {
@@ -84,6 +86,7 @@ impl OrderedModel {
 	///
 	/// ```
 	/// use reinhardt_orm::order_with_respect_to::OrderedModel;
+	/// use reinhardt_orm::query_types::DbBackend;
 	/// use std::sync::Arc;
 	/// use sqlx::AnyPool;
 	///
@@ -94,6 +97,7 @@ impl OrderedModel {
 	///     vec!["category_id".to_string()],
 	///     "products".to_string(),
 	///     pool,
+	///     DbBackend::Sqlite,
 	/// );
 	///
 	/// assert_eq!(ordered.order_field(), "_order");
@@ -104,12 +108,14 @@ impl OrderedModel {
 		order_with_respect_to: Vec<String>,
 		table_name: String,
 		pool: Arc<AnyPool>,
+		db_backend: DbBackend,
 	) -> Self {
 		Self {
 			order_field,
 			order_with_respect_to,
 			table_name,
 			pool,
+			db_backend,
 		}
 	}
 
@@ -201,9 +207,8 @@ impl OrderedModel {
 
 	/// Get database backend type
 	fn get_backend(&self) -> DbBackend {
-		// TODO: Detect actual backend from connection pool
-		// Temporary workaround - defaults to Postgres
-		DbBackend::Postgres
+		// Return the backend type that was provided during OrderedModel creation
+		self.db_backend
 	}
 
 	/// Moves an object up in the ordering (decreases order value)
