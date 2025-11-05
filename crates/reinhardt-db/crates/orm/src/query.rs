@@ -1134,10 +1134,22 @@ where
 
 	/// Add an annotation to the QuerySet
 	///
-	/// # Note
+	/// Annotations allow you to add calculated fields to query results using expressions,
+	/// aggregations, or subqueries. The annotation will be added to the SELECT clause.
 	///
-	/// This feature is not yet implemented. Tests are currently ignored.
-	/// See `annotation.rs` for test cases that will be enabled when this is implemented.
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_orm::annotation::{Annotation, AnnotationValue};
+	/// use reinhardt_orm::aggregation::Aggregate;
+	///
+	/// // Add aggregate annotation
+	/// let users = User::objects()
+	///     .annotate(Annotation::new("total_orders",
+	///         AnnotationValue::Aggregate(Aggregate::count(Some("orders")))))
+	///     .all()
+	///     .await?;
+	/// ```
 	pub fn annotate(mut self, annotation: crate::annotation::Annotation) -> Self {
 		self.annotations.push(annotation);
 		self
@@ -1145,9 +1157,26 @@ where
 
 	/// Perform an aggregation on the QuerySet
 	///
-	/// # Note
+	/// Aggregations allow you to calculate summary statistics (COUNT, SUM, AVG, MAX, MIN)
+	/// for the queryset. The aggregation result will be added to the SELECT clause.
 	///
-	/// This feature is not yet implemented. Tests are currently ignored.
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_orm::aggregation::Aggregate;
+	///
+	/// // Count all users
+	/// let result = User::objects()
+	///     .aggregate(Aggregate::count_all().with_alias("total_users"))
+	///     .all()
+	///     .await?;
+	///
+	/// // Sum order amounts
+	/// let result = Order::objects()
+	///     .aggregate(Aggregate::sum("amount").with_alias("total_amount"))
+	///     .all()
+	///     .await?;
+	/// ```
 	pub fn aggregate(mut self, aggregate: crate::aggregation::Aggregate) -> Self {
 		// Convert Aggregate to Annotation and add to annotations list
 		let alias = aggregate

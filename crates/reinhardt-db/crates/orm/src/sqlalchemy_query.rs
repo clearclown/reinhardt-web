@@ -7,6 +7,7 @@
 //! Licensed under MIT License. See THIRD-PARTY-NOTICES for details.
 
 use crate::query_fields::{Field, Lookup, QueryFieldCompiler};
+use crate::set_operations::CombinedQuery;
 use crate::typed_join::TypedJoin;
 use crate::{Model, Q};
 use std::marker::PhantomData;
@@ -259,9 +260,13 @@ impl<T: Model> SelectQuery<T> {
 	}
 
 	/// One result - corresponds to SQLAlchemy's .one()
-	/// In real implementation, would raise error if not exactly one result
+	///
+	/// Sets LIMIT 2 to detect multiple results. The execution layer should:
+	/// - Error if 0 results are returned (NoResultFound)
+	/// - Error if 2+ results are returned (MultipleResultsFound)
+	/// - Return the single result if exactly 1 is found
 	pub fn one(mut self) -> Self {
-		self.limit = Some(1);
+		self.limit = Some(2);
 		self
 	}
 
@@ -312,27 +317,67 @@ impl<T: Model> SelectQuery<T> {
 	}
 
 	/// Union with another query
-	pub fn union(self, _other: SelectQuery<T>) -> Self {
-		// In real implementation, would support UNION
-		self
+	///
+	/// Combines two queries using UNION (removes duplicates).
+	/// Returns a CombinedQuery that can be further chained.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let query1 = select::<User>().filter(User::is_active.eq(true));
+	/// let query2 = select::<User>().filter(User::is_admin.eq(true));
+	/// let combined = query1.union(query2);
+	/// ```
+	pub fn union(self, other: SelectQuery<T>) -> CombinedQuery {
+		CombinedQuery::new(self.to_sql()).union(other.to_sql())
 	}
 
 	/// Union All with another query
-	pub fn union_all(self, _other: SelectQuery<T>) -> Self {
-		// In real implementation, would support UNION ALL
-		self
+	///
+	/// Combines two queries using UNION ALL (keeps duplicates).
+	/// Returns a CombinedQuery that can be further chained.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let query1 = select::<User>().filter(User::is_active.eq(true));
+	/// let query2 = select::<User>().filter(User::is_admin.eq(true));
+	/// let combined = query1.union_all(query2);
+	/// ```
+	pub fn union_all(self, other: SelectQuery<T>) -> CombinedQuery {
+		CombinedQuery::new(self.to_sql()).union_all(other.to_sql())
 	}
 
 	/// Intersect with another query
-	pub fn intersect(self, _other: SelectQuery<T>) -> Self {
-		// In real implementation, would support INTERSECT
-		self
+	///
+	/// Combines two queries using INTERSECT (returns common rows).
+	/// Returns a CombinedQuery that can be further chained.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let query1 = select::<User>().filter(User::is_active.eq(true));
+	/// let query2 = select::<User>().filter(User::department.eq("Engineering"));
+	/// let combined = query1.intersect(query2);  // Active engineers
+	/// ```
+	pub fn intersect(self, other: SelectQuery<T>) -> CombinedQuery {
+		CombinedQuery::new(self.to_sql()).intersect(other.to_sql())
 	}
 
 	/// Except (difference) with another query
-	pub fn except(self, _other: SelectQuery<T>) -> Self {
-		// In real implementation, would support EXCEPT
-		self
+	///
+	/// Combines two queries using EXCEPT (returns rows in first query but not in second).
+	/// Returns a CombinedQuery that can be further chained.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let query1 = select::<User>();  // All users
+	/// let query2 = select::<User>().filter(User::is_deleted.eq(true));  // Deleted users
+	/// let combined = query1.except(query2);  // Active users only
+	/// ```
+	pub fn except(self, other: SelectQuery<T>) -> CombinedQuery {
+		CombinedQuery::new(self.to_sql()).except(other.to_sql())
 	}
 
 	/// Generate SQL string

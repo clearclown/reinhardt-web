@@ -133,10 +133,7 @@ impl Annotation {
 
 	/// Helper method for creating field-based annotations (convenience alias for `new`)
 	///
-	/// # Note
-	///
-	/// This is a convenience method that calls `Annotation::new()`.
-	/// The actual annotation functionality is not yet implemented.
+	/// This is a convenience method that calls `Annotation::new()` with field-based annotation values.
 	pub fn field(alias: impl Into<String>, value: AnnotationValue) -> Self {
 		Self::new(alias, value)
 	}

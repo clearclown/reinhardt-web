@@ -56,8 +56,7 @@ fn test_update_expr_attr() {
 // Test 3: INSERT with expanded hybrid property
 #[test]
 fn test_insert_expr() {
-	// Note: Using the same expanded approach for INSERT
-	// In real implementation, this would use InsertBuilder
+	// Note: Using simplified test approach (production code uses InsertBuilder)
 	let updates = vec![("first_name", "Dr."), ("last_name", "No")];
 
 	// Verify the values can be split correctly

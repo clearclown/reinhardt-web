@@ -244,8 +244,8 @@ fn test_raiseload_prevents_access() {
 	assert_eq!(option.strategy(), LoadingStrategy::Raise);
 	assert!(option.strategy().prevents_load());
 
-	// In real implementation, accessing relationship would raise error
-	// Here we just verify the strategy properties
+	// Note: Raiseload prevents relationship access (would error on actual use)
+	// This test verifies the strategy configuration
 	assert!(
 		!option.strategy().is_eager(),
 		"Raiseload is not eager loading"
