@@ -25,6 +25,7 @@
 //!     allowed_methods: vec!["GET".to_string(), "POST".to_string()],
 //!     renders: vec!["application/json".to_string()],
 //!     parses: vec!["application/json".to_string()],
+//!     serializer_fields: None,
 //! };
 //! ```
 //!

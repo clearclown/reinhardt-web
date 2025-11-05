@@ -365,6 +365,7 @@ mod tests {
 			allowed_methods: vec!["POST".to_string()],
 			renders: vec!["application/json".to_string()],
 			parses: vec!["application/json".to_string()],
+			serializer_fields: None,
 		};
 
 		let actions = metadata.determine_actions(&options.allowed_methods, &fields);
