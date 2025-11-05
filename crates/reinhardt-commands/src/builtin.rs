@@ -534,8 +534,10 @@ impl BaseCommand for RunServerCommand {
 	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
 		let address = ctx.arg(0).map(|s| s.as_str()).unwrap_or("127.0.0.1:8000");
 		let noreload = ctx.has_option("noreload");
-		let _clear = ctx.has_option("clear");
-		let _watch_delay = ctx
+		#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
+		let clear = ctx.has_option("clear");
+		#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
+		let watch_delay = ctx
 			.option("watch-delay")
 			.and_then(|v| v.parse::<u64>().ok())
 			.unwrap_or(500);
@@ -774,10 +776,10 @@ impl RunServerCommand {
 		use std::process::{Command, Stdio};
 
 		// Check if cargo-watch is installed
-		if !is_cargo_watch_installed() {
-			ctx.error("cargo-watch not found. Install with:");
-			ctx.info("  cargo install cargo-watch");
-			ctx.info("");
+		if !Self::is_cargo_watch_installed() {
+			eprintln!("cargo-watch not found. Install with:");
+			eprintln!("  cargo install cargo-watch");
+			eprintln!("");
 			return Err(crate::CommandError::ExecutionError(
 				"cargo-watch not installed".to_string(),
 			));
