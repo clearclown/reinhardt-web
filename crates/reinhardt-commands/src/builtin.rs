@@ -313,11 +313,18 @@ impl BaseCommand for ShellCommand {
 	}
 
 	fn options(&self) -> Vec<CommandOption> {
-		vec![CommandOption::option(
-			Some('c'),
-			"command",
-			"Execute a command and exit",
-		)]
+		vec![
+			CommandOption::option(
+				Some('c'),
+				"command",
+				"Execute a command and exit",
+			),
+			CommandOption::option(
+				Some('e'),
+				"engine",
+				"Evaluation engine: rhai (default), python",
+			),
+		]
 	}
 
 	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
@@ -352,34 +359,42 @@ impl BaseCommand for ShellCommand {
 						if !trimmed.is_empty() {
 							let _ = rl.add_history_entry(line.as_str());
 
-							// TODO: Implement code evaluation
-							//
-							// Full implementation requires choosing one of these approaches:
-							//
-							// 1. **Embedded Rust Interpreter** (recommended):
-							//    - Use `evcxr` crate for Rust code evaluation
-							//    - Maintains context between evaluations
-							//    - Example:
-							//      ```
-							//      use evcxr::EvalContext;
-							//      let mut eval_context = EvalContext::new()?;
-							//      let result = eval_context.eval(trimmed)?;
-							//      ctx.info(&format!("=> {}", result));
-							//      ```
-							//
-							// 2. **Compile-and-Run**:
-							//    - Write code to temporary file
-							//    - Compile with `rustc`
-							//    - Execute binary
-							//    - Slower but more flexible
-							//
-							// 3. **Python-style Shell**:
-							//    - Create Python shell with Reinhardt bindings
-							//    - Use PyO3 for Rust-Python interop
-							//    - Allows dynamic imports and introspection
-							//
-							// Current placeholder just echoes input:
-							ctx.info(&format!("Executed: {}", trimmed));
+							// Evaluate code using selected engine
+							let engine = ctx
+								.option("engine")
+								.map(|s| s.as_str())
+								.unwrap_or("rhai");
+
+							match engine {
+								"rhai" => {
+									#[cfg(feature = "shell-rhai")]
+									{
+										Self::eval_rhai(ctx, trimmed)?;
+									}
+									#[cfg(not(feature = "shell-rhai"))]
+									{
+										ctx.warning(
+											"Rhai engine not enabled. Enable 'shell-rhai' feature.",
+										);
+									}
+								}
+								"python" | "py" => {
+									#[cfg(feature = "shell-pyo3")]
+									{
+										Self::eval_python(ctx, trimmed)?;
+									}
+									#[cfg(not(feature = "shell-pyo3"))]
+									{
+										ctx.warning(
+											"Python engine not enabled. Enable 'shell-pyo3' feature.",
+										);
+									}
+								}
+								_ => {
+									ctx.warning(&format!("Unknown engine: {}", engine));
+									ctx.info("Available engines: rhai, python");
+								}
+							}
 						}
 					}
 					Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
@@ -405,6 +420,77 @@ impl BaseCommand for ShellCommand {
 			ctx.info("  reinhardt-commands = { version = \"*\", features = [\"shell\"] }");
 			Ok(())
 		}
+	}
+}
+
+impl ShellCommand {
+	/// Evaluate code using Rhai engine
+	#[cfg(feature = "shell-rhai")]
+	fn eval_rhai(ctx: &CommandContext, code: &str) -> CommandResult<()> {
+		use rhai::{Engine, EvalAltResult};
+
+		let mut engine = Engine::new();
+
+		// Register helper functions
+		engine.register_fn("println", |s: &str| {
+			println!("{}", s);
+		});
+
+		// Evaluate the code
+		match engine.eval::<rhai::Dynamic>(code) {
+			Ok(result) => {
+				// Display result if not Unit type
+				if !result.is_unit() {
+					ctx.info(&format!("=> {}", result));
+				}
+				Ok(())
+			}
+			Err(e) => {
+				let error_msg = match *e {
+					EvalAltResult::ErrorParsing(ref err, _) => {
+						format!("Parse error: {}", err)
+					}
+					EvalAltResult::ErrorRuntime(ref msg, _) => {
+						format!("Runtime error: {}", msg)
+					}
+					_ => format!("Error: {}", e),
+				};
+				ctx.warning(&error_msg);
+				Ok(())
+			}
+		}
+	}
+
+	/// Evaluate code using Python (PyO3) engine
+	#[cfg(feature = "shell-pyo3")]
+	fn eval_python(ctx: &CommandContext, code: &str) -> CommandResult<()> {
+		use pyo3::prelude::*;
+		use pyo3::types::PyDict;
+
+		Python::with_gil(|py| {
+			// Create a locals dictionary to maintain state between evaluations
+			let locals = PyDict::new_bound(py);
+
+			// Execute the code
+			match py.eval_bound(code, None, Some(&locals)) {
+				Ok(result) => {
+					// Convert result to string and display
+					if let Ok(result_str) = result.str() {
+						if let Ok(s) = result_str.to_string() {
+							if s != "()" && !s.is_empty() {
+								ctx.info(&format!("=> {}", s));
+							}
+						}
+					}
+					Ok(())
+				}
+				Err(e) => {
+					let error_msg = format!("Python error: {}", e);
+					ctx.warning(&error_msg);
+					Ok(())
+				}
+			}
+		})
 	}
 }
 
