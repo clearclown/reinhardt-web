@@ -4,6 +4,24 @@ use crate::secrets::{SecretError, SecretMetadata, SecretProvider, SecretResult, 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+use std::time::{Duration, Instant};
+
+/// Cached secret entry with expiration
+#[derive(Debug, Clone)]
+struct CachedSecret {
+	/// The cached secret value
+	value: SecretString,
+	/// When this cache entry expires
+	expires_at: Instant,
+}
+
+impl CachedSecret {
+	/// Check if this cache entry is still valid
+	fn is_valid(&self) -> bool {
+		Instant::now() < self.expires_at
+	}
+}
 
 /// HashiCorp Vault client configuration
 #[derive(Debug, Clone)]
@@ -19,6 +37,9 @@ pub struct VaultConfig {
 
 	/// Optional namespace (for Vault Enterprise)
 	pub namespace: Option<String>,
+
+	/// Cache TTL in seconds (default: 300 = 5 minutes)
+	pub cache_ttl: Duration,
 }
 
 impl VaultConfig {
@@ -29,6 +50,7 @@ impl VaultConfig {
 			token: token.into(),
 			mount: "secret".to_string(),
 			namespace: None,
+			cache_ttl: Duration::from_secs(300), // Default: 5 minutes
 		}
 	}
 	/// Set the mount point
@@ -41,12 +63,18 @@ impl VaultConfig {
 		self.namespace = Some(namespace.into());
 		self
 	}
+	/// Set the cache TTL
+	pub fn with_cache_ttl(mut self, ttl: Duration) -> Self {
+		self.cache_ttl = ttl;
+		self
+	}
 }
 
 /// HashiCorp Vault secret provider
 pub struct VaultSecretProvider {
 	config: VaultConfig,
 	client: reqwest::Client,
+	cache: Arc<RwLock<HashMap<String, CachedSecret>>>,
 }
 
 impl VaultSecretProvider {
@@ -57,7 +85,11 @@ impl VaultSecretProvider {
 			.build()
 			.map_err(|e| SecretError::ProviderError(format!("Failed to create client: {}", e)))?;
 
-		Ok(Self { config, client })
+		Ok(Self {
+			config,
+			client,
+			cache: Arc::new(RwLock::new(HashMap::new())),
+		})
 	}
 
 	fn secret_path(&self, key: &str) -> String {
@@ -180,6 +212,17 @@ struct VaultVersionInfo {
 #[async_trait]
 impl SecretProvider for VaultSecretProvider {
 	async fn get_secret(&self, key: &str) -> SecretResult<SecretString> {
+		// Check cache first
+		{
+			let cache = self.cache.read().unwrap();
+			if let Some(cached) = cache.get(key) {
+				if cached.is_valid() {
+					return Ok(cached.value.clone());
+				}
+			}
+		}
+
+		// Cache miss or expired - fetch from Vault
 		let path = self.secret_path(key);
 		let response: VaultReadResponse = self.request(reqwest::Method::GET, &path, None).await?;
 
@@ -189,7 +232,21 @@ impl SecretProvider for VaultSecretProvider {
 			.get("value")
 			.ok_or_else(|| SecretError::NotFound(format!("Secret not found: {}", key)))?;
 
-		Ok(SecretString::new(value.clone()))
+		let secret = SecretString::new(value.clone());
+
+		// Update cache
+		{
+			let mut cache = self.cache.write().unwrap();
+			cache.insert(
+				key.to_string(),
+				CachedSecret {
+					value: secret.clone(),
+					expires_at: Instant::now() + self.config.cache_ttl,
+				},
+			);
+		}
+
+		Ok(secret)
 	}
 
 	async fn get_secret_with_metadata(
@@ -230,6 +287,12 @@ impl SecretProvider for VaultSecretProvider {
 			.request(reqwest::Method::POST, &path, Some(body))
 			.await?;
 
+		// Invalidate cache entry
+		{
+			let mut cache = self.cache.write().unwrap();
+			cache.remove(key);
+		}
+
 		Ok(())
 	}
 
@@ -238,6 +301,13 @@ impl SecretProvider for VaultSecretProvider {
 		let _: serde_json::Value = self
 			.request(reqwest::Method::DELETE, &metadata_path, None)
 			.await?;
+
+		// Invalidate cache entry
+		{
+			let mut cache = self.cache.write().unwrap();
+			cache.remove(key);
+		}
+
 		Ok(())
 	}
 
@@ -247,10 +317,14 @@ impl SecretProvider for VaultSecretProvider {
 		Ok(vec![])
 	}
 
-	fn exists(&self, _key: &str) -> bool {
-		// Note: Since this is a sync method, we can't make async calls
-		// In real implementation, this would check cached state or return default
-		false
+	fn exists(&self, key: &str) -> bool {
+		// Check cached state (since this is a sync method, we can't make async calls)
+		let cache = self.cache.read().unwrap();
+		if let Some(cached) = cache.get(key) {
+			cached.is_valid()
+		} else {
+			false
+		}
 	}
 
 	fn name(&self) -> &str {
