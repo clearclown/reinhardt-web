@@ -25,6 +25,7 @@ reinhardt-http = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-apps = { workspace = true }
 reinhardt-di = { workspace = true }
+reinhardt-sessions = { workspace = true }
 reinhardt-orm = { workspace = true }
 reinhardt-throttling = { workspace = true }
 argon2 = { workspace = true }

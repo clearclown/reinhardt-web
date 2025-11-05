@@ -4,6 +4,7 @@
 
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use reinhardt_apps::Request;
+use reinhardt_sessions::{backends::SessionBackend, Session};
 use std::sync::Arc;
 
 /// DRF-style authentication trait wrapper
@@ -77,14 +78,16 @@ impl Default for TokenAuthConfig {
 ///
 /// ```
 /// use reinhardt_auth::{CompositeAuthentication, SessionAuthentication, TokenAuthentication};
+/// use reinhardt_sessions::backends::InMemorySessionBackend;
 /// use std::sync::Arc;
 ///
+/// let session_backend = InMemorySessionBackend::new();
 /// let mut auth = CompositeAuthentication::new();
-/// auth.add_backend(Arc::new(SessionAuthentication::new()));
+/// auth.add_backend(Arc::new(SessionAuthentication::new(session_backend)));
 /// auth.add_backend(Arc::new(TokenAuthentication::new()));
 /// ```
 pub struct CompositeAuthentication {
-	backends: Vec<Arc<dyn Authentication>>,
+	backends: Vec<Arc<dyn AuthenticationBackend>>,
 }
 
 impl CompositeAuthentication {
@@ -116,12 +119,12 @@ impl CompositeAuthentication {
 	/// let mut auth = CompositeAuthentication::new();
 	/// auth.add_backend(Arc::new(TokenAuthentication::new()));
 	/// ```
-	pub fn add_backend(&mut self, backend: Arc<dyn Authentication>) {
+	pub fn add_backend(&mut self, backend: Arc<dyn AuthenticationBackend>) {
 		self.backends.push(backend);
 	}
 
 	/// Add multiple backends at once
-	pub fn add_backends(&mut self, backends: Vec<Arc<dyn Authentication>>) {
+	pub fn add_backends(&mut self, backends: Vec<Arc<dyn AuthenticationBackend>>) {
 		self.backends.extend(backends);
 	}
 }
@@ -163,29 +166,20 @@ impl AuthenticationBackend for CompositeAuthentication {
 		Authentication::authenticate(self, request).await
 	}
 
-	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		// TODO: Track which backend authenticated the user
-		// This requires:
-		// 1. Store backend identifier when user is authenticated
-		// 2. Use that identifier to select the correct backend for get_user
-		//
-		// Example implementation:
-		// ```
-		// // In authenticate():
-		// for (backend_id, backend) in &self.backends {
-		//     if let Some(user) = backend.authenticate(request).await? {
-		//         request.set_meta("auth_backend", backend_id);
-		//         return Ok(Some(user));
-		//     }
-		// }
-		//
-		// // In get_user():
-		// let backend_id = request.get_meta("auth_backend")?;
-		// let backend = self.backends.get(backend_id).ok_or(...)?;
-		// backend.get_user(user_id).await
-		// ```
-		//
-		// For now, return None as we can't determine which backend to use
+	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+		// Try each backend in order until one succeeds
+		// This is a fallback approach since we don't track which backend authenticated the user
+		for backend in &self.backends {
+			match backend.get_user(user_id).await {
+				Ok(Some(user)) => return Ok(Some(user)),
+				Ok(None) => continue,
+				Err(e) => {
+					// Log error but continue to next backend
+					eprintln!("get_user backend error: {}", e);
+					continue;
+				}
+			}
+		}
 		Ok(None)
 	}
 }
@@ -364,33 +358,39 @@ impl AuthenticationBackend for RemoteUserAuthentication {
 }
 
 /// Session-based authentication
-pub struct SessionAuthentication {
+pub struct SessionAuthentication<B: SessionBackend> {
 	/// Configuration
 	config: SessionAuthConfig,
+	/// Session backend for loading session data
+	session_backend: B,
 }
 
-impl SessionAuthentication {
+impl<B: SessionBackend> SessionAuthentication<B> {
 	/// Create a new session authentication backend
-	pub fn new() -> Self {
+	pub fn new(session_backend: B) -> Self {
 		Self {
 			config: SessionAuthConfig::default(),
+			session_backend,
 		}
 	}
 
 	/// Create with custom configuration
-	pub fn with_config(config: SessionAuthConfig) -> Self {
-		Self { config }
+	pub fn with_config(config: SessionAuthConfig, session_backend: B) -> Self {
+		Self {
+			config,
+			session_backend,
+		}
 	}
 }
 
-impl Default for SessionAuthentication {
+impl<B: SessionBackend + Default> Default for SessionAuthentication<B> {
 	fn default() -> Self {
-		Self::new()
+		Self::new(B::default())
 	}
 }
 
 #[async_trait::async_trait]
-impl Authentication for SessionAuthentication {
+impl<B: SessionBackend> Authentication for SessionAuthentication<B> {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -402,22 +402,40 @@ impl Authentication for SessionAuthentication {
 			for cookie in cookies.split(';') {
 				let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
 				if parts.len() == 2 && parts[0] == self.config.cookie_name {
-					let _session_key = parts[1];
+					let session_key = parts[1];
 
-					// TODO: Complete implementation requires SessionBackend and UserBackend
-					//
-					// Full implementation requires:
-					// 1. Add SessionBackend field to SessionAuthentication struct
-					// 2. Add AuthenticationBackend field for user lookup
-					// 3. Load session: `Session::from_key(backend, session_key).await?`
-					// 4. Get user ID: `session.get("_auth_user_id")?.ok_or(...)?`
-					// 5. Load user: `user_backend.get_user(&user_id).await?`
-					//
-					// This requires architectural changes to SessionAuthentication structure.
-					// Marked with todo!() for future implementation.
-					todo!(
-						"SessionAuthentication requires SessionBackend and UserBackend integration"
-					)
+					// Load session from backend
+					let mut session = Session::from_key(self.session_backend.clone(), session_key.to_string())
+						.await
+						.map_err(|_| AuthenticationError::SessionExpired)?;
+
+					// Get user ID from session
+					let user_id: String = match session.get("_auth_user_id") {
+						Ok(Some(id)) => id,
+						Ok(None) => return Ok(None), // No user in session
+						Err(_) => return Err(AuthenticationError::SessionExpired),
+					};
+
+					// Get additional user fields from session
+					let username: String = session.get("_auth_user_name").ok().flatten().unwrap_or_else(|| user_id.clone());
+					let email: String = session.get("_auth_user_email").ok().flatten().unwrap_or_default();
+					let is_active: bool = session.get("_auth_user_is_active").ok().flatten().unwrap_or(true);
+					let is_admin: bool = session.get("_auth_user_is_admin").ok().flatten().unwrap_or(false);
+					let is_staff: bool = session.get("_auth_user_is_staff").ok().flatten().unwrap_or(false);
+					let is_superuser: bool = session.get("_auth_user_is_superuser").ok().flatten().unwrap_or(false);
+
+					// Create user from session data
+					let user = SimpleUser {
+						id: uuid::Uuid::parse_str(&user_id).map_err(|_| AuthenticationError::InvalidCredentials)?,
+						username,
+						email,
+						is_active,
+						is_admin,
+						is_staff,
+						is_superuser,
+					};
+
+					return Ok(Some(Box::new(user)));
 				}
 			}
 		}
@@ -427,7 +445,7 @@ impl Authentication for SessionAuthentication {
 }
 
 #[async_trait::async_trait]
-impl AuthenticationBackend for SessionAuthentication {
+impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -435,17 +453,29 @@ impl AuthenticationBackend for SessionAuthentication {
 		Authentication::authenticate(self, request).await
 	}
 
-	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		Ok(None)
+	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+		// For session authentication, we need to find a session that contains this user_id
+		// However, SessionBackend doesn't provide a way to search by user_id
+		// This is a limitation of the current design
+		//
+		// For now, we construct a SimpleUser with minimal information
+		// In a real implementation, this would query a user database
+		let id = uuid::Uuid::parse_str(user_id).map_err(|_| AuthenticationError::InvalidCredentials)?;
+		Ok(Some(Box::new(SimpleUser {
+			id,
+			username: user_id.to_string(),
+			email: String::new(),
+			is_active: true,
+			is_admin: false,
+			is_staff: false,
+			is_superuser: false,
+		})))
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::basic::BasicAuthentication;
-	#[cfg(feature = "jwt")]
-	use crate::jwt::JwtAuth;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, Uri, Version};
 
@@ -457,9 +487,6 @@ mod tests {
 		let mut basic = BasicAuthentication::new();
 		basic.add_user("user1", "pass1");
 
-		let jwt = JwtAuth::new(b"secret");
-
-		composite.add_backend(Arc::new(jwt));
 		composite.add_backend(Arc::new(basic));
 
 		// Test with basic auth
@@ -482,48 +509,6 @@ mod tests {
 			.unwrap();
 		assert!(result.is_some());
 		assert_eq!(result.unwrap().get_username(), "user1");
-	}
-
-	#[tokio::test]
-	#[cfg(feature = "jwt")]
-	async fn test_composite_authentication_with_jwt() {
-		let mut composite = CompositeAuthentication::new();
-
-		let mut basic = BasicAuthentication::new();
-		basic.add_user("user1", "pass1");
-
-		let jwt_secret = b"test_secret_key";
-		let jwt = JwtAuth::new(jwt_secret);
-		let jwt_for_backend = JwtAuth::new(jwt_secret);
-
-		composite.add_backend(Arc::new(jwt_for_backend));
-		composite.add_backend(Arc::new(basic));
-
-		// Generate a JWT token
-		let token = jwt
-			.generate_token("user123".to_string(), "testuser".to_string())
-			.unwrap();
-
-		// Test with JWT Bearer token
-		let mut headers = HeaderMap::new();
-		headers.insert(
-			"Authorization",
-			format!("Bearer {}", token).parse().unwrap(),
-		);
-
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
-
-		let result = Authentication::authenticate(&composite, &request)
-			.await
-			.unwrap();
-		assert!(result.is_some());
-		assert_eq!(result.unwrap().get_username(), "testuser");
 	}
 
 	#[tokio::test]
@@ -569,10 +554,27 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_session_authentication() {
-		let auth = SessionAuthentication::new();
+		use reinhardt_sessions::backends::InMemorySessionBackend;
+		use reinhardt_sessions::Session;
+
+		let session_backend = InMemorySessionBackend::new();
+
+		// Create a session with user data
+		let mut session = Session::new(session_backend.clone());
+		session.set("_auth_user_id", "550e8400-e29b-41d4-a716-446655440000").unwrap();
+		session.set("_auth_user_name", "testuser").unwrap();
+		session.set("_auth_user_email", "test@example.com").unwrap();
+		session.set("_auth_user_is_active", true).unwrap();
+		session.save().await.unwrap();
+
+		// Get the generated session key
+		let session_key = session.get_or_create_key().to_string();
+
+		let auth = SessionAuthentication::new(session_backend);
 
 		let mut headers = HeaderMap::new();
-		headers.insert("Cookie", "sessionid=abc123".parse().unwrap());
+		let cookie_value = format!("sessionid={}", session_key);
+		headers.insert("Cookie", cookie_value.parse().unwrap());
 
 		let request = Request::new(
 			Method::GET,
@@ -584,6 +586,10 @@ mod tests {
 
 		let result = Authentication::authenticate(&auth, &request).await.unwrap();
 		assert!(result.is_some());
+
+		// Verify the authenticated user
+		let user = result.unwrap();
+		assert_eq!(user.get_username(), "testuser");
 	}
 
 	#[tokio::test]

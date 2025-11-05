@@ -366,16 +366,19 @@ assert!(permission.has_permission(&context).await);
 - **Cookie Integration**: Secure session cookie handling
 
 ```rust
-use reinhardt_auth::{SessionAuthentication, Session, InMemorySessionStore};
+use reinhardt_auth::{SessionAuthentication, Authentication};
+use reinhardt_sessions::backends::InMemorySessionBackend;
 
-let store = InMemorySessionStore::new();
-let auth = SessionAuthentication::new(store);
+let session_backend = InMemorySessionBackend::new();
+let auth = SessionAuthentication::new(session_backend);
 
-// Create session
-let session_id = auth.create_session(user).await?;
+// Authenticate user from request (checks session cookie)
+let user = auth.authenticate(&request).await?;
 
-// Verify session
-let user = auth.authenticate_session(&session_id).await?;
+// Get user by ID
+if let Some(user) = auth.get_user("user_id").await? {
+    println!("User: {}", user.get_username());
+}
 ```
 
 ### Multi-Factor Authentication (MFA)
