@@ -472,8 +472,57 @@ impl ReorderHandler {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_backends::{BackendsConnection, MockBackend};
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::error::Result;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
 	use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
+
+	// Mock backend for testing
+	struct MockBackend;
+
+	#[async_trait::async_trait]
+	impl BackendTrait for MockBackend {
+		fn database_type(&self) -> DatabaseType {
+			DatabaseType::Postgres
+		}
+
+		fn placeholder(&self, index: usize) -> String {
+			format!("${}", index)
+		}
+
+		fn supports_returning(&self) -> bool {
+			true
+		}
+
+		fn supports_on_conflict(&self) -> bool {
+			true
+		}
+
+		async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 0 })
+		}
+
+		async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		fn as_any(&self) -> &dyn std::any::Any {
+			self
+		}
+	}
 
 	/// Create a mock database connection for testing
 	fn create_mock_connection() -> Arc<DatabaseConnection> {
