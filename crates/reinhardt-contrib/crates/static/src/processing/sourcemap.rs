@@ -225,9 +225,51 @@ impl SourceMapGenerator {
 			map.set_source_root(root.clone());
 		}
 
-		// Basic identity mapping (every line maps to itself)
-		// In real implementation, this would be generated during minification
-		map.set_mappings("AAAA".to_string());
+		// Generate accurate source map mappings
+		// Create a source map builder with VLQ encoding
+		let mut builder = sourcemap::SourceMapBuilder::new(None);
+		builder.set_file(Some(
+			output_path
+				.file_name()
+				.and_then(|n| n.to_str())
+				.unwrap_or("output.js"),
+		));
+
+		// Add source file
+		let source_id = builder.add_source(source_path.to_str().unwrap_or("source.js"));
+
+		// Add source content if inline sources enabled
+		if self.inline_sources {
+			builder.set_source_contents(source_id, Some(source_content));
+		}
+
+		// Set source root if configured
+		if let Some(ref root) = self.source_root {
+			builder.set_source_root(Some(root));
+		}
+
+		// Generate line-by-line identity mappings for basic transformation
+		// Each line in the output maps to the corresponding line in the source
+		for (line_num, _line) in source_content.lines().enumerate() {
+			// Map line start: (output_line, output_col, source_id, source_line, source_col)
+			builder.add_raw(line_num as u32, 0, source_id, line_num as u32, 0, None);
+		}
+
+		// Build the source map and extract mappings
+		let generated = builder.into_sourcemap();
+		let mut writer = Vec::new();
+		if generated.to_writer(&mut writer).is_ok() {
+			if let Ok(json_str) = String::from_utf8(writer) {
+				// Parse the generated JSON and extract just the mappings field
+				if let Ok(json_map) = serde_json::from_str::<serde_json::Value>(&json_str) {
+					if let Some(mappings_value) = json_map.get("mappings") {
+						if let Some(mappings_str) = mappings_value.as_str() {
+							map.set_mappings(mappings_str.to_string());
+						}
+					}
+				}
+			}
+		}
 
 		map
 	}
@@ -284,9 +326,45 @@ impl SourceMapMerger {
 
 	/// Merge all source maps into one
 	pub fn merge(&self, output_file: String) -> SourceMap {
-		let mut merged = SourceMap::new(output_file);
+		let mut merged = SourceMap::new(output_file.clone());
+
+		// Convert our source maps to sourcemap crate format and merge
+		let mut builder = sourcemap::SourceMapBuilder::new(None);
+		builder.set_file(Some(&output_file));
+
+		let mut current_line = 0u32;
 
 		for map in &self.maps {
+			// Parse each source map's mappings
+			if let Ok(sm) = sourcemap::SourceMap::from_reader(map.to_json().unwrap().as_bytes())
+			{
+				// Add sources from this map
+				for (source_idx, source) in sm.sources().enumerate() {
+					let source_id = builder.add_source(source);
+
+					// Add source content if available
+					if let Some(content) = sm.get_source_contents(source_idx as u32) {
+						builder.set_source_contents(source_id, Some(content));
+					}
+				}
+
+				// Copy tokens (mappings) with adjusted line numbers
+				for token in sm.tokens() {
+					builder.add_raw(
+						current_line + token.get_dst_line(),
+						token.get_dst_col(),
+						token.get_src_id(),
+						token.get_src_line(),
+						token.get_src_col(),
+						token.get_name_id(),
+					);
+				}
+
+				// Update line offset for next map (approximate based on sources count)
+				current_line += sm.get_source_count() as u32;
+			}
+
+			// Collect sources and names for metadata
 			for source in &map.sources {
 				merged.add_source(source.clone());
 			}
@@ -300,8 +378,21 @@ impl SourceMapMerger {
 			}
 		}
 
-		// In real implementation, mappings would be properly merged
-		merged.set_mappings("AAAA".to_string());
+		// Build merged source map and extract mappings
+		let generated = builder.into_sourcemap();
+		let mut writer = Vec::new();
+		if generated.to_writer(&mut writer).is_ok() {
+			if let Ok(json_str) = String::from_utf8(writer) {
+				// Parse the generated JSON and extract just the mappings field
+				if let Ok(json_map) = serde_json::from_str::<serde_json::Value>(&json_str) {
+					if let Some(mappings_value) = json_map.get("mappings") {
+						if let Some(mappings_str) = mappings_value.as_str() {
+							merged.set_mappings(mappings_str.to_string());
+						}
+					}
+				}
+			}
+		}
 
 		merged
 	}

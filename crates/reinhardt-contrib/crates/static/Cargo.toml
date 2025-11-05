@@ -50,6 +50,7 @@ brotli = "7.0"
 
 # Source maps
 base64 = "0.22"
+sourcemap = "9.0"
 
 # Advanced minification (optional)
 oxc_allocator = { version = "0.95", optional = true }
