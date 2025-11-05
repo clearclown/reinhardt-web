@@ -11,11 +11,11 @@
 //! ```rust,no_run
 //! # #[cfg(feature = "dynamic-redis")]
 //! # async fn example() -> Result<(), String> {
-//! use reinhardt_settings::backends::RedisBackend;
+//! use reinhardt_settings::backends::RedisSettingsBackend;
 //! use serde_json::json;
 //!
 //! // Create backend
-//! let backend = RedisBackend::new("redis://localhost:6379").await?;
+//! let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
 //!
 //! // Set a value with TTL
 //! let value = json!({"debug": true, "port": 8080});
@@ -90,6 +90,8 @@ impl RedisSettingsBackend {
 	/// use reinhardt_settings::backends::RedisSettingsBackend;
 	///
 	/// let backend = RedisSettingsBackend::new("redis://localhost:6379").await?;
+	/// # Ok(())
+	/// # }
 	/// ```
 	#[cfg(feature = "dynamic-redis")]
 	pub async fn new(url: &str) -> Result<Self, String> {
