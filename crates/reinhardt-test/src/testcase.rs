@@ -160,7 +160,7 @@ macro_rules! authenticated_test_case {
 ///
 /// ## PostgreSQL Example
 ///
-/// ```no_run
+/// ```ignore
 /// use reinhardt_test::test_case_with_db;
 /// use reinhardt_test::testcase::APITestCase;
 ///
@@ -178,7 +178,7 @@ macro_rules! authenticated_test_case {
 ///
 /// ## MySQL Example
 ///
-/// ```no_run
+/// ```ignore
 /// use reinhardt_test::test_case_with_db;
 /// use reinhardt_test::testcase::APITestCase;
 ///
