@@ -375,14 +375,31 @@ mod tests {
 
 	#[test]
 	fn test_url_function() {
+		use reinhardt_routers::{register_router, UnifiedRouter};
+		use reinhardt_http::{Request, Response};
+		use hyper::Method;
+
+		// Setup router with a named route
+		let mut router = UnifiedRouter::new().function_named(
+			"/users/{id}",
+			Method::GET,
+			"user_profile",
+			|_req: Request| async { Ok(Response::ok()) },
+		);
+
+		// Register routes with the reverser (required before URL reversal)
+		router.register_all_routes();
+
+		register_router(router);
+
 		let func = UrlFunction;
 		let mut args = HashMap::new();
 		args.insert("name".to_string(), json!("user_profile"));
 		args.insert("id".to_string(), json!(42));
 
 		let result = func.call(&args).unwrap();
-		// Should replace {id} placeholder
-		assert!(result.as_str().unwrap().contains("user_profile"));
+		// Should replace {id} placeholder with 42
+		assert_eq!(result, json!("/users/42"));
 	}
 
 	#[test]
