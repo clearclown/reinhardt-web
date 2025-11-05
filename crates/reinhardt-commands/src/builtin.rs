@@ -1102,11 +1102,10 @@ mod tests {
 		#[cfg(feature = "server")]
 		{
 			use reinhardt_routers::UnifiedRouter;
-			use std::sync::Arc;
 			use std::time::Duration;
 
 			// Register a dummy router for the test
-			let router = Arc::new(UnifiedRouter::new());
+			let router = UnifiedRouter::new();
 			reinhardt_routers::register_router(router);
 
 			// Create context with noreload option to disable autoreload
