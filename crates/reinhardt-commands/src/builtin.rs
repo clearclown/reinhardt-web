@@ -817,7 +817,8 @@ impl RunServerCommand {
 		}
 
 		// Watch delay (debounce)
-		args.extend_from_slice(&["--delay", &watch_delay.to_string()]);
+		let delay_str = watch_delay.to_string();
+		args.extend_from_slice(&["--delay", &delay_str]);
 
 		// Execute command: cargo run --bin runserver -- <addr> --noreload
 		let run_cmd = format!("run --bin runserver -- {} --noreload", addr);
