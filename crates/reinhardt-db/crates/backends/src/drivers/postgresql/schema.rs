@@ -21,7 +21,7 @@ use pg_escape::quote_identifier;
 
 /// PostgreSQL-specific schema editor
 pub struct PostgreSQLSchemaEditor {
-	/// Connection string or executor (would be added in real implementation)
+	/// Placeholder for database connection (to be integrated with connection pool)
 	_connection: (),
 }
 
@@ -249,8 +249,8 @@ impl Default for PostgreSQLSchemaEditor {
 #[async_trait::async_trait]
 impl BaseDatabaseSchemaEditor for PostgreSQLSchemaEditor {
 	async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
-		// In real implementation, this would execute SQL via sqlx
-		// For now, we just validate that SQL is not empty
+		// TODO: Execute SQL via sqlx connection pool
+		// Current implementation validates SQL input only
 		if _sql.is_empty() {
 			return Err(SchemaEditorError::InvalidOperation(
 				"Cannot execute empty SQL".to_string(),

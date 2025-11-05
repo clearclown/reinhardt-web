@@ -211,16 +211,42 @@ fn test_csrf_vs_session_cookie_httponly() {
 }
 
 #[test]
+#[ignore] // TODO: Implement actual session regeneration functionality
 fn test_session_fixation_prevention() {
-	// Test: Session ID should be regenerated on login
-	// Old session: sessionid=old123
-	// After login: sessionid=new456
+	// Test: Session ID should be regenerated on login to prevent session fixation attacks
+	//
+	// Implementation Guide:
+	// 1. Create a session with initial session ID
+	//    - Use SessionBackend::create() to generate session
+	//    - Store session ID (e.g., "old123")
+	//
+	// 2. Simulate login action
+	//    - Call session.regenerate_id() or equivalent method
+	//    - This should generate a new session ID while preserving session data
+	//
+	// 3. Verify session ID changed
+	//    - New session ID should be different from old ID
+	//    - Session data should be preserved (user_id, etc.)
+	//    - Old session ID should be invalidated
+	//
+	// 4. Assert security properties:
+	//    - assert_ne!(old_session_id, new_session_id);
+	//    - assert!(backend.get(&old_session_id).await.is_err()); // Old ID invalid
+	//    - assert!(backend.get(&new_session_id).await.is_ok()); // New ID valid
+	//    - assert_eq!(old_session_data, new_session_data); // Data preserved
+	//
+	// Dependencies:
+	// - Session::regenerate_id() method (currently unimplemented)
+	// - SessionBackend implementation with regeneration support
+	//
+	// Current Status:
+	// This is a skeleton test that violates TESTING_STANDARDS.md TP-1.
+	// It must be implemented with actual session regeneration logic before enabling.
 
 	let old_session_id = "old123";
 	let new_session_id = "new456";
 
 	assert_ne!(old_session_id, new_session_id);
-	// In real implementation, session ID should be regenerated
 }
 
 #[test]

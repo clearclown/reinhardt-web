@@ -46,7 +46,7 @@ mod tests {
 				"value" => {
 					let val = value.as_integer()?;
 					Ok(Box::new(TestChild {
-						id: 0, // ID will be set by ORM in real implementation
+						id: 0, // Placeholder ID (ORM sets actual ID on save)
 						value: val,
 						score: 0.0,
 					}))

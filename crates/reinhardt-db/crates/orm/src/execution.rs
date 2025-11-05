@@ -156,13 +156,22 @@ where
 	}
 
 	fn one(&self) -> SelectStatement {
-		// In real implementation, this would check result count
+		// Sets LIMIT 2 to detect multiple results
+		// The execution layer should:
+		// - Error if 0 results are returned (NoResultFound)
+		// - Error if 2+ results are returned (MultipleResultsFound)
+		// - Return the single result if exactly 1 is found
 		let mut stmt = self.stmt.clone();
 		stmt.limit(2);
 		stmt
 	}
 
 	fn one_or_none(&self) -> SelectStatement {
+		// Sets LIMIT 2 to detect multiple results
+		// The execution layer should:
+		// - Return None if 0 results
+		// - Error if 2+ results are returned (MultipleResultsFound)
+		// - Return Some(result) if exactly 1 is found
 		let mut stmt = self.stmt.clone();
 		stmt.limit(2);
 		stmt

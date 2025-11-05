@@ -462,9 +462,35 @@ where
 
 	/// Check permissions for the request
 	async fn check_permissions(&self, request: &Request) -> std::result::Result<(), ViewError> {
+		// TODO: Integrate with session system for authentication check
+		//
+		// Implementation Guide:
+		// 1. Extract session from request using reinhardt-sessions middleware
+		//    - Access session via request extensions or custom request wrapper
+		//    - Example: let session = request.extensions().get::<Session>();
+		//
+		// 2. Retrieve user information from session
+		//    - Check for user_id or authentication token in session data
+		//    - Load user model from database if authenticated
+		//
+		// 3. Set authentication context based on session state:
+		//    - is_authenticated: true if valid session with user_id exists
+		//    - is_admin: true if user has admin/staff privileges
+		//    - is_active: user.is_active from user model
+		//    - user: Some(user_model) if authenticated, None otherwise
+		//
+		// Dependencies:
+		// - reinhardt-sessions: Session extraction from request
+		// - reinhardt-auth: User model and authentication utilities
+		// - Request extensions: Session middleware integration
+		//
+		// Current Behavior:
+		// All requests are treated as unauthenticated (is_authenticated: false)
+		// This is a security risk - authentication checks will always pass for
+		// permissions that don't require authentication.
 		let context = PermissionContext {
 			request,
-			is_authenticated: false, // Simplified - in real implementation would check session
+			is_authenticated: false, // ← FIXME: Always false - implement session integration
 			is_admin: false,
 			is_active: true,
 			user: None,

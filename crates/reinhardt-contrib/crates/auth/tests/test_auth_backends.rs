@@ -37,7 +37,7 @@ impl AuthBackend for MockAuthBackend {
 	async fn authenticate(&self, username: &str, _password: &str) -> Result<Option<Self::User>> {
 		for user in &self.users {
 			if user.username == username {
-				// In real implementation, verify password hash
+				// Note: Mock implementation skips password verification for testing
 				return Ok(Some(user.clone()));
 			}
 		}

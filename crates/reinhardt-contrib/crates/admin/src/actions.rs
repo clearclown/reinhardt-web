@@ -270,7 +270,7 @@ impl AdminAction for DeleteSelectedAction {
 
 		// Perform bulk deletion using AdminDatabase
 		// Note: We use a dummy Model type here since we only need the interface
-		// In real implementation, this would be parameterized with the actual model type
+		// TODO: Future enhancement - parameterize with actual model type instead of DummyModel
 		match database
 			.bulk_delete::<DummyModel>(table_name, pk_field, item_ids.clone())
 			.await
@@ -288,7 +288,7 @@ impl AdminAction for DeleteSelectedAction {
 }
 
 // Dummy model type for generic database operations
-// In real implementation, we would parameterize the action with the actual model type
+// TODO: Replace with actual model type parameter when implementing type-parameterized actions
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 struct DummyModel {
 	id: Option<i64>,

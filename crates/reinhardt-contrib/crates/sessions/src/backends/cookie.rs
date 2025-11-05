@@ -250,7 +250,7 @@ impl SessionBackend for CookieSessionBackend {
 			)));
 		}
 
-		// Store in memory (in real implementation, this would be set as HTTP cookie)
+		// Store in memory (HTTP cookie handling via middleware layer)
 		let mut storage = self.storage.write().await;
 		storage.insert(session_key.to_string(), encoded);
 

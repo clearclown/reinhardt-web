@@ -57,16 +57,20 @@ impl MockMessageMiddleware {
 		Ok(())
 	}
 
-	/// Process a request (simulated)
+	/// Process a request (mock implementation)
+	///
+	/// This is a no-op mock that always succeeds. In a full HTTP middleware implementation,
+	/// this would attach message storage to the request context.
 	pub fn process_request<R>(&self, _request: &R) -> Result<(), String> {
-		// In real implementation, this would attach message storage to request
 		Ok(())
 	}
 
-	/// Process a response (simulated)
+	/// Process a response (mock implementation)
+	///
+	/// This is a no-op mock that always succeeds. In a full HTTP middleware implementation,
+	/// this would handle message serialization and cookie setting. This mock does not fail
+	/// even if messages don't exist on the request, matching the real middleware behavior.
 	pub fn process_response<R>(&self, _response: &mut R) -> Result<(), String> {
-		// In real implementation, this would handle message serialization
-		// Should not fail even if messages don't exist on request
 		Ok(())
 	}
 }
