@@ -439,10 +439,15 @@ path = "tests/admin_crud_integration.rs"
 
 # ORM loading strategy integration tests
 [[test]]
-name = "loading_strategy_integration_tests"
+name = "orm_loading_strategy_integration_tests"
 path = "tests/orm/loading_strategy_integration_tests.rs"
 
 # ORM composite primary key query tests
 [[test]]
-name = "composite_pk_query_tests"
+name = "orm_composite_pk_query_tests"
 path = "tests/orm/composite_pk_query_tests.rs"
+
+# ORM Session::get() integration tests
+[[test]]
+name = "orm_session_get_integration_tests"
+path = "tests/orm/session_get_integration_tests.rs"

@@ -137,6 +137,10 @@ name = "auth_auth_security_integration"
 path = "integration/tests/auth/auth_security_integration.rs"
 
 [[test]]
+name = "auth_session_authentication_integration"
+path = "integration/tests/auth/session_authentication_integration.rs"
+
+[[test]]
 name = "contrib_contrib_health_integration_tests"
 path = "integration/tests/contrib/contrib_health_integration_tests.rs"
 
@@ -333,3 +337,7 @@ path = "integration/tests/orm/loading_strategy_integration_tests.rs"
 [[test]]
 name = "orm_composite_pk_query_tests"
 path = "integration/tests/orm/composite_pk_query_tests.rs"
+
+[[test]]
+name = "orm_session_get_integration_tests"
+path = "integration/tests/orm/session_get_integration_tests.rs"
