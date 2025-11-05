@@ -231,18 +231,24 @@ impl OrderedModel {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_orm::order_with_respect_to::OrderedModel;
+	/// use sqlx::AnyPool;
+	/// use std::sync::Arc;
 	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = AnyPool::connect("sqlite::memory:").await?;
 	/// let ordered = OrderedModel::new(
 	///     "order".to_string(),
 	///     vec!["parent_id".to_string()],
+	///     "items".to_string(),
+	///     Arc::new(pool),
 	/// );
 	///
-	/// # tokio_test::block_on(async {
-	/// let new_order = ordered.move_to_position(5, 10, 3).await.unwrap();
+	/// let new_order = ordered.move_to_position(5, 10, 3).await?;
 	/// assert_eq!(new_order, 3);
-	/// # });
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub async fn move_to_position(
 		&self,
@@ -398,29 +404,91 @@ fn bind_sea_value<'a>(
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use rstest::*;
+	use serial_test::serial;
 
-	#[test]
-	fn test_ordered_model_creation() {
-		let ordered = OrderedModel::new("_order".to_string(), vec!["category_id".to_string()]);
+	// Helper function to create a test pool
+	async fn create_test_pool() -> Arc<AnyPool> {
+		use sqlx::pool::PoolOptions;
+
+		// Initialize SQLx drivers (idempotent operation)
+		sqlx::any::install_default_drivers();
+
+		// Use shared in-memory database so all connections see the same data
+		// The "mode=memory" and "cache=shared" ensure the database persists across connections
+		let pool = PoolOptions::new()
+			.min_connections(1)
+			.max_connections(5)
+			.connect("sqlite:file:test_order_db?mode=memory&cache=shared")
+			.await
+			.expect("Failed to create test pool");
+
+		// Create the test_table for testing
+		// Schema matches what order_with_respect_to tests expect
+		sqlx::query(
+			r#"CREATE TABLE IF NOT EXISTS test_table (
+				id INTEGER PRIMARY KEY,
+				"order" INTEGER NOT NULL DEFAULT 0,
+				parent_id INTEGER NOT NULL,
+				category_id INTEGER
+			)"#,
+		)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test_table");
+
+		Arc::new(pool)
+	}
+
+	/// Initialize SQLx drivers (required for AnyPool)
+	#[fixture]
+	fn init_drivers() {
+		sqlx::any::install_default_drivers();
+	}
+
+	#[rstest]
+	#[serial(sqlx_drivers)]
+	#[tokio::test]
+	async fn test_ordered_model_creation(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"_order".to_string(),
+			vec!["category_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		assert_eq!(ordered.order_field(), "_order");
 		assert_eq!(ordered.order_with_respect_to().len(), 1);
 		assert_eq!(ordered.order_with_respect_to()[0], "category_id");
 	}
 
-	#[test]
-	fn test_ordered_model_with_multiple_fields() {
+	#[rstest]
+	#[serial(sqlx_drivers)]
+	#[tokio::test]
+	async fn test_ordered_model_with_multiple_fields(_init_drivers: ()) {
+		let pool = create_test_pool().await;
 		let ordered = OrderedModel::new(
 			"order".to_string(),
 			vec!["parent_id".to_string(), "category_id".to_string()],
+			"test_table".to_string(),
+			pool,
 		);
 
 		assert_eq!(ordered.order_with_respect_to().len(), 2);
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_get_next_order() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_get_next_order(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let mut filters = HashMap::new();
 		filters.insert("parent_id".to_string(), OrderValue::Integer(1));
@@ -429,9 +497,17 @@ mod tests {
 		assert_eq!(next_order, 0);
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_move_up() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_move_up(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let new_order = ordered.move_up(5).await.unwrap();
 		assert_eq!(new_order, 4);
@@ -440,9 +516,17 @@ mod tests {
 		assert!(result.is_err());
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_move_down() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_move_down(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let new_order = ordered.move_down(3, 10).await.unwrap();
 		assert_eq!(new_order, 4);
@@ -451,9 +535,17 @@ mod tests {
 		assert!(result.is_err());
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_move_to_position() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_move_to_position(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let new_order = ordered.move_to_position(5, 10, 7).await.unwrap();
 		assert_eq!(new_order, 7);
@@ -465,18 +557,34 @@ mod tests {
 		assert!(result.is_err());
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_swap_order() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_swap_order(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let (new_order1, new_order2) = ordered.swap_order(3, 7).await.unwrap();
 		assert_eq!(new_order1, 7);
 		assert_eq!(new_order2, 3);
 	}
 
-	#[test]
-	fn test_validate_order() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	#[rstest]
+	#[serial(sqlx_drivers)]
+	#[tokio::test]
+	async fn test_validate_order(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		assert!(ordered.validate_order(5, 10).is_ok());
 		assert!(ordered.validate_order(0, 10).is_ok());
@@ -486,9 +594,17 @@ mod tests {
 		assert!(ordered.validate_order(11, 10).is_err());
 	}
 
+	#[rstest]
+	#[serial(sqlx_drivers)]
 	#[tokio::test]
-	async fn test_reorder_all() {
-		let ordered = OrderedModel::new("order".to_string(), vec!["parent_id".to_string()]);
+	async fn test_reorder_all(_init_drivers: ()) {
+		let pool = create_test_pool().await;
+		let ordered = OrderedModel::new(
+			"order".to_string(),
+			vec!["parent_id".to_string()],
+			"test_table".to_string(),
+			pool,
+		);
 
 		let mut filters = HashMap::new();
 		filters.insert("parent_id".to_string(), OrderValue::Integer(1));
