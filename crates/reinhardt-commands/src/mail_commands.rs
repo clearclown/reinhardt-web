@@ -28,54 +28,34 @@ impl BaseCommand for SendTestEmailCommand {
 		use reinhardt_mail::message::EmailMessage;
 
 		// Collect recipients from command arguments
-		let recipients: Vec<String> = ctx.args.clone();
+		let mut recipients: Vec<String> = ctx.args.clone();
 
 		// Check for --managers option
 		let use_managers = ctx.has_option("managers");
 		if use_managers {
-			// TODO: Load MANAGERS from settings
-			//
-			// Full implementation requires:
-			// 1. Add Settings reference to CommandContext struct
-			// 2. Access settings.managers: Vec<Contact>
-			// 3. Extract email addresses: managers.iter().map(|c| c.email.clone())
-			//
-			// Example:
-			// ```
-			// if let Some(settings) = &ctx.settings {
-			//     for manager in &settings.managers {
-			//         recipients.push(manager.email.clone());
-			//     }
-			// }
-			// ```
-			//
-			// This requires architectural changes to CommandContext structure.
-			// Marked with todo!() for future implementation.
-			todo!("CommandContext requires Settings reference to load MANAGERS");
+			if let Some(settings) = &ctx.settings {
+				for manager in &settings.managers {
+					recipients.push(manager.email.clone());
+				}
+			} else {
+				return Err(CommandError::ExecutionError(
+					"Settings not available in command context. Cannot load MANAGERS.".to_string(),
+				));
+			}
 		}
 
 		// Check for --admins option
 		let use_admins = ctx.has_option("admins");
 		if use_admins {
-			// TODO: Load ADMINS from settings
-			//
-			// Full implementation requires:
-			// 1. Add Settings reference to CommandContext struct
-			// 2. Access settings.admins: Vec<Contact>
-			// 3. Extract email addresses: admins.iter().map(|c| c.email.clone())
-			//
-			// Example:
-			// ```
-			// if let Some(settings) = &ctx.settings {
-			//     for admin in &settings.admins {
-			//         recipients.push(admin.email.clone());
-			//     }
-			// }
-			// ```
-			//
-			// This requires architectural changes to CommandContext structure.
-			// Marked with todo!() for future implementation.
-			todo!("CommandContext requires Settings reference to load ADMINS");
+			if let Some(settings) = &ctx.settings {
+				for admin in &settings.admins {
+					recipients.push(admin.email.clone());
+				}
+			} else {
+				return Err(CommandError::ExecutionError(
+					"Settings not available in command context. Cannot load ADMINS.".to_string(),
+				));
+			}
 		}
 
 		// Validate that we have at least one recipient

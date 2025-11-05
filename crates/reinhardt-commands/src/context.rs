@@ -1,12 +1,15 @@
 //! Command execution context
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct CommandContext {
 	pub args: Vec<String>,
 	pub options: HashMap<String, Vec<String>>,
 	pub verbosity: u8,
+	/// Optional reference to application settings
+	pub settings: Option<Arc<reinhardt_settings::Settings>>,
 }
 
 impl CommandContext {
@@ -15,6 +18,7 @@ impl CommandContext {
 			args,
 			options: HashMap::new(),
 			verbosity: 0,
+			settings: None,
 		}
 	}
 
@@ -25,6 +29,12 @@ impl CommandContext {
 
 	pub fn with_options(mut self, options: HashMap<String, Vec<String>>) -> Self {
 		self.options = options;
+		self
+	}
+
+	/// Set the application settings reference
+	pub fn with_settings(mut self, settings: Arc<reinhardt_settings::Settings>) -> Self {
+		self.settings = Some(settings);
 		self
 	}
 
