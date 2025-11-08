@@ -348,7 +348,13 @@ impl<T, K> ReverseRelationship for ForeignKey<T, K> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_test::fixtures::User;
+
+	#[allow(dead_code)]
+	#[derive(Clone)]
+	struct User {
+		id: i64,
+		name: String,
+	}
 
 	#[test]
 	fn test_foreign_key_creation() {

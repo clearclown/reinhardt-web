@@ -371,13 +371,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_run_sql_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let sql = RunSQL::new("SELECT COUNT(*) FROM users");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let statements = sql.database_forwards(editor.as_ref());
+		let statements = sql.database_forwards(&editor);
 		assert_eq!(statements.len(), 1);
 		assert_eq!(statements[0], "SELECT COUNT(*) FROM users");
 	}

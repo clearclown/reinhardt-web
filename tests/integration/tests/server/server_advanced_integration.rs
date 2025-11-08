@@ -1,7 +1,6 @@
 // Advanced Server Integration Tests
 // Tests HTTP server functionality, WebSocket support, and server lifecycle
 
-use bytes::Bytes;
 use reinhardt_http::{Request, Response};
 use reinhardt_server::{HttpServer, serve};
 use reinhardt_types::Handler;
@@ -67,8 +66,8 @@ async fn test_http_server_handler_assignment() {
 	let handler1 = Arc::new(SimpleHandler);
 	let handler2 = Arc::new(EchoPathHandler);
 
-	let server1 = HttpServer::new(handler1.clone());
-	let server2 = HttpServer::new(handler2.clone());
+	let _server1 = HttpServer::new(handler1.clone());
+	let _server2 = HttpServer::new(handler2.clone());
 
 	// Verify different handlers are assigned correctly
 	assert_eq!(Arc::strong_count(&handler1), 2); // One for handler1, one for server1

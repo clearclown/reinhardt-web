@@ -315,7 +315,7 @@ where
 			message: format!("Failed to get connection: {}", e),
 		})?;
 
-		conn.execute(&query)
+		conn.execute(&query, vec![])
 			.await
 			.map_err(|e| SerializerError::Other {
 				message: format!("Failed to add M2M relationships: {}", e),
@@ -358,7 +358,7 @@ where
 			message: format!("Failed to get connection: {}", e),
 		})?;
 
-		conn.execute(&query)
+		conn.execute(&query, vec![])
 			.await
 			.map_err(|e| SerializerError::Other {
 				message: format!("Failed to remove M2M relationships: {}", e),
@@ -417,7 +417,7 @@ where
 			message: format!("Failed to get connection: {}", e),
 		})?;
 
-		conn.execute(&query)
+		conn.execute(&query, vec![])
 			.await
 			.map_err(|e| SerializerError::Other {
 				message: format!("Failed to clear M2M relationships: {}", e),

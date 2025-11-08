@@ -17,9 +17,11 @@ pub enum DatabaseBackend {
 }
 
 /// Query row wrapper for ORM compatibility
+#[derive(serde::Serialize)]
 pub struct QueryRow {
 	pub data: serde_json::Value,
 	#[allow(dead_code)]
+	#[serde(skip)]
 	inner: Option<Row>,
 }
 
@@ -46,6 +48,8 @@ impl QueryRow {
 					serde_json::Value::String(base64::engine::general_purpose::STANDARD.encode(&b))
 				}
 				QueryValue::Timestamp(dt) => serde_json::Value::String(dt.to_rfc3339()),
+				// NOW() should never appear in Row data (it's resolved to actual timestamp in database)
+				QueryValue::Now => panic!("QueryValue::Now should not appear in Row data"),
 			};
 			map.insert(key.clone(), json_value);
 		}
@@ -149,28 +153,40 @@ impl DatabaseConnection {
 	}
 
 	/// Execute a SQL query and return a single row
-	pub async fn query_one(&self, sql: &str) -> Result<QueryRow, anyhow::Error> {
-		let row = self.inner.fetch_one(sql, vec![]).await?;
+	pub async fn query_one(
+		&self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> Result<QueryRow, anyhow::Error> {
+		let row = self.inner.fetch_one(sql, params).await?;
 		Ok(QueryRow::from_backend_row(row))
 	}
 
 	/// Execute a SQL query and return an optional row
-	pub async fn query_optional(&self, sql: &str) -> Result<Option<QueryRow>, anyhow::Error> {
-		match self.inner.fetch_one(sql, vec![]).await {
+	pub async fn query_optional(
+		&self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> Result<Option<QueryRow>, anyhow::Error> {
+		match self.inner.fetch_one(sql, params).await {
 			Ok(row) => Ok(Some(QueryRow::from_backend_row(row))),
 			Err(_) => Ok(None),
 		}
 	}
 
 	/// Execute a SQL statement (INSERT, UPDATE, DELETE, etc.)
-	pub async fn execute(&self, sql: &str) -> Result<u64, anyhow::Error> {
-		let result = self.inner.execute(sql, vec![]).await?;
+	pub async fn execute(&self, sql: &str, params: Vec<QueryValue>) -> Result<u64, anyhow::Error> {
+		let result = self.inner.execute(sql, params).await?;
 		Ok(result.rows_affected)
 	}
 
 	/// Execute a SQL query and return all rows
-	pub async fn query(&self, sql: &str) -> Result<Vec<QueryRow>, anyhow::Error> {
-		let rows = self.inner.fetch_all(sql, vec![]).await?;
+	pub async fn query(
+		&self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> Result<Vec<QueryRow>, anyhow::Error> {
+		let rows = self.inner.fetch_all(sql, params).await?;
 		Ok(rows.into_iter().map(QueryRow::from_backend_row).collect())
 	}
 
@@ -189,7 +205,7 @@ impl DatabaseConnection {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn begin_transaction(&self) -> Result<(), anyhow::Error> {
-		self.execute("BEGIN TRANSACTION").await?;
+		self.execute("BEGIN TRANSACTION", vec![]).await?;
 		Ok(())
 	}
 
@@ -213,7 +229,7 @@ impl DatabaseConnection {
 		level: crate::transaction::IsolationLevel,
 	) -> Result<(), anyhow::Error> {
 		let sql = format!("BEGIN TRANSACTION ISOLATION LEVEL {}", level.to_sql());
-		self.execute(&sql).await?;
+		self.execute(&sql, vec![]).await?;
 		Ok(())
 	}
 
@@ -234,7 +250,7 @@ impl DatabaseConnection {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn commit_transaction(&self) -> Result<(), anyhow::Error> {
-		self.execute("COMMIT").await?;
+		self.execute("COMMIT", vec![]).await?;
 		Ok(())
 	}
 
@@ -255,7 +271,7 @@ impl DatabaseConnection {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn rollback_transaction(&self) -> Result<(), anyhow::Error> {
-		self.execute("ROLLBACK").await?;
+		self.execute("ROLLBACK", vec![]).await?;
 		Ok(())
 	}
 
@@ -278,21 +294,21 @@ impl DatabaseConnection {
 	/// ```
 	pub async fn savepoint(&self, name: &str) -> Result<(), anyhow::Error> {
 		let sql = format!("SAVEPOINT {}", name);
-		self.execute(&sql).await?;
+		self.execute(&sql, vec![]).await?;
 		Ok(())
 	}
 
 	/// Release a savepoint
 	pub async fn release_savepoint(&self, name: &str) -> Result<(), anyhow::Error> {
 		let sql = format!("RELEASE SAVEPOINT {}", name);
-		self.execute(&sql).await?;
+		self.execute(&sql, vec![]).await?;
 		Ok(())
 	}
 
 	/// Rollback to a savepoint
 	pub async fn rollback_to_savepoint(&self, name: &str) -> Result<(), anyhow::Error> {
 		let sql = format!("ROLLBACK TO SAVEPOINT {}", name);
-		self.execute(&sql).await?;
+		self.execute(&sql, vec![]).await?;
 		Ok(())
 	}
 }
@@ -300,10 +316,10 @@ impl DatabaseConnection {
 #[async_trait]
 impl DatabaseExecutor for DatabaseConnection {
 	async fn execute(&self, sql: &str) -> Result<u64, anyhow::Error> {
-		self.execute(sql).await
+		self.execute(sql, vec![]).await
 	}
 
 	async fn query(&self, sql: &str) -> Result<Vec<QueryRow>, anyhow::Error> {
-		self.query(sql).await
+		self.query(sql, vec![]).await
 	}
 }

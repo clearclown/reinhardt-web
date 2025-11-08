@@ -76,7 +76,9 @@ pub fn permission_required_impl(args: TokenStream, input: ItemFn) -> Result<Toke
 		#(#fn_attrs)*
 		#[doc = #perm_doc]
 		#fn_vis #asyncness fn #fn_name(#fn_inputs) #fn_output {
-			// In a real implementation, this would check permissions first
+			// TODO: Implement permission checking before function execution
+			// Required: Add runtime permission verification based on #[require_permissions] attribute
+			// Current implementation: No permission checking (direct execution)
 			#fn_block
 		}
 	})

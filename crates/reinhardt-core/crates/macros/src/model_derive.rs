@@ -4,7 +4,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Result, Type};
+use syn::{Data, DeriveInput, Fields, Result, Type, parse_quote};
 
 /// Model configuration from #[model(...)] attribute
 #[derive(Debug, Clone)]
@@ -222,6 +222,43 @@ fn extract_option_type(ty: &Type) -> (bool, &Type) {
 	(false, ty)
 }
 
+/// Generate field accessor methods that return FieldRef<M, T>
+///
+/// Generates const methods like:
+/// ```ignore
+/// impl User {
+///     pub const fn field_id() -> FieldRef<User, i64> { FieldRef::new("id") }
+///     pub const fn field_name() -> FieldRef<User, String> { FieldRef::new("name") }
+/// }
+/// ```
+fn generate_field_accessors(struct_name: &syn::Ident, field_infos: &[FieldInfo]) -> TokenStream {
+	let accessor_methods: Vec<_> = field_infos
+		.iter()
+		.map(|field| {
+			let field_name = &field.name;
+			let field_type = &field.ty;
+			let method_name = syn::Ident::new(&format!("field_{}", field_name), field_name.span());
+			let field_name_str = field_name.to_string();
+
+			quote! {
+				/// Field accessor for type-safe field references
+				///
+				/// Returns a `FieldRef<#struct_name, #field_type>` that provides compile-time
+				/// type safety for field operations.
+				pub const fn #method_name() -> ::reinhardt_orm::expressions::FieldRef<#struct_name, #field_type> {
+					::reinhardt_orm::expressions::FieldRef::new(#field_name_str)
+				}
+			}
+		})
+		.collect();
+
+	quote! {
+		impl #struct_name {
+			#(#accessor_methods)*
+		}
+	}
+}
+
 /// Implementation of the `Model` derive macro
 pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	let struct_name = &input.ident;
@@ -309,8 +346,16 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		.map(|(_, expr)| expr.clone())
 		.collect();
 
+	// Define composite_pk_type_def and holder for code generation
+	let composite_pk_type_def: Option<TokenStream>;
+	// Note: composite_pk_type_holder is only assigned in the composite PK branch,
+	// but must be declared here to extend its lifetime beyond the if-else scope
+	#[allow(unused_assignments)]
+	let mut composite_pk_type_holder: Option<Type> = None;
+
 	// For single PK, extract field info
 	let (pk_name, _pk_ty, pk_is_option, pk_type) = if !is_composite_pk {
+		composite_pk_type_def = None;
 		let pk_field = pk_fields[0];
 		let pk_name = &pk_field.name;
 		let pk_ty = &pk_field.ty;
@@ -318,11 +363,25 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		let pk_type = if pk_is_option { pk_inner_ty } else { pk_ty };
 		(pk_name, pk_ty, pk_is_option, pk_type)
 	} else {
-		// For composite PK, we use a dummy type that will be replaced
-		// The actual implementation will be different
-		let dummy_ident = &pk_fields[0].name;
-		let dummy_ty = &pk_fields[0].ty;
-		(dummy_ident, dummy_ty, false, dummy_ty)
+		// Composite primary key: generate dedicated composite PK type
+		let composite_pk_name =
+			syn::Ident::new(&format!("{}CompositePk", struct_name), struct_name.span());
+
+		// Generate the composite PK type definition
+		composite_pk_type_def = Some(generate_composite_pk_type(struct_name, &pk_fields));
+
+		// Use the generated composite PK type and store in holder (avoid temporary variable)
+		composite_pk_type_holder = Some(parse_quote! { #composite_pk_name });
+		let composite_pk_type_ref = composite_pk_type_holder.as_ref().unwrap();
+
+		// Use first field name for primary_key_field() (legacy API compatibility)
+		let first_pk_name = &pk_fields[0].name;
+		(
+			first_pk_name,
+			composite_pk_type_ref,
+			false,
+			composite_pk_type_ref,
+		)
 	};
 
 	// Generate field_metadata implementation
@@ -337,41 +396,72 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		// Composite primary key implementation
 		let composite_impl = generate_composite_pk_impl(&pk_fields);
 
-		// For composite PK, primary_key() and set_primary_key() return/accept dummy values
-		// The actual values are accessed via get_composite_pk_values()
-		let first_pk_name = &pk_fields[0].name;
-		let first_pk_ty = &pk_fields[0].ty;
-		let (first_is_option, first_inner_ty) = extract_option_type(first_pk_ty);
-		let _first_pk_type = if first_is_option {
-			first_inner_ty
-		} else {
-			first_pk_ty
-		};
+		// For composite PK, use the generated composite PK type
+		let pk_field_names: Vec<_> = pk_fields.iter().map(|f| &f.name).collect();
 
-		let pk_getter = if first_is_option {
+		// Check if any field is Option
+		let has_option_fields = pk_fields.iter().any(|f| {
+			let (is_option, _) = extract_option_type(&f.ty);
+			is_option
+		});
+
+		let pk_getter = if has_option_fields {
+			// If any field is Option, check all fields have values
 			quote! {
 				fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-					self.#first_pk_name.as_ref()
+					// Check if all fields have values
+					if #(self.#pk_field_names.is_some())&&* {
+						thread_local! {
+							static PK_CACHE: ::std::cell::RefCell<Option<Self::PrimaryKey>> = ::std::cell::RefCell::new(None);
+						}
+
+						PK_CACHE.with(|cache| {
+							let mut cache = cache.borrow_mut();
+							*cache = Some(Self::PrimaryKey::new(
+								#(self.#pk_field_names.clone().unwrap()),*
+							));
+							// SAFETY: We know cache contains Some
+							unsafe { ::std::mem::transmute(cache.as_ref().unwrap()) }
+						})
+					} else {
+						None
+					}
 				}
 			}
 		} else {
+			// All fields are non-Option, construct composite PK directly
 			quote! {
 				fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-					Some(&self.#first_pk_name)
+					thread_local! {
+						static PK_CACHE: ::std::cell::RefCell<Option<Self::PrimaryKey>> = ::std::cell::RefCell::new(None);
+					}
+
+					PK_CACHE.with(|cache| {
+						let mut cache = cache.borrow_mut();
+						*cache = Some(Self::PrimaryKey::new(
+							#(self.#pk_field_names.clone()),*
+						));
+						// SAFETY: We know cache contains Some
+						unsafe { ::std::mem::transmute(cache.as_ref().unwrap()) }
+					})
 				}
 			}
 		};
 
-		let pk_setter = if first_is_option {
+		let pk_setter = if has_option_fields {
 			quote! {
 				fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-					self.#first_pk_name = Some(value);
+					#(
+						self.#pk_field_names = Some(value.#pk_field_names);
+					)*
 				}
 			}
 		} else {
 			quote! {
 				fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-					self.#first_pk_name = value;
+					#(
+						self.#pk_field_names = value.#pk_field_names;
+					)*
 				}
 			}
 		};
@@ -412,8 +502,17 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		(pk_getter, pk_setter, quote! {})
 	};
 
+	// Generate field accessor methods
+	let field_accessors = generate_field_accessors(struct_name, &field_infos);
+
 	// Generate the Model implementation
 	let expanded = quote! {
+		// Generate composite PK type definition if needed
+		#composite_pk_type_def
+
+		// Generate field accessor methods for type-safe field references
+		#field_accessors
+
 		impl #generics ::reinhardt_orm::Model for #struct_name #generics #where_clause {
 			type PrimaryKey = #pk_type;
 
@@ -646,7 +745,6 @@ fn generate_registration_code(
 
 /// Generate composite primary key implementation
 fn generate_composite_pk_impl(pk_fields: &[&FieldInfo]) -> TokenStream {
-	let field_names: Vec<_> = pk_fields.iter().map(|f| &f.name).collect();
 	let field_name_strings: Vec<String> = pk_fields.iter().map(|f| f.name.to_string()).collect();
 
 	quote! {
@@ -660,14 +758,97 @@ fn generate_composite_pk_impl(pk_fields: &[&FieldInfo]) -> TokenStream {
 		}
 
 		fn get_composite_pk_values(&self) -> ::std::collections::HashMap<String, ::reinhardt_orm::composite_pk::PkValue> {
-			let mut values = ::std::collections::HashMap::new();
-			#(
+			// Use the generated composite PK type's to_pk_values() method
+			if let Some(pk) = self.primary_key() {
+				pk.to_pk_values()
+			} else {
+				::std::collections::HashMap::new()
+			}
+		}
+	}
+}
+
+/// Generate composite primary key type definition
+///
+/// Creates a dedicated struct type for composite primary keys with:
+/// - Named fields matching the model's PK fields
+/// - Derived traits: Debug, Clone, PartialEq, Eq, Hash
+/// - From/Into conversions for tuple types
+/// - Individual PkValue conversions for each field
+fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]) -> TokenStream {
+	// Generate composite PK struct name: {ModelName}CompositePk
+	let composite_pk_name =
+		syn::Ident::new(&format!("{}CompositePk", struct_name), struct_name.span());
+
+	// Extract field names and types
+	let field_names: Vec<_> = pk_fields.iter().map(|f| &f.name).collect();
+	let field_types: Vec<_> = pk_fields
+		.iter()
+		.map(|f| {
+			let ty = &f.ty;
+			let (is_option, inner_ty) = extract_option_type(ty);
+			if is_option { inner_ty } else { ty }
+		})
+		.collect();
+
+	// Generate From<tuple> implementation for easy construction
+	let tuple_type = if field_types.len() == 1 {
+		quote! { #(#field_types),* }
+	} else {
+		quote! { (#(#field_types),*) }
+	};
+
+	// Generate individual field conversions for PkValue
+	let pk_value_conversions: Vec<_> = field_names
+		.iter()
+		.map(|name| {
+			quote! {
 				values.insert(
-					stringify!(#field_names).to_string(),
-					::reinhardt_orm::composite_pk::PkValue::from(&self.#field_names)
+					stringify!(#name).to_string(),
+					::reinhardt_orm::composite_pk::PkValue::from(&self.#name)
 				);
-			)*
-			values
+			}
+		})
+		.collect();
+
+	quote! {
+		/// Composite primary key type for #struct_name
+		#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+		pub struct #composite_pk_name {
+			#(pub #field_names: #field_types),*
+		}
+
+		impl #composite_pk_name {
+			/// Create a new composite primary key
+			pub fn new(#(#field_names: #field_types),*) -> Self {
+				Self {
+					#(#field_names),*
+				}
+			}
+
+			/// Convert to a HashMap of PkValues for database operations
+			pub fn to_pk_values(&self) -> ::std::collections::HashMap<String, ::reinhardt_orm::composite_pk::PkValue> {
+				let mut values = ::std::collections::HashMap::new();
+				#(#pk_value_conversions)*
+				values
+			}
+		}
+
+		// Conversion from tuple type
+		impl ::std::convert::From<#tuple_type> for #composite_pk_name {
+			fn from(tuple: #tuple_type) -> Self {
+				let (#(#field_names),*) = tuple;
+				Self {
+					#(#field_names),*
+				}
+			}
+		}
+
+		// Conversion to tuple type
+		impl ::std::convert::From<#composite_pk_name> for #tuple_type {
+			fn from(pk: #composite_pk_name) -> Self {
+				(#(pk.#field_names),*)
+			}
 		}
 	}
 }

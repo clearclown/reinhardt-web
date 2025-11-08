@@ -122,6 +122,7 @@ pub enum AuthenticationError {
 	UserNotFound,
 	SessionExpired,
 	InvalidToken,
+	DatabaseError(String),
 	Unknown(String),
 }
 
@@ -132,6 +133,7 @@ impl std::fmt::Display for AuthenticationError {
 			AuthenticationError::UserNotFound => write!(f, "User not found"),
 			AuthenticationError::SessionExpired => write!(f, "Session expired"),
 			AuthenticationError::InvalidToken => write!(f, "Invalid token"),
+			AuthenticationError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
 			AuthenticationError::Unknown(msg) => write!(f, "Authentication error: {}", msg),
 		}
 	}

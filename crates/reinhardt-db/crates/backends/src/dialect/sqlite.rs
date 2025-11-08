@@ -34,6 +34,11 @@ impl SqliteBackend {
 			QueryValue::String(s) => query.bind(s),
 			QueryValue::Bytes(b) => query.bind(b),
 			QueryValue::Timestamp(dt) => query.bind(dt),
+			QueryValue::Now => {
+				// SQLite uses datetime('now'), which should be part of SQL string
+				// For binding, we use current UTC time
+				query.bind(chrono::Utc::now())
+			}
 		}
 	}
 

@@ -8,35 +8,68 @@
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 /// use reinhardt_db::backends::schema::BaseDatabaseSchemaEditor;
+/// use sqlx::PgPool;
 ///
-/// let editor = PostgreSQLSchemaEditor::new();
+/// # async fn example() -> Result<(), sqlx::Error> {
+/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+/// let editor = PostgreSQLSchemaEditor::new(pool);
 /// let sql = editor.create_index_concurrently_sql("idx_email", "users", &["email"], false, None);
 /// assert!(sql.contains("CONCURRENTLY"));
+/// # Ok(())
+/// # }
 /// ```
 use crate::schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult};
 use pg_escape::quote_identifier;
+use sqlx::PgPool;
+use std::sync::Arc;
 
 /// PostgreSQL-specific schema editor
 pub struct PostgreSQLSchemaEditor {
-	/// Placeholder for database connection (to be integrated with connection pool)
-	_connection: (),
+	/// PostgreSQL connection pool
+	pool: Arc<PgPool>,
 }
 
 impl PostgreSQLSchemaEditor {
-	/// Create a new PostgreSQL schema editor
+	/// Create a new PostgreSQL schema editor from a connection pool
 	///
 	/// # Example
 	///
-	/// ```rust
+	/// ```no_run
 	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), sqlx::Error> {
+	/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// let editor = PostgreSQLSchemaEditor::new(pool);
+	/// # Ok(())
+	/// # }
 	/// ```
-	pub fn new() -> Self {
-		Self { _connection: () }
+	pub fn new(pool: PgPool) -> Self {
+		Self {
+			pool: Arc::new(pool),
+		}
+	}
+
+	/// Create from an Arc<PgPool>
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
+	/// use std::sync::Arc;
+	///
+	/// # async fn example() -> Result<(), sqlx::Error> {
+	/// let pool = Arc::new(PgPool::connect("postgresql://localhost/mydb").await?);
+	/// let editor = PostgreSQLSchemaEditor::from_pool_arc(pool);
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub fn from_pool_arc(pool: Arc<PgPool>) -> Self {
+		Self { pool }
 	}
 
 	/// Generate CREATE INDEX CONCURRENTLY SQL
@@ -240,22 +273,22 @@ impl PostgreSQLSchemaEditor {
 	}
 }
 
-impl Default for PostgreSQLSchemaEditor {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
 #[async_trait::async_trait]
 impl BaseDatabaseSchemaEditor for PostgreSQLSchemaEditor {
-	async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
-		// TODO: Execute SQL via sqlx connection pool
-		// Current implementation validates SQL input only
-		if _sql.is_empty() {
+	async fn execute(&mut self, sql: &str) -> SchemaEditorResult<()> {
+		// Validate SQL input
+		if sql.is_empty() {
 			return Err(SchemaEditorError::InvalidOperation(
 				"Cannot execute empty SQL".to_string(),
 			));
 		}
+
+		// Execute SQL via sqlx connection pool
+		sqlx::query(sql)
+			.execute(self.pool.as_ref())
+			.await
+			.map_err(|e| SchemaEditorError::ExecutionError(e.to_string()))?;
+
 		Ok(())
 	}
 }
@@ -263,10 +296,27 @@ impl BaseDatabaseSchemaEditor for PostgreSQLSchemaEditor {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use rstest::*;
 
-	#[test]
-	fn test_create_index_concurrently() {
-		let editor = PostgreSQLSchemaEditor::new();
+	// Fixture to create a test pool for SQL generation tests
+	// These tests don't actually execute SQL, they just test SQL generation
+	#[fixture]
+	async fn pg_pool() -> PgPool {
+		// Create a dummy pool for testing SQL generation methods
+		// The pool is never actually used in these tests
+		PgPool::connect_lazy("postgresql://localhost/test_db").expect("Failed to create test pool")
+	}
+
+	// Helper function to create a test editor from the pool fixture
+	fn create_test_editor(pool: PgPool) -> PostgreSQLSchemaEditor {
+		PostgreSQLSchemaEditor::new(pool)
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_index_concurrently(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql =
 			editor.create_index_concurrently_sql("idx_email", "users", &["email"], false, None);
 
@@ -276,18 +326,22 @@ mod tests {
 		assert!(sql.contains("(email)"));
 	}
 
-	#[test]
-	fn test_create_unique_index_concurrently() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_unique_index_concurrently(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql =
 			editor.create_index_concurrently_sql("idx_email", "users", &["email"], true, None);
 
 		assert!(sql.contains("CREATE UNIQUE INDEX CONCURRENTLY"));
 	}
 
-	#[test]
-	fn test_create_partial_index_concurrently() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_partial_index_concurrently(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.create_index_concurrently_sql(
 			"idx_active_email",
 			"users",
@@ -299,33 +353,41 @@ mod tests {
 		assert!(sql.contains("WHERE active = true"));
 	}
 
-	#[test]
-	fn test_drop_index_concurrently() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_drop_index_concurrently(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.drop_index_concurrently_sql("idx_email");
 
 		assert_eq!(sql, "DROP INDEX CONCURRENTLY IF EXISTS idx_email");
 	}
 
-	#[test]
-	fn test_alter_sequence_type() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_alter_sequence_type(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.alter_sequence_type_sql("users_id_seq", "BIGINT");
 
 		assert_eq!(sql, "ALTER SEQUENCE IF EXISTS users_id_seq AS BIGINT");
 	}
 
-	#[test]
-	fn test_drop_sequence() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_drop_sequence(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.drop_sequence_sql("users_id_seq");
 
 		assert_eq!(sql, "DROP SEQUENCE IF EXISTS users_id_seq CASCADE");
 	}
 
-	#[test]
-	fn test_add_identity() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_add_identity(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.add_identity_sql("users", "id");
 
 		assert!(sql.contains("ALTER TABLE users"));
@@ -333,9 +395,11 @@ mod tests {
 		assert!(sql.contains("ADD GENERATED BY DEFAULT AS IDENTITY"));
 	}
 
-	#[test]
-	fn test_drop_identity() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_drop_identity(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 		let sql = editor.drop_identity_sql("users", "id");
 
 		assert!(sql.contains("ALTER TABLE users"));
@@ -343,9 +407,11 @@ mod tests {
 		assert!(sql.contains("DROP IDENTITY IF EXISTS"));
 	}
 
-	#[test]
-	fn test_create_like_index() {
-		let editor = PostgreSQLSchemaEditor::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_like_index(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let editor = create_test_editor(pool);
 
 		// varchar should create index
 		let varchar_sql = editor.create_like_index_sql("users", "email", "varchar(255)");

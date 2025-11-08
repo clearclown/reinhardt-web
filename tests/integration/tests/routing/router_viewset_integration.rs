@@ -1,12 +1,11 @@
 // Router and ViewSet integration tests
 // Inspired by Django REST Framework's ViewSet router registration tests
 
-use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Handler, Request, Response, Result};
+use reinhardt_apps::Request;
 use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{Action, ModelViewSet, ViewSet};
+use reinhardt_viewsets::ModelViewSet;
 use std::sync::Arc;
 
 #[allow(dead_code)]

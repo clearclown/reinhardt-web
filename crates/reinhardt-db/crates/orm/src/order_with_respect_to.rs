@@ -49,6 +49,7 @@ pub enum OrderValue {
 ///
 /// ```
 /// use reinhardt_orm::order_with_respect_to::OrderedModel;
+/// use reinhardt_orm::query_types::DbBackend;
 /// use std::collections::HashMap;
 /// use std::sync::Arc;
 /// use sqlx::AnyPool;
@@ -60,6 +61,7 @@ pub enum OrderValue {
 ///     vec!["parent_id".to_string()],
 ///     "items".to_string(),
 ///     pool,
+///     DbBackend::Sqlite,
 /// );
 ///
 /// assert_eq!(ordered.order_field(), "order");
@@ -135,6 +137,7 @@ impl OrderedModel {
 	///
 	/// ```
 	/// use reinhardt_orm::order_with_respect_to::{OrderedModel, OrderValue};
+	/// use reinhardt_orm::query_types::DbBackend;
 	/// use std::collections::HashMap;
 	/// use std::sync::Arc;
 	/// use sqlx::AnyPool;
@@ -146,6 +149,7 @@ impl OrderedModel {
 	///     vec!["parent_id".to_string()],
 	///     "items".to_string(),
 	///     pool,
+	///     DbBackend::Sqlite,
 	/// );
 	///
 	/// let mut filters = HashMap::new();
@@ -238,6 +242,7 @@ impl OrderedModel {
 	///
 	/// ```no_run
 	/// use reinhardt_orm::order_with_respect_to::OrderedModel;
+	/// use reinhardt_orm::query_types::DbBackend;
 	/// use sqlx::AnyPool;
 	/// use std::sync::Arc;
 	///
@@ -248,6 +253,7 @@ impl OrderedModel {
 	///     vec!["parent_id".to_string()],
 	///     "items".to_string(),
 	///     Arc::new(pool),
+	///     DbBackend::Sqlite,
 	/// );
 	///
 	/// let new_order = ordered.move_to_position(5, 10, 3).await?;
@@ -461,6 +467,7 @@ mod tests {
 			vec!["category_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		assert_eq!(ordered.order_field(), "_order");
@@ -478,6 +485,7 @@ mod tests {
 			vec!["parent_id".to_string(), "category_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		assert_eq!(ordered.order_with_respect_to().len(), 2);
@@ -493,6 +501,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let mut filters = HashMap::new();
@@ -512,6 +521,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let new_order = ordered.move_up(5).await.unwrap();
@@ -531,6 +541,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let new_order = ordered.move_down(3, 10).await.unwrap();
@@ -550,6 +561,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let new_order = ordered.move_to_position(5, 10, 7).await.unwrap();
@@ -572,6 +584,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let (new_order1, new_order2) = ordered.swap_order(3, 7).await.unwrap();
@@ -589,6 +602,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		assert!(ordered.validate_order(5, 10).is_ok());
@@ -609,6 +623,7 @@ mod tests {
 			vec!["parent_id".to_string()],
 			"test_table".to_string(),
 			pool,
+			DbBackend::Sqlite,
 		);
 
 		let mut filters = HashMap::new();

@@ -1578,7 +1578,8 @@ impl InferenceEngine {
 							matches_required = false;
 							break;
 						}
-						// Pattern matching simplified - actual implementation would use regex
+						// TODO: Implement regex-based pattern matching for model renames
+						// Current implementation uses simple string comparison only
 						if from_pattern == ".*" || to_pattern == ".*" {
 							evidence.push(format!(
 								"Model renamed: {}.{} → {}.{}",

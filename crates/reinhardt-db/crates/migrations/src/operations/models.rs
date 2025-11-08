@@ -737,13 +737,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_delete_model_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let delete = DeleteModel::new("users");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = delete.database_forwards(editor.as_ref());
+		let sql = delete.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert_eq!(sql[0], "DROP TABLE IF EXISTS \"users\"");
 	}
@@ -751,13 +750,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_rename_model_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let rename = RenameModel::new("users", "customers");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = rename.database_forwards(editor.as_ref());
+		let sql = rename.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert_eq!(sql[0], "ALTER TABLE \"users\" RENAME TO \"customers\"");
 	}
@@ -1008,13 +1006,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_move_model_without_table_rename() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let move_op = MoveModel::new("User", "myapp", "auth");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = move_op.database_forwards(editor.as_ref());
+		let sql = move_op.database_forwards(&editor);
 		// No SQL needed when not renaming table
 		assert_eq!(sql.len(), 0);
 	}
@@ -1022,15 +1019,14 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_move_model_with_table_rename() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let move_op =
 			MoveModel::new("User", "myapp", "auth").with_table_rename("myapp_user", "auth_user");
 
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = move_op.database_forwards(editor.as_ref());
+		let sql = move_op.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert_eq!(sql[0], "ALTER TABLE \"myapp_user\" RENAME TO \"auth_user\"");
 	}
@@ -1038,15 +1034,14 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_move_model_backward_sql() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let move_op =
 			MoveModel::new("User", "myapp", "auth").with_table_rename("myapp_user", "auth_user");
 
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = move_op.database_backwards(editor.as_ref());
+		let sql = move_op.database_backwards(&editor);
 		assert_eq!(sql.len(), 1);
 		// Reverse: auth_user back to myapp_user
 		assert_eq!(sql[0], "ALTER TABLE \"auth_user\" RENAME TO \"myapp_user\"");

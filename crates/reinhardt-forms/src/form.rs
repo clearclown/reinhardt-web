@@ -20,6 +20,12 @@ type CleanFunction =
 type FieldCleanFunction =
 	Box<dyn Fn(&serde_json::Value) -> FormResult<serde_json::Value> + Send + Sync>;
 
+/// Special key for form-level (non-field-specific) errors.
+///
+/// In Django, this is `"__all__"`, but in Rust we use a single underscore
+/// to follow Rust conventions for internal/private identifiers.
+pub const ALL_FIELDS_KEY: &str = "_all";
+
 /// Form data structure
 pub struct Form {
 	fields: Vec<Box<dyn FormField>>,
@@ -257,7 +263,7 @@ impl Form {
 					}
 					FormError::Validation(msg) => {
 						self.errors
-							.entry("__all__".to_string())
+							.entry(ALL_FIELDS_KEY.to_string())
 							.or_default()
 							.push(msg);
 					}
@@ -441,7 +447,7 @@ impl Form {
 		let mut html = String::new();
 
 		// Non-field errors
-		if let Some(errors) = self.errors.get("__all__") {
+		if let Some(errors) = self.errors.get(ALL_FIELDS_KEY) {
 			html.push_str(r#"<tr><td colspan="2"><ul class="errorlist">"#);
 			for error in errors {
 				html.push_str(&format!("<li>{}</li>", html_escape(error)));
@@ -502,7 +508,7 @@ impl Form {
 		let mut html = String::new();
 
 		// Non-field errors
-		if let Some(errors) = self.errors.get("__all__") {
+		if let Some(errors) = self.errors.get(ALL_FIELDS_KEY) {
 			html.push_str(r#"<ul class="errorlist">"#);
 			for error in errors {
 				html.push_str(&format!("<li>{}</li>", html_escape(error)));
@@ -562,7 +568,7 @@ impl Form {
 		let mut html = String::new();
 
 		// Non-field errors
-		if let Some(errors) = self.errors.get("__all__") {
+		if let Some(errors) = self.errors.get(ALL_FIELDS_KEY) {
 			html.push_str(r#"<li><ul class="errorlist">"#);
 			for error in errors {
 				html.push_str(&format!("<li>{}</li>", html_escape(error)));
@@ -992,7 +998,7 @@ mod tests {
 		data2.insert("confirm".to_string(), serde_json::json!("different"));
 		form.bind(data2);
 		assert!(!form.is_valid());
-		assert!(form.errors().contains_key("__all__"));
+		assert!(form.errors().contains_key(ALL_FIELDS_KEY));
 	}
 
 	#[test]

@@ -196,7 +196,9 @@ fn test_settings_deserialization() {
         "secure_hsts_preload": false,
         "session_cookie_secure": false,
         "csrf_cookie_secure": false,
-        "append_slash": true
+        "append_slash": true,
+        "admins": [],
+        "managers": []
     }"#;
 
 	let settings: Settings = serde_json::from_str(json).unwrap();

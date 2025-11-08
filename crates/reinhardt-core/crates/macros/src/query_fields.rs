@@ -60,8 +60,9 @@ pub fn derive_query_fields_impl(input: DeriveInput) -> TokenStream {
 
 /// Map Rust types to field lookup types
 fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
-	// Handle the type - this is a simplified version
-	// In a real implementation, you'd want more sophisticated type mapping
+	// TODO: Implement sophisticated type mapping for query field lookups
+	// Current implementation uses basic pattern matching for common types
+	// Required: Add support for custom types, generic types, and complex nested structures
 	match ty {
 		Type::Path(type_path) => {
 			let last_segment = type_path.path.segments.last().unwrap();

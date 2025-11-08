@@ -33,9 +33,9 @@
 
 use crate::filter::{FilterBackend, FilterResult};
 use async_trait::async_trait;
-use backends::connection::DatabaseConnection as BackendsConnection;
 use log::{debug, info, warn};
 use regex::Regex;
+use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -590,7 +590,7 @@ impl QueryOptimizer {
 	///
 	/// ```ignore
 	/// use reinhardt_filters::QueryOptimizer;
-	/// use backends::connection::DatabaseConnection;
+	/// use reinhardt_db_backends::connection::DatabaseConnection;
 	/// use std::sync::Arc;
 	///
 	/// # async fn example() {
@@ -760,7 +760,10 @@ impl QueryOptimizer {
 	///
 	/// Different databases return EXPLAIN results in different formats.
 	/// This method converts them to a unified string format for analysis.
-	fn rows_to_explain_output(rows: &[backends::types::Row], db_type: DatabaseType) -> String {
+	fn rows_to_explain_output(
+		rows: &[reinhardt_db_backends::types::Row],
+		db_type: DatabaseType,
+	) -> String {
 		let mut output = String::new();
 
 		for row in rows {
@@ -768,7 +771,7 @@ impl QueryOptimizer {
 				DatabaseType::PostgreSQL => {
 					// PostgreSQL: EXPLAIN returns a single "QUERY PLAN" column
 					if let Some(plan) = row.data.get("QUERY PLAN")
-						&& let backends::types::QueryValue::String(plan_str) = plan
+						&& let reinhardt_db_backends::types::QueryValue::String(plan_str) = plan
 					{
 						output.push_str(plan_str);
 						output.push('\n');
@@ -778,7 +781,7 @@ impl QueryOptimizer {
 					// MySQL: EXPLAIN returns multiple columns (id, select_type, table, type, etc.)
 					let mut line = String::new();
 					for (key, value) in &row.data {
-						if let backends::types::QueryValue::String(val_str) = value {
+						if let reinhardt_db_backends::types::QueryValue::String(val_str) = value {
 							if !line.is_empty() {
 								line.push_str(" | ");
 							}
@@ -793,7 +796,7 @@ impl QueryOptimizer {
 				DatabaseType::SQLite => {
 					// SQLite: EXPLAIN QUERY PLAN returns columns (detail)
 					if let Some(detail) = row.data.get("detail")
-						&& let backends::types::QueryValue::String(detail_str) = detail
+						&& let reinhardt_db_backends::types::QueryValue::String(detail_str) = detail
 					{
 						output.push_str(detail_str);
 						output.push('\n');
@@ -1342,7 +1345,7 @@ mod tests {
 
 	#[test]
 	fn test_rows_to_explain_output_postgresql() {
-		use backends::types::{QueryValue, Row};
+		use reinhardt_db_backends::types::{QueryValue, Row};
 		use std::collections::HashMap;
 
 		let mut data = HashMap::new();
@@ -1360,7 +1363,7 @@ mod tests {
 
 	#[test]
 	fn test_rows_to_explain_output_mysql() {
-		use backends::types::{QueryValue, Row};
+		use reinhardt_db_backends::types::{QueryValue, Row};
 		use std::collections::HashMap;
 
 		let mut data = HashMap::new();
@@ -1381,7 +1384,7 @@ mod tests {
 
 	#[test]
 	fn test_rows_to_explain_output_sqlite() {
-		use backends::types::{QueryValue, Row};
+		use reinhardt_db_backends::types::{QueryValue, Row};
 		use std::collections::HashMap;
 
 		let mut data = HashMap::new();
@@ -1398,7 +1401,7 @@ mod tests {
 
 	#[test]
 	fn test_rows_to_explain_output_empty() {
-		use backends::types::Row;
+		use reinhardt_db_backends::types::Row;
 		use std::collections::HashMap;
 
 		let row = Row {

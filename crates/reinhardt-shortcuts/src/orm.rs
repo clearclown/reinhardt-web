@@ -210,6 +210,7 @@ mod tests {
 						username VARCHAR(255) NOT NULL,
 						email VARCHAR(255) NOT NULL
 					)",
+					vec![],
 				)
 				.await
 				.expect("Failed to create test_users table");

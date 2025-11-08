@@ -285,8 +285,9 @@ impl AlterField {
 		// MySQL: ALTER TABLE table MODIFY COLUMN column type
 		// SQLite: Requires table recreation
 
-		// For now, we'll generate PostgreSQL-style SQL
-		// A proper implementation would check the database type
+		// TODO: Implement database-specific SQL generation for ALTER COLUMN
+		// Currently generates PostgreSQL-style SQL only
+		// Required: Add database type detection and generate appropriate SQL for MySQL, SQLite, etc.
 		vec![format!(
 			"ALTER TABLE {} ALTER COLUMN {} TYPE {}",
 			quote_identifier(&self.model_name),
@@ -491,16 +492,15 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_add_field_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let add = AddField::new(
 			"users",
 			FieldDefinition::new("email", "VARCHAR(255)", false, false, None::<String>),
 		);
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = add.database_forwards(editor.as_ref());
+		let sql = add.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("ALTER TABLE"));
 		assert!(sql[0].contains("ADD COLUMN"));
@@ -510,13 +510,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_remove_field_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let remove = RemoveField::new("users", "email");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = remove.database_forwards(editor.as_ref());
+		let sql = remove.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("ALTER TABLE"));
 		assert!(sql[0].contains("DROP COLUMN"));
@@ -526,13 +525,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_rename_field_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let rename = RenameField::new("users", "email", "email_address");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = rename.database_forwards(editor.as_ref());
+		let sql = rename.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("ALTER TABLE"));
 		assert!(sql[0].contains("RENAME COLUMN"));

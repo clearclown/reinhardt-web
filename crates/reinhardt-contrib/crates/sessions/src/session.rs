@@ -319,6 +319,45 @@ impl<B: SessionBackend> Session<B> {
 		Ok(())
 	}
 
+	/// Regenerate session ID to prevent session fixation attacks
+	///
+	/// This method creates a new session ID while preserving all session data.
+	/// It should be called after authentication (login) to prevent session fixation attacks.
+	///
+	/// # Security
+	///
+	/// Session fixation is an attack where an attacker sets a victim's session ID
+	/// to a known value. By regenerating the session ID after login, we ensure that
+	/// even if an attacker knew the pre-authentication session ID, it becomes invalid
+	/// after the user logs in.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let backend = InMemorySessionBackend::new();
+	/// let mut session = Session::new(backend);
+	///
+	/// // User logs in
+	/// session.set("user_id", 123)?;
+	///
+	/// // Regenerate session ID to prevent session fixation
+	/// session.regenerate_id().await?;
+	///
+	/// // Session data is preserved
+	/// let user_id: i32 = session.get("user_id")?.unwrap();
+	/// assert_eq!(user_id, 123);
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn regenerate_id(&mut self) -> Result<(), crate::backends::SessionError> {
+		// Delegate to cycle_key which implements the same logic
+		self.cycle_key().await
+	}
+
 	/// Save the session to the backend
 	///
 	/// # Example

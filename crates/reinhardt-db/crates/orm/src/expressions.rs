@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::marker::PhantomData;
 
 /// F expression - represents a database field reference
 /// Similar to Django's F() objects for database-side operations
@@ -45,6 +46,139 @@ impl F {
 impl fmt::Display for F {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "{}", self.field)
+	}
+}
+
+/// Type-safe field reference for database operations
+///
+/// `FieldRef<M, T>` provides compile-time type safety for field references,
+/// where `M` is the model type and `T` is the field type.
+///
+/// This type replaces Python-style `__` (double underscore) field lookup notation
+/// with Rust-idiomatic typed field accessors.
+///
+/// # Type Parameters
+///
+/// - `M`: Model type (e.g., `User`, `Post`)
+/// - `T`: Field type (e.g., `i64`, `String`)
+///
+/// # Examples
+///
+/// ```ignore
+/// use reinhardt_orm::expressions::FieldRef;
+/// use reinhardt_macros::Model;
+///
+/// #[derive(Model)]
+/// #[model(table_name = "users")]
+/// struct User {
+///     #[field(primary_key = true)]
+///     id: i64,
+///     name: String,
+///     email: String,
+/// }
+///
+/// // The #[derive(Model)] macro automatically generates:
+/// // impl User {
+/// //     pub const fn field_id() -> FieldRef<User, i64> {
+/// //         FieldRef::new("id")
+/// //     }
+/// //     pub const fn field_name() -> FieldRef<User, String> {
+/// //         FieldRef::new("name")
+/// //     }
+/// //     pub const fn field_email() -> FieldRef<User, String> {
+/// //         FieldRef::new("email")
+/// //     }
+/// // }
+///
+/// // Basic usage:
+/// let id_ref = User::field_id();
+/// assert_eq!(id_ref.name(), "id");
+/// assert_eq!(id_ref.to_sql(), "id");
+///
+/// // Convert to F expression for use in queries:
+/// use reinhardt_orm::expressions::F;
+/// let f: F = User::field_name().into();
+/// assert_eq!(f.to_sql(), "name");
+/// ```
+///
+/// # Migration from `__` notation
+///
+/// Before (Python-style):
+/// ```ignore
+/// // Not type-safe, prone to typos
+/// let query = User::objects().filter("name__icontains", "alice");
+/// ```
+///
+/// After (Rust-idiomatic):
+/// ```ignore
+/// // Type-safe, compile-time checked
+/// let query = User::objects().filter(User::field_name(), "alice");
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct FieldRef<M, T> {
+	name: &'static str,
+	_phantom: PhantomData<(M, T)>,
+}
+
+impl<M, T> FieldRef<M, T> {
+	/// Create a new field reference with compile-time type safety
+	///
+	/// This constructor is typically used by the `#[derive(Model)]` macro
+	/// to generate field accessor methods.
+	///
+	/// # Arguments
+	///
+	/// - `name`: Field name as a static string
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_orm::expressions::FieldRef;
+	///
+	/// const USER_ID: FieldRef<User, i64> = FieldRef::new("id");
+	/// ```
+	pub const fn new(name: &'static str) -> Self {
+		Self {
+			name,
+			_phantom: PhantomData,
+		}
+	}
+
+	/// Get the field name
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let id_ref = User::field_id();
+	/// assert_eq!(id_ref.name(), "id");
+	/// ```
+	pub const fn name(&self) -> &'static str {
+		self.name
+	}
+
+	/// Convert to SQL representation
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let id_ref = User::field_id();
+	/// assert_eq!(id_ref.to_sql(), "id");
+	/// ```
+	pub fn to_sql(&self) -> String {
+		self.name.to_string()
+	}
+}
+
+impl<M, T> fmt::Display for FieldRef<M, T> {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.name)
+	}
+}
+
+// Allow conversion from FieldRef to F for backward compatibility
+impl<M, T> From<FieldRef<M, T>> for F {
+	fn from(field_ref: FieldRef<M, T>) -> Self {
+		F::new(field_ref.name)
 	}
 }
 
@@ -563,6 +697,46 @@ impl Q {
 mod tests {
 	use super::*;
 
+	// Test model for FieldRef demonstration
+	#[allow(dead_code)]
+	struct TestUser {
+		id: i64,
+		name: String,
+	}
+
+	// Simulating what #[derive(Model)] macro would generate
+	impl TestUser {
+		pub const fn field_id() -> FieldRef<TestUser, i64> {
+			FieldRef::new("id")
+		}
+
+		pub const fn field_name() -> FieldRef<TestUser, String> {
+			FieldRef::new("name")
+		}
+	}
+
+	#[test]
+	fn test_field_ref_basic() {
+		let id_ref = TestUser::field_id();
+		assert_eq!(id_ref.name(), "id");
+		assert_eq!(id_ref.to_sql(), "id");
+		assert_eq!(format!("{}", id_ref), "id");
+	}
+
+	#[test]
+	fn test_field_ref_string_field() {
+		let name_ref = TestUser::field_name();
+		assert_eq!(name_ref.name(), "name");
+		assert_eq!(name_ref.to_sql(), "name");
+	}
+
+	#[test]
+	fn test_field_ref_to_f_conversion() {
+		let id_ref = TestUser::field_id();
+		let f: F = id_ref.into();
+		assert_eq!(f.to_sql(), "id");
+	}
+
 	#[test]
 	fn test_expressions_f_unit() {
 		let f = F::new("price");
@@ -693,6 +867,58 @@ mod tests {
 			"Expected exact EXISTS SQL structure, got: {}",
 			sql
 		);
+	}
+
+	// FieldRef-based F expression tests (Phase 3-4)
+
+	#[test]
+	fn test_field_ref_to_f_direct_conversion() {
+		// Verify FieldRef can be directly converted to F expression
+		let id_field = TestUser::field_id();
+		let f: F = id_field.into();
+
+		assert_eq!(f.to_sql(), "id");
+		assert_eq!(format!("{}", f), "id");
+	}
+
+	#[test]
+	fn test_field_ref_string_field_to_f() {
+		// Verify String-typed FieldRef works with F expression
+		let name_field = TestUser::field_name();
+		let f: F = name_field.into();
+
+		assert_eq!(f.to_sql(), "name");
+		assert_eq!(format!("{}", f), "name");
+	}
+
+	#[test]
+	fn test_multiple_field_refs_to_f() {
+		// Verify multiple FieldRefs can be converted to F expressions
+		let id_f: F = TestUser::field_id().into();
+		let name_f: F = TestUser::field_name().into();
+
+		assert_eq!(id_f.to_sql(), "id");
+		assert_eq!(name_f.to_sql(), "name");
+		assert_ne!(id_f.to_sql(), name_f.to_sql());
+	}
+
+	#[test]
+	fn test_field_ref_preserves_field_name_in_f() {
+		// Ensure field name is correctly preserved through conversion
+		let id_field = TestUser::field_id();
+		let original_name = id_field.name();
+		let f: F = id_field.into();
+
+		assert_eq!(f.to_sql(), original_name);
+	}
+
+	#[test]
+	fn test_field_ref_const_to_f_conversion() {
+		// Verify const FieldRef can be converted to F
+		const ID_FIELD: FieldRef<TestUser, i64> = FieldRef::new("id");
+		let f: F = ID_FIELD.into();
+
+		assert_eq!(f.to_sql(), "id");
 	}
 }
 // Auto-generated tests for expressions module

@@ -3,6 +3,7 @@
 //! These tests verify that reinhardt-parsers work correctly with complex data.
 
 use bytes::Bytes;
+use hyper::HeaderMap;
 use reinhardt_parsers::{JSONParser, MediaType, ParseError, Parser};
 use serde_json::json;
 
@@ -34,7 +35,11 @@ async fn test_json_parser_nested_objects() {
 	});
 
 	let body = Bytes::from(serde_json::to_vec(&json_data).unwrap());
-	let result = parser.parse(Some("application/json"), body).await.unwrap();
+	let headers = HeaderMap::new();
+	let result = parser
+		.parse(Some("application/json"), body, &headers)
+		.await
+		.unwrap();
 
 	// Verify nested structure is preserved
 	match result {
@@ -56,8 +61,9 @@ async fn test_json_parser_error_handling() {
 	// Invalid JSON - missing closing brace
 	let invalid_json = b"{\"name\": \"Alice\"";
 	let body = Bytes::from(&invalid_json[..]);
+	let headers = HeaderMap::new();
 
-	let result = parser.parse(Some("application/json"), body).await;
+	let result = parser.parse(Some("application/json"), body, &headers).await;
 
 	assert!(result.is_err());
 	match result {
@@ -73,7 +79,8 @@ async fn test_json_parser_empty_body() {
 	let parser = JSONParser::new();
 
 	let body = Bytes::new();
-	let result = parser.parse(Some("application/json"), body).await;
+	let headers = HeaderMap::new();
+	let result = parser.parse(Some("application/json"), body, &headers).await;
 
 	// Should error on empty body by default
 	assert!(result.is_err());
@@ -84,7 +91,8 @@ async fn test_json_parser_empty_body_allowed() {
 	let parser = JSONParser::new().allow_empty(true);
 
 	let body = Bytes::new();
-	let result = parser.parse(Some("application/json"), body).await;
+	let headers = HeaderMap::new();
+	let result = parser.parse(Some("application/json"), body, &headers).await;
 
 	// Should return null when empty is allowed
 	assert!(result.is_ok());
@@ -169,7 +177,11 @@ async fn test_json_parser_array_data() {
 	]);
 
 	let body = Bytes::from(serde_json::to_vec(&json_array).unwrap());
-	let result = parser.parse(Some("application/json"), body).await.unwrap();
+	let headers = HeaderMap::new();
+	let result = parser
+		.parse(Some("application/json"), body, &headers)
+		.await
+		.unwrap();
 
 	match result {
 		reinhardt_parsers::parser::ParsedData::Json(value) => {
@@ -193,7 +205,11 @@ async fn test_json_parser_unicode() {
 	});
 
 	let body = Bytes::from(serde_json::to_vec(&json_data).unwrap());
-	let result = parser.parse(Some("application/json"), body).await.unwrap();
+	let headers = HeaderMap::new();
+	let result = parser
+		.parse(Some("application/json"), body, &headers)
+		.await
+		.unwrap();
 
 	match result {
 		reinhardt_parsers::parser::ParsedData::Json(value) => {

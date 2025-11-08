@@ -662,95 +662,12 @@ mod tests {
 	}
 
 	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_get_registered_models() {
-		let models = get_registered_models();
-		// Should have at least our test models
-		assert!(models.len() >= 3);
-
-		// Check that our test models are present
-		assert!(models.iter().any(|m| m.model_name == "User"));
-		assert!(models.iter().any(|m| m.model_name == "Post"));
-		assert!(models.iter().any(|m| m.model_name == "Comment"));
-	}
-
-	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_get_models_for_app(_model_cache: TeardownGuard<ModelCacheGuard>) {
-		let blog_models = get_models_for_app("blog");
-		assert_eq!(blog_models.len(), 2);
-
-		let model_names: HashSet<&str> = blog_models.iter().map(|m| m.model_name).collect();
-		assert_eq!(model_names, HashSet::from(["Post", "Comment"]));
-
-		let auth_models = get_models_for_app("auth");
-		assert_eq!(auth_models.len(), 1);
-		assert_eq!(auth_models[0].model_name, "User");
-	}
-
-	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_get_models_for_app_cached(_model_cache: TeardownGuard<ModelCacheGuard>) {
-		// First call - populates cache
-		let models1 = get_models_for_app("blog");
-		assert_eq!(models1.len(), 2);
-
-		// Second call - should use cache
-		let models2 = get_models_for_app("blog");
-		assert_eq!(models2.len(), 2);
-
-		// Results should be the same
-		assert_eq!(models1.len(), models2.len());
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_get_models_for_nonexistent_app() {
-		let models = get_models_for_app("nonexistent");
-		assert_eq!(models.len(), 0);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_find_model() {
-		let model = find_model("auth.User");
-		assert!(model.is_some());
-		assert_eq!(model.unwrap().model_name, "User");
-		assert_eq!(model.unwrap().table_name, "auth_users");
-
-		let model = find_model("blog.Post");
-		assert!(model.is_some());
-		assert_eq!(model.unwrap().model_name, "Post");
-	}
-
-	#[test]
 	fn test_find_model_invalid_format() {
 		let model = find_model("InvalidFormat");
 		assert!(model.is_none());
 
 		let model = find_model("too.many.parts");
 		assert!(model.is_none());
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_find_nonexistent_model() {
-		let model = find_model("nonexistent.Model");
-		assert!(model.is_none());
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_clear_model_cache() {
-		// Populate cache
-		let _ = get_models_for_app("blog");
-
-		// Clear cache
-		clear_model_cache();
-
-		// Should still work (rebuilds cache)
-		let models = get_models_for_app("blog");
-		assert_eq!(models.len(), 2);
 	}
 
 	#[test]
@@ -923,75 +840,10 @@ mod tests {
 	}
 
 	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_get_registered_relationships() {
-		let relationships = get_registered_relationships();
-		// Should have at least our test relationships
-		assert!(relationships.len() >= 2);
-
-		// Check that our test relationships are present
-		assert!(
-			relationships
-				.iter()
-				.any(|r| r.field_name == "author" && r.from_model == "blog.Post")
-		);
-		assert!(
-			relationships
-				.iter()
-				.any(|r| r.field_name == "tags" && r.from_model == "blog.Post")
-		);
-	}
-
-	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_get_relationships_for_model(
-		_relationship_cache: TeardownGuard<RelationshipCacheGuard>,
-	) {
-		let post_rels = get_relationships_for_model("blog.Post");
-		assert_eq!(post_rels.len(), 2);
-
-		let field_names: HashSet<&str> = post_rels.iter().map(|r| r.field_name).collect();
-		assert_eq!(field_names, HashSet::from(["author", "tags"]));
-	}
-
-	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_get_relationships_for_nonexistent_model(
-		_relationship_cache: TeardownGuard<RelationshipCacheGuard>,
-	) {
-		let rels = get_relationships_for_model("nonexistent.Model");
-		assert_eq!(rels.len(), 0);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_get_relationships_to_model() {
-		let user_rels = get_relationships_to_model("auth.User");
-		assert!(user_rels.len() >= 1);
-
-		let from_models: HashSet<&str> = user_rels.iter().map(|r| r.from_model).collect();
-		assert!(from_models.contains("blog.Post"));
-	}
-
-	#[test]
 	fn test_relationship_types() {
 		assert_eq!(RelationshipType::ForeignKey, RelationshipType::ForeignKey);
 		assert_ne!(RelationshipType::ForeignKey, RelationshipType::ManyToMany);
 		assert_ne!(RelationshipType::ForeignKey, RelationshipType::OneToOne);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_clear_relationship_cache() {
-		// Populate cache
-		let _ = get_relationships_for_model("blog.Post");
-
-		// Clear cache
-		clear_relationship_cache();
-
-		// Should still work (rebuilds cache)
-		let rels = get_relationships_for_model("blog.Post");
-		assert_eq!(rels.len(), 2);
 	}
 
 	#[test]

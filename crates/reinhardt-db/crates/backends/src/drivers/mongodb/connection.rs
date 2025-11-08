@@ -636,6 +636,11 @@ impl MongoDBBackend {
 				// Convert chrono DateTime to BSON DateTime
 				Bson::DateTime(bson::DateTime::from_millis(dt.timestamp_millis()))
 			}
+			QueryValue::Now => {
+				// MongoDB doesn't have SQL NOW(), use current UTC time
+				let now = chrono::Utc::now();
+				Bson::DateTime(bson::DateTime::from_millis(now.timestamp_millis()))
+			}
 		}
 	}
 

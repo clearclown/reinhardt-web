@@ -66,7 +66,20 @@ impl<S, A, T> AssociationProxy<S, A, T> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_test::fixtures::{Address, UserWithAddress as User};
+
+	#[allow(dead_code)]
+	#[derive(Clone)]
+	struct Address {
+		city: String,
+		country: String,
+	}
+
+	#[allow(dead_code)]
+	#[derive(Clone)]
+	struct User {
+		id: i64,
+		address: Address,
+	}
 
 	#[test]
 	fn test_association_proxy_basic() {

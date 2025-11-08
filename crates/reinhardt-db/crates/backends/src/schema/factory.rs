@@ -27,7 +27,7 @@
 /// let editor = factory.create_for_database(DatabaseType::PostgreSQL);
 /// // Use the editor for DDL operations via BaseDatabaseSchemaEditor trait methods
 /// ```
-use crate::schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult};
+use crate::schema::BaseDatabaseSchemaEditor;
 
 #[cfg(feature = "postgres")]
 use crate::drivers::postgresql::schema::PostgreSQLSchemaEditor;
@@ -39,6 +39,15 @@ use crate::drivers::mysql::schema::MySQLSchemaEditor;
 use crate::drivers::sqlite::schema::SQLiteSchemaEditor;
 
 use std::sync::Arc;
+
+#[cfg(feature = "postgres")]
+use sqlx::PgPool;
+
+#[cfg(feature = "mysql")]
+use sqlx::MySqlPool;
+
+#[cfg(feature = "sqlite")]
+use sqlx::SqlitePool;
 
 /// Database type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -107,20 +116,32 @@ impl DatabaseType {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```no_run
 /// use reinhardt_db::backends::schema::factory::{SchemaEditorFactory, DatabaseType};
+/// use sqlx::PgPool;
 ///
-/// let factory = SchemaEditorFactory::new();
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+/// let factory = SchemaEditorFactory::new_postgres(pool);
 /// // Create a PostgreSQL schema editor
 /// let pg_editor = factory.create_for_database(DatabaseType::PostgreSQL);
 /// // Use BaseDatabaseSchemaEditor trait methods for DDL operations
+/// # Ok(())
+/// # }
 /// ```
 pub struct SchemaEditorFactory {
-	_config: (),
+	#[cfg(feature = "postgres")]
+	pg_pool: Option<Arc<PgPool>>,
+	#[cfg(feature = "mysql")]
+	#[allow(dead_code)]
+	mysql_pool: Option<Arc<MySqlPool>>,
+	#[cfg(feature = "sqlite")]
+	#[allow(dead_code)]
+	sqlite_pool: Option<Arc<SqlitePool>>,
 }
 
 impl SchemaEditorFactory {
-	/// Create a new schema editor factory
+	/// Create a new empty schema editor factory
 	///
 	/// # Example
 	///
@@ -130,23 +151,90 @@ impl SchemaEditorFactory {
 	/// let factory = SchemaEditorFactory::new();
 	/// ```
 	pub fn new() -> Self {
-		Self { _config: () }
+		Self {
+			#[cfg(feature = "postgres")]
+			pg_pool: None,
+			#[cfg(feature = "mysql")]
+			mysql_pool: None,
+			#[cfg(feature = "sqlite")]
+			sqlite_pool: None,
+		}
+	}
+
+	/// Create a factory with PostgreSQL pool
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// use reinhardt_db::backends::schema::factory::SchemaEditorFactory;
+	/// use sqlx::PgPool;
+	///
+	/// # async fn example() -> Result<(), sqlx::Error> {
+	/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// let factory = SchemaEditorFactory::new_postgres(pool);
+	/// # Ok(())
+	/// # }
+	/// ```
+	#[cfg(feature = "postgres")]
+	pub fn new_postgres(pool: PgPool) -> Self {
+		Self {
+			pg_pool: Some(Arc::new(pool)),
+			#[cfg(feature = "mysql")]
+			mysql_pool: None,
+			#[cfg(feature = "sqlite")]
+			sqlite_pool: None,
+		}
+	}
+
+	/// Create a factory with MySQL pool
+	#[cfg(feature = "mysql")]
+	pub fn new_mysql(pool: MySqlPool) -> Self {
+		Self {
+			#[cfg(feature = "postgres")]
+			pg_pool: None,
+			mysql_pool: Some(Arc::new(pool)),
+			#[cfg(feature = "sqlite")]
+			sqlite_pool: None,
+		}
+	}
+
+	/// Create a factory with SQLite pool
+	#[cfg(feature = "sqlite")]
+	pub fn new_sqlite(pool: SqlitePool) -> Self {
+		Self {
+			#[cfg(feature = "postgres")]
+			pg_pool: None,
+			#[cfg(feature = "mysql")]
+			mysql_pool: None,
+			sqlite_pool: Some(Arc::new(pool)),
+		}
 	}
 
 	/// Create a schema editor for the specified database type
 	///
 	/// # Example
 	///
-	/// ```rust
+	/// ```no_run
 	/// use reinhardt_db::backends::schema::factory::{SchemaEditorFactory, DatabaseType};
+	/// use sqlx::PgPool;
 	///
-	/// let factory = SchemaEditorFactory::new();
+	/// # async fn example() -> Result<(), sqlx::Error> {
+	/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// let factory = SchemaEditorFactory::new_postgres(pool);
 	/// let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn create_for_database(&self, db_type: DatabaseType) -> Box<dyn BaseDatabaseSchemaEditor> {
 		match db_type {
 			#[cfg(feature = "postgres")]
-			DatabaseType::PostgreSQL => Box::new(PostgreSQLSchemaEditor::new()),
+			DatabaseType::PostgreSQL => {
+				let pool = self
+					.pg_pool
+					.as_ref()
+					.expect("PostgreSQL pool not set. Use SchemaEditorFactory::new_postgres()");
+				Box::new(PostgreSQLSchemaEditor::from_pool_arc(Arc::clone(pool)))
+			}
 
 			#[cfg(not(feature = "postgres"))]
 			DatabaseType::PostgreSQL => {
@@ -171,46 +259,26 @@ impl SchemaEditorFactory {
 		}
 	}
 
-	/// Create a schema editor from a connection string
-	///
-	/// # Example
-	///
-	/// ```rust
-	/// use reinhardt_db::backends::schema::factory::SchemaEditorFactory;
-	///
-	/// let factory = SchemaEditorFactory::new();
-	/// let result = factory.create_from_connection_string("postgres://localhost/mydb");
-	/// assert!(result.is_ok());
-	/// ```
-	pub fn create_from_connection_string(
-		&self,
-		conn_str: &str,
-	) -> SchemaEditorResult<Box<dyn BaseDatabaseSchemaEditor>> {
-		let db_type = DatabaseType::from_connection_string(conn_str).ok_or_else(|| {
-			SchemaEditorError::InvalidOperation(format!(
-				"Could not determine database type from connection string: {}",
-				conn_str
-			))
-		})?;
-
-		Ok(self.create_for_database(db_type))
-	}
-
 	/// Create an Arc-wrapped schema editor for shared access
 	///
 	/// This is useful when you need to share the schema editor across multiple threads.
 	///
 	/// # Example
 	///
-	/// ```rust
+	/// ```no_run
 	/// use reinhardt_db::backends::schema::factory::{SchemaEditorFactory, DatabaseType};
 	/// use std::sync::Arc;
+	/// use sqlx::PgPool;
 	///
-	/// let factory = SchemaEditorFactory::new();
+	/// # async fn example() -> Result<(), sqlx::Error> {
+	/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// let factory = SchemaEditorFactory::new_postgres(pool);
 	/// let editor = factory.create_shared(DatabaseType::PostgreSQL);
 	///
-	// Can be cloned and shared across threads
+	/// // Can be cloned and shared across threads
 	/// let editor_clone = Arc::clone(&editor);
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn create_shared(
 		&self,
@@ -218,7 +286,13 @@ impl SchemaEditorFactory {
 	) -> Arc<dyn BaseDatabaseSchemaEditor + Send + Sync> {
 		match db_type {
 			#[cfg(feature = "postgres")]
-			DatabaseType::PostgreSQL => Arc::new(PostgreSQLSchemaEditor::new()),
+			DatabaseType::PostgreSQL => {
+				let pool = self
+					.pg_pool
+					.as_ref()
+					.expect("PostgreSQL pool not set. Use SchemaEditorFactory::new_postgres()");
+				Arc::new(PostgreSQLSchemaEditor::from_pool_arc(Arc::clone(pool)))
+			}
 
 			#[cfg(not(feature = "postgres"))]
 			DatabaseType::PostgreSQL => {
@@ -253,6 +327,7 @@ impl Default for SchemaEditorFactory {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use rstest::*;
 
 	#[test]
 	fn test_database_type_from_connection_string() {
@@ -294,32 +369,27 @@ mod tests {
 	}
 
 	#[cfg(feature = "postgres")]
-	#[test]
-	fn test_create_postgresql_editor() {
-		let factory = SchemaEditorFactory::new();
+	#[fixture]
+	async fn pg_pool() -> PgPool {
+		PgPool::connect_lazy("postgresql://localhost/test_db").expect("Failed to create test pool")
+	}
+
+	#[cfg(feature = "postgres")]
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_postgresql_editor(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let factory = SchemaEditorFactory::new_postgres(pool);
 		let _editor = factory.create_for_database(DatabaseType::PostgreSQL);
 		// Editor created successfully
 	}
 
 	#[cfg(feature = "postgres")]
-	#[test]
-	fn test_create_from_connection_string() {
-		let factory = SchemaEditorFactory::new();
-		let result = factory.create_from_connection_string("postgres://localhost/mydb");
-		assert!(result.is_ok());
-	}
-
-	#[test]
-	fn test_create_from_invalid_connection_string() {
-		let factory = SchemaEditorFactory::new();
-		let result = factory.create_from_connection_string("invalid://localhost/mydb");
-		assert!(result.is_err());
-	}
-
-	#[cfg(feature = "postgres")]
-	#[test]
-	fn test_create_shared_editor() {
-		let factory = SchemaEditorFactory::new();
+	#[rstest]
+	#[tokio::test]
+	async fn test_create_shared_editor(#[future] pg_pool: PgPool) {
+		let pool = pg_pool.await;
+		let factory = SchemaEditorFactory::new_postgres(pool);
 		let editor = factory.create_shared(DatabaseType::PostgreSQL);
 
 		let _editor_clone = Arc::clone(&editor);

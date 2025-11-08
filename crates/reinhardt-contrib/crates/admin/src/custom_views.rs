@@ -425,7 +425,7 @@ impl ReorderHandler {
 				.to_string(PostgresQueryBuilder);
 
 			// Execute the query
-			match self.connection.execute(&query).await {
+			match self.connection.execute(&query, vec![]).await {
 				Ok(_) => {
 					updated_count += 1;
 				}

@@ -55,23 +55,129 @@ impl ImageOptimizer {
 
 	/// Optimize PNG image
 	fn optimize_png(&self, input: &[u8]) -> ProcessingResult<Vec<u8>> {
-		// For now, return input unchanged
-		// Real implementation would use oxipng or similar
-		Ok(input.to_vec())
+		#[cfg(feature = "image-optimization")]
+		{
+			use oxipng::{Options, optimize_from_memory};
+
+			// Create optimization options based on quality setting
+			// Quality 1-100 maps to oxipng compression level 0-6
+			let level = ((self.quality as f32 / 100.0) * 6.0) as u8;
+			let level = level.clamp(0, 6);
+
+			let options = Options::from_preset(level);
+
+			optimize_from_memory(input, &options).map_err(|e| {
+				io::Error::new(
+					io::ErrorKind::Other,
+					format!("PNG optimization failed: {}", e),
+				)
+			})
+		}
+
+		#[cfg(not(feature = "image-optimization"))]
+		{
+			// Without image-optimization feature, return input unchanged
+			Ok(input.to_vec())
+		}
 	}
 
 	/// Optimize JPEG image
 	fn optimize_jpeg(&self, input: &[u8]) -> ProcessingResult<Vec<u8>> {
-		// For now, return input unchanged
-		// Real implementation would use mozjpeg or similar
-		Ok(input.to_vec())
+		#[cfg(feature = "image-optimization")]
+		{
+			use image::ImageReader;
+			use image::codecs::jpeg::JpegEncoder;
+			use std::io::Cursor;
+
+			// Decode the JPEG image
+			let img = ImageReader::new(Cursor::new(input))
+				.with_guessed_format()
+				.map_err(|e| {
+					io::Error::new(
+						io::ErrorKind::InvalidData,
+						format!("Failed to read JPEG: {}", e),
+					)
+				})?
+				.decode()
+				.map_err(|e| {
+					io::Error::new(
+						io::ErrorKind::InvalidData,
+						format!("Failed to decode JPEG: {}", e),
+					)
+				})?;
+
+			// Re-encode with specified quality
+			let mut output = Vec::new();
+			let mut encoder = JpegEncoder::new_with_quality(&mut output, self.quality);
+			encoder
+				.encode(
+					img.as_bytes(),
+					img.width(),
+					img.height(),
+					img.color().into(),
+				)
+				.map_err(|e| {
+					io::Error::new(io::ErrorKind::Other, format!("JPEG encoding failed: {}", e))
+				})?;
+
+			Ok(output)
+		}
+
+		#[cfg(not(feature = "image-optimization"))]
+		{
+			// Without image-optimization feature, return input unchanged
+			Ok(input.to_vec())
+		}
 	}
 
 	/// Optimize WebP image
 	fn optimize_webp(&self, input: &[u8]) -> ProcessingResult<Vec<u8>> {
-		// For now, return input unchanged
-		// Real implementation would use libwebp
-		Ok(input.to_vec())
+		#[cfg(feature = "image-optimization")]
+		{
+			use image::ImageReader;
+			use std::io::Cursor;
+
+			// Decode the image
+			let img = ImageReader::new(Cursor::new(input))
+				.with_guessed_format()
+				.map_err(|e| {
+					io::Error::new(
+						io::ErrorKind::InvalidData,
+						format!("Failed to read WebP: {}", e),
+					)
+				})?
+				.decode()
+				.map_err(|e| {
+					io::Error::new(
+						io::ErrorKind::InvalidData,
+						format!("Failed to decode WebP: {}", e),
+					)
+				})?;
+
+			// Encode to WebP
+			let encoder = webp::Encoder::from_image(&img).map_err(|e| {
+				io::Error::new(
+					io::ErrorKind::Other,
+					format!("Failed to create WebP encoder: {}", e),
+				)
+			})?;
+
+			let webp_data = if self.lossy {
+				// Lossy compression with quality setting
+				encoder.encode(self.quality as f32)
+			} else {
+				// Lossless compression
+				encoder.encode_lossless()
+			};
+
+			Ok(webp_data.to_vec())
+		}
+
+		#[cfg(not(feature = "image-optimization"))]
+		{
+			// Without image-optimization feature, return input unchanged
+			Ok(input.to_vec())
+		}
 	}
 
 	/// Detect image format from file extension
@@ -183,7 +289,9 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_optimize_png_basic() {
+	#[cfg(not(feature = "image-optimization"))]
+	async fn test_optimize_png_basic_without_feature() {
+		// Without image-optimization feature, input should be returned unchanged
 		let optimizer = ImageOptimizer::new(85);
 		let input = b"fake png data";
 		let result = optimizer
@@ -194,7 +302,19 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_optimize_jpeg_basic() {
+	#[cfg(feature = "image-optimization")]
+	async fn test_optimize_png_basic_with_feature() {
+		// With image-optimization feature, invalid PNG data should return error
+		let optimizer = ImageOptimizer::new(85);
+		let input = b"fake png data";
+		let result = optimizer.process(input, &PathBuf::from("test.png")).await;
+		assert!(result.is_err());
+	}
+
+	#[tokio::test]
+	#[cfg(not(feature = "image-optimization"))]
+	async fn test_optimize_jpeg_basic_without_feature() {
+		// Without image-optimization feature, input should be returned unchanged
 		let optimizer = ImageOptimizer::new(85);
 		let input = b"fake jpeg data";
 		let result = optimizer
@@ -205,7 +325,19 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_optimize_webp_basic() {
+	#[cfg(feature = "image-optimization")]
+	async fn test_optimize_jpeg_basic_with_feature() {
+		// With image-optimization feature, invalid JPEG data should return error
+		let optimizer = ImageOptimizer::new(85);
+		let input = b"fake jpeg data";
+		let result = optimizer.process(input, &PathBuf::from("test.jpg")).await;
+		assert!(result.is_err());
+	}
+
+	#[tokio::test]
+	#[cfg(not(feature = "image-optimization"))]
+	async fn test_optimize_webp_basic_without_feature() {
+		// Without image-optimization feature, input should be returned unchanged
 		let optimizer = ImageOptimizer::new(85);
 		let input = b"fake webp data";
 		let result = optimizer
@@ -213,6 +345,16 @@ mod tests {
 			.await
 			.unwrap();
 		assert_eq!(result, input);
+	}
+
+	#[tokio::test]
+	#[cfg(feature = "image-optimization")]
+	async fn test_optimize_webp_basic_with_feature() {
+		// With image-optimization feature, invalid WebP data should return error
+		let optimizer = ImageOptimizer::new(85);
+		let input = b"fake webp data";
+		let result = optimizer.process(input, &PathBuf::from("test.webp")).await;
+		assert!(result.is_err());
 	}
 
 	#[tokio::test]

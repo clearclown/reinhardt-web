@@ -376,8 +376,9 @@ impl<P: Model, C: Model> Relationship<P, C> {
 				Some(stmt.to_owned())
 			}
 			LoadingStrategy::Subquery => {
-				// Subquery strategy requires parent query context
-				// Use build_subquery() method for proper implementation
+				// TODO: Implement proper subquery loading strategy with parent query context
+				// Current implementation generates basic SELECT without parent context integration
+				// Required: Use build_subquery() method to properly correlate with parent query
 				let mut stmt = Query::select();
 				stmt.from(Alias::new(child_table))
 					.column(sea_query::Asterisk);

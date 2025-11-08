@@ -378,7 +378,7 @@ pub fn temp_dir() -> tempfile::TempDir {
 // ============================================================================
 
 #[cfg(feature = "testcontainers")]
-use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
+use testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
 #[cfg(feature = "testcontainers")]
 use testcontainers_modules::{postgres::Postgres, redis::Redis};
 
@@ -496,6 +496,10 @@ pub async fn redis_cluster_fixture() -> (
 			"5000",
 			"--appendonly",
 			"no",
+			"--bind",
+			"0.0.0.0",
+			"--protected-mode",
+			"no",
 		])
 		.start()
 		.await
@@ -513,6 +517,10 @@ pub async fn redis_cluster_fixture() -> (
 			"5000",
 			"--appendonly",
 			"no",
+			"--bind",
+			"0.0.0.0",
+			"--protected-mode",
+			"no",
 		])
 		.start()
 		.await
@@ -529,6 +537,10 @@ pub async fn redis_cluster_fixture() -> (
 			"--cluster-node-timeout",
 			"5000",
 			"--appendonly",
+			"no",
+			"--bind",
+			"0.0.0.0",
+			"--protected-mode",
 			"no",
 		])
 		.start()
@@ -548,268 +560,519 @@ pub async fn redis_cluster_fixture() -> (
 		.await
 		.expect("Failed to get Redis node 3 port");
 
+	// Get bridge IPs for cross-container communication
+	let node1_ip = node1
+		.get_bridge_ip_address()
+		.await
+		.expect("Failed to get node 1 IP");
+	let node2_ip = node2
+		.get_bridge_ip_address()
+		.await
+		.expect("Failed to get node 2 IP");
+	let node3_ip = node3
+		.get_bridge_ip_address()
+		.await
+		.expect("Failed to get node 3 IP");
+
 	let url1 = format!("redis://localhost:{}", port1);
 	let url2 = format!("redis://localhost:{}", port2);
 	let url3 = format!("redis://localhost:{}", port3);
 
-	// Initialize cluster by creating cluster meet connections
-	let meet_cmd2 = format!("redis-cli -p 6379 CLUSTER MEET 127.0.0.1 {}", port2);
-	let meet_cmd3 = format!("redis-cli -p 6379 CLUSTER MEET 127.0.0.1 {}", port3);
+	eprintln!("Redis Cluster nodes:");
+	eprintln!("  Node 1: {} (internal: {}:6379)", url1, node1_ip);
+	eprintln!("  Node 2: {} (internal: {}:6379)", url2, node2_ip);
+	eprintln!("  Node 3: {} (internal: {}:6379)", url3, node3_ip);
 
+	// Wait for Redis nodes to fully initialize
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+	// Initialize cluster by creating cluster meet connections
+	// Node 1 meets Node 2
+	let meet_cmd2 = format!("redis-cli CLUSTER MEET {} 6379", node2_ip);
 	node1
 		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd2]))
 		.await
-		.ok();
-	tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+		.expect("CLUSTER MEET node2 failed");
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
+	// Node 1 meets Node 3
+	let meet_cmd3 = format!("redis-cli CLUSTER MEET {} 6379", node3_ip);
 	node1
 		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd3]))
 		.await
-		.ok();
-	tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+		.expect("CLUSTER MEET node3 failed");
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-	// Assign slots to each node
+	// Assign slots to each node (must be done sequentially to avoid conflicts)
 	// Node 1: slots 0-5460
-	let slots1_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 0 5460)";
+	let slots1_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 0 5460)";
 	node1
 		.exec(ExecCommand::new(vec!["sh", "-c", slots1_cmd]))
 		.await
-		.ok();
+		.expect("CLUSTER ADDSLOTS node1 failed");
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
 	// Node 2: slots 5461-10922
-	let slots2_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 5461 10922)";
+	let slots2_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 5461 10922)";
 	node2
 		.exec(ExecCommand::new(vec!["sh", "-c", slots2_cmd]))
 		.await
-		.ok();
+		.expect("CLUSTER ADDSLOTS node2 failed");
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
 	// Node 3: slots 10923-16383
-	let slots3_cmd = "redis-cli -p 6379 CLUSTER ADDSLOTS $(seq 10923 16383)";
+	let slots3_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 10923 16383)";
 	node3
 		.exec(ExecCommand::new(vec!["sh", "-c", slots3_cmd]))
 		.await
-		.ok();
+		.expect("CLUSTER ADDSLOTS node3 failed");
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
-	// Wait for cluster to be ready
-	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+	// Wait for cluster to be fully initialized and stable
+	// Redis Cluster needs time to propagate slot assignments and converge
+	eprintln!("Waiting for cluster to be ready...");
+	tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+
+	eprintln!("Redis Cluster initialization complete");
 
 	// Return containers and URLs
 	// Containers will be automatically cleaned up when they go out of scope
 	(vec![node1, node2, node3], vec![url1, url2, url3])
 }
 
-/// Fixture providing a Memcached TestContainer
+/// LocalStack container fixture for AWS services testing
 ///
-/// Returns a tuple of (container, connection_url).
-/// The container is automatically cleaned up when the test ends.
+/// This fixture provides a LocalStack container that emulates AWS services locally.
+/// Useful for testing AWS integrations without actual AWS credentials.
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::memcached_container;
+/// ```no_run
 /// use rstest::*;
+/// use reinhardt_test::fixtures::localstack_fixture;
 ///
 /// #[rstest]
 /// #[tokio::test]
-/// async fn test_with_memcached(#[future] memcached_container: (ContainerAsync<GenericImage>, String)) {
-///     let (_container, url) = memcached_container.await;
-///     // Use Memcached at `url`
+/// async fn test_with_localstack(
+///     #[future] localstack_fixture: (ContainerAsync<GenericImage>, String)
+/// ) {
+///     let (_container, endpoint_url) = localstack_fixture.await;
+///     // Use endpoint_url to configure AWS SDK
 /// }
 /// ```
 #[cfg(feature = "testcontainers")]
 #[fixture]
-pub async fn memcached_container() -> (ContainerAsync<GenericImage>, String) {
-	let container = GenericImage::new("memcached", "1.6-alpine")
-		.with_exposed_port(11211.into())
+pub async fn localstack_fixture() -> (
+	testcontainers::ContainerAsync<testcontainers::GenericImage>,
+	String,
+) {
+	use std::time::Duration;
+	use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
+
+	// LocalStack community image - minimal configuration for faster startup
+	// No wait condition - rely on port mapping and sleep instead
+	let localstack = GenericImage::new("localstack/localstack", "latest")
+		.with_env_var("SERVICES", "secretsmanager") // Only enable Secrets Manager service
+		.with_env_var("EDGE_PORT", "4566") // Default LocalStack edge port
 		.start()
 		.await
-		.expect("Failed to start Memcached container");
+		.expect("Failed to start LocalStack container");
 
-	let port = container
-		.get_host_port_ipv4(11211)
+	// Get the mapped port for LocalStack edge port (4566)
+	let port = localstack
+		.get_host_port_ipv4(4566)
 		.await
-		.expect("Failed to get Memcached port");
+		.expect("Failed to get LocalStack port");
 
-	let url = format!("localhost:{}", port);
+	// Construct endpoint URL
+	let endpoint_url = format!("http://localhost:{}", port);
 
-	(container, url)
+	eprintln!("LocalStack started at: {}", endpoint_url);
+
+	// Wait for LocalStack to fully initialize (no log watching, just sleep)
+	tokio::time::sleep(Duration::from_secs(5)).await;
+
+	(localstack, endpoint_url)
 }
 
-/// Fixture providing an SQLite in-memory database pool
-///
-/// Returns a connection pool that can be used for testing.
-/// The database is automatically cleaned up when the pool is dropped.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::sqlite_pool;
-/// use rstest::*;
-/// use sqlx::SqlitePool;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_with_sqlite(#[future] sqlite_pool: SqlitePool) {
-///     let pool = sqlite_pool.await;
-///     // Use SQLite pool
-/// }
-/// ```
+// ============================================================================
+// Advanced Setup/Teardown Fixtures using resource.rs
+// ============================================================================
+
 #[cfg(feature = "testcontainers")]
-#[fixture]
-pub async fn sqlite_pool() -> sqlx::SqlitePool {
-	use sqlx::sqlite::SqlitePoolOptions;
+pub use suite_resources::*;
 
-	SqlitePoolOptions::new()
-		.max_connections(5)
-		.connect(":memory:")
-		.await
-		.expect("Failed to create SQLite pool")
-}
-
-/// Fixture providing a PostgreSQL connection pool (with TestContainer)
-///
-/// This combines the postgres_container fixture with a connection pool.
-/// Both the pool and the container are automatically cleaned up.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::postgres_pool;
-/// use rstest::*;
-/// use sqlx::PgPool;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_with_postgres_pool(
-///     #[future] postgres_pool: (ContainerAsync<testcontainers_modules::postgres::Postgres>, PgPool)
-/// ) {
-///     let (_container, pool) = postgres_pool.await;
-///     // Use PostgreSQL pool
-/// }
-/// ```
+/// Suite-wide shared resources using `resource.rs` SuiteResource pattern
 #[cfg(feature = "testcontainers")]
-#[fixture]
-pub async fn postgres_pool() -> (ContainerAsync<Postgres>, sqlx::PgPool) {
-	use sqlx::postgres::PgPoolOptions;
+mod suite_resources {
+	use super::*;
+	use crate::resource::{SuiteGuard, SuiteResource, acquire_suite};
+	use std::sync::{Mutex, OnceLock, Weak};
 
-	let (container, url) = postgres_container().await;
+	#[cfg(feature = "testcontainers")]
+	use testcontainers::core::{ContainerPort, WaitFor};
 
-	let pool = PgPoolOptions::new()
-		.max_connections(5)
-		.connect(&url)
-		.await
-		.expect("Failed to connect to PostgreSQL");
+	/// Suite-wide PostgreSQL container resource
+	///
+	/// This resource is shared across all tests in the suite and automatically
+	/// cleaned up when the last test completes. Uses `SuiteResource` pattern
+	/// from `resource.rs` for safe lifecycle management.
+	///
+	/// ## Example
+	///
+	/// ```rust
+	/// use reinhardt_test::fixtures::*;
+	/// use rstest::*;
+	///
+	/// #[rstest]
+	/// #[tokio::test]
+	/// async fn test_database_query(postgres_suite: SuiteGuard<PostgresSuiteResource>) {
+	///     let pool = &postgres_suite.pool;
+	///     let result = sqlx::query("SELECT 1").fetch_one(pool).await;
+	///     assert!(result.is_ok());
+	/// }
+	/// ```
+	pub struct PostgresSuiteResource {
+		#[allow(dead_code)]
+		pub container: testcontainers::ContainerAsync<testcontainers::GenericImage>,
+		pub pool: sqlx::postgres::PgPool,
+		pub port: u16,
+		pub database_url: String,
+	}
 
-	(container, pool)
+	impl SuiteResource for PostgresSuiteResource {
+		fn init() -> Self {
+			// Block on async initialization (SuiteResource::init is sync)
+			tokio::task::block_in_place(|| {
+				tokio::runtime::Handle::current().block_on(async { Self::init_async().await })
+			})
+		}
+	}
+
+	impl PostgresSuiteResource {
+		async fn init_async() -> Self {
+			use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
+
+			let postgres = GenericImage::new("postgres", "17-alpine")
+				.with_wait_for(WaitFor::message_on_stderr(
+					"database system is ready to accept connections",
+				))
+				.with_exposed_port(ContainerPort::Tcp(5432))
+				.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
+				.start()
+				.await
+				.expect("Failed to start PostgreSQL container");
+
+			let port = postgres
+				.get_host_port_ipv4(ContainerPort::Tcp(5432))
+				.await
+				.expect("Failed to get PostgreSQL port");
+
+			let database_url = format!("postgres://postgres@localhost:{}/postgres", port);
+
+			// Retry connection with exponential backoff
+			let pool = retry_connect_postgres(&database_url, 10).await;
+
+			Self {
+				container: postgres,
+				pool,
+				port,
+				database_url,
+			}
+		}
+	}
+
+	async fn retry_connect_postgres(url: &str, max_retries: u32) -> sqlx::postgres::PgPool {
+		use sqlx::postgres::PgPoolOptions;
+		use std::time::Duration;
+
+		for attempt in 0..max_retries {
+			match PgPoolOptions::new()
+				.max_connections(5)
+				.acquire_timeout(Duration::from_secs(3))
+				.connect(url)
+				.await
+			{
+				Ok(pool) => return pool,
+				Err(e) if attempt < max_retries - 1 => {
+					eprintln!(
+						"Connection attempt {} failed: {}. Retrying...",
+						attempt + 1,
+						e
+					);
+					tokio::time::sleep(Duration::from_millis(100 * (attempt as u64 + 1))).await;
+				}
+				Err(e) => panic!(
+					"Failed to connect to PostgreSQL after {} retries: {}",
+					max_retries, e
+				),
+			}
+		}
+		unreachable!()
+	}
+
+	static POSTGRES_SUITE: OnceLock<Mutex<Weak<PostgresSuiteResource>>> = OnceLock::new();
+
+	/// Acquire shared PostgreSQL suite resource
+	///
+	/// This fixture provides a suite-wide PostgreSQL container that is shared
+	/// across all tests and automatically cleaned up when the last test completes.
+	///
+	/// ## Example
+	///
+	/// ```rust
+	/// use reinhardt_test::fixtures::*;
+	/// use rstest::*;
+	///
+	/// #[rstest]
+	/// #[tokio::test]
+	/// async fn test_example(postgres_suite: SuiteGuard<PostgresSuiteResource>) {
+	///     let pool = &postgres_suite.pool;
+	///     // Use pool in test
+	/// }
+	/// ```
+	#[fixture]
+	pub fn postgres_suite() -> SuiteGuard<PostgresSuiteResource> {
+		acquire_suite(&POSTGRES_SUITE)
+	}
+
+	/// Suite-wide MySQL container resource
+	pub struct MySqlSuiteResource {
+		#[allow(dead_code)]
+		pub container: testcontainers::ContainerAsync<testcontainers::GenericImage>,
+		pub pool: sqlx::mysql::MySqlPool,
+		pub port: u16,
+		pub database_url: String,
+	}
+
+	impl SuiteResource for MySqlSuiteResource {
+		fn init() -> Self {
+			tokio::task::block_in_place(|| {
+				tokio::runtime::Handle::current().block_on(async { Self::init_async().await })
+			})
+		}
+	}
+
+	impl MySqlSuiteResource {
+		async fn init_async() -> Self {
+			use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
+
+			let mysql = GenericImage::new("mysql", "8.0")
+				.with_wait_for(WaitFor::message_on_stderr("ready for connections"))
+				.with_exposed_port(ContainerPort::Tcp(3306))
+				.with_env_var("MYSQL_ROOT_PASSWORD", "test")
+				.with_env_var("MYSQL_DATABASE", "test")
+				.start()
+				.await
+				.expect("Failed to start MySQL container");
+
+			let port = mysql
+				.get_host_port_ipv4(ContainerPort::Tcp(3306))
+				.await
+				.expect("Failed to get MySQL port");
+
+			let database_url = format!("mysql://root:test@localhost:{}/test", port);
+
+			let pool = retry_connect_mysql(&database_url, 10).await;
+
+			Self {
+				container: mysql,
+				pool,
+				port,
+				database_url,
+			}
+		}
+	}
+
+	async fn retry_connect_mysql(url: &str, max_retries: u32) -> sqlx::mysql::MySqlPool {
+		use sqlx::mysql::MySqlPoolOptions;
+		use std::time::Duration;
+
+		for attempt in 0..max_retries {
+			match MySqlPoolOptions::new()
+				.max_connections(5)
+				.acquire_timeout(Duration::from_secs(3))
+				.connect(url)
+				.await
+			{
+				Ok(pool) => return pool,
+				Err(e) if attempt < max_retries - 1 => {
+					eprintln!(
+						"Connection attempt {} failed: {}. Retrying...",
+						attempt + 1,
+						e
+					);
+					tokio::time::sleep(Duration::from_millis(100 * (attempt as u64 + 1))).await;
+				}
+				Err(e) => panic!(
+					"Failed to connect to MySQL after {} retries: {}",
+					max_retries, e
+				),
+			}
+		}
+		unreachable!()
+	}
+
+	static MYSQL_SUITE: OnceLock<Mutex<Weak<MySqlSuiteResource>>> = OnceLock::new();
+
+	/// Acquire shared MySQL suite resource
+	#[fixture]
+	pub fn mysql_suite() -> SuiteGuard<MySqlSuiteResource> {
+		acquire_suite(&MYSQL_SUITE)
+	}
 }
 
 // ============================================================================
-// WebSocket fixtures
+// Per-test Resources using TestResource pattern
 // ============================================================================
 
-/// Fixture providing a WebSocket RoomManager for testing
-///
-/// Returns an Arc-wrapped RoomManager that can be used across test functions.
-/// The manager is automatically cleaned up when dropped.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::websocket_manager;
-/// use rstest::*;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_with_websocket(websocket_manager: std::sync::Arc<reinhardt_websockets::RoomManager>) {
-///     // Create rooms as needed
-///     websocket_manager.create_room("test_room".to_string()).await;
-///     // Use RoomManager for testing
-/// }
-/// ```
-#[cfg(feature = "websockets")]
-#[fixture]
-pub fn websocket_manager() -> std::sync::Arc<reinhardt_websockets::RoomManager> {
-	std::sync::Arc::new(reinhardt_websockets::RoomManager::new())
+pub use test_resources::*;
+
+/// Per-test resources using `resource.rs` TestResource pattern
+mod test_resources {
+	use super::*;
+	use crate::resource::{TeardownGuard, TestResource};
+	use std::path::PathBuf;
+
+	/// Per-test template directory resource with automatic cleanup
+	///
+	/// Creates a temporary directory for template files and automatically
+	/// removes it when the test completes.
+	///
+	/// ## Example
+	///
+	/// ```rust
+	/// use reinhardt_test::fixtures::*;
+	/// use rstest::*;
+	///
+	/// #[rstest]
+	/// fn test_template_rendering(template_dir: TeardownGuard<TemplateDirResource>) {
+	///     let dir = template_dir.path();
+	///     // Write template files to dir
+	///     // Directory is automatically cleaned up
+	/// }
+	/// ```
+	pub struct TemplateDirResource {
+		path: PathBuf,
+	}
+
+	impl TemplateDirResource {
+		pub fn path(&self) -> &PathBuf {
+			&self.path
+		}
+	}
+
+	impl TestResource for TemplateDirResource {
+		fn setup() -> Self {
+			let test_id = uuid::Uuid::new_v4();
+			let path = PathBuf::from(format!("/tmp/reinhardt_template_test_{}", test_id));
+			std::fs::create_dir_all(&path).expect("Failed to create template test directory");
+			Self { path }
+		}
+
+		fn teardown(&mut self) {
+			if self.path.exists() {
+				std::fs::remove_dir_all(&self.path)
+					.unwrap_or_else(|e| eprintln!("Failed to cleanup template directory: {}", e));
+			}
+		}
+	}
+
+	/// Per-test template directory fixture
+	#[fixture]
+	pub fn template_dir() -> TeardownGuard<TemplateDirResource> {
+		TeardownGuard::new()
+	}
 }
 
-// ============================================================================
-// テスト用モデル構造体
-// ============================================================================
-//
-// これらは`reinhardt-associations`のテストで使用される汎用モデルです。
-// テストユーティリティとして意図的に定義されているため、
-// 一部フィールドが未使用でも許容されます。
+// ================================================================================
+// Mock Database Connection Fixtures
+// ================================================================================
 
-/// 注文モデル（collection.rsテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Order {
-	pub id: u32,
-	pub product_name: String,
-}
+#[cfg(feature = "testcontainers")]
+pub use mock_database::*;
 
-/// ユーザーモデル（複数テスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct User {
-	pub id: i64,
-	pub name: String,
-}
+#[cfg(feature = "testcontainers")]
+mod mock_database {
+	use reinhardt_db::backends::Result;
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
+	use rstest::*;
+	use std::sync::Arc;
 
-/// ユーザーモデル（collectionテスト用、Orderリレーション付き）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct UserWithOrders {
-	pub id: u32,
-	pub orders: Vec<Order>,
-}
+	/// Mock backend implementation for database testing
+	///
+	/// This mock backend provides a no-op implementation of all database operations,
+	/// useful for testing code that depends on DatabaseConnection without requiring
+	/// an actual database.
+	struct MockBackend;
 
-/// 投稿モデル（foreign_key/loadingテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Post {
-	pub id: i64,
-	pub title: String,
-	pub author_id: i64,
-}
+	#[async_trait::async_trait]
+	impl BackendTrait for MockBackend {
+		fn database_type(&self) -> DatabaseType {
+			DatabaseType::Postgres
+		}
 
-/// 学生モデル（many_to_manyテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Student {
-	pub id: i64,
-	pub name: String,
-}
+		fn placeholder(&self, index: usize) -> String {
+			format!("${}", index)
+		}
 
-/// コースモデル（many_to_manyテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Course {
-	pub id: i64,
-	pub name: String,
-}
+		fn supports_returning(&self) -> bool {
+			true
+		}
 
-/// ユーザープロフィールモデル（one_to_oneテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct UserProfile {
-	pub id: i64,
-	pub user_id: i64,
-	pub bio: String,
-}
+		fn supports_on_conflict(&self) -> bool {
+			true
+		}
 
-/// 住所モデル（proxyテスト用）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct Address {
-	pub city: String,
-	pub country: String,
-}
+		async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 0 })
+		}
 
-/// ユーザーモデル（proxyテスト用、Address付き）
-#[allow(dead_code)]
-#[derive(Clone)]
-pub struct UserWithAddress {
-	pub id: u32,
-	pub address: Address,
+		async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		fn as_any(&self) -> &dyn std::any::Any {
+			self
+		}
+	}
+
+	/// Fixture for creating a mock database connection
+	///
+	/// Returns a DatabaseConnection with a mock backend that doesn't perform
+	/// actual database operations. Useful for testing code that requires a
+	/// connection but doesn't need real data.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_test::fixtures::mock_connection;
+	/// use rstest::*;
+	///
+	/// #[rstest]
+	/// fn test_with_mock_db(mock_connection: DatabaseConnection) {
+	///     // Use mock_connection for testing
+	/// }
+	/// ```
+	#[fixture]
+	pub fn mock_connection() -> DatabaseConnection {
+		let mock_backend = Arc::new(MockBackend);
+		let backends_conn = BackendsConnection::new(mock_backend);
+		DatabaseConnection::new(DatabaseBackend::Postgres, backends_conn)
+	}
 }

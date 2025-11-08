@@ -17,9 +17,12 @@ pub fn receiver_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 	let fn_attrs = &input_fn.attrs;
 	let fn_sig = &input_fn.sig;
 
-	// For now, we just pass through the function
-	// In a real implementation, you would track these functions
-	// and generate registration code in a build script or init function
+	// TODO: Implement receiver function tracking and registration code generation
+	// Required functionality:
+	// 1. Track receiver functions during macro expansion
+	// 2. Generate registration code in build script or initialization function
+	// 3. Enable signal-receiver automatic connection at runtime
+	// Current implementation: Pass-through only (no tracking or registration)
 	let expanded = quote! {
 		#(#fn_attrs)*
 		#fn_vis #fn_sig {

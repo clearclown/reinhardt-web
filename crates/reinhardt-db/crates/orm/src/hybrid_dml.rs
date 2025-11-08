@@ -10,6 +10,14 @@ use reinhardt_hybrid::HybridProperty;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+/// Internal marker key for expanded hybrid property values.
+///
+/// When a hybrid property expands to multiple columns (e.g., Point(x, y) -> x, y),
+/// we store them under this special key to distinguish from regular columns.
+///
+/// Uses a single underscore prefix following Rust conventions for internal identifiers.
+const EXPANDED_MARKER: &str = "_expanded";
+
 /// A value that can be inserted/updated, either direct or from a hybrid property
 #[derive(Debug, Clone)]
 pub enum DmlValue {
@@ -160,7 +168,7 @@ impl InsertBuilder {
 
 		// Add a special marker for expanded values
 		self.values
-			.insert("__expanded__".to_string(), DmlValue::Expanded(expanded));
+			.insert(EXPANDED_MARKER.to_string(), DmlValue::Expanded(expanded));
 		self
 	}
 	/// Build the SQL INSERT statement
@@ -201,7 +209,7 @@ impl InsertBuilder {
 		};
 
 		// Handle expanded values first
-		if let Some(DmlValue::Expanded(expanded)) = self.values.get("__expanded__") {
+		if let Some(DmlValue::Expanded(expanded)) = self.values.get(EXPANDED_MARKER) {
 			for (col, val) in expanded {
 				columns.push(col.clone());
 				placeholders.push(get_placeholder(param_index));
@@ -212,7 +220,7 @@ impl InsertBuilder {
 
 		// Handle regular values
 		for (col, val) in &self.values {
-			if col == "__expanded__" {
+			if col == EXPANDED_MARKER {
 				continue;
 			}
 			match val {
@@ -384,7 +392,7 @@ impl UpdateBuilder {
 			.collect();
 
 		self.values
-			.insert("__expanded__".to_string(), DmlValue::Expanded(expanded));
+			.insert(EXPANDED_MARKER.to_string(), DmlValue::Expanded(expanded));
 		self
 	}
 	/// Add WHERE clause
@@ -449,7 +457,7 @@ impl UpdateBuilder {
 		};
 
 		// Handle expanded values first
-		if let Some(DmlValue::Expanded(expanded)) = self.values.get("__expanded__") {
+		if let Some(DmlValue::Expanded(expanded)) = self.values.get(EXPANDED_MARKER) {
 			for (col, val) in expanded {
 				set_clauses.push(format!("{}={}", col, get_placeholder(param_index)));
 				param_index += 1;
@@ -459,7 +467,7 @@ impl UpdateBuilder {
 
 		// Handle regular values
 		for (col, val) in &self.values {
-			if col == "__expanded__" {
+			if col == EXPANDED_MARKER {
 				continue;
 			}
 			match val {

@@ -337,7 +337,7 @@ impl BatchValidator {
 
 		// Execute query
 		let rows = conn
-			.query(&final_query)
+			.query(&final_query, vec![])
 			.await
 			.map_err(|e| SerializerError::Other {
 				message: format!("Failed to execute batch validation query: {}", e),

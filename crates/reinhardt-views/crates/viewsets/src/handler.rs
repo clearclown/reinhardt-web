@@ -462,43 +462,112 @@ where
 
 	/// Check permissions for the request
 	async fn check_permissions(&self, request: &Request) -> std::result::Result<(), ViewError> {
-		// TODO: Integrate with session system for authentication check
+		// Extract authentication information from request extensions
+		// The session middleware stores authenticated user_id in extensions
 		//
-		// Implementation Guide:
-		// 1. Extract session from request using reinhardt-sessions middleware
-		//    - Access session via request extensions or custom request wrapper
-		//    - Example: let session = request.extensions().get::<Session>();
+		// Expected usage:
+		// 1. Session middleware extracts session from cookie/token
+		// 2. Middleware validates session and extracts user_id
+		// 3. Middleware stores user_id in request.extensions using a dedicated type
 		//
-		// 2. Retrieve user information from session
-		//    - Check for user_id or authentication token in session data
-		//    - Load user model from database if authenticated
-		//
-		// 3. Set authentication context based on session state:
-		//    - is_authenticated: true if valid session with user_id exists
-		//    - is_admin: true if user has admin/staff privileges
-		//    - is_active: user.is_active from user model
-		//    - user: Some(user_model) if authenticated, None otherwise
-		//
-		// Dependencies:
-		// - reinhardt-sessions: Session extraction from request
-		// - reinhardt-auth: User model and authentication utilities
-		// - Request extensions: Session middleware integration
-		//
-		// Current Behavior:
-		// All requests are treated as unauthenticated (is_authenticated: false)
-		// This is a security risk - authentication checks will always pass for
-		// permissions that don't require authentication.
-		let context = PermissionContext {
-			request,
-			is_authenticated: false, // ← FIXME: Always false - implement session integration
-			is_admin: false,
-			is_active: true,
-			user: None,
+		// Example middleware implementation:
+		//   if let Some(user_id) = session.get::<i64>("user_id").ok().flatten() {
+		//       request.extensions.insert(AuthenticatedUserId(user_id));
+		//   }
+
+		// Try to extract user_id from extensions
+		// Support both String and UUID formats
+		let user_id_string: Option<String> = request.extensions.get::<String>().or_else(|| {
+			request
+				.extensions
+				.get::<uuid::Uuid>()
+				.map(|id| id.to_string())
+		});
+
+		// Determine authentication status based on user_id presence
+		let is_authenticated = user_id_string.is_some();
+
+		// Load user from database if authenticated and pool is available
+		let (is_admin, is_active) = if let (Some(user_id_str), Some(_pool)) =
+			(user_id_string.as_ref(), self.pool.as_ref())
+		{
+			// Parse user_id as UUID
+			match uuid::Uuid::parse_str(user_id_str) {
+				Ok(user_uuid) => {
+					// Get database connection
+					use reinhardt_orm::manager::get_connection;
+					match get_connection().await {
+						Ok(conn) => {
+							// Build SQL query to fetch user from database
+							use reinhardt_auth::DefaultUser;
+							use reinhardt_orm::Model;
+							use reinhardt_orm::connection::QueryValue;
+
+							let table_name = DefaultUser::table_name();
+							let pk_field = DefaultUser::primary_key_field();
+							let sql =
+								format!("SELECT * FROM {} WHERE {} = $1", table_name, pk_field);
+
+							// Execute query with parameter binding
+							let params = vec![QueryValue::String(user_uuid.to_string())];
+
+							match conn.query_optional(&sql, params).await {
+								Ok(Some(row)) => {
+									// Deserialize user from query result
+									match serde_json::from_value::<DefaultUser>(row.data) {
+										Ok(user) => {
+											use reinhardt_auth::User;
+											// Extract admin and active status from loaded user
+											(user.is_admin(), user.is_active())
+										}
+										Err(_) => {
+											// Deserialization failed, use defaults
+											(false, true)
+										}
+									}
+								}
+								Ok(None) => {
+									// User not found, use defaults
+									(false, true)
+								}
+								Err(_) => {
+									// Database query failed, use defaults
+									(false, true)
+								}
+							}
+						}
+						Err(_) => {
+							// Connection failed, use defaults
+							(false, true)
+						}
+					}
+				}
+				Err(_) => {
+					// UUID parse failed, use defaults
+					(false, true)
+				}
+			}
+		} else {
+			// Not authenticated or no pool, use defaults
+			(false, true)
 		};
 
+		let context = PermissionContext {
+			request,
+			is_authenticated,
+			is_admin,
+			is_active,
+			user: None, // TODO: Requires lifetime management for boxed trait object
+		};
+
+		// Check all registered permission classes
 		for permission in &self.permission_classes {
 			if !permission.has_permission(&context).await {
-				return Err(ViewError::Permission("Permission denied".to_string()));
+				// Permission denied - return specific error
+				return Err(ViewError::Permission(format!(
+					"Permission denied by {}",
+					std::any::type_name_of_val(&**permission)
+				)));
 			}
 		}
 

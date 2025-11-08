@@ -120,7 +120,7 @@ impl<M: Model> Manager<M> {
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
-		let row = conn.query_one(&sql).await?;
+		let row = conn.query_one(&sql, vec![]).await?;
 		let value = serde_json::to_value(&row.data)
 			.map_err(|e| reinhardt_apps::Error::Database(e.to_string()))?;
 		serde_json::from_value(value).map_err(|e| reinhardt_apps::Error::Database(e.to_string()))
@@ -215,7 +215,7 @@ impl<M: Model> Manager<M> {
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
-		let row = conn.query_one(&sql).await?;
+		let row = conn.query_one(&sql, vec![]).await?;
 		let value = serde_json::to_value(&row.data)
 			.map_err(|e| reinhardt_apps::Error::Database(e.to_string()))?;
 		serde_json::from_value(value).map_err(|e| reinhardt_apps::Error::Database(e.to_string()))
@@ -233,7 +233,7 @@ impl<M: Model> Manager<M> {
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
-		conn.execute(&sql).await?;
+		conn.execute(&sql, vec![]).await?;
 		Ok(())
 	}
 
@@ -250,7 +250,7 @@ impl<M: Model> Manager<M> {
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
-		let row = conn.query_one(&sql).await?;
+		let row = conn.query_one(&sql, vec![]).await?;
 		row.get::<i64>("count")
 			.ok_or_else(|| reinhardt_apps::Error::Database("Failed to get count".to_string()))
 	}
@@ -343,7 +343,7 @@ impl<M: Model> Manager<M> {
 		let (select_sql, _) =
 			self.get_or_create_sql(&lookup_fields, &defaults.clone().unwrap_or_default());
 
-		if let Ok(Some(row)) = conn.query_optional(&select_sql).await {
+		if let Ok(Some(row)) = conn.query_optional(&select_sql, vec![]).await {
 			let value = serde_json::to_value(&row.data)
 				.map_err(|e| reinhardt_apps::Error::Database(e.to_string()))?;
 			let model: M = serde_json::from_value(value)
@@ -367,7 +367,7 @@ impl<M: Model> Manager<M> {
 			values.join(", ")
 		);
 
-		let row = conn.query_one(&insert_sql).await?;
+		let row = conn.query_one(&insert_sql, vec![]).await?;
 		let value = serde_json::to_value(&row.data)
 			.map_err(|e| reinhardt_apps::Error::Database(e.to_string()))?;
 		let model: M = serde_json::from_value(value)
@@ -439,12 +439,12 @@ impl<M: Model> Manager<M> {
 
 			// Execute and get results
 			if ignore_conflicts {
-				conn.execute(&sql).await?;
+				conn.execute(&sql, vec![]).await?;
 				// Note: Can't get RETURNING with DO NOTHING, skip results
 				// Return empty vec for ignored conflicts
 			} else {
 				let sql_with_returning = sql + " RETURNING *";
-				let rows = conn.query(&sql_with_returning).await?;
+				let rows = conn.query(&sql_with_returning, vec![]).await?;
 				for row in rows {
 					let value = serde_json::to_value(&row.data)
 						.map_err(|e| reinhardt_apps::Error::Database(e.to_string()))?;
@@ -510,7 +510,7 @@ impl<M: Model> Manager<M> {
 
 			if !updates.is_empty() {
 				let sql = self.bulk_update_sql_detailed(&updates, &fields);
-				let rows_affected = conn.execute(&sql).await?;
+				let rows_affected = conn.execute(&sql, vec![]).await?;
 				total_updated += rows_affected as usize;
 			}
 		}

@@ -380,14 +380,14 @@ impl DatabaseEngine {
 	/// let connection = DatabaseConnection::connect("sqlite::memory:").await?;
 	///
 	/// // Execute SQL statements (mock always returns 0)
-	/// let rows_affected = connection.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)").await?;
+	/// let rows_affected = connection.execute("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)", vec![]).await?;
 	/// assert_eq!(rows_affected, 0);
 	///
-	/// let rows_affected = connection.execute("INSERT INTO users (id, name) VALUES (1, 'Alice')").await?;
+	/// let rows_affected = connection.execute("INSERT INTO users (id, name) VALUES (1, 'Alice')", vec![]).await?;
 	/// assert_eq!(rows_affected, 0);
 	///
 	/// // Query returns empty vec in mock
-	/// let rows = connection.query("SELECT * FROM users").await?;
+	/// let rows = connection.query("SELECT * FROM users", vec![]).await?;
 	/// assert_eq!(rows.len(), 0);
 	/// # Ok(())
 	/// # }

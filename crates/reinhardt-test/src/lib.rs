@@ -42,9 +42,7 @@ pub use fixtures::{
 };
 
 #[cfg(feature = "testcontainers")]
-pub use fixtures::{
-	memcached_container, postgres_container, postgres_pool, redis_container, sqlite_pool,
-};
+pub use fixtures::{postgres_container, redis_container};
 pub use http::{
 	assert_has_header, assert_header_contains, assert_header_equals, assert_no_header,
 	assert_status, create_insecure_request, create_request, create_response_with_headers,
@@ -56,7 +54,7 @@ pub use messages::{
 	MessagesTestMixin, assert_message_count, assert_message_exists, assert_message_level,
 	assert_message_tags, assert_messages,
 };
-pub use mock::{CallRecord, DummyCache, MockFunction, SimpleHandler, Spy};
+pub use mock::{CallRecord, DummyCache, MockFunction, MockSchemaEditor, SimpleHandler, Spy};
 pub use resource::{
 	AsyncTeardownGuard, AsyncTestResource, SuiteGuard, SuiteResource, TeardownGuard, TestResource,
 	acquire_suite,
@@ -94,9 +92,7 @@ pub mod prelude {
 	};
 
 	#[cfg(feature = "testcontainers")]
-	pub use super::fixtures::{
-		memcached_container, postgres_container, postgres_pool, redis_container, sqlite_pool,
-	};
+	pub use super::fixtures::{postgres_container, redis_container};
 	pub use super::http::{
 		assert_has_header, assert_header_contains, assert_header_equals, assert_no_header,
 		assert_status, create_insecure_request, create_request, create_response_with_headers,

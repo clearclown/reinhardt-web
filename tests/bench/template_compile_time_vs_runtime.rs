@@ -11,7 +11,7 @@
 //!
 //! Expected performance: Comparable for simple templates, Tera more powerful for complex logic
 
-use reinhardt_renderers::{Post, PostListTemplate, TemplateHTMLRenderer};
+use reinhardt_renderers::{Post, TemplateHTMLRenderer};
 use std::collections::HashMap;
 use std::time::Instant;
 use tera::{Context, Tera};

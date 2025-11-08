@@ -12,10 +12,12 @@ reinhardt-apps = { workspace = true }
 reinhardt-auth = { workspace = true }
 reinhardt-browsable-api = { workspace = true }
 reinhardt-cache = { workspace = true, features = ["redis-sentinel", "memcached-backend"] }
+reinhardt-commands = { workspace = true }
 reinhardt-contrib = { workspace = true }
 reinhardt-contenttypes = { workspace = true, features = ["database"] }
 reinhardt-di = { workspace = true }
 reinhardt-exception = { workspace = true }
+reinhardt-hybrid = { workspace = true }
 reinhardt-filters = { workspace = true }
 reinhardt-forms = { workspace = true }
 reinhardt-graphql = { workspace = true }
@@ -80,6 +82,7 @@ rstest = "0.24"
 sqlx = { workspace = true }
 sea-query = { workspace = true }
 ctor = "0.6.0"
+linkme = "0.3"
 
 # gRPC integration dependencies
 reinhardt-grpc = { workspace = true }
@@ -155,10 +158,6 @@ path = "integration/tests/contrib/graphql_integration.rs"
 [[test]]
 name = "contrib_messages_framework_integration"
 path = "integration/tests/contrib/messages_framework_integration.rs"
-
-[[test]]
-name = "contrib_messages_integration"
-path = "integration/tests/contrib/messages_integration.rs"
 
 [[test]]
 name = "contrib_websocket_integration_tests"
@@ -341,3 +340,12 @@ path = "integration/tests/orm/composite_pk_query_tests.rs"
 [[test]]
 name = "orm_session_get_integration_tests"
 path = "integration/tests/orm/session_get_integration_tests.rs"
+
+# Apps integration tests
+[[test]]
+name = "apps_registry_integration"
+path = "integration/tests/apps/registry_integration.rs"
+
+[[test]]
+name = "apps_discovery_integration"
+path = "integration/tests/apps/discovery_integration.rs"

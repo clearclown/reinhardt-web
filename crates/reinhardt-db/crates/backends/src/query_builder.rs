@@ -21,6 +21,10 @@ fn query_value_to_sea_value(qv: &QueryValue) -> Value {
 		QueryValue::Bytes(b) => Value::Bytes(Some(b.clone())),
 		// Convert timestamp to string representation for now
 		QueryValue::Timestamp(dt) => Value::String(Some(dt.to_rfc3339())),
+		// NOW() is handled specially in build() methods, should not reach here
+		QueryValue::Now => {
+			panic!("QueryValue::Now should be handled in build() method, not converted to Value")
+		}
 	}
 }
 
@@ -133,8 +137,7 @@ impl UpdateBuilder {
 	}
 
 	pub fn set_now(mut self, column: impl Into<String>) -> Self {
-		self.sets
-			.push((column.into(), QueryValue::String("__NOW__".to_string())));
+		self.sets.push((column.into(), QueryValue::Now));
 		self
 	}
 
@@ -152,9 +155,7 @@ impl UpdateBuilder {
 
 		// Add SET clauses
 		for (col, val) in &self.sets {
-			if let QueryValue::String(s) = val
-				&& s == "__NOW__"
-			{
+			if matches!(val, QueryValue::Now) {
 				stmt.value(Alias::new(col), Expr::cust("NOW()"));
 				continue;
 			}
@@ -182,7 +183,7 @@ impl UpdateBuilder {
 		// Preserve parameter order: first SET values, then WHERE values
 		let mut params = Vec::new();
 		for (_, val) in &self.sets {
-			if !matches!(val, QueryValue::String(s) if s == "__NOW__") {
+			if !matches!(val, QueryValue::Now) {
 				params.push(val.clone());
 			}
 		}

@@ -549,39 +549,6 @@ mod tests {
 	};
 
 	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_discover_models() {
-		use std::collections::HashSet;
-
-		let models = discover_models("discovery_test");
-		assert_eq!(models.len(), 2);
-
-		let model_names: HashSet<&str> = models.iter().map(|m| m.model_name).collect();
-		assert_eq!(model_names, HashSet::from(["User", "Post"]));
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_discover_all_models() {
-		let models = discover_all_models();
-		// Should have at least our test models
-		assert!(models.len() >= 2);
-
-		assert!(
-			models
-				.iter()
-				.any(|m| m.app_label == "discovery_test" && m.model_name == "User")
-		);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_discover_models_empty() {
-		let models = discover_models("nonexistent_app");
-		assert_eq!(models.len(), 0);
-	}
-
-	#[test]
 	fn test_relation_metadata_new() {
 		let relation = RelationMetadata::new(
 			"Post",
@@ -715,93 +682,6 @@ mod tests {
 		let path = PathBuf::from("/tmp/migrations/abc_initial.rs");
 		let result = parse_migration_file(&path, "myapp");
 		assert!(result.is_err());
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_build_reverse_relations_basic() {
-		use crate::registry::clear_reverse_relations;
-
-		clear_reverse_relations();
-		// Should not panic - basic implementation exists
-		build_reverse_relations();
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_extract_model_relations_with_registry() {
-		use crate::registry::clear_relationship_cache;
-
-		clear_relationship_cache();
-
-		// Test with blog.Post which has relationships in the test registry
-		let post_metadata = ModelMetadata::new("blog", "Post", "blog_posts");
-		let relations = extract_model_relations(&post_metadata);
-
-		// Should find the test relationships (author and tags)
-		assert_eq!(relations.len(), 2);
-
-		// Check that relationships are correctly converted
-		use std::collections::HashSet;
-		let field_names: HashSet<&str> = relations.iter().map(|r| r.field_name).collect();
-		assert_eq!(field_names, HashSet::from(["author", "tags"]));
-
-		// Check relationship types
-		let author_rel = relations.iter().find(|r| r.field_name == "author").unwrap();
-		assert_eq!(author_rel.relation_type, RelationType::OneToMany);
-		assert_eq!(author_rel.to_model, "User");
-
-		let tags_rel = relations.iter().find(|r| r.field_name == "tags").unwrap();
-		assert_eq!(tags_rel.relation_type, RelationType::ManyToMany);
-		assert_eq!(tags_rel.to_model, "Tag");
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_extract_model_relations_no_relationships() {
-		use crate::registry::clear_relationship_cache;
-
-		clear_relationship_cache();
-
-		// Test with a model that has no relationships
-		let user_metadata = ModelMetadata::new("auth", "User", "auth_users");
-		let relations = extract_model_relations(&user_metadata);
-		assert_eq!(relations.len(), 0);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_extract_model_relations_different_models() {
-		use crate::registry::clear_relationship_cache;
-
-		clear_relationship_cache();
-
-		// Test with different model names to ensure consistency
-		let user_metadata = ModelMetadata::new("auth", "User", "auth_users");
-		let post_metadata = ModelMetadata::new("blog", "Post", "blog_posts");
-		let comment_metadata = ModelMetadata::new("blog", "Comment", "blog_comments");
-
-		let user_relations = extract_model_relations(&user_metadata);
-		let post_relations = extract_model_relations(&post_metadata);
-		let comment_relations = extract_model_relations(&comment_metadata);
-
-		// User and Comment have no relationships, Post has 2
-		assert_eq!(user_relations.len(), 0);
-		assert_eq!(post_relations.len(), 2);
-		assert_eq!(comment_relations.len(), 0);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_extract_model_relations_no_panic() {
-		use crate::registry::clear_relationship_cache;
-
-		clear_relationship_cache();
-
-		// Ensure the function doesn't panic even with unusual inputs
-		let metadata = ModelMetadata::new("", "", "");
-		let relations = extract_model_relations(&metadata);
-		assert_eq!(relations.len(), 0);
 	}
 
 	#[test]

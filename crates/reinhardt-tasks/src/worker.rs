@@ -374,17 +374,56 @@ impl Worker {
 
 		// Execute task with registry if available
 		let result: Result<(), Box<dyn std::error::Error + Send + Sync>> =
-			if let Some(ref _registry) = self.registry {
-				// In a real implementation, we would:
-				// 1. Get serialized task data from backend
-				// 2. Deserialize task using registry
-				// 3. Execute the task
-				// For now, this is a placeholder showing the pattern
-				println!(
-					"[{}] Task execution with registry (placeholder)",
-					self.config.name
-				);
-				Ok(())
+			if let Some(ref registry) = self.registry {
+				// Get serialized task data from backend
+				match backend.get_task_data(task_id).await? {
+					Some(serialized_task) => {
+						println!(
+							"[{}] Executing task {} with registry",
+							self.config.name, task_name
+						);
+
+						// Deserialize task using registry to get concrete task instance
+						match registry
+							.create(serialized_task.name(), serialized_task.data())
+							.await
+						{
+							Ok(task_executor) => {
+								// Execute the deserialized task with its arguments
+								match task_executor.execute().await {
+									Ok(_) => {
+										println!(
+											"[{}] Task {} completed successfully",
+											self.config.name, task_name
+										);
+										Ok(())
+									}
+									Err(e) => {
+										println!(
+											"[{}] Task {} failed: {}",
+											self.config.name, task_name, e
+										);
+										Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+									}
+								}
+							}
+							Err(e) => {
+								println!(
+									"[{}] Failed to deserialize task {}: {}",
+									self.config.name, task_name, e
+								);
+								Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
+							}
+						}
+					}
+					None => {
+						println!(
+							"[{}] Task {} not found in backend",
+							self.config.name, task_id
+						);
+						Err(format!("Task {} not found", task_id).into())
+					}
+				}
 			} else {
 				println!(
 					"[{}] Task execution without registry (basic mode)",

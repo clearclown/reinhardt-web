@@ -177,8 +177,9 @@ mod dropdown_with_auth_tests {
 		assert!(html.contains("Browsable API"), "Should contain description");
 		assert!(html.contains("200"), "Should show 200 status");
 
-		// In a real implementation, user name would be in the context
-		// For now, verify the structure supports rendering user info
+		// NOTE: This test verifies username display capability in rendered HTML
+		// User authentication context would provide username in production
+		// Test manually sets username in title to verify rendering behavior
 		context.title = "API Root - john".to_string();
 		let html_with_user = renderer.render(&context).unwrap();
 		assert!(

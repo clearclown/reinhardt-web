@@ -284,8 +284,8 @@ mod relationship_tests {
 		let author_id = db.add_author("Author", None);
 		db.add_profile("First profile", Some(author_id));
 
-		// In a real implementation, this would fail
-		// Here we just verify there's only one profile per author
+		// NOTE: Test verifies one-to-one relationship query without duplicate prevention
+		// Production implementation would enforce unique constraint at database level
 		let profile = db.get_profile_by_author(author_id);
 		assert!(profile.is_some());
 	}

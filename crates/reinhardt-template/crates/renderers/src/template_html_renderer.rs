@@ -424,7 +424,7 @@ mod tests {
 
 		match result {
 			Err(Error::Internal(msg)) => {
-				assert!(msg.contains("File-based template loading not yet implemented"));
+				assert!(msg.contains("Template directory not configured"));
 			}
 			_ => panic!("Expected Internal error"),
 		}

@@ -359,7 +359,20 @@ impl<T, K> ReverseRelationship for ManyToMany<T, K> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_test::fixtures::{Course, Student};
+
+	#[allow(dead_code)]
+	#[derive(Clone)]
+	struct Student {
+		id: i64,
+		name: String,
+	}
+
+	#[allow(dead_code)]
+	#[derive(Clone)]
+	struct Course {
+		id: i64,
+		title: String,
+	}
 
 	#[test]
 	fn test_many_to_many_creation() {

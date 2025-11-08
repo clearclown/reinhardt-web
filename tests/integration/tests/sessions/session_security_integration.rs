@@ -210,51 +210,105 @@ fn test_csrf_vs_session_cookie_httponly() {
 	assert!(!has_cookie_attribute(csrf_cookie, "HttpOnly"));
 }
 
-#[test]
-#[ignore] // TODO: Implement actual session regeneration functionality
-fn test_session_fixation_prevention() {
+#[tokio::test]
+async fn test_session_fixation_prevention() {
 	// Test: Session ID should be regenerated on login to prevent session fixation attacks
 	//
-	// Implementation Guide:
+	// This test verifies that:
+	// 1. Session ID changes after calling regenerate_id()
+	// 2. Session data is preserved during regeneration
+	// 3. Old session ID is invalidated (removed from backend)
+	// 4. New session ID is valid and contains the same data
+
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::{InMemorySessionBackend, SessionBackend};
+
 	// 1. Create a session with initial session ID
-	//    - Use SessionBackend::create() to generate session
-	//    - Store session ID (e.g., "old123")
-	//
-	// 2. Simulate login action
-	//    - Call session.regenerate_id() or equivalent method
-	//    - This should generate a new session ID while preserving session data
-	//
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend.clone());
+
+	// Set initial user data (simulating a logged-in user)
+	session.set("user_id", 42_i32).unwrap();
+	session.set("username", "alice".to_string()).unwrap();
+	session.set("role", "admin".to_string()).unwrap();
+
+	// Save the session and get the initial session key
+	session.save().await.unwrap();
+	let old_session_key = session.session_key().unwrap().to_string();
+
+	// Store the original data for comparison
+	let old_user_id: i32 = session.get("user_id").unwrap().unwrap();
+	let old_username: String = session.get("username").unwrap().unwrap();
+	let old_role: String = session.get("role").unwrap().unwrap();
+
+	// 2. Simulate login action - regenerate session ID
+	session.regenerate_id().await.unwrap();
+
+	// Save the session with new key
+	session.save().await.unwrap();
+
+	// Get the new session key
+	let new_session_key = session.session_key().unwrap().to_string();
+
 	// 3. Verify session ID changed
-	//    - New session ID should be different from old ID
-	//    - Session data should be preserved (user_id, etc.)
-	//    - Old session ID should be invalidated
-	//
-	// 4. Assert security properties:
-	//    - assert_ne!(old_session_id, new_session_id);
-	//    - assert!(backend.get(&old_session_id).await.is_err()); // Old ID invalid
-	//    - assert!(backend.get(&new_session_id).await.is_ok()); // New ID valid
-	//    - assert_eq!(old_session_data, new_session_data); // Data preserved
-	//
-	// Dependencies:
-	// - Session::regenerate_id() method (currently unimplemented)
-	// - SessionBackend implementation with regeneration support
-	//
-	// Current Status:
-	// This is a skeleton test that violates TESTING_STANDARDS.md TP-1.
-	// It must be implemented with actual session regeneration logic before enabling.
+	assert_ne!(
+		old_session_key, new_session_key,
+		"Session ID should change after regeneration"
+	);
 
-	let old_session_id = "old123";
-	let new_session_id = "new456";
+	// 4. Verify session data is preserved
+	let new_user_id: i32 = session.get("user_id").unwrap().unwrap();
+	let new_username: String = session.get("username").unwrap().unwrap();
+	let new_role: String = session.get("role").unwrap().unwrap();
 
-	assert_ne!(old_session_id, new_session_id);
+	assert_eq!(old_user_id, new_user_id, "User ID should be preserved");
+	assert_eq!(old_username, new_username, "Username should be preserved");
+	assert_eq!(old_role, new_role, "Role should be preserved");
+
+	// 5. Verify old session ID is invalidated in backend
+	let old_session_exists = backend.exists(&old_session_key).await.unwrap();
+	assert!(
+		!old_session_exists,
+		"Old session ID should be invalidated (deleted from backend)"
+	);
+
+	// 6. Verify new session ID is valid and contains correct data
+	let new_session_exists = backend.exists(&new_session_key).await.unwrap();
+	assert!(
+		new_session_exists,
+		"New session ID should be valid in backend"
+	);
+
+	// Load the session from backend using new session key
+	let mut loaded_session = Session::from_key(backend.clone(), new_session_key.clone())
+		.await
+		.unwrap();
+	let loaded_user_id: i32 = loaded_session.get("user_id").unwrap().unwrap();
+	let loaded_username: String = loaded_session.get("username").unwrap().unwrap();
+	let loaded_role: String = loaded_session.get("role").unwrap().unwrap();
+
+	assert_eq!(
+		loaded_user_id, old_user_id,
+		"Loaded session should contain original user ID"
+	);
+	assert_eq!(
+		loaded_username, old_username,
+		"Loaded session should contain original username"
+	);
+	assert_eq!(
+		loaded_role, old_role,
+		"Loaded session should contain original role"
+	);
 }
 
 #[test]
 fn test_session_timeout() {
-	// Test: Session should timeout after inactivity
+	// TODO: Implement session timeout validation based on last activity
+	// Current: Only verifies max_age configuration value is positive
+	// Required: Add last_activity timestamp tracking and timeout checking logic
+	// Expected behavior: Session should be invalidated if (current_time - last_activity) > max_age
 	let max_age = 3600; // 1 hour
 	assert!(max_age > 0);
-	// Real implementation would check last activity timestamp
 }
 
 #[test]

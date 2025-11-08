@@ -2,7 +2,7 @@
 //!
 //! Provides DRF-compatible authentication wrappers and combinators.
 
-use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
+use crate::{AuthenticationBackend, AuthenticationError, DefaultUser, SimpleUser, User};
 use reinhardt_apps::Request;
 use reinhardt_sessions::{Session, backends::SessionBackend};
 use std::sync::Arc;
@@ -480,29 +480,48 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 	}
 
 	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		// For session authentication, we need to find a session that contains this user_id
-		// However, SessionBackend doesn't provide a way to search by user_id
-		// This is a limitation of the current design
-		//
-		// For now, we construct a SimpleUser with minimal information
-		// In a real implementation, this would query a user database
+		// Parse user_id as UUID
 		let id =
 			uuid::Uuid::parse_str(user_id).map_err(|_| AuthenticationError::InvalidCredentials)?;
-		Ok(Some(Box::new(SimpleUser {
-			id,
-			username: user_id.to_string(),
-			email: String::new(),
-			is_active: true,
-			is_admin: false,
-			is_staff: false,
-			is_superuser: false,
-		})))
+
+		// Get database connection
+		let conn = reinhardt_orm::manager::get_connection()
+			.await
+			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
+
+		// Build SQL query to fetch user from database
+		use reinhardt_orm::Model;
+		use reinhardt_orm::connection::QueryValue;
+
+		let table_name = DefaultUser::table_name();
+		let sql = format!(
+			"SELECT id, username, email, first_name, last_name, password_hash, last_login, \
+			 is_active, is_staff, is_superuser, date_joined, user_permissions, groups \
+			 FROM {} WHERE id = $1",
+			table_name
+		);
+
+		// Execute query with parameter binding
+		let params = vec![QueryValue::String(id.to_string())];
+		let row = conn
+			.query_one(&sql, params)
+			.await
+			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
+
+		// Deserialize to DefaultUser
+		let user: DefaultUser = serde_json::from_value(row.data).map_err(|e| {
+			AuthenticationError::DatabaseError(format!("Deserialization failed: {}", e))
+		})?;
+
+		// Return as trait object
+		Ok(Some(Box::new(user)))
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::basic::BasicAuthentication;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, Uri, Version};
 

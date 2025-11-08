@@ -707,7 +707,7 @@ where
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
 		// Execute query and deserialize results
-		let rows = conn.query(&sql).await?;
+		let rows = conn.query(&sql, vec![]).await?;
 		rows.into_iter()
 			.map(|row| {
 				serde_json::from_value(serde_json::to_value(&row.data).map_err(|e| {
@@ -829,7 +829,7 @@ where
 		let (sql, _values) = stmt.build(PostgresQueryBuilder);
 
 		// Execute query
-		let rows = conn.query(&sql).await?;
+		let rows = conn.query(&sql, vec![]).await?;
 		if let Some(row) = rows.first() {
 			// Extract count from first row
 			if let Some(count_value) = row.data.get("count")
@@ -1107,7 +1107,7 @@ where
 		let conn = crate::manager::get_connection().await?;
 
 		// Execute the SELECT query
-		let rows = conn.query(&sql).await?;
+		let rows = conn.query(&sql, vec![]).await?;
 
 		// Composite PK queries should return exactly one row
 		if rows.is_empty() {

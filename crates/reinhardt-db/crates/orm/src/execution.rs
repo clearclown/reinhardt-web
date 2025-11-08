@@ -5,6 +5,8 @@
 //! This module provides execution methods similar to SQLAlchemy's Query class
 
 use crate::Model;
+use backends;
+use backends::types::QueryValue;
 use sea_query::{Alias, Expr, ExprTrait, Func, Query, SelectStatement};
 use std::marker::PhantomData;
 
@@ -23,39 +25,227 @@ pub enum ExecutionResult<T> {
 	None,
 }
 
-/// Query execution methods
-/// These would be async in a real implementation
-pub trait QueryExecution<T: Model> {
-	/// Get a single result by primary key
+/// Errors that can occur during query execution
+#[derive(Debug, thiserror::Error)]
+pub enum ExecutionError {
+	/// Database error
+	#[error("Database error: {0}")]
+	Database(#[from] backends::DatabaseError),
+
+	/// No result found (for .one())
+	#[error("No result found")]
+	NoResultFound,
+
+	/// Multiple results found (for .one() and .one_or_none())
+	#[error("Multiple results found (expected 1, got {0})")]
+	MultipleResultsFound(usize),
+
+	/// Deserialization error
+	#[error("Failed to deserialize result: {0}")]
+	Deserialization(#[from] serde_json::Error),
+
+	/// Query building error
+	#[error("Query building error: {0}")]
+	QueryBuild(String),
+
+	/// Generic error from anyhow
+	#[error("Generic error: {0}")]
+	Generic(#[from] anyhow::Error),
+}
+
+/// Convert sea_query::Value to QueryValue for parameter binding
+fn convert_value_to_query_value(value: sea_query::Value) -> QueryValue {
+	use sea_query::Value as SV;
+
+	match value {
+		// Null values
+		SV::Bool(None)
+		| SV::TinyInt(None)
+		| SV::SmallInt(None)
+		| SV::Int(None)
+		| SV::BigInt(None)
+		| SV::TinyUnsigned(None)
+		| SV::SmallUnsigned(None)
+		| SV::Unsigned(None)
+		| SV::BigUnsigned(None)
+		| SV::Float(None)
+		| SV::Double(None)
+		| SV::String(None)
+		| SV::Char(None)
+		| SV::Bytes(None)
+		| SV::ChronoDateTimeUtc(None)
+		| SV::ChronoDateTimeLocal(None)
+		| SV::ChronoDateTimeWithTimeZone(None)
+		| SV::ChronoDate(None)
+		| SV::ChronoTime(None)
+		| SV::ChronoDateTime(None)
+		| SV::Json(None)
+		| SV::Array(_, None) => QueryValue::Null,
+
+		// Boolean
+		SV::Bool(Some(b)) => QueryValue::Bool(b),
+
+		// Signed integers (convert all to i64)
+		SV::TinyInt(Some(v)) => QueryValue::Int(v as i64),
+		SV::SmallInt(Some(v)) => QueryValue::Int(v as i64),
+		SV::Int(Some(v)) => QueryValue::Int(v as i64),
+		SV::BigInt(Some(v)) => QueryValue::Int(v),
+
+		// Unsigned integers (convert to i64, may overflow for large values)
+		SV::TinyUnsigned(Some(v)) => QueryValue::Int(v as i64),
+		SV::SmallUnsigned(Some(v)) => QueryValue::Int(v as i64),
+		SV::Unsigned(Some(v)) => QueryValue::Int(v as i64),
+		SV::BigUnsigned(Some(v)) => QueryValue::Int(v as i64),
+
+		// Floating point
+		SV::Float(Some(v)) => QueryValue::Float(v as f64),
+		SV::Double(Some(v)) => QueryValue::Float(v),
+
+		// String and char
+		SV::String(Some(s)) => QueryValue::String(s.to_string()),
+		SV::Char(Some(c)) => QueryValue::String(c.to_string()),
+
+		// Bytes
+		SV::Bytes(Some(b)) => QueryValue::Bytes(b.to_vec()),
+
+		// Chrono datetime types
+		SV::ChronoDateTimeUtc(Some(dt)) => QueryValue::Timestamp(dt),
+
+		// For other datetime types, convert to UTC if possible
+		SV::ChronoDateTimeLocal(Some(dt)) => QueryValue::Timestamp(dt.with_timezone(&chrono::Utc)),
+		SV::ChronoDateTimeWithTimeZone(Some(dt)) => {
+			QueryValue::Timestamp(dt.with_timezone(&chrono::Utc))
+		}
+
+		// Other datetime types that cannot be easily converted
+		SV::ChronoDate(_) | SV::ChronoTime(_) | SV::ChronoDateTime(_) => {
+			// Convert to string representation as fallback
+			QueryValue::String(format!("{:?}", value))
+		}
+
+		// JSON - convert to string
+		SV::Json(_) => QueryValue::String(format!("{:?}", value)),
+
+		// Arrays - convert to string
+		SV::Array(_, _) => QueryValue::String(format!("{:?}", value)),
+	}
+}
+
+/// Convert sea_query::Values (Vec<Value>) to Vec<QueryValue>
+fn convert_values(values: sea_query::Values) -> Vec<QueryValue> {
+	values
+		.0
+		.into_iter()
+		.map(convert_value_to_query_value)
+		.collect()
+}
+
+/// Query execution methods with both sync builders and async execution
+#[async_trait::async_trait]
+pub trait QueryExecution<T: Model>
+where
+	T: Send + Sync,
+	T::PrimaryKey: Send + Sync,
+{
+	/// Get a single result by primary key (async execution)
 	/// Corresponds to SQLAlchemy's .get()
+	async fn get_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+		pk: &T::PrimaryKey,
+	) -> Result<T, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>;
+
+	/// Get a single result by primary key (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn get(&self, pk: &T::PrimaryKey) -> SelectStatement;
 
-	/// Get all results
+	/// Get all results (async execution)
 	/// Corresponds to SQLAlchemy's .all()
+	async fn all_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Vec<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>;
+
+	/// Get all results (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn all(&self) -> SelectStatement;
 
-	/// Get first result or None
+	/// Get first result or None (async execution)
 	/// Corresponds to SQLAlchemy's .first()
+	async fn first_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>;
+
+	/// Get first result or None (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn first(&self) -> SelectStatement;
 
-	/// Get exactly one result, raise if 0 or >1
+	/// Get exactly one result, raise if 0 or >1 (async execution)
 	/// Corresponds to SQLAlchemy's .one()
+	async fn one_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<T, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>;
+
+	/// Get exactly one result (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn one(&self) -> SelectStatement;
 
-	/// Get one result or None, raise if >1
+	/// Get one result or None, raise if >1 (async execution)
 	/// Corresponds to SQLAlchemy's .one_or_none()
+	async fn one_or_none_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>;
+
+	/// Get one result or None (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn one_or_none(&self) -> SelectStatement;
 
-	/// Get scalar value (first column of first row)
+	/// Get scalar value (first column of first row) (async execution)
 	/// Corresponds to SQLAlchemy's .scalar()
+	async fn scalar_async<S>(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<S>, ExecutionError>
+	where
+		S: for<'de> serde::Deserialize<'de>;
+
+	/// Get scalar value (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn scalar(&self) -> SelectStatement;
 
-	/// Count results
+	/// Count results (async execution)
 	/// Corresponds to SQLAlchemy's .count()
+	async fn count_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<i64, ExecutionError>;
+
+	/// Count results (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn count(&self) -> SelectStatement;
 
-	/// Check if any results exist
+	/// Check if any results exist (async execution)
 	/// Corresponds to SQLAlchemy's .exists()
+	async fn exists_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<bool, ExecutionError>;
+
+	/// Check if any results exist (statement builder)
+	/// Returns a SelectStatement for manual execution
 	fn exists(&self) -> SelectStatement;
 }
 
@@ -132,9 +322,11 @@ impl<T: Model> SelectExecution<T> {
 	}
 }
 
+#[async_trait::async_trait]
 impl<T: Model> QueryExecution<T> for SelectExecution<T>
 where
-	T::PrimaryKey: Into<sea_query::Value> + Clone,
+	T::PrimaryKey: Into<sea_query::Value> + Clone + Send + Sync,
+	T: Send + Sync,
 {
 	fn get(&self, pk: &T::PrimaryKey) -> SelectStatement {
 		Query::select()
@@ -196,6 +388,189 @@ where
 		Query::select()
 			.expr(Expr::exists(self.stmt.clone()))
 			.to_owned()
+	}
+
+	async fn get_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+		pk: &T::PrimaryKey,
+	) -> Result<T, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.get(pk);
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let row = db.query_one(&sql, query_values).await?;
+		let json = serde_json::to_value(&row)?;
+		let result = serde_json::from_value(json)?;
+		Ok(result)
+	}
+
+	async fn all_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Vec<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.all();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let rows = db.query(&sql, query_values).await?;
+		let mut results = Vec::with_capacity(rows.len());
+		for row in rows {
+			let json = serde_json::to_value(&row)?;
+			let result = serde_json::from_value(json)?;
+			results.push(result);
+		}
+		Ok(results)
+	}
+
+	async fn first_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.first();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let rows = db.query(&sql, query_values).await?;
+		match rows.first() {
+			Some(row) => {
+				let json = serde_json::to_value(row)?;
+				let result = serde_json::from_value(json)?;
+				Ok(Some(result))
+			}
+			None => Ok(None),
+		}
+	}
+
+	async fn one_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<T, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.one();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let rows = db.query(&sql, query_values).await?;
+		match rows.len() {
+			0 => Err(ExecutionError::NoResultFound),
+			1 => {
+				let json = serde_json::to_value(&rows[0])?;
+				let result = serde_json::from_value(json)?;
+				Ok(result)
+			}
+			n => Err(ExecutionError::MultipleResultsFound(n)),
+		}
+	}
+
+	async fn one_or_none_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<T>, ExecutionError>
+	where
+		T: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.one_or_none();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let rows = db.query(&sql, query_values).await?;
+		match rows.len() {
+			0 => Ok(None),
+			1 => {
+				let json = serde_json::to_value(&rows[0])?;
+				let result = serde_json::from_value(json)?;
+				Ok(Some(result))
+			}
+			n => Err(ExecutionError::MultipleResultsFound(n)),
+		}
+	}
+
+	async fn scalar_async<S>(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<Option<S>, ExecutionError>
+	where
+		S: for<'de> serde::Deserialize<'de>,
+	{
+		let stmt = self.scalar();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let rows = db.query(&sql, query_values).await?;
+		match rows.first() {
+			Some(row) => {
+				// Get the first column value
+				let json = serde_json::to_value(row)?;
+				if let Some(obj) = json.as_object() {
+					if let Some((_, value)) = obj.iter().next() {
+						let result = serde_json::from_value(value.clone())?;
+						return Ok(Some(result));
+					}
+				}
+				Ok(None)
+			}
+			None => Ok(None),
+		}
+	}
+
+	async fn count_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<i64, ExecutionError> {
+		let stmt = self.count();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let row = db.query_one(&sql, query_values).await?;
+		let json = serde_json::to_value(&row)?;
+
+		// Extract count from the result (usually the first column)
+		if let Some(obj) = json.as_object() {
+			if let Some((_, value)) = obj.iter().next() {
+				let count: i64 = serde_json::from_value(value.clone())?;
+				return Ok(count);
+			}
+		}
+
+		Err(ExecutionError::QueryBuild(
+			"Count query returned unexpected format".to_string(),
+		))
+	}
+
+	async fn exists_async(
+		&self,
+		db: &crate::connection::DatabaseConnection,
+	) -> Result<bool, ExecutionError> {
+		let stmt = self.exists();
+		let (sql, values) = stmt.build_any(&sea_query::PostgresQueryBuilder);
+
+		let query_values = convert_values(values);
+		let row = db.query_one(&sql, query_values).await?;
+		let json = serde_json::to_value(&row)?;
+
+		// Extract exists from the result (usually the first column)
+		if let Some(obj) = json.as_object() {
+			if let Some((_, value)) = obj.iter().next() {
+				let exists: bool = serde_json::from_value(value.clone())?;
+				return Ok(exists);
+			}
+		}
+
+		Err(ExecutionError::QueryBuild(
+			"Exists query returned unexpected format".to_string(),
+		))
 	}
 }
 

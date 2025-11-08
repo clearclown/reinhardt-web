@@ -20,6 +20,13 @@ use tera::{Context, Tera};
 #[cfg(feature = "templates")]
 static TERA_ENGINE: OnceLock<Arc<Tera>> = OnceLock::new();
 
+/// Template name for dynamically rendered content (not stored in files).
+///
+/// Used when rendering template strings directly via `render_template_string()`.
+/// Uses a single underscore prefix following Rust conventions for internal identifiers.
+#[cfg(feature = "templates")]
+const DYNAMIC_TEMPLATE_NAME: &str = "_dynamic";
+
 /// Get or initialize the global Tera template engine
 ///
 /// The template directory is determined by the `REINHARDT_TEMPLATE_DIR`
@@ -227,7 +234,7 @@ where
 	V: Serialize,
 {
 	let mut tera = Tera::default();
-	tera.add_raw_template("__dynamic__", template_content)?;
+	tera.add_raw_template(DYNAMIC_TEMPLATE_NAME, template_content)?;
 
 	// Convert HashMap to Tera Context
 	let mut tera_context = Context::new();
@@ -237,7 +244,7 @@ where
 		}
 	}
 
-	tera.render("__dynamic__", &tera_context)
+	tera.render(DYNAMIC_TEMPLATE_NAME, &tera_context)
 }
 
 /// Check if a template exists in the template directory

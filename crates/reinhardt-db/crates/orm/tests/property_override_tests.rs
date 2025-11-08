@@ -128,7 +128,9 @@ fn test_override_expr() {
 	// Verify the expressions are different
 	assert_ne!(base_expr, override_expr);
 
-	// In a real implementation, HybridProperty would have .with_expression()
+	// TODO: Implement HybridProperty.with_expression() method for SQL expression override
+	// Current: Test demonstrates expression override concept without actual HybridProperty implementation
+	// Required: Add .with_expression() builder method to HybridProperty for custom SQL expressions
 	// let prop = HybridProperty::new(getter)
 	//     .with_expression(override_expr);
 }

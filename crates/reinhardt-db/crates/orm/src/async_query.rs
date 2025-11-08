@@ -638,10 +638,11 @@ mod tests {
 
 		#[tokio::test]
 		async fn test_mysql_async_session() {
+			// MySQL's "ready for connections" message appears twice:
+			// 1st time: during initialization
+			// 2nd time: when fully ready
+			// So we remove the WaitFor condition and rely on create_mysql_pool's retry logic
 			let mysql_image = GenericImage::new("mysql", "8.0")
-				.with_wait_for(testcontainers::core::WaitFor::message_on_stderr(
-					"ready for connections",
-				))
 				.with_exposed_port(testcontainers::core::ContainerPort::Tcp(3306))
 				.with_env_var("MYSQL_ROOT_PASSWORD", "test")
 				.with_env_var("MYSQL_DATABASE", "test");
@@ -652,6 +653,8 @@ mod tests {
 				.await
 				.expect("Failed to start MySQL container");
 
+			// create_mysql_pool will retry up to 30 times (60 seconds total)
+			// to ensure MySQL is fully initialized
 			let pool = create_mysql_pool(&container)
 				.await
 				.expect("Failed to create MySQL pool");

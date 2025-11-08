@@ -24,6 +24,8 @@ pub enum QueryValue {
 	String(String),
 	Bytes(Vec<u8>),
 	Timestamp(chrono::DateTime<chrono::Utc>),
+	/// Represents SQL NOW() function
+	Now,
 }
 
 impl From<&str> for QueryValue {

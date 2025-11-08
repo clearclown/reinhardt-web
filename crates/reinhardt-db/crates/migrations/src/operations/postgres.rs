@@ -358,13 +358,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_create_extension_database_forwards() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let ext = CreateExtension::new("hstore");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = ext.database_forwards(editor.as_ref());
+		let sql = ext.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("CREATE EXTENSION IF NOT EXISTS"));
 		assert!(sql[0].contains("\"hstore\""));
@@ -373,13 +372,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_create_extension_with_schema_sql() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let ext = CreateExtension::new("hstore").with_schema("public");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = ext.database_forwards(editor.as_ref());
+		let sql = ext.database_forwards(&editor);
 		assert!(sql[0].contains("SCHEMA"));
 		assert!(sql[0].contains("\"public\""));
 	}
@@ -387,13 +385,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_drop_extension() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let drop = DropExtension::new("hstore");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = drop.database_forwards(editor.as_ref());
+		let sql = drop.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("DROP EXTENSION IF EXISTS"));
 		assert!(sql[0].contains("\"hstore\""));
@@ -402,13 +399,12 @@ mod tests {
 	#[cfg(feature = "postgres")]
 	#[test]
 	fn test_create_collation() {
-		use backends::schema::factory::{DatabaseType, SchemaEditorFactory};
+		use reinhardt_test::mock::MockSchemaEditor;
 
 		let collation = CreateCollation::new("german", "de_DE");
-		let factory = SchemaEditorFactory::new();
-		let editor = factory.create_for_database(DatabaseType::PostgreSQL);
+		let editor = MockSchemaEditor::new();
 
-		let sql = collation.database_forwards(editor.as_ref());
+		let sql = collation.database_forwards(&editor);
 		assert_eq!(sql.len(), 1);
 		assert!(sql[0].contains("CREATE COLLATION IF NOT EXISTS"));
 		assert!(sql[0].contains("\"german\""));

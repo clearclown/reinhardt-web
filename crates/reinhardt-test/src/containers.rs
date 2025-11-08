@@ -81,6 +81,12 @@ use testcontainers_modules::mysql::Mysql;
 use testcontainers_modules::postgres::Postgres;
 use testcontainers_modules::redis::Redis as RedisImage;
 
+/// Test key used by Memcached container's `wait_ready()` method to verify readiness.
+///
+/// This key is used to test actual Memcached set/get operations during initialization.
+/// Uses a single underscore prefix following Rust conventions for internal test identifiers.
+const TEST_WAIT_READY_KEY: &str = "_test_wait_ready";
+
 /// Common interface for database test containers
 #[async_trait::async_trait]
 pub trait TestDatabase: Send + Sync {
@@ -280,12 +286,59 @@ impl RedisContainer {
 			.expect("Failed to start Redis container");
 		let port = container.get_host_port_ipv4(6379).await.unwrap();
 
-		Self {
+		let redis_container = Self {
 			container,
 			host: "localhost".to_string(),
 			port,
-		}
+		};
+
+		// Wait for Redis to be ready
+		redis_container
+			.wait_until_ready()
+			.await
+			.expect("Redis container failed to become ready");
+
+		redis_container
 	}
+
+	/// Wait for Redis server to be ready to accept connections
+	async fn wait_until_ready(&self) -> Result<(), Box<dyn std::error::Error>> {
+		let connection_url = self.connection_url();
+
+		// Try to connect to Redis with retries (max 30 attempts, 3 seconds total)
+		for attempt in 1..=30 {
+			match redis::Client::open(connection_url.as_str()) {
+				Ok(client) => match client.get_connection() {
+					Ok(_) => {
+						// Connection successful
+						return Ok(());
+					}
+					Err(e) if attempt < 30 => {
+						// Connection failed, but we'll retry
+						eprintln!("Redis connection attempt {}/30 failed: {}", attempt, e);
+						tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+					}
+					Err(e) => {
+						// Final attempt failed
+						return Err(Box::new(std::io::Error::new(
+							std::io::ErrorKind::ConnectionRefused,
+							format!("Redis failed to become ready after 30 attempts: {}", e),
+						)));
+					}
+				},
+				Err(e) if attempt < 30 => {
+					eprintln!("Redis client creation attempt {}/30 failed: {}", attempt, e);
+					tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+				}
+				Err(e) => {
+					return Err(Box::new(e));
+				}
+			}
+		}
+
+		Ok(())
+	}
+
 	/// Get the connection URL for Redis
 	pub fn connection_url(&self) -> String {
 		format!("redis://{}:{}", self.host, self.port)
@@ -365,7 +418,7 @@ impl MemcachedContainer {
 		let max_attempts = 10;
 		let mut attempt = 0;
 		let base_delay = Duration::from_millis(100);
-		let test_key = "__wait_ready_test__".to_string();
+		let test_key = TEST_WAIT_READY_KEY.to_string();
 		let test_value = b"ready";
 
 		while attempt < max_attempts {

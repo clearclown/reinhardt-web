@@ -2,6 +2,7 @@ use crate::Argon2Hasher;
 use crate::base_user::BaseUser;
 use crate::full_user::FullUser;
 use crate::permissions_mixin::PermissionsMixin;
+use crate::user::User;
 use chrono::{DateTime, Utc};
 use reinhardt_orm::Model;
 use serde::{Deserialize, Serialize};
@@ -262,5 +263,39 @@ impl Default for DefaultUser {
 			user_permissions: Vec::new(),
 			groups: Vec::new(),
 		}
+	}
+}
+
+impl User for DefaultUser {
+	fn id(&self) -> String {
+		self.id.to_string()
+	}
+
+	fn username(&self) -> &str {
+		&self.username
+	}
+
+	fn get_username(&self) -> &str {
+		&self.username
+	}
+
+	fn is_authenticated(&self) -> bool {
+		true
+	}
+
+	fn is_active(&self) -> bool {
+		self.is_active
+	}
+
+	fn is_admin(&self) -> bool {
+		self.is_superuser
+	}
+
+	fn is_staff(&self) -> bool {
+		self.is_staff
+	}
+
+	fn is_superuser(&self) -> bool {
+		self.is_superuser
 	}
 }
