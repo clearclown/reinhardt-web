@@ -1,5 +1,5 @@
 use reinhardt_templates_macros::template;
 
 fn main() {
-    let _ = template!("/etc/passwd");
+	let _ = template!("/etc/passwd");
 }

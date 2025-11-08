@@ -1,5 +1,5 @@
 use reinhardt_templates_macros::template;
 
 fn main() {
-    let _ = template!("script.py");
+	let _ = template!("script.py");
 }
