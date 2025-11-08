@@ -553,12 +553,10 @@ impl OperationOptimizer {
 			let mut found_cancellation = false;
 
 			// Search forward for cancelling operations
-			for j in (i + 1)..operations.len() {
+			for (j, next_op) in operations.iter().enumerate().skip(i + 1) {
 				if removed_indices.contains(&j) {
 					continue;
 				}
-
-				let next_op = &operations[j];
 
 				// Check for cancellation patterns
 				let cancels = match (op, next_op) {

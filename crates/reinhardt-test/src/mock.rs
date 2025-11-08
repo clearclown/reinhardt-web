@@ -517,6 +517,10 @@ impl reinhardt_backends::cache::CacheBackend for DummyCache {
 /// # });
 /// ```
 ///
+/// Type alias for Redis cluster node storage
+/// Each node contains a HashMap of key-value pairs
+type ClusterNodes = Arc<std::sync::Mutex<[std::collections::HashMap<String, Vec<u8>>; 3]>>;
+
 /// # Limitations
 ///
 /// - TTL is accepted but not enforced (keys don't expire)
@@ -527,7 +531,7 @@ pub struct MockRedisClusterCache {
 	/// Index 0: Node 0 (slots 0-5460)
 	/// Index 1: Node 1 (slots 5461-10922)
 	/// Index 2: Node 2 (slots 10923-16383)
-	nodes: Arc<std::sync::Mutex<[std::collections::HashMap<String, Vec<u8>>; 3]>>,
+	nodes: ClusterNodes,
 	/// Key prefix for namespacing
 	key_prefix: String,
 }

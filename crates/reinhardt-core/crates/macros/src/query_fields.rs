@@ -86,14 +86,7 @@ fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
 				"bool" => quote! { bool },
 
 				// DateTime types
-				"DateTime" => {
-					// Check if it's chrono::DateTime or reinhardt DateTime
-					if has_chrono_path(type_path) {
-						quote! { ::reinhardt_orm::query_fields::DateTime }
-					} else {
-						quote! { ::reinhardt_orm::query_fields::DateTime }
-					}
-				}
+				"DateTime" => quote! { ::reinhardt_orm::query_fields::DateTime },
 				"Date" => quote! { ::reinhardt_orm::query_fields::Date },
 				"NaiveDateTime" => quote! { ::reinhardt_orm::query_fields::DateTime },
 				"NaiveDate" => quote! { ::reinhardt_orm::query_fields::Date },
@@ -157,15 +150,6 @@ fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
 		}
 		_ => quote! { #ty },
 	}
-}
-
-/// Check if a type path includes "chrono" in its segments
-fn has_chrono_path(type_path: &syn::TypePath) -> bool {
-	type_path
-		.path
-		.segments
-		.iter()
-		.any(|seg| seg.ident == "chrono")
 }
 
 /// Handle Option<T> type mapping
