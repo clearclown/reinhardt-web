@@ -9,7 +9,7 @@
 //! This approach reduces cleanup time complexity from O(n) to O(1) amortized.
 
 use crate::entry::CacheEntry;
-use rand::seq::SliceRandom;
+use rand::prelude::IndexedRandom;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -273,7 +273,7 @@ impl LayeredCacheStore {
 		// Sample random keys
 		let sample_size = self.active_sampler.sample_size.min(keys.len());
 		let sample: Vec<_> = {
-			let mut rng = rand::thread_rng();
+			let mut rng = rand::rng();
 			keys.choose_multiple(&mut rng, sample_size)
 				.cloned()
 				.collect()
@@ -284,7 +284,7 @@ impl LayeredCacheStore {
 		{
 			let store = self.store.read().await;
 			for key in &sample {
-				if let Some(entry) = store.get(key)
+				if let Some(entry) = store.get::<String>(key)
 					&& entry.is_expired()
 				{
 					expired_keys.push(key.clone());

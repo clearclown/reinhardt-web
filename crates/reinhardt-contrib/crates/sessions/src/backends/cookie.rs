@@ -36,12 +36,11 @@
 use super::{SessionBackend, SessionError};
 use aes_gcm::{
 	Aes256Gcm, Nonce,
-	aead::{Aead, KeyInit, OsRng},
+	aead::{Aead, KeyInit, OsRng, rand_core::RngCore},
 };
 use async_trait::async_trait;
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use hmac::{Hmac, Mac};
-use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::collections::HashMap;
