@@ -510,3 +510,154 @@ fn test_migrations_operations_composite_index() {
 		sql
 	);
 }
+// Multi-DB SQL Generation Tests
+
+#[test]
+fn test_alter_column_multi_db() {
+	// Test AlterColumn operation across all supported databases
+	let operation = Operation::AlterColumn {
+		table: "users".to_string(),
+		column: "status".to_string(),
+		new_definition: ColumnDefinition::new("status", "VARCHAR(20) NOT NULL"),
+	};
+
+	// PostgreSQL: ALTER COLUMN ... TYPE
+	let sql_pg = operation.to_sql(&SqlDialect::Postgres);
+	assert_eq!(
+		sql_pg, "ALTER TABLE users ALTER COLUMN status TYPE VARCHAR(20) NOT NULL;",
+		"PostgreSQL syntax mismatch"
+	);
+
+	// CockroachDB: Same as PostgreSQL
+	let sql_crdb = operation.to_sql(&SqlDialect::Cockroachdb);
+	assert_eq!(
+		sql_crdb, "ALTER TABLE users ALTER COLUMN status TYPE VARCHAR(20) NOT NULL;",
+		"CockroachDB syntax mismatch"
+	);
+
+	// MySQL: MODIFY COLUMN
+	let sql_mysql = operation.to_sql(&SqlDialect::Mysql);
+	assert_eq!(
+		sql_mysql, "ALTER TABLE users MODIFY COLUMN status VARCHAR(20) NOT NULL;",
+		"MySQL syntax mismatch"
+	);
+
+	// SQLite: Warning comment
+	let sql_sqlite = operation.to_sql(&SqlDialect::Sqlite);
+	assert!(
+		sql_sqlite.contains("SQLite does not support ALTER COLUMN"),
+		"SQLite should return warning comment"
+	);
+}
+
+#[test]
+fn test_drop_index_multi_db() {
+	// Test DropIndex operation across databases
+	let operation = Operation::DropIndex {
+		table: "users".to_string(),
+		columns: vec!["email".to_string()],
+	};
+
+	// PostgreSQL, SQLite, CockroachDB: DROP INDEX idx_name;
+	let sql_pg = operation.to_sql(&SqlDialect::Postgres);
+	assert_eq!(
+		sql_pg, "DROP INDEX idx_users_email;",
+		"PostgreSQL DROP INDEX syntax"
+	);
+
+	let sql_sqlite = operation.to_sql(&SqlDialect::Sqlite);
+	assert_eq!(
+		sql_sqlite, "DROP INDEX idx_users_email;",
+		"SQLite DROP INDEX syntax"
+	);
+
+	let sql_crdb = operation.to_sql(&SqlDialect::Cockroachdb);
+	assert_eq!(
+		sql_crdb, "DROP INDEX idx_users_email;",
+		"CockroachDB DROP INDEX syntax"
+	);
+
+	// MySQL: DROP INDEX idx_name ON table_name;
+	let sql_mysql = operation.to_sql(&SqlDialect::Mysql);
+	assert_eq!(
+		sql_mysql, "DROP INDEX idx_users_email ON users;",
+		"MySQL DROP INDEX syntax"
+	);
+}
+
+#[test]
+fn test_alter_table_comment_multi_db() {
+	// Test AlterTableComment operation across databases
+	let operation = Operation::AlterTableComment {
+		table: "users".to_string(),
+		comment: Some("User account table".to_string()),
+	};
+
+	// PostgreSQL and CockroachDB: COMMENT ON TABLE
+	let sql_pg = operation.to_sql(&SqlDialect::Postgres);
+	assert_eq!(
+		sql_pg, "COMMENT ON TABLE users IS 'User account table';",
+		"PostgreSQL COMMENT syntax"
+	);
+
+	let sql_crdb = operation.to_sql(&SqlDialect::Cockroachdb);
+	assert_eq!(
+		sql_crdb, "COMMENT ON TABLE users IS 'User account table';",
+		"CockroachDB COMMENT syntax"
+	);
+
+	// MySQL: ALTER TABLE ... COMMENT=''
+	let sql_mysql = operation.to_sql(&SqlDialect::Mysql);
+	assert_eq!(
+		sql_mysql, "ALTER TABLE users COMMENT='User account table';",
+		"MySQL COMMENT syntax"
+	);
+
+	// SQLite: No comment support (empty string)
+	let sql_sqlite = operation.to_sql(&SqlDialect::Sqlite);
+	assert_eq!(sql_sqlite, "", "SQLite does not support table comments");
+}
+
+#[test]
+fn test_create_table_same_across_databases() {
+	// Verify CreateTable generates identical SQL across databases
+	let operation = Operation::CreateTable {
+		name: "products".to_string(),
+		columns: vec![
+			ColumnDefinition::new("id", "SERIAL PRIMARY KEY"),
+			ColumnDefinition::new("name", "VARCHAR(255) NOT NULL"),
+			ColumnDefinition::new("price", "DECIMAL(10,2)"),
+		],
+		constraints: vec!["UNIQUE(name)".to_string()],
+	};
+
+	let sql_pg = operation.to_sql(&SqlDialect::Postgres);
+	let sql_mysql = operation.to_sql(&SqlDialect::Mysql);
+	let sql_sqlite = operation.to_sql(&SqlDialect::Sqlite);
+	let sql_crdb = operation.to_sql(&SqlDialect::Cockroachdb);
+
+	// All databases should generate identical CREATE TABLE syntax
+	assert_eq!(
+		sql_pg, sql_mysql,
+		"PostgreSQL and MySQL CREATE TABLE should match"
+	);
+	assert_eq!(
+		sql_pg, sql_sqlite,
+		"PostgreSQL and SQLite CREATE TABLE should match"
+	);
+	assert_eq!(
+		sql_pg, sql_crdb,
+		"PostgreSQL and CockroachDB CREATE TABLE should match"
+	);
+
+	// Verify common structure
+	assert!(
+		sql_pg.contains("CREATE TABLE products"),
+		"Should contain table name"
+	);
+	assert!(
+		sql_pg.contains("id SERIAL PRIMARY KEY"),
+		"Should contain id column"
+	);
+	assert!(sql_pg.contains("UNIQUE(name)"), "Should contain constraint");
+}

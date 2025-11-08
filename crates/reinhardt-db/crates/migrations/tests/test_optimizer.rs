@@ -1,7 +1,7 @@
 //! Tests for migration optimizer
 //! Adapted from Django's test_optimizer.py
 
-use reinhardt_migrations::{ColumnDefinition, Migration, Operation};
+use reinhardt_migrations::{ColumnDefinition, Migration, Operation, OperationOptimizer};
 
 fn create_column(name: &str, type_def: &str) -> ColumnDefinition {
 	ColumnDefinition {
@@ -30,10 +30,11 @@ fn test_create_delete_table_optimization() {
 		},
 	];
 
-	// TODO: Implement optimization to cancel out opposite operations (CreateTable + DropTable)
-	// Current: Test verifies operations exist without optimization
-	// Required: Add migration optimizer to detect and remove redundant operation pairs
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Both operations should be removed (they cancel each other)
+	assert_eq!(optimized.len(), 0);
 }
 
 #[test]
@@ -50,12 +51,16 @@ fn test_add_remove_field_optimization() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Both operations should be removed (they cancel each other)
+	assert_eq!(optimized.len(), 0);
 }
 
 #[test]
 fn test_consecutive_alter_optimization() {
-	// Multiple AlterColumn on same field could be merged
+	// Multiple AlterColumn on same field should be merged
 	let operations = vec![
 		Operation::AlterColumn {
 			table: "test_table".to_string(),
@@ -69,7 +74,23 @@ fn test_consecutive_alter_optimization() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Should be merged into a single AlterColumn (last one wins)
+	assert_eq!(optimized.len(), 1);
+	match &optimized[0] {
+		Operation::AlterColumn {
+			table,
+			column,
+			new_definition,
+		} => {
+			assert_eq!(table, "test_table");
+			assert_eq!(column, "field");
+			assert_eq!(new_definition.type_definition, "INTEGER NOT NULL");
+		}
+		_ => panic!("Expected AlterColumn operation"),
+	}
 }
 
 #[test]
@@ -86,12 +107,26 @@ fn test_rename_table_optimization() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Debug: Print optimized operations
+	eprintln!("Optimized operations: {:?}", optimized);
+
+	// Should be chained into a single RenameTable (old -> new)
+	assert_eq!(optimized.len(), 1);
+	match &optimized[0] {
+		Operation::RenameTable { old_name, new_name } => {
+			assert_eq!(old_name, "old");
+			assert_eq!(new_name, "new");
+		}
+		_ => panic!("Expected RenameTable operation"),
+	}
 }
 
 #[test]
 fn test_create_table_with_add_column() {
-	// CreateTable followed by AddColumn should merge
+	// CreateTable followed by AddColumn (not currently optimized)
 	let operations = vec![
 		Operation::CreateTable {
 			name: "test_table".to_string(),
@@ -104,13 +139,18 @@ fn test_create_table_with_add_column() {
 		},
 	];
 
-	// These could be optimized to a single CreateTable
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// NOTE: Current optimizer does not merge AddColumn into CreateTable
+	// This optimization requires modifying CreateTable.columns, which is complex
+	// Future enhancement: Merge AddColumn into CreateTable.columns
+	assert_eq!(optimized.len(), 2);
 }
 
 #[test]
 fn test_no_optimization_needed() {
-	// Some operations don't need optimization
+	// Different tables - no optimization needed
 	let operations = vec![
 		Operation::CreateTable {
 			name: "table1".to_string(),
@@ -124,12 +164,16 @@ fn test_no_optimization_needed() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// No optimization needed (different tables)
+	assert_eq!(optimized.len(), 2);
 }
 
 #[test]
 fn test_index_optimization() {
-	// CreateIndex followed by DropIndex could be optimized
+	// CreateIndex followed by DropIndex should be optimized away
 	let operations = vec![
 		Operation::CreateIndex {
 			table: "test_table".to_string(),
@@ -142,12 +186,16 @@ fn test_index_optimization() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Both operations should be removed (they cancel each other)
+	assert_eq!(optimized.len(), 0);
 }
 
 #[test]
 fn test_constraint_optimization() {
-	// AddConstraint followed by DropConstraint could be optimized
+	// AddConstraint followed by DropConstraint should be optimized away
 	let operations = vec![
 		Operation::AddConstraint {
 			table: "test_table".to_string(),
@@ -159,7 +207,13 @@ fn test_constraint_optimization() {
 		},
 	];
 
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations);
+
+	// Both operations should be removed (approximate matching by table)
+	// NOTE: Current implementation uses approximate matching (by table only)
+	// Perfect matching would require parsing constraint_sql to extract name
+	assert_eq!(optimized.len(), 0);
 }
 
 #[test]
@@ -196,6 +250,17 @@ fn test_migration_optimization_preserves_order() {
 		},
 	];
 
-	// Order matters due to foreign key
-	assert_eq!(operations.len(), 2);
+	let optimizer = OperationOptimizer::new();
+	let optimized = optimizer.optimize(operations.clone());
+
+	// Order must be preserved (table2 depends on table1)
+	assert_eq!(optimized.len(), 2);
+	match &optimized[0] {
+		Operation::CreateTable { name, .. } => assert_eq!(name, "table1"),
+		_ => panic!("Expected CreateTable for table1"),
+	}
+	match &optimized[1] {
+		Operation::CreateTable { name, .. } => assert_eq!(name, "table2"),
+		_ => panic!("Expected CreateTable for table2"),
+	}
 }
