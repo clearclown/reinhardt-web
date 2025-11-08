@@ -378,7 +378,7 @@ pub fn temp_dir() -> tempfile::TempDir {
 // ============================================================================
 
 #[cfg(feature = "testcontainers")]
-use testcontainers::{ContainerAsync, ImageExt, runners::AsyncRunner};
+use testcontainers::{ContainerAsync, runners::AsyncRunner};
 #[cfg(feature = "testcontainers")]
 use testcontainers_modules::{postgres::Postgres, redis::Redis};
 
@@ -456,8 +456,14 @@ pub async fn redis_container() -> (ContainerAsync<Redis>, String) {
 
 /// Fixture providing a Redis Cluster TestContainer setup
 ///
-/// Returns a tuple of (containers, connection_urls) for the 3 cluster nodes.
-/// The containers are automatically cleaned up when the test ends.
+/// Returns a tuple of (container, connection_urls) for the cluster nodes.
+/// The container is automatically cleaned up when the test ends.
+///
+/// # Notes
+///
+/// This fixture uses the `grokzen/redis-cluster` Docker image which provides
+/// a pre-configured Redis Cluster with 6 nodes (3 masters + 3 replicas).
+/// Ports 7000-7005 are exposed for the 6 nodes.
 ///
 /// # Examples
 ///
@@ -468,176 +474,47 @@ pub async fn redis_container() -> (ContainerAsync<Redis>, String) {
 /// #[rstest]
 /// #[tokio::test]
 /// async fn test_with_redis_cluster(
-///     #[future] redis_cluster_fixture: (Vec<testcontainers::ContainerAsync<testcontainers::GenericImage>>, Vec<String>)
+///     #[future] redis_cluster_fixture: (testcontainers::ContainerAsync<testcontainers::GenericImage>, Vec<String>)
 /// ) {
-///     let (_containers, urls) = redis_cluster_fixture.await;
+///     let (_container, urls) = redis_cluster_fixture.await;
 ///     // Use Redis Cluster at `urls`
 /// }
 /// ```
 #[cfg(feature = "testcontainers")]
 #[fixture]
 pub async fn redis_cluster_fixture() -> (
-	Vec<testcontainers::ContainerAsync<testcontainers::GenericImage>>,
+	testcontainers::ContainerAsync<testcontainers::GenericImage>,
 	Vec<String>,
 ) {
 	use testcontainers::GenericImage;
-	use testcontainers::core::{ExecCommand, WaitFor};
+	use testcontainers::core::WaitFor;
 
-	// Start 3 Redis nodes with cluster mode enabled
-	let node1 = GenericImage::new("redis", "7-alpine")
-		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
-		.with_cmd(vec![
-			"redis-server",
-			"--cluster-enabled",
-			"yes",
-			"--cluster-config-file",
-			"nodes.conf",
-			"--cluster-node-timeout",
-			"5000",
-			"--appendonly",
-			"no",
-			"--bind",
-			"0.0.0.0",
-			"--protected-mode",
-			"no",
-		])
+	// Start Redis Cluster using grokzen/redis-cluster image
+	// This image provides a pre-configured cluster with 6 nodes (3 masters + 3 replicas)
+	let cluster = GenericImage::new("grokzen/redis-cluster", "latest")
+		.with_wait_for(WaitFor::message_on_stdout("Cluster state changed: ok"))
 		.start()
 		.await
-		.expect("Failed to start Redis node 1");
+		.expect("Failed to start Redis Cluster container");
 
-	let node2 = GenericImage::new("redis", "7-alpine")
-		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
-		.with_cmd(vec![
-			"redis-server",
-			"--cluster-enabled",
-			"yes",
-			"--cluster-config-file",
-			"nodes.conf",
-			"--cluster-node-timeout",
-			"5000",
-			"--appendonly",
-			"no",
-			"--bind",
-			"0.0.0.0",
-			"--protected-mode",
-			"no",
-		])
-		.start()
-		.await
-		.expect("Failed to start Redis node 2");
+	// Get host ports for the 6 Redis nodes (internal ports 7000-7005)
+	let mut urls = Vec::new();
+	for internal_port in 7000..=7005 {
+		let host_port = cluster
+			.get_host_port_ipv4(internal_port)
+			.await
+			.unwrap_or_else(|_| panic!("Failed to get host port for Redis node {}", internal_port));
+		urls.push(format!("redis://localhost:{}", host_port));
+	}
 
-	let node3 = GenericImage::new("redis", "7-alpine")
-		.with_wait_for(WaitFor::message_on_stdout("Ready to accept connections"))
-		.with_cmd(vec![
-			"redis-server",
-			"--cluster-enabled",
-			"yes",
-			"--cluster-config-file",
-			"nodes.conf",
-			"--cluster-node-timeout",
-			"5000",
-			"--appendonly",
-			"no",
-			"--bind",
-			"0.0.0.0",
-			"--protected-mode",
-			"no",
-		])
-		.start()
-		.await
-		.expect("Failed to start Redis node 3");
+	eprintln!("Redis Cluster nodes ready:");
+	for (i, url) in urls.iter().enumerate() {
+		eprintln!("  Node {}: {}", i, url);
+	}
 
-	let port1 = node1
-		.get_host_port_ipv4(6379)
-		.await
-		.expect("Failed to get Redis node 1 port");
-	let port2 = node2
-		.get_host_port_ipv4(6379)
-		.await
-		.expect("Failed to get Redis node 2 port");
-	let port3 = node3
-		.get_host_port_ipv4(6379)
-		.await
-		.expect("Failed to get Redis node 3 port");
-
-	// Get bridge IPs for cross-container communication
-	let node1_ip = node1
-		.get_bridge_ip_address()
-		.await
-		.expect("Failed to get node 1 IP");
-	let node2_ip = node2
-		.get_bridge_ip_address()
-		.await
-		.expect("Failed to get node 2 IP");
-	let node3_ip = node3
-		.get_bridge_ip_address()
-		.await
-		.expect("Failed to get node 3 IP");
-
-	let url1 = format!("redis://localhost:{}", port1);
-	let url2 = format!("redis://localhost:{}", port2);
-	let url3 = format!("redis://localhost:{}", port3);
-
-	eprintln!("Redis Cluster nodes:");
-	eprintln!("  Node 1: {} (internal: {}:6379)", url1, node1_ip);
-	eprintln!("  Node 2: {} (internal: {}:6379)", url2, node2_ip);
-	eprintln!("  Node 3: {} (internal: {}:6379)", url3, node3_ip);
-
-	// Wait for Redis nodes to fully initialize
-	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-
-	// Initialize cluster by creating cluster meet connections
-	// Node 1 meets Node 2
-	let meet_cmd2 = format!("redis-cli CLUSTER MEET {} 6379", node2_ip);
-	node1
-		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd2]))
-		.await
-		.expect("CLUSTER MEET node2 failed");
-	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-	// Node 1 meets Node 3
-	let meet_cmd3 = format!("redis-cli CLUSTER MEET {} 6379", node3_ip);
-	node1
-		.exec(ExecCommand::new(vec!["sh", "-c", &meet_cmd3]))
-		.await
-		.expect("CLUSTER MEET node3 failed");
-	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-	// Assign slots to each node (must be done sequentially to avoid conflicts)
-	// Node 1: slots 0-5460
-	let slots1_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 0 5460)";
-	node1
-		.exec(ExecCommand::new(vec!["sh", "-c", slots1_cmd]))
-		.await
-		.expect("CLUSTER ADDSLOTS node1 failed");
-	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-	// Node 2: slots 5461-10922
-	let slots2_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 5461 10922)";
-	node2
-		.exec(ExecCommand::new(vec!["sh", "-c", slots2_cmd]))
-		.await
-		.expect("CLUSTER ADDSLOTS node2 failed");
-	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-	// Node 3: slots 10923-16383
-	let slots3_cmd = "redis-cli CLUSTER ADDSLOTS $(seq 10923 16383)";
-	node3
-		.exec(ExecCommand::new(vec!["sh", "-c", slots3_cmd]))
-		.await
-		.expect("CLUSTER ADDSLOTS node3 failed");
-	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-	// Wait for cluster to be fully initialized and stable
-	// Redis Cluster needs time to propagate slot assignments and converge
-	eprintln!("Waiting for cluster to be ready...");
-	tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
-
-	eprintln!("Redis Cluster initialization complete");
-
-	// Return containers and URLs
-	// Containers will be automatically cleaned up when they go out of scope
-	(vec![node1, node2, node3], vec![url1, url2, url3])
+	// Return container and URLs
+	// Container will be automatically cleaned up when it goes out of scope
+	(cluster, urls)
 }
 
 /// LocalStack container fixture for AWS services testing
