@@ -133,4 +133,236 @@ mod tests {
 		// 4. Verify that no messages are stored
 		assert_eq!(storage.peek().len(), 0);
 	}
+
+	#[tokio::test]
+	async fn test_message_persistence_across_requests() {
+		// Test: Messages added in one request should appear in the next request
+		use reinhardt_http::{Request, Response};
+		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
+		use reinhardt_messages::{Level, MemoryStorage, Message};
+		use reinhardt_types::{Handler, Middleware};
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+		use std::sync::Arc;
+
+		// Mock handler that adds a message
+		struct AddMessageHandler;
+
+		#[async_trait]
+		impl Handler for AddMessageHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				// Add a message during request processing
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					container.add(Message::new(Level::Success, "Message from first request"));
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Mock handler that checks for messages
+		struct CheckMessageHandler;
+
+		#[async_trait]
+		impl Handler for CheckMessageHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				// Verify message from previous request exists
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					let messages = container.get_messages();
+					assert_eq!(messages.len(), 1);
+					assert_eq!(messages[0].text, "Message from first request");
+					assert_eq!(messages[0].level, Level::Success);
+				} else {
+					panic!("MessagesContainer not found in request extensions");
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Create middleware with shared storage
+		let storage = MemoryStorage::new();
+		let middleware = MessagesMiddleware::new(storage);
+
+		// First request: Add a message
+		let request1 = Request::new(
+			Method::POST,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler1 = Arc::new(AddMessageHandler) as Arc<dyn Handler>;
+		let _ = middleware.process(request1, handler1).await.unwrap();
+
+		// Second request: Verify message appears
+		let request2 = Request::new(
+			Method::GET,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler2 = Arc::new(CheckMessageHandler) as Arc<dyn Handler>;
+		let _ = middleware.process(request2, handler2).await.unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_message_cleanup_after_display() {
+		// Test: Messages should be cleared after being retrieved
+		use reinhardt_http::{Request, Response};
+		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
+		use reinhardt_messages::{Level, MemoryStorage, Message};
+		use reinhardt_types::{Handler, Middleware};
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+		use std::sync::Arc;
+
+		// Handler that retrieves messages (simulating display)
+		struct DisplayMessagesHandler;
+
+		#[async_trait]
+		impl Handler for DisplayMessagesHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				// Get messages (simulating template rendering)
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					let messages = container.get_messages();
+					assert_eq!(messages.len(), 1);
+					// Clear messages after display
+					container.clear();
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Handler that checks messages are cleared
+		struct CheckEmptyHandler;
+
+		#[async_trait]
+		impl Handler for CheckEmptyHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				// Verify no messages remain
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					let messages = container.get_messages();
+					assert_eq!(messages.len(), 0, "Messages should be cleared after display");
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Create middleware with shared storage
+		let mut storage = MemoryStorage::new();
+		storage.add(Message::new(Level::Info, "Test message"));
+		let middleware = MessagesMiddleware::new(storage);
+
+		// First request: Display messages
+		let request1 = Request::new(
+			Method::GET,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler1 = Arc::new(DisplayMessagesHandler) as Arc<dyn Handler>;
+		let _ = middleware.process(request1, handler1).await.unwrap();
+
+		// Second request: Verify messages were cleared
+		let request2 = Request::new(
+			Method::GET,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler2 = Arc::new(CheckEmptyHandler) as Arc<dyn Handler>;
+		let _ = middleware.process(request2, handler2).await.unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_message_accumulation_across_multiple_requests() {
+		// Test: Multiple messages can be added and accumulated across requests
+		use reinhardt_http::{Request, Response};
+		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
+		use reinhardt_messages::{Level, MemoryStorage, Message};
+		use reinhardt_types::{Handler, Middleware};
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+		use std::sync::Arc;
+
+		// Handler that adds a message
+		struct AddMessageHandler {
+			message_text: String,
+			level: Level,
+		}
+
+		#[async_trait]
+		impl Handler for AddMessageHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					container.add(Message::new(self.level.clone(), &self.message_text));
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Handler that checks accumulated messages
+		struct CheckAccumulatedHandler {
+			expected_count: usize,
+		}
+
+		#[async_trait]
+		impl Handler for CheckAccumulatedHandler {
+			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+				if let Some(container) = request.extensions.get::<MessagesContainer>() {
+					let messages = container.get_messages();
+					assert_eq!(messages.len(), self.expected_count);
+				}
+				Ok(Response::new(StatusCode::OK))
+			}
+		}
+
+		// Create middleware with shared storage
+		let storage = MemoryStorage::new();
+		let middleware = MessagesMiddleware::new(storage);
+
+		// Request 1: Add first message
+		let request1 = Request::new(
+			Method::POST,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler1 = Arc::new(AddMessageHandler {
+			message_text: "First message".to_string(),
+			level: Level::Info,
+		}) as Arc<dyn Handler>;
+		let _ = middleware.process(request1, handler1).await.unwrap();
+
+		// Request 2: Add second message
+		let request2 = Request::new(
+			Method::POST,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler2 = Arc::new(AddMessageHandler {
+			message_text: "Second message".to_string(),
+			level: Level::Warning,
+		}) as Arc<dyn Handler>;
+		let _ = middleware.process(request2, handler2).await.unwrap();
+
+		// Request 3: Verify both messages accumulated
+		let request3 = Request::new(
+			Method::GET,
+			"/".parse::<Uri>().unwrap(),
+			Version::HTTP_11,
+			HeaderMap::new(),
+			Bytes::new(),
+		);
+		let handler3 = Arc::new(CheckAccumulatedHandler { expected_count: 2 }) as Arc<dyn Handler>;
+		let _ = middleware.process(request3, handler3).await.unwrap();
+	}
 }
