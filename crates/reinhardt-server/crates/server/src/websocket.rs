@@ -342,11 +342,11 @@ impl WebSocketServer {
 											if let Some(ref manager) = broadcast_manager
 												&& let Some(clients) = manager.clients.read().await.get(&peer_addr) {
 													let mut sender = clients.sender.lock().await;
-													sender.send(Message::Text(response)).await?;
+													sender.send(Message::Text(response.into())).await?;
 												}
 										} else if let Some(ref mut w) = direct_write {
 											// Normal mode: send directly
-											w.send(Message::Text(response)).await?;
+											w.send(Message::Text(response.into())).await?;
 										}
 									}
 									Err(error) => {
@@ -354,10 +354,10 @@ impl WebSocketServer {
 											if let Some(ref manager) = broadcast_manager
 												&& let Some(clients) = manager.clients.read().await.get(&peer_addr) {
 													let mut sender = clients.sender.lock().await;
-													sender.send(Message::Text(error)).await?;
+													sender.send(Message::Text(error.into())).await?;
 												}
 										} else if let Some(ref mut w) = direct_write {
-											w.send(Message::Text(error)).await?;
+											w.send(Message::Text(error.into())).await?;
 										}
 									}
 								}
@@ -384,7 +384,7 @@ impl WebSocketServer {
 						&& let Some(ref manager) = broadcast_manager
 							&& let Some(client) = manager.clients.read().await.get(&peer_addr) {
 								let mut sender = client.sender.lock().await;
-								if let Err(e) = sender.send(Message::Text(msg)).await {
+								if let Err(e) = sender.send(Message::Text(msg.into())).await {
 									eprintln!("Failed to send broadcast to {}: {}", peer_addr, e);
 									break;
 								}
