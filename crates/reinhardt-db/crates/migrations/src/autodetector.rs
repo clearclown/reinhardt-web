@@ -3,6 +3,7 @@
 use petgraph::Undirected;
 use petgraph::graph::Graph;
 use petgraph::visit::EdgeRef;
+use regex::Regex;
 use std::collections::HashMap;
 use strsim::{jaro_winkler, levenshtein};
 
@@ -1547,6 +1548,32 @@ impl InferenceEngine {
 		});
 	}
 
+	/// Match string against a pattern (supports regex)
+	///
+	/// Patterns can be:
+	/// - Literal strings (exact match)
+	/// - ".*" wildcard (matches anything)
+	/// - Regular expressions (e.g., "User.*" matches "User", "UserProfile", etc.)
+	fn matches_pattern(value: &str, pattern: &str) -> bool {
+		// Wildcard pattern matches everything
+		if pattern == ".*" {
+			return true;
+		}
+
+		// Try exact match first
+		if value == pattern {
+			return true;
+		}
+
+		// Try regex match
+		if let Ok(re) = Regex::new(pattern) {
+			re.is_match(value)
+		} else {
+			// If regex is invalid, fall back to exact match
+			false
+		}
+	}
+
 	/// Get all rules
 	pub fn rules(&self) -> &[InferenceRule] {
 		&self.rules
@@ -1578,16 +1605,28 @@ impl InferenceEngine {
 							matches_required = false;
 							break;
 						}
-						// TODO: Implement regex-based pattern matching for model renames
-						// Current implementation uses simple string comparison only
-						if from_pattern == ".*" || to_pattern == ".*" {
-							evidence.push(format!(
-								"Model renamed: {}.{} → {}.{}",
-								model_renames[0].0,
-								model_renames[0].1,
-								model_renames[0].2,
-								model_renames[0].3
-							));
+
+						// Check if any model rename matches the patterns
+						let mut matched = false;
+						for (from_app, from_model, to_app, to_model) in model_renames {
+							let from_name = format!("{}.{}", from_app, from_model);
+							let to_name = format!("{}.{}", to_app, to_model);
+
+							if Self::matches_pattern(&from_name, from_pattern)
+								&& Self::matches_pattern(&to_name, to_pattern)
+							{
+								evidence.push(format!(
+									"Model renamed: {} → {} (pattern: {} → {})",
+									from_name, to_name, from_pattern, to_pattern
+								));
+								matched = true;
+								break;
+							}
+						}
+
+						if !matched {
+							matches_required = false;
+							break;
 						}
 					}
 					RuleCondition::ModelMove { app_pattern } => {
@@ -1595,20 +1634,31 @@ impl InferenceEngine {
 							matches_required = false;
 							break;
 						}
-						if app_pattern == ".*" {
-							evidence.push(format!(
-								"Model moved: {}.{} → {}.{}",
-								model_moves[0].0,
-								model_moves[0].1,
-								model_moves[0].2,
-								model_moves[0].3
-							));
+
+						// Check if any model move matches the app pattern
+						let mut matched = false;
+						for (from_app, from_model, to_app, to_model) in model_moves {
+							if Self::matches_pattern(to_app, app_pattern) {
+								evidence.push(format!(
+									"Model moved: {}.{} → {}.{} (app pattern: {})",
+									from_app, from_model, to_app, to_model, app_pattern
+								));
+								matched = true;
+								break;
+							}
+						}
+
+						if !matched {
+							matches_required = false;
+							break;
 						}
 					}
 					RuleCondition::FieldAddition { field_name_pattern } => {
 						let matching_fields: Vec<_> = field_additions
 							.iter()
-							.filter(|(_, _, field)| field.contains(field_name_pattern.as_str()))
+							.filter(|(_, _, field)| {
+								Self::matches_pattern(field, field_name_pattern)
+							})
 							.collect();
 
 						if matching_fields.is_empty() {
@@ -1616,8 +1666,11 @@ impl InferenceEngine {
 							break;
 						}
 						evidence.push(format!(
-							"Field added: {}.{}.{}",
-							matching_fields[0].0, matching_fields[0].1, matching_fields[0].2
+							"Field added: {}.{}.{} (pattern: {})",
+							matching_fields[0].0,
+							matching_fields[0].1,
+							matching_fields[0].2,
+							field_name_pattern
 						));
 					}
 					RuleCondition::FieldRename {
@@ -1628,14 +1681,25 @@ impl InferenceEngine {
 							matches_required = false;
 							break;
 						}
-						if from_pattern == ".*" || to_pattern == ".*" {
-							evidence.push(format!(
-								"Field renamed: {}.{}.{} → {}",
-								field_renames[0].0,
-								field_renames[0].1,
-								field_renames[0].2,
-								field_renames[0].3
-							));
+
+						// Check if any field rename matches the patterns
+						let mut matched = false;
+						for (app, model, from_field, to_field) in field_renames {
+							if Self::matches_pattern(from_field, from_pattern)
+								&& Self::matches_pattern(to_field, to_pattern)
+							{
+								evidence.push(format!(
+									"Field renamed: {}.{}.{} → {} (pattern: {} → {})",
+									app, model, from_field, to_field, from_pattern, to_pattern
+								));
+								matched = true;
+								break;
+							}
+						}
+
+						if !matched {
+							matches_required = false;
+							break;
 						}
 					}
 					RuleCondition::MultipleModelRenames { min_count } => {
@@ -1649,19 +1713,19 @@ impl InferenceEngine {
 						model_pattern,
 						min_count,
 					} => {
-						let count = if model_pattern == ".*" {
-							field_additions.len()
-						} else {
-							field_additions
-								.iter()
-								.filter(|(_, model, _)| model.contains(model_pattern.as_str()))
-								.count()
-						};
+						let count = field_additions
+							.iter()
+							.filter(|(_, model, _)| Self::matches_pattern(model, model_pattern))
+							.count();
+
 						if count < *min_count {
 							matches_required = false;
 							break;
 						}
-						evidence.push(format!("Multiple field additions: {}", count));
+						evidence.push(format!(
+							"Multiple field additions: {} (pattern: {}, min: {})",
+							count, model_pattern, min_count
+						));
 					}
 				}
 			}
