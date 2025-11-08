@@ -6,9 +6,9 @@ use crate::secrets::{SecretError, SecretMetadata, SecretProvider, SecretResult, 
 use async_trait::async_trait;
 
 #[cfg(feature = "azure-keyvault")]
-use azure_identity::create_default_credential;
+use azure_identity::DeveloperToolsCredential;
 #[cfg(feature = "azure-keyvault")]
-use azure_security_keyvault::KeyvaultClient;
+use azure_security_keyvault_secrets::SecretClient;
 
 /// Azure Key Vault provider
 ///
@@ -30,7 +30,7 @@ use azure_security_keyvault::KeyvaultClient;
 /// ```
 pub struct AzureKeyVaultProvider {
 	#[cfg(feature = "azure-keyvault")]
-	client: KeyvaultClient,
+	client: SecretClient,
 	#[cfg(not(feature = "azure-keyvault"))]
 	_phantom: std::marker::PhantomData<()>,
 }
@@ -58,10 +58,10 @@ impl AzureKeyVaultProvider {
 	/// Documentation for `new`
 	pub async fn new(vault_url: impl Into<String>) -> SecretResult<Self> {
 		let vault_url = vault_url.into();
-		let credential = create_default_credential().map_err(|e| {
+		let credential = DeveloperToolsCredential::new(None).map_err(|e| {
 			SecretError::Provider(format!("Failed to create default credential: {}", e))
 		})?;
-		let client = KeyvaultClient::new(&vault_url, credential)
+		let client = SecretClient::new(&vault_url, credential, None)
 			.map_err(|e| SecretError::Provider(format!("Failed to create Azure client: {}", e)))?;
 
 		Ok(Self { client })
@@ -80,12 +80,16 @@ impl AzureKeyVaultProvider {
 impl SecretProvider for AzureKeyVaultProvider {
 	#[cfg(feature = "azure-keyvault")]
 	async fn get_secret(&self, name: &str) -> SecretResult<SecretString> {
-		let result = self.client.secret_client().get(name).await;
+		let result = self.client.get_secret(name, None).await;
 
 		match result {
-			Ok(secret_response) => Ok(SecretString::new(secret_response.value)),
+			Ok(response) => {
+				let secret = response.into_body()
+					.map_err(|e| SecretError::Provider(format!("Failed to parse secret response: {}", e)))?;
+				Ok(SecretString::new(secret.value.unwrap_or_default()))
+			}
 			Err(err) => {
-				if err.to_string().contains("404") {
+				if err.to_string().contains("404") || err.to_string().contains("SecretNotFound") {
 					Err(SecretError::NotFound(format!(
 						"Secret '{}' not found",
 						name
@@ -112,29 +116,40 @@ impl SecretProvider for AzureKeyVaultProvider {
 		&self,
 		name: &str,
 	) -> SecretResult<(SecretString, SecretMetadata)> {
-		let result = self.client.secret_client().get(name).await;
+		let result = self.client.get_secret(name, None).await;
 
 		match result {
-			Ok(secret_response) => {
-				let created_at = {
-					let unix_timestamp = secret_response.attributes.created_on.unix_timestamp();
-					chrono::DateTime::from_timestamp(unix_timestamp, 0)
-				};
+			Ok(response) => {
+				let secret = response.into_body()
+					.map_err(|e| SecretError::Provider(format!("Failed to parse secret response: {}", e)))?;
 
-				let updated_at = {
-					let unix_timestamp = secret_response.attributes.updated_on.unix_timestamp();
-					chrono::DateTime::from_timestamp(unix_timestamp, 0)
-				};
+				let created_at = secret.attributes
+					.as_ref()
+					.and_then(|attr| attr.created)
+					.map(|ts| {
+						let unix_timestamp = ts.unix_timestamp();
+						chrono::DateTime::from_timestamp(unix_timestamp, 0)
+					})
+					.flatten();
+
+				let updated_at = secret.attributes
+					.as_ref()
+					.and_then(|attr| attr.updated)
+					.map(|ts| {
+						let unix_timestamp = ts.unix_timestamp();
+						chrono::DateTime::from_timestamp(unix_timestamp, 0)
+					})
+					.flatten();
 
 				let metadata = SecretMetadata {
 					created_at,
 					updated_at,
 				};
 
-				Ok((SecretString::new(secret_response.value), metadata))
+				Ok((SecretString::new(secret.value.unwrap_or_default()), metadata))
 			}
 			Err(err) => {
-				if err.to_string().contains("404") {
+				if err.to_string().contains("404") || err.to_string().contains("SecretNotFound") {
 					Err(SecretError::NotFound(format!(
 						"Secret '{}' not found",
 						name
@@ -161,9 +176,17 @@ impl SecretProvider for AzureKeyVaultProvider {
 
 	#[cfg(feature = "azure-keyvault")]
 	async fn set_secret(&self, name: &str, value: SecretString) -> SecretResult<()> {
+		use azure_security_keyvault_secrets::models::SetSecretParameters;
+
+		let params = SetSecretParameters {
+			value: Some(value.expose_secret().to_string()),
+			..Default::default()
+		};
+
 		self.client
-			.secret_client()
-			.set(name, value.expose_secret())
+			.set_secret(name, params.try_into().map_err(|e| {
+				SecretError::Provider(format!("Failed to create secret parameters: {}", e))
+			})?, None)
 			.await
 			.map_err(|e| SecretError::Provider(format!("Failed to set secret: {}", e)))?;
 
@@ -180,8 +203,7 @@ impl SecretProvider for AzureKeyVaultProvider {
 	#[cfg(feature = "azure-keyvault")]
 	async fn delete_secret(&self, name: &str) -> SecretResult<()> {
 		self.client
-			.secret_client()
-			.delete(name)
+			.delete_secret(name, None)
 			.await
 			.map_err(|e| SecretError::Provider(format!("Failed to delete secret: {}", e)))?;
 
@@ -197,28 +219,19 @@ impl SecretProvider for AzureKeyVaultProvider {
 
 	#[cfg(feature = "azure-keyvault")]
 	async fn list_secrets(&self) -> SecretResult<Vec<String>> {
-		use futures::stream::StreamExt;
+		use azure_security_keyvault_secrets::ResourceExt;
+		use futures::stream::TryStreamExt;
 
 		let mut secrets = Vec::new();
-		let mut pageable = self.client.secret_client().list_secrets().into_stream();
+		let pager = self.client.list_secret_properties(None)
+			.map_err(|e| SecretError::Provider(format!("Failed to create secret list pager: {}", e)))?;
+		let mut stream = pager.into_stream();
 
-		while let Some(result) = pageable.next().await {
-			match result {
-				Ok(response) => {
-					for item in response.value {
-						let name = item.id.split('/').next_back().unwrap_or("");
-						if !name.is_empty() {
-							secrets.push(name.to_string());
-						}
-					}
-				}
-				Err(e) => {
-					return Err(SecretError::Provider(format!(
-						"Failed to list secrets: {}",
-						e
-					)));
-				}
-			}
+		while let Some(secret_props) = stream.try_next().await
+			.map_err(|e| SecretError::Provider(format!("Failed to list secrets: {}", e)))? {
+			let resource_id = secret_props.resource_id()
+				.map_err(|e| SecretError::Provider(format!("Failed to get resource ID: {}", e)))?;
+			secrets.push(resource_id.name);
 		}
 
 		Ok(secrets)
