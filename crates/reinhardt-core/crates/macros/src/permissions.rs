@@ -18,6 +18,46 @@ fn validate_permission(permission: &str, span: Span) -> Result<()> {
 ///
 /// This function is used internally by the `#[permission_required]` attribute macro.
 /// Users should not call this function directly.
+///
+/// # Implementation Details
+///
+/// The macro performs two types of validation:
+///
+/// 1. **Compile-time validation**: Validates permission string format
+/// 2. **Runtime validation** (if Request parameter exists): Checks user permissions at runtime
+///
+/// # Examples
+///
+/// With Request parameter (recommended):
+///
+/// ```ignore
+/// use reinhardt_macros::permission_required;
+/// use reinhardt_http::{Request, Response};
+/// use std::sync::Arc;
+/// use reinhardt_auth::PermissionsMixin;
+///
+/// #[permission_required("auth.view_user")]
+/// async fn view_user(request: Request) -> Result<Response, Box<dyn std::error::Error>> {
+///     // Runtime permission check is automatically injected here
+///     // User is extracted from request.extensions as Arc<dyn PermissionsMixin>
+///     // The authentication middleware must store the user in this format:
+///     // request.extensions.insert(Arc::new(user) as Arc<dyn PermissionsMixin>);
+///     Ok(Response::ok())
+/// }
+/// ```
+///
+/// Without Request parameter (compile-time only):
+///
+/// ```ignore
+/// use reinhardt_macros::permission_required;
+///
+/// #[permission_required("auth.view_user")]
+/// async fn view_user() -> Result<(), ()> {
+///     // Only compile-time validation
+///     // Runtime checking must be done elsewhere (e.g., middleware)
+///     Ok(())
+/// }
+/// ```
 pub fn permission_required_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 	let mut permissions = Vec::new();
 
@@ -72,13 +112,68 @@ pub fn permission_required_impl(args: TokenStream, input: ItemFn) -> Result<Toke
 	let perm_list = permissions.join(", ");
 	let perm_doc = format!("Required permissions: {}", perm_list);
 
+	// Find the Request parameter name (optional for runtime checking)
+	let request_param = fn_inputs.iter().find_map(|arg| {
+		if let syn::FnArg::Typed(pat_type) = arg
+			&& let syn::Pat::Ident(pat_ident) = &*pat_type.pat
+		{
+			// Check if the type is Request
+			if let syn::Type::Path(type_path) = &*pat_type.ty
+				&& type_path
+					.path
+					.segments
+					.last()
+					.map(|seg| seg.ident == "Request")
+					.unwrap_or(false)
+			{
+				return Some(&pat_ident.ident);
+			}
+		}
+		None
+	});
+
+	// Build permission check expressions
+	let perm_checks: Vec<_> = permissions
+		.iter()
+		.map(|perm| {
+			quote! { #perm }
+		})
+		.collect();
+
+	// Generate runtime permission checking code (only if Request parameter exists)
+	let permission_check = if let Some(request_ident) = request_param {
+		quote! {
+			// Runtime permission check using Request parameter
+			// Extract user from request extensions (stored as Arc<dyn PermissionsMixin> by auth middleware)
+			let user = #request_ident.extensions.get::<std::sync::Arc<dyn reinhardt_auth::PermissionsMixin>>()
+				.ok_or_else(|| reinhardt_exception::Error::Authorization(
+					"Authentication required. User not found in request context.".to_string()
+				))?;
+
+			// Check all required permissions
+			let required_permissions = &[#(#perm_checks),*];
+			if !user.has_perms(required_permissions) {
+				return Err(reinhardt_exception::Error::Authorization(
+					format!("Permission denied. Required permissions: {}", required_permissions.join(", "))
+				).into());
+			}
+		}
+	} else {
+		// No Request parameter: compile-time validation only
+		// Runtime checking should be performed by middleware or at call site
+		quote! {
+			// Note: Runtime permission checking requires a Request parameter.
+			// Current function has no Request parameter, so permissions are validated at compile-time only.
+			// Ensure authentication middleware is properly configured.
+		}
+	};
+
+	// Inject permission check into function body
 	Ok(quote! {
 		#(#fn_attrs)*
 		#[doc = #perm_doc]
 		#fn_vis #asyncness fn #fn_name(#fn_inputs) #fn_output {
-			// TODO: Implement permission checking before function execution
-			// Required: Add runtime permission verification based on #[require_permissions] attribute
-			// Current implementation: No permission checking (direct execution)
+			#permission_check
 			#fn_block
 		}
 	})
