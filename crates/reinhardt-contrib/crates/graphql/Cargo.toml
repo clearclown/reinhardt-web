@@ -51,12 +51,12 @@ chrono = { workspace = true }
 # gRPC integration (optional)
 reinhardt-grpc = { workspace = true, optional = true }
 reinhardt-graphql-macros = { workspace = true, optional = true }
-tonic = { version = "0.12", optional = true }
+tonic = { version = "0.14.2", optional = true }
 tokio-stream = { workspace = true, optional = true, features = ["sync"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
-criterion = { version = "0.5", features = ["async_tokio", "html_reports"] }
+criterion = { version = "0.7.0", features = ["async_tokio", "html_reports"] }
 
 [[bench]]
 name = "graphql_performance"

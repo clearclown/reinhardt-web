@@ -14,7 +14,7 @@ reinhardt-serializers = { workspace = true, optional = true }
 reinhardt-viewsets = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_yaml = "0.9"
+serde_yaml = "0.9.33"
 thiserror = { workspace = true }
 indexmap = { version = "2.0", features = ["serde"] }
 http = "1.3.1"

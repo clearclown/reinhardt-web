@@ -32,8 +32,8 @@ argon2 = { workspace = true }
 rand = { workspace = true }
 jsonwebtoken = { workspace = true }
 clap = { version = "4.5", features = ["derive"] }
-console = "0.15"
-dialoguer = "0.11"
+console = "0.16.1"
+dialoguer = "0.12.0"
 uuid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

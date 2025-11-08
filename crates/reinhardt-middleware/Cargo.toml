@@ -36,7 +36,7 @@ hyper = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 flate2 = { workspace = true }
-brotli = "6.0"
+brotli = "8.0.2"
 sha2 = { workspace = true }
 hex = "0.4"
 httpdate = "1.0"

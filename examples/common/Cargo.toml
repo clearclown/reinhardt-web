@@ -13,7 +13,7 @@ tokio = { workspace = true }
 
 # Dependencies for manage_cli (only when reinhardt is available)
 reinhardt-commands = { version = "^0.1.0-alpha.1", optional = true }
-console = { version = "0.15", optional = true }
+console = { version = "0.16.1", optional = true }
 
 [features]
 # Enable manage_cli feature
