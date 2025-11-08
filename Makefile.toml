@@ -42,12 +42,12 @@ args = ["clean"]
 [tasks.fmt]
 description = "Check code formatting (CI mode)"
 command = "cargo"
-args = ["fmt", "--check"]
+args = ["fmt", "--check", "--all"]
 
 [tasks.fmt-fix]
 description = "Auto-fix code formatting"
 command = "cargo"
-args = ["fmt"]
+args = ["fmt", "--all"]
 
 [tasks.clippy]
 description = "Run clippy linter"
