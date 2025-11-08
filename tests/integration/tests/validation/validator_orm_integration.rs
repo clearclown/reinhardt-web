@@ -245,10 +245,8 @@ mod constraint_validation_tests {
 
 	#[test]
 	fn test_unique_constraint_simulation() {
-		// TODO: Implement database UNIQUE constraint validation
-		// Current: Uses in-memory Vec to simulate uniqueness checking
-		// Required: Add validator that queries database to check for existing values
-		// This should integrate with UniqueValidator from reinhardt-validators
+		// This test verifies in-memory uniqueness checking
+		// For actual database UNIQUE constraint validation, see test_unique_constraint_database_violation
 		let existing_codes = vec!["PROD001", "PROD002", "PROD003"];
 
 		let new_code = "PROD004";
@@ -256,6 +254,84 @@ mod constraint_validation_tests {
 
 		let duplicate_code = "PROD001";
 		assert!(existing_codes.contains(&duplicate_code));
+	}
+
+	#[tokio::test]
+	async fn test_unique_constraint_database_violation() {
+		use reinhardt_validators::UniqueValidator;
+		use std::sync::Arc;
+
+		let db = TestDatabase::new()
+			.await
+			.expect("Failed to connect to database");
+		db.setup_tables().await.expect("Failed to setup tables");
+
+		// Insert first user successfully
+		let user1_id = db
+			.insert_user("alice", "alice@example.com")
+			.await
+			.expect("Failed to insert first user");
+		assert!(user1_id > 0);
+
+		// Create a UniqueValidator for username field
+		let pool = db.pool.clone();
+		let username_validator = UniqueValidator::new(
+			"username",
+			Box::new(move |value, exclude_id| {
+				let pool = pool.clone();
+				Box::pin(async move {
+					let query = if let Some(id) = exclude_id {
+						sqlx::query_as::<_, (i64,)>(
+							"SELECT COUNT(*) FROM test_users WHERE username = $1 AND id != $2",
+						)
+						.bind(&value)
+						.bind(id)
+					} else {
+						sqlx::query_as::<_, (i64,)>(
+							"SELECT COUNT(*) FROM test_users WHERE username = $1",
+						)
+						.bind(&value)
+					};
+
+					let result = query.fetch_one(pool.as_ref()).await;
+					result.map(|(count,)| count > 0).unwrap_or(false)
+				})
+			}),
+		);
+
+		// Validate new username (should pass)
+		let result = username_validator.validate_async("bob", None).await;
+		assert!(result.is_ok());
+
+		// Validate existing username (should fail with NotUnique error)
+		let result = username_validator.validate_async("alice", None).await;
+		assert!(result.is_err());
+		let error = result.unwrap_err();
+		assert_eq!(
+			error.to_string(),
+			"Field 'username' must be unique. Value 'alice' already exists"
+		);
+
+		// Validate updating with same username (should pass when excluding current ID)
+		let result = username_validator
+			.validate_async("alice", Some(user1_id))
+			.await;
+		assert!(result.is_ok());
+
+		// Test actual database UNIQUE constraint violation
+		let insert_result = db.insert_user("alice", "different@example.com").await;
+		assert!(insert_result.is_err());
+
+		// Verify error message contains UNIQUE constraint violation
+		let error_message = insert_result.unwrap_err().to_string();
+		assert!(
+			error_message.contains("unique") || error_message.contains("duplicate"),
+			"Expected UNIQUE constraint error, got: {}",
+			error_message
+		);
+
+		// Cleanup
+		db.cleanup().await.expect("Failed to cleanup");
 	}
 }
 
@@ -277,15 +353,215 @@ mod relationship_validation_tests {
 			.await
 			.expect("Failed to insert user");
 
-		// TODO: Implement foreign key existence validation
-		// Current: Only validates user_id is positive (> 0)
-		// Required: Add validator that checks if user_id actually exists in database
-		// before allowing it as foreign key reference (e.g., ExistsValidator)
+		// Simple positivity check (legacy validation)
 		assert!(user_id > 0);
-
-		// Simulate validation: ensure user_id is positive
 		let id_validator = MinValueValidator::new(1);
 		assert!(id_validator.validate(&user_id).is_ok());
+
+		// Cleanup
+		db.cleanup().await.expect("Failed to cleanup");
+	}
+
+	#[tokio::test]
+	async fn test_foreign_key_existence_validation() {
+		use reinhardt_validators::ExistsValidator;
+
+		let db = TestDatabase::new()
+			.await
+			.expect("Failed to connect to database");
+		db.setup_tables().await.expect("Failed to setup tables");
+
+		// Insert user and product for valid FK references
+		let user_id = db
+			.insert_user("alice", "alice@example.com")
+			.await
+			.expect("Failed to insert user");
+		let product_id = db
+			.insert_product("Laptop", "PROD001", 999.99, 10)
+			.await
+			.expect("Failed to insert product");
+
+		// Create ExistsValidator for user_id
+		let user_pool = db.pool.clone();
+		let user_validator = ExistsValidator::new(
+			"user_id",
+			"users",
+			Box::new(move |value| {
+				let pool = user_pool.clone();
+				Box::pin(async move {
+					if let Ok(id) = value.parse::<i32>() {
+						let result = sqlx::query_as::<_, (i64,)>(
+							"SELECT COUNT(*) FROM test_users WHERE id = $1",
+						)
+						.bind(id)
+						.fetch_one(pool.as_ref())
+						.await;
+						result.map(|(count,)| count > 0).unwrap_or(false)
+					} else {
+						false
+					}
+				})
+			}),
+		);
+
+		// Create ExistsValidator for product_id
+		let product_pool = db.pool.clone();
+		let product_validator = ExistsValidator::new(
+			"product_id",
+			"products",
+			Box::new(move |value| {
+				let pool = product_pool.clone();
+				Box::pin(async move {
+					if let Ok(id) = value.parse::<i32>() {
+						let result = sqlx::query_as::<_, (i64,)>(
+							"SELECT COUNT(*) FROM test_products WHERE id = $1",
+						)
+						.bind(id)
+						.fetch_one(pool.as_ref())
+						.await;
+						result.map(|(count,)| count > 0).unwrap_or(false)
+					} else {
+						false
+					}
+				})
+			}),
+		);
+
+		// Validate existing user_id (should pass)
+		let result = user_validator
+			.validate_async(user_id.to_string())
+			.await;
+		assert!(result.is_ok());
+
+		// Validate non-existing user_id (should fail)
+		let result = user_validator.validate_async("99999").await;
+		assert!(result.is_err());
+		let error = result.unwrap_err();
+		assert_eq!(
+			error.to_string(),
+			"Foreign key reference not found: user_id with value 99999 does not exist in users"
+		);
+
+		// Validate existing product_id (should pass)
+		let result = product_validator
+			.validate_async(product_id.to_string())
+			.await;
+		assert!(result.is_ok());
+
+		// Validate non-existing product_id (should fail)
+		let result = product_validator.validate_async("88888").await;
+		assert!(result.is_err());
+		let error = result.unwrap_err();
+		assert!(error.to_string().contains("Foreign key reference not found"));
+		assert!(error.to_string().contains("product_id"));
+		assert!(error.to_string().contains("88888"));
+
+		// Test actual database FK constraint violation (insert with invalid FK)
+		let insert_result = db.insert_order(99999, product_id, 1).await;
+		assert!(insert_result.is_err());
+
+		// Verify error message indicates FK constraint violation
+		let error_message = insert_result.unwrap_err().to_string();
+		assert!(
+			error_message.contains("foreign key") || error_message.contains("violates"),
+			"Expected FK constraint error, got: {}",
+			error_message
+		);
+
+		// Cleanup
+		db.cleanup().await.expect("Failed to cleanup");
+	}
+
+	#[tokio::test]
+	async fn test_foreign_key_update_violation() {
+		let db = TestDatabase::new()
+			.await
+			.expect("Failed to connect to database");
+		db.setup_tables().await.expect("Failed to setup tables");
+
+		// Insert user and product
+		let user_id = db
+			.insert_user("bob", "bob@example.com")
+			.await
+			.expect("Failed to insert user");
+		let product_id = db
+			.insert_product("Mouse", "PROD002", 29.99, 50)
+			.await
+			.expect("Failed to insert product");
+
+		// Insert valid order
+		let order_id = db
+			.insert_order(user_id, product_id, 2)
+			.await
+			.expect("Failed to insert order");
+		assert!(order_id > 0);
+
+		// Attempt to update order with non-existent user_id (should fail)
+		let update_result = sqlx::query(
+			"UPDATE test_orders SET user_id = $1 WHERE id = $2",
+		)
+		.bind(99999)
+		.bind(order_id)
+		.execute(db.pool.as_ref())
+		.await;
+
+		assert!(update_result.is_err());
+		let error_message = update_result.unwrap_err().to_string();
+		assert!(
+			error_message.contains("foreign key") || error_message.contains("violates"),
+			"Expected FK constraint error on update, got: {}",
+			error_message
+		);
+
+		// Cleanup
+		db.cleanup().await.expect("Failed to cleanup");
+	}
+
+	#[tokio::test]
+	async fn test_foreign_key_cascade_delete() {
+		let db = TestDatabase::new()
+			.await
+			.expect("Failed to connect to database");
+		db.setup_tables().await.expect("Failed to setup tables");
+
+		// Insert user and product
+		let user_id = db
+			.insert_user("charlie", "charlie@example.com")
+			.await
+			.expect("Failed to insert user");
+		let product_id = db
+			.insert_product("Keyboard", "PROD003", 79.99, 30)
+			.await
+			.expect("Failed to insert product");
+
+		// Insert order referencing both
+		let order_id = db
+			.insert_order(user_id, product_id, 1)
+			.await
+			.expect("Failed to insert order");
+		assert!(order_id > 0);
+
+		// Attempt to delete user (should fail because of FK constraint)
+		// Note: test_orders table does NOT have ON DELETE CASCADE
+		let delete_result =
+			sqlx::query("DELETE FROM test_users WHERE id = $1")
+				.bind(user_id)
+				.execute(db.pool.as_ref())
+				.await;
+
+		assert!(delete_result.is_err());
+		let error_message = delete_result.unwrap_err().to_string();
+		assert!(
+			error_message.contains("foreign key")
+				|| error_message.contains("violates")
+				|| error_message.contains("still referenced"),
+			"Expected FK constraint error on delete, got: {}",
+			error_message
+		);
+
+		// Verify user still exists (delete was prevented)
+		let user_exists = db.user_exists(user_id).await.expect("Failed to check user");
+		assert!(user_exists);
 
 		// Cleanup
 		db.cleanup().await.expect("Failed to cleanup");

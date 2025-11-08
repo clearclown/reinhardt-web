@@ -175,6 +175,65 @@ impl TestDatabase {
 			.await?;
 		Ok(count.0 > 0)
 	}
+
+	/// Insert test product
+	pub async fn insert_product(
+		&self,
+		name: &str,
+		code: &str,
+		price: f64,
+		stock: i32,
+	) -> Result<i32, Box<dyn std::error::Error>> {
+		let row: (i32,) = sqlx::query_as(
+			"INSERT INTO test_products (name, code, price, stock) VALUES ($1, $2, $3, $4) RETURNING id",
+		)
+		.bind(name)
+		.bind(code)
+		.bind(price)
+		.bind(stock)
+		.fetch_one(self.pool.as_ref())
+		.await?;
+		Ok(row.0)
+	}
+
+	/// Check if user exists by ID
+	pub async fn user_exists(&self, user_id: i32) -> Result<bool, Box<dyn std::error::Error>> {
+		let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM test_users WHERE id = $1")
+			.bind(user_id)
+			.fetch_one(self.pool.as_ref())
+			.await?;
+		Ok(count.0 > 0)
+	}
+
+	/// Check if product exists by ID
+	pub async fn product_exists(
+		&self,
+		product_id: i32,
+	) -> Result<bool, Box<dyn std::error::Error>> {
+		let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM test_products WHERE id = $1")
+			.bind(product_id)
+			.fetch_one(self.pool.as_ref())
+			.await?;
+		Ok(count.0 > 0)
+	}
+
+	/// Insert test order (with FK constraints)
+	pub async fn insert_order(
+		&self,
+		user_id: i32,
+		product_id: i32,
+		quantity: i32,
+	) -> Result<i32, Box<dyn std::error::Error>> {
+		let row: (i32,) = sqlx::query_as(
+			"INSERT INTO test_orders (user_id, product_id, quantity) VALUES ($1, $2, $3) RETURNING id",
+		)
+		.bind(user_id)
+		.bind(product_id)
+		.bind(quantity)
+		.fetch_one(self.pool.as_ref())
+		.await?;
+		Ok(row.0)
+	}
 }
 
 /// Test user model for validation tests
