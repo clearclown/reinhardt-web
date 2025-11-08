@@ -3,12 +3,17 @@
 //! These tests verify the integration between reinhardt-websockets and other crates.
 //! Based on FastAPI WebSocket test patterns.
 
-use reinhardt_test::fixtures::websocket_manager;
 use reinhardt_websockets::{Message, RoomManager, WebSocketConnection};
 use rstest::*;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, timeout};
+
+/// Fixture: Create a new WebSocket room manager for testing
+#[fixture]
+fn websocket_manager() -> Arc<RoomManager> {
+	Arc::new(RoomManager::new())
+}
 
 /// Integration test: WebSocket with room manager and multiple connections
 #[rstest]

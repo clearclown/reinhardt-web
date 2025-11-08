@@ -1,7 +1,6 @@
 //! Integration tests for message API
 //!
 //! These tests verify the basic message API functionality using reinhardt-messages.
-//! More complex integration tests requiring full HTTP/middleware stack are kept as #[ignore].
 
 #[cfg(test)]
 mod tests {
@@ -137,7 +136,9 @@ mod tests {
 			fn add_message(&self, message: Message) -> Result<(), String> {
 				match &self.request {
 					Some(_) => {
-						// In a real implementation, this would add to the request's message storage
+						// TODO: Implement message storage integration for test wrapper
+						// Current: Returns Ok(()) without adding to actual storage
+						// Required: Add message to request's message_storage when RequestWrapper is integrated with MessageMiddleware
 						Ok(())
 					}
 					None => Err("No request available".to_string()),
