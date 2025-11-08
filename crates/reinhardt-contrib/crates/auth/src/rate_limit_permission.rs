@@ -273,7 +273,7 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 
 	/// Extract user ID from context
 	fn extract_user_id(&self, context: &PermissionContext) -> Option<String> {
-		context.user.map(|user| user.id())
+		context.user.as_ref().map(|user| user.id())
 	}
 
 	/// Generate rate limit key based on strategy

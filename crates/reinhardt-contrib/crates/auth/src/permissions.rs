@@ -4,12 +4,19 @@ use reinhardt_types::Request;
 use crate::user::User;
 
 /// Context for permission checks
+///
+/// # Lifetime Management
+///
+/// The `user` field uses `Box<dyn User>` instead of `&'a dyn User` to avoid
+/// lifetime conflicts when loading user objects from the database.
+/// Database queries return owned types, which cannot be easily converted
+/// to trait object references with the required lifetime.
 pub struct PermissionContext<'a> {
 	pub request: &'a Request,
 	pub is_authenticated: bool,
 	pub is_admin: bool,
 	pub is_active: bool,
-	pub user: Option<&'a dyn User>,
+	pub user: Option<Box<dyn User>>,
 }
 
 /// Permission trait for authorization checks

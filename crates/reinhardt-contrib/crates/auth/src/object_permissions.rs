@@ -332,10 +332,10 @@ impl<T: ObjectPermissionChecker + Send + Sync> Permission for ObjectPermission<T
 			return false;
 		}
 
-		if let Some(user) = context.user {
+		if let Some(ref user) = context.user {
 			return self
 				.checker
-				.has_object_permission(user, &self.object_id, &self.permission)
+				.has_object_permission(user.as_ref(), &self.object_id, &self.permission)
 				.await;
 		}
 
