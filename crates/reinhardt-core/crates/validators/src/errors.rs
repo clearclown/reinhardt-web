@@ -88,6 +88,15 @@ pub enum ValidationError {
 		allowed_mime_types: String,
 	},
 
+	#[error(
+		"Foreign key reference not found: {field} with value {value} does not exist in {table}"
+	)]
+	ForeignKeyNotFound {
+		field: String,
+		value: String,
+		table: String,
+	},
+
 	#[error("Custom validation error: {0}")]
 	Custom(String),
 }
