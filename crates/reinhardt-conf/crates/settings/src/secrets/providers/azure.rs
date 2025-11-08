@@ -84,8 +84,9 @@ impl SecretProvider for AzureKeyVaultProvider {
 
 		match result {
 			Ok(response) => {
-				let secret = response.into_body()
-					.map_err(|e| SecretError::Provider(format!("Failed to parse secret response: {}", e)))?;
+				let secret = response.into_body().map_err(|e| {
+					SecretError::Provider(format!("Failed to parse secret response: {}", e))
+				})?;
 				Ok(SecretString::new(secret.value.unwrap_or_default()))
 			}
 			Err(err) => {
@@ -120,33 +121,37 @@ impl SecretProvider for AzureKeyVaultProvider {
 
 		match result {
 			Ok(response) => {
-				let secret = response.into_body()
-					.map_err(|e| SecretError::Provider(format!("Failed to parse secret response: {}", e)))?;
+				let secret = response.into_body().map_err(|e| {
+					SecretError::Provider(format!("Failed to parse secret response: {}", e))
+				})?;
 
-				let created_at = secret.attributes
+				let created_at = secret
+					.attributes
 					.as_ref()
 					.and_then(|attr| attr.created)
-					.map(|ts| {
+					.and_then(|ts| {
 						let unix_timestamp = ts.unix_timestamp();
 						chrono::DateTime::from_timestamp(unix_timestamp, 0)
-					})
-					.flatten();
+					});
 
-				let updated_at = secret.attributes
+				let updated_at = secret
+					.attributes
 					.as_ref()
 					.and_then(|attr| attr.updated)
-					.map(|ts| {
+					.and_then(|ts| {
 						let unix_timestamp = ts.unix_timestamp();
 						chrono::DateTime::from_timestamp(unix_timestamp, 0)
-					})
-					.flatten();
+					});
 
 				let metadata = SecretMetadata {
 					created_at,
 					updated_at,
 				};
 
-				Ok((SecretString::new(secret.value.unwrap_or_default()), metadata))
+				Ok((
+					SecretString::new(secret.value.unwrap_or_default()),
+					metadata,
+				))
 			}
 			Err(err) => {
 				if err.to_string().contains("404") || err.to_string().contains("SecretNotFound") {
@@ -184,9 +189,13 @@ impl SecretProvider for AzureKeyVaultProvider {
 		};
 
 		self.client
-			.set_secret(name, params.try_into().map_err(|e| {
-				SecretError::Provider(format!("Failed to create secret parameters: {}", e))
-			})?, None)
+			.set_secret(
+				name,
+				params.try_into().map_err(|e| {
+					SecretError::Provider(format!("Failed to create secret parameters: {}", e))
+				})?,
+				None,
+			)
 			.await
 			.map_err(|e| SecretError::Provider(format!("Failed to set secret: {}", e)))?;
 
@@ -223,13 +232,18 @@ impl SecretProvider for AzureKeyVaultProvider {
 		use futures::stream::TryStreamExt;
 
 		let mut secrets = Vec::new();
-		let pager = self.client.list_secret_properties(None)
-			.map_err(|e| SecretError::Provider(format!("Failed to create secret list pager: {}", e)))?;
+		let pager = self.client.list_secret_properties(None).map_err(|e| {
+			SecretError::Provider(format!("Failed to create secret list pager: {}", e))
+		})?;
 		let mut stream = pager.into_stream();
 
-		while let Some(secret_props) = stream.try_next().await
-			.map_err(|e| SecretError::Provider(format!("Failed to list secrets: {}", e)))? {
-			let resource_id = secret_props.resource_id()
+		while let Some(secret_props) = stream
+			.try_next()
+			.await
+			.map_err(|e| SecretError::Provider(format!("Failed to list secrets: {}", e)))?
+		{
+			let resource_id = secret_props
+				.resource_id()
 				.map_err(|e| SecretError::Provider(format!("Failed to get resource ID: {}", e)))?;
 			secrets.push(resource_id.name);
 		}
