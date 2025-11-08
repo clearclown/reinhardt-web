@@ -3,6 +3,6 @@
 use reinhardt_macros::path;
 
 fn main() {
-    let pattern = path!("polls/{id}/");
-    assert_eq!(pattern, "polls/{id}/");
+	let pattern = path!("polls/{id}/");
+	assert_eq!(pattern, "polls/{id}/");
 }

@@ -3,5 +3,5 @@
 use reinhardt_macros::path;
 
 fn main() {
-    let pattern = path!("polls/{1id}/");
+	let pattern = path!("polls/{1id}/");
 }
