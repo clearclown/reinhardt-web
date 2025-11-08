@@ -301,14 +301,125 @@ async fn test_session_fixation_prevention() {
 	);
 }
 
-#[test]
-fn test_session_timeout() {
-	// TODO: Implement session timeout validation based on last activity
-	// Current: Only verifies max_age configuration value is positive
-	// Required: Add last_activity timestamp tracking and timeout checking logic
-	// Expected behavior: Session should be invalidated if (current_time - last_activity) > max_age
-	let max_age = 3600; // 1 hour
-	assert!(max_age > 0);
+#[tokio::test]
+async fn test_session_timeout_valid_before_expiry() {
+	// Test: Session should be valid before timeout
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::{InMemorySessionBackend, SessionBackend};
+
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend);
+
+	// Set session data
+	session.set("user_id", 42_i32).unwrap();
+
+	// Set timeout to 10 seconds
+	session.set_timeout(10);
+
+	// Session should be valid immediately
+	assert!(!session.is_timed_out());
+	assert!(session.validate_timeout().is_ok());
+}
+
+#[tokio::test]
+async fn test_session_timeout_invalid_after_expiry() {
+	// Test: Session should be invalid after timeout
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::InMemorySessionBackend;
+	use std::time::Duration;
+
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend);
+
+	// Set session data
+	session.set("user_id", 42_i32).unwrap();
+
+	// Set very short timeout (1 second)
+	session.set_timeout(1);
+
+	// Wait for session to expire
+	tokio::time::sleep(Duration::from_secs(2)).await;
+
+	// Session should be timed out
+	assert!(session.is_timed_out());
+	assert!(session.validate_timeout().is_err());
+}
+
+#[tokio::test]
+async fn test_session_last_activity_updates() {
+	// Test: Session last_activity timestamp updates on each access
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::InMemorySessionBackend;
+	use std::time::Duration;
+
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend);
+
+	// Set initial data
+	session.set("user_id", 42_i32).unwrap();
+
+	// Get initial last_activity
+	let first_activity = session.get_last_activity().unwrap();
+
+	// Wait a bit
+	tokio::time::sleep(Duration::from_millis(100)).await;
+
+	// Access session data (should update last_activity)
+	session.get::<i32>("user_id").unwrap();
+
+	// Get updated last_activity
+	let second_activity = session.get_last_activity().unwrap();
+
+	// last_activity should have been updated
+	assert!(second_activity > first_activity);
+}
+
+#[tokio::test]
+async fn test_session_update_activity_manually() {
+	// Test: Manual update_activity() extends session lifetime
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::InMemorySessionBackend;
+	use std::time::Duration;
+
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend);
+
+	// Set timeout to 1 second
+	session.set_timeout(1);
+
+	// Wait 500ms (half of timeout)
+	tokio::time::sleep(Duration::from_millis(500)).await;
+
+	// Update activity manually
+	session.update_activity();
+
+	// Wait another 750ms (total 1.25s from initial creation, but only 750ms from update)
+	tokio::time::sleep(Duration::from_millis(750)).await;
+
+	// Session should still be valid (last activity was 750ms ago, which is < 1s)
+	assert!(!session.is_timed_out());
+	assert!(session.validate_timeout().is_ok());
+}
+
+#[tokio::test]
+async fn test_session_timeout_configuration() {
+	// Test: Session timeout can be configured
+	use reinhardt_sessions::Session;
+	use reinhardt_sessions::backends::InMemorySessionBackend;
+
+	let backend = InMemorySessionBackend::new();
+	let mut session = Session::new(backend);
+
+	// Default timeout should be 1800 seconds (30 minutes)
+	assert_eq!(session.get_timeout(), 1800);
+
+	// Set custom timeout
+	session.set_timeout(3600); // 1 hour
+	assert_eq!(session.get_timeout(), 3600);
+
+	// Set very short timeout
+	session.set_timeout(60); // 1 minute
+	assert_eq!(session.get_timeout(), 60);
 }
 
 #[test]
