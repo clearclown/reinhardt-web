@@ -108,11 +108,13 @@ mod tests {
 	fn test_request_is_none() {
 		// Test that operations handle None/missing request gracefully
 		use std::collections::HashMap;
+		use std::sync::{Arc, Mutex};
 
 		// Mock request wrapper that can be None
 		#[derive(Debug)]
 		struct RequestWrapper {
 			request: Option<MockRequest>,
+			message_storage: Arc<Mutex<MemoryStorage>>,
 		}
 
 		#[derive(Debug)]
@@ -126,23 +128,32 @@ mod tests {
 					request: Some(MockRequest {
 						headers: HashMap::new(),
 					}),
+					message_storage: Arc::new(Mutex::new(MemoryStorage::new())),
 				}
 			}
 
 			fn new_without_request() -> Self {
-				Self { request: None }
+				Self {
+					request: None,
+					message_storage: Arc::new(Mutex::new(MemoryStorage::new())),
+				}
 			}
 
 			fn add_message(&self, message: Message) -> Result<(), String> {
 				match &self.request {
 					Some(_) => {
-						// TODO: Implement message storage integration for test wrapper
-						// Current: Returns Ok(()) without adding to actual storage
-						// Required: Add message to request's message_storage when RequestWrapper is integrated with MessageMiddleware
+						// Add message to the actual storage
+						let mut storage = self.message_storage.lock().unwrap();
+						storage.add(message);
 						Ok(())
 					}
 					None => Err("No request available".to_string()),
 				}
+			}
+
+			fn get_messages(&self) -> Vec<Message> {
+				let storage = self.message_storage.lock().unwrap();
+				storage.peek()
 			}
 		}
 
@@ -151,11 +162,30 @@ mod tests {
 		let result = wrapper_with_request.add_message(Message::new(Level::Info, "Test message"));
 		assert!(result.is_ok());
 
+		// Verify the message was actually stored
+		let messages = wrapper_with_request.get_messages();
+		assert_eq!(messages.len(), 1);
+		assert_eq!(messages[0].text, "Test message");
+		assert_eq!(messages[0].level, Level::Info);
+
+		// Add another message and verify both are stored
+		let result2 = wrapper_with_request.add_message(Message::new(Level::Warning, "Second message"));
+		assert!(result2.is_ok());
+
+		let all_messages = wrapper_with_request.get_messages();
+		assert_eq!(all_messages.len(), 2);
+		assert_eq!(all_messages[1].text, "Second message");
+		assert_eq!(all_messages[1].level, Level::Warning);
+
 		// Test with no request
 		let wrapper_without_request = RequestWrapper::new_without_request();
 		let result = wrapper_without_request.add_message(Message::new(Level::Info, "Test message"));
 		assert!(result.is_err());
 		assert_eq!(result.unwrap_err(), "No request available");
+
+		// Verify no messages were stored when request is None
+		let no_messages = wrapper_without_request.get_messages();
+		assert_eq!(no_messages.len(), 0);
 	}
 
 	#[test]

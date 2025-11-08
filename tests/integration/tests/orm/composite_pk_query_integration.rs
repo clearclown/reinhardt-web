@@ -3,26 +3,26 @@
 //! Tests the `get_composite()` method implementation that executes
 //! database queries for records with composite primary keys.
 //!
-//! # Known Issues
+//! # Connection Pool Configuration
 //!
-//! **Connection Pool Exhaustion (TODO)**
+//! **Solution Implemented (2025-01-08)**
 //!
-//! Tests are experiencing non-deterministic failures due to connection pool timeout.
+//! The connection pool exhaustion issue has been resolved with configurable pool size support.
 //!
-//! - **Root Cause**: Global PostgreSQL container + global `reinhardt_orm::manager`
-//!   with limited default pool size (likely 1-5 connections)
-//! - **Symptoms**: `Pool timed out` errors during `CREATE TABLE IF NOT EXISTS`
-//! - **Attempted Solutions**:
-//!   - ✗ Per-test delays (100ms)
-//!   - ✗ TRUNCATE instead of DROP/CREATE
-//!   - ✗ Connection retry logic (10 retries, 500ms intervals)
-//! - **Framework-Level Solution Needed**:
-//!   - Add configurable pool size parameter to `init_database()`
-//!   - Or provide pool size configuration via environment variable
-//! - **Alternative**: Revert to per-test PostgreSQL containers (slower but reliable)
+//! - **Framework Changes**:
+//!   - Added `connect_with_pool_size()` to `DatabaseConnection`
+//!   - Added `init_database_with_pool_size()` and `reinitialize_database_with_pool_size()` to `manager`
+//!   - Default pool size increased from 10 to 20 connections
+//!   - `acquire_timeout` increased from 3 seconds to 10 seconds
 //!
-//! Currently, tests may pass or fail depending on execution timing.
-//! This is a framework design limitation, not a test implementation issue.
+//! - **Configuration Options**:
+//!   1. Explicit pool size: `init_database_with_pool_size(url, Some(50)).await`
+//!   2. Environment variable: `DATABASE_POOL_MAX_CONNECTIONS=50`
+//!   3. Default: 20 connections (increased from 10)
+//!
+//! - **Priority**: explicit argument > environment variable > default
+//!
+//! This eliminates non-deterministic test failures in concurrent test execution.
 
 use reinhardt_macros::Model;
 use reinhardt_orm::{QuerySet, composite_pk::PkValue, manager::init_database};
