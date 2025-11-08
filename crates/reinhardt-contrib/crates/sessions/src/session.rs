@@ -44,6 +44,10 @@ pub struct Session<B: SessionBackend> {
 	data: HashMap<String, Value>,
 	is_modified: bool,
 	is_accessed: bool,
+	/// Last activity timestamp (UTC)
+	last_activity: Option<chrono::DateTime<chrono::Utc>>,
+	/// Session timeout in seconds (default: 1800 = 30 minutes)
+	timeout: u64,
 }
 
 impl<B: SessionBackend> Session<B> {
@@ -65,6 +69,8 @@ impl<B: SessionBackend> Session<B> {
 			data: HashMap::new(),
 			is_modified: false,
 			is_accessed: false,
+			last_activity: Some(chrono::Utc::now()),
+			timeout: 1800, // 30 minutes (Django default)
 		}
 	}
 
@@ -97,6 +103,8 @@ impl<B: SessionBackend> Session<B> {
 			data,
 			is_modified: false,
 			is_accessed: true,
+			last_activity: Some(chrono::Utc::now()),
+			timeout: 1800, // 30 minutes (Django default)
 		})
 	}
 
@@ -123,6 +131,7 @@ impl<B: SessionBackend> Session<B> {
 		T: for<'de> Deserialize<'de>,
 	{
 		self.is_accessed = true;
+		self.last_activity = Some(chrono::Utc::now());
 		self.data
 			.get(key)
 			.map(|v| serde_json::from_value(v.clone()))
@@ -154,6 +163,7 @@ impl<B: SessionBackend> Session<B> {
 		self.data.insert(key.to_string(), json_value);
 		self.is_modified = true;
 		self.is_accessed = true;
+		self.last_activity = Some(chrono::Utc::now());
 		Ok(())
 	}
 
@@ -605,6 +615,140 @@ impl<B: SessionBackend> Session<B> {
 	/// ```
 	pub fn mark_unmodified(&mut self) {
 		self.is_modified = false;
+	}
+
+	/// Set session timeout in seconds
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// let backend = InMemorySessionBackend::new();
+	/// let mut session = Session::new(backend);
+	///
+	/// // Set timeout to 1 hour (3600 seconds)
+	/// session.set_timeout(3600);
+	/// ```
+	pub fn set_timeout(&mut self, timeout: u64) {
+		self.timeout = timeout;
+	}
+
+	/// Get session timeout in seconds
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// let backend = InMemorySessionBackend::new();
+	/// let session = Session::new(backend);
+	///
+	/// // Default timeout is 1800 seconds (30 minutes)
+	/// assert_eq!(session.get_timeout(), 1800);
+	/// ```
+	pub fn get_timeout(&self) -> u64 {
+		self.timeout
+	}
+
+	/// Update last activity timestamp
+	///
+	/// This should be called on each request to update the session's last activity time.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// let backend = InMemorySessionBackend::new();
+	/// let mut session = Session::new(backend);
+	///
+	/// // Update activity timestamp
+	/// session.update_activity();
+	/// ```
+	pub fn update_activity(&mut self) {
+		self.last_activity = Some(chrono::Utc::now());
+		self.is_modified = true;
+	}
+
+	/// Get last activity timestamp
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// let backend = InMemorySessionBackend::new();
+	/// let session = Session::new(backend);
+	///
+	/// // Last activity is set on creation
+	/// assert!(session.get_last_activity().is_some());
+	/// ```
+	pub fn get_last_activity(&self) -> Option<chrono::DateTime<chrono::Utc>> {
+		self.last_activity
+	}
+
+	/// Check if session has timed out
+	///
+	/// Returns `true` if the session has exceeded its timeout period based on last activity.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// let backend = InMemorySessionBackend::new();
+	/// let mut session = Session::new(backend);
+	///
+	/// // New session should not be timed out
+	/// assert!(!session.is_timed_out());
+	///
+	/// // Set very short timeout
+	/// session.set_timeout(0);
+	/// // Still not timed out immediately (last_activity is now)
+	/// assert!(!session.is_timed_out());
+	/// ```
+	pub fn is_timed_out(&self) -> bool {
+		if let Some(last_activity) = self.last_activity {
+			let now = chrono::Utc::now();
+			let elapsed = now.signed_duration_since(last_activity);
+			elapsed.num_seconds() as u64 > self.timeout
+		} else {
+			// No last_activity means session never used, not timed out
+			false
+		}
+	}
+
+	/// Validate session timeout
+	///
+	/// Returns an error if the session has timed out.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_sessions::Session;
+	/// use reinhardt_sessions::backends::InMemorySessionBackend;
+	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let backend = InMemorySessionBackend::new();
+	/// let mut session = Session::new(backend);
+	///
+	/// // Validate timeout (should succeed for new session)
+	/// session.validate_timeout()?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub fn validate_timeout(&self) -> Result<(), crate::backends::SessionError> {
+		if self.is_timed_out() {
+			Err(crate::backends::SessionError::SessionExpired)
+		} else {
+			Ok(())
+		}
 	}
 }
 

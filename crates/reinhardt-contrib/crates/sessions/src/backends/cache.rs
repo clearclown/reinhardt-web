@@ -42,6 +42,8 @@ pub enum SessionError {
 	CacheError(String),
 	#[error("Serialization error: {0}")]
 	SerializationError(String),
+	#[error("Session has expired due to inactivity")]
+	SessionExpired,
 }
 
 /// Session backend trait
