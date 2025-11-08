@@ -59,10 +59,15 @@ pub fn derive_query_fields_impl(input: DeriveInput) -> TokenStream {
 }
 
 /// Map Rust types to field lookup types
+///
+/// Handles sophisticated type mapping including:
+/// - Primitive types (String, i32, i64, f32, f64, bool)
+/// - DateTime types (DateTime, Date)
+/// - Generic types (Option<T>, Vec<T>, HashMap<K,V>, HashSet<T>)
+/// - ORM relationship types (ForeignKey, OneToOneField, ManyToManyField)
+/// - Complex nested structures (Option<Vec<T>>, Result<T, E>)
+/// - Custom types with full path qualification
 fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
-	// TODO: Implement sophisticated type mapping for query field lookups
-	// Current implementation uses basic pattern matching for common types
-	// Required: Add support for custom types, generic types, and complex nested structures
 	match ty {
 		Type::Path(type_path) => {
 			let last_segment = type_path.path.segments.last().unwrap();
@@ -70,32 +75,239 @@ fn map_type_to_lookup_type(ty: &Type) -> TokenStream {
 			let type_name = type_ident.to_string();
 
 			match type_name.as_str() {
-				"String" => quote! { String },
-				"i32" => quote! { i32 },
-				"i64" => quote! { i64 },
+				// Primitive types
+				"String" | "str" => quote! { String },
+				"i8" | "i16" | "i32" => quote! { i32 },
+				"i64" | "i128" | "isize" => quote! { i64 },
+				"u8" | "u16" | "u32" => quote! { i32 },
+				"u64" | "u128" | "usize" => quote! { i64 },
 				"f32" => quote! { f32 },
 				"f64" => quote! { f64 },
 				"bool" => quote! { bool },
-				"DateTime" => quote! { ::reinhardt_orm::query_fields::DateTime },
-				"Date" => quote! { ::reinhardt_orm::query_fields::Date },
-				"Option" => {
-					// Handle Option<T>
-					if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
-						&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
-					{
-						let inner_lookup = map_type_to_lookup_type(inner_type);
-						return quote! { Option<#inner_lookup> };
+
+				// DateTime types
+				"DateTime" => {
+					// Check if it's chrono::DateTime or reinhardt DateTime
+					if has_chrono_path(type_path) {
+						quote! { ::reinhardt_orm::query_fields::DateTime }
+					} else {
+						quote! { ::reinhardt_orm::query_fields::DateTime }
 					}
-					quote! { #ty }
 				}
+				"Date" => quote! { ::reinhardt_orm::query_fields::Date },
+				"NaiveDateTime" => quote! { ::reinhardt_orm::query_fields::DateTime },
+				"NaiveDate" => quote! { ::reinhardt_orm::query_fields::Date },
+
+				// Generic collection types
+				"Option" => handle_option_type(last_segment),
+				"Vec" => handle_vec_type(last_segment),
+				"HashMap" => handle_hashmap_type(last_segment),
+				"HashSet" => handle_hashset_type(last_segment),
+				"BTreeMap" => handle_btreemap_type(last_segment),
+				"BTreeSet" => handle_btreeset_type(last_segment),
+
+				// Result type
+				"Result" => handle_result_type(last_segment),
+
+				// Box, Arc, Rc
+				"Box" | "Arc" | "Rc" => handle_pointer_type(last_segment),
+
+				// ORM relationship types
+				"ForeignKey" => handle_foreign_key_type(last_segment),
+				"OneToOneField" => handle_one_to_one_type(last_segment),
+				"ManyToManyField" => handle_many_to_many_type(last_segment),
+
+				// Custom types - use full path
 				_ => {
-					// For unknown types, use as-is
-					quote! { #ty }
+					// Check if this is a qualified path (e.g., chrono::DateTime)
+					if type_path.path.segments.len() > 1 {
+						// Use the full path for qualified types
+						let full_path = &type_path.path;
+						quote! { #full_path }
+					} else {
+						// For unqualified custom types, use as-is
+						quote! { #type_ident }
+					}
 				}
+			}
+		}
+		Type::Reference(type_ref) => {
+			// Handle reference types by extracting the inner type
+			map_type_to_lookup_type(&type_ref.elem)
+		}
+		Type::Array(type_array) => {
+			// Handle array types: [T; N]
+			let elem_type = map_type_to_lookup_type(&type_array.elem);
+			quote! { Vec<#elem_type> }
+		}
+		Type::Slice(type_slice) => {
+			// Handle slice types: &[T]
+			let elem_type = map_type_to_lookup_type(&type_slice.elem);
+			quote! { Vec<#elem_type> }
+		}
+		Type::Tuple(type_tuple) => {
+			// Handle tuple types
+			if type_tuple.elems.is_empty() {
+				// Unit type ()
+				quote! { () }
+			} else {
+				// For non-empty tuples, use as-is
+				quote! { #ty }
 			}
 		}
 		_ => quote! { #ty },
 	}
+}
+
+/// Check if a type path includes "chrono" in its segments
+fn has_chrono_path(type_path: &syn::TypePath) -> bool {
+	type_path
+		.path
+		.segments
+		.iter()
+		.any(|seg| seg.ident == "chrono")
+}
+
+/// Handle Option<T> type mapping
+fn handle_option_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+	{
+		let inner_lookup = map_type_to_lookup_type(inner_type);
+		return quote! { Option<#inner_lookup> };
+	}
+	quote! { Option<()> }
+}
+
+/// Handle Vec<T> type mapping
+fn handle_vec_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+	{
+		let inner_lookup = map_type_to_lookup_type(inner_type);
+		return quote! { Vec<#inner_lookup> };
+	}
+	quote! { Vec<()> }
+}
+
+/// Handle HashMap<K, V> type mapping
+fn handle_hashmap_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+		let mut args_iter = args.args.iter();
+		if let (
+			Some(syn::GenericArgument::Type(key_type)),
+			Some(syn::GenericArgument::Type(value_type)),
+		) = (args_iter.next(), args_iter.next())
+		{
+			let key_lookup = map_type_to_lookup_type(key_type);
+			let value_lookup = map_type_to_lookup_type(value_type);
+			return quote! { ::std::collections::HashMap<#key_lookup, #value_lookup> };
+		}
+	}
+	quote! { ::std::collections::HashMap<(), ()> }
+}
+
+/// Handle HashSet<T> type mapping
+fn handle_hashset_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+	{
+		let inner_lookup = map_type_to_lookup_type(inner_type);
+		return quote! { ::std::collections::HashSet<#inner_lookup> };
+	}
+	quote! { ::std::collections::HashSet<()> }
+}
+
+/// Handle BTreeMap<K, V> type mapping
+fn handle_btreemap_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+		let mut args_iter = args.args.iter();
+		if let (
+			Some(syn::GenericArgument::Type(key_type)),
+			Some(syn::GenericArgument::Type(value_type)),
+		) = (args_iter.next(), args_iter.next())
+		{
+			let key_lookup = map_type_to_lookup_type(key_type);
+			let value_lookup = map_type_to_lookup_type(value_type);
+			return quote! { ::std::collections::BTreeMap<#key_lookup, #value_lookup> };
+		}
+	}
+	quote! { ::std::collections::BTreeMap<(), ()> }
+}
+
+/// Handle BTreeSet<T> type mapping
+fn handle_btreeset_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+	{
+		let inner_lookup = map_type_to_lookup_type(inner_type);
+		return quote! { ::std::collections::BTreeSet<#inner_lookup> };
+	}
+	quote! { ::std::collections::BTreeSet<()> }
+}
+
+/// Handle Result<T, E> type mapping
+fn handle_result_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments {
+		let mut args_iter = args.args.iter();
+		if let (
+			Some(syn::GenericArgument::Type(ok_type)),
+			Some(syn::GenericArgument::Type(err_type)),
+		) = (args_iter.next(), args_iter.next())
+		{
+			let ok_lookup = map_type_to_lookup_type(ok_type);
+			let err_lookup = map_type_to_lookup_type(err_type);
+			return quote! { Result<#ok_lookup, #err_lookup> };
+		}
+	}
+	quote! { Result<(), ()> }
+}
+
+/// Handle Box<T>, Arc<T>, Rc<T> type mapping
+fn handle_pointer_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+	{
+		// For pointer types, extract the inner type directly
+		return map_type_to_lookup_type(inner_type);
+	}
+	quote! { () }
+}
+
+/// Handle ForeignKey type mapping
+fn handle_foreign_key_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(related_model)) = args.args.first()
+	{
+		// Extract the related model type
+		let model_lookup = map_type_to_lookup_type(related_model);
+		return quote! { #model_lookup };
+	}
+	// If no generic arguments, use i64 (primary key type)
+	quote! { i64 }
+}
+
+/// Handle OneToOneField type mapping
+fn handle_one_to_one_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(related_model)) = args.args.first()
+	{
+		let model_lookup = map_type_to_lookup_type(related_model);
+		return quote! { #model_lookup };
+	}
+	quote! { i64 }
+}
+
+/// Handle ManyToManyField type mapping
+fn handle_many_to_many_type(segment: &syn::PathSegment) -> TokenStream {
+	if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(syn::GenericArgument::Type(related_model)) = args.args.first()
+	{
+		let model_lookup = map_type_to_lookup_type(related_model);
+		// ManyToMany returns a collection of the related model
+		return quote! { Vec<#model_lookup> };
+	}
+	quote! { Vec<i64> }
 }
 
 #[cfg(test)]
@@ -122,5 +334,280 @@ mod tests {
 		assert!(output_str.contains("pub fn email"));
 		assert!(output_str.contains("pub fn age"));
 		assert!(output_str.contains("pub fn created_at"));
+	}
+
+	#[test]
+	fn test_primitive_type_mapping() {
+		let ty: Type = parse_quote! { String };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "String");
+
+		let ty: Type = parse_quote! { i32 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		let ty: Type = parse_quote! { i64 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
+
+		let ty: Type = parse_quote! { f64 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "f64");
+
+		let ty: Type = parse_quote! { bool };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "bool");
+	}
+
+	#[test]
+	fn test_option_type_mapping() {
+		let ty: Type = parse_quote! { Option<String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Option < String >");
+
+		let ty: Type = parse_quote! { Option<i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Option < i64 >");
+
+		// Nested Option
+		let ty: Type = parse_quote! { Option<Option<String>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Option < Option < String > >");
+	}
+
+	#[test]
+	fn test_vec_type_mapping() {
+		let ty: Type = parse_quote! { Vec<String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < String >");
+
+		let ty: Type = parse_quote! { Vec<i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < i64 >");
+
+		// Complex nested type
+		let ty: Type = parse_quote! { Vec<Option<String>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < Option < String > >");
+	}
+
+	#[test]
+	fn test_hashmap_type_mapping() {
+		let ty: Type = parse_quote! { HashMap<String, i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: HashMap < String , i64 >"
+		);
+
+		let ty: Type = parse_quote! { HashMap<i64, Vec<String>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: HashMap < i64 , Vec < String > >"
+		);
+	}
+
+	#[test]
+	fn test_hashset_type_mapping() {
+		let ty: Type = parse_quote! { HashSet<String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: HashSet < String >"
+		);
+
+		let ty: Type = parse_quote! { HashSet<i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: HashSet < i64 >"
+		);
+	}
+
+	#[test]
+	fn test_btreemap_type_mapping() {
+		let ty: Type = parse_quote! { BTreeMap<String, i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: BTreeMap < String , i64 >"
+		);
+	}
+
+	#[test]
+	fn test_btreeset_type_mapping() {
+		let ty: Type = parse_quote! { BTreeSet<String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: std :: collections :: BTreeSet < String >"
+		);
+	}
+
+	#[test]
+	fn test_result_type_mapping() {
+		let ty: Type = parse_quote! { Result<String, i32> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Result < String , i32 >");
+
+		let ty: Type = parse_quote! { Result<Vec<String>, String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Result < Vec < String > , String >");
+	}
+
+	#[test]
+	fn test_pointer_type_mapping() {
+		let ty: Type = parse_quote! { Box<String> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "String");
+
+		let ty: Type = parse_quote! { Arc<i64> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
+
+		let ty: Type = parse_quote! { Rc<Vec<String>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < String >");
+	}
+
+	#[test]
+	fn test_datetime_type_mapping() {
+		let ty: Type = parse_quote! { DateTime };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: reinhardt_orm :: query_fields :: DateTime"
+		);
+
+		let ty: Type = parse_quote! { Date };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: reinhardt_orm :: query_fields :: Date"
+		);
+
+		let ty: Type = parse_quote! { chrono::DateTime<chrono::Utc> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			":: reinhardt_orm :: query_fields :: DateTime"
+		);
+	}
+
+	#[test]
+	fn test_reference_type_mapping() {
+		let ty: Type = parse_quote! { &str };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "String");
+
+		let ty: Type = parse_quote! { &String };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "String");
+
+		let ty: Type = parse_quote! { &i64 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
+	}
+
+	#[test]
+	fn test_array_type_mapping() {
+		let ty: Type = parse_quote! { [i32; 10] };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < i32 >");
+
+		let ty: Type = parse_quote! { [String; 5] };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < String >");
+	}
+
+	#[test]
+	fn test_slice_type_mapping() {
+		let ty: Type = parse_quote! { &[i32] };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < i32 >");
+
+		let ty: Type = parse_quote! { &[String] };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Vec < String >");
+	}
+
+	#[test]
+	fn test_complex_nested_types() {
+		// Option<Vec<HashMap<String, i64>>>
+		let ty: Type = parse_quote! { Option<Vec<HashMap<String, i64>>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			"Option < Vec < :: std :: collections :: HashMap < String , i64 > > >"
+		);
+
+		// Result<Option<String>, Vec<String>>
+		let ty: Type = parse_quote! { Result<Option<String>, Vec<String>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(
+			result.to_string(),
+			"Result < Option < String > , Vec < String > >"
+		);
+
+		// Arc<Option<Vec<String>>>
+		let ty: Type = parse_quote! { Arc<Option<Vec<String>>> };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "Option < Vec < String > >");
+	}
+
+	#[test]
+	fn test_custom_type_mapping() {
+		// Simple custom type
+		let ty: Type = parse_quote! { CustomType };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "CustomType");
+
+		// Qualified custom type
+		let ty: Type = parse_quote! { my_crate::CustomType };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "my_crate :: CustomType");
+
+		// Fully qualified custom type
+		let ty: Type = parse_quote! { crate::models::User };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "crate :: models :: User");
+	}
+
+	#[test]
+	fn test_integer_type_normalization() {
+		// Smaller integers map to i32
+		let ty: Type = parse_quote! { i8 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		let ty: Type = parse_quote! { i16 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		let ty: Type = parse_quote! { u8 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		let ty: Type = parse_quote! { u16 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		let ty: Type = parse_quote! { u32 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i32");
+
+		// Larger integers map to i64
+		let ty: Type = parse_quote! { i128 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
+
+		let ty: Type = parse_quote! { u64 };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
+
+		let ty: Type = parse_quote! { usize };
+		let result = map_type_to_lookup_type(&ty);
+		assert_eq!(result.to_string(), "i64");
 	}
 }
