@@ -8,7 +8,8 @@ async fn test_request_throttling_multiple_throttles() {
 	// Ensure all throttle classes see each request even when the request is already being throttled
 	// Using 3/sec and 6/min throttles
 	// NOTE: In this implementation, each throttle has its own backend, so they track independently
-	// In a real application, multiple throttles would be chained together in middleware
+	// NOTE: Production applications chain multiple throttles together in middleware
+	// Test uses independent throttles to verify each throttle's counting behavior in isolation
 
 	let throttle_3_sec = UserRateThrottle::new(3, 1); // 3 per second
 	let throttle_6_min = UserRateThrottle::new(6, 60); // 6 per minute
@@ -47,8 +48,9 @@ async fn test_request_throttling_multiple_throttles() {
 async fn test_throttle_rate_change_negative() {
 	// Test that changing rate during execution doesn't break existing limits
 	// NOTE: In this implementation, creating a new throttle creates a new backend
-	// So the counts don't carry over. In a real application, you would use
-	// shared backend to maintain state across rate changes.
+	// So the counts don't carry over.
+	// NOTE: Production applications use shared backend to maintain state across rate changes
+	// Test creates separate throttles to verify rate limit enforcement for each configuration
 
 	let user_id = "test_user";
 
@@ -137,8 +139,8 @@ async fn test_next_rate_remains_constant_if_followed() {
 	for i in 0..5 {
 		let allowed = throttle.allow_request(user_id).await.unwrap();
 
-		// In a real scenario with proper timing, all should be allowed
-		// Here we're testing the basic behavior
+		// NOTE: Test verifies basic throttle behavior without actual timing delays
+		// Production scenario with real 20-second intervals would allow all requests
 		if i < 3 {
 			assert!(allowed, "Request {} should be allowed", i);
 			let wait_time = throttle.wait_time(user_id).await.unwrap();

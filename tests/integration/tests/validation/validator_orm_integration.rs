@@ -245,8 +245,10 @@ mod constraint_validation_tests {
 
 	#[test]
 	fn test_unique_constraint_simulation() {
-		// In a real implementation, this would check database uniqueness
-		// Here we simulate with a simple in-memory check
+		// TODO: Implement database UNIQUE constraint validation
+		// Current: Uses in-memory Vec to simulate uniqueness checking
+		// Required: Add validator that queries database to check for existing values
+		// This should integrate with UniqueValidator from reinhardt-validators
 		let existing_codes = vec!["PROD001", "PROD002", "PROD003"];
 
 		let new_code = "PROD004";
@@ -275,8 +277,10 @@ mod relationship_validation_tests {
 			.await
 			.expect("Failed to insert user");
 
-		// In a real implementation, we would validate that user_id exists
-		// before creating an order with this user_id
+		// TODO: Implement foreign key existence validation
+		// Current: Only validates user_id is positive (> 0)
+		// Required: Add validator that checks if user_id actually exists in database
+		// before allowing it as foreign key reference (e.g., ExistsValidator)
 		assert!(user_id > 0);
 
 		// Simulate validation: ensure user_id is positive

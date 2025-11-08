@@ -86,6 +86,7 @@ impl MockAPIView {
 				"application/x-www-form-urlencoded".to_string(),
 				"multipart/form-data".to_string(),
 			],
+			serializer_fields: None,
 		};
 
 		let metadata_response = metadata.determine_metadata(request, &options).await?;
@@ -150,6 +151,7 @@ impl PermissionAPIView {
 			allowed_methods: filtered_methods.clone(),
 			renders: vec!["application/json".to_string()],
 			parses: vec!["application/json".to_string()],
+			serializer_fields: None,
 		};
 
 		let fields = HashMap::new();
@@ -203,6 +205,7 @@ impl VersionedAPIView {
 			allowed_methods: vec!["POST".to_string()],
 			renders: vec!["application/json".to_string()],
 			parses: vec!["application/json".to_string()],
+			serializer_fields: None,
 		};
 
 		let metadata_response = self
@@ -443,6 +446,7 @@ async fn test_read_only_primary_key_related_field() {
 			"application/x-www-form-urlencoded".to_string(),
 			"multipart/form-data".to_string(),
 		],
+		serializer_fields: None,
 	};
 
 	let metadata_response = metadata
