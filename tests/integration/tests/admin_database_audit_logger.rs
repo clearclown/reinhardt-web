@@ -59,12 +59,13 @@ async fn setup_test_db() -> (
             ip_address TEXT,
             user_agent TEXT
         )",
+		vec![],
 	)
 	.await
 	.expect("Failed to create audit_logs table");
 
 	// Create AdminDatabase and DatabaseAuditLogger
-	let admin_db = Arc::new(AdminDatabase::new(Arc::new(conn)));
+	let admin_db = Arc::new(AdminDatabase::new(conn));
 	let logger = DatabaseAuditLogger::new(admin_db, "audit_logs".to_string());
 
 	(postgres, logger)
