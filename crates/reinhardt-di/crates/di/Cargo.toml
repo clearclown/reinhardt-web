@@ -9,6 +9,8 @@ repository.workspace = true
 [dependencies]
 thiserror = { workspace = true }
 async-trait = { workspace = true }
+reinhardt-apps = { workspace = true }
+reinhardt-params = { workspace = true }
 
 [dev-dependencies]
 reinhardt-di = { workspace = true }
