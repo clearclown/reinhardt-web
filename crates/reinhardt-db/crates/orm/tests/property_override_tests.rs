@@ -128,11 +128,14 @@ fn test_override_expr() {
 	// Verify the expressions are different
 	assert_ne!(base_expr, override_expr);
 
-	// TODO: Implement HybridProperty.with_expression() method for SQL expression override
-	// Current: Test demonstrates expression override concept without actual HybridProperty implementation
-	// Required: Add .with_expression() builder method to HybridProperty for custom SQL expressions
-	// let prop = HybridProperty::new(getter)
-	//     .with_expression(override_expr);
+	// HybridProperty.with_expression() is already implemented in reinhardt-hybrid
+	// This test verifies that expression override concept works as expected
+	use reinhardt_hybrid::HybridProperty;
+
+	let getter = |p: &Person| format!("{} {}", p.first_name, p.last_name);
+	let prop = HybridProperty::new(getter).with_expression(override_expr.to_string());
+
+	assert_eq!(prop.sql_expression(), override_expr);
 }
 
 #[test]
