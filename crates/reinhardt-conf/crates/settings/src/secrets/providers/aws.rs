@@ -86,15 +86,31 @@ impl AwsSecretsProvider {
 		Ok(Self { client, prefix })
 	}
 
-	/// Create a provider with custom endpoint (for LocalStack testing)
+	/// Create a provider with custom endpoint (for testing)
 	#[cfg(feature = "aws-secrets")]
 	pub async fn with_endpoint(endpoint_url: String, prefix: Option<String>) -> SecretResult<Self> {
+		use aws_sdk_secretsmanager::config::{Credentials, Region};
+		use aws_smithy_runtime::client::http::hyper_014::HyperClientBuilder;
+
+		// Create static credentials for testing
+		let credentials = Credentials::new(
+			"test-access-key",
+			"test-secret-key",
+			None,
+			None,
+			"static-credentials",
+		);
+
+		// Create HTTP client that supports both HTTP and HTTPS
+		let http_client = HyperClientBuilder::new().build_https();
+
 		let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
 		let client = Client::from_conf(
 			aws_sdk_secretsmanager::config::Builder::from(&config)
 				.endpoint_url(endpoint_url)
-				// LocalStack requires region to be set
-				.region(aws_config::Region::new("us-east-1"))
+				.region(Region::new("us-east-1"))
+				.credentials_provider(credentials)
+				.http_client(http_client)
 				.build(),
 		);
 		Ok(Self { client, prefix })
@@ -154,7 +170,13 @@ impl SecretProvider for AwsSecretsProvider {
 				}
 			}
 			Err(err) => {
-				if err.to_string().contains("ResourceNotFoundException") {
+				// Check error type using AWS SDK's error handling
+				use aws_sdk_secretsmanager::operation::get_secret_value::GetSecretValueError;
+
+				if err
+					.as_service_error()
+					.is_some_and(|e| matches!(e, GetSecretValueError::ResourceNotFoundException(_)))
+				{
 					Err(SecretError::NotFound(format!(
 						"Secret '{}' not found in AWS Secrets Manager",
 						key
@@ -212,7 +234,13 @@ impl SecretProvider for AwsSecretsProvider {
 				}
 			}
 			Err(err) => {
-				if err.to_string().contains("ResourceNotFoundException") {
+				// Check error type using AWS SDK's error handling
+				use aws_sdk_secretsmanager::operation::get_secret_value::GetSecretValueError;
+
+				if err
+					.as_service_error()
+					.is_some_and(|e| matches!(e, GetSecretValueError::ResourceNotFoundException(_)))
+				{
 					Err(SecretError::NotFound(format!(
 						"Secret '{}' not found in AWS Secrets Manager",
 						key
@@ -253,8 +281,14 @@ impl SecretProvider for AwsSecretsProvider {
 		match update_result {
 			Ok(_) => Ok(()),
 			Err(err) => {
+				// Check error type using AWS SDK's error handling
+				use aws_sdk_secretsmanager::operation::update_secret::UpdateSecretError;
+
 				// If secret doesn't exist, create it
-				if err.to_string().contains("ResourceNotFoundException") {
+				if err
+					.as_service_error()
+					.is_some_and(|e| matches!(e, UpdateSecretError::ResourceNotFoundException(_)))
+				{
 					self.client
 						.create_secret()
 						.name(&full_name)
@@ -369,79 +403,355 @@ impl SecretProvider for AwsSecretsProvider {
 #[cfg(all(test, feature = "aws-secrets"))]
 mod tests {
 	use super::*;
-	use rstest::*;
+	use wiremock::{
+		Mock, MockServer, ResponseTemplate,
+		matchers::{method, path},
+	};
 
-	// LocalStack fixture for AWS services testing
-	// This fixture is defined in reinhardt-test crate
-	#[fixture]
-	async fn localstack_endpoint() -> String {
-		use std::time::Duration;
-		use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
-
-		// LocalStack community image - minimal configuration for faster startup
-		// No wait condition - rely on port mapping and sleep instead
-		let localstack = GenericImage::new("localstack/localstack", "latest")
-			.with_env_var("SERVICES", "secretsmanager")
-			.with_env_var("EDGE_PORT", "4566")
-			.start()
-			.await
-			.expect("Failed to start LocalStack container");
-
-		let port = localstack
-			.get_host_port_ipv4(4566)
-			.await
-			.expect("Failed to get LocalStack port");
-
-		// Wait for LocalStack to fully initialize (no log watching, just sleep)
-		tokio::time::sleep(Duration::from_secs(5)).await;
-
-		format!("http://localhost:{}", port)
+	/// Create a mock AWS Secrets Manager endpoint
+	async fn create_mock_server() -> MockServer {
+		MockServer::start().await
 	}
 
-	/// Test: AWS provider creation with LocalStack
+	/// Mock response for GetSecretValue API (success)
+	fn mock_get_secret_response(secret_value: &str) -> String {
+		serde_json::json!({
+			"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-secret-AbCdEf",
+			"Name": "test-secret",
+			"SecretString": secret_value,
+			"VersionId": "EXAMPLE1-90ab-cdef-fedc-ba987EXAMPLE",
+			"CreatedDate": 1523477145.713
+		})
+		.to_string()
+	}
+
+	/// Mock response for ResourceNotFoundException (secret not found)
+	///
+	/// AWS SDK expects the Smithy error format with fully qualified error type.
+	fn mock_resource_not_found_response() -> String {
+		serde_json::json!({
+			"__type": "com.amazonaws.secretsmanager#ResourceNotFoundException",
+			"message": "Secrets Manager can't find the specified secret."
+		})
+		.to_string()
+	}
+
+	/// Test: AWS provider creation with mock server
 	///
 	/// This test verifies that AwsSecretsProvider can be created successfully
-	/// using LocalStack as a mock AWS Secrets Manager service.
-	///
-	/// TODO: This test is currently ignored due to LocalStack startup issues:
-	/// - Container startup timeout with WaitFor conditions
-	/// - Port binding conflicts in CI/CD environments
-	/// - TestContainers cleanup issues
-	/// - Investigate LocalStack alternatives or implement HTTP mock server
-	#[rstest]
+	/// with a custom endpoint (mock HTTP server).
 	#[tokio::test]
-	#[ignore]
-	async fn test_aws_provider_creation(#[future] localstack_endpoint: String) {
-		let endpoint = localstack_endpoint.await;
+	async fn test_aws_provider_creation() {
+		let mock_server = create_mock_server().await;
+		let endpoint = mock_server.uri();
+
 		let result = AwsSecretsProvider::with_endpoint(endpoint, None).await;
 		assert!(result.is_ok());
+	}
+
+	/// Test: Getting a secret successfully
+	///
+	/// This test verifies that the provider can successfully retrieve a secret
+	/// from the mock AWS Secrets Manager API.
+	#[tokio::test]
+	async fn test_aws_get_secret_success() {
+		let mock_server = create_mock_server().await;
+
+		// Mock the GetSecretValue API endpoint
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200)
+					.set_body_string(mock_get_secret_response("my-secret-value"))
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider.get_secret("test-secret").await;
+		assert!(result.is_ok(), "Expected Ok, got: {:?}", result);
+		assert_eq!(result.unwrap().expose_secret(), "my-secret-value");
+	}
+
+	/// Test: Getting a JSON secret with single key
+	///
+	/// This test verifies that the provider correctly parses JSON secrets
+	/// with a single key-value pair (common AWS Secrets Manager pattern).
+	#[tokio::test]
+	async fn test_aws_get_json_secret() {
+		let mock_server = create_mock_server().await;
+
+		// Mock JSON secret response
+		let json_secret = r#"{"password":"super-secret-password"}"#;
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200)
+					.set_body_string(mock_get_secret_response(json_secret))
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider.get_secret("test-json-secret").await;
+		assert!(result.is_ok());
+		// Should extract the value from the JSON object
+		assert_eq!(result.unwrap().expose_secret(), "super-secret-password");
 	}
 
 	/// Test: Getting a non-existent secret returns NotFound error
 	///
 	/// This test verifies that attempting to retrieve a non-existent secret
-	/// from AWS Secrets Manager (via LocalStack) returns the appropriate
-	/// SecretError::NotFound error.
-	///
-	/// TODO: This test is currently ignored due to LocalStack startup issues.
-	/// See test_aws_provider_creation for details.
-	#[rstest]
+	/// returns the appropriate SecretError::NotFound error.
 	#[tokio::test]
-	#[ignore]
-	async fn test_aws_get_nonexistent_secret(#[future] localstack_endpoint: String) {
-		let endpoint = localstack_endpoint.await;
-		let provider = AwsSecretsProvider::with_endpoint(endpoint, Some("test/".to_string()))
-			.await
-			.unwrap();
+	async fn test_aws_get_nonexistent_secret() {
+		let mock_server = create_mock_server().await;
+
+		// Mock ResourceNotFoundException response with proper AWS Smithy error format
+		// AWS SDK uses smithy error format, not just HTTP status codes
+		let error_response = serde_json::json!({
+			"__type": "com.amazonaws.secretsmanager#ResourceNotFoundException",
+			"message": "Secrets Manager can't find the specified secret."
+		})
+		.to_string();
+
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(400)
+					.set_body_string(error_response)
+					.insert_header("x-amzn-errortype", "ResourceNotFoundException")
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider =
+			AwsSecretsProvider::with_endpoint(mock_server.uri(), Some("test/".to_string()))
+				.await
+				.unwrap();
 
 		let result = provider.get_secret("nonexistent-secret-12345").await;
 
 		assert!(result.is_err());
-		if let Err(SecretError::NotFound(_)) = result {
-			// Expected error type
-		} else {
-			panic!("Expected NotFound error, got: {:?}", result);
+		match result {
+			Err(SecretError::NotFound(_)) => {
+				// Expected error type
+			}
+			_ => panic!("Expected NotFound error, got: {:?}", result),
 		}
+	}
+
+	/// Test: Setting a secret (update existing)
+	///
+	/// This test verifies that the provider can update an existing secret.
+	#[tokio::test]
+	async fn test_aws_set_secret_update() {
+		let mock_server = create_mock_server().await;
+
+		// Mock successful UpdateSecret response
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200)
+					.set_body_string(
+						serde_json::json!({
+							"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-secret-AbCdEf",
+							"Name": "test-secret",
+							"VersionId": "EXAMPLE2-90ab-cdef-fedc-ba987EXAMPLE"
+						})
+						.to_string(),
+					)
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider
+			.set_secret("test-secret", SecretString::new("new-value".to_string()))
+			.await;
+
+		assert!(result.is_ok());
+	}
+
+	/// Test: Setting a secret (create new)
+	///
+	/// This test verifies that the provider can create a new secret
+	/// when updating a non-existent secret.
+	#[tokio::test]
+	async fn test_aws_set_secret_create() {
+		let mock_server = create_mock_server().await;
+
+		// First call: UpdateSecret returns ResourceNotFoundException
+		let error_response = serde_json::json!({
+			"__type": "com.amazonaws.secretsmanager#ResourceNotFoundException",
+			"message": "Secrets Manager can't find the specified secret."
+		})
+		.to_string();
+
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(400)
+					.set_body_string(error_response)
+					.insert_header("x-amzn-errortype", "ResourceNotFoundException")
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.up_to_n_times(1)
+			.mount(&mock_server)
+			.await;
+
+		// Second call: CreateSecret succeeds
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200)
+					.set_body_string(
+						serde_json::json!({
+							"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:new-secret-AbCdEf",
+							"Name": "new-secret",
+							"VersionId": "EXAMPLE1-90ab-cdef-fedc-ba987EXAMPLE"
+						})
+						.to_string(),
+					)
+					.insert_header("content-type", "application/x-amz-json-1.1"),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider
+			.set_secret("new-secret", SecretString::new("new-value".to_string()))
+			.await;
+
+		assert!(result.is_ok());
+	}
+
+	/// Test: Deleting a secret
+	///
+	/// This test verifies that the provider can delete a secret.
+	#[tokio::test]
+	async fn test_aws_delete_secret() {
+		let mock_server = create_mock_server().await;
+
+		// Mock successful DeleteSecret response
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200).set_body_string(
+					serde_json::json!({
+						"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:test-secret-AbCdEf",
+						"Name": "test-secret",
+						"DeletionDate": 1524085349.095
+					})
+					.to_string(),
+				),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider.delete_secret("test-secret").await;
+		assert!(result.is_ok());
+	}
+
+	/// Test: Listing secrets with prefix
+	///
+	/// This test verifies that the provider can list secrets and correctly
+	/// filter by prefix.
+	#[tokio::test]
+	async fn test_aws_list_secrets_with_prefix() {
+		let mock_server = create_mock_server().await;
+
+		// Mock ListSecrets response
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200).set_body_string(
+					serde_json::json!({
+						"SecretList": [
+							{
+								"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:myapp/db-password-AbCdEf",
+								"Name": "myapp/db-password"
+							},
+							{
+								"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:myapp/api-key-GhIjKl",
+								"Name": "myapp/api-key"
+							},
+							{
+								"ARN": "arn:aws:secretsmanager:us-east-1:123456789012:secret:other-secret-MnOpQr",
+								"Name": "other-secret"
+							}
+						]
+					})
+					.to_string(),
+				),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider =
+			AwsSecretsProvider::with_endpoint(mock_server.uri(), Some("myapp/".to_string()))
+				.await
+				.unwrap();
+
+		let result = provider.list_secrets().await;
+		assert!(result.is_ok());
+
+		let secrets = result.unwrap();
+		assert_eq!(secrets.len(), 2);
+		assert!(secrets.contains(&"db-password".to_string()));
+		assert!(secrets.contains(&"api-key".to_string()));
+		// "other-secret" should be filtered out
+		assert!(!secrets.contains(&"other-secret".to_string()));
+	}
+
+	/// Test: Getting secret with metadata
+	///
+	/// This test verifies that the provider can retrieve a secret along
+	/// with its metadata (creation date, etc.).
+	#[tokio::test]
+	async fn test_aws_get_secret_with_metadata() {
+		let mock_server = create_mock_server().await;
+
+		Mock::given(method("POST"))
+			.and(path("/"))
+			.respond_with(
+				ResponseTemplate::new(200)
+					.set_body_string(mock_get_secret_response("secret-with-metadata")),
+			)
+			.mount(&mock_server)
+			.await;
+
+		let provider = AwsSecretsProvider::with_endpoint(mock_server.uri(), None)
+			.await
+			.unwrap();
+
+		let result = provider.get_secret_with_metadata("test-secret").await;
+		assert!(result.is_ok());
+
+		let (secret, metadata) = result.unwrap();
+		assert_eq!(secret.expose_secret(), "secret-with-metadata");
+		assert!(metadata.created_at.is_some());
+		assert!(metadata.updated_at.is_some());
 	}
 }
 
