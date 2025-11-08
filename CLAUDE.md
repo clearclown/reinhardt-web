@@ -62,8 +62,10 @@ See @docs/ANTI_PATTERNS.md for comprehensive anti-patterns guide.
 **Core Principles:**
 - NO skeleton tests (all tests MUST have meaningful assertions)
 - EVERY test MUST use at least one Reinhardt component
-- Unit tests (1 crate): Place in functional crate
-- Integration tests (2+ crates): Place in `tests/` crate
+- Unit tests: Test single component behavior, place in functional crate
+- Integration tests: Test integration points between components
+  - Cross-crate integration: Place in `tests/` crate
+  - Within-crate integration: Can place in functional crate
 - Functional crates MUST NOT include other Reinhardt crates in `dev-dependencies`
 - ALL test artifacts MUST be cleaned up
 - Global state tests MUST use `#[serial(group_name)]`

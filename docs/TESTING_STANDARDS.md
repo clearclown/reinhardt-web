@@ -77,12 +77,19 @@ fn test_validation() {
 
 ### TO-1 (MUST): Unit vs Integration Tests
 
-Clear separation based on crate dependencies:
+Clear separation based on the nature of what is being tested:
 
 #### Unit Tests
-**Definition:** Tests using exactly **ONE** Reinhardt crate
+**Definition:** Tests that verify the behavior of a **single component**
+
+**Component:** A function, method, struct, trait, module, or any cohesive functional unit
 
 **Location:** Within the functional crate being tested
+
+**Characteristics:**
+- Tests a component in isolation
+- Verifies the component's behavior and edge cases
+- Does not test interactions between multiple components
 
 **Structure:**
 ```
@@ -91,17 +98,18 @@ crates/reinhardt-orm/
 │   ├── lib.rs
 │   ├── query.rs
 │   └── model.rs
-└── tests/           // ❌ NO integration tests here
-    └── ...
+└── tests/
+    └── unit_tests.rs
 
 // Unit tests in the same file
 // src/query.rs
 #[cfg(test)]
 mod tests {
-    use super::*;  // Only using reinhardt-orm
+    use super::*;
 
     #[test]
-    fn test_query_builder() {
+    fn test_query_builder_table_name() {
+        // Testing a single component's internal behavior
         let query = QueryBuilder::new()
             .table("users")
             .build();
@@ -111,30 +119,59 @@ mod tests {
 ```
 
 #### Integration Tests
-**Definition:** Tests using **TWO or MORE** Reinhardt crates
+**Definition:** Tests that verify the **integration points** (interfaces) between **two or more components**
 
-**Location:** MUST be placed in the `tests` crate at repository root
+**Integration Point:** The interface, interaction, or data exchange between components
+
+**Location:**
+- **Cross-crate integration:** MUST be placed in the `tests` crate at repository root
+- **Within-crate integration:** Can be placed in the functional crate
+
+**Characteristics:**
+- Tests how components work together
+- Verifies data flow and communication between components
+- Focuses on interfaces and interactions
 
 **Structure:**
 ```
-tests/                    // Integration tests crate
+tests/                    // Cross-crate integration tests
 ├── Cargo.toml           // Dependencies on multiple Reinhardt crates
 └── integration/
     └── tests/
         └── orm_serializer_integration.rs
+
+crates/reinhardt-orm/
+└── tests/
+    └── integration_tests.rs  // Within-crate integration (if needed)
 ```
 
-**Example:**
+**Example (Cross-crate integration):**
 ```rust
 // tests/integration/tests/orm_serializer_integration.rs
-use reinhardt_orm::Model;          // Crate 1
-use reinhardt_serializers::Serialize;  // Crate 2
+use reinhardt_orm::Model;
+use reinhardt_serializers::Serialize;
 
 #[test]
 fn test_model_serialization() {
+    // Testing the integration between ORM and Serializer components
     let user = User { id: 1, name: "Alice".to_string() };
     let json = user.serialize();
     assert_eq!(json, r#"{"id":1,"name":"Alice"}"#);
+}
+```
+
+**Example (Within-crate integration):**
+```rust
+// crates/reinhardt-orm/tests/integration_tests.rs
+use reinhardt_orm::{QueryBuilder, Connection};
+
+#[test]
+fn test_query_execution() {
+    // Testing the integration between QueryBuilder and Connection components
+    let conn = Connection::new_in_memory();
+    let query = QueryBuilder::new().table("users").build();
+    let result = conn.execute(query);
+    assert!(result.is_ok());
 }
 ```
 
@@ -142,13 +179,19 @@ fn test_model_serialization() {
 
 **Functional crates MUST NOT include other Reinhardt crates as `dev-dependencies`**
 
-**Why?** This ensures unit tests remain isolated and test only the crate's own functionality.
+**Exception**: Within the same workspace subcrate hierarchy (e.g., `reinhardt-rest/crates/rest-core` depending on `reinhardt-rest`), dev-dependencies are allowed for within-crate integration testing.
+
+**Why?**
+- This ensures that cross-crate integration tests are properly located in the `tests` crate
+- Within-crate tests (both unit and integration) should not require external Reinhardt crates
+- If a test requires multiple Reinhardt crates, it tests cross-crate integration points and belongs in the repository-level `tests` crate
+- The exception allows subcrates to test their integration with their parent crate without violating the separation principle
 
 ❌ **BAD:**
 ```toml
 # crates/reinhardt-orm/Cargo.toml
 [dev-dependencies]
-reinhardt-serializers = { path = "../reinhardt-serializers" }  # ❌ NEVER do this
+reinhardt-serializers = { path = "../reinhardt-serializers" }  # ❌ NEVER do this (cross-crate)
 ```
 
 ✅ **GOOD:**
@@ -159,6 +202,13 @@ reinhardt-types = { path = "../reinhardt-types" }  # ✅ Feature dependencies OK
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt", "macros"] }  # ✅ External deps OK
+```
+
+✅ **ACCEPTABLE (Exception - Within-crate hierarchy):**
+```toml
+# crates/reinhardt-rest/crates/rest-core/Cargo.toml
+[dev-dependencies]
+reinhardt-rest = { workspace = true }  # ✅ Parent crate for within-crate integration tests
 ```
 
 ```toml
@@ -490,6 +540,7 @@ fn test_calculation() {
 fn test_generate_uuid() {
     let uuid = generate_uuid();
     // ✅ UUID is random, can only check format
+    // NOTE: UUID value is cryptographically random, exact match impossible
     assert!(uuid.len() == 36);
     assert!(uuid.chars().filter(|&c| c == '-').count() == 4);
 }
@@ -500,6 +551,7 @@ fn test_timestamp_generation() {
     let timestamp = get_current_timestamp();
     let after = SystemTime::now();
     // ✅ Timestamp is system-dependent, can only check range
+    // NOTE: System clock resolution makes exact matching impractical
     assert!(timestamp >= before);
     assert!(timestamp <= after);
 }
@@ -509,7 +561,47 @@ fn test_random_selection() {
     let choices = vec!["a", "b", "c"];
     let selected = random_choice(&choices);
     // ✅ Random result, can only verify it's in the set
+    // NOTE: Selection is non-deterministic by design
     assert!(choices.contains(&selected));
+}
+
+#[test]
+fn test_csrf_token_in_cookie() {
+    let cookie = generate_csrf_cookie();
+    // ✅ CSRF token is cryptographically random
+    // NOTE: Token value cannot be predicted, only format verified
+    assert!(cookie.to_str().unwrap().contains("csrftoken="));
+    assert_eq!(cookie.to_str().unwrap().split('=').count(), 2);
+}
+
+#[test]
+fn test_sql_where_clause_with_multiple_conditions() {
+    let sql = build_query_with_filters(&[("age", ">=18"), ("active", "true")]);
+    // ✅ SQL clause order is not guaranteed by query builder
+    // NOTE: Query optimizer may reorder clauses, verify presence not order
+    assert!(sql.contains("age >= 18"));
+    assert!(sql.contains("active = true"));
+}
+
+#[test]
+fn test_counter_incremented_by_concurrent_threads() {
+    let counter = Arc::new(AtomicCounter::new());
+    // Spawn threads that increment counter
+    let handles: Vec<_> = (0..10)
+        .map(|_| {
+            let c = counter.clone();
+            thread::spawn(move || c.increment())
+        })
+        .collect();
+
+    for handle in handles {
+        handle.join().unwrap();
+    }
+
+    // ✅ Exact value depends on thread scheduling
+    // NOTE: Thread interleaving is non-deterministic, verify bounds only
+    assert!(counter.get() > 0);
+    assert!(counter.get() <= 10);
 }
 ```
 

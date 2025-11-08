@@ -34,7 +34,20 @@ pub use database::*;  // ❌ Pollutes namespace
 pub use database::{Pool, Connection, PoolConfig};  // ✅ Explicit
 ```
 
-**Why?** Makes it unclear what's exported and causes naming conflicts.
+**Exception**: Test modules may use `use super::*;` for convenience:
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;  // ✅ Acceptable in test modules
+
+    #[test]
+    fn test_functionality() {
+        // Test code can access parent module items
+    }
+}
+```
+
+**Why?** Makes it unclear what's exported and causes naming conflicts. However, in test modules, the scope is limited and readability benefits outweigh the risks.
 
 ### ❌ Circular Module Dependencies
 
@@ -308,14 +321,14 @@ fn test_query_building() {
 
 **Why?** Every test must verify at least one Reinhardt component.
 
-### ❌ Integration Tests in Functional Crates
+### ❌ Cross-Crate Integration Tests in Functional Crates
 
 **DON'T:**
 ```
 crates/reinhardt-orm/
 ├── src/
 └── tests/
-    └── with_serializers.rs  // ❌ Uses reinhardt-serializers (2 crates)
+    └── with_serializers.rs  // ❌ Tests integration with reinhardt-serializers
 ```
 
 ```toml
@@ -326,7 +339,7 @@ reinhardt-serializers = { path = "../reinhardt-serializers" }  # ❌ NEVER
 
 **DO:**
 ```
-tests/                           // ✅ Integration tests here
+tests/                           // ✅ Cross-crate integration tests here
 └── integration/
     └── tests/
         └── orm_serializer_integration.rs
@@ -339,7 +352,11 @@ reinhardt-orm = { path = "../crates/reinhardt-orm" }          # ✅ OK
 reinhardt-serializers = { path = "../crates/reinhardt-serializers" }
 ```
 
-**Why?** Integration tests (2+ crates) MUST be in the `tests/` crate.
+**Why?**
+- Cross-crate integration tests verify integration points between components from different crates
+- These tests MUST be in the repository-level `tests/` crate
+- Functional crates should not have other Reinhardt crates as dev-dependencies
+- Within-crate integration tests (testing integration between components in the same crate) can remain in the functional crate
 
 ### ❌ Tests Without Cleanup
 

@@ -133,7 +133,22 @@ pub use database::*;
 pub use database::{Pool, Connection, PoolConfig};
 ```
 
-**Why?** Glob imports make it unclear what's actually exported and can cause naming conflicts.
+**Exception**: Test modules may use `use super::*;` for convenience:
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;  // ✅ Acceptable in test modules
+
+    #[test]
+    fn test_database_connection() {
+        // Test code can access parent module items
+        let conn = create_connection();
+        assert!(conn.is_ok());
+    }
+}
+```
+
+**Why?** Glob imports make it unclear what's actually exported and can cause naming conflicts. However, in test modules, the scope is limited and readability benefits outweigh the risks.
 
 ### ❌ Anti-Pattern 3: Circular Dependencies
 
