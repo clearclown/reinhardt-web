@@ -16,6 +16,7 @@ quote = "1.0"
 proc-macro2 = "1.0"
 nom = "8"
 ctor = "0.6.0"
+inventory = "0.3"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
@@ -23,3 +24,5 @@ trybuild = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 reinhardt-orm = { workspace = true }
 reinhardt-migrations = { workspace = true }
+reinhardt-signals = { workspace = true }
+serial_test = { workspace = true }
