@@ -2,11 +2,12 @@
 // Tests ForeignKey, OneToOne, and ManyToMany relationships
 
 #[cfg(test)]
+#[allow(dead_code)]
 mod relationship_tests {
 	use reinhardt_orm::{
-		CascadeOption, LoadingStrategy, Relationship, RelationshipDirection, RelationshipType,
+		CascadeOption, LoadingStrategy, RelationshipType,
 	};
-	use std::collections::{HashMap, HashSet};
+	use std::collections::HashMap;
 
 	// Test models
 	#[derive(Debug, Clone, PartialEq)]
@@ -269,7 +270,7 @@ mod relationship_tests {
 		let mut db = MockDatabase::new();
 
 		let author_id = db.add_author("Profile Owner", None);
-		let profile_id = db.add_profile("This is my bio", Some(author_id));
+		let _profile_id = db.add_profile("This is my bio", Some(author_id));
 
 		let profile = db.get_profile_by_author(author_id).unwrap();
 		assert_eq!(profile.bio, "This is my bio");

@@ -11,7 +11,7 @@ mod mongodb_tests {
 	use serial_test::serial;
 	use std::sync::Arc;
 	use testcontainers::{
-		RunnableImage, clients::Cli, core::WaitFor, images::generic::GenericImage,
+		GenericImage, core::WaitFor, runners::AsyncRunner,
 	};
 	use tokio::sync::OnceCell;
 
@@ -19,22 +19,23 @@ mod mongodb_tests {
 	static CONTAINER: OnceCell<Arc<MongoContainer>> = OnceCell::const_new();
 
 	struct MongoContainer {
-		_container: testcontainers::Container<'static, GenericImage>,
+		_container: testcontainers::ContainerAsync<GenericImage>,
 		connection_string: String,
 	}
 
 	async fn get_mongo_container() -> Arc<MongoContainer> {
 		CONTAINER
 			.get_or_init(|| async {
-				let docker = Box::leak(Box::new(Cli::default()));
-
 				let image = GenericImage::new("mongo", "7.0")
 					.with_wait_for(WaitFor::message_on_stdout("Waiting for connections"));
+			// Note: with_exposed_port() is no longer needed in testcontainers 0.25.x
+			// Ports defined in the image's EXPOSE directive are automatically published
 
-				let runnable = RunnableImage::from(image).with_mapped_port((27017, 27017));
-
-				let container = docker.run(runnable);
-				let port = container.get_host_port_ipv4(27017);
+				let container = image.start().await.expect("Failed to start MongoDB");
+				let port = container
+					.get_host_port_ipv4(27017)
+					.await
+					.expect("Failed to get port");
 
 				let connection_string = format!("mongodb://127.0.0.1:{}", port);
 

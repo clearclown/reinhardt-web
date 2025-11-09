@@ -280,7 +280,7 @@ async fn test_concurrent_transactions() {
 	let handle1 = tokio::spawn(async move {
 		participant1.begin(xid1).await.unwrap();
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('concurrent1')")
-			.execute(participant1.pool.as_ref())
+			.execute(participant1.pool())
 			.await
 			.unwrap();
 		participant1.prepare(xid1).await.unwrap();
@@ -290,7 +290,7 @@ async fn test_concurrent_transactions() {
 	let handle2 = tokio::spawn(async move {
 		participant2.begin(xid2).await.unwrap();
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('concurrent2')")
-			.execute(participant2.pool.as_ref())
+			.execute(participant2.pool())
 			.await
 			.unwrap();
 		participant2.prepare(xid2).await.unwrap();

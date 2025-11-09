@@ -1,3 +1,5 @@
+#![cfg(feature = "jwt")]
+
 use reinhardt_auth::JwtAuth;
 
 // === JWT Token Tests ===

@@ -136,18 +136,16 @@ async fn insert_test_user_with_id(
 		.expect("Failed to query users");
 
 	// Find the user we just inserted by username
-	// Note: db.list() returns rows with structure {"data": {...}}
+	// Note: db.list() returns rows with flat structure {"id": ..., "username": ..., ...}
 	all_users
 		.iter()
 		.find(|row| {
-			row.get("data")
-				.and_then(|data| data.get("username"))
+			row.get("username")
 				.and_then(|v| v.as_str())
 				.map(|s| s == username)
 				.unwrap_or(false)
 		})
-		.and_then(|row| row.get("data"))
-		.and_then(|data| data.get("id"))
+		.and_then(|row| row.get("id"))
 		.and_then(|v| v.as_i64())
 		.expect(&format!(
 			"Failed to get inserted user ID for username '{}'",

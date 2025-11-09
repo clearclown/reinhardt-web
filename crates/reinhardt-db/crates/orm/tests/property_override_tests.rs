@@ -10,6 +10,7 @@ use reinhardt_hybrid::HybridProperty;
 /// Base model for property override tests
 #[derive(Debug, Clone)]
 struct Person {
+	#[allow(dead_code)]
 	id: i32,
 	firstname: String,
 	lastname: String,
@@ -132,10 +133,10 @@ fn test_override_expr() {
 	// This test verifies that expression override concept works as expected
 	use reinhardt_hybrid::HybridProperty;
 
-	let getter = |p: &Person| format!("{} {}", p.first_name, p.last_name);
-	let prop = HybridProperty::new(getter).with_expression(override_expr.to_string());
+	let getter = |p: &Person| format!("{} {}", p.firstname, p.lastname);
+	let prop = HybridProperty::new(getter).with_expression(|| override_expr.to_string());
 
-	assert_eq!(prop.sql_expression(), override_expr);
+	assert_eq!(prop.expression(), Some(override_expr.to_string()));
 }
 
 #[test]

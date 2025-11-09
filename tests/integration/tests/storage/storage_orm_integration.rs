@@ -4,7 +4,7 @@
 
 use image::{ImageBuffer, Rgb};
 use reinhardt_orm::file_fields::{FileField as ORMFileField, ImageField as ORMImageField};
-use reinhardt_storage::{InMemoryStorage, LocalStorage, Storage};
+use reinhardt_utils::storage::{InMemoryStorage, LocalStorage, Storage};
 use std::io::Cursor;
 use tempfile::TempDir;
 
