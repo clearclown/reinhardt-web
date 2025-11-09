@@ -279,17 +279,20 @@ impl DatabaseMigrationExecutor {
 	/// Apply a single migration
 	async fn apply_migration(&self, migration: &Migration) -> Result<()> {
 		// Convert SqlDialect based on database type
+		#[cfg(feature = "mongodb-backend")]
+		if matches!(self.db_type, DatabaseType::MongoDB) {
+			// MongoDB is schemaless, so structural migrations don't apply
+			// Only data migrations and index operations are relevant
+			// Skip SQL-based schema operations for MongoDB
+			return Ok(());
+		}
+
 		let dialect = match self.db_type {
 			DatabaseType::Postgres => SqlDialect::Postgres,
 			DatabaseType::Sqlite => SqlDialect::Sqlite,
 			DatabaseType::Mysql => SqlDialect::Mysql,
-			#[cfg(feature = "mongodb")]
-			DatabaseType::MongoDB => {
-				// MongoDB is schemaless, so structural migrations don't apply
-				// Only data migrations and index operations are relevant
-				// Skip SQL-based schema operations for MongoDB
-				return Ok(());
-			}
+			#[cfg(feature = "mongodb-backend")]
+			DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 		};
 
 		for operation in &migration.operations {
@@ -327,12 +330,8 @@ impl DatabaseMigrationExecutor {
 			DatabaseType::Postgres => SqlDialect::Postgres,
 			DatabaseType::Sqlite => SqlDialect::Sqlite,
 			DatabaseType::Mysql => SqlDialect::Mysql,
-			#[cfg(feature = "mongodb")]
-			DatabaseType::MongoDB => {
-				// MongoDB is schemaless, so structural migrations don't apply
-				// Only migration tracking is supported
-				SqlDialect::Postgres // Placeholder, won't be used
-			}
+			#[cfg(feature = "mongodb-backend")]
+			DatabaseType::MongoDB => SqlDialect::Postgres, // Placeholder for MongoDB
 		};
 
 		for migration in &plan.migrations {
@@ -346,9 +345,9 @@ impl DatabaseMigrationExecutor {
 			}
 
 			// Apply migration
-			#[cfg(feature = "mongodb")]
+			#[cfg(feature = "mongodb-backend")]
 			let is_mongodb = matches!(self.db_type, DatabaseType::MongoDB);
-			#[cfg(not(feature = "mongodb"))]
+			#[cfg(not(feature = "mongodb-backend"))]
 			let is_mongodb = false;
 
 			if !is_mongodb {

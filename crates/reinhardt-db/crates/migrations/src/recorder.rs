@@ -112,7 +112,7 @@ impl DatabaseMigrationRecorder {
 		};
 
 		// Handle MongoDB separately (early return)
-		#[cfg(feature = "mongodb")]
+		#[cfg(feature = "mongodb-backend")]
 		if self.connection.database_type() == DatabaseType::MongoDB {
 			use bson::doc;
 
@@ -188,7 +188,7 @@ impl DatabaseMigrationRecorder {
 				DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 				DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 				DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-				#[cfg(feature = "mongodb")]
+				#[cfg(feature = "mongodb-backend")]
 				DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 			}
 		}; // stmt is dropped here, before await
@@ -221,11 +221,11 @@ impl DatabaseMigrationRecorder {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn is_applied(&self, app: &str, name: &str) -> crate::Result<bool> {
-		#[cfg(feature = "mongodb")]
+		#[cfg(feature = "mongodb-backend")]
 		use backends::types::DatabaseType;
 
 		match self.connection.database_type() {
-			#[cfg(feature = "mongodb")]
+			#[cfg(feature = "mongodb-backend")]
 			DatabaseType::MongoDB => {
 				use bson::doc;
 
@@ -311,11 +311,11 @@ impl DatabaseMigrationRecorder {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn record_applied(&self, app: &str, name: &str) -> crate::Result<()> {
-		#[cfg(feature = "mongodb")]
+		#[cfg(feature = "mongodb-backend")]
 		use backends::types::DatabaseType;
 
 		match self.connection.database_type() {
-			#[cfg(feature = "mongodb")]
+			#[cfg(feature = "mongodb-backend")]
 			DatabaseType::MongoDB => {
 				use bson::doc;
 				use chrono::Utc;
@@ -387,11 +387,11 @@ impl DatabaseMigrationRecorder {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn get_applied_migrations(&self) -> crate::Result<Vec<MigrationRecord>> {
-		#[cfg(feature = "mongodb")]
+		#[cfg(feature = "mongodb-backend")]
 		use backends::types::DatabaseType;
 
 		match self.connection.database_type() {
-			#[cfg(feature = "mongodb")]
+			#[cfg(feature = "mongodb-backend")]
 			DatabaseType::MongoDB => {
 				use bson::doc;
 				use futures::stream::TryStreamExt;
@@ -507,11 +507,11 @@ impl DatabaseMigrationRecorder {
 	///
 	/// Used when rolling back migrations.
 	pub async fn unapply(&self, app: &str, name: &str) -> crate::Result<()> {
-		#[cfg(feature = "mongodb")]
+		#[cfg(feature = "mongodb-backend")]
 		use backends::types::DatabaseType;
 
 		match self.connection.database_type() {
-			#[cfg(feature = "mongodb")]
+			#[cfg(feature = "mongodb-backend")]
 			DatabaseType::MongoDB => {
 				use bson::doc;
 
