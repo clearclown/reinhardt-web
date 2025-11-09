@@ -252,7 +252,7 @@ fn build_field_schema(field_type: &syn::Type, attrs: &FieldAttributes) -> proc_m
 	if let Some(min) = attrs.minimum {
 		modifications.push(quote! {
 			if let Schema::Object(mut obj) = schema {
-				obj.minimum = Some(::utoipa::openapi::schema::Number::from(#min as f64));
+				obj.minimum = Some(::utoipa::Number::from(#min as f64));
 				schema = Schema::Object(obj);
 			}
 		});
@@ -261,7 +261,7 @@ fn build_field_schema(field_type: &syn::Type, attrs: &FieldAttributes) -> proc_m
 	if let Some(max) = attrs.maximum {
 		modifications.push(quote! {
 			if let Schema::Object(mut obj) = schema {
-				obj.maximum = Some(::utoipa::openapi::schema::Number::from(#max as f64));
+				obj.maximum = Some(::utoipa::Number::from(#max as f64));
 				schema = Schema::Object(obj);
 			}
 		});

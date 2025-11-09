@@ -53,6 +53,7 @@ pub use registry::SchemaRegistry;
 pub use reinhardt_openapi_macros::Schema;
 pub use serde_attrs::{FieldMetadata, RenameAll, SchemaBuilderExt};
 pub use swagger::SwaggerUI;
+pub use utoipa::Number;
 pub use viewset_inspector::{InspectorConfig, ViewSetInspector};
 
 #[derive(Debug, Error)]
