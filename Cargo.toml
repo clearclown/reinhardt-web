@@ -510,7 +510,9 @@ rmp-serde = "1.3.0"
 prost = "0.14.1"
 
 # Redis (for sessions)
-redis = { version = "1.0.0-rc.2", features = [
+# Temporarily downgraded to 0.32 due to deadpool-redis compatibility
+# TODO: Upgrade to redis 1.0 when deadpool-redis supports it
+redis = { version = "0.32", features = [
   "tokio-comp",
   "connection-manager",
 ] }
