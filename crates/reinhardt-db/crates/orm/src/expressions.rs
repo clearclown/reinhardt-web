@@ -2224,10 +2224,6 @@ impl Expression {
 			Expression::F(f) => f.to_sql(),
 			Expression::Value(v) => v.to_sql(),
 			Expression::Case(c) => c.to_sql(),
-			// Expression::Aggregate(a) => {
-			//     let field = a.field.as_ref().map(|f| f.as_str()).unwrap_or("*");
-			//     format!("{}({})", a.function, field)
-			// }
 		}
 	}
 }

@@ -1,4 +1,3 @@
-// use crate::middleware::ViewSetMiddleware;
 /// ViewSetHandler - wraps a ViewSet as a Handler
 use crate::{Action, ViewSet};
 use async_trait::async_trait;
@@ -7,7 +6,6 @@ use reinhardt_apps::{Handler, Request, Response, Result};
 use reinhardt_auth::permissions::{Permission, PermissionContext};
 use reinhardt_filters::FilterBackend;
 use reinhardt_orm::{Model, query_types::DbBackend};
-// use reinhardt_pagination::{PaginatedResponse, Paginator};
 use reinhardt_serializers::{ModelSerializer, Serializer};
 use serde::Serialize;
 use serde::de::DeserializeOwned;

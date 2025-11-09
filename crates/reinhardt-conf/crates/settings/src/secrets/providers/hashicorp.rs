@@ -156,24 +156,28 @@ struct VaultReadResponse {
 #[derive(Debug, Deserialize)]
 struct VaultData {
 	data: HashMap<String, String>,
+	// Note: Used by serde for JSON deserialization from Vault API responses
 	#[allow(dead_code)]
 	metadata: VaultSecretMetadata,
 }
 
 #[derive(Debug, Deserialize)]
 struct VaultSecretMetadata {
+	// Note: Fields used by serde for JSON deserialization, not directly accessed in code
 	#[allow(dead_code)]
 	created_time: String,
 	#[allow(dead_code)]
 	version: u64,
 }
 
+// Note: Struct reserved for future write operations to Vault
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
 struct VaultWriteRequest {
 	data: HashMap<String, String>,
 }
 
+// Note: Structs used by serde for JSON deserialization from Vault list API responses
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 struct VaultListResponse {
@@ -193,6 +197,7 @@ struct VaultMetadataResponse {
 
 #[derive(Debug, Deserialize)]
 struct VaultMetadataData {
+	// Note: Used by serde for JSON deserialization from Vault metadata API responses
 	#[allow(dead_code)]
 	versions: HashMap<String, VaultVersionInfo>,
 	created_time: String,
@@ -201,6 +206,7 @@ struct VaultMetadataData {
 
 #[derive(Debug, Deserialize)]
 struct VaultVersionInfo {
+	// Note: Fields used by serde for JSON deserialization, not directly accessed in code
 	#[allow(dead_code)]
 	created_time: String,
 	#[allow(dead_code)]

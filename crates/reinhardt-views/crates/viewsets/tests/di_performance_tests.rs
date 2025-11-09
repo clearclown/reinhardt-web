@@ -24,7 +24,11 @@ use std::time::Instant;
 
 #[tokio::test]
 async fn test_injection_speed_simple_service() {
+	// NOTE: Fields appear unused but are essential for DI injection testing
+	// - The presence of fields tests DI system's ability to inject dependencies
+	// - Memory layout affects performance measurement accuracy
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct FastService {
 		id: usize,
 	}
@@ -36,6 +40,7 @@ async fn test_injection_speed_simple_service() {
 	}
 
 	#[derive(Clone, InjectableDerive)]
+	#[allow(dead_code)]
 	struct FastViewSet {
 		#[inject]
 		service: FastService,
@@ -66,7 +71,11 @@ async fn test_injection_speed_simple_service() {
 
 #[tokio::test]
 async fn test_injection_speed_multiple_dependencies() {
+	// NOTE: Service fields appear unused but are essential for DI performance testing
+	// - Multiple dependencies test DI resolution speed with complex dependency graphs
+	// - Field count affects memory allocation patterns and cache behavior
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct Service1 {
 		data: i32,
 	}
@@ -77,6 +86,7 @@ async fn test_injection_speed_multiple_dependencies() {
 	}
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct Service2 {
 		data: i32,
 	}
@@ -87,6 +97,7 @@ async fn test_injection_speed_multiple_dependencies() {
 	}
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct Service3 {
 		data: i32,
 	}
@@ -97,6 +108,7 @@ async fn test_injection_speed_multiple_dependencies() {
 	}
 
 	#[derive(Clone, InjectableDerive)]
+	#[allow(dead_code)]
 	struct MultiDepsViewSet {
 		#[inject]
 		s1: Service1,

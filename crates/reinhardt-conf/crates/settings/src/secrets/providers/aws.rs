@@ -425,17 +425,6 @@ mod tests {
 		.to_string()
 	}
 
-	/// Mock response for ResourceNotFoundException (secret not found)
-	///
-	/// AWS SDK expects the Smithy error format with fully qualified error type.
-	fn mock_resource_not_found_response() -> String {
-		serde_json::json!({
-			"__type": "com.amazonaws.secretsmanager#ResourceNotFoundException",
-			"message": "Secrets Manager can't find the specified secret."
-		})
-		.to_string()
-	}
-
 	/// Test: AWS provider creation with mock server
 	///
 	/// This test verifies that AwsSecretsProvider can be created successfully

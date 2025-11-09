@@ -7,7 +7,6 @@
 //! - Per-request CSP overrides
 
 use async_trait::async_trait;
-// use hyper::StatusCode;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
 use std::collections::HashMap;
 use std::sync::Arc;

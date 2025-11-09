@@ -7,9 +7,7 @@ use crate::openapi::{
 	Operation, Parameter, ParameterIn, PathItem, RefOr, RequestBody, Response,
 	/* Responses, */ Schema,
 };
-// use crate::SchemaError;
 use hyper::Method;
-// use indexmap::IndexMap;
 use reinhardt_viewsets::{ActionMetadata, ViewSet};
 use std::collections::HashMap;
 use utoipa::openapi::ContentBuilder;

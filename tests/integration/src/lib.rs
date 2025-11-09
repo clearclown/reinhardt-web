@@ -34,6 +34,7 @@ pub async fn setup_test_db() -> Pool<Postgres> {
 }
 
 /// Create test tables for flatpages using reinhardt-migrations
+// Note: Test helper function - may appear unused but available for flatpages integration tests
 #[allow(dead_code)]
 pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 	use reinhardt_migrations::{ColumnDefinition, Migration, Operation, SqlDialect};
@@ -89,6 +90,7 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 }
 
 /// Clean up test tables using reinhardt-migrations
+// Note: Test helper function - may appear unused but available for test cleanup
 #[allow(dead_code)]
 pub async fn cleanup_test_tables(pool: &Pool<Postgres>) {
 	use reinhardt_migrations::{Migration, Operation, SqlDialect};
