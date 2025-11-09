@@ -1,4 +1,4 @@
-use reinhardt_routers_macros::path;
+use reinhardt_urls::routers_macros::path;
 
 fn main() {
 	let _ = path!("/users/");
