@@ -13,12 +13,11 @@ mod cockroachdb_tests {
 		CockroachDBBackend, CockroachDBSchemaEditor, CockroachDBTransactionManager,
 	};
 	use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
-	use reinhardt_db::schema::BaseDatabaseSchemaEditor;
 	use serial_test::serial;
-	use sqlx::{PgPool, Row};
+	use sqlx::PgPool;
 	use std::sync::Arc;
 	use testcontainers::{
-		ContainerAsync, core::WaitFor, images::generic::GenericImage, runners::AsyncRunner,
+		ContainerAsync, GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner,
 	};
 	use tokio::sync::OnceCell;
 
@@ -40,8 +39,9 @@ mod cockroachdb_tests {
 						"start-single-node".to_string(),
 						"--insecure".to_string(),
 						"--store=type=mem,size=1GiB".to_string(),
-					])
-					.with_exposed_port(26257.into());
+					]);
+				// Note: with_exposed_port() is no longer needed in testcontainers 0.25.x
+				// Ports defined in the image's EXPOSE directive are automatically published
 
 				let container = image.start().await.expect("Failed to start CockroachDB");
 				let port = container
@@ -84,7 +84,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_backend_creation() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 
 		assert_eq!(backend.database_name(), "cockroachdb");
@@ -93,7 +94,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_supported_features() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 
 		assert!(backend.supports_feature("multi_region"));
@@ -114,7 +116,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_locality_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -132,7 +135,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_alter_locality_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -146,7 +150,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_partitioned_table_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -174,7 +179,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_index_with_storing_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -199,7 +205,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_unique_index_with_condition() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -219,7 +226,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_as_of_system_time_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -232,7 +240,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_show_regions_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -243,7 +252,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_survival_goal_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -254,7 +264,8 @@ mod cockroachdb_tests {
 	#[tokio::test]
 	#[serial(cockroachdb)]
 	async fn test_schema_editor_set_primary_region_sql() {
-		let pg_editor = PostgreSQLSchemaEditor::new();
+		let pool = create_test_pool().await;
+		let pg_editor = PostgreSQLSchemaEditor::new(pool);
 		let backend = CockroachDBBackend::new(pg_editor);
 		let editor = backend.schema_editor();
 
@@ -275,12 +286,12 @@ mod cockroachdb_tests {
 		cleanup_test_tables(&pool).await;
 
 		// Create a simple table using PostgreSQL-compatible schema editor
-		let pg_editor = PostgreSQLSchemaEditor::new();
-		let mut editor = CockroachDBSchemaEditor::new(pg_editor);
+		let pg_editor = PostgreSQLSchemaEditor::new(pool.clone());
+		let _editor = CockroachDBSchemaEditor::new(pg_editor);
 
 		let create_sql = "CREATE TABLE test_users (id UUID PRIMARY KEY, name VARCHAR(100))";
-		editor
-			.execute(create_sql)
+		sqlx::query(create_sql)
+			.execute(&pool)
 			.await
 			.expect("Failed to create table");
 
