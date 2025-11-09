@@ -210,13 +210,10 @@ impl crate::backend::TaskBackend for SqliteBackend {
 			.map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
 
 		match record {
-			Some((name,)) => {
-				// Return a placeholder serialized task
-				// In production, task data should be stored separately
-				Ok(Some(crate::registry::SerializedTask::new(
-					name,
-					"{}".to_string(),
-				)))
+			Some((_name,)) => {
+				// TODO: Store and retrieve actual task data from database
+				// Currently returns empty JSON as placeholder
+				todo!("Implement proper task data storage and retrieval for SQLite backend")
 			}
 			None => Ok(None),
 		}

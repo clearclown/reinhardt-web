@@ -24,20 +24,19 @@ impl Default for QueueConfig {
 	}
 }
 
-pub struct TaskQueue {
-	#[allow(dead_code)]
-	config: QueueConfig,
-}
+// Note: TaskQueue.config field was removed as it was unused
+// QueueConfig (including max_retries) is not currently utilized in enqueue()
+// If queue configuration (e.g., max_retries, timeout) is needed in the future,
+// the config should be properly integrated into the TaskQueue behavior
+pub struct TaskQueue;
 
 impl TaskQueue {
 	pub fn new() -> Self {
-		Self {
-			config: QueueConfig::default(),
-		}
+		Self
 	}
 
-	pub fn with_config(config: QueueConfig) -> Self {
-		Self { config }
+	pub fn with_config(_config: QueueConfig) -> Self {
+		Self
 	}
 
 	pub async fn enqueue(

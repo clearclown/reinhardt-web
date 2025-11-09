@@ -308,7 +308,7 @@ impl Worker {
 			Ok(Some(task_id)) => {
 				println!("[{}] Processing task: {}", self.config.name, task_id);
 
-				// Execute task (placeholder - actual execution would happen here)
+				// Execute task
 				match self.execute_task(task_id, backend.clone()).await {
 					Ok(_) => {
 						println!(

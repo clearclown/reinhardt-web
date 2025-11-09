@@ -67,6 +67,7 @@ impl AsyncNoopTask {
 		}
 	}
 
+	#[allow(dead_code)]
 	fn with_priority(mut self, priority: i32) -> Self {
 		self.priority = TaskPriority::new(priority);
 		self
@@ -97,7 +98,7 @@ impl TaskExecutor for AsyncNoopTask {
 #[tokio::test]
 async fn test_using_correct_backend() {
 	let backend = Arc::new(DummyBackend::new());
-	let backends = TaskBackends::new();
+	let _backends = TaskBackends::new();
 
 	// This test verifies the backend type matches
 	assert_eq!(backend.backend_name(), "dummy");
