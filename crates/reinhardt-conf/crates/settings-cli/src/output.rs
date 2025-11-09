@@ -1,6 +1,6 @@
 //! Output formatting utilities
 
-use colored::*;
+use colored::Colorize;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -12,18 +12,8 @@ pub enum OutputFormat {
 	Toml,
 }
 
-impl OutputFormat {
-	/// Parse an OutputFormat from a string
-	///
-	#[allow(dead_code)]
-	pub fn parse(s: &str) -> Self {
-		match s.to_lowercase().as_str() {
-			"json" => Self::Json,
-			"toml" => Self::Toml,
-			_ => Self::Text,
-		}
-	}
-}
+// Note: OutputFormat::parse() was removed as clap's ValueEnum is used instead
+// See OutputFormatArg in commands/show.rs
 /// Print a success message
 ///
 pub fn success(msg: &str) {
@@ -44,30 +34,8 @@ pub fn warning(msg: &str) {
 pub fn info(msg: &str) {
 	println!("{} {}", "ℹ".blue().bold(), msg);
 }
-/// Print a key-value pair
-///
-#[allow(dead_code)]
-pub fn key_value(key: &str, value: &str) {
-	println!("{}: {}", key.cyan().bold(), value);
-}
-/// Print a table header
-///
-#[allow(dead_code)]
-pub fn table_header(columns: &[&str]) {
-	let header = columns
-		.iter()
-		.map(|c| c.bold().to_string())
-		.collect::<Vec<_>>()
-		.join(" | ");
-	println!("{}", header);
-	println!("{}", "-".repeat(header.len()));
-}
-/// Print a table row
-///
-#[allow(dead_code)]
-pub fn table_row(values: &[&str]) {
-	println!("{}", values.join(" | "));
-}
+// Note: key_value(), table_header(), and table_row() were removed as unused
+// These were placeholder utility functions that were never integrated into any command
 /// Format and print a value based on the output format
 ///
 pub fn print_value<T: Serialize>(value: &T, format: OutputFormat) -> anyhow::Result<()> {
