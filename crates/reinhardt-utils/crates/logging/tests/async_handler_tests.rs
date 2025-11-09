@@ -103,7 +103,7 @@ async fn test_queue_handler_enqueues_records() {
 	let logger = Logger::new("test.queue".to_string());
 	let (handler, mut receiver) = QueueHandler::new(LogLevel::Info);
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	logger.info("Test message 1".to_string()).await;
@@ -125,7 +125,7 @@ async fn test_queue_listener_processes_records() {
 	let logger = Logger::new("test.listener".to_string());
 	let (handler, receiver) = QueueHandler::new(LogLevel::Info);
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	// Create listener with a memory handler
@@ -160,7 +160,7 @@ async fn test_queue_handler_nonblocking() {
 	let logger = Logger::new("test.nonblock".to_string());
 	let (handler, _receiver) = QueueHandler::new(LogLevel::Info);
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	// Log many messages - should complete quickly
@@ -182,7 +182,7 @@ async fn test_listener_respects_handler_levels() {
 	let logger = Logger::new("test.levels".to_string());
 	let (handler, receiver) = QueueHandler::new(LogLevel::Debug);
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	// Create listener with handler at WARNING level
@@ -215,12 +215,12 @@ async fn test_logging_multiple_listeners() {
 	// Multiple listeners can consume from different queues
 	let logger1 = Logger::new("test.queue1".to_string());
 	let (handler1, receiver1) = QueueHandler::new(LogLevel::Info);
-	logger1.add_handler(Box::new(handler1)).await;
+	logger1.add_handler(Arc::new(handler1)).await;
 	logger1.set_level(LogLevel::Info).await;
 
 	let logger2 = Logger::new("test.queue2".to_string());
 	let (handler2, receiver2) = QueueHandler::new(LogLevel::Info);
-	logger2.add_handler(Box::new(handler2)).await;
+	logger2.add_handler(Arc::new(handler2)).await;
 	logger2.set_level(LogLevel::Info).await;
 
 	// Create separate listeners
@@ -259,7 +259,7 @@ async fn test_listener_with_multiple_handlers() {
 	// Single listener can forward to multiple handlers
 	let logger = Logger::new("test.multi".to_string());
 	let (handler, receiver) = QueueHandler::new(LogLevel::Info);
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	// Create listener with multiple memory handlers
@@ -293,7 +293,7 @@ async fn test_queue_handler_cloning_records() {
 	let logger = Logger::new("test.clone".to_string());
 	let (handler, mut receiver) = QueueHandler::new(LogLevel::Info);
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	logger.info("Test message".to_string()).await;
@@ -318,7 +318,7 @@ async fn test_listener_start_background() {
 	// Listener start() should process records in the background
 	let logger = Logger::new("test.background".to_string());
 	let (handler, receiver) = QueueHandler::new(LogLevel::Info);
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let mut listener = QueueListener::new(receiver);

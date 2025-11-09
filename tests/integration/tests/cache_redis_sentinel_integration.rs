@@ -12,7 +12,7 @@
 //! For production Sentinel operational testing (failover, master discovery, etc.),
 //! use manual testing with real Sentinel clusters.
 
-use reinhardt_cache::RedisSentinelConfig;
+use reinhardt_utils::cache::RedisSentinelConfig;
 
 #[tokio::test]
 async fn test_redis_sentinel_config_creation() {

@@ -66,13 +66,14 @@ impl SecurityLogger {
 	}
 }
 
+#[allow(dead_code)]
 async fn test_suspicious_operation_logged() {
 	// SuspiciousOperation should be logged at ERROR level
 	let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());
@@ -91,13 +92,14 @@ async fn test_suspicious_operation_logged() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_disallowed_host_logged() {
 	// DisallowedHost errors should be logged with helpful message
 	let logger = Arc::new(Logger::new("reinhardt.security.DisallowedHost".to_string()));
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());
@@ -113,6 +115,7 @@ async fn test_disallowed_host_logged() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_suspicious_file_operation_logged() {
 	// Suspicious file operations should be logged
 	let logger = Arc::new(Logger::new(
@@ -121,7 +124,7 @@ async fn test_suspicious_file_operation_logged() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());
@@ -139,18 +142,19 @@ async fn test_suspicious_file_operation_logged() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_security_logger_separation() {
 	// Security logger should be separate from main logger
 	let main_logger = Arc::new(Logger::new("myapp.main".to_string()));
 	let main_handler = MemoryHandler::new(LogLevel::Info);
 	let main_memory = main_handler.clone();
-	main_logger.add_handler(Box::new(main_handler)).await;
+	main_logger.add_handler(Arc::new(main_handler)).await;
 	main_logger.set_level(LogLevel::Info).await;
 
 	let sec_logger_inner = Arc::new(Logger::new("myapp.security".to_string()));
 	let sec_handler = MemoryHandler::new(LogLevel::Error);
 	let sec_memory = sec_handler.clone();
-	sec_logger_inner.add_handler(Box::new(sec_handler)).await;
+	sec_logger_inner.add_handler(Arc::new(sec_handler)).await;
 	sec_logger_inner.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(sec_logger_inner.clone());
@@ -177,13 +181,14 @@ async fn test_security_logger_separation() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_multiple_security_violations() {
 	// Multiple security violations should all be logged
 	let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());
@@ -229,7 +234,7 @@ async fn test_security_logger_with_different_levels() {
 	let handler = MemoryHandler::new(LogLevel::Debug);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());
@@ -247,13 +252,14 @@ async fn test_security_logger_with_different_levels() {
 	assert_eq!(records[0].level, LogLevel::Error);
 }
 
+#[allow(dead_code)]
 async fn test_security_error_types() {
 	// Test all security error types can be logged
 	let logger = Arc::new(Logger::new("reinhardt.security".to_string()));
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let sec_logger = SecurityLogger::new(logger.clone());

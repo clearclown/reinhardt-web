@@ -39,11 +39,11 @@ async fn test_depends_with_cache_default() {
 	let ctx = InjectionContext::new(singleton);
 
 	// Cache is enabled by default
-	let params1 = Depends::<CommonQueryParams>::new()
+	let params1 = Depends::<CommonQueryParams>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
-	let params2 = Depends::<CommonQueryParams>::new()
+	let params2 = Depends::<CommonQueryParams>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
@@ -62,11 +62,11 @@ async fn test_depends_no_cache() {
 	let ctx = InjectionContext::new(singleton);
 
 	// Cache disabled
-	let service1 = Depends::<CountedService>::no_cache()
+	let service1 = Depends::<CountedService>::builder_no_cache()
 		.resolve(&ctx)
 		.await
 		.unwrap();
-	let service2 = Depends::<CountedService>::no_cache()
+	let service2 = Depends::<CountedService>::builder_no_cache()
 		.resolve(&ctx)
 		.await
 		.unwrap();
@@ -86,11 +86,11 @@ async fn test_depends_with_cache_enabled() {
 	let ctx = InjectionContext::new(singleton);
 
 	// Cache enabled (default)
-	let service1 = Depends::<CountedService>::new()
+	let service1 = Depends::<CountedService>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
-	let service2 = Depends::<CountedService>::new()
+	let service2 = Depends::<CountedService>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
@@ -114,7 +114,7 @@ async fn test_depends_deref() {
 	let singleton = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::new(singleton);
 
-	let params = Depends::<CommonQueryParams>::new()
+	let params = Depends::<CommonQueryParams>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
@@ -129,7 +129,7 @@ async fn test_fastapi_depends_clone() {
 	let singleton = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::new(singleton);
 
-	let params1 = Depends::<CommonQueryParams>::new()
+	let params1 = Depends::<CommonQueryParams>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();
@@ -158,8 +158,8 @@ async fn test_fastapi_style_usage() {
 	let ctx = InjectionContext::new(singleton);
 
 	// Simulate endpoint usage
-	let config = Depends::<Config>::new().resolve(&ctx).await.unwrap();
-	let params = Depends::<CommonQueryParams>::new()
+	let config = Depends::<Config>::builder().resolve(&ctx).await.unwrap();
+	let params = Depends::<CommonQueryParams>::builder()
 		.resolve(&ctx)
 		.await
 		.unwrap();

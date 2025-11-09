@@ -1,7 +1,7 @@
 //! Tests for log level filtering functionality
 //! Based on Django's DefaultLoggingTests
 
-use reinhardt_logging::{LogLevel, Logger, LoggingConfig, LoggingManager, handlers::MemoryHandler};
+use reinhardt_logging::{LogLevel, Logger, handlers::MemoryHandler};
 use std::sync::Arc;
 
 #[tokio::test]
@@ -11,9 +11,7 @@ async fn test_logger_basic_levels() {
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	logger.error("Hey, this is an error.".to_string()).await;
@@ -36,9 +34,7 @@ async fn test_logger_only_outputs_when_level_allows() {
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Info).await;
 
 	logger.error("Hey, this is an error.".to_string()).await;
@@ -64,9 +60,7 @@ async fn test_logger_warning() {
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	logger.warning("warning".to_string()).await;
@@ -83,9 +77,7 @@ async fn test_logger_info() {
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	logger.info("info".to_string()).await;
@@ -104,7 +96,7 @@ async fn test_logger_debug_filtered_by_default() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Info).await;
 
@@ -122,7 +114,7 @@ async fn test_handler_level_filtering() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -148,12 +140,8 @@ async fn test_multiple_handlers_different_levels() {
 	let handler1_clone = handler1.clone();
 	let handler2_clone = handler2.clone();
 
-	logger
-		.add_handler(Box::new(handler1_clone.as_ref().clone() as MemoryHandler))
-		.await;
-	logger
-		.add_handler(Box::new(handler2_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler1_clone).await;
+	logger.add_handler(handler2_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	logger.debug("debug".to_string()).await;

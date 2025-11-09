@@ -19,7 +19,7 @@ async fn test_translation_key_missing_logged() {
 	let handler = MemoryHandler::new(LogLevel::Debug);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	logger
@@ -42,7 +42,7 @@ async fn test_translation_locale_fallback_logged() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	logger
@@ -81,7 +81,7 @@ async fn test_format_exception_with_traceback() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let traceback = vec![("views.py", 42), ("middleware.py", 15), ("handlers.py", 8)];
@@ -105,7 +105,7 @@ async fn test_format_exception_with_cause_chain() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let msg = "RuntimeError: Failed to process\nCaused by: ValueError: Invalid data\nCaused by: TypeError: Wrong type";
@@ -127,7 +127,7 @@ async fn test_format_exception_truncation() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	// Create a very long traceback
@@ -157,7 +157,7 @@ async fn test_exception_in_log_record() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let mut record = LogRecord::new(
@@ -195,7 +195,7 @@ async fn test_multiple_nested_exceptions() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let msg = "Level 1 Error\n  Caused by: Level 2 Error\n    Caused by: Level 3 Error\n      Caused by: Root cause";
@@ -352,7 +352,7 @@ async fn test_request_logging_middleware() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let request = Request {
@@ -380,7 +380,7 @@ async fn test_response_logging_middleware() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let response = Response { status: 200 };
@@ -401,7 +401,7 @@ async fn test_request_response_timing_logged() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let request = Request {

@@ -37,7 +37,7 @@ async fn test_page_not_found_warning() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -58,14 +58,13 @@ async fn test_page_not_found_warning() {
 	assert_eq!(status_code, Some(404));
 }
 
+#[allow(dead_code)]
 async fn test_control_chars_escaped() {
 	let logger = Logger::new("reinhardt.request".to_string());
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	// Use actual ESC character (\x1b) instead of URL-encoded version
@@ -84,14 +83,13 @@ async fn test_control_chars_escaped() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_permission_denied() {
 	let logger = Logger::new("reinhardt.request".to_string());
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	log_response(
@@ -111,14 +109,13 @@ async fn test_permission_denied() {
 	);
 }
 
+#[allow(dead_code)]
 async fn test_internal_server_error() {
 	let logger = Logger::new("reinhardt.request".to_string());
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	log_response(
@@ -145,7 +142,7 @@ async fn test_internal_server_error_599() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -172,7 +169,7 @@ async fn test_logs_5xx_as_error() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -191,7 +188,7 @@ async fn test_logs_4xx_as_warning() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -210,7 +207,7 @@ async fn test_logs_2xx_as_info() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -222,14 +219,13 @@ async fn test_logs_2xx_as_info() {
 	assert_eq!(records[0].message, "OK response");
 }
 
+#[allow(dead_code)]
 async fn test_unicode_paths() {
 	let logger = Logger::new("reinhardt.request".to_string());
 	let handler = Arc::new(MemoryHandler::new(LogLevel::Debug));
 	let handler_clone = handler.clone();
 
-	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
-		.await;
+	logger.add_handler(handler_clone).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	let path = "/café/test/路径";
@@ -254,7 +250,7 @@ async fn test_multi_part_parser_error() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 
@@ -280,7 +276,7 @@ async fn test_format_args_are_applied() {
 	let handler_clone = handler.clone();
 
 	logger
-		.add_handler(Box::new(handler_clone.as_ref().clone() as MemoryHandler))
+		.add_handler(handler_clone)
 		.await;
 	logger.set_level(LogLevel::Debug).await;
 

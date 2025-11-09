@@ -44,7 +44,7 @@ async fn test_engine_echo_flag() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -70,7 +70,7 @@ async fn test_engine_echo_disabled() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), false);
@@ -90,7 +90,7 @@ async fn test_named_logger() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -111,7 +111,7 @@ async fn test_sql_parameter_logging() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -138,7 +138,7 @@ async fn test_large_parameter_truncation() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -167,7 +167,7 @@ async fn test_multiple_statements_logged() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -194,7 +194,7 @@ async fn test_echo_respects_logger_level() {
 	let handler = MemoryHandler::new(LogLevel::Warning);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Warning).await; // Set to WARNING
 
 	let engine = LoggingEngine::new(logger.clone(), true);
@@ -214,13 +214,13 @@ async fn test_multiple_engines_different_echo() {
 	let logger1 = Arc::new(Logger::new("reinhardt.orm.engine.conn1".to_string()));
 	let handler1 = MemoryHandler::new(LogLevel::Info);
 	let memory1 = handler1.clone();
-	logger1.add_handler(Box::new(handler1)).await;
+	logger1.add_handler(Arc::new(handler1)).await;
 	logger1.set_level(LogLevel::Info).await;
 
 	let logger2 = Arc::new(Logger::new("reinhardt.orm.engine.conn2".to_string()));
 	let handler2 = MemoryHandler::new(LogLevel::Info);
 	let memory2 = handler2.clone();
-	logger2.add_handler(Box::new(handler2)).await;
+	logger2.add_handler(Arc::new(handler2)).await;
 	logger2.set_level(LogLevel::Info).await;
 
 	// Engine 1 with echo=true
@@ -249,7 +249,7 @@ async fn test_sql_with_newlines_logged() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let engine = LoggingEngine::new(logger.clone(), true);

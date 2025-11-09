@@ -88,6 +88,7 @@ async fn test_async_callable_dependency() {
 #[derive(Clone)]
 struct StatefulDependency {
 	instance_id: usize,
+	#[allow(dead_code)]
 	counter_ref: Arc<AtomicUsize>,
 }
 

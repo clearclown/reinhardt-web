@@ -2,7 +2,7 @@
 //!
 //! Tests the MemcachedCache backend with a real Memcached container using TestContainers.
 
-use reinhardt_cache::{Cache, MemcachedCache, MemcachedConfig};
+use reinhardt_utils::cache::{Cache, MemcachedCache, MemcachedConfig};
 use rstest::*;
 use std::time::Duration;
 use testcontainers::core::IntoContainerPort;

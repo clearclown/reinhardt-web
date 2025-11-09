@@ -123,7 +123,7 @@ async fn test_pool_connection_logging() {
 	let handler = MemoryHandler::new(LogLevel::Debug);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	let mut pool = LoggingPool::new(logger.clone(), 5, 2);
@@ -148,7 +148,7 @@ async fn test_pool_overflow_warnings() {
 	let handler = MemoryHandler::new(LogLevel::Debug);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	let mut pool = LoggingPool::new(logger.clone(), 2, 3);
@@ -178,7 +178,7 @@ async fn test_connection_timeout_logging() {
 	let handler = MemoryHandler::new(LogLevel::Debug);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Debug).await;
 
 	let mut pool = LoggingPool::new(logger.clone(), 2, 1);
@@ -210,7 +210,7 @@ async fn test_pool_recycle_events() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let pool = LoggingPool::new(logger.clone(), 5, 2).with_recycle(Duration::from_secs(3600));
@@ -234,7 +234,7 @@ async fn test_pool_dispose_logging() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let pool = LoggingPool::new(logger.clone(), 5, 2);
@@ -255,13 +255,13 @@ async fn test_multiple_pools_different_configs() {
 	let logger1 = Arc::new(Logger::new("reinhardt.orm.pool.primary".to_string()));
 	let handler1 = MemoryHandler::new(LogLevel::Debug);
 	let memory1 = handler1.clone();
-	logger1.add_handler(Box::new(handler1)).await;
+	logger1.add_handler(Arc::new(handler1)).await;
 	logger1.set_level(LogLevel::Debug).await;
 
 	let logger2 = Arc::new(Logger::new("reinhardt.orm.pool.replica".to_string()));
 	let handler2 = MemoryHandler::new(LogLevel::Debug);
 	let memory2 = handler2.clone();
-	logger2.add_handler(Box::new(handler2)).await;
+	logger2.add_handler(Arc::new(handler2)).await;
 	logger2.set_level(LogLevel::Debug).await;
 
 	let mut pool1 = LoggingPool::new(logger1.clone(), 10, 5);
@@ -290,7 +290,7 @@ async fn test_pool_statistics_logging() {
 	let handler = MemoryHandler::new(LogLevel::Info);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Info).await;
 
 	let mut pool = LoggingPool::new(logger.clone(), 10, 5);
@@ -316,7 +316,7 @@ async fn test_connection_validation_errors() {
 	let handler = MemoryHandler::new(LogLevel::Error);
 	let memory = handler.clone();
 
-	logger.add_handler(Box::new(handler)).await;
+	logger.add_handler(Arc::new(handler)).await;
 	logger.set_level(LogLevel::Error).await;
 
 	let pool = LoggingPool::new(logger.clone(), 5, 2);

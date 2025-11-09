@@ -4,7 +4,7 @@
 //! using TestContainers and Redis, testing message publishing, subscription,
 //! and multi-subscriber scenarios.
 
-use reinhardt_cache::{CacheInvalidationChannel, CacheInvalidationMessage};
+use reinhardt_utils::cache::{CacheInvalidationChannel, CacheInvalidationMessage};
 use rstest::*;
 use testcontainers::{ContainerAsync, runners::AsyncRunner};
 use testcontainers_modules::redis::Redis;
