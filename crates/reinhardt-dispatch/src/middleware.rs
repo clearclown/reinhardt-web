@@ -1,8 +1,8 @@
 //! Middleware system for request/response processing pipeline.
 
 use reinhardt_exception::Result;
-use reinhardt_http::{Request, Response};
 use reinhardt_types::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
 use std::sync::Arc;
 
 /// A middleware chain that composes multiple middleware components with a handler.

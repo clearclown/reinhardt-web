@@ -1,5 +1,5 @@
-use reinhardt_http::{Request, Response};
 use reinhardt_types::Handler;
+use reinhardt_http::{Request, Response};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::Arc;

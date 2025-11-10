@@ -69,7 +69,7 @@ pub use reinhardt_views_core::generic;
 
 // Re-export viewsets if the feature is enabled
 #[cfg(feature = "viewsets")]
-pub use reinhardt_viewsets;
+pub use reinhardt_viewsets as viewsets;
 
 // Module declarations
 mod core;

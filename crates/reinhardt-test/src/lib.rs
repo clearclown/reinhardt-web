@@ -55,7 +55,7 @@ pub use messages::{
 	assert_message_tags, assert_messages,
 };
 pub use mock::{
-	CallRecord, DummyCache, MockFunction, MockRedisClusterCache, MockSchemaEditor, SimpleHandler,
+	CallRecord, MockFunction, MockSchemaEditor, SimpleHandler,
 	Spy,
 };
 pub use resource::{
@@ -106,7 +106,7 @@ pub mod prelude {
 	pub use super::messages::{
 		MessagesTestMixin, assert_message_count, assert_message_exists, assert_messages,
 	};
-	pub use super::mock::{MockFunction, MockRedisClusterCache, SimpleHandler, Spy};
+	pub use super::mock::{MockFunction, SimpleHandler, Spy};
 	pub use super::resource::{
 		AsyncTeardownGuard, AsyncTestResource, SuiteGuard, SuiteResource, TeardownGuard,
 		TestResource, acquire_suite,

@@ -6,7 +6,7 @@ use crate::{BaseCommand, CommandArgument, CommandContext, CommandOption, Command
 use async_trait::async_trait;
 
 #[cfg(feature = "migrations")]
-use reinhardt_migrations::DatabaseMigrationExecutor;
+use reinhardt_db::migrations::DatabaseMigrationExecutor;
 
 #[cfg(feature = "migrations")]
 use reinhardt_db::backends::{DatabaseConnection, DatabaseType};
@@ -73,7 +73,7 @@ impl BaseCommand for MigrateCommand {
 		// Use reinhardt-migrations for migration execution
 		#[cfg(feature = "migrations")]
 		{
-			use reinhardt_migrations::MigrationLoader;
+			use reinhardt_db::migrations::MigrationLoader;
 			use std::path::PathBuf;
 
 			// 1. Load migration files from disk
@@ -263,7 +263,9 @@ impl BaseCommand for MakeMigrationsCommand {
 		// Use reinhardt-migrations MakeMigrationsCommand
 		#[cfg(feature = "migrations")]
 		{
-			use reinhardt_migrations::{MakeMigrationsCommand as MigCmd, MakeMigrationsOptions};
+			use reinhardt_db::migrations::{
+				MakeMigrationsCommand as MigCmd, MakeMigrationsOptions,
+			};
 
 			let options = MakeMigrationsOptions {
 				app_label,
@@ -1142,7 +1144,7 @@ impl CheckCommand {
 	async fn check_migrations() -> Result<u32, String> {
 		#[cfg(feature = "migrations")]
 		{
-			use reinhardt_migrations::{DatabaseMigrationRecorder, MigrationLoader};
+			use reinhardt_db::migrations::{DatabaseMigrationRecorder, MigrationLoader};
 			use std::path::PathBuf;
 
 			// 1. Load migration files from disk

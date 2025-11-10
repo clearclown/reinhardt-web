@@ -10,7 +10,7 @@
 
 use async_trait::async_trait;
 use reinhardt_exception::{Error, Result};
-use reinhardt_orm::Model;
+use reinhardt_db::orm::Model;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -73,7 +73,7 @@ pub trait AdminView: Send + Sync {
 ///
 /// ```
 /// use reinhardt_views_core::admin::ModelAdmin;
-/// use reinhardt_orm::Model;
+/// use reinhardt_db::orm::Model;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -126,7 +126,7 @@ impl<T: Model + Serialize + for<'de> Deserialize<'de> + Clone> ModelAdmin<T> {
 	///
 	/// ```
 	/// use reinhardt_views_core::admin::ModelAdmin;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,7 +165,7 @@ impl<T: Model + Serialize + for<'de> Deserialize<'de> + Clone> ModelAdmin<T> {
 	///
 	/// ```
 	/// use reinhardt_views_core::admin::ModelAdmin;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]

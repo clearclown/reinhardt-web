@@ -5,12 +5,12 @@
 
 use bytes::Bytes;
 use hyper::StatusCode;
-use reinhardt_http::{Request, Response};
-use reinhardt_routers::DefaultRouter;
 use reinhardt_signals::{
 	RequestFinishedEvent, RequestStartedEvent, request_finished, request_started,
 };
 use reinhardt_types::Handler;
+use reinhardt_http::{Request, Response};
+use reinhardt_routers::DefaultRouter;
 use std::sync::Arc;
 use tracing::{debug, error, trace};
 

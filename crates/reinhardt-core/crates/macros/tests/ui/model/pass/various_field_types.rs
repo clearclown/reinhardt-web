@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[allow(unused_imports)]
 use reinhardt_migrations as _;
 #[allow(unused_imports)]
-use reinhardt_orm::{self as _, Model as _};
+use reinhardt_db::orm::{self as _, Model as _};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Model)]
 #[model(app_label = "test", table_name = "complex_model")]

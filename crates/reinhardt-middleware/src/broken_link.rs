@@ -14,8 +14,8 @@ use hyper::StatusCode;
 use hyper::header::{REFERER, USER_AGENT};
 use regex::Regex;
 use reinhardt_apps::{Handler, Middleware, Request, Response, Result};
+use reinhardt_conf::settings;
 use reinhardt_mail;
-use reinhardt_settings;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -254,7 +254,7 @@ impl BrokenLinkEmailsMiddleware {
 		let managers = if let Ok(settings_json) = std::env::var("REINHARDT_SETTINGS") {
 			// Attempt to parse settings from environment variable
 			if let Ok(settings) =
-				serde_json::from_str::<reinhardt_settings::Settings>(&settings_json)
+				serde_json::from_str::<settings::Settings>(&settings_json)
 			{
 				settings.managers
 			} else {
@@ -265,7 +265,7 @@ impl BrokenLinkEmailsMiddleware {
 			self.config
 				.email_addresses
 				.iter()
-				.map(|email| reinhardt_settings::Contact::new("", email.clone()))
+				.map(|email| settings::Contact::new("", email.clone()))
 				.collect()
 		};
 

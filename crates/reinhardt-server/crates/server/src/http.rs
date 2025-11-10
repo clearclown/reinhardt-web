@@ -4,8 +4,8 @@ use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
+use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 use reinhardt_http::{Request, Response};
-use reinhardt_types::Handler;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -17,7 +17,7 @@ use crate::shutdown::ShutdownCoordinator;
 /// HTTP Server with middleware support
 pub struct HttpServer {
 	pub handler: Arc<dyn Handler>,
-	pub(crate) middlewares: Vec<Arc<dyn reinhardt_types::Middleware>>,
+	pub(crate) middlewares: Vec<Arc<dyn Middleware>>,
 }
 
 impl HttpServer {
@@ -59,7 +59,7 @@ impl HttpServer {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_server_core::HttpServer;
-	/// use reinhardt_types::{Handler, Middleware};
+	/// use reinhardt_core::types::{Handler, Middleware};
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -84,7 +84,7 @@ impl HttpServer {
 	/// let server = HttpServer::new(handler)
 	///     .with_middleware(middleware);
 	/// ```
-	pub fn with_middleware(mut self, middleware: Arc<dyn reinhardt_types::Middleware>) -> Self {
+	pub fn with_middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {
 		self.middlewares.push(middleware);
 		self
 	}
@@ -97,7 +97,7 @@ impl HttpServer {
 			return self.handler.clone();
 		}
 
-		let mut chain = reinhardt_types::MiddlewareChain::new(self.handler.clone());
+		let mut chain = MiddlewareChain::new(self.handler.clone());
 		for middleware in &self.middlewares {
 			chain.add_middleware(middleware.clone());
 		}

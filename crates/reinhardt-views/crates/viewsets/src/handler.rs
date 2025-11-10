@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_apps::{Handler, Request, Response, Result};
 use reinhardt_auth::permissions::{Permission, PermissionContext};
+use reinhardt_db::orm::{Model, query_types::DbBackend};
 use reinhardt_filters::FilterBackend;
-use reinhardt_orm::{Model, query_types::DbBackend};
 use reinhardt_serializers::{ModelSerializer, Serializer};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -196,7 +196,7 @@ impl std::error::Error for ViewError {}
 ///
 /// ```no_run
 /// # use reinhardt_viewsets::ModelViewSetHandler;
-/// # use reinhardt_orm::Model;
+/// # use reinhardt_db::orm::Model;
 /// # use serde::{Serialize, Deserialize};
 /// #
 /// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -241,7 +241,7 @@ where
 	///
 	/// ```
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -277,7 +277,7 @@ where
 	///
 	/// ```
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -311,7 +311,7 @@ where
 	/// ```
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_serializers::ModelSerializer;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use std::sync::Arc;
 	/// #
@@ -345,7 +345,7 @@ where
 	///
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use sqlx::AnyPool;
 	/// # use std::sync::Arc;
@@ -380,7 +380,7 @@ where
 	///
 	/// ```
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
-	/// # use reinhardt_orm::{Model, query_types::DbBackend};
+	/// # use reinhardt_db::orm::{Model, query_types::DbBackend};
 	/// # use serde::{Serialize, Deserialize};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -410,7 +410,7 @@ where
 	/// ```
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_auth::permissions::IsAuthenticated;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use std::sync::Arc;
 	/// #
@@ -493,13 +493,13 @@ where
 			match uuid::Uuid::parse_str(user_id_str) {
 				Ok(user_uuid) => {
 					// Get database connection
-					use reinhardt_orm::manager::get_connection;
+					use reinhardt_db::orm::manager::get_connection;
 					match get_connection().await {
 						Ok(conn) => {
 							// Build SQL query to fetch user from database
 							use reinhardt_auth::DefaultUser;
-							use reinhardt_orm::Model;
-							use reinhardt_orm::connection::QueryValue;
+							use reinhardt_db::orm::Model;
+							use reinhardt_db::orm::connection::QueryValue;
 
 							let table_name = DefaultUser::table_name();
 							let pk_field = DefaultUser::primary_key_field();
@@ -583,7 +583,7 @@ where
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_apps::Request;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use bytes::Bytes;
 	/// # use hyper::{Method, Uri, Version, HeaderMap};
@@ -642,7 +642,7 @@ where
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_apps::Request;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
@@ -715,7 +715,7 @@ where
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_apps::Request;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use bytes::Bytes;
 	/// # use hyper::{Method, Uri, Version, HeaderMap};
@@ -763,7 +763,7 @@ where
 		// Save to database if pool is available
 		if let Some(pool) = &self.pool {
 			// Create a new session for this request
-			let mut session = reinhardt_orm::session::Session::new(pool.clone(), self.db_backend)
+			let mut session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
 				.await
 				.map_err(|e| {
 					ViewError::DatabaseError(format!("Failed to create session: {}", e))
@@ -803,7 +803,7 @@ where
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_apps::Request;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
@@ -860,7 +860,7 @@ where
 		// Update database if pool is available
 		if let Some(pool) = &self.pool {
 			// Create a new session for this request
-			let mut session = reinhardt_orm::session::Session::new(pool.clone(), self.db_backend)
+			let mut session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
 				.await
 				.map_err(|e| {
 					ViewError::DatabaseError(format!("Failed to create session: {}", e))
@@ -900,7 +900,7 @@ where
 	/// ```no_run
 	/// # use reinhardt_viewsets::ModelViewSetHandler;
 	/// # use reinhardt_apps::Request;
-	/// # use reinhardt_orm::Model;
+	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
@@ -957,7 +957,7 @@ where
 		// Delete from database if pool is available
 		if let Some(pool) = &self.pool {
 			// Create a new session for this request
-			let mut session = reinhardt_orm::session::Session::new(pool.clone(), self.db_backend)
+			let mut session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
 				.await
 				.map_err(|e| {
 					ViewError::DatabaseError(format!("Failed to create session: {}", e))

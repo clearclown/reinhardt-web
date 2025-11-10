@@ -3,13 +3,11 @@ use async_graphql::{EmptySubscription, Schema};
 #[cfg(feature = "graphql")]
 use http::{Method, StatusCode};
 #[cfg(feature = "graphql")]
-use reinhardt_http::{Request, Response};
-#[cfg(feature = "graphql")]
 use reinhardt_types::Handler;
 #[cfg(feature = "graphql")]
-use std::sync::Arc;
+use reinhardt_http::{Request, Response};
 #[cfg(feature = "graphql")]
-extern crate serde_json;
+use std::sync::Arc;
 
 /// GraphQL server handler that wraps an async-graphql schema
 #[cfg(feature = "graphql")]

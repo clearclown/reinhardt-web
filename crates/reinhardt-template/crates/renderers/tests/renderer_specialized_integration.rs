@@ -418,74 +418,6 @@ mod specialized_renderer_tests {
 		assert!(html.contains("Submit"));
 	}
 
-	// BrowsableAPIRenderer Integration Tests
-	// Note: BrowsableAPIRenderer has a different API than the Renderer trait,
-	// so these tests just verify basic integration
-	#[tokio::test]
-	async fn test_browsable_api_renderer_exists() {
-		use reinhardt_browsable_api::{ApiContext, BrowsableApiRenderer};
-		let _renderer = BrowsableApiRenderer::new();
-		// Just verify it can be instantiated
-	}
-
-	#[tokio::test]
-	async fn test_browsable_api_renderer_basic_render() {
-		use reinhardt_browsable_api::{ApiContext, BrowsableApiRenderer};
-		let renderer = BrowsableApiRenderer::new();
-		let context = ApiContext {
-			title: "Test API".to_string(),
-			description: Some("A test endpoint".to_string()),
-			endpoint: "/test".to_string(),
-			method: "GET".to_string(),
-			response_data: json!({"message": "Hello"}),
-			response_status: 200,
-			allowed_methods: vec!["GET".to_string(), "POST".to_string()],
-			request_form: None,
-			headers: vec![],
-		};
-
-		let result = renderer.render(&context);
-		assert!(result.is_ok());
-		let html = result.unwrap();
-		assert!(html.contains("Test API"));
-	}
-
-	#[tokio::test]
-	async fn test_browsable_api_renderer_with_form() {
-		use reinhardt_browsable_api::{ApiContext, BrowsableApiRenderer, FormContext, FormField};
-		let renderer = BrowsableApiRenderer::new();
-		let form = FormContext {
-			fields: vec![FormField {
-				name: "username".to_string(),
-				label: "Username".to_string(),
-				field_type: "text".to_string(),
-				required: true,
-				help_text: None,
-				initial_value: None,
-				options: None,
-				initial_label: None,
-			}],
-			submit_url: "/submit".to_string(),
-			submit_method: "POST".to_string(),
-		};
-		let context = ApiContext {
-			title: "Form API".to_string(),
-			description: None,
-			endpoint: "/form".to_string(),
-			method: "POST".to_string(),
-			response_data: json!({}),
-			response_status: 200,
-			allowed_methods: vec!["POST".to_string()],
-			request_form: Some(form),
-			headers: vec![],
-		};
-
-		let result = renderer.render(&context);
-		assert!(result.is_ok());
-		let html = result.unwrap();
-		assert!(html.contains("username"));
-	}
-
 	// Combined Renderer Tests
 	#[tokio::test]
 	async fn test_specialized_renderers_unique_formats() {
@@ -541,13 +473,11 @@ mod specialized_renderer_tests {
 
 	#[tokio::test]
 	async fn test_all_specialized_renderers_are_send_sync() {
-		use reinhardt_browsable_api::BrowsableApiRenderer;
 		fn assert_send_sync<T: Send + Sync>() {}
 
 		assert_send_sync::<StaticHTMLRenderer>();
 		assert_send_sync::<DocumentationRenderer>();
 		assert_send_sync::<SchemaJSRenderer>();
 		assert_send_sync::<HTMLFormRenderer>();
-		assert_send_sync::<BrowsableApiRenderer>();
 	}
 }

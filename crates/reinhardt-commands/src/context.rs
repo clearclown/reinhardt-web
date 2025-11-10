@@ -9,7 +9,7 @@ pub struct CommandContext {
 	pub options: HashMap<String, Vec<String>>,
 	pub verbosity: u8,
 	/// Optional reference to application settings
-	pub settings: Option<Arc<reinhardt_settings::Settings>>,
+	pub settings: Option<Arc<reinhardt_conf::settings::Settings>>,
 }
 
 impl CommandContext {
@@ -33,7 +33,7 @@ impl CommandContext {
 	}
 
 	/// Set the application settings reference
-	pub fn with_settings(mut self, settings: Arc<reinhardt_settings::Settings>) -> Self {
+	pub fn with_settings(mut self, settings: Arc<reinhardt_conf::settings::Settings>) -> Self {
 		self.settings = Some(settings);
 		self
 	}

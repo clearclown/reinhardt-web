@@ -287,4 +287,4 @@ pub use xml::XMLRenderer;
 pub use yaml_renderer::YAMLRenderer;
 
 // Re-export from specialized crates
-pub use reinhardt_browsable_api::BrowsableApiRenderer as BrowsableAPIRenderer;
+pub use reinhardt_browsable_api::BrowsableApiRenderer;

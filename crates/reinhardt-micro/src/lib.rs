@@ -73,7 +73,7 @@
 pub use reinhardt_apps::{Error, Request, Response, Result};
 
 #[cfg(feature = "params")]
-pub use reinhardt_params::{Cookie, Form, Header, Json, Path, Query};
+pub use reinhardt_di::params::{Cookie, Form, Header, Json, Path, Query};
 
 #[cfg(feature = "di")]
 pub use reinhardt_di::Depends;
@@ -122,7 +122,7 @@ pub mod prelude {
 	pub use super::{Error, Request, Response, Result};
 
 	#[cfg(feature = "params")]
-	pub use reinhardt_params::{Cookie, Form, Header, Json, Path, Query};
+	pub use reinhardt_di::params::{Cookie, Form, Header, Json, Path, Query};
 
 	#[cfg(feature = "di")]
 	pub use reinhardt_di::Depends;
@@ -140,10 +140,10 @@ pub mod prelude {
 	pub use serde::{Deserialize, Serialize};
 }
 
+use reinhardt_types::Handler;
 use reinhardt_middleware::Middleware;
 use reinhardt_routers::{DefaultRouter, Route, Router};
 use reinhardt_server::serve as http_serve;
-use reinhardt_types::Handler;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
