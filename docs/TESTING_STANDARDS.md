@@ -175,49 +175,6 @@ fn test_query_execution() {
 }
 ```
 
-### TO-2 (MUST): Dependency Rules
-
-**Functional crates MUST NOT include other Reinhardt crates as `dev-dependencies`**
-
-**Exception**: Within the same workspace subcrate hierarchy (e.g., `reinhardt-rest/crates/rest-core` depending on `reinhardt-rest`), dev-dependencies are allowed for within-crate integration testing.
-
-**Why?**
-- This ensures that cross-crate integration tests are properly located in the `tests` crate
-- Within-crate tests (both unit and integration) should not require external Reinhardt crates
-- If a test requires multiple Reinhardt crates, it tests cross-crate integration points and belongs in the repository-level `tests` crate
-- The exception allows subcrates to test their integration with their parent crate without violating the separation principle
-
-❌ **BAD:**
-```toml
-# crates/reinhardt-orm/Cargo.toml
-[dev-dependencies]
-reinhardt-serializers = { path = "../reinhardt-serializers" }  # ❌ NEVER do this (cross-crate)
-```
-
-✅ **GOOD:**
-```toml
-# crates/reinhardt-orm/Cargo.toml
-[dependencies]
-reinhardt-types = { path = "../reinhardt-types" }  # ✅ Feature dependencies OK
-
-[dev-dependencies]
-tokio = { version = "1.0", features = ["rt", "macros"] }  # ✅ External deps OK
-```
-
-✅ **ACCEPTABLE (Exception - Within-crate hierarchy):**
-```toml
-# crates/reinhardt-rest/crates/rest-core/Cargo.toml
-[dev-dependencies]
-reinhardt-rest = { workspace = true }  # ✅ Parent crate for within-crate integration tests
-```
-
-```toml
-# tests/Cargo.toml (integration tests)
-[dependencies]
-reinhardt-orm = { path = "../crates/reinhardt-orm" }           # ✅ Multiple crates OK
-reinhardt-serializers = { path = "../crates/reinhardt-serializers" }
-```
-
 ---
 
 ## Test Implementation
@@ -935,7 +892,6 @@ Before submitting a PR with tests:
 - [ ] Each test uses at least one Reinhardt component
 - [ ] Unit tests (1 crate) are in functional crate
 - [ ] Integration tests (2+ crates) are in `tests/` crate
-- [ ] No Reinhardt crates in functional crate `dev-dependencies`
 - [ ] Placeholders marked with `todo!()` or `// TODO:`
 - [ ] All test artifacts cleaned up
 - [ ] Global state tests use `#[serial(group_name)]`

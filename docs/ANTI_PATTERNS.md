@@ -321,43 +321,6 @@ fn test_query_building() {
 
 **Why?** Every test must verify at least one Reinhardt component.
 
-### ❌ Cross-Crate Integration Tests in Functional Crates
-
-**DON'T:**
-```
-crates/reinhardt-orm/
-├── src/
-└── tests/
-    └── with_serializers.rs  // ❌ Tests integration with reinhardt-serializers
-```
-
-```toml
-# crates/reinhardt-orm/Cargo.toml
-[dev-dependencies]
-reinhardt-serializers = { path = "../reinhardt-serializers" }  # ❌ NEVER
-```
-
-**DO:**
-```
-tests/                           // ✅ Cross-crate integration tests here
-└── integration/
-    └── tests/
-        └── orm_serializer_integration.rs
-```
-
-```toml
-# tests/Cargo.toml
-[dependencies]
-reinhardt-orm = { path = "../crates/reinhardt-orm" }          # ✅ OK
-reinhardt-serializers = { path = "../crates/reinhardt-serializers" }
-```
-
-**Why?**
-- Cross-crate integration tests verify integration points between components from different crates
-- These tests MUST be in the repository-level `tests/` crate
-- Functional crates should not have other Reinhardt crates as dev-dependencies
-- Within-crate integration tests (testing integration between components in the same crate) can remain in the functional crate
-
 ### ❌ Tests Without Cleanup
 
 **DON'T:**
@@ -724,7 +687,6 @@ Use `fetch_data().await` asynchronously...  // ✅ Current!
 **Testing:**
 - ❌ Skeleton tests (no assertions)
 - ❌ Tests without Reinhardt components
-- ❌ Integration tests in functional crates
 - ❌ No test cleanup
 - ❌ Global state without `#[serial]`
 - ❌ Loose assertions (`contains`, range checks) without justification
