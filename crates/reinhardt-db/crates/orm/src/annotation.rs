@@ -326,7 +326,7 @@ mod annotation_extended_tests {
 	use crate::Model;
 	use crate::expressions::Q;
 	use crate::query::QuerySet;
-	use reinhardt_validators::TableName;
+	use reinhardt_core::validators::TableName;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]

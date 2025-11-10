@@ -42,7 +42,7 @@
 
 use crate::Cache;
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

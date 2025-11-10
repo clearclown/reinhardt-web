@@ -35,9 +35,9 @@ use crate::session::Session;
 #[cfg(feature = "middleware")]
 use async_trait::async_trait;
 #[cfg(feature = "middleware")]
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 #[cfg(feature = "middleware")]
-use reinhardt_types::{Handler, Middleware};
+use reinhardt_core::types::{Handler, Middleware};
 #[cfg(feature = "middleware")]
 use reinhardt_http::{Request, Response};
 #[cfg(feature = "middleware")]
@@ -278,7 +278,7 @@ impl<B: SessionBackend + 'static> Middleware for SessionMiddleware<B> {
 			// Acquire write lock to save
 			let mut session_mut = shared_session.write().await;
 			session_mut.save().await.map_err(|e| {
-				reinhardt_exception::Error::Internal(format!("Failed to save session: {}", e))
+				reinhardt_core::exception::Error::Internal(format!("Failed to save session: {}", e))
 			})?;
 
 			// Add Set-Cookie header

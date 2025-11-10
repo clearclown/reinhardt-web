@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use futures::stream;
 use futures::stream::{Stream, StreamExt};
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde_json::Value;
 use std::pin::Pin;
 use std::time::Duration;

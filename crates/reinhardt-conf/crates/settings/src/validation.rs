@@ -7,8 +7,8 @@ use crate::profile::Profile;
 use serde_json::Value;
 use std::collections::HashMap;
 
-// Import base SettingsValidator trait from reinhardt-validators
-use reinhardt_validators::SettingsValidator as BaseSettingsValidator;
+// Import base SettingsValidator trait from reinhardt-core
+use reinhardt_core::validators::SettingsValidator as BaseSettingsValidator;
 
 /// Validation result
 pub type ValidationResult = Result<(), ValidationError>;
@@ -32,9 +32,9 @@ pub enum ValidationError {
 	Multiple(Vec<ValidationError>),
 }
 
-impl From<ValidationError> for reinhardt_validators::ValidationError {
+impl From<ValidationError> for reinhardt_core::validators::ValidationError {
 	fn from(error: ValidationError) -> Self {
-		reinhardt_validators::ValidationError::Custom(error.to_string())
+		reinhardt_core::validators::ValidationError::Custom(error.to_string())
 	}
 }
 
@@ -107,7 +107,7 @@ impl BaseSettingsValidator for RequiredValidator {
 		&self,
 		_key: &str,
 		_value: &Value,
-	) -> reinhardt_validators::ValidationResult<()> {
+	) -> reinhardt_core::validators::ValidationResult<()> {
 		// This validator checks presence, not individual values
 		// Always pass for individual settings
 		Ok(())
@@ -209,7 +209,7 @@ impl BaseSettingsValidator for SecurityValidator {
 		&self,
 		key: &str,
 		value: &Value,
-	) -> reinhardt_validators::ValidationResult<()> {
+	) -> reinhardt_core::validators::ValidationResult<()> {
 		if !self.profile.is_production() {
 			return Ok(());
 		}
@@ -217,7 +217,7 @@ impl BaseSettingsValidator for SecurityValidator {
 		match key {
 			"debug" => {
 				if value.as_bool() == Some(true) {
-					return Err(reinhardt_validators::ValidationError::Custom(
+					return Err(reinhardt_core::validators::ValidationError::Custom(
 						"DEBUG must be false in production".to_string(),
 					));
 				}
@@ -228,7 +228,7 @@ impl BaseSettingsValidator for SecurityValidator {
 						|| key_str == "change-this"
 						|| key_str.len() < 32)
 				{
-					return Err(reinhardt_validators::ValidationError::Custom(
+					return Err(reinhardt_core::validators::ValidationError::Custom(
 						"SECRET_KEY must be a strong random value in production".to_string(),
 					));
 				}
@@ -236,19 +236,19 @@ impl BaseSettingsValidator for SecurityValidator {
 			"allowed_hosts" => {
 				if let Some(hosts) = value.as_array() {
 					if hosts.is_empty() || hosts.iter().any(|h| h.as_str() == Some("*")) {
-						return Err(reinhardt_validators::ValidationError::Custom(
+						return Err(reinhardt_core::validators::ValidationError::Custom(
                             "ALLOWED_HOSTS must be properly configured in production (no wildcards)".to_string(),
                         ));
 					}
 				} else {
-					return Err(reinhardt_validators::ValidationError::Custom(
+					return Err(reinhardt_core::validators::ValidationError::Custom(
 						"ALLOWED_HOSTS must be an array".to_string(),
 					));
 				}
 			}
 			"secure_ssl_redirect" => {
 				if value.as_bool() != Some(true) {
-					return Err(reinhardt_validators::ValidationError::Custom(
+					return Err(reinhardt_core::validators::ValidationError::Custom(
 						"SECURE_SSL_REDIRECT should be true in production".to_string(),
 					));
 				}
@@ -379,32 +379,32 @@ impl BaseSettingsValidator for RangeValidator {
 		&self,
 		key: &str,
 		value: &Value,
-	) -> reinhardt_validators::ValidationResult<()> {
+	) -> reinhardt_core::validators::ValidationResult<()> {
 		if let Some(num) = value.as_f64() {
 			if let Some(min) = self.min
 				&& num < min
 			{
-				return Err(reinhardt_validators::ValidationError::Custom(format!(
-					"Value {} for '{}' is less than minimum {}",
-					num, key, min
-				)));
+				return Err(reinhardt_core::validators::ValidationError::Custom(
+					format!("Value {} for '{}' is less than minimum {}", num, key, min),
+				));
 			}
 
 			if let Some(max) = self.max
 				&& num > max
 			{
-				return Err(reinhardt_validators::ValidationError::Custom(format!(
-					"Value {} for '{}' is greater than maximum {}",
-					num, key, max
-				)));
+				return Err(reinhardt_core::validators::ValidationError::Custom(
+					format!(
+						"Value {} for '{}' is greater than maximum {}",
+						num, key, max
+					),
+				));
 			}
 
 			Ok(())
 		} else {
-			Err(reinhardt_validators::ValidationError::Custom(format!(
-				"Expected numeric value for '{}'",
-				key
-			)))
+			Err(reinhardt_core::validators::ValidationError::Custom(
+				format!("Expected numeric value for '{}'", key),
+			))
 		}
 	}
 
@@ -470,22 +470,23 @@ impl BaseSettingsValidator for PatternValidator {
 		&self,
 		key: &str,
 		value: &Value,
-	) -> reinhardt_validators::ValidationResult<()> {
+	) -> reinhardt_core::validators::ValidationResult<()> {
 		if let Some(s) = value.as_str() {
 			if self.pattern.is_match(s) {
 				Ok(())
 			} else {
-				Err(reinhardt_validators::ValidationError::Custom(format!(
-					"Value for '{}' does not match pattern: {}",
-					key,
-					self.pattern.as_str()
-				)))
+				Err(reinhardt_core::validators::ValidationError::Custom(
+					format!(
+						"Value for '{}' does not match pattern: {}",
+						key,
+						self.pattern.as_str()
+					),
+				))
 			}
 		} else {
-			Err(reinhardt_validators::ValidationError::Custom(format!(
-				"Expected string value for '{}'",
-				key
-			)))
+			Err(reinhardt_core::validators::ValidationError::Custom(
+				format!("Expected string value for '{}'", key),
+			))
 		}
 	}
 
@@ -551,21 +552,22 @@ impl BaseSettingsValidator for ChoiceValidator {
 		&self,
 		key: &str,
 		value: &Value,
-	) -> reinhardt_validators::ValidationResult<()> {
+	) -> reinhardt_core::validators::ValidationResult<()> {
 		if let Some(s) = value.as_str() {
 			if self.choices.contains(&s.to_string()) {
 				Ok(())
 			} else {
-				Err(reinhardt_validators::ValidationError::Custom(format!(
-					"Value '{}' for '{}' is not in allowed choices: {:?}",
-					s, key, self.choices
-				)))
+				Err(reinhardt_core::validators::ValidationError::Custom(
+					format!(
+						"Value '{}' for '{}' is not in allowed choices: {:?}",
+						s, key, self.choices
+					),
+				))
 			}
 		} else {
-			Err(reinhardt_validators::ValidationError::Custom(format!(
-				"Expected string value for '{}'",
-				key
-			)))
+			Err(reinhardt_core::validators::ValidationError::Custom(
+				format!("Expected string value for '{}'", key),
+			))
 		}
 	}
 

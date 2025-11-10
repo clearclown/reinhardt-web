@@ -5,7 +5,7 @@
 //! Status: IMPLEMENTED - Based on reinhardt-proxy capabilities
 //! Tests: 20 advanced proxy functionality tests
 
-use reinhardt_proxy::{
+use reinhardt_urls::proxy::{
 	AssociationProxy, CollectionProxy, JoinConfig, LoadingStrategy, NestedProxy, ProxyBuilder,
 	ProxyError, ProxyTarget, RelationshipPath, ScalarProxy, ScalarValue,
 };

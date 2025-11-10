@@ -520,7 +520,7 @@ pub enum JoinType {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_validators::TableName;
+	use reinhardt_core::validators::TableName;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]

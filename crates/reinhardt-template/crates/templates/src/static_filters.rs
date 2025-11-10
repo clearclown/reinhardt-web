@@ -36,7 +36,7 @@ impl Default for StaticConfig {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_templates::static_filters::{StaticConfig, init_static_config};
+/// use reinhardt_templates::r#static_filters::{StaticConfig, init_static_config};
 ///
 /// init_static_config(StaticConfig {
 ///     static_url: "/static/".to_string(),

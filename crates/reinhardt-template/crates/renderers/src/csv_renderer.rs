@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use csv::WriterBuilder;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde_json::Value;
 
 use crate::renderer::{RenderResult, Renderer, RendererContext};

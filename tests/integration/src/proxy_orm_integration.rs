@@ -11,7 +11,7 @@ use reinhardt_orm::{
 	ManyToMany, Model, OnDelete, OnUpdate, Query, QuerySet, Relationship, RelationshipType,
 	Session, UniqueConstraint,
 };
-use reinhardt_proxy::{AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue};
+use reinhardt_urls::proxy::{AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue};
 use serde::{Deserialize, Serialize};
 
 use crate::db_transaction::db_transaction_fixture;

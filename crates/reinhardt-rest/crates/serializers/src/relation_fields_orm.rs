@@ -152,7 +152,7 @@ where
 		})?;
 
 		if count == 0 {
-			return Err(SerializerError::validation(ValidatorError::Custom {
+			return Err(SerializerError::Validation(ValidatorError::Custom {
 				message: format!("Instance with pk {} does not exist", pk),
 			}));
 		}
@@ -200,7 +200,7 @@ where
 				message: format!("Failed to fetch instance: {}", e),
 			})?
 			.ok_or_else(|| {
-				SerializerError::validation(ValidatorError::Custom {
+				SerializerError::Validation(ValidatorError::Custom {
 					message: format!("Instance with pk {} not found", pk),
 				})
 			})?;
@@ -366,7 +366,7 @@ where
 		})?;
 
 		if count == 0 {
-			return Err(SerializerError::validation(ValidatorError::Custom {
+			return Err(SerializerError::Validation(ValidatorError::Custom {
 				message: format!(
 					"Instance with {} '{}' does not exist",
 					self.slug_field, slug
@@ -412,7 +412,7 @@ where
 				message: format!("Failed to fetch instance: {}", e),
 			})?
 			.ok_or_else(|| {
-				SerializerError::validation(ValidatorError::Custom {
+				SerializerError::Validation(ValidatorError::Custom {
 					message: format!("Instance with {} '{}' not found", self.slug_field, slug),
 				})
 			})?;

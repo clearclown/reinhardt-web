@@ -13,7 +13,7 @@ pub mod ordering;
 pub mod relay;
 
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 
 use crate::core::{AsyncPaginator, PaginatedResponse, Paginator, SchemaParameter};
 pub use database::{

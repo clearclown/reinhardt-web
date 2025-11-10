@@ -3,7 +3,7 @@
 //! This provides a simplified middleware implementation for testing
 //! message functionality without requiring the full HTTP stack.
 
-use reinhardt_messages::{Level, Message, MessageStorage};
+use reinhardt_contrib::messages::{Level, Message, MessageStorage};
 use std::collections::HashMap;
 
 /// Mock MessageMiddleware for testing
@@ -119,7 +119,7 @@ impl MockSuccessMessageMixin {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_messages::MemoryStorage;
+	use reinhardt_contrib::messages::MemoryStorage;
 
 	#[test]
 	fn test_middleware_enabled() {

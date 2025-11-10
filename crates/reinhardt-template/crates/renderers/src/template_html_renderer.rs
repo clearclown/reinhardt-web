@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 

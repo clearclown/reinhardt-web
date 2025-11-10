@@ -253,9 +253,7 @@ impl BrokenLinkEmailsMiddleware {
 		// In production, this should be configured via environment or config file
 		let managers = if let Ok(settings_json) = std::env::var("REINHARDT_SETTINGS") {
 			// Attempt to parse settings from environment variable
-			if let Ok(settings) =
-				serde_json::from_str::<settings::Settings>(&settings_json)
-			{
+			if let Ok(settings) = serde_json::from_str::<settings::Settings>(&settings_json) {
 				settings.managers
 			} else {
 				Vec::new()

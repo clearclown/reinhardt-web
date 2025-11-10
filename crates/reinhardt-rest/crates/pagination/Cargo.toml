@@ -7,8 +7,8 @@ description = "Pagination support for Reinhardt framework"
 repository.workspace = true
 
 [dependencies]
-reinhardt-exception = { path = "../../../reinhardt-core/crates/exception" }
 async-trait = "0.1"
+reinhardt-core = { workspace = true, features = ["exception"] }
 base64 = "0.22"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

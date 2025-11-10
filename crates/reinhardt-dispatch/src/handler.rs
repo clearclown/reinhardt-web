@@ -5,12 +5,12 @@
 
 use bytes::Bytes;
 use hyper::StatusCode;
-use reinhardt_signals::{
+use reinhardt_core::signals::{
 	RequestFinishedEvent, RequestStartedEvent, request_finished, request_started,
 };
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_http::{Request, Response};
-use reinhardt_routers::DefaultRouter;
+use reinhardt_urls::routers::DefaultRouter;
 use std::sync::Arc;
 use tracing::{debug, error, trace};
 
@@ -40,7 +40,7 @@ impl BaseHandler {
 	///
 	/// ```
 	/// use reinhardt_dispatch::BaseHandler;
-	/// use reinhardt_routers::DefaultRouter;
+	/// use reinhardt_urls::routers::DefaultRouter;
 	/// use std::sync::Arc;
 	///
 	/// let router = DefaultRouter::new();
@@ -102,7 +102,7 @@ impl BaseHandler {
 					trace!("Route handled successfully");
 					return Ok(response);
 				}
-				Err(reinhardt_exception::Error::NotFound(msg)) => {
+				Err(reinhardt_core::exception::Error::NotFound(msg)) => {
 					debug!("No route matched: {}", msg);
 					return Ok(Response::new(StatusCode::NOT_FOUND));
 				}
@@ -147,10 +147,10 @@ impl Default for BaseHandler {
 
 #[async_trait::async_trait]
 impl Handler for BaseHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		self.handle_request(request)
 			.await
-			.map_err(|e| reinhardt_exception::Error::Internal(e.to_string()))
+			.map_err(|e| reinhardt_core::exception::Error::Internal(e.to_string()))
 	}
 }
 
@@ -159,7 +159,7 @@ mod tests {
 	use super::*;
 	use async_trait::async_trait;
 	use hyper::{HeaderMap, Method, Uri, Version};
-	use reinhardt_routers::{DefaultRouter, Router, path};
+	use reinhardt_urls::routers::{DefaultRouter, Router, path};
 
 	// Test handler for routing tests
 	struct TestHandler {
@@ -168,7 +168,7 @@ mod tests {
 
 	#[async_trait]
 	impl Handler for TestHandler {
-		async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 			Ok(Response::ok().with_body(self.response_body.clone()))
 		}
 	}

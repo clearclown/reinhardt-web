@@ -134,7 +134,7 @@ pub fn debug_context_processor(debug: bool) -> HashMap<String, String> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_templates::static_context_processor;
+/// use reinhardt_templates::r#static_context_processor;
 ///
 /// let context = static_context_processor("/static/");
 /// assert_eq!(context.get("STATIC_URL"), Some(&"/static/".to_string()));

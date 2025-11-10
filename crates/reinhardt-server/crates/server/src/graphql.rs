@@ -3,7 +3,7 @@ use async_graphql::{EmptySubscription, Schema};
 #[cfg(feature = "graphql")]
 use http::{Method, StatusCode};
 #[cfg(feature = "graphql")]
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 #[cfg(feature = "graphql")]
 use reinhardt_http::{Request, Response};
 #[cfg(feature = "graphql")]
@@ -85,7 +85,7 @@ where
 	Query: async_graphql::ObjectType + Send + Sync + 'static,
 	Mutation: async_graphql::ObjectType + Send + Sync + 'static,
 {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Only accept POST requests for GraphQL queries
 		if request.method != Method::POST {
 			return Ok(Response::new(StatusCode::METHOD_NOT_ALLOWED)
@@ -95,19 +95,19 @@ where
 		// Parse the GraphQL request
 		let body = request
 			.read_body()
-			.map_err(|e| reinhardt_exception::Error::ParseError(e.to_string()))?;
+			.map_err(|e| reinhardt_core::exception::Error::ParseError(e.to_string()))?;
 		let body_str = String::from_utf8(body.to_vec())
-			.map_err(|e| reinhardt_exception::Error::ParseError(e.to_string()))?;
+			.map_err(|e| reinhardt_core::exception::Error::ParseError(e.to_string()))?;
 
 		let graphql_request: async_graphql::Request = serde_json::from_str(&body_str)
-			.map_err(|e| reinhardt_exception::Error::Serialization(e.to_string()))?;
+			.map_err(|e| reinhardt_core::exception::Error::Serialization(e.to_string()))?;
 
 		// Execute the query
 		let response = self.schema.execute(graphql_request).await;
 
 		// Serialize the response
 		let response_json = serde_json::to_string(&response)
-			.map_err(|e| reinhardt_exception::Error::Serialization(e.to_string()))?;
+			.map_err(|e| reinhardt_core::exception::Error::Serialization(e.to_string()))?;
 
 		Ok(Response::ok()
 			.with_header("content-type", "application/json")

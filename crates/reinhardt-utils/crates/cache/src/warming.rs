@@ -2,7 +2,7 @@
 
 use crate::cache_trait::Cache;
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 
 /// Cache warmer trait
 ///
@@ -21,7 +21,7 @@ use reinhardt_exception::Result;
 ///
 /// #[async_trait]
 /// impl CacheWarmer<InMemoryCache> for UserCacheWarmer {
-///     async fn warm(&self, cache: Arc<InMemoryCache>) -> reinhardt_exception::Result<()> {
+///     async fn warm(&self, cache: Arc<InMemoryCache>) -> reinhardt_core::exception::Result<()> {
 ///         for user_id in &self.user_ids {
 ///             // Simulate fetching user data
 ///             let user_data = format!("user_{}", user_id);
@@ -32,7 +32,7 @@ use reinhardt_exception::Result;
 ///     }
 /// }
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 /// let warmer = UserCacheWarmer {
 ///     user_ids: vec![1, 2, 3],
@@ -63,7 +63,7 @@ pub trait CacheWarmer<C: Cache>: Send + Sync {
 /// use reinhardt_cache::{Cache, InMemoryCache, FunctionWarmer, CacheWarmer};
 /// use std::sync::Arc;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 ///
 /// let warmer = FunctionWarmer::new(|cache: Arc<InMemoryCache>| {
@@ -137,7 +137,7 @@ where
 /// use reinhardt_cache::{Cache, InMemoryCache, BatchWarmer, FunctionWarmer, CacheWarmer};
 /// use std::sync::Arc;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 ///
 /// let config_warmer = FunctionWarmer::new(|cache: Arc<InMemoryCache>| {
@@ -213,7 +213,7 @@ impl<C: Cache> CacheWarmer<C> for BatchWarmer<C> {
 /// use reinhardt_cache::{Cache, InMemoryCache, ParallelWarmer, FunctionWarmer, CacheWarmer};
 /// use std::sync::Arc;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 ///
 /// let warmer1 = FunctionWarmer::new(|cache: Arc<InMemoryCache>| {

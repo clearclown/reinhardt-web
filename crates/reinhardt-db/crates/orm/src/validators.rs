@@ -2,7 +2,7 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 use reinhardt_apps::Result;
-use reinhardt_validators::{
+use reinhardt_core::validators::{
 	self as validators_crate, OrmValidator, ValidationError as BaseValidationError,
 	ValidationResult,
 };
@@ -57,7 +57,7 @@ impl std::error::Error for ValidationError {}
 /// Base trait for validators
 ///
 /// This is the ORM-specific validator trait. For the base validator trait,
-/// see `reinhardt_validators::Validator`.
+/// see `reinhardt_core::validators::Validator`.
 pub trait Validator: Send + Sync {
 	fn validate(&self, value: &str) -> Result<()>;
 	fn message(&self) -> String;
@@ -1216,7 +1216,7 @@ mod tests {
 
 	#[test]
 	fn test_regex_validator_with_message() {
-		use reinhardt_validators::OrmValidator;
+		use reinhardt_core::validators::OrmValidator;
 		let validator = RegexValidator::with_message(r"^\d{5}$", "ZIP code must be 5 digits");
 		assert_eq!(
 			OrmValidator::message(&validator),

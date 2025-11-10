@@ -596,7 +596,7 @@ impl BaseCommand for RunServerCommand {
 			ctx.info("");
 			ctx.info("Alternatively, implement your own server using:");
 			ctx.info("  use reinhardt_server::HttpServer;");
-			ctx.info("  use reinhardt_routers::DefaultRouter;");
+			ctx.info("  use reinhardt_urls::routers::DefaultRouter;");
 			ctx.info("");
 			ctx.info("  let router = DefaultRouter::new();");
 			ctx.info("  // Register your routes");
@@ -625,13 +625,13 @@ impl RunServerCommand {
 		use std::time::Duration;
 
 		// Get registered router
-		if !reinhardt_routers::is_router_registered() {
+		if !reinhardt_urls::routers::is_router_registered() {
 			return Err(crate::CommandError::ExecutionError(
-                "No router registered. Call reinhardt_routers::register_router() before running the server.".to_string()
+                "No router registered. Call reinhardt_urls::routers::register_router() before running the server.".to_string()
             ));
 		}
 
-		let router = reinhardt_routers::get_router().ok_or_else(|| {
+		let router = reinhardt_urls::routers::get_router().ok_or_else(|| {
 			crate::CommandError::ExecutionError("Failed to get registered router".to_string())
 		})?;
 
@@ -867,9 +867,9 @@ impl BaseCommand for ShowUrlsCommand {
 
 	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
 		// Check if router is registered
-		if !reinhardt_routers::is_router_registered() {
+		if !reinhardt_urls::routers::is_router_registered() {
 			ctx.warning(
-				"No router registered. Call reinhardt_routers::register_router() in your application startup.",
+				"No router registered. Call reinhardt_urls::routers::register_router() in your application startup.",
 			);
 			ctx.info("");
 			ctx.info("Example:");
@@ -877,13 +877,13 @@ impl BaseCommand for ShowUrlsCommand {
 			ctx.info("      .with_prefix(\"/api\")");
 			ctx.info("      .function(\"/health\", Method::GET, health_handler);");
 			ctx.info("");
-			ctx.info("  reinhardt_routers::register_router(Arc::new(router));");
+			ctx.info("  reinhardt_urls::routers::register_router(Arc::new(router));");
 			return Ok(());
 		}
 
 		// Get registered router
-		let router =
-			reinhardt_routers::get_router().expect("Router should be registered (checked above)");
+		let router = reinhardt_urls::routers::get_router()
+			.expect("Router should be registered (checked above)");
 
 		// Get all routes
 		let routes = router.get_all_routes();
@@ -1308,12 +1308,12 @@ mod tests {
 		// Server blocks indefinitely, so timeout is expected
 		#[cfg(feature = "server")]
 		{
-			use reinhardt_routers::UnifiedRouter;
+			use reinhardt_urls::routers::UnifiedRouter;
 			use std::time::Duration;
 
 			// Register a dummy router for the test
 			let router = UnifiedRouter::new();
-			reinhardt_routers::register_router(router);
+			reinhardt_urls::routers::register_router(router);
 
 			// Create context with noreload option to disable autoreload
 			let mut ctx = CommandContext::default();
@@ -1335,7 +1335,7 @@ mod tests {
 			let result = server_task.await;
 
 			// Cleanup: clear the registered router
-			reinhardt_routers::clear_router();
+			reinhardt_urls::routers::clear_router();
 
 			// Task should have been cancelled
 			assert!(result.is_err(), "Server task should have been cancelled");

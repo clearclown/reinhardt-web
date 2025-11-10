@@ -20,8 +20,8 @@
 //! ```
 
 use crate::ProjectState;
-use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
 use pg_escape::quote_literal;
+use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
 use serde::{Deserialize, Serialize};
 
 /// Create a PostgreSQL extension

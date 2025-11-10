@@ -117,7 +117,7 @@ pub mod redis_sentinel;
 pub mod pubsub;
 
 // Re-export exception types
-pub use reinhardt_exception::Result;
+pub use reinhardt_core::exception::Result;
 
 // Re-export core items
 pub use cache_trait::Cache;

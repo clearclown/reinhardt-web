@@ -4,7 +4,7 @@ use hyper::body::Incoming;
 use hyper::server::conn::http2;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_http::{Request, Response};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -27,14 +27,14 @@ impl Http2Server {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok().with_body("Hello from HTTP/2"))
 	///     }
 	/// }
@@ -57,14 +57,14 @@ impl Http2Server {
 	/// use std::sync::Arc;
 	/// use std::net::SocketAddr;
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -106,14 +106,14 @@ impl Http2Server {
 	/// use std::net::SocketAddr;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::{Http2Server, ShutdownCoordinator};
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -184,14 +184,14 @@ impl Http2Server {
 	/// use std::net::SocketAddr;
 	/// use tokio::net::TcpStream;
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -277,14 +277,14 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 /// use std::sync::Arc;
 /// use std::net::SocketAddr;
 /// use reinhardt_server_core::serve_http2;
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok().with_body("Hello from HTTP/2!"))
 ///     }
 /// }
@@ -315,14 +315,14 @@ pub async fn serve_http2(
 /// use std::net::SocketAddr;
 /// use std::time::Duration;
 /// use reinhardt_server_core::{serve_http2_with_shutdown, shutdown_signal, ShutdownCoordinator};
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok().with_body("Hello from HTTP/2!"))
 ///     }
 /// }
@@ -361,7 +361,7 @@ mod tests {
 
 	#[async_trait::async_trait]
 	impl Handler for TestHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 			Ok(Response::ok().with_body("Hello from HTTP/2!"))
 		}
 	}

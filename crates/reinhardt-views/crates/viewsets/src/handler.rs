@@ -3,7 +3,7 @@ use crate::{Action, ViewSet};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_apps::{Handler, Request, Response, Result};
-use reinhardt_auth::permissions::{Permission, PermissionContext};
+use reinhardt_auth::{Permission, PermissionContext};
 use reinhardt_db::orm::{Model, query_types::DbBackend};
 use reinhardt_filters::FilterBackend;
 use reinhardt_serializers::{ModelSerializer, Serializer};

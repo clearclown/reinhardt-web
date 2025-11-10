@@ -15,6 +15,7 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+reinhardt-core = { workspace = true, features = ["exception", "types"] }
 uuid = { workspace = true }
 chrono = { workspace = true }
 
@@ -42,8 +43,6 @@ jsonwebtoken = { workspace = true, optional = true }
 
 # Optional dependencies for HTTP middleware
 reinhardt-http = { workspace = true, optional = true }
-reinhardt-types = { path = "../../../reinhardt-core/crates/types" }
-reinhardt-exception = { path = "../../../reinhardt-core/crates/exception" }
 bytes = { workspace = true, optional = true }
 
 # Optional dependency for MessagePack serialization

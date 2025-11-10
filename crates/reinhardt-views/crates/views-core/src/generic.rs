@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response};
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 
 /// Base trait for all generic views
 #[async_trait]

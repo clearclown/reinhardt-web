@@ -41,7 +41,7 @@ use crate::Cache;
 use async_trait::async_trait;
 use redis::AsyncCommands;
 use redis::cluster::{ClusterClient, ClusterClientBuilder};
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

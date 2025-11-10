@@ -31,7 +31,7 @@
 use crate::cache_trait::Cache;
 use async_trait::async_trait;
 use redis::{AsyncCommands, sentinel::Sentinel};
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

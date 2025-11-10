@@ -77,7 +77,7 @@ impl NestedSaveContext {
 	pub fn increment_depth(&mut self) -> Result<(), SerializerError> {
 		self.depth += 1;
 		if self.depth > self.max_depth {
-			return Err(SerializerError::validation(ValidatorError::Custom {
+			return Err(SerializerError::Validation(ValidatorError::Custom {
 				message: format!("Maximum nesting depth {} exceeded", self.max_depth),
 			}));
 		}
@@ -94,7 +94,7 @@ impl NestedSaveContext {
 		};
 
 		if child.depth > child.max_depth {
-			return Err(SerializerError::validation(ValidatorError::Custom {
+			return Err(SerializerError::Validation(ValidatorError::Custom {
 				message: format!("Maximum nesting depth {} exceeded", self.max_depth),
 			}));
 		}
@@ -205,7 +205,7 @@ where
 				map.insert(fk_field.to_string(), parent_pk.clone());
 			}
 		} else {
-			return Err(SerializerError::validation(ValidatorError::RequiredField {
+			return Err(SerializerError::Validation(ValidatorError::RequiredField {
 				field_name: parent_pk_field.to_string(),
 				message: format!(
 					"Parent primary key '{}' not found in context",

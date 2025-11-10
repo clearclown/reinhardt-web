@@ -180,7 +180,7 @@ let content = loader.load("index.html").unwrap();
 ### Static Files
 
 ```rust
-use reinhardt_templates::static_filters::{StaticConfig, init_static_config};
+use reinhardt_templates::r#static_filters::{StaticConfig, init_static_config};
 use std::collections::HashMap;
 
 // Configure static files

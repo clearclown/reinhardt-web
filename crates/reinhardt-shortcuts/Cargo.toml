@@ -12,7 +12,7 @@ reinhardt-http = { workspace = true }
 reinhardt-views = { workspace = true }
 reinhardt-template = { workspace = true, optional = true }
 reinhardt-db = { workspace = true, optional = true }
-reinhardt-routers = { path = "../reinhardt-urls/crates/routers", version = "0.1.0-alpha.1" }
+reinhardt-urls = { workspace = true, features = ["routers"] }
 
 bytes = { workspace = true }
 thiserror = { workspace = true }

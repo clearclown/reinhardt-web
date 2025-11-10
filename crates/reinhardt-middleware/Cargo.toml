@@ -22,6 +22,7 @@ sqlx = ["dep:sqlx"]
 [dependencies]
 reinhardt-http = { version = "0.1.0-alpha.1", path = "../reinhardt-http" }
 reinhardt-apps = { workspace = true }
+reinhardt-core = { workspace = true, features = ["auth"] }
 reinhardt-auth = { path = "../reinhardt-contrib/crates/auth", features = ["session"] }
 reinhardt-mail = { path = "../reinhardt-contrib/crates/mail" }
 reinhardt-di = { workspace = true }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use async_trait::async_trait;
-use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 
 /// Call record for tracking function calls
 #[derive(Debug, Clone)]
@@ -378,7 +378,6 @@ impl<T> Default for Spy<T> {
 	}
 }
 
-
 // ============================================================================
 // Handler Mocks
 // ============================================================================
@@ -396,7 +395,7 @@ impl<T> Default for Spy<T> {
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
 /// use reinhardt_apps::{Request, Response};
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     Ok(Response::ok().with_body("Hello, World!"))
@@ -475,7 +474,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<F> reinhardt_types::Handler for SimpleHandler<F>
+impl<F> reinhardt_core::types::Handler for SimpleHandler<F>
 where
 	F: Fn(reinhardt_apps::Request) -> reinhardt_apps::Result<reinhardt_apps::Response>
 		+ Send

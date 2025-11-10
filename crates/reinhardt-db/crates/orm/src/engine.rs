@@ -41,7 +41,9 @@
 //! Copyright 2005-2025 SQLAlchemy authors and contributors
 //! Licensed under MIT License. See THIRD-PARTY-NOTICES for details.
 
-use reinhardt_backends::{DatabaseError, DatabaseType, Row as DbRow, connection::DatabaseConnection};
+use reinhardt_backends::{
+	DatabaseError, DatabaseType, Row as DbRow, connection::DatabaseConnection,
+};
 use sqlx::{Any, AnyPool, pool::PoolOptions};
 use std::time::Duration;
 

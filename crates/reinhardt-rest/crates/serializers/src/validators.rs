@@ -99,7 +99,9 @@ pub enum DatabaseValidatorError {
 
 impl From<DatabaseValidatorError> for SerializerError {
 	fn from(err: DatabaseValidatorError) -> Self {
-		SerializerError::new(err.to_string())
+		SerializerError::Other {
+			message: err.to_string(),
+		}
 	}
 }
 

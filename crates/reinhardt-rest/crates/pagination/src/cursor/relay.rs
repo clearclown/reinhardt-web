@@ -6,7 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::CursorEncoder;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 use std::sync::Arc;
 
 /// An edge in a Relay connection

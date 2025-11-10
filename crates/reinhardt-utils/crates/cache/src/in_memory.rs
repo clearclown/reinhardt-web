@@ -5,7 +5,7 @@ use crate::entry::CacheEntry;
 use crate::layered::LayeredCacheStore;
 use crate::statistics::{CacheEntryInfo, CacheStatistics};
 use async_trait::async_trait;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

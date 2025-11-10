@@ -5,7 +5,7 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
 use reinhardt_apps::{Error, Request, Response, Result};
-use reinhardt_orm::Model;
+use reinhardt_db::orm::Model;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

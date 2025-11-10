@@ -71,7 +71,7 @@ use crate::Result;
 use crate::cache_trait::Cache;
 use async_trait::async_trait;
 use memcache_async::ascii::Protocol;
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::net::TcpStream;

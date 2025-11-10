@@ -4,11 +4,11 @@ use crate::core::View;
 use crate::mixins::SingleObjectMixin;
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response};
-use reinhardt_exception::{Error, Result};
-use reinhardt_orm::{
+use reinhardt_db::orm::{
 	Model, QuerySet,
 	query::{Filter, FilterOperator, FilterValue},
 };
+use reinhardt_exception::{Error, Result};
 use reinhardt_serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -50,7 +50,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,7 +88,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,7 +132,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,7 +163,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -194,7 +194,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -225,7 +225,7 @@ where
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -259,7 +259,7 @@ where
 	/// ```rust,ignore
 	/// use reinhardt_views::DetailView;
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::{Model, QuerySet};
+	/// use reinhardt_db::orm::{Model, QuerySet};
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -404,7 +404,17 @@ where
 
 		// Serialize object
 		let serializer = S::default();
-		let serialized = serializer.serialize(&object)?;
+		let serialized = serializer.serialize(&object).map_err(|e| match e {
+			reinhardt_serializers::SerializerError::Validation(v) => {
+				Error::Validation(v.to_string())
+			}
+			reinhardt_serializers::SerializerError::Serde { message } => {
+				Error::Serialization(message)
+			}
+			reinhardt_serializers::SerializerError::Other { message } => {
+				Error::Serialization(message)
+			}
+		})?;
 
 		// Build response - for HEAD, return same headers but empty body
 		if is_head {

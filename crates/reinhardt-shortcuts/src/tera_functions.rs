@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use tera::{Function, Result as TeraResult};
 
 #[cfg(feature = "templates")]
-use reinhardt_routers::get_router;
+use reinhardt_urls::routers::get_router;
 
 /// Generate a range of numbers
 ///
@@ -226,7 +226,7 @@ impl Function for StaticFunction {
 /// # Examples
 ///
 /// ```ignore
-/// use reinhardt_routers::{UnifiedRouter, register_router};
+/// use reinhardt_urls::routers::{UnifiedRouter, register_router};
 /// use reinhardt_shortcuts::tera_functions::UrlFunction;
 /// use tera::Function;
 /// use serde_json::json;
@@ -377,7 +377,7 @@ mod tests {
 	fn test_url_function() {
 		use hyper::Method;
 		use reinhardt_http::{Request, Response};
-		use reinhardt_routers::{UnifiedRouter, register_router};
+		use reinhardt_urls::routers::{UnifiedRouter, register_router};
 
 		// Setup router with a named route
 		let mut router = UnifiedRouter::new().function_named(

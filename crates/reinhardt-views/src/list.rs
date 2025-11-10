@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response};
+use reinhardt_db::orm::Model;
 use reinhardt_exception::{Error, Result};
-use reinhardt_orm::Model;
 use reinhardt_serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -47,7 +47,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,7 +83,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,7 +123,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,7 +155,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,7 +189,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -221,7 +221,7 @@ where
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -401,7 +401,19 @@ where
 		let serializer = S::default();
 		let serialized_objects: Result<Vec<_>> = paginated_objects
 			.iter()
-			.map(|obj| serializer.serialize(obj).map_err(|e| e.into()))
+			.map(|obj| {
+				serializer.serialize(obj).map_err(|e| match e {
+					reinhardt_serializers::SerializerError::Validation(v) => {
+						Error::Validation(v.to_string())
+					}
+					reinhardt_serializers::SerializerError::Serde { message } => {
+						Error::Serialization(message)
+					}
+					reinhardt_serializers::SerializerError::Other { message } => {
+						Error::Serialization(message)
+					}
+				})
+			})
 			.collect();
 
 		let serialized_objects = serialized_objects?;

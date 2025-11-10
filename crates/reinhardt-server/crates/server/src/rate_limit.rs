@@ -1,4 +1,4 @@
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_http::{Request, Response};
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -105,14 +105,14 @@ struct RateLimitEntry {
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_server_core::{RateLimitHandler, RateLimitConfig};
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok())
 ///     }
 /// }
@@ -140,14 +140,14 @@ impl RateLimitHandler {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_server_core::{RateLimitHandler, RateLimitConfig};
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -230,7 +230,7 @@ impl RateLimitHandler {
 
 #[async_trait::async_trait]
 impl Handler for RateLimitHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let client_ip = self.extract_client_ip(&request);
 
 		if self.is_allowed(client_ip).await {
@@ -250,7 +250,7 @@ mod tests {
 
 	#[async_trait::async_trait]
 	impl Handler for TestHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 			Ok(Response::ok().with_body("Success"))
 		}
 	}

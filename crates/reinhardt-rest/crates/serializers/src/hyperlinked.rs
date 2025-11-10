@@ -189,8 +189,8 @@ impl<M: Model> HyperlinkedModelSerializer<M> {
 	{
 		if let Some(pk) = instance.primary_key() {
 			let pk_str = serde_json::to_string(pk)
-				.map_err(|e| {
-					SerializerError::new(format!("Primary key serialization error: {}", e))
+				.map_err(|e| SerializerError::Other {
+					message: format!("Primary key serialization error: {}", e),
 				})?
 				.trim_matches('"')
 				.to_string();
@@ -200,12 +200,11 @@ impl<M: Model> HyperlinkedModelSerializer<M> {
 				let mut params = HashMap::new();
 				params.insert(M::primary_key_field().to_string(), pk_str);
 
-				reverser.reverse(&self.view_name, &params).map_err(|e| {
-					SerializerError::new(format!(
-						"URL reversal error for view '{}': {}",
-						self.view_name, e
-					))
-				})
+				reverser
+					.reverse(&self.view_name, &params)
+					.map_err(|e| SerializerError::Other {
+						message: format!("URL reversal error for view '{}': {}", self.view_name, e),
+					})
 			} else {
 				// Fallback to simple path-based URL generation
 				Ok(format!(
@@ -216,9 +215,9 @@ impl<M: Model> HyperlinkedModelSerializer<M> {
 				))
 			}
 		} else {
-			Err(SerializerError::new(String::from(
-				"Instance has no primary key",
-			)))
+			Err(SerializerError::Other {
+				message: String::from("Instance has no primary key"),
+			})
 		}
 	}
 }
@@ -233,8 +232,9 @@ where
 
 	fn serialize(&self, input: &Self::Input) -> Result<Self::Output, SerializerError> {
 		// 1. Serialize the model to JSON value
-		let mut value: Value = serde_json::to_value(input)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))?;
+		let mut value: Value = serde_json::to_value(input).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})?;
 
 		// 2. Add URL field
 		if let Value::Object(ref mut map) = value {
@@ -243,14 +243,16 @@ where
 		}
 
 		// 3. Convert to JSON string
-		serde_json::to_string(&value)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))
+		serde_json::to_string(&value).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})
 	}
 
 	fn deserialize(&self, output: &Self::Output) -> Result<Self::Input, SerializerError> {
 		// Deserialize from JSON, ignoring the URL field
-		serde_json::from_str(output)
-			.map_err(|e| SerializerError::new(format!("Deserialization error: {}", e)))
+		serde_json::from_str(output).map_err(|e| SerializerError::Other {
+			message: format!("Deserialization error: {}", e),
+		})
 	}
 }
 

@@ -13,9 +13,8 @@ reinhardt-mail = { path = "../reinhardt-contrib/crates/mail" }
 reinhardt-static = { path = "../reinhardt-contrib/crates/static" }
 reinhardt-utils-core = { path = "../reinhardt-utils/crates/utils-core" }
 reinhardt-conf = { workspace = true }
-reinhardt-routers = { path = "../reinhardt-urls/crates/routers", optional = true }
-reinhardt-migrations = { path = "../reinhardt-db/crates/migrations", optional = true }
-reinhardt-db = { workspace = true, optional = true }
+reinhardt-urls = { workspace = true, features = ["routers"], optional = true }
+reinhardt-db = { workspace = true, features = ["migrations"], optional = true }
 reinhardt-server = { workspace = true, optional = true }
 clap = { version = "4.5", features = ["derive", "cargo"] }
 tokio = { workspace = true }
@@ -61,8 +60,8 @@ rstest = { workspace = true }
 
 [features]
 default = []
-migrations = ["dep:reinhardt-migrations"]
-routers = ["dep:reinhardt-routers"]
+migrations = ["dep:reinhardt-db"]
+routers = ["dep:reinhardt-urls"]
 server = ["dep:reinhardt-server", "routers"]
 autoreload = ["dep:notify", "server"]
 cargo-watch-reload = ["server"]

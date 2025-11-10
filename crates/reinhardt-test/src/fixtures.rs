@@ -1506,11 +1506,11 @@ pub use mock_database::*;
 
 #[cfg(feature = "testcontainers")]
 mod mock_database {
-	use reinhardt_backends::Result;
-	use reinhardt_backends::backend::DatabaseBackend as BackendTrait;
-	use reinhardt_backends::connection::DatabaseConnection as BackendsConnection;
-	use reinhardt_backends::types::{DatabaseType, QueryResult, QueryValue, Row};
-	use reinhardt_orm::{DatabaseBackend, DatabaseConnection};
+	use reinhardt_db::backends::Result;
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use reinhardt_db::orm::{DatabaseBackend, DatabaseConnection};
 	use rstest::*;
 	use std::sync::Arc;
 

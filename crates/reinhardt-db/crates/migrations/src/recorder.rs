@@ -1,7 +1,7 @@
 //! Migration recorder
 
-use reinhardt_backends::{DatabaseConnection, QueryValue};
 use chrono::{DateTime, Utc};
+use reinhardt_backends::{DatabaseConnection, QueryValue};
 
 /// Migration record
 #[derive(Debug, Clone)]
@@ -126,9 +126,9 @@ impl DatabaseMigrationRecorder {
 				let collection = db.collection::<bson::Document>("_reinhardt_migrations");
 
 				let indexes = collection.list_index_names().await.map_err(|e| {
-					crate::MigrationError::DatabaseError(reinhardt_backends::DatabaseError::ConnectionError(
-						e.to_string(),
-					))
+					crate::MigrationError::DatabaseError(
+						reinhardt_backends::DatabaseError::ConnectionError(e.to_string()),
+					)
 				})?;
 
 				if indexes.is_empty() {
@@ -232,9 +232,9 @@ impl DatabaseMigrationRecorder {
 				let backend = self.connection.backend();
 				let backend_any = backend.as_any();
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>()
-				{
+				if let Some(mongo_backend) = backend_any
+					.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>(
+				) {
 					let db = mongo_backend.database();
 					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
 
@@ -244,9 +244,9 @@ impl DatabaseMigrationRecorder {
 					};
 
 					let count = collection.count_documents(filter).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(reinhardt_backends::DatabaseError::QueryError(
-							e.to_string(),
-						))
+						crate::MigrationError::DatabaseError(
+							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+						)
 					})?;
 
 					Ok(count > 0)
@@ -323,9 +323,9 @@ impl DatabaseMigrationRecorder {
 				let backend = self.connection.backend();
 				let backend_any = backend.as_any();
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>()
-				{
+				if let Some(mongo_backend) = backend_any
+					.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>(
+				) {
 					let db = mongo_backend.database();
 					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
 
@@ -336,9 +336,9 @@ impl DatabaseMigrationRecorder {
 					};
 
 					collection.insert_one(doc).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(reinhardt_backends::DatabaseError::QueryError(
-							e.to_string(),
-						))
+						crate::MigrationError::DatabaseError(
+							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+						)
 					})?;
 
 					Ok(())
@@ -399,9 +399,9 @@ impl DatabaseMigrationRecorder {
 				let backend = self.connection.backend();
 				let backend_any = backend.as_any();
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>()
-				{
+				if let Some(mongo_backend) = backend_any
+					.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>(
+				) {
 					let db = mongo_backend.database();
 					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
 
@@ -421,9 +421,9 @@ impl DatabaseMigrationRecorder {
 
 					let mut records = Vec::new();
 					while let Some(doc) = cursor.try_next().await.map_err(|e| {
-						crate::MigrationError::DatabaseError(reinhardt_backends::DatabaseError::QueryError(
-							e.to_string(),
-						))
+						crate::MigrationError::DatabaseError(
+							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+						)
 					})? {
 						let app = doc
 							.get_str("app")
@@ -518,9 +518,9 @@ impl DatabaseMigrationRecorder {
 				let backend = self.connection.backend();
 				let backend_any = backend.as_any();
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>()
-				{
+				if let Some(mongo_backend) = backend_any
+					.downcast_ref::<reinhardt_backends::drivers::mongodb::MongoDBBackend>(
+				) {
 					let db = mongo_backend.database();
 					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
 
@@ -530,9 +530,9 @@ impl DatabaseMigrationRecorder {
 					};
 
 					collection.delete_one(filter).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(reinhardt_backends::DatabaseError::QueryError(
-							e.to_string(),
-						))
+						crate::MigrationError::DatabaseError(
+							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+						)
 					})?;
 
 					Ok(())

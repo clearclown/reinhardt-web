@@ -1,6 +1,6 @@
 //! Cursor encoding strategies for cursor-based pagination
 
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 

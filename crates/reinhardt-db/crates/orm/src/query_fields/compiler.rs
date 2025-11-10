@@ -341,7 +341,7 @@ mod tests {
 	use super::*;
 	use crate::Model;
 	use crate::query_fields::Field;
-	use reinhardt_validators::TableName;
+	use reinhardt_core::validators::TableName;
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestUser {

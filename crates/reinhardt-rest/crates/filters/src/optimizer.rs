@@ -760,10 +760,7 @@ impl QueryOptimizer {
 	///
 	/// Different databases return EXPLAIN results in different formats.
 	/// This method converts them to a unified string format for analysis.
-	fn rows_to_explain_output(
-		rows: &[Row],
-		db_type: DatabaseType,
-	) -> String {
+	fn rows_to_explain_output(rows: &[Row], db_type: DatabaseType) -> String {
 		let mut output = String::new();
 
 		for row in rows {

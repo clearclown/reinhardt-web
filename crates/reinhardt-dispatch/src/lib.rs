@@ -29,9 +29,9 @@
 //!
 //! ```rust
 //! use reinhardt_dispatch::BaseHandler;
-//! use reinhardt_routers::{DefaultRouter, Router, path};
+//! use reinhardt_urls::routers::{DefaultRouter, Router, path};
 //! use reinhardt_http::{Request, Response};
-//! use reinhardt_types::Handler;
+//! use reinhardt_core::types::Handler;
 //! use std::sync::Arc;
 //! use hyper::{Method, Uri, Version, HeaderMap, StatusCode};
 //! use bytes::Bytes;
@@ -42,7 +42,7 @@
 //!
 //! #[async_trait]
 //! impl Handler for HelloHandler {
-//!     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+//!     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 //!         Ok(Response::ok().with_body("Hello, World!"))
 //!     }
 //! }
@@ -75,8 +75,8 @@
 //!
 //! ```rust
 //! use reinhardt_dispatch::{BaseHandler, MiddlewareChain};
-//! use reinhardt_routers::{DefaultRouter, Router, path};
-//! use reinhardt_types::{Handler, Middleware};
+//! use reinhardt_urls::routers::{DefaultRouter, Router, path};
+//! use reinhardt_core::types::{Handler, Middleware};
 //! use reinhardt_http::{Request, Response};
 //! use std::sync::Arc;
 //! use async_trait::async_trait;
@@ -86,7 +86,7 @@
 //!
 //! #[async_trait]
 //! impl Middleware for LoggingMiddleware {
-//!     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+//!     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_core::exception::Result<Response> {
 //!         println!("Request: {} {}", request.method, request.path());
 //!         let response = next.handle(request).await?;
 //!         println!("Response: {}", response.status);
@@ -99,7 +99,7 @@
 //!
 //! #[async_trait]
 //! impl Handler for ApiHandler {
-//!     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+//!     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 //!         Ok(Response::ok().with_json(&serde_json::json!({"status": "ok"})).unwrap())
 //!     }
 //! }

@@ -71,7 +71,7 @@ impl<M: Model> Field<M, String> {
 	/// ```
 	/// use reinhardt_orm::query_fields::Field;
 	/// use reinhardt_orm::Model;
-	/// use reinhardt_validators::TableName;
+	/// use reinhardt_core::validators::TableName;
 	///
 	/// #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// struct User {
@@ -103,7 +103,7 @@ impl<M: Model> Field<M, String> {
 	/// ```
 	/// use reinhardt_orm::query_fields::Field;
 	/// use reinhardt_orm::Model;
-	/// use reinhardt_validators::TableName;
+	/// use reinhardt_core::validators::TableName;
 	///
 	/// #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// struct Product {
@@ -135,7 +135,7 @@ impl<M: Model> Field<M, String> {
 	/// ```
 	/// use reinhardt_orm::query_fields::Field;
 	/// use reinhardt_orm::Model;
-	/// use reinhardt_validators::TableName;
+	/// use reinhardt_core::validators::TableName;
 	///
 	/// #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// struct Comment {
@@ -168,7 +168,7 @@ impl<M: Model> Field<M, String> {
 	/// ```
 	/// use reinhardt_orm::query_fields::Field;
 	/// use reinhardt_orm::Model;
-	/// use reinhardt_validators::TableName;
+	/// use reinhardt_core::validators::TableName;
 	///
 	/// #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// struct Post {
@@ -436,7 +436,7 @@ impl<M: Model, T> Field<M, Option<T>> {
 mod tests {
 	use super::*;
 	use crate::Model;
-	use reinhardt_validators::TableName;
+	use reinhardt_core::validators::TableName;
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestUser {

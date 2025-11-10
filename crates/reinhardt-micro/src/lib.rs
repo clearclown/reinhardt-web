@@ -79,10 +79,10 @@ pub use reinhardt_di::params::{Cookie, Form, Header, Json, Path, Query};
 pub use reinhardt_di::Depends;
 
 #[cfg(feature = "database")]
-pub use reinhardt_orm as orm;
+pub use reinhardt_db::orm;
 
 // Re-export endpoint macros for FastAPI-style function-based endpoints
-pub use reinhardt_macros::{delete, endpoint, get, patch, post, put, use_injection};
+pub use reinhardt_core::macros::{delete, endpoint, get, patch, post, put, use_injection};
 
 /// Built-in middleware shortcuts for common use cases
 pub mod middleware {
@@ -128,7 +128,7 @@ pub mod prelude {
 	pub use reinhardt_di::Depends;
 
 	// Re-export endpoint macros
-	pub use reinhardt_macros::{delete, endpoint, get, patch, post, put, use_injection};
+	pub use reinhardt_core::macros::{delete, endpoint, get, patch, post, put, use_injection};
 
 	// Re-export utils
 	pub use super::utils::*;
@@ -140,10 +140,10 @@ pub mod prelude {
 	pub use serde::{Deserialize, Serialize};
 }
 
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_middleware::Middleware;
-use reinhardt_routers::{DefaultRouter, Route, Router};
 use reinhardt_server::serve as http_serve;
+use reinhardt_urls::routers::{DefaultRouter, Route, Router};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;

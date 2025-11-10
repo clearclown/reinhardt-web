@@ -28,7 +28,7 @@
 
 use futures::StreamExt;
 use redis::{AsyncCommands, Client, aio::PubSub};
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;

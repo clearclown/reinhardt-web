@@ -30,7 +30,7 @@
 
 use crate::format_suffix::extract_format_suffix;
 use crate::renderer::{Renderer, RendererRegistry};
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 
 /// Helper for selecting renderers based on request information
 ///

@@ -94,7 +94,7 @@
 //! ```
 
 #[cfg(feature = "validation")]
-use reinhardt_validators::{ValidationResult, Validator};
+use reinhardt_core::validators::{ValidationResult, Validator};
 #[cfg(feature = "validation")]
 use std::fmt::{self, Debug};
 use std::ops::Deref;
@@ -108,7 +108,7 @@ use std::ops::Deref;
 ///
 /// ```rust,ignore
 /// use reinhardt_params::{Path, Validated};
-/// use reinhardt_validators::MinLengthValidator;
+/// use reinhardt_core::validators::MinLengthValidator;
 ///
 /// async fn handler(id: Validated<Path<String>, MinLengthValidator>) {
 ///     // id is guaranteed to meet the validation constraints
@@ -232,17 +232,17 @@ impl<T> ValidationConstraints<T> {
 	pub fn validate_string(&self, value: &str) -> ValidationResult<()> {
 		// Length constraints
 		if let Some(min) = self.min_length {
-			reinhardt_validators::MinLengthValidator::new(min).validate(value)?;
+			reinhardt_core::validators::MinLengthValidator::new(min).validate(value)?;
 		}
 		if let Some(max) = self.max_length {
-			reinhardt_validators::MaxLengthValidator::new(max).validate(value)?;
+			reinhardt_core::validators::MaxLengthValidator::new(max).validate(value)?;
 		}
 
 		// Regex constraint
 		if let Some(ref pattern) = self.regex {
-			reinhardt_validators::RegexValidator::new(pattern)
+			reinhardt_core::validators::RegexValidator::new(pattern)
 				.map_err(|e| {
-					reinhardt_validators::ValidationError::Custom(format!(
+					reinhardt_core::validators::ValidationError::Custom(format!(
 						"Invalid regex pattern: {}",
 						e
 					))
@@ -252,12 +252,12 @@ impl<T> ValidationConstraints<T> {
 
 		// Email constraint
 		if self.email {
-			reinhardt_validators::EmailValidator::new().validate(value)?;
+			reinhardt_core::validators::EmailValidator::new().validate(value)?;
 		}
 
 		// URL constraint
 		if self.url {
-			reinhardt_validators::UrlValidator::new().validate(value)?;
+			reinhardt_core::validators::UrlValidator::new().validate(value)?;
 		}
 
 		Ok(())
@@ -272,12 +272,12 @@ impl<T> ValidationConstraints<T> {
 		if let Some(ref min_str) = self.min_value
 			&& let Ok(min) = min_str.parse::<N>()
 		{
-			reinhardt_validators::MinValueValidator::new(min).validate(value)?;
+			reinhardt_core::validators::MinValueValidator::new(min).validate(value)?;
 		}
 		if let Some(ref max_str) = self.max_value
 			&& let Ok(max) = max_str.parse::<N>()
 		{
-			reinhardt_validators::MaxValueValidator::new(max).validate(value)?;
+			reinhardt_core::validators::MaxValueValidator::new(max).validate(value)?;
 		}
 		Ok(())
 	}

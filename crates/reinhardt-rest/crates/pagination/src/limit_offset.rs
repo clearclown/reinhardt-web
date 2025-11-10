@@ -1,7 +1,7 @@
 //! Limit/offset based pagination implementation
 
 use async_trait::async_trait;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 
 use crate::core::{AsyncPaginator, PaginatedResponse, Paginator, SchemaParameter};
 

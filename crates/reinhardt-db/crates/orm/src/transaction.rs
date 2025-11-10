@@ -1369,7 +1369,7 @@ mod tests {
 	}
 
 	// Database execution tests
-	use reinhardt_validators::TableName;
+	use reinhardt_core::validators::TableName;
 	use serde::{Deserialize, Serialize};
 
 	#[allow(dead_code)]

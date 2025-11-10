@@ -11,9 +11,8 @@ categories = ["web-programming"]
 
 [dependencies]
 reinhardt-apps = { workspace = true }
-reinhardt-browsable-api = { path = "../../../reinhardt-rest/crates/browsable-api" }
-reinhardt-negotiation = { path = "../../../reinhardt-rest/crates/negotiation" }
-reinhardt-exception = { path = "../../../reinhardt-core/crates/exception" }
+reinhardt-browsable-api = { path = "../../../reinhardt-rest/crates/browsable-api", version = "0.1.0-alpha.1" }
+reinhardt-negotiation = { path = "../../../reinhardt-rest/crates/negotiation", version = "0.1.0-alpha.1" }
 async-trait = "0.1"
 bytes = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -22,6 +21,7 @@ serde_yaml = "0.9.33"
 quick-xml = { version = "0.38.3", features = ["serialize"] }
 csv = "1.3"
 thiserror = "2.0.17"
+reinhardt-core = { workspace = true, features = ["exception"] }
 mime = "0.3"
 utoipa = { version = "5.4", features = ["yaml"] }
 tera = "1.19"

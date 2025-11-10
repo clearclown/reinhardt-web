@@ -3,7 +3,7 @@
 use crate::cache_trait::Cache;
 use crate::entry::CacheEntry;
 use async_trait::async_trait;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -22,7 +22,7 @@ use tokio::sync::RwLock;
 /// use reinhardt_cache::{Cache, FileCache};
 /// use std::path::PathBuf;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = FileCache::new(PathBuf::from("/tmp/cache")).await?;
 ///
 /// // Set a value
@@ -55,7 +55,7 @@ impl FileCache {
 	/// use reinhardt_cache::FileCache;
 	/// use std::path::PathBuf;
 	///
-	/// # async fn example() -> reinhardt_exception::Result<()> {
+	/// # async fn example() -> reinhardt_core::exception::Result<()> {
 	/// let cache = FileCache::new(PathBuf::from("/tmp/my_cache")).await?;
 	/// # Ok(())
 	/// # }
@@ -81,7 +81,7 @@ impl FileCache {
 	/// use std::path::PathBuf;
 	/// use std::time::Duration;
 	///
-	/// # async fn example() -> reinhardt_exception::Result<()> {
+	/// # async fn example() -> reinhardt_core::exception::Result<()> {
 	/// let cache = FileCache::new(PathBuf::from("/tmp/cache"))
 	///     .await?
 	///     .with_default_ttl(Duration::from_secs(300));
@@ -105,7 +105,7 @@ impl FileCache {
 	/// use std::path::PathBuf;
 	/// use std::time::Duration;
 	///
-	/// # async fn example() -> reinhardt_exception::Result<()> {
+	/// # async fn example() -> reinhardt_core::exception::Result<()> {
 	/// let cache = FileCache::new(PathBuf::from("/tmp/cache")).await?;
 	///
 	/// // Set a value with short TTL

@@ -32,8 +32,7 @@
 //! This design avoids the N+1 query problem and gives developers explicit control
 //! over when and how relationships are loaded.
 
-use crate::arena::SerializationArena;
-use crate::{Serializer, SerializerError};
+use crate::{SerializationArena, Serializer, SerializerError};
 use reinhardt_db::orm::Model;
 use serde_json::Value;
 use std::marker::PhantomData;
@@ -229,8 +228,9 @@ impl<M: Model, R: Model> Serializer for NestedSerializer<M, R> {
 			let arena = SerializationArena::new();
 			let serialized = arena.serialize_model(input, self.depth);
 			let json_value = arena.to_json(serialized);
-			serde_json::to_string(&json_value)
-				.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))
+			serde_json::to_string(&json_value).map_err(|e| SerializerError::Other {
+				message: format!("Serialization error: {}", e),
+			})
 		} else {
 			// Traditional heap-based serialization (backward compatibility)
 			self.serialize_without_arena(input)
@@ -238,8 +238,9 @@ impl<M: Model, R: Model> Serializer for NestedSerializer<M, R> {
 	}
 
 	fn deserialize(&self, output: &Self::Output) -> Result<Self::Input, SerializerError> {
-		serde_json::from_str(output)
-			.map_err(|e| SerializerError::new(format!("Deserialization error: {}", e)))
+		serde_json::from_str(output).map_err(|e| SerializerError::Other {
+			message: format!("Deserialization error: {}", e),
+		})
 	}
 }
 
@@ -247,8 +248,9 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 	/// Serialize without using arena allocation (traditional approach)
 	fn serialize_without_arena(&self, input: &M) -> Result<String, SerializerError> {
 		// Serialize parent model to JSON
-		let mut parent_value = serde_json::to_value(input)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))?;
+		let mut parent_value = serde_json::to_value(input).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})?;
 
 		// If depth > 0, check if relationship data is already loaded in the parent JSON
 		// This follows Django REST Framework's approach where related data is loaded
@@ -270,8 +272,9 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 		}
 
 		// Convert the value back to string
-		serde_json::to_string(&parent_value)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))
+		serde_json::to_string(&parent_value).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})
 	}
 }
 
@@ -327,13 +330,15 @@ impl<M: Model> Serializer for ListSerializer<M> {
 	type Output = String;
 
 	fn serialize(&self, input: &Self::Input) -> Result<Self::Output, SerializerError> {
-		serde_json::to_string(input)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))
+		serde_json::to_string(input).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})
 	}
 
 	fn deserialize(&self, output: &Self::Output) -> Result<Self::Input, SerializerError> {
-		serde_json::from_str(output)
-			.map_err(|e| SerializerError::new(format!("Deserialization error: {}", e)))
+		serde_json::from_str(output).map_err(|e| SerializerError::Other {
+			message: format!("Deserialization error: {}", e),
+		})
 	}
 }
 
@@ -515,8 +520,9 @@ impl<M: Model, R: Model> WritableNestedSerializer<M, R> {
 	/// }
 	/// ```
 	pub fn extract_nested_data(&self, json: &str) -> Result<Option<Value>, SerializerError> {
-		let value: Value = serde_json::from_str(json)
-			.map_err(|e| SerializerError::new(format!("JSON parsing error: {}", e)))?;
+		let value: Value = serde_json::from_str(json).map_err(|e| SerializerError::Other {
+			message: format!("JSON parsing error: {}", e),
+		})?;
 
 		if let Value::Object(ref map) = value
 			&& let Some(nested_value) = map.get(&self.relationship_field)
@@ -557,14 +563,16 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 	fn serialize(&self, input: &Self::Input) -> Result<Self::Output, SerializerError> {
 		// Same as NestedSerializer - requires ORM relationship loading
 		// See NestedSerializer::serialize for implementation roadmap
-		serde_json::to_string(input)
-			.map_err(|e| SerializerError::new(format!("Serialization error: {}", e)))
+		serde_json::to_string(input).map_err(|e| SerializerError::Other {
+			message: format!("Serialization error: {}", e),
+		})
 	}
 
 	fn deserialize(&self, output: &Self::Output) -> Result<Self::Input, SerializerError> {
 		// Parse JSON to validate structure
-		let value: Value = serde_json::from_str(output)
-			.map_err(|e| SerializerError::new(format!("JSON parsing error: {}", e)))?;
+		let value: Value = serde_json::from_str(output).map_err(|e| SerializerError::Other {
+			message: format!("JSON parsing error: {}", e),
+		})?;
 
 		// Check for nested data at relationship_field
 		if let Value::Object(ref map) = value
@@ -575,13 +583,13 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 				// Single related object
 				if let Some(pk) = nested_value.get(M::primary_key_field()) {
 					if pk.is_null() && !self.allow_create {
-						return Err(SerializerError::new(
-							"Creating nested instances is not allowed".to_string(),
-						));
+						return Err(SerializerError::Other {
+							message: "Creating nested instances is not allowed".to_string(),
+						});
 					} else if !pk.is_null() && !self.allow_update {
-						return Err(SerializerError::new(
-							"Updating nested instances is not allowed".to_string(),
-						));
+						return Err(SerializerError::Other {
+							message: "Updating nested instances is not allowed".to_string(),
+						});
 					}
 				}
 			} else if nested_value.is_array() {
@@ -589,13 +597,13 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 				for item in nested_value.as_array().unwrap() {
 					if let Some(pk) = item.get(M::primary_key_field()) {
 						if pk.is_null() && !self.allow_create {
-							return Err(SerializerError::new(
-								"Creating nested instances is not allowed".to_string(),
-							));
+							return Err(SerializerError::Other {
+								message: "Creating nested instances is not allowed".to_string(),
+							});
 						} else if !pk.is_null() && !self.allow_update {
-							return Err(SerializerError::new(
-								"Updating nested instances is not allowed".to_string(),
-							));
+							return Err(SerializerError::Other {
+								message: "Updating nested instances is not allowed".to_string(),
+							});
 						}
 					}
 				}
@@ -626,8 +634,9 @@ impl<M: Model, R: Model> Serializer for WritableNestedSerializer<M, R> {
 		}
 
 		// For now, deserialize parent model only
-		serde_json::from_str(output)
-			.map_err(|e| SerializerError::new(format!("Deserialization error: {}", e)))
+		serde_json::from_str(output).map_err(|e| SerializerError::Other {
+			message: format!("Deserialization error: {}", e),
+		})
 	}
 }
 

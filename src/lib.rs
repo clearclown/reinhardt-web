@@ -203,7 +203,9 @@ pub use reinhardt_rest::filters::{
 
 // Re-export throttling
 #[cfg(feature = "rest")]
-pub use reinhardt_rest::throttling::{AnonRateThrottle, ScopedRateThrottle, Throttle, UserRateThrottle};
+pub use reinhardt_rest::throttling::{
+	AnonRateThrottle, ScopedRateThrottle, Throttle, UserRateThrottle,
+};
 
 // Re-export signals
 #[cfg(feature = "core")]

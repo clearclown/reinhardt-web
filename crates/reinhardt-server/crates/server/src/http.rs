@@ -4,7 +4,7 @@ use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
-use reinhardt_types::{Handler, Middleware, MiddlewareChain};
+use reinhardt_core::types::{Handler, Middleware, MiddlewareChain};
 use reinhardt_http::{Request, Response};
 use std::future::Future;
 use std::net::SocketAddr;
@@ -28,14 +28,14 @@ impl HttpServer {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_server_core::HttpServer;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok().with_body("Hello"))
 	///     }
 	/// }
@@ -67,14 +67,14 @@ impl HttpServer {
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
 	///
 	/// #[async_trait::async_trait]
 	/// impl Middleware for MyMiddleware {
-	///     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+	///     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_core::exception::Result<Response> {
 	///         next.handle(request).await
 	///     }
 	/// }
@@ -115,14 +115,14 @@ impl HttpServer {
 	/// use std::sync::Arc;
 	/// use std::net::SocketAddr;
 	/// use reinhardt_server_core::HttpServer;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -167,14 +167,14 @@ impl HttpServer {
 	/// use std::net::SocketAddr;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::{HttpServer, ShutdownCoordinator};
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -247,14 +247,14 @@ impl HttpServer {
 	/// use std::net::SocketAddr;
 	/// use tokio::net::TcpStream;
 	/// use reinhardt_server_core::HttpServer;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -346,14 +346,14 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 /// use std::sync::Arc;
 /// use std::net::SocketAddr;
 /// use reinhardt_server_core::serve;
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok().with_body("Hello, World!"))
 ///     }
 /// }
@@ -384,14 +384,14 @@ pub async fn serve(
 /// use std::net::SocketAddr;
 /// use std::time::Duration;
 /// use reinhardt_server_core::{serve_with_shutdown, shutdown_signal, ShutdownCoordinator};
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok().with_body("Hello, World!"))
 ///     }
 /// }
@@ -430,7 +430,7 @@ mod tests {
 
 	#[async_trait::async_trait]
 	impl Handler for TestHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 			Ok(Response::ok().with_body("Hello, World!"))
 		}
 	}
@@ -443,7 +443,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_http_server_with_middleware() {
-		use reinhardt_types::Middleware;
+		use reinhardt_core::types::Middleware;
 
 		struct TestMiddleware {
 			prefix: String,
@@ -455,7 +455,7 @@ mod tests {
 				&self,
 				request: Request,
 				next: Arc<dyn Handler>,
-			) -> reinhardt_exception::Result<Response> {
+			) -> reinhardt_core::exception::Result<Response> {
 				let response = next.handle(request).await?;
 				let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
 				let new_body = format!("{}{}", self.prefix, current_body);
@@ -475,7 +475,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_http_server_multiple_middlewares() {
-		use reinhardt_types::Middleware;
+		use reinhardt_core::types::Middleware;
 
 		struct PrefixMiddleware {
 			prefix: String,
@@ -487,7 +487,7 @@ mod tests {
 				&self,
 				request: Request,
 				next: Arc<dyn Handler>,
-			) -> reinhardt_exception::Result<Response> {
+			) -> reinhardt_core::exception::Result<Response> {
 				let response = next.handle(request).await?;
 				let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
 				let new_body = format!("{}{}", self.prefix, current_body);
@@ -513,7 +513,7 @@ mod tests {
 	async fn test_middleware_chain_execution() {
 		use bytes::Bytes;
 		use hyper::{HeaderMap, Method, Uri, Version};
-		use reinhardt_types::Middleware;
+		use reinhardt_core::types::Middleware;
 
 		struct PrefixMiddleware {
 			prefix: String,
@@ -525,7 +525,7 @@ mod tests {
 				&self,
 				request: Request,
 				next: Arc<dyn Handler>,
-			) -> reinhardt_exception::Result<Response> {
+			) -> reinhardt_core::exception::Result<Response> {
 				let response = next.handle(request).await?;
 				let current_body = String::from_utf8(response.body.to_vec()).unwrap_or_default();
 				let new_body = format!("{}{}", self.prefix, current_body);

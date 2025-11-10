@@ -2,7 +2,7 @@
 
 use crate::cache_trait::Cache;
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use tokio::sync::RwLock;
 /// use reinhardt_cache::{Cache, InMemoryCache, TaggedCache, TaggedCacheWrapper};
 /// use std::sync::Arc;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 /// let tagged_cache = TaggedCacheWrapper::new(cache);
 ///
@@ -85,7 +85,7 @@ pub trait TaggedCache: Send + Sync {
 /// use reinhardt_cache::{Cache, InMemoryCache, TaggedCacheWrapper, TaggedCache};
 /// use std::sync::Arc;
 ///
-/// # async fn example() -> reinhardt_exception::Result<()> {
+/// # async fn example() -> reinhardt_core::exception::Result<()> {
 /// let cache = Arc::new(InMemoryCache::new());
 /// let tagged_cache = TaggedCacheWrapper::new(cache);
 ///

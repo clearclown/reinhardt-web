@@ -9,7 +9,7 @@ description = "Parameter extraction system for Reinhardt, inspired by FastAPI"
 
 [dependencies]
 reinhardt-apps = { workspace = true }
-reinhardt-validators = { path = "../../../reinhardt-core/crates/validators", optional = true }
+reinhardt-core = { workspace = true, features = ["validators"], optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
@@ -25,7 +25,7 @@ futures-util = { version = "0.3", optional = true }
 
 [features]
 default = ["multi-value-arrays"]
-validation = ["reinhardt-validators", "validator"]
+validation = ["reinhardt-core", "validator"]
 multi-value-arrays = []
 multipart = ["multer", "futures-util"]
 

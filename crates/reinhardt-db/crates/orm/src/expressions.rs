@@ -66,7 +66,7 @@ impl fmt::Display for F {
 ///
 /// ```ignore
 /// use reinhardt_orm::expressions::FieldRef;
-/// use reinhardt_macros::Model;
+/// use reinhardt_core::macros::Model;
 ///
 /// #[derive(Model)]
 /// #[model(table_name = "users")]

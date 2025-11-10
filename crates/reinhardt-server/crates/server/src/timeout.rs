@@ -1,4 +1,4 @@
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_http::{Request, Response};
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,14 +16,14 @@ use tokio::time::timeout;
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_server_core::TimeoutHandler;
-/// use reinhardt_types::Handler;
+/// use reinhardt_core::types::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
 ///
 /// #[async_trait::async_trait]
 /// impl Handler for MyHandler {
-///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 ///         Ok(Response::ok().with_body("Hello"))
 ///     }
 /// }
@@ -50,14 +50,14 @@ impl TimeoutHandler {
 	/// use std::sync::Arc;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::TimeoutHandler;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -80,14 +80,14 @@ impl TimeoutHandler {
 	/// use std::sync::Arc;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::TimeoutHandler;
-	/// use reinhardt_types::Handler;
+	/// use reinhardt_core::types::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _req: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -103,7 +103,7 @@ impl TimeoutHandler {
 
 #[async_trait::async_trait]
 impl Handler for TimeoutHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		match timeout(self.timeout_duration, self.inner.handle(request)).await {
 			Ok(result) => result,
 			Err(_) => {
@@ -123,7 +123,7 @@ mod tests {
 
 	#[async_trait::async_trait]
 	impl Handler for FastHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 			Ok(Response::ok().with_body("Fast response"))
 		}
 	}
@@ -134,7 +134,7 @@ mod tests {
 
 	#[async_trait::async_trait]
 	impl Handler for SlowHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 			tokio::time::sleep(self.delay).await;
 			Ok(Response::ok().with_body("Slow response"))
 		}

@@ -3,7 +3,7 @@
 //! This module provides utilities for testing HTTP servers, including
 //! spawning test servers and various test handler implementations.
 
-use reinhardt_types::Handler;
+use reinhardt_core::types::Handler;
 use reinhardt_http::{Request, Response};
 use reinhardt_server::HttpServer;
 use std::sync::Arc;
@@ -117,7 +117,7 @@ pub struct EchoPathHandler;
 
 #[async_trait::async_trait]
 impl Handler for EchoPathHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let path = request.path().to_string();
 		Ok(Response::ok().with_body(path))
 	}
@@ -147,7 +147,7 @@ pub struct StatusCodeHandler;
 
 #[async_trait::async_trait]
 impl Handler for StatusCodeHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		match request.path() {
 			"/200" => Ok(Response::ok().with_body("OK")),
 			"/404" => Ok(Response::not_found().with_body("Not Found")),
@@ -177,7 +177,7 @@ pub struct MethodEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for MethodEchoHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let method = request.method.as_str().to_string();
 		Ok(Response::ok().with_body(method))
 	}
@@ -215,7 +215,7 @@ pub struct DelayedHandler {
 
 #[async_trait::async_trait]
 impl Handler for DelayedHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		tokio::time::sleep(tokio::time::Duration::from_millis(self.delay_ms)).await;
 		Ok(Response::ok().with_body(self.response_body.clone()))
 	}
@@ -241,7 +241,7 @@ pub struct BodyEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for BodyEchoHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let body = request.read_body()?;
 		Ok(Response::ok().with_body(body))
 	}
@@ -275,7 +275,7 @@ pub struct LargeResponseHandler {
 
 #[async_trait::async_trait]
 impl Handler for LargeResponseHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		let data = "x".repeat(self.size_kb * 1024);
 		Ok(Response::ok().with_body(data))
 	}
@@ -306,7 +306,7 @@ pub struct RouterHandler;
 
 #[async_trait::async_trait]
 impl Handler for RouterHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let path = request.uri.path();
 
 		match path {

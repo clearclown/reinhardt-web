@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde_json::Value;
 
 use crate::renderer::{RenderResult, Renderer, RendererContext};

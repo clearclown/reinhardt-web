@@ -5,7 +5,7 @@
 
 // use reinhardt_orm::connection::Connection; // Not available in current version
 // use reinhardt_orm::model::Model; // Not used in current tests
-use reinhardt_validators::ValidationResult;
+use reinhardt_core::validators::ValidationResult;
 use sqlx::PgPool;
 use std::sync::Arc;
 use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};

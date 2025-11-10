@@ -6,7 +6,7 @@ use crate::Cache;
 use async_trait::async_trait;
 use deadpool_redis::{Config as PoolConfig, Pool, Runtime};
 use redis::AsyncCommands;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

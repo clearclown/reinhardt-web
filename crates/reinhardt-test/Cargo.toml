@@ -16,17 +16,15 @@ testcontainers = [
   "dep:redis",
   "dep:fs2",
 ]
-static = ["reinhardt-static"]
-websockets = ["dep:reinhardt-websockets"]
+static = ["reinhardt-contrib/static"]
+websockets = ["reinhardt-contrib/websockets"]
 
 [dependencies]
 reinhardt-apps = { workspace = true }
-reinhardt-orm = { path = "../reinhardt-db/crates/orm" }
-reinhardt-db = { workspace = true }
-reinhardt-views = { workspace = true }
-reinhardt-viewsets = { path = "../reinhardt-views/crates/viewsets" }
-reinhardt-auth = { path = "../reinhardt-contrib/crates/auth" }
-reinhardt-messages = { path = "../reinhardt-contrib/crates/messages" }
+
+reinhardt-db = { workspace = true, features = ["orm", "backends"] }
+reinhardt-views = { workspace = true, features = ["viewsets"] }
+reinhardt-contrib = { workspace = true, features = ["auth", "messages"] }
 reinhardt-http = { workspace = true }
 reinhardt-server = { workspace = true }
 
@@ -62,16 +60,13 @@ redis = { workspace = true, optional = true, features = [
 fs2 = { version = "0.4", optional = true }
 
 # Optional dependencies for static feature
-reinhardt-static = { path = "../reinhardt-contrib/crates/static", optional = true }
+# Note: contrib features are added to the main reinhardt-contrib dependency above
 
 # Optional dependencies for websockets feature
-reinhardt-websockets = { path = "../reinhardt-contrib/crates/websockets", optional = true }
-reinhardt-serializers = { path = "../reinhardt-rest/crates/serializers" }
-reinhardt-parsers = { path = "../reinhardt-rest/crates/parsers" }
-reinhardt-types = { path = "../reinhardt-core/crates/types" }
-reinhardt-backends = { path = "../reinhardt-db/crates/backends" }
-reinhardt-exception = { path = "../reinhardt-core/crates/exception" }
-reinhardt-cache = { path = "../reinhardt-utils/crates/cache" }
+# Note: contrib features are added to the main reinhardt-contrib dependency above
+reinhardt-rest = { workspace = true, features = ["serializers", "parsers"] }
+reinhardt-core = { workspace = true, features = ["types", "exception"] }
+reinhardt-utils = { workspace = true, features = ["cache"] }
 reinhardt-template = { workspace = true, features = ["renderers"] }
 
 tempfile = "3.8"

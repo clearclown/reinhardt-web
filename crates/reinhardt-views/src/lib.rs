@@ -19,7 +19,7 @@
 //! ```rust,ignore
 //! use reinhardt_views::{ListView, DetailView, View};
 //! use reinhardt_serializers::JsonSerializer;
-//! use reinhardt_orm::{Model, QuerySet};
+//! use reinhardt_db::orm::{Model, QuerySet};
 //! use reinhardt_apps::{Request, Response};
 //! use serde::{Serialize, Deserialize};
 //!

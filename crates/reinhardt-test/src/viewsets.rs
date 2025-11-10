@@ -6,8 +6,8 @@
 
 use async_trait::async_trait;
 use reinhardt_apps::{Request, Response, Result};
-use reinhardt_viewsets::middleware::{CompositeMiddleware, ViewSetMiddleware};
-use reinhardt_viewsets::{Action, ViewSet};
+use reinhardt_views::viewsets::middleware::{CompositeMiddleware, ViewSetMiddleware};
+use reinhardt_views::viewsets::{Action, ViewSet};
 use std::sync::Arc;
 
 /// Test ViewSet with configurable middleware support
@@ -38,8 +38,8 @@ impl TestViewSet {
 	}
 
 	/// Convert ViewSet to Handler with action mapping
-	pub fn as_view(self) -> reinhardt_viewsets::builder::ViewSetBuilder<Self> {
-		reinhardt_viewsets::builder::ViewSetBuilder::new(self)
+	pub fn as_view(self) -> reinhardt_views::viewsets::builder::ViewSetBuilder<Self> {
+		reinhardt_views::viewsets::builder::ViewSetBuilder::new(self)
 	}
 }
 

@@ -1,4 +1,4 @@
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 
 /// Common configuration trait
 ///
