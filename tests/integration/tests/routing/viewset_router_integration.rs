@@ -2,8 +2,7 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 use reinhardt_apps::{Handler, Request};
 use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_test::TestViewSet;
-use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, ViewSet};
+use reinhardt_viewsets::{GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -287,7 +286,7 @@ async fn test_extra_actions_with_router() {
 #[tokio::test]
 async fn test_get_extra_actions() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, action, register_action};
+	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -550,7 +549,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 /// Test viewset has required attributes after as_view()
 #[tokio::test]
 async fn test_args_kwargs_request_action_map_on_self() {
-	use reinhardt_viewsets::{ViewSetHandler, viewset_actions};
+	use reinhardt_viewsets::viewset_actions;
 
 	// Test that ViewSetHandler has the expected behavior:
 	// 1. action_map is set during construction
@@ -599,7 +598,7 @@ async fn test_login_required_middleware_compat() {
 	use hyper::{Method, Uri, Version};
 	use reinhardt_test::TestViewSet;
 	use reinhardt_viewsets::viewset_actions;
-	use std::collections::HashMap;
+	
 
 	// Test ViewSet without login required
 	let viewset = TestViewSet::new("test");

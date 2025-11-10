@@ -86,6 +86,19 @@ struct PostTag {
 	description: String,
 }
 
+impl std::fmt::Display for PostTag {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "PostTag({}, {})", self.post_id, self.tag_id)
+	}
+}
+
+// Display implementation for the composite PK type
+impl std::fmt::Display for PostTagCompositePk {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "PostTagPK({}, {})", self.post_id, self.tag_id)
+	}
+}
+
 /// Another test model with composite primary key
 #[derive(Model, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[model(app_label = "test_app", table_name = "user_roles")]
@@ -98,6 +111,19 @@ struct UserRole {
 
 	#[field(max_length = 100, null = true)]
 	granted_by: Option<String>,
+}
+
+impl std::fmt::Display for UserRole {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "UserRole({}, {})", self.user_id, self.role_id)
+	}
+}
+
+// Display implementation for the composite PK type
+impl std::fmt::Display for UserRoleCompositePk {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "UserRolePK({}, {})", self.user_id, self.role_id)
+	}
 }
 
 /// Set up test database fixture and recreate tables
@@ -397,6 +423,19 @@ async fn test_get_composite_string_pk(#[future] postgres_fixture: String) {
 
 		#[field(null = true, max_length = 1000)]
 		value: Option<String>,
+	}
+
+	impl std::fmt::Display for StringComposite {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			write!(f, "StringComposite({}, {})", self.category, self.item_id)
+		}
+	}
+
+	// Display implementation for the composite PK type
+	impl std::fmt::Display for StringCompositeCompositePk {
+		fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+			write!(f, "StringCompositePK({}, {})", self.category, self.item_id)
+		}
 	}
 
 	// Query with string PK

@@ -1,11 +1,11 @@
 //! Integration tests for reinhardt-graphql
 
 use async_graphql::{ID, Schema};
+use futures::StreamExt;
 use reinhardt_graphql::{
 	EventBroadcaster, Mutation, Query, SubscriptionRoot, User, UserEvent, UserStorage,
 	create_schema,
 };
-use tokio_stream::StreamExt;
 
 #[tokio::test]
 async fn test_full_graphql_workflow() {

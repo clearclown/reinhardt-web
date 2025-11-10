@@ -9,12 +9,8 @@
 //! - Integration with reinhardt-pagination
 //! - Error handling in paginated templates
 
-use reinhardt_templates::{
-	FileSystemTemplateLoader, Template, TemplateError, TemplateLoader, TemplateResult,
-	custom_filters::*,
-};
+use reinhardt_templates::{FileSystemTemplateLoader, custom_filters::*};
 use std::collections::HashMap;
-use std::path::Path;
 use tempfile::TempDir;
 use tera::{Context, Tera};
 
@@ -149,7 +145,7 @@ fn render_paginated_list(items: Vec<String>, pagination_html: String) -> String 
 {% endfor %}
 </ul>
 
-{{ pagination_html }}
+{{ pagination_html | safe }}
 </div>"#;
 
 	Tera::one_off(template, &context, true).unwrap()
@@ -602,7 +598,8 @@ fn test_pagination_with_filters() {
 	};
 
 	let title_text = "page 1 of 3";
-	let formatted_title = title(title_text).unwrap();
+	let formatted_value = title(&tera::Value::String(title_text.to_string()), &HashMap::new()).unwrap();
+	let formatted_title = formatted_value.as_str().unwrap();
 	assert_eq!(formatted_title, "Page 1 Of 3");
 
 	let page_info = format!(
@@ -768,12 +765,12 @@ fn test_pagination_with_file_system_loader() {
 
 	assert!(
 		content.contains("{% if pagination.has_previous %}"),
-		"Expected '{% if pagination.has_previous %}' in template, got: {}",
+		"Expected '{{% if pagination.has_previous %}}' in template, got: {}",
 		content
 	);
 	assert!(
 		content.contains("{% if pagination.has_next %}"),
-		"Expected '{% if pagination.has_next %}' in template, got: {}",
+		"Expected '{{% if pagination.has_next %}}' in template, got: {}",
 		content
 	);
 	assert!(

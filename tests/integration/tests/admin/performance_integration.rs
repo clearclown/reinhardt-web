@@ -9,15 +9,11 @@
 use async_trait::async_trait;
 use chrono::Utc;
 use reinhardt_admin::{
-	AdminResult,
+	AdminResult, BooleanFilter, FilterManager,
 	audit::{AuditAction, AuditLog, AuditLogQuery, AuditLogger, MemoryAuditLogger},
 	dashboard::{DashboardWidget, WidgetConfig, WidgetContext, WidgetPosition, WidgetRegistry},
-	export::ExportFormat,
-	filters::{BooleanFilter, ChoiceFilter, FilterManager},
-	import::{CsvImporter, ImportFormat, JsonImporter},
+	import::{CsvImporter, JsonImporter},
 };
-use std::collections::HashMap;
-use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -254,11 +250,11 @@ impl DashboardWidget for TestWidget {
 		WidgetPosition::TopLeft
 	}
 
-	fn size(&self) -> (usize, usize) {
+	fn size(&self) -> (u32, u32) {
 		(4, 3)
 	}
 
-	fn refresh_interval(&self) -> Option<u64> {
+	fn refresh_interval(&self) -> Option<u32> {
 		None
 	}
 
@@ -291,8 +287,11 @@ async fn test_dashboard_widget_concurrent_loading() {
 		let config = WidgetConfig {
 			id: format!("widget_{}", i),
 			position: WidgetPosition::TopLeft,
+			size: (1, 1),
 			order: i,
-			enabled: true,
+			css_classes: vec![],
+			style: std::collections::HashMap::new(),
+			options: std::collections::HashMap::new(),
 		};
 		registry
 			.register(widget, config)
@@ -342,8 +341,11 @@ async fn test_dashboard_position_concurrent_loading() {
 		let config = WidgetConfig {
 			id: format!("top_left_{}", i),
 			position: WidgetPosition::TopLeft,
+			size: (1, 1),
 			order: i,
-			enabled: true,
+			css_classes: vec![],
+			style: std::collections::HashMap::new(),
+			options: std::collections::HashMap::new(),
 		};
 		registry
 			.register(widget, config)
@@ -355,8 +357,11 @@ async fn test_dashboard_position_concurrent_loading() {
 		let config = WidgetConfig {
 			id: format!("top_right_{}", i),
 			position: WidgetPosition::TopRight,
+			size: (1, 1),
 			order: i,
-			enabled: true,
+			css_classes: vec![],
+			style: std::collections::HashMap::new(),
+			options: std::collections::HashMap::new(),
 		};
 		registry
 			.register(widget, config)
@@ -405,8 +410,11 @@ async fn test_sequential_vs_concurrent_widget_loading() {
 		let config_seq = WidgetConfig {
 			id: format!("widget_{}", i),
 			position: WidgetPosition::Center,
+			size: (1, 1),
 			order: i,
-			enabled: true,
+			css_classes: vec![],
+			style: std::collections::HashMap::new(),
+			options: std::collections::HashMap::new(),
 		};
 		let config_conc = config_seq.clone();
 

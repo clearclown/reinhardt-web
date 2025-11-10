@@ -4,7 +4,7 @@
 //! Covers multilingual template rendering, translation filters, and localization.
 
 use reinhardt_i18n::{
-	MessageCatalog, activate, deactivate, get_locale, gettext, ngettext, pgettext,
+	MessageCatalog, activate, deactivate, get_locale, gettext, load_catalog, ngettext, pgettext,
 };
 use reinhardt_templates::{blocktrans, localize_date_filter, localize_number_filter};
 use tera::{Context, Tera};
@@ -22,7 +22,8 @@ fn test_template_with_simple_translation() {
 	catalog.add_translation("Hello", "こんにちは");
 	catalog.add_translation("Welcome", "ようこそ");
 
-	activate("ja", catalog);
+	load_catalog("ja", catalog).unwrap();
+	activate("ja").unwrap();
 
 	let message = gettext("Hello");
 	let rendered = render_translation_template(&message);
@@ -35,10 +36,11 @@ fn test_template_with_simple_translation() {
 #[test]
 fn test_template_with_context_translation() {
 	let mut catalog = MessageCatalog::new("es");
-	catalog.add_context("button", "Save", "Guardar");
-	catalog.add_context("menu", "Save", "Guardar archivo");
+	catalog.add_context_str("button", "Save", "Guardar");
+	catalog.add_context_str("menu", "Save", "Guardar archivo");
 
-	activate("es", catalog);
+	load_catalog("es", catalog).unwrap();
+	activate("es").unwrap();
 
 	let button_save = pgettext("button", "Save");
 	let menu_save = pgettext("menu", "Save");
@@ -54,10 +56,12 @@ fn test_template_with_block_translation() {
 	let mut catalog = MessageCatalog::new("fr");
 	catalog.add_translation("Welcome!", "Bienvenue!");
 
-	activate("fr", catalog);
+	load_catalog("fr", catalog).unwrap();
+	activate("fr").unwrap();
 
 	let result = blocktrans("Welcome!").unwrap();
-	assert_eq!(result, "Welcome!");
+	// blocktrans()は正しく翻訳を返す（実装済み）
+	assert_eq!(result, "Bienvenue!");
 
 	deactivate();
 }
@@ -65,9 +69,10 @@ fn test_template_with_block_translation() {
 #[test]
 fn test_template_with_plural_translation() {
 	let mut catalog = MessageCatalog::new("de");
-	catalog.add_plural("item", "items", vec!["Artikel", "Artikel"]);
+	catalog.add_plural("item".to_string(), vec!["Artikel".to_string(), "Artikel".to_string()]);
 
-	activate("de", catalog);
+	load_catalog("de", catalog).unwrap();
+	activate("de").unwrap();
 
 	let result_singular = ngettext("item", "items", 1);
 	assert_eq!(result_singular, "Artikel");
@@ -82,10 +87,12 @@ fn test_template_with_plural_translation() {
 fn test_template_number_localization() {
 	let catalog = MessageCatalog::new("fr");
 
-	activate("fr", catalog);
+	load_catalog("fr", catalog).unwrap();
+	activate("fr").unwrap();
 
 	let result = localize_number_filter(1234.56).unwrap();
-	assert!(result.contains("1234"));
+	// フランス語ロケールでは "1 234,56" のようにスペース区切り・カンマ小数点
+	assert_eq!(result, "1 234,56");
 
 	deactivate();
 }
@@ -93,7 +100,8 @@ fn test_template_number_localization() {
 #[test]
 fn test_template_date_localization() {
 	let catalog = MessageCatalog::new("ja");
-	activate("ja", catalog);
+	load_catalog("ja", catalog).unwrap();
+	activate("ja").unwrap();
 
 	let date_str = "2025-10-16";
 	let result = localize_date_filter(date_str).unwrap();
@@ -108,7 +116,8 @@ fn test_template_date_localization() {
 #[test]
 fn test_language_detection_in_template() {
 	let catalog1 = MessageCatalog::new("it");
-	activate("it", catalog1);
+	load_catalog("it", catalog1).unwrap();
+	activate("it").unwrap();
 
 	let lang = get_locale();
 	assert_eq!(lang, "it");
@@ -116,7 +125,8 @@ fn test_language_detection_in_template() {
 	deactivate();
 
 	let catalog2 = MessageCatalog::new("pt");
-	activate("pt", catalog2);
+	load_catalog("pt", catalog2).unwrap();
+	activate("pt").unwrap();
 	let lang2 = get_locale();
 	assert_eq!(lang2, "pt");
 
@@ -136,7 +146,8 @@ fn test_multilingual_template_rendering() {
 		let mut catalog = MessageCatalog::new(lang);
 		catalog.add_translation(key, expected);
 
-		activate(lang, catalog);
+		load_catalog(lang, catalog).unwrap();
+		activate(lang).unwrap();
 
 		let translated = gettext(key);
 		assert_eq!(translated, expected, "Failed for language: {}", lang);
@@ -150,7 +161,8 @@ fn test_template_with_missing_translation() {
 	let mut catalog = MessageCatalog::new("zh");
 	catalog.add_translation("Existing", "存在");
 
-	activate("zh", catalog);
+	load_catalog("zh", catalog).unwrap();
+	activate("zh").unwrap();
 
 	let existing = gettext("Existing");
 	assert_eq!(existing, "存在");
@@ -164,7 +176,8 @@ fn test_template_with_missing_translation() {
 #[test]
 fn test_template_fallback_to_default_language() {
 	let catalog = MessageCatalog::new("unknown_lang");
-	activate("unknown_lang", catalog);
+	load_catalog("unknown_lang", catalog).unwrap();
+	activate("unknown_lang").unwrap();
 
 	let result = gettext("Hello");
 	assert_eq!(result, "Hello");
@@ -180,10 +193,12 @@ fn test_nested_translation_with_variables() {
 		"안녕하세요님, 메시지가 있습니다",
 	);
 
-	activate("ko", catalog);
+	load_catalog("ko", catalog).unwrap();
+	activate("ko").unwrap();
 
 	let result = blocktrans("Hello user, you have messages").unwrap();
-	assert_eq!(result, "Hello user, you have messages");
+	// blocktrans()は正しく翻訳を返す（実装済み）
+	assert_eq!(result, "안녕하세요님, 메시지가 있습니다");
 
 	deactivate();
 }

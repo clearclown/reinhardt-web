@@ -12,7 +12,6 @@ use reinhardt_admin::{
 	AuditLogger,
 	ChartData,
 	ChartDataset,
-	ChartType,
 	DashboardWidget,
 	MemoryAuditLogger,
 	QuickLink,
@@ -74,20 +73,27 @@ async fn test_audit_to_dashboard_workflow() {
 	let activities: Vec<Activity> = all_logs
 		.into_iter()
 		.map(|log| Activity {
-			user: log.user_id,
+			user: log.user_id().to_string(),
 			action: format!(
 				"{} {} {}",
-				log.action.as_str(),
-				log.model_name,
-				log.object_id
+				log.action().as_str(),
+				log.model_name(),
+				log.object_id()
 			),
-			timestamp: log.timestamp.format("%Y-%m-%d %H:%M:%S").to_string(),
+			timestamp: log.timestamp().format("%Y-%m-%d %H:%M:%S").to_string(),
 		})
 		.collect();
 
-	let widget = RecentActivityWidget::new("Recent Admin Actions", WidgetPosition::TopRight)
-		.with_max_items(10)
-		.with_activities(activities.clone());
+	let activities_clone = activities.clone();
+	let widget = RecentActivityWidget::new(
+		"Recent Admin Actions",
+		WidgetPosition::TopRight,
+		10, // max_items
+		move || {
+			let activities = activities_clone.clone();
+			async move { Ok(activities) }
+		},
+	);
 
 	let context = WidgetContext::new();
 	let html = widget
@@ -130,7 +136,7 @@ async fn test_audit_stats_in_widget() {
 	let stat_widget = StatWidget::new(
 		"Total Admin Actions",
 		WidgetPosition::TopLeft,
-		move || async move { Ok(total) },
+		move || async move { Ok(total as i64) },
 	);
 
 	let context = WidgetContext::new();
@@ -176,7 +182,7 @@ async fn test_dashboard_multi_widget_audit_integration() {
 	let total_widget = Arc::new(StatWidget::new(
 		"Total Actions",
 		WidgetPosition::TopLeft,
-		move || async move { Ok(total_count) },
+		move || async move { Ok(total_count as i64) },
 	));
 
 	registry
@@ -189,9 +195,9 @@ async fn test_dashboard_multi_widget_audit_integration() {
 	// Widget 2: Actions by model (Chart)
 	let datasets = vec![ChartDataset {
 		label: "Actions by Model".to_string(),
-		data: counts_by_model.values().cloned().collect(),
-		background_color: Some("#3498db".to_string()),
-		border_color: Some("#2980b9".to_string()),
+		data: counts_by_model.values().map(|&v| v as f64).collect(),
+		background_color: Some(vec!["#3498db".to_string()]),
+		border_color: Some(vec!["#2980b9".to_string()]),
 	}];
 
 	let chart_data = ChartData {
@@ -219,10 +225,7 @@ async fn test_dashboard_multi_widget_audit_integration() {
 		)
 		.expect("Register links widget");
 
-	// Verify registry
-	assert_eq!(registry.widget_count(), 2);
-
-	// Get widgets by position
+	// Verify registry by checking positions
 	let top_left_widgets = registry.get_by_position(WidgetPosition::TopLeft);
 	assert_eq!(top_left_widgets.len(), 1);
 
@@ -270,14 +273,22 @@ async fn test_recent_activity_widget_filtering() {
 	let activities: Vec<Activity> = alice_logs
 		.into_iter()
 		.map(|log| Activity {
-			user: log.user_id,
-			action: format!("{} {}", log.action.as_str(), log.model_name),
-			timestamp: log.timestamp.format("%H:%M:%S").to_string(),
+			user: log.user_id().to_string(),
+			action: format!("{} {}", log.action().as_str(), log.model_name()),
+			timestamp: log.timestamp().format("%H:%M:%S").to_string(),
 		})
 		.collect();
 
-	let widget = RecentActivityWidget::new("Alice's Activities", WidgetPosition::Center)
-		.with_activities(activities.clone());
+	let activities_clone = activities.clone();
+	let widget = RecentActivityWidget::new(
+		"Alice's Activities",
+		WidgetPosition::Center,
+		10, // max_items
+		move || {
+			let activities = activities_clone.clone();
+			async move { Ok(activities) }
+		},
+	);
 
 	let context = WidgetContext::new();
 	let html = widget
@@ -336,9 +347,28 @@ async fn test_table_widget_audit_summary() {
 
 	// Create table widget
 	let columns = vec!["Action".to_string(), "Count".to_string()];
-	let widget = TableWidget::new("Action Statistics", WidgetPosition::Center)
-		.with_columns(columns.clone())
-		.with_data(stats.clone());
+	let stats_clone = stats.clone();
+	let widget = TableWidget::new(
+		"Action Statistics",
+		WidgetPosition::Center,
+		columns,
+		move || {
+			let stats = stats_clone.clone();
+			async move {
+				// Convert HashMap<String, String> to Vec<Vec<String>>
+				let rows: Vec<Vec<String>> = stats
+					.iter()
+					.map(|row| {
+						vec![
+							row.get("Action").cloned().unwrap_or_default(),
+							row.get("Count").cloned().unwrap_or_default(),
+						]
+					})
+					.collect();
+				Ok(rows)
+			}
+		},
+	);
 
 	let context = WidgetContext::new();
 	let html = widget
@@ -374,21 +404,21 @@ async fn test_widget_permission_with_audit_context() {
 	logger.log(admin_log).await.expect("Admin log");
 	logger.log(user_log).await.expect("User log");
 
+	// Count admin actions before creating widget
+	let admin_count = logger
+		.count(
+			&AuditLogQuery::builder()
+				.user_id("admin".to_string())
+				.build(),
+		)
+		.await
+		.expect("Count admin actions");
+
 	// Create widget that requires admin permission
 	let admin_widget = StatWidget::new(
 		"Admin Actions",
 		WidgetPosition::TopLeft,
-		move || async move {
-			let count = logger
-				.count(
-					&AuditLogQuery::builder()
-						.user_id("admin".to_string())
-						.build(),
-				)
-				.await
-				.unwrap();
-			Ok(count)
-		},
+		move || async move { Ok(admin_count as i64) },
 	);
 
 	// Test visibility for admin user
@@ -437,7 +467,7 @@ async fn test_audit_retention_dashboard_update() {
 	let active_count_widget = StatWidget::new(
 		"Active Audit Logs",
 		WidgetPosition::TopLeft,
-		move || async move { Ok(50usize) },
+		move || async move { Ok(50i64) },
 	);
 
 	let context = WidgetContext::new();
@@ -470,25 +500,41 @@ async fn test_audit_ip_user_agent_tracking() {
 	let logged = logger.log(log).await.expect("Log with IP should succeed");
 
 	// Verify IP and user agent are stored
-	assert_eq!(logged.ip_address, Some(ip_addr));
-	assert_eq!(logged.user_agent, Some(user_agent.to_string()));
+	assert_eq!(logged.ip_address(), Some(ip_addr));
+	assert_eq!(logged.user_agent(), Some(user_agent));
 
 	// Create table widget showing security audit info
 	let mut row = std::collections::HashMap::new();
-	row.insert("User".to_string(), logged.user_id);
+	row.insert("User".to_string(), logged.user_id().to_string());
 	row.insert("IP".to_string(), ip_addr.to_string());
 	row.insert(
 		"User Agent".to_string(),
 		user_agent[..20].to_string() + "...",
 	);
 
-	let widget = TableWidget::new("Security Audit", WidgetPosition::BottomLeft)
-		.with_columns(vec![
-			"User".to_string(),
-			"IP".to_string(),
-			"User Agent".to_string(),
-		])
-		.with_data(vec![row]);
+	let columns = vec![
+		"User".to_string(),
+		"IP".to_string(),
+		"User Agent".to_string(),
+	];
+	let row_clone = row.clone();
+	let widget = TableWidget::new(
+		"Security Audit",
+		WidgetPosition::BottomLeft,
+		columns,
+		move || {
+			let row = row_clone.clone();
+			async move {
+				// Convert single HashMap to Vec<Vec<String>>
+				let rows = vec![vec![
+					row.get("User").cloned().unwrap_or_default(),
+					row.get("IP").cloned().unwrap_or_default(),
+					row.get("User Agent").cloned().unwrap_or_default(),
+				]];
+				Ok(rows)
+			}
+		},
+	);
 
 	let context = WidgetContext::new();
 	let html = widget

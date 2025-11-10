@@ -259,7 +259,7 @@ mod constraint_validation_tests {
 	#[tokio::test]
 	async fn test_unique_constraint_database_violation() {
 		use reinhardt_validators::UniqueValidator;
-		use std::sync::Arc;
+		
 
 		let db = TestDatabase::new()
 			.await

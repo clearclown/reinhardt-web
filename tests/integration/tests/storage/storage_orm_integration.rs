@@ -4,7 +4,7 @@
 
 use image::{ImageBuffer, Rgb};
 use reinhardt_orm::file_fields::{FileField as ORMFileField, ImageField as ORMImageField};
-use reinhardt_utils::storage::{InMemoryStorage, LocalStorage, Storage};
+use reinhardt_storage::{InMemoryStorage, LocalStorage, Storage};
 use std::io::Cursor;
 use tempfile::TempDir;
 
@@ -90,8 +90,8 @@ async fn test_filefield_get_upload_to_string() {
 #[tokio::test]
 async fn test_filefield_attr_class() {
 	// Test FileField attribute class
-	let field = ORMFileField::new();
-	assert_eq!(field.name, None);
+	let field = ORMFileField::new("uploads/documents");
+	assert_eq!(field.upload_to, "uploads/documents");
 }
 
 #[tokio::test]
@@ -112,7 +112,7 @@ async fn test_filefield_path() {
 #[tokio::test]
 async fn test_filefield_repr() {
 	// Test FileField representation
-	let field = ORMFileField::new();
+	let field = ORMFileField::new("uploads/documents");
 	let repr = format!("{:?}", field);
 	assert!(repr.contains("FileField"));
 }
@@ -181,9 +181,9 @@ async fn test_filefield_pathlib() {
 #[tokio::test]
 async fn test_imagefield_constructor() {
 	// Test ImageField constructor
-	let field = ORMImageField::new();
-	assert!(field.width.is_none());
-	assert!(field.height.is_none());
+	let field = ORMImageField::new("uploads/images");
+	assert!(field.width_field.is_none());
+	assert!(field.height_field.is_none());
 }
 
 #[tokio::test]

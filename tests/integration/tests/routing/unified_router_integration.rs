@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_apps::{Handler, Request, Response, Result};
 use reinhardt_routers::UnifiedRouter;
-use reinhardt_viewsets::{Action, ViewSet};
+use reinhardt_viewsets::{Action, ActionType, ViewSet};
 use std::sync::Arc;
 
 // Mock ViewSet for testing
@@ -18,12 +18,12 @@ impl ViewSet for UserViewSet {
 	}
 
 	async fn dispatch(&self, _req: Request, action: Action) -> Result<Response> {
-		match action {
-			Action::List => Ok(Response::ok().with_body(b"User list".to_vec())),
-			Action::Detail(_) => Ok(Response::ok().with_body(b"User detail".to_vec())),
-			Action::Create => Ok(Response::ok().with_body(b"User created".to_vec())),
-			Action::Update(_) => Ok(Response::ok().with_body(b"User updated".to_vec())),
-			Action::Delete(_) => Ok(Response::ok().with_body(b"User deleted".to_vec())),
+		match action.action_type {
+			ActionType::List => Ok(Response::ok().with_body(b"User list".to_vec())),
+			ActionType::Retrieve => Ok(Response::ok().with_body(b"User detail".to_vec())),
+			ActionType::Create => Ok(Response::ok().with_body(b"User created".to_vec())),
+			ActionType::Update => Ok(Response::ok().with_body(b"User updated".to_vec())),
+			ActionType::Destroy => Ok(Response::ok().with_body(b"User deleted".to_vec())),
 			_ => Ok(Response::not_found()),
 		}
 	}
@@ -122,7 +122,7 @@ async fn test_unified_router_nested_namespace_reversal() {
 		health_handler,
 	);
 
-	let mut v1 = UnifiedRouter::new()
+	let v1 = UnifiedRouter::new()
 		.with_namespace("v1")
 		.mount("/users", users);
 

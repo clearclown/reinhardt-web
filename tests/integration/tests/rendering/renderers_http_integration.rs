@@ -16,10 +16,11 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
+use reinhardt_exception::Error;
 use reinhardt_http::{Request, Response};
 use reinhardt_negotiation::{ContentNegotiator, MediaType};
 use reinhardt_renderers::{JSONRenderer, Renderer, RendererContext, RendererRegistry};
-use reinhardt_views::View;
+use reinhardt_views_core::View;
 use serde_json::json;
 
 // ============================================================================
@@ -70,7 +71,7 @@ impl CustomHTMLRenderer {
 #[async_trait]
 impl Renderer for CustomHTMLRenderer {
 	fn media_types(&self) -> Vec<String> {
-		vec!["text/html".to_string()]
+		vec!["text/html; charset=utf-8".to_string(), "text/html".to_string()]
 	}
 
 	fn format(&self) -> Option<&str> {
@@ -85,7 +86,7 @@ impl Renderer for CustomHTMLRenderer {
 		let html = format!(
 			"<!DOCTYPE html><html><body><pre>{}</pre></body></html>",
 			serde_json::to_string_pretty(data)
-				.map_err(|e| reinhardt_renderers::RenderError::SerializationError(e.to_string()))?
+				.map_err(|e| Error::Serialization(e.to_string()))?
 		);
 		Ok(bytes::Bytes::from(html))
 	}
@@ -188,7 +189,7 @@ impl View for TestAPIView {
 			Response::new(hyper::StatusCode::OK)
 				.with_typed_header(
 					hyper::header::CONTENT_TYPE,
-					hyper::header::HeaderValue::from_str(&renderer.content_type()).unwrap(),
+					hyper::header::HeaderValue::from_str(&renderer.media_type()).unwrap(),
 				)
 				.with_typed_header(
 					hyper::header::CONTENT_LENGTH,
@@ -199,7 +200,7 @@ impl View for TestAPIView {
 				.with_body(rendered)
 				.with_typed_header(
 					hyper::header::CONTENT_TYPE,
-					hyper::header::HeaderValue::from_str(&renderer.content_type()).unwrap(),
+					hyper::header::HeaderValue::from_str(&renderer.media_type()).unwrap(),
 				)
 		};
 

@@ -68,14 +68,14 @@ mod tests {
 		// Mock HTTP request with message storage
 		#[derive(Debug)]
 		struct MockRequest {
-			headers: HashMap<String, String>,
+			_headers: HashMap<String, String>,
 			message_storage: Arc<Mutex<MemoryStorage>>,
 		}
 
 		impl MockRequest {
 			fn new() -> Self {
 				Self {
-					headers: HashMap::new(),
+					_headers: HashMap::new(),
 					message_storage: Arc::new(Mutex::new(MemoryStorage::new())),
 				}
 			}
@@ -119,14 +119,14 @@ mod tests {
 
 		#[derive(Debug)]
 		struct MockRequest {
-			headers: HashMap<String, String>,
+			_headers: HashMap<String, String>,
 		}
 
 		impl RequestWrapper {
 			fn new_with_request() -> Self {
 				Self {
 					request: Some(MockRequest {
-						headers: HashMap::new(),
+						_headers: HashMap::new(),
 					}),
 					message_storage: Arc::new(Mutex::new(MemoryStorage::new())),
 				}
@@ -195,21 +195,21 @@ mod tests {
 
 		#[derive(Debug)]
 		struct MockRequest {
-			headers: HashMap<String, String>,
+			_headers: HashMap<String, String>,
 			has_message_middleware: bool,
 		}
 
 		impl MockRequest {
 			fn new() -> Self {
 				Self {
-					headers: HashMap::new(),
+					_headers: HashMap::new(),
 					has_message_middleware: false,
 				}
 			}
 
 			fn with_middleware() -> Self {
 				Self {
-					headers: HashMap::new(),
+					_headers: HashMap::new(),
 					has_message_middleware: true,
 				}
 			}
@@ -243,14 +243,14 @@ mod tests {
 
 		#[derive(Debug)]
 		struct MockRequest {
-			headers: HashMap<String, String>,
+			_headers: HashMap<String, String>,
 			has_message_middleware: bool,
 		}
 
 		impl MockRequest {
 			fn new() -> Self {
 				Self {
-					headers: HashMap::new(),
+					_headers: HashMap::new(),
 					has_message_middleware: false,
 				}
 			}
@@ -298,7 +298,7 @@ mod tests {
 
 		#[derive(Debug)]
 		struct MockRequest {
-			headers: HashMap<String, String>,
+			_headers: HashMap<String, String>,
 			path: String,
 		}
 
@@ -306,7 +306,7 @@ mod tests {
 			fn new(path: String) -> Self {
 				Self {
 					inner_request: MockRequest {
-						headers: HashMap::new(),
+						_headers: HashMap::new(),
 						path,
 					},
 					message_storage: Arc::new(Mutex::new(MemoryStorage::new())),

@@ -3,7 +3,6 @@
 //! These tests demonstrate message configuration functionality using mock settings
 
 use reinhardt_messages::{Level, Message};
-use reinhardt_conf::settings::Settings;
 use std::collections::HashMap;
 
 // Mock message configuration for testing
@@ -52,7 +51,7 @@ impl MessageConfig {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_test::messages::{assert_message_count, assert_message_exists};
+	
 
 	/// Test that MESSAGE_TAGS settings can override default level tags
 	/// Original: django/tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags

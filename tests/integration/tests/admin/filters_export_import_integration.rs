@@ -6,27 +6,14 @@ use reinhardt_admin::{
 	// Filters
 	BooleanFilter,
 	ChoiceFilter,
-	// Export
-	CsvExporter,
-	// Import
-	CsvImporter,
 	DateRangeFilter,
 	ExportBuilder,
-	ExportConfig,
 	ExportFormat,
-	ExportResult,
 	FilterManager,
-	FilterSpec,
 	ImportBuilder,
-	ImportConfig,
 	ImportFormat,
-	ImportResult,
-	JsonExporter,
-	JsonImporter,
 	ListFilter,
 	NumberRangeFilter,
-	TsvExporter,
-	TsvImporter,
 };
 use std::collections::HashMap;
 
@@ -55,7 +42,7 @@ async fn test_csv_filter_export_import_roundtrip() {
 	let all_data = vec![user1.clone(), user2.clone(), user3.clone()];
 
 	// Step 2: Apply filter (simulate filtering active users)
-	let filter = BooleanFilter::new("is_active", "Active Status");
+	let _filter = BooleanFilter::new("is_active", "Active Status");
 	let filtered_data: Vec<_> = all_data
 		.iter()
 		.filter(|row| row.get("is_active") == Some(&"true".to_string()))
@@ -113,11 +100,11 @@ async fn test_json_multiple_filters_export_import() {
 	}
 
 	// Apply multiple filters: status = active AND age >= 26
-	let status_filter = ChoiceFilter::new("status", "Status")
+	let _status_filter = ChoiceFilter::new("status", "Status")
 		.add_choice("active", "Active")
 		.add_choice("inactive", "Inactive");
 
-	let age_filter = NumberRangeFilter::with_ranges(
+	let _age_filter = NumberRangeFilter::with_ranges(
 		"age",
 		"Age Range",
 		vec![
@@ -236,7 +223,7 @@ async fn test_tsv_filter_export_import() {
 	}
 
 	// Filter by price range
-	let price_filter = NumberRangeFilter::with_ranges(
+	let _price_filter = NumberRangeFilter::with_ranges(
 		"price",
 		"Price",
 		vec![

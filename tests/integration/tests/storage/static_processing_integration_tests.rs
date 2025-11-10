@@ -4,7 +4,7 @@
 //! with the processing pipeline.
 
 use reinhardt_static::processing::{
-	ProcessingConfig, ProcessingPipeline,
+	Processor, ProcessingConfig, ProcessingPipeline,
 	bundle::{AssetBundler, BundleConfig},
 	compress::{BrotliCompressor, CompressionConfig, GzipCompressor},
 	minify::{CssMinifier, JsMinifier},

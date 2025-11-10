@@ -108,10 +108,6 @@ pub use reinhardt_pagination as pagination;
 pub use reinhardt_throttling as throttling;
 pub use reinhardt_versioning as versioning;
 
-// Re-export OpenAPI macros
-#[cfg(feature = "openapi-macros")]
-pub use reinhardt_openapi_macros as openapi_macros;
-
 // Re-export from rest-core
 pub use rest_core::authentication;
 pub use rest_core::response;

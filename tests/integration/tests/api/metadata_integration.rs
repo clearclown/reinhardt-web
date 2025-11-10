@@ -10,7 +10,6 @@ use reinhardt_metadata::{
 	BaseMetadata, FieldInfoBuilder, FieldType, MetadataOptions, SimpleMetadata,
 };
 use reinhardt_versioning::{BaseVersioning, QueryParameterVersioning};
-use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;

@@ -305,7 +305,7 @@ async fn test_session_fixation_prevention() {
 async fn test_session_timeout_valid_before_expiry() {
 	// Test: Session should be valid before timeout
 	use reinhardt_sessions::Session;
-	use reinhardt_sessions::backends::{InMemorySessionBackend, SessionBackend};
+	use reinhardt_sessions::backends::InMemorySessionBackend;
 
 	let backend = InMemorySessionBackend::new();
 	let mut session = Session::new(backend);

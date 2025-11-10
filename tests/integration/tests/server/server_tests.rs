@@ -1,54 +1,17 @@
 //! Integration tests for Server implementation
 
-use async_trait::async_trait;
-use reinhardt_apps::{Handler, Request, Response, Result, Router, Server};
+use hyper::Method;
+use reinhardt_apps::Response;
+use reinhardt_routers::UnifiedRouter as Router;
+use reinhardt_server::HttpServer;
 use std::sync::Arc;
-
-/// Simple handler for testing
-struct TestHandler {
-	message: String,
-}
-
-#[async_trait]
-impl Handler for TestHandler {
-	async fn handle(&self, _request: Request) -> Result<Response> {
-		Ok(Response::ok().with_body(self.message.clone()))
-	}
-}
-
-/// Handler that echoes request method
-struct EchoMethodHandler;
-
-#[async_trait]
-impl Handler for EchoMethodHandler {
-	async fn handle(&self, request: Request) -> Result<Response> {
-		Ok(Response::ok().with_body(format!("Method: {}", request.method)))
-	}
-}
-
-/// Handler that returns request headers
-struct HeadersHandler;
-
-#[async_trait]
-impl Handler for HeadersHandler {
-	async fn handle(&self, request: Request) -> Result<Response> {
-		let user_agent = request
-			.headers
-			.get(hyper::header::USER_AGENT)
-			.and_then(|v| v.to_str().ok())
-			.unwrap_or("Unknown");
-
-		Ok(Response::ok().with_body(format!("User-Agent: {}", user_agent)))
-	}
-}
 
 #[tokio::test]
 async fn test_server_basic_request() {
-	let router = Arc::new(Router::new().get(
+	let router = Arc::new(Router::new().function(
 		"/test",
-		Arc::new(TestHandler {
-			message: "Server works!".to_string(),
-		}),
+		Method::GET,
+		|_req| async { Ok(Response::ok().with_body("Server works!")) },
 	));
 
 	// Spawn server in background
@@ -58,7 +21,7 @@ async fn test_server_basic_request() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -81,17 +44,15 @@ async fn test_server_basic_request() {
 async fn test_server_multiple_requests() {
 	let router = Arc::new(
 		Router::new()
-			.get(
+			.function(
 				"/hello",
-				Arc::new(TestHandler {
-					message: "Hello!".to_string(),
-				}),
+				Method::GET,
+				|_req| async { Ok(Response::ok().with_body("Hello!")) },
 			)
-			.get(
+			.function(
 				"/goodbye",
-				Arc::new(TestHandler {
-					message: "Goodbye!".to_string(),
-				}),
+				Method::GET,
+				|_req| async { Ok(Response::ok().with_body("Goodbye!")) },
 			),
 	);
 
@@ -101,7 +62,7 @@ async fn test_server_multiple_requests() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -126,17 +87,14 @@ async fn test_server_multiple_requests() {
 
 #[tokio::test]
 async fn test_server_post_request() {
-	struct PostHandler;
-
-	#[async_trait]
-	impl Handler for PostHandler {
-		async fn handle(&self, request: Request) -> Result<Response> {
-			let body_str = String::from_utf8(request.body.to_vec()).unwrap_or_default();
+	let router = Arc::new(Router::new().function(
+		"/submit",
+		Method::POST,
+		|request| async move {
+			let body_str = String::from_utf8(request.body().to_vec()).unwrap_or_default();
 			Ok(Response::ok().with_body(format!("Received: {}", body_str)))
-		}
-	}
-
-	let router = Arc::new(Router::new().post("/submit", Arc::new(PostHandler)));
+		},
+	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -144,7 +102,7 @@ async fn test_server_post_request() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -164,17 +122,14 @@ async fn test_server_post_request() {
 
 #[tokio::test]
 async fn test_server_json_request_response() {
-	struct JsonEchoHandler;
-
-	#[async_trait]
-	impl Handler for JsonEchoHandler {
-		async fn handle(&self, request: Request) -> Result<Response> {
+	let router = Arc::new(Router::new().function(
+		"/echo",
+		Method::POST,
+		|request| async move {
 			let json: serde_json::Value = request.json()?;
 			Response::ok().with_json(&json)
-		}
-	}
-
-	let router = Arc::new(Router::new().post("/echo", Arc::new(JsonEchoHandler)));
+		},
+	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -182,7 +137,7 @@ async fn test_server_json_request_response() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -209,11 +164,10 @@ async fn test_server_json_request_response() {
 
 #[tokio::test]
 async fn test_server_404_response() {
-	let router = Arc::new(Router::new().get(
+	let router = Arc::new(Router::new().function(
 		"/exists",
-		Arc::new(TestHandler {
-			message: "I exist!".to_string(),
-		}),
+		Method::GET,
+		|_req| async { Ok(Response::ok().with_body("I exist!")) },
 	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
@@ -222,7 +176,7 @@ async fn test_server_404_response() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -240,7 +194,11 @@ async fn test_server_404_response() {
 
 #[tokio::test]
 async fn test_server_concurrent_requests() {
-	let router = Arc::new(Router::new().get("/test", Arc::new(EchoMethodHandler)));
+	let router = Arc::new(Router::new().function(
+		"/test",
+		Method::GET,
+		|request| async move { Ok(Response::ok().with_body(format!("Method: {}", request.method))) },
+	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -248,7 +206,7 @@ async fn test_server_concurrent_requests() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -281,7 +239,18 @@ async fn test_server_concurrent_requests() {
 
 #[tokio::test]
 async fn test_server_custom_headers() {
-	let router = Arc::new(Router::new().get("/headers", Arc::new(HeadersHandler)));
+	let router = Arc::new(Router::new().function(
+		"/headers",
+		Method::GET,
+		|request| async move {
+			let user_agent = request
+				.headers
+				.get(hyper::header::USER_AGENT)
+				.and_then(|v| v.to_str().ok())
+				.unwrap_or("Unknown");
+			Ok(Response::ok().with_body(format!("User-Agent: {}", user_agent)))
+		},
+	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -289,7 +258,7 @@ async fn test_server_custom_headers() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
@@ -309,17 +278,14 @@ async fn test_server_custom_headers() {
 
 #[tokio::test]
 async fn test_server_path_parameters() {
-	struct PathParamHandler;
-
-	#[async_trait]
-	impl Handler for PathParamHandler {
-		async fn handle(&self, request: Request) -> Result<Response> {
+	let router = Arc::new(Router::new().function(
+		"/users/:id",
+		Method::GET,
+		|request| async move {
 			let id = request.path_params.get("id").unwrap();
 			Ok(Response::ok().with_body(format!("ID: {}", id)))
-		}
-	}
-
-	let router = Arc::new(Router::new().get("/users/:id", Arc::new(PathParamHandler)));
+		},
+	));
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -327,7 +293,7 @@ async fn test_server_path_parameters() {
 
 	let router_clone = router.clone();
 	tokio::spawn(async move {
-		let server = Server::new(router_clone);
+		let server = HttpServer::new(router_clone);
 		let _ = server.listen(server_addr).await;
 	});
 
