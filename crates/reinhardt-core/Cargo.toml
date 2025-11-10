@@ -15,6 +15,8 @@ reinhardt-signals = { version = "0.1.0-alpha.1", path = "crates/signals", option
 reinhardt-macros = { version = "0.1.0-alpha.1", path = "crates/macros", optional = true }
 reinhardt-security = { version = "0.1.0-alpha.1", path = "crates/security", optional = true }
 reinhardt-validators = { version = "0.1.0-alpha.1", path = "crates/validators", optional = true }
+reinhardt-core-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers", optional = true }
+reinhardt-core-auth = { version = "0.1.0-alpha.1", path = "crates/auth", optional = true }
 
 [features]
 default = [
@@ -24,6 +26,7 @@ default = [
   "macros",
   "security",
   "validators",
+  "serializers",
 ]
 types = ["dep:reinhardt-types"]
 exception = ["dep:reinhardt-exception"]
@@ -31,3 +34,5 @@ signals = ["dep:reinhardt-signals"]
 macros = ["dep:reinhardt-macros"]
 security = ["dep:reinhardt-security"]
 validators = ["dep:reinhardt-validators"]
+serializers = ["dep:reinhardt-core-serializers"]
+auth = ["dep:reinhardt-core-auth"]

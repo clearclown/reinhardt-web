@@ -43,3 +43,9 @@ pub use reinhardt_security as security;
 
 #[cfg(feature = "validators")]
 pub use reinhardt_validators as validators;
+
+#[cfg(feature = "serializers")]
+pub use reinhardt_core_serializers as serializers;
+
+#[cfg(feature = "auth")]
+pub use reinhardt_core_auth as auth;
