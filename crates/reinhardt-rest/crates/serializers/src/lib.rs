@@ -1,9 +1,23 @@
 //! Serializers for Reinhardt REST framework
 
-pub mod arena;
+// Re-export base layer types from reinhardt-core
+pub use reinhardt_core::serializers::{
+	arena::{FieldValue, SerializationArena, SerializedValue},
+	fields::{
+		BooleanField, CharField, ChoiceField, DateField, DateTimeField, EmailField, FieldError,
+		FloatField, IntegerField, URLField,
+	},
+	recursive::{RecursiveError, RecursiveResult, SerializationContext},
+	serializer::{Deserializer, JsonSerializer, Serializer, SerializerError, ValidatorError},
+	validator::{
+		FieldLevelValidation, FieldValidator, ObjectLevelValidation, ObjectValidator,
+		ValidationError, ValidationResult, validate_fields,
+	},
+};
+
+// REST-specific modules (ORM-integrated features)
 pub mod cache_invalidation;
 pub mod content_negotiation;
-pub mod fields;
 pub mod hyperlinked;
 pub mod introspection;
 pub mod meta;
@@ -16,21 +30,14 @@ pub mod parsers;
 pub mod performance;
 pub mod pool_manager;
 pub mod queryset_integration;
-pub mod recursive;
 pub mod relation_fields_orm;
 pub mod relations;
-pub mod serializer;
-pub mod validator;
 pub mod validator_config;
 pub mod validators;
 
-pub use arena::{FieldValue, SerializationArena, SerializedValue};
+// Re-export REST-specific types
 pub use cache_invalidation::{CacheInvalidator, InvalidationStrategy};
 pub use content_negotiation::ContentNegotiator;
-pub use fields::{
-	BooleanField, CharField, ChoiceField, DateField, DateTimeField, EmailField, FieldError,
-	FloatField, IntegerField, URLField,
-};
 pub use hyperlinked::{HyperlinkedModelSerializer, UrlReverser};
 pub use introspection::{FieldInfo, FieldIntrospector, TypeMapper};
 pub use meta::{DefaultMeta, MetaConfig, SerializerMeta};
@@ -49,18 +56,12 @@ pub use performance::{
 };
 pub use pool_manager::{ConnectionPoolManager, default_pool_config};
 pub use queryset_integration::{CacheAwareSaveContext, SaveContext, SerializerSaveMixin};
-pub use recursive::{RecursiveError, RecursiveResult, SerializationContext};
 pub use relation_fields_orm::{
 	OptimizableRelationField, PrimaryKeyRelatedFieldORM, QueryOptimizer, SlugRelatedFieldORM,
 };
 pub use relations::{
 	HyperlinkedRelatedField, IdentityField, ManyRelatedField, PrimaryKeyRelatedField,
 	RelationField, SlugRelatedField, StringRelatedField,
-};
-pub use serializer::{Deserializer, JsonSerializer, Serializer, SerializerError, ValidatorError};
-pub use validator::{
-	FieldLevelValidation, FieldValidator, ObjectLevelValidation, ObjectValidator, ValidationError,
-	ValidationResult, validate_fields,
 };
 pub use validator_config::ValidatorConfig;
 pub use validators::{DatabaseValidatorError, UniqueTogetherValidator, UniqueValidator};
