@@ -16,6 +16,7 @@ reinhardt-orm = { path = "crates/orm", version = "0.1.0-alpha.1", optional = tru
 reinhardt-migrations = { path = "crates/migrations", version = "0.1.0-alpha.1", optional = true }
 reinhardt-hybrid = { path = "crates/hybrid", version = "0.1.0-alpha.1", optional = true }
 reinhardt-associations = { path = "crates/associations", version = "0.1.0-alpha.1", optional = true }
+reinhardt-contenttypes = { path = "crates/contenttypes", version = "0.1.0-alpha.1", optional = true }
 
 # Database drivers and query builders
 sqlx = { version = "0.8", features = [
@@ -71,6 +72,7 @@ orm = ["dep:reinhardt-orm"]
 migrations = ["dep:reinhardt-migrations"]
 hybrid = ["dep:reinhardt-hybrid"]
 associations = ["dep:reinhardt-associations"]
+contenttypes = ["dep:reinhardt-contenttypes"]
 
 # Database-specific features
 postgres = [

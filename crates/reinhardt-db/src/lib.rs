@@ -177,6 +177,9 @@ pub use reinhardt_hybrid as hybrid;
 #[cfg(feature = "associations")]
 pub use reinhardt_associations as associations;
 
+#[cfg(feature = "contenttypes")]
+pub use reinhardt_contenttypes as contenttypes;
+
 /// Prelude module for convenient imports
 ///
 /// Imports commonly used types from all modules.
@@ -199,6 +202,9 @@ pub mod prelude {
 
 	#[cfg(feature = "associations")]
 	pub use crate::associations::*;
+
+	#[cfg(feature = "contenttypes")]
+	pub use crate::contenttypes::*;
 }
 
 // Re-export top-level commonly used types
