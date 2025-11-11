@@ -24,7 +24,7 @@ browsable-api = []
 [dependencies]
 # Core dependencies
 reinhardt-apps = { workspace = true }
-reinhardt-contrib = { workspace = true, features = ["auth"] }
+reinhardt-core = { workspace = true, features = ["auth", "exception"] }
 reinhardt-urls = { workspace = true, features = ["routers"] }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 # openapi = { path = "crates/openapi", optional = true } # Temporarily disabled due to utoipa API changes
@@ -41,7 +41,6 @@ reinhardt-throttling = { version = "0.1.0-alpha.1", path = "crates/throttling" }
 reinhardt-versioning = { version = "0.1.0-alpha.1", path = "crates/versioning" }
 reinhardt-metadata = { version = "0.1.0-alpha.1", path = "crates/metadata" }
 reinhardt-negotiation = { version = "0.1.0-alpha.1", path = "crates/negotiation" }
-reinhardt-exception = { path = "../reinhardt-core/crates/exception" }
 
 # Serialization
 serde = { workspace = true }

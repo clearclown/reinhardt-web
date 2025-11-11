@@ -1,16 +1,16 @@
 //! REST API authentication
 //!
-//! Re-exports authentication types from reinhardt-auth.
+//! Re-exports authentication types from reinhardt-core::auth.
 
-// Re-export core authentication types from reinhardt-auth
-pub use reinhardt_contrib::auth::{
+// Re-export core authentication types from reinhardt-core::auth
+pub use reinhardt_core::auth::{
 	AllowAny, AnonymousUser, AuthBackend, IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly,
 	Permission, SimpleUser, User,
 };
 
-// Re-export JWT types conditionally
+// Re-export JWT types conditionally from reinhardt-auth
 #[cfg(feature = "jwt")]
-pub use reinhardt_contrib::auth::{Claims, JwtAuth};
+pub use reinhardt_auth::{Claims, JwtAuth};
 
 /// Authentication result (REST-specific utility)
 #[derive(Debug, Clone)]
