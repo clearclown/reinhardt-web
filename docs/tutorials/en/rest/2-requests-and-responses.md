@@ -97,7 +97,9 @@ Response::internal_server_error()
 
 ## Parsing Request Data
 
-Reinhardt automatically parses JSON request bodies. Simply use `serde_json::from_slice`:
+### Method 1: Using Request Helper Methods (Recommended)
+
+Reinhardt provides convenient helper methods on the `Request` type for parsing request data:
 
 ```rust
 use reinhardt::prelude::*;
@@ -113,9 +115,8 @@ struct CreateSnippet {
 
 #[endpoint]
 async fn create_snippet(mut request: Request) -> Result<Response> {
-    // Parse JSON from request body
-    let body_bytes = std::mem::take(&mut request.body);
-    let data: CreateSnippet = serde_json::from_slice(&body_bytes)?;
+    // Recommended: Use request helper method for JSON parsing
+    let data: CreateSnippet = request.json().await?;
 
     println!("Title: {}", data.title);
     println!("Code: {}", data.code);
@@ -125,10 +126,37 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
 }
 ```
 
-**Note**: Reinhardt's `#[endpoint]` macro handles request parsing automatically. The framework takes care of:
-- Content-Type header checking
-- JSON deserialization
-- Error handling for invalid JSON
+**Available Helper Methods:**
+- `request.json::<T>().await?` - Parse JSON body into type T
+- `request.parse_form().await?` - Parse URL-encoded form data
+- `request.body` - Access raw body bytes
+
+**Benefits:**
+- Automatic Content-Type header validation
+- Built-in error handling for invalid data
+- Clean, readable code
+- No manual `std::mem::take()` required
+
+### Method 2: Manual Parsing (Advanced Use Cases)
+
+For special parsing requirements, you can manually parse the request body:
+
+```rust
+#[endpoint]
+async fn create_snippet_manual(mut request: Request) -> Result<Response> {
+    // Manual parsing for advanced use cases
+    let body_bytes = std::mem::take(&mut request.body);
+    let data: CreateSnippet = serde_json::from_slice(&body_bytes)?;
+
+    Response::new(201)
+        .with_json(&data)
+}
+```
+
+**When to use manual parsing:**
+- Custom validation logic before deserialization
+- Streaming large request bodies
+- Non-standard content types
 
 ## Content Negotiation
 
@@ -200,7 +228,7 @@ async fn safe_view(mut request: Request) -> Result<Response> {
 
 ## Complete Example
 
-Full request/response handling with modern Reinhardt patterns:
+Full request/response handling using Reinhardt's helper methods:
 
 ```rust
 use reinhardt::prelude::*;
@@ -245,9 +273,8 @@ async fn snippet_list(mut request: Request) -> Result<Response> {
                 .with_json(&snippets)
         }
         Method::POST => {
-            // Create new snippet
-            let body_bytes = std::mem::take(&mut request.body);
-            let mut snippet: Snippet = serde_json::from_slice(&body_bytes)?;
+            // Create new snippet using helper method
+            let mut snippet: Snippet = request.json().await?;
 
             // Validate
             if let Err(e) = validate_snippet(&snippet) {
@@ -268,6 +295,11 @@ async fn snippet_list(mut request: Request) -> Result<Response> {
     }
 }
 ```
+
+**Key improvements in this example:**
+- Using `request.json().await?` instead of manual parsing
+- Clean, readable code with less boilerplate
+- Automatic error handling for invalid JSON
 
 ## Summary
 

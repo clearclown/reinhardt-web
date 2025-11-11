@@ -58,16 +58,23 @@ Reinhardt provides the following generic views:
 
 ## Moving to ViewSets
 
-For more complex APIs, we recommend using ViewSets. ViewSets combine multiple actions in one struct:
+> **Note:** ViewSets are currently under development and will be available in a future release.
+> The examples below demonstrate the planned API design.
+
+For more complex APIs, we plan to provide ViewSets. ViewSets will combine multiple actions in one struct:
 
 ```rust
 use reinhardt::prelude::*;
 
-// ViewSet automatically provides all CRUD operations
+// ViewSet will automatically provide all CRUD operations (Future Implementation)
 let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet");
 ```
 
-For more details about ViewSets, see [Tutorial 6: ViewSets and Routers](6-viewsets-and-routers.md).
+**Current Status:**
+- ✅ **Available Now**: Generic Views (ListAPIView, CreateAPIView, etc.)
+- 🔜 **In Development**: ViewSets (ModelViewSet, ReadOnlyModelViewSet, etc.)
+
+For more details about the planned ViewSets implementation, see [Tutorial 6: ViewSets and Routers](6-viewsets-and-routers.md).
 
 ## Summary
 

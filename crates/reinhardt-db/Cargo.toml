@@ -9,8 +9,8 @@ description = "Django-style database layer for Reinhardt framework"
 
 [dependencies]
 # Internal crates (optional)
-reinhardt-backends = { path = "../reinhardt-db/crates/backends", optional = true }
-reinhardt-backends-pool = { path = "../reinhardt-db/crates/backends-pool", optional = true }
+reinhardt-backends = { path = "crates/backends", optional = true }
+reinhardt-backends-pool = { path = "crates/backends-pool", optional = true }
 reinhardt-pool = { path = "crates/pool", version = "0.1.0-alpha.1", optional = true }
 reinhardt-orm = { path = "crates/orm", version = "0.1.0-alpha.1", optional = true }
 reinhardt-migrations = { path = "crates/migrations", version = "0.1.0-alpha.1", optional = true }

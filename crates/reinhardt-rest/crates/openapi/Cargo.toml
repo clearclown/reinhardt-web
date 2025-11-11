@@ -8,7 +8,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-reinhardt-core = { workspace = true, features = ["apps", "serializers"] }
+reinhardt-core = { workspace = true, features = ["serializers"] }
 reinhardt-openapi-macros = { path = "../openapi-macros", version = "0.1.0-alpha.1" }
 reinhardt-viewsets = { path = "../../../reinhardt-views/crates/viewsets", version = "0.1.0-alpha.1" }
 serde = { workspace = true }

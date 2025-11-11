@@ -21,10 +21,6 @@ reinhardt-core = { workspace = true, features = [
     "signals",
     "types",
     "validators",
-    "di",
-    "params",
-    "apps",
-    "http",
     "messages",
 ] }
 reinhardt-db = { workspace = true, features = [

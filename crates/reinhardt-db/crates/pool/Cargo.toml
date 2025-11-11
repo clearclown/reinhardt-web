@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-reinhardt-core = { workspace = true, features = ["di"] }
+reinhardt-core = { workspace = true }
 sqlx = { workspace = true, features = [
   "runtime-tokio",
   "chrono",

@@ -4,35 +4,41 @@ In this tutorial, we'll process form submissions and refactor our views using ge
 
 ## Writing a Simple Form
 
-Let's implement the voting functionality. Update the vote view in `src/polls.rs`:
+Let's implement the voting functionality using Reinhardt's modern endpoint system. Update the vote view in `polls/views.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use sqlx::SqlitePool;
-use std::collections::HashMap;
+use reinhardt_macros::endpoint;
+use reinhardt_db::backends::DatabaseConnection;
+use std::sync::Arc;
 
-pub async fn vote(request: Request) -> Result<Response, Box<dyn std::error::Error + Send + Sync>> {
-    let pool = request.extensions.get::<SqlitePool>().unwrap();
-    let question_id: i64 = request.path_params.get("question_id")
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+#[derive(serde::Deserialize)]
+struct VoteForm {
+    choice: i64,
+}
+
+#[endpoint]
+pub async fn vote(
+    request: Request,
+    #[inject] conn: Arc<DatabaseConnection>,
+) -> Result<Response> {
+    // Extract question_id from path parameters
+    let question_id: i64 = request.path_params
+        .get("question_id")
+        .ok_or("Missing question_id")?
+        .parse()?;
 
     // Get the question
-    let question = crate::models::Question::get(pool, question_id)
+    let question = crate::models::Question::get(&conn, question_id)
         .await?
         .ok_or("Question not found")?;
 
-    // Parse form data
-    let body = String::from_utf8(request.body().to_vec())?;
-    let form_data: HashMap<String, String> = serde_urlencoded::from_str(&body)?;
-
-    // Get the selected choice
-    let choice_id: i64 = form_data.get("choice")
-        .and_then(|s| s.parse().ok())
-        .ok_or("You didn't select a choice")?;
+    // Parse form data using Reinhardt's helper method
+    let form_data: VoteForm = request.parse_form().await?;
+    let choice_id = form_data.choice;
 
     // Verify the choice belongs to this question
-    let choice = crate::models::Choice::get(pool, choice_id)
+    let choice = crate::models::Choice::get(&conn, choice_id)
         .await?
         .ok_or("Choice not found")?;
 
@@ -41,12 +47,19 @@ pub async fn vote(request: Request) -> Result<Response, Box<dyn std::error::Erro
     }
 
     // Increment the vote count
-    crate::models::Choice::increment_votes(pool, choice_id).await?;
+    crate::models::Choice::increment_votes(&conn, choice_id).await?;
 
     // Redirect to results page
-    Ok(redirect(&format!("/polls/{}/results/", question_id)))
+    Response::redirect(&format!("/polls/{}/results/", question_id))
 }
 ```
+
+**Key improvements:**
+- `#[endpoint]` macro for automatic request handling
+- `#[inject]` for dependency injection of database connection
+- `request.parse_form().await?` for clean form parsing
+- `Response::redirect()` for type-safe redirects
+- No manual `extensions.get()` - DI handles it
 
 Add the helper methods to `src/models.rs`:
 

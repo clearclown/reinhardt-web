@@ -25,6 +25,7 @@ hex = "0.4"
 hyper = { workspace = true }
 reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
 reinhardt-types = { path = "../types", version = "0.1.0-alpha.1", features = ["http"] }
+reinhardt-http = { workspace = true }
 
 # Optional password hashers
 argon2 = { workspace = true, optional = true }

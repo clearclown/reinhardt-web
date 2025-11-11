@@ -66,8 +66,6 @@ reinhardt-rest = { workspace = true, features = ["serializers", "parsers"] }
 reinhardt-core = { workspace = true, features = [
   "types",
   "exception",
-  "http",
-  "apps",
   "messages",
 ] }
 reinhardt-utils = { workspace = true, features = ["cache", "static"] }

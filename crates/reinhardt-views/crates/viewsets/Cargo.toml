@@ -16,8 +16,8 @@ reinhardt-core = { workspace = true, features = [
   "exception",
   "types",
   "macros",
-  "apps",
-  "di",
+  "http",
+  "pagination",
 ] }
 reinhardt-pagination = { workspace = true }
 reinhardt-auth = { workspace = true }

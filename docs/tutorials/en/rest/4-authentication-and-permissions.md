@@ -17,18 +17,42 @@ async fn login(username: &str, password: &str) -> Option<User> {
 
 ## Permission System
 
-Implement custom permissions using the `Permission` trait:
+Reinhardt provides standard permission implementations that you can use out of the box.
+
+### Using Standard Permissions (Recommended)
+
+Reinhardt includes common permission classes in `reinhardt_auth::drf_permissions`:
+
+```rust
+use reinhardt::prelude::*;
+use reinhardt_auth::drf_permissions::{DrfIsAuthenticated, DrfAllowAny};
+
+// Use the standard IsAuthenticated permission
+let permissions = vec![
+    Box::new(DrfIsAuthenticated) as Box<dyn Permission>
+];
+```
+
+**Available Standard Permissions:**
+- `DrfAllowAny` - Allows access to any user (authenticated or not)
+- `DrfIsAuthenticated` - Only allows access to authenticated users
+- (Future) `DrfIsAdminUser` - Only allows access to admin users
+
+### Custom Permission Implementation (Advanced)
+
+For custom authorization logic, you can implement the `Permission` trait:
 
 ```rust
 use reinhardt::prelude::*;
 use async_trait::async_trait;
 
-pub struct IsAuthenticated;
+pub struct CustomPermission;
 
 #[async_trait]
-impl Permission for IsAuthenticated {
+impl Permission for CustomPermission {
     async fn has_permission(&self, context: &PermissionContext<'_>) -> bool {
-        context.is_authenticated
+        // Your custom authorization logic
+        context.is_authenticated && context.user.map_or(false, |u| u.is_active)
     }
 }
 ```
@@ -46,56 +70,52 @@ pub struct PermissionContext<'a> {
 }
 ```
 
-## Built-in Permissions
+## Standard Permission Classes
 
-Reinhardt provides common permission classes:
+Reinhardt provides the following standard permission classes in `reinhardt_auth::drf_permissions`:
 
-### IsAuthenticated
+### DrfAllowAny
+
+Allows access to any user (authenticated or not). This is the default permission:
+
+```rust
+use reinhardt_auth::drf_permissions::DrfAllowAny;
+
+let permission = Box::new(DrfAllowAny) as Box<dyn Permission>;
+```
+
+### DrfIsAuthenticated
 
 Only authenticated users can access:
 
 ```rust
-use reinhardt::prelude::*;
+use reinhardt_auth::drf_permissions::DrfIsAuthenticated;
 
-let permission = IsAuthenticated;
+let permission = Box::new(DrfIsAuthenticated) as Box<dyn Permission>;
 ```
 
-### IsAdminUser
-
-Only admin users can access:
-
+**Implementation Reference:**
 ```rust
-use reinhardt::prelude::*;
-
-pub struct IsAdminUser;
+// You don't need to implement this - use DrfIsAuthenticated directly
+pub struct DrfIsAuthenticated;
 
 #[async_trait]
-impl Permission for IsAdminUser {
+impl Permission for DrfIsAuthenticated {
     async fn has_permission(&self, context: &PermissionContext<'_>) -> bool {
-        if let Some(user) = context.user {
-            user.is_staff
-        } else {
-            false
-        }
+        context.is_authenticated
     }
 }
 ```
 
-### AllowAny
+### DrfIsAdminUser (Future)
 
-All users can access (default):
+Admin-only permission (implementation planned):
 
 ```rust
-use reinhardt::prelude::*;
+// Future implementation - not yet available
+use reinhardt_auth::drf_permissions::DrfIsAdminUser;
 
-pub struct AllowAny;
-
-#[async_trait]
-impl Permission for AllowAny {
-    async fn has_permission(&self, _context: &PermissionContext<'_>) -> bool {
-        true
-    }
-}
+let permission = Box::new(DrfIsAdminUser) as Box<dyn Permission>;
 ```
 
 ## Custom Permissions
@@ -197,10 +217,11 @@ impl Permission for IsAuthenticatedAndActive {
 
 ## Complete Example
 
-Full authentication and permission workflow:
+Full authentication and permission workflow using standard and custom permissions:
 
 ```rust
 use reinhardt::prelude::*;
+use reinhardt_auth::drf_permissions::DrfIsAuthenticated;
 use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
 use hyper::Method;
@@ -221,7 +242,11 @@ struct SnippetSerializer {
     owner: String,
 }
 
-// Custom permission: Owner or read-only
+// Example 1: Using standard permission
+let viewset_with_standard = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
+    .with_permission(DrfIsAuthenticated);
+
+// Example 2: Custom permission for more complex logic
 pub struct IsOwnerOrReadOnly;
 
 #[async_trait]
@@ -242,8 +267,8 @@ impl Permission for IsOwnerOrReadOnly {
     }
 }
 
-// Create ViewSet with permissions
-let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
+// Create ViewSet with custom permission
+let viewset_with_custom = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet")
     .with_permission(IsOwnerOrReadOnly);
 ```
 

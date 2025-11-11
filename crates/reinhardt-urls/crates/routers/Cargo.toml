@@ -11,7 +11,7 @@ reinhardt-views = { workspace = true, features = ["viewsets"] }
 reinhardt-viewsets = { path = "../../../reinhardt-views/crates/viewsets", version = "0.1.0-alpha.1" }
 reinhardt-routers-macros = { path = "../routers-macros", version = "0.1.0-alpha.1" }
 reinhardt-middleware = { workspace = true, optional = true }
-reinhardt-core = { workspace = true, features = ["exception", "http", "types", "apps", "di"] }
+reinhardt-core = { workspace = true, features = ["exception", "types", "di"] }
 regex = { workspace = true }
 nom = { workspace = true }
 async-trait = { workspace = true }

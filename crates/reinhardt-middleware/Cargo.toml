@@ -22,11 +22,9 @@ sqlx = ["dep:sqlx"]
 [dependencies]
 reinhardt-core = { workspace = true, features = [
     "auth",
-    "apps",
-    "di",
-    "http",
     "types",
     "exception",
+    "http",
 ] }
 reinhardt-auth = { workspace = true, features = ["session"] }
 reinhardt-mail = { workspace = true }
