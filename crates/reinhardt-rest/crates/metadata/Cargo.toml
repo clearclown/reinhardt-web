@@ -7,7 +7,7 @@ description = "Metadata API for OPTIONS requests in Reinhardt framework"
 repository.workspace = true
 
 [dependencies]
-reinhardt-core = { workspace = true, version = "0.1.0-alpha.1", features = ["exception"] }
+reinhardt-core = { workspace = true, features = ["exception"] }
 reinhardt-serializers = { path = "../serializers" }
 async-trait = "0.1"
 regex = "1.11"

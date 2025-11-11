@@ -27,7 +27,6 @@ pub trait ViewSet: Send + Sync {
 
 	/// Dispatch request with dependency injection context
 	///
-
 	/// Get extra actions defined on this ViewSet
 	/// Returns custom actions decorated with #[action] or manually registered
 	fn get_extra_actions(&self) -> Vec<ActionMetadata> {
