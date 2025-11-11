@@ -1,6 +1,8 @@
 use super::Request;
 use bytes::Bytes;
+#[cfg(feature = "parsers")]
 use reinhardt_parsers::parser::{ParsedData, Parser};
+#[cfg(feature = "parsers")]
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 
@@ -87,6 +89,7 @@ impl Request {
 	/// let request = request.with_parsers(vec![]);
 	/// assert_eq!(request.method, Method::POST);
 	/// ```
+	#[cfg(feature = "parsers")]
 	pub fn with_parsers(mut self, parsers: Vec<Box<dyn Parser>>) -> Self {
 		self.parsers = parsers;
 		self
@@ -151,6 +154,7 @@ impl Request {
 	///     assert!(post_data.is_empty());
 	/// }
 	/// ```
+	#[cfg(feature = "parsers")]
 	pub async fn post(&self) -> crate::Result<HashMap<String, Vec<String>>> {
 		use crate::Error;
 		if self.body_consumed.load(Ordering::SeqCst) {
@@ -210,6 +214,7 @@ impl Request {
 	///     assert!(request.data().await.is_err());
 	/// }
 	/// ```
+	#[cfg(feature = "parsers")]
 	pub async fn data(&self) -> crate::Result<ParsedData> {
 		use crate::Error;
 		if self.body_consumed.load(Ordering::SeqCst) {
@@ -222,6 +227,7 @@ impl Request {
 	}
 
 	/// Internal method to parse body with caching
+	#[cfg(feature = "parsers")]
 	pub(super) async fn parse_body_internal(&self) -> crate::Result<ParsedData> {
 		// Check cache first
 		{

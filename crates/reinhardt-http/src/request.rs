@@ -5,6 +5,7 @@ mod params;
 use crate::extensions::Extensions;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
+#[cfg(feature = "parsers")]
 use reinhardt_parsers::parser::{ParsedData, Parser};
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -25,8 +26,10 @@ pub struct Request {
 	/// Remote address of the client (if available)
 	pub remote_addr: Option<SocketAddr>,
 	/// Parsers for request body
+	#[cfg(feature = "parsers")]
 	parsers: Vec<Box<dyn Parser>>,
 	/// Cached parsed data (lazy parsing)
+	#[cfg(feature = "parsers")]
 	parsed_data: Arc<Mutex<Option<ParsedData>>>,
 	/// Whether the body has been consumed
 	body_consumed: Arc<AtomicBool>,
@@ -75,7 +78,9 @@ impl Request {
 			query_params,
 			is_secure: false, // Default to insecure, can be set later
 			remote_addr: None,
+			#[cfg(feature = "parsers")]
 			parsers: Vec::new(),
+			#[cfg(feature = "parsers")]
 			parsed_data: Arc::new(Mutex::new(None)),
 			body_consumed: Arc::new(AtomicBool::new(false)),
 			extensions: Extensions::new(),
@@ -123,7 +128,9 @@ impl Request {
 			query_params,
 			is_secure,
 			remote_addr: None,
+			#[cfg(feature = "parsers")]
 			parsers: Vec::new(),
+			#[cfg(feature = "parsers")]
 			parsed_data: Arc::new(Mutex::new(None)),
 			body_consumed: Arc::new(AtomicBool::new(false)),
 			extensions: Extensions::new(),
