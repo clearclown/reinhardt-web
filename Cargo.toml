@@ -11,7 +11,7 @@ authors.workspace = true
 default = ["standard"]
 
 # Minimal feature set - for microservices and simple APIs
-minimal = ["reinhardt-core/di", "reinhardt-core/params"]
+minimal = []
 
 # Standard feature set - balanced for most projects
 standard = [
@@ -67,9 +67,8 @@ server = ["reinhardt-server"]
 conf = ["reinhardt-conf"]
 core = ["reinhardt-core"]
 rest = ["reinhardt-rest"]
-di = ["reinhardt-core/di"]
 messages = ["reinhardt-core/messages"]
-di-generator = ["di", "reinhardt-core/di-generator"]
+di = ["reinhardt-core/di"]
 test = ["reinhardt-test"]
 
 # Meta features
@@ -206,6 +205,8 @@ members = [
   "crates/reinhardt-micro",
   "crates/reinhardt-conf",
   "crates/reinhardt-core",
+  "crates/reinhardt-di",
+  "crates/reinhardt-http",
   "crates/reinhardt-server",
   "crates/reinhardt-views",
   "crates/reinhardt-urls",
@@ -262,6 +263,8 @@ no-individual-tags = true       # Disable cargo-ws automatic tag generation (we 
 reinhardt-micro = { path = "crates/reinhardt-micro", version = "0.1.0-alpha.1" }
 reinhardt-conf = { path = "crates/reinhardt-conf", version = "0.1.0-alpha.1" }
 reinhardt-core = { path = "crates/reinhardt-core", version = "0.1.0-alpha.1" }
+reinhardt-di = { path = "crates/reinhardt-di", version = "0.1.0-alpha.1" }
+reinhardt-http = { path = "crates/reinhardt-http", version = "0.1.0-alpha.1" }
 reinhardt-server = { path = "crates/reinhardt-server", version = "0.1.0-alpha.1" }
 reinhardt-views = { path = "crates/reinhardt-views", version = "0.1.0-alpha.1" }
 reinhardt-urls = { path = "crates/reinhardt-urls", version = "0.1.0-alpha.1" }
@@ -289,9 +292,9 @@ reinhardt-graphql = { path = "crates/reinhardt-graphql", version = "0.1.0-alpha.
 reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-alpha.1" }
 
 # REST subcrates
-reinhardt-negotiation = { path = "crates/reinhardt-rest/crates/negotiation", version = "0.1.0-alpha.1" }
-reinhardt-pagination = { path = "crates/reinhardt-rest/crates/pagination", version = "0.1.0-alpha.1" }
-reinhardt-parsers = { path = "crates/reinhardt-rest/crates/parsers", version = "0.1.0-alpha.1" }
+reinhardt-negotiation = { path = "crates/reinhardt-core/crates/negotiation", version = "0.1.0-alpha.1" }
+reinhardt-pagination = { path = "crates/reinhardt-core/crates/pagination", version = "0.1.0-alpha.1" }
+reinhardt-parsers = { path = "crates/reinhardt-core/crates/parsers", version = "0.1.0-alpha.1" }
 
 # Web framework
 tokio = { version = "1.48.0", features = ["full"] }
