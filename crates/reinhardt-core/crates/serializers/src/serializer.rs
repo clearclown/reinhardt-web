@@ -276,20 +276,20 @@ mod tests {
 
 	#[test]
 	fn test_json_serializer_deserialize() {
-		let json = r#"{"id":1,"name":"Alice"}"#;
+		let json = r#"{"id":1,"name":"Alice"}"#.to_string();
 		let serializer = JsonSerializer::<TestUser>::new();
 
-		let user = serializer.deserialize(json).unwrap();
+		let user = serializer.deserialize(&json).unwrap();
 		assert_eq!(user.id, 1);
 		assert_eq!(user.name, "Alice");
 	}
 
 	#[test]
 	fn test_json_serializer_deserialize_error() {
-		let invalid_json = r#"{"invalid"}"#;
+		let invalid_json = r#"{"invalid"}"#.to_string();
 		let serializer = JsonSerializer::<TestUser>::new();
 
-		let result = serializer.deserialize(invalid_json);
+		let result = serializer.deserialize(&invalid_json);
 		assert!(result.is_err());
 	}
 

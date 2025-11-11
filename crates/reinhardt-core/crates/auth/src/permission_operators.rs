@@ -396,7 +396,7 @@ mod tests {
 	use crate::{AllowAny, IsAdminUser, IsAuthenticated};
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, Uri, Version};
-	use reinhardt_core::types::Request;
+	use reinhardt_types::Request;
 
 	#[tokio::test]
 	async fn test_and_permission_both_true() {
