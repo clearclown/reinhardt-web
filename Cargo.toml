@@ -21,8 +21,7 @@ standard = [
   "reinhardt-rest",
   "reinhardt-rest/serializers",
   "reinhardt-views/viewsets",
-  "reinhardt-contrib",
-  "reinhardt-contrib/auth",
+  "reinhardt-auth",
   "reinhardt-middleware",
   "reinhardt-rest/pagination",
   "reinhardt-rest/filters",
@@ -42,26 +41,24 @@ database = [
   "reinhardt-db",
   "reinhardt-db/orm",
   "reinhardt-db/migrations",
-  "reinhardt-contrib",
-  "reinhardt-contrib/contenttypes",
+  "reinhardt-db/contenttypes",
 ]
 api = ["reinhardt-rest", "reinhardt-rest/serializers", "reinhardt-views/viewsets"]
-auth = ["reinhardt-contrib", "reinhardt-contrib/auth"]
+auth = ["reinhardt-auth"]
 # admin = ["reinhardt-admin", "reinhardt-forms", "reinhardt-template"]  # reinhardt-admin not yet created
 admin = ["reinhardt-forms", "reinhardt-template"]
 forms = ["reinhardt-forms"]
-graphql = ["reinhardt-contrib", "reinhardt-contrib/graphql"]
+graphql = ["reinhardt-graphql"]
 templates = ["reinhardt-template"]
-websockets = ["reinhardt-contrib", "reinhardt-contrib/websockets"]
+websockets = ["reinhardt-websockets"]
 cache = ["reinhardt-utils/cache"]
 redis-backend = ["cache"]
-i18n = ["reinhardt-contrib", "reinhardt-contrib/i18n"]
-mail = ["reinhardt-contrib", "reinhardt-contrib/mail"]
-sessions = ["reinhardt-contrib", "reinhardt-contrib/sessions"]
-middleware = ["sessions", "reinhardt-contrib/sessions"]
-static-files = ["reinhardt-contrib", "reinhardt-contrib/static"]
+i18n = ["reinhardt-i18n"]
+mail = ["reinhardt-mail"]
+sessions = ["reinhardt-auth"]
+middleware = ["sessions"]
+static-files = ["reinhardt-utils/static"]
 storage = ["reinhardt-utils/storage"]
-contrib = ["reinhardt-contrib"]
 shortcuts = ["reinhardt-shortcuts"]
 tasks = ["reinhardt-tasks"]
 server = ["reinhardt-server"]
@@ -71,6 +68,7 @@ conf = ["reinhardt-conf"]
 core = ["reinhardt-core"]
 rest = ["reinhardt-rest"]
 di = ["reinhardt-core/di"]
+messages = ["reinhardt-core/messages"]
 di-generator = ["di", "reinhardt-core/di-generator"]
 test = ["reinhardt-test"]
 
@@ -88,7 +86,6 @@ full = [
   "sessions",
   "static-files",
   "storage",
-  "contrib",
 ]
 
 # API-only preset - REST without templates/forms
@@ -97,8 +94,7 @@ api-only = [
   "reinhardt-rest",
   "reinhardt-rest/serializers",
   "reinhardt-views/viewsets",
-  "reinhardt-contrib",
-  "reinhardt-contrib/auth",
+  "reinhardt-auth",
   "reinhardt-rest/parsers",
   "reinhardt-template",
   "reinhardt-template/renderers",
@@ -113,18 +109,16 @@ api-only = [
 # GraphQL-focused preset
 graphql-server = [
   "minimal",
-  "reinhardt-contrib",
-  "reinhardt-contrib/graphql",
-  "reinhardt-contrib/auth",
+  "reinhardt-auth",
+  "graphql",
   "database",
 ]
 
 # WebSocket-centric preset
 websocket-server = [
   "minimal",
-  "reinhardt-contrib",
-  "reinhardt-contrib/websockets",
-  "reinhardt-contrib/auth",
+  "reinhardt-auth",
+  "websockets",
   "reinhardt-utils/cache",
 ]
 
@@ -134,8 +128,7 @@ cli-tools = [
   "reinhardt-db",
   "reinhardt-db/migrations",
   "reinhardt-tasks",
-  "reinhardt-contrib",
-  "reinhardt-contrib/mail",
+  "mail",
 ]
 
 # Testing utilities preset
@@ -145,10 +138,10 @@ test-utils = [
 ]
 
 # Fine-grained authentication
-auth-jwt = ["auth", "reinhardt-contrib/auth-jwt"]
-auth-session = ["auth", "reinhardt-contrib/auth-session", "sessions"]
-auth-oauth = ["auth", "reinhardt-contrib/auth-oauth"]
-auth-token = ["auth", "reinhardt-contrib/auth-token"]
+auth-jwt = ["auth", "reinhardt-auth/jwt"]
+auth-session = ["auth", "reinhardt-auth/session", "sessions"]
+auth-oauth = ["auth", "reinhardt-auth/oauth"]
+auth-token = ["auth", "reinhardt-auth/token"]
 
 # Fine-grained database support
 db-postgres = ["database", "reinhardt-db/postgres"]
@@ -184,15 +177,19 @@ reinhardt-db = { workspace = true, optional = true }
 reinhardt-template = { workspace = true, optional = true }
 reinhardt-test = { workspace = true, optional = true }
 reinhardt-rest = { workspace = true, optional = true }
-reinhardt-contrib = { workspace = true, optional = true }
+reinhardt-auth = { workspace = true, optional = true }
 
 # Additional optional dependencies
-# reinhardt-admin = { workspace = true, optional = true }  # Not yet created
+reinhardt-admin-panel = { workspace = true, optional = true }
 reinhardt-forms = { workspace = true, optional = true }
 reinhardt-middleware = { workspace = true, optional = true }
 reinhardt-shortcuts = { workspace = true, optional = true }
 reinhardt-tasks = { workspace = true, optional = true }
 reinhardt-server = { workspace = true, optional = true }
+reinhardt-i18n = { workspace = true, optional = true }
+reinhardt-mail = { workspace = true, optional = true }
+reinhardt-graphql = { workspace = true, optional = true }
+reinhardt-websockets = { workspace = true, optional = true }
 
 # Re-export commonly used dependencies
 tokio = { workspace = true }
@@ -217,7 +214,8 @@ members = [
   "crates/reinhardt-tasks",
   "crates/reinhardt-utils",
   "crates/reinhardt-rest",
-  "crates/reinhardt-contrib",
+  "crates/reinhardt-auth",
+  "crates/reinhardt-admin-panel", # Web admin panel
   "crates/reinhardt-grpc",
   "crates/reinhardt-graphql-macros",
   "crates/reinhardt-commands",
@@ -227,6 +225,10 @@ members = [
   "crates/reinhardt-shortcuts",
   "crates/reinhardt-forms",
   "crates/reinhardt-template",
+  "crates/reinhardt-i18n",
+  "crates/reinhardt-mail",
+  "crates/reinhardt-graphql",
+  "crates/reinhardt-websockets",
   # Integration tests
   "tests",
 ]
@@ -240,7 +242,6 @@ default-members = [
   "crates/reinhardt-tasks",
   "crates/reinhardt-utils",
   "crates/reinhardt-rest",
-  "crates/reinhardt-contrib",
 ]
 
 [workspace.package]
@@ -271,7 +272,8 @@ reinhardt-test = { path = "crates/reinhardt-test", version = "0.1.0-alpha.1" }
 reinhardt-tasks = { path = "crates/reinhardt-tasks", version = "0.1.0-alpha.1" }
 reinhardt-utils = { path = "crates/reinhardt-utils", version = "0.1.0-alpha.1" }
 reinhardt-rest = { path = "crates/reinhardt-rest", version = "0.1.0-alpha.1" }
-reinhardt-contrib = { path = "crates/reinhardt-contrib", version = "0.1.0-alpha.1" }
+reinhardt-auth = { path = "crates/reinhardt-auth", version = "0.1.0-alpha.1" }
+reinhardt-admin-panel = { path = "crates/reinhardt-admin-panel", version = "0.1.0-alpha.1" }
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
 reinhardt-graphql-macros = { path = "crates/reinhardt-graphql-macros", version = "0.1.0-alpha.1" }
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0-alpha.1" }
@@ -281,6 +283,15 @@ reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0-alph
 reinhardt-events = { path = "crates/reinhardt-events", version = "0.1.0-alpha.1" }
 reinhardt-shortcuts = { path = "crates/reinhardt-shortcuts", version = "0.1.0-alpha.1" }
 reinhardt-dispatch = { path = "crates/reinhardt-dispatch", version = "0.1.0-alpha.1" }
+reinhardt-i18n = { path = "crates/reinhardt-i18n", version = "0.1.0-alpha.1" }
+reinhardt-mail = { path = "crates/reinhardt-mail", version = "0.1.0-alpha.1" }
+reinhardt-graphql = { path = "crates/reinhardt-graphql", version = "0.1.0-alpha.1" }
+reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-alpha.1" }
+
+# REST subcrates
+reinhardt-negotiation = { path = "crates/reinhardt-rest/crates/negotiation", version = "0.1.0-alpha.1" }
+reinhardt-pagination = { path = "crates/reinhardt-rest/crates/pagination", version = "0.1.0-alpha.1" }
+reinhardt-parsers = { path = "crates/reinhardt-rest/crates/parsers", version = "0.1.0-alpha.1" }
 
 # Web framework
 tokio = { version = "1.48.0", features = ["full"] }

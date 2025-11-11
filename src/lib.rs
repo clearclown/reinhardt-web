@@ -97,8 +97,6 @@
 pub mod apps;
 #[cfg(feature = "conf")]
 pub mod conf;
-#[cfg(feature = "contrib")]
-pub mod contrib;
 #[cfg(feature = "core")]
 pub mod core;
 #[cfg(feature = "database")]
@@ -174,13 +172,13 @@ pub use reinhardt_urls::routers::{
 
 // Re-export auth
 #[cfg(feature = "auth")]
-pub use reinhardt_contrib::auth::{
+pub use reinhardt_auth::{
 	AllowAny, AnonymousUser, Argon2Hasher, AuthBackend, IsAdminUser, IsAuthenticated,
 	PasswordHasher, Permission, SimpleUser, User,
 };
 
 #[cfg(feature = "auth-jwt")]
-pub use reinhardt_contrib::auth::{Claims, JwtAuth};
+pub use reinhardt_auth::{Claims, JwtAuth};
 
 // Re-export middleware
 #[cfg(feature = "sessions")]
@@ -283,7 +281,7 @@ pub use reinhardt_urls::routers::{
 
 // Re-export database related (database feature)
 #[cfg(feature = "database")]
-pub use reinhardt_contrib::contenttypes::{
+pub use reinhardt_db::contenttypes::{
 	CONTENT_TYPE_REGISTRY, ContentType, ContentTypeRegistry, GenericForeignKey, GenericRelatable,
 	GenericRelationQuery, ModelType,
 };
@@ -305,12 +303,12 @@ pub use reinhardt_utils::cache::RedisCache;
 
 // Re-export sessions (sessions feature)
 #[cfg(feature = "sessions")]
-pub use reinhardt_contrib::sessions::{
+pub use reinhardt_auth::sessions::{
 	CacheSessionBackend, InMemorySessionBackend, Session, SessionBackend, SessionError,
 };
 
 #[cfg(all(feature = "sessions", feature = "middleware"))]
-pub use reinhardt_contrib::sessions::{HttpSessionConfig, SameSite, SessionMiddleware};
+pub use reinhardt_auth::sessions::{HttpSessionConfig, SameSite, SessionMiddleware};
 
 // Re-export contrib modules (contrib feature)
 // Note: reinhardt_contrib exports individual modules (auth, sessions, etc.)
