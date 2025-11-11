@@ -51,12 +51,6 @@ pub use reinhardt_core_serializers as serializers;
 pub use reinhardt_core_auth as auth;
 
 // New facade subcrate re-exports
-#[cfg(feature = "negotiation")]
-pub use reinhardt_negotiation as negotiation;
-
-#[cfg(feature = "pagination")]
-pub use reinhardt_pagination as pagination;
-
 #[cfg(feature = "http")]
 pub use reinhardt_http as http;
 
@@ -66,5 +60,5 @@ pub use reinhardt_apps as apps;
 #[cfg(feature = "di")]
 pub use reinhardt_di as di;
 
-#[cfg(feature = "parsers")]
-pub use reinhardt_parsers as parsers;
+#[cfg(feature = "messages")]
+pub use reinhardt_messages as messages;

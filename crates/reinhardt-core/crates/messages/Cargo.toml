@@ -1,0 +1,22 @@
+[package]
+name = "reinhardt-messages"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Django-style messaging framework for displaying notifications to users"
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+reinhardt-exception = { version = "0.1.0-alpha.1", path = "../exception" }
+reinhardt-types = { version = "0.1.0-alpha.1", path = "../types" }
+reinhardt-http = { version = "0.1.0-alpha.1", path = "../http" }
+serde_json = "1.0"
+base64 = "0.22"
+percent-encoding = "2.3"
+async-trait = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+bytes = "1.0"
+hyper = "1.0"
