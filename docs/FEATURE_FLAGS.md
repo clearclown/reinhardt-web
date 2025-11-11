@@ -1,292 +1,292 @@
 # Feature Flags Guide
 
-## 目次
+## Table of Contents
 
-- [概要](#概要)
-- [基本的な使用方法](#基本的な使用方法)
-- [バンドルFeature](#バンドルfeature)
-  - [Minimal - マイクロサービス向け](#minimal---マイクロサービス向け)
-  - [Standard - 標準構成](#standard---標準構成)
-  - [Full - フル機能](#full---フル機能)
-  - [プリセット構成](#プリセット構成)
-- [機能別Feature Flag](#機能別feature-flag)
-  - [データベース](#データベース)
-  - [認証](#認証)
-  - [キャッシュ](#キャッシュ)
-  - [API機能](#api機能)
-  - [ミドルウェア](#ミドルウェア)
-  - [その他の機能](#その他の機能)
-- [主要クレートのFeature Flag](#主要クレートのfeature-flag)
-- [Feature Flag依存関係マップ](#feature-flag依存関係マップ)
-- [使用例とベストプラクティス](#使用例とベストプラクティス)
-- [ビルド時間とバイナリサイズの比較](#ビルド時間とバイナリサイズの比較)
-- [トラブルシューティング](#トラブルシューティング)
+- [Overview](#overview)
+- [Basic Usage](#basic-usage)
+- [Bundle Features](#bundle-features)
+  - [Minimal - For Microservices](#minimal---for-microservices)
+  - [Standard - Balanced Configuration](#standard---balanced-configuration)
+  - [Full - All Features](#full---all-features)
+  - [Preset Configurations](#preset-configurations)
+- [Feature Flags by Category](#feature-flags-by-category)
+  - [Database](#database)
+  - [Authentication](#authentication)
+  - [Cache](#cache)
+  - [API Features](#api-features)
+  - [Middleware](#middleware)
+  - [Other Features](#other-features)
+- [Feature Flags for Major Crates](#feature-flags-for-major-crates)
+- [Feature Flag Dependency Map](#feature-flag-dependency-map)
+- [Usage Examples and Best Practices](#usage-examples-and-best-practices)
+- [Build Time and Binary Size Comparison](#build-time-and-binary-size-comparison)
+- [Troubleshooting](#troubleshooting)
 - [Quick Reference](#quick-reference)
 
 ---
 
-## 概要
+## Overview
 
-Reinhardtは**非常に細粒度なfeature flagシステム**を採用しており、必要な機能のみを選択してビルドできます。これにより、以下のような利点があります:
+Reinhardt employs a **highly granular feature flag system**, allowing you to build with only the functionality you need. This provides several benefits:
 
-### 利点
+### Benefits
 
-- **コンパイル時間の短縮**: 不要な機能を除外することで、ビルド時間を大幅に短縮
-- **バイナリサイズの削減**: 使用しない機能のコードが含まれないため、実行ファイルサイズが小さくなる
-- **依存関係の最小化**: 必要な外部クレートのみをビルドに含める
-- **柔軟な構成**: マイクロサービスからフル機能アプリまで、用途に応じた最適な構成を実現
+- **Reduced Compile Time**: Significantly shorter build times by excluding unnecessary features
+- **Smaller Binary Size**: Smaller executables as unused code is not included
+- **Minimized Dependencies**: Only required external crates are included in the build
+- **Flexible Configuration**: Optimal configuration for any use case, from microservices to full-featured applications
 
-### Feature Flagの粒度
+### Feature Flag Granularity
 
-Reinhardtのfeature flagは**3段階の粒度**を持ちます:
+Reinhardt's feature flags have **3 levels of granularity**:
 
-1. **バンドルFeature**: `minimal`, `standard`, `full`などの大きなグループ
-2. **機能グループFeature**: `database`, `auth`, `cache`などの機能単位
-3. **個別Feature**: `jwt`, `redis-backend`, `cors`などの細かい機能単位
+1. **Bundle Features**: Large groups like `minimal`, `standard`, `full`
+2. **Feature Group Features**: Functional units like `database`, `auth`, `cache`
+3. **Individual Features**: Fine-grained functionality like `jwt`, `redis-backend`, `cors`
 
-合計で**70以上のfeature flag**が定義されており、極めて柔軟な構成が可能です。
+With **over 70 feature flags** defined, extremely flexible configuration is possible.
 
 ---
 
-## 基本的な使用方法
+## Basic Usage
 
-### デフォルト構成（standard）
+### Default Configuration (standard)
 
-何も指定しない場合、`standard`構成が有効になります:
+If nothing is specified, the `standard` configuration is enabled:
 
 ```toml
 [dependencies]
 reinhardt = "0.1.0-alpha.1"
-# これは以下と同等:
+# This is equivalent to:
 # reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }
 ```
 
-### 特定の構成を選択
+### Selecting a Specific Configuration
 
 ```toml
 [dependencies]
-# minimal構成
+# minimal configuration
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 
-# full構成
+# full configuration
 reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
-### カスタム構成
+### Custom Configuration
 
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
-  default-features = false,  # デフォルトを無効化
+  default-features = false,  # Disable defaults
   features = [
-    "minimal",        # ベースとなる最小構成
-    "database",       # データベース機能
-    "db-postgres",    # PostgreSQLサポート
-    "auth-jwt",       # JWT認証
-    "cache",          # キャッシュ
-    "redis-backend",  # Redisバックエンド
+    "minimal",        # Base minimal configuration
+    "database",       # Database functionality
+    "db-postgres",    # PostgreSQL support
+    "auth-jwt",       # JWT authentication
+    "cache",          # Cache
+    "redis-backend",  # Redis backend
   ]
 }
 ```
 
 ---
 
-## バンドルFeature
+## Bundle Features
 
-バンドルFeatureは、複数の機能をまとめて有効化する便利なプリセットです。
+Bundle features are convenient presets that enable multiple features at once.
 
-### Minimal - マイクロサービス向け
+### Minimal - For Microservices
 
-**Feature名**: `minimal`
+**Feature name**: `minimal`
 
-**用途**: 軽量なマイクロサービスやシンプルなAPI
+**Use case**: Lightweight microservices or simple APIs
 
-**有効化される機能**:
-- パラメータ抽出 (`reinhardt-params`)
-- 依存性注入 (`reinhardt-di`)
+**Enabled features**:
+- Parameter extraction (`reinhardt-params`)
+- Dependency injection (`reinhardt-di`)
 
-**バイナリサイズ**: ~5-10 MB
-**コンパイル時間**: 速い
+**Binary size**: ~5-10 MB
+**Compile time**: Fast
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 ```
 
-**適したユースケース**:
-- ✅ シンプルなREST API
-- ✅ マイクロサービスアーキテクチャ
-- ✅ 高速な起動時間が必要な場合
-- ❌ データベースアクセスが必要な場合
-- ❌ 複雑な認証が必要な場合
+**Suitable use cases**:
+- ✅ Simple REST APIs
+- ✅ Microservice architecture
+- ✅ When fast startup time is required
+- ❌ When database access is needed
+- ❌ When complex authentication is required
 
 ---
 
-### Standard - 標準構成
+### Standard - Balanced Configuration
 
-**Feature名**: `standard` (デフォルト)
+**Feature name**: `standard` (default)
 
-**用途**: ほとんどのプロジェクトに適したバランス型構成
+**Use case**: Balanced configuration suitable for most projects
 
-**有効化される機能**:
-- `minimal`のすべて
+**Enabled features**:
+- All of `minimal`
 - ORM (`reinhardt-orm`)
-- シリアライザ (`reinhardt-serializers`)
+- Serializers (`reinhardt-serializers`)
 - ViewSets (`reinhardt-viewsets`)
-- 認証 (`reinhardt-auth`)
-- ミドルウェア (`reinhardt-middleware`)
-- ページネーション (`reinhardt-pagination`)
-- フィルタリング (`reinhardt-filters`)
-- スロットリング (`reinhardt-throttling`)
-- シグナル (`reinhardt-signals`)
-- パーサ (`reinhardt-parsers`)
-- レンダラ (`reinhardt-renderers`)
-- バージョニング (`reinhardt-versioning`)
-- メタデータ (`reinhardt-metadata`)
-- コンテンツネゴシエーション (`reinhardt-negotiation`)
-- REST APIコア (`reinhardt-rest`)
+- Authentication (`reinhardt-auth`)
+- Middleware (`reinhardt-middleware`)
+- Pagination (`reinhardt-pagination`)
+- Filtering (`reinhardt-filters`)
+- Throttling (`reinhardt-throttling`)
+- Signals (`reinhardt-signals`)
+- Parsers (`reinhardt-parsers`)
+- Renderers (`reinhardt-renderers`)
+- Versioning (`reinhardt-versioning`)
+- Metadata (`reinhardt-metadata`)
+- Content negotiation (`reinhardt-negotiation`)
+- REST API core (`reinhardt-rest`)
 
-**バイナリサイズ**: ~20-30 MB
-**コンパイル時間**: 中程度
+**Binary size**: ~20-30 MB
+**Compile time**: Medium
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = "0.1.0-alpha.1"
-# または明示的に
+# Or explicitly
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }
 ```
 
-**適したユースケース**:
-- ✅ 一般的なREST API
-- ✅ データベースを使用するアプリケーション
-- ✅ 認証が必要なAPI
-- ✅ ページネーションやフィルタリングが必要なAPI
-- ⚠️ GraphQLやWebSocketは含まれない（別途有効化が必要）
+**Suitable use cases**:
+- ✅ General REST APIs
+- ✅ Applications using databases
+- ✅ APIs requiring authentication
+- ✅ APIs requiring pagination or filtering
+- ⚠️ GraphQL or WebSocket not included (requires separate enablement)
 
 ---
 
-### Full - フル機能
+### Full - All Features
 
-**Feature名**: `full`
+**Feature name**: `full`
 
-**用途**: Django風のバッテリー同梱型、全機能を使用
+**Use case**: Django-style batteries-included, all features enabled
 
-**有効化される機能**:
-- `standard`のすべて
-- データベース (`database`)
-- 管理画面 (`admin`)
+**Enabled features**:
+- All of `standard`
+- Database (`database`)
+- Admin panel (`admin`)
 - GraphQL (`graphql`)
 - WebSocket (`websockets`)
-- キャッシュ (`cache`)
-- 国際化 (`i18n`)
-- メール送信 (`mail`)
-- セッション管理 (`sessions`)
-- 静的ファイル配信 (`static-files`)
-- ストレージシステム (`storage`)
-- Contribアプリ (`contrib`)
+- Cache (`cache`)
+- Internationalization (`i18n`)
+- Email sending (`mail`)
+- Session management (`sessions`)
+- Static file serving (`static-files`)
+- Storage system (`storage`)
+- Contrib apps (`contrib`)
 
-**バイナリサイズ**: ~50+ MB
-**コンパイル時間**: 遅い
+**Binary size**: ~50+ MB
+**Compile time**: Slow
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
-**適したユースケース**:
-- ✅ 大規模なWebアプリケーション
-- ✅ 複雑な要件を持つシステム
-- ✅ GraphQLとREST APIの両方を提供
-- ✅ リアルタイム機能（WebSocket）が必要
-- ✅ 多言語対応が必要
-- ❌ マイクロサービス（オーバースペック）
-- ❌ コンパイル時間を最小化したい場合
+**Suitable use cases**:
+- ✅ Large web applications
+- ✅ Systems with complex requirements
+- ✅ Providing both GraphQL and REST APIs
+- ✅ When real-time features (WebSocket) are needed
+- ✅ When multi-language support is required
+- ❌ Microservices (overpowered)
+- ❌ When minimizing compile time is desired
 
 ---
 
-### プリセット構成
+### Preset Configurations
 
-特定のユースケースに最適化されたプリセット構成も用意されています。
+Preset configurations optimized for specific use cases are also available.
 
-#### api-only - REST API専用
+#### api-only - REST API Only
 
-テンプレートやフォームが不要なREST API専用構成。
+REST API-only configuration without templates or forms.
 
-**有効化される機能**:
-- `minimal`のすべて
-- シリアライザ、ViewSets、認証
-- パーサ、レンダラ、バージョニング
-- メタデータ、コンテンツネゴシエーション
-- REST APIコア
-- ページネーション、フィルタリング、スロットリング
+**Enabled features**:
+- All of `minimal`
+- Serializers, ViewSets, authentication
+- Parsers, renderers, versioning
+- Metadata, content negotiation
+- REST API core
+- Pagination, filtering, throttling
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["api-only"] }
 ```
 
-#### graphql-server - GraphQLサーバー
+#### graphql-server - GraphQL Server
 
-GraphQL API中心のサーバー構成。
+GraphQL API-centric server configuration.
 
-**有効化される機能**:
-- `minimal`のすべて
+**Enabled features**:
+- All of `minimal`
 - GraphQL (`reinhardt-graphql`)
-- 認証 (`reinhardt-auth`)
-- データベース (`database`)
+- Authentication (`reinhardt-auth`)
+- Database (`database`)
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["graphql-server"] }
 ```
 
-#### websocket-server - WebSocketサーバー
+#### websocket-server - WebSocket Server
 
-リアルタイム通信中心のサーバー構成。
+Real-time communication-centric server configuration.
 
-**有効化される機能**:
-- `minimal`のすべて
+**Enabled features**:
+- All of `minimal`
 - WebSocket (`reinhardt-websockets`)
-- 認証 (`reinhardt-auth`)
-- キャッシュ (`reinhardt-cache`)
+- Authentication (`reinhardt-auth`)
+- Cache (`reinhardt-cache`)
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["websocket-server"] }
 ```
 
-#### cli-tools - CLI/バックグラウンドジョブ
+#### cli-tools - CLI/Background Jobs
 
-CLIツールやバックグラウンド処理向け構成。
+Configuration for CLI tools and background processing.
 
-**有効化される機能**:
-- データベース (`database`)
-- マイグレーション (`reinhardt-migrations`)
-- タスク (`reinhardt-tasks`)
-- メール送信 (`reinhardt-mail`)
+**Enabled features**:
+- Database (`database`)
+- Migrations (`reinhardt-migrations`)
+- Tasks (`reinhardt-tasks`)
+- Email sending (`reinhardt-mail`)
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["cli-tools"] }
 ```
 
-#### test-utils - テストユーティリティ
+#### test-utils - Test Utilities
 
-テスト環境向け構成。
+Configuration for test environments.
 
-**有効化される機能**:
-- テストユーティリティ (`reinhardt-test`)
-- データベース (`database`)
+**Enabled features**:
+- Test utilities (`reinhardt-test`)
+- Database (`database`)
 
-**使用例**:
+**Usage example**:
 ```toml
 [dev-dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["test-utils"] }
@@ -294,457 +294,457 @@ reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["
 
 ---
 
-## 機能別Feature Flag
+## Feature Flags by Category
 
-### データベース
+### Database
 
 #### database
 
-データベース機能全般を有効化。
+Enables general database functionality.
 
-**有効化されるクレート**:
-- `reinhardt-orm` - ORM機能
-- `reinhardt-migrations` - マイグレーション
-- `reinhardt-contenttypes` - コンテンツタイプ
-- `reinhardt-db` - データベース基盤
+**Enabled crates**:
+- `reinhardt-orm` - ORM functionality
+- `reinhardt-migrations` - Migrations
+- `reinhardt-contenttypes` - Content types
+- `reinhardt-db` - Database foundation
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "database"] }
 ```
 
-#### データベース固有のFeature
+#### Database-Specific Features
 
-特定のデータベースサポートを有効化:
+Enable support for specific databases:
 
-| Feature | データベース | 説明 |
-|---------|------------|------|
-| `db-postgres` | PostgreSQL | PostgreSQLサポート |
-| `db-mysql` | MySQL | MySQLサポート |
-| `db-sqlite` | SQLite | SQLiteサポート（軽量、ファイルベース） |
-| `db-mongodb` | MongoDB | MongoDBサポート（NoSQL） |
-| `db-cockroachdb` | CockroachDB | CockroachDBサポート（分散SQL） |
+| Feature | Database | Description |
+|---------|----------|-------------|
+| `db-postgres` | PostgreSQL | PostgreSQL support |
+| `db-mysql` | MySQL | MySQL support |
+| `db-sqlite` | SQLite | SQLite support (lightweight, file-based) |
+| `db-mongodb` | MongoDB | MongoDB support (NoSQL) |
+| `db-cockroachdb` | CockroachDB | CockroachDB support (distributed SQL) |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# PostgreSQL使用
+# Using PostgreSQL
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "database", "db-postgres"] }
 
-# 複数データベース対応
+# Multiple database support
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "database", "db-postgres", "db-sqlite"] }
 ```
 
-**注意**:
-- `database` featureは自動的にPostgreSQLを有効化します（`reinhardt-db`のデフォルト）
-- 他のデータベースを使用する場合は、明示的に対応するfeatureを指定
+**Note**:
+- The `database` feature automatically enables PostgreSQL (`reinhardt-db` default)
+- For other databases, explicitly specify the corresponding feature
 
 ---
 
-### 認証
+### Authentication
 
 #### auth
 
-基本的な認証機能を有効化。
+Enables basic authentication functionality.
 
-**有効化されるクレート**:
-- `reinhardt-auth` - 認証基盤
+**Enabled crates**:
+- `reinhardt-auth` - Authentication foundation
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "auth"] }
 ```
 
-#### 認証方式別のFeature
+#### Authentication Method Features
 
-特定の認証方式を有効化:
+Enable specific authentication methods:
 
-| Feature | 認証方式 | 説明 |
-|---------|----------|------|
-| `auth-jwt` | JWT | JSON Web Token認証 |
-| `auth-session` | Session | セッションベース認証 |
-| `auth-oauth` | OAuth | OAuth認証 |
-| `auth-token` | Token | トークン認証 |
+| Feature | Method | Description |
+|---------|--------|-------------|
+| `auth-jwt` | JWT | JSON Web Token authentication |
+| `auth-session` | Session | Session-based authentication |
+| `auth-oauth` | OAuth | OAuth authentication |
+| `auth-token` | Token | Token authentication |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# JWT認証のみ
+# JWT authentication only
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "auth-jwt"] }
 
-# JWT + セッション認証
+# JWT + session authentication
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "auth-jwt", "auth-session"] }
 ```
 
-**注意**:
-- 個別の認証方式feature（`auth-jwt`など）は自動的に`auth`を有効化
-- `auth-session`は自動的に`sessions` featureも有効化
+**Note**:
+- Individual authentication method features (`auth-jwt`, etc.) automatically enable `auth`
+- `auth-session` automatically enables the `sessions` feature
 
 ---
 
-### キャッシュ
+### Cache
 
 #### cache
 
-キャッシュ機能の基盤を有効化。
+Enables cache functionality foundation.
 
-**有効化されるクレート**:
-- `reinhardt-cache` - キャッシュシステム
+**Enabled crates**:
+- `reinhardt-cache` - Cache system
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "cache"] }
 ```
 
-#### キャッシュバックエンド別のFeature
+#### Cache Backend Features
 
-| Feature | バックエンド | 説明 |
-|---------|-------------|------|
-| `redis-backend` | Redis | Redisキャッシュバックエンド |
-| `redis-cluster` | Redis Cluster | Redisクラスタ対応 |
-| `redis-sentinel` | Redis Sentinel | Redisセンチネル対応 |
-| `memcached-backend` | Memcached | Memcachedバックエンド |
+| Feature | Backend | Description |
+|---------|---------|-------------|
+| `redis-backend` | Redis | Redis cache backend |
+| `redis-cluster` | Redis Cluster | Redis cluster support |
+| `redis-sentinel` | Redis Sentinel | Redis sentinel support |
+| `memcached-backend` | Memcached | Memcached backend |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# Redisキャッシュ
+# Redis cache
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "cache", "redis-backend"] }
 
-# Redisクラスタ対応
+# Redis cluster support
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "cache", "redis-backend", "redis-cluster"] }
 ```
 
-**依存関係**:
-- 外部クレート: `redis`, `deadpool-redis` (Redis使用時)
-- 外部クレート: `memcache-async`, `tokio-util` (Memcached使用時)
+**Dependencies**:
+- External crates: `redis`, `deadpool-redis` (when using Redis)
+- External crates: `memcache-async`, `tokio-util` (when using Memcached)
 
 ---
 
-### API機能
+### API Features
 
 #### api
 
-API関連の基本機能を有効化。
+Enables basic API-related functionality.
 
-**有効化されるクレート**:
-- `reinhardt-serializers` - シリアライザ
+**Enabled crates**:
+- `reinhardt-serializers` - Serializers
 - `reinhardt-viewsets` - ViewSets
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "api"] }
 ```
 
-#### シリアライゼーション形式
+#### Serialization Formats
 
-| Feature | 形式 | 説明 |
-|---------|------|------|
-| `serialize-json` | JSON | JSON形式（デフォルトで有効） |
-| `serialize-xml` | XML | XML形式 |
-| `serialize-yaml` | YAML | YAML形式 |
+| Feature | Format | Description |
+|---------|--------|-------------|
+| `serialize-json` | JSON | JSON format (enabled by default) |
+| `serialize-xml` | XML | XML format |
+| `serialize-yaml` | YAML | YAML format |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# JSON + YAML対応
+# JSON + YAML support
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "serialize-yaml"] }
 ```
 
-**注意**:
-- `serialize-json`は`reinhardt-serializers`のデフォルトで有効
-- XML/YAMLを使用する場合は明示的に指定が必要
+**Note**:
+- `serialize-json` is enabled by default in `reinhardt-serializers`
+- XML/YAML require explicit specification
 
 ---
 
-### ミドルウェア
+### Middleware
 
 #### middleware
 
-基本的なミドルウェア機能を有効化。
+Enables basic middleware functionality.
 
-**有効化されるクレート**:
-- `reinhardt-middleware` - ミドルウェア基盤
+**Enabled crates**:
+- `reinhardt-middleware` - Middleware foundation
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "middleware"] }
 ```
 
-**注意**: `middleware`は自動的に`sessions`も有効化します。
+**Note**: `middleware` automatically enables `sessions`.
 
-#### ミドルウェア個別機能
+#### Individual Middleware Features
 
-特定のミドルウェア機能のみを有効化:
+Enable specific middleware functionality only:
 
-| Feature | 機能 | 説明 |
-|---------|------|------|
+| Feature | Functionality | Description |
+|---------|---------------|-------------|
 | `middleware-cors` | CORS | Cross-Origin Resource Sharing |
-| `middleware-compression` | 圧縮 | レスポンス圧縮（gzip等） |
-| `middleware-security` | セキュリティ | セキュリティヘッダー等 |
-| `middleware-rate-limit` | レート制限 | リクエスト数制限 |
+| `middleware-compression` | Compression | Response compression (gzip, etc.) |
+| `middleware-security` | Security | Security headers, etc. |
+| `middleware-rate-limit` | Rate limiting | Request count limiting |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# CORS + レート制限のみ
+# CORS + rate limiting only
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal", "middleware-cors", "middleware-rate-limit"] }
 ```
 
 ---
 
-### その他の機能
+### Other Features
 
-#### admin - 管理画面
+#### admin - Admin Panel
 
-Django風の自動生成管理画面。
+Django-style auto-generated admin panel.
 
-**有効化されるクレート**:
-- `reinhardt-forms` - フォーム処理
-- `reinhardt-template` - テンプレートエンジン
+**Enabled crates**:
+- `reinhardt-forms` - Form processing
+- `reinhardt-template` - Template engine
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "admin"] }
 ```
 
-**注意**: `reinhardt-admin`クレートは現在開発中のため、`admin` featureから除外されています。
+**Note**: The `reinhardt-admin` crate is currently under development and excluded from the `admin` feature.
 
 ---
 
 #### graphql - GraphQL
 
-GraphQL APIサポート。
+GraphQL API support.
 
-**有効化されるクレート**:
-- `reinhardt-graphql` - GraphQLスキーマとリゾルバ
+**Enabled crates**:
+- `reinhardt-graphql` - GraphQL schema and resolvers
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "graphql"] }
 ```
 
-**機能**:
-- GraphQLスキーマ生成
-- リゾルバ定義
-- サブスクリプション対応
+**Features**:
+- GraphQL schema generation
+- Resolver definitions
+- Subscription support
 
 ---
 
 #### websockets - WebSocket
 
-リアルタイム双方向通信。
+Real-time bidirectional communication.
 
-**有効化されるクレート**:
-- `reinhardt-websockets` - WebSocketサーバー
+**Enabled crates**:
+- `reinhardt-websockets` - WebSocket server
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "websockets"] }
 ```
 
-**機能**:
-- WebSocketチャネル
-- ルーム管理
-- 認証統合
-- Redis統合（pub/sub）
+**Features**:
+- WebSocket channels
+- Room management
+- Authentication integration
+- Redis integration (pub/sub)
 
 ---
 
-#### i18n - 国際化
+#### i18n - Internationalization
 
-多言語対応。
+Multi-language support.
 
-**有効化されるクレート**:
-- `reinhardt-i18n` - 翻訳カタログとロケール管理
+**Enabled crates**:
+- `reinhardt-i18n` - Translation catalogs and locale management
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "i18n"] }
 ```
 
-**機能**:
-- 翻訳カタログ（gettext形式）
-- ロケール切り替え
-- 複数形対応
-- タイムゾーン対応
+**Features**:
+- Translation catalogs (gettext format)
+- Locale switching
+- Plural form support
+- Timezone support
 
 ---
 
-#### mail - メール送信
+#### mail - Email Sending
 
-メール送信機能。
+Email sending functionality.
 
-**有効化されるクレート**:
-- `reinhardt-mail` - メール送信とテンプレート
+**Enabled crates**:
+- `reinhardt-mail` - Email sending and templates
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "mail"] }
 ```
 
-**機能**:
-- SMTP送信
-- テンプレートメール
-- 添付ファイル
-- HTMLメール
+**Features**:
+- SMTP sending
+- Template emails
+- Attachments
+- HTML emails
 
 ---
 
-#### sessions - セッション管理
+#### sessions - Session Management
 
-セッション管理機能。
+Session management functionality.
 
-**有効化されるクレート**:
-- `reinhardt-sessions` - セッションストレージ
+**Enabled crates**:
+- `reinhardt-sessions` - Session storage
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "sessions"] }
 ```
 
-**機能**:
-- 複数のバックエンド（データベース、ファイル、Cookie、JWT）
-- セキュアなセッションID生成
-- セッションミドルウェア統合
+**Features**:
+- Multiple backends (database, file, Cookie, JWT)
+- Secure session ID generation
+- Session middleware integration
 
 ---
 
-#### static-files - 静的ファイル配信
+#### static-files - Static File Serving
 
-静的ファイルの配信と管理。
+Static file serving and management.
 
-**有効化されるクレート**:
-- `reinhardt-static` - 静的ファイルハンドラ
+**Enabled crates**:
+- `reinhardt-static` - Static file handler
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "static-files"] }
 ```
 
-**機能**:
-- CDN統合
-- ハッシュ化ストレージ
-- 圧縮対応
-- キャッシュ制御
+**Features**:
+- CDN integration
+- Hashed storage
+- Compression support
+- Cache control
 
 ---
 
-#### storage - ストレージシステム
+#### storage - Storage System
 
-ファイルストレージの抽象化。
+File storage abstraction.
 
-**有効化されるクレート**:
-- `reinhardt-storage` - ストレージバックエンド
+**Enabled crates**:
+- `reinhardt-storage` - Storage backends
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "storage"] }
 ```
 
-**機能**:
-- ローカルファイルシステム
-- S3互換ストレージ
-- ストレージバックエンドの切り替え
+**Features**:
+- Local file system
+- S3-compatible storage
+- Storage backend switching
 
 ---
 
-#### tasks - タスク/バックグラウンドジョブ
+#### tasks - Tasks/Background Jobs
 
-非同期タスク処理。
+Asynchronous task processing.
 
-**有効化されるクレート**:
-- `reinhardt-tasks` - タスクキューとワーカー
+**Enabled crates**:
+- `reinhardt-tasks` - Task queue and workers
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "tasks"] }
 ```
 
-**機能**:
-- タスクキュー
-- スケジュール実行
-- リトライ機能
-- バックグラウンドワーカー
+**Features**:
+- Task queue
+- Scheduled execution
+- Retry functionality
+- Background workers
 
 ---
 
-#### shortcuts - Django風ショートカット
+#### shortcuts - Django-style Shortcuts
 
-Django風の便利関数。
+Django-style convenience functions.
 
-**有効化されるクレート**:
-- `reinhardt-shortcuts` - ショートカット関数
+**Enabled crates**:
+- `reinhardt-shortcuts` - Shortcut functions
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "shortcuts"] }
 ```
 
-**機能**:
-- `get_object_or_404()` - オブジェクト取得または404エラー
-- `redirect()` - リダイレクト
-- `render()` - テンプレートレンダリング
+**Features**:
+- `get_object_or_404()` - Get object or 404 error
+- `redirect()` - Redirect
+- `render()` - Template rendering
 
 ---
 
-#### contrib - Contribアプリ集約
+#### contrib - Contrib Apps Aggregation
 
-すべてのcontribアプリを一括有効化。
+Enables all contrib apps at once.
 
-**有効化されるクレート**:
-- `reinhardt-contrib` - contrib集約クレート（auth, contenttypes, sessions, messages, static, mail, graphql, websockets, i18n）
+**Enabled crates**:
+- `reinhardt-contrib` - Contrib aggregation crate (auth, contenttypes, sessions, messages, static, mail, graphql, websockets, i18n)
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["standard", "contrib"] }
 ```
 
-**注意**: 個別のcontrib機能を有効化することも可能（`reinhardt-contrib`クレート内のfeature flag参照）。
+**Note**: Individual contrib features can be enabled (see `reinhardt-contrib` crate feature flags).
 
 ---
 
-## 主要クレートのFeature Flag
+## Feature Flags for Major Crates
 
 ### reinhardt-micro
 
-**目的**: 軽量なマイクロサービス向け構成
+**Purpose**: Lightweight microservice configuration
 
-**デフォルト**: `["routing", "params", "di"]`
+**Default**: `["routing", "params", "di"]`
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存関係 |
-|---------|------|----------|
-| `routing` | ルーティング機能 | reinhardt-routers |
-| `params` | パラメータ抽出 | reinhardt-params |
-| `di` | 依存性注入 | reinhardt-di |
-| `database` | データベース対応 | reinhardt-db |
-| `compression` | 圧縮ミドルウェア | - |
-| `cors` | CORSミドルウェア | - |
-| `rate-limit` | レート制限 | - |
-| `security` | セキュリティミドルウェア | - |
+| Feature | Description | Dependencies |
+|---------|-------------|--------------|
+| `routing` | Routing functionality | reinhardt-routers |
+| `params` | Parameter extraction | reinhardt-params |
+| `di` | Dependency injection | reinhardt-di |
+| `database` | Database support | reinhardt-db |
+| `compression` | Compression middleware | - |
+| `cors` | CORS middleware | - |
+| `rate-limit` | Rate limiting | - |
+| `security` | Security middleware | - |
 
-**一時的に無効化されている機能**:
-- `schema` (OpenAPIスキーマ生成) - utoipa API互換性対応中
+**Temporarily disabled features**:
+- `schema` (OpenAPI schema generation) - Working on utoipa API compatibility
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
 reinhardt-micro = { version = "0.1.0-alpha.1", features = ["routing", "params", "di", "database"] }
@@ -754,87 +754,87 @@ reinhardt-micro = { version = "0.1.0-alpha.1", features = ["routing", "params", 
 
 ### reinhardt-db
 
-**目的**: データベース層の統合クレート
+**Purpose**: Database layer integration crate
 
-**デフォルト**: `["backends", "pool", "postgres", "orm", "migrations", "hybrid", "associations"]`
+**Default**: `["backends", "pool", "postgres", "orm", "migrations", "hybrid", "associations"]`
 
-**利用可能なFeature**:
+**Available features**:
 
-#### モジュールFeature
+#### Module Features
 
-| Feature | 説明 | 有効化されるクレート |
-|---------|------|---------------------|
-| `backends` | バックエンド実装 | reinhardt-backends |
-| `pool` | コネクションプール | reinhardt-backends-pool, reinhardt-pool, reinhardt-di |
-| `orm` | ORM機能 | reinhardt-orm |
-| `migrations` | マイグレーション | reinhardt-migrations |
-| `hybrid` | ハイブリッド機能 | reinhardt-hybrid |
-| `associations` | 関連機能 | reinhardt-associations |
+| Feature | Description | Enabled Crates |
+|---------|-------------|----------------|
+| `backends` | Backend implementations | reinhardt-backends |
+| `pool` | Connection pooling | reinhardt-backends-pool, reinhardt-pool, reinhardt-di |
+| `orm` | ORM functionality | reinhardt-orm |
+| `migrations` | Migrations | reinhardt-migrations |
+| `hybrid` | Hybrid functionality | reinhardt-hybrid |
+| `associations` | Association functionality | reinhardt-associations |
 
-#### データベースFeature
+#### Database Features
 
-| Feature | データベース | 依存クレート |
-|---------|------------|-------------|
+| Feature | Database | Dependent Crates |
+|---------|----------|------------------|
 | `postgres` | PostgreSQL | sqlx/postgres, tokio-postgres |
 | `sqlite` | SQLite | sqlx/sqlite, rusqlite |
 | `mysql` | MySQL | sqlx/mysql, mysql_async |
 | `mongodb-backend` | MongoDB | mongodb, tokio |
-| `cockroachdb-backend` | CockroachDB | 同postgres（プロトコル互換） |
-| `all-databases` | 全データベース | 上記すべて |
+| `cockroachdb-backend` | CockroachDB | Same as postgres (protocol compatible) |
+| `all-databases` | All databases | All of the above |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# PostgreSQLのみ（デフォルト）
+# PostgreSQL only (default)
 reinhardt-db = "0.1.0-alpha.1"
 
-# SQLiteとPostgreSQL
+# SQLite and PostgreSQL
 reinhardt-db = { version = "0.1.0-alpha.1", features = ["postgres", "sqlite"] }
 
-# 全データベース対応
+# All database support
 reinhardt-db = { version = "0.1.0-alpha.1", features = ["all-databases"] }
 ```
 
-**注意**:
-- `pool` featureは自動的に`reinhardt-di`を有効化（DI統合のため）
-- デフォルトでPostgreSQLが有効（最も一般的なため）
+**Note**:
+- The `pool` feature automatically enables `reinhardt-di` (for DI integration)
+- PostgreSQL is enabled by default (most common)
 
 ---
 
 ### reinhardt-auth
 
-**目的**: 認証システム
+**Purpose**: Authentication system
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-#### 認証方式
+#### Authentication Methods
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `jwt` | JWT認証 | jsonwebtoken |
-| `session` | セッション認証 | reinhardt-sessions |
-| `oauth` | OAuth認証 | oauth2 |
-| `token` | トークン認証 | - |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `jwt` | JWT authentication | jsonwebtoken |
+| `session` | Session authentication | reinhardt-sessions |
+| `oauth` | OAuth authentication | oauth2 |
+| `token` | Token authentication | - |
 
-#### ストレージ
+#### Storage
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `database` | データベースストレージ | sqlx, sea-query, sea-query-binder |
-| `redis-sessions` | Redisセッション | redis, deadpool-redis |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `database` | Database storage | sqlx, sea-query, sea-query-binder |
+| `redis-sessions` | Redis sessions | redis, deadpool-redis |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# JWT認証のみ
+# JWT authentication only
 reinhardt-auth = { version = "0.1.0-alpha.1", features = ["jwt"] }
 
-# JWT + データベースストレージ
+# JWT + database storage
 reinhardt-auth = { version = "0.1.0-alpha.1", features = ["jwt", "database"] }
 
-# すべての認証方式
+# All authentication methods
 reinhardt-auth = { version = "0.1.0-alpha.1", features = ["jwt", "session", "oauth", "token", "database"] }
 ```
 
@@ -842,68 +842,68 @@ reinhardt-auth = { version = "0.1.0-alpha.1", features = ["jwt", "session", "oau
 
 ### reinhardt-sessions
 
-**目的**: セッション管理
+**Purpose**: Session management
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `database` | データベースバックエンド | reinhardt-orm, reinhardt-db, sea-query, sea-query-binder |
-| `file` | ファイルバックエンド | tokio, fs2 |
-| `cookie` | Cookieベースセッション | base64, aes-gcm, rand, hmac, sha2 |
-| `jwt` | JWTセッション | jsonwebtoken |
-| `middleware` | HTTPミドルウェア統合 | reinhardt-http, reinhardt-types, reinhardt-exception, bytes |
-| `messagepack` | MessagePackシリアライゼーション | rmp-serde |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `database` | Database backend | reinhardt-orm, reinhardt-db, sea-query, sea-query-binder |
+| `file` | File backend | tokio, fs2 |
+| `cookie` | Cookie-based sessions | base64, aes-gcm, rand, hmac, sha2 |
+| `jwt` | JWT sessions | jsonwebtoken |
+| `middleware` | HTTP middleware integration | reinhardt-http, reinhardt-types, reinhardt-exception, bytes |
+| `messagepack` | MessagePack serialization | rmp-serde |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# データベースセッション + ミドルウェア
+# Database session + middleware
 reinhardt-sessions = { version = "0.1.0-alpha.1", features = ["database", "middleware"] }
 
-# Cookieベースセッション
+# Cookie-based sessions
 reinhardt-sessions = { version = "0.1.0-alpha.1", features = ["cookie", "middleware"] }
 
-# すべてのバックエンド
+# All backends
 reinhardt-sessions = { version = "0.1.0-alpha.1", features = ["database", "file", "cookie", "jwt", "middleware"] }
 ```
 
-**バックエンドの選択**:
-- `database`: 大規模アプリ、複数サーバー対応
-- `file`: 開発環境、小規模アプリ
-- `cookie`: ステートレス、サーバー側ストレージ不要
-- `jwt`: API向け、トークンベース
+**Backend selection**:
+- `database`: Large apps, multi-server support
+- `file`: Development environment, small apps
+- `cookie`: Stateless, no server-side storage needed
+- `jwt`: API-focused, token-based
 
 ---
 
 ### reinhardt-cache
 
-**目的**: キャッシュシステム
+**Purpose**: Cache system
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `redis-backend` | Redisバックエンド | redis, deadpool-redis |
-| `redis-cluster` | Redisクラスタ | 同上 |
-| `redis-sentinel` | Redisセンチネル | 同上 |
-| `memcached-backend` | Memcachedバックエンド | memcache-async, tokio-util |
-| `all-backends` | すべてのバックエンド | 上記すべて |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `redis-backend` | Redis backend | redis, deadpool-redis |
+| `redis-cluster` | Redis cluster | Same as above |
+| `redis-sentinel` | Redis sentinel | Same as above |
+| `memcached-backend` | Memcached backend | memcache-async, tokio-util |
+| `all-backends` | All backends | All of the above |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# Redis単体
+# Redis standalone
 reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-backend"] }
 
-# Redisクラスタ対応
+# Redis cluster support
 reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-backend", "redis-cluster"] }
 
-# RedisとMemcached両対応
+# Redis and Memcached both
 reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-backend", "memcached-backend"] }
 ```
 
@@ -911,28 +911,28 @@ reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-backend", "mem
 
 ### reinhardt-middleware
 
-**目的**: HTTPミドルウェア
+**Purpose**: HTTP middleware
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 機能 |
-|---------|------|------|
-| `cors` | CORSミドルウェア | クロスオリジンリクエスト制御 |
-| `compression` | 圧縮ミドルウェア | gzip/brotli圧縮 |
-| `security` | セキュリティミドルウェア | セキュリティヘッダー設定 |
-| `rate-limit` | レート制限 | リクエスト数制限 |
-| `session` | セッションミドルウェア | セッション管理統合 |
-| `sqlx` | SQLxデータベース対応 | データベース接続管理 |
+| Feature | Description | Functionality |
+|---------|-------------|---------------|
+| `cors` | CORS middleware | Cross-origin request control |
+| `compression` | Compression middleware | gzip/brotli compression |
+| `security` | Security middleware | Security header configuration |
+| `rate-limit` | Rate limiting | Request count limiting |
+| `session` | Session middleware | Session management integration |
+| `sqlx` | SQLx database support | Database connection management |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# CORS + 圧縮
+# CORS + compression
 reinhardt-middleware = { version = "0.1.0-alpha.1", features = ["cors", "compression"] }
 
-# すべてのミドルウェア
+# All middleware
 reinhardt-middleware = { version = "0.1.0-alpha.1", features = ["cors", "compression", "security", "rate-limit", "session"] }
 ```
 
@@ -940,28 +940,28 @@ reinhardt-middleware = { version = "0.1.0-alpha.1", features = ["cors", "compres
 
 ### reinhardt-serializers
 
-**目的**: データのシリアライゼーション
+**Purpose**: Data serialization
 
-**デフォルト**: `["json"]`
+**Default**: `["json"]`
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 形式 | 依存クレート |
-|---------|------|-------------|
+| Feature | Format | Dependent Crates |
+|---------|--------|------------------|
 | `json` | JSON | serde_json |
 | `xml` | XML | quick-xml, serde-xml-rs |
 | `yaml` | YAML | serde_yaml |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# JSONのみ（デフォルト）
+# JSON only (default)
 reinhardt-serializers = "0.1.0-alpha.1"
 
 # JSON + YAML
 reinhardt-serializers = { version = "0.1.0-alpha.1", features = ["json", "yaml"] }
 
-# すべての形式
+# All formats
 reinhardt-serializers = { version = "0.1.0-alpha.1", features = ["json", "xml", "yaml"] }
 ```
 
@@ -969,61 +969,61 @@ reinhardt-serializers = { version = "0.1.0-alpha.1", features = ["json", "xml", 
 
 ### reinhardt-rest
 
-**目的**: REST APIコア機能
+**Purpose**: REST API core functionality
 
-**デフォルト**: `["serializers", "parsers", "renderers"]`
+**Default**: `["serializers", "parsers", "renderers"]`
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `serializers` | シリアライザ | reinhardt-orm |
-| `parsers` | パーサ | reinhardt-parsers |
-| `renderers` | レンダラ | reinhardt-renderers |
-| `jwt` | JWTサポート | rest-core/jwt |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `serializers` | Serializers | reinhardt-orm |
+| `parsers` | Parsers | reinhardt-parsers |
+| `renderers` | Renderers | reinhardt-renderers |
+| `jwt` | JWT support | rest-core/jwt |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# デフォルト構成
+# Default configuration
 reinhardt-rest = "0.1.0-alpha.1"
 
-# JWT付き
+# With JWT
 reinhardt-rest = { version = "0.1.0-alpha.1", features = ["serializers", "parsers", "renderers", "jwt"] }
 ```
 
-**注意**: `serializers` featureは`reinhardt-orm`を依存関係に含みます。
+**Note**: The `serializers` feature includes `reinhardt-orm` as a dependency.
 
 ---
 
 ### reinhardt-contrib
 
-**目的**: Contribアプリの集約
+**Purpose**: Contrib apps aggregation
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 有効化されるクレート |
-|---------|------|---------------------|
-| `auth` | 認証 | reinhardt-auth |
-| `contenttypes` | コンテンツタイプ | reinhardt-contenttypes |
-| `sessions` | セッション | reinhardt-sessions |
-| `messages` | メッセージ | reinhardt-messages |
-| `static` | 静的ファイル | reinhardt-static |
-| `mail` | メール | reinhardt-mail |
+| Feature | Description | Enabled Crates |
+|---------|-------------|----------------|
+| `auth` | Authentication | reinhardt-auth |
+| `contenttypes` | Content types | reinhardt-contenttypes |
+| `sessions` | Sessions | reinhardt-sessions |
+| `messages` | Messages | reinhardt-messages |
+| `static` | Static files | reinhardt-static |
+| `mail` | Email | reinhardt-mail |
 | `graphql` | GraphQL | reinhardt-graphql |
 | `websockets` | WebSocket | reinhardt-websockets |
-| `i18n` | 国際化 | reinhardt-i18n |
-| `full` | すべて | 上記すべて |
+| `i18n` | Internationalization | reinhardt-i18n |
+| `full` | All | All of the above |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# 個別機能
+# Individual features
 reinhardt-contrib = { version = "0.1.0-alpha.1", features = ["auth", "sessions"] }
 
-# すべての機能
+# All features
 reinhardt-contrib = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
@@ -1031,25 +1031,25 @@ reinhardt-contrib = { version = "0.1.0-alpha.1", features = ["full"] }
 
 ### reinhardt-di
 
-**目的**: 依存性注入システム
+**Purpose**: Dependency injection system
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `params` | パラメータ抽出 | reinhardt-params |
-| `dev-tools` | 開発ツール | indexmap |
-| `generator` | ジェネレータ機能 | genawaiter |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `params` | Parameter extraction | reinhardt-params |
+| `dev-tools` | Development tools | indexmap |
+| `generator` | Generator functionality | genawaiter |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dependencies]
-# パラメータ抽出付き
+# With parameter extraction
 reinhardt-di = { version = "0.1.0-alpha.1", features = ["params"] }
 
-# すべての機能
+# All features
 reinhardt-di = { version = "0.1.0-alpha.1", features = ["params", "dev-tools", "generator"] }
 ```
 
@@ -1057,37 +1057,37 @@ reinhardt-di = { version = "0.1.0-alpha.1", features = ["params", "dev-tools", "
 
 ### reinhardt-test
 
-**目的**: テストユーティリティ
+**Purpose**: Test utilities
 
-**デフォルト**: なし（すべてオプション）
+**Default**: None (all optional)
 
-**利用可能なFeature**:
+**Available features**:
 
-| Feature | 説明 | 依存クレート |
-|---------|------|-------------|
-| `testcontainers` | TestContainers統合 | testcontainers, testcontainers-modules, sqlx, memcache-async, tokio-util |
-| `static` | 静的ファイルテスト | reinhardt-static |
+| Feature | Description | Dependent Crates |
+|---------|-------------|------------------|
+| `testcontainers` | TestContainers integration | testcontainers, testcontainers-modules, sqlx, memcache-async, tokio-util |
+| `static` | Static file testing | reinhardt-static |
 
-**使用例**:
+**Usage example**:
 ```toml
 [dev-dependencies]
-# TestContainers統合（データベース/キャッシュテスト用）
+# TestContainers integration (for database/cache testing)
 reinhardt-test = { version = "0.1.0-alpha.1", features = ["testcontainers"] }
 
-# すべてのテストユーティリティ
+# All test utilities
 reinhardt-test = { version = "0.1.0-alpha.1", features = ["testcontainers", "static"] }
 ```
 
-**TestContainersの用途**:
-- 実際のPostgreSQL/MySQL/SQLiteコンテナでのテスト
-- Redisコンテナでのキャッシュテスト
-- Memcachedコンテナでのキャッシュテスト
+**TestContainers use cases**:
+- Testing with actual PostgreSQL/MySQL/SQLite containers
+- Cache testing with Redis containers
+- Cache testing with Memcached containers
 
 ---
 
-## Feature Flag依存関係マップ
+## Feature Flag Dependency Map
 
-### バンドルFeatureの依存関係
+### Bundle Feature Dependencies
 
 ```
 default
@@ -1112,7 +1112,7 @@ default
     └── reinhardt-rest
 
 full
-├── standard (上記すべて)
+├── standard (all of the above)
 ├── database
 │   ├── reinhardt-orm
 │   ├── reinhardt-migrations
@@ -1140,7 +1140,7 @@ full
 └── contrib → reinhardt-contrib
 ```
 
-### データベースFeatureの依存関係
+### Database Feature Dependencies
 
 ```
 database
@@ -1152,7 +1152,7 @@ database
     ├── pool
     │   ├── reinhardt-backends-pool
     │   ├── reinhardt-pool
-    │   └── reinhardt-di (自動有効化)
+    │   └── reinhardt-di (auto-enabled)
     ├── postgres (default)
     ├── orm
     ├── migrations
@@ -1180,7 +1180,7 @@ db-cockroachdb
 └── reinhardt-db/cockroachdb-backend
 ```
 
-### 認証Featureの依存関係
+### Authentication Feature Dependencies
 
 ```
 auth
@@ -1194,7 +1194,7 @@ auth-jwt
 auth-session
 ├── auth
 ├── reinhardt-auth/session
-└── sessions (自動有効化)
+└── sessions (auto-enabled)
     └── reinhardt-sessions
 
 auth-oauth
@@ -1207,7 +1207,7 @@ auth-token
 └── reinhardt-auth/token
 ```
 
-### キャッシュFeatureの依存関係
+### Cache Feature Dependencies
 
 ```
 cache
@@ -1234,12 +1234,12 @@ memcached-backend
     └── tokio-util
 ```
 
-### ミドルウェアFeatureの依存関係
+### Middleware Feature Dependencies
 
 ```
 middleware
 ├── reinhardt-middleware
-└── sessions (自動有効化)
+└── sessions (auto-enabled)
 
 middleware-cors
 └── reinhardt-middleware/cors
@@ -1258,77 +1258,77 @@ middleware + session
     └── reinhardt-sessions
 ```
 
-### 相互依存関係の重要な注意点
+### Important Interdependency Notes
 
-1. **pool → reinhardt-di**: コネクションプールのDI統合のため自動有効化
-2. **middleware → sessions**: ミドルウェアがセッション機能を使用するため自動有効化
-3. **auth-session → sessions**: セッション認証がセッション管理を使用するため自動有効化
-4. **serializers → reinhardt-orm**: シリアライザがORMモデルを扱うため依存
+1. **pool → reinhardt-di**: Auto-enabled for connection pool DI integration
+2. **middleware → sessions**: Auto-enabled as middleware uses session functionality
+3. **auth-session → sessions**: Auto-enabled as session authentication uses session management
+4. **serializers → reinhardt-orm**: Dependency as serializers handle ORM models
 
 ---
 
-## 使用例とベストプラクティス
+## Usage Examples and Best Practices
 
-### シナリオ1: シンプルなマイクロサービスAPI
+### Scenario 1: Simple Microservice API
 
-**要件**:
-- データベース不要
-- 軽量で高速起動
-- 基本的なルーティングとパラメータ抽出
+**Requirements**:
+- No database needed
+- Lightweight and fast startup
+- Basic routing and parameter extraction
 
-**推奨構成**:
+**Recommended configuration**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 ```
 
-**または**:
+**Or**:
 ```toml
 [dependencies]
-reinhardt-micro = "0.1.0-alpha.1"  # デフォルトでrouting + params + di
+reinhardt-micro = "0.1.0-alpha.1"  # Default: routing + params + di
 ```
 
-**バイナリサイズ**: ~5-10 MB
-**コンパイル時間**: 1-2分
+**Binary size**: ~5-10 MB
+**Compile time**: 1-2 minutes
 
 ---
 
-### シナリオ2: PostgreSQLを使用するREST API
+### Scenario 2: REST API with PostgreSQL
 
-**要件**:
-- PostgreSQLデータベース
+**Requirements**:
+- PostgreSQL database
 - JSON API
-- JWT認証
-- ページネーションとフィルタリング
+- JWT authentication
+- Pagination and filtering
 
-**推奨構成**:
+**Recommended configuration**:
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
   default-features = false,
   features = [
-    "api-only",      # REST API基本機能
-    "db-postgres",   # PostgreSQL対応
-    "auth-jwt",      # JWT認証
+    "api-only",      # REST API basics
+    "db-postgres",   # PostgreSQL support
+    "auth-jwt",      # JWT authentication
   ]
 }
 ```
 
-**バイナリサイズ**: ~20-25 MB
-**コンパイル時間**: 3-5分
+**Binary size**: ~20-25 MB
+**Compile time**: 3-5 minutes
 
 ---
 
-### シナリオ3: GraphQL + WebSocketサーバー
+### Scenario 3: GraphQL + WebSocket Server
 
-**要件**:
+**Requirements**:
 - GraphQL API
-- WebSocketでのリアルタイム通信
-- Redisキャッシュ
-- PostgreSQLデータベース
+- Real-time communication with WebSocket
+- Redis cache
+- PostgreSQL database
 
-**推奨構成**:
+**Recommended configuration**:
 ```toml
 [dependencies]
 reinhardt = {
@@ -1346,40 +1346,40 @@ reinhardt = {
 }
 ```
 
-**バイナリサイズ**: ~30-35 MB
-**コンパイル時間**: 5-7分
+**Binary size**: ~30-35 MB
+**Compile time**: 5-7 minutes
 
 ---
 
-### シナリオ4: フル機能Webアプリケーション
+### Scenario 4: Full-Featured Web Application
 
-**要件**:
+**Requirements**:
 - REST API + GraphQL
 - WebSocket
-- 管理画面
-- 多言語対応
-- メール送信
-- 静的ファイル配信
+- Admin panel
+- Multi-language support
+- Email sending
+- Static file serving
 
-**推奨構成**:
+**Recommended configuration**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
-**バイナリサイズ**: ~50+ MB
-**コンパイル時間**: 10-15分
+**Binary size**: ~50+ MB
+**Compile time**: 10-15 minutes
 
 ---
 
-### シナリオ5: CLIツール/バックグラウンドジョブ
+### Scenario 5: CLI Tool/Background Jobs
 
-**要件**:
-- データベースマイグレーション
-- メール送信バッチ
-- タスクスケジューリング
+**Requirements**:
+- Database migrations
+- Email sending batch
+- Task scheduling
 
-**推奨構成**:
+**Recommended configuration**:
 ```toml
 [dependencies]
 reinhardt = {
@@ -1391,22 +1391,22 @@ reinhardt = {
 }
 ```
 
-**バイナリサイズ**: ~15-20 MB
-**コンパイル時間**: 3-4分
+**Binary size**: ~15-20 MB
+**Compile time**: 3-4 minutes
 
 ---
 
-### ベストプラクティス
+### Best Practices
 
-#### 1. default-featuresの制御
+#### 1. Control default-features
 
-**最小構成から始める**:
+**Start from minimal configuration**:
 ```toml
-# ❌ 悪い例: 不要な機能が含まれる
+# ❌ Bad: Includes unnecessary features
 [dependencies]
-reinhardt = "0.1.0-alpha.1"  # standardがすべて有効化
+reinhardt = "0.1.0-alpha.1"  # Enables all of standard
 
-# ✅ 良い例: 必要な機能のみ選択
+# ✅ Good: Select only needed features
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
@@ -1415,68 +1415,68 @@ reinhardt = {
 }
 ```
 
-#### 2. データベースバックエンドの明示的指定
+#### 2. Explicitly Specify Database Backend
 
-**使用するデータベースを明示**:
+**Explicitly declare which database to use**:
 ```toml
-# ❌ 悪い例: デフォルトのPostgreSQLが有効化される
+# ❌ Bad: Default PostgreSQL gets enabled
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", features = ["database"] }
 
-# ✅ 良い例: 使用するデータベースを明示
+# ✅ Good: Explicitly specify the database
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
-  features = ["database", "db-sqlite"]  # SQLiteを明示
+  features = ["database", "db-sqlite"]  # Explicitly SQLite
 }
 ```
 
-#### 3. 開発環境と本番環境の分離
+#### 3. Separate Development and Production Environments
 
-**環境ごとにfeatureを切り替え**:
+**Switch features per environment**:
 ```toml
 [dependencies]
 reinhardt = { version = "0.1.0-alpha.1", default-features = false }
 
 [features]
-# 開発環境: テストユーティリティを含む
+# Development: Include test utilities
 dev = ["reinhardt/standard", "reinhardt/test-utils"]
 
-# 本番環境: 最小構成
+# Production: Minimal configuration
 prod = ["reinhardt/minimal", "reinhardt/database", "reinhardt/db-postgres"]
 ```
 
-ビルド時:
+Build:
 ```bash
-# 開発環境
+# Development
 cargo build --features dev
 
-# 本番環境
+# Production
 cargo build --release --features prod
 ```
 
-#### 4. キャッシュバックエンドの適切な選択
+#### 4. Appropriate Cache Backend Selection
 
-**用途に応じたバックエンド選択**:
+**Select backend based on use case**:
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
   features = [
     "cache",
-    # 開発環境: Memcached（簡単セットアップ）
+    # Development: Memcached (easy setup)
     "memcached-backend",
 
-    # 本番環境: Redis Cluster（高可用性）
+    # Production: Redis Cluster (high availability)
     # "redis-backend",
     # "redis-cluster",
   ]
 }
 ```
 
-#### 5. テスト用の構成
+#### 5. Test Configuration
 
-**dev-dependenciesでテストユーティリティを追加**:
+**Add test utilities in dev-dependencies**:
 ```toml
 [dependencies]
 reinhardt = {
@@ -1495,82 +1495,82 @@ reinhardt-test = { version = "0.1.0-alpha.1", features = ["testcontainers"] }
 
 ---
 
-## ビルド時間とバイナリサイズの比較
+## Build Time and Binary Size Comparison
 
-### 構成別の比較表
+### Comparison by Configuration
 
-| 構成 | Features | コンパイル時間 | バイナリサイズ | 推奨用途 |
-|------|----------|---------------|---------------|----------|
-| **Minimal** | `minimal` | 1-2分 | ~5-10 MB | マイクロサービス、シンプルAPI |
-| **Minimal + DB** | `minimal`, `database`, `db-postgres` | 2-3分 | ~15-20 MB | データベース使用の小規模API |
-| **API Only** | `api-only`, `db-postgres` | 3-4分 | ~20-25 MB | REST API専用 |
-| **Standard** | `standard` (デフォルト) | 5-7分 | ~25-30 MB | 一般的なWebアプリ |
-| **Standard + Extra** | `standard`, `graphql`, `cache` | 7-9分 | ~35-40 MB | REST + GraphQL + キャッシュ |
-| **Full** | `full` | 10-15分 | ~50+ MB | フル機能Webアプリ |
+| Configuration | Features | Compile Time | Binary Size | Recommended Use |
+|--------------|----------|--------------|-------------|-----------------|
+| **Minimal** | `minimal` | 1-2 min | ~5-10 MB | Microservices, simple APIs |
+| **Minimal + DB** | `minimal`, `database`, `db-postgres` | 2-3 min | ~15-20 MB | Small APIs with database |
+| **API Only** | `api-only`, `db-postgres` | 3-4 min | ~20-25 MB | REST API only |
+| **Standard** | `standard` (default) | 5-7 min | ~25-30 MB | General web apps |
+| **Standard + Extra** | `standard`, `graphql`, `cache` | 7-9 min | ~35-40 MB | REST + GraphQL + cache |
+| **Full** | `full` | 10-15 min | ~50+ MB | Full-featured web apps |
 
-### データベースバックエンド別の影響
+### Database Backend Impact
 
-| データベース | 追加コンパイル時間 | 追加バイナリサイズ |
-|-------------|-------------------|-------------------|
-| PostgreSQL | +30秒 | +2-3 MB |
-| MySQL | +30秒 | +2-3 MB |
-| SQLite | +10秒 | +1 MB |
-| MongoDB | +1分 | +4-5 MB |
-| 全データベース | +2分 | +8-10 MB |
+| Database | Additional Compile Time | Additional Binary Size |
+|----------|------------------------|------------------------|
+| PostgreSQL | +30 sec | +2-3 MB |
+| MySQL | +30 sec | +2-3 MB |
+| SQLite | +10 sec | +1 MB |
+| MongoDB | +1 min | +4-5 MB |
+| All databases | +2 min | +8-10 MB |
 
-### キャッシュバックエンド別の影響
+### Cache Backend Impact
 
-| キャッシュ | 追加コンパイル時間 | 追加バイナリサイズ |
-|-----------|-------------------|-------------------|
-| Redis | +20秒 | +1-2 MB |
-| Memcached | +15秒 | +1 MB |
-| Redis Cluster | +30秒 | +2 MB |
+| Cache | Additional Compile Time | Additional Binary Size |
+|-------|------------------------|------------------------|
+| Redis | +20 sec | +1-2 MB |
+| Memcached | +15 sec | +1 MB |
+| Redis Cluster | +30 sec | +2 MB |
 
-### 計測環境
+### Measurement Environment
 
-- **CPU**: Apple M1/M2またはIntel Core i5以上
-- **メモリ**: 16GB以上
-- **Rustバージョン**: 1.70以上
-- **ビルドモード**: `--release`
+- **CPU**: Apple M1/M2 or Intel Core i5 or above
+- **Memory**: 16GB or more
+- **Rust version**: 1.70 or above
+- **Build mode**: `--release`
 
-**注意**: 実際のコンパイル時間とバイナリサイズは、ハードウェア、Rustバージョン、依存関係のキャッシュ状態により変動します。
+**Note**: Actual compile times and binary sizes vary depending on hardware, Rust version, and dependency cache status.
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### 問題1: コンパイルエラー「feature not found」
+### Issue 1: Compile Error "feature not found"
 
-**エラーメッセージ例**:
+**Example error message**:
 ```
 error: feature `foo` is not available in package `reinhardt`
 ```
 
-**原因**: 存在しないfeature名を指定している
+**Cause**: Specified non-existent feature name
 
-**解決方法**:
-1. [Quick Reference](#quick-reference)で正しいfeature名を確認
-2. タイポがないかチェック（例: `databse` → `database`）
-3. バージョンによる差異を確認（古いバージョンでは未実装の可能性）
+**Solution**:
+1. Check correct feature name in [Quick Reference](#quick-reference)
+2. Check for typos (e.g., `databse` → `database`)
+3. Verify version differences (may be unimplemented in older versions)
 
 ---
 
-### 問題2: 依存関係の競合
+### Issue 2: Dependency Conflicts
 
-**エラーメッセージ例**:
+**Example error message**:
 ```
 error: multiple versions of `sqlx` found
 ```
 
-**原因**: 複数のfeatureが異なるバージョンの同じクレートを要求
+**Cause**: Multiple features requesting different versions of the same crate
 
-**解決方法**:
+**Solution**:
 ```toml
 [patch.crates-io]
 sqlx = { git = "https://github.com/launchbadge/sqlx", branch = "main" }
 ```
 
-または、Cargo.lockを削除して再ビルド:
+Or delete Cargo.lock and rebuild:
 ```bash
 rm Cargo.lock
 cargo build
@@ -1578,16 +1578,16 @@ cargo build
 
 ---
 
-### 問題3: リンカエラー
+### Issue 3: Linker Errors
 
-**エラーメッセージ例**:
+**Example error message**:
 ```
 error: linking with `cc` failed
 ```
 
-**原因**: データベースドライバの共有ライブラリが見つからない
+**Cause**: Database driver shared library not found
 
-**解決方法**:
+**Solution**:
 
 **PostgreSQL**:
 ```bash
@@ -1627,144 +1627,144 @@ sudo dnf install sqlite-devel
 
 ---
 
-### 問題4: バイナリサイズが大きすぎる
+### Issue 4: Binary Size Too Large
 
-**症状**: releaseビルドでも50MB以上のバイナリ
+**Symptom**: Binary over 50MB even in release build
 
-**原因**: 不要なfeatureが有効化されている
+**Cause**: Unnecessary features are enabled
 
-**解決方法**:
+**Solution**:
 
-1. **使用していないfeatureを無効化**:
+1. **Disable unused features**:
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
-  default-features = false,  # これが重要
+  default-features = false,  # This is important
   features = ["minimal", "database", "db-postgres"]
 }
 ```
 
-2. **Cargo.tomlでLTO（Link Time Optimization）を有効化**:
+2. **Enable LTO (Link Time Optimization) in Cargo.toml**:
 ```toml
 [profile.release]
 lto = true
 codegen-units = 1
-opt-level = "z"  # サイズ最適化
-strip = true     # デバッグシンボル削除
+opt-level = "z"  # Size optimization
+strip = true     # Remove debug symbols
 ```
 
-3. **実際に使用しているfeatureを確認**:
+3. **Verify actually used features**:
 ```bash
 cargo tree --features standard | grep reinhardt
 ```
 
 ---
 
-### 問題5: コンパイル時間が長すぎる
+### Issue 5: Compile Time Too Long
 
-**症状**: ビルドに10分以上かかる
+**Symptom**: Build takes over 10 minutes
 
-**原因**: 不要なfeatureが有効化、またはキャッシュが効いていない
+**Cause**: Unnecessary features enabled, or cache not working
 
-**解決方法**:
+**Solution**:
 
-1. **並列ビルドを有効化**:
+1. **Enable parallel build**:
 ```bash
 # ~/.cargo/config.toml
 [build]
-jobs = 8  # CPUコア数に応じて調整
+jobs = 8  # Adjust based on CPU cores
 ```
 
-2. **sccacheを使用（ビルドキャッシュ）**:
+2. **Use sccache (build cache)**:
 ```bash
-# インストール
+# Install
 cargo install sccache
 
-# 環境変数設定
+# Set environment variable
 export RUSTC_WRAPPER=sccache
 ```
 
-3. **不要なfeatureを無効化**:
+3. **Disable unnecessary features**:
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
   default-features = false,
-  features = ["minimal"]  # 必要最小限
+  features = ["minimal"]  # Bare minimum
 }
 ```
 
 ---
 
-### 問題6: ランタイムエラー「feature not enabled」
+### Issue 6: Runtime Error "feature not enabled"
 
-**エラーメッセージ例**:
+**Example error message**:
 ```
 thread 'main' panicked at 'Redis backend not enabled'
 ```
 
-**原因**: コードで使用している機能のfeatureが有効化されていない
+**Cause**: Feature for functionality used in code is not enabled
 
-**解決方法**:
+**Solution**:
 
-1. **エラーメッセージから必要なfeatureを特定**:
-   - `Redis backend not enabled` → `redis-backend` featureが必要
-   - `JWT support not enabled` → `auth-jwt` featureが必要
+1. **Identify required feature from error message**:
+   - `Redis backend not enabled` → Need `redis-backend` feature
+   - `JWT support not enabled` → Need `auth-jwt` feature
 
-2. **Cargo.tomlに該当featureを追加**:
+2. **Add corresponding feature to Cargo.toml**:
 ```toml
 [dependencies]
 reinhardt = {
   version = "0.1.0-alpha.1",
-  features = ["cache", "redis-backend"]  # 追加
+  features = ["cache", "redis-backend"]  # Add this
 }
 ```
 
 ---
 
-### 問題7: TestContainersが動作しない
+### Issue 7: TestContainers Not Working
 
-**症状**: テスト実行時にDockerコンテナが起動しない
+**Symptom**: Docker containers don't start during test execution
 
-**原因**: `testcontainers` featureが有効化されていない、またはDockerが起動していない
+**Cause**: `testcontainers` feature not enabled, or Docker not running
 
-**解決方法**:
+**Solution**:
 
-1. **Dockerが起動しているか確認**:
+1. **Verify Docker is running**:
 ```bash
 docker ps
 ```
 
-2. **dev-dependenciesで`testcontainers` featureを有効化**:
+2. **Enable `testcontainers` feature in dev-dependencies**:
 ```toml
 [dev-dependencies]
 reinhardt-test = { version = "0.1.0-alpha.1", features = ["testcontainers"] }
 ```
 
-3. **環境変数を設定（Podman使用時）**:
+3. **Set environment variable (when using Podman)**:
 ```bash
 export DOCKER_HOST=unix:///run/podman/podman.sock
 ```
 
 ---
 
-### デバッグのヒント
+### Debugging Tips
 
-#### 1. 有効化されているfeatureを確認
+#### 1. Check Enabled Features
 
 ```bash
-# 依存関係ツリーを表示（feature付き）
+# Display dependency tree (with features)
 cargo tree -e features
 
-# reinhardtクレートのfeatureのみ表示
+# Display only reinhardt crate features
 cargo tree -e features | grep reinhardt
 ```
 
-#### 2. 条件付きコンパイルの確認
+#### 2. Check Conditional Compilation
 
 ```rust
-// コード内でfeatureの有効状態を確認
+// Check feature enabled state in code
 #[cfg(feature = "redis-backend")]
 println!("Redis backend is enabled");
 
@@ -1772,13 +1772,13 @@ println!("Redis backend is enabled");
 println!("Redis backend is NOT enabled");
 ```
 
-#### 3. ビルド時の詳細ログ
+#### 3. Detailed Build Logs
 
 ```bash
-# ビルド時の詳細ログを表示
+# Display detailed build logs
 cargo build -vv
 
-# 特定のクレートのビルドログのみ表示
+# Display only specific crate build logs
 cargo build -vv 2>&1 | grep reinhardt
 ```
 
@@ -1786,92 +1786,92 @@ cargo build -vv 2>&1 | grep reinhardt
 
 ## Quick Reference
 
-### 全Feature Flag一覧表（アルファベット順）
+### Complete Feature Flag List (Alphabetical)
 
-| Feature | カテゴリ | 説明 | デフォルト |
-|---------|---------|------|-----------|
-| `admin` | 機能 | 管理画面（forms, template） | ❌ |
-| `api` | 機能 | API基本機能（serializers, viewsets） | ❌ |
-| `api-only` | バンドル | REST API専用構成 | ❌ |
-| `auth` | 機能 | 認証基盤 | ❌ |
-| `auth-jwt` | 認証 | JWT認証 | ❌ |
-| `auth-oauth` | 認証 | OAuth認証 | ❌ |
-| `auth-session` | 認証 | セッション認証 | ❌ |
-| `auth-token` | 認証 | トークン認証 | ❌ |
-| `cache` | 機能 | キャッシュシステム | ❌ |
-| `cli-tools` | バンドル | CLI/バックグラウンドジョブ構成 | ❌ |
-| `conf` | クレート | 設定管理 | ❌ |
-| `contrib` | 機能 | Contribアプリ集約 | ❌ |
-| `core` | クレート | コア機能 | ❌ |
-| `database` | 機能 | データベース全般 | ❌ |
-| `db-cockroachdb` | データベース | CockroachDBサポート | ❌ |
-| `db-mongodb` | データベース | MongoDBサポート | ❌ |
-| `db-mysql` | データベース | MySQLサポート | ❌ |
-| `db-postgres` | データベース | PostgreSQLサポート | ❌ |
-| `db-sqlite` | データベース | SQLiteサポート | ❌ |
-| `default` | - | デフォルト構成（standard） | ✅ |
-| `di` | クレート | 依存性注入 | ❌ |
-| `di-generator` | DI | DIジェネレータ | ❌ |
-| `forms` | 機能 | フォーム処理 | ❌ |
-| `full` | バンドル | 全機能有効化 | ❌ |
-| `graphql` | 機能 | GraphQLサポート | ❌ |
-| `graphql-server` | バンドル | GraphQLサーバー構成 | ❌ |
-| `i18n` | 機能 | 国際化 | ❌ |
-| `mail` | 機能 | メール送信 | ❌ |
-| `memcached-backend` | キャッシュ | Memcachedバックエンド | ❌ |
-| `middleware` | 機能 | ミドルウェア基盤 | ❌ |
-| `middleware-compression` | ミドルウェア | 圧縮ミドルウェア | ❌ |
-| `middleware-cors` | ミドルウェア | CORSミドルウェア | ❌ |
-| `middleware-rate-limit` | ミドルウェア | レート制限ミドルウェア | ❌ |
-| `middleware-security` | ミドルウェア | セキュリティミドルウェア | ❌ |
-| `minimal` | バンドル | 最小構成 | ❌ |
-| `redis-backend` | キャッシュ | Redisバックエンド | ❌ |
-| `redis-cluster` | キャッシュ | Redisクラスタ | ❌ |
-| `redis-sentinel` | キャッシュ | Redisセンチネル | ❌ |
-| `rest` | クレート | REST APIコア | ❌ |
-| `serialize-json` | シリアライズ | JSON形式 | ✅ (serializers) |
-| `serialize-xml` | シリアライズ | XML形式 | ❌ |
-| `serialize-yaml` | シリアライズ | YAML形式 | ❌ |
-| `server` | 機能 | サーバーコンポーネント | ❌ |
-| `sessions` | 機能 | セッション管理 | ❌ |
-| `shortcuts` | 機能 | Django風ショートカット | ❌ |
-| `standard` | バンドル | 標準構成（デフォルト） | ✅ |
-| `static-files` | 機能 | 静的ファイル配信 | ❌ |
-| `storage` | 機能 | ストレージシステム | ❌ |
-| `tasks` | 機能 | タスク/バックグラウンドジョブ | ❌ |
-| `templates` | 機能 | テンプレートエンジン | ❌ |
-| `test` | クレート | テストユーティリティ | ❌ |
-| `test-utils` | バンドル | テスト環境構成 | ❌ |
-| `websocket-server` | バンドル | WebSocketサーバー構成 | ❌ |
-| `websockets` | 機能 | WebSocketサポート | ❌ |
+| Feature | Category | Description | Default |
+|---------|----------|-------------|---------|
+| `admin` | Feature | Admin panel (forms, template) | ❌ |
+| `api` | Feature | Basic API functionality (serializers, viewsets) | ❌ |
+| `api-only` | Bundle | REST API-only configuration | ❌ |
+| `auth` | Feature | Authentication foundation | ❌ |
+| `auth-jwt` | Auth | JWT authentication | ❌ |
+| `auth-oauth` | Auth | OAuth authentication | ❌ |
+| `auth-session` | Auth | Session authentication | ❌ |
+| `auth-token` | Auth | Token authentication | ❌ |
+| `cache` | Feature | Cache system | ❌ |
+| `cli-tools` | Bundle | CLI/background job configuration | ❌ |
+| `conf` | Crate | Configuration management | ❌ |
+| `contrib` | Feature | Contrib apps aggregation | ❌ |
+| `core` | Crate | Core functionality | ❌ |
+| `database` | Feature | General database | ❌ |
+| `db-cockroachdb` | Database | CockroachDB support | ❌ |
+| `db-mongodb` | Database | MongoDB support | ❌ |
+| `db-mysql` | Database | MySQL support | ❌ |
+| `db-postgres` | Database | PostgreSQL support | ❌ |
+| `db-sqlite` | Database | SQLite support | ❌ |
+| `default` | - | Default configuration (standard) | ✅ |
+| `di` | Crate | Dependency injection | ❌ |
+| `di-generator` | DI | DI generator | ❌ |
+| `forms` | Feature | Form processing | ❌ |
+| `full` | Bundle | All features enabled | ❌ |
+| `graphql` | Feature | GraphQL support | ❌ |
+| `graphql-server` | Bundle | GraphQL server configuration | ❌ |
+| `i18n` | Feature | Internationalization | ❌ |
+| `mail` | Feature | Email sending | ❌ |
+| `memcached-backend` | Cache | Memcached backend | ❌ |
+| `middleware` | Feature | Middleware foundation | ❌ |
+| `middleware-compression` | Middleware | Compression middleware | ❌ |
+| `middleware-cors` | Middleware | CORS middleware | ❌ |
+| `middleware-rate-limit` | Middleware | Rate limiting middleware | ❌ |
+| `middleware-security` | Middleware | Security middleware | ❌ |
+| `minimal` | Bundle | Minimal configuration | ❌ |
+| `redis-backend` | Cache | Redis backend | ❌ |
+| `redis-cluster` | Cache | Redis cluster | ❌ |
+| `redis-sentinel` | Cache | Redis sentinel | ❌ |
+| `rest` | Crate | REST API core | ❌ |
+| `serialize-json` | Serialization | JSON format | ✅ (serializers) |
+| `serialize-xml` | Serialization | XML format | ❌ |
+| `serialize-yaml` | Serialization | YAML format | ❌ |
+| `server` | Feature | Server components | ❌ |
+| `sessions` | Feature | Session management | ❌ |
+| `shortcuts` | Feature | Django-style shortcuts | ❌ |
+| `standard` | Bundle | Standard configuration (default) | ✅ |
+| `static-files` | Feature | Static file serving | ❌ |
+| `storage` | Feature | Storage system | ❌ |
+| `tasks` | Feature | Tasks/background jobs | ❌ |
+| `templates` | Feature | Template engine | ❌ |
+| `test` | Crate | Test utilities | ❌ |
+| `test-utils` | Bundle | Test environment configuration | ❌ |
+| `websocket-server` | Bundle | WebSocket server configuration | ❌ |
+| `websockets` | Feature | WebSocket support | ❌ |
 
-### カテゴリ別索引
+### Category Index
 
-#### バンドルFeature
+#### Bundle Features
 - `minimal`, `standard`, `full`
 - `api-only`, `graphql-server`, `websocket-server`, `cli-tools`, `test-utils`
 
-#### データベース
+#### Database
 - `database`, `db-postgres`, `db-mysql`, `db-sqlite`, `db-mongodb`, `db-cockroachdb`
 
-#### 認証
+#### Authentication
 - `auth`, `auth-jwt`, `auth-session`, `auth-oauth`, `auth-token`
 
-#### キャッシュ
+#### Cache
 - `cache`, `redis-backend`, `redis-cluster`, `redis-sentinel`, `memcached-backend`
 
-#### ミドルウェア
+#### Middleware
 - `middleware`, `middleware-cors`, `middleware-compression`, `middleware-security`, `middleware-rate-limit`
 
 #### API
 - `api`, `rest`, `graphql`, `serialize-json`, `serialize-xml`, `serialize-yaml`
 
-#### その他
+#### Other
 - `admin`, `forms`, `templates`, `websockets`, `i18n`, `mail`, `sessions`, `static-files`, `storage`, `tasks`, `shortcuts`, `server`
 
-### 構成テンプレート
+### Configuration Templates
 
-#### マイクロサービス
+#### Microservice
 ```toml
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["minimal"] }
 ```
@@ -1881,43 +1881,43 @@ reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["api-only", "db-postgres"] }
 ```
 
-#### GraphQLサーバー
+#### GraphQL Server
 ```toml
 reinhardt = { version = "0.1.0-alpha.1", default-features = false, features = ["graphql-server"] }
 ```
 
-#### フル機能
+#### Full Features
 ```toml
 reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 ```
 
 ---
 
-## まとめ
+## Summary
 
-Reinhardtのfeature flagシステムは、**3段階の粒度**（バンドル、機能グループ、個別機能）で**70以上のfeature**を提供しています。
+Reinhardt's feature flag system provides **over 70 features** with **3 levels of granularity** (bundle, feature group, individual features).
 
-### 主な特徴
+### Key Characteristics
 
-1. **柔軟な構成**: マイクロサービスからフル機能アプリまで、用途に応じた最適な構成を実現
-2. **自動依存解決**: 上位featureを有効化すると、必要な下位featureが自動的に有効化
-3. **パフォーマンス**: 不要な機能を除外することで、ビルド時間とバイナリサイズを削減
-4. **デフォルト構成**: `standard`がデフォルトで、ほとんどのプロジェクトに適したバランス型
+1. **Flexible Configuration**: Optimal configuration for any use case, from microservices to full-featured applications
+2. **Automatic Dependency Resolution**: Enabling higher-level features automatically enables required lower-level features
+3. **Performance**: Reduced build time and binary size by excluding unnecessary functionality
+4. **Default Configuration**: `standard` is the default, a balanced configuration suitable for most projects
 
-### 選択ガイド
+### Selection Guide
 
-| 用途 | 推奨構成 | バイナリサイズ |
-|-----|---------|--------------|
-| シンプルAPI | `minimal` | ~5-10 MB |
-| REST API | `api-only` + データベース | ~20-25 MB |
-| 一般的なWebアプリ | `standard` | ~25-30 MB |
-| フル機能アプリ | `full` | ~50+ MB |
+| Use Case | Recommended Configuration | Binary Size |
+|----------|--------------------------|-------------|
+| Simple API | `minimal` | ~5-10 MB |
+| REST API | `api-only` + database | ~20-25 MB |
+| General web app | `standard` | ~25-30 MB |
+| Full-featured app | `full` | ~50+ MB |
 
-詳細については、各セクションを参照してください。
+For detailed information, refer to each section.
 
 ---
 
-**関連ドキュメント**:
-- [README.md](../README.md) - プロジェクト概要
-- [GETTING_STARTED.md](GETTING_STARTED.md) - 入門ガイド
-- [CLAUDE.md](../CLAUDE.md) - 開発者向けガイドライン
+**Related Documentation**:
+- [README.md](../README.md) - Project overview
+- [GETTING_STARTED.md](GETTING_STARTED.md) - Getting started guide
+- [CLAUDE.md](../CLAUDE.md) - Developer guidelines
