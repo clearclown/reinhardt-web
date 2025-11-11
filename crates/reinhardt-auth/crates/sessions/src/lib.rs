@@ -48,7 +48,6 @@ pub mod backends;
 pub mod cleanup;
 pub mod config;
 pub mod csrf;
-pub mod di_support;
 pub mod middleware;
 pub mod migration;
 pub mod models;

@@ -11,7 +11,6 @@ pub mod cors;
 pub mod csp;
 pub mod csp_helpers;
 pub mod csrf;
-pub mod di_support;
 pub mod etag;
 pub mod flatpages;
 #[cfg(feature = "compression")]
@@ -84,7 +83,10 @@ mod tests {
 	use super::*;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-	use reinhardt_core::apps::{Handler, Middleware, Request, Response};
+	use reinhardt_core::{
+		Handler, Middleware,
+		http::{Request, Response},
+	};
 	use std::sync::Arc;
 
 	struct TestHandler;

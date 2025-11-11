@@ -7,7 +7,6 @@ pub mod actions;
 pub mod batch_operations;
 pub mod builder;
 pub mod cached;
-pub mod di_support;
 pub mod filtering_support;
 pub mod handler;
 pub mod metadata;
@@ -26,7 +25,6 @@ pub use batch_operations::{
 };
 pub use builder::ViewSetBuilder;
 pub use cached::{CacheConfig, CachedResponse, CachedViewSet, CachedViewSetTrait};
-pub use di_support::{DatabaseConnection, DiViewSet, ViewSetFactory};
 pub use filtering_support::{FilterConfig, FilterableViewSet, InMemoryFilter, OrderingConfig};
 pub use handler::{ModelViewSetHandler, ViewError, ViewSetHandler};
 pub use metadata::{ActionHandler, ActionMetadata, ActionRegistryEntry, FunctionActionHandler};
@@ -50,7 +48,7 @@ mod tests {
 	use super::*;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-	use reinhardt_core::apps::Request;
+	use reinhardt_core::http::Request;
 
 	#[allow(dead_code)]
 	#[derive(Debug, Clone)]

@@ -93,9 +93,7 @@ mod key_builder;
 mod layered;
 mod statistics;
 
-pub mod di_support;
 pub mod file_backend;
-pub mod middleware;
 pub mod tags;
 pub mod warming;
 
@@ -126,9 +124,6 @@ pub use key_builder::CacheKeyBuilder;
 pub use layered::LayeredCacheStore;
 pub use statistics::{CacheEntryInfo, CacheStatistics};
 
-// Re-export middleware and Redis backend
-pub use middleware::{CacheMiddleware, CacheMiddlewareConfig};
-
 #[cfg(feature = "redis-backend")]
 pub use redis_backend::RedisCache;
 
@@ -145,11 +140,6 @@ pub use redis_sentinel::{RedisSentinelCache, RedisSentinelConfig};
 
 #[cfg(feature = "redis-backend")]
 pub use pubsub::{CacheInvalidationChannel, CacheInvalidationMessage, CacheInvalidationSubscriber};
-
-// Re-export DI support
-pub use di_support::CacheService;
-#[cfg(feature = "redis-backend")]
-pub use di_support::RedisConfig;
 
 // Re-export file backend
 pub use file_backend::FileCache;
