@@ -9,9 +9,11 @@
 //! - `html`: HTML escaping and manipulation
 //! - `encoding`: Text encoding and URL encoding
 //! - `text`: Text manipulation utilities
+//! - `humanize`: Human-friendly formatting utilities
 //! - `logging`: Logging utilities (feature: `logging`)
 //! - `cache`: Caching utilities (feature: `cache`)
 //! - `storage`: Storage utilities (feature: `storage`)
+//! - `static`: Static file serving utilities (feature: `static`)
 //!
 //! ## Example
 //!
@@ -32,6 +34,9 @@
 //! let ordinal = text::ordinal(1); // "1st"
 //! ```
 
+// Core modules
+pub mod humanize;
+
 // Re-export utils-core modules
 pub use utils_core::{dateformat, encoding, html, text, timezone};
 
@@ -44,6 +49,9 @@ pub use reinhardt_cache as cache;
 
 #[cfg(feature = "storage")]
 pub use reinhardt_storage as storage;
+
+#[cfg(feature = "static")]
+pub use reinhardt_static as r#static;
 
 pub use dateformat::format as format_date;
 pub use encoding::{escapejs, slugify, truncate_chars, truncate_words, urldecode, urlencode};

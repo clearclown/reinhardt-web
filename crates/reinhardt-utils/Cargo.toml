@@ -18,14 +18,17 @@ utils-core = { version = "0.1.0-alpha.1", path = "crates/utils-core", package = 
 reinhardt-logging = { version = "0.1.0-alpha.1", path = "crates/logging", optional = true }
 reinhardt-cache = { version = "0.1.0-alpha.1", path = "crates/cache", optional = true }
 reinhardt-storage = { version = "0.1.0-alpha.1", path = "crates/storage", optional = true }
+reinhardt-static = { version = "0.1.0-alpha.1", path = "crates/static", optional = true }
 
 [features]
 default = []
 logging = ["dep:reinhardt-logging"]
 cache = ["dep:reinhardt-cache"]
 storage = ["dep:reinhardt-storage"]
-all = ["logging", "cache", "storage"]
+static = ["dep:reinhardt-static"]
+all = ["logging", "cache", "storage", "static"]
 
 [dev-dependencies]
 tokio = { workspace = true }
 proptest = "1.8"
+regex = "1.0"
