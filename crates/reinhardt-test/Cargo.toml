@@ -16,15 +16,15 @@ testcontainers = [
   "dep:redis",
   "dep:fs2",
 ]
-static = ["reinhardt-contrib/static"]
-websockets = ["reinhardt-contrib/websockets"]
+static = ["reinhardt-utils/static"]
+websockets = ["dep:reinhardt-websockets"]
 
 [dependencies]
-
 reinhardt-db = { workspace = true, features = ["orm", "backends"] }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
-reinhardt-contrib = { workspace = true, features = ["auth", "messages"] }
+reinhardt-auth = { workspace = true }
 reinhardt-server = { workspace = true }
+reinhardt-websockets = { workspace = true, optional = true }
 
 hyper = { workspace = true }
 tokio = { workspace = true }
@@ -58,13 +58,19 @@ redis = { workspace = true, optional = true, features = [
 fs2 = { version = "0.4", optional = true }
 
 # Optional dependencies for static feature
-# Note: contrib features are added to the main reinhardt-contrib dependency above
+# Note: static feature is provided via reinhardt-utils
 
 # Optional dependencies for websockets feature
-# Note: contrib features are added to the main reinhardt-contrib dependency above
+# Note: websockets feature uses top-level reinhardt-websockets crate
 reinhardt-rest = { workspace = true, features = ["serializers", "parsers"] }
-reinhardt-core = { workspace = true, features = ["types", "exception", "http", "apps"] }
-reinhardt-utils = { workspace = true, features = ["cache"] }
+reinhardt-core = { workspace = true, features = [
+  "types",
+  "exception",
+  "http",
+  "apps",
+  "messages",
+] }
+reinhardt-utils = { workspace = true, features = ["cache", "static"] }
 reinhardt-template = { workspace = true, features = ["renderers"] }
 
 tempfile = "3.8"

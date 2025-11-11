@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use reinhardt_apps::{Handler, Request, Response, Result};
-use reinhardt_contrib::auth::session::InMemorySessionStore;
-use reinhardt_contrib::auth::{SimpleUser, User};
+use reinhardt_auth::session::InMemorySessionStore;
+use reinhardt_auth::{SimpleUser, User};
 use reinhardt_middleware::AuthenticationMiddleware;
 use reinhardt_middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
 use reinhardt_urls::routers::{DefaultRouter, Router, path};

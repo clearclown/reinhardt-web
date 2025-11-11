@@ -3,7 +3,7 @@
 //! This module provides assertion functions for testing message functionality,
 //! similar to Django's message testing utilities.
 
-use reinhardt_contrib::messages::{Level, Message};
+use reinhardt_core::messages::{Level, Message};
 
 /// Error type for message assertion failures
 #[derive(Debug, thiserror::Error)]
@@ -39,10 +39,10 @@ pub type MessageAssertionResult<T> = Result<T, MessageAssertionError>;
 ///
 /// ```rust
 /// use reinhardt_test::messages::assert_message_count;
-/// use reinhardt_contrib::messages::Message;
+/// use reinhardt_core::messages::Message;
 ///
 /// let messages = vec![
-///     Message::new(reinhardt_contrib::messages::Level::Info, "Test message".to_string()),
+///     Message::new(reinhardt_core::messages::Level::Info, "Test message".to_string()),
 /// ];
 /// assert_message_count(&messages, 1).unwrap();
 /// ```
@@ -66,7 +66,7 @@ pub fn assert_message_count(
 ///
 /// ```rust
 /// use reinhardt_test::messages::{assert_message_exists, assert_message_level};
-/// use reinhardt_contrib::messages::{Message, Level};
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::new(Level::Info, "Test message".to_string()),
@@ -99,7 +99,7 @@ pub fn assert_message_exists(
 ///
 /// ```rust
 /// use reinhardt_test::messages::assert_message_level;
-/// use reinhardt_contrib::messages::{Message, Level};
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let message = Message::new(Level::Info, "Test message".to_string());
 /// assert_message_level(&message, Level::Info).unwrap();
@@ -123,7 +123,7 @@ pub fn assert_message_level(
 ///
 /// ```rust
 /// use reinhardt_test::messages::assert_message_tags;
-/// use reinhardt_contrib::messages::{Message, Level};
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let mut message = Message::new(Level::Info, "Test message".to_string());
 /// message.extra_tags = vec!["tag1".to_string(), "tag2".to_string()];
@@ -148,7 +148,7 @@ pub fn assert_message_tags(
 ///
 /// ```rust
 /// use reinhardt_test::messages::assert_messages;
-/// use reinhardt_contrib::messages::{Message, Level};
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::new(Level::Info, "First message".to_string()),
@@ -204,7 +204,7 @@ pub fn assert_messages(
 ///
 /// ```rust
 /// use reinhardt_test::messages::MessagesTestMixin;
-/// use reinhardt_contrib::messages::{Message, Level};
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let mut mixin = MessagesTestMixin::new();
 /// let messages = vec![
@@ -318,7 +318,7 @@ impl MessagesTestMixin {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_contrib::messages::{Level, Message};
+	use reinhardt_core::messages::{Level, Message};
 
 	#[test]
 	fn test_assert_message_count_success() {

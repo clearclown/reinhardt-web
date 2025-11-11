@@ -8,21 +8,60 @@ publish = false
 [dependencies]
 # Reinhardt crates
 reinhardt-commands = { workspace = true }
-reinhardt-contrib = { workspace = true, features = ["admin", "auth", "contenttypes", "graphql", "i18n", "mail", "messages", "sessions", "static", "websockets"] }
-reinhardt-core = { workspace = true, features = ["exception", "macros", "security", "signals", "types", "validators", "di", "params", "apps", "http"] }
-reinhardt-db = { workspace = true, features = ["hybrid", "migrations"] }
+reinhardt-auth = { workspace = true }
+reinhardt-admin-panel = { workspace = true }
+reinhardt-graphql = { workspace = true }
+reinhardt-websockets = { workspace = true }
+reinhardt-i18n = { workspace = true }
+reinhardt-mail = { workspace = true }
+reinhardt-core = { workspace = true, features = [
+    "exception",
+    "macros",
+    "security",
+    "signals",
+    "types",
+    "validators",
+    "di",
+    "params",
+    "apps",
+    "http",
+    "messages",
+] }
+reinhardt-db = { workspace = true, features = [
+    "hybrid",
+    "migrations",
+    "contenttypes",
+] }
 reinhardt-conf = { workspace = true, features = ["settings"] }
 reinhardt-forms = { workspace = true }
 reinhardt-middleware = { workspace = true }
-reinhardt-orm = { path = "../crates/reinhardt-db/crates/orm", features = ["postgres", "sqlite"] }
-reinhardt-rest = { workspace = true, features = ["browsable-api", "filters", "metadata", "negotiation", "pagination", "parsers", "serializers", "throttling", "versioning"] }
+reinhardt-orm = { path = "../crates/reinhardt-db/crates/orm", features = [
+    "postgres",
+    "sqlite",
+] }
+reinhardt-rest = { workspace = true, features = [
+    "browsable-api",
+    "filters",
+    "metadata",
+    "negotiation",
+    "pagination",
+    "parsers",
+    "serializers",
+    "throttling",
+    "versioning",
+] }
 reinhardt-urls = { workspace = true, features = ["proxy", "routers"] }
 reinhardt-server = { workspace = true }
 reinhardt-shortcuts = { workspace = true }
 reinhardt-tasks = { workspace = true }
 reinhardt-template = { workspace = true, features = ["renderers"] }
 reinhardt-test = { workspace = true }
-reinhardt-utils = { workspace = true, features = ["cache", "logging", "storage"] }
+reinhardt-utils = { workspace = true, features = [
+    "cache",
+    "logging",
+    "storage",
+    "static",
+] }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 
 # External dependencies

@@ -9,10 +9,15 @@ autotests = true
 
 [dependencies]
 # Reinhardt crates
-reinhardt-core = { path = "../../crates/reinhardt-core", features = ["http", "types", "exception", "apps", "di"] }
-reinhardt-contrib = { path = "../../crates/reinhardt-contrib" }
-reinhardt-admin = { path = "../../crates/reinhardt-contrib/crates/admin" }
-reinhardt-auth = { path = "../../crates/reinhardt-contrib/crates/auth" }
+reinhardt-core = { workspace = true, features = [
+  "http",
+  "types",
+  "exception",
+  "apps",
+  "di",
+] }
+reinhardt-admin = { workspace = true }
+reinhardt-auth = { workspace = true }
 reinhardt-security = { path = "../../crates/reinhardt-core/crates/security" }
 reinhardt-middleware = { path = "../../crates/reinhardt-middleware" }
 reinhardt-templates = { path = "../../crates/reinhardt-template/crates/templates" }
@@ -20,30 +25,32 @@ reinhardt-routers = { path = "../../crates/reinhardt-urls/crates/routers" }
 reinhardt-proxy = { path = "../../crates/reinhardt-urls/crates/proxy" }
 reinhardt-viewsets = { path = "../../crates/reinhardt-views/crates/viewsets" }
 reinhardt-openapi = { path = "../../crates/reinhardt-rest/crates/openapi" }
-reinhardt-graphql = { path = "../../crates/reinhardt-contrib/crates/graphql" }
+reinhardt-graphql = { workspace = true }
 reinhardt-db = { path = "../../crates/reinhardt-db" }
 reinhardt-orm = { path = "../../crates/reinhardt-db/crates/orm" }
 reinhardt-migrations = { path = "../../crates/reinhardt-db/crates/migrations" }
 backends = { path = "../../crates/reinhardt-db/crates/backends", package = "reinhardt-db-backends" }
 reinhardt-metadata = { path = "../../crates/reinhardt-rest/crates/metadata" }
 reinhardt-versioning = { path = "../../crates/reinhardt-rest/crates/versioning" }
-reinhardt-messages = { path = "../../crates/reinhardt-contrib/crates/messages" }
-reinhardt-parsers = { path = "../../crates/reinhardt-rest/crates/parsers" }
+reinhardt-messages = { workspace = true }
+reinhardt-parsers = { workspace = true }
 reinhardt-exception = { path = "../../crates/reinhardt-core/crates/exception" }
 reinhardt-types = { path = "../../crates/reinhardt-core/crates/types" }
 reinhardt-signals = { path = "../../crates/reinhardt-core/crates/signals" }
-reinhardt-websockets = { path = "../../crates/reinhardt-contrib/crates/websockets" }
+reinhardt-websockets = { workspace = true }
 reinhardt-server = { path = "../../crates/reinhardt-server" }
 reinhardt-logging = { path = "../../crates/reinhardt-utils/crates/logging" }
-reinhardt-mail = { path = "../../crates/reinhardt-contrib/crates/mail" }
-reinhardt-contenttypes = { path = "../../crates/reinhardt-contrib/crates/contenttypes", features = ["database"] }
+reinhardt-mail = { workspace = true }
+reinhardt-contenttypes = { workspace = true, features = ["database"] }
 reinhardt-macros = { path = "../../crates/reinhardt-core/crates/macros" }
-reinhardt-static = { path = "../../crates/reinhardt-contrib/crates/static", features = [
-  "templates-integration",
+reinhardt-static = { workspace = true, features = ["templates-integration"] }
+reinhardt-cache = { path = "../../crates/reinhardt-utils/crates/cache", features = [
+  "redis-backend",
+  "redis-sentinel",
+  "memcached-backend",
 ] }
-reinhardt-cache = { path = "../../crates/reinhardt-utils/crates/cache", features = ["redis-backend", "redis-sentinel", "memcached-backend"] }
 reinhardt-views-core = { path = "../../crates/reinhardt-views/crates/views-core" }
-reinhardt-negotiation = { path = "../../crates/reinhardt-rest/crates/negotiation" }
+reinhardt-negotiation = { workspace = true }
 reinhardt-renderers = { path = "../../crates/reinhardt-template/crates/renderers" }
 reinhardt-validators = { path = "../../crates/reinhardt-core/crates/validators" }
 reinhardt-serializers = { path = "../../crates/reinhardt-rest/crates/serializers" }
@@ -55,19 +62,22 @@ reinhardt-settings = { path = "../../crates/reinhardt-conf/crates/settings", fea
   "caching",
 ] }
 reinhardt-browsable-api = { path = "../../crates/reinhardt-rest/crates/browsable-api" }
-reinhardt-i18n = { path = "../../crates/reinhardt-contrib/crates/i18n" }
+reinhardt-i18n = { workspace = true }
 reinhardt-tasks = { path = "../../crates/reinhardt-tasks" }
 reinhardt-rest = { path = "../../crates/reinhardt-rest" }
-reinhardt-pagination = { path = "../../crates/reinhardt-rest/crates/pagination" }
+reinhardt-pagination = { workspace = true }
 reinhardt-filters = { path = "../../crates/reinhardt-rest/crates/filters" }
 reinhardt-forms = { path = "../../crates/reinhardt-forms" }
 reinhardt-throttling = { path = "../../crates/reinhardt-rest/crates/throttling" }
-reinhardt-utils = { path = "../../crates/reinhardt-utils", features = ["cache", "logging"] }
-reinhardt-storage = { path = "../../crates/reinhardt-utils/crates/storage" }
-reinhardt-test = { path = "../../crates/reinhardt-test", features = ["testcontainers"] }
-reinhardt-sessions = { path = "../../crates/reinhardt-contrib/crates/sessions", features = [
-  "database",
+reinhardt-utils = { path = "../../crates/reinhardt-utils", features = [
+  "cache",
+  "logging",
 ] }
+reinhardt-storage = { path = "../../crates/reinhardt-utils/crates/storage" }
+reinhardt-test = { path = "../../crates/reinhardt-test", features = [
+  "testcontainers",
+] }
+reinhardt-sessions = { workspace = true, features = ["database"] }
 
 # Web framework (using reinhardt-apps)
 tokio = { version = "1.0", features = ["full"] }
