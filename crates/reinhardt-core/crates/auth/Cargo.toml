@@ -24,8 +24,12 @@ sha2 = { workspace = true }
 hex = "0.4"
 hyper = { workspace = true }
 reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
-reinhardt-types = { path = "../types", version = "0.1.0-alpha.1" }
+reinhardt-types = { path = "../types", version = "0.1.0-alpha.1", features = ["http"] }
 
 # Optional password hashers
 argon2 = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+bytes = { workspace = true }

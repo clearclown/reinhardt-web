@@ -29,6 +29,7 @@ default = [
   "serializers",
 ]
 types = ["dep:reinhardt-types"]
+types-http = ["types", "reinhardt-types/http"]
 exception = ["dep:reinhardt-exception"]
 signals = ["dep:reinhardt-signals"]
 macros = ["dep:reinhardt-macros"]
@@ -36,3 +37,4 @@ security = ["dep:reinhardt-security"]
 validators = ["dep:reinhardt-validators"]
 serializers = ["dep:reinhardt-core-serializers"]
 auth = ["dep:reinhardt-core-auth"]
+argon2-hasher = ["auth", "reinhardt-core-auth/argon2-hasher"]

@@ -7,9 +7,13 @@ description = "Core type definitions and common types for the Reinhardt framewor
 repository.workspace = true
 
 [dependencies]
-reinhardt-http = { workspace = true }
-reinhardt-exception = { path = "../../../reinhardt-core/crates/exception" }
+reinhardt-http = { workspace = true, optional = true }
+reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
 async-trait = { workspace = true }
+
+[features]
+default = []
+http = ["dep:reinhardt-http"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }
