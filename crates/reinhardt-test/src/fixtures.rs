@@ -9,6 +9,9 @@
 //! - `mock` - mockall-based mock implementations for database backends
 //! - `testcontainers` - Docker container fixtures (PostgreSQL, Redis, LocalStack)
 //! - `resources` - Suite-wide shared resources with automatic lifecycle management
+//! - `validator` - Validator integration test fixtures
+//! - `auth` - Authentication integration test fixtures
+//! - `admin` - Admin panel integration test fixtures
 //!
 //! ## Usage Examples
 //!
@@ -66,11 +69,17 @@
 // Module declarations
 pub mod loader;
 pub mod mock;
+pub mod server;
 
 #[cfg(feature = "testcontainers")]
 pub mod resources;
 #[cfg(feature = "testcontainers")]
 pub mod testcontainers;
+
+// New fixture modules for integration tests
+pub mod admin;
+pub mod auth;
+pub mod validator;
 
 // Re-export commonly used items from submodules
 
@@ -82,6 +91,9 @@ pub use loader::{
 
 // From mock module
 pub use mock::{MockDatabaseBackend, mock_connection, mock_database};
+
+// From server module
+pub use server::{TestServerGuard, test_server_guard};
 
 // From testcontainers module (conditional on feature)
 #[cfg(feature = "testcontainers")]

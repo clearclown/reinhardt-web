@@ -24,6 +24,7 @@ reinhardt-db = { workspace = true, features = ["orm", "backends"] }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 reinhardt-auth = { workspace = true }
 reinhardt-server = { workspace = true }
+reinhardt-routers = { path = "../reinhardt-urls/crates/routers" }
 reinhardt-websockets = { workspace = true, optional = true }
 
 hyper = { workspace = true }
