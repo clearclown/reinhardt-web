@@ -5,10 +5,10 @@
 
 use linkme::distributed_slice;
 use reinhardt_apps::registry::{
-	MODELS, ModelMetadata, RELATIONSHIPS, RelationshipMetadata, RelationshipType,
 	clear_model_cache, clear_relationship_cache, find_model, get_models_for_app,
 	get_registered_models, get_registered_relationships, get_relationships_for_model,
-	get_relationships_to_model,
+	get_relationships_to_model, ModelMetadata, RelationshipMetadata, RelationshipType, MODELS,
+	RELATIONSHIPS,
 };
 use reinhardt_test::resource::{TeardownGuard, TestResource};
 use rstest::*;
@@ -189,16 +189,12 @@ fn test_get_registered_relationships() {
 	assert!(relationships.len() >= 2);
 
 	// Check that our test relationships are present
-	assert!(
-		relationships
-			.iter()
-			.any(|r| r.field_name == "author" && r.from_model == "blog.Post")
-	);
-	assert!(
-		relationships
-			.iter()
-			.any(|r| r.field_name == "tags" && r.from_model == "blog.Post")
-	);
+	assert!(relationships
+		.iter()
+		.any(|r| r.field_name == "author" && r.from_model == "blog.Post"));
+	assert!(relationships
+		.iter()
+		.any(|r| r.field_name == "tags" && r.from_model == "blog.Post"));
 }
 
 #[rstest]
@@ -226,11 +222,9 @@ fn test_get_relationships_to_model(_relationship_cache: TeardownGuard<Relationsh
 	let user_rels = get_relationships_to_model("auth.User");
 	assert!(user_rels.len() >= 1);
 
-	assert!(
-		user_rels
-			.iter()
-			.any(|r| r.field_name == "author" && r.from_model == "blog.Post")
-	);
+	assert!(user_rels
+		.iter()
+		.any(|r| r.field_name == "author" && r.from_model == "blog.Post"));
 }
 
 #[rstest]

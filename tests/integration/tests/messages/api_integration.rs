@@ -169,7 +169,8 @@ mod tests {
 		assert_eq!(messages[0].level, Level::Info);
 
 		// Add another message and verify both are stored
-		let result2 = wrapper_with_request.add_message(Message::new(Level::Warning, "Second message"));
+		let result2 =
+			wrapper_with_request.add_message(Message::new(Level::Warning, "Second message"));
 		assert!(result2.is_ok());
 
 		let all_messages = wrapper_with_request.get_messages();

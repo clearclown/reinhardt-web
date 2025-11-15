@@ -3,17 +3,17 @@
 //! These tests verify file system watching and automatic configuration reload.
 
 #[cfg(feature = "hot-reload")]
-use reinhardt_conf::settings::backends::MemoryBackend;
+use reinhardt_settings::backends::MemoryBackend;
 #[cfg(feature = "hot-reload")]
-use reinhardt_conf::settings::dynamic::DynamicSettings;
+use reinhardt_settings::dynamic::DynamicSettings;
 #[cfg(feature = "hot-reload")]
-use reinhardt_conf::settings::hot_reload::HotReloadManager;
+use reinhardt_settings::hot_reload::HotReloadManager;
 #[cfg(feature = "hot-reload")]
 use std::fs;
 #[cfg(feature = "hot-reload")]
-use std::sync::Arc;
-#[cfg(feature = "hot-reload")]
 use std::sync::atomic::{AtomicU32, Ordering};
+#[cfg(feature = "hot-reload")]
+use std::sync::Arc;
 #[cfg(feature = "hot-reload")]
 use std::time::Duration;
 #[cfg(feature = "hot-reload")]

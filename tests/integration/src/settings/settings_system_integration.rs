@@ -3,7 +3,7 @@
 //! These tests verify that reinhardt-settings works correctly with loading,
 //! validation, and access patterns.
 
-use reinhardt_conf::settings::{DatabaseConfig, Settings, TemplateConfig};
+use reinhardt_settings::{DatabaseConfig, Settings, TemplateConfig};
 use std::path::PathBuf;
 
 // ============================================================================
@@ -64,11 +64,9 @@ fn test_add_middleware() {
 	settings.add_middleware("myapp.middleware.CustomMiddleware");
 
 	assert_eq!(settings.middleware.len(), initial_count + 1);
-	assert!(
-		settings
-			.middleware
-			.contains(&"myapp.middleware.CustomMiddleware".to_string())
-	);
+	assert!(settings
+		.middleware
+		.contains(&"myapp.middleware.CustomMiddleware".to_string()));
 }
 
 #[test]

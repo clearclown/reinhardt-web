@@ -2,8 +2,9 @@
 
 use async_trait::async_trait;
 use hyper::Method;
-use reinhardt_apps::{Handler, Request, Response, Result};
+use reinhardt_http::{Error, Request, Response, Result};
 use reinhardt_routers::UnifiedRouter;
+use reinhardt_types::Handler;
 use reinhardt_viewsets::{Action, ActionType, ViewSet};
 use std::sync::Arc;
 

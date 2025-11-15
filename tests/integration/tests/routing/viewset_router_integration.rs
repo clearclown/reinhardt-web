@@ -1,7 +1,8 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Handler, Request};
+use reinhardt_http::Request;
 use reinhardt_routers::{DefaultRouter, Router};
+use reinhardt_types::Handler;
 use reinhardt_viewsets::{GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
@@ -195,7 +196,7 @@ async fn test_viewset_router_http_methods() {
 #[tokio::test]
 async fn test_extra_actions_with_router() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -213,8 +214,8 @@ async fn test_extra_actions_with_router() {
 			&self,
 			_request: Request,
 			_action: reinhardt_viewsets::Action,
-		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
-			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
+		) -> reinhardt_http::Result<reinhardt_http::Response> {
+			reinhardt_http::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
 	}
 
@@ -225,7 +226,7 @@ async fn test_extra_actions_with_router() {
 		.with_detail(false)
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok()
+				reinhardt_http::Response::ok()
 					.with_json(&serde_json::json!({"action": "custom_list"}))
 			})
 		}));
@@ -234,7 +235,7 @@ async fn test_extra_actions_with_router() {
 		.with_detail(true)
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok()
+				reinhardt_http::Response::ok()
 					.with_json(&serde_json::json!({"action": "custom_detail"}))
 			})
 		}));
@@ -286,7 +287,7 @@ async fn test_extra_actions_with_router() {
 #[tokio::test]
 async fn test_get_extra_actions() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -304,8 +305,8 @@ async fn test_get_extra_actions() {
 			&self,
 			_request: Request,
 			_action: reinhardt_viewsets::Action,
-		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
-			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
+		) -> reinhardt_http::Result<reinhardt_http::Response> {
+			reinhardt_http::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
 	}
 
@@ -316,7 +317,7 @@ async fn test_get_extra_actions() {
 		.with_detail(false)
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok().with_json(&serde_json::json!({"action": "list"}))
+				reinhardt_http::Response::ok().with_json(&serde_json::json!({"action": "list"}))
 			})
 		}));
 
@@ -324,7 +325,7 @@ async fn test_get_extra_actions() {
 		.with_detail(true)
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok().with_json(&serde_json::json!({"action": "detail"}))
+				reinhardt_http::Response::ok().with_json(&serde_json::json!({"action": "detail"}))
 			})
 		}));
 
@@ -339,18 +340,16 @@ async fn test_get_extra_actions() {
 
 	assert_eq!(extra_actions.len(), 2);
 	assert!(extra_actions.iter().any(|a| a.name == "custom_list_action"));
-	assert!(
-		extra_actions
-			.iter()
-			.any(|a| a.name == "custom_detail_action")
-	);
+	assert!(extra_actions
+		.iter()
+		.any(|a| a.name == "custom_detail_action"));
 }
 
 /// Test extra action URL map generation
 #[tokio::test]
 async fn test_extra_action_url_map() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -368,8 +367,8 @@ async fn test_extra_action_url_map() {
 			&self,
 			_request: Request,
 			_action: reinhardt_viewsets::Action,
-		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
-			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
+		) -> reinhardt_http::Result<reinhardt_http::Response> {
+			reinhardt_http::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
 	}
 
@@ -380,7 +379,7 @@ async fn test_extra_action_url_map() {
 		.with_detail(false)
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok()
+				reinhardt_http::Response::ok()
 					.with_json(&serde_json::json!({"action": "custom_list"}))
 			})
 		}));
@@ -409,7 +408,7 @@ async fn test_extra_action_url_map() {
 #[tokio::test]
 async fn test_action_names_with_kwargs() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -427,8 +426,8 @@ async fn test_action_names_with_kwargs() {
 			&self,
 			_request: Request,
 			_action: reinhardt_viewsets::Action,
-		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
-			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
+		) -> reinhardt_http::Result<reinhardt_http::Response> {
+			reinhardt_http::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
 	}
 
@@ -440,7 +439,7 @@ async fn test_action_names_with_kwargs() {
 		.with_custom_name("Custom Name")
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok()
+				reinhardt_http::Response::ok()
 					.with_json(&serde_json::json!({"action": "named_action"}))
 			})
 		}));
@@ -450,7 +449,7 @@ async fn test_action_names_with_kwargs() {
 		.with_suffix("Custom Suffix")
 		.with_handler(FunctionActionHandler::new(|_req| {
 			Box::pin(async {
-				reinhardt_apps::Response::ok()
+				reinhardt_http::Response::ok()
 					.with_json(&serde_json::json!({"action": "suffixed_action"}))
 			})
 		}));
@@ -598,7 +597,6 @@ async fn test_login_required_middleware_compat() {
 	use hyper::{Method, Uri, Version};
 	use reinhardt_test::TestViewSet;
 	use reinhardt_viewsets::viewset_actions;
-	
 
 	// Test ViewSet without login required
 	let viewset = TestViewSet::new("test");

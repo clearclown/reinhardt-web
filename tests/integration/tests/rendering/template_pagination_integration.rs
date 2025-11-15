@@ -9,7 +9,7 @@
 //! - Integration with reinhardt-pagination
 //! - Error handling in paginated templates
 
-use reinhardt_templates::{FileSystemTemplateLoader, custom_filters::*};
+use reinhardt_templates::{custom_filters::*, FileSystemTemplateLoader};
 use std::collections::HashMap;
 use tempfile::TempDir;
 use tera::{Context, Tera};
@@ -598,7 +598,11 @@ fn test_pagination_with_filters() {
 	};
 
 	let title_text = "page 1 of 3";
-	let formatted_value = title(&tera::Value::String(title_text.to_string()), &HashMap::new()).unwrap();
+	let formatted_value = title(
+		&tera::Value::String(title_text.to_string()),
+		&HashMap::new(),
+	)
+	.unwrap();
 	let formatted_title = formatted_value.as_str().unwrap();
 	assert_eq!(formatted_title, "Page 1 Of 3");
 

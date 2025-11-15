@@ -25,12 +25,12 @@
 //! This eliminates non-deterministic test failures in concurrent test execution.
 
 use reinhardt_macros::Model;
-use reinhardt_orm::{QuerySet, composite_pk::PkValue, manager::init_database};
+use reinhardt_orm::{composite_pk::PkValue, manager::init_database, QuerySet};
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use serial_test::serial;
 use std::collections::HashMap;
-use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 use tokio::sync::OnceCell;
 
 /// Global PostgreSQL container instance shared across all tests

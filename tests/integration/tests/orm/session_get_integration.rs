@@ -9,12 +9,12 @@
 //! Run with: cargo test --test session_get_integration_tests
 
 use reinhardt_macros::Model;
-use reinhardt_orm::{DatabaseConnection, query_types::DbBackend, session::Session};
+use reinhardt_orm::{query_types::DbBackend, session::Session, DatabaseConnection};
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{AnyPool, Row};
 use std::sync::Arc;
-use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 
 /// Test model using derive(Model) macro
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Model)]

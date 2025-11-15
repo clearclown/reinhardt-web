@@ -5,10 +5,10 @@
 //! with and without manifest-based hashing.
 
 use reinhardt_static::{
-	ManifestStaticFilesStorage, StaticFilesConfig, TemplateStaticConfig,
 	init_template_static_config, init_template_static_config_with_manifest,
+	ManifestStaticFilesStorage, StaticFilesConfig, TemplateStaticConfig,
 };
-use reinhardt_templates::{StaticConfig, static_filter};
+use reinhardt_templates::{static_filter, StaticConfig};
 use serial_test::serial;
 use std::collections::HashMap;
 use std::path::PathBuf;

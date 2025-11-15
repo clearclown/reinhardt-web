@@ -2,7 +2,7 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_apps::Request;
+use reinhardt_http::Request;
 use reinhardt_viewsets::{
 	FilterConfig, FilterableViewSet, ModelViewSet, OrderingConfig, ReadOnlyModelViewSet,
 };

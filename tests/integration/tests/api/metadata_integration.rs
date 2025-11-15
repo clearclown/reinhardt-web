@@ -5,7 +5,7 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Error, Request, Response, Result};
+use reinhardt_http::{Error, Request, Response, Result};
 use reinhardt_metadata::{
 	BaseMetadata, FieldInfoBuilder, FieldType, MetadataOptions, SimpleMetadata,
 };

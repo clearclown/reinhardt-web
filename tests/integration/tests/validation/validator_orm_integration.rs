@@ -259,7 +259,6 @@ mod constraint_validation_tests {
 	#[tokio::test]
 	async fn test_unique_constraint_database_violation() {
 		use reinhardt_validators::UniqueValidator;
-		
 
 		let db = TestDatabase::new()
 			.await
@@ -428,9 +427,7 @@ mod relationship_validation_tests {
 		);
 
 		// Validate existing user_id (should pass)
-		let result = user_validator
-			.validate_async(user_id.to_string())
-			.await;
+		let result = user_validator.validate_async(user_id.to_string()).await;
 		assert!(result.is_ok());
 
 		// Validate non-existing user_id (should fail)
@@ -452,7 +449,9 @@ mod relationship_validation_tests {
 		let result = product_validator.validate_async("88888").await;
 		assert!(result.is_err());
 		let error = result.unwrap_err();
-		assert!(error.to_string().contains("Foreign key reference not found"));
+		assert!(error
+			.to_string()
+			.contains("Foreign key reference not found"));
 		assert!(error.to_string().contains("product_id"));
 		assert!(error.to_string().contains("88888"));
 
@@ -497,13 +496,11 @@ mod relationship_validation_tests {
 		assert!(order_id > 0);
 
 		// Attempt to update order with non-existent user_id (should fail)
-		let update_result = sqlx::query(
-			"UPDATE test_orders SET user_id = $1 WHERE id = $2",
-		)
-		.bind(99999)
-		.bind(order_id)
-		.execute(db.pool.as_ref())
-		.await;
+		let update_result = sqlx::query("UPDATE test_orders SET user_id = $1 WHERE id = $2")
+			.bind(99999)
+			.bind(order_id)
+			.execute(db.pool.as_ref())
+			.await;
 
 		assert!(update_result.is_err());
 		let error_message = update_result.unwrap_err().to_string();
@@ -543,11 +540,10 @@ mod relationship_validation_tests {
 
 		// Attempt to delete user (should fail because of FK constraint)
 		// Note: test_orders table does NOT have ON DELETE CASCADE
-		let delete_result =
-			sqlx::query("DELETE FROM test_users WHERE id = $1")
-				.bind(user_id)
-				.execute(db.pool.as_ref())
-				.await;
+		let delete_result = sqlx::query("DELETE FROM test_users WHERE id = $1")
+			.bind(user_id)
+			.execute(db.pool.as_ref())
+			.await;
 
 		assert!(delete_result.is_err());
 		let error_message = delete_result.unwrap_err().to_string();

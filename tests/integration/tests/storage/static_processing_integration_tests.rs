@@ -4,10 +4,10 @@
 //! with the processing pipeline.
 
 use reinhardt_static::processing::{
-	Processor, ProcessingConfig, ProcessingPipeline,
 	bundle::{AssetBundler, BundleConfig},
 	compress::{BrotliCompressor, CompressionConfig, GzipCompressor},
 	minify::{CssMinifier, JsMinifier},
+	ProcessingConfig, ProcessingPipeline, Processor,
 };
 use std::path::PathBuf;
 use tempfile::tempdir;

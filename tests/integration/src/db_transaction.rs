@@ -6,7 +6,7 @@
 use reinhardt_orm::connection::DatabaseConnection;
 use rstest::*;
 use std::sync::Arc;
-use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 
 /// Database transaction fixture that automatically rolls back on drop
 ///
@@ -25,7 +25,7 @@ use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner
 ///
 /// ```rust,no_run
 /// use rstest::*;
-/// use super::db_transaction_fixture;
+/// use reinhardt_integration_tests::db_transaction::db_transaction_fixture;
 ///
 /// #[rstest]
 /// #[tokio::test]

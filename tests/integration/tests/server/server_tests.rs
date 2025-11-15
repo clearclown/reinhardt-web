@@ -1,18 +1,16 @@
 //! Integration tests for Server implementation
 
 use hyper::Method;
-use reinhardt_apps::Response;
+use reinhardt_http::Response;
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_server::HttpServer;
 use std::sync::Arc;
 
 #[tokio::test]
 async fn test_server_basic_request() {
-	let router = Arc::new(Router::new().function(
-		"/test",
-		Method::GET,
-		|_req| async { Ok(Response::ok().with_body("Server works!")) },
-	));
+	let router = Arc::new(Router::new().function("/test", Method::GET, |_req| async {
+		Ok(Response::ok().with_body("Server works!"))
+	}));
 
 	// Spawn server in background
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
@@ -44,16 +42,12 @@ async fn test_server_basic_request() {
 async fn test_server_multiple_requests() {
 	let router = Arc::new(
 		Router::new()
-			.function(
-				"/hello",
-				Method::GET,
-				|_req| async { Ok(Response::ok().with_body("Hello!")) },
-			)
-			.function(
-				"/goodbye",
-				Method::GET,
-				|_req| async { Ok(Response::ok().with_body("Goodbye!")) },
-			),
+			.function("/hello", Method::GET, |_req| async {
+				Ok(Response::ok().with_body("Hello!"))
+			})
+			.function("/goodbye", Method::GET, |_req| async {
+				Ok(Response::ok().with_body("Goodbye!"))
+			}),
 	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
@@ -87,14 +81,12 @@ async fn test_server_multiple_requests() {
 
 #[tokio::test]
 async fn test_server_post_request() {
-	let router = Arc::new(Router::new().function(
-		"/submit",
-		Method::POST,
-		|request| async move {
+	let router = Arc::new(
+		Router::new().function("/submit", Method::POST, |request| async move {
 			let body_str = String::from_utf8(request.body().to_vec()).unwrap_or_default();
 			Ok(Response::ok().with_body(format!("Received: {}", body_str)))
-		},
-	));
+		}),
+	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -122,14 +114,12 @@ async fn test_server_post_request() {
 
 #[tokio::test]
 async fn test_server_json_request_response() {
-	let router = Arc::new(Router::new().function(
-		"/echo",
-		Method::POST,
-		|request| async move {
+	let router = Arc::new(
+		Router::new().function("/echo", Method::POST, |request| async move {
 			let json: serde_json::Value = request.json()?;
 			Response::ok().with_json(&json)
-		},
-	));
+		}),
+	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -164,11 +154,11 @@ async fn test_server_json_request_response() {
 
 #[tokio::test]
 async fn test_server_404_response() {
-	let router = Arc::new(Router::new().function(
-		"/exists",
-		Method::GET,
-		|_req| async { Ok(Response::ok().with_body("I exist!")) },
-	));
+	let router = Arc::new(
+		Router::new().function("/exists", Method::GET, |_req| async {
+			Ok(Response::ok().with_body("I exist!"))
+		}),
+	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -194,11 +184,11 @@ async fn test_server_404_response() {
 
 #[tokio::test]
 async fn test_server_concurrent_requests() {
-	let router = Arc::new(Router::new().function(
-		"/test",
-		Method::GET,
-		|request| async move { Ok(Response::ok().with_body(format!("Method: {}", request.method))) },
-	));
+	let router = Arc::new(
+		Router::new().function("/test", Method::GET, |request| async move {
+			Ok(Response::ok().with_body(format!("Method: {}", request.method)))
+		}),
+	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -239,18 +229,16 @@ async fn test_server_concurrent_requests() {
 
 #[tokio::test]
 async fn test_server_custom_headers() {
-	let router = Arc::new(Router::new().function(
-		"/headers",
-		Method::GET,
-		|request| async move {
+	let router = Arc::new(
+		Router::new().function("/headers", Method::GET, |request| async move {
 			let user_agent = request
 				.headers
 				.get(hyper::header::USER_AGENT)
 				.and_then(|v| v.to_str().ok())
 				.unwrap_or("Unknown");
 			Ok(Response::ok().with_body(format!("User-Agent: {}", user_agent)))
-		},
-	));
+		}),
+	);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -278,14 +266,13 @@ async fn test_server_custom_headers() {
 
 #[tokio::test]
 async fn test_server_path_parameters() {
-	let router = Arc::new(Router::new().function(
-		"/users/:id",
-		Method::GET,
-		|request| async move {
-			let id = request.path_params.get("id").unwrap();
-			Ok(Response::ok().with_body(format!("ID: {}", id)))
-		},
-	));
+	let router =
+		Arc::new(
+			Router::new().function("/users/:id", Method::GET, |request| async move {
+				let id = request.path_params.get("id").unwrap();
+				Ok(Response::ok().with_body(format!("ID: {}", id)))
+			}),
+		);
 
 	let addr = "127.0.0.1:0".parse::<std::net::SocketAddr>().unwrap();
 	let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

@@ -6,9 +6,9 @@
 
 use reinhardt_utils::cache::{CacheInvalidationChannel, CacheInvalidationMessage};
 use rstest::*;
-use testcontainers::{ContainerAsync, runners::AsyncRunner};
+use testcontainers::{runners::AsyncRunner, ContainerAsync};
 use testcontainers_modules::redis::Redis;
-use tokio::time::{Duration, sleep};
+use tokio::time::{sleep, Duration};
 
 /// rstest fixture providing a Redis container and connection URL
 ///

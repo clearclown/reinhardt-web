@@ -137,13 +137,13 @@ mod tests {
 	#[tokio::test]
 	async fn test_message_persistence_across_requests() {
 		// Test: Messages added in one request should appear in the next request
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use reinhardt_http::{Request, Response};
 		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
 		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use reinhardt_types::{Handler, Middleware};
-		use async_trait::async_trait;
-		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use std::sync::Arc;
 
 		// Mock handler that adds a message
@@ -209,13 +209,13 @@ mod tests {
 	#[tokio::test]
 	async fn test_message_cleanup_after_display() {
 		// Test: Messages should be cleared after being retrieved
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use reinhardt_http::{Request, Response};
 		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
 		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use reinhardt_types::{Handler, Middleware};
-		use async_trait::async_trait;
-		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use std::sync::Arc;
 
 		// Handler that retrieves messages (simulating display)
@@ -244,7 +244,11 @@ mod tests {
 				// Verify no messages remain
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
-					assert_eq!(messages.len(), 0, "Messages should be cleared after display");
+					assert_eq!(
+						messages.len(),
+						0,
+						"Messages should be cleared after display"
+					);
 				}
 				Ok(Response::new(StatusCode::OK))
 			}
@@ -281,13 +285,13 @@ mod tests {
 	#[tokio::test]
 	async fn test_message_accumulation_across_multiple_requests() {
 		// Test: Multiple messages can be added and accumulated across requests
+		use async_trait::async_trait;
+		use bytes::Bytes;
+		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use reinhardt_http::{Request, Response};
 		use reinhardt_messages::middleware::{MessagesContainer, MessagesMiddleware};
 		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use reinhardt_types::{Handler, Middleware};
-		use async_trait::async_trait;
-		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 		use std::sync::Arc;
 
 		// Handler that adds a message

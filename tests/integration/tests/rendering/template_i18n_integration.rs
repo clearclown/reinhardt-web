@@ -4,7 +4,7 @@
 //! Covers multilingual template rendering, translation filters, and localization.
 
 use reinhardt_i18n::{
-	MessageCatalog, activate, deactivate, get_locale, gettext, load_catalog, ngettext, pgettext,
+	activate, deactivate, get_locale, gettext, load_catalog, ngettext, pgettext, MessageCatalog,
 };
 use reinhardt_templates::{blocktrans, localize_date_filter, localize_number_filter};
 use tera::{Context, Tera};
@@ -69,7 +69,10 @@ fn test_template_with_block_translation() {
 #[test]
 fn test_template_with_plural_translation() {
 	let mut catalog = MessageCatalog::new("de");
-	catalog.add_plural("item".to_string(), vec!["Artikel".to_string(), "Artikel".to_string()]);
+	catalog.add_plural(
+		"item".to_string(),
+		vec!["Artikel".to_string(), "Artikel".to_string()],
+	);
 
 	load_catalog("de", catalog).unwrap();
 	activate("de").unwrap();

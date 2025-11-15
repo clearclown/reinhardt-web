@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Request, Response};
-use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, ViewSet, action, register_action};
+use reinhardt_http::{Request, Response};
+use reinhardt_viewsets::{action, register_action, ActionMetadata, FunctionActionHandler, ViewSet};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
@@ -28,7 +28,7 @@ impl ViewSet for TestViewSet {
 		&self,
 		_request: Request,
 		_action: reinhardt_viewsets::Action,
-	) -> reinhardt_apps::Result<Response> {
+	) -> reinhardt_http::Result<Response> {
 		Response::ok().with_json(&serde_json::json!({"test": true}))
 	}
 }

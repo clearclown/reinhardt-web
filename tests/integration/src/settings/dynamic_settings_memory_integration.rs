@@ -4,10 +4,10 @@
 //! the in-memory backend, including CRUD operations, caching, observer pattern,
 //! and TTL support.
 
-use reinhardt_conf::settings::backends::MemoryBackend;
-use reinhardt_conf::settings::dynamic::{DynamicBackend, DynamicSettings};
-use std::sync::Arc;
+use reinhardt_settings::backends::MemoryBackend;
+use reinhardt_settings::dynamic::{DynamicBackend, DynamicSettings};
 use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_memory_backend_basic_crud() {

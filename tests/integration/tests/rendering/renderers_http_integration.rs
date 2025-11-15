@@ -71,7 +71,10 @@ impl CustomHTMLRenderer {
 #[async_trait]
 impl Renderer for CustomHTMLRenderer {
 	fn media_types(&self) -> Vec<String> {
-		vec!["text/html; charset=utf-8".to_string(), "text/html".to_string()]
+		vec![
+			"text/html; charset=utf-8".to_string(),
+			"text/html".to_string(),
+		]
 	}
 
 	fn format(&self) -> Option<&str> {
@@ -85,8 +88,7 @@ impl Renderer for CustomHTMLRenderer {
 	) -> reinhardt_renderers::RenderResult<bytes::Bytes> {
 		let html = format!(
 			"<!DOCTYPE html><html><body><pre>{}</pre></body></html>",
-			serde_json::to_string_pretty(data)
-				.map_err(|e| Error::Serialization(e.to_string()))?
+			serde_json::to_string_pretty(data).map_err(|e| Error::Serialization(e.to_string()))?
 		);
 		Ok(bytes::Bytes::from(html))
 	}
@@ -248,12 +250,10 @@ mod http_renderer_tests {
 			response.headers.get(hyper::header::CONTENT_TYPE).unwrap(),
 			"application/json; charset=utf-8"
 		);
-		assert!(
-			response
-				.headers
-				.get(hyper::header::CONTENT_LENGTH)
-				.is_some()
-		);
+		assert!(response
+			.headers
+			.get(hyper::header::CONTENT_LENGTH)
+			.is_some());
 		// Body should be empty for HEAD request
 		assert_eq!(response.body.len(), 0);
 	}
@@ -380,15 +380,13 @@ mod http_renderer_tests {
 		let response = view.dispatch(request).await.unwrap();
 
 		assert_eq!(response.status, hyper::StatusCode::OK);
-		assert!(
-			response
-				.headers
-				.get(hyper::header::CONTENT_TYPE)
-				.unwrap()
-				.to_str()
-				.unwrap()
-				.contains("text/html")
-		);
+		assert!(response
+			.headers
+			.get(hyper::header::CONTENT_TYPE)
+			.unwrap()
+			.to_str()
+			.unwrap()
+			.contains("text/html"));
 	}
 
 	#[tokio::test]

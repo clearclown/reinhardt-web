@@ -51,7 +51,6 @@ impl MessageConfig {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	
 
 	/// Test that MESSAGE_TAGS settings can override default level tags
 	/// Original: django/tests/messages_tests/tests.py::TestLevelTags::test_override_settings_level_tags

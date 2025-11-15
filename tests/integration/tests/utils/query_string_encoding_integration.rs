@@ -9,7 +9,7 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_apps::Request;
+use reinhardt_http::Request;
 use reinhardt_params::extract::FromRequest;
 use reinhardt_params::{ParamContext, Query};
 use serde::Deserialize;

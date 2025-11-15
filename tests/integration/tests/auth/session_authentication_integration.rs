@@ -1,8 +1,8 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_apps::Request;
 use reinhardt_auth::{Authentication, AuthenticationBackend, SessionAuthentication};
-use reinhardt_sessions::{Session, backends::InMemorySessionBackend};
+use reinhardt_http::Request;
+use reinhardt_sessions::{backends::InMemorySessionBackend, Session};
 use uuid::Uuid;
 
 /// Test SessionAuthentication with InMemorySessionBackend

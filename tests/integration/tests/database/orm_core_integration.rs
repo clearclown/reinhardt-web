@@ -3,9 +3,9 @@
 //! These tests verify the public API of the crate
 
 use reinhardt_orm::{
-	Abs, AnnotationValue, Cast, Concat, F, Greatest, IsolationLevel, Lower, Model, Q, Round,
-	SoftDeletable, SoftDelete, Sqrt, SqlType, Timestamped, Timestamps, Transaction,
-	TransactionState, Upper, Value,
+	Abs, AnnotationValue, Cast, Concat, Greatest, IsolationLevel, Lower, Model, Round,
+	SoftDeletable, SoftDelete, SqlType, Sqrt, Timestamped, Timestamps, Transaction,
+	TransactionState, Upper, Value, F, Q,
 };
 use reinhardt_validators::TableName;
 use serde::{Deserialize, Serialize};
