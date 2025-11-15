@@ -458,13 +458,14 @@ mod tests {
 		cached_renderer.render(&data, None).await.unwrap();
 		assert_eq!(counter.load(Ordering::SeqCst), 1);
 
-		// Cache hit before TTL expires
-		tokio::time::sleep(Duration::from_millis(50)).await;
+		// Cache hit before TTL expires - no sleep needed, immediate check
 		cached_renderer.render(&data, None).await.unwrap();
 		assert_eq!(counter.load(Ordering::SeqCst), 1);
 
+		// Wait for TTL to expire (100ms)
+		tokio::time::sleep(Duration::from_millis(150)).await;
+
 		// Cache miss after TTL expires
-		tokio::time::sleep(Duration::from_millis(100)).await;
 		cached_renderer.render(&data, None).await.unwrap();
 		assert_eq!(counter.load(Ordering::SeqCst), 2);
 	}
