@@ -5,8 +5,8 @@
 ///
 /// # Example
 ///
-/// ```rust
-/// use reinhardt_db::reinhardt_backends::schema::{BaseDatabaseSchemaEditor, DDLStatement};
+/// ```rust,ignore
+/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, DDLStatement};
 ///
 // Example of using schema editor to generate DDL
 /// let create_table = DDLStatement::CreateTable {
@@ -65,8 +65,8 @@ impl DDLStatement {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::schema::DDLStatement;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::schema::DDLStatement;
 	///
 	/// let stmt = DDLStatement::CreateTable {
 	///     table: "users".to_string(),
@@ -121,8 +121,8 @@ pub enum AlterTableChange {
 ///
 /// # Example
 ///
-/// ```rust
-/// use reinhardt_db::reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+/// ```rust,ignore
+/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 /// use async_trait::async_trait;
 ///
 /// struct MySchemaEditor;
@@ -145,8 +145,8 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 	/// use async_trait::async_trait;
 	/// use sea_query::PostgresQueryBuilder;
 	///

@@ -48,7 +48,9 @@ pub use drivers::mongodb::{MongoDBBackend, MongoDBQueryBuilder, MongoDBSchemaEdi
 pub use drivers::postgresql::two_phase::{PostgresTwoPhaseParticipant, PreparedTransactionInfo};
 
 #[cfg(feature = "mysql")]
-pub use drivers::mysql::two_phase::{MySqlTwoPhaseParticipant, XaTransactionInfo};
+pub use drivers::mysql::two_phase::{
+	MySqlTwoPhaseParticipant, XaSession, XaState, XaTransactionInfo,
+};
 
 // Re-export dialect backends
 #[cfg(feature = "postgres")]
@@ -59,3 +61,9 @@ pub use dialect::SqliteBackend;
 
 #[cfg(feature = "mysql")]
 pub use dialect::MySqlBackend;
+
+#[cfg(feature = "cockroachdb-backend")]
+pub use drivers::cockroachdb::{
+	ClusterInfo, CockroachDBBackend, CockroachDBConnection, CockroachDBConnectionConfig,
+	CockroachDBSchemaEditor, CockroachDBTransactionManager,
+};
