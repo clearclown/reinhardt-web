@@ -427,7 +427,7 @@ mod specialized_renderer_tests {
 		let form_renderer = HTMLFormRenderer::new();
 
 		// Each should have a unique format (or None)
-		let formats = vec![
+		let _formats = vec![
 			static_renderer.format(),
 			doc_renderer.format(),
 			schema_renderer.format(),
