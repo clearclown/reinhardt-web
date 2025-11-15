@@ -1,25 +1,39 @@
 //! Integration tests for PostgreSQL two-phase commit
 //!
-//! These tests require:
-//! - A running PostgreSQL server
-//! - max_prepared_transactions > 0 in postgresql.conf
-//!
-//! Set the DATABASE_URL environment variable to run these tests:
-//! ```bash
-//! export DATABASE_URL="postgresql://localhost/testdb"
-//! cargo test --test postgres_two_phase_tests -- --test-threads=1
-//! ```
+//! These tests use TestContainers to provide an isolated PostgreSQL instance.
+//! No manual setup required - the container is automatically created and destroyed.
 
 use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+use rstest::*;
 use serial_test::serial;
 use sqlx::{PgPool, Row};
+use std::sync::Arc;
+use testcontainers::{ImageExt, runners::AsyncRunner};
+use testcontainers_modules::postgres::Postgres;
 
-async fn setup_pool() -> PgPool {
-	let database_url = std::env::var("DATABASE_URL")
-		.unwrap_or_else(|_| "postgresql://localhost/postgres".to_string());
-	PgPool::connect(&database_url)
+type PostgresContainer = testcontainers::ContainerAsync<Postgres>;
+
+#[fixture]
+async fn postgres_pool() -> (PostgresContainer, Arc<PgPool>) {
+	// Start PostgreSQL container with max_prepared_transactions enabled
+	let postgres = Postgres::default()
+		.with_cmd(vec!["-c", "max_prepared_transactions=100"])
+		.start()
 		.await
-		.expect("Failed to connect to PostgreSQL")
+		.expect("Failed to start PostgreSQL container");
+
+	let port = postgres
+		.get_host_port_ipv4(5432)
+		.await
+		.expect("Failed to get PostgreSQL port");
+
+	let database_url = format!("postgresql://postgres:postgres@localhost:{}/postgres", port);
+
+	let pool = PgPool::connect(&database_url)
+		.await
+		.expect("Failed to connect to PostgreSQL");
+
+	(postgres, Arc::new(pool))
 }
 
 async fn cleanup_prepared_transactions(pool: &PgPool) {
@@ -55,27 +69,34 @@ async fn drop_test_table(pool: &PgPool) {
 		.await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_basic_two_phase_commit_flow() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_basic_two_phase_commit_flow(
+	#[future] postgres_pool: (PostgresContainer, Arc<PgPool>),
+) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant = PostgresTwoPhaseParticipant::new(pool.clone());
 	let xid = "test_basic_2pc_001";
 
-	// Begin transaction
-	participant.begin(xid).await.expect("Failed to begin");
+	// Begin transaction and get session
+	let mut session = participant.begin(xid).await.expect("Failed to begin");
 
-	// Insert data
+	// Insert data using the session's dedicated connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('test')")
-		.execute(&pool)
+		.execute(&mut *session.connection)
 		.await
 		.expect("Failed to insert");
 
 	// Prepare transaction
-	participant.prepare(xid).await.expect("Failed to prepare");
+	participant
+		.prepare(&mut session)
+		.await
+		.expect("Failed to prepare");
 
 	// Verify transaction is in prepared state
 	let prepared = participant
@@ -85,83 +106,102 @@ async fn test_basic_two_phase_commit_flow() {
 	assert!(prepared.is_some());
 	assert_eq!(prepared.unwrap().gid, xid);
 
-	// Commit prepared transaction
-	participant.commit(xid).await.expect("Failed to commit");
+	// Commit prepared transaction (consumes session)
+	participant
+		.commit_by_xid(xid)
+		.await
+		.expect("Failed to commit");
 
 	// Verify data was committed
 	let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_2pc")
-		.fetch_one(&pool)
+		.fetch_one(pool)
 		.await
 		.expect("Failed to count rows");
 	assert_eq!(count, 1);
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_prepare_and_rollback() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_prepare_and_rollback(#[future] postgres_pool: (PostgresContainer, Arc<PgPool>)) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant = PostgresTwoPhaseParticipant::new(pool.clone());
 	let xid = "test_rollback_2pc_002";
 
-	// Begin and prepare transaction
-	participant.begin(xid).await.expect("Failed to begin");
+	// Begin transaction and get session with dedicated connection
+	let mut session = participant.begin(xid).await.expect("Failed to begin");
+
+	// Insert data using session's dedicated connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('rollback_test')")
-		.execute(&pool)
+		.execute(&mut *session.connection)
 		.await
 		.expect("Failed to insert");
-	participant.prepare(xid).await.expect("Failed to prepare");
+
+	// Prepare transaction
+	participant
+		.prepare(&mut session)
+		.await
+		.expect("Failed to prepare");
 
 	// Verify transaction is prepared
 	let prepared = participant.find_prepared_transaction(xid).await.unwrap();
 	assert!(prepared.is_some());
 
-	// Rollback prepared transaction
-	participant.rollback(xid).await.expect("Failed to rollback");
+	// Rollback prepared transaction (using recovery API since we no longer have session after prepare)
+	participant
+		.rollback_by_xid(xid)
+		.await
+		.expect("Failed to rollback");
 
 	// Verify data was not committed
 	let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_2pc")
-		.fetch_one(&pool)
+		.fetch_one(pool)
 		.await
 		.expect("Failed to count rows");
 	assert_eq!(count, 0);
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_list_prepared_transactions() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_list_prepared_transactions(
+	#[future] postgres_pool: (PostgresContainer, Arc<PgPool>),
+) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant = PostgresTwoPhaseParticipant::new(pool.clone());
 	let xid1 = "test_list_2pc_003_a";
 	let xid2 = "test_list_2pc_003_b";
 
 	// Prepare multiple transactions
-	participant.begin(xid1).await.expect("Failed to begin 1");
+	let mut session1 = participant.begin(xid1).await.expect("Failed to begin 1");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('tx1')")
-		.execute(&pool)
+		.execute(&mut *session1.connection)
 		.await
 		.expect("Failed to insert 1");
 	participant
-		.prepare(xid1)
+		.prepare(&mut session1)
 		.await
 		.expect("Failed to prepare 1");
 
-	participant.begin(xid2).await.expect("Failed to begin 2");
+	let mut session2 = participant.begin(xid2).await.expect("Failed to begin 2");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('tx2')")
-		.execute(&pool)
+		.execute(&mut *session2.connection)
 		.await
 		.expect("Failed to insert 2");
 	participant
-		.prepare(xid2)
+		.prepare(&mut session2)
 		.await
 		.expect("Failed to prepare 2");
 
@@ -177,31 +217,44 @@ async fn test_list_prepared_transactions() {
 	assert!(gids.contains(&xid2.to_string()));
 
 	// Cleanup
-	participant.commit(xid1).await.expect("Failed to commit 1");
-	participant.commit(xid2).await.expect("Failed to commit 2");
+	participant
+		.commit_by_xid(xid1)
+		.await
+		.expect("Failed to commit 1");
+	participant
+		.commit_by_xid(xid2)
+		.await
+		.expect("Failed to commit 2");
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_recovery_from_prepared_state() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_recovery_from_prepared_state(
+	#[future] postgres_pool: (PostgresContainer, Arc<PgPool>),
+) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let xid = "test_recovery_2pc_004";
 
 	// Simulate a crash scenario: prepare but don't commit
 	{
 		let participant = PostgresTwoPhaseParticipant::new(pool.clone());
-		participant.begin(xid).await.expect("Failed to begin");
+		let mut session = participant.begin(xid).await.expect("Failed to begin");
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('recovery_test')")
-			.execute(&pool)
+			.execute(&mut *session.connection)
 			.await
 			.expect("Failed to insert");
-		participant.prepare(xid).await.expect("Failed to prepare");
-		// Participant goes out of scope (simulating crash)
+		participant
+			.prepare(&mut session)
+			.await
+			.expect("Failed to prepare");
+		// Session and participant go out of scope (simulating crash)
 	}
 
 	// Recovery: New participant instance finds and commits the prepared transaction
@@ -214,36 +267,46 @@ async fn test_recovery_from_prepared_state() {
 		assert!(prepared.is_some());
 
 		// Decide to commit (in real scenario, coordinator would decide)
-		participant.commit(xid).await.expect("Failed to commit");
+		participant
+			.commit_by_xid(xid)
+			.await
+			.expect("Failed to commit");
 	}
 
 	// Verify data was committed
 	let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_2pc")
-		.fetch_one(&pool)
+		.fetch_one(pool)
 		.await
 		.expect("Failed to count rows");
 	assert_eq!(count, 1);
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_cleanup_stale_transactions() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_cleanup_stale_transactions(
+	#[future] postgres_pool: (PostgresContainer, Arc<PgPool>),
+) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant = PostgresTwoPhaseParticipant::new(pool.clone());
 	let xid = "test_cleanup_2pc_005";
 
 	// Prepare a transaction
-	participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant.begin(xid).await.expect("Failed to begin");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('stale_test')")
-		.execute(&pool)
+		.execute(&mut *session.connection)
 		.await
 		.expect("Failed to insert");
-	participant.prepare(xid).await.expect("Failed to prepare");
+	participant
+		.prepare(&mut session)
+		.await
+		.expect("Failed to prepare");
 
 	// Wait a moment
 	tokio::time::sleep(std::time::Duration::from_secs(2)).await;
@@ -260,15 +323,17 @@ async fn test_cleanup_stale_transactions() {
 	let prepared = participant.find_prepared_transaction(xid).await.unwrap();
 	assert!(prepared.is_none());
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_concurrent_transactions() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_concurrent_transactions(#[future] postgres_pool: (PostgresContainer, Arc<PgPool>)) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant1 = PostgresTwoPhaseParticipant::new(pool.clone());
 	let participant2 = PostgresTwoPhaseParticipant::new(pool.clone());
@@ -278,23 +343,23 @@ async fn test_concurrent_transactions() {
 
 	// Run two transactions concurrently
 	let handle1 = tokio::spawn(async move {
-		participant1.begin(xid1).await.unwrap();
+		let mut session = participant1.begin(xid1).await.unwrap();
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('concurrent1')")
-			.execute(participant1.pool())
+			.execute(&mut *session.connection)
 			.await
 			.unwrap();
-		participant1.prepare(xid1).await.unwrap();
-		participant1.commit(xid1).await.unwrap();
+		participant1.prepare(&mut session).await.unwrap();
+		participant1.commit_by_xid(xid1).await.unwrap();
 	});
 
 	let handle2 = tokio::spawn(async move {
-		participant2.begin(xid2).await.unwrap();
+		let mut session = participant2.begin(xid2).await.unwrap();
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('concurrent2')")
-			.execute(participant2.pool())
+			.execute(&mut *session.connection)
 			.await
 			.unwrap();
-		participant2.prepare(xid2).await.unwrap();
-		participant2.commit(xid2).await.unwrap();
+		participant2.prepare(&mut session).await.unwrap();
+		participant2.commit_by_xid(xid2).await.unwrap();
 	});
 
 	handle1.await.expect("Task 1 failed");
@@ -302,19 +367,21 @@ async fn test_concurrent_transactions() {
 
 	// Verify both transactions committed
 	let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_2pc")
-		.fetch_one(&pool)
+		.fetch_one(pool)
 		.await
 		.expect("Failed to count rows");
 	assert_eq!(count, 2);
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_participant_clone() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
+async fn test_participant_clone(#[future] postgres_pool: (PostgresContainer, Arc<PgPool>)) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
 
 	let participant1 = PostgresTwoPhaseParticipant::new(pool.clone());
 	let participant2 = participant1.clone();
@@ -331,30 +398,46 @@ async fn test_participant_clone() {
 	let _ = participant2.list_prepared_transactions().await;
 }
 
+#[rstest]
 #[tokio::test]
 #[serial(postgres_2pc)]
-async fn test_error_handling_duplicate_prepare() {
-	let pool = setup_pool().await;
-	cleanup_prepared_transactions(&pool).await;
-	create_test_table(&pool).await;
+async fn test_error_handling_duplicate_prepare(
+	#[future] postgres_pool: (PostgresContainer, Arc<PgPool>),
+) {
+	let (_container, pool) = postgres_pool.await;
+	let pool = pool.as_ref();
+	cleanup_prepared_transactions(pool).await;
+	create_test_table(pool).await;
 
 	let participant = PostgresTwoPhaseParticipant::new(pool.clone());
 	let xid = "test_error_2pc_008";
 
-	participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant.begin(xid).await.expect("Failed to begin");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('error_test')")
-		.execute(&pool)
+		.execute(&mut *session.connection)
 		.await
 		.expect("Failed to insert");
-	participant.prepare(xid).await.expect("Failed to prepare");
+	participant
+		.prepare(&mut session)
+		.await
+		.expect("Failed to prepare");
 
 	// Try to prepare again with the same xid (should fail)
-	participant.begin(xid).await.expect("Failed to begin again");
-	let result = participant.prepare(xid).await;
-	assert!(result.is_err());
+	let mut session2 = participant.begin(xid).await.expect("Failed to begin again");
+	// Insert another row to make this a non-empty transaction
+	// (empty transactions don't trigger duplicate XID error in PostgreSQL)
+	sqlx::query("INSERT INTO test_2pc (value) VALUES ('second_attempt')")
+		.execute(&mut *session2.connection)
+		.await
+		.expect("Failed to insert second row");
+	let result = participant.prepare(&mut session2).await;
+	assert!(result.is_err(), "Second PREPARE with same XID should fail");
 
-	// Cleanup
-	participant.rollback(xid).await.expect("Failed to rollback");
+	// Cleanup the first prepared transaction
+	participant
+		.rollback_by_xid(xid)
+		.await
+		.expect("Failed to rollback");
 
-	drop_test_table(&pool).await;
+	drop_test_table(pool).await;
 }

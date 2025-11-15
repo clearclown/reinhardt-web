@@ -3,43 +3,79 @@
 //! This module implements the `TwoPhaseParticipant` trait for PostgreSQL using
 //! the PREPARE TRANSACTION, COMMIT PREPARED, and ROLLBACK PREPARED SQL commands.
 
-use sqlx::{PgPool, Row};
+use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Postgres, Row, pool::PoolConnection};
 use std::sync::Arc;
 
 use crate::error::{DatabaseError, Result};
 
+/// Session for a PostgreSQL two-phase commit transaction
+///
+/// Owns a dedicated database connection for the entire lifecycle of the transaction.
+/// This ensures that BEGIN, all data modifications, and PREPARE TRANSACTION execute
+/// on the same connection, which is required for correct 2PC semantics.
+pub struct PgSession {
+	/// The dedicated PostgreSQL connection for this transaction
+	pub connection: PoolConnection<Postgres>,
+	/// The transaction identifier
+	pub xid: String,
+	/// Current state of the transaction
+	pub state: PgTwoPhaseState,
+}
+
+/// State of a PostgreSQL two-phase transaction
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PgTwoPhaseState {
+	/// Transaction is active (after BEGIN)
+	Active,
+	/// Transaction has been prepared (after PREPARE TRANSACTION)
+	Prepared,
+}
+
 /// PostgreSQL Two-Phase Commit participant
 ///
-/// Manages two-phase commit transactions using PostgreSQL's PREPARE TRANSACTION
-/// functionality. PostgreSQL requires `max_prepared_transactions` to be set to
-/// a non-zero value in postgresql.conf for this feature to work.
+/// Manages two-phase commit transactions using PostgreSQL's PREPARE TRANSACTION feature.
+///
+/// # Requirements
+///
+/// PostgreSQL must be configured with `max_prepared_transactions > 0` (default is 0).
+///
+/// # Two-Phase Transaction Flow
+///
+/// 1. BEGIN - Start a transaction
+/// 2. ... perform operations ...
+/// 3. PREPARE TRANSACTION 'xid' - Prepare the transaction
+/// 4. COMMIT PREPARED 'xid' or ROLLBACK PREPARED 'xid' - Finalize
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+/// use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 /// use sqlx::PgPool;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+/// let pool = PgPool::connect("postgres://localhost/mydb").await?;
 /// let participant = PostgresTwoPhaseParticipant::new(pool);
 ///
-/// // Begin a transaction
-/// participant.begin("txn_001").await?;
+/// // Start a transaction and get a session
+/// let mut session = participant.begin("txn_001").await?;
 ///
-/// // ... perform operations ...
+/// // ... perform operations using session.connection ...
 ///
 /// // Prepare the transaction
-/// participant.prepare("txn_001").await?;
+/// participant.prepare(&mut session).await?;
 ///
 /// // Commit the prepared transaction
-/// participant.commit("txn_001").await?;
+/// participant.commit(session).await?;
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Clone)]
 pub struct PostgresTwoPhaseParticipant {
 	pool: Arc<PgPool>,
+	// Internal session storage for ORM layer compatibility
+	// XID -> Session mapping for managing active transactions
+	sessions: Arc<std::sync::Mutex<std::collections::HashMap<String, PgSession>>>,
 }
 
 impl PostgresTwoPhaseParticipant {
@@ -48,7 +84,7 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// use sqlx::PgPool;
 	///
 	/// # async fn example() -> Result<(), sqlx::Error> {
@@ -60,12 +96,16 @@ impl PostgresTwoPhaseParticipant {
 	pub fn new(pool: PgPool) -> Self {
 		Self {
 			pool: Arc::new(pool),
+			sessions: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
 		}
 	}
 
 	/// Create from an Arc<PgPool>
 	pub fn from_pool_arc(pool: Arc<PgPool>) -> Self {
-		Self { pool }
+		Self {
+			pool,
+			sessions: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
+		}
 	}
 
 	/// Get a reference to the underlying PgPool
@@ -76,31 +116,45 @@ impl PostgresTwoPhaseParticipant {
 		self.pool.as_ref()
 	}
 
-	/// Begin a transaction
+	/// Begin a transaction and return a session
+	///
+	/// Acquires a dedicated connection from the pool and starts a transaction.
+	/// The returned session owns this connection for the entire transaction lifetime.
 	///
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
 	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
-	/// participant.begin("txn_001").await?;
+	/// let mut session = participant.begin("txn_001").await?;
+	/// // ... perform operations using session.connection ...
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn begin(&self, _xid: &str) -> Result<()> {
+	pub async fn begin(&self, xid: &str) -> Result<PgSession> {
+		// Acquire dedicated connection for the transaction
+		let mut connection = self.pool.acquire().await.map_err(DatabaseError::from)?;
+
+		// Start transaction on the dedicated connection
 		sqlx::query("BEGIN")
-			.execute(self.pool.as_ref())
+			.execute(&mut *connection)
 			.await
 			.map_err(DatabaseError::from)?;
-		Ok(())
+
+		Ok(PgSession {
+			connection,
+			xid: xid.to_string(),
+			state: PgTwoPhaseState::Active,
+		})
 	}
 
 	/// Prepare a transaction for two-phase commit
 	///
 	/// This executes `PREPARE TRANSACTION 'xid'` in PostgreSQL.
+	/// Transitions the session state from Active to Prepared.
 	///
 	/// # Errors
 	///
@@ -112,33 +166,35 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
 	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
-	/// participant.begin("txn_001").await?;
-	/// // ... perform operations ...
-	/// participant.prepare("txn_001").await?;
+	/// let mut session = participant.begin("txn_001").await?;
+	/// // ... perform operations using session.connection ...
+	/// participant.prepare(&mut session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn prepare(&self, xid: &str) -> Result<()> {
+	pub async fn prepare(&self, session: &mut PgSession) -> Result<()> {
 		// Use Box::leak to convert String to &'static str for sqlx compatibility
 		// This is acceptable as prepared transaction IDs are typically short-lived
-		let xid_escaped = pg_escape::quote_literal(xid);
+		let xid_escaped = pg_escape::quote_literal(&session.xid);
 		let sql = format!("PREPARE TRANSACTION {}", xid_escaped);
 		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
 		sqlx::query(sql_static)
-			.execute(self.pool.as_ref())
+			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
+
+		session.state = PgTwoPhaseState::Prepared;
 		Ok(())
 	}
 
 	/// Commit a prepared transaction
 	///
-	/// This executes `COMMIT PREPARED 'xid'` in PostgreSQL.
+	/// This executes `COMMIT PREPARED 'xid'` in PostgreSQL. Consumes the session.
 	///
 	/// # Errors
 	///
@@ -147,22 +203,56 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
 	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
-	/// participant.commit("txn_001").await?;
+	/// let mut session = participant.begin("txn_001").await?;
+	/// participant.prepare(&mut session).await?;
+	/// participant.commit(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn commit(&self, xid: &str) -> Result<()> {
+	pub async fn commit(&self, mut session: PgSession) -> Result<()> {
 		// Use Box::leak to convert String to &'static str for sqlx compatibility
+		let xid_escaped = pg_escape::quote_literal(&session.xid);
+		let sql = format!("COMMIT PREPARED {}", xid_escaped);
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Session is consumed and connection is dropped
+		Ok(())
+	}
+
+	/// Commit a prepared transaction by XID (for recovery scenarios)
+	///
+	/// This executes `COMMIT PREPARED 'xid'` in PostgreSQL using a new connection.
+	/// Use this for recovery scenarios where you don't have the original session.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use sqlx::PgPool;
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
+	/// // Recovery scenario: commit by XID directly
+	/// participant.commit_by_xid("txn_001").await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn commit_by_xid(&self, xid: &str) -> Result<()> {
+		let mut conn = self.pool.acquire().await.map_err(DatabaseError::from)?;
 		let xid_escaped = pg_escape::quote_literal(xid);
 		let sql = format!("COMMIT PREPARED {}", xid_escaped);
 		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
 		sqlx::query(sql_static)
-			.execute(self.pool.as_ref())
+			.execute(&mut *conn)
 			.await
 			.map_err(DatabaseError::from)?;
 		Ok(())
@@ -170,27 +260,61 @@ impl PostgresTwoPhaseParticipant {
 
 	/// Rollback a prepared transaction
 	///
-	/// This executes `ROLLBACK PREPARED 'xid'` in PostgreSQL.
+	/// This executes `ROLLBACK PREPARED 'xid'` in PostgreSQL. Consumes the session.
 	///
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
 	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
-	/// participant.rollback("txn_001").await?;
+	/// let mut session = participant.begin("txn_001").await?;
+	/// participant.prepare(&mut session).await?;
+	/// participant.rollback(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn rollback(&self, xid: &str) -> Result<()> {
+	pub async fn rollback(&self, mut session: PgSession) -> Result<()> {
 		// Use Box::leak to convert String to &'static str for sqlx compatibility
+		let xid_escaped = pg_escape::quote_literal(&session.xid);
+		let sql = format!("ROLLBACK PREPARED {}", xid_escaped);
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Session is consumed and connection is dropped
+		Ok(())
+	}
+
+	/// Rollback a prepared transaction by XID (for recovery scenarios)
+	///
+	/// This executes `ROLLBACK PREPARED 'xid'` in PostgreSQL using a new connection.
+	/// Use this for recovery scenarios where you don't have the original session.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use sqlx::PgPool;
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
+	/// # let participant = PostgresTwoPhaseParticipant::new(pool);
+	/// // Recovery scenario: rollback by XID directly
+	/// participant.rollback_by_xid("txn_001").await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn rollback_by_xid(&self, xid: &str) -> Result<()> {
+		let mut conn = self.pool.acquire().await.map_err(DatabaseError::from)?;
 		let xid_escaped = pg_escape::quote_literal(xid);
 		let sql = format!("ROLLBACK PREPARED {}", xid_escaped);
 		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
 		sqlx::query(sql_static)
-			.execute(self.pool.as_ref())
+			.execute(&mut *conn)
 			.await
 			.map_err(DatabaseError::from)?;
 		Ok(())
@@ -204,7 +328,7 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
@@ -245,7 +369,7 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = PgPool::connect("postgresql://localhost/mydb").await?;
@@ -253,7 +377,7 @@ impl PostgresTwoPhaseParticipant {
 	/// if let Some(info) = participant.find_prepared_transaction("txn_001").await? {
 	///     println!("Found prepared transaction: {:?}", info);
 	///     // Decide whether to commit or rollback
-	///     participant.commit("txn_001").await?;
+	///     participant.commit_by_xid("txn_001").await?;
 	/// }
 	/// # Ok(())
 	/// # }
@@ -291,7 +415,7 @@ impl PostgresTwoPhaseParticipant {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_db::reinhardt_backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
+	/// # use reinhardt_db::backends::postgresql::two_phase::PostgresTwoPhaseParticipant;
 	/// # use sqlx::PgPool;
 	/// # use std::time::Duration;
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -317,12 +441,100 @@ impl PostgresTwoPhaseParticipant {
 		let mut cleaned = 0;
 		for row in rows {
 			let gid: String = row.try_get("gid").map_err(DatabaseError::from)?;
-			if self.rollback(&gid).await.is_ok() {
+			if self.rollback_by_xid(&gid).await.is_ok() {
 				cleaned += 1;
 			}
 		}
 
 		Ok(cleaned)
+	}
+
+	// XID-based wrapper methods for ORM layer compatibility
+	// These methods manage sessions internally using the sessions HashMap
+
+	/// Begin a transaction by XID (ORM layer wrapper)
+	///
+	/// Creates a session and stores it internally for later use.
+	pub async fn begin_by_xid(&self, xid: &str) -> Result<()> {
+		let session = self.begin(xid).await?;
+		self.sessions
+			.lock()
+			.unwrap()
+			.insert(xid.to_string(), session);
+		Ok(())
+	}
+
+	/// Prepare a transaction by XID (ORM layer wrapper)
+	///
+	/// Executes PREPARE TRANSACTION without exposing the session to the caller.
+	pub async fn prepare_by_xid(&self, xid: &str) -> Result<()> {
+		// Extract the session temporarily to avoid holding the lock across await
+		let mut session = {
+			let mut sessions = self.sessions.lock().unwrap();
+			sessions.remove(xid).ok_or_else(|| {
+				DatabaseError::QueryError(format!("No active session for XID: {}", xid))
+			})?
+		};
+
+		// Perform the prepare operation directly without calling self.prepare()
+		let xid_escaped = pg_escape::quote_literal(xid);
+		let sql = format!("PREPARE TRANSACTION {}", xid_escaped);
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Update state and re-insert
+		session.state = PgTwoPhaseState::Prepared;
+		self.sessions
+			.lock()
+			.unwrap()
+			.insert(xid.to_string(), session);
+
+		Ok(())
+	}
+
+	/// Commit a transaction by XID (ORM layer wrapper)
+	///
+	/// Removes the session from internal storage, executes COMMIT PREPARED, and consumes the session.
+	pub async fn commit_managed(&self, xid: &str) -> Result<()> {
+		let mut session = self.sessions.lock().unwrap().remove(xid).ok_or_else(|| {
+			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
+		})?;
+
+		// Execute commit directly without calling self.commit()
+		let xid_escaped = pg_escape::quote_literal(xid);
+		let sql = format!("COMMIT PREPARED {}", xid_escaped);
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Session is consumed and connection is dropped
+		Ok(())
+	}
+
+	/// Rollback a transaction by XID (ORM layer wrapper)
+	///
+	/// Removes the session from internal storage, executes ROLLBACK PREPARED, and consumes the session.
+	pub async fn rollback_managed(&self, xid: &str) -> Result<()> {
+		let mut session = self.sessions.lock().unwrap().remove(xid).ok_or_else(|| {
+			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
+		})?;
+
+		// Execute rollback directly without calling self.rollback()
+		let xid_escaped = pg_escape::quote_literal(xid);
+		let sql = format!("ROLLBACK PREPARED {}", xid_escaped);
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Session is consumed and connection is dropped
+		Ok(())
 	}
 }
 
@@ -331,8 +543,8 @@ impl PostgresTwoPhaseParticipant {
 pub struct PreparedTransactionInfo {
 	/// Global transaction identifier
 	pub gid: String,
-	/// Timestamp when the transaction was prepared
-	pub prepared: chrono::NaiveDateTime,
+	/// Timestamp when the transaction was prepared (with timezone)
+	pub prepared: DateTime<Utc>,
 	/// Owner (role) of the transaction
 	pub owner: String,
 	/// Database name
@@ -347,7 +559,7 @@ mod tests {
 	fn test_prepared_transaction_info_creation() {
 		let info = PreparedTransactionInfo {
 			gid: "txn_001".to_string(),
-			prepared: chrono::DateTime::UNIX_EPOCH.naive_utc(),
+			prepared: DateTime::UNIX_EPOCH,
 			owner: "postgres".to_string(),
 			database: "testdb".to_string(),
 		};
