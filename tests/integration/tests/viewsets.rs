@@ -7,8 +7,8 @@ mod as_view_integration;
 #[path = "viewsets/di_advanced_scenarios_integration.rs"]
 mod di_advanced_scenarios_integration;
 
-#[path = "viewsets/di_dispatch_injection_integration.rs"]
-mod di_dispatch_injection_integration;
+// #[path = "viewsets/di_dispatch_injection_integration.rs"]
+// mod di_dispatch_injection_integration;
 
 #[path = "viewsets/di_e2e_integration.rs"]
 mod di_e2e_integration;

@@ -5,9 +5,10 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Request, Response, Result};
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
+use reinhardt_exception::Result;
 use reinhardt_macros::{endpoint, Injectable};
+use reinhardt_types::{Request, Response};
 use reinhardt_viewsets::{Action, ActionType, ViewSet};
 use std::sync::Arc;
 
@@ -153,12 +154,16 @@ async fn test_viewset_dispatch_error_handling() {
 
 		async fn dispatch(&self, _request: Request, action: Action) -> Result<Response> {
 			if self.service.should_fail {
-				return Err(reinhardt_apps::Error::Internal("Service error".to_string()));
+				return Err(reinhardt_exception::Error::Internal(
+					"Service error".to_string(),
+				));
 			}
 
 			match action.action_type {
 				ActionType::List => Ok(Response::ok().with_body("list")),
-				_ => Err(reinhardt_apps::Error::NotFound("Not found".to_string())),
+				_ => Err(reinhardt_exception::Error::NotFound(
+					"Not found".to_string(),
+				)),
 			}
 		}
 	}
@@ -212,7 +217,7 @@ async fn test_method_di_error_conversion() {
 		async fn test_method(&self, request: Request, ctx: &InjectionContext) -> Result<Response> {
 			self.test_method_impl(request, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 	}
 
@@ -616,7 +621,7 @@ async fn test_method_injection_with_request_params() {
 		) -> Result<Response> {
 			self.process_impl(request, id, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 	}
 
@@ -687,7 +692,7 @@ async fn test_dispatch_injection_with_action_routing() {
 		) -> Result<Response> {
 			self.dispatch_impl(request, action, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 	}
 
@@ -775,7 +780,7 @@ async fn test_mixed_di_patterns_in_viewset() {
 		) -> Result<Response> {
 			self.custom_action_impl(request, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 	}
 
@@ -859,7 +864,7 @@ async fn test_viewset_with_stateful_service() {
 					let count = self.counter.count.fetch_add(1, Ordering::SeqCst);
 					Ok(Response::ok().with_body(format!("incremented to: {}", count + 1)))
 				}
-				_ => Err(reinhardt_apps::Error::NotFound(
+				_ => Err(reinhardt_exception::Error::NotFound(
 					"Action not found".to_string(),
 				)),
 			}
@@ -1040,7 +1045,7 @@ async fn test_multiple_async_methods_with_di() {
 		async fn method_one(&self, request: Request, ctx: &InjectionContext) -> Result<Response> {
 			self.method_one_impl(request, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 
 		#[endpoint]
@@ -1055,7 +1060,7 @@ async fn test_multiple_async_methods_with_di() {
 		async fn method_two(&self, request: Request, ctx: &InjectionContext) -> Result<Response> {
 			self.method_two_impl(request, ctx)
 				.await
-				.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+				.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 		}
 	}
 

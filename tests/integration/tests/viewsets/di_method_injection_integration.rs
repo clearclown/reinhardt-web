@@ -3,9 +3,10 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
-use reinhardt_apps::{Request, Response, Result};
 use reinhardt_di::{DiResult, InjectionContext, SingletonScope};
+use reinhardt_exception::Result;
 use reinhardt_macros::endpoint;
+use reinhardt_types::{Request, Response};
 use reinhardt_viewsets::{Action, ViewSet};
 use std::sync::Arc;
 
@@ -68,7 +69,7 @@ impl ProductViewSet {
 	) -> Result<Response> {
 		self.send_notification_impl(request, ctx)
 			.await
-			.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+			.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 	}
 
 	/// List action with method-level DI
@@ -85,7 +86,7 @@ impl ProductViewSet {
 	async fn list_products(&self, request: Request, ctx: &InjectionContext) -> Result<Response> {
 		self.list_products_impl(request, ctx)
 			.await
-			.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+			.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 	}
 
 	/// Action with multiple injected dependencies
@@ -110,7 +111,7 @@ impl ProductViewSet {
 	) -> Result<Response> {
 		self.create_and_notify_impl(request, ctx)
 			.await
-			.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+			.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 	}
 
 	/// Action with mixed injected and regular parameters
@@ -136,7 +137,7 @@ impl ProductViewSet {
 	) -> Result<Response> {
 		self.get_product_by_id_impl(request, product_id, ctx)
 			.await
-			.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+			.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 	}
 }
 
@@ -291,7 +292,7 @@ impl CacheTestViewSet {
 	) -> Result<Response> {
 		self.test_cache_control_impl(request, ctx)
 			.await
-			.map_err(|e| reinhardt_apps::Error::Internal(format!("DI error: {}", e)))
+			.map_err(|e| reinhardt_exception::Error::Internal(format!("DI error: {}", e)))
 	}
 }
 
