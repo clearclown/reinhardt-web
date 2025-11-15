@@ -10,6 +10,9 @@ RUST_BACKTRACE = "1"
 TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/test_db"
 MYSQL_DATABASE_URL = "mysql://root:mysql@localhost:3306/test_db"
 REDIS_URL = "redis://localhost:6379"
+# Force TestContainers to use Docker instead of Podman
+DOCKER_HOST = "unix:///var/run/docker.sock"
+TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = "/var/run/docker.sock"
 
 # ============================================================================
 # Core Development Tasks
@@ -185,7 +188,7 @@ fi
 description = "Start infrastructure for examples (PostgreSQL)"
 cwd = "examples"
 script = '''
-podman-compose up -d postgres
+docker compose up -d postgres
 echo "⏳ Waiting for PostgreSQL to start..."
 sleep 5
 echo "✅ PostgreSQL started"
@@ -195,7 +198,7 @@ echo "✅ PostgreSQL started"
 description = "Stop infrastructure for examples"
 cwd = "examples"
 script = '''
-podman-compose down
+docker compose down
 '''
 
 [tasks.examples-test]
@@ -252,14 +255,14 @@ args = ["clean"]
 description = "Check examples infrastructure status"
 cwd = "examples"
 script = '''
-podman-compose ps
+docker compose ps
 '''
 
 [tasks.examples-logs]
 description = "Show examples infrastructure logs"
 cwd = "examples"
 script = '''
-podman-compose logs -f
+docker compose logs -f
 '''
 
 # ============================================================================
