@@ -191,7 +191,7 @@ async fn test_delete_selected_action_without_database() {
 
 	assert!(result.is_success());
 	assert_eq!(result.affected_count(), 3);
-	assert!(result.message().contains("Successfully deleted 3 item(s)"));
+	assert_eq!(result.message(), "Successfully deleted 3 item(s)");
 }
 
 #[tokio::test]
@@ -246,7 +246,7 @@ async fn test_custom_publish_action_success() {
 
 	assert!(result.is_success());
 	assert_eq!(result.affected_count(), 2);
-	assert!(result.message().contains("Successfully published"));
+	assert_eq!(result.message(), "Successfully published 2 article(s)");
 }
 
 #[tokio::test]
@@ -294,7 +294,7 @@ async fn test_custom_publish_action_partial_success() {
 		} => {
 			assert_eq!(*succeeded_count, 3);
 			assert_eq!(*failed_count, 2);
-			assert!(message.contains("Published 3 article(s), 2 failed"));
+			assert_eq!(message, "Published 3 article(s), 2 failed");
 			assert_eq!(errors.len(), 1);
 		}
 		_ => panic!("Expected PartialSuccess result, got {:?}", result),
@@ -359,6 +359,10 @@ async fn test_action_registry_get_action() {
 
 	let missing = registry.get_action("nonexistent");
 	assert!(missing.is_err());
+	assert_eq!(
+		missing.unwrap_err().to_string(),
+		"Action not found: nonexistent"
+	);
 }
 
 #[tokio::test]
@@ -461,9 +465,10 @@ async fn test_bulk_action_execution() {
 async fn test_action_confirmation_message() {
 	let action = DeleteSelectedAction::new();
 	let message = action.confirmation_message(5);
-	assert!(message.contains("5"));
-	assert!(message.contains("delete"));
-	assert!(message.contains("cannot be undone"));
+	assert_eq!(
+		message,
+		"Are you sure you want to delete 5 item(s)? This action cannot be undone."
+	);
 }
 
 #[tokio::test]

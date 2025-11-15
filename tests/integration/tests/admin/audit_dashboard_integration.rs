@@ -101,7 +101,10 @@ async fn test_audit_to_dashboard_workflow() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("Recent Admin Actions"));
+	// Verify HTML structure with more specific assertions
+	assert!(html.starts_with("<div"));
+	assert!(html.ends_with("</div>"));
+	assert_eq!(html.matches("Recent Admin Actions").count(), 1);
 	assert_eq!(activities.len(), 3);
 }
 
@@ -145,8 +148,11 @@ async fn test_audit_stats_in_widget() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("Total Admin Actions"));
-	assert!(html.contains("10")); // Total count
+	// Verify HTML contains expected text exactly once
+	assert!(html.starts_with("<div"));
+	assert!(html.ends_with("</div>"));
+	assert_eq!(html.matches("Total Admin Actions").count(), 1);
+	assert_eq!(html.matches("10").count(), 1);
 }
 
 /// Test: Dashboard with multiple widgets showing audit data
@@ -296,7 +302,10 @@ async fn test_recent_activity_widget_filtering() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("Alice's Activities"));
+	// Verify HTML structure
+	assert!(html.starts_with("<div"));
+	assert!(html.ends_with("</div>"));
+	assert_eq!(html.matches("Alice's Activities").count(), 1);
 	// All activities should be from alice
 	for activity in &activities {
 		assert_eq!(activity.user, "alice");
@@ -376,9 +385,12 @@ async fn test_table_widget_audit_summary() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("Action Statistics"));
-	assert!(html.contains("Action"));
-	assert!(html.contains("Count"));
+	// Verify table structure with exact counts
+	assert!(html.starts_with("<table") || html.starts_with("<div"));
+	assert!(html.ends_with("</table>") || html.ends_with("</div>"));
+	assert_eq!(html.matches("Action Statistics").count(), 1);
+	assert_eq!(html.matches("Action").count(), 1); // Column header
+	assert_eq!(html.matches("Count").count(), 1); // Column header
 }
 
 /// Test: Permission-based widget visibility with audit context
@@ -476,7 +488,10 @@ async fn test_audit_retention_dashboard_update() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("50"));
+	// Verify HTML contains exact count
+	assert!(html.starts_with("<div"));
+	assert!(html.ends_with("</div>"));
+	assert_eq!(html.matches("50").count(), 1);
 }
 
 /// Test: IP address and user agent tracking in audit logs
@@ -542,6 +557,9 @@ async fn test_audit_ip_user_agent_tracking() {
 		.await
 		.expect("Render should succeed");
 
-	assert!(html.contains("Security Audit"));
-	assert!(html.contains("192.168.1.100"));
+	// Verify table contains exact IP address
+	assert!(html.starts_with("<table") || html.starts_with("<div"));
+	assert!(html.ends_with("</table>") || html.ends_with("</div>"));
+	assert_eq!(html.matches("Security Audit").count(), 1);
+	assert_eq!(html.matches("192.168.1.100").count(), 1);
 }
