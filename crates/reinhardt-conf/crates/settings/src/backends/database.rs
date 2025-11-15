@@ -646,9 +646,6 @@ mod tests {
 			.await
 			.expect("Failed to set setting");
 
-		// Wait a moment to ensure expiration
-		tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
 		// Try to get expired setting
 		let retrieved = backend.get(key).await.expect("Failed to get setting");
 
@@ -676,9 +673,6 @@ mod tests {
 				.await
 				.expect("Failed to set setting");
 		}
-
-		// Wait for expiration
-		tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
 		// Clean up expired settings
 		let deleted = backend.cleanup_expired().await.expect("Failed to cleanup");
@@ -795,9 +789,6 @@ mod tests {
 			.set("expired2", &json!("value4"), Some(0))
 			.await
 			.expect("Failed to set expired2");
-
-		// Wait for expiration
-		tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
 		// Get keys (should only include active settings)
 		let keys = backend.keys().await.expect("Failed to get keys");

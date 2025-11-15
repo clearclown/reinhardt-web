@@ -350,8 +350,14 @@ mod tests {
 		// Should exist immediately
 		assert!(backend.exists("temp_key").await.unwrap());
 
-		// Wait for expiration
-		tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+		// Poll until key expires (1 second TTL)
+		reinhardt_test::poll_until(
+			Duration::from_millis(1200),
+			Duration::from_millis(50),
+			|| async { !backend.exists("temp_key").await.unwrap() },
+		)
+		.await
+		.expect("Key should expire within 1200ms");
 
 		// Should be expired and auto-removed on access
 		assert!(!backend.exists("temp_key").await.unwrap());
@@ -462,7 +468,7 @@ mod tests {
 
 		assert_eq!(backend.len(), 3);
 
-		// Wait for expiration
+		// Wait for expiration (TTL is 1 second, wait 1100ms to ensure expiration)
 		tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
 
 		// Manual cleanup
@@ -493,8 +499,8 @@ mod tests {
 			.await
 			.unwrap();
 
-		// Wait for one to expire
-		tokio::time::sleep(tokio::time::Duration::from_millis(1100)).await;
+		// Wait for one to expire (1 second TTL)
+		tokio::time::sleep(Duration::from_millis(1100)).await;
 
 		// keys() should only return non-expired keys
 		let keys = backend.keys().await.unwrap();

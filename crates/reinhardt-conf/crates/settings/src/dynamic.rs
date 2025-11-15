@@ -832,8 +832,6 @@ mod tests {
 		settings.set("test", &"value", None).await.unwrap();
 
 		// Small delay to ensure callback is executed
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
 		assert!(*called.read());
 	}
 
@@ -850,13 +848,11 @@ mod tests {
 		});
 
 		settings.set("key1", &"value1", None).await.unwrap();
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 		assert_eq!(*called.read(), 1);
 
 		settings.unsubscribe(sub_id);
 
 		settings.set("key2", &"value2", None).await.unwrap();
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 		assert_eq!(*called.read(), 1); // Should not increment
 	}
 
