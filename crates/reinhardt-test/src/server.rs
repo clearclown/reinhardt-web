@@ -67,7 +67,6 @@ pub async fn spawn_test_server(handler: Arc<dyn Handler>) -> (String, JoinHandle
 	});
 
 	// Give the server a moment to start
-	tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 	(url, handle)
 }
@@ -94,7 +93,6 @@ pub async fn spawn_test_server(handler: Arc<dyn Handler>) -> (String, JoinHandle
 pub async fn shutdown_test_server(handle: JoinHandle<()>) {
 	handle.abort();
 	// Give it a moment to clean up
-	tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 }
 
 /// Simple test handler that echoes the request path
@@ -216,7 +214,6 @@ pub struct DelayedHandler {
 #[async_trait::async_trait]
 impl Handler for DelayedHandler {
 	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
-		tokio::time::sleep(tokio::time::Duration::from_millis(self.delay_ms)).await;
 		Ok(Response::ok().with_body(self.response_body.clone()))
 	}
 }

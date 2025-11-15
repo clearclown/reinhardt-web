@@ -107,7 +107,6 @@ impl PostgresSuiteResource {
 							attempt + 1,
 							e
 						);
-						tokio::time::sleep(Duration::from_millis(100 * (attempt as u64 + 1))).await;
 					}
 					Err(e) => panic!(
 						"Failed to connect to PostgreSQL after {} retries: {}",
@@ -226,7 +225,6 @@ impl MySqlSuiteResource {
 							attempt + 1,
 							e
 						);
-						tokio::time::sleep(Duration::from_millis(100 * (attempt as u64 + 1))).await;
 					}
 					Err(e) => panic!(
 						"Failed to connect to MySQL after {} retries: {}",

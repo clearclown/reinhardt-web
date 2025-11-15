@@ -364,9 +364,7 @@ pub async fn redis_container() -> (ContainerAsync<GenericImage>, u16, String) {
 				);
 				last_error = Some(e);
 
-				if attempt < MAX_RETRIES - 1 {
-					tokio::time::sleep(tokio::time::Duration::from_millis(RETRY_DELAY_MS)).await;
-				}
+				if attempt < MAX_RETRIES - 1 {}
 			}
 		}
 	}
@@ -498,7 +496,6 @@ pub async fn redis_cluster_cleanup(_redis_cluster_lock: FileLockGuard) {
 	// }
 	//
 	// // Small delay to ensure complete cleanup
-	// tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 }
 
 /// Helper function to attempt Redis cluster container start
@@ -546,8 +543,6 @@ async fn try_start_redis_cluster(
 			eprintln!("All Redis cluster ports ready after {} attempts", retry + 1);
 			return Ok((cluster, node_ports));
 		}
-
-		tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 	}
 
 	Err(format!(
@@ -918,8 +913,6 @@ pub async fn redis_cluster_fixture() -> (
 				}
 			}
 		}
-
-		tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 	}
 
 	// Level 3: Start container and wait for ports
@@ -983,8 +976,6 @@ pub async fn redis_cluster_fixture() -> (
 					max_retries, node_ports
 				);
 			}
-
-			tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 		}
 
 		(cluster, node_ports)
@@ -1016,8 +1007,6 @@ pub async fn redis_cluster_fixture() -> (
 					max_retries, node_ports
 				);
 			}
-
-			tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 		}
 	}
 

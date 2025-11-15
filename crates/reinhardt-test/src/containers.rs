@@ -316,7 +316,6 @@ impl RedisContainer {
 					Err(e) if attempt < 30 => {
 						// Connection failed, but we'll retry
 						eprintln!("Redis connection attempt {}/30 failed: {}", attempt, e);
-						tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 					}
 					Err(e) => {
 						// Final attempt failed
@@ -328,7 +327,6 @@ impl RedisContainer {
 				},
 				Err(e) if attempt < 30 => {
 					eprintln!("Redis client creation attempt {}/30 failed: {}", attempt, e);
-					tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 				}
 				Err(e) => {
 					return Err(Box::new(e));

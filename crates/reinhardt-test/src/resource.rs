@@ -507,12 +507,10 @@ mod tests {
 	#[async_trait::async_trait]
 	impl AsyncTestResource for AsyncCounter {
 		async fn setup() -> Self {
-			tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 			Self { value: 42 }
 		}
 
 		async fn teardown(self) {
-			tokio::time::sleep(std::time::Duration::from_millis(1)).await;
 			// Cleanup
 		}
 	}
