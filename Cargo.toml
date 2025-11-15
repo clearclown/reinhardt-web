@@ -220,7 +220,7 @@ members = [
   "crates/reinhardt-grpc",
   "crates/reinhardt-graphql-macros",
   "crates/reinhardt-commands",
-  "crates/reinhardt-admin", # CLI tool
+  "crates/reinhardt-admin-cli", # CLI tool
   "crates/reinhardt-db",
   "crates/reinhardt-dispatch",
   "crates/reinhardt-shortcuts",
@@ -280,7 +280,7 @@ reinhardt-admin-panel = { path = "crates/reinhardt-admin-panel", version = "0.1.
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
 reinhardt-graphql-macros = { path = "crates/reinhardt-graphql-macros", version = "0.1.0-alpha.1" }
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0-alpha.1" }
-reinhardt-admin-cli = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
+reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
 reinhardt-db = { path = "crates/reinhardt-db", version = "0.1.0-alpha.1" }
 reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0-alpha.1" }
 reinhardt-events = { path = "crates/reinhardt-events", version = "0.1.0-alpha.1" }

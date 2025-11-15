@@ -1,17 +1,17 @@
-# reinhardt-admin
+# reinhardt-admin-cli
 
 Global command-line tool for Reinhardt project management.
 
 ## Overview
 
-`reinhardt-admin` is the Django's `django-admin` equivalent for Reinhardt. It provides utilities for creating new projects and applications.
+`reinhardt-admin-cli` is the Django's `django-admin` equivalent for Reinhardt. It provides utilities for creating new projects and applications.
 
 ## Installation
 
 Install globally using cargo:
 
 ```bash
-cargo install reinhardt-admin
+cargo install reinhardt-admin-cli
 ```
 
 ## Usage
@@ -61,7 +61,7 @@ reinhardt-admin --version
 
 ## Project Templates
 
-`reinhardt-admin` includes two project templates:
+`reinhardt-admin-cli` includes two project templates:
 
 - **RESTful** (default): API-focused applications
 - **MTV**: Traditional server-rendered web applications (Model-Template-View)
@@ -81,10 +81,10 @@ Apps can be created in two forms:
 
 ## Architecture
 
-`reinhardt-admin` depends on `reinhardt-commands` for its core functionality:
+`reinhardt-admin-cli` depends on `reinhardt-commands` for its core functionality:
 
 ```
-reinhardt-admin (CLI binary)
+reinhardt-admin-cli (CLI binary)
     ↓
 reinhardt-commands (Library)
     ↓
