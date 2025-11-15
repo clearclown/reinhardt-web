@@ -513,7 +513,14 @@ mod tests {
 			throttle.send(i).await.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(100)).await;
+		// Poll until signals are processed
+		reinhardt_test::poll_until(
+			Duration::from_millis(100),
+			Duration::from_millis(10),
+			|| async { counter.load(Ordering::SeqCst) == 5 },
+		)
+		.await
+		.expect("5 signals should be processed within 100ms");
 
 		assert_eq!(counter.load(Ordering::SeqCst), 5);
 		assert_eq!(throttle.dropped_count(), 5);
@@ -545,16 +552,29 @@ mod tests {
 			throttle.send(i).await.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(50)).await;
-		assert_eq!(counter.load(Ordering::SeqCst), 3);
+		// Poll until initial 3 signals are processed
+		reinhardt_test::poll_until(
+			Duration::from_millis(50),
+			Duration::from_millis(10),
+			|| async { counter.load(Ordering::SeqCst) == 3 },
+		)
+		.await
+		.expect("3 signals should be processed within 50ms");
 
-		// Wait for window to pass
+		// Wait for window to pass (200ms window duration)
 		tokio::time::sleep(Duration::from_millis(200)).await;
 
 		// Should be able to send again
 		throttle.send(99).await.unwrap();
-		tokio::time::sleep(Duration::from_millis(50)).await;
-		assert_eq!(counter.load(Ordering::SeqCst), 4);
+
+		// Poll until the new signal is processed
+		reinhardt_test::poll_until(
+			Duration::from_millis(50),
+			Duration::from_millis(10),
+			|| async { counter.load(Ordering::SeqCst) == 4 },
+		)
+		.await
+		.expect("4th signal should be processed within 50ms");
 	}
 
 	#[tokio::test]
@@ -582,13 +602,26 @@ mod tests {
 			throttle.send(i).await.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(50)).await;
-		assert_eq!(counter.load(Ordering::SeqCst), 10);
+		// Poll until all 10 signals are processed
+		reinhardt_test::poll_until(
+			Duration::from_millis(50),
+			Duration::from_millis(10),
+			|| async { counter.load(Ordering::SeqCst) == 10 },
+		)
+		.await
+		.expect("10 signals should be processed within 50ms");
 
 		// Next signal should be dropped (no tokens)
 		throttle.send(100).await.unwrap();
-		tokio::time::sleep(Duration::from_millis(50)).await;
-		assert_eq!(throttle.dropped_count(), 1);
+
+		// Poll until dropped count increments
+		reinhardt_test::poll_until(
+			Duration::from_millis(50),
+			Duration::from_millis(10),
+			|| async { throttle.dropped_count() == 1 },
+		)
+		.await
+		.expect("11th signal should be dropped within 50ms");
 	}
 
 	#[tokio::test]
@@ -618,14 +651,27 @@ mod tests {
 			throttle.send(i).await.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(100)).await;
+		// Poll until initial 5 signals are processed
+		reinhardt_test::poll_until(
+			Duration::from_millis(100),
+			Duration::from_millis(10),
+			|| async { counter.load(Ordering::SeqCst) == 5 },
+		)
+		.await
+		.expect("5 signals should be processed immediately within 100ms");
 
 		// 5 should go through immediately, 5 should be queued
 		assert_eq!(counter.load(Ordering::SeqCst), 5);
 		assert!(throttle.queue_length() > 0);
 
-		// Wait for queue to be processed
-		tokio::time::sleep(Duration::from_millis(500)).await;
+		// Poll until queue is processed (window is 300ms)
+		reinhardt_test::poll_until(
+			Duration::from_millis(500),
+			Duration::from_millis(20),
+			|| async { counter.load(Ordering::SeqCst) >= 9 },
+		)
+		.await
+		.expect("Queue should be processed within 500ms");
 
 		// Eventually all should be processed
 		assert!(counter.load(Ordering::SeqCst) >= 9);
