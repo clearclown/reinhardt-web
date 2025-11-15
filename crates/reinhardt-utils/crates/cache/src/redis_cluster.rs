@@ -450,9 +450,7 @@ mod tests {
 		assert_eq!(value, None);
 	}
 
-	/// Test: Redis Cluster cache TTL
 	#[rstest]
-	#[serial(redis_cluster)]
 	#[tokio::test]
 	async fn test_redis_cluster_cache_ttl(
 		#[future] redis_cluster_urls: (Vec<String>, RedisClusterContainer),
@@ -471,8 +469,17 @@ mod tests {
 		let value: Option<String> = cache.get("test:ttl").await.unwrap();
 		assert_eq!(value, Some("value".to_string()));
 
-		// Wait for expiration
-		tokio::time::sleep(Duration::from_secs(2)).await;
+		// Poll until key expires (1 second TTL)
+		reinhardt_test::poll_until(
+			Duration::from_millis(1200),
+			Duration::from_millis(50),
+			|| async {
+				let value: Option<String> = cache.get("test:ttl").await.unwrap();
+				value.is_none()
+			},
+		)
+		.await
+		.expect("Key should expire within 1200ms");
 
 		// Should be expired
 		let value: Option<String> = cache.get("test:ttl").await.unwrap();

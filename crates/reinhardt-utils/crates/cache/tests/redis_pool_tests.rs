@@ -205,8 +205,17 @@ mod redis_pool_integration {
 		let value: Option<String> = cache.get("ttl_test").await.expect("Failed to get value");
 		assert_eq!(value, Some("expires_soon".to_string()));
 
-		// Wait for expiration
-		tokio::time::sleep(Duration::from_secs(3)).await;
+		// Poll until key expires (2 second TTL)
+		reinhardt_test::poll_until(
+			Duration::from_millis(2500),
+			Duration::from_millis(100),
+			|| async {
+				let value: Option<String> = cache.get("ttl_test").await.ok().flatten();
+				value.is_none()
+			},
+		)
+		.await
+		.expect("Key should expire within 2500ms");
 
 		let expired: Option<String> = cache
 			.get("ttl_test")

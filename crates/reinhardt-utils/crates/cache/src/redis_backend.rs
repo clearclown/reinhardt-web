@@ -454,8 +454,17 @@ mod tests {
 		let value: Option<String> = cache.get("ttl_key").await.unwrap();
 		assert_eq!(value, Some("value".to_string()));
 
-		// Wait for expiration
-		tokio::time::sleep(Duration::from_secs(3)).await;
+		// Poll until key expires (2 second TTL)
+		reinhardt_test::poll_until(
+			Duration::from_millis(2500),
+			Duration::from_millis(100),
+			|| async {
+				let value: Option<String> = cache.get("ttl_key").await.unwrap();
+				value.is_none()
+			},
+		)
+		.await
+		.expect("Key should expire within 2500ms");
 
 		// Key should be expired
 		let value: Option<String> = cache.get("ttl_key").await.unwrap();
