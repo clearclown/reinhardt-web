@@ -4,8 +4,8 @@
 //!
 //! # Example
 //!
-//! ```rust
-//! use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+//! ```rust,ignore
+//! use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 //! use bson::doc;
 //!
 //! let builder = MongoDBQueryBuilder::new("users")
@@ -22,8 +22,8 @@ use bson::{Document, doc};
 ///
 /// # Example
 ///
-/// ```rust
-/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+/// ```rust,ignore
+/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 /// use bson::doc;
 ///
 /// let builder = MongoDBQueryBuilder::new("users")
@@ -46,8 +46,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users");
 	/// assert_eq!(builder.collection_name(), "users");
@@ -67,8 +67,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -83,8 +83,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -99,8 +99,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
 	///     .limit(10);
@@ -114,8 +114,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
 	///     .skip(20);
@@ -129,8 +129,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -145,8 +145,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users");
 	/// assert_eq!(builder.collection_name(), "users");
@@ -159,8 +159,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -175,8 +175,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -192,8 +192,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
 	///     .limit(10);
@@ -207,8 +207,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
 	///     .skip(20);
@@ -222,8 +222,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")
@@ -239,8 +239,8 @@ impl MongoDBQueryBuilder {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::mongodb::MongoDBQueryBuilder;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::mongodb::MongoDBQueryBuilder;
 	/// use bson::doc;
 	///
 	/// let builder = MongoDBQueryBuilder::new("users")

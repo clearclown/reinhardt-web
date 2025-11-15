@@ -8,50 +8,20 @@ mod mongodb_tests {
 	use reinhardt_db::backends::mongodb::{
 		MongoDBBackend, MongoDBBackendBuilder, MongoDBQueryBuilder, MongoDBSchemaEditor,
 	};
+	use reinhardt_test::fixtures::mongodb_container;
+	use rstest::*;
 	use serial_test::serial;
-	use std::sync::Arc;
-	use testcontainers::{GenericImage, core::WaitFor, runners::AsyncRunner};
-	use tokio::sync::OnceCell;
+	use testcontainers::{ContainerAsync, GenericImage};
 
-	// Global container that will be reused across tests
-	static CONTAINER: OnceCell<Arc<MongoContainer>> = OnceCell::const_new();
-
-	struct MongoContainer {
-		_container: testcontainers::ContainerAsync<GenericImage>,
-		connection_string: String,
-	}
-
-	async fn get_mongo_container() -> Arc<MongoContainer> {
-		CONTAINER
-			.get_or_init(|| async {
-				let image = GenericImage::new("mongo", "7.0")
-					.with_wait_for(WaitFor::message_on_stdout("Waiting for connections"));
-				// Note: with_exposed_port() is no longer needed in testcontainers 0.25.x
-				// Ports defined in the image's EXPOSE directive are automatically published
-
-				let container = image.start().await.expect("Failed to start MongoDB");
-				let port = container
-					.get_host_port_ipv4(27017)
-					.await
-					.expect("Failed to get port");
-
-				let connection_string = format!("mongodb://127.0.0.1:{}", port);
-
-				Arc::new(MongoContainer {
-					_container: container,
-					connection_string,
-				})
-			})
-			.await
-			.clone()
-	}
-
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_connection() {
-		let container = get_mongo_container().await;
+	async fn test_connection(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect");
 
@@ -67,13 +37,16 @@ mod mongodb_tests {
 		assert!(collections.is_empty() || !collections.is_empty()); // Just verify it works
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_builder_connection() {
-		let container = get_mongo_container().await;
+	async fn test_builder_connection(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
 		let backend = MongoDBBackendBuilder::new()
-			.url(&container.connection_string)
+			.url(&connection_string)
 			.database("test_db")
 			.max_pool_size(50)
 			.min_pool_size(5)
@@ -90,12 +63,15 @@ mod mongodb_tests {
 		assert!(collections.is_empty() || !collections.is_empty());
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_insert_and_find() {
-		let container = get_mongo_container().await;
+	async fn test_insert_and_find(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_insert");
@@ -140,12 +116,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_insert_many() {
-		let container = get_mongo_container().await;
+	async fn test_insert_many(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_insert_many");
@@ -187,12 +166,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_update_operations() {
-		let container = get_mongo_container().await;
+	async fn test_update_operations(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_update");
@@ -251,12 +233,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_delete_operations() {
-		let container = get_mongo_container().await;
+	async fn test_delete_operations(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_delete");
@@ -321,12 +306,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_aggregation() {
-		let container = get_mongo_container().await;
+	async fn test_aggregation(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_aggregation");
@@ -379,12 +367,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_query_builder() {
-		let container = get_mongo_container().await;
+	async fn test_query_builder(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_query_builder");
@@ -445,12 +436,15 @@ mod mongodb_tests {
 			.await;
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_schema_editor() {
-		let container = get_mongo_container().await;
+	async fn test_schema_editor(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let editor = MongoDBSchemaEditor::new(&container.connection_string, "test_schema")
+		let editor = MongoDBSchemaEditor::new(&connection_string, "test_schema")
 			.await
 			.expect("Failed to create editor");
 
@@ -505,12 +499,15 @@ mod mongodb_tests {
 			.expect("Failed to drop collection");
 	}
 
+	#[rstest]
 	#[tokio::test]
 	#[serial(mongodb)]
-	async fn test_validation_enforcement() {
-		let container = get_mongo_container().await;
+	async fn test_validation_enforcement(
+		#[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16),
+	) {
+		let (_container, connection_string, _port) = mongodb_container.await;
 
-		let editor = MongoDBSchemaEditor::new(&container.connection_string, "test_validation")
+		let editor = MongoDBSchemaEditor::new(&connection_string, "test_validation")
 			.await
 			.expect("Failed to create editor");
 
@@ -534,7 +531,7 @@ mod mongodb_tests {
 			.await
 			.expect("Failed to create collection");
 
-		let backend = MongoDBBackend::connect(&container.connection_string)
+		let backend = MongoDBBackend::connect(&connection_string)
 			.await
 			.expect("Failed to connect")
 			.with_database("test_validation");
