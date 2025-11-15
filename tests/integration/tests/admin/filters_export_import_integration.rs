@@ -2,7 +2,7 @@
 //!
 //! Tests the complete flow: filtering data → exporting → importing back
 
-use reinhardt_admin::{
+use reinhardt_admin_panel::{
 	// Filters
 	BooleanFilter,
 	ChoiceFilter,

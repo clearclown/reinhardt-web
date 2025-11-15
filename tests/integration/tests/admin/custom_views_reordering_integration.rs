@@ -3,9 +3,8 @@
 //! Tests custom view registration, rendering, and model reordering functionality
 
 use async_trait::async_trait;
-use reinhardt_admin::{
-	CustomView, CustomViewRegistry, DragDropConfig,
-	ReorderableModel, ViewConfig,
+use reinhardt_admin_panel::{
+	CustomView, CustomViewRegistry, DragDropConfig, ReorderableModel, ViewConfig,
 };
 use std::collections::HashMap;
 
@@ -426,10 +425,13 @@ async fn test_permission_based_view_access() {
 		email: "admin@example.com".to_string(),
 		is_active: true,
 		is_admin: true,
-		is_staff: true,  // Required for has_permission to return true
+		is_staff: true, // Required for has_permission to return true
 		is_superuser: true,
 	};
-	assert!(view.has_permission(&admin_user as &(dyn std::any::Any + Send + Sync)).await);
+	assert!(
+		view.has_permission(&admin_user as &(dyn std::any::Any + Send + Sync))
+			.await
+	);
 
 	// Test with regular user (not staff)
 	let regular_user = reinhardt_auth::SimpleUser {
@@ -438,10 +440,14 @@ async fn test_permission_based_view_access() {
 		email: "user@example.com".to_string(),
 		is_active: true,
 		is_admin: false,
-		is_staff: false,  // Not staff, should fail permission check
+		is_staff: false, // Not staff, should fail permission check
 		is_superuser: false,
 	};
-	assert!(!view.has_permission(&regular_user as &(dyn std::any::Any + Send + Sync)).await);
+	assert!(
+		!view
+			.has_permission(&regular_user as &(dyn std::any::Any + Send + Sync))
+			.await
+	);
 }
 
 // TODO: ReorderHandler now requires database connection - needs refactoring

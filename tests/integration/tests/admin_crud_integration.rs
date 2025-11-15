@@ -10,7 +10,7 @@
 //!
 //! All tests use TestContainers for automatic database setup and cleanup.
 
-use reinhardt_admin::{
+use reinhardt_admin_panel::{
 	AdminDatabase, AdminSite, BooleanFilter, ChoiceFilter, CreateView, DeleteView, FilterManager,
 	ListFilter, ListView, ModelAdminConfig, UpdateView,
 };
@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
-use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 
 /// Test model representing a user
 #[derive(Debug, Clone, Serialize, Deserialize)]

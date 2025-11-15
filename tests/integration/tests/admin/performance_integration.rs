@@ -8,11 +8,11 @@
 
 use async_trait::async_trait;
 use chrono::Utc;
-use reinhardt_admin::{
-	AdminResult, BooleanFilter, FilterManager,
+use reinhardt_admin_panel::{
 	audit::{AuditAction, AuditLog, AuditLogQuery, AuditLogger, MemoryAuditLogger},
 	dashboard::{DashboardWidget, WidgetConfig, WidgetContext, WidgetPosition, WidgetRegistry},
 	import::{CsvImporter, JsonImporter},
+	AdminResult, BooleanFilter, FilterManager,
 };
 use std::sync::Arc;
 use std::time::Instant;

@@ -5,17 +5,17 @@
 //! and counting operations.
 
 use chrono::Utc;
-use reinhardt_admin::AdminDatabase;
-use reinhardt_admin::audit::{
+use reinhardt_admin_panel::audit::{
 	AuditAction, AuditLog, AuditLogQuery, AuditLogger, DatabaseAuditLogger,
 };
+use reinhardt_admin_panel::AdminDatabase;
 use reinhardt_orm::DatabaseConnection;
 use rstest::*;
 use serde_json::json;
 use serial_test::serial;
 use std::net::IpAddr;
 use std::sync::Arc;
-use testcontainers::{GenericImage, ImageExt, core::WaitFor, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, runners::AsyncRunner, GenericImage, ImageExt};
 
 /// Fixture providing test database with audit_logs table
 #[fixture]

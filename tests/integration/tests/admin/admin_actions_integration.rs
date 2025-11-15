@@ -9,12 +9,10 @@
 //! - Action registry management
 
 use async_trait::async_trait;
-use reinhardt_admin::{
+use reinhardt_admin_panel::{
 	ActionRegistry, ActionResult, AdminAction, AdminDatabase, DeleteSelectedAction,
 };
-use reinhardt_orm::{
-	Model, Timestamped, Timestamps,
-};
+use reinhardt_orm::{Model, Timestamped, Timestamps};
 use reinhardt_test::fixtures::mock_connection;
 use serde::{Deserialize, Serialize};
 use std::any::Any;
