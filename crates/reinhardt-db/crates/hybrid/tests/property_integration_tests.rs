@@ -5,6 +5,7 @@ use reinhardt_hybrid::prelude::*;
 
 #[derive(Debug)]
 struct Article {
+	#[allow(dead_code)]
 	id: i32,
 	title: String,
 	body: String,

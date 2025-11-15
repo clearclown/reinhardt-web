@@ -5,6 +5,7 @@ use reinhardt_hybrid::prelude::*;
 
 #[derive(Debug)]
 struct User {
+	#[allow(dead_code)]
 	id: i32,
 	first_name: String,
 	last_name: String,

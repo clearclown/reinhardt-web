@@ -81,6 +81,7 @@ impl PartialOrd for Amount {
 
 #[derive(Debug)]
 struct BankAccount {
+	#[allow(dead_code)]
 	id: i32,
 	balance_value: f64,
 }

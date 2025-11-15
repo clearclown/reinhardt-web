@@ -5,6 +5,7 @@ use reinhardt_hybrid::prelude::*;
 
 #[derive(Debug)]
 struct Account {
+	#[allow(dead_code)]
 	id: i32,
 	balance: f64,
 	currency: String,
