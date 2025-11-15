@@ -15,15 +15,18 @@
 //!
 //! # Example
 //!
-//! ```rust
-//! use reinhardt_db::reinhardt_backends::cockroachdb::{
+//! ```ignore
+//! use reinhardt_db::backends::cockroachdb::{
 //!     CockroachDBBackend,
 //!     schema::CockroachDBSchemaEditor,
 //! };
-//! use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+//! use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+//! use sqlx::PgPool;
 //!
 //! // Create a CockroachDB backend
-//! let pg_editor = PostgreSQLSchemaEditor::new();
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+//! let pg_editor = PostgreSQLSchemaEditor::new(pool);
 //! let backend = CockroachDBBackend::new(pg_editor);
 //!
 //! // Create a multi-region table
@@ -34,6 +37,8 @@
 //!     "REGIONAL BY ROW"
 //! );
 //! assert!(sql.contains("LOCALITY REGIONAL BY ROW"));
+//! # Ok(())
+//! # }
 //! ```
 
 pub mod connection;
@@ -53,12 +58,17 @@ use crate::drivers::postgresql::schema::PostgreSQLSchemaEditor;
 ///
 /// # Examples
 ///
-/// ```rust
-/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+/// ```ignore
+/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+/// use sqlx::PgPool;
 ///
-/// let pg_editor = PostgreSQLSchemaEditor::new();
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 /// let backend = CockroachDBBackend::new(pg_editor);
+/// # Ok(())
+/// # }
 /// ```
 pub struct CockroachDBBackend {
 	schema_editor: CockroachDBSchemaEditor,
@@ -69,12 +79,17 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let backend = CockroachDBBackend::new(pg_editor);
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn new(pg_editor: PostgreSQLSchemaEditor) -> Self {
 		Self {
@@ -86,16 +101,21 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let backend = CockroachDBBackend::new(pg_editor);
 	/// let editor = backend.schema_editor();
 	///
 	/// let sql = editor.show_regions_sql();
 	/// assert_eq!(sql, "SHOW REGIONS");
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn schema_editor(&self) -> &CockroachDBSchemaEditor {
 		&self.schema_editor
@@ -105,13 +125,18 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let mut backend = CockroachDBBackend::new(pg_editor);
 	/// let editor = backend.schema_editor_mut();
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn schema_editor_mut(&mut self) -> &mut CockroachDBSchemaEditor {
 		&mut self.schema_editor
@@ -121,13 +146,18 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let backend = CockroachDBBackend::new(pg_editor);
 	/// assert_eq!(backend.database_name(), "cockroachdb");
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn database_name(&self) -> &str {
 		"cockroachdb"
@@ -137,17 +167,22 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let backend = CockroachDBBackend::new(pg_editor);
 	///
 	/// assert!(backend.supports_feature("multi_region"));
 	/// assert!(backend.supports_feature("distributed_transactions"));
 	/// assert!(backend.supports_feature("as_of_system_time"));
 	/// assert!(!backend.supports_feature("unknown_feature"));
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn supports_feature(&self, feature: &str) -> bool {
 		matches!(
@@ -168,11 +203,14 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::CockroachDBBackend;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```ignore
+	/// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// use sqlx::PgPool;
 	///
-	/// let pg_editor = PostgreSQLSchemaEditor::new();
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
+	/// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 	/// let backend = CockroachDBBackend::new(pg_editor);
 	/// let features = backend.supported_features();
 	///

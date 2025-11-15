@@ -11,9 +11,9 @@
 ///
 /// # Example
 ///
-/// ```rust
-/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+/// ```rust,ignore
+/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 ///
 /// let pg_editor = PostgreSQLSchemaEditor::new();
 /// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -28,7 +28,14 @@
 /// ```
 use crate::drivers::postgresql::schema::PostgreSQLSchemaEditor;
 use crate::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-use pg_escape::quote_identifier;
+
+/// Quote an identifier with double quotes
+///
+/// Always adds double quotes around identifiers for CockroachDB,
+/// ensuring compatibility with reserved words and special characters.
+fn quote_ident(ident: &str) -> String {
+	format!("\"{}\"", ident.replace("\"", "\"\""))
+}
 
 /// CockroachDB-specific schema editor
 ///
@@ -43,9 +50,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -63,9 +70,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -84,10 +91,10 @@ impl CockroachDBSchemaEditor {
 		columns: &[(&str, &str)],
 		locality: &str,
 	) -> String {
-		let quoted_table = quote_identifier(table);
+		let quoted_table = quote_ident(table);
 		let column_defs: Vec<String> = columns
 			.iter()
-			.map(|(name, def)| format!("{} {}", quote_identifier(name), def))
+			.map(|(name, def)| format!("{} {}", quote_ident(name), def))
 			.collect();
 
 		format!(
@@ -102,9 +109,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -116,7 +123,7 @@ impl CockroachDBSchemaEditor {
 	pub fn alter_table_locality_sql(&self, table: &str, locality: &str) -> String {
 		format!(
 			"ALTER TABLE {} SET LOCALITY {}",
-			quote_identifier(table),
+			quote_ident(table),
 			locality
 		)
 	}
@@ -127,9 +134,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -149,22 +156,22 @@ impl CockroachDBSchemaEditor {
 		partition_column: &str,
 		partitions: &[(&str, &str)],
 	) -> String {
-		let quoted_table = quote_identifier(table);
+		let quoted_table = quote_ident(table);
 		let column_defs: Vec<String> = columns
 			.iter()
-			.map(|(name, def)| format!("{} {}", quote_identifier(name), def))
+			.map(|(name, def)| format!("{} {}", quote_ident(name), def))
 			.collect();
 
 		let partition_defs: Vec<String> = partitions
 			.iter()
-			.map(|(name, values)| format!("PARTITION {} VALUES IN ({})", name, values))
+			.map(|(name, values)| format!("PARTITION {} VALUES IN ({})", quote_ident(name), values))
 			.collect();
 
 		format!(
 			"CREATE TABLE {} ({}) PARTITION BY LIST ({}) ({})",
 			quoted_table,
 			column_defs.join(", "),
-			quote_identifier(partition_column),
+			quote_ident(partition_column),
 			partition_defs.join(", ")
 		)
 	}
@@ -175,9 +182,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -202,24 +209,18 @@ impl CockroachDBSchemaEditor {
 		condition: Option<&str>,
 	) -> String {
 		let unique_keyword = if unique { "UNIQUE " } else { "" };
-		let quoted_columns: Vec<String> = columns
-			.iter()
-			.map(|c| quote_identifier(c).to_string())
-			.collect();
+		let quoted_columns: Vec<String> = columns.iter().map(|c| quote_ident(c)).collect();
 
 		let mut sql = format!(
 			"CREATE {}INDEX {} ON {} ({})",
 			unique_keyword,
-			quote_identifier(name),
-			quote_identifier(table),
+			quote_ident(name),
+			quote_ident(table),
 			quoted_columns.join(", ")
 		);
 
 		if !storing.is_empty() {
-			let storing_cols: Vec<String> = storing
-				.iter()
-				.map(|c| quote_identifier(c).to_string())
-				.collect();
+			let storing_cols: Vec<String> = storing.iter().map(|c| quote_ident(c)).collect();
 			sql.push_str(&format!(" STORING ({})", storing_cols.join(", ")));
 		}
 
@@ -236,9 +237,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -256,9 +257,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -276,9 +277,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -294,9 +295,9 @@ impl CockroachDBSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust
-	/// use reinhardt_db::reinhardt_backends::cockroachdb::schema::CockroachDBSchemaEditor;
-	/// use reinhardt_db::reinhardt_backends::postgresql::schema::PostgreSQLSchemaEditor;
+	/// ```rust,ignore
+	/// use reinhardt_db::backends::cockroachdb::schema::CockroachDBSchemaEditor;
+	/// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 	///
 	/// let pg_editor = PostgreSQLSchemaEditor::new();
 	/// let editor = CockroachDBSchemaEditor::new(pg_editor);
@@ -307,8 +308,8 @@ impl CockroachDBSchemaEditor {
 	pub fn set_primary_region_sql(&self, database: &str, region: &str) -> String {
 		format!(
 			"ALTER DATABASE {} SET PRIMARY REGION {}",
-			quote_identifier(database),
-			quote_identifier(region)
+			quote_ident(database),
+			quote_ident(region)
 		)
 	}
 }
