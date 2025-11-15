@@ -61,18 +61,25 @@ mod anonymous_user_tests {
 		let html = renderer.render(&context).unwrap();
 
 		// Verify the HTTP status is displayed
-		assert!(html.contains("403"), "HTML should display 403 status code");
-
-		// Verify the endpoint title is shown
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
 		assert!(
-			html.contains("Protected Endpoint"),
-			"HTML should show endpoint title"
+			html.matches("403").count() >= 1,
+			"HTML should display 403 status code at least once"
+		);
+
+		// Verify the endpoint title is shown (may appear in <title> and <h1>)
+		assert!(
+			html.matches("Protected Endpoint").count() >= 1,
+			"HTML should show endpoint title at least once"
 		);
 
 		// Verify the error message is in the response
-		assert!(
-			html.contains("Authentication credentials were not provided"),
-			"HTML should contain the authentication error message"
+		assert_eq!(
+			html.matches("Authentication credentials were not provided")
+				.count(),
+			1,
+			"HTML should contain the authentication error message exactly once"
 		);
 
 		// Verify no form is rendered (anonymous users shouldn't see forms for protected endpoints)
@@ -83,9 +90,10 @@ mod anonymous_user_tests {
 		);
 
 		// Verify headers are displayed
-		assert!(
-			html.contains("WWW-Authenticate"),
-			"HTML should display response headers"
+		assert_eq!(
+			html.matches("WWW-Authenticate").count(),
+			1,
+			"HTML should display WWW-Authenticate header exactly once"
 		);
 
 		cleanup_test_output(&test_dir);
@@ -112,22 +120,35 @@ mod anonymous_user_tests {
 
 		let html = renderer.render(&context).unwrap();
 
-		// Verify status code
-		assert!(html.contains("403"), "Should display 403 status");
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
 
-		// Verify title
-		assert!(html.contains("Forbidden"), "Should display Forbidden title");
+		// Verify status code
+		assert!(
+			html.matches("403").count() >= 1,
+			"Should display 403 status at least once"
+		);
+
+		// Verify title (may appear in <title> and <h1>)
+		assert!(
+			html.matches("Forbidden").count() >= 1,
+			"Should display Forbidden title at least once"
+		);
 
 		// Verify permission error message
-		assert!(
-			html.contains("You do not have permission to perform this action"),
-			"Should display permission error message"
+		assert_eq!(
+			html.matches("You do not have permission to perform this action")
+				.count(),
+			1,
+			"Should display permission error message exactly once"
 		);
 
 		// Verify endpoint URL is shown
-		assert!(
-			html.contains("/api/basicviewset/"),
-			"Should display the endpoint URL"
+		assert_eq!(
+			html.matches("/api/basicviewset/").count(),
+			1,
+			"Should display the endpoint URL exactly once"
 		);
 
 		// Verify no allowed methods are shown (empty vec)
@@ -172,10 +193,23 @@ mod dropdown_with_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
-		// Verify basic rendering
-		assert!(html.contains("API Root"), "Should contain API title");
-		assert!(html.contains("Browsable API"), "Should contain description");
-		assert!(html.contains("200"), "Should show 200 status");
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
+		// Verify basic rendering (titles may appear in <title> and <h1>)
+		assert!(
+			html.matches("API Root").count() >= 1,
+			"Should contain API title at least once"
+		);
+		assert!(
+			html.matches("Browsable API").count() >= 1,
+			"Should contain description at least once"
+		);
+		assert!(
+			html.matches("200").count() >= 1,
+			"Should show 200 status at least once"
+		);
 
 		// NOTE: This test verifies username display capability in rendered HTML
 		// User authentication context would provide username in production
@@ -183,8 +217,8 @@ mod dropdown_with_auth_tests {
 		context.title = "API Root - john".to_string();
 		let html_with_user = renderer.render(&context).unwrap();
 		assert!(
-			html_with_user.contains("john"),
-			"Should support displaying username in title"
+			html_with_user.matches("john").count() >= 1,
+			"Should support displaying username in title at least once"
 		);
 
 		cleanup_test_output(&test_dir);
@@ -214,11 +248,21 @@ mod dropdown_with_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
 		// Verify logout URL is present
-		assert!(html.contains("/auth/logout/"), "Should contain logout URL");
+		assert!(
+			html.matches("/auth/logout/").count() >= 1,
+			"Should contain logout URL at least once"
+		);
 
 		// Verify it's a POST form
-		assert!(html.contains("POST"), "Logout should use POST method");
+		assert!(
+			html.matches("POST").count() >= 1,
+			"Logout should use POST method at least once"
+		);
 
 		// Verify form structure exists
 		let has_request_section = html.matches("Make a Request").count() >= 1;
@@ -276,25 +320,35 @@ mod dropdown_with_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
 		// Verify login URL
-		assert!(html.contains("/auth/login/"), "Should contain login URL");
+		assert!(
+			html.matches("/auth/login/").count() >= 1,
+			"Should contain login URL at least once"
+		);
 
 		// Verify login form fields
 		assert!(
-			html.contains("name=\"username\""),
-			"Should have username field"
+			html.matches("name=\"username\"").count() >= 1,
+			"Should have username field at least once"
 		);
 		assert!(
-			html.contains("name=\"password\""),
-			"Should have password field"
+			html.matches("name=\"password\"").count() >= 1,
+			"Should have password field at least once"
 		);
 		assert!(
-			html.contains("type=\"password\""),
-			"Password field should be type password"
+			html.matches("type=\"password\"").count() >= 1,
+			"Password field should be type password at least once"
 		);
 
 		// Verify required fields
-		assert!(html.contains("required"), "Login fields should be required");
+		assert!(
+			html.matches("required").count() >= 1,
+			"Login fields should be required at least once"
+		);
 
 		cleanup_test_output(&test_dir);
 	}
@@ -323,8 +377,15 @@ mod dropdown_with_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
 		// Verify logout URL with next parameter
-		assert!(html.contains("/auth/logout/"), "Should contain logout URL");
+		assert!(
+			html.matches("/auth/logout/").count() >= 1,
+			"Should contain logout URL at least once"
+		);
 		// The URL may be HTML-encoded by Handlebars, so check for the path
 		let has_next_query = html.matches("?next=/").count() >= 1;
 		let has_next_param = html.matches("next").count() >= 1;
@@ -334,11 +395,20 @@ mod dropdown_with_auth_tests {
 		);
 
 		// Verify POST method
-		assert!(html.contains("method=\"POST\""), "Should use POST method");
+		assert!(
+			html.matches("method=\"POST\"").count() >= 1,
+			"Should use POST method at least once"
+		);
 
 		// Verify form tag structure
-		assert!(html.contains("<form"), "Should contain form tag");
-		assert!(html.contains("</form>"), "Should have closing form tag");
+		assert!(
+			html.matches("<form").count() >= 1,
+			"Should contain form tag at least once"
+		);
+		assert!(
+			html.matches("</form>").count() >= 1,
+			"Should have closing form tag at least once"
+		);
 
 		cleanup_test_output(&test_dir);
 	}
@@ -368,6 +438,10 @@ mod no_dropdown_without_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
 		// Verify no form is rendered when request_form is None
 		assert_eq!(
 			html.matches("Make a Request").count(),
@@ -375,12 +449,15 @@ mod no_dropdown_without_auth_tests {
 			"Should not show request form when auth is disabled"
 		);
 
-		// Verify basic structure is still present
+		// Verify basic structure is still present (title may appear in <title> and <h1>)
 		assert!(
-			html.contains("View Without Dropdown"),
-			"Should display title"
+			html.matches("View Without Dropdown").count() >= 1,
+			"Should display title at least once"
 		);
-		assert!(html.contains("200"), "Should display status");
+		assert!(
+			html.matches("200").count() >= 1,
+			"Should display status at least once"
+		);
 
 		cleanup_test_output(&test_dir);
 	}
@@ -405,6 +482,10 @@ mod no_dropdown_without_auth_tests {
 
 		let html = renderer.render(&context).unwrap();
 
+		// Verify HTML structure
+		assert!(html.starts_with("<!DOCTYPE html>") || html.starts_with("<html"));
+		assert!(html.trim_end().ends_with("</html>"));
+
 		// Verify no auth-related elements
 		assert_eq!(
 			html.matches("dropdown").count(),
@@ -422,9 +503,15 @@ mod no_dropdown_without_auth_tests {
 			"Should not contain logout references"
 		);
 
-		// Verify page renders correctly
-		assert!(html.contains("Public View No Auth"), "Should display title");
-		assert!(html.contains("GET"), "Should display method");
+		// Verify page renders correctly (title may appear in <title> and <h1>)
+		assert!(
+			html.matches("Public View No Auth").count() >= 1,
+			"Should display title at least once"
+		);
+		assert!(
+			html.matches("GET").count() >= 1,
+			"Should display method at least once"
+		);
 
 		cleanup_test_output(&test_dir);
 	}
@@ -489,74 +576,117 @@ mod integration_tests {
 		// save_html_output(&test_dir, "complete_rendering.html", &html);
 
 		// Verify page structure
-		assert!(html.contains("<!DOCTYPE html>"), "Should be valid HTML");
-		assert!(html.contains("<html>"), "Should have html tag");
-		assert!(html.contains("</html>"), "Should close html tag");
-
-		// Verify title and description
-		assert!(html.contains("User API"), "Should display API title");
-		assert!(html.contains("Manage users"), "Should display description");
-
-		// Verify endpoint and method
-		assert!(html.contains("/api/users/"), "Should display endpoint URL");
-		assert!(html.contains("GET"), "Should display current method");
-
-		// Verify response data is displayed
-		assert!(html.contains("john"), "Should display user john");
-		assert!(html.contains("jane"), "Should display user jane");
 		assert!(
-			html.contains("john@example.com"),
-			"Should display john's email"
+			html.starts_with("<!DOCTYPE html>"),
+			"Should start with valid HTML doctype"
 		);
 		assert!(
-			html.contains("jane@example.com"),
-			"Should display jane's email"
+			html.trim_end().ends_with("</html>"),
+			"Should end with closing html tag"
+		);
+		assert!(
+			html.matches("<html").count() >= 1,
+			"Should have at least one opening html tag"
+		);
+
+		// Verify title and description (may appear in <title> and <h1>)
+		assert!(
+			html.matches("User API").count() >= 1,
+			"Should display API title at least once"
+		);
+		assert!(
+			html.matches("Manage users").count() >= 1,
+			"Should display description at least once"
+		);
+
+		// Verify endpoint and method
+		assert!(
+			html.matches("/api/users/").count() >= 1,
+			"Should display endpoint URL at least once"
+		);
+		assert!(
+			html.matches("GET").count() >= 1,
+			"Should display GET method at least once"
+		);
+
+		// Verify response data is displayed
+		assert!(
+			html.matches("john").count() >= 1,
+			"Should display user john at least once"
+		);
+		assert!(
+			html.matches("jane").count() >= 1,
+			"Should display user jane at least once"
+		);
+		assert_eq!(
+			html.matches("john@example.com").count(),
+			1,
+			"Should display john's email exactly once"
+		);
+		assert_eq!(
+			html.matches("jane@example.com").count(),
+			1,
+			"Should display jane's email exactly once"
 		);
 
 		// Verify form fields
 		assert!(
-			html.contains("name=\"username\""),
-			"Should have username field"
+			html.matches("name=\"username\"").count() >= 1,
+			"Should have username field at least once"
 		);
-		assert!(html.contains("name=\"email\""), "Should have email field");
 		assert!(
-			html.contains("type=\"email\""),
-			"Email field should have correct type"
+			html.matches("name=\"email\"").count() >= 1,
+			"Should have email field at least once"
+		);
+		assert!(
+			html.matches("type=\"email\"").count() >= 1,
+			"Email field should have correct type at least once"
 		);
 
 		// Verify help text
-		assert!(
-			html.contains("Enter a unique username"),
-			"Should display username help text"
+		assert_eq!(
+			html.matches("Enter a unique username").count(),
+			1,
+			"Should display username help text exactly once"
 		);
-		assert!(
-			html.contains("Enter a valid email address"),
-			"Should display email help text"
+		assert_eq!(
+			html.matches("Enter a valid email address").count(),
+			1,
+			"Should display email help text exactly once"
 		);
 
 		// Verify headers section
 		assert!(
-			html.contains("Content-Type"),
-			"Should display Content-Type header"
+			html.matches("Content-Type").count() >= 1,
+			"Should display Content-Type header at least once"
 		);
 		assert!(
-			html.contains("application/json"),
-			"Should display JSON content type"
+			html.matches("application/json").count() >= 1,
+			"Should display JSON content type at least once"
 		);
-		assert!(html.contains("Allow"), "Should display Allow header");
+		assert!(
+			html.matches("Allow").count() >= 1,
+			"Should display Allow header at least once"
+		);
 
-		// Verify allowed methods badges
-		assert!(html.contains("GET"), "Should show GET method badge");
-		assert!(html.contains("POST"), "Should show POST method badge");
+		// Verify allowed methods badges (GET appears in multiple contexts: current method, allowed methods)
+		assert!(
+			html.matches("GET").count() >= 1,
+			"Should show GET method at least once"
+		);
+		assert!(
+			html.matches("POST").count() >= 1,
+			"Should show POST method at least once"
+		);
 
 		// Verify form submission
 		assert!(
-			html.contains("method=\"POST\""),
-			"Form should use POST method"
+			html.matches("method=\"POST\"").count() >= 1,
+			"Form should use POST method at least once"
 		);
 		assert!(
-			html.contains("action=\"/api/users/\""),
-			"Form should submit to correct URL"
+			html.matches("action=\"/api/users/\"").count() >= 1,
+			"Form should submit to correct URL at least once"
 		);
 
 		cleanup_test_output(&test_dir);
