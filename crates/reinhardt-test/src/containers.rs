@@ -75,10 +75,10 @@
 //! let temp_url = sqlite::temp_file_url("my_test");
 //! ```
 
+use testcontainers::core::WaitFor;
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use testcontainers_modules::mysql::Mysql;
-use testcontainers_modules::postgres::Postgres;
 use testcontainers_modules::redis::Redis as RedisImage;
 
 /// Test key used by Memcached container's `wait_ready()` method to verify readiness.
@@ -103,7 +103,7 @@ pub trait TestDatabase: Send + Sync {
 /// PostgreSQL test container
 pub struct PostgresContainer {
 	#[allow(dead_code)]
-	container: ContainerAsync<Postgres>,
+	container: ContainerAsync<GenericImage>,
 	host: String,
 	port: u16,
 	database: String,
@@ -145,26 +145,36 @@ impl PostgresContainer {
 		Self::with_credentials("postgres", "postgres", "test").await
 	}
 	/// Create a PostgreSQL container with custom credentials
-	pub async fn with_credentials(username: &str, password: &str, database: &str) -> Self {
-		let image = Postgres::default()
-			.with_env_var("POSTGRES_USER", username)
-			.with_env_var("POSTGRES_PASSWORD", password)
-			.with_env_var("POSTGRES_DB", database);
+pub async fn with_credentials(username: &str, password: &str, database: &str) -> Self {
+	// Use GenericImage to ensure port is properly exposed
+	let image = GenericImage::new("postgres", "16-alpine")
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_env_var("POSTGRES_USER", username)
+		.with_env_var("POSTGRES_PASSWORD", password)
+		.with_env_var("POSTGRES_DB", database);
 
-		let container = AsyncRunner::start(image)
-			.await
-			.expect("Failed to start PostgreSQL container");
-		let port = container.get_host_port_ipv4(5432).await.unwrap();
+	let container = AsyncRunner::start(image)
+		.await
+		.expect("Failed to start PostgreSQL container");
+	
+	// PostgreSQL listens on port 5432 inside container
+	// testcontainers automatically maps it to a random host port
+	let port = container
+		.get_host_port_ipv4(5432)
+		.await
+		.expect("Failed to get PostgreSQL port");
 
-		Self {
-			container,
-			host: "localhost".to_string(),
-			port,
-			database: database.to_string(),
-			username: username.to_string(),
-			password: password.to_string(),
-		}
+	Self {
+		container,
+		host: "localhost".to_string(),
+		port,
+		database: database.to_string(),
+		username: username.to_string(),
+		password: password.to_string(),
 	}
+}
 	/// Get the container port
 	pub fn port(&self) -> u16 {
 		self.port
@@ -303,30 +313,54 @@ impl RedisContainer {
 
 	/// Wait for Redis server to be ready to accept connections
 	async fn wait_until_ready(&self) -> Result<(), Box<dyn std::error::Error>> {
+		use redis::AsyncCommands;
+		use tokio::time::{sleep, Duration};
+
 		let connection_url = self.connection_url();
 
-		// Try to connect to Redis with retries (max 30 attempts, 3 seconds total)
+		// Try to connect to Redis with retries (max 30 attempts, ~15 seconds total)
 		for attempt in 1..=30 {
 			match redis::Client::open(connection_url.as_str()) {
-				Ok(client) => match client.get_connection() {
-					Ok(_) => {
-						// Connection successful
-						return Ok(());
+				Ok(client) => {
+					match client.get_multiplexed_async_connection().await {
+						Ok(mut conn) => {
+							// Try PING command to ensure Redis is fully ready
+							match conn.ping::<String>().await {
+								Ok(_) => {
+									// Connection successful and Redis is ready
+									return Ok(());
+								}
+								Err(e) if attempt < 30 => {
+									// PING failed, but we'll retry
+									eprintln!("Redis PING attempt {}/30 failed: {}", attempt, e);
+									sleep(Duration::from_millis(500)).await;
+								}
+								Err(e) => {
+									// Final attempt failed
+									return Err(Box::new(std::io::Error::new(
+										std::io::ErrorKind::ConnectionRefused,
+										format!("Redis failed to become ready after 30 attempts: {}", e),
+									)));
+								}
+							}
+						}
+						Err(e) if attempt < 30 => {
+							// Connection failed, but we'll retry
+							eprintln!("Redis connection attempt {}/30 failed: {}", attempt, e);
+							sleep(Duration::from_millis(500)).await;
+						}
+						Err(e) => {
+							// Final attempt failed
+							return Err(Box::new(std::io::Error::new(
+								std::io::ErrorKind::ConnectionRefused,
+								format!("Redis failed to become ready after 30 attempts: {}", e),
+							)));
+						}
 					}
-					Err(e) if attempt < 30 => {
-						// Connection failed, but we'll retry
-						eprintln!("Redis connection attempt {}/30 failed: {}", attempt, e);
-					}
-					Err(e) => {
-						// Final attempt failed
-						return Err(Box::new(std::io::Error::new(
-							std::io::ErrorKind::ConnectionRefused,
-							format!("Redis failed to become ready after 30 attempts: {}", e),
-						)));
-					}
-				},
+				}
 				Err(e) if attempt < 30 => {
 					eprintln!("Redis client creation attempt {}/30 failed: {}", attempt, e);
+					sleep(Duration::from_millis(500)).await;
 				}
 				Err(e) => {
 					return Err(Box::new(e));
