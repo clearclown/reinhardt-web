@@ -75,6 +75,7 @@ tempfile = "3.8"
 
 # Testing framework dependencies
 rstest = "0.26.1"
+mockall = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
