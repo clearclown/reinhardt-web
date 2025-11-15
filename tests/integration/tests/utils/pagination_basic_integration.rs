@@ -33,7 +33,7 @@ mod basic_pagination_tests {
 	#[test]
 	fn test_page_size_override() {
 		let items: Vec<i32> = (1..=50).collect();
-		let paginator = PageNumberPagination::new()
+		let _paginator = PageNumberPagination::new()
 			.page_size(10)
 			.page_size_query_param("page_size");
 
@@ -53,7 +53,7 @@ mod basic_pagination_tests {
 	#[test]
 	fn test_max_page_size_limit() {
 		let items: Vec<i32> = (1..=50).collect();
-		let paginator = PageNumberPagination::new().page_size(10).max_page_size(15);
+		let _paginator = PageNumberPagination::new().page_size(10).max_page_size(15);
 
 		// Test that max_page_size is respected
 		let large_paginator = PageNumberPagination::new()

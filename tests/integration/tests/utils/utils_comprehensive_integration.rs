@@ -47,7 +47,7 @@ fn test_user_profile_display() {
 
 	// 2. Localize registration date
 	let utc_date = timezone::now();
-	let local_date = timezone::to_local(utc_date);
+	let _local_date = timezone::to_local(utc_date);
 	let formatted = dateformat::format(&utc_date, "M d, Y");
 	assert!(!formatted.is_empty());
 
@@ -73,7 +73,7 @@ fn test_multilingual_metadata() {
 
 	// 2. Timezone conversion
 	let utc_time = timezone::now();
-	let local_time = timezone::to_local(utc_time);
+	let _local_time = timezone::to_local(utc_time);
 
 	// 3. Date formatting
 	let date_str = dateformat::format(&utc_time, "Y-m-d H:i:s");

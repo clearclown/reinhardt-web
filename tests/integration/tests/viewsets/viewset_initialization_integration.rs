@@ -4,6 +4,7 @@ use reinhardt_http::Request;
 use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, ReadOnlyModelViewSet, ViewSet};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TestModel {
 	id: i64,
 	name: String,

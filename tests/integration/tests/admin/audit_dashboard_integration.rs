@@ -206,7 +206,7 @@ async fn test_dashboard_multi_widget_audit_integration() {
 		border_color: Some(vec!["#2980b9".to_string()]),
 	}];
 
-	let chart_data = ChartData {
+	let _chart_data = ChartData {
 		labels: counts_by_model.keys().cloned().collect(),
 		datasets,
 	};
@@ -389,8 +389,8 @@ async fn test_table_widget_audit_summary() {
 	assert!(html.starts_with("<table") || html.starts_with("<div"));
 	assert!(html.ends_with("</table>") || html.ends_with("</div>"));
 	assert_eq!(html.matches("Action Statistics").count(), 1);
-	assert_eq!(html.matches("Action").count(), 1); // Column header
-	assert_eq!(html.matches("Count").count(), 1); // Column header
+	assert_eq!(html.matches("Action").count(), 2); // Title + Column header
+	assert_eq!(html.matches("Count").count(), 1); // Column header only
 }
 
 /// Test: Permission-based widget visibility with audit context

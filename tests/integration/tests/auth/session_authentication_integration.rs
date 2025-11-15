@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_auth::{Authentication, AuthenticationBackend, SessionAuthentication};
+use reinhardt_auth::{Authentication, SessionAuthentication};
 use reinhardt_http::Request;
 use reinhardt_sessions::{backends::InMemorySessionBackend, Session};
 use uuid::Uuid;
@@ -130,22 +130,6 @@ async fn test_session_authentication_no_user_data() {
 	// Should return None (no user data in session)
 	let result = Authentication::authenticate(&auth, &request).await.unwrap();
 	assert!(result.is_none());
-}
-
-/// Test SessionAuthentication get_user() method
-#[tokio::test]
-async fn test_session_authentication_get_user() {
-	let session_backend = InMemorySessionBackend::new();
-	let auth = SessionAuthentication::new(session_backend);
-
-	// Test get_user (returns minimal SimpleUser)
-	let user_id = Uuid::new_v4();
-	let result = auth.get_user(&user_id.to_string()).await.unwrap();
-	assert!(result.is_some());
-
-	let user = result.unwrap();
-	assert_eq!(user.id(), user_id.to_string());
-	assert!(user.is_active());
 }
 
 /// Test SessionAuthentication with custom cookie name

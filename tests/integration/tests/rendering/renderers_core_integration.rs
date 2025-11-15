@@ -506,6 +506,6 @@ async fn test_format_parameter_takes_precedence_over_accept_header() {
 	let result = registry.render(&data, None, Some(&context)).await;
 	assert!(result.is_ok());
 
-	let (bytes, content_type) = result.unwrap();
+	let (_bytes, content_type) = result.unwrap();
 	assert_eq!(content_type, "application/json; charset=utf-8");
 }

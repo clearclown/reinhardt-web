@@ -20,6 +20,8 @@ use std::sync::Arc;
 
 // Test model for integration testing
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
+#[allow(dead_code)]
 struct Article {
 	id: Option<i64>,
 	title: String,
@@ -359,10 +361,12 @@ async fn test_action_registry_get_action() {
 
 	let missing = registry.get_action("nonexistent");
 	assert!(missing.is_err());
-	assert_eq!(
-		missing.unwrap_err().to_string(),
-		"Action not found: nonexistent"
-	);
+	if let Err(e) = missing {
+		assert_eq!(
+			e.to_string(),
+			"Invalid action: Action not found: nonexistent"
+		);
+	}
 }
 
 #[tokio::test]

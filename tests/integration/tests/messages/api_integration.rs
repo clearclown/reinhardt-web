@@ -215,7 +215,7 @@ mod tests {
 				}
 			}
 
-			fn add_message(&self, message: Message) -> Result<(), String> {
+			fn add_message(&self, _message: Message) -> Result<(), String> {
 				if self.has_message_middleware {
 					Ok(())
 				} else {
@@ -258,7 +258,7 @@ mod tests {
 
 			fn add_message_silently(
 				&self,
-				message: Message,
+				_message: Message,
 				fail_silently: bool,
 			) -> Result<(), String> {
 				if self.has_message_middleware {

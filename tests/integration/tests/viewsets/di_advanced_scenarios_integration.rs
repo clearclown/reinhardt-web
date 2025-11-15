@@ -104,6 +104,7 @@ async fn test_error_messages_are_descriptive() {
 	// Verify that error messages contain useful information
 	// This is more of a documentation test showing the expected behavior
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct TestService {
 		id: usize,
 	}
@@ -115,6 +116,7 @@ async fn test_error_messages_are_descriptive() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct TestStruct {
 		#[inject]
 		service: TestService,
@@ -592,6 +594,7 @@ async fn test_method_injection_with_request_params() {
 	}
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct ParamViewSet {
 		name: String,
 	}
@@ -916,6 +919,7 @@ async fn test_concurrent_di_injections() {
 	use tokio::task::JoinSet;
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct ConcurrentService {
 		id: usize,
 	}
@@ -927,6 +931,7 @@ async fn test_concurrent_di_injections() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct ConcurrentViewSet {
 		#[inject]
 		service: ConcurrentService,
@@ -988,6 +993,7 @@ async fn test_timeout_handling_in_injection() {
 	use tokio::time::{timeout, Duration};
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct SlowService {
 		ready: bool,
 	}
@@ -999,6 +1005,7 @@ async fn test_timeout_handling_in_injection() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct TimeoutViewSet {
 		#[inject]
 		service: SlowService,
@@ -1197,6 +1204,7 @@ async fn test_large_number_of_dependencies() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct LargeDepsViewSet {
 		#[inject]
 		s1: Service,
@@ -1243,6 +1251,7 @@ async fn test_recursive_struct_with_arc() {
 	use std::sync::Mutex;
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct Node {
 		value: i32,
 		next: Arc<Mutex<Option<Box<Node>>>>,

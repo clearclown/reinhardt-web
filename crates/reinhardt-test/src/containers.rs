@@ -145,36 +145,36 @@ impl PostgresContainer {
 		Self::with_credentials("postgres", "postgres", "test").await
 	}
 	/// Create a PostgreSQL container with custom credentials
-pub async fn with_credentials(username: &str, password: &str, database: &str) -> Self {
-	// Use GenericImage to ensure port is properly exposed
-	let image = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr(
-			"database system is ready to accept connections",
-		))
-		.with_env_var("POSTGRES_USER", username)
-		.with_env_var("POSTGRES_PASSWORD", password)
-		.with_env_var("POSTGRES_DB", database);
+	pub async fn with_credentials(username: &str, password: &str, database: &str) -> Self {
+		// Use GenericImage to ensure port is properly exposed
+		let image = GenericImage::new("postgres", "16-alpine")
+			.with_wait_for(WaitFor::message_on_stderr(
+				"database system is ready to accept connections",
+			))
+			.with_env_var("POSTGRES_USER", username)
+			.with_env_var("POSTGRES_PASSWORD", password)
+			.with_env_var("POSTGRES_DB", database);
 
-	let container = AsyncRunner::start(image)
-		.await
-		.expect("Failed to start PostgreSQL container");
-	
-	// PostgreSQL listens on port 5432 inside container
-	// testcontainers automatically maps it to a random host port
-	let port = container
-		.get_host_port_ipv4(5432)
-		.await
-		.expect("Failed to get PostgreSQL port");
+		let container = AsyncRunner::start(image)
+			.await
+			.expect("Failed to start PostgreSQL container");
 
-	Self {
-		container,
-		host: "localhost".to_string(),
-		port,
-		database: database.to_string(),
-		username: username.to_string(),
-		password: password.to_string(),
+		// PostgreSQL listens on port 5432 inside container
+		// testcontainers automatically maps it to a random host port
+		let port = container
+			.get_host_port_ipv4(5432)
+			.await
+			.expect("Failed to get PostgreSQL port");
+
+		Self {
+			container,
+			host: "localhost".to_string(),
+			port,
+			database: database.to_string(),
+			username: username.to_string(),
+			password: password.to_string(),
+		}
 	}
-}
 	/// Get the container port
 	pub fn port(&self) -> u16 {
 		self.port
@@ -314,7 +314,7 @@ impl RedisContainer {
 	/// Wait for Redis server to be ready to accept connections
 	async fn wait_until_ready(&self) -> Result<(), Box<dyn std::error::Error>> {
 		use redis::AsyncCommands;
-		use tokio::time::{sleep, Duration};
+		use tokio::time::{Duration, sleep};
 
 		let connection_url = self.connection_url();
 
@@ -339,7 +339,10 @@ impl RedisContainer {
 									// Final attempt failed
 									return Err(Box::new(std::io::Error::new(
 										std::io::ErrorKind::ConnectionRefused,
-										format!("Redis failed to become ready after 30 attempts: {}", e),
+										format!(
+											"Redis failed to become ready after 30 attempts: {}",
+											e
+										),
 									)));
 								}
 							}

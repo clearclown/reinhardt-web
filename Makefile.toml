@@ -100,9 +100,8 @@ args = ["nextest", "run", "--workspace", "--lib", "--tests", "--exclude", "reinh
 
 [tasks.integration-test]
 description = "Run integration tests (requires PostgreSQL, MySQL, Redis)"
-cwd = "tests/integration"
 command = "cargo"
-args = ["nextest", "run", "--workspace", "--all-features", "--no-fail-fast"]
+args = ["nextest", "run", "--package", "reinhardt-integration-tests", "--all-features", "--no-fail-fast"]
 
 [tasks.test]
 description = "Run all tests"

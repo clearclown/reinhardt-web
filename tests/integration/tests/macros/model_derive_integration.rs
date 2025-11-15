@@ -167,6 +167,7 @@ fn test_multiple_models_registration() {
 	// Define another model to ensure multiple models can be registered
 	#[derive(Debug, Clone, Serialize, Deserialize, Model)]
 	#[model(app_label = "test_app", table_name = "test_posts")]
+	#[allow(dead_code)]
 	struct TestPost {
 		#[field(primary_key = true)]
 		id: Option<i64>,

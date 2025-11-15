@@ -129,10 +129,10 @@ mod tests {
 		let config = MessageConfig::new().with_level(29);
 
 		// Test messages at various levels
-		let debug_msg = Message::new(Level::Debug, "Debug message");
-		let info_msg = Message::new(Level::Info, "Info message");
-		let warning_msg = Message::new(Level::Warning, "Warning message");
-		let error_msg = Message::new(Level::Error, "Error message");
+		let _debug_msg = Message::new(Level::Debug, "Debug message");
+		let _info_msg = Message::new(Level::Info, "Info message");
+		let _warning_msg = Message::new(Level::Warning, "Warning message");
+		let _error_msg = Message::new(Level::Error, "Error message");
 
 		// Convert to numeric levels for testing
 		let debug_level = 10;

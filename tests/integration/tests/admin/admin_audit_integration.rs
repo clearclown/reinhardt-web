@@ -10,7 +10,7 @@ use reinhardt_admin_panel::audit::{
 };
 use reinhardt_admin_panel::AdminDatabase;
 use reinhardt_orm::DatabaseConnection;
-use rstest::*;
+use rstest::{fixture, rstest};
 use serde_json::json;
 use serial_test::serial;
 use std::net::IpAddr;
@@ -28,6 +28,7 @@ async fn setup_test_db() -> (
 		.with_wait_for(WaitFor::message_on_stderr(
 			"database system is ready to accept connections",
 		))
+		.with_wait_for(WaitFor::seconds(3)) // Additional wait for PostgreSQL initialization
 		.with_env_var("POSTGRES_PASSWORD", "test")
 		.with_env_var("POSTGRES_DB", "test_db")
 		.start()
@@ -41,8 +42,11 @@ async fn setup_test_db() -> (
 
 	let database_url = format!("postgres://postgres:test@localhost:{}/test_db", port);
 
-	// Create connection using DatabaseConnection
-	let conn = DatabaseConnection::connect(&database_url)
+	// Additional sleep to ensure PostgreSQL is fully ready
+	tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+	// Create connection using DatabaseConnection with smaller pool for tests
+	let conn = DatabaseConnection::connect_with_pool_size(&database_url, Some(5))
 		.await
 		.expect("Failed to connect to database");
 

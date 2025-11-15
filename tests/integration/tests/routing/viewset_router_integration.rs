@@ -7,6 +7,7 @@ use reinhardt_viewsets::{GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TestModel {
 	id: i64,
 	name: String,

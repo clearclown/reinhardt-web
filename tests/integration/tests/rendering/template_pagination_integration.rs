@@ -19,6 +19,7 @@ use tera::{Context, Tera};
 // ============================================================================
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PaginatedData<T> {
 	pub items: Vec<T>,
 	pub current_page: u32,

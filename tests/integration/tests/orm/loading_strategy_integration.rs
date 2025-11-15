@@ -11,7 +11,7 @@ mod integration_tests {
 		LoadingStrategy, Model,
 	};
 	use reinhardt_validators::TableName;
-	use rstest::*;
+	use rstest::{fixture, rstest};
 	use serde::{Deserialize, Serialize};
 	use sqlx::{sqlite::SqlitePoolOptions, Row, SqlitePool};
 	use std::sync::Arc;

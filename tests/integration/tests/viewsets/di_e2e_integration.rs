@@ -25,6 +25,7 @@ async fn test_complete_request_response_cycle() {
 	static REQUEST_COUNTER: LazyLock<AtomicUsize> = LazyLock::new(|| AtomicUsize::new(0));
 
 	#[derive(Clone)]
+	#[allow(dead_code)]
 	struct RequestLogger {
 		count: Arc<AtomicUsize>,
 	}
@@ -38,6 +39,7 @@ async fn test_complete_request_response_cycle() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct LoggingViewSet {
 		#[inject]
 		logger: RequestLogger,
@@ -948,6 +950,7 @@ async fn test_empty_request_handling() {
 	}
 
 	#[derive(Clone, Injectable)]
+	#[allow(dead_code)]
 	struct EmptyViewSet {
 		#[inject]
 		handler: EmptyRequestHandler,

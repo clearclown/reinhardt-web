@@ -4,13 +4,14 @@
 //! Based on Django's CSRF middleware tests
 
 use hyper::header::{HeaderName, HeaderValue, COOKIE, SET_COOKIE};
-use reinhardt_http::{Error, Request, Response, Result};
+use reinhardt_http::{Request, Response, Result};
 use reinhardt_security::csrf::SameSite;
 use reinhardt_security::{generate_token_hmac, verify_token_hmac, CsrfConfig};
 use reinhardt_test::http::*;
 use reinhardt_types::Handler;
 
 // Mock handler for testing
+#[allow(dead_code)]
 struct MockHandler;
 
 #[async_trait::async_trait]
@@ -46,6 +47,7 @@ fn create_request_with_csrf_header(
 }
 
 /// Extract CSRF token from Set-Cookie header
+#[allow(dead_code)]
 fn extract_csrf_token_from_response(response: &Response) -> Option<String> {
 	response
 		.headers
@@ -98,7 +100,7 @@ async fn test_csrf_safe_methods_bypass() {
 	let safe_methods = ["GET", "HEAD", "OPTIONS", "TRACE"];
 
 	for method in &safe_methods {
-		let request = create_test_request(method, "/api/test", true);
+		let _request = create_test_request(method, "/api/test", true);
 		// Safe methods should not require CSRF token
 		// This would normally be handled by middleware
 		assert!(["GET", "HEAD", "OPTIONS", "TRACE"].contains(&method));
@@ -111,7 +113,7 @@ async fn test_csrf_unsafe_methods_require_token() {
 	let unsafe_methods = ["POST", "PUT", "DELETE", "PATCH"];
 
 	for method in &unsafe_methods {
-		let request = create_test_request(method, "/api/test", true);
+		let _request = create_test_request(method, "/api/test", true);
 		// These methods should require CSRF validation
 		assert!(["POST", "PUT", "DELETE", "PATCH"].contains(&method));
 	}
