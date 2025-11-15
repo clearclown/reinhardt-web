@@ -23,6 +23,7 @@ tokio-tungstenite = { version = "0.28.0", optional = true }
 futures-util = { version = "0.3", optional = true }
 
 [dev-dependencies]
+reinhardt-test = { workspace = true }
 tokio-test = "0.4"
 anyhow = { workspace = true }
 reqwest = { version = "0.12", features = ["json"] }

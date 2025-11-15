@@ -349,19 +349,24 @@ mod tests {
 			assert_eq!(response.status, http::StatusCode::OK);
 		}
 
-		// Wait for window to reset
-		tokio::time::sleep(Duration::from_millis(150)).await;
-
-		// Should be allowed again
-		let request = Request::new(
-			http::Method::GET,
-			"/".parse().unwrap(),
-			http::Version::HTTP_11,
-			http::HeaderMap::new(),
-			bytes::Bytes::new(),
-		);
-		let response = rate_limit_handler.handle(request).await.unwrap();
-		assert_eq!(response.status, http::StatusCode::OK);
+		// Poll until rate limit window resets (100ms window duration)
+		reinhardt_test::poll_until(
+			Duration::from_millis(200),
+			Duration::from_millis(10),
+			|| async {
+				let test_request = Request::new(
+					http::Method::GET,
+					"/".parse().unwrap(),
+					http::Version::HTTP_11,
+					http::HeaderMap::new(),
+					bytes::Bytes::new(),
+				);
+				let test_response = rate_limit_handler.handle(test_request).await.unwrap();
+				test_response.status == http::StatusCode::OK
+			},
+		)
+		.await
+		.expect("Window should reset within 200ms");
 	}
 
 	// Client IP extraction tests
