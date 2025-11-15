@@ -2,6 +2,8 @@
 //! Based on Django's django/tests/mail/test_sendtestemail.py
 
 use reinhardt_commands::{BaseCommand, CommandContext, SendTestEmailCommand};
+use reinhardt_conf::settings::{Contact, Settings};
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_single_receiver() {
@@ -45,7 +47,15 @@ async fn test_missing_receivers() {
 #[tokio::test]
 async fn test_manager_receivers() {
 	let command = SendTestEmailCommand::new();
-	let mut ctx = CommandContext::new(vec![]);
+
+	// Create mock settings with manager contacts
+	let mut settings = Settings::default();
+	settings.managers = vec![Contact {
+		name: "Manager".to_string(),
+		email: "manager@example.com".to_string(),
+	}];
+
+	let mut ctx = CommandContext::new(vec![]).with_settings(Arc::new(settings));
 	ctx.set_option("managers".to_string(), "true".to_string());
 
 	let result = command.execute(&ctx).await;
@@ -56,7 +66,15 @@ async fn test_manager_receivers() {
 #[tokio::test]
 async fn test_admin_receivers() {
 	let command = SendTestEmailCommand::new();
-	let mut ctx = CommandContext::new(vec![]);
+
+	// Create mock settings with admin contacts
+	let mut settings = Settings::default();
+	settings.admins = vec![Contact {
+		name: "Admin".to_string(),
+		email: "admin@example.com".to_string(),
+	}];
+
+	let mut ctx = CommandContext::new(vec![]).with_settings(Arc::new(settings));
 	ctx.set_option("admins".to_string(), "true".to_string());
 
 	let result = command.execute(&ctx).await;
@@ -67,7 +85,19 @@ async fn test_admin_receivers() {
 #[tokio::test]
 async fn test_manager_and_admin_receivers() {
 	let command = SendTestEmailCommand::new();
-	let mut ctx = CommandContext::new(vec![]);
+
+	// Create mock settings with both manager and admin contacts
+	let mut settings = Settings::default();
+	settings.managers = vec![Contact {
+		name: "Manager".to_string(),
+		email: "manager@example.com".to_string(),
+	}];
+	settings.admins = vec![Contact {
+		name: "Admin".to_string(),
+		email: "admin@example.com".to_string(),
+	}];
+
+	let mut ctx = CommandContext::new(vec![]).with_settings(Arc::new(settings));
 	ctx.set_option("managers".to_string(), "true".to_string());
 	ctx.set_option("admins".to_string(), "true".to_string());
 

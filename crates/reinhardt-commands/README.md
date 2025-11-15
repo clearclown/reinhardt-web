@@ -19,10 +19,10 @@ reinhardt-commands = "0.1.0-alpha.1"
 
 ### As a global CLI tool
 
-For creating new projects and apps, use the separate `reinhardt-admin` package:
+For creating new projects and apps, use the separate `reinhardt-admin-cli` package:
 
 ```bash
-cargo install reinhardt-admin
+cargo install reinhardt-admin-cli
 ```
 
 This installs the `reinhardt-admin` command:
@@ -32,7 +32,7 @@ reinhardt-admin startproject myproject
 reinhardt-admin startapp myapp
 ```
 
-See [reinhardt-admin documentation](../reinhardt-admin/README.md) for more details.
+See [reinhardt-admin documentation](../reinhardt-admin-cli/README.md) for more details.
 
 ## Features
 
