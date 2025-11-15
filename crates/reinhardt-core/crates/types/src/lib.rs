@@ -1,14 +1,14 @@
-use async_trait::async_trait;
-use reinhardt_exception::Result;
-use std::sync::Arc;
-
 // Re-export Request and Response for convenience
 #[cfg(feature = "http")]
 pub use reinhardt_http::{Request, Response};
 
 #[cfg(feature = "http")]
 mod http_types {
-	use super::*;
+	use async_trait::async_trait;
+	use reinhardt_exception::Result;
+	use std::sync::Arc;
+
+	use super::{Request, Response};
 
 	/// Handler trait for processing requests
 	/// This is the core abstraction - all request handlers implement this
@@ -245,8 +245,11 @@ pub use http_types::{Handler, Middleware, MiddlewareChain};
 #[cfg(all(test, feature = "http"))]
 mod tests {
 	use super::*;
+	use async_trait::async_trait;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, Uri, Version};
+	use reinhardt_exception::Result;
+	use std::sync::Arc;
 
 	// Mock handler for testing
 	struct MockHandler {
