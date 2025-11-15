@@ -1,5 +1,5 @@
 error[E0428]: the name `auth` is defined multiple times
-  --> tests/ui/fail/duplicate_labels.rs:10:9
+  --> tests/ui/fail/duplicate_labels.rs:10:3
    |
  9 |         auth: "reinhardt.contrib.auth",
    |         ---- previous definition of the type `auth` here
@@ -9,7 +9,7 @@ error[E0428]: the name `auth` is defined multiple times
    = note: `auth` must be defined only once in the type namespace of this enum
 
 error[E0004]: non-exhaustive patterns: `&InstalledApp::auth` not covered
-  --> tests/ui/fail/duplicate_labels.rs:8:5
+  --> tests/ui/fail/duplicate_labels.rs:8:2
    |
  8 | /     installed_apps! {
  9 | |         auth: "reinhardt.contrib.auth",
@@ -18,7 +18,7 @@ error[E0004]: non-exhaustive patterns: `&InstalledApp::auth` not covered
    | |_____^ pattern `&InstalledApp::auth` not covered
    |
 note: `InstalledApp` defined here
-  --> tests/ui/fail/duplicate_labels.rs:8:5
+  --> tests/ui/fail/duplicate_labels.rs:8:2
    |
  8 | /     installed_apps! {
  9 | |         auth: "reinhardt.contrib.auth",
@@ -30,7 +30,7 @@ note: `InstalledApp` defined here
    = note: this error originates in the derive macro `Debug` which comes from the expansion of the macro `installed_apps` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error[E0004]: non-exhaustive patterns: `&InstalledApp::auth` not covered
-  --> tests/ui/fail/duplicate_labels.rs:8:5
+  --> tests/ui/fail/duplicate_labels.rs:8:2
    |
  8 | /     installed_apps! {
  9 | |         auth: "reinhardt.contrib.auth",
@@ -39,7 +39,7 @@ error[E0004]: non-exhaustive patterns: `&InstalledApp::auth` not covered
    | |_____^ pattern `&InstalledApp::auth` not covered
    |
 note: `InstalledApp` defined here
-  --> tests/ui/fail/duplicate_labels.rs:8:5
+  --> tests/ui/fail/duplicate_labels.rs:8:2
    |
  8 | /     installed_apps! {
  9 | |         auth: "reinhardt.contrib.auth",
@@ -52,5 +52,5 @@ note: `InstalledApp` defined here
 help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
    |
 11 ~     },
-12 +     &InstalledApp::auth => todo!()
+12 ~     &InstalledApp::auth => todo!()
    |

@@ -1,5 +1,5 @@
 error: expected identifier
- --> tests/ui/fail/empty_label.rs:8:9
+ --> tests/ui/fail/empty_label.rs:8:3
   |
 8 |         : "reinhardt.contrib.auth",
   |         ^

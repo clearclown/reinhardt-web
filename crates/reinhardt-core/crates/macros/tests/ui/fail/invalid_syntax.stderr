@@ -1,5 +1,5 @@
 error: expected `:`
- --> tests/ui/fail/invalid_syntax.rs:8:14
+ --> tests/ui/fail/invalid_syntax.rs:8:8
   |
 8 |         auth "reinhardt.contrib.auth",
   |              ^^^^^^^^^^^^^^^^^^^^^^^^

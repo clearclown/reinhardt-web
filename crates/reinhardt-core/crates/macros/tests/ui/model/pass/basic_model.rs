@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 
 // Required by Model derive macro
 #[allow(unused_imports)]
-use reinhardt_migrations as _;
+use reinhardt_db::migrations as _;
 #[allow(unused_imports)]
-use reinhardt_orm as _;
+use reinhardt_db::orm as _;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Model)]
 #[model(app_label = "test", table_name = "users")]

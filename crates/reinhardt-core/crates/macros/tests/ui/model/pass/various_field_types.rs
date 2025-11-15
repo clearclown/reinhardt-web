@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 // Required by Model derive macro
 #[allow(unused_imports)]
-use reinhardt_migrations as _;
+use reinhardt_db::migrations as _;
 #[allow(unused_imports)]
 use reinhardt_db::orm::{self as _, Model as _};
 

@@ -1,5 +1,5 @@
 error: expected string literal
- --> tests/ui/fail/missing_path.rs:8:14
+ --> tests/ui/fail/missing_path.rs:8:8
   |
 8 |         auth:,
   |              ^
