@@ -237,7 +237,6 @@ impl Model for UserProfile {
 /// session.commit()
 /// ```
 #[rstest]
-#[rstest]
 #[tokio::test]
 async fn test_create_via_append(
 	#[future] db_transaction_fixture: (
@@ -266,7 +265,9 @@ async fn test_create_via_append(
 	let result = proxy
 		.append(&mut user, ScalarValue::String("rust".to_string()))
 		.await;
-	assert!(result.is_ok());
+	
+	// Verify result is successful
+	result.expect("Append operation should succeed");
 
 	// No manual cleanup needed - container drops automatically
 }
@@ -302,7 +303,9 @@ async fn test_create_via_set() {
 		ScalarValue::String("python".to_string()),
 	];
 	let result = proxy.set_values(&mut user, keywords).await;
-	assert!(result.is_ok());
+	
+	// Verify result is successful
+	result.expect("Set values operation should succeed");
 
 }
 
@@ -337,13 +340,20 @@ async fn test_persist_changes() {
 	let result = proxy
 		.append(&mut user, ScalarValue::String("new_keyword".to_string()))
 		.await;
-	assert!(result.is_ok());
+	
+	// Verify append succeeded
+	result.expect("Append operation should succeed");
 
 	// Verify the change is persisted
 	let keywords = proxy.get_values(&user).await;
 	match keywords {
 		Ok(values) => {
-			assert!(values.contains(&ScalarValue::String("new_keyword".to_string())));
+			// Verify exact value is present
+			assert!(
+				values.contains(&ScalarValue::String("new_keyword".to_string())),
+				"Keywords should contain 'new_keyword', got: {:?}",
+				values
+			);
 		}
 		Err(_) => {} // Implementation dependent
 	}
@@ -380,8 +390,9 @@ async fn test_lazy_load_through_proxy() {
 
 	// Accessing proxy should trigger lazy load
 	let result = proxy.get_values(&user).await;
-	// Result depends on implementation - could be Ok or Err
-	assert!(result.is_ok() || result.is_err());
+	// Result may be Ok or Err depending on implementation
+	// Verify the operation completes without panicking
+	let _ = result;
 
 }
 
@@ -402,8 +413,8 @@ async fn test_filter_with_any() {
 
 	// Test filtering with any() equivalent
 	let filter_result = proxy.filter_with_any("name", "rust").await;
-	// Result depends on implementation
-	assert!(filter_result.is_ok() || filter_result.is_err());
+	// Verify the operation completes without panicking
+	let _ = filter_result;
 
 }
 
@@ -424,8 +435,8 @@ async fn test_filter_with_has() {
 
 	// Test filtering with has() equivalent
 	let filter_result = proxy.filter_with_has("name", "Alice").await;
-	// Result depends on implementation
-	assert!(filter_result.is_ok() || filter_result.is_err());
+	// Verify the operation completes without panicking
+	let _ = filter_result;
 
 }
 
@@ -450,9 +461,11 @@ async fn test_query_with_join() {
 
 	// Generate SQL for JOIN
 	let sql = relationship.load_sql("users.id");
-	assert!(sql.contains("LEFT JOIN"));
-	assert!(sql.contains("posts"));
-	assert!(sql.contains("user_id"));
+	
+	// Verify SQL structure with exact checks
+	assert!(sql.contains("LEFT JOIN"), "SQL should contain LEFT JOIN");
+	assert!(sql.contains("posts"), "SQL should reference posts table");
+	assert!(sql.contains("user_id"), "SQL should reference user_id foreign key");
 
 }
 
@@ -483,7 +496,7 @@ async fn test_cascade_delete() {
 
 	// Clear keywords (should trigger cascade delete)
 	let result = proxy.clear(&mut user).await;
-	assert!(result.is_ok());
+	result.expect("Clear operation should succeed");
 
 }
 
@@ -539,11 +552,24 @@ async fn test_relationship_loading_strategies() {
 		// Test SQL generation for each strategy
 		let sql = relationship.load_sql("users.id");
 		match strategy {
-			LoadingStrategy::Joined => assert!(sql.contains("LEFT JOIN")),
-			LoadingStrategy::Lazy | LoadingStrategy::Selectin => {
-				assert!(sql.contains("SELECT * FROM posts"))
+			LoadingStrategy::Joined => {
+				assert!(
+					sql.contains("LEFT JOIN"),
+					"Joined loading should generate LEFT JOIN in SQL"
+				);
 			}
-			LoadingStrategy::Subquery => assert!(sql.contains("IN (SELECT")),
+			LoadingStrategy::Lazy | LoadingStrategy::Selectin => {
+				assert!(
+					sql.contains("SELECT * FROM posts"),
+					"Lazy/Selectin loading should generate SELECT FROM posts"
+				);
+			}
+			LoadingStrategy::Subquery => {
+				assert!(
+					sql.contains("IN (SELECT"),
+					"Subquery loading should generate IN (SELECT subquery"
+				);
+			}
 			_ => {}
 		}
 	}
@@ -585,7 +611,8 @@ async fn test_transaction_rollback(
 	let result = proxy
 		.append(&mut user, ScalarValue::String("temp".to_string()))
 		.await;
-	assert!(result.is_ok());
+	
+	result.expect("Append operation should succeed");
 
 	// Automatic rollback implemented via container drop:
 	// - When test completes (success or failure), _container is dropped
@@ -622,7 +649,7 @@ async fn test_bulk_insert() {
 	];
 
 	let result = proxy.bulk_insert(&mut user, keywords).await;
-	assert!(result.is_ok());
+	result.expect("Bulk insert operation should succeed");
 
 }
 
@@ -684,7 +711,8 @@ async fn test_session_merge() {
 	let result = proxy
 		.merge(&mut user, ScalarValue::String("merged_keyword".to_string()))
 		.await;
-	assert!(result.is_ok());
+	
+	result.expect("Merge operation should succeed");
 
 }
 
@@ -711,7 +739,8 @@ async fn test_optimistic_locking() {
 	let result = proxy
 		.update_with_version(&mut user, ScalarValue::String("updated".to_string()), 1)
 		.await;
-	assert!(result.is_ok());
+	
+	result.expect("Optimistic locking update should succeed");
 
 }
 
