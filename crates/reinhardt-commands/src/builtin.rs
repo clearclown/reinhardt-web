@@ -1309,7 +1309,6 @@ mod tests {
 		#[cfg(feature = "server")]
 		{
 			use reinhardt_urls::routers::UnifiedRouter;
-			use std::time::Duration;
 
 			// Register a dummy router for the test
 			let router = UnifiedRouter::new();
@@ -1324,9 +1323,6 @@ mod tests {
 				let cmd = RunServerCommand;
 				cmd.execute(&ctx).await
 			});
-
-			// Wait a short time for server to start
-			tokio::time::sleep(Duration::from_millis(200)).await;
 
 			// Abort the server task (server blocks, so we need to abort)
 			server_task.abort();
