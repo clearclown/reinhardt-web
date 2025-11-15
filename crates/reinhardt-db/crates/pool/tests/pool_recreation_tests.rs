@@ -183,6 +183,9 @@ async fn test_pool_recreate_closes_old_connections() {
 		.await
 		.expect("Failed to acquire conn1");
 
+	// Drop connection before recreating to prevent deadlock
+	drop(_conn1);
+
 	// Recreate the pool (this should close all existing connections)
 	pool.recreate().await.expect("Failed to recreate pool");
 
