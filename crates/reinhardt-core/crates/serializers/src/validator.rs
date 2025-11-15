@@ -30,7 +30,7 @@ impl ValidationError {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_serializers::ValidationError;
+	/// use reinhardt_core_serializers::ValidationError;
 	///
 	/// let error = ValidationError::field_error("email", "Invalid email format");
 	/// // Verify the error is created successfully
@@ -48,7 +48,7 @@ impl ValidationError {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_serializers::ValidationError;
+	/// use reinhardt_core_serializers::ValidationError;
 	///
 	/// let error = ValidationError::object_error("Password and confirmation do not match");
 	/// // Verify the error is created successfully
@@ -63,7 +63,7 @@ impl ValidationError {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_serializers::ValidationError;
+	/// use reinhardt_core_serializers::ValidationError;
 	///
 	/// let errors = vec![
 	///     ValidationError::field_error("email", "Required"),
@@ -85,7 +85,7 @@ impl ValidationError {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_serializers::{FieldValidator, ValidationResult, ValidationError};
+/// use reinhardt_core_serializers::{FieldValidator, ValidationResult, ValidationError};
 /// use serde_json::{Value, json};
 ///
 /// struct EmailValidator;
@@ -121,7 +121,7 @@ pub trait FieldValidator {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_serializers::{ObjectValidator, ValidationResult, ValidationError};
+/// use reinhardt_core_serializers::{ObjectValidator, ValidationResult, ValidationError};
 /// use serde_json::{Value, json};
 /// use std::collections::HashMap;
 ///
@@ -183,7 +183,7 @@ pub trait ObjectLevelValidation {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_serializers::{validate_fields, FieldValidator, ValidationResult, ValidationError};
+/// use reinhardt_core_serializers::{validate_fields, FieldValidator, ValidationResult, ValidationError};
 /// use serde_json::{Value, json};
 /// use std::collections::HashMap;
 ///
