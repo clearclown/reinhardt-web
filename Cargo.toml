@@ -262,6 +262,7 @@ no-individual-tags = true       # Disable cargo-ws automatic tag generation (we 
 # Internal crates
 reinhardt-micro = { path = "crates/reinhardt-micro", version = "0.1.0-alpha.1" }
 reinhardt-conf = { path = "crates/reinhardt-conf", version = "0.1.0-alpha.1" }
+reinhardt-settings = { path = "crates/reinhardt-conf/crates/settings", version = "0.1.0-alpha.1" }
 reinhardt-core = { path = "crates/reinhardt-core", version = "0.1.0-alpha.1" }
 reinhardt-di = { path = "crates/reinhardt-di", version = "0.1.0-alpha.1" }
 reinhardt-http = { path = "crates/reinhardt-http", version = "0.1.0-alpha.1" }
@@ -290,6 +291,12 @@ reinhardt-i18n = { path = "crates/reinhardt-i18n", version = "0.1.0-alpha.1" }
 reinhardt-mail = { path = "crates/reinhardt-mail", version = "0.1.0-alpha.1" }
 reinhardt-graphql = { path = "crates/reinhardt-graphql", version = "0.1.0-alpha.1" }
 reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-alpha.1" }
+
+# Contrib subcrates
+reinhardt-messages = { path = "crates/reinhardt-core/crates/messages", version = "0.1.0-alpha.1" }
+reinhardt-contenttypes = { path = "crates/reinhardt-db/crates/contenttypes", version = "0.1.0-alpha.1" }
+reinhardt-sessions = { path = "crates/reinhardt-auth/crates/sessions", version = "0.1.0-alpha.1" }
+reinhardt-static = { path = "crates/reinhardt-utils/crates/static", version = "0.1.0-alpha.1" }
 
 # REST subcrates
 reinhardt-negotiation = { path = "crates/reinhardt-core/crates/negotiation", version = "0.1.0-alpha.1" }
@@ -397,4 +404,5 @@ proptest = "1.8.0"
 tokio-test = "0.4.4"
 serial_test = "3.2.0"
 rstest = "0.26.1"
+mockall = "0.13.1"
 scopeguard = "1.2.0"
