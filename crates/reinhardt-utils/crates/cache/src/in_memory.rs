@@ -1123,6 +1123,7 @@ mod tests {
 		cache.set("key2", &"value2", None).await.unwrap();
 
 		// Wait for first key to expire
+		tokio::time::sleep(Duration::from_millis(100)).await;
 
 		// Cleanup expired entries
 		cache.cleanup_expired().await;
