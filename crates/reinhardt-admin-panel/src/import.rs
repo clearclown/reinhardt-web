@@ -4,9 +4,11 @@
 //! including CSV and JSON.
 
 use crate::{AdminError, AdminResult};
+use csv::ReaderBuilder;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::io::Cursor;
 
 /// Import format
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -321,18 +323,20 @@ impl CsvImporter {
 	/// assert!(result.is_ok());
 	/// ```
 	pub fn import(data: &[u8], skip_header: bool) -> AdminResult<Vec<HashMap<String, String>>> {
-		let content = String::from_utf8(data.to_vec())
-			.map_err(|e| AdminError::ValidationError(format!("Invalid UTF-8: {}", e)))?;
+		// Use csv crate for RFC 4180 compliant parsing
+		let mut reader = ReaderBuilder::new()
+			.has_headers(true) // Always expect headers
+			.flexible(false) // Strict column count validation
+			.trim(csv::Trim::All) // Trim whitespace
+			.from_reader(Cursor::new(data));
 
-		let lines: Vec<&str> = content.lines().collect();
-
-		if lines.is_empty() {
-			return Ok(Vec::new());
-		}
-
-		// Parse header
-		let header_line = lines[0];
-		let headers = Self::parse_csv_line(header_line);
+		// Get headers
+		let headers = reader
+			.headers()
+			.map_err(|e| AdminError::ValidationError(format!("Failed to read CSV headers: {}", e)))?
+			.iter()
+			.map(|h| h.to_string())
+			.collect::<Vec<_>>();
 
 		if headers.is_empty() {
 			return Err(AdminError::ValidationError(
@@ -340,102 +344,49 @@ impl CsvImporter {
 			));
 		}
 
-		let start_row = if skip_header { 1 } else { 0 };
-		let data_lines: Vec<_> = lines.iter().skip(start_row).collect();
+		// Parse records
+		let mut records = Vec::new();
+		let mut row_num = 1; // Start from 1 (after header)
 
-		// Use parallel processing for large files (1000+ rows)
-		let records: Vec<HashMap<String, String>> = if data_lines.len() > 1000 {
-			// Parallel processing with rayon
-			data_lines
-				.par_iter()
-				.enumerate()
-				.filter_map(|(_idx, line)| {
-					if line.trim().is_empty() {
-						return None;
-					}
+		for result in reader.records() {
+			row_num += 1;
 
-					let values = Self::parse_csv_line(line);
+			let record = result.map_err(|e| {
+				AdminError::ValidationError(format!("Row {}: CSV parse error: {}", row_num, e))
+			})?;
 
-					if values.len() != headers.len() {
-						// Skip malformed rows in parallel mode (could log warning)
-						return None;
-					}
-
-					let mut record = HashMap::new();
-					for (header, value) in headers.iter().zip(values.iter()) {
-						record.insert(header.clone(), value.clone());
-					}
-
-					Some(record)
-				})
-				.collect()
-		} else {
-			// Sequential processing for small files
-			let mut records = Vec::new();
-
-			for (idx, line) in data_lines.iter().enumerate() {
-				if line.trim().is_empty() {
-					continue;
-				}
-
-				let values = Self::parse_csv_line(line);
-
-				if values.len() != headers.len() {
-					return Err(AdminError::ValidationError(format!(
-						"Row {}: Expected {} columns, got {}",
-						idx + start_row + 1,
-						headers.len(),
-						values.len()
-					)));
-				}
-
-				let mut record = HashMap::new();
-				for (header, value) in headers.iter().zip(values.iter()) {
-					record.insert(header.clone(), value.clone());
-				}
-
-				records.push(record);
+			// Validate column count
+			if record.len() != headers.len() {
+				return Err(AdminError::ValidationError(format!(
+					"Row {}: Expected {} columns, got {}",
+					row_num,
+					headers.len(),
+					record.len()
+				)));
 			}
 
-			records
-		};
-
-		Ok(records)
-	}
-
-	fn parse_csv_line(line: &str) -> Vec<String> {
-		let mut values = Vec::new();
-		let mut current = String::new();
-		let mut in_quotes = false;
-		let mut chars = line.chars().peekable();
-
-		while let Some(c) = chars.next() {
-			match c {
-				'"' => {
-					if in_quotes {
-						// Check for escaped quote
-						if chars.peek() == Some(&'"') {
-							current.push('"');
-							chars.next();
-						} else {
-							in_quotes = false;
-						}
-					} else {
-						in_quotes = true;
-					}
-				}
-				',' if !in_quotes => {
-					values.push(current.clone());
-					current.clear();
-				}
-				_ => {
-					current.push(c);
-				}
+			// Convert to HashMap
+			let mut map = HashMap::new();
+			for (header, value) in headers.iter().zip(record.iter()) {
+				map.insert(header.clone(), value.to_string());
 			}
+
+			records.push(map);
 		}
 
-		values.push(current);
-		values
+		// If skip_header is false, we need to include the header as a data row
+		// (but csv crate already skipped it as headers)
+		// This is unusual but matches the original behavior
+		if !skip_header && !headers.is_empty() {
+			// Insert header row at the beginning
+			let mut header_record = HashMap::new();
+			for header in &headers {
+				header_record.insert(header.clone(), header.clone());
+			}
+			records.insert(0, header_record);
+		}
+
+		Ok(records)
 	}
 }
 

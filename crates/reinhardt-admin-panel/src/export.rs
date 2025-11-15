@@ -4,6 +4,7 @@
 //! including CSV, JSON, and Excel.
 
 use crate::{AdminError, AdminResult};
+use csv::Writer;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -248,39 +249,38 @@ impl CsvExporter {
 		data: &[HashMap<String, String>],
 		include_headers: bool,
 	) -> AdminResult<Vec<u8>> {
-		let mut output = Vec::new();
+		// Use csv crate for RFC 4180 compliant CSV writing
+		let mut writer = Writer::from_writer(Vec::new());
 
 		// Write headers
 		if include_headers {
-			let header_line = fields.join(",");
-			output.extend_from_slice(header_line.as_bytes());
-			output.push(b'\n');
+			writer.write_record(fields).map_err(|e| {
+				AdminError::ValidationError(format!("Failed to write CSV headers: {}", e))
+			})?;
 		}
 
 		// Write data rows
 		for row in data {
-			let values: Vec<String> = fields
+			let values: Vec<&str> = fields
 				.iter()
-				.map(|field| {
-					row.get(field)
-						.map(|v| Self::escape_csv_value(v))
-						.unwrap_or_default()
-				})
+				.map(|field| row.get(field).map(|v| v.as_str()).unwrap_or(""))
 				.collect();
-			let line = values.join(",");
-			output.extend_from_slice(line.as_bytes());
-			output.push(b'\n');
+
+			writer.write_record(&values).map_err(|e| {
+				AdminError::ValidationError(format!("Failed to write CSV row: {}", e))
+			})?;
 		}
+
+		// Flush and get the output
+		writer.flush().map_err(|e| {
+			AdminError::ValidationError(format!("Failed to flush CSV writer: {}", e))
+		})?;
+
+		let output = writer
+			.into_inner()
+			.map_err(|e| AdminError::ValidationError(format!("Failed to get CSV output: {}", e)))?;
 
 		Ok(output)
-	}
-
-	fn escape_csv_value(value: &str) -> String {
-		if value.contains(',') || value.contains('"') || value.contains('\n') {
-			format!("\"{}\"", value.replace('"', "\"\""))
-		} else {
-			value.to_string()
-		}
 	}
 }
 
