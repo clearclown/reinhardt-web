@@ -201,7 +201,6 @@ mod tests {
 		drop(watcher);
 
 		// Give background thread time to clean up
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 	}
 
 	#[tokio::test]
@@ -228,7 +227,6 @@ mod tests {
 		drop(watcher);
 
 		// Give background thread time to clean up
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 	}
 
 	#[tokio::test]
@@ -247,7 +245,6 @@ mod tests {
 		drop(watcher);
 
 		// Give background thread time to clean up
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 	}
 
 	#[test]
