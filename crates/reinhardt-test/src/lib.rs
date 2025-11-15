@@ -104,6 +104,7 @@ pub mod prelude {
 		MessagesTestMixin, assert_message_count, assert_message_exists, assert_messages,
 	};
 	pub use super::mock::{MockFunction, SimpleHandler, Spy};
+	pub use super::poll_until;
 	pub use super::resource::{
 		AsyncTeardownGuard, AsyncTestResource, SuiteGuard, SuiteResource, TeardownGuard,
 		TestResource, acquire_suite,
@@ -128,4 +129,58 @@ pub mod prelude {
 
 	#[cfg(feature = "static")]
 	pub use super::static_files::*;
+}
+
+/// Poll a condition until it becomes true or timeout is reached.
+///
+/// This is useful for testing asynchronous operations that may take some time to complete,
+/// such as cache expiration, rate limit window resets, or background task completion.
+///
+/// # Arguments
+///
+/// * `timeout` - Maximum duration to wait for the condition to become true
+/// * `interval` - Duration to wait between each poll attempt
+/// * `condition` - Async closure that returns `true` when the desired state is reached
+///
+/// # Returns
+///
+/// * `Ok(())` if the condition becomes true within the timeout
+/// * `Err(String)` if the timeout is reached before the condition becomes true
+///
+/// # Examples
+///
+/// ```no_run
+/// use reinhardt_test::poll_until;
+/// use std::time::Duration;
+///
+/// # async fn example() {
+/// // Poll until a cache entry expires
+/// poll_until(
+///     Duration::from_millis(200),
+///     Duration::from_millis(10),
+///     || async {
+///         // Check if cache entry has expired
+///         // cache.get("key").await.is_none()
+///         true
+///     }
+/// ).await.expect("Condition should be met");
+/// # }
+/// ```
+pub async fn poll_until<F, Fut>(
+	timeout: std::time::Duration,
+	interval: std::time::Duration,
+	mut condition: F,
+) -> Result<(), String>
+where
+	F: FnMut() -> Fut,
+	Fut: std::future::Future<Output = bool>,
+{
+	let start = std::time::Instant::now();
+	while start.elapsed() < timeout {
+		if condition().await {
+			return Ok(());
+		}
+		tokio::time::sleep(interval).await;
+	}
+	Err(format!("Timeout after {:?} waiting for condition", timeout))
 }
