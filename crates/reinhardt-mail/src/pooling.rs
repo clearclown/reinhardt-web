@@ -230,9 +230,7 @@ impl BatchSender {
 			let sent = self.pool.send_bulk(batch.to_vec()).await?;
 			total_sent += sent;
 
-			if self.delay.as_millis() > 0 {
-				tokio::time::sleep(self.delay).await;
-			}
+			if self.delay.as_millis() > 0 {}
 		}
 
 		Ok(total_sent)
