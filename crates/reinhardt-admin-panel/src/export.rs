@@ -53,7 +53,7 @@ impl ExportFormat {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{ExportConfig, ExportFormat};
+/// use reinhardt_admin_panel::{ExportConfig, ExportFormat};
 ///
 /// let config = ExportConfig::new("User", ExportFormat::CSV)
 ///     .with_field("id")
@@ -230,7 +230,7 @@ impl CsvExporter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::CsvExporter;
+	/// use reinhardt_admin_panel::CsvExporter;
 	/// use std::collections::HashMap;
 	///
 	/// let fields = vec!["id".to_string(), "name".to_string()];
@@ -293,7 +293,7 @@ impl JsonExporter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::JsonExporter;
+	/// use reinhardt_admin_panel::JsonExporter;
 	/// use std::collections::HashMap;
 	///
 	/// let mut row1 = HashMap::new();
@@ -354,7 +354,7 @@ impl TsvExporter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{ExportBuilder, ExportFormat};
+/// use reinhardt_admin_panel::{ExportBuilder, ExportFormat};
 /// use std::collections::HashMap;
 ///
 /// let mut row = HashMap::new();

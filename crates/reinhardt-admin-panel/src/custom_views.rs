@@ -16,7 +16,7 @@
 //! ### Registering a Custom View
 //!
 //! ```rust
-//! use reinhardt_admin::custom_views::{CustomView, ViewConfig, CustomViewRegistry};
+//! use reinhardt_admin_panel::custom_views::{CustomView, ViewConfig, CustomViewRegistry};
 //! use async_trait::async_trait;
 //!
 //! struct DashboardView;
@@ -42,7 +42,7 @@
 //! ### Implementing Reorderable Model
 //!
 //! ```rust
-//! use reinhardt_admin::custom_views::ReorderableModel;
+//! use reinhardt_admin_panel::custom_views::ReorderableModel;
 //! use async_trait::async_trait;
 //!
 //! struct Category {

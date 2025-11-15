@@ -13,7 +13,7 @@ use std::sync::Arc;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::AdminSite;
+/// use reinhardt_admin_panel::AdminSite;
 ///
 /// let admin = AdminSite::new("My Application");
 /// assert_eq!(admin.name(), "My Application");
@@ -73,7 +73,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("E-commerce Admin");
 	/// ```
@@ -91,7 +91,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("My Admin");
 	/// assert_eq!(admin.name(), "My Admin");
@@ -105,7 +105,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let mut admin = AdminSite::new("Admin");
 	/// admin.set_url_prefix("/manage");
@@ -125,7 +125,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::{AdminSite, site::AdminSiteConfig};
+	/// use reinhardt_admin_panel::{AdminSite, site::AdminSiteConfig};
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// admin.configure(|config| {
@@ -151,7 +151,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_admin::{AdminSite, ModelAdminConfig};
+	/// use reinhardt_admin_panel::{AdminSite, ModelAdminConfig};
 	///
 	/// let admin = AdminSite::new("Admin");
 	///
@@ -177,7 +177,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// // ... register User ...
@@ -195,7 +195,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// assert!(!admin.is_registered("User"));
@@ -209,7 +209,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// // ... register User ...
@@ -227,7 +227,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// assert_eq!(admin.registered_models().len(), 0);
@@ -244,7 +244,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// assert_eq!(admin.model_count(), 0);
@@ -258,7 +258,7 @@ impl AdminSite {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminSite;
+	/// use reinhardt_admin_panel::AdminSite;
 	///
 	/// let admin = AdminSite::new("Admin");
 	/// admin.clear();

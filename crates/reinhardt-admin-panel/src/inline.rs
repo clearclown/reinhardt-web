@@ -21,7 +21,7 @@ pub enum InlineType {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{InlineModelAdmin, InlineType};
+/// use reinhardt_admin_panel::{InlineModelAdmin, InlineType};
 ///
 /// let inline = InlineModelAdmin::new("Comment", "post")
 ///     .with_type(InlineType::Tabular)
@@ -176,7 +176,7 @@ impl InlineModelAdmin {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::InlineFormset;
+/// use reinhardt_admin_panel::InlineFormset;
 ///
 /// let formset = InlineFormset::new("Comment", "post", "123");
 /// assert_eq!(formset.model_name(), "Comment");

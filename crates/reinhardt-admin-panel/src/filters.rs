@@ -10,7 +10,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::FilterSpec;
+/// use reinhardt_admin_panel::FilterSpec;
 ///
 /// let filter = FilterSpec {
 ///     field: "status".to_string(),
@@ -40,7 +40,7 @@ impl FilterSpec {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::FilterSpec;
+	/// use reinhardt_admin_panel::FilterSpec;
 	///
 	/// let filter = FilterSpec::new("status", "exact", "active", "Active Items");
 	/// assert_eq!(filter.field, "status");
@@ -64,7 +64,7 @@ impl FilterSpec {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::FilterSpec;
+	/// use reinhardt_admin_panel::FilterSpec;
 	///
 	/// let filter = FilterSpec::new("status", "exact", "active", "Active");
 	/// assert_eq!(filter.to_query_param(), "status__exact=active");
@@ -81,7 +81,7 @@ impl FilterSpec {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{ListFilter, FilterSpec};
+/// use reinhardt_admin_panel::{ListFilter, FilterSpec};
 ///
 /// struct StatusFilter {
 ///     field: String,
@@ -133,7 +133,7 @@ pub trait ListFilter: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{BooleanFilter, ListFilter};
+/// use reinhardt_admin_panel::{BooleanFilter, ListFilter};
 ///
 /// let filter = BooleanFilter::new("is_active", "Active Status");
 /// assert_eq!(filter.field_name(), "is_active");
@@ -177,7 +177,7 @@ impl ListFilter for BooleanFilter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{ChoiceFilter, ListFilter};
+/// use reinhardt_admin_panel::{ChoiceFilter, ListFilter};
 ///
 /// let filter = ChoiceFilter::new("status", "Status")
 ///     .add_choice("active", "Active")
@@ -238,7 +238,7 @@ impl ListFilter for ChoiceFilter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{DateRangeFilter, ListFilter};
+/// use reinhardt_admin_panel::{DateRangeFilter, ListFilter};
 ///
 /// let filter = DateRangeFilter::new("created_at", "Created Date");
 /// let choices = filter.choices();
@@ -306,7 +306,7 @@ impl ListFilter for DateRangeFilter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{NumberRangeFilter, ListFilter};
+/// use reinhardt_admin_panel::{NumberRangeFilter, ListFilter};
 ///
 /// let filter = NumberRangeFilter::new("price", "Price Range");
 /// let choices = filter.choices();
@@ -341,7 +341,7 @@ impl NumberRangeFilter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::NumberRangeFilter;
+	/// use reinhardt_admin_panel::NumberRangeFilter;
 	///
 	/// let filter = NumberRangeFilter::with_ranges(
 	///     "price",
@@ -400,7 +400,7 @@ impl ListFilter for NumberRangeFilter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::{FilterManager, BooleanFilter, ChoiceFilter};
+/// use reinhardt_admin_panel::{FilterManager, BooleanFilter, ChoiceFilter};
 ///
 /// let manager = FilterManager::new()
 ///     .add_filter(BooleanFilter::new("is_active", "Active"))

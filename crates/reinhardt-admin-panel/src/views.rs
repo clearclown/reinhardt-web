@@ -44,7 +44,7 @@ impl AdminViewContext {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::ListView;
+/// use reinhardt_admin_panel::ListView;
 ///
 /// let view = ListView::new("User");
 /// assert_eq!(view.model_name(), "User");
@@ -79,7 +79,7 @@ impl ListView {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::ListView;
+	/// use reinhardt_admin_panel::ListView;
 	///
 	/// let view = ListView::new("User").with_page_size(50);
 	/// assert_eq!(view.get_page_size(), 50);
@@ -99,7 +99,7 @@ impl ListView {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::ListView;
+	/// use reinhardt_admin_panel::ListView;
 	///
 	/// let view = ListView::new("User")
 	///     .with_ordering(vec!["name".to_string(), "-created_at".to_string()]);
@@ -136,7 +136,7 @@ impl ListView {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::DetailView;
+/// use reinhardt_admin_panel::DetailView;
 ///
 /// let view = DetailView::new("User", "123");
 /// assert_eq!(view.model_name(), "User");
@@ -191,7 +191,7 @@ impl DetailView {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::CreateView;
+/// use reinhardt_admin_panel::CreateView;
 ///
 /// let view = CreateView::new("User");
 /// assert_eq!(view.model_name(), "User");
@@ -251,7 +251,7 @@ impl CreateView {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::UpdateView;
+/// use reinhardt_admin_panel::UpdateView;
 ///
 /// let view = UpdateView::new("User", "123");
 /// assert_eq!(view.model_name(), "User");
@@ -319,7 +319,7 @@ impl UpdateView {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::DeleteView;
+/// use reinhardt_admin_panel::DeleteView;
 ///
 /// let view = DeleteView::new("User", "123");
 /// assert_eq!(view.model_name(), "User");

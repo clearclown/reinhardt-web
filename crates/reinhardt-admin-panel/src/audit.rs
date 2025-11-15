@@ -67,7 +67,7 @@ impl AuditAction {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::audit::{AuditLog, AuditAction};
+/// use reinhardt_admin_panel::audit::{AuditLog, AuditAction};
 /// use chrono::Utc;
 /// use serde_json::json;
 ///
@@ -181,7 +181,7 @@ impl AuditLog {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::audit::{AuditLogBuilder, AuditAction};
+/// use reinhardt_admin_panel::audit::{AuditLogBuilder, AuditAction};
 /// use serde_json::json;
 ///
 /// let log = AuditLogBuilder::new()
@@ -301,7 +301,7 @@ impl Default for AuditLogBuilder {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::audit::{AuditLogger, AuditLog, AuditLogQuery};
+/// use reinhardt_admin_panel::audit::{AuditLogger, AuditLog, AuditLogQuery};
 /// use async_trait::async_trait;
 ///
 /// struct CustomAuditLogger;
@@ -349,7 +349,7 @@ pub trait AuditLogger: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::audit::{AuditLogQuery, AuditAction};
+/// use reinhardt_admin_panel::audit::{AuditLogQuery, AuditAction};
 /// use chrono::{Utc, Duration};
 ///
 /// let query = AuditLogQuery::builder()
@@ -531,7 +531,7 @@ impl Default for AuditLogQueryBuilder {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::audit::{MemoryAuditLogger, AuditLogger, AuditLog, AuditAction, AuditLogQuery};
+/// use reinhardt_admin_panel::audit::{MemoryAuditLogger, AuditLogger, AuditLog, AuditAction, AuditLogQuery};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 /// let logger = MemoryAuditLogger::new();
@@ -829,8 +829,8 @@ impl AuditLogger for MemoryAuditLogger {
 /// # Examples
 ///
 /// ```ignore
-/// use reinhardt_admin::audit::{DatabaseAuditLogger, AuditLogger};
-/// use reinhardt_admin::AdminDatabase;
+/// use reinhardt_admin_panel::audit::{DatabaseAuditLogger, AuditLogger};
+/// use reinhardt_admin_panel::AdminDatabase;
 /// use std::sync::Arc;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -1195,7 +1195,7 @@ impl AuditLogger for DatabaseAuditLogger {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_orm::DatabaseConnection;
+	use reinhardt_db::orm::DatabaseConnection;
 	use reinhardt_test::fixtures::mock_connection;
 	use rstest::*;
 

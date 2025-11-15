@@ -72,7 +72,7 @@ fn build_filter_condition(filters: &[Filter]) -> Option<Condition> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin::AdminDatabase;
+/// use reinhardt_admin_panel::AdminDatabase;
 /// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 /// use std::sync::Arc;
 /// use serde::{Serialize, Deserialize};
@@ -140,7 +140,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model, Filter, FilterOperator, FilterValue};
 	/// use std::sync::Arc;
 	/// use serde::{Serialize, Deserialize};
@@ -220,7 +220,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 	/// use std::sync::Arc;
 	/// use serde::{Serialize, Deserialize};
@@ -283,7 +283,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 	/// use std::sync::Arc;
 	/// use std::collections::HashMap;
@@ -368,7 +368,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 	/// use std::sync::Arc;
 	/// use std::collections::HashMap;
@@ -444,7 +444,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 	/// use std::sync::Arc;
 	/// use serde::{Serialize, Deserialize};
@@ -496,7 +496,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model};
 	/// use std::sync::Arc;
 	/// use serde::{Serialize, Deserialize};
@@ -541,7 +541,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::DatabaseConnection;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -583,7 +583,7 @@ impl AdminDatabase {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin::AdminDatabase;
+	/// use reinhardt_admin_panel::AdminDatabase;
 	/// use reinhardt_db::orm::{DatabaseConnection, DatabaseBackend, Model, Filter, FilterOperator, FilterValue};
 	/// use std::sync::Arc;
 	/// use serde::{Serialize, Deserialize};
