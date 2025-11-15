@@ -3,6 +3,7 @@
 use async_graphql::*;
 use reinhardt_server::graphql_handler;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -168,8 +169,16 @@ async fn test_e2e_graphql_query_all_books() {
 
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("1984"));
-	assert!(body.contains("To Kill a Mockingbird"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let books = json["data"]["books"].as_array().unwrap();
+
+	// Verify we have 2 books
+	assert_eq!(books.len(), 2);
+
+	// Verify book titles
+	let titles: Vec<&str> = books.iter().map(|b| b["title"].as_str().unwrap()).collect();
+	assert!(titles.contains(&"1984"));
+	assert!(titles.contains(&"To Kill a Mockingbird"));
 
 	shutdown_test_server(handle).await;
 }
@@ -198,8 +207,13 @@ async fn test_e2e_graphql_query_single_book() {
 
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("1984"));
-	assert!(body.contains("George Orwell"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let book = &json["data"]["book"];
+
+	assert_eq!(book["id"].as_str().unwrap(), "1");
+	assert_eq!(book["title"].as_str().unwrap(), "1984");
+	assert_eq!(book["author"].as_str().unwrap(), "George Orwell");
+	assert_eq!(book["year"].as_i64().unwrap(), 1949);
 
 	shutdown_test_server(handle).await;
 }
@@ -228,7 +242,11 @@ async fn test_e2e_graphql_search_books() {
 
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("To Kill a Mockingbird"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let books = json["data"]["searchBooks"].as_array().unwrap();
+
+	assert_eq!(books.len(), 1);
+	assert_eq!(books[0]["title"].as_str().unwrap(), "To Kill a Mockingbird");
 
 	shutdown_test_server(handle).await;
 }
@@ -257,8 +275,12 @@ async fn test_e2e_graphql_add_book_mutation() {
 
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("The Great Gatsby"));
-	assert!(body.contains("F. Scott Fitzgerald"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let book = &json["data"]["addBook"];
+
+	assert_eq!(book["title"].as_str().unwrap(), "The Great Gatsby");
+	assert_eq!(book["author"].as_str().unwrap(), "F. Scott Fitzgerald");
+	assert_eq!(book["year"].as_i64().unwrap(), 1925);
 
 	shutdown_test_server(handle).await;
 }
@@ -287,7 +309,11 @@ async fn test_e2e_graphql_update_book_mutation() {
 
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("Nineteen Eighty-Four"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let book = &json["data"]["updateBook"];
+
+	assert_eq!(book["id"].as_str().unwrap(), "1");
+	assert_eq!(book["title"].as_str().unwrap(), "Nineteen Eighty-Four");
 
 	shutdown_test_server(handle).await;
 }
@@ -327,7 +353,10 @@ async fn test_e2e_graphql_delete_book_mutation() {
 		.unwrap();
 
 	let body = response.text().await.unwrap();
-	assert!(body.contains("null"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+
+	// Deleted book should return null
+	assert!(json["data"]["book"].is_null());
 
 	shutdown_test_server(handle).await;
 }
@@ -367,7 +396,10 @@ async fn test_e2e_graphql_full_workflow() {
 		.unwrap();
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("The Catcher in the Rye"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let book = &json["data"]["addBook"];
+
+	assert_eq!(book["title"].as_str().unwrap(), "The Catcher in the Rye");
 
 	// 3. Search for the new book
 	let search_query = r#"{"query": "{ searchBooks(title: \"Catcher\") { id title } }"}"#;
@@ -380,7 +412,14 @@ async fn test_e2e_graphql_full_workflow() {
 		.unwrap();
 	assert_eq!(response.status(), 200);
 	let body = response.text().await.unwrap();
-	assert!(body.contains("The Catcher in the Rye"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+	let books = json["data"]["searchBooks"].as_array().unwrap();
+
+	assert_eq!(books.len(), 1);
+	assert_eq!(
+		books[0]["title"].as_str().unwrap(),
+		"The Catcher in the Rye"
+	);
 
 	shutdown_test_server(handle).await;
 }
@@ -409,7 +448,10 @@ async fn test_e2e_graphql_invalid_query() {
 
 	assert_eq!(response.status(), 200); // GraphQL returns 200 even for query errors
 	let body = response.text().await.unwrap();
-	assert!(body.contains("errors") || body.contains("error"));
+	let json: Value = serde_json::from_str(&body).unwrap();
+
+	// GraphQL errors should be in the "errors" field
+	assert!(json.get("errors").is_some());
 
 	shutdown_test_server(handle).await;
 }
