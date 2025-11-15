@@ -613,18 +613,26 @@ mod tests {
 		.await
 		.unwrap();
 
-		// Wait for initial attempt
-		tokio::time::sleep(Duration::from_millis(50)).await;
-		assert_eq!(attempt_count.load(Ordering::SeqCst), 1);
+		// Poll until initial attempt completes
+		reinhardt_test::poll_until(
+			Duration::from_millis(100),
+			Duration::from_millis(10),
+			|| async { attempt_count.load(Ordering::SeqCst) >= 1 },
+		)
+		.await
+		.expect("Initial attempt should complete");
 
 		// Make it succeed on retry
 		should_fail.store(false, Ordering::SeqCst);
 
-		// Wait for retry
-		tokio::time::sleep(Duration::from_millis(200)).await;
-
-		// Should have retried and succeeded
-		assert!(attempt_count.load(Ordering::SeqCst) >= 2);
+		// Poll until retry completes
+		reinhardt_test::poll_until(
+			Duration::from_millis(300),
+			Duration::from_millis(20),
+			|| async { attempt_count.load(Ordering::SeqCst) >= 2 },
+		)
+		.await
+		.expect("Retry should complete within 300ms");
 
 		let stats = dlq.stats();
 		assert_eq!(stats.total_recovered(), 1);
@@ -658,11 +666,26 @@ mod tests {
 		.await
 		.unwrap();
 
-		// Wait for all retries
-		tokio::time::sleep(Duration::from_millis(500)).await;
+		// Poll until all retries complete (1 initial + 2 retries = 3 total)
+		reinhardt_test::poll_until(
+			Duration::from_secs(1),
+			Duration::from_millis(50),
+			|| async { attempt_count.load(Ordering::SeqCst) >= 3 },
+		)
+		.await
+		.expect("All retries should complete within 1000ms");
 
-		// Should have attempted: 1 initial + 2 retries = 3 total
-		assert!(attempt_count.load(Ordering::SeqCst) >= 3);
+		// Wait for stats to be updated (background task updates stats after final retry)
+		reinhardt_test::poll_until(
+			Duration::from_secs(1),
+			Duration::from_millis(50),
+			|| async {
+				let stats = dlq.stats();
+				stats.total_failed() == 1
+			},
+		)
+		.await
+		.expect("Stats should be updated within 1000ms");
 
 		let stats = dlq.stats();
 		assert_eq!(stats.total_failed(), 1);
@@ -694,8 +717,6 @@ mod tests {
 			.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(100)).await;
-
 		// Queue should be capped at 3
 		let stats = dlq.stats();
 		assert!(stats.queue_size() <= 3);
@@ -721,7 +742,6 @@ mod tests {
 			.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(100)).await;
 		assert!(dlq.stats().queue_size() > 0);
 
 		dlq.clear();
