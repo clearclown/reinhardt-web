@@ -297,7 +297,6 @@ mod tests {
 		// Spawn a task to notify shutdown complete
 		let coordinator_clone = coordinator.clone();
 		tokio::spawn(async move {
-			tokio::time::sleep(Duration::from_millis(100)).await;
 			coordinator_clone.notify_shutdown_complete();
 		});
 
@@ -336,7 +335,8 @@ mod tests {
 		let shutdown_rx = coordinator.subscribe();
 
 		let work = async {
-			tokio::time::sleep(Duration::from_secs(10)).await;
+			// Add delay to ensure shutdown signal arrives first
+			tokio::time::sleep(Duration::from_millis(100)).await;
 			42
 		};
 

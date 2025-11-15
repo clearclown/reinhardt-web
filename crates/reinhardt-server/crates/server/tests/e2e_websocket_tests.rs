@@ -156,8 +156,6 @@ async fn spawn_websocket_server(
 		}
 	});
 
-	tokio::time::sleep(Duration::from_millis(100)).await;
-
 	(url, handle)
 }
 
@@ -319,23 +317,43 @@ async fn test_e2e_websocket_connection_lifecycle() {
 
 	// Connect first client
 	let (ws_stream1, _) = connect_async(&url).await.unwrap();
-	tokio::time::sleep(Duration::from_millis(100)).await;
-	assert_eq!(handler_clone.connection_count.load(Ordering::SeqCst), 1);
+	reinhardt_test::poll_until(
+		Duration::from_millis(200),
+		Duration::from_millis(10),
+		|| async { handler_clone.connection_count.load(Ordering::SeqCst) == 1 },
+	)
+	.await
+	.expect("First connection should be counted within 200ms");
 
 	// Connect second client
 	let (ws_stream2, _) = connect_async(&url).await.unwrap();
-	tokio::time::sleep(Duration::from_millis(100)).await;
-	assert_eq!(handler_clone.connection_count.load(Ordering::SeqCst), 2);
+	reinhardt_test::poll_until(
+		Duration::from_millis(200),
+		Duration::from_millis(10),
+		|| async { handler_clone.connection_count.load(Ordering::SeqCst) == 2 },
+	)
+	.await
+	.expect("Second connection should be counted within 200ms");
 
 	// Disconnect first client
 	drop(ws_stream1);
-	tokio::time::sleep(Duration::from_millis(100)).await;
-	assert_eq!(handler_clone.connection_count.load(Ordering::SeqCst), 1);
+	reinhardt_test::poll_until(
+		Duration::from_millis(200),
+		Duration::from_millis(10),
+		|| async { handler_clone.connection_count.load(Ordering::SeqCst) == 1 },
+	)
+	.await
+	.expect("First disconnection should be counted within 200ms");
 
 	// Disconnect second client
 	drop(ws_stream2);
-	tokio::time::sleep(Duration::from_millis(100)).await;
-	assert_eq!(handler_clone.connection_count.load(Ordering::SeqCst), 0);
+	reinhardt_test::poll_until(
+		Duration::from_millis(200),
+		Duration::from_millis(10),
+		|| async { handler_clone.connection_count.load(Ordering::SeqCst) == 0 },
+	)
+	.await
+	.expect("Second disconnection should be counted within 200ms");
 
 	server_handle.abort();
 }
