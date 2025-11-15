@@ -174,7 +174,7 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
 	///
 	/// ```
 	/// use reinhardt_viewsets::{ModelViewSet, ViewSet};
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::prelude::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,7 +211,7 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
 	///
 	/// ```
 	/// use reinhardt_viewsets::{ModelViewSet, ViewSet};
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::prelude::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -437,7 +437,7 @@ impl<M: 'static, S: 'static> ReadOnlyModelViewSet<M, S> {
 	///
 	/// ```
 	/// use reinhardt_viewsets::{ReadOnlyModelViewSet, ViewSet};
-	/// use reinhardt_orm::Model;
+	/// use reinhardt_db::prelude::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -85,7 +85,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
 	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;

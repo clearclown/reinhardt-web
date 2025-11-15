@@ -207,7 +207,7 @@ impl RelationshipPath {
 	///     .through("posts")
 	///     .through("comments")
 	///     .attribute("content");
-	/// assert_eq!(path.attribute(), "content");
+	/// assert_eq!(path.get_attribute(), "content");
 	/// ```
 	pub fn attribute(mut self, attr: &str) -> Self {
 		self.attribute = Some(attr.to_string());

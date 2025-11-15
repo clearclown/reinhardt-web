@@ -887,7 +887,7 @@ impl NamespaceVersioning {
 	/// ```
 	/// use reinhardt_versioning::NamespaceVersioning;
 	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
-	/// use reinhardt_core::http::Handler;
+	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;

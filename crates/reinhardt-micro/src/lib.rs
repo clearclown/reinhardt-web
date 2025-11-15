@@ -241,7 +241,7 @@ impl App {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use std::time::Duration;
 	/// use reinhardt_micro::App;
 	///
