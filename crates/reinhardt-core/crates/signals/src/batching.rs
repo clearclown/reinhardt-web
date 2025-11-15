@@ -391,7 +391,6 @@ mod tests {
 		batcher.flush().await.unwrap();
 
 		// Wait for processing
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		let results = received.lock();
 		assert_eq!(results.len(), 5);
@@ -421,7 +420,6 @@ mod tests {
 		}
 
 		// Wait for auto flush
-		tokio::time::sleep(Duration::from_millis(100)).await;
 
 		assert_eq!(counter.load(Ordering::SeqCst), 5);
 		assert_eq!(batcher.current_batch_size(), 0);
@@ -452,10 +450,14 @@ mod tests {
 			batcher.queue(i).await.unwrap();
 		}
 
-		// Wait for time-based flush
-		tokio::time::sleep(Duration::from_millis(300)).await;
-
-		assert_eq!(counter.load(Ordering::SeqCst), 3);
+		// Poll until time-based flush completes
+		reinhardt_test::poll_until(
+			Duration::from_millis(400),
+			Duration::from_millis(20),
+			|| async { counter.load(Ordering::SeqCst) == 3 },
+		)
+		.await
+		.expect("Batch should be flushed within 400ms");
 	}
 
 	#[tokio::test]

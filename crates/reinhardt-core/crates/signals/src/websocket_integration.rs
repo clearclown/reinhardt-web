@@ -539,8 +539,6 @@ mod tests {
 
 		signal.send("test payload".to_string()).await.unwrap();
 
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
 		let messages = client.messages();
 		assert_eq!(messages.len(), 1);
 

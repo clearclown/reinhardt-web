@@ -361,7 +361,6 @@ mod tests {
 		signal_a.send(model).await.unwrap();
 
 		// Wait for async execution
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 		let results = calls.lock();
 		assert_eq!(results.len(), 2);
@@ -412,8 +411,6 @@ mod tests {
 			})
 			.await
 			.unwrap();
-
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 		let admin_results = admin_calls.lock();
 		let all_results = all_calls.lock();

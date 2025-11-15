@@ -516,7 +516,6 @@ mod tests {
 		}
 
 		// Wait for processing
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		// Reset counter
 		counter.store(0, Ordering::SeqCst);
@@ -526,7 +525,6 @@ mod tests {
 		let stats = replayer.replay_all(ReplayConfig::new()).await.unwrap();
 
 		// Wait for replay processing
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		assert_eq!(stats.total_replayed(), 5);
 		assert_eq!(stats.errors(), 0);
@@ -566,8 +564,6 @@ mod tests {
 		let config = ReplayConfig::new().with_limit(5);
 		let stats = replayer.replay_all(config).await.unwrap();
 
-		tokio::time::sleep(Duration::from_millis(50)).await;
-
 		assert_eq!(stats.total_replayed(), 5);
 		assert_eq!(counter.load(Ordering::SeqCst), 5);
 	}
@@ -604,8 +600,6 @@ mod tests {
 		let replayer = SignalReplayer::new(store, signal);
 		let config = ReplayConfig::new().with_offset(5);
 		let stats = replayer.replay_all(config).await.unwrap();
-
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		assert_eq!(stats.total_replayed(), 5);
 
@@ -645,14 +639,11 @@ mod tests {
 				.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(50)).await;
 		counter.store(0, Ordering::SeqCst);
 
 		// Replay just one specific signal
 		let replayer = SignalReplayer::new(store, signal);
 		replayer.replay_one(3).await.unwrap();
-
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		assert_eq!(counter.load(Ordering::SeqCst), 1);
 	}

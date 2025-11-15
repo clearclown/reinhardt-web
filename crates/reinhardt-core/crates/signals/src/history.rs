@@ -598,8 +598,6 @@ mod tests {
 				.unwrap();
 		}
 
-		tokio::time::sleep(Duration::from_millis(50)).await;
-
 		// Check history
 		let stats = history.stats();
 		assert_eq!(stats.total_count(), 5);
@@ -714,8 +712,6 @@ mod tests {
 				})
 				.await;
 		}
-
-		tokio::time::sleep(Duration::from_millis(50)).await;
 
 		let errors = history.get_errors();
 		assert_eq!(errors.len(), 5); // 1, 3, 5, 7, 9

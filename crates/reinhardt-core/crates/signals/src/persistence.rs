@@ -479,7 +479,6 @@ mod tests {
 		persistent.send(event.clone()).await.unwrap();
 
 		// Wait for processing
-		tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 		// Verify signal was sent to receivers
 		assert_eq!(counter.load(Ordering::SeqCst), 1);

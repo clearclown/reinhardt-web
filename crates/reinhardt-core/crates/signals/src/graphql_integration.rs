@@ -457,8 +457,6 @@ mod tests {
 
 		signal.send("test data".to_string()).await.unwrap();
 
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
-
 		let result = receiver.recv().await.unwrap();
 		let parsed: SubscriptionEvent<String> = serde_json::from_str(&result).unwrap();
 		assert_eq!(parsed.subscription_name, "user_event");
@@ -523,7 +521,6 @@ mod tests {
 		assert_eq!(bridge.receiver_count("test"), 2);
 
 		drop(_r1);
-		tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 		// Note: receiver_count may still show 2 due to async nature of channel cleanup
 	}
 
