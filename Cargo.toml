@@ -203,6 +203,7 @@ resolver = "3"
 members = [
   # Core framework (always included)
   "crates/reinhardt-micro",
+  "crates/reinhardt-apps",
   "crates/reinhardt-conf",
   "crates/reinhardt-core",
   "crates/reinhardt-di",
@@ -260,6 +261,7 @@ no-individual-tags = false      # Enable cargo-ws automatic tag generation
 [workspace.dependencies]
 # Internal crates
 reinhardt-micro = { path = "crates/reinhardt-micro", version = "0.1.0-alpha.1" }
+reinhardt-apps = { path = "crates/reinhardt-apps", version = "0.1.0-alpha.1" }
 reinhardt-conf = { path = "crates/reinhardt-conf", version = "0.1.0-alpha.1" }
 reinhardt-settings = { path = "crates/reinhardt-conf/crates/settings", version = "0.1.0-alpha.1" }
 reinhardt-core = { path = "crates/reinhardt-core", version = "0.1.0-alpha.1" }
