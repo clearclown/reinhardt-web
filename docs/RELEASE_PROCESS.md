@@ -449,7 +449,7 @@ Verify on GitHub:
 
 ## Automated Publishing with CI/CD
 
-The Reinhardt project automatically publishes crates to crates.io when Git tags are pushed to the main branch.
+The Reinhardt project automatically publishes crates to crates.io when a pull request with the `release` label is merged to the main branch. This integrated workflow combines change detection, publishing, tagging, and GitHub Release creation into a single automated process.
 
 ### Prerequisites
 
@@ -473,7 +473,7 @@ Create a `release` label:
 - Description: `Trigger automatic crates.io publishing`
 - Color: `#0e8a16` (green)
 
-**3. Branch Protection Rules (Optional but Recommended)**
+**3. Branch Protection Rules (Recommended)**
 
 Configure main branch protection:
 - Navigate to Settings → Branches → Branch protection rules → Add rule
@@ -484,148 +484,213 @@ Configure main branch protection:
   - Select `Publish Dry-Run` (this check appears after first workflow run)
   - ✅ Require branches to be up to date before merging
 
-#### Development Prerequisites
-
-- PR has been merged and changes are reflected in the main branch
-- Cargo.toml version has been updated
-- CHANGELOG.md has been updated
-- Dry-run checks passed during PR review
-
 ### Publishing Workflow
 
-#### Step 1-4: Normal Development Process
+The automated publishing process consists of two main stages:
 
-Follow the normal development process to create and merge a PR.
+1. **Pre-merge validation** (`publish-dry-run.yml`): Validates publishability before merge
+2. **Post-merge publishing** (`publish-on-merge.yml`): Publishes to crates.io and creates releases
+
+#### Step 1: Develop and Create PR
+
+Create a feature branch and update version information:
 
 ```bash
-# 1. Develop on feature branch
+# 1. Create feature branch
 git checkout -b feature/update-reinhardt-orm
 
-# 2. Update Cargo.toml
+# 2. Update Cargo.toml version
 vim crates/reinhardt-orm/Cargo.toml  # version = "0.2.0"
 
 # 3. Update CHANGELOG.md
+vim crates/reinhardt-orm/CHANGELOG.md  # Add release notes
+
+# 4. Commit changes
+git add crates/reinhardt-orm/Cargo.toml crates/reinhardt-orm/CHANGELOG.md
+git commit -m "chore(release): Bump reinhardt-orm to v0.2.0
+
+Prepare reinhardt-orm for publication to crates.io.
+
+Version Changes:
+- crates/reinhardt-orm/Cargo.toml: version 0.1.0 -> 0.2.0
+- crates/reinhardt-orm/CHANGELOG.md: Add release notes for v0.2.0
+
+New Features:
+- Add support for async connection pooling
+- Implement QueryBuilder::with_timeout() method
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 5. Push and create PR
+git push origin feature/update-reinhardt-orm
+```
+
+#### Step 2: Add `release` Label to PR
+
+**Critical**: The `release` label triggers both dry-run validation and automatic publishing.
+
+1. Open the PR on GitHub
+2. Click "Labels" in the right sidebar
+3. Select `release` label
+4. Verify the green `release` label appears
+
+**What happens:**
+- `publish-dry-run.yml` workflow automatically starts
+- Detects changed crates using `cargo ws changed`
+- Runs `cargo ws publish --dry-run` for each changed crate
+- Reports results in PR checks
+
+#### Step 3: Review Dry-Run Results
+
+Check the GitHub Actions tab for dry-run results:
+
+**Success indicators:**
+- ✅ Green check mark on "Publish Dry-Run" workflow
+- Summary shows: "📋 Dry-Run Publish Check" with validated crates list
+- No errors or warnings in workflow logs
+
+**Common issues:**
+- ❌ Missing Cargo.toml fields (description, license, repository)
+- ❌ Unpublished dependencies
+- ❌ Version already published to crates.io
+
+**Fix issues before merging:**
+```bash
+# Fix metadata issues
+vim crates/reinhardt-orm/Cargo.toml  # Add missing fields
+
+# Commit and push fixes
+git add crates/reinhardt-orm/Cargo.toml
+git commit -m "fix(release): Add missing Cargo.toml metadata"
+git push origin feature/update-reinhardt-orm
+
+# Dry-run automatically re-runs on new push
+```
+
+#### Step 4: Merge PR
+
+Once dry-run passes and PR is approved:
+
+1. Click "Merge pull request" on GitHub
+2. Confirm merge
+
+**Important**: Only merge after dry-run succeeds.
+
+#### Step 5: Automatic Publishing Process
+
+After merge, `publish-on-merge.yml` workflow automatically executes:
+
+**Phase 1: Change Detection**
+- Detects changed crates using `cargo ws changed --include-merged-tags`
+- Extracts crate name and version from Cargo.toml
+- Checks if version already published to crates.io
+- Skips already-published crates
+
+**Phase 2: Sequential Publishing**
+- Publishes each changed crate to crates.io
+- Runs dry-run before each publish as final verification
+- Uses exponential backoff retry (3 attempts: 10s, 20s, 40s)
+- Waits 30 seconds between crates (for crates.io index propagation)
+- Creates local Git tags after successful publish
+
+**Phase 3: GitHub Releases**
+- Extracts release notes from each crate's CHANGELOG.md
+- Creates GitHub Release for each published crate
+- Links to crates.io and docs.rs
+
+**Phase 4: Tag Push**
+- Pushes all created tags to remote repository
+- Tag format: `[crate-name]@v[version]`
+
+**Example execution:**
+```
+[1/2] Publishing reinhardt-types v0.2.0...
+  Running dry-run...
+  ✅ Dry-run passed for reinhardt-types v0.2.0
+  Publishing...
+  ✅ Successfully published reinhardt-types v0.2.0
+  🏷️ Created tag: reinhardt-types@v0.2.0
+  ⏳ Waiting 30 seconds before next crate...
+
+[2/2] Publishing reinhardt-orm v0.3.0...
+  Running dry-run...
+  ✅ Dry-run passed for reinhardt-orm v0.3.0
+  Publishing...
+  ✅ Successfully published reinhardt-orm v0.3.0
+  🏷️ Created tag: reinhardt-orm@v0.3.0
+
+Creating GitHub Releases...
+✅ Created GitHub Release for reinhardt-types@v0.2.0
+✅ Created GitHub Release for reinhardt-orm@v0.3.0
+
+Pushing tags...
+✅ Tag reinhardt-types@v0.2.0 pushed successfully
+✅ Tag reinhardt-orm@v0.3.0 pushed successfully
+
+🎉 All crates published successfully!
+```
+
+#### Step 6: Verify Publication
+
+Check the following to confirm successful publication:
+
+**crates.io:**
+- Visit https://crates.io/crates/[crate-name]
+- Verify new version appears in version dropdown
+- Check publication timestamp
+
+**GitHub Releases:**
+- Navigate to repository's "Releases" page
+- Verify new release with tag `[crate-name]@v[version]`
+- Check release notes extracted from CHANGELOG.md
+
+**docs.rs:**
+- Visit https://docs.rs/[crate-name]/[version]
+- Documentation builds automatically within ~5-10 minutes
+- Check "Docs" badge shows "passing"
+
+**GitHub Actions:**
+- Workflow summary shows "🎉 Release Successful"
+- Lists all published crates with links
+- No errors in workflow logs
+
+### Multi-Crate Release Process
+
+The workflow automatically handles multiple crate releases in a single PR:
+
+```bash
+# Update multiple crates
+vim crates/reinhardt-types/Cargo.toml     # version = "0.2.0"
+vim crates/reinhardt-types/CHANGELOG.md
+
+vim crates/reinhardt-orm/Cargo.toml       # version = "0.3.0"
 vim crates/reinhardt-orm/CHANGELOG.md
 
-# 4. Create commit
-git add crates/reinhardt-orm/Cargo.toml crates/reinhardt-orm/CHANGELOG.md
-git commit -m "feat(orm): Add support for async connection pooling
+# Commit all changes
+git add crates/reinhardt-types crates/reinhardt-orm
+git commit -m "chore(release): Bump reinhardt-types v0.2.0 and reinhardt-orm v0.3.0
 
 ..."
 
-# 5. Create PR
-git push origin feature/update-reinhardt-orm
-
-# 6. Create PR on GitHub and add `release` label
-# 7. Verify dry-run check passes → Merge PR
+# Create PR + add `release` label + merge
 ```
 
-#### Step 5: PR Merge (Auto-tag Generation Trigger)
+**Automatic dependency ordering:**
+- `cargo ws changed` detects all modified crates
+- Publishes in dependency order (leaf crates first)
+- 30-second intervals ensure crates.io index updates
+- Retry logic handles transient failures
 
-**Important**: Automatic tag generation only occurs on merge if the PR has the `release` label.
-
-After PR merge, the `publish-on-merge.yml` workflow automatically executes:
-
-1. Detects changed Cargo.toml files from the merged PR
-2. Extracts crate name and version from each Cargo.toml
-3. Compares with existing tags and creates only new tags
-4. Pushes Git tags to remote (sequentially with 30-second intervals)
-
-**Tag Creation Example**:
-- Crate name: `reinhardt-orm`
-- Version: `0.2.0`
-- Generated tag: `reinhardt-orm@v0.2.0`
-
-#### Step 6: Automatic Publishing on Tag Push
-
-When a tag is pushed, the `publish-on-tag.yml` workflow automatically executes:
-
-1. Verifies tag exists on main branch
-2. Extracts crate name and version from tag name
-3. Verifies version matches Cargo.toml
-4. Runs final dry-run
-5. Executes `cargo ws publish -p <crate-name>`
-6. Extracts release notes from CHANGELOG.md
-7. Creates GitHub Release automatically
-
-**Progress Monitoring**:
-- Check workflow execution in GitHub Actions tab
-- Completes in approximately 3-5 minutes (depending on crate size)
-
-#### Step 7: Verify Publication
-
-After successful publication:
-- ✅ **crates.io**: https://crates.io/crates/reinhardt-orm
-- ✅ **GitHub Releases**: Release automatically created on tag page
-- ✅ **docs.rs**: Documentation automatically builds within a few minutes
-
-### Using the `release` Label
-
-Trigger automatic publishing by adding the `release` label to the PR:
-
-1. **Add label to new PR**:
-   - GitHub PR screen, right-side "Labels" section
-   - Select `release` label
-
-2. **Add label to existing PR**:
-   - Click "Labels" on PR screen
-   - Check `release` label
-
-3. **Verification**:
-   - Confirm green `release` label appears on PR
-   - Dry-run workflow automatically executes
+**Example with dependencies:**
+```
+reinhardt-types (no internal deps) → published first
+    ↓
+reinhardt-orm (depends on reinhardt-types) → published after 30s
+```
 
 ### Troubleshooting
-
-#### Issue: "Tag is NOT on main branch" Error
-
-**Cause**: Tag does not exist on main branch
-
-**Solution**:
-```bash
-# Check current branch
-git branch
-
-# If not on main, switch to main and recreate tag
-git checkout main
-git pull origin main
-```
-
-Normally, `publish-on-merge.yml` automatically creates tags from the main branch, so this error should not occur.
-
-#### Issue: "Version mismatch" Error
-
-**Cause**: Cargo.toml version does not match tag version
-
-**Solution**:
-```bash
-# Delete tag (if error occurred on GitHub Actions)
-git tag -d reinhardt-orm@v0.2.0
-git push origin :refs/tags/reinhardt-orm@v0.2.0
-
-# Verify Cargo.toml version
-cargo metadata --no-deps --format-version 1 | jq '.packages[] | select(.name == "reinhardt-orm") | .version'
-
-# Create new PR with correct version
-```
-
-#### Issue: Publishing Failed
-
-**Check**:
-1. Is `CARGO_REGISTRY_TOKEN` correctly configured?
-2. Is Cargo.toml metadata (description, license, repository) complete?
-3. Are all dependency crates already published?
-
-**Solution**:
-```bash
-# Delete failed tag
-git tag -d reinhardt-orm@v0.2.0
-git push origin :refs/tags/reinhardt-orm@v0.2.0
-
-# Fix issues, create PR → merge → auto-generate tags again
-```
-
-**Automatic Retry**: `publish-on-tag.yml` automatically retries up to 3 times with exponential backoff.
 
 #### Issue: Dry-run Check Not Executing
 
@@ -633,55 +698,155 @@ git push origin :refs/tags/reinhardt-orm@v0.2.0
 
 **Solution**:
 1. Add `release` label to PR
-2. Manually trigger `publish-dry-run` workflow from GitHub Actions tab
+2. Workflow automatically triggers
+3. Alternative: Manually trigger from GitHub Actions tab
 
-#### Issue: Dependency Error During Multi-Crate Publishing
+#### Issue: Dry-run Failed - Missing Metadata
 
-**Cause**: Crates.io index update time lag
+**Cause**: Cargo.toml missing required fields
 
-**Solution**: Tags are automatically pushed at 30-second intervals, so this usually isn't an issue. If errors occur, `publish-on-tag.yml` automatically retries.
+**Error example:**
+```
+error: missing field `description` in Cargo.toml
+```
 
-### Recommended Multi-Crate Release Process
+**Solution**:
+```toml
+[package]
+name = "reinhardt-orm"
+version = "0.2.0"
+description = "ORM layer for Reinhardt framework"  # Add this
+license = "MIT OR Apache-2.0"  # Add this
+repository = "https://github.com/kent8192/reinhardt-rs"  # Add this
+```
 
-The process is the same even when releasing multiple crates with dependencies:
+Commit and push - dry-run re-runs automatically.
 
+#### Issue: Publishing Failed - Version Already Exists
+
+**Cause**: Version already published to crates.io
+
+**Solution**:
 ```bash
-# Update multiple Cargo.toml files
-vim crates/reinhardt-types/Cargo.toml  # version = "0.2.0"
-vim crates/reinhardt-orm/Cargo.toml    # version = "0.3.0" (depends on reinhardt-types v0.2.0)
+# Check existing versions
+curl -s "https://crates.io/api/v1/crates/reinhardt-orm" | jq '.versions[].num'
 
-# Update both CHANGELOG.md files
-vim crates/reinhardt-types/CHANGELOG.md
+# Increment version in Cargo.toml
+vim crates/reinhardt-orm/Cargo.toml  # version = "0.2.1"
+
+# Update CHANGELOG.md
 vim crates/reinhardt-orm/CHANGELOG.md
 
-# Create PR + add `release` label + merge
-# → Both tags automatically created at 30-second intervals
-# → Auto-publish following dependency order (reinhardt-types → reinhardt-orm)
+# Commit, push, wait for dry-run, merge
 ```
 
-**Reason**: `publish-on-merge.yml` automatically detects changed Cargo.toml files and pushes tags sequentially considering dependencies.
+#### Issue: Publishing Failed - Dependency Not Available
 
-### Manual Tag Creation (Emergency)
+**Cause**: Dependency crate not yet published or crates.io index not updated
 
-If automatic tag generation fails, you can manually create and push tags:
+**Solution 1**: Wait and retry
+- Workflow automatically retries 3 times with exponential backoff
+- Usually resolves after 30-second interval
+
+**Solution 2**: Manual intervention (if auto-retry fails)
+```bash
+# Wait 2-3 minutes for crates.io index to fully update
+# Manually trigger publish-on-tag workflow from GitHub Actions:
+# Actions → Publish on Tag (Manual Only) → Run workflow
+# Input: reinhardt-orm@v0.2.0
+```
+
+#### Issue: No Crates Detected for Publishing
+
+**Cause**: No version changes detected or all versions already published
+
+**Solution**:
+```bash
+# Verify Cargo.toml version was actually changed
+git diff main -- crates/*/Cargo.toml
+
+# Check if version already published
+curl -s "https://crates.io/api/v1/crates/reinhardt-orm" | \
+  jq '.versions[] | select(.num == "0.2.0")'
+
+# If needed, update version and create new PR
+```
+
+#### Issue: CHANGELOG Extraction Failed
+
+**Cause**: CHANGELOG.md format doesn't match expected pattern
+
+**Expected format:**
+```markdown
+## [0.2.0] - 2025-01-15
+
+### Added
+- Feature description
+
+### Fixed
+- Bug fix description
+```
+
+**Solution**:
+Follow [Keep a Changelog](https://keepachangelog.com/) format exactly.
+
+#### Issue: Git Tag Already Exists
+
+**Cause**: Previous failed publish attempt created tag
+
+**Solution**:
+```bash
+# Delete remote tag
+git push origin :refs/tags/reinhardt-orm@v0.2.0
+
+# Workflow will recreate tag after successful publish
+```
+
+### Emergency Manual Publishing
+
+If automated publishing fails completely, use the manual workflow:
+
+#### Via GitHub Actions (Recommended)
+
+1. Navigate to Actions → "Publish on Tag (Manual Only)"
+2. Click "Run workflow"
+3. Enter tag name: `reinhardt-orm@v0.2.0`
+4. Click "Run workflow"
+5. Monitor execution in Actions tab
+
+**Note**: The tag must already exist. Create it first if needed:
+```bash
+git tag reinhardt-orm@v0.2.0 -m "Release reinhardt-orm v0.2.0"
+git push origin reinhardt-orm@v0.2.0
+```
+
+#### Via Command Line
+
+If GitHub Actions is unavailable:
 
 ```bash
-# Switch to main branch
-git checkout main
-git pull origin main
-
-# Create tag
-TAG="reinhardt-orm@v0.2.0"
-git tag "$TAG" -m "Release reinhardt-orm v0.2.0"
-
-# Verify tag is on main branch
-git merge-base --is-ancestor "$TAG" main && echo "✅ Tag is on main" || echo "❌ Tag is NOT on main"
-
-# Push tag → automatic publishing starts
-git push origin "$TAG"
+# Follow steps in "Manual Publishing Process" section above
+# Then create and push tag:
+git tag reinhardt-orm@v0.2.0 -m "Release reinhardt-orm v0.2.0"
+git push origin --tags
 ```
 
-**Note**: Even with manual tag creation, automatic publishing via `publish-on-tag.yml` still executes.
+### Workflow Files Reference
+
+**`.github/workflows/publish-dry-run.yml`**
+- Triggers: PR with `release` label (on open, sync, reopen, labeled)
+- Purpose: Pre-merge validation of publishability
+- Actions: Detects changed crates, runs `--dry-run` for each
+
+**`.github/workflows/publish-on-merge.yml`**
+- Triggers: PR merge to main (only if PR has `release` label)
+- Purpose: Publish to crates.io, create tags and releases
+- Actions: Detect changes → publish → create tags → create releases → push tags
+
+**`.github/workflows/publish-on-tag.yml`**
+- Triggers: Manual dispatch only
+- Purpose: Emergency manual publishing
+- Actions: Validate tag → verify version → publish → create release
 
 ---
 
