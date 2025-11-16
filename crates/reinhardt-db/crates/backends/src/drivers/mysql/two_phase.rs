@@ -145,9 +145,9 @@ impl MySqlTwoPhaseParticipant {
 		let mut connection = self.pool.acquire().await.map_err(DatabaseError::from)?;
 
 		let sql = format!("XA START '{}'", Self::escape_xid(xid));
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
 		// MySQL XA commands are not supported in prepared statement protocol
-		// Use raw_sql to execute without preparation
-		sqlx::raw_sql(&sql)
+		sqlx::query(sql_static)
 			.execute(&mut *connection)
 			.await
 			.map_err(DatabaseError::from)?;
@@ -518,7 +518,8 @@ impl MySqlTwoPhaseParticipant {
 
 		// Perform the end operation directly without calling self.end()
 		let sql = format!("XA END '{}'", Self::escape_xid(xid));
-		sqlx::raw_sql(&sql)
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
@@ -547,7 +548,8 @@ impl MySqlTwoPhaseParticipant {
 
 		// Perform the prepare operation directly without calling self.prepare()
 		let sql = format!("XA PREPARE '{}'", Self::escape_xid(xid));
-		sqlx::raw_sql(&sql)
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
@@ -572,7 +574,8 @@ impl MySqlTwoPhaseParticipant {
 
 		// Execute commit directly without calling self.commit()
 		let sql = format!("XA COMMIT '{}'", Self::escape_xid(xid));
-		sqlx::raw_sql(&sql)
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
@@ -591,7 +594,8 @@ impl MySqlTwoPhaseParticipant {
 
 		// Execute rollback directly without calling self.rollback()
 		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(xid));
-		sqlx::raw_sql(&sql)
+		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		sqlx::query(sql_static)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
