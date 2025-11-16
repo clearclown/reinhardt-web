@@ -3,10 +3,11 @@
 //! Tests custom view registration, rendering, and model reordering functionality
 
 use async_trait::async_trait;
-use reinhardt_admin_panel::{
+use reinhardt_panel::{
 	CustomView, CustomViewRegistry, DragDropConfig, ReorderableModel, ViewConfig,
 };
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Simple test model for reordering
 #[derive(Debug, Clone)]
@@ -112,259 +113,215 @@ async fn test_multiple_custom_views() {
 	assert!(registry.find_by_path("/nonexistent").is_none());
 }
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// ReorderHandler::new() signature changed to require:
-// - config: DragDropConfig
-// - connection: Arc<DatabaseConnection>
-// - table_name: impl Into<String>
-// - id_field: impl Into<String>
-// process_reorder() now takes Vec<(String, i32)> and updates database directly
-//
-// /// Test: Basic item reordering
-// #[tokio::test]
-// async fn test_basic_reordering() {
-// 	let config = DragDropConfig::new("order");
-// 	let handler = ReorderHandler::new(config);
-//
-// 	// Create test items
-// 	let mut items = vec![
-// 		TestItem {
-// 			id: "1".to_string(),
-// 			name: "Item 1".to_string(),
-// 			order: 0,
-// 		},
-// 		TestItem {
-// 			id: "2".to_string(),
-// 			name: "Item 2".to_string(),
-// 			order: 1,
-// 		},
-// 		TestItem {
-// 			id: "3".to_string(),
-// 			name: "Item 3".to_string(),
-// 			order: 2,
-// 		},
-// 	];
-//
-// 	// Reorder: [0, 1, 2] → [2, 0, 1]
-// 	let new_orders = vec![2, 0, 1];
-// 	let result = handler.process_reorder(&mut items, new_orders).await;
-//
-// 	assert!(result.is_ok());
-// 	let reorder_result = result.unwrap();
-// 	assert!(reorder_result.success);
-// 	assert_eq!(reorder_result.updated_count, 3);
-//
-// 	// Verify new order
-// 	assert_eq!(items[0].order, 2);
-// 	assert_eq!(items[1].order, 0);
-// 	assert_eq!(items[2].order, 1);
-// }
+/// Helper function to create mock database connection for testing
+fn create_mock_connection() -> Arc<reinhardt_db::orm::DatabaseConnection> {
+	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::error::Result;
+	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use reinhardt_db::orm::{DatabaseBackend, DatabaseConnection};
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// /// Test: Reorder validation catches invalid orders
-// #[tokio::test]
-// async fn test_reorder_validation_errors() {
-// 	let config = DragDropConfig::new("order");
-// 	let handler = ReorderHandler::new(config);
-//
-// 	let mut items = vec![
-// 		TestItem {
-// 			id: "1".to_string(),
-// 			name: "Item 1".to_string(),
-// 			order: 0,
-// 		},
-// 		TestItem {
-// 			id: "2".to_string(),
-// 			name: "Item 2".to_string(),
-// 			order: 1,
-// 		},
-// 	];
-//
-// 	// Test 1: Negative order
-// 	let invalid_orders = vec![-1, 1];
-// 	let result = handler.process_reorder(&mut items, invalid_orders).await;
-// 	assert!(result.is_err());
-// 	assert!(
-// 		result
-// 			.unwrap_err()
-// 			.contains("Order values must be non-negative")
-// 	);
-//
-// 	// Test 2: Duplicate orders
-// 	let duplicate_orders = vec![0, 0];
-// 	let result = handler.process_reorder(&mut items, duplicate_orders).await;
-// 	assert!(result.is_err());
-// 	assert!(result.unwrap_err().contains("Duplicate order values found"));
-//
-// 	// Test 3: Gap in sequence
-// 	let gap_orders = vec![0, 2]; // Missing 1
-// 	let result = handler.process_reorder(&mut items, gap_orders).await;
-// 	assert!(result.is_err());
-// 	assert!(
-// 		result
-// 			.unwrap_err()
-// 			.contains("Order values must be continuous")
-// 	);
-// }
+	// Mock backend for testing
+	struct MockBackend;
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// /// Test: Adjacent item reordering
-// #[tokio::test]
-// async fn test_adjacent_reordering() {
-// 	let config = DragDropConfig::new("order");
-// 	let handler = ReorderHandler::new(config);
-//
-// 	let mut items = vec![
-// 		TestItem {
-// 			id: "1".to_string(),
-// 			name: "First".to_string(),
-// 			order: 0,
-// 		},
-// 		TestItem {
-// 			id: "2".to_string(),
-// 			name: "Second".to_string(),
-// 			order: 1,
-// 		},
-// 		TestItem {
-// 			id: "3".to_string(),
-// 			name: "Third".to_string(),
-// 			order: 2,
-// 		},
-// 	];
-//
-// 	// Swap first and second items
-// 	let result = handler.reorder_adjacent(&mut items, 0, 1).await;
-// 	assert!(result.is_ok());
-//
-// 	let reorder_result = result.unwrap();
-// 	assert!(reorder_result.success);
-// 	assert_eq!(reorder_result.updated_count, 2);
-//
-// 	// Verify swap
-// 	assert_eq!(items[0].name, "First");
-// 	assert_eq!(items[0].order, 1); // Swapped
-// 	assert_eq!(items[1].name, "Second");
-// 	assert_eq!(items[1].order, 0); // Swapped
-// 	assert_eq!(items[2].order, 2); // Unchanged
-// }
+	#[async_trait::async_trait]
+	impl BackendTrait for MockBackend {
+		fn database_type(&self) -> DatabaseType {
+			DatabaseType::Postgres
+		}
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// /// Test: Reordering with custom view integration
-// #[tokio::test]
-// async fn test_reordering_with_custom_view() {
-// 	// Custom view that manages reorderable items
-// 	struct ItemManagerView {
-// 		items: tokio::sync::Mutex<Vec<TestItem>>,
-// 	}
-//
-// 	impl ItemManagerView {
-// 		fn new() -> Self {
-// 			let items = vec![
-// 				TestItem {
-// 					id: "a".to_string(),
-// 					name: "Alpha".to_string(),
-// 					order: 0,
-// 				},
-// 				TestItem {
-// 					id: "b".to_string(),
-// 					name: "Beta".to_string(),
-// 					order: 1,
-// 				},
-// 				TestItem {
-// 					id: "c".to_string(),
-// 					name: "Gamma".to_string(),
-// 					order: 2,
-// 				},
-// 			];
-// 			Self {
-// 				items: tokio::sync::Mutex::new(items),
-// 			}
-// 		}
-//
-// 		async fn reorder_items(&self, new_orders: Vec<i32>) -> ReorderResult {
-// 			let config = DragDropConfig::new("order");
-// 			let handler = ReorderHandler::new(config);
-// 			let mut items = self.items.lock().await;
-// 			handler
-// 				.process_reorder(&mut *items, new_orders)
-// 				.await
-// 				.unwrap_or_else(|e| ReorderResult {
-// 					updated_count: 0,
-// 					success: false,
-// 					error: Some(e),
-// 				})
-// 		}
-// 	}
-//
-// 	#[async_trait]
-// 	impl CustomView for ItemManagerView {
-// 		fn config(&self) -> ViewConfig {
-// 			ViewConfig::builder()
-// 				.path("/items/manage")
-// 				.name("Item Manager")
-// 				.build()
-// 		}
-//
-// 		async fn render(&self, _context: HashMap<String, String>) -> String {
-// 			let items = self.items.lock().await;
-// 			let mut html = String::from("<ul>");
-// 			for item in items.iter() {
-// 				html.push_str(&format!(
-// 					"<li data-order='{}'>{}</li>",
-// 					item.order, item.name
-// 				));
-// 			}
-// 			html.push_str("</ul>");
-// 			html
-// 		}
-//
-// 		async fn has_permission(&self, _user: &(dyn std::any::Any + Send + Sync)) -> bool {
-// 			true
-// 		}
-// 	}
-//
-// 	// Test the integrated view
-// 	let view = ItemManagerView::new();
-//
-// 	// Initial render
-// 	let context = HashMap::new();
-// 	let initial_html = view.render(context.clone()).await;
-// 	assert!(initial_html.contains("Alpha"));
-// 	assert!(initial_html.contains("data-order='0'"));
-//
-// 	// Reorder: [0, 1, 2] → [2, 0, 1]
-// 	let result = view.reorder_items(vec![2, 0, 1]).await;
-// 	assert!(result.success);
-// 	assert_eq!(result.updated_count, 3);
-//
-// 	// Render after reorder
-// 	let after_html = view.render(context).await;
-// 	assert!(after_html.contains("data-order='2'"));
-// 	assert!(after_html.contains("data-order='0'"));
-// 	assert!(after_html.contains("data-order='1'"));
-// }
+		fn placeholder(&self, index: usize) -> String {
+			format!("${}", index)
+		}
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// /// Test: Disabled drag-drop configuration
-// #[tokio::test]
-// async fn test_drag_drop_disabled() {
-// 	let config = DragDropConfig::builder()
-// 		.order_field("order")
-// 		.enabled(false)
-// 		.build();
-//
-// 	let handler = ReorderHandler::new(config);
-//
-// 	let mut items = vec![TestItem {
-// 		id: "1".to_string(),
-// 		name: "Item".to_string(),
-// 		order: 0,
-// 	}];
-//
-// 	let result = handler.process_reorder(&mut items, vec![0]).await;
-// 	assert!(result.is_err());
-// 	assert!(result.unwrap_err().contains("Reordering is disabled"));
-// }
+		fn supports_returning(&self) -> bool {
+			true
+		}
+
+		fn supports_on_conflict(&self) -> bool {
+			true
+		}
+
+		async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 1 })
+		}
+
+		async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		fn as_any(&self) -> &dyn std::any::Any {
+			self
+		}
+	}
+
+	let mock_backend = Arc::new(MockBackend);
+	let backends_conn = BackendsConnection::new(mock_backend);
+	Arc::new(DatabaseConnection::new(
+		DatabaseBackend::Postgres,
+		backends_conn,
+	))
+}
+
+/// Test: Basic item reordering
+#[tokio::test]
+async fn test_basic_reordering() {
+	use reinhardt_panel::ReorderHandler;
+
+	let config = DragDropConfig::new("order");
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config, conn, "test_items", "id");
+
+	// Reorder: item1(order=0), item2(order=1), item3(order=2) → item3(0), item1(1), item2(2)
+	let items = vec![
+		("3".to_string(), 0),
+		("1".to_string(), 1),
+		("2".to_string(), 2),
+	];
+
+	let result = handler.process_reorder(items).await;
+	assert!(result.success);
+	assert_eq!(result.updated_count, 3);
+	assert!(result.error.is_none());
+}
+
+/// Test: Reorder validation catches invalid orders
+#[tokio::test]
+async fn test_reorder_validation_errors() {
+	use reinhardt_panel::ReorderHandler;
+
+	let config = DragDropConfig::new("order");
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config.clone(), conn.clone(), "test_items", "id");
+
+	// Test 1: Negative order
+	let items_negative = vec![("1".to_string(), -1), ("2".to_string(), 1)];
+	let result = handler.process_reorder(items_negative).await;
+	assert!(!result.success);
+	assert!(result
+		.error
+		.as_ref()
+		.unwrap()
+		.contains("Order values must be non-negative"));
+
+	// Test 2: Duplicate orders
+	let handler2 = ReorderHandler::new(config.clone(), conn.clone(), "test_items", "id");
+	let items_duplicate = vec![("1".to_string(), 0), ("2".to_string(), 0)];
+	let result = handler2.process_reorder(items_duplicate).await;
+	assert!(!result.success);
+	assert!(result
+		.error
+		.as_ref()
+		.unwrap()
+		.contains("Duplicate order value"));
+
+	// Test 3: Gap in sequence
+	let handler3 = ReorderHandler::new(config, conn, "test_items", "id");
+	let items_gap = vec![("1".to_string(), 0), ("2".to_string(), 2)]; // Missing 1
+	let result = handler3.process_reorder(items_gap).await;
+	assert!(!result.success);
+	assert!(result
+		.error
+		.as_ref()
+		.unwrap()
+		.contains("Order values must be sequential"));
+}
+
+/// Test: Adjacent item reordering
+#[tokio::test]
+async fn test_adjacent_reordering() {
+	use reinhardt_panel::ReorderHandler;
+
+	let config = DragDropConfig::new("order");
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config, conn, "test_items", "id");
+
+	// Swap first (id="1", order=0) and second (id="2", order=1) items
+	// New order: Second(0), First(1), Third(2)
+	let items = vec![
+		("2".to_string(), 0), // Second becomes first
+		("1".to_string(), 1), // First becomes second
+		("3".to_string(), 2), // Third unchanged
+	];
+
+	let result = handler.process_reorder(items).await;
+	assert!(result.success);
+	assert_eq!(result.updated_count, 3); // All three items in the list are updated
+	assert!(result.error.is_none());
+}
+
+/// Test: Reordering with custom view integration
+#[tokio::test]
+async fn test_reordering_with_custom_view() {
+	use reinhardt_panel::ReorderHandler;
+
+	// Simulate custom view managing items: Alpha(0), Beta(1), Gamma(2)
+	let config = DragDropConfig::new("order");
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config.clone(), conn.clone(), "custom_items", "id");
+
+	// Initial reorder: [a=0, b=1, c=2] → [c=0, a=1, b=2]
+	// This simulates user dragging Gamma to the top
+	let items = vec![
+		("c".to_string(), 0), // Gamma → position 0
+		("a".to_string(), 1), // Alpha → position 1
+		("b".to_string(), 2), // Beta → position 2
+	];
+
+	let result = handler.process_reorder(items).await;
+	assert!(result.success);
+	assert_eq!(result.updated_count, 3);
+	assert!(result.error.is_none());
+
+	// Second reorder: Reverse the order [c=0, a=1, b=2] → [b=0, a=1, c=2]
+	let handler2 = ReorderHandler::new(config.clone(), conn.clone(), "custom_items", "id");
+	let items2 = vec![
+		("b".to_string(), 0), // Beta → position 0
+		("a".to_string(), 1), // Alpha stays at 1
+		("c".to_string(), 2), // Gamma → position 2
+	];
+
+	let result2 = handler2.process_reorder(items2).await;
+	assert!(result2.success);
+	assert_eq!(result2.updated_count, 3); // All three items in the list are updated
+	assert!(result2.error.is_none());
+}
+
+/// Test: Disabled drag-drop configuration
+#[tokio::test]
+async fn test_drag_drop_disabled() {
+	use reinhardt_panel::ReorderHandler;
+
+	let config = DragDropConfig::builder()
+		.order_field("order")
+		.enabled(false)
+		.build();
+
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config, conn, "test_items", "id");
+
+	let items = vec![("1".to_string(), 0)];
+
+	let result = handler.process_reorder(items).await;
+	assert!(!result.success);
+	assert!(result
+		.error
+		.as_ref()
+		.unwrap()
+		.contains("Reordering is not enabled"));
+}
 
 /// Test: Custom JavaScript integration
 #[tokio::test]
@@ -452,45 +409,38 @@ async fn test_permission_based_view_access() {
 	);
 }
 
-// TODO: ReorderHandler now requires database connection - needs refactoring
-// /// Test: Large-scale reordering performance
-// #[tokio::test]
-// async fn test_large_scale_reordering() {
-// 	let config = DragDropConfig::new("order");
-// 	let handler = ReorderHandler::new(config);
-//
-// 	// Create 100 items
-// 	let mut items: Vec<TestItem> = (0..100)
-// 		.map(|i| TestItem {
-// 			id: i.to_string(),
-// 			name: format!("Item {}", i),
-// 			order: i,
-// 		})
-// 		.collect();
-//
-// 	// Reverse order: [0..99] → [99..0]
-// 	let new_orders: Vec<i32> = (0..100).rev().collect();
-//
-// 	let start = std::time::Instant::now();
-// 	let result = handler.process_reorder(&mut items, new_orders).await;
-// 	let duration = start.elapsed();
-//
-// 	assert!(result.is_ok());
-// 	let reorder_result = result.unwrap();
-// 	assert!(reorder_result.success);
-// 	assert_eq!(reorder_result.updated_count, 100);
-//
-// 	// Performance check: should complete in under 100ms
-// 	assert!(
-// 		duration.as_millis() < 100,
-// 		"Reordering 100 items took too long: {:?}",
-// 		duration
-// 	);
-//
-// 	// Verify order is reversed
-// 	assert_eq!(items[0].order, 99);
-// 	assert_eq!(items[99].order, 0);
-// }
+/// Test: Large-scale reordering performance
+#[tokio::test]
+async fn test_large_scale_reordering() {
+	use reinhardt_panel::ReorderHandler;
+
+	let config = DragDropConfig::new("order");
+	let conn = create_mock_connection();
+	let handler = ReorderHandler::new(config, conn, "test_items", "id");
+
+	// Create 100 items in reversed order: [99, 98, ..., 1, 0]
+	// This simulates moving item 99 to position 0, item 98 to position 1, etc.
+	let items: Vec<(String, i32)> = (0..100)
+		.rev()
+		.enumerate()
+		.map(|(new_order, old_id)| (old_id.to_string(), new_order as i32))
+		.collect();
+
+	let start = std::time::Instant::now();
+	let result = handler.process_reorder(items).await;
+	let duration = start.elapsed();
+
+	assert!(result.success);
+	assert_eq!(result.updated_count, 100);
+	assert!(result.error.is_none());
+
+	// Performance check: should complete in under 100ms
+	assert!(
+		duration.as_millis() < 100,
+		"Reordering 100 items took too long: {:?}",
+		duration
+	);
+}
 
 /// Test: Reordering with context data in custom view
 #[tokio::test]
