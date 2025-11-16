@@ -1,13 +1,12 @@
 # reinhardt-admin
 
-Admin functionality for Reinhardt framework.
+Admin panel functionality for Reinhardt framework.
 
 ## Features
 
-This crate provides two main components:
+This crate provides the Django-style web admin panel for managing models.
 
-- **Panel** (`reinhardt-panel`): Django-style web admin panel for managing models
-- **CLI** (`reinhardt-cli`): Command-line tool for project management
+For the command-line tool, see [`reinhardt-admin-cli`](../reinhardt-admin-cli).
 
 ## Usage
 
@@ -17,22 +16,13 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-admin = { version = "0.1.0-alpha.1", features = ["panel"] }
-```
-
-### Using the CLI
-
-Install the CLI globally:
-
-```bash
-cargo install reinhardt-admin --features cli
+reinhardt-admin = "0.1.0-alpha.1"
 ```
 
 ## Feature Flags
 
 - `panel` (default): Web admin panel
-- `cli`: Command-line interface
-- `all`: All admin functionality
+- `all`: All admin panel functionality
 
 ## License
 
