@@ -40,7 +40,7 @@ impl PermissionAction {
 /// # Examples
 ///
 /// ```no_run
-/// use reinhardt_admin_panel::{AdminAuthBackend, PermissionAction};
+/// use reinhardt_panel::{AdminAuthBackend, PermissionAction};
 /// use reinhardt_auth::SimpleUser;
 ///
 /// # async fn example() {
@@ -69,7 +69,7 @@ impl AdminAuthBackend {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_admin_panel::{AdminAuthBackend, PermissionAction};
+	/// # use reinhardt_panel::{AdminAuthBackend, PermissionAction};
 	/// # use reinhardt_auth::SimpleUser;
 	/// # async fn example() {
 	/// let auth = AdminAuthBackend::new();

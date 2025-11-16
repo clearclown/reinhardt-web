@@ -60,7 +60,7 @@ impl FormField {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin_panel::{FormField, FieldType};
+	/// use reinhardt_panel::{FormField, FieldType};
 	///
 	/// let field = FormField::new("email", "Email Address", FieldType::Email);
 	/// assert_eq!(field.name, "email");
@@ -119,7 +119,7 @@ impl FormField {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{AdminForm, FormField, FieldType};
+/// use reinhardt_panel::{AdminForm, FormField, FieldType};
 ///
 /// let form = AdminForm::new("User")
 ///     .add_field(FormField::new("username", "Username", FieldType::Text).required())
@@ -277,7 +277,7 @@ impl AdminForm {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{FormBuilder, FieldType};
+/// use reinhardt_panel::{FormBuilder, FieldType};
 ///
 /// let form = FormBuilder::new("User")
 ///     .add_text_field("username", "Username", true)

@@ -39,7 +39,7 @@
 //! ### 2. Register with Admin
 //!
 //! ```rust,ignore
-//! use reinhardt_admin_panel::{AdminSite, ModelAdmin};
+//! use reinhardt_panel::{AdminSite, ModelAdmin};
 //!
 //! #[tokio::main]
 //! async fn main() {
@@ -56,7 +56,7 @@
 //! ### 3. Customize the Admin
 //!
 //! ```rust,ignore
-//! use reinhardt_admin_panel::ModelAdmin;
+//! use reinhardt_panel::ModelAdmin;
 //!
 //! struct UserAdmin {
 //!     list_display: Vec<String>,

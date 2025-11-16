@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::BulkEdit;
+/// use reinhardt_panel::BulkEdit;
 /// use serde_json::json;
 ///
 /// let bulk_edit = BulkEdit::new("User")
@@ -181,7 +181,7 @@ impl Default for BulkEditResult {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{BulkEditForm, BulkEditField};
+/// use reinhardt_panel::{BulkEditForm, BulkEditField};
 ///
 /// let form = BulkEditForm::new("User")
 ///     .add_field(BulkEditField::new("status", "Status", "text"))

@@ -8,7 +8,7 @@
 //! ## Rich Text Editor
 //!
 //! ```
-//! use reinhardt_admin_panel::widgets::{RichTextEditorConfig, EditorType, Widget, WidgetType};
+//! use reinhardt_panel::widgets::{RichTextEditorConfig, EditorType, Widget, WidgetType};
 //!
 //! // Create a TinyMCE editor
 //! let config = RichTextEditorConfig::new(EditorType::TinyMCE)
@@ -21,7 +21,7 @@
 //! ## Image Upload
 //!
 //! ```
-//! use reinhardt_admin_panel::widgets::{ImageUploadConfig, ImageFormat, Widget, WidgetType};
+//! use reinhardt_panel::widgets::{ImageUploadConfig, ImageFormat, Widget, WidgetType};
 //!
 //! // Create an image upload widget
 //! let config = ImageUploadConfig::new()

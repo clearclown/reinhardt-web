@@ -78,7 +78,7 @@ impl ActionResult {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{AdminAction, ActionResult};
+/// use reinhardt_panel::{AdminAction, ActionResult};
 /// use async_trait::async_trait;
 ///
 /// struct PublishAction;
@@ -160,7 +160,7 @@ pub trait AdminAction: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{DeleteSelectedAction, AdminAction};
+/// use reinhardt_panel::{DeleteSelectedAction, AdminAction};
 ///
 /// let action = DeleteSelectedAction::new();
 /// assert_eq!(action.name(), "delete_selected");
@@ -290,7 +290,7 @@ impl AdminAction for DeleteSelectedAction {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_admin_panel::{ActionRegistry, DeleteSelectedAction};
+/// use reinhardt_panel::{ActionRegistry, DeleteSelectedAction};
 ///
 /// let registry = ActionRegistry::new();
 /// registry.register(DeleteSelectedAction::new());
@@ -315,7 +315,7 @@ impl ActionRegistry {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin_panel::ActionRegistry;
+	/// use reinhardt_panel::ActionRegistry;
 	///
 	/// let registry = ActionRegistry::with_defaults();
 	/// assert!(registry.has_action("delete_selected"));
@@ -331,7 +331,7 @@ impl ActionRegistry {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin_panel::{ActionRegistry, DeleteSelectedAction};
+	/// use reinhardt_panel::{ActionRegistry, DeleteSelectedAction};
 	///
 	/// let registry = ActionRegistry::new();
 	/// registry.register(DeleteSelectedAction::new());
@@ -346,7 +346,7 @@ impl ActionRegistry {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_admin_panel::{ActionRegistry, DeleteSelectedAction};
+	/// use reinhardt_panel::{ActionRegistry, DeleteSelectedAction};
 	///
 	/// let registry = ActionRegistry::with_defaults();
 	/// assert!(registry.unregister("delete_selected").is_ok());
