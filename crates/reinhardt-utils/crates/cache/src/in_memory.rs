@@ -1226,6 +1226,7 @@ mod tests {
 		assert_eq!(stats.entry_count, num_keys);
 
 		// Wait for expiration
+		tokio::time::sleep(Duration::from_millis(60)).await;
 
 		// Cleanup (should be fast with layered strategy)
 		cache.cleanup_expired().await;
