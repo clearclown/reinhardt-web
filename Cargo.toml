@@ -47,7 +47,6 @@ api = ["reinhardt-rest", "reinhardt-rest/serializers", "reinhardt-views/viewsets
 auth = ["reinhardt-auth"]
 admin = ["reinhardt-admin", "reinhardt-admin/panel", "reinhardt-forms", "reinhardt-template"]
 admin-panel = ["reinhardt-admin/panel"]
-admin-cli = ["reinhardt-admin/cli"]
 forms = ["reinhardt-forms"]
 graphql = ["reinhardt-graphql"]
 templates = ["reinhardt-template"]
@@ -217,7 +216,8 @@ members = [
   "crates/reinhardt-utils",
   "crates/reinhardt-rest",
   "crates/reinhardt-auth",
-  "crates/reinhardt-admin", # Admin functionality (panel + CLI)
+  "crates/reinhardt-admin", # Admin panel functionality
+  "crates/reinhardt-admin-cli", # Admin CLI tool
   "crates/reinhardt-grpc",
   "crates/reinhardt-graphql-macros",
   "crates/reinhardt-commands",
@@ -280,7 +280,7 @@ reinhardt-rest = { path = "crates/reinhardt-rest", version = "0.1.0-alpha.1" }
 reinhardt-auth = { path = "crates/reinhardt-auth", version = "0.1.0-alpha.1" }
 reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
 reinhardt-panel = { path = "crates/reinhardt-admin/crates/panel", version = "0.1.0-alpha.1" }
-reinhardt-cli = { path = "crates/reinhardt-admin/crates/cli", version = "0.1.0-alpha.1" }
+reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
 reinhardt-graphql-macros = { path = "crates/reinhardt-graphql-macros", version = "0.1.0-alpha.1" }
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0-alpha.1" }
