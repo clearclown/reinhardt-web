@@ -14,9 +14,10 @@ pub use renderer::BrowsableApiRenderer;
 pub use templates::InteractiveDocsRenderer;
 
 /// Color scheme for syntax highlighting
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ColorScheme {
 	/// Dark theme (default)
+	#[default]
 	Dark,
 	/// Light theme
 	Light,
@@ -26,12 +27,6 @@ pub enum ColorScheme {
 	SolarizedDark,
 	/// Solarized light theme
 	SolarizedLight,
-}
-
-impl Default for ColorScheme {
-	fn default() -> Self {
-		Self::Dark
-	}
 }
 
 impl ColorScheme {
