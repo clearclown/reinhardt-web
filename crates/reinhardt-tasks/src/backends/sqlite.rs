@@ -60,6 +60,7 @@ impl SqliteBackend {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 status TEXT NOT NULL,
+                task_data TEXT,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             )
@@ -96,12 +97,19 @@ impl crate::backend::TaskBackend for SqliteBackend {
 		let id_str = task_id.to_string();
 		let status_str = "pending";
 
+		// Create SerializedTask with task name and placeholder data
+		let serialized = crate::registry::SerializedTask::new(task_name.clone(), "{}".to_string());
+		let task_data_json = serialized
+			.to_json()
+			.map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+
 		sqlx::query(
-			"INSERT INTO tasks (id, name, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+			"INSERT INTO tasks (id, name, status, task_data, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
 		)
 		.bind(&id_str)
 		.bind(&task_name)
 		.bind(status_str)
+		.bind(&task_data_json)
 		.bind(now)
 		.bind(now)
 		.execute(&self.pool)
@@ -203,17 +211,18 @@ impl crate::backend::TaskBackend for SqliteBackend {
 	) -> Result<Option<crate::registry::SerializedTask>, TaskExecutionError> {
 		let id_str = task_id.to_string();
 
-		let record: Option<(String,)> = sqlx::query_as("SELECT name FROM tasks WHERE id = ?")
-			.bind(&id_str)
-			.fetch_optional(&self.pool)
-			.await
-			.map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+		let record: Option<(String,)> =
+			sqlx::query_as("SELECT task_data FROM tasks WHERE id = ?")
+				.bind(&id_str)
+				.fetch_optional(&self.pool)
+				.await
+				.map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
 
 		match record {
-			Some((_name,)) => {
-				// TODO: Store and retrieve actual task data from database
-				// Currently returns empty JSON as placeholder
-				todo!("Implement proper task data storage and retrieval for SQLite backend")
+			Some((task_data_json,)) => {
+				let serialized = crate::registry::SerializedTask::from_json(&task_data_json)
+					.map_err(|e| TaskExecutionError::BackendError(e.to_string()))?;
+				Ok(Some(serialized))
 			}
 			None => Ok(None),
 		}
@@ -502,5 +511,91 @@ mod tests {
 			.await
 			.expect("Failed to get result");
 		assert!(retrieved.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_sqlite_backend_get_task_data_after_enqueue() {
+		let backend = SqliteBackend::new("sqlite::memory:")
+			.await
+			.expect("Failed to create backend");
+
+		let task = Box::new(TestTask {
+			id: TaskId::new(),
+			name: "test_task".to_string(),
+		});
+
+		let task_id = task.id();
+		backend.enqueue(task).await.expect("Failed to enqueue");
+
+		// Retrieve task data
+		let task_data = backend
+			.get_task_data(task_id)
+			.await
+			.expect("Failed to get task data");
+
+		assert!(task_data.is_some());
+		let serialized = task_data.unwrap();
+		assert_eq!(serialized.name(), "test_task");
+		assert_eq!(serialized.data(), "{}");
+	}
+
+	#[tokio::test]
+	async fn test_sqlite_backend_get_task_data_not_found() {
+		let backend = SqliteBackend::new("sqlite::memory:")
+			.await
+			.expect("Failed to create backend");
+
+		let task_id = TaskId::new();
+		let task_data = backend
+			.get_task_data(task_id)
+			.await
+			.expect("Failed to get task data");
+
+		assert!(task_data.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_sqlite_backend_task_data_persistence() {
+		use tempfile::tempdir;
+
+		// Create temporary directory for database file
+		let temp_dir = tempdir().expect("Failed to create temp directory");
+		let db_path = temp_dir.path().join("test.db");
+		let db_url = format!("sqlite://{}", db_path.display());
+
+		let task_id = TaskId::new();
+		let task_name = "persistent_task".to_string();
+
+		// Create backend and enqueue task
+		{
+			let backend = SqliteBackend::new(&db_url)
+				.await
+				.expect("Failed to create backend");
+
+			let task = Box::new(TestTask {
+				id: task_id,
+				name: task_name.clone(),
+			});
+
+			backend.enqueue(task).await.expect("Failed to enqueue");
+		}
+
+		// Create new backend instance with same database
+		{
+			let backend = SqliteBackend::new(&db_url)
+				.await
+				.expect("Failed to create backend");
+
+			// Verify task data persists
+			let task_data = backend
+				.get_task_data(task_id)
+				.await
+				.expect("Failed to get task data");
+
+			assert!(task_data.is_some());
+			let serialized = task_data.unwrap();
+			assert_eq!(serialized.name(), task_name);
+			assert_eq!(serialized.data(), "{}");
+		}
 	}
 }
