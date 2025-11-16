@@ -6,6 +6,30 @@ Derive macros for GraphQL-gRPC integration in Reinhardt framework
 
 `reinhardt-graphql-macros` provides procedural macros to simplify the integration between gRPC and GraphQL in the Reinhardt framework. These macros automatically generate conversion code and subscription implementations to reduce boilerplate.
 
+## Important
+
+**This is an internal subcrate of `reinhardt-graphql`.** Users should depend on `reinhardt-graphql` (the parent facade crate) instead of this crate directly.
+
+```toml
+# ✅ Correct - use the facade crate
+[dependencies]
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc"] }
+
+# ❌ Incorrect - don't depend on this crate directly
+[dependencies]
+reinhardt-graphql-macros = "0.1.0-alpha.1"
+```
+
+The macros are automatically re-exported by `reinhardt-graphql`:
+
+```rust
+// ✅ Correct - import from the facade crate
+use reinhardt_graphql::{GrpcGraphQLConvert, GrpcSubscription};
+
+// Or use the macros module
+use reinhardt_graphql::macros::{GrpcGraphQLConvert, GrpcSubscription};
+```
+
 ## Features
 
 ### Implemented ✓
@@ -27,7 +51,7 @@ Derive macros for GraphQL-gRPC integration in Reinhardt framework
 ### Type Conversion
 
 ```rust
-use reinhardt_graphql_macros::GrpcGraphQLConvert;
+use reinhardt_graphql::GrpcGraphQLConvert;
 
 #[derive(GrpcGraphQLConvert)]
 #[graphql(rename_all = "camelCase")]
@@ -47,7 +71,7 @@ This generates:
 ### gRPC Subscriptions
 
 ```rust
-use reinhardt_graphql_macros::GrpcSubscription;
+use reinhardt_graphql::GrpcSubscription;
 
 #[derive(GrpcSubscription)]
 #[grpc(service = "UserEventsServiceClient", method = "subscribe_user_events")]

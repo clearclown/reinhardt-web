@@ -24,7 +24,7 @@ impl EventBroadcaster {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql::subscription::EventBroadcaster;
+	/// use reinhardt_graphql_core::subscription::EventBroadcaster;
 	///
 	/// let broadcaster = EventBroadcaster::new();
 	/// ```

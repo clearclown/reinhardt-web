@@ -219,7 +219,6 @@ members = [
   "crates/reinhardt-admin", # Admin panel functionality
   "crates/reinhardt-admin-cli", # Admin CLI tool
   "crates/reinhardt-grpc",
-  "crates/reinhardt-graphql-macros",
   "crates/reinhardt-commands",
   "crates/reinhardt-db",
   "crates/reinhardt-dispatch",
@@ -282,7 +281,8 @@ reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
 reinhardt-panel = { path = "crates/reinhardt-admin/crates/panel", version = "0.1.0-alpha.1" }
 reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
-reinhardt-graphql-macros = { path = "crates/reinhardt-graphql-macros", version = "0.1.0-alpha.1" }
+reinhardt-graphql-macros = { path = "crates/reinhardt-graphql/crates/macros", version = "0.1.0-alpha.1" }
+reinhardt-graphql-core = { path = "crates/reinhardt-graphql/crates/core", version = "0.1.0-alpha.1" }
 reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0-alpha.1" }
 reinhardt-db = { path = "crates/reinhardt-db", version = "0.1.0-alpha.1" }
 reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0-alpha.1" }
@@ -418,3 +418,15 @@ serial_test = "3.2.0"
 rstest = "0.26.1"
 mockall = "0.13.1"
 scopeguard = "1.2.0"
+
+# Note: num-bigint-dig v0.8.x has a future incompatibility warning
+# (private vec macro issue, see https://github.com/rust-lang/rust/issues/120192)
+# This is fixed in v0.9.0+, but we currently use v0.8.6 via the following dependency chain:
+# sqlx -> sqlx-mysql -> rsa v0.9.x -> num-bigint-dig v0.8.6
+#
+# The warning does not affect current builds and will be resolved when:
+# - rsa upgrades to num-bigint-dig v0.9.0+ (tracked in rsa repository)
+# - OR sqlx upgrades to a version of rsa that uses num-bigint-dig v0.9.0+
+#
+# This is a transitive dependency issue that will be resolved upstream.
+# No action needed on our side unless the warning becomes an error in future Rust versions.
