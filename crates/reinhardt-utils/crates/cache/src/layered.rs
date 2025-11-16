@@ -611,6 +611,7 @@ mod tests {
 		}
 
 		// Wait for short TTL to expire
+		tokio::time::sleep(Duration::from_millis(60)).await;
 
 		// Run TTL index cleanup
 		store.cleanup_ttl_index().await;
