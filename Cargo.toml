@@ -26,7 +26,7 @@ standard = [
   "reinhardt-rest/pagination",
   "reinhardt-rest/filters",
   "reinhardt-rest/throttling",
-  "reinhardt-core",
+  "core",
   "reinhardt-core/signals",
   "reinhardt-rest/parsers",
   "reinhardt-template",
@@ -65,7 +65,7 @@ server = ["reinhardt-server"]
 
 # Parent crate features (new module structure)
 conf = ["reinhardt-conf"]
-core = ["reinhardt-core"]
+core = ["reinhardt-core", "reinhardt-apps"]
 rest = ["reinhardt-rest"]
 messages = ["reinhardt-core/messages"]
 di = ["reinhardt-core/di"]
@@ -170,6 +170,7 @@ hyper = { workspace = true }
 
 # Parent crate dependencies (new module structure)
 # These parent crates expose their subcrates via features
+reinhardt-apps = { workspace = true, optional = true }
 reinhardt-conf = { workspace = true, optional = true }
 reinhardt-core = { workspace = true, optional = true }
 reinhardt-db = { workspace = true, optional = true }

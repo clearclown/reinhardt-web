@@ -94,6 +94,7 @@
 //! ```
 
 // Module re-exports following Django's structure
+#[cfg(feature = "core")]
 pub mod apps;
 #[cfg(feature = "conf")]
 pub mod conf;
@@ -130,9 +131,11 @@ pub mod contrib {
 	pub use reinhardt_admin::panel as admin;
 }
 
-// TODO: Re-export app types when apps system is restored
-// #[cfg(feature = "core")]
-// pub use reinhardt_core::apps::{AppConfig, AppError, AppResult, Apps};
+// Re-export app types from reinhardt-apps
+#[cfg(feature = "core")]
+pub use reinhardt_apps::{
+	AppConfig, AppError, AppResult, Apps, get_apps, init_apps, init_apps_checked,
+};
 
 // Re-export settings from dedicated crate
 #[cfg(feature = "conf")]
@@ -180,8 +183,8 @@ pub use reinhardt_urls::routers::{
 // Re-export auth
 #[cfg(feature = "auth")]
 pub use reinhardt_auth::{
-	AllowAny, AnonymousUser, AuthBackend, IsAdminUser, IsAuthenticated,
-	PasswordHasher, Permission, SimpleUser, User,
+	AllowAny, AnonymousUser, AuthBackend, IsAdminUser, IsAuthenticated, PasswordHasher, Permission,
+	SimpleUser, User,
 };
 
 #[cfg(feature = "auth-jwt")]
@@ -289,69 +292,28 @@ pub use reinhardt_urls::routers::{
 // Re-export admin panel (admin feature)
 #[cfg(feature = "admin")]
 pub use reinhardt_admin::panel::{
-	// Core types
-	AdminSite,
-	ModelAdmin,
-	ModelAdminConfig,
 	// Actions
 	ActionRegistry,
 	ActionResult,
+	// Dashboard
+	Activity,
 	AdminAction,
-	DeleteSelectedAction,
-	// Views
-	CreateView as AdminCreateView,
-	DeleteView as AdminDeleteView,
-	DetailView as AdminDetailView,
-	ListView as AdminListView,
-	UpdateView as AdminUpdateView,
-	// Filters
-	BooleanFilter,
-	ChoiceFilter,
-	DateRangeFilter,
-	FilterManager,
-	FilterSpec,
-	ListFilter,
-	NumberRangeFilter,
+	// Auth
+	AdminAuthBackend,
+	AdminAuthMiddleware,
+	// Templates
+	AdminContext,
+	// Database
+	AdminDatabase,
+	// Error types
+	AdminError,
 	// Forms
 	AdminForm,
-	FieldType as AdminFieldType,
-	FormBuilder,
-	FormField,
-	// Advanced features
-	BulkEdit,
-	BulkEditConfig,
-	BulkEditField,
-	BulkEditForm,
-	BulkEditResult,
-	// Export/Import
-	CsvExporter,
-	CsvImporter,
-	ExportBuilder,
-	ExportConfig,
-	ExportFormat,
-	ExportResult,
-	ImportBuilder,
-	ImportConfig,
-	ImportError,
-	ImportFormat,
-	ImportResult,
-	JsonExporter,
-	JsonImporter,
-	TsvExporter,
-	TsvImporter,
-	// Inline editing
-	InlineForm,
-	InlineFormset,
-	InlineModelAdmin,
-	InlineType,
-	// Widgets
-	EditorType,
-	ImageFormat,
-	ImageUploadConfig,
-	RichTextEditorConfig,
-	Widget,
-	WidgetFactory,
-	WidgetType,
+	AdminPermissionChecker,
+	AdminResult,
+	// Core types
+	AdminSite,
+	AdminTemplateRenderer,
 	// Audit
 	AuditAction,
 	AuditLog,
@@ -359,54 +321,95 @@ pub use reinhardt_admin::panel::{
 	AuditLogQuery,
 	AuditLogQueryBuilder,
 	AuditLogger,
-	DatabaseAuditLogger,
-	MemoryAuditLogger,
-	// Auth
-	AdminAuthBackend,
-	AdminAuthMiddleware,
-	AdminPermissionChecker,
-	PermissionAction,
-	// Custom views
-	CustomView,
-	CustomViewRegistry,
-	DragDropConfig,
-	DragDropConfigBuilder,
-	ReorderHandler,
-	ReorderResult,
-	ReorderableModel,
-	ViewConfig,
-	ViewConfigBuilder,
-	// Dashboard
-	Activity,
+	// Filters
+	BooleanFilter,
+	// Advanced features
+	BulkEdit,
+	BulkEditConfig,
+	BulkEditField,
+	BulkEditForm,
+	BulkEditResult,
 	ChartData,
 	ChartDataset,
 	ChartType,
 	ChartWidget,
+	ChoiceFilter,
+	// Views
+	CreateView as AdminCreateView,
+	// Export/Import
+	CsvExporter,
+	CsvImporter,
+	// Custom views
+	CustomView,
+	CustomViewRegistry,
+	DashboardContext,
+	DashboardUserInfo,
 	DashboardWidget,
+	DatabaseAuditLogger,
+	DateRangeFilter,
+	DeleteConfirmationContext,
+	DeleteSelectedAction,
+	DeleteView as AdminDeleteView,
+	DetailView as AdminDetailView,
+	DragDropConfig,
+	DragDropConfigBuilder,
+	// Widgets
+	EditorType,
+	ExportBuilder,
+	ExportConfig,
+	ExportFormat,
+	ExportResult,
+	FieldType as AdminFieldType,
+	FilterManager,
+	FilterSpec,
+	FormBuilder,
+	FormField,
+	FormViewContext,
+	ImageFormat,
+	ImageUploadConfig,
+	ImportBuilder,
+	ImportConfig,
+	ImportError,
+	ImportFormat,
+	ImportResult,
+	// Inline editing
+	InlineForm,
+	InlineFormset,
+	InlineModelAdmin,
+	InlineType,
+	JsonExporter,
+	JsonImporter,
+	ListFilter,
+	ListView as AdminListView,
+	ListViewContext,
+	MemoryAuditLogger,
+	ModelAdmin,
+	ModelAdminConfig,
+	NumberRangeFilter,
+	PaginationContext,
+	PermissionAction,
 	QuickLink,
 	QuickLinksWidget,
 	RecentActivityWidget,
+	ReorderHandler,
+	ReorderResult,
+	ReorderableModel,
+	RichTextEditorConfig,
 	StatWidget,
 	TableWidget,
-	DashboardUserInfo,
+	TsvExporter,
+	TsvImporter,
+	UpdateView as AdminUpdateView,
+	UserContext,
+	ViewConfig,
+	ViewConfigBuilder,
+	Widget,
 	WidgetConfig,
 	WidgetContext,
+	WidgetFactory,
 	WidgetPosition,
 	WidgetRegistry,
-	// Database
-	AdminDatabase,
-	// Templates
-	AdminContext,
-	AdminTemplateRenderer,
-	DashboardContext,
-	DeleteConfirmationContext,
-	FormViewContext,
-	ListViewContext,
-	PaginationContext,
-	UserContext,
-	// Error types
-	AdminError,
-	AdminResult,
+	WidgetType,
 };
 
 // Re-export database related (database feature)
@@ -578,18 +581,24 @@ pub mod prelude {
 	// Admin feature
 	#[cfg(feature = "admin")]
 	pub use crate::{
-		AdminSite, AdminAction, AdminForm, AdminError, AdminResult, ModelAdmin, ModelAdminConfig,
+		// Actions
+		ActionRegistry,
+		AdminAction,
+		AdminError,
+		AdminForm,
+		AdminResult,
+		AdminSite,
 		// Filters
 		BooleanFilter,
 		ChoiceFilter,
 		DateRangeFilter,
-		ListFilter,
+		DeleteSelectedAction,
 		// Forms
 		FieldType,
 		FormBuilder,
 		FormField,
-		// Actions
-		ActionRegistry,
-		DeleteSelectedAction,
+		ListFilter,
+		ModelAdmin,
+		ModelAdminConfig,
 	};
 }

@@ -11,6 +11,5 @@
 //! let app_config = AppConfig::new("myapp");
 //! ```
 
-// TODO: Re-export apps types when apps system is restored
-// #[cfg(feature = "core")]
-// pub use reinhardt_core::apps::*;
+// Re-export from reinhardt-apps crate
+pub use reinhardt_apps::*;
