@@ -109,7 +109,10 @@ async fn test_basic_xa_transaction_flow(#[future] mysql_pool: (MysqlContainer, A
 	let xid = "test_xa_basic_001";
 
 	// Start XA transaction and get session
-	let mut session = participant.begin(xid).await.expect("Failed to begin XA");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin XA");
 
 	// Insert data using session's connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('xa_test')")
@@ -165,7 +168,10 @@ async fn test_xa_prepare_and_rollback(#[future] mysql_pool: (MysqlContainer, Arc
 	let xid = "test_xa_rollback_002";
 
 	// Start, insert, end, and prepare
-	let mut session = participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin");
 
 	// Insert data using session's connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('rollback_test')")
@@ -212,7 +218,10 @@ async fn test_xa_one_phase_commit(#[future] mysql_pool: (MysqlContainer, Arc<MyS
 	let xid = "test_xa_one_phase_003";
 
 	// Start XA transaction
-	let mut session = participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin");
 
 	// Insert data using session's connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('one_phase_test')")
@@ -254,7 +263,10 @@ async fn test_list_xa_transactions(#[future] mysql_pool: (MysqlContainer, Arc<My
 	let xid2 = "test_xa_list_004_b";
 
 	// Prepare first XA transaction
-	let mut session1 = participant1.begin(xid1).await.expect("Failed to begin 1");
+	let mut session1 = participant1
+		.begin(xid1.to_string())
+		.await
+		.expect("Failed to begin 1");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('tx1')")
 		.execute(&mut *session1.connection)
 		.await
@@ -269,7 +281,10 @@ async fn test_list_xa_transactions(#[future] mysql_pool: (MysqlContainer, Arc<My
 		.expect("Failed to prepare 1");
 
 	// Prepare second XA transaction
-	let mut session2 = participant2.begin(xid2).await.expect("Failed to begin 2");
+	let mut session2 = participant2
+		.begin(xid2.to_string())
+		.await
+		.expect("Failed to begin 2");
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('tx2')")
 		.execute(&mut *session2.connection)
 		.await
@@ -323,7 +338,10 @@ async fn test_recovery_from_xa_prepared_state(
 	// Simulate a crash scenario: prepare but don't commit
 	{
 		let participant = MySqlTwoPhaseParticipant::new(pool.clone());
-		let mut session = participant.begin(xid).await.expect("Failed to begin");
+		let mut session = participant
+			.begin(xid.to_string())
+			.await
+			.expect("Failed to begin");
 
 		// Insert data using session's connection
 		sqlx::query("INSERT INTO test_2pc (value) VALUES ('recovery_test')")
@@ -381,7 +399,10 @@ async fn test_cleanup_stale_xa_transactions(
 	let xid = "stale_test_xa_006";
 
 	// Prepare an XA transaction
-	let mut session = participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin");
 
 	// Insert data using session connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('stale_test')")
@@ -426,8 +447,8 @@ async fn test_concurrent_xa_transactions(#[future] mysql_pool: (MysqlContainer, 
 	let xid2 = "test_xa_concurrent_007_b";
 
 	// Start both XA transactions
-	let mut session1 = participant1.begin(xid1).await.unwrap();
-	let mut session2 = participant2.begin(xid2).await.unwrap();
+	let mut session1 = participant1.begin(xid1.to_string()).await.unwrap();
+	let mut session2 = participant2.begin(xid2.to_string()).await.unwrap();
 
 	// Insert data in both transactions using session connections
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('concurrent1')")
@@ -475,7 +496,10 @@ async fn test_participant_clone(#[future] mysql_pool: (MysqlContainer, Arc<MySql
 	// (each creates its own session with independent connections)
 	let xid1 = "test_xa_clone_008_a";
 
-	let mut session1 = participant1.begin(xid1).await.expect("Failed to begin 1");
+	let mut session1 = participant1
+		.begin(xid1.to_string())
+		.await
+		.expect("Failed to begin 1");
 	participant1
 		.end(&mut session1)
 		.await
@@ -484,7 +508,10 @@ async fn test_participant_clone(#[future] mysql_pool: (MysqlContainer, Arc<MySql
 
 	// participant2 can start its own XA transaction
 	let xid2 = "test_xa_clone_008_b";
-	let mut session2 = participant2.begin(xid2).await.expect("Failed to begin 2");
+	let mut session2 = participant2
+		.begin(xid2.to_string())
+		.await
+		.expect("Failed to begin 2");
 	participant2
 		.end(&mut session2)
 		.await
@@ -507,7 +534,10 @@ async fn test_xa_transaction_info_structure(
 	let xid = "test_xa_info_009";
 
 	// Prepare an XA transaction
-	let mut session = participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin");
 
 	// Insert data using session connection
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('info_test')")
@@ -555,7 +585,10 @@ async fn test_error_handling_missing_end(#[future] mysql_pool: (MysqlContainer, 
 	let xid = "test_xa_error_010";
 
 	// Start XA transaction but don't end it before prepare
-	let mut session = participant.begin(xid).await.expect("Failed to begin");
+	let mut session = participant
+		.begin(xid.to_string())
+		.await
+		.expect("Failed to begin");
 
 	// Insert data using session connection (not pool)
 	sqlx::query("INSERT INTO test_2pc (value) VALUES ('error_test')")

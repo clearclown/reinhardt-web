@@ -149,7 +149,7 @@ pub enum ParticipantStatus {
 /// Trait for two-phase commit participants
 ///
 /// Participants must implement this trait to participate in distributed transactions.
-#[async_trait]
+#[async_trait(?Send)]
 pub trait TwoPhaseParticipant: Send + Sync {
 	/// Get the participant's identifier
 	fn id(&self) -> &str;
@@ -161,17 +161,17 @@ pub trait TwoPhaseParticipant: Send + Sync {
 	///
 	/// This is the voting phase where the participant indicates whether it can commit.
 	/// Returns Ok(()) if ready to commit, or an error if unable to commit.
-	async fn prepare(&self, xid: &str) -> Result<(), TwoPhaseError>;
+	async fn prepare(&self, xid: String) -> Result<(), TwoPhaseError>;
 
 	/// Commit the prepared transaction (Phase 2)
 	///
 	/// This commits the transaction that was previously prepared.
-	async fn commit(&self, xid: &str) -> Result<(), TwoPhaseError>;
+	async fn commit(&self, xid: String) -> Result<(), TwoPhaseError>;
 
 	/// Rollback the transaction (Phase 2)
 	///
 	/// This rolls back the transaction, either before or after prepare.
-	async fn rollback(&self, xid: &str) -> Result<(), TwoPhaseError>;
+	async fn rollback(&self, xid: String) -> Result<(), TwoPhaseError>;
 
 	/// Recover prepared transactions
 	///
@@ -730,7 +730,7 @@ impl TwoPhaseCoordinator {
 			}
 
 			for participant in participants.iter_mut() {
-				match participant.prepare(&self.transaction_id).await {
+				match participant.prepare(self.transaction_id.clone()).await {
 					Ok(_) => {
 						participant.set_status(ParticipantStatus::Prepared);
 					}
@@ -778,7 +778,7 @@ impl TwoPhaseCoordinator {
 
 			// Phase 2: Commit all participants
 			for participant in participants.iter_mut() {
-				match participant.commit(&self.transaction_id).await {
+				match participant.commit(self.transaction_id.clone()).await {
 					Ok(_) => {
 						participant.set_status(ParticipantStatus::Committed);
 					}
@@ -842,7 +842,7 @@ impl TwoPhaseCoordinator {
 			let mut participants = self.participants.lock().await;
 
 			for participant in participants.iter_mut() {
-				match participant.rollback(&self.transaction_id).await {
+				match participant.rollback(self.transaction_id.clone()).await {
 					Ok(_) => {
 						participant.set_status(ParticipantStatus::Aborted);
 					}
@@ -950,7 +950,7 @@ impl PostgresParticipantAdapter {
 }
 
 #[cfg(feature = "postgres")]
-#[async_trait]
+#[async_trait(?Send)]
 impl TwoPhaseParticipant for PostgresParticipantAdapter {
 	fn id(&self) -> &str {
 		&self.id
@@ -963,23 +963,23 @@ impl TwoPhaseParticipant for PostgresParticipantAdapter {
 			.map_err(|e| TwoPhaseError::DatabaseError(e.to_string()))
 	}
 
-	async fn prepare(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn prepare(&self, xid: String) -> Result<(), TwoPhaseError> {
 		self.backend
-			.prepare_by_xid(xid)
+			.prepare_by_xid(&xid)
 			.await
 			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))
 	}
 
-	async fn commit(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn commit(&self, xid: String) -> Result<(), TwoPhaseError> {
 		self.backend
-			.commit_managed(xid)
+			.commit_managed(&xid)
 			.await
 			.map_err(|e| TwoPhaseError::CommitFailed(self.id.clone(), e.to_string()))
 	}
 
-	async fn rollback(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn rollback(&self, xid: String) -> Result<(), TwoPhaseError> {
 		self.backend
-			.rollback_managed(xid)
+			.rollback_managed(&xid)
 			.await
 			.map_err(|e| TwoPhaseError::RollbackFailed(self.id.clone(), e.to_string()))
 	}
@@ -1070,23 +1070,24 @@ impl MySqlParticipantAdapter {
 }
 
 #[cfg(feature = "mysql")]
-#[async_trait]
+#[async_trait(?Send)]
 impl TwoPhaseParticipant for MySqlParticipantAdapter {
 	fn id(&self) -> &str {
 		&self.id
 	}
 
 	async fn begin(&self) -> Result<(), TwoPhaseError> {
+		let id = self.id.clone(); // Clone to avoid lifetime issues with async_trait
 		self.backend
-			.begin_by_xid(&self.id)
+			.begin_by_xid(id)
 			.await
 			.map_err(|e| TwoPhaseError::DatabaseError(e.to_string()))
 	}
 
-	async fn prepare(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn prepare(&self, xid: String) -> Result<(), TwoPhaseError> {
 		// MySQL requires XA END before XA PREPARE
 		self.backend
-			.end_by_xid(xid)
+			.end_by_xid(xid.clone())
 			.await
 			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))?;
 
@@ -1096,14 +1097,14 @@ impl TwoPhaseParticipant for MySqlParticipantAdapter {
 			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))
 	}
 
-	async fn commit(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn commit(&self, xid: String) -> Result<(), TwoPhaseError> {
 		self.backend
 			.commit_managed(xid)
 			.await
 			.map_err(|e| TwoPhaseError::CommitFailed(self.id.clone(), e.to_string()))
 	}
 
-	async fn rollback(&self, xid: &str) -> Result<(), TwoPhaseError> {
+	async fn rollback(&self, xid: String) -> Result<(), TwoPhaseError> {
 		self.backend
 			.rollback_managed(xid)
 			.await
@@ -1167,7 +1168,7 @@ impl MockParticipant {
 }
 
 #[cfg(test)]
-#[async_trait]
+#[async_trait(?Send)]
 impl TwoPhaseParticipant for MockParticipant {
 	fn id(&self) -> &str {
 		&self.id
@@ -1177,7 +1178,7 @@ impl TwoPhaseParticipant for MockParticipant {
 		Ok(())
 	}
 
-	async fn prepare(&self, _xid: &str) -> Result<(), TwoPhaseError> {
+	async fn prepare(&self, _xid: String) -> Result<(), TwoPhaseError> {
 		if self.should_fail_prepare {
 			Err(TwoPhaseError::PrepareFailed(
 				self.id.clone(),
@@ -1189,7 +1190,7 @@ impl TwoPhaseParticipant for MockParticipant {
 		}
 	}
 
-	async fn commit(&self, _xid: &str) -> Result<(), TwoPhaseError> {
+	async fn commit(&self, _xid: String) -> Result<(), TwoPhaseError> {
 		if self.should_fail_commit {
 			Err(TwoPhaseError::CommitFailed(
 				self.id.clone(),
@@ -1201,7 +1202,7 @@ impl TwoPhaseParticipant for MockParticipant {
 		}
 	}
 
-	async fn rollback(&self, _xid: &str) -> Result<(), TwoPhaseError> {
+	async fn rollback(&self, _xid: String) -> Result<(), TwoPhaseError> {
 		if self.should_fail_rollback {
 			Err(TwoPhaseError::RollbackFailed(
 				self.id.clone(),

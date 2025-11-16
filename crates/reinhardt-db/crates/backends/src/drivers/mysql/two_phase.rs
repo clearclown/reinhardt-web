@@ -140,21 +140,20 @@ impl MySqlTwoPhaseParticipant {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn begin(&self, xid: &str) -> Result<XaSession> {
+	pub async fn begin(&self, xid: String) -> Result<XaSession> {
 		// XAトランザクション用の新しいコネクションを取得
 		let mut connection = self.pool.acquire().await.map_err(DatabaseError::from)?;
 
-		let sql = format!("XA START '{}'", Self::escape_xid(xid));
-		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
+		let sql = format!("XA START '{}'", Self::escape_xid(&xid));
 		// MySQL XA commands are not supported in prepared statement protocol
-		sqlx::query(sql_static)
+		sqlx::raw_sql(&sql)
 			.execute(&mut *connection)
 			.await
 			.map_err(DatabaseError::from)?;
 
 		Ok(XaSession {
 			connection,
-			xid: xid.to_string(),
+			xid,
 			state: XaState::Started,
 		})
 	}
@@ -495,41 +494,35 @@ impl MySqlTwoPhaseParticipant {
 	/// Begin an XA transaction by XID (ORM layer wrapper)
 	///
 	/// Creates a session and stores it internally for later use.
-	pub async fn begin_by_xid(&self, xid: &str) -> Result<()> {
+	pub async fn begin_by_xid(&self, xid: String) -> Result<()> {
+		let xid_copy = xid.clone();
 		let session = self.begin(xid).await?;
-		self.sessions
-			.lock()
-			.unwrap()
-			.insert(xid.to_string(), session);
+		self.sessions.lock().unwrap().insert(xid_copy, session);
 		Ok(())
 	}
 
 	/// End an XA transaction by XID (ORM layer wrapper)
 	///
 	/// Executes XA END without exposing the session to the caller.
-	pub async fn end_by_xid(&self, xid: &str) -> Result<()> {
+	pub async fn end_by_xid(&self, xid: String) -> Result<()> {
 		// Extract the session temporarily to avoid holding the lock across await
 		let mut session = {
 			let mut sessions = self.sessions.lock().unwrap();
-			sessions.remove(xid).ok_or_else(|| {
+			sessions.remove(&xid).ok_or_else(|| {
 				DatabaseError::QueryError(format!("No active session for XID: {}", xid))
 			})?
 		};
 
 		// Perform the end operation directly without calling self.end()
-		let sql = format!("XA END '{}'", Self::escape_xid(xid));
-		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
-		sqlx::query(sql_static)
+		let sql = format!("XA END '{}'", Self::escape_xid(&xid));
+		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
 
 		// Update state and re-insert
 		session.state = XaState::Ended;
-		self.sessions
-			.lock()
-			.unwrap()
-			.insert(xid.to_string(), session);
+		self.sessions.lock().unwrap().insert(xid, session);
 
 		Ok(())
 	}
@@ -537,29 +530,25 @@ impl MySqlTwoPhaseParticipant {
 	/// Prepare an XA transaction by XID (ORM layer wrapper)
 	///
 	/// Executes XA PREPARE without exposing the session to the caller.
-	pub async fn prepare_by_xid(&self, xid: &str) -> Result<()> {
+	pub async fn prepare_by_xid(&self, xid: String) -> Result<()> {
 		// Extract the session temporarily to avoid holding the lock across await
 		let mut session = {
 			let mut sessions = self.sessions.lock().unwrap();
-			sessions.remove(xid).ok_or_else(|| {
+			sessions.remove(&xid).ok_or_else(|| {
 				DatabaseError::QueryError(format!("No active session for XID: {}", xid))
 			})?
 		};
 
 		// Perform the prepare operation directly without calling self.prepare()
-		let sql = format!("XA PREPARE '{}'", Self::escape_xid(xid));
-		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
-		sqlx::query(sql_static)
+		let sql = format!("XA PREPARE '{}'", Self::escape_xid(&xid));
+		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
 
 		// Update state and re-insert
 		session.state = XaState::Prepared;
-		self.sessions
-			.lock()
-			.unwrap()
-			.insert(xid.to_string(), session);
+		self.sessions.lock().unwrap().insert(xid, session);
 
 		Ok(())
 	}
@@ -567,15 +556,14 @@ impl MySqlTwoPhaseParticipant {
 	/// Commit an XA transaction by XID (ORM layer wrapper)
 	///
 	/// Removes the session from internal storage, executes XA COMMIT, and consumes the session.
-	pub async fn commit_managed(&self, xid: &str) -> Result<()> {
-		let mut session = self.sessions.lock().unwrap().remove(xid).ok_or_else(|| {
+	pub async fn commit_managed(&self, xid: String) -> Result<()> {
+		let mut session = self.sessions.lock().unwrap().remove(&xid).ok_or_else(|| {
 			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
 		})?;
 
 		// Execute commit directly without calling self.commit()
-		let sql = format!("XA COMMIT '{}'", Self::escape_xid(xid));
-		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
-		sqlx::query(sql_static)
+		let sql = format!("XA COMMIT '{}'", Self::escape_xid(&xid));
+		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
@@ -587,15 +575,14 @@ impl MySqlTwoPhaseParticipant {
 	/// Rollback an XA transaction by XID (ORM layer wrapper)
 	///
 	/// Removes the session from internal storage, executes XA ROLLBACK, and consumes the session.
-	pub async fn rollback_managed(&self, xid: &str) -> Result<()> {
-		let mut session = self.sessions.lock().unwrap().remove(xid).ok_or_else(|| {
+	pub async fn rollback_managed(&self, xid: String) -> Result<()> {
+		let mut session = self.sessions.lock().unwrap().remove(&xid).ok_or_else(|| {
 			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
 		})?;
 
 		// Execute rollback directly without calling self.rollback()
-		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(xid));
-		let sql_static: &'static str = Box::leak(sql.into_boxed_str());
-		sqlx::query(sql_static)
+		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(&xid));
+		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
