@@ -68,7 +68,7 @@ jobs:
         run: cargo install cargo-make
 
       - name: Check code formatting
-        run: cargo make fmt
+        run: cargo make fmt-check
 
   clippy:
     name: Clippy
@@ -107,7 +107,7 @@ jobs:
         run: cargo install cargo-make
 
       - name: Run clippy
-        run: cargo make clippy
+        run: cargo make clippy-check
 
   test-unit:
     name: Unit Tests & Doc Tests
