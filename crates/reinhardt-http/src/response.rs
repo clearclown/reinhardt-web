@@ -248,6 +248,11 @@ impl Response {
 	}
 	/// Add a custom header to the response
 	///
+	/// # Panics
+	///
+	/// Panics if the header name or value is invalid according to HTTP specifications.
+	/// Header names must be valid ASCII tokens, and values must not contain invalid characters.
+	///
 	/// # Examples
 	///
 	/// ```
@@ -259,12 +264,19 @@ impl Response {
 	///     "custom-value"
 	/// );
 	/// ```
+	///
+	/// ```should_panic
+	/// use reinhardt_http::Response;
+	///
+	/// // This will panic because header names cannot contain spaces
+	/// let response = Response::ok().with_header("Invalid Header", "value");
+	/// ```
 	pub fn with_header(mut self, name: &str, value: &str) -> Self {
-		if let Ok(header_name) = hyper::header::HeaderName::from_bytes(name.as_bytes())
-			&& let Ok(header_value) = hyper::header::HeaderValue::from_str(value)
-		{
-			self.headers.insert(header_name, header_value);
-		}
+		let header_name = hyper::header::HeaderName::from_bytes(name.as_bytes())
+			.unwrap_or_else(|e| panic!("Invalid header name '{}': {}", name, e));
+		let header_value = hyper::header::HeaderValue::from_str(value)
+			.unwrap_or_else(|e| panic!("Invalid header value for '{}': {}", name, e));
+		self.headers.insert(header_name, header_value);
 		self
 	}
 	/// Add a Location header to the response (typically used for redirects)

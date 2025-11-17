@@ -16,6 +16,7 @@ Includes request logging, error logging, and integration with external logging s
 
 - **Logger System**: Core logger implementation with handler attachment support
   - `Logger` struct with warning level logging
+  - `LoggerHandle`: Wrapper around `Arc<Logger>` for thread-safe logger access
   - LogHandler trait for extensible log processing
   - Thread-safe handler management
 - **Log Levels**: Support for Debug, Info, Warn, and Error severity levels
@@ -25,7 +26,7 @@ Includes request logging, error logging, and integration with external logging s
 
 - **Global Logging Manager**: Singleton-based global logging initialization and management
   - `init_global_logging()` for one-time setup
-  - `get_logger()` for retrieving named loggers
+  - `get_logger(name)` returns `LoggerHandle` for retrieving named loggers
   - Thread-safe access via `once_cell`
 - **Configuration Structures**:
   - `LoggingConfig`: Main configuration container

@@ -391,9 +391,7 @@ async fn test_admin_create_view(
 		.with_initial("is_active", json!(true));
 
 	assert_eq!(create_view.model_name(), "TestUser");
-	let fields = create_view.get_fields();
-	assert!(fields.is_some());
-	let fields = fields.unwrap();
+	let fields = create_view.get_fields().unwrap();
 	assert_eq!(fields.len(), 3);
 	assert_eq!(fields[0], "username");
 	assert_eq!(fields[1], "email");

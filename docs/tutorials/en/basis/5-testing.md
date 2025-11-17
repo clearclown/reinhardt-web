@@ -240,6 +240,8 @@ use reinhardt_db::backends::DatabaseConnection;
 use reinhardt_http::{Request, Response};
 use std::sync::Arc;
 use chrono::Utc;
+use bytes::Bytes;
+use hyper::{HeaderMap, Method, Version};
 use crate::models::Question;
 use crate::views;
 
@@ -286,7 +288,14 @@ async fn test_detail_not_found(
 ) {
     let (_container, conn) = postgres_fixture.await;
 
-    let mut request = Request::new();
+    let mut request = Request::builder()
+        .method(Method::GET)
+        .uri("/")
+        .version(Version::HTTP_11)
+        .headers(HeaderMap::new())
+        .body(Bytes::new())
+        .build()
+        .unwrap();
     request.path_params.insert("question_id".to_string(), "999".to_string());
 
     let response = views::detail(request, conn).await;
