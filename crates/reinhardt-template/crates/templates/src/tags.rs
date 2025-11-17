@@ -12,11 +12,14 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+/// Type alias for template tag function
+type TagFn = dyn Fn(&HashMap<String, String>) -> String + Send + Sync;
+
 /// Template tag function type
 ///
 /// Takes arguments as a HashMap and returns a rendered string
 pub struct TagFunction {
-	inner: Arc<dyn Fn(&HashMap<String, String>) -> String + Send + Sync>,
+	inner: Arc<TagFn>,
 }
 
 impl TagFunction {
@@ -32,7 +35,7 @@ impl TagFunction {
 }
 
 impl std::ops::Deref for TagFunction {
-	type Target = dyn Fn(&HashMap<String, String>) -> String + Send + Sync;
+	type Target = TagFn;
 
 	fn deref(&self) -> &Self::Target {
 		&*self.inner
