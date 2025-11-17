@@ -15,13 +15,14 @@ use crate::user::User;
 /// use hyper::{Method, Uri, Version, header::HeaderMap};
 /// use bytes::Bytes;
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 /// let context = PermissionContext {
 ///     request: &request,
 ///     is_authenticated: false,
@@ -95,13 +96,14 @@ pub trait Permission: Send + Sync {
 ///
 /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
 /// let permission = AllowAny;
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 /// let context = PermissionContext {
 ///     request: &request,
 ///     is_authenticated: false,
@@ -136,13 +138,14 @@ impl Permission for AllowAny {
 ///
 /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
 /// let permission = IsAuthenticated;
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// // Anonymous user - permission denied
 /// let context = PermissionContext {
@@ -197,13 +200,14 @@ impl Permission for IsAuthenticated {
 ///
 /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
 /// let permission = IsAdminUser;
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// // Non-admin user - permission denied
 /// let user = SimpleUser {
@@ -265,13 +269,14 @@ impl Permission for IsAdminUser {
 ///
 /// # tokio::runtime::Runtime::new().unwrap().block_on(async {
 /// let permission = IsActiveUser;
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// // Inactive user - permission denied
 /// let context = PermissionContext {
@@ -320,13 +325,14 @@ impl Permission for IsActiveUser {
 /// let permission = IsAuthenticatedOrReadOnly;
 ///
 /// // GET request from anonymous user - allowed
-/// let mut request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let mut request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 /// request.method = Method::GET;
 /// let context = PermissionContext {
 ///     request: &request,

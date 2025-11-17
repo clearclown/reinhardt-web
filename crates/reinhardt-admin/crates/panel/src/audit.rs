@@ -1312,8 +1312,6 @@ mod tests {
 			.build();
 
 		let result = logger.log(log).await;
-		assert!(result.is_ok());
-
 		let logged = result.unwrap();
 		assert_eq!(logged.id(), Some(1));
 		assert_eq!(logger.len(), 1);

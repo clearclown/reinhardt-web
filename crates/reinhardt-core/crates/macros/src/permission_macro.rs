@@ -163,7 +163,6 @@ mod tests {
 	#[test]
 	fn test_valid_simple_permission() {
 		let result = parse_and_validate("auth.view_user");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.app_label, "auth");
 		assert_eq!(ast.permission_codename, "view_user");
@@ -172,7 +171,6 @@ mod tests {
 	#[test]
 	fn test_valid_permission_with_underscores() {
 		let result = parse_and_validate("my_app.add_blog_post");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.app_label, "my_app");
 		assert_eq!(ast.permission_codename, "add_blog_post");
@@ -181,7 +179,6 @@ mod tests {
 	#[test]
 	fn test_valid_permission_starting_with_underscore() {
 		let result = parse_and_validate("_app._permission");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.app_label, "_app");
 		assert_eq!(ast.permission_codename, "_permission");
@@ -260,7 +257,6 @@ mod tests {
 	#[test]
 	fn test_valid_mixed_case() {
 		let result = parse_and_validate("MyApp.ViewMyModel");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.app_label, "MyApp");
 		assert_eq!(ast.permission_codename, "ViewMyModel");

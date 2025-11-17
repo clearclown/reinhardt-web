@@ -15,7 +15,37 @@ use std::sync::{Arc, RwLock};
 /// Template tag function type
 ///
 /// Takes arguments as a HashMap and returns a rendered string
-pub type TagFunction = Arc<dyn Fn(&HashMap<String, String>) -> String + Send + Sync>;
+pub struct TagFunction {
+	inner: Arc<dyn Fn(&HashMap<String, String>) -> String + Send + Sync>,
+}
+
+impl TagFunction {
+	/// Create a new tag function
+	pub fn new<F>(func: F) -> Self
+	where
+		F: Fn(&HashMap<String, String>) -> String + Send + Sync + 'static,
+	{
+		Self {
+			inner: Arc::new(func),
+		}
+	}
+}
+
+impl std::ops::Deref for TagFunction {
+	type Target = dyn Fn(&HashMap<String, String>) -> String + Send + Sync;
+
+	fn deref(&self) -> &Self::Target {
+		&*self.inner
+	}
+}
+
+impl Clone for TagFunction {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+		}
+	}
+}
 
 /// Registry for custom template tags
 #[derive(Clone)]
@@ -63,7 +93,7 @@ impl TemplateTagRegistry {
 		F: Fn(&HashMap<String, String>) -> String + Send + Sync + 'static,
 	{
 		if let Ok(mut tags) = self.tags.write() {
-			tags.insert(name.into(), Arc::new(tag_fn));
+			tags.insert(name.into(), TagFunction::new(tag_fn));
 		}
 	}
 

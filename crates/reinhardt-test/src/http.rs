@@ -72,7 +72,14 @@ pub fn create_request(
 		header_map.insert(header_name, header_value);
 	}
 
-	Request::new(method, uri, Version::HTTP_11, header_map, body_bytes)
+	Request::builder()
+		.method(method)
+		.uri(uri)
+		.version(Version::HTTP_11)
+		.headers(header_map)
+		.body(body_bytes)
+		.build()
+		.expect("Failed to build request")
 }
 
 /// Extract and deserialize JSON from a response
@@ -176,7 +183,14 @@ pub fn create_test_request(method: &str, uri: &str, secure: bool) -> Request {
 		);
 	}
 
-	let mut request = Request::new(method, uri, Version::HTTP_11, headers, Bytes::new());
+	let mut request = Request::builder()
+		.method(method)
+		.uri(uri)
+		.version(Version::HTTP_11)
+		.headers(headers)
+		.body(Bytes::new())
+		.build()
+		.expect("Failed to build request");
 	request.is_secure = secure;
 	request
 }

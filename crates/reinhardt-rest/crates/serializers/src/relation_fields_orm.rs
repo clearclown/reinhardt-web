@@ -14,19 +14,97 @@ use std::marker::PhantomData;
 use std::pin::Pin;
 use std::sync::Arc;
 
-// Type aliases to simplify complex function pointer types
+// Type wrappers to simplify complex function pointer types
 
-/// Type alias for async many-to-many relation resolver function
-pub type ManyRelationResolverFn<T, RelatedItem> = Arc<
-	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
+/// Async many-to-many relation resolver function
+pub struct ManyRelationResolverFn<T, RelatedItem> {
+	inner: Arc<
+		dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
+			+ Send
+			+ Sync,
+	>,
+	_phantom: PhantomData<RelatedItem>,
+}
+
+impl<T, RelatedItem> ManyRelationResolverFn<T, RelatedItem> {
+	/// Create a new many-to-many relation resolver
+	pub fn new<F>(func: F) -> Self
+	where
+		F: Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
+			+ Send
+			+ Sync
+			+ 'static,
+	{
+		Self {
+			inner: Arc::new(func),
+			_phantom: PhantomData,
+		}
+	}
+}
+
+impl<T, RelatedItem> std::ops::Deref for ManyRelationResolverFn<T, RelatedItem> {
+	type Target = dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
 		+ Send
-		+ Sync,
->;
+		+ Sync;
 
-/// Type alias for async one-to-one/foreign-key relation resolver function
-pub type SingleRelationResolverFn<T, RelatedItem> = Arc<
-	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>> + Send + Sync,
->;
+	fn deref(&self) -> &Self::Target {
+		&*self.inner
+	}
+}
+
+impl<T, RelatedItem> Clone for ManyRelationResolverFn<T, RelatedItem> {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+			_phantom: PhantomData,
+		}
+	}
+}
+
+/// Async one-to-one/foreign-key relation resolver function
+pub struct SingleRelationResolverFn<T, RelatedItem> {
+	inner: Arc<
+		dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>>
+			+ Send
+			+ Sync,
+	>,
+	_phantom: PhantomData<RelatedItem>,
+}
+
+impl<T, RelatedItem> SingleRelationResolverFn<T, RelatedItem> {
+	/// Create a new single relation resolver
+	pub fn new<F>(func: F) -> Self
+	where
+		F: Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>>
+			+ Send
+			+ Sync
+			+ 'static,
+	{
+		Self {
+			inner: Arc::new(func),
+			_phantom: PhantomData,
+		}
+	}
+}
+
+impl<T, RelatedItem> std::ops::Deref for SingleRelationResolverFn<T, RelatedItem> {
+	type Target = dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>>
+		+ Send
+		+ Sync;
+
+	fn deref(&self) -> &Self::Target {
+		&*self.inner
+	}
+}
+
+impl<T, RelatedItem> Clone for SingleRelationResolverFn<T, RelatedItem> {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+			_phantom: PhantomData,
+		}
+	}
+}
 
 /// Primary key related field with ORM query support
 ///

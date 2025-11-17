@@ -94,13 +94,14 @@
 //!
 //! # tokio::runtime::Runtime::new().unwrap().block_on(async {
 //! let permission = IsAuthenticated;
-//! let request = Request::new(
-//!     Method::GET,
-//!     "/".parse::<Uri>().unwrap(),
-//!     Version::HTTP_11,
-//!     HeaderMap::new(),
-//!     Bytes::new()
-//! );
+//! let request = Request::builder()
+//!     .method(Method::GET)
+//!     .uri("/")
+//!     .version(Version::HTTP_11)
+//!     .headers(HeaderMap::new())
+//!     .body(Bytes::new())
+//!     .build()
+//!     .unwrap();
 //!
 //! let context = PermissionContext {
 //!     request: &request,

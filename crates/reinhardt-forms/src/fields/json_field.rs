@@ -273,7 +273,6 @@ mod tests {
 	fn test_json_field_valid_object() {
 		let field = JSONField::new("data");
 		let result = field.clean(Some(&json!(r#"{"name": "John", "age": 30}"#)));
-		assert!(result.is_ok());
 		let value = result.unwrap();
 		assert!(value.is_object());
 	}
@@ -282,7 +281,6 @@ mod tests {
 	fn test_json_field_valid_array() {
 		let field = JSONField::new("data");
 		let result = field.clean(Some(&json!(r#"[1, 2, 3, 4, 5]"#)));
-		assert!(result.is_ok());
 		let value = result.unwrap();
 		assert!(value.is_array());
 	}

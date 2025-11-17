@@ -49,7 +49,7 @@ pub async fn spawn_test_server(handler: Arc<dyn Handler>) -> (String, JoinHandle
 		loop {
 			match listener.accept().await {
 				Ok((stream, socket_addr)) => {
-					let handler_clone = server.handler.clone();
+					let handler_clone = server.handler();
 					tokio::spawn(async move {
 						if let Err(e) =
 							HttpServer::handle_connection(stream, socket_addr, handler_clone).await

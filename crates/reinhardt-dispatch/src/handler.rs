@@ -182,16 +182,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_base_handler_handle_request() {
 		let handler = BaseHandler::new();
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle_request(request).await;
-		assert!(response.is_ok());
 		let resp = response.unwrap();
 		assert_eq!(resp.status, StatusCode::OK);
 	}
@@ -199,13 +199,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_base_handler_handle_exception() {
 		let handler = BaseHandler::new();
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let error = DispatchError::View("Test error".to_string());
 
 		let response = handler.handle_exception(&request, error).await;
@@ -226,13 +227,14 @@ mod tests {
 		let handler = BaseHandler::new();
 
 		for method in [Method::GET, Method::POST, Method::PUT, Method::DELETE] {
-			let request = Request::new(
-				method,
-				"/".parse::<Uri>().unwrap(),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(method)
+				.uri("/")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = handler.handle_request(request).await;
 			assert!(response.is_ok());
@@ -244,13 +246,14 @@ mod tests {
 		let handler = BaseHandler::new();
 
 		for path in ["/", "/test", "/api/v1/users", "/admin/login"] {
-			let request = Request::new(
-				Method::GET,
-				path.parse::<Uri>().unwrap(),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri(path)
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = handler.handle_request(request).await;
 			assert!(response.is_ok());
@@ -271,16 +274,16 @@ mod tests {
 		let handler = BaseHandler::with_router(Arc::new(router));
 
 		// Test matching route
-		let request = Request::new(
-			Method::GET,
-			"/test".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle_request(request).await;
-		assert!(response.is_ok());
 		let resp = response.unwrap();
 		assert_eq!(resp.status, StatusCode::OK);
 
@@ -297,16 +300,16 @@ mod tests {
 		let handler = BaseHandler::with_router(Arc::new(router));
 
 		// Test non-existent route
-		let request = Request::new(
-			Method::GET,
-			"/nonexistent".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/nonexistent")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle_request(request).await;
-		assert!(response.is_ok());
 		let resp = response.unwrap();
 		assert_eq!(resp.status, StatusCode::NOT_FOUND);
 	}
@@ -331,25 +334,27 @@ mod tests {
 		let handler = BaseHandler::with_router(Arc::new(router));
 
 		// Test first route
-		let request = Request::new(
-			Method::GET,
-			"/hello".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/hello")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = handler.handle_request(request).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
 		assert_eq!(String::from_utf8(response.body.to_vec()).unwrap(), "Hello");
 
 		// Test second route
-		let request = Request::new(
-			Method::GET,
-			"/world".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/world")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = handler.handle_request(request).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
 		assert_eq!(String::from_utf8(response.body.to_vec()).unwrap(), "World");

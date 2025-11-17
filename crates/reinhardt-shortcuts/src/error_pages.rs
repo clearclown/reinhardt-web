@@ -482,16 +482,17 @@ where
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			Uri::from_static("/test/path"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/test/path")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[test]

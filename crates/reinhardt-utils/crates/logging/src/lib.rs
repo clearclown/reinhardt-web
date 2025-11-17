@@ -23,6 +23,56 @@ use std::sync::Arc;
 
 static GLOBAL_MANAGER: OnceCell<LoggingManager> = OnceCell::new();
 
+/// A handle to a logger that hides the internal Arc.
+///
+/// This provides a user-friendly interface to the logger without exposing the Arc wrapper.
+#[derive(Clone)]
+pub struct LoggerHandle {
+	inner: Arc<Logger>,
+}
+
+impl LoggerHandle {
+	/// Create a new logger handle from a logger.
+	fn new(logger: Arc<Logger>) -> Self {
+		Self { inner: logger }
+	}
+
+	/// Add a handler to this logger.
+	pub async fn add_handler<H: LogHandler + 'static>(&self, handler: H) {
+		self.inner.add_handler(Arc::new(handler)).await;
+	}
+
+	/// Set the log level for this logger.
+	pub async fn set_level(&self, level: LogLevel) {
+		self.inner.set_level(level).await;
+	}
+
+	/// Log a record.
+	pub async fn log_record(&self, record: &LogRecord) {
+		self.inner.log_record(record).await;
+	}
+
+	/// Log a debug message.
+	pub async fn debug(&self, message: impl Into<String>) {
+		self.inner.debug(message.into()).await;
+	}
+
+	/// Log an info message.
+	pub async fn info(&self, message: impl Into<String>) {
+		self.inner.info(message.into()).await;
+	}
+
+	/// Log a warning message.
+	pub async fn warning(&self, message: impl Into<String>) {
+		self.inner.warning(message.into()).await;
+	}
+
+	/// Log a warning message synchronously.
+	pub fn warning_sync(&self, message: &str) {
+		self.inner.warning_sync(message);
+	}
+}
+
 /// Initialize the global logging manager. Subsequent calls are no-ops.
 pub fn init_global_logging(config: LoggingConfig) {
 	let _ = GLOBAL_MANAGER.set(LoggingManager::new(config));
@@ -33,8 +83,19 @@ fn global_manager() -> &'static LoggingManager {
 }
 
 /// Get a logger by name from the global manager.
-pub fn get_logger(name: &str) -> Arc<Logger> {
-	global_manager().get_logger(name)
+///
+/// Returns a `LoggerHandle` that provides a user-friendly interface without exposing the internal Arc.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_logging::get_logger;
+///
+/// let logger = get_logger("myapp");
+/// logger.warning_sync("This is a warning message");
+/// ```
+pub fn get_logger(name: &str) -> LoggerHandle {
+	LoggerHandle::new(global_manager().get_logger(name))
 }
 
 /// Emit a warning message via the named logger (global).
@@ -47,8 +108,6 @@ pub fn emit_warning(logger_name: &str, message: impl Into<String>) {
 pub async fn attach_memory_handler(logger_name: &str, level: LogLevel) -> handlers::MemoryHandler {
 	let handler = handlers::MemoryHandler::new(level);
 	let logger = get_logger(logger_name);
-	logger
-		.add_handler(std::sync::Arc::new(handler.clone()))
-		.await;
+	logger.add_handler(handler.clone()).await;
 	handler
 }

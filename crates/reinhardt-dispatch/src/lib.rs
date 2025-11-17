@@ -33,7 +33,7 @@
 //! use reinhardt_core::http::{Request, Response};
 //! use reinhardt_core::types::Handler;
 //! use std::sync::Arc;
-//! use hyper::{Method, Uri, Version, HeaderMap, StatusCode};
+//! use hyper::{Method, Version, HeaderMap, StatusCode};
 //! use bytes::Bytes;
 //! use async_trait::async_trait;
 //!
@@ -57,13 +57,14 @@
 //! let handler = BaseHandler::with_router(Arc::new(router));
 //!
 //! // Create a request
-//! let request = Request::new(
-//!     Method::GET,
-//!     Uri::from_static("/"),
-//!     Version::HTTP_11,
-//!     HeaderMap::new(),
-//!     Bytes::new(),
-//! );
+//! let request = Request::builder()
+//!     .method(Method::GET)
+//!     .uri("/")
+//!     .version(Version::HTTP_11)
+//!     .headers(HeaderMap::new())
+//!     .body(Bytes::new())
+//!     .build()
+//!     .unwrap();
 //!
 //! // Handle request
 //! let response = handler.handle_request(request).await.unwrap();
@@ -119,13 +120,14 @@
 //!     .build();
 //!
 //! // Use the handler
-//! let request = Request::new(
-//!     hyper::Method::GET,
-//!     hyper::Uri::from_static("/api"),
-//!     hyper::Version::HTTP_11,
-//!     hyper::HeaderMap::new(),
-//!     bytes::Bytes::new(),
-//! );
+//! let request = Request::builder()
+//!     .method(hyper::Method::GET)
+//!     .uri("/api")
+//!     .version(hyper::Version::HTTP_11)
+//!     .headers(hyper::HeaderMap::new())
+//!     .body(bytes::Bytes::new())
+//!     .build()
+//!     .unwrap();
 //!
 //! let response = handler.handle(request).await.unwrap();
 //! assert_eq!(response.status, hyper::StatusCode::OK);

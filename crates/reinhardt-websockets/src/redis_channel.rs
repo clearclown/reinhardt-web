@@ -542,8 +542,6 @@ mod tests {
 
 		// Receive message
 		let result = layer.receive("test_channel").await;
-		assert!(result.is_ok());
-
 		let received = result.unwrap();
 		assert!(received.is_some());
 		assert_eq!(received.unwrap().sender(), msg.sender());

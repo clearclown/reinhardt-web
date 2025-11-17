@@ -211,8 +211,6 @@ mod tests {
 		};
 
 		let result = expand_derive(input);
-		assert!(result.is_ok());
-
 		let output = result.unwrap();
 		let output_str = output.to_string();
 
@@ -233,8 +231,6 @@ mod tests {
 		};
 
 		let result = expand_derive(input);
-		assert!(result.is_ok());
-
 		let output = result.unwrap();
 		let output_str = output.to_string();
 
@@ -253,8 +249,6 @@ mod tests {
 		};
 
 		let result = expand_derive(input);
-		assert!(result.is_ok());
-
 		let output = result.unwrap();
 		let output_str = output.to_string();
 

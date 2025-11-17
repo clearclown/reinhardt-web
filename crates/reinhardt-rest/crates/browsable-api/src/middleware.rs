@@ -191,7 +191,7 @@ impl Middleware for BrowsableApiMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -212,13 +212,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Accept", "text/html".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -245,13 +246,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Accept", "application/json".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		// When requesting JSON, should return JSON unchanged
@@ -276,13 +278,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Accept", "text/html".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		// When disabled, should return JSON unchanged
@@ -326,13 +329,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Accept", "text/html".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(BrowsableApiMiddleware::prefers_html(&request));
 	}
@@ -342,26 +346,28 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Accept", "application/json".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(!BrowsableApiMiddleware::prefers_html(&request));
 	}
 
 	#[tokio::test]
 	async fn test_prefers_html_without_accept_header() {
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(!BrowsableApiMiddleware::prefers_html(&request));
 	}

@@ -141,8 +141,6 @@ mod tests {
 	#[test]
 	fn test_path_parameter_metadata() {
 		let param = PathParam::<i64>::parameter_metadata("id", true);
-		assert!(param.is_some());
-
 		let param = param.unwrap();
 		assert_eq!(param.name, "id");
 		assert!(matches!(param.parameter_in, ParameterLocation::Path));
@@ -159,8 +157,6 @@ mod tests {
 	#[test]
 	fn test_query_parameter_metadata() {
 		let param = QueryParam::<String>::parameter_metadata("search", true);
-		assert!(param.is_some());
-
 		let param = param.unwrap();
 		assert_eq!(param.name, "search");
 		assert!(matches!(param.parameter_in, ParameterLocation::Query));
@@ -176,8 +172,6 @@ mod tests {
 	#[test]
 	fn test_header_parameter_metadata() {
 		let param = HeaderParam::<String>::parameter_metadata("X-API-Key", true);
-		assert!(param.is_some());
-
 		let param = param.unwrap();
 		assert_eq!(param.name, "X-API-Key");
 		assert!(matches!(param.parameter_in, ParameterLocation::Header));
@@ -193,8 +187,6 @@ mod tests {
 	#[test]
 	fn test_cookie_parameter_metadata() {
 		let param = CookieParam::<String>::parameter_metadata("session_id", true);
-		assert!(param.is_some());
-
 		let param = param.unwrap();
 		assert_eq!(param.name, "session_id");
 		assert!(matches!(param.parameter_in, ParameterLocation::Cookie));

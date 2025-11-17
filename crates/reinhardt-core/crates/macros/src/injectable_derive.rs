@@ -175,8 +175,6 @@ mod tests {
 		};
 
 		let result = injectable_derive_impl(input);
-		assert!(result.is_ok());
-
 		let output = result.unwrap().to_string();
 		assert!(output.contains("Injectable"));
 		assert!(output.contains("inject"));
@@ -193,8 +191,6 @@ mod tests {
 		};
 
 		let result = injectable_derive_impl(input);
-		assert!(result.is_ok());
-
 		let output = result.unwrap().to_string();
 		assert!(output.contains("resolve"));
 		assert!(output.contains("false"));

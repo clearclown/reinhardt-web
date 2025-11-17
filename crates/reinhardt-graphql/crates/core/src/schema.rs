@@ -417,7 +417,6 @@ mod tests {
 		storage.add_user(user.clone()).await;
 
 		let retrieved = storage.get_user("storage-test-1").await;
-		assert!(retrieved.is_some());
 		let retrieved = retrieved.unwrap();
 		assert_eq!(retrieved.id.to_string(), "storage-test-1");
 		assert_eq!(retrieved.name, "Frank");

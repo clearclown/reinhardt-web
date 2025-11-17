@@ -48,7 +48,6 @@ fn test_find_first() {
 
 	// Should find the first occurrence
 	let found = finder.find("test/file.txt");
-	assert!(found.is_ok());
 	let found_path = found.unwrap();
 	assert_eq!(
 		found_path.canonicalize().unwrap(),
@@ -96,7 +95,6 @@ fn test_find_in_multiple_dirs() {
 
 	// Should find file in second directory
 	let found = finder.find("other/file.txt");
-	assert!(found.is_ok());
 	let found_path = found.unwrap();
 	assert_eq!(
 		found_path.canonicalize().unwrap(),

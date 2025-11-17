@@ -112,15 +112,16 @@ impl MessagesContext {
 /// use reinhardt_messages::Message;
 /// use reinhardt_http::Request;
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method, Version};
 ///
-/// let mut request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let mut request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let container = MessagesContainer::new(vec![Message::info("Test")]);
 /// request.extensions.insert(container);
@@ -149,15 +150,16 @@ pub fn get_messages_context(request: &Request) -> MessagesContext {
 /// use reinhardt_messages::Message;
 /// use reinhardt_http::Request;
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method, Version};
 ///
-/// let mut request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let mut request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// // Initialize container
 /// request.extensions.insert(MessagesContainer::new(vec![]));
@@ -182,16 +184,17 @@ mod tests {
 	use crate::Level;
 	use crate::middleware::MessagesContainer;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[test]

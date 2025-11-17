@@ -545,8 +545,6 @@ mod tests {
 			.unwrap();
 
 		let profile = profiler.get_receiver_profile("test_receiver");
-		assert!(profile.is_some());
-
 		let profile = profile.unwrap();
 		assert_eq!(profile.call_count, 1);
 		// avg_duration should be recorded (non-zero for valid execution)

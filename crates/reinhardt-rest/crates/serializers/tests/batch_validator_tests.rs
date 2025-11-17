@@ -109,7 +109,6 @@ async fn test_batch_validator_basic_integration() {
 
 	// Execute validation
 	let result = validator.execute().await;
-	assert!(result.is_ok());
 	let failures = result.unwrap();
 
 	// Debug output
@@ -128,7 +127,6 @@ async fn test_batch_validator_basic_integration() {
 	validator.add_unique_check("users", "username", "newuser");
 
 	let result = validator.execute().await;
-	assert!(result.is_ok());
 	let failures = result.unwrap();
 
 	// No failures expected for new data
@@ -159,7 +157,6 @@ async fn test_batch_validator_mixed_checks_integration() {
 
 	// Execute validation
 	let result = validator.execute().await;
-	assert!(result.is_ok());
 	let failures = result.unwrap();
 
 	// All 3 checks should fail (existing data found)
@@ -181,7 +178,6 @@ async fn test_batch_validator_mixed_checks_integration() {
 	validator.add_unique_check("products", "sku", "PROD-456");
 
 	let result = validator.execute().await;
-	assert!(result.is_ok());
 	let failures = result.unwrap();
 
 	// No failures expected for new data
@@ -198,7 +194,6 @@ async fn test_batch_validator_empty() {
 
 	// Execute with no checks
 	let result = validator.execute().await;
-	assert!(result.is_ok());
 	let failures = result.unwrap();
 	assert_eq!(failures.len(), 0);
 }

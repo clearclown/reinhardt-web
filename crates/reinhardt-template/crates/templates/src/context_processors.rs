@@ -14,7 +14,37 @@ use std::sync::{Arc, RwLock};
 ///
 /// A context processor takes no arguments and returns a HashMap of variable names
 /// to their string values.
-pub type ContextProcessor = Arc<dyn Fn() -> HashMap<String, String> + Send + Sync>;
+pub struct ContextProcessor {
+	inner: Arc<dyn Fn() -> HashMap<String, String> + Send + Sync>,
+}
+
+impl ContextProcessor {
+	/// Create a new context processor
+	pub fn new<F>(processor: F) -> Self
+	where
+		F: Fn() -> HashMap<String, String> + Send + Sync + 'static,
+	{
+		Self {
+			inner: Arc::new(processor),
+		}
+	}
+}
+
+impl std::ops::Deref for ContextProcessor {
+	type Target = dyn Fn() -> HashMap<String, String> + Send + Sync;
+
+	fn deref(&self) -> &Self::Target {
+		&*self.inner
+	}
+}
+
+impl Clone for ContextProcessor {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+		}
+	}
+}
 
 /// Registry for context processors
 #[derive(Clone)]
@@ -58,7 +88,7 @@ impl ContextProcessorRegistry {
 		F: Fn() -> HashMap<String, String> + Send + Sync + 'static,
 	{
 		if let Ok(mut processors) = self.processors.write() {
-			processors.push(Arc::new(processor));
+			processors.push(ContextProcessor::new(processor));
 		}
 	}
 

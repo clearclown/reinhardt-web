@@ -877,8 +877,6 @@ mod tests {
 		cache.set("key1", &"value1", None).await.unwrap();
 
 		let info = cache.inspect_entry("key1").await;
-		assert!(info.is_some());
-
 		let info = info.unwrap();
 		assert_eq!(info.key, "key1");
 		assert!(!info.has_expiry);
@@ -897,8 +895,6 @@ mod tests {
 			.unwrap();
 
 		let info = cache.inspect_entry("key1").await;
-		assert!(info.is_some());
-
 		let info = info.unwrap();
 		assert_eq!(info.key, "key1");
 		assert!(info.has_expiry);
@@ -952,8 +948,6 @@ mod tests {
 
 		// Entry still exists (not cleaned up)
 		let info = cache.inspect_entry("key1").await;
-		assert!(info.is_some());
-
 		let info = info.unwrap();
 		assert!(info.has_expiry);
 		// TTL should be None because it's expired
@@ -1195,8 +1189,6 @@ mod tests {
 			.unwrap();
 
 		let info = cache.inspect_entry("key1").await;
-		assert!(info.is_some());
-
 		let info = info.unwrap();
 		assert_eq!(info.key, "key1");
 		assert!(info.has_expiry);

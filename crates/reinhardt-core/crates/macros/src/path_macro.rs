@@ -341,7 +341,6 @@ mod tests {
 	#[test]
 	fn test_parse_simple_literal() {
 		let result = parse_and_validate("polls/");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.segments.len(), 1);
 		assert!(matches!(ast.segments[0], Segment::Literal(_)));
@@ -350,7 +349,6 @@ mod tests {
 	#[test]
 	fn test_parse_simple_parameter() {
 		let result = parse_and_validate("polls/{id}/");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 		assert_eq!(ast.segments.len(), 3);
 
@@ -366,7 +364,6 @@ mod tests {
 	#[test]
 	fn test_parse_typed_parameter() {
 		let result = parse_and_validate("polls/{<int:question_id>}/");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 
 		// Find the parameter segment
@@ -386,7 +383,6 @@ mod tests {
 	#[test]
 	fn test_parse_multiple_parameters() {
 		let result = parse_and_validate("users/{user_id}/posts/{post_id}/");
-		assert!(result.is_ok());
 		let ast = result.unwrap();
 
 		let params: Vec<&Parameter> = ast

@@ -18,19 +18,20 @@ use std::ops::{BitAnd, BitOr, Not};
 /// use reinhardt_core_auth::permission_operators::AndPermission;
 /// use reinhardt_core_auth::permission::{IsAuthenticated, IsAdminUser, Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method, Version};
 /// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = AndPermission::new(IsAuthenticated, IsAdminUser);
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 ///     // Both authenticated AND admin required
 ///     let context = PermissionContext {
@@ -95,19 +96,20 @@ where
 /// use reinhardt_core_auth::permission_operators::OrPermission;
 /// use reinhardt_core_auth::permission::{IsAuthenticated, AllowAny, Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method, Version};
 /// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = OrPermission::new(IsAuthenticated, AllowAny);
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 ///     // Either authenticated OR allow any
 ///     let context = PermissionContext {
@@ -162,19 +164,20 @@ where
 /// use reinhardt_core_auth::permission_operators::NotPermission;
 /// use reinhardt_core_auth::permission::{IsAuthenticated, Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method, Version};
 /// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = NotPermission::new(IsAuthenticated);
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 ///     // NOT authenticated - only allows unauthenticated users
 ///     let context = PermissionContext {
@@ -395,19 +398,20 @@ mod tests {
 	use super::*;
 	use crate::{AllowAny, IsAdminUser, IsAuthenticated};
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 	use reinhardt_types::Request;
 
 	#[tokio::test]
 	async fn test_and_permission_both_true() {
 		let permission = AndPermission::new(IsAuthenticated, IsAdminUser);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -423,13 +427,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_and_permission_left_false() {
 		let permission = AndPermission::new(IsAuthenticated, IsAdminUser);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -445,13 +450,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_and_permission_right_false() {
 		let permission = AndPermission::new(IsAuthenticated, IsAdminUser);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -467,13 +473,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_or_permission_both_true() {
 		let permission = OrPermission::new(IsAuthenticated, AllowAny);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -489,13 +496,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_or_permission_left_true() {
 		let permission = OrPermission::new(IsAuthenticated, IsAdminUser);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -511,13 +519,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_or_permission_right_true() {
 		let permission = OrPermission::new(IsAuthenticated, AllowAny);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -533,13 +542,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_or_permission_both_false() {
 		let permission = OrPermission::new(IsAuthenticated, IsAdminUser);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -555,13 +565,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_not_permission_true() {
 		let permission = NotPermission::new(IsAuthenticated);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -577,13 +588,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_not_permission_false() {
 		let permission = NotPermission::new(IsAuthenticated);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -601,13 +613,14 @@ mod tests {
 		let permission =
 			OrPermission::new(AndPermission::new(IsAuthenticated, IsAdminUser), AllowAny);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -626,13 +639,14 @@ mod tests {
 	async fn test_bitand_operator() {
 		let permission = IsAuthenticated & IsAdminUser;
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Both conditions met
 		let context = PermissionContext {
@@ -659,13 +673,14 @@ mod tests {
 	async fn test_bitor_operator() {
 		let permission = IsAuthenticated | AllowAny;
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Not authenticated, but AllowAny should allow
 		let context = PermissionContext {
@@ -682,13 +697,14 @@ mod tests {
 	async fn test_not_operator() {
 		let permission = !IsAuthenticated;
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Not authenticated - should be allowed
 		let context = PermissionContext {
@@ -716,13 +732,14 @@ mod tests {
 		// (IsAuthenticated & IsAdminUser) | AllowAny
 		let permission = (IsAuthenticated & IsAdminUser) | AllowAny;
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Not authenticated, but AllowAny allows
 		let context = PermissionContext {

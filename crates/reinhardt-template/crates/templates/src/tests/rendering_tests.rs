@@ -153,7 +153,6 @@ fn test_template_loader_render_workflow() {
 	});
 
 	let result = loader.render("page.html");
-	assert!(result.is_ok());
 	let html = result.unwrap();
 	assert!(html.contains("Welcome"));
 }

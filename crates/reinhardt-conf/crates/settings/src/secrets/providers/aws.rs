@@ -703,8 +703,6 @@ mod tests {
 				.unwrap();
 
 		let result = provider.list_secrets().await;
-		assert!(result.is_ok());
-
 		let secrets = result.unwrap();
 		assert_eq!(secrets.len(), 2);
 		assert!(secrets.contains(&"db-password".to_string()));

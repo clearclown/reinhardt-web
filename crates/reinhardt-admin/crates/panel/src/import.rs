@@ -669,7 +669,6 @@ mod tests {
 		let csv_data = b"id,name\n1,Alice\n2,Bob";
 		let result = CsvImporter::import(csv_data, true);
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 		assert_eq!(records[0].get("id"), Some(&"1".to_string()));
@@ -681,7 +680,6 @@ mod tests {
 		let csv_data = b"id,name\n1,\"Smith, John\"\n2,\"Doe, Jane\"";
 		let result = CsvImporter::import(csv_data, true);
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 		assert_eq!(records[0].get("name"), Some(&"Smith, John".to_string()));
@@ -692,7 +690,6 @@ mod tests {
 		let json_data = br#"[{"id":"1","name":"Alice"},{"id":"2","name":"Bob"}]"#;
 		let result = JsonImporter::import(json_data);
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 		assert_eq!(records[0].get("id"), Some(&"1".to_string()));
@@ -704,7 +701,6 @@ mod tests {
 		let tsv_data = b"id\tname\n1\tAlice\n2\tBob";
 		let result = TsvImporter::import(tsv_data, true);
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 		assert_eq!(records[0].get("id"), Some(&"1".to_string()));
@@ -719,7 +715,6 @@ mod tests {
 			.data(csv_data.to_vec())
 			.parse();
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 	}
@@ -733,7 +728,6 @@ mod tests {
 			.field_mapping("username", "login")
 			.parse();
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records[0].get("login"), Some(&"alice".to_string()));
 		assert_eq!(records[0].get("username"), None);
@@ -748,7 +742,6 @@ mod tests {
 			.max_records(2)
 			.parse();
 
-		assert!(result.is_ok());
 		let records = result.unwrap();
 		assert_eq!(records.len(), 2);
 	}

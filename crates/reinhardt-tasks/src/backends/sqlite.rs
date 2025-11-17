@@ -536,7 +536,6 @@ mod tests {
 			.await
 			.expect("Failed to get task data");
 
-		assert!(task_data.is_some());
 		let serialized = task_data.unwrap();
 		assert_eq!(serialized.name(), "test_task");
 		assert_eq!(serialized.data(), "{}");
@@ -595,7 +594,6 @@ mod tests {
 				.await
 				.expect("Failed to get task data");
 
-			assert!(task_data.is_some());
 			let serialized = task_data.unwrap();
 			assert_eq!(serialized.name(), task_name);
 			assert_eq!(serialized.data(), "{}");

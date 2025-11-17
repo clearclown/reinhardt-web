@@ -74,13 +74,14 @@ where
 		Err(error) => {
 			let exception_handler = DefaultExceptionHandler;
 			// Create a dummy request for error handling since we consumed the original
-			let dummy_request = Request::new(
-				hyper::Method::GET,
-				"/".parse().unwrap(),
-				hyper::Version::HTTP_11,
-				hyper::HeaderMap::new(),
-				Bytes::new(),
-			);
+			let dummy_request = Request::builder()
+				.method(hyper::Method::GET)
+				.uri("/")
+				.version(hyper::Version::HTTP_11)
+				.headers(hyper::HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			exception_handler
 				.handle_exception(&dummy_request, error)
 				.await

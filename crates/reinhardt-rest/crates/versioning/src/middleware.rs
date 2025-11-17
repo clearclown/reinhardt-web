@@ -162,13 +162,14 @@ mod tests {
 
 	fn create_test_request(uri: &str) -> Request {
 		let uri = uri.parse::<Uri>().unwrap();
-		Request::new(
-			Method::GET,
-			uri,
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri(uri)
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	// Dummy handler for testing

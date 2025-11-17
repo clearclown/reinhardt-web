@@ -312,7 +312,6 @@ mod tests {
 		let dt = now();
 		let result = to_timezone(dt, "America/New_York");
 
-		assert!(result.is_ok());
 		let ny_dt = result.unwrap();
 		// Should represent the same instant in time
 		assert_eq!(dt.timestamp(), ny_dt.timestamp());
@@ -323,7 +322,6 @@ mod tests {
 		let dt = now();
 		let result = to_timezone(dt, "Asia/Tokyo");
 
-		assert!(result.is_ok());
 		let tokyo_dt = result.unwrap();
 		// Should represent the same instant in time
 		assert_eq!(dt.timestamp(), tokyo_dt.timestamp());
@@ -362,7 +360,6 @@ mod tests {
 		let dt_str = "2025-01-01T12:00:00+09:00";
 		let dt = parse_datetime(dt_str);
 
-		assert!(dt.is_ok());
 		let parsed = dt.unwrap();
 		assert_eq!(parsed.timezone(), Utc);
 	}

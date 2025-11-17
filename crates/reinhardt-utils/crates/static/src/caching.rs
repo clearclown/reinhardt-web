@@ -439,13 +439,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/style.css"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/style.css")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -464,13 +465,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/app.js"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/app.js")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -489,13 +491,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/index.html"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/index.html")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -516,13 +519,14 @@ mod tests {
 
 		for ext in &["png", "jpg", "jpeg", "gif", "svg", "webp"] {
 			let url = format!("/static/image.{}", ext);
-			let request = Request::new(
-				Method::GET,
-				url.parse().unwrap(),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri(url.as_str())
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			let cache_control = response
@@ -547,13 +551,14 @@ mod tests {
 
 		for ext in &["woff", "woff2", "ttf", "eot"] {
 			let url = format!("/static/font.{}", ext);
-			let request = Request::new(
-				Method::GET,
-				url.parse().unwrap(),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri(url.as_str())
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			let cache_control = response
@@ -576,13 +581,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/file.unknown"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/file.unknown")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -603,13 +609,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/file.txt"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/file.txt")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -628,13 +635,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/style.css"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/style.css")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -648,13 +656,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::not_found());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/nonexistent.css"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/nonexistent.css")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -669,13 +678,14 @@ mod tests {
 		let middleware = Arc::new(CacheControlMiddleware::new(config));
 		let handler = Arc::new(TestHandler::ok());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/file.unknown"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/file.unknown")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

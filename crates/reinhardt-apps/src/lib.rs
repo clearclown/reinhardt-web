@@ -55,13 +55,14 @@ mod tests {
 	#[test]
 	fn test_request_query_params() {
 		let uri = Uri::from_static("/test?foo=bar&baz=qux");
-		let request = Request::new(
-			Method::GET,
-			uri,
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri(uri)
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert_eq!(request.query_params.get("foo"), Some(&"bar".to_string()));
 		assert_eq!(request.query_params.get("baz"), Some(&"qux".to_string()));

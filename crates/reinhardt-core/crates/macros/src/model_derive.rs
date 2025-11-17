@@ -540,9 +540,10 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 				vec![
 					#(
 						::reinhardt_db::orm::inspection::IndexInfo {
+							name: format!("{}_{}_idx", <Self as ::reinhardt_db::orm::Model>::table_name(), #indexed_fields),
 							fields: vec![#indexed_fields.to_string()],
 							unique: false,
-							name: None,
+							condition: None,
 						}
 					),*
 				]
@@ -844,6 +845,22 @@ fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]
 		impl ::std::convert::From<#composite_pk_name> for #tuple_type {
 			fn from(pk: #composite_pk_name) -> Self {
 				(#(pk.#field_names),*)
+			}
+		}
+
+		// Display implementation for composite primary key
+		impl ::std::fmt::Display for #composite_pk_name {
+			fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+				write!(f, "(")?;
+				let mut first = true;
+				#(
+					if !first {
+						write!(f, ", ")?;
+					}
+					write!(f, "{}={}", stringify!(#field_names), self.#field_names)?;
+					first = false;
+				)*
+				write!(f, ")")
 			}
 		}
 	}

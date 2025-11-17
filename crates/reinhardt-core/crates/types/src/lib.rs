@@ -283,13 +283,14 @@ mod tests {
 	}
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]
@@ -434,25 +435,27 @@ mod tests {
 		let chain = MiddlewareChain::new(handler).with_middleware(conditional_mw);
 
 		// Test with /api/ path - middleware should run
-		let api_request = Request::new(
-			Method::GET,
-			"/api/users".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let api_request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = chain.handle(api_request).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
 		assert_eq!(body, "API:Response");
 
 		// Test with non-/api/ path - middleware should be skipped
-		let non_api_request = Request::new(
-			Method::GET,
-			"/public".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let non_api_request = Request::builder()
+			.method(Method::GET)
+			.uri("/public")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = chain.handle(non_api_request).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
 		assert_eq!(body, "Response"); // No prefix because middleware was skipped
@@ -545,25 +548,27 @@ mod tests {
 			.with_middleware(always_mw);
 
 		// Test with /api/ path - both middleware should run
-		let api_request = Request::new(
-			Method::GET,
-			"/api/test".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let api_request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = chain.handle(api_request).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
 		assert_eq!(body, "API:Always:Base");
 
 		// Test with non-/api/ path - only always_mw should run
-		let non_api_request = Request::new(
-			Method::GET,
-			"/public".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let non_api_request = Request::builder()
+			.method(Method::GET)
+			.uri("/public")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = chain.handle(non_api_request).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
 		assert_eq!(body, "Always:Base"); // Only always_mw prefix

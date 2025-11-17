@@ -86,13 +86,14 @@ pub fn create_request(
 	};
 
 	let uri = uri_str.parse::<Uri>().unwrap();
-	Request::new(
-		method,
-		uri,
-		Version::HTTP_11,
-		headers.unwrap_or_default(),
-		body.unwrap_or_default(),
-	)
+	Request::builder()
+		.method(method)
+		.uri(uri)
+		.version(Version::HTTP_11)
+		.headers(headers.unwrap_or_default())
+		.body(body.unwrap_or_default())
+		.build()
+		.expect("Failed to build request")
 }
 
 /// Create a test request with path parameters

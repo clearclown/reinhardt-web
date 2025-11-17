@@ -16,7 +16,7 @@ use serde::de::DeserializeOwned;
 /// ```
 /// use reinhardt_micro::utils::extract_bearer_token;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap, header};
+/// use hyper::{Method, Version, HeaderMap, header};
 /// use bytes::Bytes;
 ///
 /// let mut headers = HeaderMap::new();
@@ -25,13 +25,14 @@ use serde::de::DeserializeOwned;
 ///     "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9".parse().unwrap()
 /// );
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let token = extract_bearer_token(&request);
 /// assert_eq!(token, Some("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9".to_string()));
@@ -42,16 +43,17 @@ use serde::de::DeserializeOwned;
 /// ```
 /// use reinhardt_micro::utils::extract_bearer_token;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let token = extract_bearer_token(&request);
 /// assert_eq!(token, None);
@@ -74,7 +76,7 @@ pub fn extract_bearer_token(request: &Request) -> Option<String> {
 /// ```
 /// use reinhardt_micro::utils::parse_query_params;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 /// use serde::Deserialize;
 ///
@@ -84,13 +86,14 @@ pub fn extract_bearer_token(request: &Request) -> Option<String> {
 ///     limit: u32,
 /// }
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/api/users?page=2&limit=10".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/users?page=2&limit=10")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let params: Pagination = parse_query_params(&request).unwrap();
 /// assert_eq!(params, Pagination { page: 2, limit: 10 });
@@ -101,7 +104,7 @@ pub fn extract_bearer_token(request: &Request) -> Option<String> {
 /// ```
 /// use reinhardt_micro::utils::parse_query_params;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 /// use serde::Deserialize;
 ///
@@ -111,13 +114,14 @@ pub fn extract_bearer_token(request: &Request) -> Option<String> {
 ///     limit: u32,
 /// }
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/api/users?page=invalid".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/users?page=invalid")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let result: Result<Pagination, _> = parse_query_params(&request);
 /// assert!(result.is_err());
@@ -144,7 +148,7 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
 /// ```
 /// use reinhardt_micro::utils::validate_content_type;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap, header};
+/// use hyper::{Method, Version, HeaderMap, header};
 /// use bytes::Bytes;
 ///
 /// let mut headers = HeaderMap::new();
@@ -153,13 +157,14 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
 ///     "application/json".parse().unwrap()
 /// );
 ///
-/// let request = Request::new(
-///     Method::POST,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::POST)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// assert!(validate_content_type(&request, "application/json").is_ok());
 /// ```
@@ -169,7 +174,7 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
 /// ```
 /// use reinhardt_micro::utils::validate_content_type;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap, header};
+/// use hyper::{Method, Version, HeaderMap, header};
 /// use bytes::Bytes;
 ///
 /// let mut headers = HeaderMap::new();
@@ -178,13 +183,14 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
 ///     "text/plain".parse().unwrap()
 /// );
 ///
-/// let request = Request::new(
-///     Method::POST,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::POST)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let result = validate_content_type(&request, "application/json");
 /// assert!(result.is_err());
@@ -195,16 +201,17 @@ pub fn parse_query_params<T: DeserializeOwned>(request: &Request) -> Result<T> {
 /// ```
 /// use reinhardt_micro::utils::validate_content_type;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
-/// let request = Request::new(
-///     Method::POST,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::POST)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let result = validate_content_type(&request, "application/json");
 /// assert!(result.is_err());
@@ -235,7 +242,7 @@ pub fn validate_content_type(request: &Request, expected: &str) -> Result<()> {
 /// ```
 /// use reinhardt_micro::utils::get_header;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap, header};
+/// use hyper::{Method, Version, HeaderMap, header};
 /// use bytes::Bytes;
 ///
 /// let mut headers = HeaderMap::new();
@@ -244,13 +251,14 @@ pub fn validate_content_type(request: &Request, expected: &str) -> Result<()> {
 ///     "Mozilla/5.0".parse().unwrap()
 /// );
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let user_agent = get_header(&request, "user-agent");
 /// assert_eq!(user_agent, Some("Mozilla/5.0".to_string()));
@@ -261,16 +269,17 @@ pub fn validate_content_type(request: &Request, expected: &str) -> Result<()> {
 /// ```
 /// use reinhardt_micro::utils::get_header;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let header = get_header(&request, "x-custom-header");
 /// assert_eq!(header, None);
@@ -293,7 +302,7 @@ pub fn get_header(request: &Request, name: &str) -> Option<String> {
 /// ```
 /// use reinhardt_micro::utils::get_client_ip;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap, header};
+/// use hyper::{Method, Version, HeaderMap, header};
 /// use bytes::Bytes;
 ///
 /// let mut headers = HeaderMap::new();
@@ -302,13 +311,14 @@ pub fn get_header(request: &Request, name: &str) -> Option<String> {
 ///     "203.0.113.1, 198.51.100.1".parse().unwrap()
 /// );
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let ip = get_client_ip(&request);
 /// assert_eq!(ip, Some("203.0.113.1".parse().unwrap()));
@@ -319,16 +329,17 @@ pub fn get_header(request: &Request, name: &str) -> Option<String> {
 /// ```
 /// use reinhardt_micro::utils::get_client_ip;
 /// use reinhardt_micro::Request;
-/// use hyper::{Method, Uri, Version, HeaderMap};
+/// use hyper::{Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     "/".parse::<Uri>().unwrap(),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new()
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let ip = get_client_ip(&request);
 /// assert_eq!(ip, None);
@@ -377,13 +388,14 @@ mod tests {
 			"Bearer test_token_123".parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let token = extract_bearer_token(&request);
 		assert_eq!(token, Some("test_token_123".to_string()));
@@ -391,13 +403,14 @@ mod tests {
 
 	#[test]
 	fn test_extract_bearer_token_missing() {
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let token = extract_bearer_token(&request);
 		assert_eq!(token, None);
@@ -408,13 +421,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(header::USER_AGENT, "TestClient/1.0".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let user_agent = get_header(&request, "user-agent");
 		assert_eq!(user_agent, Some("TestClient/1.0".to_string()));
@@ -422,13 +436,14 @@ mod tests {
 
 	#[test]
 	fn test_get_header_missing() {
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let header = get_header(&request, "x-custom-header");
 		assert_eq!(header, None);
@@ -442,13 +457,14 @@ mod tests {
 			"192.168.1.1, 10.0.0.1".parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = get_client_ip(&request);
 		assert_eq!(ip, Some("192.168.1.1".parse().unwrap()));
@@ -462,13 +478,14 @@ mod tests {
 			"203.0.113.5".parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = get_client_ip(&request);
 		assert_eq!(ip, Some("203.0.113.5".parse().unwrap()));
@@ -476,13 +493,14 @@ mod tests {
 
 	#[test]
 	fn test_get_client_ip_none() {
-		let request = Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = get_client_ip(&request);
 		assert_eq!(ip, None);
@@ -493,13 +511,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(validate_content_type(&request, "application/json").is_ok());
 	}
@@ -509,26 +528,28 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(header::CONTENT_TYPE, "text/plain".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(validate_content_type(&request, "application/json").is_err());
 	}
 
 	#[test]
 	fn test_validate_content_type_missing() {
-		let request = Request::new(
-			Method::POST,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		assert!(validate_content_type(&request, "application/json").is_err());
 	}

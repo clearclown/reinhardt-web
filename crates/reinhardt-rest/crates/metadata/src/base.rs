@@ -206,16 +206,17 @@ mod tests {
 	use crate::fields::FieldInfoBuilder;
 	use crate::types::{ChoiceInfo, FieldType};
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::OPTIONS,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::OPTIONS)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	// DRF test: test_determine_metadata_abstract_method_raises_proper_error

@@ -648,7 +648,6 @@ mod tests {
 		let path = PathBuf::from("/tmp/migrations/0001_initial.rs");
 		let result = parse_migration_file(&path, "myapp");
 
-		assert!(result.is_ok());
 		let migration = result.unwrap();
 		assert_eq!(migration.app_label, "myapp");
 		assert_eq!(migration.name, "initial");
@@ -662,7 +661,6 @@ mod tests {
 		let path = PathBuf::from("/tmp/migrations/0002_add_user_field.rs");
 		let result = parse_migration_file(&path, "myapp");
 
-		assert!(result.is_ok());
 		let migration = result.unwrap();
 		assert_eq!(migration.app_label, "myapp");
 		assert_eq!(migration.name, "add_user_field");

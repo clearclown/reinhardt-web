@@ -1101,12 +1101,10 @@ mod tests {
 
 		// Float that represents an integer should work
 		let page = paginator.paginate(&items, Some("1.0"), "http://api.example.com/items");
-		assert!(page.is_ok());
 		let page = page.unwrap();
 		assert_eq!(page.results, vec![1, 2, 3]);
 
 		let page = paginator.paginate(&items, Some("2.0"), "http://api.example.com/items");
-		assert!(page.is_ok());
 		let page = page.unwrap();
 		assert_eq!(page.results, vec![4, 5, 6]);
 	}
@@ -1532,7 +1530,6 @@ mod async_tests {
 			.apaginate(&items, Some("2.0"), "http://api.example.com/items")
 			.await;
 
-		assert!(result.is_ok());
 		let page = result.unwrap();
 		assert_eq!(page.results, (11..=20).collect::<Vec<i32>>());
 	}

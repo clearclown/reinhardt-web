@@ -60,7 +60,6 @@ async fn test_serve_directory_with_index() {
 	let handler = StaticFileHandler::new(temp_dir.path().to_path_buf());
 	let result = handler.serve("subdir").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.content, b"<html>Index</html>");
 }
@@ -90,7 +89,6 @@ async fn test_custom_index_files() {
 		.with_index_files(vec!["default.html".to_string()]);
 	let result = handler.serve("subdir").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.content, b"<html>Custom Index</html>");
 }
@@ -101,7 +99,6 @@ async fn test_mime_type_detection_html() {
 	let handler = StaticFileHandler::new(setup.temp_dir.path().to_path_buf());
 	let result = handler.serve("test.html").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.mime_type, "text/html");
 }
@@ -112,7 +109,6 @@ async fn test_mime_type_detection_css() {
 	let handler = StaticFileHandler::new(setup.temp_dir.path().to_path_buf());
 	let result = handler.serve("style.css").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.mime_type, "text/css");
 }
@@ -123,7 +119,6 @@ async fn test_mime_type_detection_javascript() {
 	let handler = StaticFileHandler::new(setup.temp_dir.path().to_path_buf());
 	let result = handler.serve("script.js").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert!(
 		static_file.mime_type.contains("javascript") || static_file.mime_type == "text/javascript"
@@ -136,7 +131,6 @@ async fn test_mime_type_detection_json() {
 	let handler = StaticFileHandler::new(setup.temp_dir.path().to_path_buf());
 	let result = handler.serve("data.json").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.mime_type, "application/json");
 }
@@ -147,7 +141,6 @@ async fn test_mime_type_detection_png() {
 	let handler = StaticFileHandler::new(setup.temp_dir.path().to_path_buf());
 	let result = handler.serve("image.png").await;
 
-	assert!(result.is_ok());
 	let static_file = result.unwrap();
 	assert_eq!(static_file.mime_type, "image/png");
 }

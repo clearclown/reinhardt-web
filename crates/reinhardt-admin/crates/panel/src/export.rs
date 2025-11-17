@@ -575,7 +575,6 @@ mod tests {
 			.data(vec![row])
 			.build();
 
-		assert!(result.is_ok());
 		let export = result.unwrap();
 		assert_eq!(export.row_count, 1);
 		assert!(export.filename.starts_with("User_"));

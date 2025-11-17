@@ -867,8 +867,6 @@ mod tests {
         }"#;
 
 		let result = serializer.extract_nested_data(json).unwrap();
-		assert!(result.is_some());
-
 		let nested = result.unwrap();
 		assert!(nested.is_object());
 		assert_eq!(nested.get("id").unwrap().as_i64().unwrap(), 42);
@@ -945,8 +943,6 @@ mod tests {
         }"#;
 
 		let result = serializer.extract_nested_data(json).unwrap();
-		assert!(result.is_some());
-
 		let nested = result.unwrap();
 		assert!(nested.is_array());
 		assert_eq!(nested.as_array().unwrap().len(), 2);
@@ -962,8 +958,6 @@ mod tests {
 		};
 
 		let result = serializer.serialize(&post);
-		assert!(result.is_ok());
-
 		let json_str = result.unwrap();
 		let value: Value = serde_json::from_str(&json_str).unwrap();
 		assert_eq!(value["id"], 1);
@@ -979,8 +973,6 @@ mod tests {
 		};
 
 		let result = serializer.serialize(&post);
-		assert!(result.is_ok());
-
 		let json_str = result.unwrap();
 		let value: Value = serde_json::from_str(&json_str).unwrap();
 		assert_eq!(value["id"], 1);

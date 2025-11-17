@@ -102,13 +102,14 @@ fn test_request_helpers_extract_bearer_token() {
 		"Bearer test_token_123".parse().unwrap(),
 	);
 
-	let request = Request::new(
-		Method::GET,
-		"/".parse::<Uri>().unwrap(),
-		Version::HTTP_11,
-		headers,
-		Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::GET)
+		.uri("/")
+		.version(Version::HTTP_11)
+		.headers(headers)
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let token = extract_bearer_token(&request);
 	assert_eq!(token, Some("test_token_123".to_string()));
@@ -122,13 +123,14 @@ fn test_request_helpers_parse_query_params() {
 		limit: u32,
 	}
 
-	let request = Request::new(
-		Method::GET,
-		"/api?page=2&limit=10".parse::<Uri>().unwrap(),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::GET)
+		.uri("/api?page=2&limit=10")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let params: QueryParams = parse_query_params(&request).unwrap();
 	assert_eq!(params, QueryParams { page: 2, limit: 10 });
@@ -139,13 +141,14 @@ fn test_request_helpers_validate_content_type() {
 	let mut headers = HeaderMap::new();
 	headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
 
-	let request = Request::new(
-		Method::POST,
-		"/".parse::<Uri>().unwrap(),
-		Version::HTTP_11,
-		headers,
-		Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::POST)
+		.uri("/")
+		.version(Version::HTTP_11)
+		.headers(headers)
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	assert!(validate_content_type(&request, "application/json").is_ok());
 }
@@ -155,13 +158,14 @@ fn test_request_helpers_get_header() {
 	let mut headers = HeaderMap::new();
 	headers.insert(header::USER_AGENT, "TestClient/1.0".parse().unwrap());
 
-	let request = Request::new(
-		Method::GET,
-		"/".parse::<Uri>().unwrap(),
-		Version::HTTP_11,
-		headers,
-		Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::GET)
+		.uri("/")
+		.version(Version::HTTP_11)
+		.headers(headers)
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let user_agent = get_header(&request, "user-agent");
 	assert_eq!(user_agent, Some("TestClient/1.0".to_string()));
@@ -175,13 +179,14 @@ fn test_request_helpers_get_client_ip() {
 		"192.168.1.1".parse().unwrap(),
 	);
 
-	let request = Request::new(
-		Method::GET,
-		"/".parse::<Uri>().unwrap(),
-		Version::HTTP_11,
-		headers,
-		Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::GET)
+		.uri("/")
+		.version(Version::HTTP_11)
+		.headers(headers)
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let ip = get_client_ip(&request);
 	assert_eq!(ip, Some("192.168.1.1".parse().unwrap()));

@@ -205,7 +205,7 @@ mod tests {
 	use crate::Level;
 	use crate::storage::MemoryStorage;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	// Mock handler for testing
 	struct MockHandler;
@@ -218,13 +218,14 @@ mod tests {
 	}
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]

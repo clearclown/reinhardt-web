@@ -441,7 +441,6 @@ mod tests {
 		let context = RendererContext::new().with_extra("accept_encoding", "gzip");
 
 		let result = renderer.render(&data, Some(&context)).await;
-		assert!(result.is_ok());
 		let compressed = result.unwrap();
 
 		// Verify compression worked (compressed should be smaller)
@@ -461,7 +460,6 @@ mod tests {
 		let context = RendererContext::new().with_extra("accept_encoding", "br");
 
 		let result = renderer.render(&data, Some(&context)).await;
-		assert!(result.is_ok());
 		let compressed = result.unwrap();
 
 		// Verify compression worked
@@ -479,7 +477,6 @@ mod tests {
 		let context = RendererContext::new().with_extra("accept_encoding", "deflate");
 
 		let result = renderer.render(&data, Some(&context)).await;
-		assert!(result.is_ok());
 		let compressed = result.unwrap();
 
 		// Verify compression worked

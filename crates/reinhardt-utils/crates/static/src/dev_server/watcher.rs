@@ -219,7 +219,6 @@ mod tests {
 		let event =
 			tokio::time::timeout(std::time::Duration::from_secs(2), watcher.next_event()).await;
 
-		assert!(event.is_ok());
 		let event = event.unwrap();
 		assert!(event.is_some());
 
