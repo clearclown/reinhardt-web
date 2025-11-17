@@ -8,7 +8,6 @@ use reinhardt_test::fixtures::testcontainers::redis_container;
 use reinhardt_utils::cache::{CacheInvalidationChannel, CacheInvalidationMessage};
 use rstest::*;
 use testcontainers::ContainerAsync;
-use testcontainers_modules::redis::Redis;
 use tokio::time::{sleep, Duration};
 
 /// Fixture providing Redis container and connection URL for cache pubsub testing
@@ -19,14 +18,17 @@ use tokio::time::{sleep, Duration};
 /// the container and connection URL in the format expected by CacheInvalidationChannel.
 #[fixture]
 async fn redis_fixture(
-	#[future] redis_container: (ContainerAsync<Redis>, String),
-) -> (ContainerAsync<Redis>, String) {
-	redis_container.await
+	#[future] redis_container: (ContainerAsync<testcontainers::GenericImage>, u16, String),
+) -> (ContainerAsync<testcontainers::GenericImage>, String) {
+	let (container, _port, url) = redis_container.await;
+	(container, url)
 }
 
 #[rstest]
 #[tokio::test]
-async fn test_redis_pubsub_basic(#[future] redis_fixture: (ContainerAsync<Redis>, String)) {
+async fn test_redis_pubsub_basic(
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
+) {
 	let (_container, redis_url) = redis_fixture.await;
 
 	// Create channel for publishing and subscribing
@@ -69,7 +71,7 @@ async fn test_redis_pubsub_basic(#[future] redis_fixture: (ContainerAsync<Redis>
 #[rstest]
 #[tokio::test]
 async fn test_redis_pubsub_pattern_invalidation(
-	#[future] redis_fixture: (ContainerAsync<Redis>, String),
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
 ) {
 	let (_container, redis_url) = redis_fixture.await;
 
@@ -112,7 +114,9 @@ async fn test_redis_pubsub_pattern_invalidation(
 
 #[rstest]
 #[tokio::test]
-async fn test_redis_pubsub_clear_all(#[future] redis_fixture: (ContainerAsync<Redis>, String)) {
+async fn test_redis_pubsub_clear_all(
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
+) {
 	let (_container, redis_url) = redis_fixture.await;
 
 	// Create channel for publishing and subscribing
@@ -155,7 +159,7 @@ async fn test_redis_pubsub_clear_all(#[future] redis_fixture: (ContainerAsync<Re
 #[rstest]
 #[tokio::test]
 async fn test_redis_pubsub_multiple_subscribers(
-	#[future] redis_fixture: (ContainerAsync<Redis>, String),
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
 ) {
 	let (_container, redis_url) = redis_fixture.await;
 
@@ -219,7 +223,7 @@ async fn test_redis_pubsub_multiple_subscribers(
 #[rstest]
 #[tokio::test]
 async fn test_redis_pubsub_multiple_messages(
-	#[future] redis_fixture: (ContainerAsync<Redis>, String),
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
 ) {
 	let (_container, redis_url) = redis_fixture.await;
 
@@ -294,7 +298,7 @@ async fn test_redis_pubsub_multiple_messages(
 #[rstest]
 #[tokio::test]
 async fn test_redis_pubsub_custom_channel_name(
-	#[future] redis_fixture: (ContainerAsync<Redis>, String),
+	#[future] redis_fixture: (ContainerAsync<testcontainers::GenericImage>, String),
 ) {
 	let (_container, redis_url) = redis_fixture.await;
 
