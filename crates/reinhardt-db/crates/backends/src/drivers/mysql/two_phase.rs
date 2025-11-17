@@ -1,7 +1,22 @@
-//! MySQL-specific Two-Phase Commit implementation
+//! MySQL-specific Two-Phase Commit implementation with type-safe state transitions
 //!
 //! This module implements the `TwoPhaseParticipant` trait for MySQL using
 //! the XA transaction protocol (XA START, XA END, XA PREPARE, XA COMMIT, XA ROLLBACK).
+//!
+//! # Type-Safe State Transitions
+//!
+//! The API uses the type system to enforce correct XA transaction state transitions at compile time:
+//!
+//! ```text
+//! Idle --begin()--> Started --end()--> Ended --prepare()--> Prepared
+//!                                                               |
+//!                                                   commit() ---+--- rollback()
+//!                                                               |
+//!                                                          Completed
+//! ```
+//!
+//! Invalid state transitions are caught at compile time. For example, you cannot call
+//! `prepare()` on a `XaSessionStarted` - it requires `XaSessionEnded`.
 
 use sqlx::pool::PoolConnection;
 use sqlx::{MySql, MySqlPool, Row};
@@ -9,32 +24,37 @@ use std::sync::Arc;
 
 use crate::error::{DatabaseError, Result};
 
-/// XA transaction state machine
+/// XA transaction session in Started state
 ///
-/// Represents the various states an XA transaction can be in during its lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum XaState {
-	/// Initial state, no transaction started
-	Idle,
-	/// Transaction started with XA START
-	Started,
-	/// Transaction ended with XA END
-	Ended,
-	/// Transaction prepared with XA PREPARE
-	Prepared,
-}
-
-/// MySQL XA transaction session
-///
-/// Owns the MySQL connection and tracks the XA transaction state.
-/// This ensures all XA operations occur on the same connection as required by MySQL.
-pub struct XaSession {
+/// After calling `begin()`, the transaction is in Started state.
+/// You can perform database operations on the connection.
+pub struct XaSessionStarted {
 	/// The dedicated MySQL connection for this XA transaction
 	pub connection: PoolConnection<MySql>,
 	/// The XA transaction identifier
 	pub xid: String,
-	/// Current state of the XA transaction
-	pub state: XaState,
+}
+
+/// XA transaction session in Ended state
+///
+/// After calling `end()` on a Started session, the transaction is in Ended state.
+/// From here, you can either `prepare()` for two-phase commit or use `commit_one_phase()`.
+pub struct XaSessionEnded {
+	/// The dedicated MySQL connection for this XA transaction
+	pub connection: PoolConnection<MySql>,
+	/// The XA transaction identifier
+	pub xid: String,
+}
+
+/// XA transaction session in Prepared state
+///
+/// After calling `prepare()` on an Ended session, the transaction is in Prepared state.
+/// From here, you must either `commit()` or `rollback()` the transaction.
+pub struct XaSessionPrepared {
+	/// The dedicated MySQL connection for this XA transaction
+	pub connection: PoolConnection<MySql>,
+	/// The XA transaction identifier
+	pub xid: String,
 }
 
 /// MySQL Two-Phase Commit participant using XA transactions
@@ -43,15 +63,18 @@ pub struct XaSession {
 /// XA transactions in MySQL follow the X/Open XA standard for distributed
 /// transaction processing.
 ///
-/// # XA Transaction States
+/// # Type-Safe State Transitions
 ///
-/// - ACTIVE: After XA START
-/// - IDLE: After XA END
-/// - PREPARED: After XA PREPARE
-/// - COMMITTED: After XA COMMIT
-/// - ROLLBACK: After XA ROLLBACK
+/// The API enforces correct state transitions at compile time:
 ///
-/// # Examples
+/// | State      | Valid Methods           | Transitions To     |
+/// |------------|-------------------------|--------------------|
+/// | Idle       | `begin()`               | `XaSessionStarted` |
+/// | Started    | `end()`, `rollback()`   | `XaSessionEnded`   |
+/// | Ended      | `prepare()`, `commit_one_phase()` | `XaSessionPrepared` |
+/// | Prepared   | `commit()`, `rollback()` | Completed         |
+///
+/// # Example: Complete Two-Phase Commit Flow
 ///
 /// ```no_run
 /// use reinhardt_db::backends::mysql::two_phase::MySqlTwoPhaseParticipant;
@@ -61,28 +84,66 @@ pub struct XaSession {
 /// let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 /// let participant = MySqlTwoPhaseParticipant::new(pool);
 ///
-/// // Start an XA transaction and get a session
-/// let mut session = participant.begin("txn_001").await?;
+/// // 1. Start XA transaction - returns XaSessionStarted
+/// let session = participant.begin("txn_001").await?;
 ///
-/// // ... perform operations ...
+/// // 2. Perform database operations
+/// // sqlx::query("INSERT INTO ...").execute(&mut *session.connection).await?;
 ///
-/// // End the XA transaction
-/// participant.end(&mut session).await?;
+/// // 3. End the XA transaction - consumes Started, returns Ended
+/// let session = participant.end(session).await?;
 ///
-/// // Prepare the transaction
-/// participant.prepare(&mut session).await?;
+/// // 4. Prepare for two-phase commit - consumes Ended, returns Prepared
+/// let session = participant.prepare(session).await?;
 ///
-/// // Commit the prepared transaction
+/// // 5. Commit the prepared transaction - consumes Prepared
 /// participant.commit(session).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Example: One-Phase Commit Optimization
+///
+/// ```no_run
+/// # use reinhardt_db::backends::mysql::two_phase::MySqlTwoPhaseParticipant;
+/// # use sqlx::MySqlPool;
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
+/// # let participant = MySqlTwoPhaseParticipant::new(pool);
+/// let session = participant.begin("txn_002").await?;
+/// // ... perform operations ...
+/// let session = participant.end(session).await?;
+///
+/// // Skip prepare and use one-phase commit
+/// participant.commit_one_phase(session).await?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// # Example: Rollback from Any State
+///
+/// ```no_run
+/// # use reinhardt_db::backends::mysql::two_phase::MySqlTwoPhaseParticipant;
+/// # use sqlx::MySqlPool;
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
+/// # let participant = MySqlTwoPhaseParticipant::new(pool);
+/// let session = participant.begin("txn_003").await?;
+///
+/// // Can rollback from Started state
+/// participant.rollback_started(session).await?;
+///
+/// // Or from Prepared state
+/// let session = participant.begin("txn_004").await?;
+/// let session = participant.end(session).await?;
+/// let session = participant.prepare(session).await?;
+/// participant.rollback_prepared(session).await?;
 /// # Ok(())
 /// # }
 /// ```
 #[derive(Clone)]
 pub struct MySqlTwoPhaseParticipant {
 	pool: Arc<MySqlPool>,
-	// Internal session storage for ORM layer compatibility
-	// XID -> Session mapping for managing active transactions
-	sessions: Arc<std::sync::Mutex<std::collections::HashMap<String, XaSession>>>,
 }
 
 impl MySqlTwoPhaseParticipant {
@@ -103,16 +164,12 @@ impl MySqlTwoPhaseParticipant {
 	pub fn new(pool: MySqlPool) -> Self {
 		Self {
 			pool: Arc::new(pool),
-			sessions: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
 		}
 	}
 
 	/// Create from an Arc<MySqlPool>
 	pub fn from_pool_arc(pool: Arc<MySqlPool>) -> Self {
-		Self {
-			pool,
-			sessions: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
-		}
+		Self { pool }
 	}
 
 	/// Get a reference to the underlying MySqlPool
@@ -125,8 +182,13 @@ impl MySqlTwoPhaseParticipant {
 
 	/// Start an XA transaction
 	///
-	/// This executes `XA START 'xid'` in MySQL and returns an XaSession that owns
+	/// Executes `XA START 'xid'` in MySQL and returns an `XaSessionStarted` that owns
 	/// the connection. All subsequent XA operations must use this session.
+	///
+	/// # Returns
+	///
+	/// Returns `XaSessionStarted` which can be used to perform database operations
+	/// and must be passed to `end()` to transition to the next state.
 	///
 	/// # Examples
 	///
@@ -136,13 +198,15 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
+	/// let session = participant.begin("txn_001").await?;
+	/// // Perform database operations on session.connection
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn begin(&self, xid: String) -> Result<XaSession> {
+	pub async fn begin(&self, xid: impl Into<String>) -> Result<XaSessionStarted> {
 		// XAトランザクション用の新しいコネクションを取得
 		let mut connection = self.pool.acquire().await.map_err(DatabaseError::from)?;
+		let xid = xid.into();
 
 		let sql = format!("XA START '{}'", Self::escape_xid(&xid));
 		// MySQL XA commands are not supported in prepared statement protocol
@@ -151,17 +215,19 @@ impl MySqlTwoPhaseParticipant {
 			.await
 			.map_err(DatabaseError::from)?;
 
-		Ok(XaSession {
-			connection,
-			xid,
-			state: XaState::Started,
-		})
+		Ok(XaSessionStarted { connection, xid })
 	}
 
 	/// End an XA transaction
 	///
-	/// This executes `XA END 'xid'` in MySQL. Must be called before XA PREPARE.
-	/// Transitions the session state from Started to Ended.
+	/// Executes `XA END 'xid'` in MySQL. Must be called before `prepare()`.
+	/// Consumes `XaSessionStarted` and returns `XaSessionEnded`.
+	///
+	/// # Type Safety
+	///
+	/// This method enforces at compile time that:
+	/// - The transaction is in Started state (accepts only `XaSessionStarted`)
+	/// - The session transitions to Ended state (returns `XaSessionEnded`)
 	///
 	/// # Examples
 	///
@@ -171,33 +237,36 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
+	/// let session = participant.begin("txn_001").await?;
 	/// // ... perform operations ...
-	/// participant.end(&mut session).await?;
+	/// let session = participant.end(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn end(&self, session: &mut XaSession) -> Result<()> {
+	pub async fn end(&self, mut session: XaSessionStarted) -> Result<XaSessionEnded> {
 		let sql = format!("XA END '{}'", Self::escape_xid(&session.xid));
 		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
 
-		session.state = XaState::Ended;
-		Ok(())
+		Ok(XaSessionEnded {
+			connection: session.connection,
+			xid: session.xid,
+		})
 	}
 
 	/// Prepare an XA transaction for two-phase commit
 	///
-	/// This executes `XA PREPARE 'xid'` in MySQL.
-	/// Transitions the session state from Ended to Prepared.
+	/// Executes `XA PREPARE 'xid'` in MySQL.
+	/// Consumes `XaSessionEnded` and returns `XaSessionPrepared`.
 	///
-	/// # Errors
+	/// # Type Safety
 	///
-	/// Returns an error if:
-	/// - The XA transaction is not in IDLE state (must call `end()` first)
-	/// - The transaction ID does not exist
+	/// This method enforces at compile time that:
+	/// - The transaction is in Ended state (accepts only `XaSessionEnded`)
+	/// - Cannot be called before `end()` (compile error if you try)
+	/// - The session transitions to Prepared state (returns `XaSessionPrepared`)
 	///
 	/// # Examples
 	///
@@ -207,31 +276,37 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
+	/// let session = participant.begin("txn_001").await?;
 	/// // ... perform operations ...
-	/// participant.end(&mut session).await?;
-	/// participant.prepare(&mut session).await?;
+	/// let session = participant.end(session).await?;
+	/// let session = participant.prepare(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn prepare(&self, session: &mut XaSession) -> Result<()> {
+	pub async fn prepare(&self, mut session: XaSessionEnded) -> Result<XaSessionPrepared> {
 		let sql = format!("XA PREPARE '{}'", Self::escape_xid(&session.xid));
 		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
 			.await
 			.map_err(DatabaseError::from)?;
 
-		session.state = XaState::Prepared;
-		Ok(())
+		Ok(XaSessionPrepared {
+			connection: session.connection,
+			xid: session.xid,
+		})
 	}
 
 	/// Commit a prepared XA transaction
 	///
-	/// This executes `XA COMMIT 'xid'` in MySQL. Consumes the session.
+	/// Executes `XA COMMIT 'xid'` in MySQL. Consumes `XaSessionPrepared` to complete
+	/// the two-phase commit.
 	///
-	/// # Errors
+	/// # Type Safety
 	///
-	/// Returns an error if the prepared transaction does not exist.
+	/// This method enforces at compile time that:
+	/// - The transaction is in Prepared state (accepts only `XaSessionPrepared`)
+	/// - Cannot be called before `prepare()` (compile error if you try)
+	/// - The transaction is completed (session is consumed)
 	///
 	/// # Examples
 	///
@@ -241,14 +316,14 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
-	/// participant.end(&mut session).await?;
-	/// participant.prepare(&mut session).await?;
+	/// let session = participant.begin("txn_001").await?;
+	/// let session = participant.end(session).await?;
+	/// let session = participant.prepare(session).await?;
 	/// participant.commit(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn commit(&self, mut session: XaSession) -> Result<()> {
+	pub async fn commit(&self, mut session: XaSessionPrepared) -> Result<()> {
 		let sql = format!("XA COMMIT '{}'", Self::escape_xid(&session.xid));
 		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
@@ -289,9 +364,20 @@ impl MySqlTwoPhaseParticipant {
 
 	/// Commit an XA transaction with one-phase optimization
 	///
-	/// This executes `XA COMMIT 'xid' ONE PHASE` in MySQL. This is an optimization
-	/// for single-phase commit when the transaction is in IDLE state (after XA END).
-	/// Consumes the session.
+	/// Executes `XA COMMIT 'xid' ONE PHASE` in MySQL. This is an optimization
+	/// for single-phase commit that skips the PREPARE step. Consumes `XaSessionEnded`.
+	///
+	/// # Type Safety
+	///
+	/// This method enforces at compile time that:
+	/// - The transaction is in Ended state (accepts only `XaSessionEnded`)
+	/// - The PREPARE step is not required for one-phase commit
+	/// - The transaction is completed (session is consumed)
+	///
+	/// # When to Use
+	///
+	/// Use this method when you don't need the full two-phase commit protocol,
+	/// such as when there's only one participant in the distributed transaction.
 	///
 	/// # Examples
 	///
@@ -301,14 +387,14 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
+	/// let session = participant.begin("txn_001").await?;
 	/// // ... perform operations ...
-	/// participant.end(&mut session).await?;
+	/// let session = participant.end(session).await?;
 	/// participant.commit_one_phase(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn commit_one_phase(&self, mut session: XaSession) -> Result<()> {
+	pub async fn commit_one_phase(&self, mut session: XaSessionEnded) -> Result<()> {
 		let sql = format!("XA COMMIT '{}' ONE PHASE", Self::escape_xid(&session.xid));
 		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
@@ -319,9 +405,16 @@ impl MySqlTwoPhaseParticipant {
 		Ok(())
 	}
 
-	/// Rollback a prepared XA transaction
+	/// Rollback an XA transaction from Started state
 	///
-	/// This executes `XA ROLLBACK 'xid'` in MySQL. Consumes the session.
+	/// Executes `XA ROLLBACK 'xid'` in MySQL from the Started state.
+	/// Consumes `XaSessionStarted`.
+	///
+	/// # Type Safety
+	///
+	/// This method enforces at compile time that:
+	/// - The transaction is in Started state (accepts only `XaSessionStarted`)
+	/// - The transaction is aborted (session is consumed)
 	///
 	/// # Examples
 	///
@@ -331,14 +424,51 @@ impl MySqlTwoPhaseParticipant {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
 	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
-	/// let mut session = participant.begin("txn_001").await?;
-	/// participant.end(&mut session).await?;
-	/// participant.prepare(&mut session).await?;
-	/// participant.rollback(session).await?;
+	/// let session = participant.begin("txn_001").await?;
+	/// // Error occurred, rollback from Started state
+	/// participant.rollback_started(session).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn rollback(&self, mut session: XaSession) -> Result<()> {
+	pub async fn rollback_started(&self, mut session: XaSessionStarted) -> Result<()> {
+		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(&session.xid));
+		sqlx::raw_sql(&sql)
+			.execute(&mut *session.connection)
+			.await
+			.map_err(DatabaseError::from)?;
+
+		// Session is consumed and connection is dropped
+		Ok(())
+	}
+
+	/// Rollback an XA transaction from Prepared state
+	///
+	/// Executes `XA ROLLBACK 'xid'` in MySQL from the Prepared state.
+	/// Consumes `XaSessionPrepared`.
+	///
+	/// # Type Safety
+	///
+	/// This method enforces at compile time that:
+	/// - The transaction is in Prepared state (accepts only `XaSessionPrepared`)
+	/// - The transaction is aborted (session is consumed)
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # use reinhardt_db::backends::mysql::two_phase::MySqlTwoPhaseParticipant;
+	/// # use sqlx::MySqlPool;
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// # let pool = MySqlPool::connect("mysql://localhost/mydb").await?;
+	/// # let participant = MySqlTwoPhaseParticipant::new(pool);
+	/// let session = participant.begin("txn_001").await?;
+	/// let session = participant.end(session).await?;
+	/// let session = participant.prepare(session).await?;
+	/// // Decide to rollback instead of commit
+	/// participant.rollback_prepared(session).await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn rollback_prepared(&self, mut session: XaSessionPrepared) -> Result<()> {
 		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(&session.xid));
 		sqlx::raw_sql(&sql)
 			.execute(&mut *session.connection)
@@ -486,109 +616,6 @@ impl MySqlTwoPhaseParticipant {
 	/// This is a simple escaping mechanism that removes single quotes.
 	fn escape_xid(xid: &str) -> String {
 		xid.replace('\'', "''")
-	}
-
-	// XID-based wrapper methods for ORM layer compatibility
-	// These methods manage sessions internally using the sessions HashMap
-
-	/// Begin an XA transaction by XID (ORM layer wrapper)
-	///
-	/// Creates a session and stores it internally for later use.
-	pub async fn begin_by_xid(&self, xid: String) -> Result<()> {
-		let xid_copy = xid.clone();
-		let session = self.begin(xid).await?;
-		self.sessions.lock().unwrap().insert(xid_copy, session);
-		Ok(())
-	}
-
-	/// End an XA transaction by XID (ORM layer wrapper)
-	///
-	/// Executes XA END without exposing the session to the caller.
-	pub async fn end_by_xid(&self, xid: String) -> Result<()> {
-		// Extract the session temporarily to avoid holding the lock across await
-		let mut session = {
-			let mut sessions = self.sessions.lock().unwrap();
-			sessions.remove(&xid).ok_or_else(|| {
-				DatabaseError::QueryError(format!("No active session for XID: {}", xid))
-			})?
-		};
-
-		// Perform the end operation directly without calling self.end()
-		let sql = format!("XA END '{}'", Self::escape_xid(&xid));
-		sqlx::raw_sql(&sql)
-			.execute(&mut *session.connection)
-			.await
-			.map_err(DatabaseError::from)?;
-
-		// Update state and re-insert
-		session.state = XaState::Ended;
-		self.sessions.lock().unwrap().insert(xid, session);
-
-		Ok(())
-	}
-
-	/// Prepare an XA transaction by XID (ORM layer wrapper)
-	///
-	/// Executes XA PREPARE without exposing the session to the caller.
-	pub async fn prepare_by_xid(&self, xid: String) -> Result<()> {
-		// Extract the session temporarily to avoid holding the lock across await
-		let mut session = {
-			let mut sessions = self.sessions.lock().unwrap();
-			sessions.remove(&xid).ok_or_else(|| {
-				DatabaseError::QueryError(format!("No active session for XID: {}", xid))
-			})?
-		};
-
-		// Perform the prepare operation directly without calling self.prepare()
-		let sql = format!("XA PREPARE '{}'", Self::escape_xid(&xid));
-		sqlx::raw_sql(&sql)
-			.execute(&mut *session.connection)
-			.await
-			.map_err(DatabaseError::from)?;
-
-		// Update state and re-insert
-		session.state = XaState::Prepared;
-		self.sessions.lock().unwrap().insert(xid, session);
-
-		Ok(())
-	}
-
-	/// Commit an XA transaction by XID (ORM layer wrapper)
-	///
-	/// Removes the session from internal storage, executes XA COMMIT, and consumes the session.
-	pub async fn commit_managed(&self, xid: String) -> Result<()> {
-		let mut session = self.sessions.lock().unwrap().remove(&xid).ok_or_else(|| {
-			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
-		})?;
-
-		// Execute commit directly without calling self.commit()
-		let sql = format!("XA COMMIT '{}'", Self::escape_xid(&xid));
-		sqlx::raw_sql(&sql)
-			.execute(&mut *session.connection)
-			.await
-			.map_err(DatabaseError::from)?;
-
-		// Session is consumed and connection is dropped
-		Ok(())
-	}
-
-	/// Rollback an XA transaction by XID (ORM layer wrapper)
-	///
-	/// Removes the session from internal storage, executes XA ROLLBACK, and consumes the session.
-	pub async fn rollback_managed(&self, xid: String) -> Result<()> {
-		let mut session = self.sessions.lock().unwrap().remove(&xid).ok_or_else(|| {
-			DatabaseError::QueryError(format!("No active session for XID: {}", xid))
-		})?;
-
-		// Execute rollback directly without calling self.rollback()
-		let sql = format!("XA ROLLBACK '{}'", Self::escape_xid(&xid));
-		sqlx::raw_sql(&sql)
-			.execute(&mut *session.connection)
-			.await
-			.map_err(DatabaseError::from)?;
-
-		// Session is consumed and connection is dropped
-		Ok(())
 	}
 }
 

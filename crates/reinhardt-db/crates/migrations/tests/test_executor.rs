@@ -234,8 +234,6 @@ async fn test_executor_empty_plan() {
 	let mut executor = MigrationExecutor::new(pool);
 
 	let result = executor.apply_migrations(&vec![]).await;
-	assert!(result.is_ok());
-
 	let execution_result = result.unwrap();
 	assert_eq!(execution_result.applied.len(), 0);
 	assert!(execution_result.failed.is_none());
@@ -298,8 +296,6 @@ async fn test_executor_with_dependencies() {
 	let result = executor
 		.apply_migrations(&vec![migration1, migration2])
 		.await;
-	assert!(result.is_ok());
-
 	let execution_result = result.unwrap();
 	assert_eq!(execution_result.applied.len(), 2);
 }

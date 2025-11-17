@@ -1222,7 +1222,6 @@ mod tests {
 	#[test]
 	fn test_regex_validator_try_new_valid() {
 		let result = RegexValidator::try_new(r"^\d+$");
-		assert!(result.is_ok());
 		let validator = result.unwrap();
 		assert!(validator.validate("123").is_ok());
 		assert!(validator.validate("abc").is_err());

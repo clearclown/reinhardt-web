@@ -501,7 +501,6 @@ mod database_tests {
 			.await
 			.expect("Failed to get validated content type");
 
-		assert!(validated_ct.is_some());
 		let validated_ct = validated_ct.unwrap();
 		assert_eq!(validated_ct.app_label, "auth");
 		assert_eq!(validated_ct.model, "User");

@@ -120,15 +120,12 @@ async fn test_basic_xa_transaction_flow(#[future] mysql_pool: (MysqlContainer, A
 		.await
 		.expect("Failed to insert");
 
-	// End XA transaction
-	participant
-		.end(&mut session)
-		.await
-		.expect("Failed to end XA");
+	// End XA transaction (consumes XaSessionStarted, returns XaSessionEnded)
+	let mut ended_session = participant.end(session).await.expect("Failed to end XA");
 
-	// Prepare XA transaction
-	participant
-		.prepare(&mut session)
+	// Prepare XA transaction (consumes XaSessionEnded, returns XaSessionPrepared)
+	let prepared_session = participant
+		.prepare(ended_session)
 		.await
 		.expect("Failed to prepare XA");
 
@@ -139,9 +136,9 @@ async fn test_basic_xa_transaction_flow(#[future] mysql_pool: (MysqlContainer, A
 		.expect("Failed to query XA transactions");
 	assert!(prepared.is_some());
 
-	// Commit prepared XA transaction
+	// Commit prepared XA transaction (consumes XaSessionPrepared)
 	participant
-		.commit(session)
+		.commit(prepared_session)
 		.await
 		.expect("Failed to commit XA");
 
@@ -179,9 +176,9 @@ async fn test_xa_prepare_and_rollback(#[future] mysql_pool: (MysqlContainer, Arc
 		.await
 		.expect("Failed to insert");
 
-	participant.end(&mut session).await.expect("Failed to end");
-	participant
-		.prepare(&mut session)
+	let ended_session = participant.end(session).await.expect("Failed to end");
+	let prepared_session = participant
+		.prepare(ended_session)
 		.await
 		.expect("Failed to prepare");
 
@@ -191,7 +188,7 @@ async fn test_xa_prepare_and_rollback(#[future] mysql_pool: (MysqlContainer, Arc
 
 	// Rollback prepared transaction
 	participant
-		.rollback(session)
+		.rollback_prepared(prepared_session)
 		.await
 		.expect("Failed to rollback");
 
@@ -230,11 +227,11 @@ async fn test_xa_one_phase_commit(#[future] mysql_pool: (MysqlContainer, Arc<MyS
 		.expect("Failed to insert");
 
 	// End XA transaction
-	participant.end(&mut session).await.expect("Failed to end");
+	let ended_session = participant.end(session).await.expect("Failed to end");
 
 	// Commit with one-phase optimization (skip prepare)
 	participant
-		.commit_one_phase(session)
+		.commit_one_phase(ended_session)
 		.await
 		.expect("Failed to commit one phase");
 
@@ -271,12 +268,9 @@ async fn test_list_xa_transactions(#[future] mysql_pool: (MysqlContainer, Arc<My
 		.execute(&mut *session1.connection)
 		.await
 		.expect("Failed to insert 1");
+	let ended1 = participant1.end(session1).await.expect("Failed to end 1");
 	participant1
-		.end(&mut session1)
-		.await
-		.expect("Failed to end 1");
-	participant1
-		.prepare(&mut session1)
+		.prepare(ended1)
 		.await
 		.expect("Failed to prepare 1");
 
@@ -289,12 +283,9 @@ async fn test_list_xa_transactions(#[future] mysql_pool: (MysqlContainer, Arc<My
 		.execute(&mut *session2.connection)
 		.await
 		.expect("Failed to insert 2");
+	let ended2 = participant2.end(session2).await.expect("Failed to end 2");
 	participant2
-		.end(&mut session2)
-		.await
-		.expect("Failed to end 2");
-	participant2
-		.prepare(&mut session2)
+		.prepare(ended2)
 		.await
 		.expect("Failed to prepare 2");
 
@@ -349,11 +340,8 @@ async fn test_recovery_from_xa_prepared_state(
 			.await
 			.expect("Failed to insert");
 
-		participant.end(&mut session).await.expect("Failed to end");
-		participant
-			.prepare(&mut session)
-			.await
-			.expect("Failed to prepare");
+		let ended = participant.end(session).await.expect("Failed to end");
+		participant.prepare(ended).await.expect("Failed to prepare");
 		// Session and participant go out of scope (simulating crash)
 	}
 
@@ -410,11 +398,8 @@ async fn test_cleanup_stale_xa_transactions(
 		.await
 		.expect("Failed to insert");
 
-	participant.end(&mut session).await.expect("Failed to end");
-	participant
-		.prepare(&mut session)
-		.await
-		.expect("Failed to prepare");
+	let ended = participant.end(session).await.expect("Failed to end");
+	participant.prepare(ended).await.expect("Failed to prepare");
 
 	// Cleanup transactions with "stale_" prefix
 	let cleaned = participant
@@ -462,14 +447,14 @@ async fn test_concurrent_xa_transactions(#[future] mysql_pool: (MysqlContainer, 
 		.unwrap();
 
 	// End and prepare both
-	participant1.end(&mut session1).await.unwrap();
-	participant2.end(&mut session2).await.unwrap();
-	participant1.prepare(&mut session1).await.unwrap();
-	participant2.prepare(&mut session2).await.unwrap();
+	let ended1 = participant1.end(session1).await.unwrap();
+	let ended2 = participant2.end(session2).await.unwrap();
+	let prepared1 = participant1.prepare(ended1).await.unwrap();
+	let prepared2 = participant2.prepare(ended2).await.unwrap();
 
 	// Commit both
-	participant1.commit(session1).await.unwrap();
-	participant2.commit(session2).await.unwrap();
+	participant1.commit(prepared1).await.unwrap();
+	participant2.commit(prepared2).await.unwrap();
 
 	// Verify both transactions committed
 	let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_2pc")
@@ -496,27 +481,21 @@ async fn test_participant_clone(#[future] mysql_pool: (MysqlContainer, Arc<MySql
 	// (each creates its own session with independent connections)
 	let xid1 = "test_xa_clone_008_a";
 
-	let mut session1 = participant1
+	let session1 = participant1
 		.begin(xid1.to_string())
 		.await
 		.expect("Failed to begin 1");
-	participant1
-		.end(&mut session1)
-		.await
-		.expect("Failed to end 1");
-	let _ = participant1.rollback(session1).await;
+	// Rollback without ending (valid XA operation)
+	let _ = participant1.rollback_started(session1).await;
 
 	// participant2 can start its own XA transaction
 	let xid2 = "test_xa_clone_008_b";
-	let mut session2 = participant2
+	let session2 = participant2
 		.begin(xid2.to_string())
 		.await
 		.expect("Failed to begin 2");
-	participant2
-		.end(&mut session2)
-		.await
-		.expect("Failed to end 2");
-	let _ = participant2.rollback(session2).await;
+	// Rollback without ending (valid XA operation)
+	let _ = participant2.rollback_started(session2).await;
 }
 
 #[rstest]
@@ -545,11 +524,8 @@ async fn test_xa_transaction_info_structure(
 		.await
 		.expect("Failed to insert");
 
-	participant.end(&mut session).await.expect("Failed to end");
-	participant
-		.prepare(&mut session)
-		.await
-		.expect("Failed to prepare");
+	let ended = participant.end(session).await.expect("Failed to end");
+	participant.prepare(ended).await.expect("Failed to prepare");
 
 	// Get transaction info
 	let info = participant
@@ -572,37 +548,30 @@ async fn test_xa_transaction_info_structure(
 	drop_test_table(pool).await;
 }
 
-#[rstest]
-#[tokio::test]
-#[serial(mysql_2pc)]
-async fn test_error_handling_missing_end(#[future] mysql_pool: (MysqlContainer, Arc<MySqlPool>)) {
-	let (_container, pool) = mysql_pool.await;
-	let pool = pool.as_ref();
-	cleanup_xa_transactions(pool).await;
-	create_test_table(pool).await;
-
-	let participant = MySqlTwoPhaseParticipant::new(pool.clone());
-	let xid = "test_xa_error_010";
-
-	// Start XA transaction but don't end it before prepare
-	let mut session = participant
-		.begin(xid.to_string())
-		.await
-		.expect("Failed to begin");
-
-	// Insert data using session connection (not pool)
-	sqlx::query("INSERT INTO test_2pc (value) VALUES ('error_test')")
-		.execute(&mut *session.connection)
-		.await
-		.expect("Failed to insert");
-
-	// Try to prepare without ending (should fail)
-	let result = participant.prepare(&mut session).await;
-	assert!(result.is_err());
-
-	// Cleanup - end and rollback
-	let _ = participant.end(&mut session).await;
-	let _ = participant.rollback(session).await;
-
-	drop_test_table(pool).await;
-}
+// Note: This test is no longer relevant with the type-safe API.
+// The new API enforces correct state transitions at compile time:
+// - prepare() requires XaSessionEnded (from end())
+// - Attempting to call prepare() without end() results in a compile error
+//
+// The type system now prevents this error case, which is a significant improvement
+// over runtime validation. This test has been removed because the error condition
+// it tested for is now impossible to express in code.
+//
+// #[rstest]
+// #[tokio::test]
+// #[serial(mysql_2pc)]
+// async fn test_error_handling_missing_end(#[future] mysql_pool: (MysqlContainer, Arc<MySqlPool>)) {
+// 	let (_container, pool) = mysql_pool.await;
+// 	let pool = pool.as_ref();
+// 	cleanup_xa_transactions(pool).await;
+// 	create_test_table(pool).await;
+//
+// 	let participant = MySqlTwoPhaseParticipant::new(pool.clone());
+// 	let xid = "test_xa_error_010";
+//
+// 	// With the new API, the following code would not compile:
+// 	// let mut session = participant.begin(xid.to_string()).await.expect("Failed to begin");
+// 	// participant.prepare(session).await; // Compile error: prepare() requires XaSessionEnded
+//
+// 	drop_test_table(pool).await;
+// }

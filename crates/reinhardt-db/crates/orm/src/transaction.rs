@@ -1155,8 +1155,6 @@ mod tests {
 		let conn = mock_connection;
 
 		let tx = TransactionScope::begin(&conn).await;
-		assert!(tx.is_ok());
-
 		let tx = tx.unwrap();
 		assert_eq!(tx.depth, 1);
 		assert!(tx.savepoint_name.is_none());
@@ -1186,8 +1184,6 @@ mod tests {
 		let conn = mock_connection;
 
 		let tx = TransactionScope::begin_with_isolation(&conn, IsolationLevel::Serializable).await;
-		assert!(tx.is_ok());
-
 		let tx = tx.unwrap();
 		let result = tx.commit().await;
 		assert!(result.is_ok());

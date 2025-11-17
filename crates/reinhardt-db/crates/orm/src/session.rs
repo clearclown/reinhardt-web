@@ -1031,7 +1031,6 @@ mod tests {
 		let pool = create_test_pool().await;
 		let session = Session::new(pool, DbBackend::Sqlite).await;
 
-		assert!(session.is_ok());
 		let session = session.unwrap();
 		assert!(!session.is_closed());
 		assert_eq!(session.identity_count(), 0);

@@ -364,7 +364,6 @@ mod tests {
 	#[test]
 	fn test_composite_pk_new_valid() {
 		let pk = CompositePrimaryKey::new(vec!["user_id".to_string(), "role_id".to_string()]);
-		assert!(pk.is_ok());
 		let pk = pk.unwrap();
 		assert_eq!(pk.fields().len(), 2);
 		assert_eq!(pk.fields()[0], "user_id");
@@ -393,7 +392,6 @@ mod tests {
 	fn test_composite_pk_with_name() {
 		let pk =
 			CompositePrimaryKey::with_name(vec!["a".to_string(), "b".to_string()], "custom_pk");
-		assert!(pk.is_ok());
 		let pk = pk.unwrap();
 		assert_eq!(pk.name(), Some("custom_pk"));
 	}
@@ -471,7 +469,6 @@ mod tests {
 		values.insert("role_id".to_string(), PkValue::Int(5));
 
 		let where_clause = pk.to_where_clause(&values);
-		assert!(where_clause.is_ok());
 		let clause = where_clause.unwrap();
 		assert!(clause.contains("user_id = 100"));
 		assert!(clause.contains("role_id = 5"));

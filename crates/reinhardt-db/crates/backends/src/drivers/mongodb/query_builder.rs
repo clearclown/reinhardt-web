@@ -309,7 +309,6 @@ mod tests {
 	fn test_sort() {
 		let builder = MongoDBQueryBuilder::new("users").sort(doc! { "name": 1 });
 		let sort = builder.build_sort();
-		assert!(sort.is_some());
 		let sort = sort.unwrap();
 		assert!(sort.contains_key("name"));
 	}
@@ -325,7 +324,6 @@ mod tests {
 	fn test_projection() {
 		let builder = MongoDBQueryBuilder::new("users").projection(doc! { "name": 1, "email": 1 });
 		let projection = builder.build_projection();
-		assert!(projection.is_some());
 		let projection = projection.unwrap();
 		assert!(projection.contains_key("name"));
 		assert!(projection.contains_key("email"));

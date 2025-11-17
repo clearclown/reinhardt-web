@@ -44,8 +44,6 @@ fn test_project_state_get_model() {
 	state.add_model(model);
 
 	let retrieved = state.get_model("myapp", "User");
-	assert!(retrieved.is_some());
-
 	let retrieved_model = retrieved.unwrap();
 	assert_eq!(retrieved_model.name, "User");
 }
@@ -98,8 +96,6 @@ fn test_model_state_get_field() {
 	model.add_field(create_field("email", "TEXT", false));
 
 	let field = model.get_field("email");
-	assert!(field.is_some());
-
 	let field_state = field.unwrap();
 	assert_eq!(field_state.field_type, "TEXT");
 }

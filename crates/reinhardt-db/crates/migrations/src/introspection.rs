@@ -897,7 +897,6 @@ mod tests {
 			.await
 			.expect("Failed to read table");
 
-		assert!(table.is_some());
 		let posts_table = table.unwrap();
 		assert_eq!(posts_table.name, "posts");
 		assert_eq!(posts_table.columns.len(), 3);

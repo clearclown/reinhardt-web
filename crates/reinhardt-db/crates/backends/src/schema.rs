@@ -404,7 +404,6 @@ mod tests {
 
 		// Simple index
 		let stmt = editor.create_index_statement("idx_email", "users", &["email"], false, None);
-		assert!(stmt.is_ok());
 		let sql = stmt.unwrap().to_string(PostgresQueryBuilder);
 		assert!(sql.contains("CREATE INDEX"));
 		assert!(sql.contains("idx_email"));
@@ -413,7 +412,6 @@ mod tests {
 		// Unique index
 		let unique_stmt =
 			editor.create_index_statement("idx_email_uniq", "users", &["email"], true, None);
-		assert!(unique_stmt.is_ok());
 		let unique_sql = unique_stmt.unwrap().to_string(PostgresQueryBuilder);
 		assert!(unique_sql.contains("CREATE UNIQUE INDEX"));
 

@@ -50,7 +50,7 @@ use tokio::sync::Mutex as TokioMutex;
 use reinhardt_backends::PostgresTwoPhaseParticipant;
 
 #[cfg(feature = "mysql")]
-use reinhardt_backends::MySqlTwoPhaseParticipant;
+use reinhardt_backends::{MySqlTwoPhaseParticipant, XaSessionPrepared, XaSessionStarted};
 
 /// Errors that can occur during two-phase commit operations
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1002,19 +1002,40 @@ impl TwoPhaseParticipant for PostgresParticipantAdapter {
 	}
 }
 
+/// XA session state for MySQL participant adapter
+///
+/// Represents the possible states of an XA transaction session:
+/// - `Started`: Transaction has been started with XA START
+/// - `Prepared`: Transaction has been prepared with XA END + XA PREPARE
+///
+/// Note: The `Ended` state is transient and not stored, as it immediately
+/// transitions to `Prepared` within the `prepare()` method.
+#[cfg(feature = "mysql")]
+enum XaSessionState {
+	/// Session in Started state (after XA START)
+	Started(XaSessionStarted),
+	/// Session in Prepared state (after XA END + XA PREPARE)
+	Prepared(XaSessionPrepared),
+}
+
 /// MySQL participant adapter
 ///
 /// Adapts backend's `MySqlTwoPhaseParticipant` to ORM layer's `TwoPhaseParticipant` trait.
-/// Session management is delegated to the backend layer via XID-based wrapper methods.
+/// Session management uses type-safe state transitions via XaSession types.
+///
+/// # Type-Safe Session Management
+///
+/// The adapter maintains an XA session with compile-time enforced state transitions:
+/// - `XaSessionStarted` → `XaSessionEnded` → `XaSessionPrepared` → Committed/Rolled back
 ///
 /// # XA Transaction Flow
 ///
 /// MySQL XA transactions require a specific sequence:
-/// 1. XA START - Begin transaction
+/// 1. XA START - Begin transaction (returns XaSessionStarted)
 /// 2. ... perform operations ...
-/// 3. XA END - End transaction (required before prepare)
-/// 4. XA PREPARE - Prepare for commit
-/// 5. XA COMMIT or XA ROLLBACK - Finalize
+/// 3. XA END - End transaction (consumes XaSessionStarted, returns XaSessionEnded)
+/// 4. XA PREPARE - Prepare for commit (consumes XaSessionEnded, returns XaSessionPrepared)
+/// 5. XA COMMIT or XA ROLLBACK - Finalize (consumes XaSessionPrepared)
 ///
 /// # Examples
 ///
@@ -1033,6 +1054,7 @@ pub struct MySqlParticipantAdapter {
 	id: String,
 	backend: MySqlTwoPhaseParticipant,
 	status: ParticipantStatus,
+	session: Arc<StdMutex<Option<XaSessionState>>>,
 }
 
 #[cfg(feature = "mysql")]
@@ -1056,6 +1078,7 @@ impl MySqlParticipantAdapter {
 			id: id.into(),
 			backend: MySqlTwoPhaseParticipant::new(pool),
 			status: ParticipantStatus::Active,
+			session: Arc::new(StdMutex::new(None)),
 		}
 	}
 
@@ -1065,6 +1088,7 @@ impl MySqlParticipantAdapter {
 			id: id.into(),
 			backend: MySqlTwoPhaseParticipant::from_pool_arc(pool),
 			status: ParticipantStatus::Active,
+			session: Arc::new(StdMutex::new(None)),
 		}
 	}
 }
@@ -1077,38 +1101,137 @@ impl TwoPhaseParticipant for MySqlParticipantAdapter {
 	}
 
 	async fn begin(&self) -> Result<(), TwoPhaseError> {
-		let id = self.id.clone(); // Clone to avoid lifetime issues with async_trait
-		self.backend
-			.begin_by_xid(id)
+		// Create new XA session with participant's ID as XID
+		let session = self
+			.backend
+			.begin(self.id.clone())
 			.await
-			.map_err(|e| TwoPhaseError::DatabaseError(e.to_string()))
+			.map_err(|e| TwoPhaseError::DatabaseError(e.to_string()))?;
+
+		// Store session in Started state
+		let mut session_guard = self.session.lock().map_err(|e| {
+			TwoPhaseError::DatabaseError(format!("Failed to acquire session lock: {}", e))
+		})?;
+		*session_guard = Some(XaSessionState::Started(session));
+		Ok(())
 	}
 
 	async fn prepare(&self, xid: String) -> Result<(), TwoPhaseError> {
+		// Take session from Started state
+		let session = {
+			let mut session_guard = self.session.lock().map_err(|e| {
+				TwoPhaseError::PrepareFailed(
+					self.id.clone(),
+					format!("Failed to acquire session lock: {}", e),
+				)
+			})?;
+
+			match session_guard.take() {
+				Some(XaSessionState::Started(s)) => s,
+				Some(XaSessionState::Prepared(_)) => {
+					return Err(TwoPhaseError::InvalidState(format!(
+						"Session already prepared for participant '{}'",
+						self.id
+					)));
+				}
+				None => {
+					return Err(TwoPhaseError::InvalidState(format!(
+						"No active session for participant '{}'",
+						self.id
+					)));
+				}
+			}
+		};
+
 		// MySQL requires XA END before XA PREPARE
-		self.backend
-			.end_by_xid(xid.clone())
+		let ended_session = self
+			.backend
+			.end(session)
 			.await
 			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))?;
 
-		self.backend
-			.prepare_by_xid(xid)
+		let prepared_session = self
+			.backend
+			.prepare(ended_session)
 			.await
-			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))
+			.map_err(|e| TwoPhaseError::PrepareFailed(self.id.clone(), e.to_string()))?;
+
+		// Store session in Prepared state
+		let mut session_guard = self.session.lock().map_err(|e| {
+			TwoPhaseError::PrepareFailed(
+				self.id.clone(),
+				format!("Failed to acquire session lock: {}", e),
+			)
+		})?;
+		*session_guard = Some(XaSessionState::Prepared(prepared_session));
+		Ok(())
 	}
 
 	async fn commit(&self, xid: String) -> Result<(), TwoPhaseError> {
+		// Take session from Prepared state
+		let session = {
+			let mut session_guard = self.session.lock().map_err(|e| {
+				TwoPhaseError::CommitFailed(
+					self.id.clone(),
+					format!("Failed to acquire session lock: {}", e),
+				)
+			})?;
+
+			match session_guard.take() {
+				Some(XaSessionState::Prepared(s)) => s,
+				Some(XaSessionState::Started(_)) => {
+					return Err(TwoPhaseError::InvalidState(format!(
+						"Session not prepared for participant '{}'",
+						self.id
+					)));
+				}
+				None => {
+					return Err(TwoPhaseError::InvalidState(format!(
+						"No active session for participant '{}'",
+						self.id
+					)));
+				}
+			}
+		};
+
+		// Commit the prepared transaction
 		self.backend
-			.commit_managed(xid)
+			.commit(session)
 			.await
 			.map_err(|e| TwoPhaseError::CommitFailed(self.id.clone(), e.to_string()))
 	}
 
 	async fn rollback(&self, xid: String) -> Result<(), TwoPhaseError> {
-		self.backend
-			.rollback_managed(xid)
-			.await
-			.map_err(|e| TwoPhaseError::RollbackFailed(self.id.clone(), e.to_string()))
+		// Take session from either Started or Prepared state
+		let session_state = {
+			let mut session_guard = self.session.lock().map_err(|e| {
+				TwoPhaseError::RollbackFailed(
+					self.id.clone(),
+					format!("Failed to acquire session lock: {}", e),
+				)
+			})?;
+
+			session_guard.take().ok_or_else(|| {
+				TwoPhaseError::InvalidState(format!(
+					"No active session for participant '{}'",
+					self.id
+				))
+			})?
+		};
+
+		// Rollback based on current state
+		match session_state {
+			XaSessionState::Started(s) => self
+				.backend
+				.rollback_started(s)
+				.await
+				.map_err(|e| TwoPhaseError::RollbackFailed(self.id.clone(), e.to_string())),
+			XaSessionState::Prepared(s) => self
+				.backend
+				.rollback_prepared(s)
+				.await
+				.map_err(|e| TwoPhaseError::RollbackFailed(self.id.clone(), e.to_string())),
+		}
 	}
 
 	async fn recover(&self) -> Result<Vec<String>, TwoPhaseError> {

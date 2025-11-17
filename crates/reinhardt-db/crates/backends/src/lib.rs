@@ -49,7 +49,8 @@ pub use drivers::postgresql::two_phase::{PostgresTwoPhaseParticipant, PreparedTr
 
 #[cfg(feature = "mysql")]
 pub use drivers::mysql::two_phase::{
-	MySqlTwoPhaseParticipant, XaSession, XaState, XaTransactionInfo,
+	MySqlTwoPhaseParticipant, XaSessionEnded, XaSessionPrepared, XaSessionStarted,
+	XaTransactionInfo,
 };
 
 // Re-export dialect backends

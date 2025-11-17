@@ -622,7 +622,6 @@ mod tests {
 		rel.register_type(PolymorphicIdentity::new("post", "posts", "id"));
 
 		let sql = rel.build_query("post", "123");
-		assert!(sql.is_some());
 		let sql = sql.unwrap();
 		assert!(sql.contains("SELECT * FROM posts"));
 		assert!(sql.contains("WHERE id = 123"));
@@ -654,7 +653,6 @@ mod tests {
 		rel.register_type(PolymorphicIdentity::new("post", "posts", "id"));
 
 		let join = rel.join_clause("post", "comments");
-		assert!(join.is_some());
 		let join = join.unwrap();
 		assert!(join.contains("LEFT JOIN posts"));
 		assert!(join.contains("comments.object_id = posts.id"));
