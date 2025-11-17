@@ -199,17 +199,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_allow_any() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = AllowAny;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -225,17 +224,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_authenticated_with_auth() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsAuthenticated;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -251,17 +249,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_authenticated_without_auth() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsAuthenticated;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -277,17 +274,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_admin_user() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsAdminUser;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Admin user
 		let context = PermissionContext {
@@ -313,17 +309,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_active_user() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsActiveUser;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Active user
 		let context = PermissionContext {
@@ -349,17 +344,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_authenticated_or_read_only_get() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Unauthenticated GET should be allowed
 		let context = PermissionContext {
@@ -375,17 +369,16 @@ mod tests {
 	#[tokio::test]
 	async fn test_permission_is_authenticated_or_read_only_post() {
 		use bytes::Bytes;
-		use hyper::{HeaderMap, Method, Uri, Version};
+		use hyper::Method;
 		use reinhardt_core::types::Request;
 
 		let permission = IsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Unauthenticated POST should be denied
 		let context = PermissionContext {

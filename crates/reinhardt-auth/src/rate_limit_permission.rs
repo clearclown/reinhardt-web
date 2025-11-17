@@ -383,18 +383,18 @@ impl<B: ThrottleBackend> Permission for RateLimitPermission<B> {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 	use reinhardt_core::types::Request;
 	use reinhardt_throttling::MemoryBackend;
 
 	fn create_test_request(headers: HeaderMap) -> Request {
-		Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]

@@ -81,12 +81,11 @@ impl Default for TokenAuthConfig {
 /// ```
 /// use reinhardt_auth::{CompositeAuthentication, SessionAuthentication, TokenAuthentication};
 /// use reinhardt_sessions::backends::InMemorySessionBackend;
-/// use std::sync::Arc;
 ///
 /// let session_backend = InMemorySessionBackend::new();
-/// let mut auth = CompositeAuthentication::new();
-/// auth.add_backend(Arc::new(SessionAuthentication::new(session_backend)));
-/// auth.add_backend(Arc::new(TokenAuthentication::new()));
+/// let auth = CompositeAuthentication::new()
+///     .with_backend(SessionAuthentication::new(session_backend))
+///     .with_backend(TokenAuthentication::new());
 /// ```
 pub struct CompositeAuthentication {
 	backends: Vec<Arc<dyn AuthenticationBackend>>,
@@ -108,26 +107,28 @@ impl CompositeAuthentication {
 		}
 	}
 
-	/// Add an authentication backend
+	/// Add an authentication backend (chainable)
 	///
 	/// Backends are tried in the order they are added.
+	/// The backend will be wrapped in an Arc internally.
 	///
 	/// # Examples
 	///
 	/// ```
 	/// use reinhardt_auth::{CompositeAuthentication, TokenAuthentication};
-	/// use std::sync::Arc;
 	///
-	/// let mut auth = CompositeAuthentication::new();
-	/// auth.add_backend(Arc::new(TokenAuthentication::new()));
+	/// let auth = CompositeAuthentication::new()
+	///     .with_backend(TokenAuthentication::new());
 	/// ```
-	pub fn add_backend(&mut self, backend: Arc<dyn AuthenticationBackend>) {
-		self.backends.push(backend);
+	pub fn with_backend<B: AuthenticationBackend + 'static>(mut self, backend: B) -> Self {
+		self.backends.push(Arc::new(backend));
+		self
 	}
 
-	/// Add multiple backends at once
-	pub fn add_backends(&mut self, backends: Vec<Arc<dyn AuthenticationBackend>>) {
+	/// Add multiple backends at once (chainable)
+	pub fn with_backends(mut self, backends: Vec<Arc<dyn AuthenticationBackend>>) -> Self {
 		self.backends.extend(backends);
+		self
 	}
 }
 
@@ -531,19 +532,18 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	#[cfg(feature = "jwt")]
 	use crate::basic::BasicAuthentication;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 
 	#[tokio::test]
 	#[cfg(feature = "jwt")]
 	async fn test_composite_authentication() {
-		let mut composite = CompositeAuthentication::new();
-
 		let mut basic = BasicAuthentication::new();
 		basic.add_user("user1", "pass1");
 
-		composite.add_backend(Arc::new(basic));
+		let composite = CompositeAuthentication::new().with_backend(basic);
 
 		// Test with basic auth
 		let mut headers = HeaderMap::new();
@@ -552,13 +552,13 @@ mod tests {
 			"Basic dXNlcjE6cGFzczE=".parse().unwrap(), // user1:pass1
 		);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = Authentication::authenticate(&composite, &request)
 			.await
@@ -575,13 +575,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Authorization", "Token secret_token".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = Authentication::authenticate(&auth, &request).await.unwrap();
 		assert!(result.is_some());
@@ -595,13 +595,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("REMOTE_USER", "bob".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = Authentication::authenticate(&auth, &request).await.unwrap();
 		assert!(result.is_some());
@@ -634,13 +634,13 @@ mod tests {
 		let cookie_value = format!("sessionid={}", session_key);
 		headers.insert("Cookie", cookie_value.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = Authentication::authenticate(&auth, &request).await.unwrap();
 		assert!(result.is_some());
@@ -663,13 +663,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-API-Key", "Bearer my_token".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = Authentication::authenticate(&auth, &request).await.unwrap();
 		assert!(result.is_some());

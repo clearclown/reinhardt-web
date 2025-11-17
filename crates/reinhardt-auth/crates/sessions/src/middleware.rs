@@ -331,26 +331,25 @@ mod tests {
 	}
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	fn create_test_request_with_cookie(cookie_value: &str) -> Request {
 		let mut headers = HeaderMap::new();
 		headers.insert("cookie", cookie_value.parse().unwrap());
 
-		Request::new(
-			Method::GET,
-			"/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]
@@ -449,8 +448,6 @@ mod tests {
 
 		// Session was modified, should have Set-Cookie header
 		let set_cookie = response.headers.get("set-cookie");
-		assert!(set_cookie.is_some());
-
 		let cookie_value = set_cookie.unwrap().to_str().unwrap();
 		assert!(cookie_value.starts_with("sessionid="));
 		assert!(cookie_value.contains("Path=/"));

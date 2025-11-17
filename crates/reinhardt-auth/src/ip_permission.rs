@@ -419,7 +419,7 @@ impl FromStr for CidrRange {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 	use reinhardt_core::types::Request;
 
 	#[test]
@@ -512,13 +512,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("x-forwarded-for", "192.168.1.1".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -570,13 +570,13 @@ mod tests {
 		let mut headers1 = HeaderMap::new();
 		headers1.insert("x-forwarded-for", "192.168.1.100".parse().unwrap());
 
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers1,
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.headers(headers1)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context1 = PermissionContext {
 			request: &request1,
@@ -591,13 +591,13 @@ mod tests {
 		let mut headers2 = HeaderMap::new();
 		headers2.insert("x-forwarded-for", "192.168.1.1".parse().unwrap());
 
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers2,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.headers(headers2)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context2 = PermissionContext {
 			request: &request2,

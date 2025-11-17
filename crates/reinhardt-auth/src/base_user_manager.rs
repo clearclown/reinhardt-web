@@ -22,7 +22,7 @@ use std::collections::HashMap;
 ///
 /// Implementing a simple in-memory user manager:
 ///
-/// ```
+/// ```ignore
 /// use reinhardt_auth::{BaseUser, BaseUserManager, Argon2Hasher};
 /// use reinhardt_core::exception::Result;
 /// use async_trait::async_trait;

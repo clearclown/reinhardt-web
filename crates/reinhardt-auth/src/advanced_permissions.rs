@@ -178,7 +178,7 @@ impl Permission for RoleBasedPermission {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::Method;
 	use reinhardt_core::types::Request;
 
 	#[test]
@@ -198,13 +198,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_object_permission_authenticated() {
 		let perm = ObjectPermission::new("view", None::<String>);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -220,13 +219,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_object_permission_unauthenticated() {
 		let perm = ObjectPermission::new("edit", Some("post:42"));
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -282,13 +280,12 @@ mod tests {
 		perm.add_role("user", vec!["read"]);
 		perm.assign_user_role("alice", "user");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -304,13 +301,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_role_permission_trait_unauthenticated() {
 		let perm = RoleBasedPermission::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,

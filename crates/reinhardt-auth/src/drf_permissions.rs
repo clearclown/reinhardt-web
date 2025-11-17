@@ -15,19 +15,18 @@ use async_trait::async_trait;
 /// use reinhardt_auth::drf_permissions::DrfAllowAny;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::Method;
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = DrfAllowAny;
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///
 ///     let context = PermissionContext {
 ///         request: &request,
@@ -59,19 +58,18 @@ impl Permission for DrfAllowAny {
 /// use reinhardt_auth::drf_permissions::DrfIsAuthenticated;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::Method;
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = DrfIsAuthenticated;
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///
 ///     // Authenticated user
 ///     let context = PermissionContext {
@@ -113,19 +111,18 @@ impl Permission for DrfIsAuthenticated {
 /// use reinhardt_auth::drf_permissions::DrfIsAdminUser;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::Method;
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     let permission = DrfIsAdminUser;
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///
 ///     // Admin user
 ///     let context = PermissionContext {
@@ -168,7 +165,7 @@ impl Permission for DrfIsAdminUser {
 /// use reinhardt_auth::drf_permissions::DrfIsAuthenticatedOrReadOnly;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::Method;
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
@@ -176,13 +173,12 @@ impl Permission for DrfIsAdminUser {
 ///     let permission = DrfIsAuthenticatedOrReadOnly;
 ///
 ///     // GET request - allowed for unauthenticated
-///     let get_request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let get_request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///     let context = PermissionContext {
 ///         request: &get_request,
 ///         is_authenticated: false,
@@ -193,13 +189,12 @@ impl Permission for DrfIsAdminUser {
 ///     assert!(permission.has_permission(&context).await);
 ///
 ///     // POST request - requires authentication
-///     let post_request = Request::new(
-///         Method::POST,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let post_request = Request::builder()
+///         .method(Method::POST)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///     let context = PermissionContext {
 ///         request: &post_request,
 ///         is_authenticated: false,
@@ -227,19 +222,18 @@ impl Permission for DrfIsAuthenticatedOrReadOnly {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::Method;
 	use reinhardt_core::types::Request;
 
 	#[tokio::test]
 	async fn test_drf_allow_any() {
 		let permission = DrfAllowAny;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -255,13 +249,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_success() {
 		let permission = DrfIsAuthenticated;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -277,13 +270,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_failure() {
 		let permission = DrfIsAuthenticated;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -299,13 +291,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_admin_user_success() {
 		let permission = DrfIsAdminUser;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -321,13 +312,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_admin_user_not_admin() {
 		let permission = DrfIsAdminUser;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -343,13 +333,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_admin_user_not_authenticated() {
 		let permission = DrfIsAdminUser;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -365,13 +354,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_or_read_only_get() {
 		let permission = DrfIsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -387,13 +375,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_or_read_only_head() {
 		let permission = DrfIsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::HEAD,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::HEAD)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -409,13 +396,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_or_read_only_options() {
 		let permission = DrfIsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::OPTIONS,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::OPTIONS)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -431,13 +417,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_or_read_only_post_unauthenticated() {
 		let permission = DrfIsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -453,13 +438,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_drf_is_authenticated_or_read_only_post_authenticated() {
 		let permission = DrfIsAuthenticatedOrReadOnly;
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,

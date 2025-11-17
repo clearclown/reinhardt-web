@@ -252,13 +252,12 @@ mod tests {
 		});
 
 		let handler = LoginHandler::new(session_store, auth_backend);
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/login"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/login")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
 		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
@@ -271,13 +270,12 @@ mod tests {
 		let auth_backend = Arc::new(TestAuthBackend { test_user: None });
 
 		let handler = LoginHandler::new(session_store, auth_backend);
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/login"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/login")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
 		assert_eq!(
@@ -304,13 +302,13 @@ mod tests {
 				.unwrap(),
 		);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/logout"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/logout")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
 		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
@@ -324,13 +322,12 @@ mod tests {
 		let session_store = Arc::new(InMemorySessionStore::new());
 		let handler = LogoutHandler::new(session_store);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/logout"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/logout")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
 		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);

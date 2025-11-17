@@ -514,7 +514,6 @@ mod tests {
 			.unwrap();
 
 		let loaded: Option<serde_json::Value> = backend.load("complex_test").await.unwrap();
-		assert!(loaded.is_some());
 		let data = loaded.unwrap();
 		assert_eq!(data["user_id"], 333);
 		assert_eq!(data["roles"][0], "admin");

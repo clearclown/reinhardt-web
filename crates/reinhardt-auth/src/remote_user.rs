@@ -23,7 +23,7 @@ use uuid::Uuid;
 /// ```no_run
 /// use reinhardt_auth::{AuthenticationBackend, SimpleUser};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{HeaderMap, Method};
 /// use reinhardt_core::http::Request;
 ///
 /// # async fn example() {
@@ -33,13 +33,13 @@ use uuid::Uuid;
 /// // Create request with REMOTE_USER header
 /// let mut headers = HeaderMap::new();
 /// headers.insert("REMOTE_USER", "alice".parse().unwrap());
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/"),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/")
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let result = auth.authenticate(&request).await.unwrap();
 /// assert!(result.is_some());
@@ -141,7 +141,7 @@ impl AuthenticationBackend for RemoteUserAuthentication {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 
 	#[tokio::test]
 	async fn test_remote_user_with_header() {
@@ -149,13 +149,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("REMOTE_USER", "testuser".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = auth.authenticate(&request).await.unwrap();
 		assert!(result.is_some());
@@ -165,13 +165,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_remote_user_without_header() {
 		let auth = RemoteUserAuthentication::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = auth.authenticate(&request).await.unwrap();
 		assert!(result.is_none());
@@ -183,13 +182,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Auth-User", "alice".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = auth.authenticate(&request).await.unwrap();
 		assert!(result.is_some());
@@ -202,13 +201,13 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("REMOTE_USER", "".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = auth.authenticate(&request).await.unwrap();
 		assert!(result.is_none());

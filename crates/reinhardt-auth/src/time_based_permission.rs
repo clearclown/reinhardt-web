@@ -417,7 +417,7 @@ mod tests {
 	use super::*;
 	use bytes::Bytes;
 	use chrono::Timelike;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::Method;
 	use reinhardt_core::types::Request;
 
 	#[test]
@@ -587,13 +587,12 @@ mod tests {
 	async fn test_permission_has_permission() {
 		let permission = TimeBasedPermission::new().add_time_window("00:00", "23:59");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,

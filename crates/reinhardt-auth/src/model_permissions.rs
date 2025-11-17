@@ -25,7 +25,7 @@ type PermissionMap = Arc<RwLock<HashMap<String, Vec<String>>>>;
 /// use reinhardt_auth::model_permissions::DjangoModelPermissions;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{Method};
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
@@ -34,13 +34,12 @@ type PermissionMap = Arc<RwLock<HashMap<String, Vec<String>>>>;
 ///     perm.add_user_permission("alice", "blog.add_article");
 ///     perm.add_user_permission("alice", "blog.change_article");
 ///
-///     let request = Request::new(
-///         Method::POST,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let request = Request::builder()
+///         .method(Method::POST)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///
 ///     let context = PermissionContext {
 ///         request: &request,
@@ -173,7 +172,7 @@ impl Permission for DjangoModelPermissions {
 /// use reinhardt_auth::model_permissions::DjangoModelPermissionsOrAnonReadOnly;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{Method};
 /// use reinhardt_core::types::Request;
 ///
 /// #[tokio::main]
@@ -181,13 +180,12 @@ impl Permission for DjangoModelPermissions {
 ///     let perm = DjangoModelPermissionsOrAnonReadOnly::new();
 ///
 ///     // GET request - allowed for unauthenticated
-///     let get_request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let get_request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///     let context = PermissionContext {
 ///         request: &get_request,
 ///         is_authenticated: false,
@@ -198,13 +196,12 @@ impl Permission for DjangoModelPermissions {
 ///     assert!(perm.has_permission(&context).await);
 ///
 ///     // POST request - requires authentication
-///     let post_request = Request::new(
-///         Method::POST,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let post_request = Request::builder()
+///         .method(Method::POST)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///     let context = PermissionContext {
 ///         request: &post_request,
 ///         is_authenticated: false,
@@ -324,7 +321,7 @@ impl<T: Send + Sync> Permission for ModelPermission<T> {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::Method;
 	use reinhardt_core::types::Request;
 
 	#[derive(Debug)]
@@ -352,13 +349,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_permission_authenticated() {
 		let perm = ModelPermission::<TestModel>::new("read");
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -374,13 +370,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_permission_unauthenticated() {
 		let perm = ModelPermission::<TestModel>::new("create");
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -404,13 +399,12 @@ mod tests {
 		let article_perm = ModelPermission::<Article>::new("update");
 		let comment_perm = ModelPermission::<Comment>::new("delete");
 
-		let request = Request::new(
-			Method::PUT,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::PUT)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -463,13 +457,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_trait_authenticated_admin() {
 		let perm = DjangoModelPermissions::new();
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -485,13 +478,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_trait_authenticated_not_admin() {
 		let perm = DjangoModelPermissions::new();
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -507,13 +499,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_trait_unauthenticated() {
 		let perm = DjangoModelPermissions::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -529,13 +520,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_or_anon_read_only_get() {
 		let perm = DjangoModelPermissionsOrAnonReadOnly::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -551,13 +541,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_or_anon_read_only_post() {
 		let perm = DjangoModelPermissionsOrAnonReadOnly::new();
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -573,13 +562,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_django_model_permissions_or_anon_read_only_authenticated() {
 		let perm = DjangoModelPermissionsOrAnonReadOnly::new();
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,

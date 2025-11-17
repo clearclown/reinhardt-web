@@ -27,13 +27,12 @@ impl BasicAuthentication {
 	/// let auth = HttpBasicAuth::new();
 	///
 	// Create a request without authentication header
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/")
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	// Since no users are registered, authentication should return None
 	/// let result = auth.authenticate(&request).await.unwrap();
@@ -65,13 +64,13 @@ impl BasicAuthentication {
 	/// // "alice:secret123" in base64 is "YWxpY2U6c2VjcmV0MTIz"
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert("Authorization", "Basic YWxpY2U6c2VjcmV0MTIz".parse().unwrap());
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/"),
-	///     Version::HTTP_11,
-	///     headers,
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/")
+	///     .headers(headers)
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// // Authentication should succeed
 	/// let result = auth.authenticate(&request).await.unwrap();
@@ -175,18 +174,18 @@ impl Authentication for BasicAuthentication {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 
 	fn create_request_with_auth(auth: &str) -> Request {
 		let mut headers = HeaderMap::new();
 		headers.insert("Authorization", auth.parse().unwrap());
-		Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]
@@ -221,13 +220,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_basic_auth_no_header() {
 		let backend = BasicAuthentication::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = AuthenticationBackend::authenticate(&backend, &request)
 			.await

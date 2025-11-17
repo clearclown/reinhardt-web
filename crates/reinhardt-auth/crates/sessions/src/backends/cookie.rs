@@ -290,8 +290,6 @@ mod tests {
 		backend.save(session_key, &data, None).await.unwrap();
 
 		let loaded: Option<serde_json::Value> = backend.load(session_key).await.unwrap();
-		assert!(loaded.is_some());
-
 		let loaded_data = loaded.unwrap();
 		assert_eq!(loaded_data["user_id"], 42);
 		assert_eq!(loaded_data["username"], "alice");
@@ -456,8 +454,6 @@ mod tests {
 			.unwrap();
 
 		let loaded: Option<serde_json::Value> = backend.load(session_key).await.unwrap();
-		assert!(loaded.is_some());
-
 		let loaded_data = loaded.unwrap();
 		assert_eq!(loaded_data["user"]["id"], 123);
 		assert_eq!(loaded_data["user"]["roles"][0], "admin");

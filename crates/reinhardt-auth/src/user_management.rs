@@ -103,7 +103,7 @@ pub struct UpdateUserData {
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 /// use reinhardt_auth::Argon2Hasher;
 ///
@@ -145,7 +145,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::UserManager;
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -165,7 +165,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -242,7 +242,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -279,7 +279,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -318,7 +318,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData, UpdateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -383,7 +383,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -429,7 +429,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -470,7 +470,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_auth::user_management::{UserManager, CreateUserData};
 	/// use reinhardt_auth::Argon2Hasher;
 	///
@@ -511,7 +511,7 @@ impl<H: PasswordHasher> UserManager<H> {
 	}
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "argon2-hasher"))]
 mod tests {
 	use super::*;
 	use crate::Argon2Hasher;

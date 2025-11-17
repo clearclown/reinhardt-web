@@ -188,7 +188,7 @@ impl AuthenticationBackend for MFAAuthentication {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method};
 
 	#[test]
 	fn test_mfa_registration() {
@@ -274,13 +274,13 @@ mod tests {
 		headers.insert("X-Username", "alice".parse().unwrap());
 		headers.insert("X-MFA-Code", totp.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = mfa.authenticate(&request).await.unwrap();
 		assert!(result.is_some());
@@ -291,13 +291,12 @@ mod tests {
 	async fn test_mfa_authentication_without_headers() {
 		let mfa = MFAAuthentication::new("TestApp");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = mfa.authenticate(&request).await.unwrap();
 		assert!(result.is_none());

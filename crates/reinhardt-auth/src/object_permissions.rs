@@ -259,7 +259,7 @@ impl ObjectPermissionChecker for ObjectPermissionManager {
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use reinhardt_auth::{SimpleUser, User};
 /// use bytes::Bytes;
-/// use hyper::{HeaderMap, Method, Uri, Version};
+/// use hyper::{Method};
 /// use reinhardt_core::types::Request;
 /// use uuid::Uuid;
 ///
@@ -280,13 +280,12 @@ impl ObjectPermissionChecker for ObjectPermissionManager {
 ///         is_superuser: false,
 ///     };
 ///
-///     let request = Request::new(
-///         Method::GET,
-///         Uri::from_static("/"),
-///         Version::HTTP_11,
-///         HeaderMap::new(),
-///         Bytes::new(),
-///     );
+///     let request = Request::builder()
+///         .method(Method::GET)
+///         .uri("/")
+///         .body(Bytes::new())
+///         .build()
+///         .unwrap();
 ///
 ///     let context = PermissionContext {
 ///         request: &request,
@@ -348,7 +347,7 @@ mod tests {
 	use super::*;
 	use crate::SimpleUser;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::Method;
 	use reinhardt_core::types::Request;
 	use uuid::Uuid;
 
@@ -536,13 +535,12 @@ mod tests {
 			is_superuser: false,
 		};
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -560,13 +558,12 @@ mod tests {
 		let manager = ObjectPermissionManager::new();
 		let perm = ObjectPermission::new(manager, "article:123", "view");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
@@ -594,13 +591,12 @@ mod tests {
 			is_superuser: false,
 		};
 
-		let request = Request::new(
-			Method::DELETE,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::DELETE)
+			.uri("/")
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let context = PermissionContext {
 			request: &request,
