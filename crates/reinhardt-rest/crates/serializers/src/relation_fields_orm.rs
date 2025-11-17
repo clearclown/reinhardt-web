@@ -16,13 +16,16 @@ use std::sync::Arc;
 
 // Type wrappers to simplify complex function pointer types
 
+/// Type alias for async many-to-many relation resolver trait object
+type ManyResolverFn<T, RelatedItem> = Arc<
+	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
+		+ Send
+		+ Sync,
+>;
+
 /// Async many-to-many relation resolver function
 pub struct ManyRelationResolverFn<T, RelatedItem> {
-	inner: Arc<
-		dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<Vec<RelatedItem>, String>> + Send>>
-			+ Send
-			+ Sync,
-	>,
+	inner: ManyResolverFn<T, RelatedItem>,
 	_phantom: PhantomData<RelatedItem>,
 }
 
@@ -61,13 +64,14 @@ impl<T, RelatedItem> Clone for ManyRelationResolverFn<T, RelatedItem> {
 	}
 }
 
+/// Type alias for async one-to-one/foreign-key relation resolver trait object
+type SingleResolverFn<T, RelatedItem> = Arc<
+	dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>> + Send + Sync,
+>;
+
 /// Async one-to-one/foreign-key relation resolver function
 pub struct SingleRelationResolverFn<T, RelatedItem> {
-	inner: Arc<
-		dyn Fn(&T) -> Pin<Box<dyn Future<Output = Result<RelatedItem, String>> + Send>>
-			+ Send
-			+ Sync,
-	>,
+	inner: SingleResolverFn<T, RelatedItem>,
 	_phantom: PhantomData<RelatedItem>,
 }
 
