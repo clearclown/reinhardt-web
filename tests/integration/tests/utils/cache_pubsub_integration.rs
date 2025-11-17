@@ -4,31 +4,24 @@
 //! using TestContainers and Redis, testing message publishing, subscription,
 //! and multi-subscriber scenarios.
 
+use reinhardt_test::fixtures::testcontainers::redis_container;
 use reinhardt_utils::cache::{CacheInvalidationChannel, CacheInvalidationMessage};
 use rstest::*;
-use testcontainers::{runners::AsyncRunner, ContainerAsync};
+use testcontainers::ContainerAsync;
 use testcontainers_modules::redis::Redis;
 use tokio::time::{sleep, Duration};
 
-/// rstest fixture providing a Redis container and connection URL
+/// Fixture providing Redis container and connection URL for cache pubsub testing
 ///
-/// The container is automatically cleaned up when the test ends.
+/// Test intent: Provide a Redis instance for testing cache invalidation pub/sub functionality
+///
+/// This fixture chains from the standard redis_container fixture and provides
+/// the container and connection URL in the format expected by CacheInvalidationChannel.
 #[fixture]
-async fn redis_fixture() -> (ContainerAsync<Redis>, String) {
-	// Start Redis container
-	let redis_container = Redis::default()
-		.start()
-		.await
-		.expect("Failed to start Redis container");
-
-	let port = redis_container
-		.get_host_port_ipv4(6379)
-		.await
-		.expect("Failed to get Redis port");
-
-	let redis_url = format!("redis://127.0.0.1:{}", port);
-
-	(redis_container, redis_url)
+async fn redis_fixture(
+	#[future] redis_container: (ContainerAsync<Redis>, String),
+) -> (ContainerAsync<Redis>, String) {
+	redis_container.await
 }
 
 #[rstest]

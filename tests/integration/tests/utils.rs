@@ -15,3 +15,24 @@ mod query_string_encoding_integration;
 
 #[path = "utils/utils_comprehensive_integration.rs"]
 mod utils_comprehensive_integration;
+
+#[path = "utils/cache_memcached_integration.rs"]
+mod cache_memcached_integration;
+
+#[path = "utils/cache_pubsub_integration.rs"]
+mod cache_pubsub_integration;
+
+#[path = "utils/cache_redis_sentinel_integration.rs"]
+mod cache_redis_sentinel_integration;
+
+#[path = "utils/shortcuts_orm_integration.rs"]
+mod shortcuts_orm_integration;
+
+#[path = "utils/tasks_locking_redis_integration.rs"]
+mod tasks_locking_redis_integration;
+
+#[path = "utils/tasks_rabbitmq_backend_integration.rs"]
+mod tasks_rabbitmq_backend_integration;
+
+#[path = "utils/tasks_redis_backend_integration.rs"]
+mod tasks_redis_backend_integration;
