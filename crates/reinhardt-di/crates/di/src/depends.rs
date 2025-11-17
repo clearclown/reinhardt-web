@@ -104,7 +104,7 @@ where
 	///
 	/// # tokio_test::block_on(async {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	/// let result = Depends::<Config>::resolve(&ctx, true).await;
 	/// assert!(result.is_ok());
 	/// # });
@@ -178,7 +178,7 @@ where
 	///
 	/// # tokio_test::block_on(async {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	/// let builder = Depends::<Config>::builder();
 	/// let result = builder.resolve(&ctx).await;
 	/// assert!(result.is_ok());

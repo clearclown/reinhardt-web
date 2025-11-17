@@ -213,7 +213,7 @@ impl InjectionContext {
 	/// use std::sync::Arc;
 	///
 	/// let singleton_scope = Arc::new(SingletonScope::new());
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	///
 	/// ctx.set_request(42i32);
 	/// let value = ctx.get_request::<i32>().unwrap();
@@ -233,7 +233,7 @@ impl InjectionContext {
 	/// use std::sync::Arc;
 	///
 	/// let singleton_scope = Arc::new(SingletonScope::new());
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	///
 	/// ctx.set_request("request-data".to_string());
 	/// assert!(ctx.get_request::<String>().is_some());
@@ -254,7 +254,7 @@ impl InjectionContext {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
 	/// singleton_scope.set(100u64);
 	///
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	/// let value = ctx.get_singleton::<u64>().unwrap();
 	/// assert_eq!(*value, 100);
 	/// ```
@@ -272,7 +272,7 @@ impl InjectionContext {
 	/// use std::sync::Arc;
 	///
 	/// let singleton_scope = Arc::new(SingletonScope::new());
-	/// let ctx = InjectionContext::new(singleton_scope);
+	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	///
 	/// ctx.set_singleton("global-config".to_string());
 	/// assert!(ctx.get_singleton::<String>().is_some());
@@ -312,9 +312,8 @@ impl RequestContext {
 	///
 	/// ```
 	/// use reinhardt_di::{RequestContext, SingletonScope};
-	/// use std::sync::Arc;
 	///
-	/// let singleton_scope = Arc::new(SingletonScope::new());
+	/// let singleton_scope = SingletonScope::new();
 	/// let request_ctx = RequestContext::new(singleton_scope);
 	///
 	/// let ctx = request_ctx.injection_context();

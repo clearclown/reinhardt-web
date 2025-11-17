@@ -273,7 +273,8 @@ impl UnifiedRouter {
 	/// use reinhardt_core::di::{InjectionContext, SingletonScope};
 	/// use std::sync::Arc;
 	///
-	/// let di_ctx = Arc::new(InjectionContext::new(Arc::new(SingletonScope::new())));
+	/// let singleton_scope = Arc::new(SingletonScope::new());
+	/// let di_ctx = Arc::new(InjectionContext::builder(singleton_scope).build());
 	/// let router = UnifiedRouter::new()
 	///     .with_di_context(di_ctx);
 	/// ```
