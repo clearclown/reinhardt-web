@@ -2,10 +2,11 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 use reinhardt_apps::{Handler, Request};
 use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, TestViewSet, ViewSet};
+use reinhardt_viewsets::{GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TestModel {
 	id: i64,
 	name: String,
@@ -23,13 +24,14 @@ async fn test_register_viewset_with_router() {
 	router.register_viewset("test", viewset);
 
 	// Test list endpoint is accessible
-	let list_request = Request::new(
-		Method::GET,
-		Uri::from_static("/test/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let list_request = Request::builder()
+		.method(Method::GET)
+		.uri("/test/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(list_request).await;
 	assert!(response.is_ok());
@@ -46,13 +48,14 @@ async fn test_viewset_detail_endpoint_with_router() {
 	router.register_viewset("items", viewset);
 
 	// Test detail endpoint
-	let detail_request = Request::new(
-		Method::GET,
-		Uri::from_static("/items/1/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let detail_request = Request::builder()
+		.method(Method::GET)
+		.uri("/items/1/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(detail_request).await;
 	assert!(response.is_ok());
@@ -111,24 +114,26 @@ async fn test_multiple_viewset_registration() {
 	router.register_viewset("posts", posts_viewset);
 
 	// Test users endpoint
-	let users_request = Request::new(
-		Method::GET,
-		Uri::from_static("/users/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let users_request = Request::builder()
+		.method(Method::GET)
+		.uri("/users/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 	let users_response = router.route(users_request).await;
 	assert!(users_response.is_ok());
 
 	// Test posts endpoint
-	let posts_request = Request::new(
-		Method::GET,
-		Uri::from_static("/posts/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let posts_request = Request::builder()
+		.method(Method::GET)
+		.uri("/posts/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 	let posts_response = router.route(posts_request).await;
 	assert!(posts_response.is_ok());
 }
@@ -143,13 +148,14 @@ async fn test_viewset_router_http_methods() {
 	router.register_viewset("resources", viewset);
 
 	// GET (list)
-	let get_request = Request::new(
-		Method::GET,
-		Uri::from_static("/resources/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let get_request = Request::builder()
+		.method(Method::GET)
+		.uri("/resources/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 	let get_response = router.route(get_request).await;
 	assert!(get_response.is_ok());
 	assert_eq!(get_response.unwrap().status, StatusCode::OK);
@@ -181,13 +187,14 @@ async fn test_viewset_router_http_methods() {
 	assert_eq!(put_response.unwrap().status, StatusCode::OK);
 
 	// DELETE (destroy)
-	let delete_request = Request::new(
-		Method::DELETE,
-		Uri::from_static("/resources/1/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let delete_request = Request::builder()
+		.method(Method::DELETE)
+		.uri("/resources/1/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 	let delete_response = router.route(delete_request).await;
 	assert!(delete_response.is_ok());
 	assert_eq!(delete_response.unwrap().status, StatusCode::NO_CONTENT);
@@ -197,7 +204,7 @@ async fn test_viewset_router_http_methods() {
 #[tokio::test]
 async fn test_extra_actions_with_router() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -255,26 +262,28 @@ async fn test_extra_actions_with_router() {
 	assert_eq!(router.get_routes().len(), 4);
 
 	// Test custom list action endpoint
-	let custom_list_request = Request::new(
-		Method::GET,
-		Uri::from_static("/custom/custom_list/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let custom_list_request = Request::builder()
+		.method(Method::GET)
+		.uri("/custom/custom_list/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(custom_list_request).await;
 	assert!(response.is_ok(), "Custom list action should be accessible");
 	assert_eq!(response.unwrap().status, StatusCode::OK);
 
 	// Test custom detail action endpoint
-	let custom_detail_request = Request::new(
-		Method::GET,
-		Uri::from_static("/custom/1/custom_detail/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let custom_detail_request = Request::builder()
+		.method(Method::GET)
+		.uri("/custom/1/custom_detail/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(custom_detail_request).await;
 	assert!(
@@ -288,7 +297,7 @@ async fn test_extra_actions_with_router() {
 #[tokio::test]
 async fn test_get_extra_actions() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, action, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -341,18 +350,16 @@ async fn test_get_extra_actions() {
 
 	assert_eq!(extra_actions.len(), 2);
 	assert!(extra_actions.iter().any(|a| a.name == "custom_list_action"));
-	assert!(
-		extra_actions
-			.iter()
-			.any(|a| a.name == "custom_detail_action")
-	);
+	assert!(extra_actions
+		.iter()
+		.any(|a| a.name == "custom_detail_action"));
 }
 
 /// Test extra action URL map generation
 #[tokio::test]
 async fn test_extra_action_url_map() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -411,7 +418,7 @@ async fn test_extra_action_url_map() {
 #[tokio::test]
 async fn test_action_names_with_kwargs() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{ActionMetadata, FunctionActionHandler, register_action};
+	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -485,25 +492,27 @@ async fn test_action_names_with_kwargs() {
 	);
 
 	// Test that the actions are actually accessible via HTTP
-	let named_request = Request::new(
-		Method::GET,
-		Uri::from_static("/test/1/custom_action/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let named_request = Request::builder()
+		.method(Method::GET)
+		.uri("/test/1/custom_action/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(named_request).await;
 	assert!(response.is_ok(), "Named action should be accessible");
 	assert_eq!(response.unwrap().status, StatusCode::OK);
 
-	let suffixed_request = Request::new(
-		Method::GET,
-		Uri::from_static("/test/another_action/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		Bytes::new(),
-	);
+	let suffixed_request = Request::builder()
+		.method(Method::GET)
+		.uri("/test/another_action/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(Bytes::new())
+		.build()
+		.unwrap();
 
 	let response = router.route(suffixed_request).await;
 	assert!(response.is_ok(), "Suffixed action should be accessible");
@@ -523,7 +532,7 @@ async fn test_initialize_view_set_with_empty_actions() {
 		let err_msg = e.to_string();
 		assert_eq!(
 			err_msg,
-			"The `actions` argument must be provided when calling `.as_view()` on a ViewSet. For example: .as_view().with_actions(viewset_actions!(GET => \"list\"))"
+			"HTTP error: The `actions` argument must be provided when calling `.as_view()` on a ViewSet. For example `.as_view({'get': 'list'})`"
 		);
 	}
 }
@@ -549,7 +558,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 		// Exact error message from builder.rs
 		assert_eq!(
 			err_msg,
-			"reinhardt_viewsets::GenericViewSet<()>() received both `name` and `suffix`, which are mutually exclusive arguments."
+			"HTTP error: reinhardt_viewsets::viewset::GenericViewSet<()>() received both `name` and `suffix`, which are mutually exclusive arguments."
 		);
 	}
 }
@@ -557,7 +566,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 /// Test viewset has required attributes after as_view()
 #[tokio::test]
 async fn test_args_kwargs_request_action_map_on_self() {
-	use reinhardt_viewsets::{ViewSetHandler, viewset_actions};
+	use reinhardt_viewsets::viewset_actions;
 
 	// Test that ViewSetHandler has the expected behavior:
 	// - It can be called as a handler
@@ -572,7 +581,8 @@ async fn test_args_kwargs_request_action_map_on_self() {
 		.method(Method::GET)
 		.uri(Uri::from_static("/test/"))
 		.version(Version::HTTP_11)
-		.body(vec![])
+		.body(Bytes::new())
+		.build()
 		.unwrap();
 
 	// Handler should be able to process the request
@@ -585,16 +595,16 @@ async fn test_args_kwargs_request_action_map_on_self() {
 	if let Err(e) = response {
 		// Should get "Action not implemented" error, not a method routing error
 		let err_msg = e.to_string();
-		assert_eq!(err_msg, "Action not implemented");
+		assert_eq!(err_msg, "Not found: Action not implemented");
 	}
 }
 
 /// Test login_required middleware compatibility
 #[tokio::test]
 async fn test_login_required_middleware_compat() {
-	use hyper::{Method, Uri, Version};
-	use reinhardt_viewsets::{TestViewSet, viewset_actions};
-	use std::collections::HashMap;
+	use hyper::{Method, Version};
+	use reinhardt_test::TestViewSet;
+	use reinhardt_viewsets::viewset_actions;
 
 	// Test ViewSet without login required
 	let viewset = TestViewSet::new("test");
@@ -621,19 +631,20 @@ async fn test_login_required_middleware_compat() {
 
 	// Build the handler
 	let result = viewset.as_view().with_actions(actions).build();
-		let handler = result.unwrap();
+	let handler = result.unwrap();
 
 	// Create a request without authentication
-	let request = Request::new(
-		Method::GET,
-		Uri::from_static("/test/"),
-		Version::HTTP_11,
-		HeaderMap::new(),
-		bytes::Bytes::new(),
-	);
+	let request = Request::builder()
+		.method(Method::GET)
+		.uri("/test/")
+		.version(Version::HTTP_11)
+		.headers(HeaderMap::new())
+		.body(bytes::Bytes::new())
+		.build()
+		.unwrap();
 
 	// Handler should return 401 due to authentication middleware
 	let response = handler.handle(request).await;
-		let response = response.unwrap();
+	let response = response.unwrap();
 	assert_eq!(response.status, hyper::StatusCode::UNAUTHORIZED);
 }
