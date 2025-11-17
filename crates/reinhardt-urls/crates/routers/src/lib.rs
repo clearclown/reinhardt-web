@@ -69,7 +69,6 @@
 //! use reinhardt_routers::UnifiedRouter;
 //! use reinhardt_middleware::LoggingMiddleware;
 //! use hyper::Method;
-//! use std::sync::Arc;
 //! # use reinhardt_core::http::{Request, Response, Result};
 //!
 //! # async fn handler(_req: Request) -> Result<Response> {
@@ -77,7 +76,7 @@
 //! # }
 //! let router = UnifiedRouter::new()
 //!     .function("/api/users", Method::GET, handler)
-//!     .with_route_middleware(Arc::new(LoggingMiddleware));
+//!     .with_route_middleware(LoggingMiddleware);
 //! ```
 //!
 //! ## Route Group Middleware
@@ -86,7 +85,6 @@
 //! use reinhardt_routers::RouteGroup;
 //! use reinhardt_middleware::LoggingMiddleware;
 //! use hyper::Method;
-//! use std::sync::Arc;
 //! # use reinhardt_core::http::{Request, Response, Result};
 //!
 //! # async fn users_list(_req: Request) -> Result<Response> {
@@ -98,7 +96,7 @@
 //! // Create a group with middleware
 //! let group = RouteGroup::new()
 //!     .with_prefix("/api/v1")
-//!     .with_middleware(Arc::new(LoggingMiddleware))
+//!     .with_middleware(LoggingMiddleware)
 //!     .function("/users", Method::GET, users_list)
 //!     .function("/users/{id}", Method::GET, users_detail);
 //!

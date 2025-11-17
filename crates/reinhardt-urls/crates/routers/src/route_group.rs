@@ -19,7 +19,6 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 /// use reinhardt_routers::UnifiedRouter;
 /// use reinhardt_middleware::LoggingMiddleware;
 /// use hyper::Method;
-/// use std::sync::Arc;
 /// # use reinhardt_core::http::{Request, Response, Result};
 ///
 /// # async fn users_list(_req: Request) -> Result<Response> {
@@ -31,7 +30,7 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 ///
 /// let mut group = RouteGroup::new()
 ///     .with_prefix("/api/v1")
-///     .with_middleware(Arc::new(LoggingMiddleware));
+///     .with_middleware(LoggingMiddleware);
 ///
 /// let router = group
 ///     .function("/users", Method::GET, users_list)
