@@ -499,7 +499,6 @@ mod tests {
 		};
 		renderer.add_endpoint(endpoint);
 		let result = renderer.render();
-		assert!(result.is_ok());
 		let html = result.unwrap();
 		assert!(html.contains("API Docs"));
 		assert!(html.contains("/api/users/"));

@@ -239,17 +239,18 @@ impl ViewSetMiddleware for CompositeMiddleware {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 	use reinhardt_core::http::Request;
 
 	fn create_test_request() -> Request {
-		Request::new(
-			Method::GET,
-			Uri::from_static("/test/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			bytes::Bytes::new(),
-		)
+		Request::builder()
+			.method(Method::GET)
+			.uri("/test/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(bytes::Bytes::new())
+			.build()
+			.unwrap()
 	}
 
 	#[tokio::test]
@@ -283,11 +284,7 @@ mod tests {
 		let mut request = create_test_request();
 
 		let result = middleware.process_request(&mut request).await;
-		assert!(result.is_ok());
-		let response = result.unwrap();
-		assert!(response.is_some());
-
-		let response = response.unwrap();
+		let response = result.unwrap().unwrap();
 		assert_eq!(response.status, hyper::StatusCode::UNAUTHORIZED);
 	}
 
@@ -307,11 +304,7 @@ mod tests {
 		let mut request = create_test_request();
 
 		let result = middleware.process_request(&mut request).await;
-		assert!(result.is_ok());
-		let response = result.unwrap();
-		assert!(response.is_some());
-
-		let response = response.unwrap();
+		let response = result.unwrap().unwrap();
 		assert_eq!(response.status, hyper::StatusCode::FORBIDDEN);
 	}
 
@@ -325,11 +318,7 @@ mod tests {
 
 		// Should fail authentication first
 		let result = middleware.process_request(&mut request).await;
-		assert!(result.is_ok());
-		let response = result.unwrap();
-		assert!(response.is_some());
-
-		let response = response.unwrap();
+		let response = result.unwrap().unwrap();
 		assert_eq!(response.status, hyper::StatusCode::UNAUTHORIZED);
 	}
 }

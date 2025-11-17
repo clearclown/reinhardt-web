@@ -202,7 +202,7 @@ pub fn nested_detail_url(parent: &str, parent_id: &str, child: &str, child_id: &
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 
 	#[test]
 	fn test_nested_resource_new() {
@@ -252,13 +252,14 @@ mod tests {
 			.add_segment("users", "user_id")
 			.add_segment("posts", "post_id");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/users/123/posts/456/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/123/posts/456/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ids = path.extract_parent_ids(&request);
 		assert_eq!(ids.get("user_id"), Some(&"123".to_string()));
@@ -272,13 +273,14 @@ mod tests {
 			.add_segment("teams", "team_id")
 			.add_segment("members", "member_id");
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/organizations/1/teams/2/members/3/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/organizations/1/teams/2/members/3/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ids = path.extract_parent_ids(&request);
 		assert_eq!(ids.get("org_id"), Some(&"1".to_string()));
@@ -313,13 +315,14 @@ mod tests {
 		let nested = NestedResource::new("posts", "post_id", "post_id");
 		let viewset = NestedViewSet::new(inner, nested);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/posts/123/comments/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/posts/123/comments/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let parent_id = viewset.get_parent_id(&request);
 		assert_eq!(parent_id, Some("123".to_string()));
@@ -343,13 +346,14 @@ mod tests {
 	#[test]
 	fn test_extract_parent_ids_empty_path() {
 		let path = NestedResourcePath::new();
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ids = path.extract_parent_ids(&request);
 		assert_eq!(ids.len(), 0);

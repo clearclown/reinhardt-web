@@ -176,7 +176,6 @@ mod tests {
 		let highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 		let json = r#"{"name": "Alice", "age": 30}"#;
 		let result = highlighter.highlight_json(json);
-		assert!(result.is_ok());
 		let html = result.unwrap();
 		assert!(!html.is_empty());
 	}
@@ -201,7 +200,6 @@ mod tests {
 		let highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 		let json = r#"{"test": true}"#;
 		let result = highlighter.highlight_and_wrap_json(json);
-		assert!(result.is_ok());
 		let html = result.unwrap();
 		assert!(html.contains("<pre"));
 		assert!(html.contains("</pre>"));

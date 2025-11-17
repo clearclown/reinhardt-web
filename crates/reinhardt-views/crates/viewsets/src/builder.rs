@@ -78,6 +78,49 @@ impl<V: ViewSet + 'static> ViewSetBuilder<V> {
 			self.suffix,
 		)))
 	}
+
+	/// Register this ViewSet to a router with the given path
+	///
+	/// This is a convenience method that builds the handler and registers it
+	/// to the provided router in one step.
+	///
+	/// # Examples
+	///
+	/// ```rust,ignore
+	/// use reinhardt_routers::UnifiedRouter;
+	/// use reinhardt_viewsets::ModelViewSet;
+	/// use hyper::Method;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Serialize, Deserialize, Clone)]
+	/// # struct User { id: i64, name: String }
+	/// # struct UserSerializer;
+	///
+	/// let mut router = UnifiedRouter::new();
+	/// let viewset: ModelViewSet<User, UserSerializer> = ModelViewSet::new("users");
+	///
+	/// viewset.as_view()
+	///     .action(Method::GET, "list")
+	///     .action(Method::POST, "create")
+	///     .register_to(&mut router, "/users")?;
+	/// # Ok::<(), reinhardt_core::exception::Error>(())
+	/// ```
+	pub fn register_to<R>(self, router: &mut R, path: &str) -> Result<()>
+	where
+		R: RegisterViewSet,
+	{
+		let handler = self.build()?;
+		router.register_handler(path, handler);
+		Ok(())
+	}
+}
+
+/// Trait for types that can register ViewSet handlers
+///
+/// This trait is implemented by router types to allow ViewSetBuilder
+/// to register handlers directly.
+pub trait RegisterViewSet {
+	/// Register a handler at the given path
+	fn register_handler(&mut self, path: &str, handler: Arc<dyn Handler>);
 }
 
 /// Helper macro to create action mappings

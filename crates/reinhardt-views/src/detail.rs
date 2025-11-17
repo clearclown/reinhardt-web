@@ -9,15 +9,13 @@ use reinhardt_db::orm::{
 	Model, QuerySet,
 	query::{Filter, FilterOperator, FilterValue},
 };
-use reinhardt_serializers::Serializer;
+use reinhardt_serializers::{JsonSerializer, Serializer};
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
 
 /// DetailView for displaying a single object
-pub struct DetailView<T, S>
+pub struct DetailView<T>
 where
 	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
 {
 	object: Option<T>,
 	queryset: Option<QuerySet<T>>,
@@ -25,25 +23,63 @@ where
 	pk_url_kwarg_name: String,
 	slug_url_kwarg_name: String,
 	context_object_name: Option<String>,
-	_serializer: PhantomData<S>,
+	serializer: Box<dyn Serializer<Input = T, Output = String> + Send + Sync>,
 }
 
-impl<T, S> Default for DetailView<T, S>
+impl<T> Default for DetailView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-impl<T, S> DetailView<T, S>
+impl<T> DetailView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	/// Creates a new `DetailView` with default settings.
+	///
+	/// Uses `JsonSerializer` by default. Use `with_serializer` to provide a custom serializer.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_views::{DetailView, SingleObjectMixin};
+	/// use reinhardt_db::orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	///
+	/// #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// struct Article {
+	///     id: Option<i64>,
+	///     title: String,
+	/// }
+	///
+	/// impl Model for Article {
+	///     type PrimaryKey = i64;
+	///     fn table_name() -> &'static str { "articles" }
+	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// }
+	///
+	/// let view = DetailView::<Article>::new();
+	/// assert_eq!(view.get_slug_field(), "slug");
+	/// assert_eq!(view.pk_url_kwarg(), "pk");
+	/// ```
+	pub fn new() -> Self {
+		Self {
+			object: None,
+			queryset: None,
+			slug_field: "slug".to_string(),
+			pk_url_kwarg_name: "pk".to_string(),
+			slug_url_kwarg_name: "slug".to_string(),
+			context_object_name: None,
+			serializer: Box::new(JsonSerializer::<T>::new()),
+		}
+	}
+
+	/// Sets a custom serializer for the view.
 	///
 	/// # Examples
 	///
@@ -66,20 +102,15 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new();
-	/// assert_eq!(view.get_slug_field(), "slug");
-	/// assert_eq!(view.pk_url_kwarg(), "pk");
+	/// let view = DetailView::<Article>::new()
+	///     .with_serializer(Box::new(JsonSerializer::<Article>::new()));
 	/// ```
-	pub fn new() -> Self {
-		Self {
-			object: None,
-			queryset: None,
-			slug_field: "slug".to_string(),
-			pk_url_kwarg_name: "pk".to_string(),
-			slug_url_kwarg_name: "slug".to_string(),
-			context_object_name: None,
-			_serializer: PhantomData,
-		}
+	pub fn with_serializer(
+		mut self,
+		serializer: Box<dyn Serializer<Input = T, Output = String> + Send + Sync>,
+	) -> Self {
+		self.serializer = serializer;
+		self
 	}
 	/// Sets the object to display in the view.
 	///
@@ -87,7 +118,6 @@ where
 	///
 	/// ```ignore
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -105,18 +135,19 @@ where
 	/// }
 	///
 	/// let article = Article { id: Some(1), title: "Hello World".to_string() };
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_object(article.clone());
 	/// # tokio_test::block_on(async {
-	/// use hyper::{Method, Uri, Version, HeaderMap};
+	/// use hyper::{Method, Version, HeaderMap};
 	/// use bytes::Bytes;
-	/// let request = reinhardt_apps::Request::new(
-	///     Method::GET,
-	///     "/".parse::<Uri>().unwrap(),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new()
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	/// let result = view.get_object(&request).await;
 	/// assert!(result.is_ok());
 	/// # });
@@ -131,7 +162,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -148,7 +178,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_slug_field("title");
 	/// assert_eq!(view.get_slug_field(), "title");
 	/// ```
@@ -162,7 +192,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -179,7 +208,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_pk_url_kwarg("article_id");
 	/// assert_eq!(view.pk_url_kwarg(), "article_id");
 	/// ```
@@ -193,7 +222,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -210,7 +238,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_slug_url_kwarg("article_slug");
 	/// assert_eq!(view.slug_url_kwarg(), "article_slug");
 	/// ```
@@ -224,7 +252,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -241,7 +268,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_context_object_name("article");
 	/// assert_eq!(view.get_context_object_name(), Some("article"));
 	/// ```
@@ -258,7 +285,6 @@ where
 	///
 	/// ```rust,ignore
 	/// use reinhardt_views::DetailView;
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::{Model, QuerySet};
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -277,7 +303,7 @@ where
 	/// }
 	///
 	/// let queryset = QuerySet::<Article>::new();
-	/// let view = DetailView::<Article, JsonSerializer<Article>>::new()
+	/// let view = DetailView::<Article>::new()
 	///     .with_queryset(queryset);
 	/// ```
 	pub fn with_queryset(mut self, queryset: QuerySet<T>) -> Self {
@@ -287,10 +313,9 @@ where
 }
 
 #[async_trait]
-impl<T, S> SingleObjectMixin<T> for DetailView<T, S>
+impl<T> SingleObjectMixin<T> for DetailView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	async fn get_object(&self, request: &Request) -> Result<T> {
 		// If object is already set, return it
@@ -376,10 +401,9 @@ where
 }
 
 #[async_trait]
-impl<T, S> View for DetailView<T, S>
+impl<T> View for DetailView<T>
 where
 	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
-	S: Serializer<Input = T, Output = String> + Send + Sync + Default + 'static,
 {
 	async fn dispatch(&self, request: Request) -> Result<Response> {
 		// Handle OPTIONS method
@@ -403,8 +427,7 @@ where
 		let object = self.get_object(&request).await?;
 
 		// Serialize object
-		let serializer = S::default();
-		let serialized = serializer.serialize(&object).map_err(|e| match e {
+		let serialized = self.serializer.serialize(&object).map_err(|e| match e {
 			reinhardt_serializers::SerializerError::Validation(v) => {
 				Error::Validation(v.to_string())
 			}

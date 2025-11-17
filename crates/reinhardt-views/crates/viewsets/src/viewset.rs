@@ -650,7 +650,6 @@ mod tests {
 		let builder = viewset.as_view();
 		let result = builder.with_actions(actions).build();
 
-		assert!(result.is_ok());
 		let handler = result.unwrap();
 
 		// Test that handler is created successfully

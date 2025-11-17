@@ -563,7 +563,7 @@ where
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use bytes::Bytes;
-	/// # use hyper::{Method, Uri, Version, HeaderMap};
+	/// # use hyper::{Method, Version, HeaderMap};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User {
@@ -580,13 +580,13 @@ where
 	/// #
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let handler = ModelViewSetHandler::<User>::new();
-	/// let request = Request::new(
-	///     Method::GET,
-	///     "/users/".parse::<Uri>()?,
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/users/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()?;
 	/// let response = handler.list(&request).await?;
 	/// # Ok(())
 	/// # }
@@ -623,7 +623,7 @@ where
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
-	/// # use hyper::{Method, Uri, Version, HeaderMap};
+	/// # use hyper::{Method, Version, HeaderMap};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User {
@@ -640,13 +640,13 @@ where
 	/// #
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let handler = ModelViewSetHandler::<User>::new();
-	/// let request = Request::new(
-	///     Method::GET,
-	///     "/users/1/".parse::<Uri>()?,
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/users/1/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()?;
 	/// let pk = serde_json::json!(1);
 	/// let response = handler.retrieve(&request, pk).await?;
 	/// # Ok(())
@@ -695,7 +695,7 @@ where
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # use bytes::Bytes;
-	/// # use hyper::{Method, Uri, Version, HeaderMap};
+	/// # use hyper::{Method, Version, HeaderMap};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User {
@@ -712,13 +712,13 @@ where
 	/// #
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let handler = ModelViewSetHandler::<User>::new();
-	/// let request = Request::new(
-	///     Method::POST,
-	///     "/users/".parse::<Uri>()?,
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::from(r#"{"username":"alice"}"#),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::POST)
+	///     .uri("/users/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::from(r#"{"username":"alice"}"#))
+	///     .build()?;
 	/// let response = handler.create(&request).await?;
 	/// # Ok(())
 	/// # }
@@ -784,7 +784,7 @@ where
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
-	/// # use hyper::{Method, Uri, Version, HeaderMap};
+	/// # use hyper::{Method, Version, HeaderMap};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User {
@@ -801,13 +801,13 @@ where
 	/// #
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let handler = ModelViewSetHandler::<User>::new();
-	/// let request = Request::new(
-	///     Method::PUT,
-	///     "/users/1/".parse::<Uri>()?,
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::from(r#"{"username":"alice_updated"}"#),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::PUT)
+	///     .uri("/users/1/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::from(r#"{"username":"alice_updated"}"#))
+	///     .build()?;
 	/// let pk = serde_json::json!(1);
 	/// let response = handler.update(&request, pk).await?;
 	/// # Ok(())
@@ -881,7 +881,7 @@ where
 	/// # use serde::{Serialize, Deserialize};
 	/// # use serde_json::Value;
 	/// # use bytes::Bytes;
-	/// # use hyper::{Method, Uri, Version, HeaderMap};
+	/// # use hyper::{Method, Version, HeaderMap};
 	/// #
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User {
@@ -898,13 +898,13 @@ where
 	/// #
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let handler = ModelViewSetHandler::<User>::new();
-	/// let request = Request::new(
-	///     Method::DELETE,
-	///     "/users/1/".parse::<Uri>()?,
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::DELETE)
+	///     .uri("/users/1/")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()?;
 	/// let pk = serde_json::json!(1);
 	/// let response = handler.destroy(&request, pk).await?;
 	/// # Ok(())
@@ -980,7 +980,7 @@ where
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_auth::{AllowAny, IsAuthenticated};
 	use serde::{Deserialize, Serialize};
 
@@ -1063,13 +1063,14 @@ mod tests {
 		let users = create_test_users();
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
-		let request = Request::new(
-			Method::GET,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.list(&request).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -1085,13 +1086,14 @@ mod tests {
 		let users = create_test_users();
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
-		let request = Request::new(
-			Method::GET,
-			"/users/1/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(1);
 		let response = handler.retrieve(&request, pk).await.unwrap();
@@ -1106,13 +1108,14 @@ mod tests {
 		let users = create_test_users();
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
-		let request = Request::new(
-			Method::GET,
-			"/users/999/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/999/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(999);
 		let result = handler.retrieve(&request, pk).await;
@@ -1127,13 +1130,14 @@ mod tests {
 		let handler = ModelViewSetHandler::<TestUser>::new();
 
 		let body = r#"{"id":4,"username":"dave","email":"dave@example.com"}"#;
-		let request = Request::new(
-			Method::POST,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(body),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(body))
+			.build()
+			.unwrap();
 
 		let response = handler.create(&request).await.unwrap();
 		assert_eq!(response.status, StatusCode::CREATED);
@@ -1147,13 +1151,14 @@ mod tests {
 		let handler = ModelViewSetHandler::<TestUser>::new();
 
 		let body = r#"{"invalid": "data"}"#;
-		let request = Request::new(
-			Method::POST,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(body),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(body))
+			.build()
+			.unwrap();
 
 		let result = handler.create(&request).await;
 		assert!(result.is_err());
@@ -1165,13 +1170,14 @@ mod tests {
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
 		let body = r#"{"id":1,"username":"alice_updated","email":"alice_new@example.com"}"#;
-		let request = Request::new(
-			Method::PUT,
-			"/users/1/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(body),
-		);
+		let request = Request::builder()
+			.method(Method::PUT)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(body))
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(1);
 		let response = handler.update(&request, pk).await.unwrap();
@@ -1187,13 +1193,14 @@ mod tests {
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
 		let body = r#"{"id":999,"username":"nonexistent","email":"none@example.com"}"#;
-		let request = Request::new(
-			Method::PUT,
-			"/users/999/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(body),
-		);
+		let request = Request::builder()
+			.method(Method::PUT)
+			.uri("/users/999/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(body))
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(999);
 		let result = handler.update(&request, pk).await;
@@ -1205,13 +1212,14 @@ mod tests {
 		let users = create_test_users();
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
-		let request = Request::new(
-			Method::DELETE,
-			"/users/1/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::DELETE)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(1);
 		let response = handler.destroy(&request, pk).await.unwrap();
@@ -1223,13 +1231,14 @@ mod tests {
 		let users = create_test_users();
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(users);
 
-		let request = Request::new(
-			Method::DELETE,
-			"/users/999/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::DELETE)
+			.uri("/users/999/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let pk = serde_json::json!(999);
 		let result = handler.destroy(&request, pk).await;
@@ -1243,13 +1252,14 @@ mod tests {
 			.with_queryset(users)
 			.add_permission(Arc::new(IsAuthenticated));
 
-		let request = Request::new(
-			Method::GET,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = handler.list(&request).await;
 		assert!(result.is_err());
@@ -1265,13 +1275,14 @@ mod tests {
 			.with_queryset(users)
 			.add_permission(Arc::new(AllowAny));
 
-		let request = Request::new(
-			Method::GET,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = handler.list(&request).await;
 		assert!(result.is_ok());
@@ -1307,13 +1318,14 @@ mod tests {
 	async fn test_model_viewset_handler_empty_queryset() {
 		let handler = ModelViewSetHandler::<TestUser>::new().with_queryset(vec![]);
 
-		let request = Request::new(
-			Method::GET,
-			"/users/".parse::<Uri>().unwrap(),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = handler.list(&request).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);

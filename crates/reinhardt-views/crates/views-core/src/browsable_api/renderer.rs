@@ -343,7 +343,6 @@ mod tests {
 		let renderer = BrowsableApiRenderer::new("Test", ColorScheme::Dark);
 		let data = json!({"message": "Hello, world!"});
 		let result = renderer.render_json(&data, 200);
-		assert!(result.is_ok());
 		let html = result.unwrap();
 		assert!(html.contains("Hello, world!"));
 		assert!(html.contains("200"));
@@ -357,7 +356,6 @@ mod tests {
 		form.add_field("name", "text", true);
 
 		let result = renderer.render_with_form(&data, 201, &form);
-		assert!(result.is_ok());
 		let html = result.unwrap();
 		assert!(html.contains("form"));
 		assert!(html.contains("name"));

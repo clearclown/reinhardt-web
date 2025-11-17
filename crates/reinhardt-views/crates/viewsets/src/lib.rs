@@ -23,7 +23,7 @@ pub use batch_operations::{
 	BatchOperation, BatchOperationResult, BatchProcessor, BatchRequest, BatchResponse,
 	BatchStatistics,
 };
-pub use builder::ViewSetBuilder;
+pub use builder::{RegisterViewSet, ViewSetBuilder};
 pub use cached::{CacheConfig, CachedResponse, CachedViewSet, CachedViewSetTrait};
 pub use filtering_support::{FilterConfig, FilterableViewSet, InMemoryFilter, OrderingConfig};
 pub use handler::{ModelViewSetHandler, ViewError, ViewSetHandler};
@@ -47,7 +47,7 @@ pub use viewset::{GenericViewSet, ModelViewSet, ReadOnlyModelViewSet, ViewSet};
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_core::http::Request;
 
 	#[allow(dead_code)]
@@ -69,13 +69,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_viewset_list_action() {
 		let viewset: ModelViewSet<TestModel, TestSerializer> = ModelViewSet::new("users");
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/users/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::list();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -86,13 +87,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_viewset_retrieve_action() {
 		let viewset: ModelViewSet<TestModel, TestSerializer> = ModelViewSet::new("users");
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/users/1/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::retrieve();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -103,13 +105,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_viewset_create_action() {
 		let viewset: ModelViewSet<TestModel, TestSerializer> = ModelViewSet::new("users");
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/users/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(r#"{"name": "test"}"#),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/users/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(r#"{"name": "test"}"#))
+			.build()
+			.unwrap();
 		let action = Action::create();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -120,13 +123,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_viewset_update_action() {
 		let viewset: ModelViewSet<TestModel, TestSerializer> = ModelViewSet::new("users");
-		let request = Request::new(
-			Method::PUT,
-			Uri::from_static("/users/1/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(r#"{"name": "updated"}"#),
-		);
+		let request = Request::builder()
+			.method(Method::PUT)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(r#"{"name": "updated"}"#))
+			.build()
+			.unwrap();
 		let action = Action::update();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -137,13 +141,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_model_viewset_destroy_action() {
 		let viewset: ModelViewSet<TestModel, TestSerializer> = ModelViewSet::new("users");
-		let request = Request::new(
-			Method::DELETE,
-			Uri::from_static("/users/1/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::DELETE)
+			.uri("/users/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::destroy();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -155,13 +160,14 @@ mod tests {
 	async fn test_readonly_viewset_list_allowed() {
 		let viewset: ReadOnlyModelViewSet<TestModel, TestSerializer> =
 			ReadOnlyModelViewSet::new("posts");
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/posts/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/posts/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::list();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -173,13 +179,14 @@ mod tests {
 	async fn test_readonly_viewset_retrieve_allowed() {
 		let viewset: ReadOnlyModelViewSet<TestModel, TestSerializer> =
 			ReadOnlyModelViewSet::new("posts");
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/posts/1/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/posts/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::retrieve();
 
 		let response = viewset.dispatch(request, action).await.unwrap();
@@ -191,13 +198,14 @@ mod tests {
 	async fn test_readonly_viewset_create_denied() {
 		let viewset: ReadOnlyModelViewSet<TestModel, TestSerializer> =
 			ReadOnlyModelViewSet::new("posts");
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/posts/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::from(r#"{"title": "test"}"#),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/posts/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::from(r#"{"title": "test"}"#))
+			.build()
+			.unwrap();
 		let action = Action::create();
 
 		let result = viewset.dispatch(request, action).await;
@@ -209,13 +217,14 @@ mod tests {
 	async fn test_readonly_viewset_delete_denied() {
 		let viewset: ReadOnlyModelViewSet<TestModel, TestSerializer> =
 			ReadOnlyModelViewSet::new("posts");
-		let request = Request::new(
-			Method::DELETE,
-			Uri::from_static("/posts/1/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::DELETE)
+			.uri("/posts/1/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let action = Action::destroy();
 
 		let result = viewset.dispatch(request, action).await;

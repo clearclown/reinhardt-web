@@ -4,43 +4,77 @@ use async_trait::async_trait;
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_core::http::{Request, Response};
 use reinhardt_db::orm::Model;
-use reinhardt_serializers::Serializer;
+use reinhardt_serializers::{JsonSerializer, Serializer};
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
 
 use crate::core::View;
 use crate::mixins::MultipleObjectMixin;
 
 /// ListView for displaying multiple objects
-pub struct ListView<T, S>
+pub struct ListView<T>
 where
 	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
 {
 	objects: Vec<T>,
 	ordering: Option<Vec<String>>,
 	paginate_by: Option<usize>,
 	allow_empty_flag: bool,
 	context_object_name: Option<String>,
-	_serializer: PhantomData<S>,
+	serializer: Box<dyn Serializer<Input = T, Output = String> + Send + Sync>,
 }
 
-impl<T, S> Default for ListView<T, S>
+impl<T> Default for ListView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	fn default() -> Self {
 		Self::new()
 	}
 }
 
-impl<T, S> ListView<T, S>
+impl<T> ListView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	/// Creates a new `ListView` with default settings.
+	///
+	/// Uses `JsonSerializer` by default. Use `with_serializer` to provide a custom serializer.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_views::{ListView, MultipleObjectMixin};
+	/// use reinhardt_db::orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	///
+	/// #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// struct Article {
+	///     id: Option<i64>,
+	///     title: String,
+	/// }
+	///
+	/// impl Model for Article {
+	///     type PrimaryKey = i64;
+	///     fn table_name() -> &'static str { "articles" }
+	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// }
+	///
+	/// let view = ListView::<Article>::new();
+	/// assert!(view.get_context_object_name().is_none());
+	/// ```
+	pub fn new() -> Self {
+		Self {
+			objects: Vec::new(),
+			ordering: None,
+			paginate_by: None,
+			allow_empty_flag: true,
+			context_object_name: None,
+			serializer: Box::new(JsonSerializer::<T>::new()),
+		}
+	}
+
+	/// Sets a custom serializer for the view.
 	///
 	/// # Examples
 	///
@@ -63,18 +97,15 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new();
-	/// assert!(view.get_context_object_name().is_none());
+	/// let view = ListView::<Article>::new()
+	///     .with_serializer(Box::new(JsonSerializer::<Article>::new()));
 	/// ```
-	pub fn new() -> Self {
-		Self {
-			objects: Vec::new(),
-			ordering: None,
-			paginate_by: None,
-			allow_empty_flag: true,
-			context_object_name: None,
-			_serializer: PhantomData,
-		}
+	pub fn with_serializer(
+		mut self,
+		serializer: Box<dyn Serializer<Input = T, Output = String> + Send + Sync>,
+	) -> Self {
+		self.serializer = serializer;
+		self
 	}
 	/// Sets the list of objects to display in the view.
 	///
@@ -82,7 +113,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -104,7 +134,7 @@ where
 	///     Article { id: Some(2), title: "Second".to_string() },
 	/// ];
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new()
+	/// let view = ListView::<Article>::new()
 	///     .with_objects(articles.clone());
 	/// # tokio_test::block_on(async {
 	/// let objects = view.get_objects().await.unwrap();
@@ -122,7 +152,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -139,7 +168,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new()
+	/// let view = ListView::<Article>::new()
 	///     .with_ordering(vec!["-created_at".to_string(), "title".to_string()]);
 	///
 	/// assert_eq!(view.get_ordering(), Some(vec!["-created_at".to_string(), "title".to_string()]));
@@ -154,7 +183,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -171,7 +199,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new()
+	/// let view = ListView::<Article>::new()
 	///     .with_paginate_by(25);
 	///
 	/// assert_eq!(view.get_paginate_by(), Some(25));
@@ -188,7 +216,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -205,7 +232,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new()
+	/// let view = ListView::<Article>::new()
 	///     .with_allow_empty(false);
 	///
 	/// assert_eq!(view.allow_empty(), false);
@@ -220,7 +247,6 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{ListView, MultipleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -237,7 +263,7 @@ where
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
-	/// let view = ListView::<Article, JsonSerializer<Article>>::new()
+	/// let view = ListView::<Article>::new()
 	///     .with_context_object_name("articles");
 	///
 	/// assert_eq!(view.get_context_object_name(), Some("articles"));
@@ -249,10 +275,9 @@ where
 }
 
 #[async_trait]
-impl<T, S> MultipleObjectMixin<T> for ListView<T, S>
+impl<T> MultipleObjectMixin<T> for ListView<T>
 where
-	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
-	S: Serializer<Input = T, Output = String> + Send + Sync,
+	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
 {
 	async fn get_objects(&self) -> Result<Vec<T>> {
 		Ok(self.objects.clone())
@@ -276,10 +301,9 @@ where
 }
 
 #[async_trait]
-impl<T, S> View for ListView<T, S>
+impl<T> View for ListView<T>
 where
 	T: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
-	S: Serializer<Input = T, Output = String> + Send + Sync + Default + 'static,
 {
 	async fn dispatch(&self, request: Request) -> Result<Response> {
 		// Handle OPTIONS method
@@ -398,11 +422,10 @@ where
 			};
 
 		// Serialize objects
-		let serializer = S::default();
 		let serialized_objects: Result<Vec<_>> = paginated_objects
 			.iter()
 			.map(|obj| {
-				serializer.serialize(obj).map_err(|e| match e {
+				self.serializer.serialize(obj).map_err(|e| match e {
 					reinhardt_serializers::SerializerError::Validation(v) => {
 						Error::Validation(v.to_string())
 					}
