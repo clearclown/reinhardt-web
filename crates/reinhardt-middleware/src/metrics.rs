@@ -266,7 +266,7 @@ impl Default for MetricsConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{MetricsMiddleware, MetricsConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -283,13 +283,14 @@ impl Default for MetricsConfig {
 /// let middleware = MetricsMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/test"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/test")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -448,7 +449,7 @@ impl Middleware for MetricsMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use std::thread;
 	use std::time::Duration;
 
@@ -487,13 +488,14 @@ mod tests {
 		let middleware = MetricsMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let _response = middleware.process(request, handler).await.unwrap();
 
@@ -508,13 +510,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
@@ -529,24 +532,26 @@ mod tests {
 
 		// Send OK request
 		let handler_ok = Arc::new(TestHandler::new(StatusCode::OK));
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/ok"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/ok")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware.process(request1, handler_ok).await.unwrap();
 
 		// Send NOT_FOUND request
 		let handler_404 = Arc::new(TestHandler::new(StatusCode::NOT_FOUND));
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response2 = middleware.process(request2, handler_404).await.unwrap();
 
 		assert_eq!(middleware.store.get_status_count(200), 1);
@@ -560,13 +565,14 @@ mod tests {
 		let handler =
 			Arc::new(TestHandler::new(StatusCode::OK).with_delay(Duration::from_millis(10)));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/slow"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/slow")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let _response = middleware.process(request, handler).await.unwrap();
 
@@ -585,23 +591,25 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// Generate some metrics
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware.process(request1, handler.clone()).await.unwrap();
 
 		// Request metrics endpoint
-		let metrics_request = Request::new(
-			Method::GET,
-			Uri::from_static("/metrics"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let metrics_request = Request::builder()
+			.method(Method::GET)
+			.uri("/metrics")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let metrics_response = middleware.process(metrics_request, handler).await.unwrap();
 
 		assert_eq!(metrics_response.status, StatusCode::OK);
@@ -622,13 +630,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// Request to excluded path
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/health"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/health")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware.process(request, handler).await.unwrap();
 
 		// Should not be recorded
@@ -641,13 +650,14 @@ mod tests {
 		let middleware = MetricsMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/prometheus"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/prometheus")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -659,13 +669,14 @@ mod tests {
 		let middleware = MetricsMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware.process(request, handler).await.unwrap();
 
 		// Response time should not be tracked
@@ -680,26 +691,28 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// GET request
-		let get_request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let get_request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware
 			.process(get_request, handler.clone())
 			.await
 			.unwrap();
 
 		// POST request
-		let post_request = Request::new(
-			Method::POST,
-			Uri::from_static("/api/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let post_request = Request::builder()
+			.method(Method::POST)
+			.uri("/api/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response2 = middleware.process(post_request, handler).await.unwrap();
 
 		assert_eq!(middleware.store.get_request_count("GET", "/api/users"), 1);
@@ -745,13 +758,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// Generate some metrics
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(middleware.store.total_requests(), 1);
@@ -767,13 +781,14 @@ mod tests {
 		let middleware = MetricsMiddleware::default();
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(middleware.store.total_requests(), 1);

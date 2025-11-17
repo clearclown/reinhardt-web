@@ -292,7 +292,7 @@ impl Default for SessionConfig {
 /// use std::time::Duration;
 /// use reinhardt_middleware::session::{SessionMiddleware, SessionConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -309,13 +309,14 @@ impl Default for SessionConfig {
 /// let middleware = SessionMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/api/data"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/data")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -477,7 +478,7 @@ impl Middleware for SessionMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use std::thread;
 
 	struct TestHandler;
@@ -495,13 +496,14 @@ mod tests {
 		let middleware = SessionMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -524,13 +526,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		// First request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let cookie1 = response1
 			.headers
@@ -554,13 +557,14 @@ mod tests {
 			hyper::header::COOKIE,
 			hyper::header::HeaderValue::from_str(&format!("sessionid={}", session_id)).unwrap(),
 		);
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 
 		assert_eq!(response2.status, StatusCode::OK);
@@ -582,13 +586,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		// First request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let cookie1 = response1
 			.headers
@@ -613,13 +618,14 @@ mod tests {
 			hyper::header::COOKIE,
 			hyper::header::HeaderValue::from_str(&format!("sessionid={}", session_id1)).unwrap(),
 		);
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 
 		// New session ID should be created
@@ -650,13 +656,14 @@ mod tests {
 		let middleware = SessionMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -741,13 +748,14 @@ mod tests {
 		let middleware = SessionMiddleware::with_defaults();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -772,13 +780,14 @@ mod tests {
 		let middleware = SessionMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

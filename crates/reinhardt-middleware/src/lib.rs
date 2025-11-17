@@ -84,7 +84,7 @@ pub use xframe::{XFrameOptions, XFrameOptionsMiddleware};
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_core::{
 		Handler, Middleware,
 		http::{Request, Response},
@@ -114,13 +114,14 @@ mod tests {
 
 		let middleware = CorsMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -144,13 +145,14 @@ mod tests {
 
 		let middleware = CorsMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::OPTIONS,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::OPTIONS)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -172,13 +174,14 @@ mod tests {
 	async fn test_cors_middleware_permissive() {
 		let middleware = CorsMiddleware::permissive();
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -189,13 +192,14 @@ mod tests {
 	async fn test_logging_middleware() {
 		let middleware = LoggingMiddleware::new();
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

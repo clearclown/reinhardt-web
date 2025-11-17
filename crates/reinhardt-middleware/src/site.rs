@@ -196,7 +196,7 @@ impl Default for SiteConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{Site, SiteConfig, SiteMiddleware};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -220,13 +220,14 @@ impl Default for SiteConfig {
 /// let mut headers = HeaderMap::new();
 /// headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/test"),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/test")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert!(response.headers.contains_key("X-Site-ID"));
@@ -334,7 +335,7 @@ impl Middleware for SiteMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -358,13 +359,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -386,13 +388,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "www.example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -413,13 +416,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "unknown.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -440,13 +444,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "unknown.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -472,26 +477,28 @@ mod tests {
 		// Test site 1
 		let mut headers1 = HeaderMap::new();
 		headers1.insert(hyper::header::HOST, "site1.com".parse().unwrap());
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers1,
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers1)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.headers.get(SITE_ID_HEADER).unwrap(), "1");
 
 		// Test site 2
 		let mut headers2 = HeaderMap::new();
 		headers2.insert(hyper::header::HOST, "site2.com".parse().unwrap());
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers2,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers2)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.headers.get(SITE_ID_HEADER).unwrap(), "2");
 	}
@@ -508,13 +515,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -534,13 +542,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com:8080".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -554,13 +563,14 @@ mod tests {
 		let middleware = SiteMiddleware::new(config);
 
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -601,13 +611,14 @@ mod tests {
 		let middleware = SiteMiddleware::default();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);

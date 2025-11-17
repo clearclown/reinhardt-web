@@ -63,7 +63,7 @@ impl Default for CommonConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{CommonMiddleware, CommonConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -84,13 +84,14 @@ impl Default for CommonConfig {
 /// let middleware = CommonMiddleware::with_config(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/path/to/page"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/path/to/page")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// // URL without trailing slash redirects to /path/to/page/
@@ -255,7 +256,7 @@ impl Middleware for CommonMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 
 	struct TestHandler;
 
@@ -275,13 +276,14 @@ mod tests {
 		let middleware = CommonMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/path/to/page"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/path/to/page")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -299,13 +301,14 @@ mod tests {
 		let middleware = CommonMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/path/to/page/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/path/to/page/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -321,13 +324,14 @@ mod tests {
 		let middleware = CommonMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/static/file.css"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/static/file.css")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -343,13 +347,14 @@ mod tests {
 		let middleware = CommonMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/search?q=test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/search?q=test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -372,13 +377,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -399,13 +405,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(HOST, "localhost:8000".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -424,13 +431,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(HOST, "www.example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page/"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page/")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -449,13 +457,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -478,13 +487,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

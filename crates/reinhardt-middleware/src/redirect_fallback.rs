@@ -82,7 +82,7 @@ impl RedirectResponseConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{RedirectFallbackMiddleware, RedirectResponseConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct NotFoundHandler;
@@ -99,13 +99,14 @@ impl RedirectResponseConfig {
 /// let middleware = RedirectFallbackMiddleware::new(config);
 /// let handler = Arc::new(NotFoundHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/missing"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/missing")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::FOUND);
@@ -225,13 +226,14 @@ mod tests {
 		let middleware = RedirectFallbackMiddleware::new(config);
 		let handler = Arc::new(NotFoundHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -248,13 +250,14 @@ mod tests {
 		let middleware = RedirectFallbackMiddleware::new(config);
 		let handler = Arc::new(OkHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/existing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/existing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -270,13 +273,14 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Should redirect for /api/* paths
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -295,13 +299,14 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Should NOT redirect for non-/api/* paths
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/other/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/other/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -315,13 +320,14 @@ mod tests {
 		let middleware = RedirectFallbackMiddleware::new(config);
 		let handler = Arc::new(NotFoundHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -339,13 +345,14 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Request to the fallback URL itself should not redirect
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/404"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/404")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -361,25 +368,27 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Test first pattern
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/api/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.status, StatusCode::FOUND);
 
 		// Test second pattern
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/v1/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/v1/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.status, StatusCode::FOUND);
@@ -392,13 +401,14 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Test POST
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -419,13 +429,14 @@ mod tests {
 		let paths = vec!["/api/test", "/admin/test", "/any/path/here"];
 
 		for path in paths {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static(path),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri(path)
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 
@@ -445,25 +456,27 @@ mod tests {
 		let handler = Arc::new(NotFoundHandler);
 
 		// Should match /api/v1/, /api/v2/, etc.
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/api/v1/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/api/v1/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.status, StatusCode::FOUND);
 
 		// Should NOT match /api/version/
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/api/version/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/api/version/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.status, StatusCode::NOT_FOUND);

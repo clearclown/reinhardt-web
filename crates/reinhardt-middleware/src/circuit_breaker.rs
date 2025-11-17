@@ -190,7 +190,7 @@ impl Default for CircuitBreakerConfig {
 /// use std::time::Duration;
 /// use reinhardt_middleware::circuit_breaker::{CircuitBreakerMiddleware, CircuitBreakerConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -207,13 +207,14 @@ impl Default for CircuitBreakerConfig {
 /// let middleware = CircuitBreakerMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/api/data"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/data")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -399,7 +400,7 @@ impl Middleware for CircuitBreakerMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use std::sync::atomic::{AtomicU64, Ordering};
 	use std::thread;
 
@@ -438,13 +439,14 @@ mod tests {
 		let middleware = CircuitBreakerMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(0));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -460,13 +462,14 @@ mod tests {
 
 		// Generate errors
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
@@ -482,24 +485,26 @@ mod tests {
 
 		// Open the circuit
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
 		// Request while circuit is open
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::SERVICE_UNAVAILABLE);
@@ -514,13 +519,14 @@ mod tests {
 
 		// Open the circuit
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
@@ -530,13 +536,14 @@ mod tests {
 		thread::sleep(Duration::from_millis(150));
 
 		// Transition to half-open state on next request
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(middleware.get_state(), CircuitState::HalfOpen);
@@ -551,13 +558,14 @@ mod tests {
 
 		// Open the circuit
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
@@ -568,13 +576,14 @@ mod tests {
 		let success_handler = Arc::new(TestHandler::new(0));
 
 		// Request in half-open state
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response = middleware
 			.process(request, success_handler.clone())
 			.await
@@ -584,13 +593,14 @@ mod tests {
 
 		// Continue with successes
 		for _ in 0..3 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware
 				.process(request, success_handler.clone())
 				.await
@@ -611,13 +621,14 @@ mod tests {
 
 		// Successful requests
 		for _ in 0..3 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware
 				.process(request, success_handler.clone())
 				.await
@@ -626,13 +637,14 @@ mod tests {
 
 		// Failed requests
 		for _ in 0..2 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware
 				.process(request, fail_handler.clone())
 				.await
@@ -654,13 +666,14 @@ mod tests {
 
 		// Open the circuit
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 

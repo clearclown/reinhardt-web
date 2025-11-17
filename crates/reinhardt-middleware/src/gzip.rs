@@ -57,7 +57,7 @@ impl GZipMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::GZipMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -82,13 +82,14 @@ impl GZipMiddleware {
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert(hyper::header::ACCEPT_ENCODING, "gzip, deflate".parse().unwrap());
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/page"),
-	///     Version::HTTP_11,
-	///     headers,
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/page")
+	///     .version(Version::HTTP_11)
+	///     .headers(headers)
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.headers.get(hyper::header::CONTENT_ENCODING).unwrap(), "gzip");
@@ -111,7 +112,7 @@ impl GZipMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{GZipMiddleware, GZipConfig};
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -142,13 +143,14 @@ impl GZipMiddleware {
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert(hyper::header::ACCEPT_ENCODING, "gzip".parse().unwrap());
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/page"),
-	///     Version::HTTP_11,
-	///     headers,
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/page")
+	///     .version(Version::HTTP_11)
+	///     .headers(headers)
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	// Small response not compressed due to min_length=1000
@@ -250,7 +252,7 @@ impl Middleware for GZipMiddleware {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_core::http::Response;
 
 	struct TestHandler {
@@ -283,13 +285,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip, deflate".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -306,13 +309,14 @@ mod tests {
 			content_type: "text/html",
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -335,13 +339,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -359,13 +364,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -396,13 +402,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -436,13 +443,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -473,13 +481,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip, deflate".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -511,13 +520,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_ENCODING, "gzip".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

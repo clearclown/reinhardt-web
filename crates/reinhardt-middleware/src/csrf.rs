@@ -133,7 +133,7 @@ impl CsrfMiddleware {
 	/// ```
 	/// use reinhardt_middleware::csrf::CsrfMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{Method, Uri, Version, HeaderMap};
+	/// use hyper::{Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	/// use std::sync::Arc;
 	///
@@ -150,13 +150,14 @@ impl CsrfMiddleware {
 	/// let middleware = CsrfMiddleware::new();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/test"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/test")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert!(response.headers.contains_key("Set-Cookie"));
@@ -366,13 +367,14 @@ mod tests {
 		let middleware = CsrfMiddleware::new();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -394,13 +396,14 @@ mod tests {
 		let middleware = CsrfMiddleware::new();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = middleware.process(request, handler).await;
 		assert!(result.is_err());
@@ -431,13 +434,14 @@ mod tests {
 				.unwrap(),
 		);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = csrf_middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -452,13 +456,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-CSRFToken", "invalid_token_here".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let result = middleware.process(request, handler).await;
 		assert!(result.is_err());
@@ -472,13 +477,14 @@ mod tests {
 		let middleware = CsrfMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/exempt"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/exempt")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -490,13 +496,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		for method in &[Method::GET, Method::HEAD, Method::OPTIONS] {
-			let request = Request::new(
-				method.clone(),
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(method.clone())
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			assert_eq!(response.status, StatusCode::OK);
@@ -528,13 +535,14 @@ mod tests {
 		);
 		headers.insert("X-CSRFToken", token.parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = csrf_middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -546,13 +554,14 @@ mod tests {
 		let middleware = CsrfMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert!(response.headers.contains_key("Set-Cookie"));
@@ -585,13 +594,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-CSRFToken", "my_token_value".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let token = middleware.extract_token(&request);
 		assert_eq!(token, Some("my_token_value".to_string()));
@@ -604,13 +614,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("Cookie", "csrftoken=cookie_token_value".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let token = middleware.extract_token(&request);
 		assert_eq!(token, Some("cookie_token_value".to_string()));
@@ -620,22 +631,24 @@ mod tests {
 	async fn test_is_secure_request() {
 		let middleware = CsrfMiddleware::new();
 
-		let request_http = Request::new(
-			Method::GET,
-			Uri::from_static("http://example.com/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request_http = Request::builder()
+			.method(Method::GET)
+			.uri("http://example.com/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		assert!(!middleware.is_secure_request(&request_http));
 
-		let request_https = Request::new(
-			Method::GET,
-			Uri::from_static("https://example.com/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request_https = Request::builder()
+			.method(Method::GET)
+			.uri("https://example.com/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		assert!(middleware.is_secure_request(&request_https));
 	}
 
@@ -663,13 +676,14 @@ mod tests {
 			format!("sessionid={}", session_id).parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/submit"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/submit")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await;
 		assert!(response.is_ok());
@@ -699,13 +713,14 @@ mod tests {
 			format!("sessionid={}", session_id).parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/submit"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/submit")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await;
 		assert!(response.is_err());
@@ -719,13 +734,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-CSRFToken", "".parse().unwrap());
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/submit"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/submit")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await;
 		assert!(response.is_err());
@@ -736,13 +752,14 @@ mod tests {
 		let middleware = CsrfMiddleware::new();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -766,13 +783,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		for path in &["/api/webhook", "/api/callback", "/health"] {
-			let request = Request::new(
-				Method::POST,
-				Uri::from_static(path),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::POST)
+				.uri(*path)
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 
 			let response = middleware.process(request, handler.clone()).await;
 			assert!(response.is_ok(), "Path {} should be exempt", path);

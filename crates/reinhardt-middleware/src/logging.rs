@@ -21,7 +21,7 @@ impl LoggingMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::LoggingMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{Method, Uri, Version, HeaderMap, StatusCode};
+	/// use hyper::{Method, Version, HeaderMap, StatusCode};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -36,13 +36,14 @@ impl LoggingMiddleware {
 	/// # tokio_test::block_on(async {
 	/// let middleware = LoggingMiddleware::new();
 	/// let handler = Arc::new(TestHandler);
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/api/users"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/users")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::OK);

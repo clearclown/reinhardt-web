@@ -261,7 +261,7 @@ impl Default for TracingConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{TracingMiddleware, TracingConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -278,13 +278,14 @@ impl Default for TracingConfig {
 /// let middleware = TracingMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/test"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/test")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert!(response.headers.contains_key("X-Trace-ID"));
@@ -463,7 +464,7 @@ impl Middleware for TracingMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler {
 		status: StatusCode,
@@ -488,13 +489,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -518,13 +520,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(TRACE_ID_HEADER, existing_trace_id.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -541,13 +544,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::INTERNAL_SERVER_ERROR));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/error"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/error")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let _response = middleware.process(request, handler).await.unwrap();
 
@@ -563,13 +567,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/health"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/health")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -584,13 +589,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -605,13 +611,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/api/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/api/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let _response = middleware.process(request, handler).await.unwrap();
 
@@ -631,13 +638,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let _response = middleware.process(request, handler).await.unwrap();
 
@@ -657,13 +665,14 @@ mod tests {
 
 		// Generate some spans
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let _response = middleware.process(request, handler.clone()).await.unwrap();
 		}
 
@@ -681,13 +690,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -701,13 +711,14 @@ mod tests {
 		let middleware = TracingMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -720,13 +731,14 @@ mod tests {
 		let middleware = TracingMiddleware::default();
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

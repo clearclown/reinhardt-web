@@ -250,7 +250,7 @@ impl Default for RateLimitConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::rate_limit::{RateLimitMiddleware, RateLimitConfig, RateLimitStrategy};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -267,13 +267,14 @@ impl Default for RateLimitConfig {
 /// let middleware = RateLimitMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/api/data"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/data")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -531,7 +532,7 @@ impl Middleware for RateLimitMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use std::thread;
 	use std::time::Duration;
 
@@ -558,13 +559,14 @@ mod tests {
 		let middleware = RateLimitMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -581,25 +583,27 @@ mod tests {
 
 		// First 2 requests succeed
 		for _ in 0..2 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			assert_eq!(response.status, StatusCode::OK);
 		}
 
 		// 3rd request exceeds rate limit
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::TOO_MANY_REQUESTS);
@@ -614,13 +618,14 @@ mod tests {
 
 		// First 2 requests succeed
 		for _ in 0..2 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/test"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/test")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			assert_eq!(response.status, StatusCode::OK);
 		}
@@ -629,13 +634,14 @@ mod tests {
 		thread::sleep(Duration::from_secs(1));
 
 		// Next request should succeed
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -650,13 +656,14 @@ mod tests {
 
 		// Multiple requests to excluded paths are not limited
 		for _ in 0..5 {
-			let request = Request::new(
-				Method::GET,
-				Uri::from_static("/health"),
-				Version::HTTP_11,
-				HeaderMap::new(),
-				Bytes::new(),
-			);
+			let request = Request::builder()
+				.method(Method::GET)
+				.uri("/health")
+				.version(Version::HTTP_11)
+				.headers(HeaderMap::new())
+				.body(Bytes::new())
+				.build()
+				.unwrap();
 			let response = middleware.process(request, handler.clone()).await.unwrap();
 			assert_eq!(response.status, StatusCode::OK);
 		}
@@ -670,23 +677,25 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// First request succeeds
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware.process(request1, handler.clone()).await.unwrap();
 
 		// 2nd request exceeds rate limit
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 
 		assert_eq!(response2.status, StatusCode::TOO_MANY_REQUESTS);
@@ -701,24 +710,26 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// First request to /test1 succeeds
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test1"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test1")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.status, StatusCode::OK);
 
 		// First request to /test2 also succeeds (separate bucket)
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test2"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test2")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.status, StatusCode::OK);
 	}
@@ -761,13 +772,14 @@ mod tests {
 				.unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = middleware.extract_client_ip(&request);
 		assert_eq!(ip, "203.0.113.195");
@@ -781,13 +793,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Real-IP", "198.51.100.42".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = middleware.extract_client_ip(&request);
 		assert_eq!(ip, "198.51.100.42");
@@ -798,13 +811,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerIp, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let mut request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let mut request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Set remote_addr
 		request.remote_addr = Some("192.0.2.123:8080".parse().unwrap());
@@ -818,13 +832,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerIp, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = middleware.extract_client_ip(&request);
 		assert_eq!(ip, "127.0.0.1");
@@ -839,13 +854,14 @@ mod tests {
 		headers.insert("X-Forwarded-For", "203.0.113.195".parse().unwrap());
 		headers.insert("X-Real-IP", "198.51.100.42".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let ip = middleware.extract_client_ip(&request);
 		assert_eq!(ip, "203.0.113.195"); // X-Forwarded-For takes priority
@@ -856,13 +872,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerUser, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Insert user ID as String
 		request.extensions.insert("user123".to_string());
@@ -876,13 +893,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerUser, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Insert user ID as i64
 		request.extensions.insert(42i64);
@@ -896,13 +914,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerUser, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let user_id = middleware.extract_user_id(&request);
 		assert_eq!(user_id, None);
@@ -913,13 +932,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerUser, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		request.extensions.insert("user456".to_string());
 
@@ -932,13 +952,14 @@ mod tests {
 		let config = RateLimitConfig::new(RateLimitStrategy::PerUser, 10.0, 1.0);
 		let middleware = RateLimitMiddleware::new(config);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let key = middleware.generate_key(&request);
 		assert_eq!(key, "user:anonymous");
@@ -952,13 +973,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Forwarded-For", "203.0.113.195".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let key = middleware.generate_key(&request);
 		assert_eq!(key, "ip:203.0.113.195");
@@ -973,26 +995,28 @@ mod tests {
 		// First request from IP1
 		let mut headers1 = HeaderMap::new();
 		headers1.insert("X-Forwarded-For", "203.0.113.1".parse().unwrap());
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers1,
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers1)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.status, StatusCode::OK);
 
 		// First request from IP2 should also succeed (different bucket)
 		let mut headers2 = HeaderMap::new();
 		headers2.insert("X-Forwarded-For", "203.0.113.2".parse().unwrap());
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers2,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers2)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.status, StatusCode::OK);
 	}
@@ -1004,25 +1028,27 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// First request from user1
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		request1.extensions.insert("user1".to_string());
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.status, StatusCode::OK);
 
 		// First request from user2 should also succeed (different bucket)
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		request2.extensions.insert("user2".to_string());
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		assert_eq!(response2.status, StatusCode::OK);

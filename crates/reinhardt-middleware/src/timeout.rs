@@ -105,7 +105,7 @@ impl Middleware for TimeoutMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use std::time::Duration;
 	use tokio::time::sleep;
 
@@ -136,13 +136,14 @@ mod tests {
 		let middleware = TimeoutMiddleware::new(config);
 		let handler = Arc::new(FastHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -156,13 +157,14 @@ mod tests {
 			delay: Duration::from_millis(500),
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::REQUEST_TIMEOUT);
@@ -177,13 +179,14 @@ mod tests {
 			delay: Duration::from_millis(50),
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);

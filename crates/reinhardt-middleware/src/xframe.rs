@@ -57,7 +57,7 @@ impl XFrameOptionsMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::XFrameOptionsMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -73,13 +73,14 @@ impl XFrameOptionsMiddleware {
 	/// let middleware = XFrameOptionsMiddleware::deny();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/secure-page"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/secure-page")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "DENY");
@@ -100,7 +101,7 @@ impl XFrameOptionsMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::XFrameOptionsMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -116,13 +117,14 @@ impl XFrameOptionsMiddleware {
 	/// let middleware = XFrameOptionsMiddleware::same_origin();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/dashboard"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/dashboard")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "SAMEORIGIN");
@@ -145,7 +147,7 @@ impl XFrameOptionsMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{XFrameOptionsMiddleware, XFrameOptions};
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -161,13 +163,14 @@ impl XFrameOptionsMiddleware {
 	/// let middleware = XFrameOptionsMiddleware::new(XFrameOptions::Deny);
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/admin"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/admin")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.headers.get("X-Frame-Options").unwrap(), "DENY");
@@ -206,7 +209,7 @@ impl Middleware for XFrameOptionsMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -221,13 +224,14 @@ mod tests {
 	async fn test_deny_option() {
 		let middleware = XFrameOptionsMiddleware::deny();
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -238,13 +242,14 @@ mod tests {
 	async fn test_same_origin_option() {
 		let middleware = XFrameOptionsMiddleware::same_origin();
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -258,13 +263,14 @@ mod tests {
 	async fn test_default_is_same_origin() {
 		let middleware = XFrameOptionsMiddleware::default();
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -292,13 +298,14 @@ mod tests {
 
 		let middleware = XFrameOptionsMiddleware::same_origin();
 		let handler = Arc::new(TestHandlerWithHeader);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -310,13 +317,14 @@ mod tests {
 	async fn test_new_constructor_with_deny() {
 		let middleware = XFrameOptionsMiddleware::new(XFrameOptions::Deny);
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/secure"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/secure")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
@@ -326,13 +334,14 @@ mod tests {
 	async fn test_new_constructor_with_same_origin() {
 		let middleware = XFrameOptionsMiddleware::new(XFrameOptions::SameOrigin);
 		let handler = Arc::new(TestHandler);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/dashboard"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/dashboard")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(
@@ -355,13 +364,14 @@ mod tests {
 
 		let middleware = XFrameOptionsMiddleware::deny();
 		let handler = Arc::new(TestHandlerWithBody);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/content"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/content")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -377,35 +387,38 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		// First request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/page1"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/page1")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
 
 		// Second request
-		let request2 = Request::new(
-			Method::POST,
-			Uri::from_static("/page2"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::POST)
+			.uri("/page2")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler.clone()).await.unwrap();
 		assert_eq!(response2.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
 
 		// Third request
-		let request3 = Request::new(
-			Method::PUT,
-			Uri::from_static("/page3"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request3 = Request::builder()
+			.method(Method::PUT)
+			.uri("/page3")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response3 = middleware.process(request3, handler).await.unwrap();
 		assert_eq!(response3.headers.get(&X_FRAME_OPTIONS).unwrap(), "DENY");
 	}

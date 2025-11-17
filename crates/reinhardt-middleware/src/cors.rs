@@ -51,7 +51,7 @@ impl CorsMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{CorsMiddleware, cors::CorsConfig};
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -75,13 +75,14 @@ impl CorsMiddleware {
 	/// let middleware = CorsMiddleware::new(config);
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/api/data"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/data")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.headers.get("Access-Control-Allow-Origin").unwrap(), "https://example.com");
@@ -101,7 +102,7 @@ impl CorsMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::CorsMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -118,13 +119,14 @@ impl CorsMiddleware {
 	/// let handler = Arc::new(TestHandler);
 	///
 	// Preflight request
-	/// let request = Request::new(
-	///     Method::OPTIONS,
-	///     Uri::from_static("/api/users"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::OPTIONS)
+	///     .uri("/api/users")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::NO_CONTENT);
@@ -204,7 +206,7 @@ impl Middleware for CorsMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -227,13 +229,14 @@ mod tests {
 		let middleware = CorsMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::OPTIONS,
-			Uri::from_static("/api/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::OPTIONS)
+			.uri("/api/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -298,13 +301,14 @@ mod tests {
 		let middleware = CorsMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/data"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/data")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -337,13 +341,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		// Test OPTIONS request
-		let request = Request::new(
-			Method::OPTIONS,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::OPTIONS)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler.clone()).await.unwrap();
 
@@ -387,13 +392,14 @@ mod tests {
 		let middleware = CorsMiddleware::new(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/api/resource"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/api/resource")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

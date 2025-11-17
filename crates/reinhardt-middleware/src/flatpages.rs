@@ -364,7 +364,7 @@ impl Middleware for FlatpagesMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 
 	struct TestHandler {
 		status: StatusCode,
@@ -405,13 +405,14 @@ mod tests {
 		middleware.store.register(page);
 
 		let handler = Arc::new(TestHandler::not_found());
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/about/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/about/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -437,13 +438,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Request without trailing slash
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/contact"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/contact")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -468,13 +470,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Request with trailing slash
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/faq/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/faq/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -489,13 +492,14 @@ mod tests {
 		let middleware = Arc::new(FlatpagesMiddleware::new(config));
 
 		let handler = Arc::new(TestHandler::not_found());
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/nonexistent/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/nonexistent/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -520,13 +524,14 @@ mod tests {
 
 		// Handler returns OK, not 404
 		let handler = Arc::new(TestHandler::ok());
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/about/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/about/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -550,13 +555,14 @@ mod tests {
 		middleware.store.register(page);
 
 		let handler = Arc::new(TestHandler::not_found());
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/about/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/about/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -646,25 +652,27 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Request with slash should match with-slash version
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler.clone()).await.unwrap();
 		let body = String::from_utf8_lossy(&response.body);
 		assert!(body.contains("With Slash"));
 
 		// Request without slash should match without-slash version
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8_lossy(&response.body);
 		assert!(body.contains("Without Slash"));
@@ -687,13 +695,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Request without slash should NOT match
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::NOT_FOUND);
@@ -716,13 +725,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Create request with authentication state
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/protected/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/protected/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		// Add authentication state to request extensions
 		request
@@ -754,13 +764,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Create request WITHOUT authentication state
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/protected/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/protected/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -789,13 +800,14 @@ mod tests {
 		let handler = Arc::new(TestHandler::not_found());
 
 		// Create request WITHOUT authentication state
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/public/"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/public/")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

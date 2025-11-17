@@ -106,7 +106,7 @@ impl Default for LocaleConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{LocaleMiddleware, locale::LocaleConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -134,13 +134,14 @@ impl Default for LocaleConfig {
 /// let mut headers = HeaderMap::new();
 /// headers.insert(hyper::header::ACCEPT_LANGUAGE, "ja,en;q=0.9".parse().unwrap());
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/page"),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/page")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -295,7 +296,7 @@ impl Middleware for LocaleMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -319,13 +320,14 @@ mod tests {
 		let middleware = LocaleMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -344,13 +346,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_LANGUAGE, "ja,en;q=0.9".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -372,13 +375,14 @@ mod tests {
 			"fr;q=0.7,ja;q=0.9,en;q=0.8".parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -397,13 +401,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(COOKIE, "django_language=fr; other=value".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -423,13 +428,14 @@ mod tests {
 		headers.insert(ACCEPT_LANGUAGE, "ja".parse().unwrap());
 		headers.insert(COOKIE, "django_language=fr".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -447,13 +453,14 @@ mod tests {
 		let middleware = LocaleMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/ja/page/subpage"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/ja/page/subpage")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -475,13 +482,14 @@ mod tests {
 		headers.insert(ACCEPT_LANGUAGE, "ja".parse().unwrap());
 		headers.insert(COOKIE, "django_language=fr".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/en/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/en/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -498,13 +506,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_LANGUAGE, "de,fr;q=0.9".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -521,13 +530,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(ACCEPT_LANGUAGE, "ja-JP,en-US;q=0.9".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();
@@ -545,13 +555,14 @@ mod tests {
 		headers.insert(COOKIE, "django_language=invalid".parse().unwrap());
 		headers.insert(ACCEPT_LANGUAGE, "ja".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		let body = String::from_utf8(response.body.to_vec()).unwrap();

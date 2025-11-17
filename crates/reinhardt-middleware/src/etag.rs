@@ -102,7 +102,7 @@ impl Default for ETagConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::etag::{ETagMiddleware, ETagConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -119,13 +119,14 @@ impl Default for ETagConfig {
 /// let middleware = ETagMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/api/data"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/data")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -306,7 +307,7 @@ impl Middleware for ETagMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler {
 		body: Vec<u8>,
@@ -331,13 +332,14 @@ mod tests {
 		let middleware = ETagMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -355,13 +357,14 @@ mod tests {
 		let middleware = ETagMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -376,26 +379,28 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
 		// Get ETag from first request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let etag = response1.headers.get("etag").unwrap().clone();
 
 		// Second request with If-None-Match header
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::IF_NONE_MATCH, etag);
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 
 		assert_eq!(response2.status, StatusCode::NOT_MODIFIED);
@@ -415,13 +420,14 @@ mod tests {
 			hyper::header::IF_NONE_MATCH,
 			hyper::header::HeaderValue::from_static("\"different-etag\""),
 		);
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response = middleware.process(request, handler).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -436,26 +442,28 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
 		// Get ETag from first request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let etag = response1.headers.get("etag").unwrap().clone();
 
 		// PUT request with If-Match header
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::IF_MATCH, etag);
-		let request2 = Request::new(
-			Method::PUT,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::PUT)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 
 		// PUT method is excluded, so ETag check is skipped
@@ -468,13 +476,14 @@ mod tests {
 		let middleware = ETagMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/admin/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/admin/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -488,13 +497,14 @@ mod tests {
 		let middleware = ETagMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -509,23 +519,25 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(b"test body".to_vec()));
 
 		// Two requests with same body
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let etag1 = response1.headers.get("etag").unwrap().to_str().unwrap();
 
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		let etag2 = response2.headers.get("etag").unwrap().to_str().unwrap();
 
@@ -538,13 +550,14 @@ mod tests {
 		let middleware = Arc::new(ETagMiddleware::new(config));
 
 		let handler1 = Arc::new(TestHandler::new(b"body1".to_vec()));
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware
 			.process(request1, handler1.clone())
 			.await
@@ -552,13 +565,14 @@ mod tests {
 		let etag1 = response1.headers.get("etag").unwrap().to_str().unwrap();
 
 		let handler2 = Arc::new(TestHandler::new(b"body2".to_vec()));
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler2).await.unwrap();
 		let etag2 = response2.headers.get("etag").unwrap().to_str().unwrap();
 

@@ -96,7 +96,7 @@ impl CspMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::CspMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -112,13 +112,14 @@ impl CspMiddleware {
 	/// let middleware = CspMiddleware::new();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/page"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/page")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// let csp = response.headers.get("Content-Security-Policy").unwrap();
@@ -142,7 +143,7 @@ impl CspMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{CspMiddleware, CspConfig};
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	/// use std::collections::HashMap;
 	///
@@ -169,13 +170,14 @@ impl CspMiddleware {
 	/// let middleware = CspMiddleware::with_config(config);
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/app"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/app")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// let csp = response.headers.get("Content-Security-Policy").unwrap().to_str().unwrap();
@@ -195,7 +197,7 @@ impl CspMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::CspMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -211,13 +213,14 @@ impl CspMiddleware {
 	/// let middleware = CspMiddleware::strict();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/secure-app"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/secure-app")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// let csp = response.headers.get("Content-Security-Policy").unwrap().to_str().unwrap();
@@ -366,7 +369,7 @@ pub mod base64 {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler;
 
@@ -382,13 +385,14 @@ mod tests {
 		let middleware = CspMiddleware::new();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -414,13 +418,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -448,13 +453,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -480,13 +486,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -504,13 +511,14 @@ mod tests {
 		let middleware = CspMiddleware::strict();
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -547,13 +555,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -581,13 +590,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -613,13 +623,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -643,13 +654,14 @@ mod tests {
 		let middleware = CspMiddleware::with_config(config);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -677,13 +689,14 @@ mod tests {
 		let handler = Arc::new(TestHandler);
 
 		// First request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/page1"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/page1")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		let csp1 = response1
 			.headers
@@ -694,13 +707,14 @@ mod tests {
 			.to_string();
 
 		// Second request
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/page2"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/page2")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler).await.unwrap();
 		let csp2 = response2
 			.headers
@@ -742,13 +756,14 @@ mod tests {
 		let middleware = CspMiddleware::new();
 		let handler = Arc::new(TestHandlerWithBody);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

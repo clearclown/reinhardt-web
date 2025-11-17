@@ -38,7 +38,7 @@ impl ConditionalGetMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::ConditionalGetMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -54,13 +54,14 @@ impl ConditionalGetMiddleware {
 	/// let middleware = ConditionalGetMiddleware::new();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/api/resource"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/resource")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::OK);
@@ -82,7 +83,7 @@ impl ConditionalGetMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::ConditionalGetMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -103,13 +104,14 @@ impl ConditionalGetMiddleware {
 	/// let middleware = ConditionalGetMiddleware::without_etag();
 	/// let handler = Arc::new(TestHandler);
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/api/resource"),
-	///     Version::HTTP_11,
-	///     HeaderMap::new(),
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/resource")
+	///     .version(Version::HTTP_11)
+	///     .headers(HeaderMap::new())
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::OK);
@@ -283,7 +285,7 @@ impl Middleware for ConditionalGetMiddleware {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use hyper::{HeaderMap, Uri, Version};
+	use hyper::{HeaderMap, Version};
 
 	struct TestHandler {
 		body: &'static str,
@@ -320,13 +322,14 @@ mod tests {
 			with_last_modified: None,
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -346,13 +349,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(IF_NONE_MATCH, etag.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -374,13 +378,14 @@ mod tests {
 		let ims_str = httpdate::fmt_http_date((last_modified + chrono::Duration::hours(1)).into());
 		headers.insert(IF_MODIFIED_SINCE, ims_str.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -400,13 +405,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(IF_MATCH, "\"xyz789\"".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -423,13 +429,14 @@ mod tests {
 			with_last_modified: None,
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -453,13 +460,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(IF_NONE_MATCH, "\"different-etag\"".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -480,13 +488,14 @@ mod tests {
 		let ims_str = httpdate::fmt_http_date((last_modified - chrono::Duration::hours(1)).into());
 		headers.insert(IF_MODIFIED_SINCE, ims_str.parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -502,13 +511,14 @@ mod tests {
 			with_last_modified: None,
 		});
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -525,13 +535,14 @@ mod tests {
 			with_last_modified: None,
 		});
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

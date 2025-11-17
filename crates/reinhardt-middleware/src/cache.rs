@@ -254,7 +254,7 @@ impl Default for CacheConfig {
 /// use std::time::Duration;
 /// use reinhardt_middleware::cache::{CacheMiddleware, CacheConfig, CacheKeyStrategy};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler;
@@ -271,13 +271,14 @@ impl Default for CacheConfig {
 /// let middleware = CacheMiddleware::new(config);
 /// let handler = Arc::new(TestHandler);
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/api/data"),
-///     Version::HTTP_11,
-///     HeaderMap::new(),
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/api/data")
+///     .version(Version::HTTP_11)
+///     .headers(HeaderMap::new())
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::OK);
@@ -474,7 +475,7 @@ impl Middleware for CacheMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct TestHandler {
 		status: StatusCode,
@@ -508,13 +509,14 @@ mod tests {
 		let middleware = CacheMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -529,25 +531,27 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// First request (cache miss)
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.headers.get("x-cache").unwrap(), "MISS");
 		assert_eq!(handler.get_call_count(), 1);
 
 		// Second request (cache hit)
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler.clone()).await.unwrap();
 		assert_eq!(response2.headers.get("x-cache").unwrap(), "HIT");
 		assert_eq!(handler.get_call_count(), 1); // Handler is not called
@@ -560,26 +564,28 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// First request
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware.process(request1, handler.clone()).await.unwrap();
 
 		// Wait for expiration
 		std::thread::sleep(Duration::from_millis(150));
 
 		// Request after expiration (cache miss)
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler.clone()).await.unwrap();
 		assert_eq!(response2.headers.get("x-cache").unwrap(), "MISS");
 		assert_eq!(handler.get_call_count(), 2);
@@ -591,13 +597,14 @@ mod tests {
 		let middleware = CacheMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::POST,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::POST)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -612,13 +619,14 @@ mod tests {
 		let middleware = CacheMiddleware::new(config);
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/admin/users"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/admin/users")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -633,23 +641,25 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// Request to /test1
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/test1"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/test1")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let _response1 = middleware.process(request1, handler.clone()).await.unwrap();
 
 		// Request to /test2 (different cache entry)
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/test2"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/test2")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware.process(request2, handler.clone()).await.unwrap();
 
 		assert_eq!(response2.headers.get("x-cache").unwrap(), "MISS");
@@ -696,13 +706,14 @@ mod tests {
 
 		// Test with 404 status (cached by default)
 		let handler_404 = Arc::new(TestHandler::new(StatusCode::NOT_FOUND));
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/not-found"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/not-found")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware
 			.process(request1, handler_404.clone())
 			.await
@@ -712,13 +723,14 @@ mod tests {
 		assert_eq!(handler_404.get_call_count(), 1);
 
 		// Second request to same 404 URL (cache hit)
-		let request1b = Request::new(
-			Method::GET,
-			Uri::from_static("/not-found"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1b = Request::builder()
+			.method(Method::GET)
+			.uri("/not-found")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1b = middleware
 			.process(request1b, handler_404.clone())
 			.await
@@ -729,13 +741,14 @@ mod tests {
 
 		// Test with 500 status (also cached by default)
 		let handler_500 = Arc::new(TestHandler::new(StatusCode::INTERNAL_SERVER_ERROR));
-		let request2 = Request::new(
-			Method::GET,
-			Uri::from_static("/error"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::GET)
+			.uri("/error")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware
 			.process(request2, handler_500.clone())
 			.await
@@ -751,26 +764,28 @@ mod tests {
 		let handler = Arc::new(TestHandler::new(StatusCode::OK));
 
 		// GET request to /api
-		let request1 = Request::new(
-			Method::GET,
-			Uri::from_static("/api"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request1 = Request::builder()
+			.method(Method::GET)
+			.uri("/api")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response1 = middleware.process(request1, handler.clone()).await.unwrap();
 		assert_eq!(response1.headers.get("x-cache").unwrap(), "MISS");
 		assert_eq!(handler.get_call_count(), 1);
 
 		// HEAD request to same URL (different cache key due to method)
 		let handler2 = Arc::new(TestHandler::new(StatusCode::OK));
-		let request2 = Request::new(
-			Method::HEAD,
-			Uri::from_static("/api"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request2 = Request::builder()
+			.method(Method::HEAD)
+			.uri("/api")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 		let response2 = middleware
 			.process(request2, handler2.clone())
 			.await

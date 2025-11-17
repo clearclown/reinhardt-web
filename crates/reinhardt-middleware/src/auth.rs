@@ -277,7 +277,7 @@ impl AuthState {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, Uri, Version};
+	use hyper::{HeaderMap, Method, Version};
 	use reinhardt_auth::AuthenticationError;
 	use reinhardt_auth::SimpleUser;
 	use reinhardt_auth::session::{InMemorySessionStore, Session};
@@ -353,13 +353,14 @@ mod tests {
 			format!("sessionid={}", session_id).parse().unwrap(),
 		);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
@@ -373,13 +374,14 @@ mod tests {
 		let middleware = AuthenticationMiddleware::new(session_store, auth_backend);
 		let handler = Arc::new(TestHandler);
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);

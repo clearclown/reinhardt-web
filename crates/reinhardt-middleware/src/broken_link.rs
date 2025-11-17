@@ -143,7 +143,7 @@ impl Default for BrokenLinkConfig {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{BrokenLinkEmailsMiddleware, BrokenLinkConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct NotFoundHandler;
@@ -164,13 +164,14 @@ impl Default for BrokenLinkConfig {
 /// headers.insert(hyper::header::REFERER, "http://example.com/page".parse().unwrap());
 /// headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/missing"),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/missing")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let response = middleware.process(request, handler).await.unwrap();
 /// assert_eq!(response.status, StatusCode::NOT_FOUND);
@@ -374,7 +375,7 @@ impl Middleware for BrokenLinkEmailsMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	struct NotFoundHandler;
 
@@ -404,13 +405,14 @@ mod tests {
 		headers.insert(REFERER, "http://example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -428,13 +430,14 @@ mod tests {
 		headers.insert(REFERER, "http://external.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -451,13 +454,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -475,13 +479,14 @@ mod tests {
 		headers.insert(REFERER, "http://example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/favicon.ico"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/favicon.ico")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -500,13 +505,14 @@ mod tests {
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 		headers.insert(USER_AGENT, "Googlebot/2.1".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -524,13 +530,14 @@ mod tests {
 		headers.insert(REFERER, "http://example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/existing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/existing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -548,13 +555,14 @@ mod tests {
 		headers.insert(REFERER, "http://www.example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -572,13 +580,14 @@ mod tests {
 		headers.insert(REFERER, "http://example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -596,13 +605,14 @@ mod tests {
 		headers.insert(REFERER, "http://example.com/page".parse().unwrap());
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/admin/missing"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/admin/missing")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 

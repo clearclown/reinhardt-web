@@ -196,7 +196,7 @@ impl MessageStorage for CookieStorage {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::messages::{MessageMiddleware, SessionStorage, Message, MessageLevel};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+/// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
 /// struct TestHandler {
@@ -220,13 +220,14 @@ impl MessageStorage for CookieStorage {
 /// let mut headers = HeaderMap::new();
 /// headers.insert(hyper::header::COOKIE, "sessionid=test-session".parse().unwrap());
 ///
-/// let request = Request::new(
-///     Method::GET,
-///     Uri::from_static("/page"),
-///     Version::HTTP_11,
-///     headers,
-///     Bytes::new(),
-/// );
+/// let request = Request::builder()
+///     .method(Method::GET)
+///     .uri("/page")
+///     .version(Version::HTTP_11)
+///     .headers(headers)
+///     .body(Bytes::new())
+///     .build()
+///     .unwrap();
 ///
 /// let _response = middleware.process(request, handler).await.unwrap();
 /// let messages = storage.get_and_clear_messages("test-session");
@@ -297,7 +298,7 @@ impl Middleware for MessageMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 
 	#[test]
 	fn test_message_creation() {
@@ -420,13 +421,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(COOKIE, "sessionid=test-session".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -446,13 +448,14 @@ mod tests {
 		});
 
 		// No session cookie
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			HeaderMap::new(),
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(HeaderMap::new())
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);
@@ -473,13 +476,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(COOKIE, "sessionid=cookie-session".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/page"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/page")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 		assert_eq!(response.status, StatusCode::OK);

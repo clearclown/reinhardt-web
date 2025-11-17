@@ -50,7 +50,7 @@ impl HttpsRedirectMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{HttpsRedirectMiddleware, HttpsRedirectConfig};
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -75,13 +75,14 @@ impl HttpsRedirectMiddleware {
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/api/data"),
-	///     Version::HTTP_11,
-	///     headers,
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/data")
+	///     .version(Version::HTTP_11)
+	///     .headers(headers)
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::MOVED_PERMANENTLY);
@@ -101,7 +102,7 @@ impl HttpsRedirectMiddleware {
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::HttpsRedirectMiddleware;
 	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
-	/// use hyper::{StatusCode, Method, Uri, Version, HeaderMap};
+	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
 	/// struct TestHandler;
@@ -120,13 +121,14 @@ impl HttpsRedirectMiddleware {
 	/// let mut headers = HeaderMap::new();
 	/// headers.insert(hyper::header::HOST, "api.example.com".parse().unwrap());
 	///
-	/// let request = Request::new(
-	///     Method::GET,
-	///     Uri::from_static("/users?page=1"),
-	///     Version::HTTP_11,
-	///     headers,
-	///     Bytes::new(),
-	/// );
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/users?page=1")
+	///     .version(Version::HTTP_11)
+	///     .headers(headers)
+	///     .body(Bytes::new())
+	///     .build()
+	///     .unwrap();
 	///
 	/// let response = middleware.process(request, handler).await.unwrap();
 	/// assert_eq!(response.status, StatusCode::MOVED_PERMANENTLY);
@@ -194,7 +196,7 @@ impl Middleware for HttpsRedirectMiddleware {
 mod tests {
 	use super::*;
 	use bytes::Bytes;
-	use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
+	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_core::http::Request;
 
 	struct TestHandler;
@@ -214,13 +216,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -239,14 +242,15 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new_with_secure(
-			Method::GET,
-			Uri::from_static("/test"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-			true, // is_secure
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/test")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.secure(true)
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
@@ -266,13 +270,14 @@ mod tests {
 		let mut headers = HeaderMap::new();
 		headers.insert(hyper::header::HOST, "example.com".parse().unwrap());
 
-		let request = Request::new(
-			Method::GET,
-			Uri::from_static("/health"),
-			Version::HTTP_11,
-			headers,
-			Bytes::new(),
-		);
+		let request = Request::builder()
+			.method(Method::GET)
+			.uri("/health")
+			.version(Version::HTTP_11)
+			.headers(headers)
+			.body(Bytes::new())
+			.build()
+			.unwrap();
 
 		let response = middleware.process(request, handler).await.unwrap();
 
