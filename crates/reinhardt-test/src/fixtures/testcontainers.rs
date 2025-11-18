@@ -253,28 +253,6 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 	(postgres, Arc::new(pool), port, database_url)
 }
 
-/// Fixture providing a CockroachDB container with connection pool
-///
-/// Starts a CockroachDB v23.1.0 single-node container and provides a connection pool
-/// for testing distributed database operations.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::cockroachdb_container;
-/// use rstest::*;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_with_cockroachdb(
-///     #[future] cockroachdb_container: (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String)
-/// ) {
-///     let (_container, pool, port, url) = cockroachdb_container.await;
-///     let result = sqlx::query("SELECT 1").fetch_one(pool.as_ref()).await;
-///     assert!(result.is_ok());
-/// }
-/// ```
-#[fixture]
 pub async fn cockroachdb_container()
 -> (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String) {
 	let cockroachdb = GenericImage::new("cockroachdb/cockroach", "v23.1.0")
@@ -289,7 +267,7 @@ pub async fn cockroachdb_container()
 		.expect("Failed to start CockroachDB container");
 
 	let port = cockroachdb
-		.get_host_port_ipv4(26257)
+		.get_host_port_ipv4(ContainerPort::Tcp(26257))
 		.await
 		.expect("Failed to get CockroachDB port");
 
@@ -1045,26 +1023,6 @@ pub async fn redis_cluster_fixture() -> (
 // MongoDB Container Fixture
 // ============================================================================
 
-/// Fixture providing a MongoDB container with connection string
-///
-/// Starts a MongoDB 7.0 container for testing document database operations.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::mongodb_container;
-/// use rstest::*;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_with_mongodb(
-///     #[future] mongodb_container: (ContainerAsync<GenericImage>, String, u16)
-/// ) {
-///     let (_container, connection_string, port) = mongodb_container.await;
-///     // Use connection_string for MongoDB operations
-/// }
-/// ```
-#[fixture]
 pub async fn mongodb_container() -> (ContainerAsync<GenericImage>, String, u16) {
 	let mongo = GenericImage::new("mongo", "7.0")
 		.with_wait_for(WaitFor::message_on_stdout("Waiting for connections"))
