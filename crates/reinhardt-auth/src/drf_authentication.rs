@@ -361,6 +361,7 @@ impl AuthenticationBackend for RemoteUserAuthentication {
 }
 
 /// Session-based authentication
+#[derive(Clone)]
 pub struct SessionAuthentication<B: SessionBackend> {
 	/// Configuration
 	config: SessionAuthConfig,

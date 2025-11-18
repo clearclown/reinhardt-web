@@ -1,5 +1,5 @@
 use crate::drf_authentication::Authentication;
-use crate::{AuthenticationError, SimpleUser, User};
+use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use reinhardt_core::http::Request;
@@ -65,6 +65,7 @@ impl Claims {
 }
 
 /// JWT Authentication handler
+#[derive(Clone)]
 pub struct JwtAuth {
 	encoding_key: EncodingKey,
 	decoding_key: DecodingKey,
@@ -226,6 +227,25 @@ impl Authentication for JwtAuth {
 			}
 		}
 
+		Ok(None)
+	}
+}
+
+// Implement AuthenticationBackend trait
+#[async_trait::async_trait]
+impl AuthenticationBackend for JwtAuth {
+	async fn authenticate(
+		&self,
+		request: &Request,
+	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+		// Delegate to Authentication trait implementation
+		<Self as Authentication>::authenticate(self, request).await
+	}
+
+	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
+		// JWT authentication doesn't support get_user by ID
+		// It only authenticates via token validation
+		// Return None to indicate this backend doesn't support user retrieval
 		Ok(None)
 	}
 }
