@@ -16,7 +16,7 @@ reinhardt-core = { workspace = true, features = [
   "validators",
 ] }
 reinhardt-panel = { workspace = true }
-reinhardt-auth = { workspace = true, features = ["argon2-hasher"] }
+reinhardt-auth = { workspace = true, features = ["argon2-hasher", "jwt", "session", "token"] }
 reinhardt-security = { path = "../../crates/reinhardt-core/crates/security" }
 reinhardt-http = { workspace = true }
 reinhardt-params = { path = "../../crates/reinhardt-di/crates/params" }
@@ -102,7 +102,6 @@ sqlx = { version = "0.8", features = [
   "chrono",
 ] }
 sea-query = { workspace = true }
-sea-query-binder = { version = "0.7", features = ["with-chrono"] }
 
 # HTTP client for testing
 reqwest = { version = "0.12", features = ["cookies"] }
@@ -114,6 +113,7 @@ bytes = "1.0"
 
 # GraphQL
 async-graphql = "7.0.17"
+async-stream = "0.3"
 futures = "0.3"
 futures-util = "0.3"
 

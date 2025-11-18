@@ -17,7 +17,7 @@ token = []
 argon2-hasher = ["reinhardt-core/argon2-hasher"]
 
 # Database and session storage
-database = ["sqlx", "sea-query", "sea-query-binder"]
+database = ["sqlx", "sea-query"]
 redis-sessions = ["redis"]
 
 [dependencies]
@@ -49,11 +49,7 @@ sea-query = { version = "1.0.0-rc.1", features = [
   "backend-postgres",
   "backend-mysql",
   "backend-sqlite",
-], optional = true }
-sea-query-binder = { version = "0.7", features = [
-  "sqlx-postgres",
-  "sqlx-mysql",
-  "sqlx-sqlite",
+  "sqlx-utils",
 ], optional = true }
 redis = { workspace = true, optional = true }
 

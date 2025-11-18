@@ -45,11 +45,7 @@ sea-query = { version = "1.0.0-rc.1", features = [
   "backend-postgres",
   "backend-mysql",
   "backend-sqlite",
-], optional = true }
-sea-query-binder = { version = "0.7", features = [
-  "sqlx-postgres",
-  "sqlx-mysql",
-  "sqlx-sqlite",
+  "sqlx-utils",
 ], optional = true }
 
 # Secret management (optional)
@@ -85,7 +81,7 @@ uuid = { version = "1.6", features = ["v4"] }
 default = []
 async = ["async-trait"]
 dynamic-redis = ["redis", "async"]
-dynamic-database = ["sqlx", "sea-query", "sea-query-binder", "async"]
+dynamic-database = ["sqlx", "sea-query", "async"]
 vault = ["reqwest", "async"]
 aws-secrets = ["aws-config", "aws-sdk-secretsmanager", "aws-smithy-runtime", "async"]
 azure-keyvault = [
