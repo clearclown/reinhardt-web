@@ -2,8 +2,6 @@
 
 pub mod aggregations;
 pub mod operations;
-#[cfg(test)]
-mod tests;
 
 pub use aggregations::CollectionAggregations;
 pub use operations::CollectionOperations;

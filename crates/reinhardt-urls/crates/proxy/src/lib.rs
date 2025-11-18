@@ -38,12 +38,16 @@
 pub mod builder;
 pub mod collection;
 pub mod joins;
+pub mod lazy_url;
 pub mod loading;
 pub mod orm_integration;
 pub mod proxy;
 pub mod query;
 pub mod reflection;
 pub mod scalar;
+pub mod url_namespace;
+pub mod url_pattern;
+pub mod url_resolver;
 
 pub use builder::ProxyBuilder;
 pub use collection::{CollectionAggregations, CollectionOperations, CollectionProxy};
@@ -51,6 +55,7 @@ pub use joins::{
 	CircularReferenceError, JoinConfig, LoadingStrategy, NestedProxy, RelationshipPath,
 	extract_through_path, filter_through_path, traverse_and_extract, traverse_relationships,
 };
+pub use lazy_url::LazyUrl;
 pub use loading::{
 	EagerLoadConfig, EagerLoadable, LazyLoadable, LazyLoaded, LoadStrategy, RelationshipCache,
 };
@@ -62,6 +67,9 @@ pub use reflection::{
 	extract_collection_values,
 };
 pub use scalar::{ScalarComparison, ScalarProxy};
+pub use url_namespace::UrlNamespace;
+pub use url_pattern::UrlPattern;
+pub use url_resolver::UrlResolver;
 
 use thiserror::Error;
 
