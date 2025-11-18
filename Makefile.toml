@@ -21,12 +21,12 @@ TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE = "/var/run/docker.sock"
 [tasks.check]
 description = "Run cargo check on workspace"
 command = "cargo"
-args = ["check", "--workspace", "--all", "--all-features"]
+args = ["check", "--workspace", "--all", "--all-features", "--all-targets", "--profile", "test"]
 
 [tasks.build]
 description = "Build workspace"
 command = "cargo"
-args = ["build", "--workspace", "--all", "--all-features"]
+args = ["build", "--workspace", "--all", "--all-features", "--all-targets"]
 
 [tasks.build-release]
 description = "Build workspace in release mode"
