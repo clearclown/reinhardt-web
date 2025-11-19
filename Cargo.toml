@@ -236,6 +236,8 @@ members = [
   "crates/reinhardt-websockets",
   # Integration tests
   "tests/integration",
+  # Benchmark tests
+  "tests/bench",
 ]
 
 exclude = []
@@ -303,6 +305,7 @@ reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-
 # Contrib subcrates
 reinhardt-messages = { path = "crates/reinhardt-core/crates/messages", version = "0.1.0-alpha.1" }
 reinhardt-contenttypes = { path = "crates/reinhardt-db/crates/contenttypes", version = "0.1.0-alpha.1" }
+reinhardt-orm = { path = "crates/reinhardt-db/crates/orm", version = "0.1.0-alpha.1" }
 reinhardt-sessions = { path = "crates/reinhardt-auth/crates/sessions", version = "0.1.0-alpha.1" }
 reinhardt-static = { path = "crates/reinhardt-utils/crates/static", version = "0.1.0-alpha.1" }
 
