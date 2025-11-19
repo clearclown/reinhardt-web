@@ -1269,11 +1269,11 @@ mod tests {
 			.object_id("123")
 			.action(AuditAction::View)
 			.ip_address(ip)
-			.user_agent(user_agent.clone())
+			.user_agent(user_agent)
 			.build();
 
 		assert_eq!(log.ip_address(), Some(ip));
-		assert_eq!(log.user_agent(), Some(user_agent.as_str()));
+		assert_eq!(log.user_agent(), Some(user_agent));
 	}
 
 	#[test]
@@ -1320,7 +1320,7 @@ mod tests {
 			let log = AuditLog::builder()
 				.user_id(user_id)
 				.model_name("User")
-				.object_id(i)
+				.object_id(i.to_string())
 				.action(AuditAction::Create)
 				.build();
 			logger.log(log).await.unwrap();
@@ -1418,7 +1418,7 @@ mod tests {
 			let log = AuditLog::builder()
 				.user_id("admin")
 				.model_name("User")
-				.object_id(i)
+				.object_id(i.to_string())
 				.action(AuditAction::Create)
 				.build();
 			logger.log(log).await.unwrap();
@@ -1446,7 +1446,7 @@ mod tests {
 			let log = AuditLog::builder()
 				.user_id("admin")
 				.model_name("User")
-				.object_id(i)
+				.object_id(i.to_string())
 				.action(AuditAction::Create)
 				.build();
 			logger.log(log).await.unwrap();
