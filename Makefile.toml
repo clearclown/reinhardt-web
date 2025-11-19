@@ -93,19 +93,33 @@ description = "Run only documentation tests"
 command = "cargo"
 args = ["test", "--workspace", "--doc", "--all-features"]
 
-[tasks.unit-test]
-description = "Run unit tests and within-crate integration tests"
+[tasks.bench]
+description = "Run benchmark tests in tests/bench"
 command = "cargo"
-args = ["nextest", "run", "--workspace", "--lib", "--tests", "--exclude", "reinhardt-integration-tests", "--all-features", "--no-fail-fast"]
+args = ["bench", "--manifest-path", "tests/bench/Cargo.toml"]
 
-[tasks.integration-test]
-description = "Run integration tests (requires PostgreSQL, MySQL, Redis)"
+[tasks.unit-test]
+description = "Run unit tests (src/)"
+command = "cargo"
+args = ["nextest", "run", "--workspace", "--lib", "--exclude", "reinhardt-integration-tests", "--all-features", "--no-fail-fast"]
+
+[tasks.intra-crate-integration-test]
+description = "Run intra-crate integration tests (tests/)"
+command = "cargo"
+args = ["nextest", "run", "--workspace", "--test", "*", "--exclude", "reinhardt-integration-tests", "--all-features", "--no-fail-fast"]
+
+[tasks.cross-crate-integration-test]
+description = "Run cross-crate integration tests (reinhardt-integration-tests)"
 command = "cargo"
 args = ["nextest", "run", "--package", "reinhardt-integration-tests", "--all-features", "--no-fail-fast"]
 
+[tasks.integration-test]
+description = "Run all integration tests"
+dependencies = ["intra-crate-integration-test", "cross-crate-integration-test"]
+
 [tasks.test]
 description = "Run all tests"
-dependencies = ["doc-test", "unit-test", "integration-test"]
+dependencies = ["unit-test", "cross-crate-integration-test", "intra-crate-integration-test", "doc-test"]
 
 # ============================================================================
 # CI Tasks
