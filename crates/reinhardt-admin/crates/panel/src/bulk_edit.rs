@@ -94,13 +94,12 @@ impl BulkEdit {
 		self.errors.clear();
 
 		if self.item_ids.is_empty() {
-			self.errors
-				.push("No items selected for bulk edit".to_string());
+			self.errors.push("No items selected for bulk edit".into());
 		}
 
 		if self.fields.is_empty() {
 			self.errors
-				.push("No fields specified for bulk edit".to_string());
+				.push("No fields specified for bulk edit".into());
 		}
 
 		if !self.errors.is_empty() {
@@ -351,8 +350,8 @@ impl BulkEditConfig {
 
 	/// Check if a field can be bulk edited
 	pub fn can_edit_field(&self, field: &str) -> bool {
-		!self.readonly_fields.contains(&field.to_string())
-			&& (self.allowed_fields.is_empty() || self.allowed_fields.contains(&field.to_string()))
+		!self.readonly_fields.iter().any(|f| f == field)
+			&& (self.allowed_fields.is_empty() || self.allowed_fields.iter().any(|f| f == field))
 	}
 
 	/// Check if item count is within limits

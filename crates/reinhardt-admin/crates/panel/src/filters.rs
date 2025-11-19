@@ -13,10 +13,10 @@ use std::collections::HashMap;
 /// use reinhardt_panel::FilterSpec;
 ///
 /// let filter = FilterSpec {
-///     field: "status".to_string(),
-///     lookup: "exact".to_string(),
-///     value: "active".to_string(),
-///     display: "Active".to_string(),
+///     field: String::from("status"),
+///     lookup: String::from("exact"),
+///     value: String::from("active"),
+///     display: String::from("Active"),
 /// };
 ///
 /// assert_eq!(filter.field, "status");
@@ -328,10 +328,10 @@ impl NumberRangeFilter {
 			field: field.into(),
 			title: title.into(),
 			ranges: vec![
-				(Some(0), Some(100), "0-100".to_string()),
-				(Some(100), Some(1000), "100-1,000".to_string()),
-				(Some(1000), Some(10000), "1,000-10,000".to_string()),
-				(Some(10000), None, "10,000+".to_string()),
+				(Some(0), Some(100), "0-100".into()),
+				(Some(100), Some(1000), "100-1,000".into()),
+				(Some(1000), Some(10000), "1,000-10,000".into()),
+				(Some(10000), None, "10,000+".into()),
 			],
 		}
 	}
@@ -347,9 +347,9 @@ impl NumberRangeFilter {
 	///     "price",
 	///     "Price",
 	///     vec![
-	///         (Some(0), Some(50), "Under $50".to_string()),
-	///         (Some(50), Some(100), "$50-$100".to_string()),
-	///         (Some(100), None, "Over $100".to_string()),
+	///         (Some(0), Some(50), String::from("Under $50")),
+	///         (Some(50), Some(100), String::from("$50-$100")),
+	///         (Some(100), None, String::from("Over $100")),
 	///     ]
 	/// );
 	/// ```
@@ -383,7 +383,7 @@ impl ListFilter for NumberRangeFilter {
 					(Some(min_val), Some(max_val)) => format!("{}-{}", min_val, max_val),
 					(Some(min_val), None) => format!("{}+", min_val),
 					(None, Some(max_val)) => format!("-{}", max_val),
-					(None, None) => "all".to_string(),
+					(None, None) => "all".into(),
 				};
 				FilterSpec::new(&self.field, "range", value, display)
 			})
@@ -542,8 +542,8 @@ mod tests {
 	#[test]
 	fn test_choice_filter_with_choices() {
 		let choices = vec![
-			("active".to_string(), "Active".to_string()),
-			("inactive".to_string(), "Inactive".to_string()),
+			(String::from("active"), String::from("Active")),
+			(String::from("inactive"), String::from("Inactive")),
 		];
 
 		let filter = ChoiceFilter::new("status", "Status").with_choices(choices);
@@ -593,10 +593,10 @@ mod tests {
 			"price",
 			"Price",
 			vec![
-				(Some(0), Some(50), "Under $50".to_string()),
-				(Some(50), Some(100), "$50-$100".to_string()),
-				(Some(100), None, "Over $100".to_string()),
-				(None, Some(10), "Less than $10".to_string()),
+				(Some(0), Some(50), String::from("Under $50")),
+				(Some(50), Some(100), String::from("$50-$100")),
+				(Some(100), None, String::from("Over $100")),
+				(None, Some(10), String::from("Less than $10")),
 			],
 		);
 
@@ -650,13 +650,13 @@ mod tests {
 			.add_filter(ChoiceFilter::new("status", "Status"));
 
 		let mut selected = HashMap::new();
-		selected.insert("is_active".to_string(), "true".to_string());
-		selected.insert("status".to_string(), "published".to_string());
+		selected.insert(String::from("is_active"), String::from("true"));
+		selected.insert(String::from("status"), String::from("published"));
 
 		let params = manager.apply_filters(&selected);
 		assert_eq!(params.len(), 2);
-		assert!(params.contains(&"is_active__exact=true".to_string()));
-		assert!(params.contains(&"status__exact=published".to_string()));
+		assert!(params.contains(&String::from("is_active__exact=true")));
+		assert!(params.contains(&String::from("status__exact=published")));
 	}
 
 	#[test]
@@ -664,7 +664,7 @@ mod tests {
 		let filter = BooleanFilter::new("is_active", "Active");
 
 		let mut current = HashMap::new();
-		current.insert("is_active".to_string(), "true".to_string());
+		current.insert(String::from("is_active"), String::from("true"));
 
 		assert!(filter.is_selected("true", &current));
 		assert!(!filter.is_selected("false", &current));
