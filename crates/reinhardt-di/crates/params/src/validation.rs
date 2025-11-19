@@ -509,23 +509,23 @@ impl<T> ValidationConstraints<T> {
 	}
 
 	pub fn validate_string(&self, value: &str) -> Result<(), String> {
-		if let Some(min) = self.min_length {
-			if value.len() < min {
-				return Err(format!(
-					"String length {} is less than minimum {}",
-					value.len(),
-					min
-				));
-			}
+		if let Some(min) = self.min_length
+			&& value.len() < min
+		{
+			return Err(format!(
+				"String length {} is less than minimum {}",
+				value.len(),
+				min
+			));
 		}
-		if let Some(max) = self.max_length {
-			if value.len() > max {
-				return Err(format!(
-					"String length {} exceeds maximum {}",
-					value.len(),
-					max
-				));
-			}
+		if let Some(max) = self.max_length
+			&& value.len() > max
+		{
+			return Err(format!(
+				"String length {} exceeds maximum {}",
+				value.len(),
+				max
+			));
 		}
 		if let Some(ref pattern) = self.regex {
 			use regex::Regex;
@@ -543,10 +543,8 @@ impl<T> ValidationConstraints<T> {
 				return Err("Invalid email format".to_string());
 			}
 		}
-		if self.url {
-			if !value.starts_with("http://") && !value.starts_with("https://") {
-				return Err("URL must start with http:// or https://".to_string());
-			}
+		if self.url && !value.starts_with("http://") && !value.starts_with("https://") {
+			return Err("URL must start with http:// or https://".to_string());
 		}
 		Ok(())
 	}
@@ -556,19 +554,17 @@ impl<T> ValidationConstraints<T> {
 		N: PartialOrd + std::fmt::Display + Clone + std::str::FromStr,
 		<N as std::str::FromStr>::Err: std::fmt::Display,
 	{
-		if let Some(ref min_str) = self.min_value {
-			if let Ok(min) = min_str.parse::<N>() {
-				if value < &min {
-					return Err(format!("Value {} is less than minimum {}", value, min));
-				}
-			}
+		if let Some(ref min_str) = self.min_value
+			&& let Ok(min) = min_str.parse::<N>()
+			&& value < &min
+		{
+			return Err(format!("Value {} is less than minimum {}", value, min));
 		}
-		if let Some(ref max_str) = self.max_value {
-			if let Ok(max) = max_str.parse::<N>() {
-				if value > &max {
-					return Err(format!("Value {} exceeds maximum {}", value, max));
-				}
-			}
+		if let Some(ref max_str) = self.max_value
+			&& let Ok(max) = max_str.parse::<N>()
+			&& value > &max
+		{
+			return Err(format!("Value {} exceeds maximum {}", value, max));
 		}
 		Ok(())
 	}
