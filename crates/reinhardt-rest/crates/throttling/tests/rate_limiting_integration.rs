@@ -56,11 +56,13 @@ impl InMemoryRateLimitStorage {
 		}
 	}
 
+	#[allow(dead_code)]
 	fn get(&self, key: &str) -> Option<RateLimitRecord> {
 		let data = self.data.lock().unwrap();
 		data.get(key).cloned()
 	}
 
+	#[allow(dead_code)]
 	fn set(&self, key: &str, record: RateLimitRecord) {
 		let mut data = self.data.lock().unwrap();
 		data.insert(key.to_string(), record);
@@ -116,9 +118,13 @@ impl TokenBucketRateLimiter {
 
 	fn allow_request(&self, key: &str) -> bool {
 		let now = SystemTime::now();
-		let mut record = self
-			.storage
+
+		// Acquire lock for atomic read-check-write operation
+		let mut data = self.storage.data.lock().unwrap();
+
+		let mut record = data
 			.get(key)
+			.cloned()
 			.unwrap_or_else(|| RateLimitRecord::new(self.max_tokens));
 
 		// Refill tokens based on time elapsed
@@ -132,26 +138,25 @@ impl TokenBucketRateLimiter {
 		// Check if request can be allowed
 		if record.tokens >= 1.0 {
 			record.tokens -= 1.0;
-			self.storage.set(key, record);
+			data.insert(key.to_string(), record);
 			true
 		} else {
-			self.storage.set(key, record);
+			data.insert(key.to_string(), record);
 			false
 		}
 	}
 
 	fn get_remaining_tokens(&self, key: &str) -> f64 {
-		self.storage
-			.get(key)
-			.map(|r| r.tokens)
-			.unwrap_or(self.max_tokens)
+		let data = self.storage.data.lock().unwrap();
+		data.get(key).map(|r| r.tokens).unwrap_or(self.max_tokens)
 	}
 
 	#[allow(dead_code)]
 	fn get_reset_time(&self, key: &str) -> SystemTime {
-		let record = self
-			.storage
+		let data = self.storage.data.lock().unwrap();
+		let record = data
 			.get(key)
+			.cloned()
 			.unwrap_or_else(|| RateLimitRecord::new(self.max_tokens));
 		record.last_refill + Duration::from_secs_f64(self.max_tokens / self.refill_rate)
 	}
@@ -177,9 +182,12 @@ impl SlidingWindowRateLimiter {
 		let now = SystemTime::now();
 		let window_start = now - self.window_duration;
 
-		let mut record = self
-			.storage
+		// Acquire lock for atomic read-check-write operation
+		let mut data = self.storage.data.lock().unwrap();
+
+		let mut record = data
 			.get(key)
+			.cloned()
 			.unwrap_or_else(|| RateLimitRecord::with_requests(Vec::new()));
 
 		// Remove requests outside the window
@@ -188,10 +196,10 @@ impl SlidingWindowRateLimiter {
 		// Check if within limit
 		if record.requests.len() < self.max_requests {
 			record.requests.push(now);
-			self.storage.set(key, record);
+			data.insert(key.to_string(), record);
 			true
 		} else {
-			self.storage.set(key, record);
+			data.insert(key.to_string(), record);
 			false
 		}
 	}
@@ -200,9 +208,10 @@ impl SlidingWindowRateLimiter {
 		let now = SystemTime::now();
 		let window_start = now - self.window_duration;
 
-		let record = self
-			.storage
+		let data = self.storage.data.lock().unwrap();
+		let record = data
 			.get(key)
+			.cloned()
 			.unwrap_or_else(|| RateLimitRecord::with_requests(Vec::new()));
 
 		let active_requests = record
@@ -214,9 +223,10 @@ impl SlidingWindowRateLimiter {
 	}
 
 	fn get_reset_time(&self, key: &str) -> SystemTime {
-		let record = self
-			.storage
+		let data = self.storage.data.lock().unwrap();
+		let record = data
 			.get(key)
+			.cloned()
 			.unwrap_or_else(|| RateLimitRecord::with_requests(Vec::new()));
 
 		if let Some(oldest) = record.requests.first() {
