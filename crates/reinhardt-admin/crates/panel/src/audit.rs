@@ -1081,11 +1081,7 @@ impl AuditLogger for DatabaseAuditLogger {
 				.and_then(|s| s.parse::<IpAddr>().ok());
 
 			// Extract user_agent (optional)
-			let user_agent = row
-				.data
-				.get("user_agent")
-				.and_then(|v| v.as_str())
-				.map(|s| s);
+			let user_agent = row.data.get("user_agent").and_then(|v| v.as_str());
 
 			// Build AuditLog
 			let mut log = AuditLog::builder()
