@@ -53,7 +53,7 @@
 
             <div class="endpoint">
                 <span class="method-badge method-{{ method | lower }}">{{ method }}</span>
-                {{ endpoint }}
+                {{ endpoint | safe }}
             </div>
 
             <h2>Response ({{ response_status }})</h2>
@@ -61,11 +61,11 @@
                 <pre>{{ response_data_formatted }}</pre>
             </div>
 
-            {% if request_form %}
+            {% if request_form_text %}
             <div class="form-section">
                 <h2>Make a Request</h2>
-                <form method="{{ request_form.submit_method }}" action="{{ request_form.submit_url }}">
-                    {% for field in request_form.fields %}
+                <form method="{{ request_form_text.submit_method }}" action="{{ request_form_text.submit_url | safe }}">
+                    {% for field in request_form_text.fields %}
                     <div class="form-field">
                         <label for="{{ field.name }}">
                             {{ field.label }}
@@ -77,13 +77,13 @@
                             <option value="" selected>{{ field.initial_label }}</option>
                             {% endif %}
                             {% for option in field.options %}
-                            <option value="{{ option.value }}" {% if option.value == field.initial_value %}selected{% endif %}>{{ option.label }}</option>
+                            <option value="{{ option.value }}" {% if option.value == field.initial_value_text %}selected{% endif %}>{{ option.label }}</option>
                             {% endfor %}
                         </select>
                         {% elif field.field_type == "textarea" %}
-                        <textarea id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>{% if field.initial_value %}{{ field.initial_value }}{% endif %}</textarea>
+                        <textarea id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>{% if field.initial_value_text %}{{ field.initial_value_text }}{% endif %}</textarea>
                         {% else %}
-                        <input type="{{ field.field_type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if field.initial_value %}value="{{ field.initial_value }}"{% endif %}>
+                        <input type="{{ field.field_type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if field.initial_value_text %}value="{{ field.initial_value_text }}"{% endif %}>
                         {% endif %}
                         {% if field.help_text %}<div class="help-text">{{ field.help_text }}</div>{% endif %}
                     </div>
@@ -107,7 +107,7 @@
                         {% for header in headers %}
                         <tr>
                             <td><strong>{{ header.0 }}</strong></td>
-                            <td>{{ header.1 }}</td>
+                            <td>{{ header.1 | safe }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

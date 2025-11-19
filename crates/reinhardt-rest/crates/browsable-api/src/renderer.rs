@@ -80,15 +80,18 @@ impl BrowsableApiRenderer {
 	pub fn new() -> Self {
 		let mut tera = Tera::default();
 
+		// Enable autoescape for HTML (this is the default but we make it explicit)
+		tera.autoescape_on(vec![".html", ".tpl"]);
+
 		// Register template from external file
 		let template_path = concat!(env!("CARGO_MANIFEST_DIR"), "/templates/api.tpl");
-		if let Err(e) = tera.add_template_file(template_path, Some("api")) {
+		if let Err(e) = tera.add_template_file(template_path, Some("api.html")) {
 			// Fallback to default template if file cannot be read
 			eprintln!(
 				"Warning: Failed to load template file: {}. Using default template.",
 				e
 			);
-			tera.add_raw_template("api", Self::default_template())
+			tera.add_raw_template("api.html", Self::default_template())
 				.expect("Failed to register default template");
 		}
 
@@ -106,7 +109,68 @@ impl BrowsableApiRenderer {
 		let formatted_json = serde_json::to_string_pretty(&context.response_data)?;
 		tera_context.insert("response_data_formatted", &formatted_json);
 
-		Ok(self.tera.render("api", &tera_context)?)
+		// Process form fields to convert initial_value (serde_json::Value) to string
+		// This ensures proper HTML escaping by Tera's automatic escaping
+		// IMPORTANT: Use Tera-compatible struct instead of serde_json::json!()
+		// to enable automatic HTML escaping
+		if let Some(form) = &context.request_form {
+			// Create a new FormContext with string initial values
+			use serde::Serialize;
+
+			#[derive(Serialize)]
+			struct FieldWithText<'a> {
+				name: &'a str,
+				label: &'a str,
+				field_type: &'a str,
+				required: bool,
+				help_text: Option<&'a str>,
+				initial_value_text: Option<String>,
+				options: Option<&'a Vec<SelectOption>>,
+				initial_label: Option<&'a str>,
+			}
+
+			#[derive(Serialize)]
+			struct FormWithText<'a> {
+				fields: Vec<FieldWithText<'a>>,
+				submit_url: &'a str,
+				submit_method: &'a str,
+			}
+
+			let fields_with_text: Vec<FieldWithText> = form
+				.fields
+				.iter()
+				.map(|field| {
+					let initial_value_text = field.initial_value.as_ref().and_then(|v| match v {
+						serde_json::Value::String(s) => Some(s.clone()),
+						serde_json::Value::Number(n) => Some(n.to_string()),
+						serde_json::Value::Bool(b) => Some(b.to_string()),
+						serde_json::Value::Null => None,
+						other => Some(other.to_string()),
+					});
+
+					FieldWithText {
+						name: &field.name,
+						label: &field.label,
+						field_type: &field.field_type,
+						required: field.required,
+						help_text: field.help_text.as_deref(),
+						initial_value_text,
+						options: field.options.as_ref(),
+						initial_label: field.initial_label.as_deref(),
+					}
+				})
+				.collect();
+
+			let form_with_text = FormWithText {
+				fields: fields_with_text,
+				submit_url: &form.submit_url,
+				submit_method: &form.submit_method,
+			};
+
+			tera_context.insert("request_form_text", &form_with_text);
+		}
+
+		Ok(self.tera.render("api.html", &tera_context)?)
 	}
 	/// Register a custom template
 	///
@@ -178,7 +242,7 @@ impl BrowsableApiRenderer {
 
             <div class="endpoint">
                 <span class="method-badge method-{{ method | lower }}">{{ method }}</span>
-                {{ endpoint }}
+                {{ endpoint | safe }}
             </div>
 
             <h2>Response ({{ response_status }})</h2>
@@ -186,11 +250,11 @@ impl BrowsableApiRenderer {
                 <pre>{{ response_data_formatted }}</pre>
             </div>
 
-            {% if request_form %}
+            {% if request_form_text %}
             <div class="form-section">
                 <h2>Make a Request</h2>
-                <form method="{{ request_form.submit_method }}" action="{{ request_form.submit_url }}">
-                    {% for field in request_form.fields %}
+                <form method="{{ request_form_text.submit_method }}" action="{{ request_form_text.submit_url | safe }}">
+                    {% for field in request_form_text.fields %}
                     <div class="form-field">
                         <label for="{{ field.name }}">
                             {{ field.label }}
@@ -202,13 +266,13 @@ impl BrowsableApiRenderer {
                             <option value="" selected>{{ field.initial_label }}</option>
                             {% endif %}
                             {% for option in field.options %}
-                            <option value="{{ option.value }}" {% if option.value == field.initial_value %}selected{% endif %}>{{ option.label }}</option>
+                            <option value="{{ option.value }}" {% if option.value == field.initial_value_text %}selected{% endif %}>{{ option.label }}</option>
                             {% endfor %}
                         </select>
                         {% elif field.field_type == "textarea" %}
-                        <textarea id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>{% if field.initial_value %}{{ field.initial_value }}{% endif %}</textarea>
+                        <textarea id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>{% if field.initial_value_text %}{{ field.initial_value_text }}{% endif %}</textarea>
                         {% else %}
-                        <input type="{{ field.field_type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if field.initial_value %}value="{{ field.initial_value }}"{% endif %}>
+                        <input type="{{ field.field_type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} {% if field.initial_value_text %}value="{{ field.initial_value_text }}"{% endif %}>
                         {% endif %}
                         {% if field.help_text %}<div class="help-text">{{ field.help_text }}</div>{% endif %}
                     </div>
@@ -232,7 +296,7 @@ impl BrowsableApiRenderer {
                         {% for header in headers %}
                         <tr>
                             <td><strong>{{ header.0 }}</strong></td>
-                            <td>{{ header.1 }}</td>
+                            <td>{{ header.1 | safe }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
