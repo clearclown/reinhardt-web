@@ -6,6 +6,8 @@
 //! This module is only available with the `templates` feature enabled.
 
 #[cfg(feature = "templates")]
+use crate::context::TemplateContext;
+#[cfg(feature = "templates")]
 use crate::template_inheritance::get_tera_engine;
 #[cfg(feature = "templates")]
 use reinhardt_core::http::{Request, Response};
@@ -232,4 +234,147 @@ mod tests {
 			assert_eq!(response.status, StatusCode::NOT_FOUND);
 		}
 	}
+}
+
+/// Renders a template with the given context (using TemplateContext).
+///
+/// This function provides a type-safe alternative to `render_template()` by using
+/// `TemplateContext` instead of `HashMap`. It offers the same template rendering
+/// functionality with improved type safety and ergonomics.
+///
+/// # Template Features
+///
+/// Supports full Django/Jinja2-style template syntax:
+/// - Template inheritance: `{% extends "base.html" %}`
+/// - Template blocks: `{% block content %}...{% endblock %}`
+/// - Variable substitution: `{{ variable }}`
+/// - Control structures: `{% if %}`, `{% for %}`, etc.
+/// - Filters: `{{ value|lower }}`
+///
+/// # Examples
+///
+/// ```ignore
+/// use reinhardt_shortcuts::{render_template_with_context, TemplateContext};
+/// use reinhardt_core::http::Request;
+///
+/// async fn index_view(request: Request) -> Result<Response, Box<Response>> {
+///     let mut context = TemplateContext::new();
+///     context.insert("title", "Welcome");
+///     context.insert("user", request.user().name());
+///     context.insert("count", 42);
+///
+///     render_template_with_context(&request, "index.html", context)
+/// }
+/// ```
+///
+/// # Arguments
+///
+/// * `request` - The HTTP request (used for request-specific context)
+/// * `template_name` - The name of the template file (relative to template directory)
+/// * `context` - A `TemplateContext` containing template variables
+///
+/// # Returns
+///
+/// An HTTP Response with the rendered template as HTML
+///
+/// # Errors
+///
+/// - Returns HTTP 404 if template file is not found
+/// - Returns HTTP 500 if template rendering fails
+#[cfg(feature = "templates")]
+pub fn render_template_with_context(
+	_request: &Request,
+	template_name: &str,
+	context: TemplateContext,
+) -> Result<Response, Box<Response>> {
+	let tera = get_tera_engine();
+
+	// Convert TemplateContext to Tera Context
+	let mut tera_context = Context::new();
+	for (key, value) in context.as_map() {
+		tera_context.insert(key, value);
+	}
+
+	// Render template with Tera
+	let html = tera.render(template_name, &tera_context).map_err(|e| {
+		let error_msg = e.to_string();
+
+		// Check if it's a template not found error
+		if error_msg.contains("not found") || error_msg.contains("doesn't exist") {
+			let mut response = Response::not_found();
+			response.body = bytes::Bytes::from(format!("Template not found: {}", template_name));
+			Box::new(response)
+		} else {
+			let mut response = Response::internal_server_error();
+			response.body = bytes::Bytes::from(format!("Template rendering failed: {}", error_msg));
+			Box::new(response)
+		}
+	})?;
+
+	let mut response = Response::ok();
+	response.headers.insert(
+		hyper::header::CONTENT_TYPE,
+		hyper::header::HeaderValue::from_static("text/html; charset=utf-8"),
+	);
+	response.body = bytes::Bytes::from(html);
+
+	Ok(response)
+}
+
+/// Renders a template to an HTTP response with the given context (using TemplateContext).
+///
+/// This function provides a type-safe alternative to `render_to_response()` by using
+/// `TemplateContext` instead of `HashMap`. It allows you to customize the HTTP response
+/// after rendering.
+///
+/// # Examples
+///
+/// ```ignore
+/// use reinhardt_shortcuts::{render_to_response_with_context, TemplateContext};
+/// use reinhardt_core::http::Request;
+///
+/// async fn custom_view(request: Request) -> Result<Response, Box<Response>> {
+///     let mut context = TemplateContext::new();
+///     context.insert("title", "Custom Page");
+///     context.insert("message", "Hello, world!");
+///
+///     let mut response = render_to_response_with_context(
+///         &request,
+///         "custom.html",
+///         context,
+///     )?;
+///
+///     // Customize the response
+///     response.status = hyper::StatusCode::CREATED;
+///     response.headers.insert(
+///         hyper::header::CACHE_CONTROL,
+///         hyper::header::HeaderValue::from_static("no-cache"),
+///     );
+///
+///     Ok(response)
+/// }
+/// ```
+///
+/// # Arguments
+///
+/// * `request` - The HTTP request
+/// * `template_name` - The name of the template to render
+/// * `context` - A `TemplateContext` containing template variables
+///
+/// # Returns
+///
+/// A mutable HTTP Response that can be further customized
+///
+/// # Errors
+///
+/// - Returns HTTP 404 if template file is not found
+/// - Returns HTTP 500 if template rendering fails
+#[cfg(feature = "templates")]
+pub fn render_to_response_with_context(
+	request: &Request,
+	template_name: &str,
+	context: TemplateContext,
+) -> Result<Response, Box<Response>> {
+	// Use render_template_with_context as the base implementation
+	render_template_with_context(request, template_name, context)
 }
