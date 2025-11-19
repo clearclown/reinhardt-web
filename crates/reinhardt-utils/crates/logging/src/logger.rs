@@ -25,7 +25,11 @@ pub struct LogRecord {
 }
 
 impl LogRecord {
-	pub fn new(level: LogLevel, logger_name: impl Into<String>, message: impl Into<String>) -> Self {
+	pub fn new(
+		level: LogLevel,
+		logger_name: impl Into<String>,
+		message: impl Into<String>,
+	) -> Self {
 		Self {
 			level,
 			logger_name: logger_name.into(),

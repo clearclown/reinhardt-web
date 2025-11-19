@@ -496,8 +496,8 @@ mod tests {
 
 	#[test]
 	fn test_detail_view_with_fields() {
-		let view =
-			DetailView::new("User", "123").with_fields(vec![String::from("id"), String::from("name")]);
+		let view = DetailView::new("User", "123")
+			.with_fields(vec![String::from("id"), String::from("name")]);
 		assert_eq!(
 			view.get_fields(),
 			Some(&[String::from("id"), String::from("name")][..])

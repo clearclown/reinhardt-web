@@ -98,8 +98,7 @@ impl BulkEdit {
 		}
 
 		if self.fields.is_empty() {
-			self.errors
-				.push("No fields specified for bulk edit".into());
+			self.errors.push("No fields specified for bulk edit".into());
 		}
 
 		if !self.errors.is_empty() {

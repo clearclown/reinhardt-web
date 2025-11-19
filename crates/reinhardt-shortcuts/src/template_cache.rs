@@ -191,7 +191,11 @@ impl TemplateCache {
 	/// # Returns
 	///
 	/// The evicted item if cache was full, None otherwise
-	pub fn put(&self, key: impl Into<String>, content: impl Into<String>) -> Option<(String, String)> {
+	pub fn put(
+		&self,
+		key: impl Into<String>,
+		content: impl Into<String>,
+	) -> Option<(String, String)> {
 		let mut cache = self.content_cache.lock().unwrap();
 		let evicted = cache.push(key.into(), content.into());
 

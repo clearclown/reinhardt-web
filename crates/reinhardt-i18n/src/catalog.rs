@@ -44,8 +44,7 @@ impl MessageCatalog {
 
 	/// Add a simple translation
 	pub fn add_translation(&mut self, message: impl Into<String>, translation: impl Into<String>) {
-		self.messages
-			.insert(message.into(), translation.into());
+		self.messages.insert(message.into(), translation.into());
 	}
 
 	/// Add a simple translation (alias for add_translation)
@@ -69,7 +68,12 @@ impl MessageCatalog {
 	}
 
 	/// Add a plural translation with string slices
-	pub fn add_plural_str(&mut self, singular: impl Into<String>, _plural: impl Into<String>, forms: Vec<&str>) {
+	pub fn add_plural_str(
+		&mut self,
+		singular: impl Into<String>,
+		_plural: impl Into<String>,
+		forms: Vec<&str>,
+	) {
 		self.plurals.insert(
 			singular.into(),
 			forms.iter().map(|s| s.to_string()).collect(),
@@ -77,16 +81,25 @@ impl MessageCatalog {
 	}
 
 	/// Add a contextual translation
-	pub fn add_context(&mut self, context: impl Into<String>, message: impl Into<String>, translation: impl Into<String>) {
-		self.contexts.insert((context.into(), message.into()), translation.into());
+	pub fn add_context(
+		&mut self,
+		context: impl Into<String>,
+		message: impl Into<String>,
+		translation: impl Into<String>,
+	) {
+		self.contexts
+			.insert((context.into(), message.into()), translation.into());
 	}
 
 	/// Add a contextual translation with string slices
-	pub fn add_context_str(&mut self, context: impl Into<String>, message: impl Into<String>, translation: impl Into<String>) {
-		self.contexts.insert(
-			(context.into(), message.into()),
-			translation.into(),
-		);
+	pub fn add_context_str(
+		&mut self,
+		context: impl Into<String>,
+		message: impl Into<String>,
+		translation: impl Into<String>,
+	) {
+		self.contexts
+			.insert((context.into(), message.into()), translation.into());
 	}
 
 	/// Add a contextual plural translation

@@ -297,7 +297,11 @@ impl ImportError {
 	}
 
 	/// Create import error with data
-	pub fn with_data(row_number: usize, message: impl Into<String>, data: HashMap<String, String>) -> Self {
+	pub fn with_data(
+		row_number: usize,
+		message: impl Into<String>,
+		data: HashMap<String, String>,
+	) -> Self {
 		Self {
 			row_number,
 			message: message.into(),

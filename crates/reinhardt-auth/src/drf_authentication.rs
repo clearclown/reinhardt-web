@@ -249,8 +249,7 @@ impl Authentication for TokenAuthentication {
 				&& let Some(user_id) = self.tokens.get(token)
 			{
 				// Try to parse user_id as UUID, or generate a new one if it fails
-				let id = uuid::Uuid::parse_str(user_id)
-					.unwrap_or_else(|_| uuid::Uuid::new_v4());
+				let id = uuid::Uuid::parse_str(user_id).unwrap_or_else(|_| uuid::Uuid::new_v4());
 				return Ok(Some(Box::new(SimpleUser {
 					id,
 					username: user_id.clone(),
@@ -279,8 +278,7 @@ impl AuthenticationBackend for TokenAuthentication {
 	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
 		if self.tokens.values().any(|id| id == user_id) {
 			// Try to parse user_id as UUID, or generate a new one if it fails
-			let id = uuid::Uuid::parse_str(user_id)
-				.unwrap_or_else(|_| uuid::Uuid::new_v4());
+			let id = uuid::Uuid::parse_str(user_id).unwrap_or_else(|_| uuid::Uuid::new_v4());
 			Ok(Some(Box::new(SimpleUser {
 				id,
 				username: user_id.to_string(),

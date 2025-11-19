@@ -782,7 +782,10 @@ mod tests {
 			.with_attr("placeholder", "Enter text");
 
 		assert_eq!(widget.attrs.len(), 2);
-		assert_eq!(widget.attrs.get("class"), Some(&String::from("form-control")));
+		assert_eq!(
+			widget.attrs.get("class"),
+			Some(&String::from("form-control"))
+		);
 	}
 
 	#[test]
@@ -824,7 +827,10 @@ mod tests {
 	#[test]
 	fn test_render_textarea() {
 		let widget = Widget::new(WidgetType::TextArea { rows: 5, cols: 40 });
-		let html = widget.render("bio", Some(&serde_json::Value::String(String::from("Hello"))));
+		let html = widget.render(
+			"bio",
+			Some(&serde_json::Value::String(String::from("Hello"))),
+		);
 
 		assert!(
 			html.starts_with("<textarea"),
@@ -1024,7 +1030,10 @@ mod tests {
 	fn test_widget_factory_text_input() {
 		let widget = WidgetFactory::text_input();
 		assert!(matches!(widget.widget_type, WidgetType::TextInput));
-		assert_eq!(widget.attrs.get("class"), Some(&String::from("form-control")));
+		assert_eq!(
+			widget.attrs.get("class"),
+			Some(&String::from("form-control"))
+		);
 	}
 
 	#[test]
@@ -1265,7 +1274,9 @@ mod tests {
 		let widget = Widget::new(WidgetType::ImageUploadWidget { config });
 		let html = widget.render(
 			"photo",
-			Some(&serde_json::Value::String(String::from("/uploads/photo.jpg"))),
+			Some(&serde_json::Value::String(String::from(
+				"/uploads/photo.jpg",
+			))),
 		);
 
 		assert!(
