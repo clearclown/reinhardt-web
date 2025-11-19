@@ -6,13 +6,13 @@ publish = false
 
 [dependencies]
 # Reinhardt crates
-reinhardt-test = { path = "../../crates/reinhardt-test" }
-reinhardt-proxy = { path = "../../crates/reinhardt-proxy" }
-reinhardt-orm = { path = "../../crates/reinhardt-orm" }
-reinhardt-templates = { path = "../../crates/reinhardt-templates" }
-reinhardt-auth = { path = "../../crates/reinhardt-auth" }
-reinhardt-serializers = { path = "../../crates/reinhardt-serializers" }
-reinhardt-apps = { path = "../../crates/reinhardt-apps" }
+reinhardt-test = { workspace = true }
+reinhardt-proxy = { workspace = true }
+reinhardt-orm = { workspace = true }
+reinhardt-template = { workspace = true }
+reinhardt-auth = { workspace = true }
+reinhardt-serializers = { workspace = true }
+reinhardt-apps = { workspace = true }
 
 # Benchmarking
 criterion = "0.7.0"
@@ -24,8 +24,9 @@ tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
-# Standard library
-std = []
+# HTTP types
+http = "1.0"
+bytes = "1.0"
 
 [[bench]]
 name = "performance_benchmarks"
