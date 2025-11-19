@@ -244,11 +244,27 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 
 	let database_url = format!("postgres://postgres@localhost:{}/postgres", port);
 
-	let pool = sqlx::postgres::PgPoolOptions::new()
-		.max_connections(5)
-		.connect(&database_url)
-		.await
-		.expect("Failed to connect to PostgreSQL");
+	// Retry connection to PostgreSQL with exponential backoff
+	let mut retry_count = 0;
+	let max_retries = 5;
+	let pool = loop {
+		match sqlx::postgres::PgPoolOptions::new()
+			.max_connections(5)
+			.connect(&database_url)
+			.await
+		{
+			Ok(pool) => break pool,
+			Err(_e) if retry_count < max_retries => {
+				retry_count += 1;
+				let delay = std::time::Duration::from_millis(100 * 2_u64.pow(retry_count));
+				tokio::time::sleep(delay).await;
+			}
+			Err(e) => panic!(
+				"Failed to connect to PostgreSQL after {} retries: {}",
+				max_retries, e
+			),
+		}
+	};
 
 	(postgres, Arc::new(pool), port, database_url)
 }
