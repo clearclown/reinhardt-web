@@ -46,16 +46,20 @@ This crate provides the view layer for building RESTful APIs in Reinhardt. It in
   - URL parameter configuration
   - Context data building
 
-#### Generic API Views (Stubs)
+#### Generic API Views (Partial Implementation)
 
-- **ListAPIView** - List endpoint
-- **CreateAPIView** - Create endpoint
-- **UpdateAPIView** - Update endpoint
-- **DestroyAPIView** - Delete endpoint
-- **ListCreateAPIView** - Combined list/create endpoint
-- **RetrieveUpdateAPIView** - Combined retrieve/update endpoint
-- **RetrieveDestroyAPIView** - Combined retrieve/delete endpoint
-- **RetrieveUpdateDestroyAPIView** - Combined retrieve/update/delete endpoint
+⚠️ **Note**: These views currently have struct definitions but lack full dispatch implementation.
+
+- **ListAPIView** - List endpoint (struct only)
+- **CreateAPIView** - Create endpoint (struct only)
+- **UpdateAPIView** - Update endpoint (struct only)
+- **DestroyAPIView** - Delete endpoint (struct only)
+- **ListCreateAPIView** - Combined list/create endpoint (struct only)
+- **RetrieveUpdateAPIView** - Combined retrieve/update endpoint (struct only)
+- **RetrieveDestroyAPIView** - Combined retrieve/delete endpoint (struct only)
+- **RetrieveUpdateDestroyAPIView** - Combined retrieve/update/delete endpoint (struct only)
+
+For now, use `ListView`, `DetailView`, or `ViewSet` from `reinhardt-viewsets` for full functionality.
 
 #### OpenAPI Schema Generation
 
