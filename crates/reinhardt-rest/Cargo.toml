@@ -71,7 +71,7 @@ multer = "3.0"
 quick-xml = { version = "0.38.3", features = ["serialize"] }
 csv = "1.3"
 utoipa = { version = "5.4", features = ["yaml"] }
-reinhardt-renderers = { path = "../reinhardt-template/crates/renderers", optional = true }
+reinhardt-renderers = { workspace = true, optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }

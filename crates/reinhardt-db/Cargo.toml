@@ -9,14 +9,14 @@ description = "Django-style database layer for Reinhardt framework"
 
 [dependencies]
 # Internal crates (optional)
-reinhardt-backends = { path = "crates/backends", optional = true }
-reinhardt-backends-pool = { path = "crates/backends-pool", optional = true }
-reinhardt-pool = { path = "crates/pool", version = "0.1.0-alpha.1", optional = true }
-reinhardt-orm = { path = "crates/orm", version = "0.1.0-alpha.1", optional = true }
-reinhardt-migrations = { path = "crates/migrations", version = "0.1.0-alpha.1", optional = true }
-reinhardt-hybrid = { path = "crates/hybrid", version = "0.1.0-alpha.1", optional = true }
-reinhardt-associations = { path = "crates/associations", version = "0.1.0-alpha.1", optional = true }
-reinhardt-contenttypes = { path = "crates/contenttypes", version = "0.1.0-alpha.1", optional = true }
+reinhardt-backends = { workspace = true, optional = true }
+reinhardt-backends-pool = { workspace = true, optional = true }
+reinhardt-pool = { workspace = true, optional = true }
+reinhardt-orm = { workspace = true, optional = true }
+reinhardt-migrations = { workspace = true, optional = true }
+reinhardt-hybrid = { workspace = true, optional = true }
+reinhardt-associations = { workspace = true, optional = true }
+reinhardt-contenttypes = { workspace = true, optional = true }
 
 # Database drivers and query builders
 sqlx = { version = "0.8", features = [
