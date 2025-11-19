@@ -43,20 +43,21 @@ impl MessageCatalog {
 	}
 
 	/// Add a simple translation
-	pub fn add_translation(&mut self, message: &str, translation: &str) {
+	pub fn add_translation(&mut self, message: impl Into<String>, translation: impl Into<String>) {
 		self.messages
-			.insert(message.to_string(), translation.to_string());
+			.insert(message.into(), translation.into());
 	}
 
 	/// Add a simple translation (alias for add_translation)
-	pub fn add(&mut self, message: String, translation: String) {
-		self.messages.insert(message, translation);
+	pub fn add(&mut self, message: impl Into<String>, translation: impl Into<String>) {
+		self.messages.insert(message.into(), translation.into());
 	}
 
 	/// Add a plural translation with Vec<String>
 	/// If the singular key contains a colon (e.g., "context:message"), it will be
 	/// treated as a contextual plural and split accordingly.
-	pub fn add_plural(&mut self, singular: String, forms: Vec<String>) {
+	pub fn add_plural(&mut self, singular: impl Into<String>, forms: Vec<String>) {
+		let singular = singular.into();
 		// Check if the key contains a context (format: "context:message")
 		if let Some(colon_pos) = singular.find(':') {
 			let context = singular[..colon_pos].to_string();
@@ -68,36 +69,36 @@ impl MessageCatalog {
 	}
 
 	/// Add a plural translation with string slices
-	pub fn add_plural_str(&mut self, singular: &str, _plural: &str, forms: Vec<&str>) {
+	pub fn add_plural_str(&mut self, singular: impl Into<String>, _plural: impl Into<String>, forms: Vec<&str>) {
 		self.plurals.insert(
-			singular.to_string(),
+			singular.into(),
 			forms.iter().map(|s| s.to_string()).collect(),
 		);
 	}
 
 	/// Add a contextual translation
-	pub fn add_context(&mut self, context: String, message: String, translation: String) {
-		self.contexts.insert((context, message), translation);
+	pub fn add_context(&mut self, context: impl Into<String>, message: impl Into<String>, translation: impl Into<String>) {
+		self.contexts.insert((context.into(), message.into()), translation.into());
 	}
 
 	/// Add a contextual translation with string slices
-	pub fn add_context_str(&mut self, context: &str, message: &str, translation: &str) {
+	pub fn add_context_str(&mut self, context: impl Into<String>, message: impl Into<String>, translation: impl Into<String>) {
 		self.contexts.insert(
-			(context.to_string(), message.to_string()),
-			translation.to_string(),
+			(context.into(), message.into()),
+			translation.into(),
 		);
 	}
 
 	/// Add a contextual plural translation
 	pub fn add_context_plural(
 		&mut self,
-		context: &str,
-		singular: &str,
-		_plural: &str,
+		context: impl Into<String>,
+		singular: impl Into<String>,
+		_plural: impl Into<String>,
 		forms: Vec<&str>,
 	) {
 		self.context_plurals.insert(
-			(context.to_string(), singular.to_string()),
+			(context.into(), singular.into()),
 			forms.iter().map(|s| s.to_string()).collect(),
 		);
 	}
