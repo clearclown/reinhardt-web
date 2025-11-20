@@ -160,6 +160,240 @@ pub use reinhardt_db::orm::{
 	Timestamps,
 };
 
+// Re-export ORM query expressions (Django-style F/Q objects)
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{F, Q};
+//
+// // Reference a field (like Django's F object)
+// let price_expr = F::field("price");
+//
+// // Build complex queries (like Django's Q object)
+// let filter = Q::and(vec![
+//     Q::field("status").equals("active"),
+//     Q::field("price").gt(100),
+// ]);
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Query expressions (equivalent to Django's F and Q)
+	Exists,
+	F,
+	OuterRef,
+	Q,
+	QOperator,
+	Subquery,
+};
+
+// Re-export ORM annotations and aggregations
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{Annotation, Aggregate};
+//
+// // Annotate query results with computed values
+// let query = User::objects()
+//     .annotate("full_name", Annotation::concat(vec![
+//         F::field("first_name"),
+//         F::value(" "),
+//         F::field("last_name"),
+//     ]));
+//
+// // Aggregate data
+// let stats = Product::objects()
+//     .aggregate("avg_price", Aggregate::avg("price"));
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Aggregations
+	Aggregate,
+	AggregateFunc,
+	AggregateValue,
+	// Annotations
+	Annotation,
+	AnnotationValue,
+};
+
+// Re-export ORM transactions
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{atomic, IsolationLevel, Transaction};
+//
+// // Use atomic decorator for transactions
+// let result = atomic(|| async {
+//     let user = User::create(data).await?;
+//     let profile = Profile::create(user.id).await?;
+//     Ok((user, profile))
+// }).await?;
+//
+// // Or with specific isolation level
+// use reinhardt::atomic_with_isolation;
+// let result = atomic_with_isolation(IsolationLevel::Serializable, || async {
+//     // Your transaction code
+// }).await?;
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Transaction management
+	IsolationLevel,
+	Savepoint,
+	Transaction,
+	TransactionScope,
+	atomic,
+	atomic_with_isolation,
+};
+
+// Re-export ORM database functions
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{Concat, Upper, Lower, Now};
+//
+// // String functions
+// let query = User::objects()
+//     .annotate("full_name", Concat::new(vec![
+//         F::field("first_name"),
+//         F::value(" "),
+//         F::field("last_name"),
+//     ]))
+//     .annotate("email_upper", Upper::new(F::field("email")));
+//
+// // Date/time functions
+// let recent_users = User::objects()
+//     .filter(Q::field("created_at").gte(Now::new()));
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Math functions
+	Abs,
+	// Utility functions
+	Cast,
+	Ceil,
+	// String functions
+	Concat,
+	// Date/time functions
+	CurrentDate,
+	CurrentTime,
+	Extract,
+	ExtractComponent,
+	Floor,
+	Greatest,
+	Least,
+	Length,
+	Lower,
+	Mod,
+	Now,
+	NullIf,
+	Power,
+	Round,
+	SqlType,
+	Sqrt,
+	Substr,
+	Trim,
+	TrimType,
+	Upper,
+};
+
+// Re-export ORM window functions
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{Window, RowNumber, Rank};
+//
+// // Add row numbers to query results
+// let query = Product::objects()
+//     .annotate("row_num", RowNumber::new()
+//         .over(Window::new().order_by("price")));
+//
+// // Ranking within partitions
+// let query = Sale::objects()
+//     .annotate("rank", Rank::new()
+//         .over(Window::new()
+//             .partition_by("category")
+//             .order_by("-amount")));
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Ranking functions
+	DenseRank,
+	// Value functions
+	FirstValue,
+	// Window specification
+	Frame,
+	FrameBoundary,
+	FrameType,
+	Lag,
+	LastValue,
+	Lead,
+	NTile,
+	NthValue,
+	Rank,
+	RowNumber,
+	Window,
+	WindowFunction,
+};
+
+// Re-export ORM constraints and indexes
+//
+// # Availability
+//
+// Requires `database` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{UniqueConstraint, Index, BTreeIndex};
+//
+// // Define constraints programmatically
+// let constraint = UniqueConstraint::new(vec!["email"]);
+//
+// // Create indexes
+// let index = BTreeIndex::new("user_email_idx", vec!["email"]);
+// ```
+#[cfg(feature = "database")]
+pub use reinhardt_db::orm::{
+	// Indexes
+	BTreeIndex,
+	// Constraints
+	CheckConstraint,
+	Constraint,
+	ForeignKeyConstraint,
+	GinIndex,
+	GistIndex,
+	HashIndex,
+	Index,
+	OnDelete,
+	OnUpdate,
+	UniqueConstraint,
+};
+
 // Re-export database pool
 #[cfg(feature = "database")]
 pub use reinhardt_db::pool::{ConnectionPool, PoolConfig, PoolError};
@@ -190,9 +424,59 @@ pub use reinhardt_auth::{
 #[cfg(feature = "auth-jwt")]
 pub use reinhardt_auth::{Claims, JwtAuth};
 
+// Re-export auth management
+//
+// # Availability
+//
+// Requires `auth` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{UserManager, GroupManager, ObjectPermission};
+//
+// // User management
+// let user_manager = UserManager::new();
+// let user = user_manager.create_user(CreateUserData {
+//     username: "alice".to_string(),
+//     email: "alice@example.com".to_string(),
+//     password: "secret".to_string(),
+// }).await?;
+//
+// // Group management
+// let group_manager = GroupManager::new();
+// let group = group_manager.create_group(CreateGroupData {
+//     name: "editors".to_string(),
+// }).await?;
+//
+// // Object-level permissions
+// let perm = ObjectPermission::new("edit", user, article);
+// ```
+#[cfg(feature = "auth")]
+pub use reinhardt_auth::{
+	// Group management
+	CreateGroupData,
+	// User management
+	CreateUserData,
+	Group,
+	GroupManagementError,
+	GroupManagementResult,
+	GroupManager,
+	// Object-level permissions
+	ObjectPermission,
+	ObjectPermissionChecker,
+	ObjectPermissionManager,
+	UpdateUserData,
+	UserManagementError,
+	UserManagementResult,
+	UserManager,
+};
+
 // Re-export middleware
 #[cfg(feature = "sessions")]
 pub use reinhardt_middleware::AuthenticationMiddleware;
+
+#[cfg(any(feature = "standard", feature = "middleware"))]
 pub use reinhardt_middleware::LoggingMiddleware;
 
 #[cfg(feature = "middleware-cors")]
@@ -276,6 +560,29 @@ pub use reinhardt_rest::negotiation::*;
 // Re-export REST integration
 #[cfg(feature = "rest")]
 pub use reinhardt_rest::*;
+
+// Re-export OpenAPI types
+//
+// # Availability
+//
+// Requires `openapi` feature.
+//
+// # Examples
+//
+// ```rust,ignore
+// use reinhardt::{OpenApi, ApiDoc};
+//
+// // Define API documentation
+// #[derive(OpenApi)]
+// #[openapi(paths(get_users, create_user))]
+// struct ApiDoc;
+//
+// // Generate OpenAPI schema
+// let openapi = ApiDoc::openapi();
+// let json = serde_json::to_string_pretty(&openapi)?;
+// ```
+#[cfg(feature = "openapi")]
+pub use reinhardt_rest::openapi::*;
 
 // Re-export shortcuts (Django-style convenience functions)
 #[cfg(feature = "shortcuts")]
@@ -460,7 +767,8 @@ pub use reinhardt_forms::{
 #[cfg(feature = "di")]
 pub use reinhardt_core::di::{Depends, DiError, DiResult, InjectionContext, RequestContext};
 
-#[cfg(feature = "minimal")]
+// Re-export DI params - available in minimal, standard, and di features
+#[cfg(any(feature = "minimal", feature = "standard", feature = "di"))]
 pub use reinhardt_core::di::params::{Body, Cookie, Header, Json, Path, Query};
 
 // Re-export templates
@@ -521,11 +829,62 @@ pub mod prelude {
 
 	// Database feature - ORM
 	#[cfg(feature = "database")]
-	pub use crate::{DatabaseConnection, Model, SoftDeletable, Timestamped};
+	pub use crate::{
+		Aggregate,
+		// Annotations and aggregations
+		Annotation,
+		CheckConstraint,
+		// Common database functions
+		Concat,
+		CurrentDate,
+		DatabaseConnection,
+		DenseRank,
+		// Query expressions (Django-style F/Q objects)
+		F,
+		ForeignKeyConstraint,
+		Lower,
+		Model,
+		Now,
+		Q,
+		QOperator,
+		Rank,
+		RowNumber,
+		SoftDeletable,
+		Timestamped,
+		// Transaction management
+		Transaction,
+		// Constraints
+		UniqueConstraint,
+		Upper,
+		// Window functions (commonly used)
+		Window,
+		atomic,
+	};
 
 	// Auth feature
 	#[cfg(feature = "auth")]
-	pub use crate::{AuthBackend, PasswordHasher, Permission, SimpleUser, User};
+	pub use crate::{
+		AuthBackend,
+		Group,
+		GroupManager,
+		// Object-level permissions
+		ObjectPermission,
+		ObjectPermissionChecker,
+		PasswordHasher,
+		Permission,
+		SimpleUser,
+		User,
+		// User and group management
+		UserManager,
+	};
+
+	// OpenAPI feature - schema generation and documentation
+	// Note: When 'openapi' feature is enabled, types are available at top level
+	// Example: use reinhardt::prelude::*; or use reinhardt::{OpenApi, ApiDoc, Schema};
+
+	// DI params - FastAPI-style parameter extraction
+	#[cfg(any(feature = "minimal", feature = "standard"))]
+	pub use crate::{Body, Cookie, Header, Json, Path, Query};
 
 	// REST feature - serializers, parsers, pagination, throttling, versioning, metadata
 	#[cfg(feature = "rest")]
