@@ -16,6 +16,9 @@ use crate::{ProxyError, ProxyResult};
 /// let names = proxy.get_collection(&user).await?;
 /// ```
 pub struct AssociationProxy<T, U> {
+	/// Optional name/alias for this proxy
+	pub name: Option<String>,
+
 	/// Name of the relationship attribute
 	pub relationship: String,
 
@@ -24,6 +27,18 @@ pub struct AssociationProxy<T, U> {
 
 	/// Optional creator function for new associations
 	pub creator: Option<fn(U) -> T>,
+
+	/// Optional custom getter function
+	pub getter: Option<fn(&T) -> Result<U, crate::ProxyError>>,
+
+	/// Optional custom setter function
+	pub setter: Option<fn(&mut T, U) -> Result<(), crate::ProxyError>>,
+
+	/// Optional validator function
+	pub validator: Option<fn(&U) -> Result<(), crate::ProxyError>>,
+
+	/// Optional transform function
+	pub transform: Option<fn(U) -> U>,
 
 	/// Phantom data for type parameters
 	_phantom: PhantomData<(T, U)>,
@@ -48,9 +63,14 @@ impl<T, U> AssociationProxy<T, U> {
 	/// ```
 	pub fn new(relationship: &str, attribute: &str) -> Self {
 		Self {
+			name: None,
 			relationship: relationship.to_string(),
 			attribute: attribute.to_string(),
 			creator: None,
+			getter: None,
+			setter: None,
+			validator: None,
+			transform: None,
 			_phantom: PhantomData,
 		}
 	}
@@ -73,6 +93,184 @@ impl<T, U> AssociationProxy<T, U> {
 	pub fn with_creator(mut self, creator: fn(U) -> T) -> Self {
 		self.creator = Some(creator);
 		self
+	}
+
+	/// Set a custom getter function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_getter(custom_getter);
+	/// assert!(proxy.getter.is_some());
+	/// ```
+	pub fn with_getter(mut self, getter: fn(&T) -> Result<U, crate::ProxyError>) -> Self {
+		self.getter = Some(getter);
+		self
+	}
+
+	/// Set a custom setter function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_setter(custom_setter);
+	/// assert!(proxy.setter.is_some());
+	/// ```
+	pub fn with_setter(mut self, setter: fn(&mut T, U) -> Result<(), crate::ProxyError>) -> Self {
+		self.setter = Some(setter);
+		self
+	}
+
+	/// Set a validator function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::{AssociationProxy, ProxyError};
+	///
+	/// fn validate_value(_value: &()) -> Result<(), ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_validator(validate_value);
+	/// assert!(proxy.validator.is_some());
+	/// ```
+	pub fn with_validator(mut self, validator: fn(&U) -> Result<(), crate::ProxyError>) -> Self {
+		self.validator = Some(validator);
+		self
+	}
+
+	/// Set a transform function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// fn transform_value(value: ()) -> () {
+	///     value
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_transform(transform_value);
+	/// assert!(proxy.transform.is_some());
+	/// ```
+	pub fn with_transform(mut self, transform: fn(U) -> U) -> Self {
+		self.transform = Some(transform);
+		self
+	}
+
+	/// Get the proxy name if set
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// let mut proxy: AssociationProxy<(), ()> = AssociationProxy::new("rel", "attr");
+	/// proxy.name = Some("my_proxy".to_string());
+	/// assert_eq!(proxy.name(), Some("my_proxy"));
+	/// ```
+	pub fn name(&self) -> Option<&str> {
+		self.name.as_deref()
+	}
+
+	/// Get the relationship name
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("posts", "title");
+	/// assert_eq!(proxy.relationship(), "posts");
+	/// ```
+	pub fn relationship(&self) -> &str {
+		&self.relationship
+	}
+
+	/// Get the attribute name
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("posts", "title");
+	/// assert_eq!(proxy.attribute(), "title");
+	/// ```
+	pub fn attribute(&self) -> &str {
+		&self.attribute
+	}
+
+	/// Check if custom accessors (getter/setter) are configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_getter(custom_getter);
+	/// assert!(proxy.has_custom_accessors());
+	/// ```
+	pub fn has_custom_accessors(&self) -> bool {
+		self.getter.is_some() || self.setter.is_some()
+	}
+
+	/// Check if a validator is configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::{AssociationProxy, ProxyError};
+	///
+	/// fn validate(_value: &()) -> Result<(), ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_validator(validate);
+	/// assert!(proxy.has_validator());
+	/// ```
+	pub fn has_validator(&self) -> bool {
+		self.validator.is_some()
+	}
+
+	/// Check if a transform function is configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::AssociationProxy;
+	///
+	/// fn transform(value: () ) -> () { value }
+	///
+	/// let proxy = AssociationProxy::new("data", "value")
+	///     .with_transform(transform);
+	/// assert!(proxy.has_transform());
+	/// ```
+	pub fn has_transform(&self) -> bool {
+		self.transform.is_some()
 	}
 }
 
