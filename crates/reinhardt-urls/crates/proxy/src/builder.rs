@@ -15,9 +15,14 @@ use std::marker::PhantomData;
 ///     .build();
 /// ```
 pub struct ProxyBuilder<T, U> {
+	name: Option<String>,
 	relationship: Option<String>,
 	attribute: Option<String>,
 	creator: Option<fn(U) -> T>,
+	getter: Option<fn(&T) -> Result<U, crate::ProxyError>>,
+	setter: Option<fn(&mut T, U) -> Result<(), crate::ProxyError>>,
+	validator: Option<fn(&U) -> Result<(), crate::ProxyError>>,
+	transform: Option<fn(U) -> U>,
 	_phantom: PhantomData<(T, U)>,
 }
 
@@ -28,7 +33,7 @@ impl<T, U> Default for ProxyBuilder<T, U> {
 }
 
 impl<T, U> ProxyBuilder<T, U> {
-	/// Create a new proxy builder
+	/// Create a new proxy builder without a name
 	///
 	/// # Examples
 	///
@@ -40,9 +45,39 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// ```
 	pub fn new() -> Self {
 		Self {
+			name: None,
 			relationship: None,
 			attribute: None,
 			creator: None,
+			getter: None,
+			setter: None,
+			validator: None,
+			transform: None,
+			_phantom: PhantomData,
+		}
+	}
+
+	/// Create a new proxy builder with a name
+	///
+	/// This is useful for creating named proxy aliases.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::with_name("keyword_strings");
+	/// ```
+	pub fn with_name(name: &str) -> Self {
+		Self {
+			name: Some(name.to_string()),
+			relationship: None,
+			attribute: None,
+			creator: None,
+			getter: None,
+			setter: None,
+			validator: None,
+			transform: None,
 			_phantom: PhantomData,
 		}
 	}
@@ -96,6 +131,204 @@ impl<T, U> ProxyBuilder<T, U> {
 		self.creator = Some(creator);
 		self
 	}
+
+	/// Set the relationship name (alias for `relationship()`)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .for_relationship("posts");
+	/// ```
+	pub fn for_relationship(self, name: &str) -> Self {
+		self.relationship(name)
+	}
+
+	/// Set a custom getter function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .for_relationship("data")
+	///     .attribute("value")
+	///     .with_getter(custom_getter);
+	/// ```
+	pub fn with_getter(mut self, getter: fn(&T) -> Result<U, crate::ProxyError>) -> Self {
+		self.getter = Some(getter);
+		self
+	}
+
+	/// Set a custom setter function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .for_relationship("data")
+	///     .attribute("value")
+	///     .with_setter(custom_setter);
+	/// ```
+	pub fn with_setter(mut self, setter: fn(&mut T, U) -> Result<(), crate::ProxyError>) -> Self {
+		self.setter = Some(setter);
+		self
+	}
+
+	/// Set a validator function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::{ProxyBuilder, ProxyError};
+	///
+	/// fn validate_value(_value: &()) -> Result<(), ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .for_relationship("data")
+	///     .attribute("value")
+	///     .with_validator(validate_value);
+	/// ```
+	pub fn with_validator(mut self, validator: fn(&U) -> Result<(), crate::ProxyError>) -> Self {
+		self.validator = Some(validator);
+		self
+	}
+
+	/// Set a transform function
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// fn transform_value(value: ()) -> () {
+	///     value
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .for_relationship("data")
+	///     .attribute("value")
+	///     .with_transform(transform_value);
+	/// ```
+	pub fn with_transform(mut self, transform: fn(U) -> U) -> Self {
+		self.transform = Some(transform);
+		self
+	}
+
+	/// Check if custom accessors (getter/setter) are configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .with_getter(custom_getter);
+	/// assert!(builder.has_custom_accessors());
+	/// ```
+	pub fn has_custom_accessors(&self) -> bool {
+		self.getter.is_some() || self.setter.is_some()
+	}
+
+	/// Check if a validator is configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::{ProxyBuilder, ProxyError};
+	///
+	/// fn validate(_value: &()) -> Result<(), ProxyError> {
+	///     Ok(())
+	/// }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .with_validator(validate);
+	/// assert!(builder.has_validator());
+	/// ```
+	pub fn has_validator(&self) -> bool {
+		self.validator.is_some()
+	}
+
+	/// Check if a transform function is configured
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// fn transform(value: ()) -> () { value }
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .with_transform(transform);
+	/// assert!(builder.has_transform());
+	/// ```
+	pub fn has_transform(&self) -> bool {
+		self.transform.is_some()
+	}
+
+	/// Get the builder name if set
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::with_name("my_alias");
+	/// assert_eq!(builder.name(), Some("my_alias"));
+	/// ```
+	pub fn name(&self) -> Option<&str> {
+		self.name.as_deref()
+	}
+
+	/// Get the relationship name
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .relationship("posts");
+	/// assert_eq!(builder.get_relationship(), Some("posts"));
+	/// ```
+	pub fn get_relationship(&self) -> Option<&str> {
+		self.relationship.as_deref()
+	}
+
+	/// Get the attribute name
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::ProxyBuilder;
+	///
+	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
+	///     .attribute("title");
+	/// assert_eq!(builder.get_attribute(), Some("title"));
+	/// ```
+	pub fn get_attribute(&self) -> Option<&str> {
+		self.attribute.as_deref()
+	}
+
 	/// Build the association proxy
 	///
 	/// # Panics
