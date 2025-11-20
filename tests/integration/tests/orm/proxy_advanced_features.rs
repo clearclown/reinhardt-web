@@ -5,11 +5,10 @@
 //! Status: IMPLEMENTED - Based on reinhardt-proxy capabilities
 //! Tests: 20 advanced proxy functionality tests
 
-use reinhardt_urls::proxy::{
+use reinhardt_proxy::{
 	AssociationProxy, CollectionProxy, JoinConfig, LoadingStrategy, NestedProxy, ProxyBuilder,
 	ProxyError, ProxyTarget, RelationshipPath, ScalarProxy, ScalarValue,
 };
-use reinhardt_test::TestCase;
 use serde::{Deserialize, Serialize};
 
 /// Test models for proxy testing
@@ -71,6 +70,86 @@ struct UserProfile {
 	avatar_url: Option<String>,
 }
 
+// Implement OrmReflectable for test models
+reinhardt_proxy::impl_orm_reflectable!(User {
+	fields: {
+		id => Integer,
+		name => String,
+		email => String,
+	},
+	relationships: {
+		posts => Collection,
+		roles => Collection,
+		profile => Scalar,
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(Post {
+	fields: {
+		id => Integer,
+		user_id => Integer,
+		title => String,
+		content => String,
+	},
+	relationships: {
+		comments => Collection,
+		tags => Collection,
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(Comment {
+	fields: {
+		id => Integer,
+		post_id => Integer,
+		author_id => Integer,
+		content => String,
+	},
+	relationships: {
+		author => Scalar,
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(Tag {
+	fields: {
+		id => Integer,
+		name => String,
+	},
+	relationships: {
+		posts => Collection,
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(Role {
+	fields: {
+		id => Integer,
+		name => String,
+	},
+	relationships: {
+		permissions => Collection,
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(Permission {
+	fields: {
+		id => Integer,
+		name => String,
+		resource => String,
+	},
+	relationships: {
+	}
+});
+
+reinhardt_proxy::impl_orm_reflectable!(UserProfile {
+	fields: {
+		id => Integer,
+		user_id => Integer,
+		bio => String,
+		avatar_url => String,
+	},
+	relationships: {
+	}
+});
+
 /// Test chaining multiple proxies together
 ///
 /// SQLAlchemy equivalent:
@@ -80,7 +159,6 @@ struct UserProfile {
 /// ```
 #[tokio::test]
 async fn test_proxy_chain_basic() {
-	let mut test_case = TestCase::new();
 
 	// Create a proxy chain: user.posts.comments.author.name
 	let chain = RelationshipPath::new()
@@ -92,7 +170,6 @@ async fn test_proxy_chain_basic() {
 	assert_eq!(chain.path().len(), 3);
 	assert_eq!(chain.get_attribute(), "name");
 
-	test_case.cleanup().await;
 }
 
 /// Test chaining with filtering
@@ -104,7 +181,6 @@ async fn test_proxy_chain_basic() {
 /// ```
 #[tokio::test]
 async fn test_proxy_chain_with_filter() {
-	let mut test_case = TestCase::new();
 
 	// Create chain with filter at intermediate level
 	let chain = RelationshipPath::new()
@@ -117,13 +193,11 @@ async fn test_proxy_chain_with_filter() {
 	assert!(chain.has_filters());
 	assert_eq!(chain.filters().len(), 1);
 
-	test_case.cleanup().await;
 }
 
 /// Test chaining with transformation
 #[tokio::test]
 async fn test_proxy_chain_with_transform() {
-	let mut test_case = TestCase::new();
 
 	// Create chain with transformation
 	let chain = RelationshipPath::new()
@@ -135,7 +209,6 @@ async fn test_proxy_chain_with_transform() {
 	assert!(chain.has_transforms());
 	assert_eq!(chain.transforms().len(), 1);
 
-	test_case.cleanup().await;
 }
 
 /// Test circular reference detection in chains
@@ -145,7 +218,6 @@ async fn test_proxy_chain_with_transform() {
 /// or contains() to check if a relationship is already in the path.
 #[tokio::test]
 async fn test_proxy_chain_circular_detection() {
-	let mut test_case = TestCase::new();
 
 	// Test 1: Using through() - allows cycles (backwards compatible)
 	let chain_unchecked = RelationshipPath::new()
@@ -170,7 +242,6 @@ async fn test_proxy_chain_circular_detection() {
 		assert!(err.to_string().contains("Circular reference detected"));
 	}
 
-	test_case.cleanup().await;
 }
 
 /// Test creating proxy aliases
@@ -181,10 +252,9 @@ async fn test_proxy_chain_circular_detection() {
 /// ```
 #[tokio::test]
 async fn test_proxy_alias_basic() {
-	let mut test_case = TestCase::new();
 
 	// Create proxy alias for keyword strings
-	let alias = ProxyBuilder::new("keyword_strings")
+	let alias = ProxyBuilder::with_name("keyword_strings")
 		.for_relationship("keywords")
 		.attribute("name")
 		.build();
@@ -193,16 +263,14 @@ async fn test_proxy_alias_basic() {
 	assert_eq!(alias.relationship(), "keywords");
 	assert_eq!(alias.attribute(), "name");
 
-	test_case.cleanup().await;
 }
 
 /// Test alias with custom getter/setter
 #[tokio::test]
 async fn test_proxy_alias_custom_accessor() {
-	let mut test_case = TestCase::new();
 
 	// Create alias with custom getter/setter
-	let alias = ProxyBuilder::new("custom_field")
+	let alias = ProxyBuilder::with_name("custom_field")
 		.for_relationship("data")
 		.attribute("value")
 		.with_getter(|_obj| Ok(ScalarValue::String("custom".to_string())))
@@ -212,16 +280,14 @@ async fn test_proxy_alias_custom_accessor() {
 	assert_eq!(alias.name(), "custom_field");
 	assert!(alias.has_custom_accessors());
 
-	test_case.cleanup().await;
 }
 
 /// Test alias with validation
 #[tokio::test]
 async fn test_proxy_alias_with_validation() {
-	let mut test_case = TestCase::new();
 
 	// Create alias with validation
-	let alias = ProxyBuilder::new("validated_field")
+	let alias = ProxyBuilder::with_name("validated_field")
 		.for_relationship("data")
 		.attribute("value")
 		.with_validator(|value| {
@@ -242,16 +308,14 @@ async fn test_proxy_alias_with_validation() {
 	assert_eq!(alias.name(), "validated_field");
 	assert!(alias.has_validator());
 
-	test_case.cleanup().await;
 }
 
 /// Test alias with transformation
 #[tokio::test]
 async fn test_proxy_alias_with_transform() {
-	let mut test_case = TestCase::new();
 
 	// Create alias with transformation
-	let alias = ProxyBuilder::new("transformed_field")
+	let alias = ProxyBuilder::with_name("transformed_field")
 		.for_relationship("data")
 		.attribute("value")
 		.with_transform(|value| match value {
@@ -263,16 +327,14 @@ async fn test_proxy_alias_with_transform() {
 	assert_eq!(alias.name(), "transformed_field");
 	assert!(alias.has_transform());
 
-	test_case.cleanup().await;
 }
 
 /// Test alias serialization to JSON
 #[tokio::test]
 async fn test_proxy_alias_serialization() {
-	let mut test_case = TestCase::new();
 
 	// Test alias serialization to JSON
-	let alias = ProxyBuilder::new("serializable_field")
+	let alias = ProxyBuilder::with_name("serializable_field")
 		.for_relationship("data")
 		.attribute("value")
 		.build();
@@ -283,7 +345,6 @@ async fn test_proxy_alias_serialization() {
 	assert_eq!(parsed["relationship"], "data");
 	assert_eq!(parsed["attribute"], "value");
 
-	test_case.cleanup().await;
 }
 
 /// Test serializing proxy to JSON
@@ -298,7 +359,6 @@ async fn test_proxy_alias_serialization() {
 /// ```
 #[tokio::test]
 async fn test_proxy_serialization() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy serialization to JSON
 	let proxy = CollectionProxy::new("posts", "title")
@@ -311,13 +371,11 @@ async fn test_proxy_serialization() {
 	assert_eq!(parsed["attribute"], "title");
 	assert_eq!(parsed["unique"], true);
 
-	test_case.cleanup().await;
 }
 
 /// Test deserializing proxy from JSON
 #[tokio::test]
 async fn test_proxy_deserialization() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy deserialization from JSON
 	let json =
@@ -328,13 +386,11 @@ async fn test_proxy_deserialization() {
 	assert_eq!(proxy.attribute(), "title");
 	assert!(proxy.is_unique());
 
-	test_case.cleanup().await;
 }
 
 /// Test proxy configuration serialization
 #[tokio::test]
 async fn test_proxy_config_serialization() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy configuration serialization
 	let config = JoinConfig::new()
@@ -348,13 +404,11 @@ async fn test_proxy_config_serialization() {
 	assert_eq!(parsed["join_type"], "LEFT JOIN");
 	assert_eq!(parsed["condition"], "users.id = posts.user_id");
 
-	test_case.cleanup().await;
 }
 
 /// Test proxy with None/null relationships
 #[tokio::test]
 async fn test_proxy_null_relationship() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy with None/null relationships
 	let user = User {
@@ -376,13 +430,11 @@ async fn test_proxy_null_relationship() {
 		Err(_) => {} // Also acceptable - depends on implementation
 	}
 
-	test_case.cleanup().await;
 }
 
 /// Test proxy with empty collections
 #[tokio::test]
 async fn test_proxy_empty_collection() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy with empty collections
 	let user = User {
@@ -404,13 +456,11 @@ async fn test_proxy_empty_collection() {
 		Err(_) => {} // Also acceptable - depends on implementation
 	}
 
-	test_case.cleanup().await;
 }
 
 /// Test proxy with duplicate values
 #[tokio::test]
 async fn test_proxy_duplicates_handling() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy with duplicate values
 	let proxy = CollectionProxy::new("tags", "name")
@@ -420,31 +470,26 @@ async fn test_proxy_duplicates_handling() {
 	assert!(!proxy.is_unique());
 	assert!(!proxy.deduplicates());
 
-	test_case.cleanup().await;
 }
 
 /// Test nested proxy functionality
 #[tokio::test]
 async fn test_nested_proxy_basic() {
-	let mut test_case = TestCase::new();
 
 	// Test nested proxy functionality
 	let nested_proxy = NestedProxy::new()
 		.add_level("posts")
 		.add_level("comments")
 		.add_level("author")
-		.attribute("name");
+		.with_attribute("name");
 
 	assert_eq!(nested_proxy.depth(), 3);
 	assert_eq!(nested_proxy.attribute(), "name");
-
-	test_case.cleanup().await;
 }
 
 /// Test nested proxy with conditions
 #[tokio::test]
 async fn test_nested_proxy_with_conditions() {
-	let mut test_case = TestCase::new();
 
 	// Test nested proxy with conditions
 	let nested_proxy = NestedProxy::new()
@@ -453,18 +498,15 @@ async fn test_nested_proxy_with_conditions() {
 		.add_level("comments")
 		.with_condition("approved = true")
 		.add_level("author")
-		.attribute("name");
+		.with_attribute("name");
 
 	assert_eq!(nested_proxy.depth(), 3);
 	assert_eq!(nested_proxy.conditions().len(), 2);
-
-	test_case.cleanup().await;
 }
 
 /// Test proxy error handling
 #[tokio::test]
 async fn test_proxy_error_handling() {
-	let mut test_case = TestCase::new();
 
 	// Test proxy error handling
 	let proxy = AssociationProxy::new("nonexistent", "attribute");
@@ -479,7 +521,6 @@ async fn test_proxy_error_handling() {
 		Err(_) => {} // Other errors are also acceptable
 	}
 
-	test_case.cleanup().await;
 }
 
 /// Mock proxy accessor for testing
