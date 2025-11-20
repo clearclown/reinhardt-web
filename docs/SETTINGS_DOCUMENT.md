@@ -87,14 +87,62 @@ REINHARDT_ENV=production cargo run --bin runserver
 
 ## Settings Priority
 
-Settings are merged in the following priority order (highest priority first):
+Settings are merged based on the **priority value** of each source. Sources with higher priority values override sources with lower priority values.
 
-1. **Environment-Specific TOML Files** (`local.toml`, `staging.toml`, `production.toml`)
-2. **Base TOML File** (`base.toml`)
-3. **Environment Variables** (`REINHARDT_` prefix)
-4. **Default Values** (defined in code)
+### Priority Values by Source Type
 
-**Example:**
+| Source Type | Priority Value | Description |
+|------------|---------------|-------------|
+| `EnvSource` | 100 | High-priority environment variables (override TOML files) |
+| `DotEnvSource` | 90 | .env file variables |
+| `TomlFileSource` | 50 | TOML configuration files |
+| `LowPriorityEnvSource` | 40 | Low-priority environment variables (overridden by TOML files) |
+| `DefaultSource` | 0 | Default values defined in code |
+
+### Common Configuration Pattern
+
+The documentation examples use this configuration pattern:
+
+```rust
+SettingsBuilder::new()
+    .add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+    .add_source(TomlFileSource::new("settings/base.toml"))
+    .add_source(TomlFileSource::new("settings/local.toml"))
+    .build()
+```
+
+**Priority order for this pattern (highest priority first):**
+
+1. **Environment-Specific TOML Files** (`local.toml`, `staging.toml`, `production.toml`) - Priority 50
+2. **Base TOML File** (`base.toml`) - Priority 50
+3. **Low-Priority Environment Variables** (`REINHARDT_` prefix with `LowPriorityEnvSource`) - Priority 40
+4. **Default Values** (defined in code) - Priority 0
+
+**Note:** When multiple sources have the same priority (e.g., `base.toml` and `local.toml`), sources added later override earlier ones.
+
+### Environment Variable Priority Options
+
+You can choose between two environment variable sources depending on your needs:
+
+#### Option 1: Low-Priority Environment Variables (Recommended for Development)
+
+```rust
+.add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+```
+- Priority: 40 (lower than TOML files)
+- TOML files override environment variables
+- Useful for setting defaults that can be overridden by configuration files
+
+#### Option 2: High-Priority Environment Variables (Recommended for Production)
+
+```rust
+.add_source(EnvSource::new().with_prefix("REINHARDT_"))
+```
+- Priority: 100 (higher than TOML files)
+- Environment variables override TOML files
+- Useful for production deployments where environment variables should take precedence
+
+### Example with LowPriorityEnvSource
 
 ```toml
 # base.toml
@@ -115,15 +163,21 @@ host = "127.0.0.1"
 ```
 
 ```bash
-# Environment variable
+# Environment variable (using LowPriorityEnvSource)
 export REINHARDT_DATABASE_PORT=5433
 ```
 
-**Result:**
+**Result with LowPriorityEnvSource:**
 - `debug = true` (local.toml overrides base.toml)
 - `secret_key = "base-secret"` (not defined in local.toml, uses base.toml value)
 - `database.host = "127.0.0.1"` (local.toml overrides base.toml)
-- `database.port = 5432` (base.toml value, TOML has priority over environment variables)
+- `database.port = 5432` (base.toml overrides environment variable because TOML has higher priority than LowPriorityEnvSource)
+
+**Result if using EnvSource instead:**
+- `debug = true` (local.toml value)
+- `secret_key = "base-secret"` (base.toml value)
+- `database.host = "127.0.0.1"` (local.toml value)
+- `database.port = 5433` (environment variable overrides TOML because EnvSource has higher priority)
 
 ---
 
@@ -230,7 +284,12 @@ format = "json"
 
 ## Configuration via Environment Variables
 
-You can also override settings using environment variables, but note that **TOML files have higher priority**.
+You can configure settings using environment variables. The priority of environment variables depends on which source you use:
+
+- **`LowPriorityEnvSource`** (Priority: 40): TOML files override environment variables
+- **`EnvSource`** (Priority: 100): Environment variables override TOML files
+
+The examples in this document use `LowPriorityEnvSource`, which means **TOML files have higher priority** than environment variables.
 
 ### Naming Convention
 
@@ -260,13 +319,43 @@ export REINHARDT_LOGGING_LEVEL=debug
 export REINHARDT_STATIC_URL=/static/
 ```
 
+### Choosing Between EnvSource and LowPriorityEnvSource
+
+#### Use `LowPriorityEnvSource` when:
+- You want TOML files to override environment variables
+- You're in development and want configuration files to take precedence
+- You want environment variables as fallback defaults
+
+```rust
+SettingsBuilder::new()
+    .add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+    .add_source(TomlFileSource::new("settings/base.toml"))
+    .add_source(TomlFileSource::new("settings/local.toml"))
+    .build()
+// Result: local.toml > base.toml > environment variables > defaults
+```
+
+#### Use `EnvSource` when:
+- You want environment variables to override TOML files
+- You're in production and want environment variables to take precedence
+- You're deploying to cloud platforms (Heroku, AWS, etc.) that use environment variables
+
+```rust
+SettingsBuilder::new()
+    .add_source(DefaultSource::new())
+    .add_source(TomlFileSource::new("settings/base.toml"))
+    .add_source(EnvSource::new().with_prefix("REINHARDT_"))
+    .build()
+// Result: environment variables > base.toml > defaults
+```
+
 ### Managing Configuration with Environment Variables Only
 
-If you want to manage configuration using only environment variables without TOML files, modify `src/config/settings.rs` as follows:
+If you want to manage configuration using only environment variables without TOML files, use `EnvSource`:
 
 ```rust
 use reinhardt_conf::settings::prelude::*;
-use reinhardt_core::Settings;
+use reinhardt_settings::Settings;
 
 pub fn get_settings() -> Settings {
     SettingsBuilder::new()
@@ -289,13 +378,13 @@ pub fn get_settings() -> Settings {
 
 ```rust
 use reinhardt_conf::settings::prelude::*;
-use reinhardt_core::Settings;
+use reinhardt_settings::Settings;
 use std::env;
 use std::path::PathBuf;
 
 pub fn get_settings() -> Settings {
     let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
-    let profile = Profile::from_str(&profile_str).unwrap_or(Profile::Development);
+    let profile = Profile::parse(&profile_str);
 
     let settings_dir = PathBuf::from("settings");
 
@@ -482,18 +571,48 @@ pub fn get_settings() -> Settings {
 ### Implementing Custom Sources
 
 ```rust
-use reinhardt_conf::settings::sources::Source;
+use reinhardt_settings::sources::{ConfigSource, SourceError};
+use indexmap::IndexMap;
+use serde_json::Value;
 
 struct RemoteConfigSource {
     url: String,
 }
 
-impl Source for RemoteConfigSource {
-    fn load(&self) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+impl ConfigSource for RemoteConfigSource {
+    fn load(&self) -> Result<IndexMap<String, Value>, SourceError> {
         // Implementation to fetch configuration from remote server
-        todo!("Implement remote config loading")
+        // Example: HTTP request to fetch JSON configuration
+        todo!("Implement remote config loading - fetch from {}", self.url)
+    }
+
+    fn priority(&self) -> u8 {
+        // Custom priority between TOML files and high-priority env vars
+        // 0 = lowest, 100 = highest
+        // 75 = higher than TOML (50) but lower than EnvSource (100)
+        75
+    }
+
+    fn description(&self) -> String {
+        format!("Remote configuration from: {}", self.url)
     }
 }
+```
+
+**Usage:**
+
+```rust
+pub fn get_settings() -> Settings {
+    SettingsBuilder::new()
+        .add_source(DefaultSource::new())
+        .add_source(TomlFileSource::new("settings/base.toml"))
+        .add_source(RemoteConfigSource { url: "https://config.example.com/api/settings".to_string() })
+        .build()
+        .expect("Failed to build settings")
+        .into_typed()
+        .expect("Failed to convert settings")
+}
+// Priority order: RemoteConfigSource (75) > TomlFileSource (50) > DefaultSource (0)
 ```
 
 ---
