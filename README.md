@@ -271,31 +271,46 @@ users/
 Edit your app's `urls.rs`:
 
 ```rust
+// users/urls.rs
 use reinhardt_routers::UnifiedRouter;
-use hyper::Method;
-use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
-    UnifiedRouter::new()
-        .function("/users", Method::GET, views::list_users)
-        .function("/users/{id}", Method::GET, views::get_user)
-        .function("/users", Method::POST, views::create_user)
+	let router = UnifiedRouter::new();
+
+	// Add your routes using the router
+	// Example: Function-based routes
+	// router.function("/users", Method::GET, views::list_users);
+	// router.function("/users/{id}", Method::GET, views::get_user);
+	// router.function("/users", Method::POST, views::create_user);
+
+	router
 }
 ```
 
 Include in `src/config/urls.rs`:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+// src/config/urls.rs
+use reinhardt::prelude::*;
 use std::sync::Arc;
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::new()
-        .mount("/api/", users::urls::url_patterns());
+	let router = UnifiedRouter::new();
 
-    Arc::new(router)
+	// Include app routers
+	// router.include_router("/api/", users::urls::url_patterns(), Some("users".to_string()));
+
+	Arc::new(router)
 }
 ```
+
+**Note:** The `reinhardt::prelude` now includes commonly used types:
+- **ORM**: `F`, `Q`, `QOperator`, `Annotation`, `Aggregate`, `Transaction`, `atomic`
+- **Database Functions**: `Concat`, `Upper`, `Lower`, `Now`, `CurrentDate`
+- **Window Functions**: `Window`, `RowNumber`, `Rank`, `DenseRank`
+- **Constraints**: `UniqueConstraint`, `CheckConstraint`, `ForeignKeyConstraint`
+- **Auth**: `UserManager`, `GroupManager`, `Group`, `ObjectPermission`, `ObjectPermissionChecker`
+- **DI Params**: `Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`
 
 For a complete step-by-step guide, see [Getting Started](docs/GETTING_STARTED.md).
 
@@ -321,24 +336,37 @@ password = "postgres"
 Settings are automatically loaded in `src/config/settings.rs`:
 
 ```rust
-use reinhardt_conf::settings::prelude::*;
-use reinhardt_settings::Settings;
+// src/config/settings.rs
+use reinhardt_conf::settings::builder::SettingsBuilder;
+use reinhardt_conf::settings::profile::Profile;
+use reinhardt_conf::settings::sources::{DefaultSource, LowPriorityEnvSource, TomlFileSource};
+use reinhardt_core::Settings;
+use std::env;
+use std::path::PathBuf;
+use std::str::FromStr;
 
 pub fn get_settings() -> Settings {
-    let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
-    let profile = Profile::from_str(&profile_str).unwrap_or(Profile::Development);
+	let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
+	let profile = Profile::from_str(&profile_str).unwrap_or(Profile::Development);
 
-    let settings_dir = PathBuf::from("settings");
+	let base_dir = env::current_dir().expect("Failed to get current directory");
+	let settings_dir = base_dir.join("settings");
 
-    SettingsBuilder::new()
-        .profile(profile)
-        .add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
-        .add_source(TomlFileSource::new(settings_dir.join("base.toml")))
-        .add_source(TomlFileSource::new(settings_dir.join(format!("{}.toml", profile_str))))
-        .build()
-        .expect("Failed to build settings")
-        .into_typed()
-        .expect("Failed to convert settings")
+	let merged = SettingsBuilder::new()
+		.profile(profile)
+		.add_source(
+			DefaultSource::new()
+				.with_value("debug", serde_json::Value::Bool(false))
+				.with_value("language_code", serde_json::Value::String("en-us".to_string()))
+				.with_value("time_zone", serde_json::Value::String("UTC".to_string()))
+		)
+		.add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+		.add_source(TomlFileSource::new(settings_dir.join("base.toml")))
+		.add_source(TomlFileSource::new(settings_dir.join(format!("{}.toml", profile_str))))
+		.build()
+		.expect("Failed to build settings");
+
+	merged.into_typed().expect("Failed to convert settings to Settings struct")
 }
 ```
 
@@ -349,32 +377,96 @@ See [Settings Documentation](docs/SETTINGS_DOCUMENT.md) for more details.
 Define models in your app (e.g., `users/models.rs`):
 
 ```rust
+// users/models.rs
+use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct User {
-    pub id: i64,
-    pub email: String,
-    pub username: String,
-    pub is_active: bool,
+	pub id: i64,
+	pub email: String,
+	pub username: String,
+	pub is_active: bool,
+	pub created_at: DateTime<Utc>,
 }
 
 impl User {
-    pub async fn find_by_id(id: i64) -> Result<Self, Box<dyn std::error::Error>> {
-        // Query database using SeaQuery
-        // This is a simplified example
-        todo!("Implement database query with SeaQuery")
-    }
+	pub async fn find_by_id(id: i64) -> Result<Self, Box<dyn std::error::Error>> {
+		// Query database using SeaQuery
+		// This is a simplified example
+		todo!("Implement database query with SeaQuery")
+	}
 
-    pub async fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Insert or update using SeaQuery
-        todo!("Implement database save with SeaQuery")
-    }
+	pub async fn save(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+		// Insert or update using SeaQuery
+		todo!("Implement database save with SeaQuery")
+	}
 
-    pub async fn delete(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Delete from database
-        todo!("Implement database delete with SeaQuery")
-    }
+	pub async fn delete(&self) -> Result<(), Box<dyn std::error::Error>> {
+		// Delete from database
+		todo!("Implement database delete with SeaQuery")
+	}
+
+	// Django-style query methods with F/Q objects
+	pub async fn find_active_users() -> Result<Vec<Self>, Box<dyn std::error::Error>> {
+		// Filter using Q objects (Django-style)
+		// queryset.filter(Q::new().field("is_active").eq(true))
+		todo!("Implement query with Q objects")
+	}
+
+	pub async fn find_by_email_domain(domain: &str) -> Result<Vec<Self>, Box<dyn std::error::Error>> {
+		// Use F object to reference field and database functions
+		// queryset.filter(Q::new().field("email").contains(domain))
+		//         .annotate("email_lower", Lower::new(F::new("email")))
+		todo!("Implement query with F object and database functions")
+	}
+
+	pub async fn count_by_activity() -> Result<Vec<(bool, i64)>, Box<dyn std::error::Error>> {
+		// Aggregation with group by
+		// queryset.group_by("is_active")
+		//         .annotate("count", Count::new("id"))
+		todo!("Implement aggregation query")
+	}
+}
+```
+
+**Advanced Query Examples:**
+
+```rust
+use reinhardt::prelude::*;
+
+// Django-style F/Q object queries
+async fn complex_user_query() -> Result<Vec<User>, Box<dyn std::error::Error>> {
+	// F objects for field references
+	let active_query = Q::new()
+		.field("is_active").eq(true)
+		.and(Q::new().field("created_at").gte(Now::new()));
+
+	// Database functions
+	let email_lower = Lower::new(F::new("email"));
+	let username_upper = Upper::new(F::new("username"));
+
+	// Aggregations
+	let user_count = Aggregate::count("id");
+	let latest_created = Aggregate::max("created_at");
+
+	// Window functions for ranking
+	let rank_by_creation = Window::new()
+		.partition_by(vec!["is_active"])
+		.order_by(vec![("created_at", "DESC")])
+		.function(RowNumber::new());
+
+	todo!("Execute query with these components")
+}
+
+// Transaction support
+async fn create_user_with_transaction(user_data: CreateUserRequest) -> Result<User, Box<dyn std::error::Error>> {
+	// Atomic transaction with automatic rollback on error
+	atomic(|| async {
+		let user = User::create(user_data).await?;
+		log_user_creation(&user).await?;
+		Ok(user)
+	}).await
 }
 ```
 
@@ -383,28 +475,74 @@ impl User {
 Register in `src/config/apps.rs`:
 
 ```rust
+// src/config/apps.rs
 use reinhardt_macros::installed_apps;
 
 installed_apps! {
-    auth: "reinhardt.contrib.auth",
-    contenttypes: "reinhardt.contrib.contenttypes",
-    users: "users",
+	auth: "reinhardt.contrib.auth",
+	contenttypes: "reinhardt.contrib.contenttypes",
+	sessions: "reinhardt.contrib.sessions",
+	drf: "reinhardt.drf",
+	users: "users",
 }
 
 pub fn get_installed_apps() -> Vec<String> {
-    InstalledApp::all_apps()
+	InstalledApp::all_apps()
 }
 ```
 
 ### With Authentication
 
-Reinhardt provides Django-style user models with `BaseUser` and `FullUser` traits.
+Reinhardt provides Django-style user models with `BaseUser` and `FullUser` traits, along with comprehensive user management through `UserManager`.
 
 **Note:** Reinhardt includes a built-in `DefaultUser` implementation. You can use it directly or define your own user model as shown below.
+
+**User Management Example:**
+
+```rust
+use reinhardt::prelude::*;
+
+// Create and manage users with UserManager
+async fn manage_users() -> Result<(), Box<dyn std::error::Error>> {
+	let user_manager = UserManager::new();
+
+	// Create a new user
+	let user = user_manager.create_user(CreateUserData {
+		username: "alice".to_string(),
+		email: "alice@example.com".to_string(),
+		password: "secure_password".to_string(),
+		first_name: Some("Alice".to_string()),
+		last_name: Some("Smith".to_string()),
+	}).await?;
+
+	// Update user information
+	user_manager.update_user(user.id, UpdateUserData {
+		email: Some("alice.smith@example.com".to_string()),
+		is_active: Some(true),
+		..Default::default()
+	}).await?;
+
+	// Manage groups and permissions
+	let group_manager = GroupManager::new();
+	let editors = group_manager.create_group(CreateGroupData {
+		name: "editors".to_string(),
+	}).await?;
+
+	// Assign object-level permissions
+	let permission = ObjectPermission::new("edit", user.id, article.id);
+	let perm_checker = ObjectPermissionChecker::new();
+	if perm_checker.has_permission(&user, "edit", &article).await? {
+		// User can edit the article
+	}
+
+	Ok(())
+}
+```
 
 Define your user model in `users/models.rs`:
 
 ```rust
+// users/models.rs
 use reinhardt_auth::{BaseUser, FullUser, PermissionsMixin};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
@@ -412,73 +550,74 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct User {
-    pub id: Uuid,
-    pub username: String,
-    pub email: String,
-    pub password_hash: Option<String>,
-    pub first_name: String,
-    pub last_name: String,
-    pub is_active: bool,
-    pub is_staff: bool,
-    pub is_superuser: bool,
-    pub last_login: Option<DateTime<Utc>>,
-    pub date_joined: DateTime<Utc>,
+	pub id: Uuid,
+	pub username: String,
+	pub email: String,
+	pub password_hash: Option<String>,
+	pub first_name: String,
+	pub last_name: String,
+	pub is_active: bool,
+	pub is_staff: bool,
+	pub is_superuser: bool,
+	pub last_login: Option<DateTime<Utc>>,
+	pub date_joined: DateTime<Utc>,
 }
 
 impl BaseUser for User {
-    type PrimaryKey = Uuid;
+	type PrimaryKey = Uuid;
 
-    fn get_username_field() -> &'static str { "username" }
-    fn get_username(&self) -> &str { &self.username }
-    fn password_hash(&self) -> Option<&str> { self.password_hash.as_deref() }
-    fn set_password_hash(&mut self, hash: String) { self.password_hash = Some(hash); }
-    fn last_login(&self) -> Option<DateTime<Utc>> { self.last_login }
-    fn set_last_login(&mut self, time: DateTime<Utc>) { self.last_login = Some(time); }
-    fn is_active(&self) -> bool { self.is_active }
+	fn get_username_field() -> &'static str { "username" }
+	fn get_username(&self) -> &str { &self.username }
+	fn password_hash(&self) -> Option<&str> { self.password_hash.as_deref() }
+	fn set_password_hash(&mut self, hash: String) { self.password_hash = Some(hash); }
+	fn last_login(&self) -> Option<DateTime<Utc>> { self.last_login }
+	fn set_last_login(&mut self, time: DateTime<Utc>) { self.last_login = Some(time); }
+	fn is_active(&self) -> bool { self.is_active }
 }
 
 impl FullUser for User {
-    fn username(&self) -> &str { &self.username }
-    fn email(&self) -> &str { &self.email }
-    fn first_name(&self) -> &str { &self.first_name }
-    fn last_name(&self) -> &str { &self.last_name }
-    fn is_staff(&self) -> bool { self.is_staff }
-    fn is_superuser(&self) -> bool { self.is_superuser }
-    fn date_joined(&self) -> DateTime<Utc> { self.date_joined }
+	fn username(&self) -> &str { &self.username }
+	fn email(&self) -> &str { &self.email }
+	fn first_name(&self) -> &str { &self.first_name }
+	fn last_name(&self) -> &str { &self.last_name }
+	fn is_staff(&self) -> bool { self.is_staff }
+	fn is_superuser(&self) -> bool { self.is_superuser }
+	fn date_joined(&self) -> DateTime<Utc> { self.date_joined }
 }
 ```
 
 Use JWT authentication in your app's `views/profile.rs`:
 
 ```rust
+// users/views/profile.rs
 use reinhardt_auth::{JwtAuth, BaseUser};
 use reinhardt_http::{Request, Response, StatusCode};
 use crate::models::User;
 
 pub async fn get_profile(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
-    // Extract JWT token from Authorization header
-    let auth_header = req.headers.get("authorization")
-        .and_then(|h| h.to_str().ok())
-        .ok_or("Missing Authorization header")?;
+	// Extract JWT token from Authorization header
+	let auth_header = req.headers.get("authorization")
+		.and_then(|h| h.to_str().ok())
+		.ok_or("Missing Authorization header")?;
 
-    let token = auth_header.strip_prefix("Bearer ")
-        .ok_or("Invalid Authorization header format")?;
+	let token = auth_header.strip_prefix("Bearer ")
+		.ok_or("Invalid Authorization header format")?;
 
-    // Verify token and get user ID
-    let jwt_auth = JwtAuth::new(b"your-secret-key");
-    let claims = jwt_auth.verify_token(token)?;
+	// Verify token and get user ID
+	let jwt_auth = JwtAuth::new(b"your-secret-key");
+	let claims = jwt_auth.verify_token(token)?;
 
-    // Load user from database using claims.user_id
-    let user = User::find_by_id(&claims.user_id).await?;
+	// Load user from database using claims.user_id
+	let user = User::find_by_id(&claims.user_id).await?;
 
-    // Check if user is active
-    if !user.is_active() {
-        return Err("User account is inactive".into());
-    }
+	// Check if user is active
+	if !user.is_active() {
+		return Err("User account is inactive".into());
+	}
 
-    // Return user profile as JSON
-    let json = serde_json::to_string(&user)?;
-    Ok(Response::new(StatusCode::OK, json.into()))
+	// Return user profile as JSON
+	let json = serde_json::to_string(&user)?;
+	Ok(Response::new(StatusCode::OK, json.into()))
 }
 ```
 
@@ -487,45 +626,49 @@ pub async fn get_profile(req: Request) -> Result<Response, Box<dyn std::error::E
 In your app's `views/user.rs`:
 
 ```rust
+// users/views/user.rs
 use reinhardt_http::{Request, Response, StatusCode};
 use crate::models::User;
 
 pub async fn get_user(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
-    // Extract path parameter from request
-    let id = req.path_params.get("id")
-        .ok_or("Missing id parameter")?
-        .parse::<i64>()
-        .map_err(|_| "Invalid id format")?;
+	// Extract path parameter from request
+	let id = req.path_params.get("id")
+		.ok_or("Missing id parameter")?
+		.parse::<i64>()
+		.map_err(|_| "Invalid id format")?;
 
-    // Extract query parameters (e.g., ?include_inactive=true)
-    let include_inactive = req.query_params.get("include_inactive")
-        .and_then(|v| v.parse::<bool>().ok())
-        .unwrap_or(false);
+	// Extract query parameters (e.g., ?include_inactive=true)
+	let include_inactive = req.query_params.get("include_inactive")
+		.and_then(|v| v.parse::<bool>().ok())
+		.unwrap_or(false);
 
-    // Fetch user from database
-    let user = User::find_by_id(id).await?;
+	// Fetch user from database
+	let user = User::find_by_id(id).await?;
 
-    // Check active status if needed
-    if !include_inactive && !user.is_active {
-        return Err("User is inactive".into());
-    }
+	// Check active status if needed
+	if !include_inactive && !user.is_active {
+		return Err("User is inactive".into());
+	}
 
-    // Return as JSON
-    let json = serde_json::to_string(&user)?;
-    Ok(Response::new(StatusCode::OK, json.into()))
+	// Return as JSON
+	let json = serde_json::to_string(&user)?;
+	Ok(Response::new(StatusCode::OK, json.into()))
 }
 ```
 
 Register route with path parameter in `urls.rs`:
 
 ```rust
+// users/urls.rs
 use reinhardt_routers::UnifiedRouter;
-use hyper::Method;
-use crate::views;
 
 pub fn url_patterns() -> UnifiedRouter {
-    UnifiedRouter::new()
-        .function("/users/:id", Method::GET, views::get_user)
+	let router = UnifiedRouter::new();
+
+	// Add route with path parameter
+	// router.function("/users/:id", Method::GET, views::get_user);
+
+	router
 }
 ```
 
@@ -534,76 +677,78 @@ pub fn url_patterns() -> UnifiedRouter {
 In your app's `serializers/user.rs`:
 
 ```rust
+// users/serializers/user.rs
 use serde::{Serialize, Deserialize};
 use validator::Validate;
 
 #[derive(Serialize, Deserialize, Validate)]
 pub struct CreateUserRequest {
-    #[validate(email)]
-    pub email: String,
-    #[validate(length(min = 3, max = 50))]
-    pub username: String,
-    #[validate(length(min = 8))]
-    pub password: String,
+	#[validate(email)]
+	pub email: String,
+	#[validate(length(min = 3, max = 50))]
+	pub username: String,
+	#[validate(length(min = 8))]
+	pub password: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct UserResponse {
-    pub id: i64,
-    pub username: String,
-    pub email: String,
-    pub is_active: bool,
+	pub id: i64,
+	pub username: String,
+	pub email: String,
+	pub is_active: bool,
 }
 
 impl From<User> for UserResponse {
-    fn from(user: User) -> Self {
-        UserResponse {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            is_active: user.is_active,
-        }
-    }
+	fn from(user: User) -> Self {
+		UserResponse {
+			id: user.id,
+			username: user.username,
+			email: user.email,
+			is_active: user.is_active,
+		}
+	}
 }
 ```
 
 In your app's `views/user.rs`:
 
 ```rust
+// users/views/user.rs
 use reinhardt_http::{Request, Response, StatusCode};
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserResponse};
 use validator::Validate;
 
 pub async fn create_user(mut req: Request) -> Result<Response, Box<dyn std::error::Error>> {
-    // Parse request body
-    let body_bytes = std::mem::take(&mut req.body);
-    let create_req: CreateUserRequest = serde_json::from_slice(&body_bytes)?;
+	// Parse request body
+	let body_bytes = std::mem::take(&mut req.body);
+	let create_req: CreateUserRequest = serde_json::from_slice(&body_bytes)?;
 
-    // Validate request
-    create_req.validate()?;
+	// Validate request
+	create_req.validate()?;
 
-    // Create user
-    let mut user = User {
-        id: 0, // Will be set by database
-        username: create_req.username,
-        email: create_req.email,
-        password_hash: None,
-        is_active: true,
-        // ... other fields
-    };
+	// Create user
+	let mut user = User {
+		id: 0, // Will be set by database
+		username: create_req.username,
+		email: create_req.email,
+		password_hash: None,
+		is_active: true,
+		// ... other fields
+	};
 
-    // Hash password using BaseUser trait
-    user.set_password(&create_req.password)?;
+	// Hash password using BaseUser trait
+	user.set_password(&create_req.password)?;
 
-    // Save to database
-    user.save().await?;
+	// Save to database
+	user.save().await?;
 
-    // Convert to response
-    let response_data = UserResponse::from(user);
-    let json = serde_json::to_string(&response_data)?;
+	// Convert to response
+	let response_data = UserResponse::from(user);
+	let json = serde_json::to_string(&response_data)?;
 
-    Ok(Response::new(StatusCode::CREATED, json.into()))
+	Ok(Response::new(StatusCode::CREATED, json.into()))
 }
 ```
 
