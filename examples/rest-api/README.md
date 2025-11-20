@@ -131,14 +131,15 @@ cargo run --bin manage runserver
 2. Register in router via `url_patterns()`
 
 ```rust
+// src/config/urls.rs
 async fn new_endpoint() -> Json<MyData> {
-    Json(MyData { /* ... */ })
+	Json(MyData { /* ... */ })
 }
 
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::builder().build();
-    router.add_function_route("/api/new", Method::GET, new_endpoint);
-    Arc::new(router)
+	let router = UnifiedRouter::new();
+	router.function("/api/new", Method::GET, new_endpoint);
+	Arc::new(router)
 }
 ```
 

@@ -39,10 +39,10 @@ async fn list_users() -> Json<Vec<User>> {
 
 #[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::builder().build();
+	let router = UnifiedRouter::new();
 
 	// Add API endpoint
-	router.add_function_route("/api/users", Method::GET, list_users);
+	router.function("/api/users", Method::GET, list_users);
 
 	Arc::new(router)
 }

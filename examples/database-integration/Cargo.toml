@@ -10,7 +10,6 @@ path = "src/bin/manage.rs"
 
 [dependencies]
 # Caret requirement: 0.1.x
-# TODO: This dependency will not resolve until reinhardt is published
 reinhardt = "^0.1.0-alpha.1"
 reinhardt-commands = "^0.1.0-alpha.1"
 reinhardt-core = "^0.1.0-alpha.1"

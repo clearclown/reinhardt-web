@@ -169,26 +169,26 @@ use reinhardt::prelude::*;
 pub struct Migration;
 
 impl MigrationTrait for Migration {
-    fn name(&self) -> &str {
-        "0002_create_users_table"
-    }
+	fn name(&self) -> &str {
+		"0002_create_users_table"
+	}
 
-    async fn up(&self, db: &Database) -> Result<()> {
-        db.execute(r#"
-            CREATE TABLE users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255) NOT NULL,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        "#).await?;
-        Ok(())
-    }
+	async fn up(&self, db: &Database) -> Result<()> {
+		db.execute(r#"
+			CREATE TABLE users (
+				id SERIAL PRIMARY KEY,
+				name VARCHAR(255) NOT NULL,
+				email VARCHAR(255) UNIQUE NOT NULL,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			)
+		"#).await?;
+		Ok(())
+	}
 
-    async fn down(&self, db: &Database) -> Result<()> {
-        db.execute("DROP TABLE users").await?;
-        Ok(())
-    }
+	async fn down(&self, db: &Database) -> Result<()> {
+		db.execute("DROP TABLE users").await?;
+		Ok(())
+	}
 }
 ```
 

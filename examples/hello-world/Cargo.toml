@@ -6,7 +6,6 @@ publish = false
 
 [dependencies]
 # ⚠️ Get the latest version from crates.io
-# TODO: This dependency will not resolve until reinhardt is published
 reinhardt = "^0.1.0-alpha.1"
 
 [dev-dependencies]
