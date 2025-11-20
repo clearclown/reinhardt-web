@@ -19,9 +19,9 @@ Thank you for your interest in contributing to Reinhardt! This document provides
 
 ### Prerequisites
 
-- Rust 1.75+ (2024 Edition)
-- PostgreSQL (for database-related tests)
-- Docker (optional, for TestContainers)
+- Rust 1.91.1+ (2024 Edition required)
+- Docker (required for TestContainers-based integration tests)
+- PostgreSQL (optional - can use TestContainers instead)
 
 ### Fork and Clone
 
@@ -33,33 +33,58 @@ Thank you for your interest in contributing to Reinhardt! This document provides
    ```
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL_OWNER/reinhardt.git
+   git remote add upstream https://github.com/kent8192/reinhardt-rs.git
    ```
 
 ### Building the Project
 
-```bash
-# Build the entire workspace
-cargo build --workspace
+This project uses `cargo-make` for task automation. Install it first:
 
-# Build specific crate
-cargo build --package reinhardt-orm
+```bash
+cargo install cargo-make
+```
+
+Build commands:
+
+```bash
+# Build the entire workspace (recommended)
+cargo make build
 
 # Build with all features
-cargo build --workspace --all-features
+cargo make build --all-features
+
+# Or use plain cargo if needed
+cargo build --workspace --all --all-features
 ```
 
 ### Running Tests
 
+This project uses `cargo-nextest` as the test runner. Install it first:
+
 ```bash
-# Run all tests
-cargo test --workspace
+cargo install cargo-nextest
+```
 
-# Run tests for a specific crate
-cargo test --package reinhardt-orm
+Test commands:
 
-# Run integration tests
-cargo test --package reinhardt-integration-tests
+```bash
+# Run all tests (unit + integration + doc) - recommended
+cargo make test
+
+# Run unit tests only
+cargo make unit-test
+
+# Run integration tests only
+cargo make integration-test
+
+# Run doc tests
+cargo make doc-test
+
+# Or use plain cargo-nextest
+cargo nextest run --workspace --all-features
+
+# Or use standard cargo test
+cargo test --workspace --all --all-features
 ```
 
 ---
@@ -209,8 +234,9 @@ pub fn get_config() -> Config {
 
 **Dependency Rules**:
 
-- Functional crates **MUST NOT** include other Reinhardt crates as `dev-dependencies`
-- This ensures unit tests remain isolated
+- Functional crates **SHOULD NOT** include other Reinhardt functional crates as `dev-dependencies`
+- **Exception**: `reinhardt-test` MAY be included in `dev-dependencies` for test utilities and fixtures
+- This guideline ensures unit tests remain isolated and focused on single-crate functionality
 
 ### Test Implementation
 
@@ -291,7 +317,7 @@ Features:
 - Feature 1
 - Feature 2
 
-> Generated with [Claude Code](https://claude.com/claude-code)
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 ```
@@ -334,19 +360,27 @@ For detailed commit guidelines, see [CLAUDE.commit.md](CLAUDE.commit.md).
 1. **Ensure all tests pass**:
 
    ```bash
-   cargo test --workspace
+   cargo make test
    ```
 
 2. **Run code formatting**:
 
    ```bash
-   cargo fmt --all
+   # Check formatting
+   cargo make fmt-check
+
+   # Auto-fix formatting
+   cargo make fmt-fix
    ```
 
 3. **Check for linting issues**:
 
    ```bash
-   cargo clippy --workspace -- -D warnings
+   # Check linting
+   cargo make clippy-check
+
+   # Auto-fix linting issues
+   cargo make clippy-fix
    ```
 
 4. **Update documentation** (see [Documentation](#documentation) section)
@@ -450,7 +484,7 @@ Please check:
 **Testing**:
 
 - L NO skeleton tests
-- L NO cross-crate dev-dependencies in functional crates
+- L NO cross-crate functional dev-dependencies (except reinhardt-test)
 -  CLEAN UP all test artifacts
 -  SERIALIZE tests with global state using `#[serial]`
 
@@ -472,6 +506,48 @@ Please check:
 -  SPLIT commits by logical purpose
 -  KEEP commits small and focused
 
+
+### Common Commands
+
+**Development Tools**:
+
+```bash
+# Install required tools
+cargo install cargo-make
+cargo install cargo-nextest
+```
+
+**Build & Test**:
+
+```bash
+# Build
+cargo make build
+
+# Test
+cargo make test
+
+# Unit tests only
+cargo make unit-test
+
+# Integration tests only
+cargo make integration-test
+```
+
+**Code Quality**:
+
+```bash
+# Format (check)
+cargo make fmt-check
+
+# Format (fix)
+cargo make fmt-fix
+
+# Lint (check)
+cargo make clippy-check
+
+# Lint (fix)
+cargo make clippy-fix
+```
 ---
 
 ## License
