@@ -44,15 +44,16 @@ pub use auto_schema::{SchemaObject, ToSchema};
 pub use enum_schema::{EnumSchemaBuilder, EnumTagging};
 pub use generator::SchemaGenerator;
 pub use openapi::{
-	ComponentsExt, Header, Info, MediaType, OpenApiSchema, OpenApiSchemaExt, Operation,
-	OperationExt, Parameter, ParameterExt, ParameterIn as ParameterLocation, PathItem, PathItemExt,
-	RefOr, RequestBody, Required, Response, ResponsesExt, Schema, SchemaExt, Server,
+	ArrayBuilder, Components, ComponentsExt, Header, Info, MediaType, ObjectBuilder, OpenApiSchema,
+	OpenApiSchemaExt, Operation, OperationExt, Parameter, ParameterExt,
+	ParameterIn as ParameterLocation, PathItem, PathItemExt, RefOr, RequestBody, Required,
+	Response, ResponsesExt, Schema, SchemaExt, Server, Tag,
 };
 pub use param_metadata::{CookieParam, HeaderParam, ParameterMetadata, PathParam, QueryParam};
 pub use registry::SchemaRegistry;
 pub use reinhardt_openapi_macros::Schema;
 pub use serde_attrs::{FieldMetadata, RenameAll, SchemaBuilderExt};
-pub use swagger::SwaggerUI;
+pub use swagger::{RedocUI, SwaggerUI};
 pub use utoipa::Number;
 pub use viewset_inspector::{InspectorConfig, ViewSetInspector};
 

@@ -106,14 +106,33 @@ pub use reinhardt_core::parsers::{
 #[cfg(feature = "renderers")]
 pub use reinhardt_browsable_api::BrowsableApiRenderer as BrowsableAPIRenderer;
 
-// Temporarily disabled - utoipa API compatibility issues
-/*
-pub use schema::{
-	Components, Contact, Info, License, MediaType, OpenApiSchema, Operation, Parameter,
-	ParameterLocation, PathItem, RequestBody, Response, Schema, SecurityRequirement,
-	SecurityScheme, Server, ServerVariable, Tag, OPENAPI_VERSION,
+// OpenAPI module - from crates/openapi
+#[cfg(feature = "openapi")]
+pub use reinhardt_openapi as openapi;
+
+// Re-export commonly used OpenAPI types
+#[cfg(feature = "openapi")]
+pub use reinhardt_openapi::{
+	ComponentsExt, EnumSchemaBuilder, EnumTagging, Info, OpenApiSchema, Operation, Parameter,
+	ParameterLocation, PathItem, RequestBody, Response, Schema, SchemaExt, SchemaGenerator,
+	SchemaRegistry, Server, ToSchema, ViewSetInspector,
 };
-*/
+
+// Re-export builders
+#[cfg(feature = "openapi")]
+pub use reinhardt_openapi::openapi::{
+	ArrayBuilder, ComponentsBuilder, InfoBuilder, ObjectBuilder, OpenApiBuilder, OperationBuilder,
+	ParameterBuilder, PathItemBuilder, PathsBuilder, RequestBodyBuilder, ResponsesBuilder,
+	ServerBuilder, TagBuilder,
+};
+
+// Re-export OpenAPI ResponseBuilder with alias to avoid conflict with rest_core::ResponseBuilder
+#[cfg(feature = "openapi")]
+pub use reinhardt_openapi::openapi::ResponseBuilder as OpenApiResponseBuilder;
+
+// Re-export UI components
+#[cfg(feature = "openapi")]
+pub use reinhardt_openapi::swagger::SwaggerUI;
 
 #[cfg(test)]
 mod tests {
