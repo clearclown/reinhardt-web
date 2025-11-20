@@ -4,17 +4,71 @@ Welcome to the Reinhardt API reference documentation. This guide provides compre
 
 > **Note**: Full API documentation is available at [docs.rs/reinhardt](https://docs.rs/reinhardt) (coming soon).
 
+## Reinhardt Crate Structure
+
+Reinhardt is organized in a hierarchical structure:
+
+### Facade Crates
+
+Top-level crates that integrate and expose multiple sub-crates:
+
+- **`reinhardt`**: Main crate integrating all features (select features via feature flags)
+- **`reinhardt-core`**: Integrates core functionality (types, exception, pagination, etc.)
+- **`reinhardt-db`**: Integrates database-related features (orm, migrations, backends, etc.)
+- **`reinhardt-rest`**: Integrates REST API features (serializers, filters, throttling, etc.)
+- **`reinhardt-views`**: Integrates view features (views-core, viewsets)
+
+### Functional Crates
+
+Independent crates responsible for specific functional areas:
+
+- **`reinhardt-auth`**: Authentication and authorization system
+- **`reinhardt-http`**: HTTP primitives
+- **`reinhardt-di`**: Dependency injection system (includes params sub-crate)
+- Other independent crates
+
+### Sub-crates
+
+Located under facade crates and accessed via parent crate:
+
+- **`reinhardt-db::orm`**: ORM functionality (`crates/reinhardt-db/crates/orm`)
+- **`reinhardt-db::migrations`**: Migration functionality
+- **`reinhardt-rest::serializers`**: Serializer functionality
+- **`reinhardt-di::params`**: Parameter extraction functionality
+- Many more
+
+### Access Methods
+
+```rust
+// Access via facade crate (recommended)
+use reinhardt::prelude::*;
+
+// Or access individual crates directly
+use reinhardt_db::orm::Model;
+use reinhardt_di::params::{Path, Query};
+use reinhardt_rest::serializers::Serializer;
+```
+
+---
+
 ## Core Modules
 
 ### reinhardt-core
 
 Core utilities and fundamental types used throughout the framework.
 
+> **Note**: `reinhardt-core` is a facade crate that integrates multiple sub-modules:
+> - `reinhardt-core::types` - Core types
+> - `reinhardt-core::exception` - Error handling
+> - `reinhardt-core::pagination` - Pagination utilities
+> - `reinhardt-core::backends` - Cache and storage backends
+
 **Key Components:**
 
-- Request/Response types
-- Error handling
-- HTTP primitives
+- Types - Basic type definitions
+- Exception handling - Error handling utilities
+- Pagination - Pagination functionality
+- Backends - Cache and storage backends
 
 **Documentation:**
 
@@ -24,43 +78,55 @@ Core utilities and fundamental types used throughout the framework.
 
 View functions and class-based views for handling HTTP requests.
 
+> **Note**: `reinhardt-views` is a facade crate that integrates views-core and viewsets (feature flag).
+
 **Key Components:**
 
-- Function-based views
+- Function-based views with `#[endpoint]` macro
 - Class-based views
 - Generic views (ListView, DetailView, CreateView, UpdateView, DeleteView)
+- ViewSets (enabled via feature flag)
 
 **Example:**
 
 ```rust
-use reinhardt_views::{View, TemplateView};
+use reinhardt_views::endpoint;
+use reinhardt_http::{Request, Response};
 
-async fn my_view(request: Request) -> Result<Response> {
+#[endpoint]
+async fn my_view(request: Request) -> Result<Response, Box<dyn std::error::Error>> {
     // Handle request
+    Ok(Response::new(200, "Hello, World!".into()))
 }
+
+// The #[endpoint] macro automatically registers this function as a route handler
 ```
 
 **Documentation:**
 
 - [Module documentation](https://docs.rs/reinhardt-views) (coming soon)
 
-### reinhardt-params
+### reinhardt-di::params
 
 FastAPI-style parameter extractors for type-safe request data extraction.
+
+> **Note**: `params` is a sub-module of the `reinhardt-di` crate. Enable the `params` feature of `reinhardt-di` to access it.
 
 **Key Components:**
 
 - `Path<T>` - Extract path parameters
 - `Query<T>` - Extract query parameters
-- `Header<T>` - Extract headers
-- `Cookie<T>` - Extract cookies
+- `Header<T>`, `HeaderNamed` - Extract headers
+- `Cookie<T>`, `CookieNamed` - Extract cookies
 - `Json<T>` - Parse JSON body
 - `Form<T>` - Parse form data
+- `Body`, `Multipart` - Raw body and multipart form data
 
 **Example:**
 
 ```rust
-use reinhardt_params::{Path, Query, Json};
+use reinhardt_di::params::{Path, Query, Json};
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct UserQuery {
@@ -73,12 +139,14 @@ async fn get_user(
     Query(params): Query<UserQuery>,
 ) -> Result<Response> {
     // user_id and params are type-safe
+    Ok(Response::new(format!("User {} page {}", user_id, params.page.unwrap_or(1))))
 }
 ```
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-params) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-di) (coming soon)
+- Feature flag: `reinhardt-di = { version = "...", features = ["params"] }`
 
 ### reinhardt-di
 
@@ -120,31 +188,71 @@ async fn handler(db: Depends<Database>) -> Result<Response> {
 
 ## Database & ORM
 
-### reinhardt-orm
+### reinhardt-db::orm
 
-Django-style ORM with QuerySet API.
+ORM layer for database abstraction with SeaQuery v1.0.0-rc1 integration.
+
+> **Note**: `orm` is a sub-module of the `reinhardt-db` crate. Currently provides low-level API based on SeaQuery v1.0.0-rc1.
 
 **Key Components:**
 
-- `Model` trait
-- `QuerySet` - Chainable queries
-- `Manager` - Model manager
-- Field types (CharField, IntegerField, DateTimeField, etc.)
-- Relationships (ForeignKey, ManyToMany)
+- `Model` trait - Base trait for models
+- `QuerySet` / `SQLAlchemyQuery` - Chainable query builders
+- `Manager` - Model manager for CRUD operations
+- Field types (`fields.rs`, `postgres_fields.rs`) - Database field definitions
+- Relationships (`relationship.rs`, `many_to_many.rs`) - Model relationships
 
-**Example:**
+**Current Implementation Status:**
+
+- ✅ SeaQuery-based query builder (implemented)
+- ✅ Basic CRUD operations (implemented)
+- ✅ Relationship definitions (implemented)
+- 🚧 `#[derive(Model)]` macro (planned)
+- 🚧 Django-style `filter(age__gte=18)` syntax (planned)
+
+**Example (Current API):**
 
 ```rust
-use reinhardt_orm::{Model, QuerySet};
+use reinhardt_db::orm::{Model, Manager};
+use sea_query::{Query, Expr, PostgresQueryBuilder};
 
-#[derive(Model)]
+// Model definition (currently manual implementation)
+struct User {
+    id: i64,
+    username: String,
+    email: String,
+    age: i32,
+}
+
+// Query using SeaQuery
+let query = Query::select()
+    .from(User::table_name())
+    .column(User::id)
+    .column(User::username)
+    .column(User::email)
+    .and_where(Expr::col(User::age).gte(18))
+    .order_by(User::created, sea_query::Order::Desc)
+    .limit(10)
+    .to_owned();
+
+let sql = query.to_string(PostgresQueryBuilder);
+// Execute SQL to fetch users
+```
+
+**Planned API (Future Implementation):**
+
+```rust
+// Planned Django-style API
+use reinhardt_db::orm::{Model, QuerySet};
+
+#[derive(Model)]  // Macro is planned
 struct User {
     id: i64,
     username: String,
     email: String,
 }
 
-// Query examples
+// Future planned API
 let users = User::objects()
     .filter(age__gte = 18)
     .order_by("-created")
@@ -155,25 +263,36 @@ let users = User::objects()
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-orm) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-db) (coming soon)
+- [SeaQuery Documentation](https://docs.rs/sea-query/)
 
-### reinhardt-migrations
+### reinhardt-db::migrations
 
 Database migration system.
 
+> **Note**: `migrations` is a sub-module of the `reinhardt-db` crate.
+
 **Key Components:**
 
-- Migration files
-- Schema operations
-- Migration runner
+- Migration files - Management of migration files
+- Schema operations - Schema operations (CREATE TABLE, ALTER TABLE, etc.)
+- Migration runner - Migration execution engine
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-migrations) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-db) (coming soon)
 
 ### reinhardt-db
 
 Low-level database operations and connection management.
+
+> **Note**: `reinhardt-db` is a facade crate that integrates multiple sub-modules:
+> - `reinhardt-db::orm` - ORM layer
+> - `reinhardt-db::migrations` - Migration system
+> - `reinhardt-db::backends` - Database backends
+> - `reinhardt-db::pool` - Connection pooling
+> - `reinhardt-db::hybrid` - Hybrid query support
+> - `reinhardt-db::associations` - Model associations
 
 **Documentation:**
 
@@ -181,21 +300,24 @@ Low-level database operations and connection management.
 
 ## REST API Components
 
-### reinhardt-serializers
+### reinhardt-rest::serializers
 
 Data serialization, deserialization, and validation.
 
+> **Note**: `serializers` is a sub-module of the `reinhardt-rest` crate.
+
 **Key Components:**
 
-- `Serializer` trait
-- `ModelSerializer` - Auto-generate from models
-- Field validators
-- Nested serializers
+- `Serializer` trait - Base serializer
+- `ModelSerializer` - Auto-generated from models
+- Field validators - Field validation
+- Nested serializers - Nested serializers
 
 **Example:**
 
 ```rust
-use reinhardt_serializers::{Serializer, ModelSerializer};
+use reinhardt_rest::serializers::{Serializer, ModelSerializer};
+use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 struct UserSerializer {
@@ -207,52 +329,66 @@ struct UserSerializer {
 impl Serializer<User> for UserSerializer {
     fn validate(&self, instance: &User) -> ValidationResult {
         // Custom validation
+        Ok(())
     }
 }
 ```
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-serializers) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
 - [Tutorial: Serialization](../tutorials/en/rest/1-serialization.md)
 
-### reinhardt-viewsets
+### reinhardt-views (viewsets feature)
 
 CRUD views for models with automatic routing.
 
+> **Note**: The `viewsets` functionality is provided as a feature flag of the `reinhardt-views` crate.
+> Enable it with `reinhardt-views = { version = "...", features = ["viewsets"] }`.
+
 **Key Components:**
 
-- `ModelViewSet` - Full CRUD
+- `ModelViewSet` - Full CRUD operations
 - `ReadOnlyModelViewSet` - Read-only views
-- Custom actions
+- Custom actions - Custom action definitions
 
 **Example:**
 
 ```rust
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt_views::viewsets::ModelViewSet;
 
+// Use with viewsets feature enabled
 let viewset = ModelViewSet::<User, UserSerializer>::new();
+```
+
+**Cargo.toml:**
+
+```toml
+[dependencies]
+reinhardt-views = { version = "0.1.0-alpha.1", features = ["viewsets"] }
 ```
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-viewsets) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-views) (coming soon)
 - [Tutorial: ViewSets and Routers](../tutorials/en/rest/6-viewsets-and-routers.md)
 
-### reinhardt-routers
+### reinhardt-rest::routers / reinhardt-urls::routers
 
 Automatic URL routing for ViewSets.
 
+> **Note**: Router functionality is provided by `reinhardt-rest::routers` and `reinhardt-urls::routers`.
+
 **Key Components:**
 
-- `Router` trait
+- `Router` trait - Basic router interface
 - `DefaultRouter` - Standard REST routing
-- URL pattern generation
+- URL pattern generation - Automatic URL pattern generation
 
 **Example:**
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router};
+use reinhardt_rest::routers::{DefaultRouter, Router};
 
 let mut router = DefaultRouter::new();
 router.register("users", user_viewset);
@@ -261,57 +397,64 @@ router.register("posts", post_viewset);
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-routers) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-urls) (coming soon)
 
-### reinhardt-pagination
+### reinhardt-core::pagination
 
 Pagination for large datasets.
 
+> **Note**: Pagination functionality is provided by `reinhardt-core::pagination`.
+
 **Key Components:**
 
-- `PageNumberPagination`
-- `LimitOffsetPagination`
-- `CursorPagination`
+- `PageNumberPagination` - Page number-based pagination
+- `LimitOffsetPagination` - Limit/Offset-based pagination
+- `CursorPagination` - Cursor-based pagination
 
 **Example:**
 
 ```rust
-use reinhardt_pagination::PageNumberPagination;
+use reinhardt_core::pagination::PageNumberPagination;
 
 let pagination = PageNumberPagination::new(25); // 25 items per page
 ```
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-pagination) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
 
-### reinhardt-filters
+### reinhardt-rest::filters
 
 Query filtering for ViewSets.
 
+> **Note**: Filter functionality is provided by `reinhardt-rest::filters`.
+
 **Key Components:**
 
-- `SearchFilter`
-- `OrderingFilter`
-- Custom filters
+- `SearchFilter` - Search filter
+- `OrderingFilter` - Ordering filter
+- Custom filters - Custom filter definitions
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-filters) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
 
-### reinhardt-throttling
+### reinhardt-rest::throttling
 
 Rate limiting for API endpoints.
 
+> **Note**: Throttling functionality is provided by `reinhardt-rest::throttling`.
+
 **Key Components:**
 
-- `AnonRateThrottle`
-- `UserRateThrottle`
-- `ScopedRateThrottle`
+- `AnonRateThrottle` - Rate limiting for anonymous users
+- `UserRateThrottle` - Rate limiting for authenticated users
+- `ScopedRateThrottle` - Scoped rate limiting
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-throttling) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
 
 ## Authentication & Security
 
@@ -321,19 +464,23 @@ Authentication backends and permission system.
 
 **Key Components:**
 
-- JWT authentication
-- Token authentication
-- Session authentication
-- Basic authentication
-- Permission classes (`IsAuthenticated`, `IsAdminUser`, etc.)
+- JWT authentication - `JwtAuth` (note lowercase `t`)
+- Token authentication - `TokenAuthentication`
+- Session authentication - `SessionAuthentication`
+- Basic authentication - `BasicAuthentication`
+- Permission classes - `IsAuthenticated`, `IsAdminUser`, etc.
 
 **Example:**
 
 ```rust
-use reinhardt_auth::{JWTAuth, IsAuthenticated};
+use reinhardt_auth::{JwtAuth, IsAuthenticated};
 
-// Configure in settings
-let auth = JWTAuth::new(secret_key);
+// Configure JWT authentication
+let secret_key = b"your-secret-key";
+let auth = JwtAuth::new(secret_key);
+
+// Use permission classes
+// Protect endpoints with IsAuthenticated
 ```
 
 **Documentation:**
@@ -359,21 +506,25 @@ Template engine for rendering HTML.
 
 - [Module documentation](https://docs.rs/reinhardt-templates) (coming soon)
 
-### reinhardt-cache
+### reinhardt-core::backends (cache)
 
 Caching backends (Redis, in-memory).
 
+> **Note**: Cache functionality is provided by `reinhardt-core::backends`.
+
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-cache) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
 
-### reinhardt-sessions
+### reinhardt-auth::sessions
 
 Session management.
 
+> **Note**: Session management functionality is provided by `reinhardt-auth::sessions`.
+
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-sessions) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-auth) (coming soon)
 
 ### reinhardt-mail
 
@@ -383,21 +534,25 @@ Email utilities.
 
 - [Module documentation](https://docs.rs/reinhardt-mail) (coming soon)
 
-### reinhardt-static
+### reinhardt-utils::static
 
 Static file serving.
 
+> **Note**: Static file serving functionality is provided by `reinhardt-utils::static`.
+
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-static) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-utils) (coming soon)
 
-### reinhardt-storage
+### reinhardt-core::backends (storage)
 
 File storage backends (S3, local).
 
+> **Note**: Storage functionality is provided by `reinhardt-core::backends`.
+
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-storage) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
 
 ### reinhardt-websockets
 
@@ -429,17 +584,12 @@ Internationalization and localization.
 
 Configuration system and settings management.
 
+> **Note**: `reinhardt-conf` is a crate that integrates configuration management functionality.
+> Previously planned as `reinhardt-settings`, it was integrated into `reinhardt-conf`.
+
 **Documentation:**
 
 - [Module documentation](https://docs.rs/reinhardt-conf) (coming soon)
-
-### reinhardt-settings
-
-Application settings.
-
-**Documentation:**
-
-- [Module documentation](https://docs.rs/reinhardt-settings) (coming soon)
 
 ## Testing
 
@@ -476,10 +626,12 @@ Lightweight version for microservices.
 
 ```rust
 use reinhardt::prelude::*;
+use reinhardt_http::{Request, Response};
+use reinhardt_core::exception::Error;
 
 async fn my_handler() -> Result<Response, Error> {
     let data = fetch_data().await?;
-    Ok(JsonResponse::new(data))
+    Ok(Response::json(data))
 }
 ```
 
@@ -487,12 +639,14 @@ async fn my_handler() -> Result<Response, Error> {
 
 ```rust
 use reinhardt_middleware::Middleware;
+use reinhardt_http::{Request, Response};
+use async_trait::async_trait;
 
 struct LoggingMiddleware;
 
 #[async_trait]
 impl Middleware for LoggingMiddleware {
-    async fn process_request(&self, request: Request) -> Result<Request> {
+    async fn process_request(&self, request: Request) -> Result<Request, Box<dyn std::error::Error>> {
         println!("Request: {} {}", request.method(), request.uri());
         Ok(request)
     }
@@ -502,7 +656,7 @@ impl Middleware for LoggingMiddleware {
 ### Custom Validators
 
 ```rust
-use reinhardt_serializers::{ValidationError, ValidationResult};
+use reinhardt_rest::serializers::{ValidationError, ValidationResult};
 
 fn validate_email(email: &str) -> ValidationResult {
     if !email.contains('@') {
@@ -517,14 +671,14 @@ fn validate_email(email: &str) -> ValidationResult {
 - [Getting Started Guide](../GETTING_STARTED.md)
 - [Tutorials](../tutorials/README.md)
 - [Feature Flags](../FEATURE_FLAGS.md)
-- [GitHub Repository](https://github.com/kent8192/reinhardt)
+- [GitHub Repository](https://github.com/kent8192/reinhardt-rs)
 
 ## Contributing
 
 Found an error in the documentation? Want to improve it?
 
-- [Report documentation issues](https://github.com/kent8192/reinhardt/issues)
-- [Contribute to docs](https://github.com/kent8192/reinhardt/blob/main/CONTRIBUTING.md)
+- [Report documentation issues](https://github.com/kent8192/reinhardt-rs/issues)
+- [Contribute to docs](https://github.com/kent8192/reinhardt-rs/blob/main/CONTRIBUTING.md)
 
 ---
 
