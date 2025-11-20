@@ -127,7 +127,7 @@ dependencies = ["unit-test", "cross-crate-integration-test", "intra-crate-integr
 
 [tasks.ci]
 description = "Run all CI checks (check, fmt, clippy, tests)"
-dependencies = ["check", "fmt", "clippy", "test"]
+dependencies = ["check", "fmt-check", "clippy-check", "test"]
 
 # ============================================================================
 # Documentation Tasks
