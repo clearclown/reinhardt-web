@@ -7,6 +7,10 @@ use std::collections::{HashMap, HashSet};
 pub struct JoinConfig {
 	pub eager_load: bool,
 	pub max_depth: Option<usize>,
+	#[serde(skip)]
+	pub loading_strategy: Option<crate::LoadingStrategy>,
+	pub join_type: Option<String>,
+	pub condition: Option<String>,
 }
 
 impl JoinConfig {
@@ -14,7 +18,55 @@ impl JoinConfig {
 		Self {
 			eager_load: false,
 			max_depth: None,
+			loading_strategy: None,
+			join_type: None,
+			condition: None,
 		}
+	}
+
+	/// Set the loading strategy (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::{JoinConfig, LoadingStrategy};
+	///
+	/// let config = JoinConfig::new()
+	///     .with_loading_strategy(LoadingStrategy::Joined);
+	/// ```
+	pub fn with_loading_strategy(mut self, strategy: crate::LoadingStrategy) -> Self {
+		self.loading_strategy = Some(strategy);
+		self
+	}
+
+	/// Set the join type (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::JoinConfig;
+	///
+	/// let config = JoinConfig::new()
+	///     .with_join_type("LEFT JOIN");
+	/// ```
+	pub fn with_join_type(mut self, join_type: &str) -> Self {
+		self.join_type = Some(join_type.to_string());
+		self
+	}
+
+	/// Set the join condition (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::JoinConfig;
+	///
+	/// let config = JoinConfig::new()
+	///     .with_condition("users.id = posts.user_id");
+	/// ```
+	pub fn with_condition(mut self, condition: &str) -> Self {
+		self.condition = Some(condition.to_string());
+		self
 	}
 }
 
@@ -24,21 +76,149 @@ impl Default for JoinConfig {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum LoadingStrategy {
-	Eager,
-	Lazy,
-	Select,
-}
+// LoadingStrategy is now re-exported from reinhardt-orm in lib.rs
 
 #[derive(Debug, Clone)]
 pub struct NestedProxy {
 	pub path: Vec<String>,
+	pub conditions: Vec<String>,
+	pub final_attribute: Option<String>,
 }
 
 impl NestedProxy {
-	pub fn new(path: Vec<String>) -> Self {
-		Self { path }
+	/// Create a new empty nested proxy
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new();
+	/// assert_eq!(proxy.depth(), 0);
+	/// ```
+	pub fn new() -> Self {
+		Self {
+			path: Vec::new(),
+			conditions: Vec::new(),
+			final_attribute: None,
+		}
+	}
+
+	/// Create from a path vector (for backward compatibility)
+	pub fn from_path(path: Vec<String>) -> Self {
+		Self {
+			path,
+			conditions: Vec::new(),
+			final_attribute: None,
+		}
+	}
+
+	/// Add a level to the nested path (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .add_level("comments");
+	/// assert_eq!(proxy.depth(), 2);
+	/// ```
+	pub fn add_level(mut self, level: &str) -> Self {
+		self.path.push(level.to_string());
+		self
+	}
+
+	/// Add a condition to the nested proxy (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .with_condition("published = true");
+	/// assert_eq!(proxy.conditions().len(), 1);
+	/// ```
+	pub fn with_condition(mut self, condition: &str) -> Self {
+		self.conditions.push(condition.to_string());
+		self
+	}
+
+	/// Set the final attribute to access (builder pattern)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .with_attribute("title");
+	/// assert_eq!(proxy.attribute(), "title");
+	/// ```
+	pub fn with_attribute(mut self, attr: &str) -> Self {
+		self.final_attribute = Some(attr.to_string());
+		self
+	}
+
+	/// Get the depth (number of levels) in the nested path
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .add_level("comments")
+	///     .add_level("author");
+	/// assert_eq!(proxy.depth(), 3);
+	/// ```
+	pub fn depth(&self) -> usize {
+		self.path.len()
+	}
+
+	/// Get the final attribute name
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .attribute("title");
+	/// assert_eq!(proxy.attribute(), "title");
+	/// ```
+	pub fn attribute(&self) -> &str {
+		self.final_attribute.as_deref().unwrap_or("")
+	}
+
+	/// Get all conditions
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::NestedProxy;
+	///
+	/// let proxy = NestedProxy::new()
+	///     .add_level("posts")
+	///     .with_condition("published = true")
+	///     .add_level("comments")
+	///     .with_condition("approved = true");
+	/// assert_eq!(proxy.conditions().len(), 2);
+	/// ```
+	pub fn conditions(&self) -> &[String] {
+		&self.conditions
+	}
+}
+
+impl Default for NestedProxy {
+	fn default() -> Self {
+		Self::new()
 	}
 }
 
