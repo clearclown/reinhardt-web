@@ -6,6 +6,7 @@ pub mod discovery;
 pub mod hooks;
 pub mod registry;
 pub mod signals;
+pub mod validation;
 
 // Re-export from reinhardt-http
 pub use reinhardt_http::{Request, Response, StreamBody, StreamingResponse};
@@ -44,6 +45,12 @@ pub use registry::{
 pub use discovery::{
 	MigrationMetadata, RelationMetadata, RelationType, build_reverse_relations,
 	create_reverse_relation, discover_all_models, discover_migrations, discover_models,
+};
+
+// Re-export from validation module
+pub use validation::{
+	ValidationError, ValidationResult, check_circular_relationships, check_duplicate_model_names,
+	check_duplicate_table_names, validate_registry,
 };
 
 #[cfg(test)]
