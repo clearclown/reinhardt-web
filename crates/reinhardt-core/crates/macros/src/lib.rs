@@ -29,6 +29,7 @@ mod endpoint;
 mod injectable_derive;
 mod installed_apps;
 mod model_derive;
+mod orm_reflectable_derive;
 mod path_macro;
 mod permission_macro;
 mod permissions;
@@ -43,6 +44,7 @@ use endpoint::endpoint_impl;
 use injectable_derive::injectable_derive_impl;
 use installed_apps::installed_apps_impl;
 use model_derive::model_derive_impl;
+use orm_reflectable_derive::orm_reflectable_derive_impl;
 use path_macro::path_impl;
 use permissions::permission_required_impl;
 use query_fields::derive_query_fields_impl;
@@ -608,4 +610,54 @@ pub fn derive_model(input: TokenStream) -> TokenStream {
 	model_derive_impl(input)
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
+}
+
+/// Derive macro for automatic OrmReflectable implementation
+///
+/// Automatically implements the `OrmReflectable` trait for structs,
+/// enabling reflection-based field and relationship access for association proxies.
+///
+/// ## Type Inference
+///
+/// Fields are automatically classified based on their types:
+/// - `Vec<T>` → Collection relationship
+/// - `Option<T>` (where T is non-primitive) → Scalar relationship
+/// - Primitive types (i32, String, etc.) → Regular fields
+///
+/// ## Attributes
+///
+/// Override automatic inference with explicit attributes:
+///
+/// - `#[orm_field(type = "Integer")]` - Mark as regular field with specific type
+/// - `#[orm_relationship(type = "collection")]` - Mark as collection relationship
+/// - `#[orm_relationship(type = "scalar")]` - Mark as scalar relationship
+/// - `#[orm_ignore]` - Exclude field from reflection
+///
+/// ## Example
+///
+/// ```rust,ignore
+/// use reinhardt_core::proxy::orm_integration::OrmReflectable;
+///
+/// #[derive(Clone, reinhardt_macros::OrmReflectable)]
+/// struct User {
+///     id: i64,                      // Inferred as Integer field
+///     name: String,                 // Inferred as String field
+///     posts: Vec<Post>,             // Inferred as Collection relationship
+///     profile: Option<UserProfile>, // Inferred as Scalar relationship
+///
+///     #[orm_ignore]
+///     internal_cache: String,       // Excluded from reflection
+/// }
+/// ```
+///
+/// ## Supported Field Types
+///
+/// - **Integer**: i8, i16, i32, i64, i128, u8, u16, u32, u64, u128
+/// - **Float**: f32, f64
+/// - **Boolean**: bool
+/// - **String**: String, str
+///
+#[proc_macro_derive(OrmReflectable, attributes(orm_field, orm_relationship, orm_ignore))]
+pub fn derive_orm_reflectable(input: TokenStream) -> TokenStream {
+	orm_reflectable_derive_impl(input)
 }
