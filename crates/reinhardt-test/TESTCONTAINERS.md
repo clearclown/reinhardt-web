@@ -84,13 +84,15 @@ async fn test_with_redis() {
 ```rust
 use reinhardt_test::prelude::*;
 use reinhardt_test::containers::with_postgres;
+use reinhardt_test::resource::AsyncTestResource;
 
 #[tokio::test]
 #[ignore] // Requires Docker
 async fn test_api_with_database() {
     with_postgres(|db| async move {
-        let test_case = APITestCase::with_database_url(db.connection_url());
-        test_case.setup().await;
+        // Create APITestCase and set database URL
+        let test_case = APITestCase::setup().await;
+        test_case.set_database_url(db.connection_url()).await;
 
         // Get the database URL
         let db_url = test_case.database_url().await.unwrap();
@@ -143,26 +145,32 @@ The macro automatically:
 ### 5. Custom Configuration
 
 ```rust
-use testcontainers::clients::Cli;
 use reinhardt_test::containers::PostgresContainer;
 
 #[tokio::test]
 #[ignore] // Requires Docker
 async fn test_custom_postgres() {
-    let docker = Cli::default();
     let container = PostgresContainer::with_credentials(
-        &docker,
         "my_user",
         "my_password",
         "my_database",
-    );
+    ).await;
 
-    container.wait_ready().await.unwrap();
-
+    // Container is already ready after construction
     let url = container.connection_url();
     // Use custom database...
 }
 ```
+
+## Docker Image Versions
+
+The following Docker images are used by default:
+
+- **PostgreSQL**: `postgres:16-alpine`
+- **MySQL**: Default from `testcontainers-modules` crate (MySQL 8.x)
+- **Redis**: Default from `testcontainers-modules` crate (Redis 7.x)
+
+For exact MySQL/Redis versions, refer to the [`testcontainers-modules` documentation](https://docs.rs/testcontainers-modules/).
 
 ## Running Tests
 

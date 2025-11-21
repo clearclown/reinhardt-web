@@ -332,34 +332,21 @@ pub async fn redis_cluster_urls(
 
 ### Cleanup Fixture: redis_cluster_cleanup
 
+> **Note**: This fixture is currently **DISABLED**. TestContainers automatically cleans up
+> containers when they are dropped, making manual cleanup unnecessary and preventing conflicts
+> with other parallel tests.
+
 Located in `crates/reinhardt-test/src/fixtures/testcontainers.rs` (lines 356-381):
 
 ```rust
 #[fixture]
 pub async fn redis_cluster_cleanup() {
-    // Remove any stale containers from previous failed tests
-    let output = tokio::process::Command::new("docker")
-        .args(&[
-            "ps",
-            "-a",
-            "--filter",
-            "ancestor=grokzen/redis-cluster:7.0.10",
-            "--format",
-            "{{.ID}}",
-        ])
-        .output()
-        .await
-        .expect("Failed to list Redis cluster containers");
-
-    if !output.stdout.is_empty() {
-        let container_ids = String::from_utf8_lossy(&output.stdout);
-        for container_id in container_ids.lines() {
-            let _ = tokio::process::Command::new("docker")
-                .args(&["rm", "-f", container_id.trim()])
-                .output()
-                .await;
-        }
-    }
+    // DISABLED: This cleanup was stopping containers from other parallel tests.
+    // TestContainers automatically cleans up containers when they are dropped.
+    //
+    // Previous implementation:
+    // - Removed all grokzen/redis-cluster:7.0.10 containers
+    // - Could interfere with parallel test execution
 }
 ```
 
