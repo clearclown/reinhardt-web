@@ -8,7 +8,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_views_core::browsable_api::FormGenerator;
+/// use reinhardt_views::browsable_api::FormGenerator;
 /// use serde_json::json;
 ///
 /// let mut generator = FormGenerator::new("/api/users/", "POST");
@@ -58,7 +58,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	///
 	/// let generator = FormGenerator::new("/api/items/", "POST");
 	/// ```
@@ -77,7 +77,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	///
 	/// let mut generator = FormGenerator::new("/api/items/", "POST");
 	/// generator.add_field("name", "text", true);
@@ -126,7 +126,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	///
 	/// let mut generator = FormGenerator::new("/api/items/", "POST");
 	/// generator.set_csrf_token("token123");
@@ -141,7 +141,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	///
 	/// let mut generator = FormGenerator::new("/api/items/", "POST");
 	/// generator.add_error("email", "Invalid email format");
@@ -159,7 +159,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	///
 	/// let mut generator = FormGenerator::new("/api/users/", "POST");
 	/// generator.add_field("username", "text", true);
@@ -278,7 +278,7 @@ impl FormGenerator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::FormGenerator;
+	/// use reinhardt_views::browsable_api::FormGenerator;
 	/// use serde_json::json;
 	///
 	/// let schema = json!({

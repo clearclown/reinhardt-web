@@ -42,7 +42,7 @@ pub struct Parameter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_views_core::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
+/// use reinhardt_views::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
 ///
 /// let mut renderer = InteractiveDocsRenderer::new("My API Documentation");
 /// let endpoint = ApiEndpoint {
@@ -72,7 +72,7 @@ impl InteractiveDocsRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::InteractiveDocsRenderer;
+	/// use reinhardt_views::browsable_api::InteractiveDocsRenderer;
 	///
 	/// let renderer = InteractiveDocsRenderer::new("API Docs");
 	/// ```
@@ -90,7 +90,7 @@ impl InteractiveDocsRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::InteractiveDocsRenderer;
+	/// use reinhardt_views::browsable_api::InteractiveDocsRenderer;
 	///
 	/// let mut renderer = InteractiveDocsRenderer::new("API");
 	/// renderer.set_description("RESTful API for managing users");
@@ -105,7 +105,7 @@ impl InteractiveDocsRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::InteractiveDocsRenderer;
+	/// use reinhardt_views::browsable_api::InteractiveDocsRenderer;
 	///
 	/// let mut renderer = InteractiveDocsRenderer::new("API");
 	/// renderer.set_base_url("https://api.example.com");
@@ -120,7 +120,7 @@ impl InteractiveDocsRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
+	/// use reinhardt_views::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
 	///
 	/// let mut renderer = InteractiveDocsRenderer::new("API");
 	/// let endpoint = ApiEndpoint {
@@ -161,7 +161,7 @@ impl InteractiveDocsRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
+	/// use reinhardt_views::browsable_api::templates::{InteractiveDocsRenderer, ApiEndpoint};
 	///
 	/// let mut renderer = InteractiveDocsRenderer::new("API Docs");
 	/// let endpoint = ApiEndpoint {

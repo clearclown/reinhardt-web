@@ -63,9 +63,11 @@
 //! }
 //! ```
 
-// Re-export from views-core
-pub use reinhardt_views_core::browsable_api;
-pub use reinhardt_views_core::generic;
+// Module declarations from merged views-core
+pub mod admin;
+pub mod browsable_api;
+pub mod generic;
+pub mod openapi;
 
 // Re-export viewsets if the feature is enabled
 #[cfg(feature = "viewsets")]

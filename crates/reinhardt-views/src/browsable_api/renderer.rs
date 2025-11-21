@@ -11,7 +11,7 @@ use super::{ColorScheme, FormGenerator, SyntaxHighlighter};
 /// # Examples
 ///
 /// ```
-/// use reinhardt_views_core::browsable_api::{BrowsableApiRenderer, ColorScheme};
+/// use reinhardt_views::browsable_api::{BrowsableApiRenderer, ColorScheme};
 /// use serde_json::json;
 ///
 /// let renderer = BrowsableApiRenderer::new("Users API", ColorScheme::Dark);
@@ -30,7 +30,7 @@ impl BrowsableApiRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{BrowsableApiRenderer, ColorScheme};
+	/// use reinhardt_views::browsable_api::{BrowsableApiRenderer, ColorScheme};
 	///
 	/// let renderer = BrowsableApiRenderer::new("My API", ColorScheme::Dark);
 	/// ```
@@ -46,7 +46,7 @@ impl BrowsableApiRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{BrowsableApiRenderer, ColorScheme};
+	/// use reinhardt_views::browsable_api::{BrowsableApiRenderer, ColorScheme};
 	/// use serde_json::json;
 	///
 	/// let renderer = BrowsableApiRenderer::new("API", ColorScheme::Light);
@@ -67,7 +67,7 @@ impl BrowsableApiRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{BrowsableApiRenderer, ColorScheme, FormGenerator};
+	/// use reinhardt_views::browsable_api::{BrowsableApiRenderer, ColorScheme, FormGenerator};
 	/// use serde_json::json;
 	///
 	/// let renderer = BrowsableApiRenderer::new("API", ColorScheme::Dark);
@@ -146,7 +146,7 @@ impl BrowsableApiRenderer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{BrowsableApiRenderer, ColorScheme};
+	/// use reinhardt_views::browsable_api::{BrowsableApiRenderer, ColorScheme};
 	///
 	/// let mut renderer = BrowsableApiRenderer::new("API", ColorScheme::Dark);
 	/// renderer.set_color_scheme(ColorScheme::Light);

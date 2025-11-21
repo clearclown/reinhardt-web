@@ -17,7 +17,7 @@ static THEME_SET: Lazy<ThemeSet> = Lazy::new(ThemeSet::load_defaults);
 /// # Examples
 ///
 /// ```
-/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 ///
 /// let highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 /// let json = r#"{"name": "John", "age": 30}"#;
@@ -35,7 +35,7 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+	/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 	///
 	/// let highlighter = SyntaxHighlighter::new(ColorScheme::Monokai);
 	/// ```
@@ -48,7 +48,7 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+	/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 	///
 	/// let highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 	/// let json = r#"{"key": "value"}"#;
@@ -64,8 +64,8 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::highlighter::{SyntaxHighlighter};
-	/// use reinhardt_views_core::browsable_api::ColorScheme;
+	/// use reinhardt_views::browsable_api::highlighter::{SyntaxHighlighter};
+	/// use reinhardt_views::browsable_api::ColorScheme;
 	///
 	/// let highlighter = SyntaxHighlighter::new(ColorScheme::Light);
 	/// let code = "fn main() { println!(\"Hello\"); }";
@@ -99,7 +99,7 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+	/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 	///
 	/// let highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 	/// let json = r#"{"test": true}"#;
@@ -131,7 +131,7 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+	/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 	///
 	/// let mut highlighter = SyntaxHighlighter::new(ColorScheme::Dark);
 	/// highlighter.set_color_scheme(ColorScheme::Light);
@@ -145,7 +145,7 @@ impl SyntaxHighlighter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::browsable_api::{SyntaxHighlighter, ColorScheme};
+	/// use reinhardt_views::browsable_api::{SyntaxHighlighter, ColorScheme};
 	///
 	/// let highlighter = SyntaxHighlighter::new(ColorScheme::Monokai);
 	/// assert_eq!(highlighter.color_scheme(), ColorScheme::Monokai);
