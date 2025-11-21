@@ -66,26 +66,27 @@ pub use reinhardt_metadata as metadata;
 pub use reinhardt_throttling as throttling;
 pub use reinhardt_versioning as versioning;
 
-// Re-export from rest-core
-pub use rest_core::authentication;
-pub use rest_core::response;
-pub use rest_core::routers;
+// Core modules (merged from rest-core)
+pub mod authentication;
+pub mod response;
+pub mod routers;
+pub mod schema;
 
 // Re-export authentication types
-pub use rest_core::authentication::{
+pub use authentication::{
 	AllowAny, AnonymousUser, AuthBackend, AuthResult, IsAdminUser, IsAuthenticated,
 	IsAuthenticatedOrReadOnly, Permission, SimpleUser, User,
 };
 
 // Re-export JWT types conditionally
 #[cfg(feature = "jwt")]
-pub use rest_core::authentication::{Claims, JwtAuth};
+pub use authentication::{Claims, JwtAuth};
 
 // Re-export response types
-pub use rest_core::response::{ApiResponse, IntoApiResponse, PaginatedResponse, ResponseBuilder};
+pub use response::{ApiResponse, IntoApiResponse, PaginatedResponse, ResponseBuilder};
 
 // Re-export router types
-pub use rest_core::routers::{DefaultRouter, Route, Router, UrlPattern};
+pub use routers::{DefaultRouter, Route, Router, UrlPattern};
 
 // Re-export from specialized crates
 pub use reinhardt_browsable_api::*;
