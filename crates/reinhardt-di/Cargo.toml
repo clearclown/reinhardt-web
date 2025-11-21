@@ -12,7 +12,6 @@ description = "Dependency injection system for Reinhardt, inspired by FastAPI"
 reinhardt-http = { workspace = true }
 
 # Internal crates
-di = { path = "crates/di", version = "0.1.0-alpha.1", package = "reinhardt-di-core" }
 reinhardt-params = { path = "crates/params", version = "0.1.0-alpha.1", optional = true }
 
 tokio = { workspace = true }
