@@ -17,71 +17,71 @@ reinhardt-core = { workspace = true, features = [
 ] }
 reinhardt-panel = { workspace = true }
 reinhardt-auth = { workspace = true, features = ["argon2-hasher", "jwt", "session", "token"] }
-reinhardt-security = { path = "../../crates/reinhardt-core/crates/security" }
+reinhardt-security = { workspace = true }
 reinhardt-http = { workspace = true }
-reinhardt-params = { path = "../../crates/reinhardt-di/crates/params" }
+reinhardt-params = { workspace = true }
 reinhardt-di = { workspace = true }
-reinhardt-middleware = { path = "../../crates/reinhardt-middleware" }
-reinhardt-templates = { path = "../../crates/reinhardt-template/crates/templates" }
-reinhardt-routers = { path = "../../crates/reinhardt-urls/crates/routers" }
-reinhardt-proxy = { path = "../../crates/reinhardt-urls/crates/proxy" }
-reinhardt-viewsets = { path = "../../crates/reinhardt-views/crates/viewsets" }
-reinhardt-openapi = { path = "../../crates/reinhardt-rest/crates/openapi" }
+reinhardt-middleware = { workspace = true }
+reinhardt-templates = { workspace = true }
+reinhardt-routers = { workspace = true }
+reinhardt-proxy = { workspace = true }
+reinhardt-viewsets = { workspace = true }
+reinhardt-openapi = { workspace = true }
 reinhardt-graphql = { workspace = true }
-reinhardt-db = { path = "../../crates/reinhardt-db" }
-reinhardt-orm = { path = "../../crates/reinhardt-db/crates/orm" }
-reinhardt-migrations = { path = "../../crates/reinhardt-db/crates/migrations" }
-backends = { path = "../../crates/reinhardt-db/crates/backends", package = "reinhardt-backends" }
-reinhardt-metadata = { path = "../../crates/reinhardt-rest/crates/metadata" }
-reinhardt-versioning = { path = "../../crates/reinhardt-rest/crates/versioning" }
+reinhardt-db = { workspace = true }
+reinhardt-orm = { workspace = true }
+reinhardt-migrations = { workspace = true }
+reinhardt-backends = { workspace = true }
+reinhardt-metadata = { workspace = true }
+reinhardt-versioning = { workspace = true }
 reinhardt-messages = { workspace = true }
 reinhardt-parsers = { workspace = true }
-reinhardt-exception = { path = "../../crates/reinhardt-core/crates/exception" }
-reinhardt-types = { path = "../../crates/reinhardt-core/crates/types" }
-reinhardt-signals = { path = "../../crates/reinhardt-core/crates/signals" }
+reinhardt-exception = { workspace = true }
+reinhardt-types = { workspace = true }
+reinhardt-signals = { workspace = true }
 reinhardt-websockets = { workspace = true }
-reinhardt-server = { path = "../../crates/reinhardt-server" }
-reinhardt-logging = { path = "../../crates/reinhardt-utils/crates/logging" }
+reinhardt-server = { workspace = true }
+reinhardt-logging = { workspace = true }
 reinhardt-mail = { workspace = true }
 reinhardt-contenttypes = { workspace = true, features = ["database"] }
-reinhardt-macros = { path = "../../crates/reinhardt-core/crates/macros" }
+reinhardt-macros = { workspace = true }
 reinhardt-static = { workspace = true, features = ["templates-integration"] }
-reinhardt-cache = { path = "../../crates/reinhardt-utils/crates/cache", features = [
+reinhardt-cache = { workspace = true, features = [
   "redis-backend",
   "redis-sentinel",
   "memcached-backend",
 ] }
-reinhardt-views-core = { path = "../../crates/reinhardt-views/crates/views-core" }
+reinhardt-views = { workspace = true }
 reinhardt-negotiation = { workspace = true }
-reinhardt-renderers = { path = "../../crates/reinhardt-template/crates/renderers" }
-reinhardt-serializers = { path = "../../crates/reinhardt-rest/crates/serializers" }
-reinhardt-settings = { path = "../../crates/reinhardt-conf/crates/settings", features = [
+reinhardt-renderers = { workspace = true }
+reinhardt-serializers = { workspace = true }
+reinhardt-settings = { workspace = true, features = [
   "async",
   "dynamic-database",
   "dynamic-redis",
   "hot-reload",
   "caching",
 ] }
-reinhardt-browsable-api = { path = "../../crates/reinhardt-rest/crates/browsable-api" }
+reinhardt-browsable-api = { workspace = true }
 reinhardt-i18n = { workspace = true }
-reinhardt-tasks = { path = "../../crates/reinhardt-tasks", features = [
+reinhardt-tasks = { workspace = true, features = [
   "redis-backend",
   "rabbitmq-backend",
 ] }
-reinhardt-rest = { path = "../../crates/reinhardt-rest" }
-reinhardt-shortcuts = { path = "../../crates/reinhardt-shortcuts", features = [
+reinhardt-rest = { workspace = true }
+reinhardt-shortcuts = { workspace = true, features = [
   "database",
 ] }
 reinhardt-pagination = { workspace = true }
-reinhardt-filters = { path = "../../crates/reinhardt-rest/crates/filters" }
-reinhardt-forms = { path = "../../crates/reinhardt-forms" }
-reinhardt-throttling = { path = "../../crates/reinhardt-rest/crates/throttling" }
-reinhardt-utils = { path = "../../crates/reinhardt-utils", features = [
+reinhardt-filters = { workspace = true }
+reinhardt-forms = { workspace = true }
+reinhardt-throttling = { workspace = true }
+reinhardt-utils = { workspace = true, features = [
   "cache",
   "logging",
 ] }
-reinhardt-storage = { path = "../../crates/reinhardt-utils/crates/storage" }
-reinhardt-test = { path = "../../crates/reinhardt-test", features = [
+reinhardt-storage = { workspace = true }
+reinhardt-test = { workspace = true, features = [
   "testcontainers",
 ] }
 reinhardt-sessions = { workspace = true, features = ["database"] }
@@ -93,7 +93,8 @@ http = "1.0"
 async-trait = "0.1"
 
 # Database
-sqlx = { version = "0.8", features = [
+rust_decimal = { workspace = true }
+sqlx = { workspace = true, features = [
   "any",
   "postgres",
   "sqlite",
@@ -143,8 +144,8 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 [features]
 default = ["postgres", "sqlite", "caching", "hot-reload"]
 testcontainers = []
-postgres = ["reinhardt-orm/postgres", "backends/postgres"]
-sqlite = ["reinhardt-orm/sqlite", "backends/sqlite"]
+postgres = ["reinhardt-orm/postgres", "reinhardt-backends/postgres"]
+sqlite = ["reinhardt-orm/sqlite", "reinhardt-backends/sqlite"]
 caching = ["reinhardt-settings/caching"]
 hot-reload = ["reinhardt-settings/hot-reload"]
 redis-backend = ["reinhardt-tasks/redis-backend"]
