@@ -34,6 +34,52 @@ use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
 use sea_query::PostgresQueryBuilder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
+
+/// Validation errors that can occur during migration operations
+#[derive(Debug, Clone, PartialEq)]
+pub enum ValidationError {
+	/// Composite primary key list is empty
+	EmptyCompositePrimaryKey { table_name: String },
+	/// Field specified in composite primary key does not exist in table
+	NonExistentField {
+		field_name: String,
+		table_name: String,
+		available_fields: Vec<String>,
+	},
+}
+
+impl fmt::Display for ValidationError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			ValidationError::EmptyCompositePrimaryKey { table_name } => {
+				write!(
+					f,
+					"Composite primary key for table '{}' cannot be empty",
+					table_name
+				)
+			}
+			ValidationError::NonExistentField {
+				field_name,
+				table_name,
+				available_fields,
+			} => {
+				write!(
+					f,
+					"Field '{}' does not exist in table '{}'. Available fields: [{}]",
+					field_name,
+					table_name,
+					available_fields.join(", ")
+				)
+			}
+		}
+	}
+}
+
+impl std::error::Error for ValidationError {}
+
+/// Result type for migration operations
+pub type ValidationResult<T> = Result<T, ValidationError>;
 
 /// Field definition for model operations
 ///
@@ -186,7 +232,12 @@ impl CreateModel {
 		self
 	}
 
-	/// Set composite primary key
+	/// Set composite primary key with validation
+	///
+	/// # Errors
+	///
+	/// Returns `ValidationError::EmptyCompositePrimaryKey` if the fields list is empty.
+	/// Returns `ValidationError::NonExistentField` if any field name doesn't exist in the table.
 	///
 	/// # Example
 	///
@@ -201,13 +252,35 @@ impl CreateModel {
 	///         FieldDefinition::new("tag_id", "INTEGER", false, false, Option::<&str>::None),
 	///     ],
 	/// )
-	/// .with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()]);
+	/// .with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])
+	/// .expect("Valid composite primary key");
 	///
 	/// assert!(create.composite_primary_key.is_some());
 	/// ```
-	pub fn with_composite_primary_key(mut self, fields: Vec<String>) -> Self {
+	pub fn with_composite_primary_key(mut self, fields: Vec<String>) -> ValidationResult<Self> {
+		// Validation: Check for empty list
+		if fields.is_empty() {
+			return Err(ValidationError::EmptyCompositePrimaryKey {
+				table_name: self.name.clone(),
+			});
+		}
+
+		// Validation: Verify all fields exist in table schema
+		let available_field_names: Vec<String> =
+			self.fields.iter().map(|f| f.name.clone()).collect();
+
+		for field_name in &fields {
+			if !available_field_names.contains(field_name) {
+				return Err(ValidationError::NonExistentField {
+					field_name: field_name.clone(),
+					table_name: self.name.clone(),
+					available_fields: available_field_names.clone(),
+				});
+			}
+		}
+
 		self.composite_primary_key = Some(fields);
-		self
+		Ok(self)
 	}
 
 	/// Apply to project state (forward)
