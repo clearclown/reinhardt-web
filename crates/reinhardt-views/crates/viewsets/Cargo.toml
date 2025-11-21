@@ -22,8 +22,8 @@ reinhardt-core = { workspace = true, features = [
 ] }
 reinhardt-auth = { workspace = true }
 reinhardt-utils = { workspace = true, features = ["cache"] }
-reinhardt-serializers = { path = "../../../reinhardt-rest/crates/serializers", version = "0.1.0-alpha.1" }
-reinhardt-filters = { path = "../../../reinhardt-rest/crates/filters", version = "0.1.0-alpha.1" }
+reinhardt-serializers = { workspace = true }
+reinhardt-filters = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

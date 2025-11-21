@@ -11,7 +11,7 @@ keywords = ["web", "framework", "renderer", "rest", "api"]
 categories = ["web-programming"]
 
 [dependencies]
-reinhardt-browsable-api = { path = "../../../reinhardt-rest/crates/browsable-api", version = "0.1.0-alpha.1" }
+reinhardt-browsable-api = { workspace = true }
 async-trait = "0.1"
 bytes = "1.0"
 serde = { version = "1.0", features = ["derive"] }

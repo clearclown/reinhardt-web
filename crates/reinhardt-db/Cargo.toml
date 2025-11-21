@@ -28,7 +28,7 @@ sqlx = { version = "0.8", features = [
   "macros",
   "migrate",
 ] }
-sea-query = { version = "1.0.0-rc.1", features = [
+sea-query = { version = "1.0.0-rc.20", features = [
   "backend-postgres",
   "backend-mysql",
   "backend-sqlite",

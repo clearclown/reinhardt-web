@@ -15,7 +15,7 @@ chrono = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true, features = ["chrono", "runtime-tokio", "uuid"] }
-sea-query = { version = "1.0.0-rc.1", features = [
+sea-query = { version = "1.0.0-rc.20", features = [
   "backend-postgres",
   "backend-mysql",
   "backend-sqlite",
