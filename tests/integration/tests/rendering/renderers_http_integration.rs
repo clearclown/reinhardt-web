@@ -20,7 +20,7 @@ use reinhardt_exception::Error;
 use reinhardt_http::{Request, Response};
 use reinhardt_negotiation::{ContentNegotiator, MediaType};
 use reinhardt_renderers::{JSONRenderer, Renderer, RendererContext, RendererRegistry};
-use reinhardt_views_core::View;
+use reinhardt_views::View;
 use serde_json::json;
 
 // ============================================================================
