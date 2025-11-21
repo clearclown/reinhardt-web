@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
+use crate::builder::{GetterFn, SetterFn, ValidatorFn};
 use crate::{ProxyError, ProxyResult};
 
 /// Association proxy for transparent access to related object attributes
@@ -29,13 +30,13 @@ pub struct AssociationProxy<T, U> {
 	pub creator: Option<fn(U) -> T>,
 
 	/// Optional custom getter function
-	pub getter: Option<fn(&T) -> Result<U, crate::ProxyError>>,
+	pub getter: Option<GetterFn<T, U>>,
 
 	/// Optional custom setter function
-	pub setter: Option<fn(&mut T, U) -> Result<(), crate::ProxyError>>,
+	pub setter: Option<SetterFn<T, U>>,
 
 	/// Optional validator function
-	pub validator: Option<fn(&U) -> Result<(), crate::ProxyError>>,
+	pub validator: Option<ValidatorFn<U>>,
 
 	/// Optional transform function
 	pub transform: Option<fn(U) -> U>,

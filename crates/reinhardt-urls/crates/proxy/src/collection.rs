@@ -74,6 +74,9 @@ pub struct CollectionProxy {
 
 	/// Whether concurrent access is supported
 	concurrent_access: bool,
+
+	/// Whether this proxy targets a database view
+	is_view: bool,
 }
 
 impl CollectionProxy {
@@ -108,6 +111,7 @@ impl CollectionProxy {
 			fallback_database: None,
 			async_loading: false,
 			concurrent_access: false,
+			is_view: false,
 		}
 	}
 	/// Create a collection proxy that removes duplicates
@@ -141,6 +145,7 @@ impl CollectionProxy {
 			fallback_database: None,
 			async_loading: false,
 			concurrent_access: false,
+			is_view: false,
 		}
 	}
 
@@ -168,6 +173,7 @@ impl CollectionProxy {
 			fallback_database: None,
 			async_loading: false,
 			concurrent_access: false,
+			is_view: false,
 		}
 	}
 
@@ -777,21 +783,6 @@ impl CollectionProxy {
 		self
 	}
 
-	/// Configure view for collection operations
-	///
-	/// # Examples
-	///
-	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
-	///
-	/// let proxy = CollectionProxy::new("posts", "title")
-	///     .with_view("published_posts");
-	/// ```
-	pub fn with_view(self, _view: &str) -> Self {
-		// TODO: Implement view configuration
-		self
-	}
-
 	/// Bulk insert multiple items into the collection
 	///
 	/// # Examples
@@ -831,12 +822,27 @@ impl CollectionProxy {
 	/// use reinhardt_proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("user_view", "name")
-	///     .with_view("user_summary");
-	/// assert!(!proxy.is_view()); // Returns false until view tracking is implemented
+	///     .with_view(true);
+	/// assert!(proxy.is_view());
 	/// ```
 	pub fn is_view(&self) -> bool {
-		// TODO: Implement view detection logic
-		false
+		self.is_view
+	}
+
+	/// Configure this proxy to target a database view
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_proxy::CollectionProxy;
+	///
+	/// let proxy = CollectionProxy::new("user_summary", "name")
+	///     .with_view(true);
+	/// assert!(proxy.is_view());
+	/// ```
+	pub fn with_view(mut self, is_view: bool) -> Self {
+		self.is_view = is_view;
+		self
 	}
 
 	/// Update items with version tracking
@@ -1142,14 +1148,6 @@ impl<'de> Deserialize<'de> for CollectionProxy {
 	where
 		D: serde::Deserializer<'de>,
 	{
-		#[derive(Deserialize)]
-		#[serde(field_identifier, rename_all = "snake_case")]
-		enum Field {
-			Relationship,
-			Attribute,
-			Unique,
-		}
-
 		struct CollectionProxyVisitor;
 
 		impl<'de> serde::de::Visitor<'de> for CollectionProxyVisitor {
@@ -1166,26 +1164,44 @@ impl<'de> Deserialize<'de> for CollectionProxy {
 				let mut relationship = None;
 				let mut attribute = None;
 				let mut unique = None;
+				let mut caching = None;
+				let mut cache_ttl = None;
 
-				while let Some(key) = map.next_key()? {
-					match key {
-						Field::Relationship => {
+				while let Some(key) = map.next_key::<String>()? {
+					match key.as_str() {
+						"relationship" => {
 							if relationship.is_some() {
 								return Err(serde::de::Error::duplicate_field("relationship"));
 							}
 							relationship = Some(map.next_value()?);
 						}
-						Field::Attribute => {
+						"attribute" => {
 							if attribute.is_some() {
 								return Err(serde::de::Error::duplicate_field("attribute"));
 							}
 							attribute = Some(map.next_value()?);
 						}
-						Field::Unique => {
+						"unique" => {
 							if unique.is_some() {
 								return Err(serde::de::Error::duplicate_field("unique"));
 							}
 							unique = Some(map.next_value()?);
+						}
+						"caching" => {
+							if caching.is_some() {
+								return Err(serde::de::Error::duplicate_field("caching"));
+							}
+							caching = Some(map.next_value()?);
+						}
+						"cache_ttl" => {
+							if cache_ttl.is_some() {
+								return Err(serde::de::Error::duplicate_field("cache_ttl"));
+							}
+							cache_ttl = Some(map.next_value()?);
+						}
+						_ => {
+							// Ignore unknown fields
+							let _ = map.next_value::<serde::de::IgnoredAny>()?;
 						}
 					}
 				}
@@ -1203,8 +1219,8 @@ impl<'de> Deserialize<'de> for CollectionProxy {
 					deduplicate: false,     // Default value
 					loading_strategy: None, // Cannot be deserialized
 					factory: None,          // Cannot be deserialized
-					caching: false,
-					cache_ttl: None,
+					caching: caching.unwrap_or(false),
+					cache_ttl,
 					streaming: false,
 					triggers: false,
 					trigger_events: Vec::new(),
@@ -1214,6 +1230,7 @@ impl<'de> Deserialize<'de> for CollectionProxy {
 					fallback_database: None,
 					async_loading: false,
 					concurrent_access: false,
+					is_view: false,
 				})
 			}
 		}

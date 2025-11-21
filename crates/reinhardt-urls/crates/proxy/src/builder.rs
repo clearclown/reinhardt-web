@@ -3,6 +3,15 @@
 use crate::proxy::AssociationProxy;
 use std::marker::PhantomData;
 
+/// Type alias for getter function
+pub type GetterFn<T, U> = fn(&T) -> Result<U, crate::ProxyError>;
+
+/// Type alias for setter function
+pub type SetterFn<T, U> = fn(&mut T, U) -> Result<(), crate::ProxyError>;
+
+/// Type alias for validator function
+pub type ValidatorFn<U> = fn(&U) -> Result<(), crate::ProxyError>;
+
 /// Builder for creating association proxies with fluent API
 ///
 /// ## Example
@@ -19,9 +28,9 @@ pub struct ProxyBuilder<T, U> {
 	relationship: Option<String>,
 	attribute: Option<String>,
 	creator: Option<fn(U) -> T>,
-	getter: Option<fn(&T) -> Result<U, crate::ProxyError>>,
-	setter: Option<fn(&mut T, U) -> Result<(), crate::ProxyError>>,
-	validator: Option<fn(&U) -> Result<(), crate::ProxyError>>,
+	getter: Option<GetterFn<T, U>>,
+	setter: Option<SetterFn<T, U>>,
+	validator: Option<ValidatorFn<U>>,
 	transform: Option<fn(U) -> U>,
 	_phantom: PhantomData<(T, U)>,
 }
