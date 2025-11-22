@@ -36,6 +36,7 @@ pub mod config;
 pub mod docs;
 pub mod testing;
 
+use reinhardt_static::storage::StaticFilesConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -122,6 +123,9 @@ pub struct Settings {
 
 	/// Static files root directory
 	pub static_root: Option<PathBuf>,
+
+	/// Additional static files directories (STATICFILES_DIRS)
+	pub staticfiles_dirs: Vec<PathBuf>,
 
 	/// Media files URL prefix
 	pub media_url: String,
@@ -231,6 +235,7 @@ impl Settings {
 			templates: vec![TemplateConfig::default()],
 			static_url: "/static/".to_string(),
 			static_root: None,
+			staticfiles_dirs: vec![],
 			media_url: "/media/".to_string(),
 			media_root: None,
 			language_code: "en-us".to_string(),
@@ -424,6 +429,44 @@ impl Settings {
 	pub fn with_managers(mut self, managers: Vec<Contact>) -> Self {
 		self.managers = managers;
 		self
+	}
+
+	/// Convert Settings to StaticFilesConfig
+	///
+	/// This method extracts static files related configuration from Settings
+	/// and creates a StaticFilesConfig instance suitable for use with CollectStaticCommand.
+	///
+	/// # Returns
+	///
+	/// Returns `Ok(StaticFilesConfig)` if static_root is configured,
+	/// or `Err` if static_root is None.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_settings::Settings;
+	/// use std::path::PathBuf;
+	///
+	/// let settings = Settings::new(
+	///     PathBuf::from("/app"),
+	///     "secret".to_string()
+	/// );
+	///
+	/// let config = settings.get_static_config().unwrap();
+	/// assert_eq!(config.static_url, "/static/");
+	/// ```
+	pub fn get_static_config(&self) -> Result<StaticFilesConfig, String> {
+		let static_root = self
+			.static_root
+			.clone()
+			.ok_or_else(|| "STATIC_ROOT is not configured".to_string())?;
+
+		Ok(StaticFilesConfig {
+			static_root,
+			static_url: self.static_url.clone(),
+			staticfiles_dirs: self.staticfiles_dirs.clone(),
+			media_url: Some(self.media_url.clone()),
+		})
 	}
 }
 
