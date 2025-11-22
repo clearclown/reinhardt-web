@@ -3,9 +3,9 @@ resolver = "2"
 members = [
     "test-macros",
     "common",
-    "hello-world",
-    "rest-api",
-    "database-integration",
+    "examples-hello-world",
+    "examples-rest-api",
+    "examples-database-integration",
 ]
 
 # ⚠️ Do not include reinhardt in workspace.dependencies
