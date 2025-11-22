@@ -1,0 +1,31 @@
+[package]
+name = "examples-hello-world"
+version = "0.1.0-alpha.1"
+edition = "2024"
+publish = false
+
+[dependencies]
+# Uses crates.io by default
+# For local development, use .cargo/config.toml to patch with local workspace
+# See ../.cargo/config.toml.example for instructions
+reinhardt = { version = "0.1.0-alpha.1" }
+
+[dev-dependencies]
+example-test-macros = { path = "../test-macros" }
+example-common = { path = "../common" }
+tokio = { workspace = true }
+
+[build-dependencies]
+example-common = { path = "../common" }
+
+[features]
+default = []
+with-reinhardt = []
+
+[[test]]
+name = "integration"
+required-features = ["with-reinhardt"]
+
+[[test]]
+name = "availability"
+required-features = ["with-reinhardt"]

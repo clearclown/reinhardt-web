@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = [
+	"examples-hello-world",
+	"examples-rest-api",
+	"examples-database-integration",
+]
+
+# Local development mode: Uses local reinhardt workspace
+# Patches reinhardt with local workspace version
+
+[workspace.dependencies]
+# Common dependencies for examples only
+tokio = { version = "1", features = ["full", "rt-multi-thread", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12.24", features = ["json"] }
+semver = "1"
+once_cell = "1"
+
+# Common utilities from remote (shared across local/remote)
+example-common = { path = "../remote/common" }
+example-test-macros = { path = "../remote/test-macros" }
+
+# Patch for local development
+# Use local workspace crates instead of crates.io
+[patch.crates-io]
+reinhardt = { path = "../..", package = "reinhardt-web", version = "0.1.0-alpha.1" }

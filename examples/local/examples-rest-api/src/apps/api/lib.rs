@@ -1,0 +1,15 @@
+//! api application module
+//!
+//! A RESTful API application demonstrating REST features
+
+use reinhardt_macros::AppConfig;
+
+pub mod admin;
+pub mod models;
+pub mod serializers;
+pub mod urls;
+pub mod views;
+
+#[derive(AppConfig)]
+#[app_config(name = "api", label = "api")]
+pub struct ApiConfig;
