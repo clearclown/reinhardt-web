@@ -5,14 +5,17 @@ use std::any::Any;
 use std::sync::Arc;
 
 // Re-export ParamContext and Request types for convenience
+#[cfg(feature = "params")]
 pub use reinhardt_params::{ParamContext, Request};
 
 pub struct InjectionContext {
 	request_scope: RequestScope,
 	singleton_scope: Arc<SingletonScope>,
 	/// HTTP request for parameter extraction
+	#[cfg(feature = "params")]
 	request: Option<Arc<Request>>,
 	/// Parameter context for path/header/cookie extraction
+	#[cfg(feature = "params")]
 	param_context: Option<Arc<ParamContext>>,
 }
 
@@ -30,7 +33,9 @@ pub struct InjectionContext {
 /// ```
 pub struct InjectionContextBuilder {
 	singleton_scope: Arc<SingletonScope>,
+	#[cfg(feature = "params")]
 	request: Option<Request>,
+	#[cfg(feature = "params")]
 	param_context: Option<ParamContext>,
 }
 
@@ -53,6 +58,7 @@ impl InjectionContextBuilder {
 	///     .with_request(request)
 	///     .build();
 	/// ```
+	#[cfg(feature = "params")]
 	pub fn with_request(mut self, request: Request) -> Self {
 		self.request = Some(request);
 		self
@@ -72,6 +78,7 @@ impl InjectionContextBuilder {
 	///     .with_param_context(param_context)
 	///     .build();
 	/// ```
+	#[cfg(feature = "params")]
 	pub fn with_param_context(mut self, param_context: ParamContext) -> Self {
 		self.param_context = Some(param_context);
 		self
@@ -91,7 +98,9 @@ impl InjectionContextBuilder {
 		InjectionContext {
 			request_scope: RequestScope::new(),
 			singleton_scope: self.singleton_scope,
+			#[cfg(feature = "params")]
 			request: self.request.map(Arc::new),
+			#[cfg(feature = "params")]
 			param_context: self.param_context.map(Arc::new),
 		}
 	}
@@ -113,7 +122,9 @@ impl InjectionContext {
 	pub fn builder(singleton_scope: impl Into<Arc<SingletonScope>>) -> InjectionContextBuilder {
 		InjectionContextBuilder {
 			singleton_scope: singleton_scope.into(),
+			#[cfg(feature = "params")]
 			request: None,
+			#[cfg(feature = "params")]
 			param_context: None,
 		}
 	}
@@ -143,6 +154,7 @@ impl InjectionContext {
 	///
 	/// assert!(ctx.get_http_request().is_some());
 	/// ```
+	#[cfg(feature = "params")]
 	pub fn get_http_request(&self) -> Option<&Request> {
 		self.request.as_ref().map(|arc| arc.as_ref())
 	}
@@ -172,6 +184,7 @@ impl InjectionContext {
 	///
 	/// assert!(ctx.get_param_context().is_some());
 	/// ```
+	#[cfg(feature = "params")]
 	pub fn get_param_context(&self) -> Option<&ParamContext> {
 		self.param_context.as_ref().map(|arc| arc.as_ref())
 	}
@@ -198,6 +211,7 @@ impl InjectionContext {
 	///
 	/// ctx.set_http_request(request, param_context);
 	/// ```
+	#[cfg(feature = "params")]
 	pub fn set_http_request(&mut self, request: Request, param_context: ParamContext) {
 		self.request = Some(Arc::new(request));
 		self.param_context = Some(Arc::new(param_context));

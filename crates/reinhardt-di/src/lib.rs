@@ -142,9 +142,10 @@ pub mod scope;
 
 use thiserror::Error;
 
-pub use context::{
-	InjectionContext, InjectionContextBuilder, ParamContext, Request, RequestContext,
-};
+pub use context::{InjectionContext, InjectionContextBuilder, RequestContext};
+
+#[cfg(feature = "params")]
+pub use context::{ParamContext, Request};
 pub use depends::{Depends, DependsBuilder};
 pub use injectable::Injectable;
 pub use provider::{Provider, ProviderFn};
