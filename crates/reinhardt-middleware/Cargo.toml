@@ -49,4 +49,7 @@ uuid = { workspace = true }
 tokio = { workspace = true }
 
 [dev-dependencies]
+reinhardt-test = { workspace = true }
 tokio-test = "0.4"
+tokio = { workspace = true }
+serial_test = { workspace = true }

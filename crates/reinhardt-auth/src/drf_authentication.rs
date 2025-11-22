@@ -499,8 +499,8 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
 
 		// Build SQL query to fetch user from database
+		use reinhardt_db::backends::types::QueryValue;
 		use reinhardt_db::orm::Model;
-		use reinhardt_db::orm::connection::QueryValue;
 
 		let table_name = DefaultUser::table_name();
 		let sql = format!(

@@ -467,8 +467,8 @@ where
 						Ok(conn) => {
 							// Build SQL query to fetch user from database
 							use reinhardt_auth::DefaultUser;
+							use reinhardt_db::backends::types::QueryValue;
 							use reinhardt_db::orm::Model;
-							use reinhardt_db::orm::connection::QueryValue;
 
 							let table_name = DefaultUser::table_name();
 							let pk_field = DefaultUser::primary_key_field();

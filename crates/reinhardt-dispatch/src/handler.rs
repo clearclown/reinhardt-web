@@ -86,6 +86,7 @@ impl BaseHandler {
 	/// - Resolves the URL using the router
 	/// - Dispatches to the matched handler
 	/// - Returns a 404 response if no route matches
+	/// - Returns error for handler errors (will be converted to 500 by Handler trait)
 	async fn get_response_async(
 		request: Request,
 		router: Option<&Arc<DefaultRouter>>,
@@ -108,6 +109,7 @@ impl BaseHandler {
 				}
 				Err(e) => {
 					error!("Handler error: {}", e);
+					// Return error to allow middleware chain to handle it
 					return Err(DispatchError::View(e.to_string()));
 				}
 			}
@@ -148,9 +150,16 @@ impl Default for BaseHandler {
 #[async_trait::async_trait]
 impl Handler for BaseHandler {
 	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
-		self.handle_request(request)
-			.await
-			.map_err(|e| reinhardt_core::exception::Error::Internal(e.to_string()))
+		match self.handle_request(request).await {
+			Ok(response) => Ok(response),
+			Err(e) => {
+				// Convert error to 500 response (similar to Django's behavior)
+				error!("Handler error in BaseHandler::handle: {}", e);
+				let mut response = Response::new(StatusCode::INTERNAL_SERVER_ERROR);
+				response.body = Bytes::from(format!("Internal Server Error: {}", e));
+				Ok(response)
+			}
+		}
 	}
 }
 

@@ -185,11 +185,17 @@ impl<M: Model> Manager<M> {
 		let mut stmt = Query::insert();
 		stmt.into_table(Alias::new(M::table_name()));
 
-		let fields: Vec<_> = obj.keys().map(|k| Alias::new(k.as_str())).collect();
-		let values: Vec<sea_query::Expr> = obj
-			.values()
-			.map(|v| Expr::value(Self::json_to_sea_value(v)))
-			.collect();
+		// Filter out null values (e.g., id field when creating new records)
+		let (fields, values): (Vec<_>, Vec<_>) = obj
+			.iter()
+			.filter(|(_, v)| !v.is_null())
+			.map(|(k, v)| {
+				(
+					Alias::new(k.as_str()),
+					Expr::value(Self::json_to_sea_value(v)),
+				)
+			})
+			.unzip();
 
 		stmt.columns(fields);
 		stmt.values_panic(values);

@@ -233,6 +233,7 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 			"database system is ready to accept connections",
 		))
 		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
+		.with_env_var("POSTGRES_INITDB_ARGS", "-c max_connections=200")
 		.start()
 		.await
 		.expect("Failed to start PostgreSQL container");
@@ -250,6 +251,10 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 	let pool = loop {
 		match sqlx::postgres::PgPoolOptions::new()
 			.max_connections(5)
+			.min_connections(1)
+			.acquire_timeout(std::time::Duration::from_secs(5))
+			.idle_timeout(std::time::Duration::from_secs(30))
+			.max_lifetime(std::time::Duration::from_secs(120))
 			.connect(&database_url)
 			.await
 		{
@@ -309,6 +314,10 @@ pub async fn cockroachdb_container()
 
 	let pool = sqlx::postgres::PgPoolOptions::new()
 		.max_connections(5)
+		.min_connections(1)
+		.acquire_timeout(std::time::Duration::from_secs(5))
+		.idle_timeout(std::time::Duration::from_secs(30))
+		.max_lifetime(std::time::Duration::from_secs(120))
 		.connect(&database_url)
 		.await
 		.expect("Failed to connect to CockroachDB defaultdb");
