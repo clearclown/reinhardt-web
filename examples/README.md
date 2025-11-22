@@ -1,21 +1,118 @@
-# Reinhardt Examples Tests
+# Reinhardt Examples
 
-This directory contains practical application examples using **reinhardt from crates.io or local workspace**.
+This directory contains practical application examples demonstrating Reinhardt framework usage.
 
-## 🎯 Purpose
+## 🎯 Directory Structure
 
-- **Dual Mode Support**:
-  - **Production Mode**: Uses published version from crates.io
-  - **Local Development Mode**: Uses local workspace crates via `REINHARDT_LOCAL_DEV=1`
-- **Version validation**: Ensures each example works with specific versions
-- **End-to-end testing**: Validates functionality in actual user environments
-- **Infrastructure**: TestContainers for automatic database setup (no docker-compose required)
+```
+examples/
+├── local/               # Local development examples
+│   ├── examples-hello-world/
+│   ├── examples-rest-api/
+│   ├── examples-database-integration/
+│   └── Cargo.toml       # Workspace with [patch.crates-io]
+│
+├── remote/              # Published version examples
+│   ├── common/          # Common utilities (shared by both local/remote)
+│   ├── test-macros/     # Custom test macros (shared by both local/remote)
+│   ├── examples-hello-world/
+│   ├── examples-rest-api/
+│   ├── examples-database-integration/
+│   └── Cargo.toml       # Workspace without patches
+│
+└── README.md            # This file
+```
+
+## 📂 Local vs Remote Examples
+
+### Local Examples (`examples/local/`)
+
+**Purpose**: Development and testing of the latest Reinhardt implementation
+
+**Characteristics**:
+- Always uses **local workspace** reinhardt crates via `[patch.crates-io]`
+- For developing new features and examples
+- Tests run against unreleased code
+- **Migration policy**: When a local example can no longer build due to breaking changes in Reinhardt:
+  1. Fix the example to work with the new API, OR
+  2. Move it to `remote/` with appropriate version specifier for the last compatible version
+
+**Use cases**:
+- Framework development
+- Testing new features before release
+- Creating examples for upcoming versions
+- Rapid prototyping
+
+**Configuration**:
+```toml
+# examples/local/Cargo.toml
+[patch.crates-io]
+reinhardt = { path = "../..", package = "reinhardt-web", version = "0.1.0-alpha.1" }
+```
+
+### Remote Examples (`examples/remote/`)
+
+**Purpose**: Testing and validating published crates.io versions
+
+**Characteristics**:
+- Uses **published versions** from crates.io (NOT local workspace)
+- Version requirements specified in `Cargo.toml` (no `path` attribute)
+- Tests the actual user experience
+- **Archive**: Contains examples that worked with specific published versions
+- **Will fail to build** if reinhardt is not yet published to crates.io (this is intentional)
+
+**Use cases**:
+- Validating crates.io publications
+- Testing backward compatibility
+- User onboarding examples
+- Documentation examples
+
+**Configuration**:
+```toml
+# examples/remote/examples-rest-api/Cargo.toml
+[dependencies]
+# Uses crates.io by default (will fail until reinhardt is published)
+reinhardt = { version = "0.1.0-alpha.1", features = ["core", "conf", "database", "commands"] }
+```
+
+**Important**: Remote examples do NOT use `path = "../.."` to reference the local workspace. They exclusively use published versions from crates.io.
+
+## 🚀 Quick Start
+
+### Running Local Examples
+
+```bash
+cd examples/local
+
+# Run tests
+cargo test --workspace
+
+# Or with nextest
+cargo nextest run --workspace
+
+# Build specific example
+cargo build -p examples-hello-world
+```
+
+### Running Remote Examples
+
+```bash
+cd examples/remote
+
+# Run tests (requires reinhardt to be published on crates.io)
+cargo test --workspace
+
+# Or with nextest
+cargo nextest run --workspace
+```
+
+**Note**: Remote examples will skip tests if the required reinhardt version is not available on crates.io.
 
 ## 📋 Prerequisites
 
 ### Required
 - **Rust**: 1.85+ (Rust 2024 Edition)
-- **Docker**: Container runtime for TestContainers
+- **Docker**: Container runtime for TestContainers (for database examples)
 
 ### Optional
 - **cargo-nextest**: For faster test execution (`cargo install cargo-nextest`)
@@ -28,170 +125,85 @@ docker --version
 docker ps  # Verify Docker daemon is running
 ```
 
-## 🚀 Quick Start
+## 📝 Available Examples
 
-### Local Development Mode (Recommended for Development)
+### Local Examples
 
-Use local workspace crates instead of crates.io:
+| Example | Features | Database | Description |
+|---------|----------|----------|-------------|
+| `examples-hello-world` | Basic setup | Not required | Minimal Reinhardt application |
+| `examples-rest-api` | REST API, routing | Not required | RESTful API with Django-style structure |
+| `examples-database-integration` | ORM, migrations | Required (PostgreSQL) | Database integration with migrations |
 
-```bash
-cd examples
+### Remote Examples
 
-# Set environment variable for local development mode
-export REINHARDT_LOCAL_DEV=1
+Same examples as local, but tested against published crates.io versions.
 
-# Run tests (TestContainers will automatically start PostgreSQL)
-cargo test --workspace
+## 🔄 Development Workflow
 
-# Or with nextest
-cargo nextest run --workspace
-```
+### Creating a New Example
 
-### Production Mode (Testing Published Crates)
-
-Test against published crates.io versions:
+**Step 1**: Create in `local/` first
 
 ```bash
-cd examples
+cd examples/local
+mkdir examples-my-feature
+cd examples-my-feature
 
-# Run tests without REINHARDT_LOCAL_DEV
-cargo test --workspace
+# Create Cargo.toml
+cat > Cargo.toml << 'EOF'
+[package]
+name = "examples-my-feature"
+version = "0.1.0-alpha.1"
+edition = "2024"
+publish = false
 
-# Or with nextest
-cargo nextest run --workspace
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["core", "conf"] }
+example-common = { path = "../../remote/common" }
+
+[dev-dependencies]
+example-test-macros = { path = "../../remote/test-macros" }
+EOF
+
+# Add to workspace members in examples/local/Cargo.toml
 ```
 
-**Note**: Production mode requires reinhardt to be published on crates.io. If not published, tests will be skipped.
+**Step 2**: When example is stable and reinhardt is published
 
-## 📝 Version Specification (Cargo Compatible)
-
-Each test can specify version requirements using `#[example_test(version = "...")]` attribute with **the same syntax as Cargo.toml**.
-
-### Supported Version Specifiers
-
-```rust
-// 1. Exact version
-#[example_test(version = "0.1.0")]
-fn test_exact() { }
-
-// 2. Caret requirement (^)
-#[example_test(version = "^0.1")]
-fn test_caret() { }  // 0.1.x only
-
-// 3. Tilde requirement (~)
-#[example_test(version = "~0.1.2")]
-fn test_tilde() { }  // 0.1.2 <= version < 0.2.0
-
-// 4. Range specification
-#[example_test(version = ">=0.1.0, <0.2.0")]
-fn test_range() { }
-
-// 5. Wildcard
-#[example_test(version = "*")]
-fn test_latest() { }  // Latest version
-```
-
-## 📂 Examples List
-
-| Example | Version Requirement | Database | Description | README |
-|---------|---------------------|----------|-------------|--------|
-| `examples-hello-world` | `*` (latest) | Not required | Minimal application | - |
-| `examples-rest-api` | `^0.1` (0.1.x) | Not required | RESTful API with Django-style structure | [README](examples-rest-api/README.md) |
-| `examples-database-integration` | `^0.1` (0.1.x) | Required | PostgreSQL integration with migrations | [README](examples-database-integration/README.md) |
-
-### Example Features
-
-#### examples-hello-world
-- Minimal configuration
-- Simple entry point
-- Basic Reinhardt usage
-
-#### examples-rest-api ([Details](examples-rest-api/README.md))
-- **Django-style project structure**: config/, settings/, apps.rs
-- **Environment-specific settings**: local, staging, production
-- **manage CLI**: Django-style management commands via `cargo run --bin manage`
-- **URL routing**: RESTful API endpoints
-
-#### examples-database-integration ([Details](examples-database-integration/README.md))
-- **Django-style project structure**: config/, settings/, apps.rs
-- **Database configuration management**: Environment-specific DB connection settings
-- **Migration system**: Schema version control
-- **manage CLI**: makemigrations, migrate commands
-
-## 🏗️ Workspace Structure
-
-```
-examples/                            # Independent workspace
-├── Cargo.toml                      # Workspace configuration
-├── test-macros/                    # Custom test macros
-├── common/                         # Common utilities
-│   └── src/
-│       └── manage_cli.rs           # Shared manage CLI implementation
-├── examples-hello-world/           # Example 1 (minimal structure)
-├── examples-rest-api/              # Example 2 (full structure)
-│   └── src/
-│       ├── config/                 # Django-style config
-│       ├── bin/
-│       │   └── manage.rs           # Management CLI
-│       └── main.rs
-└── examples-database-integration/  # Example 3 (full structure)
-    └── src/
-        ├── config/                 # Django-style config
-        ├── bin/
-        │   └── manage.rs           # Management CLI
-        └── main.rs
-```
-
-Each example is a **workspace member**, managed in `examples/Cargo.toml`.
-
-### Project Structure
-
-Examples (`examples-rest-api`, `examples-database-integration`) use **Django-style project structure**:
-
-```
-src/
-├── config/
-│   ├── apps.rs              # Installed apps definition
-│   ├── settings.rs          # Environment-based settings loader
-│   ├── settings/
-│   │   ├── base.rs          # Common settings for all environments
-│   │   ├── local.rs         # Local development settings
-│   │   ├── staging.rs       # Staging environment settings
-│   │   └── production.rs    # Production environment settings
-│   └── urls.rs              # URL routing configuration
-├── apps.rs                  # App registry
-├── config.rs                # config module declaration
-├── main.rs                  # Application entry point
-└── bin/
-    └── manage.rs            # Management CLI tool (Django's manage.py)
-```
-
-### manage CLI
-
-Django-style management command tool:
+Copy the example to `remote/` with appropriate version constraints:
 
 ```bash
-# Start development server
-cargo run --bin manage runserver [address]
+# After reinhardt 0.1.0-alpha.1 is published
+cp -r examples/local/examples-my-feature examples/remote/
+cd examples/remote/examples-my-feature
 
-# Database migrations
-cargo run --bin manage makemigrations [app_labels...]
-cargo run --bin manage migrate [app_label] [migration_name]
+# Update Cargo.toml with appropriate version constraint
+# version = "^0.1.0-alpha.1"  (for 0.1.x series)
+# version = ">=0.1.0-alpha.1, <0.2.0"  (explicit range)
 
-# Interactive shell
-cargo run --bin manage shell [-c command]
-
-# Project check
-cargo run --bin manage check [app_label]
-
-# Collect static files
-cargo run --bin manage collectstatic [options]
-
-# Show URL list
-cargo run --bin manage showurls [--names]
+# Add to workspace members in examples/remote/Cargo.toml
 ```
 
-See each example's README for details.
+### Handling Breaking Changes
+
+When Reinhardt introduces breaking changes:
+
+**Option 1: Update the example**
+```bash
+# Fix the example to work with new API in local/
+cd examples/local/examples-my-feature
+# Update code to use new API
+cargo test
+```
+
+**Option 2: Archive to remote/**
+```bash
+# If example cannot be easily updated, archive it in remote/
+# with version constraint for the last compatible version
+cd examples/remote/examples-my-feature
+# Update Cargo.toml: version = "=0.1.0-alpha.1"  (exact version)
+```
 
 ## 🐳 Infrastructure with TestContainers
 
@@ -206,23 +218,23 @@ TestContainers automatically starts and stops containers for each test:
 ### How It Works
 
 ```rust
-use testcontainers::{clients::Cli, GenericImage, RunnableImage};
+use testcontainers::{clients::Cli, GenericImage};
 
-#[test]
+#[tokio::test]
 async fn test_with_database() {
-    // Container automatically started
-    let docker = Cli::default();
-    let postgres = docker.run(
-        GenericImage::new("postgres", "16-alpine")
-            .with_env_var("POSTGRES_PASSWORD", "test")
-    );
+	// Container automatically started
+	let docker = Cli::default();
+	let postgres = docker.run(
+		GenericImage::new("postgres", "16-alpine")
+			.with_env_var("POSTGRES_PASSWORD", "test")
+	);
 
-    let port = postgres.get_host_port_ipv4(5432);
-    let url = format!("postgres://postgres:test@localhost:{}/testdb", port);
+	let port = postgres.get_host_port_ipv4(5432).await.unwrap();
+	let url = format!("postgres://postgres:test@localhost:{}/testdb", port);
 
-    // Test code here
+	// Test code here
 
-    // Container automatically stopped and removed when dropped
+	// Container automatically stopped and removed when dropped
 }
 ```
 
@@ -233,121 +245,66 @@ async fn test_with_database() {
 - **Portable**: Works on any system with Docker installed
 - **Fast**: Containers start only when needed
 
-### Database Migrations
+## 📚 Example Features
 
-Examples using databases utilize **reinhardt-migrations** for schema management:
+### examples-hello-world
+- Minimal configuration
+- Simple entry point
+- Basic Reinhardt usage
 
-- **No SQL Scripts**: Database initialization handled through migrations
-- **Automatic Application**: Migrations run on application startup
-- **Version Control**: Migration history tracked in code
+### examples-rest-api
+- **Django-style project structure**: config/, settings/, apps.rs
+- **Environment-specific settings**: local, staging, production
+- **manage CLI**: Django-style management commands
+- **URL routing**: RESTful API endpoints
 
-**Example Migration Structure:**
-```
-examples-database-integration/
-├── migrations/
-│   ├── mod.rs
-│   └── 0001_initial.rs
-└── src/
-    └── main.rs         # Applies migrations on startup
-```
+See [examples-rest-api README](remote/examples-rest-api/README.md) for details.
 
-**Migration Example:**
-```rust
-use reinhardt_migrations::{Migration, Operation};
+### examples-database-integration
+- **Django-style project structure**: config/, settings/, apps.rs
+- **Database configuration management**: Environment-specific DB connection settings
+- **Migration system**: Schema version control
+- **manage CLI**: makemigrations, migrate commands
 
-pub fn migration() -> Migration {
-    Migration::new("0001_initial")
-        .add_operation(Operation::CreateTable {
-            name: "users".to_string(),
-            columns: vec![
-                ("id", "SERIAL PRIMARY KEY"),
-                ("name", "VARCHAR(255) NOT NULL"),
-                ("email", "VARCHAR(255) NOT NULL UNIQUE"),
-            ],
-        })
-}
-```
-
-## 🔧 Development Workflow
-
-### Adding a New Example
-
-1. **Create directory**
-   ```bash
-   mkdir examples/my-example
-   cd examples/my-example
-   ```
-
-2. **Create Cargo.toml**
-   ```toml
-   [package]
-   name = "example-my-example"
-   version = "0.1.0"
-   edition = "2024"
-   publish = false
-
-   [dependencies]
-   reinhardt = "^0.1.0-alpha.1"
-   ```
-
-3. **Add to workspace**
-   ```toml
-   # examples/Cargo.toml
-   [workspace]
-   members = [
-       # ...
-       "my-example",
-   ]
-   ```
-
-4. **Create tests**
-   ```rust
-   // examples/my-example/tests/integration.rs
-   use example_test_macros::example_test;
-
-   #[example_test(version = "^0.1")]
-   fn test_my_feature() {
-       // Test code
-   }
-   ```
+See [examples-database-integration README](remote/examples-database-integration/README.md) for details.
 
 ## ⚠️ Troubleshooting
+
+### Remote Examples: Build Fails with "package `reinhardt` not found"
+
+```
+error: no matching package named `reinhardt` found
+```
+
+**Cause**: Required reinhardt version is not yet published to crates.io
+
+**This is intentional behavior** - remote examples are designed to exclusively use crates.io versions.
+
+**Solution**: Use local examples instead for development:
+```bash
+cd examples/local
+cargo test --workspace
+```
+
+**When reinhardt is published**: Remote examples will automatically work without any code changes.
 
 ### Database Connection Error
 
 ```bash
-# Check health
-cargo make status
+# Check Docker is running
+docker ps
 
-# Check logs
-cargo make logs-postgres
-
-# Restart database
-cargo make down
-cargo make up
+# Check container logs
+docker logs <container_id>
 ```
 
 ### Port Conflict
 
+TestContainers automatically assigns random ports, so port conflicts should not occur. If you encounter issues:
+
 ```bash
-# Change port numbers in .env file
-POSTGRES_PORT=5433
-MYSQL_PORT=3307
-REDIS_PORT=6380
-```
-
-### Tests Are Skipped (Production Mode)
-
-```
-⏭️  Skipping test: reinhardt not available from crates.io
-```
-
-**Cause**: reinhardt is not yet published to crates.io
-
-**Solution**: Use local development mode:
-```bash
-export REINHARDT_LOCAL_DEV=1
-cargo test --workspace
+# Restart Docker daemon
+docker restart
 ```
 
 ## 📚 Related Documentation
@@ -355,58 +312,50 @@ cargo test --workspace
 - [Reinhardt Main Tests](../tests/)
 - [Project README](../README.md)
 - [Contributing Guide](../CONTRIBUTING.md)
-- [docker-compose Specification](https://docs.docker.com/compose/compose-file/)
 
 ---
 
-## 💡 Implementation Notes
+## 💡 Design Rationale
 
-### Dual Mode Architecture
+### Why Two Directories?
 
-This examples workspace supports two modes:
+**Separation of Concerns**:
+- `local/`: Active development, latest features, may be unstable
+- `remote/`: Published versions, stable, documented compatibility
 
-**Production Mode** (Default):
-- Uses published crates from crates.io
-- Tests the actual user experience
-- Validates version compatibility
-- Skips tests if crates aren't published
+**Dependency Resolution Strategy**:
+- `local/`: Uses workspace patch (`[patch.crates-io]`) to override with local code
+- `remote/`: Uses only crates.io published versions (no `path` attributes, no patches)
 
-**Local Development Mode** (`REINHARDT_LOCAL_DEV=1`):
-- Uses local workspace crates via `[patch.crates-io]`
-- Enables testing unreleased features
-- Bypasses version checks
-- Allows development before publication
+**Version Management**:
+- `local/`: Always uses local workspace via patch (no version constraints needed)
+- `remote/`: Explicit version requirements in Cargo.toml (e.g., `version = "0.1.0-alpha.1"`)
 
-### How It Works
+**Migration Path**:
+1. Develop new examples in `local/`
+2. Publish reinhardt to crates.io
+3. Copy stable examples to `remote/` with version constraints
+4. `remote/` becomes the archive of working examples for each version
 
-1. **Build Script Check**: Each example's `build.rs` checks:
-   - If `REINHARDT_LOCAL_DEV=1`: Use local workspace
-   - Otherwise: Check if reinhardt is available on crates.io
+**Key Difference**:
+- `local/`: `[patch.crates-io]` in workspace Cargo.toml
+- `remote/`: No patches, pure crates.io resolution (will fail until published)
 
-2. **Cargo Patch**: `examples/Cargo.toml` includes:
-   ```toml
-   [patch.crates-io]
-   reinhardt = { path = "../crates/reinhardt" }
-   ```
-   This overrides crates.io versions with local workspace when building.
+### Common Utilities Sharing
 
-3. **Conditional Compilation**: Tests are compiled only when reinhardt is available:
-   ```rust
-   #[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
-   mod tests_with_reinhardt { }
-   ```
+`common/` and `test-macros/` are located in `remote/` but shared by both:
 
-### Why Version-Specific Tests?
+**Why in remote/**:
+- Primarily used by remote examples for availability checking
+- Contains crates.io availability detection logic
+- Version checking utilities
 
-Different versions may have different APIs or behaviors. Version-specific tests:
+**How local/ uses them**:
+```toml
+# examples/local/examples-hello-world/Cargo.toml
+[dev-dependencies]
+example-common = { path = "../../remote/common" }
+example-test-macros = { path = "../../remote/test-macros" }
+```
 
-1. **Prevent Regressions**: Detect breaking changes
-2. **Document Compatibility**: Show which features work with which versions
-3. **Aid Migration**: Help users understand version differences
-
-### TestContainers Integration
-
-- **No docker-compose needed**: Containers are managed automatically
-- **Isolated testing**: Each test gets its own container
-- **Automatic cleanup**: Containers are removed after tests
-- **Cross-platform**: Works on any system with Docker
+This allows both directories to share common testing infrastructure while maintaining separate dependency resolution strategies.
