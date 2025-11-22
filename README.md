@@ -149,7 +149,7 @@ This generates a complete project structure:
 my-api/
 ├── Cargo.toml
 ├── src/
-│   ├── main.rs
+│   ├── lib.rs
 │   ├── config.rs
 │   ├── apps.rs
 │   ├── config/
@@ -162,7 +162,6 @@ my-api/
 │   │   ├── urls.rs
 │   │   └── apps.rs
 │   └── bin/
-│       ├── runserver.rs
 │       └── manage.rs
 └── README.md
 ```
