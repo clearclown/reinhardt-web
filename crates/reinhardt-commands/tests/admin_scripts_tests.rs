@@ -95,7 +95,8 @@ async fn test_startproject_creates_project_structure() {
 
 	// Verify project directory was created
 	assert!(env.file_exists(&format!("{}/Cargo.toml", project_name)));
-	assert!(env.file_exists(&format!("{}/src/main.rs", project_name)));
+	assert!(env.file_exists(&format!("{}/src/lib.rs", project_name)));
+	assert!(env.file_exists(&format!("{}/src/bin/manage.rs", project_name)));
 }
 
 #[serial]
@@ -371,8 +372,12 @@ async fn test_startproject_custom_project_destination_missing() {
 		"Cargo.toml should be created in nested directory"
 	);
 	assert!(
-		env.file_exists("nonexistent/deeply/nested/path/src/main.rs"),
-		"src/main.rs should be created in nested directory"
+		env.file_exists("nonexistent/deeply/nested/path/src/lib.rs"),
+		"src/lib.rs should be created in nested directory"
+	);
+	assert!(
+		env.file_exists("nonexistent/deeply/nested/path/src/bin/manage.rs"),
+		"src/bin/manage.rs should be created in nested directory"
 	);
 }
 
