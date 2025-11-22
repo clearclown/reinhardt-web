@@ -47,3 +47,23 @@ pub use response::{Response, StreamBody, StreamingResponse};
 
 // Re-export error types from reinhardt-exception for consistency across the framework
 pub use reinhardt_exception::{Error, Result};
+
+/// A convenient type alias for view/endpoint function return types.
+///
+/// This type alias is commonly used in endpoint handlers to simplify function signatures.
+/// It wraps any type `T` (typically `Response`) with a dynamic error type that can
+/// represent various kinds of errors that might occur during request processing.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_http::{Response, ViewResult};
+///
+/// fn hello_world() -> ViewResult<Response> {
+///     Ok(Response::ok().with_body("Hello, World!"))
+/// }
+///
+/// let response = hello_world().unwrap();
+/// assert_eq!(response.status, hyper::StatusCode::OK);
+/// ```
+pub type ViewResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
