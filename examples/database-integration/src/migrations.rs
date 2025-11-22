@@ -1,9 +1,9 @@
-#[path = "migrations/0001_initial.rs"]
-mod _0001_initial;
-
-use reinhardt_migrations::Migration;
+use reinhardt::Migration;
 
 /// Returns all migrations in order
+///
+/// TODO: Add actual migrations for the database-integration example
 pub fn all_migrations() -> Vec<Migration> {
-    vec![_0001_initial::migration()]
+	// Empty for now - migrations would be defined here in a real application
+	vec![]
 }

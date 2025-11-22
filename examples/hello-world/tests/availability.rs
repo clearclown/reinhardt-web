@@ -1,3 +1,10 @@
+//! Availability tests for hello-world example
+//!
+//! Compilation and execution control:
+//! - Cargo.toml: [[test]] name = "availability" required-features = ["with-reinhardt"]
+//! - build.rs: Sets 'with-reinhardt' feature when reinhardt is available
+//! - When feature is disabled, this entire test file is excluded from compilation
+
 use example_common::availability;
 
 /// Run first: check if reinhardt can be obtained from crates.io
