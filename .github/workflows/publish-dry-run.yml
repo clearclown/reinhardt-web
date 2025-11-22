@@ -170,12 +170,12 @@ jobs:
             echo ""
             echo "The following crates were validated for publishing:"
             echo ""
-            echo "$CRATES_JSON" | jq -r '.[] | "- \`\(.name)\` v\(.version)"'
+            echo "$CRATES_JSON" | jq -r '.[] | "- `\(.name)` v\(.version)"'
             echo ""
             echo "### Next Steps"
             echo ""
             echo "If all checks passed, this PR is ready to merge."
-            echo "Upon merge, the \`publish-on-merge\` workflow will:"
+            echo "Upon merge, the 'publish-on-merge' workflow will:"
             echo "1. Publish these crates to crates.io"
             echo "2. Create GitHub Releases"
             echo "3. Push release tags"
