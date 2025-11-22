@@ -80,103 +80,39 @@ jobs:
           echo "$CHANGED_OUTPUT"
           echo "has_changes=true" >> $GITHUB_OUTPUT
 
-          # Extract changed crate names and store in array
-          CRATES_JSON="["
-          FIRST=true
-
-          for CRATE_PATH in crates/*/Cargo.toml; do
-            CRATE_DIR=$(dirname "$CRATE_PATH")
-            CRATE_NAME=$(basename "$CRATE_DIR")
-
-            # Check if this crate was in the changed list
-            if echo "$CHANGED_OUTPUT" | grep -q "$CRATE_NAME"; then
-              # Extract version from Cargo.toml
-              VERSION=$(grep -m1 '^version = ' "$CRATE_PATH" | sed 's/version = "\(.*\)"/\1/')
-
-              if [ -z "$VERSION" ]; then
-                echo "⚠️ Could not extract version for $CRATE_NAME, skipping..."
-                continue
-              fi
-
-              if [ "$FIRST" = true ]; then
-                FIRST=false
-              else
-                CRATES_JSON="${CRATES_JSON},"
-              fi
-
-              CRATES_JSON="${CRATES_JSON}{\"name\":\"${CRATE_NAME}\",\"version\":\"${VERSION}\"}"
-              echo "📦 Will check: $CRATE_NAME v$VERSION"
-            fi
-          done
-
-          CRATES_JSON="${CRATES_JSON}]"
-
-          if [ "$CRATES_JSON" = "[]" ]; then
-            echo "No crates to check."
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "crates_json=$CRATES_JSON" >> $GITHUB_OUTPUT
-          fi
-
       - name: Run dry-run publish for changed crates
         if: steps.detect-crates.outputs.has_changes == 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          CRATES_JSON='${{ steps.detect-crates.outputs.crates_json }}'
-
           echo "::group::Running dry-run publish for changed crates"
 
-          CRATE_COUNT=$(echo "$CRATES_JSON" | jq '. | length')
-          CURRENT=0
-          FAILED_CRATES=""
-          ALL_SUCCESS=true
-
-          echo "$CRATES_JSON" | jq -c '.[]' | while read -r crate; do
-            CURRENT=$((CURRENT + 1))
-            CRATE_NAME=$(echo "$crate" | jq -r '.name')
-            VERSION=$(echo "$crate" | jq -r '.version')
-
-            echo ""
-            echo "[$CURRENT/$CRATE_COUNT] Checking $CRATE_NAME v$VERSION..."
-            echo ""
-
-            # Run dry-run
-            if cargo ws publish --dry-run -p "$CRATE_NAME"; then
-              echo "✅ Dry-run passed for $CRATE_NAME v$VERSION"
-            else
-              echo "❌ Dry-run failed for $CRATE_NAME v$VERSION"
-              FAILED_CRATES="${FAILED_CRATES}${CRATE_NAME} "
-              ALL_SUCCESS=false
-            fi
-          done
-
-          echo "::endgroup::"
-
-          if [ "$ALL_SUCCESS" = false ]; then
-            echo "::error::Dry-run publish failed for: $FAILED_CRATES"
+          # cargo-workspaces automatically detects changed crates
+          # and publishes them in dependency order
+          if cargo ws publish --dry-run; then
+            echo "✅ Dry-run passed for all changed crates"
+            echo "::notice::All dry-run checks passed successfully"
+          else
+            echo "❌ Dry-run failed"
+            echo "::error::Dry-run publish failed. Check logs above for details."
             exit 1
           fi
 
-          echo "::notice::All dry-run checks passed successfully"
+          echo "::endgroup::"
 
       - name: Summary
         if: always() && steps.detect-crates.outputs.has_changes == 'true'
         run: |
-          CRATES_JSON='${{ steps.detect-crates.outputs.crates_json }}'
-
           {
             echo "## 📋 Dry-Run Publish Check"
             echo ""
-            echo "The following crates were validated for publishing:"
-            echo ""
-            echo "$CRATES_JSON" | jq -r '.[] | "- `\(.name)` v\(.version)"'
+            echo "cargo-workspaces validated all changed crates for publishing."
             echo ""
             echo "### Next Steps"
             echo ""
             echo "If all checks passed, this PR is ready to merge."
             echo "Upon merge, the 'publish-on-merge' workflow will:"
-            echo "1. Publish these crates to crates.io"
+            echo "1. Publish changed crates to crates.io in dependency order"
             echo "2. Create GitHub Releases"
             echo "3. Push release tags"
           } >> $GITHUB_STEP_SUMMARY
