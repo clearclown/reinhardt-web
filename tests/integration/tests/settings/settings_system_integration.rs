@@ -179,6 +179,7 @@ fn test_settings_deserialization() {
         "templates": [],
         "static_url": "/static/",
         "static_root": null,
+        "staticfiles_dirs": [],
         "media_url": "/media/",
         "media_root": null,
         "language_code": "en",
