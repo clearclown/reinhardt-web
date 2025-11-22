@@ -96,6 +96,7 @@
 // Module re-exports following Django's structure
 #[cfg(feature = "core")]
 pub mod apps;
+#[cfg(feature = "commands")]
 pub mod commands;
 #[cfg(feature = "conf")]
 pub mod conf;

@@ -62,6 +62,7 @@ storage = ["reinhardt-utils/storage"]
 shortcuts = ["reinhardt-shortcuts"]
 tasks = ["reinhardt-tasks"]
 server = ["reinhardt-server"]
+commands = ["reinhardt-commands"]
 
 # Parent crate features (new module structure)
 conf = ["reinhardt-conf"]
@@ -185,7 +186,7 @@ reinhardt-auth = { workspace = true, optional = true }
 # Additional optional dependencies
 reinhardt-admin = { workspace = true, optional = true }
 reinhardt-browsable-api = { workspace = true, optional = true }
-reinhardt-commands = { workspace = true }
+reinhardt-commands = { workspace = true, optional = true }
 reinhardt-forms = { workspace = true, optional = true }
 reinhardt-middleware = { workspace = true, optional = true }
 reinhardt-shortcuts = { workspace = true, optional = true }
