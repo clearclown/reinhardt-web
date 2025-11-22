@@ -648,7 +648,7 @@ Use JWT authentication in your app's `views/profile.rs`:
 ```rust
 // users/views/profile.rs
 use reinhardt_auth::{JwtAuth, BaseUser};
-use reinhardt_http::{Request, Response, StatusCode};
+use reinhardt_http::{Request, Response, StatusCode, ViewResult};
 use reinhardt_db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
@@ -657,7 +657,7 @@ use crate::models::User;
 pub async fn get_profile(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> ViewResult<Response> {
 	// Extract JWT token from Authorization header
 	let auth_header = req.headers.get("authorization")
 		.and_then(|h| h.to_str().ok())
@@ -692,10 +692,10 @@ Reinhardt provides a FastAPI-inspired `#[endpoint]` macro for clean, declarative
 
 ```rust
 use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode};
+use reinhardt_http::{Request, Response, StatusCode, ViewResult};
 
 #[endpoint]
-pub async fn hello(req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+pub async fn hello(req: Request) -> ViewResult<Response> {
 	let name = req.path_params.get("name").unwrap_or("World");
 	let message = format!("Hello, {}!", name);
 	Ok(Response::new(StatusCode::OK, message.into()))
@@ -708,14 +708,14 @@ The `#[inject]` attribute automatically injects dependencies from the applicatio
 
 ```rust
 use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode};
+use reinhardt_http::{Request, Response, StatusCode, ViewResult};
 use std::sync::Arc;
 
 #[endpoint]
 pub async fn get_user_from_db(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,  // Automatically injected
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> ViewResult<Response> {
 	let id = req.path_params.get("id")
 		.ok_or("Missing id")?
 		.parse::<i64>()?;
@@ -739,7 +739,7 @@ Disable dependency caching with `cache = false`:
 #[endpoint]
 pub async fn handler(
 	#[inject(cache = false)] fresh_data: DataService,  // Always creates new instance
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> ViewResult<Response> {
 	// fresh_data is not cached
 	Ok(Response::new(StatusCode::OK, "OK".into()))
 }
@@ -758,7 +758,7 @@ In your app's `views/user.rs`:
 ```rust
 // users/views/user.rs
 use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode};
+use reinhardt_http::{Request, Response, StatusCode, ViewResult};
 use crate::models::User;
 use std::sync::Arc;
 
@@ -766,7 +766,7 @@ use std::sync::Arc;
 pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> ViewResult<Response> {
 	// Extract path parameter from request
 	let id = req.path_params.get("id")
 		.ok_or("Missing id parameter")?
@@ -852,7 +852,7 @@ In your app's `views/user.rs`:
 ```rust
 // users/views/user.rs
 use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode};
+use reinhardt_http::{Request, Response, StatusCode, ViewResult};
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserResponse};
 use validator::Validate;
@@ -862,7 +862,7 @@ use std::sync::Arc;
 pub async fn create_user(
 	mut req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
-) -> Result<Response, Box<dyn std::error::Error>> {
+) -> ViewResult<Response> {
 	// Parse request body
 	let body_bytes = std::mem::take(&mut req.body);
 	let create_req: CreateUserRequest = serde_json::from_slice(&body_bytes)?;

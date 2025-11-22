@@ -153,6 +153,7 @@ Edit `hello/views.rs`:
 
 ```rust
 use reinhardt::prelude::*;  // Imports Request, Response, StatusCode
+use reinhardt_http::ViewResult;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -160,7 +161,7 @@ pub struct HelloResponse {
     message: String,
 }
 
-pub async fn hello_world(_req: Request) -> Result<Response, Box<dyn std::error::Error>> {
+pub async fn hello_world(_req: Request) -> ViewResult<Response> {
     let response_data = HelloResponse {
         message: "Hello, Reinhardt!".to_string(),
     };

@@ -91,10 +91,10 @@ View functions and class-based views for handling HTTP requests.
 
 ```rust
 use reinhardt_views::endpoint;
-use reinhardt_http::{Request, Response};
+use reinhardt_http::{Request, Response, ViewResult};
 
 #[endpoint]
-async fn my_view(request: Request) -> Result<Response, Box<dyn std::error::Error>> {
+async fn my_view(request: Request) -> ViewResult<Response> {
     // Handle request
     Ok(Response::new(200, "Hello, World!".into()))
 }
