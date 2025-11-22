@@ -2,25 +2,17 @@
 //!
 //! The `url_patterns` routes URLs to handlers.
 
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
-use reinhardt::prelude::*;
-
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
-use std::sync::Arc;
-
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
+use reinhardt::{Request, Response, StatusCode, Method, UnifiedRouter, Error, Result};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
 pub struct User {
 	pub id: u64,
 	pub name: String,
 	pub email: String,
 }
 
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
-async fn list_users() -> Json<Vec<User>> {
+async fn list_users(_req: Request) -> Result<Response> {
 	let users = vec![
 		User {
 			id: 1,
@@ -34,20 +26,11 @@ async fn list_users() -> Json<Vec<User>> {
 		},
 	];
 
-	Json(users)
+	let json = serde_json::to_string(&users)?;
+	Ok(Response::new(StatusCode::OK))
 }
 
-#[cfg(not(any(reinhardt_unavailable, reinhardt_version_mismatch)))]
-pub fn url_patterns() -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::new();
-
-	// Add API endpoint
-	router.function("/api/users", Method::GET, list_users);
-
-	Arc::new(router)
-}
-
-#[cfg(any(reinhardt_unavailable, reinhardt_version_mismatch))]
-pub fn url_patterns() -> () {
-	()
+pub fn url_patterns() -> UnifiedRouter {
+	UnifiedRouter::new()
+		.function("/api/users", Method::GET, list_users)
 }
