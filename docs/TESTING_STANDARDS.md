@@ -683,6 +683,112 @@ async fn test_database_integration() {
 }
 ```
 
+### IT-2 (MUST): Prevent Flaky Tests with TestContainers
+
+When using TestContainers for parallel test execution, follow these practices to prevent resource contention and flaky tests:
+
+#### Problem: Resource Exhaustion During Parallel Execution
+
+Parallel tests spawning multiple containers can exhaust:
+- Docker daemon connection pool
+- System file descriptors
+- Memory resources
+- Database connection pools
+
+**Symptoms:**
+- Tests pass individually but fail in full test suite
+- Extremely long execution times (10x+ slower)
+- Intermittent failures without code changes
+
+#### Solution 1: Limit Parallel Execution (Recommended)
+
+Create `.cargo/nextest.toml`:
+
+```toml
+[profile.default]
+# Limit concurrent tests to prevent Docker resource exhaustion
+max-tests-per-run = 8
+
+# Increase timeout for database operations
+slow-timeout = "60s"
+timeout = "120s"
+
+# Enable retries for flaky infrastructure tests
+retries = { backoff = "exponential", max-retries = 2, seed = 12345 }
+
+# Separate integration tests into dedicated worker threads
+[profile.default.overrides]
+filter = 'test(integration)'
+threads-required = 1
+max-threads = 4
+```
+
+#### Solution 2: Optimize Container Configuration
+
+Configure PostgreSQL containers with higher resource limits:
+
+```rust
+let postgres = GenericImage::new("postgres", "17-alpine")
+    .with_wait_for(WaitFor::message_on_stderr(
+        "database system is ready to accept connections",
+    ))
+    .with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
+    .with_env_var("POSTGRES_INITDB_ARGS", "-c max_connections=200")
+    .start()
+    .await
+    .expect("Failed to start PostgreSQL container");
+```
+
+#### Solution 3: Improve Connection Pool Settings
+
+```rust
+let pool = sqlx::postgres::PgPoolOptions::new()
+    .max_connections(5)
+    .min_connections(1)
+    .acquire_timeout(std::time::Duration::from_secs(5))
+    .idle_timeout(std::time::Duration::from_secs(30))
+    .max_lifetime(std::time::Duration::from_secs(120))
+    .connect(&database_url)
+    .await
+    .expect("Failed to connect");
+```
+
+**Key Settings:**
+- `max_connections`: Limit per test to prevent pool exhaustion
+- `acquire_timeout`: Fail fast instead of indefinite wait
+- `idle_timeout`: Release idle connections for other tests
+- `max_lifetime`: Prevent long-lived connection issues
+
+#### Solution 4: Health-Check Based Waiting
+
+Replace fixed timeouts with actual connectivity verification:
+
+```rust
+// Retry connection with exponential backoff
+let mut retry_count = 0;
+let max_retries = 5;
+let pool = loop {
+    match PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+    {
+        Ok(pool) => break pool,
+        Err(_e) if retry_count < max_retries => {
+            retry_count += 1;
+            let delay = Duration::from_millis(100 * 2_u64.pow(retry_count));
+            tokio::time::sleep(delay).await;
+        }
+        Err(e) => panic!(
+            "Failed to connect after {} retries: {}",
+            max_retries, e
+        ),
+    }
+};
+```
+
+**Reference:** See `reinhardt-test/src/fixtures/testcontainers.rs` for production implementation.
+
 ---
 
 ## rstest Best Practices
