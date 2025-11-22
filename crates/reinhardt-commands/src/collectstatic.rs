@@ -60,6 +60,7 @@ impl Default for CollectStaticStats {
 	}
 }
 
+#[derive(Default)]
 pub struct CollectStaticCommand {
 	config: StaticFilesConfig,
 	options: CollectStaticOptions,

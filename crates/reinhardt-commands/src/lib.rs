@@ -131,6 +131,7 @@
 
 pub mod base;
 pub mod builtin;
+pub mod cli;
 pub mod collectstatic;
 pub mod context;
 pub mod embedded_templates;
@@ -150,6 +151,7 @@ pub use builtin::ShowUrlsCommand;
 pub use builtin::{
 	CheckCommand, MakeMigrationsCommand, MigrateCommand, RunServerCommand, ShellCommand,
 };
+pub use cli::{Commands, execute_from_command_line, run_command};
 pub use collectstatic::{CollectStaticCommand, CollectStaticOptions, CollectStaticStats};
 pub use context::CommandContext;
 pub use i18n_commands::{CompileMessagesCommand, MakeMessagesCommand};
