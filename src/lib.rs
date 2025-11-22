@@ -96,6 +96,7 @@
 // Module re-exports following Django's structure
 #[cfg(feature = "core")]
 pub mod apps;
+pub mod commands;
 #[cfg(feature = "conf")]
 pub mod conf;
 #[cfg(feature = "core")]
@@ -137,12 +138,27 @@ pub use reinhardt_apps::{
 	AppConfig, AppError, AppResult, Apps, get_apps, init_apps, init_apps_checked,
 };
 
+// Re-export macros
+#[cfg(feature = "core")]
+pub use reinhardt_macros::installed_apps;
+
 // Re-export settings from dedicated crate
 #[cfg(feature = "conf")]
 pub use reinhardt_conf::settings::{
 	AdvancedSettings, CacheSettings, CorsSettings, DatabaseConfig, EmailSettings, LoggingSettings,
 	MediaSettings, MiddlewareConfig, SessionSettings, Settings, SettingsError, StaticSettings,
 	TemplateConfig,
+};
+
+#[cfg(feature = "conf")]
+pub use reinhardt_conf::settings::builder::SettingsBuilder;
+
+#[cfg(feature = "conf")]
+pub use reinhardt_conf::settings::profile::Profile;
+
+#[cfg(feature = "conf")]
+pub use reinhardt_conf::settings::sources::{
+	DefaultSource, EnvSource, LowPriorityEnvSource, TomlFileSource,
 };
 
 // Re-export core types
@@ -485,8 +501,9 @@ pub use reinhardt_middleware::CorsMiddleware;
 // Re-export HTTP types (additional commonly used types)
 #[cfg(feature = "core")]
 pub use reinhardt_core::http::Extensions;
-// Re-export StatusCode from hyper (already used in reinhardt_http)
-pub use hyper::StatusCode;
+
+// Re-export HTTP types from hyper (already used in reinhardt_http)
+pub use hyper::{Method, StatusCode};
 
 // Re-export pagination
 #[cfg(feature = "rest")]
