@@ -28,3 +28,4 @@ reinhardt-signals = { path = "../signals", version = "0.1.0-alpha.1" }
 serial_test = { workspace = true }
 reinhardt-di = { workspace = true }
 async-trait = { workspace = true }
+reinhardt-apps = { workspace = true }

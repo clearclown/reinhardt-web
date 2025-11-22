@@ -25,6 +25,7 @@ use syn::{ItemFn, parse_macro_input};
 
 mod action;
 mod api_view;
+mod app_config_derive;
 mod endpoint;
 mod injectable_derive;
 mod installed_apps;
@@ -660,4 +661,50 @@ pub fn derive_model(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(OrmReflectable, attributes(orm_field, orm_relationship, orm_ignore))]
 pub fn derive_orm_reflectable(input: TokenStream) -> TokenStream {
 	orm_reflectable_derive_impl(input)
+}
+
+/// Derive macro for automatic AppConfig factory method generation
+///
+/// Automatically generates a `config()` method that returns an `AppConfig` instance
+/// with the specified name and label.
+///
+/// # Example
+///
+/// ```ignore
+/// use reinhardt_macros::AppConfig;
+///
+/// #[derive(AppConfig)]
+/// #[app_config(name = "api", label = "api")]
+/// pub struct ApiConfig;
+///
+/// // With verbose_name
+/// #[derive(AppConfig)]
+/// #[app_config(name = "todos", label = "todos", verbose_name = "TODO Application")]
+/// pub struct TodosConfig;
+///
+/// // Usage
+/// let config = ApiConfig::config();
+/// assert_eq!(config.name, "api");
+/// assert_eq!(config.label, "api");
+/// ```
+///
+/// # Attributes
+///
+/// - `name`: Application name (required, string literal)
+/// - `label`: Application label (required, string literal)
+/// - `verbose_name`: Verbose name (optional, string literal)
+///
+/// # Generated Code
+///
+/// ```ignore
+/// impl ApiConfig {
+///     pub fn config() -> reinhardt_apps::AppConfig {
+///         reinhardt_apps::AppConfig::new("api", "api")
+///     }
+/// }
+/// ```
+///
+#[proc_macro_derive(AppConfig, attributes(app_config))]
+pub fn derive_app_config(input: TokenStream) -> TokenStream {
+	app_config_derive::derive(input)
 }
