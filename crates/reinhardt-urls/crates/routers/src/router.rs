@@ -512,13 +512,34 @@ impl Router for DefaultRouter {
 		let path = request.path().to_string();
 
 		if let Some((handler_id, params)) = self.matcher.match_path(&path) {
-			// Find the route by name
-			if let Some(route) = self
-				.routes
-				.iter()
-				.find(|r| r.name.as_ref().map(|n| n == &handler_id).unwrap_or(false))
-			{
+			// Find the route by name or full_name
+			let route = self.routes.iter().find(|r| {
+				// Check if route name matches
+				if let Some(name) = &r.name
+					&& name == &handler_id
+				{
+					return true;
+				}
+				// Check if full_name matches
+				if let Some(full_name) = r.full_name()
+					&& full_name == handler_id
+				{
+					return true;
+				}
+				false
+			});
+
+			if let Some(route) = route {
 				// Add path parameters to request
+				request.path_params = params;
+				return route.handler().handle(request).await;
+			}
+
+			// If handler_id is in format "route_N", try to get route by index
+			if handler_id.starts_with("route_")
+				&& let Ok(index) = handler_id.strip_prefix("route_").unwrap().parse::<usize>()
+				&& let Some(route) = self.routes.get(index)
+			{
 				request.path_params = params;
 				return route.handler().handle(request).await;
 			}
