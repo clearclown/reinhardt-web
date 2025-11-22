@@ -145,7 +145,11 @@ pub mod template;
 use thiserror::Error;
 
 pub use base::{BaseCommand, CommandArgument, CommandOption};
-pub use builtin::{MakeMigrationsCommand, MigrateCommand, RunServerCommand, ShellCommand};
+#[cfg(feature = "routers")]
+pub use builtin::ShowUrlsCommand;
+pub use builtin::{
+	CheckCommand, MakeMigrationsCommand, MigrateCommand, RunServerCommand, ShellCommand,
+};
 pub use collectstatic::{CollectStaticCommand, CollectStaticOptions, CollectStaticStats};
 pub use context::CommandContext;
 pub use i18n_commands::{CompileMessagesCommand, MakeMessagesCommand};
