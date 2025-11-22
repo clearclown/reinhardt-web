@@ -95,24 +95,24 @@ fn test_latest() { }  // Latest version
 
 | Example | Version Requirement | Database | Description | README |
 |---------|---------------------|----------|-------------|--------|
-| `hello-world` | `*` (latest) | Not required | Minimal application | - |
-| `rest-api` | `^0.1` (0.1.x) | Not required | RESTful API with Django-style structure | [README](rest-api/README.md) |
-| `database-integration` | `^0.1` (0.1.x) | Required | PostgreSQL integration with migrations | [README](database-integration/README.md) |
+| `examples-hello-world` | `*` (latest) | Not required | Minimal application | - |
+| `examples-rest-api` | `^0.1` (0.1.x) | Not required | RESTful API with Django-style structure | [README](examples-rest-api/README.md) |
+| `examples-database-integration` | `^0.1` (0.1.x) | Required | PostgreSQL integration with migrations | [README](examples-database-integration/README.md) |
 
 ### Example Features
 
-#### hello-world
+#### examples-hello-world
 - Minimal configuration
 - Simple entry point
 - Basic Reinhardt usage
 
-#### rest-api ([Details](rest-api/README.md))
+#### examples-rest-api ([Details](examples-rest-api/README.md))
 - **Django-style project structure**: config/, settings/, apps.rs
 - **Environment-specific settings**: local, staging, production
 - **manage CLI**: Django-style management commands via `cargo run --bin manage`
 - **URL routing**: RESTful API endpoints
 
-#### database-integration ([Details](database-integration/README.md))
+#### examples-database-integration ([Details](examples-database-integration/README.md))
 - **Django-style project structure**: config/, settings/, apps.rs
 - **Database configuration management**: Environment-specific DB connection settings
 - **Migration system**: Schema version control
@@ -121,24 +121,24 @@ fn test_latest() { }  // Latest version
 ## 🏗️ Workspace Structure
 
 ```
-examples/                    # Independent workspace
-├── Cargo.toml              # Workspace configuration
-├── test-macros/            # Custom test macros
-├── common/                 # Common utilities
+examples/                            # Independent workspace
+├── Cargo.toml                      # Workspace configuration
+├── test-macros/                    # Custom test macros
+├── common/                         # Common utilities
 │   └── src/
-│       └── manage_cli.rs   # Shared manage CLI implementation
-├── hello-world/            # Example 1 (minimal structure)
-├── rest-api/               # Example 2 (full structure)
+│       └── manage_cli.rs           # Shared manage CLI implementation
+├── examples-hello-world/           # Example 1 (minimal structure)
+├── examples-rest-api/              # Example 2 (full structure)
 │   └── src/
-│       ├── config/         # Django-style config
+│       ├── config/                 # Django-style config
 │       ├── bin/
-│       │   └── manage.rs   # Management CLI
+│       │   └── manage.rs           # Management CLI
 │       └── main.rs
-└── database-integration/   # Example 3 (full structure)
+└── examples-database-integration/  # Example 3 (full structure)
     └── src/
-        ├── config/         # Django-style config
+        ├── config/                 # Django-style config
         ├── bin/
-        │   └── manage.rs   # Management CLI
+        │   └── manage.rs           # Management CLI
         └── main.rs
 ```
 
@@ -146,7 +146,7 @@ Each example is a **workspace member**, managed in `examples/Cargo.toml`.
 
 ### Project Structure
 
-Examples (`rest-api`, `database-integration`) use **Django-style project structure**:
+Examples (`examples-rest-api`, `examples-database-integration`) use **Django-style project structure**:
 
 ```
 src/
@@ -243,7 +243,7 @@ Examples using databases utilize **reinhardt-migrations** for schema management:
 
 **Example Migration Structure:**
 ```
-database-integration/
+examples-database-integration/
 ├── migrations/
 │   ├── mod.rs
 │   └── 0001_initial.rs
