@@ -715,11 +715,10 @@ impl CollectionProxy {
 				>(item_rel)
 				{
 					let has_value = rel_collection.iter().any(|rel_item| {
-						if let Some(attr) = rel_item.get_attribute(&self.attribute) {
-							match &attr {
-								ScalarValue::String(s) => s == value,
-								_ => false,
-							}
+						if let Some(ScalarValue::String(s)) =
+							rel_item.get_attribute(&self.attribute).as_ref()
+						{
+							s == value
 						} else {
 							false
 						}
