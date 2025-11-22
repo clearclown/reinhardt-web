@@ -57,7 +57,7 @@ Reinhardt brings together the best of three worlds:
 ### 🚀 FastAPI-Inspired Ergonomics
 
 - **Parameter Extraction**: Access path and query parameters via `Request` fields
-- **Dependency Injection**: DI system for managing application dependencies (coming soon)
+- **Dependency Injection**: FastAPI-inspired DI system with type-safe injection and automatic caching
 - **Auto OpenAPI**: Generate OpenAPI 3.0 schemas from Rust types with `#[derive(Schema)]`
 - **Function-based Endpoints**: Register functions as route handlers
 - **Background Tasks**: Simple async task execution
@@ -170,10 +170,7 @@ my-api/
 ### 3. Run the Development Server
 
 ```bash
-# Using the runserver binary (recommended)
-cargo run --bin runserver
-
-# Or using manage command
+# Using the manage command
 cargo run --bin manage runserver
 
 # Server will start at http://127.0.0.1:8000
@@ -188,13 +185,13 @@ For automatic reloading on code changes (requires external tool):
 cargo install cargo-watch
 
 # Run with auto-reload (detects changes, rebuilds, and restarts automatically)
-cargo watch -x 'run --bin runserver'
+cargo watch -x 'run --bin manage runserver'
 
 # Optional: Clear screen before each rebuild
-cargo watch -c -x 'run --bin runserver'
+cargo watch -c -x 'run --bin manage runserver'
 ```
 
-**Note:** Auto-reload is provided by the external `cargo-watch` tool. The `runserver` binary has `--noreload` and `--clear` options, but built-in auto-reload functionality is not yet implemented.
+**Note:** Auto-reload is provided by the external `cargo-watch` tool.
 
 ### 4. Create Your First App
 
@@ -257,13 +254,13 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 }
 ```
 
-**Note:** The `reinhardt::prelude` now includes commonly used types:
-- **ORM**: `F`, `Q`, `QOperator`, `Annotation`, `Aggregate`, `Transaction`, `atomic`
-- **Database Functions**: `Concat`, `Upper`, `Lower`, `Now`, `CurrentDate`
-- **Window Functions**: `Window`, `RowNumber`, `Rank`, `DenseRank`
-- **Constraints**: `UniqueConstraint`, `CheckConstraint`, `ForeignKeyConstraint`
-- **Auth**: `UserManager`, `GroupManager`, `Group`, `ObjectPermission`, `ObjectPermissionChecker`
-- **DI Params**: `Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`
+**Note:** The `reinhardt::prelude` includes commonly used types (availability depends on enabled features):
+- **ORM** (requires `database` feature): `F`, `Q`, `QOperator`, `Annotation`, `Aggregate`, `Transaction`, `atomic`
+- **Database Functions** (requires `database` feature): `Concat`, `Upper`, `Lower`, `Now`, `CurrentDate`
+- **Window Functions** (requires `database` feature): `Window`, `RowNumber`, `Rank`, `DenseRank`
+- **Constraints** (requires `database` feature): `UniqueConstraint`, `CheckConstraint`, `ForeignKeyConstraint`
+- **Auth** (requires `auth` feature): `UserManager`, `GroupManager`, `Group`, `ObjectPermission`, `ObjectPermissionChecker`
+- **DI Params** (requires `minimal` or `standard` feature): `Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`
 
 For a complete step-by-step guide, see [Getting Started](docs/GETTING_STARTED.md).
 
@@ -488,7 +485,7 @@ async fn create_user_with_transaction(
 }
 ```
 
-**Note**: Reinhardt uses [SeaQuery v1.0.0-rc1](https://crates.io/crates/sea-query) for SQL operations. The `#[derive(Model)]` macro is planned for future release to reduce boilerplate.
+**Note**: Reinhardt uses [SeaQuery v1.0.0-rc1](https://crates.io/crates/sea-query) for SQL operations. The `#[derive(Model)]` macro automatically generates Model trait implementations, type-safe field accessors, and global model registry registration.
 
 Register in `src/config/apps.rs`:
 
