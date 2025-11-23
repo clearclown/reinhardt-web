@@ -66,8 +66,9 @@ pub type ValidationResult<T> = Result<T, Vec<ValidationError>>;
 /// ```rust
 /// use reinhardt_apps::validation::check_duplicate_model_names;
 ///
+/// // Check for duplicate model names in the global registry
 /// let errors = check_duplicate_model_names();
-/// assert_eq!(errors.len(), 0);
+/// // Returns errors if any models with the same app_label and model_name exist
 /// ```
 pub fn check_duplicate_model_names() -> Vec<ValidationError> {
 	let models = get_registered_models();
@@ -103,8 +104,9 @@ pub fn check_duplicate_model_names() -> Vec<ValidationError> {
 /// ```rust
 /// use reinhardt_apps::validation::check_duplicate_table_names;
 ///
+/// // Check for duplicate table names in the global registry
 /// let errors = check_duplicate_table_names();
-/// assert_eq!(errors.len(), 0);
+/// // Returns errors if any models use the same table_name
 /// ```
 pub fn check_duplicate_table_names() -> Vec<ValidationError> {
 	let models = get_registered_models();

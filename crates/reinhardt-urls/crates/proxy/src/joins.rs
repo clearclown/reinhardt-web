@@ -190,7 +190,7 @@ impl NestedProxy {
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
-	///     .attribute("title");
+	///     .with_attribute("title");
 	/// assert_eq!(proxy.attribute(), "title");
 	/// ```
 	pub fn attribute(&self) -> &str {

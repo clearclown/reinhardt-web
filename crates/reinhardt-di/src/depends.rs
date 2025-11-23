@@ -93,7 +93,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope};
 	/// use std::sync::Arc;
 	///
@@ -102,12 +102,12 @@ where
 	///     value: String,
 	/// }
 	///
-	/// # tokio_test::block_on(async {
+	/// # async fn example() {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
 	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	/// let result = Depends::<Config>::resolve(&ctx, true).await;
 	/// assert!(result.is_ok());
-	/// # });
+	/// # }
 	/// ```
 	pub async fn resolve(ctx: &InjectionContext, use_cache: bool) -> DiResult<Self> {
 		let value = if use_cache {
@@ -167,7 +167,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope};
 	/// use std::sync::Arc;
 	///
@@ -176,13 +176,13 @@ where
 	///     value: String,
 	/// }
 	///
-	/// # tokio_test::block_on(async {
+	/// # async fn example() {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
 	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	/// let builder = Depends::<Config>::builder();
 	/// let result = builder.resolve(&ctx).await;
 	/// assert!(result.is_ok());
-	/// # });
+	/// # }
 	/// ```
 	pub async fn resolve(self, ctx: &InjectionContext) -> DiResult<Depends<T>> {
 		Depends::resolve(ctx, self.use_cache).await

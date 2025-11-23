@@ -72,7 +72,7 @@ pub trait AdminView: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_views_core::admin::ModelAdmin;
+/// use reinhardt_views::admin::ModelAdmin;
 /// use reinhardt_db::orm::Model;
 /// use serde::{Serialize, Deserialize};
 ///
@@ -125,7 +125,7 @@ impl<T: Model + Serialize + for<'de> Deserialize<'de> + Clone> ModelAdmin<T> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::admin::ModelAdmin;
+	/// use reinhardt_views::admin::ModelAdmin;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -164,7 +164,7 @@ impl<T: Model + Serialize + for<'de> Deserialize<'de> + Clone> ModelAdmin<T> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_views_core::admin::ModelAdmin;
+	/// use reinhardt_views::admin::ModelAdmin;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///

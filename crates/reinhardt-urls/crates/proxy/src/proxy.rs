@@ -147,7 +147,7 @@ impl<T, U> AssociationProxy<T, U> {
 	///     Ok(())
 	/// }
 	///
-	/// let proxy = AssociationProxy::new("data", "value")
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("data", "value")
 	///     .with_validator(validate_value);
 	/// assert!(proxy.validator.is_some());
 	/// ```
@@ -167,7 +167,7 @@ impl<T, U> AssociationProxy<T, U> {
 	///     value
 	/// }
 	///
-	/// let proxy = AssociationProxy::new("data", "value")
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("data", "value")
 	///     .with_transform(transform_value);
 	/// assert!(proxy.transform.is_some());
 	/// ```
@@ -249,7 +249,7 @@ impl<T, U> AssociationProxy<T, U> {
 	///     Ok(())
 	/// }
 	///
-	/// let proxy = AssociationProxy::new("data", "value")
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("data", "value")
 	///     .with_validator(validate);
 	/// assert!(proxy.has_validator());
 	/// ```
@@ -266,7 +266,7 @@ impl<T, U> AssociationProxy<T, U> {
 	///
 	/// fn transform(value: () ) -> () { value }
 	///
-	/// let proxy = AssociationProxy::new("data", "value")
+	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("data", "value")
 	///     .with_transform(transform);
 	/// assert!(proxy.has_transform());
 	/// ```

@@ -29,7 +29,7 @@ pub enum LoaderError {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_graphql_core::context::{DataLoader, LoaderError};
+/// use reinhardt_graphql::context::{DataLoader, LoaderError};
 /// use async_trait::async_trait;
 ///
 /// struct UserLoader;
@@ -68,7 +68,7 @@ pub trait DataLoader: Send + Sync + 'static {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_graphql_core::context::GraphQLContext;
+/// use reinhardt_graphql::context::GraphQLContext;
 /// use serde_json::json;
 ///
 /// let context = GraphQLContext::new();
@@ -93,7 +93,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::GraphQLContext;
+	/// use reinhardt_graphql::context::GraphQLContext;
 	///
 	/// let context = GraphQLContext::new();
 	/// assert!(context.get_data("nonexistent").is_none());
@@ -110,7 +110,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::GraphQLContext;
+	/// use reinhardt_graphql::context::GraphQLContext;
 	/// use serde_json::json;
 	///
 	/// let context = GraphQLContext::new();
@@ -128,7 +128,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::GraphQLContext;
+	/// use reinhardt_graphql::context::GraphQLContext;
 	/// use serde_json::json;
 	///
 	/// let context = GraphQLContext::new();
@@ -147,7 +147,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::GraphQLContext;
+	/// use reinhardt_graphql::context::GraphQLContext;
 	/// use serde_json::json;
 	///
 	/// let context = GraphQLContext::new();
@@ -167,7 +167,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::GraphQLContext;
+	/// use reinhardt_graphql::context::GraphQLContext;
 	/// use serde_json::json;
 	///
 	/// let context = GraphQLContext::new();
@@ -189,7 +189,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::{GraphQLContext, DataLoader, LoaderError};
+	/// use reinhardt_graphql::context::{GraphQLContext, DataLoader, LoaderError};
 	/// use async_trait::async_trait;
 	/// use std::sync::Arc;
 	///
@@ -226,7 +226,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::{GraphQLContext, DataLoader, LoaderError};
+	/// use reinhardt_graphql::context::{GraphQLContext, DataLoader, LoaderError};
 	/// use async_trait::async_trait;
 	/// use std::sync::Arc;
 	///
@@ -265,7 +265,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::{GraphQLContext, DataLoader, LoaderError};
+	/// use reinhardt_graphql::context::{GraphQLContext, DataLoader, LoaderError};
 	/// use async_trait::async_trait;
 	/// use std::sync::Arc;
 	///
@@ -302,7 +302,7 @@ impl GraphQLContext {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::context::{GraphQLContext, DataLoader, LoaderError};
+	/// use reinhardt_graphql::context::{GraphQLContext, DataLoader, LoaderError};
 	/// use async_trait::async_trait;
 	/// use std::sync::Arc;
 	///

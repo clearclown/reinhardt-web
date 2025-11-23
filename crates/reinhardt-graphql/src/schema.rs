@@ -56,7 +56,7 @@ impl UserStorage {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_graphql_core::schema::UserStorage;
+	/// use reinhardt_graphql::schema::UserStorage;
 	///
 	/// let storage = UserStorage::new();
 	// Creates a new storage instance with defaults
