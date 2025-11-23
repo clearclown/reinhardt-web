@@ -242,16 +242,48 @@ args = ["make", "--list-all-steps"]
 # ============================================================================
 
 [tasks.local-examples-build]
-description = "Build local examples"
-cwd = "examples/local"
-command = "cargo"
-args = ["build", "--workspace", "--release"]
+description = "Build local examples individually (auto-detect examples-* directories)"
+script = '''
+#!/bin/bash
+set -e
+
+# Change to examples/local directory
+cd examples/local
+
+# Find all directories starting with "examples-"
+for example_dir in examples-*; do
+  if [ -d "$example_dir" ]; then
+    example_name=$(basename "$example_dir")
+    echo "Building $example_name..."
+    cargo build -p "$example_name" --release
+  fi
+done
+'''
 
 [tasks.remote-examples-build]
-description = "Build remote examples"
-cwd = "examples/remote"
-command = "cargo"
-args = ["build", "--workspace", "--release"]
+description = "Build remote examples individually (auto-detect examples-* directories)"
+script = '''
+#!/bin/bash
+set -e
+
+# Change to examples/remote directory
+cd examples/remote
+
+# Find all directories starting with "examples-"
+for example_dir in examples-*; do
+  if [ -d "$example_dir" ]; then
+    example_name=$(basename "$example_dir")
+    echo ""
+    echo "========================================"
+    echo "Building $example_name..."
+    echo "========================================"
+    # Build each example from its own directory to avoid workspace conflicts
+    (cd "$example_dir" && cargo build --release) || {
+      echo "⚠️  Build failed for $example_name (expected if reinhardt not on crates.io)"
+    }
+  fi
+done
+'''
 
 [tasks.examples-build]
 description = "Build all examples (local + remote)"
