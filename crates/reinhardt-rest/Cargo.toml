@@ -11,7 +11,7 @@ default = ["serializers", "parsers", "renderers"]
 serializers = ["reinhardt-db"]
 parsers = []
 renderers = ["reinhardt-renderers"]
-jwt = ["reinhardt-auth", "reinhardt-auth/jwt"]
+jwt = ["reinhardt-auth/jwt"]
 # Subcrate features (always enabled as non-optional dependencies, but exposed as features for compatibility)
 pagination = []
 filters = []
@@ -24,15 +24,15 @@ openapi = ["reinhardt-openapi"]
 
 [dependencies]
 # Core dependencies
-reinhardt-core = { workspace = true, features = ["auth", "exception", "negotiation", "parsers", "pagination"] }
+reinhardt-core = { workspace = true, features = ["exception", "negotiation", "parsers", "pagination"] }
 reinhardt-urls = { workspace = true, features = ["routers"] }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 reinhardt-openapi = { workspace = true, optional = true }
 reinhardt-browsable-api = { workspace = true }
 reinhardt-db = { workspace = true, optional = true, features = ["orm"] }
 
-# Authentication (for JWT support in rest-core merged code)
-reinhardt-auth = { workspace = true, optional = true }
+# Authentication (required for auth types re-export)
+reinhardt-auth = { workspace = true }
 
 # Internal crates (now part of reinhardt-rest)
 reinhardt-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers" }

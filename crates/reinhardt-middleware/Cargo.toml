@@ -21,7 +21,6 @@ sqlx = ["dep:sqlx"]
 
 [dependencies]
 reinhardt-core = { workspace = true, features = [
-    "auth",
     "types",
     "exception",
     "http",

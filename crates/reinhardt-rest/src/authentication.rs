@@ -2,8 +2,8 @@
 //!
 //! Re-exports authentication types from reinhardt-core::auth.
 
-// Re-export core authentication types from reinhardt-core::auth
-pub use reinhardt_core::auth::{
+// Re-export core authentication types from reinhardt-auth
+pub use reinhardt_auth::{
 	AllowAny, AnonymousUser, AuthBackend, IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly,
 	Permission, SimpleUser, User,
 };
