@@ -69,7 +69,7 @@ conf = ["reinhardt-conf"]
 core = ["reinhardt-core", "reinhardt-apps"]
 rest = ["reinhardt-rest"]
 messages = ["reinhardt-core/messages"]
-di = ["reinhardt-core/di"]
+di = ["reinhardt-di", "reinhardt-core/di"]
 test = ["reinhardt-test"]
 openapi = ["reinhardt-rest", "reinhardt-rest/openapi"]
 
@@ -187,6 +187,7 @@ reinhardt-auth = { workspace = true, optional = true }
 reinhardt-admin = { workspace = true, optional = true }
 reinhardt-browsable-api = { workspace = true, optional = true }
 reinhardt-commands = { workspace = true, optional = true }
+reinhardt-di = { workspace = true, optional = true }
 reinhardt-forms = { workspace = true, optional = true }
 reinhardt-middleware = { workspace = true, optional = true }
 reinhardt-shortcuts = { workspace = true, optional = true }
@@ -218,7 +219,6 @@ members = [
   "crates/reinhardt-conf/crates/settings",
   "crates/reinhardt-conf/crates/settings-cli",
   "crates/reinhardt-core",
-  "crates/reinhardt-core/crates/auth",
   "crates/reinhardt-core/crates/exception",
   "crates/reinhardt-core/crates/macros",
   "crates/reinhardt-core/crates/messages",
@@ -293,7 +293,16 @@ members = [
   "tests/bench",
 ]
 
-exclude = []
+# Exclude examples as they are independent workspaces
+# Each example has a binary named "manage" which would cause
+# output filename collisions if built together.
+# Examples should be built individually or in their own workspace:
+#   cd examples/local && cargo build
+#   cd examples/remote && cargo build
+exclude = [
+  "examples/local",
+  "examples/remote",
+]
 
 default-members = [
   "crates/reinhardt-views",
@@ -355,7 +364,6 @@ reinhardt-graphql = { path = "crates/reinhardt-graphql", version = "0.1.0-alpha.
 reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-alpha.1" }
 
 # Core subcrates
-reinhardt-core-auth = { path = "crates/reinhardt-core/crates/auth", version = "0.1.0-alpha.1" }
 reinhardt-exception = { path = "crates/reinhardt-core/crates/exception", version = "0.1.0-alpha.1" }
 reinhardt-macros = { path = "crates/reinhardt-core/crates/macros", version = "0.1.0-alpha.1" }
 reinhardt-messages = { path = "crates/reinhardt-core/crates/messages", version = "0.1.0-alpha.1" }

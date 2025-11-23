@@ -16,7 +16,6 @@ reinhardt-macros = { version = "0.1.0-alpha.1", path = "crates/macros", optional
 reinhardt-security = { version = "0.1.0-alpha.1", path = "crates/security", optional = true }
 reinhardt-validators = { version = "0.1.0-alpha.1", path = "crates/validators", optional = true }
 reinhardt-core-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers", optional = true }
-reinhardt-core-auth = { version = "0.1.0-alpha.1", path = "crates/auth", optional = true }
 
 # New facade subcrates
 reinhardt-messages = { version = "0.1.0-alpha.1", path = "crates/messages", optional = true }
@@ -44,8 +43,6 @@ macros = ["dep:reinhardt-macros"]
 security = ["dep:reinhardt-security"]
 validators = ["dep:reinhardt-validators"]
 serializers = ["dep:reinhardt-core-serializers"]
-auth = ["dep:reinhardt-core-auth"]
-argon2-hasher = ["auth", "reinhardt-core-auth/argon2-hasher"]
 http = ["types-http", "dep:reinhardt-http"]
 
 # New facade features
