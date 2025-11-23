@@ -14,7 +14,7 @@ jwt = []
 session = []
 oauth = []
 token = []
-argon2-hasher = ["reinhardt-core/argon2-hasher"]
+argon2-hasher = []
 
 # Database and session storage
 database = ["sqlx", "sea-query"]
@@ -24,7 +24,10 @@ redis-sessions = ["redis"]
 reinhardt-sessions = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
 reinhardt-throttling = { workspace = true }
-reinhardt-core = { workspace = true, features = ["exception", "types", "auth", "http"] }
+reinhardt-types = { workspace = true, features = ["http"] }
+reinhardt-exception = { workspace = true }
+reinhardt-http = { workspace = true }
+hyper = { workspace = true }
 argon2 = { workspace = true }
 rand = { workspace = true }
 jsonwebtoken = { workspace = true }
@@ -40,6 +43,7 @@ tokio = { workspace = true }
 base64 = "0.22"
 sha2 = { workspace = true }
 hmac = { workspace = true }
+hex = "0.4"
 unicode-normalization = "0.1"
 reqwest = { version = "0.12", features = ["json"] }
 totp-lite = "2.0"

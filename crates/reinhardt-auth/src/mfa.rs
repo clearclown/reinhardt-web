@@ -3,7 +3,7 @@
 //! Provides TOTP (Time-based One-Time Password) support for MFA.
 
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
-use reinhardt_core::http::Request;
+use reinhardt_http::Request;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;

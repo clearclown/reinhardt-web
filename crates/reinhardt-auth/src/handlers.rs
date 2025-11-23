@@ -6,9 +6,9 @@ use crate::AuthenticationBackend;
 use crate::User;
 use crate::session::{SESSION_KEY_USER_ID, Session, SessionId, SessionStore};
 use async_trait::async_trait;
-use reinhardt_core::exception::Result;
-use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::Handler;
+use reinhardt_exception::Result;
+use reinhardt_http::{Request, Response};
+use reinhardt_types::Handler;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -260,7 +260,7 @@ mod tests {
 			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
-		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
+		assert_eq!(response.status, reinhardt_http::Response::ok().status);
 		assert!(response.headers.contains_key("set-cookie"));
 	}
 
@@ -280,7 +280,7 @@ mod tests {
 		let response = handler.handle(request).await.unwrap();
 		assert_eq!(
 			response.status,
-			reinhardt_core::http::Response::unauthorized().status
+			reinhardt_http::Response::unauthorized().status
 		);
 	}
 
@@ -311,7 +311,7 @@ mod tests {
 			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
-		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
+		assert_eq!(response.status, reinhardt_http::Response::ok().status);
 		assert!(response.headers.contains_key("set-cookie"));
 
 		assert!(session_store.load(&session_id).await.is_none());
@@ -330,6 +330,6 @@ mod tests {
 			.unwrap();
 
 		let response = handler.handle(request).await.unwrap();
-		assert_eq!(response.status, reinhardt_core::http::Response::ok().status);
+		assert_eq!(response.status, reinhardt_http::Response::ok().status);
 	}
 }

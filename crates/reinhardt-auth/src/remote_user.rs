@@ -4,7 +4,7 @@
 //! authentication systems (e.g., Apache mod_auth, nginx auth_request).
 
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
-use reinhardt_core::http::Request;
+use reinhardt_http::Request;
 use uuid::Uuid;
 
 /// Remote user authentication backend
@@ -24,7 +24,7 @@ use uuid::Uuid;
 /// use reinhardt_auth::{AuthenticationBackend, SimpleUser};
 /// use bytes::Bytes;
 /// use hyper::{HeaderMap, Method};
-/// use reinhardt_core::http::Request;
+/// use reinhardt_http::Request;
 ///
 /// # async fn example() {
 /// // Create auth backend

@@ -1,6 +1,6 @@
 use crate::BaseUser;
 use async_trait::async_trait;
-use reinhardt_core::exception::Error;
+use reinhardt_exception::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 use serde_json::Value;
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 ///
 /// ```ignore
 /// use reinhardt_auth::{BaseUser, BaseUserManager, Argon2Hasher};
-/// use reinhardt_core::exception::Result;
+/// use reinhardt_exception::Result;
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 /// use serde_json::Value;

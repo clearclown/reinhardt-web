@@ -16,7 +16,7 @@ use async_trait::async_trait;
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
 /// use hyper::Method;
-/// use reinhardt_core::types::Request;
+/// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -59,7 +59,7 @@ impl Permission for DrfAllowAny {
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
 /// use hyper::Method;
-/// use reinhardt_core::types::Request;
+/// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -112,7 +112,7 @@ impl Permission for DrfIsAuthenticated {
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
 /// use hyper::Method;
-/// use reinhardt_core::types::Request;
+/// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -166,7 +166,7 @@ impl Permission for DrfIsAdminUser {
 /// use reinhardt_auth::{Permission, PermissionContext};
 /// use bytes::Bytes;
 /// use hyper::Method;
-/// use reinhardt_core::types::Request;
+/// use reinhardt_types::Request;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -223,7 +223,7 @@ mod tests {
 	use super::*;
 	use bytes::Bytes;
 	use hyper::Method;
-	use reinhardt_core::types::Request;
+	use reinhardt_types::Request;
 
 	#[tokio::test]
 	async fn test_drf_allow_any() {

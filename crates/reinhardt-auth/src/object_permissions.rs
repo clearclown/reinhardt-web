@@ -260,7 +260,7 @@ impl ObjectPermissionChecker for ObjectPermissionManager {
 /// use reinhardt_auth::{SimpleUser, User};
 /// use bytes::Bytes;
 /// use hyper::{Method};
-/// use reinhardt_core::types::Request;
+/// use reinhardt_types::Request;
 /// use uuid::Uuid;
 ///
 /// #[tokio::main]
@@ -348,7 +348,7 @@ mod tests {
 	use crate::SimpleUser;
 	use bytes::Bytes;
 	use hyper::Method;
-	use reinhardt_core::types::Request;
+	use reinhardt_types::Request;
 	use uuid::Uuid;
 
 	#[tokio::test]
