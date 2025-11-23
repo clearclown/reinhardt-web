@@ -4,6 +4,12 @@
 
 use reinhardt_macros::AppConfig;
 
+// Re-export reinhardt_apps module so that the macro can find it
+#[allow(unused_imports)]
+mod reinhardt_apps {
+	pub use reinhardt_apps::*;
+}
+
 #[derive(AppConfig)]
 #[app_config(name = "api", label = "api")]
 pub struct ApiConfig;

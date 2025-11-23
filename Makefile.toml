@@ -99,7 +99,7 @@ dependencies = ["fmt-fix", "clippy-fix"]
 [tasks.doc-test]
 description = "Run only documentation tests"
 command = "cargo"
-args = ["test", "--workspace", "--doc", "--all-features"]
+args = ["test", "--workspace", "--doc", "--all-features", "--no-fail-fast"]
 
 [tasks.bench]
 description = "Run benchmark tests in tests/bench"
@@ -171,8 +171,7 @@ dependencies = ["local-examples-test", "remote-examples-test"]
 description = "Run all tests"
 dependencies = [
   "unit-test",
-  "cross-crate-integration-test",
-  "intra-crate-integration-test",
+  "integration-test",
   "doc-test",
   "examples-test",
 ]
@@ -182,8 +181,8 @@ dependencies = [
 # ============================================================================
 
 [tasks.ci]
-description = "Run all CI checks (check, fmt, clippy, tests)"
-dependencies = ["check", "fmt-check", "clippy-check", "test"]
+description = "Run all CI checks (check, fmt, clippy, examples-build, tests)"
+dependencies = ["check", "fmt-check", "clippy-check", "examples-build", "test"]
 
 # ============================================================================
 # Documentation Tasks

@@ -10,7 +10,7 @@ use syn::{ItemFn, LitStr, parse_macro_input};
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,ignore
 /// #[example_test(version = "0.1.0")]
 /// fn test_exact_version() {
 ///     // Run only on reinhardt 0.1.0

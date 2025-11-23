@@ -11,7 +11,8 @@ path = "src/bin/manage.rs"
 [dependencies]
 # Use local workspace version directly via path
 # package="reinhardt-web" maps the crate name to the actual package name
-reinhardt = { path = "../../..", package = "reinhardt-web", features = ["core", "conf", "database", "commands"] }
+reinhardt = { path = "../../..", package = "reinhardt-web", features = ["core", "conf", "database", "commands", "test", "server"] }
+reinhardt-routers = { path = "../../../crates/reinhardt-urls/crates/routers" }
 
 # Common utilities for availability checking
 example-common = { path = "../../remote/common" }
@@ -26,6 +27,8 @@ async-trait = "0.1"
 [dev-dependencies]
 example-test-macros = { path = "../../remote/test-macros" }
 example-common = { path = "../../remote/common" }
+rstest = { version = "0.26", default-features = false }
+tokio = { workspace = true, features = ["rt", "macros"] }
 reqwest = { workspace = true }
 testcontainers = "0.25.2"
 testcontainers-modules = { version = "0.13.0", features = ["postgres"] }
@@ -34,7 +37,7 @@ testcontainers-modules = { version = "0.13.0", features = ["postgres"] }
 example-common = { path = "../../remote/common" }
 
 [features]
-default = []
+default = ["with-reinhardt"]
 with-reinhardt = []
 
 [[test]]

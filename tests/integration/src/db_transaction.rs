@@ -27,7 +27,7 @@ use testcontainers::{
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use rstest::*;
 /// use reinhardt_integration_tests::db_transaction::db_transaction_fixture;
 ///

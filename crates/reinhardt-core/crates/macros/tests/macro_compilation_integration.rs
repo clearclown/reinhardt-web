@@ -17,6 +17,11 @@ use reinhardt_macros::{Injectable, Model, endpoint};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+// Re-export reinhardt_di module so that the macro can find it
+mod reinhardt_di {
+	pub use reinhardt_di::*;
+}
+
 // ========== Model Derive Macro Compilation Tests ==========
 
 /// Test Model derive macro with basic valid model definition
