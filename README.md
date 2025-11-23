@@ -84,6 +84,21 @@ Reinhardt brings together the best of three worlds:
 
 Reinhardt is a modular framework. Choose your starting point:
 
+**Note on Crate Naming:**
+The main Reinhardt crate is published on crates.io as `reinhardt-web`, but you import it as `reinhardt` in your code using the `package` attribute:
+
+```toml
+[dependencies]
+# Import as 'reinhardt', published as 'reinhardt-web'
+reinhardt = { version = "0.1.0-alpha.1", package = "reinhardt-web", features = ["standard"] }
+```
+
+Then use in your code:
+```rust
+use reinhardt::prelude::*;
+use reinhardt::{Request, Response, StatusCode};
+```
+
 ### Option 1: Microservices (Minimal Setup)
 
 Lightweight and fast, perfect for simple APIs:
@@ -253,13 +268,24 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 }
 ```
 
-**Note:** The `reinhardt::prelude` includes commonly used types (availability depends on enabled features):
-- **ORM** (requires `database` feature): `F`, `Q`, `QOperator`, `Annotation`, `Aggregate`, `Transaction`, `atomic`
-- **Database Functions** (requires `database` feature): `Concat`, `Upper`, `Lower`, `Now`, `CurrentDate`
-- **Window Functions** (requires `database` feature): `Window`, `RowNumber`, `Rank`, `DenseRank`
-- **Constraints** (requires `database` feature): `UniqueConstraint`, `CheckConstraint`, `ForeignKeyConstraint`
-- **Auth** (requires `auth` feature): `UserManager`, `GroupManager`, `Group`, `ObjectPermission`, `ObjectPermissionChecker`
-- **DI Params** (requires `minimal` or `standard` feature): `Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`
+**Note:** The `reinhardt::prelude` includes commonly used types. Key exports include:
+
+**Always Available:**
+- Core routing and views: `Router`, `DefaultRouter`, `UnifiedRouter`, `View`, `ListView`, `DetailView`
+- ViewSets: `ViewSet`, `ModelViewSet`, `ReadOnlyModelViewSet`
+- HTTP: `StatusCode`
+
+**Feature-Dependent:**
+- **`core` feature**: `Request`, `Response`, `Handler`, `Middleware`, Signals (`post_save`, `pre_save`, etc.)
+- **`database` feature**: `Model`, `DatabaseConnection`, `F`, `Q`, `Transaction`, `atomic`, Database functions (`Concat`, `Upper`, `Lower`, `Now`, `CurrentDate`), Window functions (`Window`, `RowNumber`, `Rank`, `DenseRank`), Constraints (`UniqueConstraint`, `CheckConstraint`, `ForeignKeyConstraint`)
+- **`auth` feature**: `User`, `UserManager`, `GroupManager`, `Permission`, `ObjectPermission`
+- **`minimal`, `standard`, or `di` features**: `Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`
+- **`rest` feature**: Serializers, Parsers, Pagination, Throttling, Versioning
+- **`admin` feature**: Admin panel components
+- **`cache` feature**: `Cache`, `InMemoryCache`
+- **`sessions` feature**: `Session`, `AuthenticationMiddleware`
+
+For a complete list, see [Feature Flags Guide](docs/FEATURE_FLAGS.md).
 
 For a complete step-by-step guide, see [Getting Started](docs/GETTING_STARTED.md).
 
@@ -492,6 +518,15 @@ Register in `src/config/apps.rs`:
 // src/config/apps.rs
 use reinhardt_macros::installed_apps;
 
+// The installed_apps! macro generates:
+// - An enum InstalledApp with variants for each app
+// - Implementation of conversion traits (From, Into, Display)
+// - A registry for app configuration and discovery
+//
+// This is equivalent to Django's INSTALLED_APPS setting and enables:
+// - Automatic app discovery for migrations, admin panel, etc.
+// - Type-safe app references throughout your code
+// - Centralized app configuration
 installed_apps! {
 	auth: "reinhardt.contrib.auth",
 	contenttypes: "reinhardt.contrib.contenttypes",
@@ -648,10 +683,13 @@ Use JWT authentication in your app's `views/profile.rs`:
 ```rust
 // users/views/profile.rs
 use reinhardt_auth::{JwtAuth, BaseUser};
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
+use reinhardt::{Request, Response, StatusCode};
+use reinhardt::endpoint;
 use reinhardt_db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
+
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_profile(
@@ -680,7 +718,8 @@ pub async fn get_profile(
 
 	// Return user profile as JSON
 	let json = serde_json::to_string(&user)?;
-	Ok(Response::new(StatusCode::OK, json.into()))
+	Ok(Response::new(StatusCode::OK)
+		.with_body(json))
 }
 ```
 
@@ -688,17 +727,32 @@ pub async fn get_profile(
 
 Reinhardt provides a FastAPI-inspired `#[endpoint]` macro for clean, declarative endpoint definitions with automatic dependency injection.
 
+**Result Type Definition:**
+
+First, define your view result type:
+
+```rust
+// Common pattern: use a boxed error for flexibility
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+// Or use a specific error type
+pub type ViewResult<T> = Result<T, MyAppError>;
+```
+
 **Basic Endpoint:**
 
 ```rust
-use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
+use reinhardt::{Request, Response, StatusCode};
+use reinhardt::endpoint;
+
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn hello(req: Request) -> ViewResult<Response> {
 	let name = req.path_params.get("name").unwrap_or("World");
 	let message = format!("Hello, {}!", name);
-	Ok(Response::new(StatusCode::OK, message.into()))
+	Ok(Response::new(StatusCode::OK)
+		.with_body(message))
 }
 ```
 
@@ -707,9 +761,11 @@ pub async fn hello(req: Request) -> ViewResult<Response> {
 The `#[inject]` attribute automatically injects dependencies from the application context:
 
 ```rust
-use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
+use reinhardt::{Request, Response, StatusCode};
+use reinhardt::endpoint;
 use std::sync::Arc;
+
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_user_from_db(
@@ -727,7 +783,8 @@ pub async fn get_user_from_db(
 		.await?;
 
 	let json = serde_json::to_string(&user)?;
-	Ok(Response::new(StatusCode::OK, json.into()))
+	Ok(Response::new(StatusCode::OK)
+		.with_body(json))
 }
 ```
 
@@ -741,7 +798,8 @@ pub async fn handler(
 	#[inject(cache = false)] fresh_data: DataService,  // Always creates new instance
 ) -> ViewResult<Response> {
 	// fresh_data is not cached
-	Ok(Response::new(StatusCode::OK, "OK".into()))
+	Ok(Response::new(StatusCode::OK)
+		.with_body("OK"))
 }
 ```
 
@@ -757,10 +815,12 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
+use reinhardt::{Request, Response, StatusCode};
+use reinhardt::endpoint;
 use crate::models::User;
 use std::sync::Arc;
+
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_user(
@@ -788,7 +848,8 @@ pub async fn get_user(
 
 	// Return as JSON
 	let json = serde_json::to_string(&user)?;
-	Ok(Response::new(StatusCode::OK, json.into()))
+	Ok(Response::new(StatusCode::OK)
+		.with_body(json))
 }
 ```
 
@@ -851,12 +912,14 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt_macros::endpoint;
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
+use reinhardt::{Request, Response, StatusCode};
+use reinhardt::endpoint;
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserResponse};
 use validator::Validate;
 use std::sync::Arc;
+
+pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn create_user(
@@ -890,7 +953,8 @@ pub async fn create_user(
 	let response_data = UserResponse::from(user);
 	let json = serde_json::to_string(&response_data)?;
 
-	Ok(Response::new(StatusCode::CREATED, json.into()))
+	Ok(Response::new(StatusCode::CREATED)
+		.with_body(json))
 }
 ```
 
