@@ -96,7 +96,7 @@ pub fn injectable_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 			let resolve_call = if field_info.use_cache {
 				quote! {
 					{
-						let __depends = ::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, true)
+						let __depends = ::reinhardt::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, true)
 							.await
 							.map_err(|e| {
 								eprintln!("Dependency injection failed for {} in {}: {:?}",
@@ -109,7 +109,7 @@ pub fn injectable_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 			} else {
 				quote! {
 					{
-						let __depends = ::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, false)
+						let __depends = ::reinhardt::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, false)
 							.await
 							.map_err(|e| {
 								eprintln!("Dependency injection failed for {} in {}: {:?}",
@@ -143,9 +143,9 @@ pub fn injectable_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	// Generate the Injectable implementation
 	let expanded = quote! {
 		#[::async_trait::async_trait]
-		impl #generics ::reinhardt_di::Injectable for #struct_name #generics #where_clause {
-			async fn inject(__di_ctx: &::reinhardt_di::InjectionContext)
-				-> ::reinhardt_di::DiResult<Self>
+		impl #generics ::reinhardt::reinhardt_di::Injectable for #struct_name #generics #where_clause {
+			async fn inject(__di_ctx: &::reinhardt::reinhardt_di::InjectionContext)
+				-> ::reinhardt::reinhardt_di::DiResult<Self>
 			{
 				#(#inject_stmts)*
 
