@@ -44,41 +44,20 @@ Reinhardt brings together the best of three worlds:
 
 **Result**: A framework that's familiar to Python developers, but with Rust's performance and safety guarantees.
 
-## ✨ Features
+## ✨ Key Features
 
-### 🎯 Core Framework
+- **Type-Safe ORM** with compile-time validation (SeaQuery v1.0.0-rc1)
+- **Powerful Serializers** with automatic validation (serde + validator)
+- **FastAPI-Style DI** with type-safe dependency injection and caching
+- **ViewSets** for rapid CRUD API development
+- **Multi-Auth** (JWT, Token, Session, Basic) with BaseUser/FullUser traits
+- **Admin Panel** with auto-generated model management interface
+- **Management Commands** for migrations, static files, and more
+- **GraphQL & WebSocket** support for real-time applications
+- **Pagination, Filtering, Rate Limiting** built-in
+- **Signals** for event-driven architecture
 
-- **Type-Safe ORM**: QuerySet API with compile-time query validation (using SeaQuery v1.0.0-rc1)
-- **Powerful Serializers**: Automatic validation and transformation with serde and validator
-- **Smart Routing**: Function-based and class-based route registration
-- **Multi-Auth Support**: JWT, Token, Session, and Basic authentication with BaseUser/FullUser traits
-- **ViewSets**: DRY principle for CRUD operations with ModelViewSet and ReadOnlyModelViewSet
-
-### 🚀 FastAPI-Inspired Ergonomics
-
-- **Parameter Extraction**: Access path and query parameters via `Request` fields
-- **Dependency Injection**: FastAPI-inspired DI system with type-safe injection and automatic caching
-- **Auto OpenAPI**: Generate OpenAPI 3.0 schemas from Rust types with `#[derive(Schema)]`
-- **Function-based Endpoints**: Register functions as route handlers
-- **Background Tasks**: Simple async task execution
-
-### 🔋 Batteries Included
-
-- **Admin Panel**: Django-style auto-generated admin interface with model management, filtering, and custom actions
-- **Middleware System**: Request/response processing pipeline
-- **Management Commands**: CLI tools for migrations, static files, and more
-- **Pagination**: PageNumber, LimitOffset, and Cursor strategies
-- **Filtering & Search**: Built-in SearchFilter and OrderingFilter for querysets
-- **Rate Limiting**: Flexible throttling (AnonRateThrottle, UserRateThrottle, ScopedRateThrottle)
-- **Signals**: Event-driven hooks (pre_save, post_save, pre_delete, post_delete, m2m_changed)
-
-### 🌍 Advanced Features
-
-- **GraphQL Support**: Build GraphQL APIs alongside REST with schema generation and subscriptions
-- **WebSocket Support**: Real-time bidirectional communication with channels, rooms, and authentication
-- **Internationalization**: Multi-language support
-- **Static Files**: CDN integration, hashed storage, and compression
-- **Browsable API**: HTML interface for API exploration
+See [Available Components](#available-components) for complete list and [Getting Started](docs/GETTING_STARTED.md) for examples.
 
 ## Installation
 
@@ -236,7 +215,7 @@ Edit your app's `urls.rs`:
 
 ```rust
 // users/urls.rs
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::UnifiedRouter;
 
 pub fn url_patterns() -> UnifiedRouter {
 	let router = UnifiedRouter::new();
@@ -857,7 +836,7 @@ Register route with path parameter in `urls.rs`:
 
 ```rust
 // users/urls.rs
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::UnifiedRouter;
 
 pub fn url_patterns() -> UnifiedRouter {
 	let router = UnifiedRouter::new();
@@ -992,36 +971,7 @@ Reinhardt offers modular components you can mix and match:
 
 **For detailed feature flags within each crate, see the [Feature Flags Guide](docs/FEATURE_FLAGS.md).**
 
-## Components
-
-Reinhardt includes the following core components:
-
-### Core Framework
-
-- **ORM**: Database abstraction layer using SeaQuery v1.0.0-rc1 for SQL operations
-- **Serializers**: Type-safe data serialization and validation with serde and validator crates
-- **Routers**: Function-based and class-based URL routing
-- **Authentication**: JWT, Token, Session, and Basic authentication with BaseUser/FullUser traits
-- **Middleware**: Request/response processing pipeline
-- **Management Commands**: Django-style CLI for project management (`reinhardt-admin-cli`)
-
-### REST API Features (reinhardt-rest)
-
-- **Authentication**: JWT, Token, Session, and Basic authentication
-- **Browsable API**: HTML interface for API exploration
-- **Schema Generation**: OpenAPI/Swagger documentation
-- **Pagination**: PageNumber, LimitOffset, and Cursor pagination
-- **Filtering**: SearchFilter and OrderingFilter for querysets
-- **Throttling**: Rate limiting (AnonRateThrottle, UserRateThrottle, ScopedRateThrottle)
-- **Signals**: Event-driven hooks (pre_save, post_save, pre_delete, post_delete, m2m_changed)
-
-### Advanced Features
-
-- **Admin Panel**: Fully-featured admin interface (`reinhardt-admin-panel`) with model management, filtering, bulk actions, and audit logging
-- **GraphQL**: Complete GraphQL support (`reinhardt-graphql`) with schema generation and subscription support
-- **WebSockets**: Real-time communication (`reinhardt-websockets`) with channels, rooms, authentication, and Redis integration
-- **Internationalization**: Multi-language support with translation catalogs
-- **Static Files**: CDN integration, hashed storage, and compression
+---
 
 ## Documentation
 

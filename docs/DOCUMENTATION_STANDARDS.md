@@ -538,43 +538,10 @@ let conn = connect("postgres://localhost")?;
 
 ---
 
-## Quick Reference
-
-### Documentation Files to Check
-
-When making changes, consider updating:
-
-- [ ] `README.md` - Project overview
-- [ ] `crates/<crate>/README.md` - Crate overview
-- [ ] `crates/<crate>/src/lib.rs` - Module docs, planned features
-- [ ] `docs/GETTING_STARTED.md` - Getting started guide
-- [ ] `docs/FEATURE_FLAGS.md` - Feature flags
-- [ ] `docs/tutorials/` - Relevant tutorials
-- [ ] `CHANGELOG.md` - Version changelog
-
-### Documentation Rules Summary
-
-**✅ DO:**
-- Update docs in same workflow as code
-- Place planned features in lib.rs
-- Test all code examples
-- Keep terminology consistent
-- Verify all links
-- Add migration guides for breaking changes
-
-**❌ DON'T:**
-- Leave docs outdated
-- Put planned features in README.md
-- Include untested code examples
-- Use inconsistent terminology
-- Leave broken links
-- Make breaking changes without migration guides
-
----
-
 ## Related Documentation
 
-- Main standards: @CLAUDE.md
-- Module system: @docs/MODULE_SYSTEM.md
-- Testing standards: @docs/TESTING_STANDARDS.md
-- Anti-patterns: @docs/ANTI_PATTERNS.md
+- **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)
+- **Main standards**: @CLAUDE.md
+- **Module system**: @docs/MODULE_SYSTEM.md
+- **Testing standards**: @docs/TESTING_STANDARDS.md
+- **Anti-patterns**: @docs/ANTI_PATTERNS.md

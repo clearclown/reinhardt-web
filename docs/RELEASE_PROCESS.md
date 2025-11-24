@@ -430,150 +430,27 @@ git reset --hard HEAD~1  # If not pushed
 
 ### Common Issues
 
-#### Dry-run Failed - Missing Metadata
+**Dry-run Failed**: Add missing metadata fields (`description`, `license`, `repository`) to `Cargo.toml`
 
-**Error**: `missing field 'description' in Cargo.toml`
+**Version Already Published**: Increment version and retry
 
-**Solution**:
-```toml
-[package]
-description = "ORM layer for Reinhardt framework"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/kent8192/reinhardt-rs"
-```
+**No Crates Detected**: Verify version changes in `Cargo.toml` files
 
-#### Version Already Published
-
-**Solution**:
-```bash
-# Check existing versions
-curl -s "https://crates.io/api/v1/crates/reinhardt-orm" | jq '.versions[].num'
-
-# Increment version and retry
-vim crates/reinhardt-orm/Cargo.toml  # version = "0.2.1"
-```
-
-#### Dependency Not Available
-
-**Cause**: Dependency not published or index not updated
-
-**Solution**:
-- Workflow retries automatically (3 attempts)
-- Manual: Wait 2-3 minutes, trigger manually
-
-#### No Crates Detected
-
-**Cause**: No version changes or already published
-
-**Solution**:
-```bash
-# Verify changes
-git diff main -- crates/*/Cargo.toml
-
-# Check if published
-curl -s "https://crates.io/api/v1/crates/reinhardt-orm" | \
-  jq '.versions[] | select(.num == "0.2.0")'
-```
-
-#### Git Tag Already Exists
-
-**Solution**:
-```bash
-git push origin :refs/tags/reinhardt-orm@v0.2.0
-# Workflow recreates after successful publish
-```
-
-### cargo-workspaces Issues
-
-#### "No changed crates detected"
-
-```bash
-cargo ws changed  # Check detection
-
-# Force publish
-cargo ws publish -p <crate-name> --force
-
-# Or create missing tags
-git tag <crate-name>@v<version> -m "Retroactive tag"
-```
-
-#### "version mismatch for workspace dependency"
-
-```bash
-# Check consistency
-grep -A 50 "\[workspace.dependencies\]" Cargo.toml
-grep "workspace = true" crates/*/Cargo.toml
-```
-
-#### cargo-workspaces not found
-
-```bash
-cargo install cargo-workspaces --version 0.4.1
-cargo ws --version
-```
+**cargo-workspaces Issues**: Run `cargo ws changed` to check detection; use `--force` if needed
 
 ### Verification Checklist
 
 - [ ] Version follows SemVer
 - [ ] CHANGELOG updated
 - [ ] Tests pass
-- [ ] Documentation builds
 - [ ] Dry-run succeeds
-- [ ] No uncommitted changes
 - [ ] Dependencies published
-
----
-
-## Quick Reference
-
-### Complete Release Checklist
-
-```
-1. ✅ Select version (MAJOR/MINOR/PATCH)
-2. ✅ Update Cargo.toml + CHANGELOG.md
-3. ✅ Run verification commands
-4. ✅ Create PR + add 'release' label
-5. ✅ Review dry-run results
-6. ✅ Merge PR
-7. ✅ Verify publication (crates.io, GitHub Releases, docs.rs)
-```
-
-### Key Commands
-
-```bash
-# Verification
-cargo check --workspace --all --all-features
-cargo test --workspace --all --all-features
-cargo test --doc -p <crate-name>
-
-# Change detection
-cargo ws changed
-
-# Dry-run
-cargo ws publish --dry-run -p <crate-name>
-
-# Publish (manual)
-cargo ws publish -p <crate-name>
-
-# Tagging (manual)
-git tag [crate-name]@v[version] -m "Release [crate-name] v[version]"
-git push origin main && git push origin --tags
-
-# Yank
-cargo yank <crate-name> --version <version>
-cargo yank <crate-name> --version <version> --undo
-```
-
-### Workflow Files
-
-- **`.github/workflows/publish-dry-run.yml`**: Pre-merge validation
-- **`.github/workflows/publish-on-merge.yml`**: Auto-publish on merge
-- **`.github/workflows/publish-on-tag.yml`**: Manual emergency publish
 
 ---
 
 ## Related Documentation
 
+- **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)
 - **Main Standards**: @CLAUDE.md
 - **Commit Guidelines**: @CLAUDE.commit.md
 - **Version Policy**: See "Release & Publishing Policy" in CLAUDE.md

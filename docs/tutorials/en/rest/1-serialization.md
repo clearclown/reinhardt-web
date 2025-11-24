@@ -243,7 +243,7 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
     }
 
     // 3. Save to database (using Reinhardt ORM)
-    // snippet.save(&conn).await?;
+    snippet.save(&conn).await?;
 
     // 4. Return response with created status
     Response::new(201)

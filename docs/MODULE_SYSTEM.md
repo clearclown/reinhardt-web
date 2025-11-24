@@ -95,120 +95,12 @@ pub use connection::Connection;
 
 ## Anti-Patterns (What NOT to Do)
 
-### ❌ Anti-Pattern 1: Using `mod.rs`
+For detailed anti-patterns and examples, see @docs/ANTI_PATTERNS.md. Key module system anti-patterns:
 
-**BAD - Old Rust 2015/2018 Style:**
-```
-src/
-├── lib.rs
-└── database/
-    ├── mod.rs      // ❌ NEVER use this
-    ├── pool.rs
-    └── connection.rs
-```
-
-**GOOD - Rust 2024 Style:**
-```
-src/
-├── lib.rs
-├── database.rs     // ✅ Use module.rs as entry point
-└── database/
-    ├── pool.rs
-    └── connection.rs
-```
-
-**Why?** The `mod.rs` pattern is deprecated and makes file navigation harder.
-
-### ❌ Anti-Pattern 2: Glob Import Abuse
-
-**BAD:**
-```rust
-// ❌ Pollutes namespace, unclear what's imported
-pub use database::*;
-```
-
-**GOOD:**
-```rust
-// ✅ Explicit re-export, clear API surface
-pub use database::{Pool, Connection, PoolConfig};
-```
-
-**Exception**: Test modules may use `use super::*;` for convenience:
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;  // ✅ Acceptable in test modules
-
-    #[test]
-    fn test_database_connection() {
-        // Test code can access parent module items
-        let conn = create_connection();
-        assert!(conn.is_ok());
-    }
-}
-```
-
-**Why?** Glob imports make it unclear what's actually exported and can cause naming conflicts. However, in test modules, the scope is limited and readability benefits outweigh the risks.
-
-### ❌ Anti-Pattern 3: Circular Dependencies
-
-**BAD:**
-```rust
-// module_a.rs
-use crate::module_b::TypeB;  // ❌ A → B
-
-// module_b.rs
-use crate::module_a::TypeA;  // ❌ B → A (circular!)
-```
-
-**GOOD:**
-```rust
-// Extract common types to break the cycle
-
-// types.rs
-pub struct TypeA;
-pub struct TypeB;
-
-// module_a.rs
-use crate::types::{TypeA, TypeB};
-
-// module_b.rs
-use crate::types::{TypeA, TypeB};
-```
-
-**Why?** Circular dependencies cause compilation errors and indicate poor module design.
-
-### ❌ Anti-Pattern 4: Excessive Flat Structure
-
-**BAD:**
-```
-src/
-├── lib.rs
-├── user_handler.rs
-├── user_service.rs
-├── user_repository.rs
-├── auth_handler.rs
-├── auth_service.rs
-└── auth_repository.rs    // ❌ Related files scattered
-```
-
-**GOOD:**
-```
-src/
-├── lib.rs
-├── user.rs
-├── user/
-│   ├── handler.rs
-│   ├── service.rs
-│   └── repository.rs
-├── auth.rs
-└── auth/
-    ├── handler.rs
-    ├── service.rs
-    └── repository.rs     // ✅ Logically grouped
-```
-
-**Why?** Grouping related functionality makes the codebase easier to navigate and maintain.
+- **Using `mod.rs`**: Use `module.rs` instead (Rust 2024 Edition)
+- **Glob imports**: Use explicit `pub use` (except in test modules)
+- **Circular dependencies**: Extract common types to break cycles
+- **Excessive flat structure**: Group related files in module directories
 
 ---
 
@@ -304,26 +196,8 @@ use my_crate::database::pool::InternalPoolManager;  // ❌ Error - not re-export
 
 ---
 
-## Quick Reference
-
-### ✅ DO
-- Use `module.rs` + `module/` directory structure
-- Use explicit `pub use` for API control
-- Group related functionality in module hierarchies
-- Mirror logical structure in filesystem layout
-- Keep nesting to ≤4 levels
-
-### ❌ DON'T
-- Use `mod.rs` files (Rust 2015 deprecated pattern)
-- Use glob imports (`use module::*`)
-- Create circular module dependencies
-- Scatter related files in flat structure
-- Over-nest modules (>4 levels)
-
----
-
 ## Related Documentation
 
-- Main standards: @CLAUDE.md
-- Code style conventions: See CLAUDE.md CS-1
-- Project structure: @README.md
+- **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)
+- **Main standards**: @CLAUDE.md
+- **Project structure**: @README.md

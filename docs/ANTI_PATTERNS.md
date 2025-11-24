@@ -259,196 +259,33 @@ pub fn send_email(to: &str, body: &str) -> Result<()> {
 
 ### ❌ Skeleton Tests
 
-**DON'T:**
-```rust
-#[test]
-fn test_user_creation() {
-    // ❌ Empty test - always passes
-}
+Tests without meaningful assertions that always pass.
 
-#[test]
-fn test_validation() {
-    let result = validate_email("test@example.com");
-    // ❌ No assertion - useless
-}
-
-#[test]
-fn test_always_true() {
-    assert!(true);  // ❌ Meaningless
-}
-```
-
-**DO:**
-```rust
-#[test]
-fn test_user_creation() {
-    let user = User::new("Alice", "alice@example.com");
-    assert_eq!(user.name, "Alice");  // ✅ Real assertion
-}
-
-#[test]
-fn test_validation() {
-    assert!(validate_email("test@example.com").is_ok());  // ✅ Tests behavior
-    assert!(validate_email("invalid").is_err());
-}
-```
-
-**Why?** Tests must be capable of failing. Skeleton tests provide no value.
+**Why?** Tests must be capable of failing. See @docs/TESTING_STANDARDS.md TP-1 for detailed examples.
 
 ### ❌ Tests Without Reinhardt Components
 
-**DON'T:**
-```rust
-#[test]
-fn test_standard_library() {
-    let vec = vec![1, 2, 3];
-    assert_eq!(vec.len(), 3);  // ❌ Only tests std library
-}
-```
+Tests that only verify standard library or third-party behavior.
 
-**DO:**
-```rust
-use reinhardt_orm::QueryBuilder;
-
-#[test]
-fn test_query_building() {
-    let query = QueryBuilder::new()  // ✅ Uses Reinhardt component
-        .table("users")
-        .build();
-    assert_eq!(query.to_sql(), "SELECT * FROM users");
-}
-```
-
-**Why?** Every test must verify at least one Reinhardt component.
+**Why?** Every test must verify at least one Reinhardt component. See @docs/TESTING_STANDARDS.md TP-2.
 
 ### ❌ Tests Without Cleanup
 
-**DON'T:**
-```rust
-#[test]
-fn test_file_creation() {
-    std::fs::write("/tmp/test_file.txt", "data").unwrap();
-    // ❌ File left behind
-}
-```
+Tests that create files/resources without cleaning up.
 
-**DO:**
-```rust
-#[test]
-fn test_file_creation() {
-    let temp_dir = tempfile::tempdir().unwrap();
-    let file_path = temp_dir.path().join("test.txt");
-    std::fs::write(&file_path, "data").unwrap();
-    // ✅ Cleanup happens automatically when temp_dir drops
-}
-```
-
-**Why?** Test artifacts must be cleaned up.
+**Why?** Test artifacts must be cleaned up. See @docs/TESTING_STANDARDS.md TI-3 for cleanup techniques.
 
 ### ❌ Global State Tests Without Serialization
 
-**DON'T:**
-```rust
-#[test]  // ❌ No #[serial] - can conflict with other tests
-fn test_i18n_activation() {
-    activate("fr", catalog);
-    assert_eq!(get_language(), "fr");
-}
-```
+Tests modifying global state without `#[serial]` attribute.
 
-**DO:**
-```rust
-use serial_test::serial;
-
-#[test]
-#[serial(i18n)]  // ✅ Serialized with other i18n tests
-fn test_i18n_activation() {
-    activate("fr", catalog);
-    assert_eq!(get_language(), "fr");
-    deactivate();  // ✅ Cleanup
-}
-```
-
-**Why?** Global state tests can conflict if run in parallel.
+**Why?** Global state tests can conflict if run in parallel. See @docs/TESTING_STANDARDS.md TI-4 for serial test patterns.
 
 ### ❌ Loose Assertions
 
-**DON'T:**
-```rust
-#[test]
-fn test_error_message() {
-    let result = validate_input("");
-    let error = result.unwrap_err();
-    // ❌ Too permissive - could match unintended substrings
-    assert!(error.to_string().contains("invalid"));
-}
+Using `contains()`, range checks, or loose pattern matching instead of exact value assertions.
 
-#[test]
-fn test_calculation() {
-    let result = calculate_discount(100, 10);
-    // ❌ Should check exact value, not just range
-    assert!(result > 0);
-    assert!(result < 100);
-}
-
-#[test]
-fn test_response_body() {
-    let response = get_user_info();
-    // ❌ Loose pattern matching
-    assert!(response.contains("\"id\":"));
-    assert!(response.contains("\"name\":"));
-}
-```
-
-**DO:**
-```rust
-#[test]
-fn test_error_message() {
-    let result = validate_input("");
-    let error = result.unwrap_err();
-    // ✅ Exact error message verification
-    assert_eq!(error.to_string(), "Input cannot be empty");
-}
-
-#[test]
-fn test_calculation() {
-    let result = calculate_discount(100, 10);
-    // ✅ Exact value expected
-    assert_eq!(result, 90);
-}
-
-#[test]
-fn test_response_body() {
-    let response = get_user_info();
-    // ✅ Deserialize and check exact structure
-    let user: UserInfo = serde_json::from_str(&response).unwrap();
-    assert_eq!(user.id, 123);
-    assert_eq!(user.name, "Alice");
-}
-```
-
-**EXCEPTION - When Loose Assertions Are Acceptable:**
-```rust
-#[test]
-fn test_generate_uuid() {
-    let uuid = generate_uuid();
-    // ✅ UUID is random, can only check format
-    assert_eq!(uuid.len(), 36);
-    assert_eq!(uuid.chars().filter(|&c| c == '-').count(), 4);
-}
-
-#[test]
-fn test_timestamp() {
-    let before = SystemTime::now();
-    let timestamp = get_current_timestamp();
-    let after = SystemTime::now();
-    // ✅ Timestamp is system-dependent, verified within bounds
-    assert!(timestamp >= before);
-    assert!(timestamp <= after);
-}
-```
-
-**Why?** Loose assertions like `contains()` or range checks can pass with incorrect values. Strict assertions catch bugs that loose assertions would miss.
+**Why?** Loose assertions can pass with incorrect values. See @docs/TESTING_STANDARDS.md TI-5 for assertion strictness guidelines and acceptable exceptions.
 
 ---
 
@@ -668,48 +505,10 @@ Use `fetch_data().await` asynchronously...  // ✅ Current!
 
 ---
 
-## Quick Reference
-
-### Top Anti-Patterns to Avoid
-
-**Module System:**
-- ❌ Using `mod.rs` files
-- ❌ Glob imports (`use module::*`)
-- ❌ Circular dependencies
-- ❌ Deep relative paths (`../../..`)
-
-**Code Style:**
-- ❌ Excessive `.to_string()` calls
-- ❌ Commented-out code
-- ❌ Deletion record comments
-- ❌ Unmarked placeholders
-
-**Testing:**
-- ❌ Skeleton tests (no assertions)
-- ❌ Tests without Reinhardt components
-- ❌ No test cleanup
-- ❌ Global state without `#[serial]`
-- ❌ Loose assertions (`contains`, range checks) without justification
-
-**File Management:**
-- ❌ Saving to project directory (use /tmp)
-- ❌ Leaving backup files (.bak, .old, ~)
-- ❌ Not cleaning up /tmp files
-
-**Workflow:**
-- ❌ Committing without user instruction
-- ❌ Bulk operations without dry-run
-- ❌ Monolithic commits
-
-**Documentation:**
-- ❌ Outdated docs after code changes
-- ❌ Planned features in README
-
----
-
 ## Related Documentation
 
-- Main standards: @CLAUDE.md
-- Module system: @docs/MODULE_SYSTEM.md
-- Testing standards: @docs/TESTING_STANDARDS.md
-- Documentation standards: @docs/DOCUMENTATION_STANDARDS.md
+- **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)
+- **Main standards**: @CLAUDE.md
+- **Module system**: @docs/MODULE_SYSTEM.md
+- **Testing standards**: @docs/TESTING_STANDARDS.md
+- **Documentation standards**: @docs/DOCUMENTATION_STANDARDS.md

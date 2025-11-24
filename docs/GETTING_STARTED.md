@@ -114,45 +114,18 @@ cargo run --bin manage runserver
 
 Visit `http://127.0.0.1:8000/` in your browser. You should see a welcome message.
 
-### Step 5: Create Your First App
+### Step 5: Create Your First Endpoint
+
+Create an app and add a simple endpoint:
 
 ```bash
-# Create a new app for our API
 cargo run --bin manage startapp hello --template-type restful
 ```
-
-This creates a `hello` app with the following structure:
-
-```
-hello/
-├── lib.rs
-├── apps.rs
-├── models.rs
-├── models/          # Directory for model files
-│   └── .gitkeep
-├── views.rs
-├── views/           # Directory for view files
-│   └── .gitkeep
-├── serializers.rs
-├── serializers/     # Directory for serializer files
-│   └── .gitkeep
-├── admin.rs
-├── admin/           # Directory for admin files
-│   └── .gitkeep
-├── urls.rs
-├── tests.rs
-└── tests/           # Directory for test files
-    └── .gitkeep
-```
-
-**Note:** Following Rust 2024 Edition module system, each `module.rs` file serves as the entry point for its corresponding `module/` directory.
-
-### Step 6: Create a Simple Endpoint
 
 Edit `hello/views.rs`:
 
 ```rust
-use reinhardt::prelude::*;  // Imports Request, Response, StatusCode
+use reinhardt::prelude::*;
 use reinhardt_http::ViewResult;
 use serde::{Deserialize, Serialize};
 
@@ -165,135 +138,31 @@ pub async fn hello_world(_req: Request) -> ViewResult<Response> {
     let response_data = HelloResponse {
         message: "Hello, Reinhardt!".to_string(),
     };
-
     let json = serde_json::to_string(&response_data)?;
     Ok(Response::new(StatusCode::OK).with_body(json))
 }
 ```
 
-### Step 7: Register the Route
+Register in `hello/urls.rs`, `src/config/urls.rs`, and `src/config/apps.rs` (see project template for examples).
 
-Edit `hello/urls.rs`:
-
-```rust
-use reinhardt_routers::UnifiedRouter;
-use hyper::Method;
-use crate::views;
-
-pub fn url_patterns() -> UnifiedRouter {
-    UnifiedRouter::new()
-        .function("/hello", Method::GET, views::hello_world)
-}
-```
-
-### Step 8: Include in Project URLs
-
-Edit `src/config/urls.rs`:
-
-```rust
-use reinhardt::prelude::*;
-use std::sync::Arc;
-
-pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::new()
-        .mount("/", hello::urls::url_patterns());
-
-    Arc::new(router)
-}
-```
-
-### Step 9: Register the App
-
-Edit `src/config/apps.rs`:
-
-```rust
-use reinhardt_macros::installed_apps;
-
-installed_apps! {
-    hello: "hello",
-}
-
-pub fn get_installed_apps() -> Vec<String> {
-    InstalledApp::all_apps()
-}
-```
-
-### Step 10: Test Your Endpoint
-
-Restart the server and visit:
-
-```bash
-curl http://127.0.0.1:8000/hello
-```
-
-You should see:
-
-```json
-{
-  "message": "Hello, Reinhardt!"
-}
-```
+Test: `curl http://127.0.0.1:8000/hello`
 
 ## Building a Real API
 
-Now let's build a more realistic API with CRUD operations using ViewSets.
-
-### Step 11: Create a Todos App
+Create a CRUD API using ViewSets:
 
 ```bash
 cargo run --bin manage startapp todos --template-type restful
 ```
 
-### Step 12: Define Your Model
-
-Edit `todos/models.rs`:
+Define model (`todos/models.rs`), serializer (`todos/serializers.rs`), and ViewSet (`todos/views.rs`):
 
 ```rust
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Todo {
-    pub id: Option<i64>,
-    pub title: String,
-    pub completed: bool,
-}
-
-impl Todo {
-    pub fn new(title: String) -> Self {
-        Self {
-            id: None,
-            title,
-            completed: false,
-        }
-    }
-}
-```
-
-### Step 13: Create Serializer
-
-Edit `todos/serializers.rs`:
-
-```rust
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TodoSerializer {
-    pub id: Option<i64>,
-    pub title: String,
-    pub completed: bool,
-}
-```
-
-### Step 14: Create a ViewSet
-
-Edit `todos/views.rs`:
-
-```rust
+// todos/views.rs
 use reinhardt::viewsets::ModelViewSet;
 use crate::models::Todo;
 use crate::serializers::TodoSerializer;
 
-// Create a ViewSet for automatic CRUD operations
 pub struct TodoViewSet;
 
 impl TodoViewSet {
@@ -303,80 +172,24 @@ impl TodoViewSet {
 }
 ```
 
-### Step 15: Register ViewSet in URLs
-
-Edit `todos/urls.rs`:
+Register in `todos/urls.rs`:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
-use std::sync::Arc;
-use crate::views::TodoViewSet;
-
-pub fn url_patterns() -> UnifiedRouter {
-    // Register ViewSet - this creates all CRUD endpoints automatically
-    UnifiedRouter::new()
-        .viewset("/todos", Arc::new(TodoViewSet::new()))
-}
+UnifiedRouter::new().viewset("/todos", Arc::new(TodoViewSet::new()))
 ```
 
-This automatically creates:
-- `GET /todos/` - List all todos
-- `POST /todos/` - Create a new todo
-- `GET /todos/{id}/` - Retrieve a todo
-- `PUT /todos/{id}/` - Update a todo
-- `DELETE /todos/{id}/` - Delete a todo
+This automatically creates all CRUD endpoints (GET, POST, PUT, DELETE).
 
-### Step 16: Include in Project
-
-Edit `src/config/urls.rs`:
-
-```rust
-use reinhardt::prelude::*;
-use std::sync::Arc;
-
-pub fn url_patterns() -> Arc<UnifiedRouter> {
-    let router = UnifiedRouter::new()
-        .mount("/api/", todos::urls::url_patterns());
-
-    Arc::new(router)
-}
-```
-
-Edit `src/config/apps.rs`:
-
-```rust
-use reinhardt_macros::installed_apps;
-
-installed_apps! {
-    todos: "todos",
-}
-
-pub fn get_installed_apps() -> Vec<String> {
-    InstalledApp::all_apps()
-}
-```
-
-### Step 17: Test Your API
+Test:
 
 ```bash
-# List todos (empty initially)
-curl http://127.0.0.1:8000/api/todos/
-
-# Create a todo
+# Create
 curl -X POST http://127.0.0.1:8000/api/todos/ \
   -H "Content-Type: application/json" \
   -d '{"title":"Learn Reinhardt","completed":false}'
 
-# Get a specific todo
-curl http://127.0.0.1:8000/api/todos/1/
-
-# Update a todo
-curl -X PUT http://127.0.0.1:8000/api/todos/1/ \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Learn Reinhardt","completed":true}'
-
-# Delete a todo
-curl -X DELETE http://127.0.0.1:8000/api/todos/1/
+# List
+curl http://127.0.0.1:8000/api/todos/
 ```
 
 ## Project Management Commands
@@ -461,33 +274,11 @@ Check out the [ORM documentation](api/README.md) for more details.
 
 ## Common Issues
 
-### Port Already in Use
+**Port Already in Use**: Change the port in `serve()` function
 
-If you see "Address already in use", change the port:
+**Compilation Errors**: Ensure Rust 1.75+ (`rustc --version`)
 
-```rust
-reinhardt::serve("127.0.0.1:3000", router).await?;
-```
-
-### Compilation Errors
-
-Make sure you're using Rust 1.75 or later:
-
-```bash
-rustc --version
-rustup update
-```
-
-### Async Runtime
-
-Reinhardt requires an async runtime. Make sure you have `#[tokio::main]` on your main function:
-
-```rust
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Your code here
-}
-```
+**Async Runtime**: Add `#[tokio::main]` to your main function
 
 ---
 
