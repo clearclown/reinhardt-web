@@ -1,7 +1,6 @@
 //! URL configuration for api app
 
-use reinhardt_http::Method;
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::{Method, UnifiedRouter};
 
 pub fn url_patterns() -> UnifiedRouter {
 	let mut router = UnifiedRouter::builder().build();

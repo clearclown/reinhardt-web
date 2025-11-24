@@ -10,7 +10,7 @@
 use example_test_macros::example_test;
 use reinhardt::test::client::APIClient;
 use reinhardt::test::fixtures::test_server_guard;
-use reinhardt_routers::UnifiedRouter as Router;
+use reinhardt::UnifiedRouter as Router;
 use rstest::*;
 use serde_json::{json, Value};
 use std::sync::Arc;

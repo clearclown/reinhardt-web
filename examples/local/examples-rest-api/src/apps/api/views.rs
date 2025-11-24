@@ -2,9 +2,8 @@
 //!
 //! RESTful API endpoints
 
-use reinhardt_http::{Request, Response, StatusCode, ViewResult};
-use reinhardt_macros::endpoint;
-use reinhardt_orm::Manager;
+use reinhardt::{Request, Response, StatusCode, ViewResult, endpoint};
+use reinhardt::db::orm::Manager;
 use crate::models::Article;
 use chrono::Utc;
 use std::sync::Arc;
@@ -34,7 +33,7 @@ use super::serializers::{ArticleListResponse, ArticleResponse, CreateArticleRequ
 #[endpoint]
 pub async fn list_articles(
 	_req: Request,
-	#[inject] db: Arc<reinhardt_db::DatabaseConnection>,
+	#[inject] db: Arc<reinhardt::db::DatabaseConnection>,
 ) -> ViewResult<Response> {
 	// Query all articles from database using ORM
 	let manager = Manager::<Article>::new();
@@ -67,7 +66,7 @@ pub async fn list_articles(
 #[endpoint]
 pub async fn create_article(
 	mut req: Request,
-	#[inject] db: Arc<reinhardt_db::DatabaseConnection>,
+	#[inject] db: Arc<reinhardt::db::DatabaseConnection>,
 ) -> ViewResult<Response> {
 	// Parse request body
 	let body_bytes = std::mem::take(&mut req.body);
@@ -106,7 +105,7 @@ pub async fn create_article(
 #[endpoint]
 pub async fn get_article(
 	req: Request,
-	#[inject] db: Arc<reinhardt_db::DatabaseConnection>,
+	#[inject] db: Arc<reinhardt::db::DatabaseConnection>,
 ) -> ViewResult<Response> {
 	// Extract ID from path parameters
 	let id = req
@@ -148,7 +147,7 @@ pub async fn get_article(
 #[endpoint]
 pub async fn update_article(
 	mut req: Request,
-	#[inject] db: Arc<reinhardt_db::DatabaseConnection>,
+	#[inject] db: Arc<reinhardt::db::DatabaseConnection>,
 ) -> ViewResult<Response> {
 	// Extract ID from path parameters
 	let id = req
@@ -205,7 +204,7 @@ pub async fn update_article(
 #[endpoint]
 pub async fn delete_article(
 	req: Request,
-	#[inject] db: Arc<reinhardt_db::DatabaseConnection>,
+	#[inject] db: Arc<reinhardt::db::DatabaseConnection>,
 ) -> ViewResult<Response> {
 	// Extract ID from path parameters
 	let id = req
