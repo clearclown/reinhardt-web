@@ -1,6 +1,6 @@
 //! View handlers for hello app
 
-use reinhardt_http::{Request, Response};
+use reinhardt::{Request, Response};
 use serde_json::json;
 
 /// Root endpoint - returns "Hello, World!"

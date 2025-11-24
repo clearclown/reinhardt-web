@@ -7,9 +7,9 @@
 
 use example_test_macros::example_test;
 use reinhardt::prelude::*;
-use reinhardt_test::client::APIClient;
-use reinhardt_test::fixtures::test_server_guard;
-use reinhardt_test::resource::TeardownGuard;
+use reinhardt::test::client::APIClient;
+use reinhardt::test::fixtures::test_server_guard;
+use reinhardt::test::resource::TeardownGuard;
 use rstest::*;
 
 /// Test that reinhardt can be imported and basic functionality works
@@ -36,7 +36,7 @@ fn test_application_initialization() {
 #[rstest]
 #[example_test("*")]
 async fn test_hello_world_endpoint(
-	#[future] test_server_guard: TeardownGuard<reinhardt_test::fixtures::TestServerGuard>,
+	#[future] test_server_guard: TeardownGuard<reinhardt::test::fixtures::TestServerGuard>,
 ) {
 	let server = test_server_guard.await;
 
@@ -59,7 +59,7 @@ async fn test_hello_world_endpoint(
 #[rstest]
 #[example_test("*")]
 async fn test_health_check_endpoint(
-	#[future] test_server_guard: TeardownGuard<reinhardt_test::fixtures::TestServerGuard>,
+	#[future] test_server_guard: TeardownGuard<reinhardt::test::fixtures::TestServerGuard>,
 ) {
 	let server = test_server_guard.await;
 
@@ -99,7 +99,7 @@ async fn test_health_check_endpoint(
 #[rstest]
 #[example_test("*")]
 async fn test_404_not_found(
-	#[future] test_server_guard: TeardownGuard<reinhardt_test::fixtures::TestServerGuard>,
+	#[future] test_server_guard: TeardownGuard<reinhardt::test::fixtures::TestServerGuard>,
 ) {
 	let server = test_server_guard.await;
 
@@ -120,7 +120,7 @@ async fn test_404_not_found(
 #[rstest]
 #[example_test("*")]
 async fn test_405_method_not_allowed(
-	#[future] test_server_guard: TeardownGuard<reinhardt_test::fixtures::TestServerGuard>,
+	#[future] test_server_guard: TeardownGuard<reinhardt::test::fixtures::TestServerGuard>,
 ) {
 	let server = test_server_guard.await;
 

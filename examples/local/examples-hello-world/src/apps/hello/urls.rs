@@ -1,7 +1,6 @@
 //! URL routing for hello app
 
-use hyper::Method;
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::{Method, UnifiedRouter};
 
 use crate::apps::hello::views;
 
