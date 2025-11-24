@@ -54,16 +54,22 @@ pub use reinhardt_exception::{Error, Result};
 /// It wraps any type `T` (typically `Response`) with a dynamic error type that can
 /// represent various kinds of errors that might occur during request processing.
 ///
+/// The `Send + Sync` bounds ensure this type is safe to use across thread boundaries,
+/// which is essential for async runtime environments.
+///
 /// # Examples
 ///
 /// ```
 /// use reinhardt_http::{Response, ViewResult};
 ///
-/// fn hello_world() -> ViewResult<Response> {
+/// async fn hello_world() -> ViewResult<Response> {
 ///     Ok(Response::ok().with_body("Hello, World!"))
 /// }
 ///
-/// let response = hello_world().unwrap();
+/// #[tokio::main]
+/// # async fn main() {
+/// let response = hello_world().await.unwrap();
 /// assert_eq!(response.status, hyper::StatusCode::OK);
+/// # }
 /// ```
-pub type ViewResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+pub type ViewResult<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
