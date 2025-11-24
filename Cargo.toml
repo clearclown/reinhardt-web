@@ -71,6 +71,7 @@ rest = ["reinhardt-rest"]
 messages = ["reinhardt-core/messages"]
 di = ["reinhardt-di", "reinhardt-core/di"]
 test = ["reinhardt-test"]
+testcontainers = ["test", "reinhardt-test/testcontainers"]
 openapi = ["reinhardt-rest", "reinhardt-rest/openapi"]
 
 # Meta features
@@ -135,6 +136,7 @@ cli-tools = [
 # Testing utilities preset
 test-utils = [
   "reinhardt-test",
+  "reinhardt-test/testcontainers",
   "database",
 ]
 

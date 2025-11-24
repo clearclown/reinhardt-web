@@ -179,6 +179,10 @@ pub use reinhardt_core::{
 	types::{Handler, Middleware, MiddlewareChain},
 };
 
+// Re-export ViewResult from reinhardt-http
+#[cfg(feature = "core")]
+pub use reinhardt_http::ViewResult;
+
 // Re-export ORM
 #[cfg(feature = "database")]
 pub use reinhardt_db::orm::{
@@ -842,6 +846,7 @@ pub mod prelude {
 		StatusCode,
 		UnifiedRouter,
 		View,
+		ViewResult,
 		ViewSet,
 		// Routers
 		clear_router,
