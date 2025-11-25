@@ -169,6 +169,12 @@ pub enum DiError {
 	ScopeError(String),
 }
 
+impl From<DiError> for reinhardt_exception::Error {
+	fn from(err: DiError) -> Self {
+		reinhardt_exception::Error::Internal(format!("Dependency injection error: {}", err))
+	}
+}
+
 pub type DiResult<T> = std::result::Result<T, DiError>;
 
 #[cfg(feature = "params")]

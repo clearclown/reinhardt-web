@@ -151,6 +151,30 @@ where
 			use_cache: true,
 		}
 	}
+
+	/// Extract the inner value from the Depends wrapper.
+	///
+	/// This method tries to unwrap the Arc. If the Arc has multiple strong references,
+	/// it clones the inner value instead.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_di::Depends;
+	///
+	/// #[derive(Clone, Default)]
+	/// struct Config {
+	///     value: String,
+	/// }
+	///
+	/// let config = Config { value: "test".to_string() };
+	/// let depends = Depends::from_value(config);
+	/// let inner = depends.into_inner();
+	/// assert_eq!(inner.value, "test");
+	/// ```
+	pub fn into_inner(self) -> T {
+		Arc::try_unwrap(self.inner).unwrap_or_else(|arc| (*arc).clone())
+	}
 }
 
 /// Builder for Depends to support FastAPI-style API.

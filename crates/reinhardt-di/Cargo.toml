@@ -10,6 +10,7 @@ description = "Dependency injection system for Reinhardt, inspired by FastAPI"
 
 [dependencies]
 reinhardt-http = { workspace = true }
+reinhardt-exception = { workspace = true }
 
 # Internal crates
 reinhardt-params = { path = "crates/params", version = "0.1.0-alpha.1", optional = true }
