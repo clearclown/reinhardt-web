@@ -23,6 +23,18 @@ pub struct DatabaseConnection {
 	backend: Arc<dyn DatabaseBackend>,
 }
 
+impl Default for DatabaseConnection {
+	fn default() -> Self {
+		// TODO: Temporary workaround for DI system limitations
+		// Long-term: Refactor DI to use explicit registration pattern (like Actix-web, Axum, Rocket)
+		// This should not be called directly - use connect_postgres(), connect_sqlite(), or connect_mysql() instead
+		unimplemented!(
+			"DatabaseConnection::default() should not be called directly. \
+			Use connect_postgres(), connect_sqlite(), or connect_mysql() instead."
+		)
+	}
+}
+
 impl DatabaseConnection {
 	pub fn new(backend: Arc<dyn DatabaseBackend>) -> Self {
 		Self { backend }
