@@ -8,14 +8,20 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = ["standard"]
+default = ["full"]
 
 # Minimal feature set - for microservices and simple APIs
-minimal = []
+# Equivalent to reinhardt-micro functionality (routing, DI, params, server, core)
+minimal = [
+  "core",   # Core types, macros, HTTP
+  "di",     # Dependency injection
+  "server", # HTTP server
+]
 
 # Standard feature set - balanced for most projects
 standard = [
   "minimal",
+  "db-postgres",                   # Default database backend
   "reinhardt-db",
   "reinhardt-db/orm",
   "reinhardt-rest",
@@ -23,6 +29,7 @@ standard = [
   "reinhardt-views/viewsets",
   "reinhardt-auth",
   "reinhardt-middleware",
+  "reinhardt-middleware/sessions",
   "reinhardt-rest/pagination",
   "reinhardt-rest/filters",
   "reinhardt-rest/throttling",
@@ -43,9 +50,18 @@ database = [
   "reinhardt-db/migrations",
   "reinhardt-db/contenttypes",
 ]
-api = ["reinhardt-rest", "reinhardt-rest/serializers", "reinhardt-views/viewsets"]
+api = [
+  "reinhardt-rest",
+  "reinhardt-rest/serializers",
+  "reinhardt-views/viewsets",
+]
 auth = ["reinhardt-auth"]
-admin = ["reinhardt-admin", "reinhardt-admin/panel", "reinhardt-forms", "reinhardt-template"]
+admin = [
+  "reinhardt-admin",
+  "reinhardt-admin/panel",
+  "reinhardt-forms",
+  "reinhardt-template",
+]
 admin-panel = ["reinhardt-admin/panel"]
 forms = ["reinhardt-forms"]
 graphql = ["reinhardt-graphql"]
@@ -56,7 +72,11 @@ redis-backend = ["cache"]
 i18n = ["reinhardt-i18n"]
 mail = ["reinhardt-mail"]
 sessions = ["reinhardt-auth"]
-middleware = ["sessions"]
+middleware = [
+  "reinhardt-middleware",
+  "reinhardt-middleware/sessions",
+  "sessions",
+]
 static-files = ["reinhardt-utils/static"]
 storage = ["reinhardt-utils/storage"]
 shortcuts = ["reinhardt-shortcuts"]
@@ -109,12 +129,7 @@ api-only = [
 ]
 
 # GraphQL-focused preset
-graphql-server = [
-  "minimal",
-  "reinhardt-auth",
-  "graphql",
-  "database",
-]
+graphql-server = ["minimal", "reinhardt-auth", "graphql", "database"]
 
 # WebSocket-centric preset
 websocket-server = [
@@ -134,15 +149,11 @@ cli-tools = [
 ]
 
 # Testing utilities preset
-test-utils = [
-  "reinhardt-test",
-  "reinhardt-test/testcontainers",
-  "database",
-]
+test-utils = ["reinhardt-test", "reinhardt-test/testcontainers", "database"]
 
 # Fine-grained authentication
 auth-jwt = ["auth", "reinhardt-auth/jwt"]
-auth-session = ["auth", "reinhardt-auth/session", "sessions"]
+auth-session = ["auth", "reinhardt-auth/sessions", "sessions"]
 auth-oauth = ["auth", "reinhardt-auth/oauth"]
 auth-token = ["auth", "reinhardt-auth/token"]
 
@@ -153,16 +164,17 @@ db-sqlite = ["database", "reinhardt-db/sqlite"]
 db-mongodb = ["database", "reinhardt-db/mongodb-backend"]
 db-cockroachdb = ["database", "reinhardt-db/cockroachdb-backend"]
 
-# Fine-grained serialization
-serialize-json = ["reinhardt-rest", "reinhardt-rest/serializers"]
-serialize-xml = ["reinhardt-rest", "reinhardt-rest/serializers"]
-serialize-yaml = ["reinhardt-rest", "reinhardt-rest/serializers"]
-
 # Fine-grained middleware
 middleware-cors = ["reinhardt-middleware", "reinhardt-middleware/cors"]
-middleware-compression = ["reinhardt-middleware", "reinhardt-middleware/compression"]
+middleware-compression = [
+  "reinhardt-middleware",
+  "reinhardt-middleware/compression",
+]
 middleware-security = ["reinhardt-middleware", "reinhardt-middleware/security"]
-middleware-rate-limit = ["reinhardt-middleware", "reinhardt-middleware/rate-limit"]
+middleware-rate-limit = [
+  "reinhardt-middleware",
+  "reinhardt-middleware/rate-limit",
+]
 
 [dependencies]
 # Core dependencies (always included)
@@ -263,9 +275,9 @@ members = [
   "crates/reinhardt-rest/crates/versioning",
   "crates/reinhardt-auth",
   "crates/reinhardt-auth/crates/sessions",
-  "crates/reinhardt-admin", # Admin panel functionality
+  "crates/reinhardt-admin",                            # Admin panel functionality
   "crates/reinhardt-admin/crates/panel",
-  "crates/reinhardt-admin-cli", # Admin CLI tool
+  "crates/reinhardt-admin-cli",                        # Admin CLI tool
   "crates/reinhardt-grpc",
   "crates/reinhardt-commands",
   "crates/reinhardt-db",
@@ -301,10 +313,7 @@ members = [
 # Examples should be built individually or in their own workspace:
 #   cd examples/local && cargo build
 #   cd examples/remote && cargo build
-exclude = [
-  "examples/local",
-  "examples/remote",
-]
+exclude = ["examples"]
 
 default-members = [
   "crates/reinhardt-views",
@@ -324,9 +333,9 @@ authors = ["kent8192 <51869472+kent8192@users.noreply.github.com>"]
 
 [workspace.metadata.workspaces]
 # cargo-workspaces configuration
-allow-branch = "main"           # Only allow publishing from main branch
-allow-dirty = false             # Require clean working directory
-no-individual-tags = false      # Enable cargo-ws automatic tag generation
+allow-branch = "main"      # Only allow publishing from main branch
+allow-dirty = false        # Require clean working directory
+no-individual-tags = false # Enable cargo-ws automatic tag generation
 
 [workspace.dependencies]
 # Internal crates
@@ -517,16 +526,25 @@ tonic-prost-build = "0.14.2"
 # Redis (for sessions)
 # Temporarily downgraded to 0.32 due to deadpool-redis compatibility
 # TODO: Upgrade to redis 1.0 when deadpool-redis supports it
-redis = { version = "0.32", features = [
-  "tokio-comp",
-  "connection-manager",
-] }
+redis = { version = "0.32", features = ["tokio-comp", "connection-manager"] }
 
 # Connection pooling & migrations
 refinery = { version = "0.9.0", features = ["tokio-postgres"] }
-sea-query = { version = "1.0.0-rc.20", features = ["with-json", "with-chrono", "with-rust_decimal", "postgres-array", "sqlx-utils", "backend-postgres", "backend-mysql", "backend-sqlite"] }
+sea-query = { version = "1.0.0-rc.20", features = [
+  "with-json",
+  "with-chrono",
+  "with-rust_decimal",
+  "postgres-array",
+  "sqlx-utils",
+  "backend-postgres",
+  "backend-mysql",
+  "backend-sqlite",
+] }
 rust_decimal = "1.37"
-sea-orm = { version = "1.1.3", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+sea-orm = { version = "1.1.3", features = [
+  "sqlx-postgres",
+  "runtime-tokio-rustls",
+] }
 
 # Testing
 testcontainers = { version = "0.25.2", features = ["blocking"] }
@@ -539,7 +557,7 @@ proptest = "1.8.0"
 tokio-test = "0.4.4"
 serial_test = "3.2.0"
 rstest = "0.26.1"
-mockall = "0.13.1"
+mockall = "0.14.0"
 scopeguard = "1.2.0"
 tempfile = "3.15.0"
 trybuild = "1.0"
@@ -556,4 +574,3 @@ url = "2.5.4"
 #
 # This is a transitive dependency issue that will be resolved upstream.
 # No action needed on our side unless the warning becomes an error in future Rust versions.
-
