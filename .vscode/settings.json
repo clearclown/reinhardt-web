@@ -1,9 +1,0 @@
-{
-  "editor.formatOnSaveMode": "modificationsIfAvailable",
-  "rust-analyzer.checkOnSave": true,
-  "rust-analyzer.showSyntaxTree": false,
-  "rust-analyzer.testExplorer": true,
-  "rust-analyzer.cargo.buildScripts.rebuildOnSave": false,
-  "claudeCode.allowDangerouslySkipPermissions": true,
-  "claudeCode.doNotExcludeSearchPatterns": true
-}
