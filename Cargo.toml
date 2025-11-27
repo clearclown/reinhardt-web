@@ -100,6 +100,7 @@ openapi = ["reinhardt-rest", "reinhardt-rest/openapi"]
 # Meta features
 full = [
   "standard",
+  "conf",
   "database",
   "auth",
   "admin",
@@ -111,6 +112,8 @@ full = [
   "sessions",
   "static-files",
   "storage",
+  "commands",
+  "test",
 ]
 
 # API-only preset - REST without templates/forms
