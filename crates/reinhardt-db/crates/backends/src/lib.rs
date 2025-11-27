@@ -22,7 +22,9 @@ pub use schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult
 pub use backend::DatabaseBackend;
 pub use connection::DatabaseConnection;
 pub use query_builder::{InsertBuilder, SelectBuilder, UpdateBuilder};
-pub use types::{DatabaseType, QueryResult, QueryValue, Row};
+pub use types::{
+	DatabaseType, IsolationLevel, QueryResult, QueryValue, Row, Savepoint, TransactionExecutor,
+};
 
 // Re-export optimization features
 pub use optimization::{
