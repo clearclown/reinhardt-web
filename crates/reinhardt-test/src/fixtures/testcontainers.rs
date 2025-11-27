@@ -1124,117 +1124,79 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 // Migration Application Fixtures
 // ============================================================================
 
-#[cfg(feature = "testcontainers")]
-use std::path::Path;
-
-/// Load migrations from a directory
+/// Fixture: PostgreSQL container with migrations from a MigrationProvider
 ///
-/// This helper function loads migration files from a specified directory
-/// and constructs a vector of `Migration` structures ready to be applied.
+/// This function starts a PostgreSQL container, applies migrations from the
+/// specified `MigrationProvider`, and returns a ready-to-use connection.
 ///
-/// **Note**: Currently returns an empty vector. In actual usage, you should
-/// populate this with your app's migrations by calling the generated
-/// migration functions from `migrations/{app_label}.rs`.
+/// Unlike `postgres_with_migrations`, this function uses compile-time migration
+/// collection via the `MigrationProvider` trait, which is necessary because Rust
+/// cannot dynamically load code at runtime.
 ///
-/// # Arguments
-/// * `migrations_dir` - Path to the migrations directory (e.g., "migrations/myapp")
+/// # Type Parameters
+/// * `P` - A type implementing `MigrationProvider`
 ///
 /// # Returns
-/// * `Vec<reinhardt_migrations::Migration>` - List of migrations in sorted order
+/// * `(ContainerAsync<GenericImage>, Arc<DatabaseConnection>)` - Container and database connection
 ///
 /// # Example
-/// ```rust,no_run
-/// // In your test, you would typically import and use your app's migrations:
-/// // use myapp::migrations::all_migrations;
-/// // let migrations = all_migrations().into_iter().map(|f| f()).collect();
-/// ```
-#[cfg(feature = "testcontainers")]
-pub fn load_migrations_from_directory(
-	migrations_dir: impl AsRef<Path>,
-) -> Vec<reinhardt_migrations::Migration> {
-	let migrations_path = migrations_dir.as_ref();
-
-	if !migrations_path.exists() {
-		eprintln!(
-			"Warning: Migrations directory not found: {}",
-			migrations_path.display()
-		);
-		return Vec::new();
-	}
-
-	// TODO: Implement migration loading from Rust files
-	// For now, return empty vector as migrations are typically
-	// provided by calling generated migration functions directly
-	Vec::new()
-}
-
-/// Fixture: PostgreSQL container with migrations applied
 ///
-/// This fixture starts a PostgreSQL container, applies migrations from the
-/// specified directory, and provides a ready-to-use connection pool.
+/// ```rust,ignore
+/// use reinhardt::collect_migrations;
+/// use reinhardt_test::fixtures::postgres_with_migrations_from;
+/// use reinhardt_migrations::MigrationProvider;
 ///
-/// # Environment Variables
-/// * `REINHARDT_MIGRATIONS_DIR` - Base directory for migrations (default: "migrations")
+/// // In your app's migrations.rs, use collect_migrations! macro
+/// pub mod _0001_initial;
+/// pub mod _0002_add_field;
 ///
-/// # Examples
+/// collect_migrations!(
+///     app_label = "myapp",
+///     _0001_initial,
+///     _0002_add_field,
+/// );
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::postgres_with_migrations;
-/// use rstest::*;
+/// // Migrations are automatically registered in global registry via linkme
 ///
-/// #[rstest]
 /// #[tokio::test]
-/// async fn test_with_migrated_db(
-///     #[future] postgres_with_migrations: (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, String)
-/// ) {
-///     let (_container, pool, _url) = postgres_with_migrations.await;
-///     // Database has all migrations applied
-///     let result = sqlx::query("SELECT * FROM users").fetch_all(pool.as_ref()).await;
+/// async fn test_with_migrations() {
+///     let (container, db) = postgres_with_migrations_from::<MyappMigrations>().await;
+///     // Database has all migrations applied from MyappMigrations provider
+///     let result = db.fetch_all("SELECT * FROM my_table", vec![]).await;
 ///     assert!(result.is_ok());
 /// }
 /// ```
-#[fixture]
 #[cfg(feature = "testcontainers")]
-pub async fn postgres_with_migrations(
-	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String),
-) -> (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, String) {
+pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
 	use reinhardt_db::DatabaseConnection;
 	use reinhardt_db::backends::types::DatabaseType;
 	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use std::sync::Arc;
 
-	let (container, pool, _port, url) = postgres_container.await;
+	// Start PostgreSQL container
+	let (container, _pool, _port, url) = postgres_container().await;
 
-	// Determine migrations directory
-	let migrations_base =
-		std::env::var("REINHARDT_MIGRATIONS_DIR").unwrap_or_else(|_| "migrations".to_string());
+	// Connect to database
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL for migrations");
 
-	// Load all migrations from all app directories
-	let migrations_path = Path::new(&migrations_base);
-	if migrations_path.exists() {
-		// Connect to database for migration execution
-		let connection = DatabaseConnection::connect_postgres(&url)
+	// Get migrations from provider
+	let migrations = P::migrations();
+
+	if !migrations.is_empty() {
+		let mut executor =
+			DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Postgres);
+		executor
+			.apply_migrations(&migrations)
 			.await
-			.expect("Failed to connect to PostgreSQL for migrations");
-
-		let mut executor = DatabaseMigrationExecutor::new(connection, DatabaseType::Postgres);
-
-		// Iterate through all subdirectories (app labels)
-		if let Ok(entries) = std::fs::read_dir(migrations_path) {
-			for entry in entries.flatten() {
-				if entry.path().is_dir() {
-					let migrations = load_migrations_from_directory(entry.path());
-					if !migrations.is_empty() {
-						executor
-							.apply_migrations(&migrations)
-							.await
-							.expect("Failed to apply migrations");
-					}
-				}
-			}
-		}
+			.expect("Failed to apply migrations");
 	}
 
-	(container, pool, url)
+	(container, Arc::new(connection))
 }
 
 /// Fixture: MySQL container (base fixture)
@@ -1324,146 +1286,455 @@ pub async fn mysql_container() -> (
 	(mysql, Arc::new(pool), port, database_url)
 }
 
-/// Fixture: MySQL container with migrations applied
+/// MySQL container with migrations from a MigrationProvider
 ///
-/// This fixture starts a MySQL container, applies migrations from the
-/// specified directory, and provides a ready-to-use connection pool.
+/// This function starts a MySQL container, applies migrations from the
+/// specified `MigrationProvider`, and returns a ready-to-use connection.
 ///
-/// # Environment Variables
-/// * `REINHARDT_MIGRATIONS_DIR` - Base directory for migrations (default: "migrations")
+/// # Type Parameters
+/// * `P` - A type implementing `MigrationProvider`
 ///
-/// # Examples
+/// # Returns
+/// * `(ContainerAsync<GenericImage>, Arc<DatabaseConnection>)` - Container and database connection
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::mysql_with_migrations;
-/// use rstest::*;
+/// # Example
 ///
-/// #[rstest]
+/// ```rust,ignore
+/// use reinhardt::collect_migrations;
+/// use reinhardt_test::fixtures::mysql_with_migrations_from;
+/// use reinhardt_migrations::MigrationProvider;
+///
+/// // In your app's migrations.rs, use collect_migrations! macro
+/// pub mod _0001_initial;
+///
+/// collect_migrations!(
+///     app_label = "myapp",
+///     _0001_initial,
+/// );
+///
+/// // Migrations are automatically registered in global registry via linkme
+///
 /// #[tokio::test]
-/// async fn test_with_migrated_mysql(
-///     #[future] mysql_with_migrations: (ContainerAsync<GenericImage>, Arc<sqlx::MySqlPool>, String)
-/// ) {
-///     let (_container, pool, _url) = mysql_with_migrations.await;
-///     // Database has all migrations applied
+/// async fn test_with_migrations() {
+///     let (container, db) = mysql_with_migrations_from::<MyappMigrations>().await;
+///     // Database has all migrations applied from MyappMigrations provider
 /// }
 /// ```
-#[fixture]
 #[cfg(feature = "testcontainers")]
-pub async fn mysql_with_migrations(
-	#[future] mysql_container: (
-		ContainerAsync<GenericImage>,
-		Arc<sqlx::MySqlPool>,
-		u16,
-		String,
-	),
-) -> (ContainerAsync<GenericImage>, Arc<sqlx::MySqlPool>, String) {
+pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
 	use reinhardt_db::DatabaseConnection;
 	use reinhardt_db::backends::types::DatabaseType;
 	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use std::sync::Arc;
 
-	let (container, pool, _port, url) = mysql_container.await;
+	// Start MySQL container
+	let (container, _pool, _port, url) = mysql_container().await;
 
-	// Determine migrations directory
-	let migrations_base =
-		std::env::var("REINHARDT_MIGRATIONS_DIR").unwrap_or_else(|_| "migrations".to_string());
+	// Connect to database
+	let connection = DatabaseConnection::connect_mysql(&url)
+		.await
+		.expect("Failed to connect to MySQL for migrations");
 
-	// Load all migrations from all app directories
-	let migrations_path = Path::new(&migrations_base);
-	if migrations_path.exists() {
-		// Connect to database for migration execution
-		let connection = DatabaseConnection::connect_mysql(&url)
+	// Get migrations from provider
+	let migrations = P::migrations();
+
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Mysql);
+		executor
+			.apply_migrations(&migrations)
 			.await
-			.expect("Failed to connect to MySQL for migrations");
-
-		let mut executor = DatabaseMigrationExecutor::new(connection, DatabaseType::Mysql);
-
-		// Iterate through all subdirectories (app labels)
-		if let Ok(entries) = std::fs::read_dir(migrations_path) {
-			for entry in entries.flatten() {
-				if entry.path().is_dir() {
-					let migrations = load_migrations_from_directory(entry.path());
-					if !migrations.is_empty() {
-						executor
-							.apply_migrations(&migrations)
-							.await
-							.expect("Failed to apply migrations");
-					}
-				}
-			}
-		}
+			.expect("Failed to apply migrations");
 	}
 
-	(container, pool, url)
+	(container, Arc::new(connection))
 }
 
-/// Fixture: SQLite in-memory database with migrations applied
+/// SQLite in-memory database with migrations from a MigrationProvider
 ///
-/// This fixture creates an SQLite in-memory database, applies migrations
-/// from the specified directory, and provides a ready-to-use connection pool.
+/// This function creates an SQLite in-memory database, applies migrations from the
+/// specified `MigrationProvider`, and returns a ready-to-use connection.
 ///
-/// # Environment Variables
-/// * `REINHARDT_MIGRATIONS_DIR` - Base directory for migrations (default: "migrations")
+/// # Type Parameters
+/// * `P` - A type implementing `MigrationProvider`
 ///
-/// # Examples
+/// # Returns
+/// * `Arc<DatabaseConnection>` - Database connection (no container needed for SQLite)
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::sqlite_with_migrations;
-/// use rstest::*;
+/// # Example
 ///
-/// #[rstest]
+/// ```rust,ignore
+/// use reinhardt::collect_migrations;
+/// use reinhardt_test::fixtures::sqlite_with_migrations_from;
+/// use reinhardt_migrations::MigrationProvider;
+///
+/// // In your app's migrations.rs, use collect_migrations! macro
+/// pub mod _0001_initial;
+///
+/// collect_migrations!(
+///     app_label = "myapp",
+///     _0001_initial,
+/// );
+///
+/// // Migrations are automatically registered in global registry via linkme
+///
 /// #[tokio::test]
-/// async fn test_with_migrated_sqlite(
-///     #[future] sqlite_with_migrations: (Arc<sqlx::SqlitePool>, String)
-/// ) {
-///     let (pool, _url) = sqlite_with_migrations.await;
-///     // Database has all migrations applied
+/// async fn test_with_migrations() {
+///     let db = sqlite_with_migrations_from::<MyappMigrations>().await;
+///     // Database has all migrations applied from MyappMigrations provider
 /// }
 /// ```
-#[fixture]
 #[cfg(feature = "testcontainers")]
-pub async fn sqlite_with_migrations() -> (Arc<sqlx::SqlitePool>, String) {
+pub async fn sqlite_with_migrations_from<P: reinhardt_migrations::MigrationProvider>()
+-> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
 	use reinhardt_db::backends::types::DatabaseType;
 	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";
 
-	// Create connection pool
-	let pool = sqlx::sqlite::SqlitePoolOptions::new()
-		.max_connections(1) // SQLite in-memory database should use single connection
-		.connect(database_url)
+	// Connect to database
+	let connection = DatabaseConnection::connect_sqlite(database_url)
 		.await
-		.expect("Failed to create SQLite in-memory database");
+		.expect("Failed to connect to SQLite for migrations");
 
-	// Determine migrations directory
-	let migrations_base =
-		std::env::var("REINHARDT_MIGRATIONS_DIR").unwrap_or_else(|_| "migrations".to_string());
+	// Get migrations from provider
+	let migrations = P::migrations();
 
-	// Load all migrations from all app directories
-	let migrations_path = Path::new(&migrations_base);
-	if migrations_path.exists() {
-		// Connect to database for migration execution
-		let connection = DatabaseConnection::connect_sqlite(database_url)
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Sqlite);
+		executor
+			.apply_migrations(&migrations)
 			.await
-			.expect("Failed to connect to SQLite for migrations");
-
-		let mut executor = DatabaseMigrationExecutor::new(connection, DatabaseType::Sqlite);
-
-		// Iterate through all subdirectories (app labels)
-		if let Ok(entries) = std::fs::read_dir(migrations_path) {
-			for entry in entries.flatten() {
-				if entry.path().is_dir() {
-					let migrations = load_migrations_from_directory(entry.path());
-					if !migrations.is_empty() {
-						executor
-							.apply_migrations(&migrations)
-							.await
-							.expect("Failed to apply migrations");
-					}
-				}
-			}
-		}
+			.expect("Failed to apply migrations");
 	}
 
-	(Arc::new(pool), database_url.to_string())
+	Arc::new(connection)
+}
+
+// ============================================================================
+// Non-Generic Fixtures with Global Registry
+// ============================================================================
+// These fixtures use the global migration registry populated by `collect_migrations!`
+// macro calls. They automatically collect and apply all registered migrations.
+
+/// PostgreSQL container with ALL registered migrations applied
+///
+/// This fixture collects migrations from the global registry (populated by
+/// `collect_migrations!` macro calls) and applies them to a fresh PostgreSQL
+/// container.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use reinhardt_test::fixtures::*;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_all_migrations(
+///     #[future] postgres_with_all_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)
+/// ) {
+///     let (_container, db) = postgres_with_all_migrations.await;
+///     // All migrations from all apps are applied
+///     let result = db.fetch_all("SELECT * FROM django_migrations", vec![]).await;
+///     assert!(result.is_ok());
+/// }
+/// ```
+///
+/// # Prerequisites
+///
+/// Your app must register migrations using `collect_migrations!`:
+///
+/// ```rust,ignore
+/// // In your app's migrations.rs
+/// reinhardt::collect_migrations!(
+///     app_label = "polls",
+///     _0001_initial,
+///     _0002_add_fields,
+/// );
+/// ```
+#[cfg(feature = "testcontainers")]
+#[rstest::fixture]
+pub async fn postgres_with_all_migrations() -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	// Start PostgreSQL container
+	let (container, _pool, _port, url) = postgres_container().await;
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL for migrations");
+
+	// Get migrations from global registry
+	let migrations = global_registry().all_migrations();
+
+	if !migrations.is_empty() {
+		let mut executor =
+			DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Postgres);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	(container, Arc::new(connection))
+}
+
+/// PostgreSQL container with migrations from specific apps
+///
+/// This function allows selective application of migrations from specific apps.
+///
+/// # Arguments
+///
+/// * `app_labels` - List of app labels to include (e.g., `["polls", "users"]`)
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use reinhardt_test::fixtures::postgres_with_apps_migrations;
+///
+/// #[tokio::test]
+/// async fn test_polls_only() {
+///     let (_container, db) = postgres_with_apps_migrations(&["polls"]).await;
+///     // Only polls app migrations are applied
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+pub async fn postgres_with_apps_migrations(
+	app_labels: &[&str],
+) -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	// Start PostgreSQL container
+	let (container, _pool, _port, url) = postgres_container().await;
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL for migrations");
+
+	// Get migrations from global registry, filtered by app labels
+	let migrations: Vec<_> = global_registry()
+		.all_migrations()
+		.into_iter()
+		.filter(|m| app_labels.contains(&m.app_label.as_str()))
+		.collect();
+
+	if !migrations.is_empty() {
+		let mut executor =
+			DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Postgres);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	(container, Arc::new(connection))
+}
+
+/// MySQL container with ALL registered migrations applied
+///
+/// This fixture collects migrations from the global registry and applies them
+/// to a fresh MySQL container.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use reinhardt_test::fixtures::*;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_all_migrations(
+///     #[future] mysql_with_all_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)
+/// ) {
+///     let (_container, db) = mysql_with_all_migrations.await;
+///     // All migrations from all apps are applied
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[rstest::fixture]
+pub async fn mysql_with_all_migrations() -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	// Start MySQL container
+	let (container, _pool, _port, url) = mysql_container().await;
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_mysql(&url)
+		.await
+		.expect("Failed to connect to MySQL for migrations");
+
+	// Get migrations from global registry
+	let migrations = global_registry().all_migrations();
+
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Mysql);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	(container, Arc::new(connection))
+}
+
+/// MySQL container with migrations from specific apps
+///
+/// # Arguments
+///
+/// * `app_labels` - List of app labels to include
+#[cfg(feature = "testcontainers")]
+pub async fn mysql_with_apps_migrations(
+	app_labels: &[&str],
+) -> (
+	ContainerAsync<GenericImage>,
+	std::sync::Arc<reinhardt_db::DatabaseConnection>,
+) {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	// Start MySQL container
+	let (container, _pool, _port, url) = mysql_container().await;
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_mysql(&url)
+		.await
+		.expect("Failed to connect to MySQL for migrations");
+
+	// Get migrations from global registry, filtered by app labels
+	let migrations: Vec<_> = global_registry()
+		.all_migrations()
+		.into_iter()
+		.filter(|m| app_labels.contains(&m.app_label.as_str()))
+		.collect();
+
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Mysql);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	(container, Arc::new(connection))
+}
+
+/// SQLite in-memory database with ALL registered migrations applied
+///
+/// This fixture collects migrations from the global registry and applies them
+/// to a fresh SQLite in-memory database.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use reinhardt_test::fixtures::*;
+/// use rstest::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_all_migrations(
+///     #[future] sqlite_with_all_migrations: Arc<DatabaseConnection>
+/// ) {
+///     let db = sqlite_with_all_migrations.await;
+///     // All migrations from all apps are applied
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[rstest::fixture]
+pub async fn sqlite_with_all_migrations() -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	let database_url = "sqlite::memory:";
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_sqlite(database_url)
+		.await
+		.expect("Failed to connect to SQLite for migrations");
+
+	// Get migrations from global registry
+	let migrations = global_registry().all_migrations();
+
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Sqlite);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	Arc::new(connection)
+}
+
+/// SQLite in-memory database with migrations from specific apps
+///
+/// # Arguments
+///
+/// * `app_labels` - List of app labels to include
+#[cfg(feature = "testcontainers")]
+pub async fn sqlite_with_apps_migrations(
+	app_labels: &[&str],
+) -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::types::DatabaseType;
+	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_migrations::registry::{global_registry, MigrationRegistry};
+	use std::sync::Arc;
+
+	let database_url = "sqlite::memory:";
+
+	// Connect to database
+	let connection = DatabaseConnection::connect_sqlite(database_url)
+		.await
+		.expect("Failed to connect to SQLite for migrations");
+
+	// Get migrations from global registry, filtered by app labels
+	let migrations: Vec<_> = global_registry()
+		.all_migrations()
+		.into_iter()
+		.filter(|m| app_labels.contains(&m.app_label.as_str()))
+		.collect();
+
+	if !migrations.is_empty() {
+		let mut executor = DatabaseMigrationExecutor::new(connection.clone(), DatabaseType::Sqlite);
+		executor
+			.apply_migrations(&migrations)
+			.await
+			.expect("Failed to apply migrations");
+	}
+
+	Arc::new(connection)
 }
