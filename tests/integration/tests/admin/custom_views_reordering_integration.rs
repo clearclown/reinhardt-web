@@ -118,8 +118,44 @@ fn create_mock_connection() -> Arc<reinhardt_db::orm::DatabaseConnection> {
 	use reinhardt_db::backends::backend::DatabaseBackend as BackendTrait;
 	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
 	use reinhardt_db::backends::error::Result;
-	use reinhardt_db::backends::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use reinhardt_db::backends::types::{
+		DatabaseType, QueryResult, QueryValue, Row, TransactionExecutor,
+	};
 	use reinhardt_db::orm::{DatabaseBackend, DatabaseConnection};
+
+	// Mock transaction executor for testing
+	struct MockTransactionExecutor;
+
+	#[async_trait::async_trait]
+	impl TransactionExecutor for MockTransactionExecutor {
+		async fn execute(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 0 })
+		}
+
+		async fn fetch_one(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&mut self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		async fn commit(self: Box<Self>) -> Result<()> {
+			Ok(())
+		}
+
+		async fn rollback(self: Box<Self>) -> Result<()> {
+			Ok(())
+		}
+	}
 
 	// Mock backend for testing
 	struct MockBackend;
@@ -164,6 +200,10 @@ fn create_mock_connection() -> Arc<reinhardt_db::orm::DatabaseConnection> {
 
 		fn as_any(&self) -> &dyn std::any::Any {
 			self
+		}
+
+		async fn begin(&self) -> Result<Box<dyn TransactionExecutor>> {
+			Ok(Box::new(MockTransactionExecutor))
 		}
 	}
 
