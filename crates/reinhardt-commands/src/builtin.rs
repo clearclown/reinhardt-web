@@ -143,10 +143,10 @@ impl BaseCommand for MigrateCommand {
 					)));
 				};
 
-				// Connect to database
+				// Connect to database (auto-create if it doesn't exist for PostgreSQL)
 				let connection = match db_type {
 					DatabaseType::Postgres => {
-						DatabaseConnection::connect_postgres(&_database_url).await
+						DatabaseConnection::connect_postgres_or_create(&_database_url).await
 					}
 					DatabaseType::Sqlite => {
 						DatabaseConnection::connect_sqlite(&_database_url).await
