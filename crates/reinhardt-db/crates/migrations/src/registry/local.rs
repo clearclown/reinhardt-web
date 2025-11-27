@@ -165,9 +165,7 @@ mod tests {
 
 		let polls_migrations = registry.migrations_for_app("polls");
 		assert_eq!(polls_migrations.len(), 2);
-		assert!(polls_migrations
-			.iter()
-			.all(|m| m.app_label == "polls"));
+		assert!(polls_migrations.iter().all(|m| m.app_label == "polls"));
 
 		let users_migrations = registry.migrations_for_app("users");
 		assert_eq!(users_migrations.len(), 1);

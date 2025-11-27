@@ -168,7 +168,9 @@ mod tests {
 		// Verify registration
 		let migrations = registry.all_migrations();
 		assert!(
-			migrations.iter().any(|m| m.app_label == "test_app" && m.name == "0001_initial"),
+			migrations
+				.iter()
+				.any(|m| m.app_label == "test_app" && m.name == "0001_initial"),
 			"Runtime-registered migration should be present"
 		);
 
@@ -201,11 +203,7 @@ mod tests {
 
 		// Clear and verify
 		registry.clear();
-		let runtime_only = registry
-			.runtime_migrations
-			.read()
-			.unwrap()
-			.clone();
+		let runtime_only = registry.runtime_migrations.read().unwrap().clone();
 		assert!(
 			runtime_only.is_empty(),
 			"Runtime migrations should be empty after clear"
@@ -254,22 +252,14 @@ mod tests {
 
 		// Test filtering
 		let polls_migrations = registry.migrations_for_app("polls");
-		assert_eq!(
-			polls_migrations.len(),
-			2,
-			"Should have 2 polls migrations"
-		);
+		assert_eq!(polls_migrations.len(), 2, "Should have 2 polls migrations");
 		assert!(
 			polls_migrations.iter().all(|m| m.app_label == "polls"),
 			"All migrations should be from polls app"
 		);
 
 		let users_migrations = registry.migrations_for_app("users");
-		assert_eq!(
-			users_migrations.len(),
-			1,
-			"Should have 1 users migration"
-		);
+		assert_eq!(users_migrations.len(), 1, "Should have 1 users migration");
 
 		// Cleanup
 		registry.clear();
