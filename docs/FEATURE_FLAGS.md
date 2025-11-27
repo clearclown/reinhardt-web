@@ -218,6 +218,32 @@ reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-cluster"] }
 
 ---
 
+### Dependency Injection
+
+| Feature | Description | Auto-enables |
+|---------|-------------|--------------|
+| `di` | Full DI system | `reinhardt-di/params`, `reinhardt-core/di` |
+
+The `di` feature enables FastAPI-style dependency injection with parameter extraction:
+
+```rust
+use reinhardt::prelude::*;
+use reinhardt::{Body, Cookie, Header, Json, Path, Query};
+
+#[endpoint]
+async fn handler(
+    Path(id): Path<i64>,
+    Query(params): Query<SearchParams>,
+    Json(body): Json<CreateRequest>,
+) -> ViewResult<Response> {
+    // ...
+}
+```
+
+**Note**: The `minimal` and `standard` bundles automatically include the `di` feature, so parameter types (`Body`, `Cookie`, `Header`, `Json`, `Path`, `Query`) are available without explicit configuration.
+
+---
+
 ### Other Features
 
 | Feature | Description | Key Crates |
@@ -240,6 +266,7 @@ reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-cluster"] }
 | Crate | Default Features | Key Features |
 |-------|------------------|--------------|
 | `reinhardt-micro` | `routing`, `params`, `di` | `database`, middleware options |
+| `reinhardt-di` | None | `params`, `dev-tools`, `generator` |
 | `reinhardt-db` | `backends`, `pool`, `postgres`, `orm`, `migrations` | `sqlite`, `mysql`, `contenttypes` |
 | `reinhardt-auth` | None | `jwt`, `session`, `oauth`, `token`, `argon2-hasher` |
 | `reinhardt-rest` | `serializers`, `parsers`, `renderers` | `pagination`, `filters`, `throttling`, `versioning` |
@@ -248,7 +275,10 @@ reinhardt-cache = { version = "0.1.0-alpha.1", features = ["redis-cluster"] }
 | `reinhardt-sessions` | None | `database`, `file`, `cookie`, `jwt` |
 | `reinhardt-test` | None | `testcontainers`, `static`, `websockets` |
 
-**Note**: `pool` auto-enables `reinhardt-di`
+**Auto-enabled dependencies**:
+- `di` feature → `reinhardt-di/params` (parameter extraction types)
+- `pool` → `reinhardt-di` (database connection injection)
+- `minimal` / `standard` → `di` (DI system included in bundles)
 
 ---
 
@@ -406,7 +436,7 @@ Reinhardt provides **70+ features** with **3 granularity levels** (bundle, group
 
 **Key bundles**: `minimal` (microservice), `standard` (balanced), `full` (all features, default), `api-only`, `graphql-server`, `cli-tools`
 
-**Auto-enabled dependencies**: `pool` → `reinhardt-di`, `middleware` → `sessions`, `auth-session` → `sessions`
+**Auto-enabled dependencies**: `di` → `reinhardt-di/params`, `pool` → `reinhardt-di`, `middleware` → `sessions`, `auth-session` → `sessions`
 
 **Best Practice**: Use `default-features = false` for explicit control
 
