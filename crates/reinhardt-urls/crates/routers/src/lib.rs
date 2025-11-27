@@ -151,4 +151,5 @@ pub use script_prefix::{clear_script_prefix, get_script_prefix, set_script_prefi
 pub use simple::SimpleRouter;
 pub use unified_router::{
 	UnifiedRouter, clear_router, get_router, is_router_registered, register_router,
+	register_router_arc,
 };

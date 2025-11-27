@@ -438,10 +438,10 @@ mod tests {
 	fn test_route_group_nested() {
 		let auth_group =
 			RouteGroup::new()
-				.with_prefix("/auth")
+				.with_prefix("/auth/")
 				.function("/login", Method::POST, test_handler);
 
-		let group = RouteGroup::new().with_prefix("/api").nest(auth_group);
+		let group = RouteGroup::new().with_prefix("/api/").nest(auth_group);
 
 		let router = group.build();
 		assert_eq!(router.children_count(), 1);
