@@ -115,7 +115,7 @@ impl IsolationLevel {
 	}
 
 	/// Convert to backends layer IsolationLevel
-	pub(crate) fn to_backends_level(&self) -> crate::connection::IsolationLevel {
+	pub(crate) fn to_backends_level(self) -> crate::connection::IsolationLevel {
 		match self {
 			IsolationLevel::ReadUncommitted => crate::connection::IsolationLevel::ReadUncommitted,
 			IsolationLevel::ReadCommitted => crate::connection::IsolationLevel::ReadCommitted,

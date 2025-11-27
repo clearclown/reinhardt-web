@@ -24,9 +24,9 @@ pub struct GlobalRegistry {
 }
 
 impl Default for GlobalRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
+	fn default() -> Self {
+		Self::new()
+	}
 }
 
 impl GlobalRegistry {
