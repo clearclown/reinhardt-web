@@ -383,7 +383,41 @@ impl DeleteBuilder {
 mod tests {
 	use super::*;
 	use crate::backend::DatabaseBackend;
-	use crate::types::{DatabaseType, QueryResult, QueryValue, Row};
+	use crate::types::{DatabaseType, QueryResult, QueryValue, Row, TransactionExecutor};
+
+	// Mock transaction executor for testing
+	struct MockTransactionExecutor;
+
+	#[async_trait::async_trait]
+	impl TransactionExecutor for MockTransactionExecutor {
+		async fn execute(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
+			Ok(QueryResult { rows_affected: 0 })
+		}
+
+		async fn fetch_one(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
+			Ok(Row::new())
+		}
+
+		async fn fetch_all(&mut self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
+			Ok(Vec::new())
+		}
+
+		async fn fetch_optional(
+			&mut self,
+			_sql: &str,
+			_params: Vec<QueryValue>,
+		) -> Result<Option<Row>> {
+			Ok(None)
+		}
+
+		async fn commit(self: Box<Self>) -> Result<()> {
+			Ok(())
+		}
+
+		async fn rollback(self: Box<Self>) -> Result<()> {
+			Ok(())
+		}
+	}
 
 	struct MockBackend;
 
@@ -427,6 +461,10 @@ mod tests {
 
 		fn as_any(&self) -> &dyn std::any::Any {
 			self
+		}
+
+		async fn begin(&self) -> Result<Box<dyn TransactionExecutor>> {
+			Ok(Box::new(MockTransactionExecutor))
 		}
 	}
 
