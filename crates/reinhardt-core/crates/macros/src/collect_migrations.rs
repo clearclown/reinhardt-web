@@ -100,8 +100,8 @@ pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::E
 			}
 		}
 
-		#[::linkme::distributed_slice(::reinhardt_migrations::registry::MIGRATION_PROVIDERS)]
-		static #static_name: ::reinhardt_migrations::registry::MigrationProviderFn =
+		#[::linkme::distributed_slice(::reinhardt_migrations::registry::global::MIGRATION_PROVIDERS)]
+		static #static_name: ::reinhardt_migrations::registry::global::MigrationProvider =
 			<#struct_name as ::reinhardt_migrations::MigrationProvider>::migrations;
 	};
 
