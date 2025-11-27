@@ -26,6 +26,7 @@ use syn::{ItemFn, parse_macro_input};
 mod action;
 mod api_view;
 mod app_config_derive;
+mod collect_migrations;
 mod endpoint;
 mod injectable_derive;
 mod installed_apps;
@@ -707,4 +708,76 @@ pub fn derive_orm_reflectable(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(AppConfig, attributes(app_config))]
 pub fn derive_app_config(input: TokenStream) -> TokenStream {
 	app_config_derive::derive(input)
+}
+
+/// Collect migrations and register them with the global registry
+///
+/// This macro generates a `MigrationProvider` implementation and automatically
+/// registers it with the global migration registry using `linkme::distributed_slice`.
+///
+/// # Example
+///
+/// ```ignore
+/// // In your app's migrations.rs or migrations/mod.rs
+/// pub mod _0001_initial;
+/// pub mod _0002_add_fields;
+///
+/// reinhardt::collect_migrations!(
+///     app_label = "polls",
+///     _0001_initial,
+///     _0002_add_fields,
+/// );
+/// ```
+///
+/// # Generated Code
+///
+/// The macro generates:
+/// 1. A struct named `{AppLabel}Migrations` (e.g., `PollsMigrations`)
+/// 2. Implementation of `MigrationProvider` trait for the struct
+/// 3. Registration with the global `MIGRATION_PROVIDERS` slice
+///
+/// ```ignore
+/// // Generated code equivalent:
+/// pub struct PollsMigrations;
+///
+/// impl MigrationProvider for PollsMigrations {
+///     fn migrations() -> Vec<Migration> {
+///         vec![
+///             _0001_initial::migration(),
+///             _0002_add_fields::migration(),
+///         ]
+///     }
+/// }
+///
+/// #[linkme::distributed_slice(MIGRATION_PROVIDERS)]
+/// static __POLLS_MIGRATIONS_PROVIDER: MigrationProviderFn = PollsMigrations::migrations;
+/// ```
+///
+/// # Usage in Tests
+///
+/// After registering migrations with this macro, you can use the non-generic fixtures:
+///
+/// ```ignore
+/// use reinhardt_test::fixtures::*;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_all_migrations(
+///     #[future] postgres_with_all_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)
+/// ) {
+///     let (_container, db) = postgres_with_all_migrations.await;
+///     // All migrations from all apps are applied
+/// }
+/// ```
+///
+/// # Requirements
+///
+/// - Each migration module must export a `migration()` function returning `Migration`
+/// - The crate must have `reinhardt-migrations` and `linkme` as dependencies
+///
+#[proc_macro]
+pub fn collect_migrations(input: TokenStream) -> TokenStream {
+	collect_migrations::collect_migrations_impl(input.into())
+		.unwrap_or_else(|e| e.to_compile_error())
+		.into()
 }
