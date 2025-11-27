@@ -45,6 +45,7 @@ pub mod model_registry;
 pub mod operations;
 pub mod plan;
 pub mod recorder;
+pub mod registry;
 pub mod schema_diff;
 pub mod squash;
 pub mod visualization;
@@ -108,6 +109,37 @@ pub use introspection::{
 };
 
 use thiserror::Error;
+
+/// Trait for types that provide migrations.
+///
+/// This trait enables compile-time migration collection, which is necessary
+/// because Rust cannot dynamically load code at runtime like Python's Django.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// use reinhardt_migrations::{Migration, MigrationProvider};
+///
+/// pub struct PollsMigrations;
+///
+/// impl MigrationProvider for PollsMigrations {
+///     fn migrations() -> Vec<Migration> {
+///         vec![
+///             super::_0001_initial::migration(),
+///             super::_0002_add_published::migration(),
+///         ]
+///     }
+/// }
+///
+/// // Use with test fixtures
+/// let (container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+/// ```
+pub trait MigrationProvider {
+	/// Returns all migrations provided by this type.
+	///
+	/// Migrations should be returned in dependency order (base migrations first).
+	fn migrations() -> Vec<Migration>;
+}
 
 #[derive(Debug, Error)]
 pub enum MigrationError {

@@ -46,6 +46,7 @@ regex = "1.11"
 strsim = "0.11"
 thiserror = "2.0"
 indexmap = "2.7"
+linkme = { workspace = true }
 reinhardt-core = { workspace = true, features = ["exception"] }
 tokio = { version = "1", features = ["full"] }
 futures = { workspace = true }
