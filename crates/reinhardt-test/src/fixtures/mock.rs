@@ -3,7 +3,7 @@ use reinhardt_db::backends::{
 	Result,
 	backend::DatabaseBackend as BackendTrait,
 	connection::DatabaseConnection as BackendsConnection,
-	types::{DatabaseType, QueryResult, QueryValue, Row},
+	types::{DatabaseType, QueryResult, QueryValue, Row, TransactionExecutor},
 };
 use reinhardt_db::orm::{DatabaseBackend, DatabaseConnection};
 use rstest::*;
@@ -70,6 +70,7 @@ mock! {
 		async fn fetch_one(&self, sql: &str, params: Vec<QueryValue>) -> Result<Row>;
 		async fn fetch_all(&self, sql: &str, params: Vec<QueryValue>) -> Result<Vec<Row>>;
 		async fn fetch_optional(&self, sql: &str, params: Vec<QueryValue>) -> Result<Option<Row>>;
+		async fn begin(&self) -> Result<Box<dyn TransactionExecutor>>;
 
 		fn as_any(&self) -> &dyn std::any::Any;
 	}
