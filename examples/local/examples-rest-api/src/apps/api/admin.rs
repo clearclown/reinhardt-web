@@ -1,6 +1,6 @@
 //! Admin configuration for api app
 
-use reinhardt_panel::ModelAdminConfig;
+use reinhardt::admin::ModelAdminConfig;
 
 /// Admin configuration for Article model
 ///

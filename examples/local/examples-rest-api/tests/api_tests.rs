@@ -6,13 +6,19 @@
 //! - When feature is disabled, this entire test file is excluded from compilation
 //!
 //! Uses standard fixtures from reinhardt-test for automatic test server management.
+//!
+//! Note: Tests must be run serially due to shared in-memory storage.
 
-use reinhardt::UnifiedRouter as Router;
 use reinhardt::test::client::APIClient;
 use reinhardt::test::fixtures::test_server_guard;
 use rstest::*;
 use serde_json::{Value, json};
+use serial_test::serial;
 use std::sync::Arc;
+
+// Import the application's url_patterns function and storage
+use examples_rest_api::apps::api::storage;
+use examples_rest_api::config::urls::url_patterns;
 
 // ============================================================================
 // Fixtures
@@ -20,7 +26,8 @@ use std::sync::Arc;
 
 #[fixture]
 async fn server() -> reinhardt::test::fixtures::TestServerGuard {
-	let router = Arc::new(Router::new());
+	// Use the actual application router instead of an empty one
+	let router = Arc::new(url_patterns());
 	test_server_guard(router).await
 }
 
@@ -64,8 +71,9 @@ async fn test_health_check_endpoint(#[future] server: reinhardt::test::fixtures:
 /// Test listing articles returns empty array initially
 #[rstest]
 #[tokio::test]
-
+#[serial(articles)]
 async fn test_list_articles_empty(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -90,7 +98,9 @@ async fn test_list_articles_empty(#[future] server: reinhardt::test::fixtures::T
 /// Test creating a new article
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_create_article(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -123,9 +133,11 @@ async fn test_create_article(#[future] server: reinhardt::test::fixtures::TestSe
 /// Test creating article with invalid data returns validation error
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_create_article_validation_error(
 	#[future] server: reinhardt::test::fixtures::TestServerGuard,
 ) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -153,7 +165,9 @@ async fn test_create_article_validation_error(
 /// Test getting a specific article by ID
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_get_article_by_id(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -196,9 +210,11 @@ async fn test_get_article_by_id(#[future] server: reinhardt::test::fixtures::Tes
 /// Test getting non-existent article returns 404
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_get_nonexistent_article(
 	#[future] server: reinhardt::test::fixtures::TestServerGuard,
 ) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -218,7 +234,9 @@ async fn test_get_nonexistent_article(
 /// Test updating an article
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_update_article(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -271,9 +289,11 @@ async fn test_update_article(#[future] server: reinhardt::test::fixtures::TestSe
 /// Test updating non-existent article returns 404
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_update_nonexistent_article(
 	#[future] server: reinhardt::test::fixtures::TestServerGuard,
 ) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -298,7 +318,9 @@ async fn test_update_nonexistent_article(
 /// Test deleting an article
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_delete_article(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -342,9 +364,11 @@ async fn test_delete_article(#[future] server: reinhardt::test::fixtures::TestSe
 /// Test deleting non-existent article returns 404
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_delete_nonexistent_article(
 	#[future] server: reinhardt::test::fixtures::TestServerGuard,
 ) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);
@@ -364,7 +388,9 @@ async fn test_delete_nonexistent_article(
 /// Test full CRUD workflow
 #[rstest]
 #[tokio::test]
+#[serial(articles)]
 async fn test_article_crud_workflow(#[future] server: reinhardt::test::fixtures::TestServerGuard) {
+	storage::clear_articles();
 	let server = server.await;
 
 	let client = APIClient::with_base_url(&server.url);

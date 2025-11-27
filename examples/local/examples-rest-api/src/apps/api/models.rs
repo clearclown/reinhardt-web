@@ -20,6 +20,7 @@ pub struct Article {
 	pub title: String,
 
 	/// Article content
+	#[field(max_length = 65535)]
 	pub content: String,
 
 	/// Author name

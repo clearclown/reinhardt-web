@@ -37,6 +37,20 @@ pub struct ArticleResponse {
 	pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+impl From<super::models::Article> for ArticleResponse {
+	fn from(article: super::models::Article) -> Self {
+		Self {
+			id: article.id,
+			title: article.title,
+			content: article.content,
+			author: article.author,
+			published: article.published,
+			created_at: article.created_at,
+			updated_at: article.updated_at,
+		}
+	}
+}
+
 /// Article list response
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ArticleListResponse {

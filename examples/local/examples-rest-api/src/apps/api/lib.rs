@@ -8,6 +8,7 @@ pub mod admin;
 pub mod migrations;
 pub mod models;
 pub mod serializers;
+pub mod storage;
 pub mod urls;
 pub mod views;
 
