@@ -62,6 +62,9 @@ default = [
 # Module features
 backends = ["dep:reinhardt-backends"]
 
+# DI integration - enables Injectable implementation for DatabaseConnection
+di = ["reinhardt-backends?/di"]
+
 # Internal crate features
 pool = ["dep:reinhardt-backends-pool", "dep:reinhardt-pool"]
 orm = ["dep:reinhardt-orm"]
