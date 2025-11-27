@@ -167,6 +167,9 @@ pub enum DiError {
 
 	#[error("Scope error: {0}")]
 	ScopeError(String),
+
+	#[error("Type '{type_name}' not registered. {hint}")]
+	NotRegistered { type_name: String, hint: String },
 }
 
 impl From<DiError> for reinhardt_exception::Error {
