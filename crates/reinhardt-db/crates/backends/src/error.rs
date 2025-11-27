@@ -41,6 +41,10 @@ pub enum DatabaseError {
 	#[error("Column not found: {0}")]
 	ColumnNotFound(String),
 
+	/// Transaction error
+	#[error("Transaction error: {0}")]
+	TransactionError(String),
+
 	/// Generic database error
 	#[error("Database error: {0}")]
 	Other(String),
