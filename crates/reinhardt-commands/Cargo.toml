@@ -59,7 +59,7 @@ serial_test = { workspace = true }
 rstest = { workspace = true }
 
 [features]
-default = []
+default = ["server"]
 migrations = ["dep:reinhardt-db"]
 routers = ["dep:reinhardt-urls"]
 server = ["dep:reinhardt-server", "routers"]
