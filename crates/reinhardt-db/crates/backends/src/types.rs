@@ -126,6 +126,21 @@ impl TryFrom<QueryValue> for i64 {
 	}
 }
 
+impl TryFrom<QueryValue> for i32 {
+	type Error = DatabaseError;
+
+	fn try_from(value: QueryValue) -> std::result::Result<Self, Self::Error> {
+		match value {
+			QueryValue::Int(i) => i32::try_from(i)
+				.map_err(|_| DatabaseError::TypeError(format!("Value {} out of range for i32", i))),
+			_ => Err(DatabaseError::TypeError(format!(
+				"Cannot convert {:?} to i32",
+				value
+			))),
+		}
+	}
+}
+
 impl TryFrom<QueryValue> for String {
 	type Error = DatabaseError;
 
@@ -179,5 +194,245 @@ impl TryFrom<QueryValue> for chrono::DateTime<chrono::Utc> {
 				value
 			))),
 		}
+	}
+}
+
+/// Transaction isolation levels for controlling database concurrency behavior
+///
+/// These isolation levels follow the SQL standard and are supported by most
+/// relational databases, though implementation details may vary.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_backends::types::{IsolationLevel, DatabaseType};
+///
+/// let level = IsolationLevel::Serializable;
+/// let sql = level.to_sql(DatabaseType::Postgres);
+/// assert!(sql.contains("SERIALIZABLE"));
+/// ```
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IsolationLevel {
+	/// Allows dirty reads, non-repeatable reads, and phantom reads.
+	/// Lowest isolation level with highest concurrency.
+	ReadUncommitted,
+	/// Prevents dirty reads but allows non-repeatable reads and phantom reads.
+	/// This is the default isolation level for most databases.
+	#[default]
+	ReadCommitted,
+	/// Prevents dirty reads and non-repeatable reads but allows phantom reads.
+	RepeatableRead,
+	/// Highest isolation level. Prevents dirty reads, non-repeatable reads,
+	/// and phantom reads. Transactions are fully serializable.
+	Serializable,
+}
+
+impl IsolationLevel {
+	/// Convert the isolation level to SQL syntax for the given database type
+	///
+	/// # Arguments
+	///
+	/// * `db_type` - The target database type
+	///
+	/// # Returns
+	///
+	/// SQL string representation suitable for SET TRANSACTION or BEGIN statements
+	pub fn to_sql(&self, db_type: DatabaseType) -> &'static str {
+		match (self, db_type) {
+			// PostgreSQL, MySQL, and SQLite all use similar syntax
+			(IsolationLevel::ReadUncommitted, _) => "READ UNCOMMITTED",
+			(IsolationLevel::ReadCommitted, _) => "READ COMMITTED",
+			(IsolationLevel::RepeatableRead, _) => "REPEATABLE READ",
+			(IsolationLevel::Serializable, _) => "SERIALIZABLE",
+		}
+	}
+
+	/// Generate the SQL statement to begin a transaction with this isolation level
+	///
+	/// # Arguments
+	///
+	/// * `db_type` - The target database type
+	///
+	/// # Returns
+	///
+	/// Complete SQL statement to begin a transaction with the specified isolation level
+	pub fn begin_transaction_sql(&self, db_type: DatabaseType) -> String {
+		match db_type {
+			DatabaseType::Postgres => {
+				format!("BEGIN ISOLATION LEVEL {}", self.to_sql(db_type))
+			}
+			DatabaseType::Mysql => {
+				// MySQL requires SET TRANSACTION before START TRANSACTION
+				format!(
+					"SET TRANSACTION ISOLATION LEVEL {}; START TRANSACTION",
+					self.to_sql(db_type)
+				)
+			}
+			DatabaseType::Sqlite => {
+				// SQLite only supports DEFERRED, IMMEDIATE, or EXCLUSIVE
+				// We map Serializable to EXCLUSIVE, others to default behavior
+				match self {
+					IsolationLevel::Serializable => "BEGIN EXCLUSIVE".to_string(),
+					_ => "BEGIN".to_string(),
+				}
+			}
+			#[cfg(feature = "mongodb-backend")]
+			DatabaseType::MongoDB => {
+				// MongoDB does not use SQL transactions
+				unimplemented!("MongoDB does not support SQL-based transactions")
+			}
+		}
+	}
+}
+
+/// Savepoint for nested transaction support
+///
+/// Savepoints allow creating checkpoint within a transaction that can be
+/// rolled back to without affecting the entire transaction.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_backends::types::Savepoint;
+///
+/// let sp = Savepoint::new("sp1");
+/// assert_eq!(sp.to_sql(), "SAVEPOINT sp1");
+/// assert_eq!(sp.release_sql(), "RELEASE SAVEPOINT sp1");
+/// assert_eq!(sp.rollback_sql(), "ROLLBACK TO SAVEPOINT sp1");
+/// ```
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Savepoint {
+	/// The name of the savepoint
+	name: String,
+}
+
+impl Savepoint {
+	/// Create a new savepoint with the given name
+	pub fn new(name: impl Into<String>) -> Self {
+		Self { name: name.into() }
+	}
+
+	/// Get the savepoint name
+	pub fn name(&self) -> &str {
+		&self.name
+	}
+
+	/// Generate SQL to create this savepoint
+	pub fn to_sql(&self) -> String {
+		format!("SAVEPOINT {}", self.name)
+	}
+
+	/// Generate SQL to release (commit) this savepoint
+	pub fn release_sql(&self) -> String {
+		format!("RELEASE SAVEPOINT {}", self.name)
+	}
+
+	/// Generate SQL to rollback to this savepoint
+	pub fn rollback_sql(&self) -> String {
+		format!("ROLLBACK TO SAVEPOINT {}", self.name)
+	}
+}
+
+/// Transaction executor trait for database-specific transaction handling
+///
+/// This trait represents a dedicated database connection that is used for
+/// transaction operations. All queries executed through this executor
+/// are guaranteed to run on the same physical connection, ensuring
+/// proper transaction isolation.
+///
+/// # Implementation Notes
+///
+/// SQLx connection pools distribute queries across multiple connections.
+/// To ensure transaction consistency, we need to acquire a dedicated
+/// connection via `pool.begin()` which returns a `Transaction` that
+/// maintains connection affinity.
+#[async_trait::async_trait]
+pub trait TransactionExecutor: Send + Sync {
+	/// Execute a query that modifies the database within the transaction
+	async fn execute(
+		&mut self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> crate::error::Result<QueryResult>;
+
+	/// Fetch a single row within the transaction
+	async fn fetch_one(&mut self, sql: &str, params: Vec<QueryValue>) -> crate::error::Result<Row>;
+
+	/// Fetch all matching rows within the transaction
+	async fn fetch_all(
+		&mut self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> crate::error::Result<Vec<Row>>;
+
+	/// Fetch an optional single row within the transaction
+	async fn fetch_optional(
+		&mut self,
+		sql: &str,
+		params: Vec<QueryValue>,
+	) -> crate::error::Result<Option<Row>>;
+
+	/// Commit the transaction
+	async fn commit(self: Box<Self>) -> crate::error::Result<()>;
+
+	/// Rollback the transaction
+	async fn rollback(self: Box<Self>) -> crate::error::Result<()>;
+
+	/// Create a savepoint within the transaction
+	///
+	/// Savepoints allow creating checkpoints within a transaction that can be
+	/// rolled back to without affecting the entire transaction.
+	///
+	/// # Arguments
+	///
+	/// * `name` - The name of the savepoint to create
+	///
+	/// # Default Implementation
+	///
+	/// Returns an error indicating savepoints are not supported. Backends that
+	/// support savepoints should override this method.
+	async fn savepoint(&mut self, name: &str) -> crate::error::Result<()> {
+		let _ = name;
+		Err(crate::error::DatabaseError::NotSupported(
+			"Savepoints are not supported by this backend".to_string(),
+		))
+	}
+
+	/// Release (commit) a savepoint
+	///
+	/// Releasing a savepoint removes the checkpoint and makes the changes
+	/// within it part of the enclosing transaction.
+	///
+	/// # Arguments
+	///
+	/// * `name` - The name of the savepoint to release
+	///
+	/// # Default Implementation
+	///
+	/// Returns an error indicating savepoints are not supported.
+	async fn release_savepoint(&mut self, name: &str) -> crate::error::Result<()> {
+		let _ = name;
+		Err(crate::error::DatabaseError::NotSupported(
+			"Savepoints are not supported by this backend".to_string(),
+		))
+	}
+
+	/// Rollback to a savepoint
+	///
+	/// Rolling back to a savepoint undoes all changes made after the savepoint
+	/// was created, while keeping the transaction open.
+	///
+	/// # Arguments
+	///
+	/// * `name` - The name of the savepoint to rollback to
+	///
+	/// # Default Implementation
+	///
+	/// Returns an error indicating savepoints are not supported.
+	async fn rollback_to_savepoint(&mut self, name: &str) -> crate::error::Result<()> {
+		let _ = name;
+		Err(crate::error::DatabaseError::NotSupported(
+			"Savepoints are not supported by this backend".to_string(),
+		))
 	}
 }
