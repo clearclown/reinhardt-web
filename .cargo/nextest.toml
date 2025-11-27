@@ -19,10 +19,16 @@ retries = { backoff = "exponential", max-retries = 2, seed = 12345 }
 
 # Separate integration tests into dedicated worker threads
 # Reduces resource contention for database-dependent tests
-[profile.default.overrides]
+[[profile.default.overrides]]
 filter = 'test(integration)'
 threads-required = 1
-max-threads = 4
+
+# Database tests in examples must run serially due to global state
+# cargo-nextest runs tests in separate processes, so serial_test crate doesn't work
+# Instead, we force these tests to run one at a time via nextest configuration
+[[profile.default.overrides]]
+filter = 'binary(examples-database-integration) & test(test_)'
+test-threads = 1
 
 # JUnit output for CI/CD integration
 [profile.default.junit]
