@@ -23,6 +23,12 @@ pub struct GlobalRegistry {
 	runtime_migrations: RwLock<Vec<Migration>>,
 }
 
+impl Default for GlobalRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GlobalRegistry {
 	/// Creates a new global registry instance
 	pub const fn new() -> Self {
