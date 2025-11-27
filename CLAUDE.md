@@ -10,7 +10,7 @@ For detailed standards, see documentation in `docs/` directory.
 
 ## Project Overview
 
-See @README.md for project details.
+See README.md for project details.
 
 **Repository URL**: https://github.com/kent8192/reinhardt-rs
 
@@ -171,7 +171,7 @@ See @CLAUDE.commit.md for detailed commit guidelines including:
 - **Efficient**: Release only changed crates, avoid unnecessary dependency updates
 - **Automation-friendly**: Compatible with tools like `release-plz`, `cargo-release`
 
-See @docs/RELEASE_PROCESS.md for detailed release procedures.
+See docs/RELEASE_PROCESS.md for detailed release procedures.
 
 ### Workflow Best Practices
 
@@ -305,7 +305,7 @@ Before submitting code:
 
 @CLAUDE.local.md - Project-specific local preferences
 
-**Note**: When editing files in `examples/` directory, also refer to @examples/CLAUDE.md for examples-specific coding standards and dependency rules.
+**Note**: When editing files in `examples/` directory, also refer to examples/CLAUDE.md for examples-specific coding standards and dependency rules.
 
 ---
 
