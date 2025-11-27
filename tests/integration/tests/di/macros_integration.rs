@@ -24,7 +24,8 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_di::{DiResult, Injectable, InjectionContext, SingletonScope};
+use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
+use reinhardt_exception::Result as ExceptionResult;
 use reinhardt_http::Request;
 use reinhardt_macros::use_injection;
 use std::sync::Arc;
@@ -84,7 +85,7 @@ async fn handler_with_inject(
 	_req: Request,
 	#[inject] db: Database,
 	regular_param: String,
-) -> Result<String, reinhardt_di::DiError> {
+) -> ExceptionResult<String> {
 	Ok(format!("db: {:?}, param: {}", db, regular_param))
 }
 
@@ -94,7 +95,7 @@ async fn handler_multiple_inject(
 	#[inject] db: Database,
 	#[inject] config: Config,
 	regular_param: i32,
-) -> Result<String, reinhardt_di::DiError> {
+) -> ExceptionResult<String> {
 	Ok(format!(
 		"db: {:?}, config key: {}, param: {}",
 		db, config.api_key, regular_param
@@ -106,15 +107,12 @@ async fn handler_with_cache_control(
 	_req: Request,
 	#[inject] db: Database,
 	#[inject(cache = false)] service: CustomService,
-) -> Result<i32, reinhardt_di::DiError> {
+) -> ExceptionResult<i32> {
 	Ok(db.connection_string.len() as i32 + service.value)
 }
 
 #[use_injection]
-async fn handler_only_inject(
-	_req: Request,
-	#[inject] db: Database,
-) -> Result<Database, reinhardt_di::DiError> {
+async fn handler_only_inject(_req: Request, #[inject] db: Database) -> ExceptionResult<Database> {
 	// db is directly injected as Database type
 	Ok(db)
 }
@@ -124,7 +122,7 @@ async fn handler_no_inject(
 	_req: Request,
 	regular_param1: String,
 	regular_param2: i32,
-) -> Result<String, reinhardt_di::DiError> {
+) -> ExceptionResult<String> {
 	Ok(format!("{}-{}", regular_param1, regular_param2))
 }
 
@@ -207,7 +205,11 @@ async fn test_endpoint_no_inject_params() {
 // ========== Additional use_injection Macro Tests ==========
 
 #[use_injection]
-async fn process_data(_req: Request, #[inject] db: Database, data: String) -> DiResult<String> {
+async fn process_data(
+	_req: Request,
+	#[inject] db: Database,
+	data: String,
+) -> ExceptionResult<String> {
 	Ok(format!(
 		"Processing {} with db: {:?}",
 		data, db.connection_string
@@ -221,7 +223,7 @@ async fn complex_handler(
 	#[inject] config: Config,
 	#[inject] logger: Logger,
 	input: i32,
-) -> DiResult<String> {
+) -> ExceptionResult<String> {
 	Ok(format!(
 		"Input: {}, DB: {:?}, Config: {}, Logger: {:?}",
 		input, db.connection_string, config.max_connections, logger.level
@@ -233,7 +235,7 @@ async fn cache_control(
 	_req: Request,
 	#[inject] cached_db: Database,
 	#[inject(cache = false)] fresh_logger: Logger,
-) -> DiResult<String> {
+) -> ExceptionResult<String> {
 	Ok(format!(
 		"DB: {:?}, Logger: {:?}",
 		cached_db.connection_string, fresh_logger.level
@@ -241,7 +243,11 @@ async fn cache_control(
 }
 
 #[use_injection]
-async fn validate_user(_req: Request, #[inject] _db: Database, user_id: u64) -> DiResult<bool> {
+async fn validate_user(
+	_req: Request,
+	#[inject] _db: Database,
+	user_id: u64,
+) -> ExceptionResult<bool> {
 	// For testing purposes, just check user_id validity
 	// (db is injected to test DI functionality, not used in validation logic)
 	Ok(user_id > 0)
@@ -254,7 +260,7 @@ async fn calculate_report(
 	#[inject] config: Config,
 	year: i32,
 	month: i32,
-) -> DiResult<String> {
+) -> ExceptionResult<String> {
 	Ok(format!(
 		"Report for {}/{} using {} connections from {:?}",
 		year, month, config.max_connections, db.connection_string
