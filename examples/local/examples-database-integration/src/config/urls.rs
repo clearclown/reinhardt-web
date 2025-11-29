@@ -32,6 +32,6 @@ async fn list_users(_req: Request) -> Result<Response> {
 
 pub fn url_patterns() -> UnifiedRouter {
 	UnifiedRouter::new()
-		.function("/api/users", Method::GET, list_users)
-		.include("/api/todos", crate::apps::todos::urls::url_patterns())
+		.function("/api/users/", Method::GET, list_users)
+		.include("/api/todos/", crate::apps::todos::urls::url_patterns())
 }

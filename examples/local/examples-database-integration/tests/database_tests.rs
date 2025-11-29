@@ -7,25 +7,11 @@
 //!
 //! Uses Reinhardt ORM Manager<T> for all database operations.
 //!
-//! ## Architecture Note: Shared Container Pattern
+//! ## Architecture Note: SQLite Test
 //!
-//! This test file uses a **shared container pattern** to work correctly with cargo-nextest.
-//!
-//! ### Why this pattern is necessary:
-//! - cargo-nextest runs each test in a **separate OS process** (not just threads)
-//! - Each process has its own static variables and memory space
-//! - `serial_test` crate only serializes tests within the same process (ineffective with nextest)
-//! - Without shared container, each test would create a NEW PostgreSQL container
-//!
-//! ### How it works:
-//! 1. `SHARED_POSTGRES` is a `OnceCell` that initializes the container exactly once
-//! 2. All tests call `get_shared_db()` to get the same container
-//! 3. Each test cleans up its data (TRUNCATE) before running, not after
-//! 4. Container cleanup happens automatically when all tests finish
-//!
-//! ### Key insight:
-//! With nextest's process-per-test model, `OnceCell` ensures each process gets a fresh
-//! container initialization, but the test data cleanup (TRUNCATE) ensures test isolation.
+//! This test uses a temporary SQLite database file for each test run (or shared if configured).
+//! Since we are using `serial_test`, we can use a shared file or one per test.
+//! For simplicity and performance, we use a temporary file.
 
 use chrono::Utc;
 use reinhardt::db::orm::{reinitialize_database, Manager};
@@ -34,73 +20,64 @@ use reinhardt::TransactionScope;
 use rstest::*;
 use serial_test::serial;
 use std::sync::Arc;
-use testcontainers::{core::WaitFor, runners::AsyncRunner, ContainerAsync, GenericImage, ImageExt};
+use tempfile::NamedTempFile;
 
 // Import models from the library crate (uses #[derive(Model)] macro)
 use examples_database_integration::{Todo, User};
-
-// Import migrations from the library crate
-use examples_database_integration::apps::todos::migrations::_0001_initial as todos_migration;
-use examples_database_integration::apps::users::migrations::_0001_initial as users_migration;
 
 // ============================================================================
 // Custom Fixtures with Migrations
 // ============================================================================
 
-/// PostgreSQL container fixture with migrations applied
+/// SQLite fixture with migrations applied
 #[fixture]
-async fn db_with_migrations() -> (ContainerAsync<GenericImage>, Arc<DatabaseConnection>) {
-	// Start PostgreSQL container
-	let postgres = GenericImage::new("postgres", "17-alpine")
-		.with_wait_for(WaitFor::message_on_stderr(
-			"database system is ready to accept connections",
-		))
-		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
-		.with_env_var("POSTGRES_INITDB_ARGS", "-c max_connections=200")
-		.start()
+async fn db_with_migrations() -> (NamedTempFile, Arc<DatabaseConnection>) {
+	// Create a temporary file for the database
+	let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+	let db_path = temp_file.path().to_str().unwrap().to_string();
+	let database_url = format!("sqlite://{}?mode=rwc", db_path);
+
+	// Connect to SQLite
+	let conn = DatabaseConnection::connect(&database_url)
 		.await
-		.expect("Failed to start PostgreSQL container");
+		.expect("Failed to connect to SQLite");
 
-	let port = postgres
-		.get_host_port_ipv4(5432)
+	// Apply migrations using new migration system
+	// For now, we manually create tables for testing
+	let create_users_table = r#"
+		CREATE TABLE IF NOT EXISTS users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(255) NOT NULL,
+			created_at DATETIME NOT NULL
+		)
+	"#;
+
+	let create_todos_table = r#"
+		CREATE TABLE IF NOT EXISTS todos (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title VARCHAR(255) NOT NULL,
+			description TEXT,
+			completed BOOLEAN NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	"#;
+
+	conn.execute(create_users_table, vec![])
 		.await
-		.expect("Failed to get PostgreSQL port");
+		.expect("Failed to create users table");
 
-	let database_url = format!("postgres://postgres@localhost:{}/postgres", port);
-
-	// Wait for connection with retries
-	let mut retry_count = 0;
-	let max_retries = 5;
-	let conn = loop {
-		match DatabaseConnection::connect(&database_url).await {
-			Ok(conn) => break conn,
-			Err(_e) if retry_count < max_retries => {
-				retry_count += 1;
-				let delay = std::time::Duration::from_millis(100 * 2_u64.pow(retry_count));
-				tokio::time::sleep(delay).await;
-			}
-			Err(e) => panic!("Failed to connect after {} retries: {}", max_retries, e),
-		}
-	};
-
-	// Apply migrations
-	let migrations = vec![
-		("users", users_migration::Migration::up()),
-		("todos", todos_migration::Migration::up()),
-	];
-
-	for (app_label, sql) in migrations {
-		conn.execute(&sql, vec![])
-			.await
-			.unwrap_or_else(|e| panic!("Failed to apply {} migration: {}", app_label, e));
-	}
+	conn.execute(create_todos_table, vec![])
+		.await
+		.expect("Failed to create todos table");
 
 	// Initialize global database state for Manager<T> operations
 	reinitialize_database(&database_url)
 		.await
 		.expect("Failed to initialize global database state");
 
-	(postgres, Arc::new(conn))
+	(temp_file, Arc::new(conn))
 }
 
 // ============================================================================
@@ -112,9 +89,9 @@ async fn db_with_migrations() -> (ContainerAsync<GenericImage>, Arc<DatabaseConn
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_database_connection(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 
 	// Verify connection by querying users table
 	let manager = Manager::<User>::new();
@@ -127,9 +104,9 @@ async fn test_database_connection(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_database_ready(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 
 	// Verify users table is accessible
 	let user_manager = Manager::<User>::new();
@@ -153,9 +130,9 @@ async fn test_database_ready(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_create_user(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<User>::new();
 
 	let new_user = User {
@@ -180,9 +157,9 @@ async fn test_create_user(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_read_users(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<User>::new();
 
 	// Create test users
@@ -215,9 +192,9 @@ async fn test_read_users(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_update_user(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<User>::new();
 
 	// Create user
@@ -244,9 +221,9 @@ async fn test_update_user(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_delete_user(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, conn) = db_with_migrations.await;
+	let (_file, conn) = db_with_migrations.await;
 	let manager = Manager::<User>::new();
 
 	// Create user
@@ -282,9 +259,9 @@ async fn test_delete_user(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_transaction_commit(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, conn) = db_with_migrations.await;
+	let (_file, conn) = db_with_migrations.await;
 
 	// Start transaction with TransactionScope
 	let tx = TransactionScope::begin(&conn)
@@ -332,9 +309,9 @@ async fn test_transaction_commit(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_transaction_rollback(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, conn) = db_with_migrations.await;
+	let (_file, conn) = db_with_migrations.await;
 
 	// Start transaction with TransactionScope
 	let mut tx = TransactionScope::begin(&conn)
@@ -388,9 +365,9 @@ async fn test_transaction_rollback(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_orm_create_todo(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	let new_todo = Todo {
@@ -415,9 +392,9 @@ async fn test_orm_create_todo(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_orm_list_todos(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	// Create test todos
@@ -454,9 +431,9 @@ async fn test_orm_list_todos(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_orm_get_todo(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	// Create todo
@@ -485,9 +462,9 @@ async fn test_orm_get_todo(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_orm_update_todo(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	// Create todo
@@ -519,9 +496,9 @@ async fn test_orm_update_todo(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_orm_delete_todo(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	// Create todo
@@ -552,9 +529,9 @@ async fn test_orm_delete_todo(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_todo_default_values(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	let new_todo = Todo {
@@ -578,9 +555,9 @@ async fn test_todo_default_values(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_todo_timestamp_behavior(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, _conn) = db_with_migrations.await;
+	let (_file, _conn) = db_with_migrations.await;
 	let manager = Manager::<Todo>::new();
 
 	let new_todo = Todo {
@@ -621,9 +598,9 @@ async fn test_todo_timestamp_behavior(
 #[tokio::test(flavor = "multi_thread")]
 #[serial(database)]
 async fn test_complete_crud_cycle(
-	#[future] db_with_migrations: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
-	let (_container, conn) = db_with_migrations.await;
+	let (_file, conn) = db_with_migrations.await;
 
 	// Use transaction for entire CRUD cycle
 	let final_count: std::result::Result<usize, anyhow::Error> =

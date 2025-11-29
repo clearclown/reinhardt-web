@@ -11,12 +11,8 @@ allowed_hosts = ["*"]
 
 # Database configuration for local development
 [database]
-engine = "postgresql"
-host = "localhost"
-port = 5432
-name = "reinhardt_examples"
-user = "reinhardt"
-password = "reinhardt_dev"
+engine = "sqlite"
+name = "db.sqlite3"
 
 # Security settings (relaxed for development)
 [security]
