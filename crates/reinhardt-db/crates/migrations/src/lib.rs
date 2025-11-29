@@ -32,24 +32,26 @@
 //!
 //! This file is automatically updated when new migrations are created.
 
+pub mod ast_parser;
 pub mod auto_migration;
 pub mod autodetector;
-pub mod commands;
 pub mod di_support;
 pub mod executor;
+pub mod fields;
 pub mod graph;
 pub mod introspection;
-pub mod loader;
 pub mod migration;
 pub mod model_registry;
 pub mod operations;
 pub mod plan;
 pub mod recorder;
 pub mod registry;
+pub mod repository;
 pub mod schema_diff;
+pub mod service;
+pub mod source;
 pub mod squash;
 pub mod visualization;
-pub mod writer;
 pub mod zero_downtime;
 
 pub use autodetector::{
@@ -70,14 +72,13 @@ pub use autodetector::{
 	ProjectState,
 	RuleCondition,
 	SimilarityConfig,
+	to_snake_case,
 };
-pub use commands::{MakeMigrationsCommand, MakeMigrationsOptions, MigrateCommand, MigrateOptions};
-pub use di_support::{MigrationConfig, MigrationService};
+pub use di_support::{MigrationConfig, MigrationService as DIMigrationService};
 pub use executor::{
 	DatabaseMigrationExecutor, ExecutionResult, MigrationExecutor, OperationOptimizer,
 };
 pub use graph::{MigrationGraph, MigrationKey, MigrationNode};
-pub use loader::MigrationLoader;
 pub use migration::Migration;
 pub use model_registry::{FieldMetadata, ModelMetadata, ModelRegistry, global_registry};
 pub use operations::{
@@ -95,18 +96,26 @@ pub use operations::{
 	RunSQL, StateOperation, special::DataMigration,
 };
 pub use recorder::{DatabaseMigrationRecorder, MigrationRecord, MigrationRecorder};
+pub use repository::{MigrationRepository, filesystem::FilesystemRepository};
 pub use schema_diff::{
 	ColumnSchema, ConstraintSchema, DatabaseSchema, IndexSchema, SchemaDiff, SchemaDiffResult,
 	TableSchema,
 };
+pub use service::MigrationService;
+pub use source::{
+	MigrationSource, composite::CompositeSource, filesystem::FilesystemSource,
+	registry::RegistrySource,
+};
 pub use squash::{MigrationSquasher, SquashOptions};
 pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, OutputFormat};
-pub use writer::MigrationWriter;
 pub use zero_downtime::{MigrationPhase, Strategy, ZeroDowntimeMigration};
 
 pub use introspection::{
 	ColumnInfo, DatabaseIntrospector, ForeignKeyInfo, IndexInfo, TableInfo, UniqueConstraintInfo,
 };
+
+// Re-export types from reinhardt-backends for convenience
+pub use reinhardt_backends::{DatabaseConnection, DatabaseType};
 
 use thiserror::Error;
 
@@ -181,3 +190,9 @@ pub enum MigrationError {
 }
 
 pub type Result<T> = std::result::Result<T, MigrationError>;
+
+// Prelude for migrations
+pub mod prelude {
+	pub use crate::fields::prelude::*;
+	pub use crate::{ColumnDefinition, Migration, Operation};
+}

@@ -85,8 +85,8 @@ pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::E
 		/// Auto-generated migration provider struct for app `#app_label`
 		pub struct #struct_name;
 
-		impl ::reinhardt_migrations::MigrationProvider for #struct_name {
-			fn migrations() -> Vec<::reinhardt_migrations::Migration> {
+		impl ::reinhardt::reinhardt_migrations::MigrationProvider for #struct_name {
+			fn migrations() -> Vec<::reinhardt::reinhardt_migrations::Migration> {
 				vec![
 					#(#migration_calls),*
 				]
@@ -95,14 +95,16 @@ pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::E
 
 		impl #struct_name {
 			/// Returns all migrations for this app
-			pub fn all() -> Vec<::reinhardt_migrations::Migration> {
-				<Self as ::reinhardt_migrations::MigrationProvider>::migrations()
+			pub fn all() -> Vec<::reinhardt::reinhardt_migrations::Migration> {
+				<Self as ::reinhardt::reinhardt_migrations::MigrationProvider>::migrations()
 			}
 		}
 
-		#[::linkme::distributed_slice(::reinhardt_migrations::registry::global::MIGRATION_PROVIDERS)]
-		static #static_name: ::reinhardt_migrations::registry::global::MigrationProvider =
-			<#struct_name as ::reinhardt_migrations::MigrationProvider>::migrations;
+		// Use linkme's distributed_slice attribute directly
+		// Note: The calling crate must have `linkme` in dependencies for this to work
+		#[::linkme::distributed_slice(::reinhardt::reinhardt_migrations::registry::global::MIGRATION_PROVIDERS)]
+		static #static_name: ::reinhardt::reinhardt_migrations::registry::global::MigrationProvider =
+			<#struct_name as ::reinhardt::reinhardt_migrations::MigrationProvider>::migrations;
 	};
 
 	Ok(expanded)
