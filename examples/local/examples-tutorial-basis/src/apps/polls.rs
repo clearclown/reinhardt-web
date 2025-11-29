@@ -6,7 +6,6 @@
 //! - Forms and generic views
 //! - Admin panel integration
 
-pub mod migrations;
 pub mod models;
 pub mod serializers;
 pub mod urls;

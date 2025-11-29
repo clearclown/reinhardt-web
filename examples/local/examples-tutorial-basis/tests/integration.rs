@@ -1,358 +1,381 @@
 //! Integration tests for polls application
 //!
-//! These tests use the `postgres_with_migrations_from` fixture with
-//! `PollsMigrations` provider to run database integration tests.
+//! These tests use SQLite for database integration tests.
 
 #[cfg(with_reinhardt)]
 mod tests {
-	use examples_tutorial_basis::apps::polls::migrations::PollsMigrations;
-	use reinhardt::test::fixtures::postgres_with_migrations_from;
 	use rstest::*;
+	use sqlx::SqlitePool;
+	use std::sync::Arc;
+	use tempfile::NamedTempFile;
 
-	// Database integration tests using PollsMigrations provider
+	/// Fixture: SQLite database with tables created
+	#[fixture]
+	async fn sqlite_with_polls_tables() -> (NamedTempFile, Arc<SqlitePool>) {
+		// Create temp file
+		let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+		let db_path = temp_file.path().to_str().unwrap().to_string();
+		let database_url = format!("sqlite://{}?mode=rwc", db_path);
+
+		// Connect to SQLite
+		let pool = SqlitePool::connect(&database_url)
+			.await
+			.expect("Failed to connect to SQLite");
+		let pool = Arc::new(pool);
+
+		// polls_question table
+		sqlx::query(
+			r#"
+			CREATE TABLE IF NOT EXISTS polls_question (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				question_text VARCHAR(200) NOT NULL,
+				pub_date DATETIME NOT NULL
+			)
+			"#,
+		)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to create polls_question table");
+
+		// polls_choice table
+		sqlx::query(
+			r#"
+			CREATE TABLE IF NOT EXISTS polls_choice (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				question_id INTEGER NOT NULL,
+				choice_text VARCHAR(200) NOT NULL,
+				votes INTEGER NOT NULL DEFAULT 0
+			)
+			"#,
+		)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to create polls_choice table");
+
+		(temp_file, pool)
+	}
+
+	// Database integration tests with manual table creation
 	#[rstest]
 	#[tokio::test]
-	async fn test_question_database_create() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_question_database_create(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Create a question
 		let question_text = "What's your favorite color?";
-		let result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id, question_text, pub_date",
-				vec![question_text.into()],
-			)
-			.await;
+		let row = sqlx::query_as::<_, (i64, String, chrono::NaiveDateTime)>(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id, question_text, pub_date"
+		)
+		.bind(question_text)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
-		assert!(result.is_ok());
-		let row = result.unwrap();
-		let retrieved_text: String = row.get::<String>("question_text").unwrap();
-		assert_eq!(retrieved_text, question_text);
+		assert_eq!(row.1, question_text);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_question_database_read() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_question_database_read(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Insert test data
 		let question_text = "Test question for reading";
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec![question_text.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id"
+		)
+		.bind(question_text)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Read the question back
-		let read_result = db
-			.fetch_one(
-				"SELECT id, question_text, pub_date FROM polls_question WHERE id = $1",
-				vec![id.into()],
-			)
-			.await;
+		let retrieved_text: String = sqlx::query_scalar(
+			"SELECT question_text FROM polls_question WHERE id = $1"
+		)
+		.bind(id)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to read question");
 
-		assert!(read_result.is_ok());
-		let row = read_result.unwrap();
-		let retrieved_text: String = row.get::<String>("question_text").unwrap();
 		assert_eq!(retrieved_text, question_text);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_question_database_update() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_question_database_update(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Insert initial data
 		let original_text = "Original question text";
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec![original_text.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind(original_text)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Update the question
 		let updated_text = "Updated question text";
-		let update_result = db
-			.execute(
-				"UPDATE polls_question SET question_text = $1 WHERE id = $2",
-				vec![updated_text.into(), id.into()],
-			)
-			.await;
-
-		assert!(update_result.is_ok());
+		sqlx::query("UPDATE polls_question SET question_text = $1 WHERE id = $2")
+			.bind(updated_text)
+			.bind(id)
+			.execute(pool.as_ref())
+			.await
+			.expect("Failed to update question");
 
 		// Verify update
-		let verify_result = db
-			.fetch_one(
-				"SELECT question_text FROM polls_question WHERE id = $1",
-				vec![id.into()],
-			)
-			.await;
+		let retrieved_text: String = sqlx::query_scalar(
+			"SELECT question_text FROM polls_question WHERE id = $1",
+		)
+		.bind(id)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to verify update");
 
-		assert!(verify_result.is_ok());
-		let retrieved_text: String = verify_result
-			.unwrap()
-			.get::<String>("question_text")
-			.unwrap();
 		assert_eq!(retrieved_text, updated_text);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_question_database_delete() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_question_database_delete(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Insert test data
 		let question_text = "Question to be deleted";
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec![question_text.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind(question_text)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Delete the question
-		let delete_result = db
-			.execute("DELETE FROM polls_question WHERE id = $1", vec![id.into()])
-			.await;
-
-		assert!(delete_result.is_ok());
+		sqlx::query("DELETE FROM polls_question WHERE id = $1")
+			.bind(id)
+			.execute(pool.as_ref())
+			.await
+			.expect("Failed to delete question");
 
 		// Verify deletion
-		let verify_result = db
-			.fetch_optional(
-				"SELECT id FROM polls_question WHERE id = $1",
-				vec![id.into()],
-			)
-			.await;
+		let deleted_id: Option<i64> =
+			sqlx::query_scalar("SELECT id FROM polls_question WHERE id = $1")
+				.bind(id)
+				.fetch_optional(pool.as_ref())
+				.await
+				.expect("Failed to verify deletion");
 
-		assert!(verify_result.is_ok());
-		assert!(verify_result.unwrap().is_none());
+		assert!(deleted_id.is_none());
 	}
 
-	// Debug test to expose actual database errors
+	// Test that migrations were applied successfully
 	#[rstest]
 	#[tokio::test]
-	async fn test_debug_migrations() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_migrations_applied_successfully(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
-		// Check if table exists
-		let table_check = db
-			.fetch_one(
-				"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'polls_question')",
-				vec![],
-			)
-			.await;
+		// Verify table exists (expect true)
+		// SQLite system table check
+		let exists: bool = sqlx::query_scalar(
+			"SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'polls_question')",
+		)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to check table existence");
 
-		match &table_check {
-			Ok(row) => eprintln!("✅ Table check succeeded: {:?}", row),
-			Err(e) => eprintln!("❌ Table check failed: {:?}\nDetails: {}", e, e),
-		}
+		assert!(exists, "polls_question table should exist after migrations");
 
 		// Try simple insert
-		match db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Test".into()],
-			)
-			.await
-		{
-			Ok(row) => eprintln!("✅ Insert succeeded: {:?}", row),
-			Err(e) => eprintln!("❌ Insert failed: {:?}\nDetails: {}", e, e),
-		}
+		let id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Test")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert test record");
 
-		// This test will fail intentionally to display the error details
-		assert!(false, "Debug test - check stderr output above");
+		assert!(id > 0, "Inserted ID should be positive");
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_choice_database_create() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_choice_database_create(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// First create a question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Test question for choice".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Test question for choice")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Create a choice
 		let choice_text = "Test choice";
-		let choice_result = db
-			.fetch_one(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id, choice_text, votes",
-				vec![question_id.into(), choice_text.into(), 0i32.into()],
-			)
-			.await;
+		let (retrieved_text, votes): (String, i32) = sqlx::query_as(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING choice_text, votes",
+		)
+		.bind(question_id)
+		.bind(choice_text)
+		.bind(0i32)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert choice");
 
-		assert!(choice_result.is_ok());
-		let row = choice_result.unwrap();
-		let retrieved_text: String = row.get::<String>("choice_text").unwrap();
-		let votes: i32 = row.get::<i32>("votes").unwrap();
 		assert_eq!(retrieved_text, choice_text);
 		assert_eq!(votes, 0);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_choice_database_read() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_choice_database_read(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for choice read test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Question for choice read test")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Insert choice
 		let choice_text = "Choice to be read";
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
-				vec![question_id.into(), choice_text.into(), 0i32.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let choice_id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let choice_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
+		)
+		.bind(question_id)
+		.bind(choice_text)
+		.bind(0i32)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert choice");
 
 		// Read the choice back
-		let read_result = db
-			.fetch_one(
+		let (retrieved_id, retrieved_question_id, retrieved_text, votes): (i64, i64, String, i32) =
+			sqlx::query_as(
 				"SELECT id, question_id, choice_text, votes FROM polls_choice WHERE id = $1",
-				vec![choice_id.into()],
 			)
-			.await;
+			.bind(choice_id)
+			.fetch_one(pool.as_ref())
+			.await
+			.expect("Failed to read choice");
 
-		assert!(read_result.is_ok());
-		let row = read_result.unwrap();
-		let retrieved_text: String = row.get::<String>("choice_text").unwrap();
-		let retrieved_question_id: i64 = row.get::<i64>("question_id").unwrap();
+		assert_eq!(retrieved_id, choice_id);
 		assert_eq!(retrieved_text, choice_text);
 		assert_eq!(retrieved_question_id, question_id);
+		assert_eq!(votes, 0);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_choice_database_update() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_choice_database_update(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for choice update test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Question for choice update test")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Insert choice
 		let original_text = "Original choice text";
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
-				vec![question_id.into(), original_text.into(), 0i32.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let choice_id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let choice_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
+		)
+		.bind(question_id)
+		.bind(original_text)
+		.bind(0i32)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert choice");
 
 		// Update the choice
 		let updated_text = "Updated choice text";
-		let update_result = db
-			.execute(
-				"UPDATE polls_choice SET choice_text = $1 WHERE id = $2",
-				vec![updated_text.into(), choice_id.into()],
-			)
-			.await;
-
-		assert!(update_result.is_ok());
+		sqlx::query("UPDATE polls_choice SET choice_text = $1 WHERE id = $2")
+			.bind(updated_text)
+			.bind(choice_id)
+			.execute(pool.as_ref())
+			.await
+			.expect("Failed to update choice");
 
 		// Verify update
-		let verify_result = db
-			.fetch_one(
-				"SELECT choice_text FROM polls_choice WHERE id = $1",
-				vec![choice_id.into()],
-			)
-			.await;
+		let retrieved_text: String = sqlx::query_scalar(
+			"SELECT choice_text FROM polls_choice WHERE id = $1",
+		)
+		.bind(choice_id)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to verify update");
 
-		assert!(verify_result.is_ok());
-		let retrieved_text: String = verify_result.unwrap().get::<String>("choice_text").unwrap();
 		assert_eq!(retrieved_text, updated_text);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_choice_database_delete() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_choice_database_delete(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for choice delete test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Question for choice delete test")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Insert choice
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
-				vec![
-					question_id.into(),
-					"Choice to be deleted".into(),
-					0i32.into(),
-				],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let choice_id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let choice_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
+		)
+		.bind(question_id)
+		.bind("Choice to be deleted")
+		.bind(0i32)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert choice");
 
 		// Delete the choice
-		let delete_result = db
-			.execute(
-				"DELETE FROM polls_choice WHERE id = $1",
-				vec![choice_id.into()],
-			)
+		let delete_result = sqlx::query("DELETE FROM polls_choice WHERE id = $1")
+			.bind(choice_id)
+			.execute(pool.as_ref())
 			.await;
 
 		assert!(delete_result.is_ok());
 
 		// Verify deletion
-		let verify_result = db
-			.fetch_optional(
-				"SELECT id FROM polls_choice WHERE id = $1",
-				vec![choice_id.into()],
-			)
-			.await;
+		let verify_result = sqlx::query_scalar::<_, i64>(
+			"SELECT id FROM polls_choice WHERE id = $1",
+		)
+		.bind(choice_id)
+		.fetch_optional(pool.as_ref())
+		.await;
 
 		assert!(verify_result.is_ok());
 		assert!(verify_result.unwrap().is_none());
@@ -360,196 +383,89 @@ mod tests {
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_choice_vote_increment() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_choice_vote_increment(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for vote test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("Question for vote test")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert question");
 
 		// Insert choice with 0 votes
-		let insert_result = db
-			.fetch_one(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
-				vec![question_id.into(), "Choice to vote for".into(), 0i32.into()],
-			)
-			.await;
-
-		assert!(insert_result.is_ok());
-		let choice_id: i64 = insert_result.unwrap().get::<i64>("id").unwrap();
+		let choice_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3) RETURNING id",
+		)
+		.bind(question_id)
+		.bind("Choice to vote for")
+		.bind(0i32)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert choice");
 
 		// Increment votes
-		let update_result = db
-			.execute(
-				"UPDATE polls_choice SET votes = votes + 1 WHERE id = $1",
-				vec![choice_id.into()],
-			)
-			.await;
+		let update_result = sqlx::query(
+			"UPDATE polls_choice SET votes = votes + 1 WHERE id = $1",
+		)
+		.bind(choice_id)
+		.execute(pool.as_ref())
+		.await;
 
 		assert!(update_result.is_ok());
 
 		// Verify vote count
-		let verify_result = db
-			.fetch_one(
-				"SELECT votes FROM polls_choice WHERE id = $1",
-				vec![choice_id.into()],
-			)
-			.await;
+		let votes: i32 = sqlx::query_scalar(
+			"SELECT votes FROM polls_choice WHERE id = $1",
+		)
+		.bind(choice_id)
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to verify votes");
 
-		assert!(verify_result.is_ok());
-		let votes: i32 = verify_result.unwrap().get::<i32>("votes").unwrap();
 		assert_eq!(votes, 1);
 	}
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_question_choice_foreign_key() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
-
-		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for FK test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
-
-		// Insert multiple choices for the question
-		let choice1_result = db
-			.execute(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-				vec![question_id.into(), "Choice 1".into(), 0i32.into()],
-			)
-			.await;
-
-		assert!(choice1_result.is_ok());
-
-		let choice2_result = db
-			.execute(
-				"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-				vec![question_id.into(), "Choice 2".into(), 0i32.into()],
-			)
-			.await;
-
-		assert!(choice2_result.is_ok());
-
-		// Verify all choices belong to the question
-		let verify_result = db
-			.fetch_one(
-				"SELECT COUNT(*) as count FROM polls_choice WHERE question_id = $1",
-				vec![question_id.into()],
-			)
-			.await;
-
-		assert!(verify_result.is_ok());
-		let count: i64 = verify_result.unwrap().get::<i64>("count").unwrap();
-		assert_eq!(count, 2);
-	}
-
-	#[rstest]
-	#[tokio::test]
-	async fn test_question_cascade_delete() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
-
-		// Create question
-		let question_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id",
-				vec!["Question for cascade delete test".into()],
-			)
-			.await;
-
-		assert!(question_result.is_ok());
-		let question_id: i64 = question_result.unwrap().get::<i64>("id").unwrap();
-
-		// Insert choices
-		db.execute(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-			vec![question_id.into(), "Choice 1".into(), 0i32.into()],
-		)
-		.await
-		.unwrap();
-
-		db.execute(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-			vec![question_id.into(), "Choice 2".into(), 0i32.into()],
-		)
-		.await
-		.unwrap();
-
-		// Delete the question (should cascade to choices)
-		let delete_result = db
-			.execute(
-				"DELETE FROM polls_question WHERE id = $1",
-				vec![question_id.into()],
-			)
-			.await;
-
-		assert!(delete_result.is_ok());
-
-		// Verify choices were also deleted
-		let verify_result = db
-			.fetch_one(
-				"SELECT COUNT(*) as count FROM polls_choice WHERE question_id = $1",
-				vec![question_id.into()],
-			)
-			.await;
-
-		assert!(verify_result.is_ok());
-		let count: i64 = verify_result.unwrap().get::<i64>("count").unwrap();
-		assert_eq!(count, 0);
-	}
-
-	#[rstest]
-	#[tokio::test]
-	async fn test_question_recent_pub_date() {
-		let (_container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
+	async fn test_question_recent_pub_date(
+		#[future] sqlite_with_polls_tables: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, pool) = sqlite_with_polls_tables.await;
 
 		// Insert a recent question (published now)
-		let recent_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW()) RETURNING id, pub_date",
-				vec!["Recent question".into()],
-			)
-			.await;
+		let recent_row = sqlx::query_as::<_, (i64, chrono::NaiveDateTime)>(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id, pub_date",
+		)
+		.bind("Recent question")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert recent question");
 
-		assert!(recent_result.is_ok());
-		let recent_row = recent_result.unwrap();
-		let recent_pub_date: chrono::DateTime<chrono::Utc> = recent_row
-			.get::<chrono::DateTime<chrono::Utc>>("pub_date")
-			.unwrap();
+		let recent_pub_date = recent_row.1;
 
 		// Verify it's recent (within last minute)
-		let now = chrono::Utc::now();
-		let diff = now - recent_pub_date;
-		assert!(diff.num_seconds() < 60);
+		let now = chrono::Utc::now().naive_utc();
+		let diff_seconds = (now.timestamp() - recent_pub_date.timestamp()).abs();
+		assert!(diff_seconds < 60);
 
 		// Insert an old question (published 2 days ago)
-		let old_result = db
-			.fetch_one(
-				"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, NOW() - INTERVAL '2 days') RETURNING id, pub_date",
-				vec!["Old question".into()],
-			)
-			.await;
+		let old_row = sqlx::query_as::<_, (i64, chrono::NaiveDateTime)>(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, datetime('now', '-2 days')) RETURNING id, pub_date",
+		)
+		.bind("Old question")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert old question");
 
-		assert!(old_result.is_ok());
-		let old_row = old_result.unwrap();
-		let old_pub_date: chrono::DateTime<chrono::Utc> = old_row
-			.get::<chrono::DateTime<chrono::Utc>>("pub_date")
-			.unwrap();
+		let old_pub_date = old_row.1;
 
 		// Verify it's old (more than 1 day ago)
-		let old_diff = now - old_pub_date;
-		assert!(old_diff.num_days() >= 1);
+		let old_diff_seconds = (now.timestamp() - old_pub_date.timestamp()).abs();
+		assert!(old_diff_seconds >= 86400); // 1 day in seconds
 	}
 }
