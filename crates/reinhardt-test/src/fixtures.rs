@@ -145,4 +145,7 @@ pub use testcontainers::ContainerAsync;
 pub use testcontainers::GenericImage;
 
 // From migrations module
-pub use migrations::migration_registry;
+pub use migrations::{
+	InMemoryRepository, TestMigrationSource, in_memory_repository, migration_registry,
+	test_migration_source,
+};
