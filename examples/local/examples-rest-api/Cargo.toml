@@ -13,6 +13,7 @@ path = "src/bin/manage.rs"
 # package="reinhardt-web" maps the crate name to the actual package name
 reinhardt = { path = "../../..", package = "reinhardt-web", features = [
     "full",
+    "db-sqlite",
 ] }
 
 # Common utilities for availability checking
@@ -37,7 +38,7 @@ serial_test = "3.2"
 tokio = { version = "1.48.0", features = ["rt", "macros"] }
 reqwest = { version = "0.12", features = ["json"] }
 testcontainers = "0.25.2"
-testcontainers-modules = { version = "0.13.0", features = ["postgres"] }
+testcontainers-modules = { version = "0.13.0", features = [] }
 
 [build-dependencies]
 example-common = { path = "../../remote/common" }

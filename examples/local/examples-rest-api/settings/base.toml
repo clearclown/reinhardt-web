@@ -60,13 +60,8 @@ managers = []
 
 # Database configuration
 [databases.default]
-engine = "postgresql"
-name = "reinhardt_examples"
-user = "reinhardt"
-password = "reinhardt_dev"
-host = "localhost"
-port = 5432
-options = {}
+engine = "sqlite"
+name = "db.sqlite3"
 
 # Template configuration
 [[templates]]
