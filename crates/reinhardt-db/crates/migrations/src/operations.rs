@@ -42,6 +42,7 @@ pub mod fields;
 pub mod models;
 pub mod postgres;
 pub mod special;
+mod to_tokens;
 
 // Re-export commonly used types for convenience
 pub use fields::{AddField, AlterField, RemoveField, RenameField};
