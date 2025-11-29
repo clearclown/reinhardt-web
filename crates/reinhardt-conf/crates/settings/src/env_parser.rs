@@ -182,6 +182,9 @@ fn parse_sqlite_url(url_str: &str) -> Result<DatabaseUrl, String> {
 		url_str.trim_start_matches("sqlite:///").to_string()
 	} else if url_str.starts_with("sqlite://") {
 		url_str.trim_start_matches("sqlite://").to_string()
+	} else if url_str.starts_with("sqlite:") {
+		// Handle sqlite:db.sqlite3 format (single colon for relative paths)
+		url_str.trim_start_matches("sqlite:").to_string()
 	} else {
 		return Err("Invalid SQLite URL format".to_string());
 	};

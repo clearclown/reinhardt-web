@@ -33,6 +33,7 @@ pub mod audit;
 pub mod hot_reload;
 
 pub mod config;
+pub mod database_config;
 pub mod docs;
 pub mod testing;
 
@@ -479,130 +480,8 @@ impl Default for Settings {
 	}
 }
 
-/// Database configuration
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DatabaseConfig {
-	/// Database engine/backend
-	pub engine: String,
-
-	/// Database name or path
-	pub name: String,
-
-	/// Database user (if applicable)
-	pub user: Option<String>,
-
-	/// Database password (if applicable)
-	pub password: Option<String>,
-
-	/// Database host (if applicable)
-	pub host: Option<String>,
-
-	/// Database port (if applicable)
-	pub port: Option<u16>,
-
-	/// Additional options
-	pub options: HashMap<String, String>,
-}
-
-impl DatabaseConfig {
-	/// Create a SQLite database configuration
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_settings::DatabaseConfig;
-	///
-	/// let db = DatabaseConfig::sqlite("myapp.db");
-	///
-	/// assert_eq!(db.engine, "reinhardt.db.backends.sqlite3");
-	/// assert_eq!(db.name, "myapp.db");
-	/// assert!(db.user.is_none());
-	/// assert!(db.password.is_none());
-	/// ```
-	pub fn sqlite(name: impl Into<String>) -> Self {
-		Self {
-			engine: "reinhardt.db.backends.sqlite3".to_string(),
-			name: name.into(),
-			user: None,
-			password: None,
-			host: None,
-			port: None,
-			options: HashMap::new(),
-		}
-	}
-	/// Create a PostgreSQL database configuration
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_settings::DatabaseConfig;
-	///
-	/// let db = DatabaseConfig::postgresql("mydb", "admin", "password123", "localhost", 5432);
-	///
-	/// assert_eq!(db.engine, "reinhardt.db.backends.postgresql");
-	/// assert_eq!(db.name, "mydb");
-	/// assert_eq!(db.user, Some("admin".to_string()));
-	/// assert_eq!(db.password, Some("password123".to_string()));
-	/// assert_eq!(db.host, Some("localhost".to_string()));
-	/// assert_eq!(db.port, Some(5432));
-	/// ```
-	pub fn postgresql(
-		name: impl Into<String>,
-		user: impl Into<String>,
-		password: impl Into<String>,
-		host: impl Into<String>,
-		port: u16,
-	) -> Self {
-		Self {
-			engine: "reinhardt.db.backends.postgresql".to_string(),
-			name: name.into(),
-			user: Some(user.into()),
-			password: Some(password.into()),
-			host: Some(host.into()),
-			port: Some(port),
-			options: HashMap::new(),
-		}
-	}
-	/// Create a MySQL database configuration
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_settings::DatabaseConfig;
-	///
-	/// let db = DatabaseConfig::mysql("mydb", "root", "password123", "localhost", 3306);
-	///
-	/// assert_eq!(db.engine, "reinhardt.db.backends.mysql");
-	/// assert_eq!(db.name, "mydb");
-	/// assert_eq!(db.user, Some("root".to_string()));
-	/// assert_eq!(db.password, Some("password123".to_string()));
-	/// assert_eq!(db.host, Some("localhost".to_string()));
-	/// assert_eq!(db.port, Some(3306));
-	/// ```
-	pub fn mysql(
-		name: impl Into<String>,
-		user: impl Into<String>,
-		password: impl Into<String>,
-		host: impl Into<String>,
-		port: u16,
-	) -> Self {
-		Self {
-			engine: "reinhardt.db.backends.mysql".to_string(),
-			name: name.into(),
-			user: Some(user.into()),
-			password: Some(password.into()),
-			host: Some(host.into()),
-			port: Some(port),
-			options: HashMap::new(),
-		}
-	}
-}
-
-impl Default for DatabaseConfig {
-	fn default() -> Self {
-		Self::sqlite("db.sqlite3".to_string())
-	}
-}
+// Re-export DatabaseConfig from database_config module
+pub use database_config::DatabaseConfig;
 
 /// Template engine configuration
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -740,23 +619,6 @@ mod tests {
 		assert_eq!(settings.debug, true);
 		assert_eq!(settings.language_code, "en-us");
 		assert_eq!(settings.time_zone, "UTC");
-	}
-
-	#[test]
-	fn test_settings_db_config_sqlite() {
-		let db = DatabaseConfig::sqlite("test.db");
-		assert_eq!(db.engine, "reinhardt.db.backends.sqlite3");
-		assert_eq!(db.name, "test.db");
-		assert!(db.user.is_none());
-	}
-
-	#[test]
-	fn test_settings_db_config_postgresql() {
-		let db = DatabaseConfig::postgresql("testdb", "user", "pass", "localhost", 5432);
-		assert_eq!(db.engine, "reinhardt.db.backends.postgresql");
-		assert_eq!(db.name, "testdb");
-		assert_eq!(db.user, Some("user".to_string()));
-		assert_eq!(db.port, Some(5432));
 	}
 
 	#[test]
