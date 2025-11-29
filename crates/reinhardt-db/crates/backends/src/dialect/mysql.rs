@@ -24,6 +24,10 @@ impl MySqlBackend {
 		}
 	}
 
+	pub fn pool(&self) -> &MySqlPool {
+		&self.pool
+	}
+
 	fn bind_value<'q>(
 		query: sqlx::query::Query<'q, sqlx::MySql, sqlx::mysql::MySqlArguments>,
 		value: &'q QueryValue,

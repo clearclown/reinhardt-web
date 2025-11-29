@@ -24,6 +24,10 @@ impl PostgresBackend {
 		}
 	}
 
+	pub fn pool(&self) -> &PgPool {
+		&self.pool
+	}
+
 	fn bind_value<'q>(
 		query: sqlx::query::Query<'q, sqlx::Postgres, sqlx::postgres::PgArguments>,
 		value: &'q QueryValue,

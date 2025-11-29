@@ -61,6 +61,7 @@ default = [
 
 # Module features
 backends = ["dep:reinhardt-backends"]
+backends-settings = ["backends", "reinhardt-backends?/settings"]
 
 # DI integration - enables Injectable implementation for DatabaseConnection
 di = ["reinhardt-backends?/di"]

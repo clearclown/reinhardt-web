@@ -262,8 +262,113 @@ impl DatabaseConnection {
 
 	#[cfg(feature = "sqlite")]
 	pub async fn connect_sqlite(url: &str) -> Result<Self> {
-		use sqlx::SqlitePool;
-		let pool = SqlitePool::connect(url).await?;
+		use sqlx::sqlite::{SqliteConnectOptions, SqlitePool};
+		use std::path::Path;
+		use std::str::FromStr;
+
+		// Handle in-memory database
+		if url == "sqlite::memory:" {
+			let pool = SqlitePool::connect(url).await?;
+			return Ok(Self {
+				backend: Arc::new(SqliteBackend::new(pool)),
+			});
+		}
+
+		// Extract file path from URL and convert to absolute path
+		let file_path = if url.starts_with("sqlite:///") {
+			// Absolute path: sqlite:///path/to/db.sqlite3
+			url.trim_start_matches("sqlite:///").to_string()
+		} else if url.starts_with("sqlite://") {
+			// Relative path: sqlite://path/to/db.sqlite3
+			// Convert to absolute path
+			let rel_path = url.trim_start_matches("sqlite://");
+			std::env::current_dir()
+				.map_err(|e| {
+					crate::error::DatabaseError::ConnectionError(format!(
+						"Failed to get current directory: {}",
+						e
+					))
+				})?
+				.join(rel_path)
+				.to_string_lossy()
+				.to_string()
+		} else if url.starts_with("sqlite:") {
+			// sqlite:path/to/db.sqlite3 (relative path format)
+			// Convert to absolute path
+			let rel_path = url.trim_start_matches("sqlite:");
+			std::env::current_dir()
+				.map_err(|e| {
+					crate::error::DatabaseError::ConnectionError(format!(
+						"Failed to get current directory: {}",
+						e
+					))
+				})?
+				.join(rel_path)
+				.to_string_lossy()
+				.to_string()
+		} else {
+			url.to_string()
+		};
+
+		// Normalize the path (remove .. and . components)
+		let db_path = Path::new(&file_path);
+		let normalized_path = if db_path.exists() {
+			// If file exists, canonicalize to get absolute path
+			db_path.canonicalize().map_err(|e| {
+				crate::error::DatabaseError::ConnectionError(format!(
+					"Failed to canonicalize path {}: {}",
+					db_path.display(),
+					e
+				))
+			})?
+		} else {
+			// If file doesn't exist, use the path as-is but ensure it's absolute
+			if db_path.is_absolute() {
+				db_path.to_path_buf()
+			} else {
+				// Convert relative path to absolute
+				std::env::current_dir()
+					.map_err(|e| {
+						crate::error::DatabaseError::ConnectionError(format!(
+							"Failed to get current directory: {}",
+							e
+						))
+					})?
+					.join(db_path)
+			}
+		};
+
+		// Create parent directory if it doesn't exist
+		if let Some(parent) = normalized_path.parent()
+			&& !parent.as_os_str().is_empty()
+			&& !parent.exists()
+		{
+			std::fs::create_dir_all(parent).map_err(|e| {
+				crate::error::DatabaseError::ConnectionError(format!(
+					"Failed to create database directory {}: {}",
+					parent.display(),
+					e
+				))
+			})?;
+		}
+
+		// Use absolute path with sqlite:/// format
+		// On Windows, we need to handle the path separator
+		let path_str = normalized_path.to_string_lossy().replace('\\', "/");
+		let absolute_url = format!("sqlite:///{}", path_str);
+
+		// Use SqliteConnectOptions with create_if_missing enabled
+		let options = SqliteConnectOptions::from_str(&absolute_url)
+			.map_err(|e| {
+				crate::error::DatabaseError::ConnectionError(format!(
+					"Invalid SQLite URL '{}': {}",
+					absolute_url, e
+				))
+			})?
+			.create_if_missing(true);
+
+		let pool = SqlitePool::connect_with(options).await?;
+
 		Ok(Self {
 			backend: Arc::new(SqliteBackend::new(pool)),
 		})
@@ -337,6 +442,156 @@ impl DatabaseConnection {
 
 	pub fn delete(&self, table: impl Into<String>) -> DeleteBuilder {
 		DeleteBuilder::new(self.backend.clone(), table)
+	}
+
+	/// Get database URL from environment variable or settings files
+	///
+	/// This function first checks the `DATABASE_URL` environment variable.
+	/// If not found, it attempts to load database configuration from settings files
+	/// in the `settings/` directory.
+	///
+	/// # Arguments
+	///
+	/// * `base_dir` - Base directory for the project (defaults to current directory if None)
+	///
+	/// # Returns
+	///
+	/// Returns the database URL string, or an error if neither environment variable
+	/// nor settings configuration is found.
+	///
+	/// # Example
+	///
+	/// ```no_run
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// use reinhardt_db::backends::connection::DatabaseConnection;
+	///
+	/// let url = DatabaseConnection::get_database_url_from_env_or_settings(None)?;
+	/// let conn = DatabaseConnection::connect_sqlite(&url).await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	#[cfg(feature = "settings")]
+	pub fn get_database_url_from_env_or_settings(
+		base_dir: Option<std::path::PathBuf>,
+	) -> Result<String> {
+		use std::env;
+
+		// First, try to get from environment variable
+		if let Ok(url) = env::var("DATABASE_URL") {
+			return Ok(url);
+		}
+
+		// If not found, try to load from settings files
+		let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
+		let profile = reinhardt_conf::settings::profile::Profile::parse(&profile_str);
+
+		let base_dir = base_dir.unwrap_or_else(|| {
+			env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
+		});
+		let settings_dir = base_dir.join("settings");
+
+		// Try to load settings
+		let merged = reinhardt_conf::settings::builder::SettingsBuilder::new()
+			.profile(profile)
+			.add_source(
+				reinhardt_conf::settings::sources::DefaultSource::new()
+					.with_value("debug", serde_json::Value::Bool(false))
+					.with_value(
+						"language_code",
+						serde_json::Value::String("en-us".to_string()),
+					)
+					.with_value("time_zone", serde_json::Value::String("UTC".to_string())),
+			)
+			.add_source(
+				reinhardt_conf::settings::sources::LowPriorityEnvSource::new()
+					.with_prefix("REINHARDT_"),
+			)
+			.add_source(reinhardt_conf::settings::sources::TomlFileSource::new(
+				settings_dir.join("base.toml"),
+			))
+			.add_source(reinhardt_conf::settings::sources::TomlFileSource::new(
+				settings_dir.join(format!("{}.toml", profile_str)),
+			))
+			.build()
+			.map_err(|e| {
+				crate::error::DatabaseError::ConnectionError(format!(
+					"Failed to load settings: {}. Please ensure settings files exist in the settings/ directory.",
+					e
+				))
+			})?;
+
+		// Try to get database configuration directly from merged settings
+		// TOML [database] section maps to "database" key as an object
+		let db_config: reinhardt_conf::settings::DatabaseConfig = {
+			// First, check if "database" key exists as raw value
+			if let Some(db_val) = merged.get_raw("database") {
+				// Try to deserialize as DatabaseConfig
+				serde_json::from_value(db_val.clone())
+					.ok()
+					.or_else(|| {
+						// If direct deserialization fails, try to extract from object
+						if let serde_json::Value::Object(db_map) = db_val {
+							// Try to construct DatabaseConfig from the object fields
+							let engine = db_map
+								.get("engine")
+								.and_then(|v| v.as_str())
+								.unwrap_or("sqlite")
+								.to_string();
+							let name = db_map
+								.get("name")
+								.and_then(|v| v.as_str())
+								.map(|s| s.to_string())
+								.unwrap_or_else(|| "db.sqlite3".to_string());
+
+							Some(reinhardt_conf::settings::DatabaseConfig {
+								engine,
+								name,
+								user: db_map
+									.get("user")
+									.and_then(|v| v.as_str())
+									.map(|s| s.to_string()),
+								password: db_map
+									.get("password")
+									.and_then(|v| v.as_str())
+									.map(|s| s.to_string()),
+								host: db_map
+									.get("host")
+									.and_then(|v| v.as_str())
+									.map(|s| s.to_string()),
+								port: db_map
+									.get("port")
+									.and_then(|v| v.as_u64())
+									.map(|p| p as u16),
+								options: std::collections::HashMap::new(),
+							})
+						} else {
+							None
+						}
+					})
+			} else {
+				// Try to get from "databases.default" or "databases.database"
+				merged
+					.get_optional::<serde_json::Value>("databases")
+					.and_then(|dbs| {
+						if let serde_json::Value::Object(dbs_map) = dbs {
+							// Try "default" first, then "database"
+							dbs_map
+								.get("default")
+								.or_else(|| dbs_map.get("database"))
+								.and_then(|db_val| serde_json::from_value(db_val.clone()).ok())
+						} else {
+							None
+						}
+					})
+			}
+		}
+		.ok_or_else(|| {
+			crate::error::DatabaseError::ConnectionError(
+				"Database configuration not found in settings. Please configure [database] in your settings file or set DATABASE_URL environment variable.".to_string(),
+			)
+		})?;
+
+		Ok(db_config.to_url())
 	}
 
 	pub async fn execute(
@@ -423,5 +678,29 @@ impl DatabaseConnection {
 		level: crate::types::IsolationLevel,
 	) -> Result<Box<dyn crate::types::TransactionExecutor>> {
 		self.backend.begin_with_isolation(level).await
+	}
+
+	#[cfg(feature = "postgres")]
+	pub fn into_postgres(&self) -> Option<sqlx::PgPool> {
+		self.backend
+			.as_any()
+			.downcast_ref::<crate::dialect::PostgresBackend>()
+			.map(|backend| backend.pool().clone())
+	}
+
+	#[cfg(feature = "sqlite")]
+	pub fn into_sqlite(&self) -> Option<sqlx::SqlitePool> {
+		self.backend
+			.as_any()
+			.downcast_ref::<crate::dialect::SqliteBackend>()
+			.map(|backend| backend.pool().clone())
+	}
+
+	#[cfg(feature = "mysql")]
+	pub fn into_mysql(&self) -> Option<sqlx::MySqlPool> {
+		self.backend
+			.as_any()
+			.downcast_ref::<crate::dialect::MySqlBackend>()
+			.map(|backend| backend.pool().clone())
 	}
 }

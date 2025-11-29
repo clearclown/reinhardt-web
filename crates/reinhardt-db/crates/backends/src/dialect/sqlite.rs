@@ -24,6 +24,10 @@ impl SqliteBackend {
 		}
 	}
 
+	pub fn pool(&self) -> &SqlitePool {
+		&self.pool
+	}
+
 	fn bind_value<'q>(
 		query: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments<'q>>,
 		value: &'q QueryValue,
