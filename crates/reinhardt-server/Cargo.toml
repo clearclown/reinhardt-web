@@ -16,3 +16,9 @@ default = ["server"]
 server = ["dep:server"]
 graphql = ["server", "server/graphql"]
 websocket = ["server", "server/websocket"]
+server-full = [
+  "server",
+  "graphql",
+  "websocket",
+  "server/full",
+]

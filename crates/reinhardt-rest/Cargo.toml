@@ -22,6 +22,29 @@ negotiation = []
 browsable-api = []
 openapi = ["reinhardt-openapi"]
 
+# Aggregate all REST features
+rest-full = [
+  "serializers",
+  "parsers",
+  "renderers",
+  "jwt",
+  "pagination",
+  "filters",
+  "throttling",
+  "versioning",
+  "metadata",
+  "negotiation",
+  "browsable-api",
+  "openapi",
+  "reinhardt-serializers/full",
+  "reinhardt-filters/full",
+  "reinhardt-throttling/full",
+  "reinhardt-versioning/full",
+  "reinhardt-metadata/full",
+  "reinhardt-browsable-api/full",
+  "reinhardt-openapi/full",
+]
+
 [dependencies]
 # Core dependencies
 reinhardt-core = { workspace = true, features = ["exception", "negotiation", "parsers", "pagination"] }

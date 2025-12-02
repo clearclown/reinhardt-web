@@ -27,6 +27,16 @@ cache = ["dep:reinhardt-cache"]
 storage = ["dep:reinhardt-storage"]
 static = ["dep:reinhardt-static"]
 all = ["logging", "cache", "storage", "static"]
+utils-full = [
+  "logging",
+  "cache",
+  "storage",
+  "static",
+  "reinhardt-logging/full",
+  "reinhardt-cache/full",
+  "reinhardt-storage/full",
+  "reinhardt-static/full",
+]
 
 [dev-dependencies]
 tokio = { workspace = true }

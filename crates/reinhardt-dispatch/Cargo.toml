@@ -28,6 +28,9 @@ futures = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
+[features]
+full = []
+
 [dev-dependencies]
 tokio = { workspace = true }
 hyper = { workspace = true }

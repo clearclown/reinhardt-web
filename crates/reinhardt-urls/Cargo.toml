@@ -18,6 +18,14 @@ default = ["routers", "routers-macros", "proxy"]
 routers = ["dep:reinhardt-routers"]
 routers-macros = ["dep:reinhardt-routers-macros"]
 proxy = ["dep:reinhardt-proxy"]
+urls-full = [
+  "routers",
+  "routers-macros",
+  "proxy",
+  "reinhardt-routers/full",
+  "reinhardt-routers-macros/full",
+  "reinhardt-proxy/full",
+]
 
 [dev-dependencies]
 tokio = { version = "1.41", features = ["full"] }

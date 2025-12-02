@@ -21,4 +21,10 @@ panel = ["dep:reinhardt-panel"]
 # All features
 all = ["panel"]
 
+# Aggregate all admin features
+admin-full = [
+  "panel",
+  "reinhardt-panel/full",
+]
+
 [dev-dependencies]

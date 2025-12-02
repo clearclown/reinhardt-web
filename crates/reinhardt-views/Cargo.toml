@@ -31,6 +31,10 @@ reinhardt-serializers = { workspace = true }
 [features]
 default = []
 viewsets = ["dep:reinhardt-viewsets"]
+views-full = [
+  "viewsets",
+  "reinhardt-viewsets/full",
+]
 
 [dev-dependencies]
 tokio = { workspace = true }

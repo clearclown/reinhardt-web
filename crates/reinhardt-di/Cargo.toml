@@ -28,6 +28,12 @@ default = []
 params = ["dep:reinhardt-params"]
 dev-tools = ["dep:indexmap"]
 generator = ["dep:genawaiter"]
+di-full = [
+  "params",
+  "dev-tools",
+  "generator",
+  "reinhardt-params/full",
+]
 
 [dev-dependencies]
 tokio = { workspace = true }

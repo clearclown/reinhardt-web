@@ -18,4 +18,11 @@ default = ["templates", "renderers", "templates-macros"]
 templates = ["dep:reinhardt-templates"]
 templates-macros = ["dep:reinhardt-templates-macros"]
 renderers = ["dep:reinhardt-renderers"]
-full = ["templates", "templates-macros", "renderers"]
+template-full = [
+  "templates",
+  "templates-macros",
+  "renderers",
+  "reinhardt-templates/full",
+  "reinhardt-templates-macros/full",
+  "reinhardt-renderers/full",
+]
