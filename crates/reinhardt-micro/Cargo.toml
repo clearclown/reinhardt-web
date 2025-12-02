@@ -22,6 +22,16 @@ compression = []
 cors = []
 rate-limit = []
 security = []
+full = [
+  "routing",
+  "di",
+  "params",
+  "database",
+  "compression",
+  "cors",
+  "rate-limit",
+  "security",
+]
 
 [dependencies]
 # Core framework

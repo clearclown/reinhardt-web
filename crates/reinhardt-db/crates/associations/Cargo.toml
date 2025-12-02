@@ -17,3 +17,6 @@ serial_test = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "postgres"] }
 tokio = { workspace = true }
 testcontainers = { workspace = true }
+
+[features]
+full = []

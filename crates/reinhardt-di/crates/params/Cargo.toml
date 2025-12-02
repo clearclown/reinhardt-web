@@ -29,6 +29,7 @@ default = ["multi-value-arrays"]
 validation = ["reinhardt-validators", "validator"]
 multi-value-arrays = []
 multipart = ["multer", "futures-util"]
+full = ["validation", "multi-value-arrays", "multipart"]
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -10,6 +10,9 @@ description = "Response renderers (JSON, XML, CSV, YAML, OpenAPI) for Reinhardt 
 keywords = ["web", "framework", "renderer", "rest", "api"]
 categories = ["web-programming"]
 
+[features]
+full = []
+
 [dependencies]
 reinhardt-browsable-api = { workspace = true }
 async-trait = "0.1"

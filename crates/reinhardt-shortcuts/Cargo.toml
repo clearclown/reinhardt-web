@@ -27,6 +27,7 @@ lru = { version = "0.16.2", optional = true }
 default = ["templates"]
 templates = ["reinhardt-template", "lru", "tera", "chrono"]
 database = ["reinhardt-db", "reinhardt-db/backends", "reinhardt-db/pool", "reinhardt-db/orm", "reinhardt-db/postgres"]
+full = ["templates", "database"]
 
 [dev-dependencies]
 tokio = { workspace = true }

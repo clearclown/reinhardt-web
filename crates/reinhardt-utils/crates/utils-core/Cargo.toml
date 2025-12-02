@@ -11,5 +11,8 @@ repository.workspace = true
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 
+[features]
+full = []
+
 [dev-dependencies]
 proptest = { workspace = true }

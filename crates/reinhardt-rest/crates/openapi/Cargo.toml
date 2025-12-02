@@ -29,6 +29,7 @@ once_cell = { workspace = true }
 [features]
 default = []
 serializers = ["reinhardt-core/serializers"]
+full = ["serializers"]
 
 [dev-dependencies]
 tokio = { workspace = true }

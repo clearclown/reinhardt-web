@@ -7,6 +7,9 @@ license = "MIT OR Apache-2.0"
 description = "Metadata API for OPTIONS requests in Reinhardt framework"
 repository.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 reinhardt-core = { workspace = true, features = ["exception"] }
 reinhardt-serializers = { path = "../serializers" }

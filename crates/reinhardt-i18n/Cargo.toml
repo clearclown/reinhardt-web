@@ -20,6 +20,9 @@ unic-langid = "0.9"
 http = "1.0"
 chrono = { workspace = true }
 
+[features]
+full = []
+
 [dev-dependencies]
 tokio = { workspace = true }
 tempfile = "3.8"

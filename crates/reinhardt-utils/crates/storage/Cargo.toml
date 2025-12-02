@@ -19,5 +19,8 @@ sha2 = { workspace = true }
 hex = "0.4"
 tempfile = "3.14"
 
+[features]
+full = []
+
 [dev-dependencies]
 tokio-test = "0.4"

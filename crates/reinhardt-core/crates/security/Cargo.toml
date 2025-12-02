@@ -8,6 +8,9 @@ description = "Security utilities including password hashing, CSRF protection, a
 repository.workspace = true
 authors.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 async-trait = { workspace = true }
 thiserror = { workspace = true }

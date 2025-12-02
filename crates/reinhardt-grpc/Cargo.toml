@@ -18,6 +18,9 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 
+[features]
+full = []
+
 [build-dependencies]
 tonic-prost-build = "0.14.2"
 

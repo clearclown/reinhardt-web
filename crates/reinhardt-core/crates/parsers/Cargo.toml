@@ -9,6 +9,9 @@ repository = "https://github.com/kent8192/reinhardt"
 keywords = ["web", "framework", "parser", "rest", "api"]
 categories = ["web-programming"]
 
+[features]
+full = []
+
 [dependencies]
 reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
 async-trait = "0.1"

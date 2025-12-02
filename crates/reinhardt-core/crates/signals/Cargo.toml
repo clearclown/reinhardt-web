@@ -7,6 +7,9 @@ license.workspace = true
 description = "Signal/event system for Reinhardt framework"
 repository.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 async-trait = "0.1"
 once_cell = "1.20"

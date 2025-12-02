@@ -8,6 +8,9 @@ repository.workspace = true
 authors.workspace = true
 description = "Template engine for Reinhardt framework (optional feature)"
 
+[features]
+full = []
+
 [dependencies]
 tera = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

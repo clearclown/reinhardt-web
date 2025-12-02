@@ -7,6 +7,9 @@ license.workspace = true
 description = "Data validation utilities with built-in validators for common use cases"
 repository.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 chrono = { workspace = true }
 regex = "1.11"

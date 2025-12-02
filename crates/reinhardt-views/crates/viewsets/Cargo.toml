@@ -10,6 +10,7 @@ repository.workspace = true
 [features]
 default = []
 argon2-hasher = ["reinhardt-auth/argon2-hasher"]
+full = ["argon2-hasher"]
 
 [dependencies]
 reinhardt-db = { workspace = true, features = ["orm"] }

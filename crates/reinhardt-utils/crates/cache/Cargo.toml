@@ -55,6 +55,7 @@ all-backends = [
   "redis-sentinel",
   "memcached-backend",
 ]
+full = ["all-backends"]
 
 [dev-dependencies]
 tokio = { workspace = true }

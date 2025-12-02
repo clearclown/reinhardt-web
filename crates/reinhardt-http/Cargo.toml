@@ -30,3 +30,4 @@ reinhardt-test = { workspace = true }
 [features]
 default = ["parsers"]
 parsers = ["dep:reinhardt-parsers"]
+full = ["parsers"]

@@ -29,6 +29,7 @@ aho-corasick = "1.1"
 [features]
 default = ["unified-router"]
 unified-router = ["reinhardt-middleware"]
+full = ["unified-router"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

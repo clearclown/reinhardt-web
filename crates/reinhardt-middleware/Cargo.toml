@@ -19,6 +19,9 @@ sessions = []
 # Database support for certain middleware
 sqlx = ["dep:sqlx"]
 
+# Aggregate all middleware features
+full = ["cors", "compression", "security", "rate-limit", "sessions", "sqlx"]
+
 [dependencies]
 reinhardt-core = { workspace = true, features = [
     "types",

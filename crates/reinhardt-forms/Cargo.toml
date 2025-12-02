@@ -36,5 +36,8 @@ sha2 = { workspace = true }
 hmac = { workspace = true }
 base64 = "0.22"
 
+[features]
+full = []
+
 [dev-dependencies]
 tokio-test = "0.4"

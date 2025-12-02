@@ -14,6 +14,7 @@ default = ["json"]
 json = []
 xml = ["quick-xml", "serde-xml-rs"]
 yaml = ["serde_yaml"]
+full = ["json", "xml", "yaml"]
 
 [dependencies]
 reinhardt-types = { path = "../types" }

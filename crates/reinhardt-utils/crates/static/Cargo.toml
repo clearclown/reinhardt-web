@@ -93,6 +93,18 @@ advanced-minification = [
   "dep:oxc_codegen",
 ]
 dev-server = ["dep:notify"]
+full = [
+  "s3",
+  "azure",
+  "gcs",
+  "templates-integration",
+  "processing",
+  "image-optimization",
+  "source-maps",
+  "compression",
+  "advanced-minification",
+  "dev-server",
+]
 
 [dev-dependencies]
 tokio-test = "0.4"

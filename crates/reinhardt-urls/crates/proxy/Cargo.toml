@@ -8,6 +8,9 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 reinhardt-db = { workspace = true, features = ["orm"] }
 

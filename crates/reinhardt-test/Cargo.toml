@@ -19,6 +19,7 @@ testcontainers = [
 ]
 static = ["reinhardt-utils/static"]
 websockets = ["dep:reinhardt-websockets"]
+full = ["testcontainers", "static", "websockets"]
 
 [dependencies]
 reinhardt-db = { workspace = true, features = ["orm", "backends", "postgres", "mysql", "sqlite"] }

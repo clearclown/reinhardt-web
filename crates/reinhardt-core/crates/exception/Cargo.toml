@@ -7,6 +7,9 @@ license.workspace = true
 description = "Unified error types and result handling for the Reinhardt framework"
 repository.workspace = true
 
+[features]
+full = []
+
 [dependencies]
 thiserror = { workspace = true }
 anyhow = { workspace = true }
