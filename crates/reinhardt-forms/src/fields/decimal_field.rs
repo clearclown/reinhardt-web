@@ -181,12 +181,12 @@ mod tests {
 		let field = DecimalField::new("amount".to_string());
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!(3.14))).unwrap(),
-			serde_json::json!(3.14)
+			field.clean(Some(&serde_json::json!(3.15))).unwrap(),
+			serde_json::json!(3.15)
 		);
 		assert_eq!(
-			field.clean(Some(&serde_json::json!("3.14"))).unwrap(),
-			serde_json::json!(3.14)
+			field.clean(Some(&serde_json::json!("3.15"))).unwrap(),
+			serde_json::json!(3.15)
 		);
 	}
 
@@ -273,12 +273,12 @@ mod tests {
 		field.required = false;
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!(-3.14))).unwrap(),
-			serde_json::json!(-3.14)
+			field.clean(Some(&serde_json::json!(-3.15))).unwrap(),
+			serde_json::json!(-3.15)
 		);
 		assert_eq!(
-			field.clean(Some(&serde_json::json!("-3.14"))).unwrap(),
-			serde_json::json!(-3.14)
+			field.clean(Some(&serde_json::json!("-3.15"))).unwrap(),
+			serde_json::json!(-3.15)
 		);
 	}
 
@@ -287,8 +287,8 @@ mod tests {
 		let field = DecimalField::new("amount".to_string());
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!("  3.14  "))).unwrap(),
-			serde_json::json!(3.14)
+			field.clean(Some(&serde_json::json!("  3.15  "))).unwrap(),
+			serde_json::json!(3.15)
 		);
 	}
 
@@ -300,7 +300,7 @@ mod tests {
 		assert!(field.clean(Some(&serde_json::json!("abc"))).is_err());
 
 		// Multiple decimal points
-		assert!(field.clean(Some(&serde_json::json!("3.14.15"))).is_err());
+		assert!(field.clean(Some(&serde_json::json!("3.15.15"))).is_err());
 	}
 
 	#[test]

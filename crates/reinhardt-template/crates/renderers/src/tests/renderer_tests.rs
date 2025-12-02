@@ -134,7 +134,7 @@ mod json_renderer_tests {
 	#[tokio::test]
 	async fn test_renderer_float_strictness() {
 		let renderer = JSONRenderer::new();
-		let data = json!({"value": 3.14159});
+		let data = json!({"value": 1.23456});
 
 		let result = renderer.render(&data, None).await.unwrap();
 		let output = String::from_utf8(result.to_vec()).unwrap();
@@ -149,8 +149,8 @@ mod json_renderer_tests {
 			.expect("The 'value' key must be a floating point number");
 
 		assert!(
-			(value - 3.14159).abs() < 1e-10,
-			"value must be 3.14159. Actual value: {}",
+			(value - 1.23456).abs() < 1e-10,
+			"value must be 1.23456. Actual value: {}",
 			value
 		);
 	}
@@ -236,7 +236,7 @@ mod json_formatting_tests {
 
 		assert_eq!(users.len(), 3, "The length of the users array must be 3");
 
-		let expected_users = vec![
+		let expected_users = [
 			("Alice", "alice@example.com"),
 			("Bob", "bob@example.com"),
 			("Charlie", "charlie@example.com"),

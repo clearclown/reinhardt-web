@@ -44,7 +44,7 @@ impl BrokenLinkConfig {
 	/// use reinhardt_middleware::BrokenLinkConfig;
 	///
 	/// let config = BrokenLinkConfig::new();
-	/// assert_eq!(config.enabled, true);
+	/// assert!(config.enabled);
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -74,7 +74,7 @@ impl BrokenLinkConfig {
 	/// use reinhardt_middleware::BrokenLinkConfig;
 	///
 	/// let config = BrokenLinkConfig::new().disabled();
-	/// assert_eq!(config.enabled, false);
+	/// assert!(!config.enabled);
 	/// ```
 	pub fn disabled(mut self) -> Self {
 		self.enabled = false;

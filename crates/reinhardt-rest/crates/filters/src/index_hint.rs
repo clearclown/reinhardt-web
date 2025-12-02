@@ -479,7 +479,7 @@ mod tests {
 
 	#[test]
 	fn test_index_strategy_variants() {
-		let strategies = vec![
+		let strategies = [
 			IndexStrategy::Use,
 			IndexStrategy::Force,
 			IndexStrategy::Ignore,

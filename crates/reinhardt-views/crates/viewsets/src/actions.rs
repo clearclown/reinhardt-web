@@ -83,7 +83,7 @@ impl Action {
 	/// use reinhardt_viewsets::Action;
 	///
 	/// let action = Action::from_name("list");
-	/// assert_eq!(action.detail, false);
+	/// assert!(!action.detail);
 	/// ```
 	pub fn from_name(name: &str) -> Self {
 		match name {

@@ -488,7 +488,7 @@ mod tests {
 			cache
 				.set(&key, &format!("value_{}", i), Some(Duration::from_secs(60)))
 				.await
-				.expect(&format!("Failed to set key {}", i));
+				.unwrap_or_else(|_| panic!("Failed to set key {}", i));
 		}
 
 		// Wait a moment for writes to propagate
@@ -499,7 +499,7 @@ mod tests {
 			let value: Option<String> = cache
 				.get(&key)
 				.await
-				.expect(&format!("Failed to get key {}", i));
+				.unwrap_or_else(|_| panic!("Failed to get key {}", i));
 
 			assert_eq!(value, Some(format!("value_{}", i)));
 		}

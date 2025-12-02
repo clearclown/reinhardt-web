@@ -341,10 +341,10 @@ mod tests {
 
 		fn lpop(&self, key: &str) -> Option<String> {
 			let mut lists = self.lists.lock().unwrap();
-			if let Some(list) = lists.get_mut(key) {
-				if !list.is_empty() {
-					return Some(list.remove(0));
-				}
+			if let Some(list) = lists.get_mut(key)
+				&& !list.is_empty()
+			{
+				return Some(list.remove(0));
 			}
 			None
 		}

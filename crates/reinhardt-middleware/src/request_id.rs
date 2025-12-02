@@ -35,8 +35,8 @@ impl RequestIdConfig {
 	/// use reinhardt_middleware::RequestIdConfig;
 	///
 	/// let config = RequestIdConfig::new();
-	/// assert_eq!(config.generate_if_missing, true);
-	/// assert_eq!(config.always_generate, false);
+	/// assert!(config.generate_if_missing);
+	/// assert!(!config.always_generate);
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -54,7 +54,7 @@ impl RequestIdConfig {
 	/// use reinhardt_middleware::RequestIdConfig;
 	///
 	/// let config = RequestIdConfig::new().always_generate();
-	/// assert_eq!(config.always_generate, true);
+	/// assert!(config.always_generate);
 	/// ```
 	pub fn always_generate(mut self) -> Self {
 		self.always_generate = true;
@@ -84,7 +84,7 @@ impl RequestIdConfig {
 	/// use reinhardt_middleware::RequestIdConfig;
 	///
 	/// let config = RequestIdConfig::new().no_generation();
-	/// assert_eq!(config.generate_if_missing, false);
+	/// assert!(!config.generate_if_missing);
 	/// ```
 	pub fn no_generation(mut self) -> Self {
 		self.generate_if_missing = false;

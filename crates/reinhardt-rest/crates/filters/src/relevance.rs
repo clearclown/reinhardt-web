@@ -501,7 +501,7 @@ mod tests {
 
 	#[test]
 	fn test_scoring_algorithm_variants() {
-		let algorithms = vec![
+		let algorithms = [
 			ScoringAlgorithm::TfIdf,
 			ScoringAlgorithm::BM25 { k1: 1.2, b: 0.75 },
 			ScoringAlgorithm::Custom("my_func".to_string()),

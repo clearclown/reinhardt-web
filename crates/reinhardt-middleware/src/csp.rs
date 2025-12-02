@@ -55,7 +55,7 @@ impl CspConfig {
 	/// let config = CspConfig::strict();
 	/// assert!(config.directives.contains_key("default-src"));
 	/// assert!(config.directives.contains_key("script-src"));
-	/// assert_eq!(config.report_only, false);
+	/// assert!(!config.report_only);
 	/// ```
 	pub fn strict() -> Self {
 		let mut directives = HashMap::new();

@@ -69,7 +69,7 @@ fn test_tera_user_list_template() {
 		html
 	);
 
-	let expected_users = vec![
+	let expected_users = [
 		("User A", "a@test.com"),
 		("User B", "b@test.com"),
 		("User C", "c@test.com"),

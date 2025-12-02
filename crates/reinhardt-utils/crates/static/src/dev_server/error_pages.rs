@@ -450,7 +450,7 @@ mod tests {
 			error.to_string(),
 			"Test error",
 			"DevServerError::to_string() should return the error message. Got: {}",
-			error.to_string()
+			error
 		);
 		assert!(
 			error.source().is_none(),
@@ -467,7 +467,7 @@ mod tests {
 			error.to_string(),
 			"Failed to load file",
 			"DevServerError::to_string() should return the error message. Got: {}",
-			error.to_string()
+			error
 		);
 		assert!(
 			error.source().is_some(),

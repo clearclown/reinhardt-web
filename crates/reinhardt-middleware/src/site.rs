@@ -142,7 +142,7 @@ impl SiteConfig {
 	/// use reinhardt_middleware::SiteConfig;
 	///
 	/// let config = SiteConfig::new();
-	/// assert_eq!(config.enabled, true);
+	/// assert!(config.enabled);
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -159,7 +159,7 @@ impl SiteConfig {
 	/// use reinhardt_middleware::SiteConfig;
 	///
 	/// let config = SiteConfig::new().without_fallback();
-	/// assert_eq!(config.fallback_enabled, false);
+	/// assert!(!config.fallback_enabled);
 	/// ```
 	pub fn without_fallback(mut self) -> Self {
 		self.fallback_enabled = false;
@@ -174,7 +174,7 @@ impl SiteConfig {
 	/// use reinhardt_middleware::SiteConfig;
 	///
 	/// let config = SiteConfig::new().disabled();
-	/// assert_eq!(config.enabled, false);
+	/// assert!(!config.enabled);
 	/// ```
 	pub fn disabled(mut self) -> Self {
 		self.enabled = false;

@@ -192,7 +192,7 @@ mod tests {
 				assert_eq!(u.id.to_string(), "created-test");
 				assert_eq!(u.name, "CreatedUser");
 				assert_eq!(u.email, "created@example.com");
-				assert_eq!(u.active, true);
+				assert!(u.active);
 			}
 			_ => panic!("Expected Created event"),
 		}
@@ -219,7 +219,7 @@ mod tests {
 			UserEvent::Updated(u) => {
 				assert_eq!(u.id.to_string(), "updated-test");
 				assert_eq!(u.name, "UpdatedUser");
-				assert_eq!(u.active, false);
+				assert!(!u.active);
 			}
 			_ => panic!("Expected Updated event"),
 		}

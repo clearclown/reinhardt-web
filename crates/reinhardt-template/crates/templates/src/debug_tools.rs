@@ -347,12 +347,12 @@ mod tests {
 		std::thread::sleep(std::time::Duration::from_millis(10));
 		profile.stop();
 
-		assert_eq!(profile.duration.is_some(), true);
+		assert!(profile.duration.is_some());
 		// NOTE: Using range assertion because timing is system-dependent
 		// Verify that duration is at least 10ms but not absurdly large
 		let duration_ms = profile.duration.unwrap().as_millis();
-		assert_eq!(duration_ms >= 10, true);
-		assert_eq!(duration_ms < 1000, true); // Should complete in less than 1 second
+		assert!(duration_ms >= 10);
+		assert!(duration_ms < 1000); // Should complete in less than 1 second
 	}
 
 	#[test]
@@ -381,7 +381,7 @@ mod tests {
 	#[test]
 	fn test_debug_panel_new() {
 		let panel = DebugPanel::new();
-		assert_eq!(panel.enabled, false);
+		assert!(!panel.enabled);
 		assert_eq!(panel.profiles.len(), 0);
 		assert_eq!(panel.contexts.len(), 0);
 	}
@@ -390,10 +390,10 @@ mod tests {
 	fn test_debug_panel_enable_disable() {
 		let mut panel = DebugPanel::new();
 		panel.enable();
-		assert_eq!(panel.enabled, true);
+		assert!(panel.enabled);
 
 		panel.disable();
-		assert_eq!(panel.enabled, false);
+		assert!(!panel.enabled);
 	}
 
 	#[test]
@@ -436,7 +436,7 @@ mod tests {
 		panel.add_context("test.html", context);
 
 		let dump = panel.get_context("test.html");
-		assert_eq!(dump.is_some(), true);
+		assert!(dump.is_some());
 		let dump_content = dump.unwrap();
 		assert_eq!(dump_content.matches("name = Alice").count(), 1);
 	}

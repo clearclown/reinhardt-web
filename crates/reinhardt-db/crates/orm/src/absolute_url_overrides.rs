@@ -165,11 +165,8 @@ mod tests {
 
 		// Register an override for TestB
 		register_url_override("absolute_url_overrides.testb", |obj: &dyn Any| {
-			if let Some(test_b) = obj.downcast_ref::<TestB>() {
-				Some(format!("/overridden-test-b/{}/", test_b.pk))
-			} else {
-				None
-			}
+			obj.downcast_ref::<TestB>()
+				.map(|test_b| format!("/overridden-test-b/{}/", test_b.pk))
 		});
 
 		let obj = TestB::new(1, "Foo");
@@ -185,11 +182,8 @@ mod tests {
 
 		// TestC has no default get_absolute_url, but we can add one via override
 		register_url_override("absolute_url_overrides.testc", |obj: &dyn Any| {
-			if let Some(test_c) = obj.downcast_ref::<TestC>() {
-				Some(format!("/test-c/{}/", test_c.pk))
-			} else {
-				None
-			}
+			obj.downcast_ref::<TestC>()
+				.map(|test_c| format!("/test-c/{}/", test_c.pk))
 		});
 
 		let obj = TestC::new(1, "Foo");

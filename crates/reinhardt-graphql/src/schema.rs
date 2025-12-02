@@ -213,7 +213,7 @@ mod tests {
 		let result = schema.execute(query).await;
 		let data = result.data.into_json().unwrap();
 		assert_eq!(data["createUser"]["name"], "Alice");
-		assert_eq!(data["createUser"]["active"], true);
+		assert!(data["createUser"]["active"].as_bool().unwrap());
 	}
 
 	#[tokio::test]
@@ -245,7 +245,7 @@ mod tests {
 		assert_eq!(data["user"]["id"], "test-id-123");
 		assert_eq!(data["user"]["name"], "Bob");
 		assert_eq!(data["user"]["email"], "bob@example.com");
-		assert_eq!(data["user"]["active"], true);
+		assert!(data["user"]["active"].as_bool().unwrap());
 	}
 
 	#[tokio::test]
@@ -365,7 +365,7 @@ mod tests {
 		let result = schema.execute(query).await;
 		let data = result.data.into_json().unwrap();
 		assert_eq!(data["updateUserStatus"]["id"], "update-test-id");
-		assert_eq!(data["updateUserStatus"]["active"], false);
+		assert!(!data["updateUserStatus"]["active"].as_bool().unwrap());
 	}
 
 	#[tokio::test]
@@ -400,7 +400,7 @@ mod tests {
 		assert_eq!(user.id.to_string(), "field-test-id");
 		assert_eq!(user.name, "Eve");
 		assert_eq!(user.email, "eve@example.com");
-		assert_eq!(user.active, false);
+		assert!(!user.active);
 	}
 
 	#[tokio::test]
@@ -421,7 +421,7 @@ mod tests {
 		assert_eq!(retrieved.id.to_string(), "storage-test-1");
 		assert_eq!(retrieved.name, "Frank");
 		assert_eq!(retrieved.email, "frank@example.com");
-		assert_eq!(retrieved.active, true);
+		assert!(retrieved.active);
 	}
 
 	#[tokio::test]

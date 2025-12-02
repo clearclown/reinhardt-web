@@ -425,8 +425,8 @@ mod tests {
 		let val2: f64 = rand::random();
 
 		// Check values are in range [0, 1)
-		assert!(val1 >= 0.0 && val1 < 1.0);
-		assert!(val2 >= 0.0 && val2 < 1.0);
+		assert!((0.0..1.0).contains(&val1));
+		assert!((0.0..1.0).contains(&val2));
 
 		// Values should be different (extremely unlikely to be equal)
 		assert_ne!(val1, val2);

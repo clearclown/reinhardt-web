@@ -34,8 +34,8 @@ impl CommonConfig {
 	/// use reinhardt_middleware::common::CommonConfig;
 	///
 	/// let config = CommonConfig::new();
-	/// assert_eq!(config.append_slash, true);
-	/// assert_eq!(config.prepend_www, false);
+	/// assert!(config.append_slash);
+	/// assert!(!config.prepend_www);
 	/// ```
 	pub fn new() -> Self {
 		Self {

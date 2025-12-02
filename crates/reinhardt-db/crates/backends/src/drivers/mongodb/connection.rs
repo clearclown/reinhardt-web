@@ -869,10 +869,10 @@ mod tests {
 			Bson::Int64(42)
 		);
 
-		let float_value = QueryValue::Float(3.14);
+		let float_value = QueryValue::Float(3.15);
 		assert_eq!(
 			MongoDBBackend::query_value_to_bson(&float_value),
-			Bson::Double(3.14)
+			Bson::Double(3.15)
 		);
 
 		let string_value = QueryValue::String("hello".to_string());

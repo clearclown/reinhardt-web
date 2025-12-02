@@ -352,7 +352,7 @@ mod tests {
 		// The timezone name will vary by system, but should not be empty
 		assert!(!tz_name.is_empty());
 		// Should be either "Local" or a TZ environment variable value
-		assert!(tz_name == "Local" || tz_name.len() > 0);
+		assert!(tz_name == "Local" || !tz_name.is_empty());
 	}
 
 	#[test]

@@ -37,7 +37,7 @@ impl SimpleMetadata {
 	/// use reinhardt_metadata::SimpleMetadata;
 	///
 	/// let metadata = SimpleMetadata::new();
-	/// assert_eq!(metadata.include_actions, true);
+	/// assert!(metadata.include_actions);
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -52,10 +52,10 @@ impl SimpleMetadata {
 	/// use reinhardt_metadata::SimpleMetadata;
 	///
 	/// let metadata = SimpleMetadata::new().with_actions(false);
-	/// assert_eq!(metadata.include_actions, false);
+	/// assert!(!metadata.include_actions);
 	///
 	/// let metadata_with_actions = SimpleMetadata::new().with_actions(true);
-	/// assert_eq!(metadata_with_actions.include_actions, true);
+	/// assert!(metadata_with_actions.include_actions);
 	/// ```
 	pub fn with_actions(mut self, include: bool) -> Self {
 		self.include_actions = include;
@@ -382,7 +382,7 @@ mod tests {
 		// Verify choice field
 		let choice_field = &post_fields["choice_field"];
 		assert_eq!(choice_field.field_type, FieldType::Choice);
-		assert_eq!(choice_field.required, true);
+		assert!(choice_field.required);
 		assert_eq!(choice_field.read_only, Some(false));
 		assert_eq!(choice_field.choices.as_ref().unwrap().len(), 3);
 
@@ -498,20 +498,20 @@ mod tests {
 		assert!(post_fields.contains_key("username"));
 		let username_field = &post_fields["username"];
 		assert_eq!(username_field.field_type, FieldType::String);
-		assert_eq!(username_field.required, true);
+		assert!(username_field.required);
 		assert_eq!(username_field.read_only, Some(false));
 
 		// Verify email field
 		assert!(post_fields.contains_key("email"));
 		let email_field = &post_fields["email"];
 		assert_eq!(email_field.field_type, FieldType::String);
-		assert_eq!(email_field.required, true);
+		assert!(email_field.required);
 
 		// Verify age field (optional)
 		assert!(post_fields.contains_key("age"));
 		let age_field = &post_fields["age"];
 		assert_eq!(age_field.field_type, FieldType::Integer);
-		assert_eq!(age_field.required, false); // is_optional: true
+		assert!(!age_field.required); // is_optional: true
 		assert_eq!(age_field.read_only, Some(false));
 	}
 }

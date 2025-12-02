@@ -203,7 +203,7 @@ impl SessionConfig {
 	///
 	/// let config = SessionConfig::new("sessionid".to_string(), Duration::from_secs(3600))
 	///     .with_secure();
-	/// assert_eq!(config.secure, true);
+	/// assert!(config.secure);
 	/// ```
 	pub fn with_secure(mut self) -> Self {
 		self.secure = true;
@@ -220,7 +220,7 @@ impl SessionConfig {
 	///
 	/// let config = SessionConfig::new("sessionid".to_string(), Duration::from_secs(3600))
 	///     .with_http_only(false);
-	/// assert_eq!(config.http_only, false);
+	/// assert!(!config.http_only);
 	/// ```
 	pub fn with_http_only(mut self, http_only: bool) -> Self {
 		self.http_only = http_only;

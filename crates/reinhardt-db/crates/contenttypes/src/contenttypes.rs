@@ -734,9 +734,7 @@ mod inspired_tests {
 
 	/// Test: GenericForeignKey get content type
 	/// Inspired by: test_get_content_type_no_arguments
-
-	// ========== ContentType Operations Tests ==========
-
+	/// ========== ContentType Operations Tests ==========
 	/// Test: ContentType ID uniqueness
 	#[test]
 	fn test_content_type_id_uniqueness() {

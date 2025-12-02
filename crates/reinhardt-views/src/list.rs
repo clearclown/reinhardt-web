@@ -235,7 +235,7 @@ where
 	/// let view = ListView::<Article>::new()
 	///     .with_allow_empty(false);
 	///
-	/// assert_eq!(view.allow_empty(), false);
+	/// assert!(!view.allow_empty());
 	/// ```
 	pub fn with_allow_empty(mut self, allow_empty: bool) -> Self {
 		self.allow_empty_flag = allow_empty;

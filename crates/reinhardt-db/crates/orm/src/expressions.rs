@@ -1787,7 +1787,7 @@ mod expressions_extended_tests {
 	fn test_nested_subquery() {
 		// Test nested subquery
 		let inner = Subquery::new("SELECT id FROM users WHERE active = 1");
-		let outer = Subquery::new(&format!(
+		let outer = Subquery::new(format!(
 			"SELECT * FROM orders WHERE user_id IN {}",
 			inner.to_sql()
 		));
@@ -1819,7 +1819,7 @@ mod expressions_extended_tests {
 	fn test_nested_subquery_join_outer_ref() {
 		// Test nested subquery with OuterRef
 		let outer_ref = OuterRef::new("parent.id");
-		let subquery = Subquery::new(&format!(
+		let subquery = Subquery::new(format!(
 			"SELECT COUNT(*) FROM children WHERE parent_id = {}",
 			outer_ref.to_sql()
 		));
@@ -1912,7 +1912,7 @@ mod expressions_extended_tests {
 	fn test_object_create_with_f_expression_in_subquery() {
 		// Test F expression in subquery
 		let f = F::new("price");
-		let subquery = Subquery::new(&format!("SELECT {} FROM products", f.to_sql()));
+		let subquery = Subquery::new(format!("SELECT {} FROM products", f.to_sql()));
 		assert_eq!(
 			subquery.to_sql(),
 			"(SELECT price FROM products)",

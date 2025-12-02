@@ -229,7 +229,7 @@ impl MetricsConfig {
 	/// use reinhardt_middleware::MetricsConfig;
 	///
 	/// let config = MetricsConfig::new().without_response_time();
-	/// assert_eq!(config.track_response_time, false);
+	/// assert!(!config.track_response_time);
 	/// ```
 	pub fn without_response_time(mut self) -> Self {
 		self.track_response_time = false;

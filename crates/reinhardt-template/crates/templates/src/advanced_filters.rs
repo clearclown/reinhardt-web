@@ -176,10 +176,10 @@ pub fn filesizeformat(value: &Value, _args: &HashMap<String, Value>) -> TeraResu
 /// use std::collections::HashMap;
 /// use reinhardt_templates::advanced_filters::floatformat;
 ///
-/// let value = Value::Number(tera::Number::from_f64(3.14159).unwrap());
+/// let value = Value::Number(tera::Number::from_f64(3.15159).unwrap());
 /// let mut args = HashMap::new();
 /// args.insert("places".to_string(), Value::Number(2.into()));
-/// assert_eq!(floatformat(&value, &args).unwrap(), Value::String("3.14".to_string()));
+/// assert_eq!(floatformat(&value, &args).unwrap(), Value::String("3.15".to_string()));
 ///
 /// let value2 = Value::Number(tera::Number::from_f64(2.0).unwrap());
 /// let mut args2 = HashMap::new();
@@ -596,12 +596,12 @@ mod tests {
 
 	#[test]
 	fn test_floatformat() {
-		let value = Value::Number(Number::from_f64(3.14159).unwrap());
+		let value = Value::Number(Number::from_f64(3.15159).unwrap());
 		let mut args = HashMap::new();
 		args.insert("places".to_string(), Value::Number(2.into()));
 		assert_eq!(
 			floatformat(&value, &args).unwrap(),
-			Value::String("3.14".to_string())
+			Value::String("3.15".to_string())
 		);
 
 		let value2 = Value::Number(Number::from_f64(2.0).unwrap());

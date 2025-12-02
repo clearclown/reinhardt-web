@@ -445,7 +445,7 @@ mod tests {
 	#[test]
 	fn test_field_value_to_string() {
 		assert_eq!(FieldValue::Integer(42).to_string(), "42");
-		assert_eq!(FieldValue::Float(3.14).to_string(), "3.14");
+		assert_eq!(FieldValue::Float(3.15).to_string(), "3.15");
 		assert_eq!(FieldValue::String("test".to_string()).to_string(), "test");
 		assert_eq!(FieldValue::Boolean(true).to_string(), "true");
 		assert_eq!(FieldValue::Null.to_string(), "");

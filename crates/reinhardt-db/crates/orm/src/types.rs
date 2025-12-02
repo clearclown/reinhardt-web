@@ -518,7 +518,7 @@ mod tests {
 		let null = SqlValue::Null;
 		let bool_val = SqlValue::Boolean(true);
 		let int_val = SqlValue::Integer(42);
-		let float_val = SqlValue::Float(3.14);
+		let float_val = SqlValue::Float(3.15);
 		let text_val = SqlValue::Text("hello".to_string());
 		let bytes_val = SqlValue::Bytes(vec![1, 2, 3]);
 

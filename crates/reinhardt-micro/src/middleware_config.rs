@@ -133,7 +133,7 @@ pub mod cors {
 	///
 	/// let config = middleware_config::cors::restrictive("https://example.com");
 	/// assert_eq!(config.allow_origins, vec!["https://example.com"]);
-	/// assert_eq!(config.allow_credentials, true);
+	/// assert!(config.allow_credentials);
 	/// ```
 	pub fn restrictive(allowed_origin: &str) -> CorsConfig {
 		CorsConfig {
@@ -319,7 +319,7 @@ mod tests {
 	fn test_cors_config_restrictive() {
 		let config = cors::restrictive("https://example.com");
 		assert_eq!(config.allow_origins, vec!["https://example.com"]);
-		assert_eq!(config.allow_credentials, true);
+		assert!(config.allow_credentials);
 		assert_eq!(config.max_age, Some(3600));
 	}
 

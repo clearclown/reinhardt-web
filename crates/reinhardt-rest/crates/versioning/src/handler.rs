@@ -422,7 +422,7 @@ mod tests {
 		assert_eq!(data["version"], "1.0");
 		assert_eq!(data["data"]["count"], 2);
 		assert_eq!(data["data"]["users"], serde_json::json!(["alice", "bob"]));
-		assert_eq!(data["version_info"]["deprecated"], false);
+		assert!(!data["version_info"]["deprecated"].as_bool().unwrap());
 	}
 
 	#[tokio::test]

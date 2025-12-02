@@ -493,6 +493,6 @@ mod tests {
 		// Jitter is applied, so it's not exactly 1 second
 		// However, it's within 1 second ±10%
 		let delay_secs = delay.as_secs_f64();
-		assert!(delay_secs >= 0.9 && delay_secs <= 1.1);
+		assert!((0.9..=1.1).contains(&delay_secs));
 	}
 }

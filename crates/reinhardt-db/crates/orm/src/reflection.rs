@@ -691,9 +691,9 @@ mod tests {
 		assert_eq!(int_value.as_str(), None);
 		assert_eq!(int_value.as_bool(), None);
 
-		let float_value = FieldValue::Float(3.14);
+		let float_value = FieldValue::Float(3.15);
 		assert_eq!(float_value.as_i64(), None);
-		assert_eq!(float_value.as_f64(), Some(3.14));
+		assert_eq!(float_value.as_f64(), Some(3.15));
 
 		let string_value = FieldValue::String("hello".to_owned());
 		assert_eq!(string_value.as_str(), Some("hello"));
@@ -714,8 +714,8 @@ mod tests {
 		let i64_value: FieldValue = 100i64.into();
 		assert_eq!(i64_value.as_i64(), Some(100));
 
-		let float_value: FieldValue = 3.14f64.into();
-		assert_eq!(float_value.as_f64(), Some(3.14));
+		let float_value: FieldValue = 3.15f64.into();
+		assert_eq!(float_value.as_f64(), Some(3.15));
 
 		let bool_value: FieldValue = true.into();
 		assert_eq!(bool_value.as_bool(), Some(true));

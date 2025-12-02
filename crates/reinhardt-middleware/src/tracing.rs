@@ -188,7 +188,7 @@ impl TracingConfig {
 	/// use reinhardt_middleware::TracingConfig;
 	///
 	/// let config = TracingConfig::new();
-	/// assert_eq!(config.enabled, true);
+	/// assert!(config.enabled);
 	/// assert_eq!(config.sample_rate, 1.0);
 	/// ```
 	pub fn new() -> Self {
@@ -224,7 +224,7 @@ impl TracingConfig {
 	/// use reinhardt_middleware::TracingConfig;
 	///
 	/// let config = TracingConfig::new().disabled();
-	/// assert_eq!(config.enabled, false);
+	/// assert!(!config.enabled);
 	/// ```
 	pub fn disabled(mut self) -> Self {
 		self.enabled = false;

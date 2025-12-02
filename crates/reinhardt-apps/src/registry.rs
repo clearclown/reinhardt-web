@@ -271,7 +271,6 @@ impl RelationshipMetadata {
 	/// );
 	/// assert_eq!(relationship.field_name, "author");
 	/// ```
-	#[allow(clippy::too_many_arguments)]
 	pub const fn new(
 		from_model: &'static str,
 		to_model: &'static str,

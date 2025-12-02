@@ -132,8 +132,8 @@ mod tests {
 		let field = FloatField::new("price".to_string());
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!(3.14))).unwrap(),
-			serde_json::json!(3.14)
+			field.clean(Some(&serde_json::json!(3.15))).unwrap(),
+			serde_json::json!(3.15)
 		);
 		assert_eq!(
 			field.clean(Some(&serde_json::json!(42))).unwrap(),
@@ -147,8 +147,8 @@ mod tests {
 		field.required = false;
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!("3.14"))).unwrap(),
-			serde_json::json!(3.14)
+			field.clean(Some(&serde_json::json!("3.15"))).unwrap(),
+			serde_json::json!(3.15)
 		);
 		assert_eq!(
 			field.clean(Some(&serde_json::json!("  -2.5  "))).unwrap(),
@@ -222,12 +222,12 @@ mod tests {
 		field.required = false;
 
 		assert_eq!(
-			field.clean(Some(&serde_json::json!(-3.14))).unwrap(),
-			serde_json::json!(-3.14)
+			field.clean(Some(&serde_json::json!(-3.15))).unwrap(),
+			serde_json::json!(-3.15)
 		);
 		assert_eq!(
-			field.clean(Some(&serde_json::json!("-3.14"))).unwrap(),
-			serde_json::json!(-3.14)
+			field.clean(Some(&serde_json::json!("-3.15"))).unwrap(),
+			serde_json::json!(-3.15)
 		);
 	}
 

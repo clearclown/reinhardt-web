@@ -66,7 +66,7 @@ impl FieldInfoBuilder {
 	/// let builder = FieldInfoBuilder::new(FieldType::String);
 	/// let field = builder.build();
 	/// assert_eq!(field.field_type, FieldType::String);
-	/// assert_eq!(field.required, false);
+	/// assert!(!field.required);
 	/// ```
 	pub fn new(field_type: FieldType) -> Self {
 		Self {
@@ -96,7 +96,7 @@ impl FieldInfoBuilder {
 	/// let field = FieldInfoBuilder::new(FieldType::String)
 	///     .required(true)
 	///     .build();
-	/// assert_eq!(field.required, true);
+	/// assert!(field.required);
 	/// ```
 	pub fn required(mut self, required: bool) -> Self {
 		self.required = required;
@@ -386,7 +386,7 @@ impl FieldInfoBuilder {
 	///     .build();
 	///
 	/// assert_eq!(field.field_type, FieldType::String);
-	/// assert_eq!(field.required, true);
+	/// assert!(field.required);
 	/// assert_eq!(field.label, Some("Username".to_string()));
 	/// assert_eq!(field.min_length, Some(3));
 	/// assert_eq!(field.max_length, Some(20));

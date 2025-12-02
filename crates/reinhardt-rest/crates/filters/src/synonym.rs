@@ -837,7 +837,7 @@ mod tests {
 		// The malicious synonym should be escaped: test'; DROP TABLE -> test''; DROP TABLE
 		let expected_escaped_synonym = "test''; drop table articles; --";
 		assert!(
-			result.contains(&expected_escaped_synonym),
+			result.contains(expected_escaped_synonym),
 			"Expected escaped malicious synonym '{}' in result, got: {}",
 			expected_escaped_synonym,
 			result

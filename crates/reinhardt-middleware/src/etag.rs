@@ -32,7 +32,7 @@ impl ETagConfig {
 	/// use reinhardt_middleware::etag::ETagConfig;
 	///
 	/// let config = ETagConfig::new();
-	/// assert_eq!(config.use_weak_etag, false);
+	/// assert!(!config.use_weak_etag);
 	/// ```
 	pub fn new() -> Self {
 		Self {
@@ -50,7 +50,7 @@ impl ETagConfig {
 	/// use reinhardt_middleware::etag::ETagConfig;
 	///
 	/// let config = ETagConfig::new().with_weak_etag();
-	/// assert_eq!(config.use_weak_etag, true);
+	/// assert!(config.use_weak_etag);
 	/// ```
 	pub fn with_weak_etag(mut self) -> Self {
 		self.use_weak_etag = true;

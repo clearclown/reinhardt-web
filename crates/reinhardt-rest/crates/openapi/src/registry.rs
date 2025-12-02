@@ -836,21 +836,19 @@ mod tests {
 
 		// Empty components may not serialize the schemas field, or it may be an empty object
 		// Both are valid representations
-		if let Some(schemas) = parsed.get("schemas") {
-			if !schemas.is_null() {
-				assert!(
-					schemas.is_object(),
-					"schemas field should be an object if present, got: {:?}",
-					schemas
-				);
-				let schemas_obj = schemas.as_object().unwrap();
-				assert_eq!(
-					schemas_obj.len(),
-					0,
-					"schemas object should be empty, got: {:?}",
-					schemas_obj
-				);
-			}
+		if let Some(schemas) = parsed.get("schemas").filter(|s| !s.is_null()) {
+			assert!(
+				schemas.is_object(),
+				"schemas field should be an object if present, got: {:?}",
+				schemas
+			);
+			let schemas_obj = schemas.as_object().unwrap();
+			assert_eq!(
+				schemas_obj.len(),
+				0,
+				"schemas object should be empty, got: {:?}",
+				schemas_obj
+			);
 		}
 		// If schemas field is not present or is null, that's also valid for empty components
 	}

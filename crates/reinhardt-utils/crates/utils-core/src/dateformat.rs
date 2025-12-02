@@ -494,21 +494,21 @@ mod proptests {
 		#[test]
 		fn prop_month_format_range(year in 2000i32..2100, month in 1u32..=12, day in 1u32..=28) {
 			let dt = Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap();
-			let result = format(&dt, "m");
-			assert_eq!(result.len(), 2);
-			let month_val = result.parse::<u32>().unwrap();
-			assert!(month_val >= 1 && month_val <= 12);
-			assert_eq!(month_val, month);
+		let result = format(&dt, "m");
+		assert_eq!(result.len(), 2);
+		let month_val = result.parse::<u32>().unwrap();
+		assert!((1..=12).contains(&month_val));
+		assert_eq!(month_val, month);
 		}
 
 		#[test]
 		fn prop_day_format_range(year in 2000i32..2100, month in 1u32..=12, day in 1u32..=28) {
 			let dt = Utc.with_ymd_and_hms(year, month, day, 12, 0, 0).unwrap();
-			let result = format(&dt, "d");
-			assert_eq!(result.len(), 2);
-			let day_val = result.parse::<u32>().unwrap();
-			assert!(day_val >= 1 && day_val <= 31);
-			assert_eq!(day_val, day);
+		let result = format(&dt, "d");
+		assert_eq!(result.len(), 2);
+		let day_val = result.parse::<u32>().unwrap();
+		assert!((1..=31).contains(&day_val));
+		assert_eq!(day_val, day);
 		}
 
 		#[test]
