@@ -1,0 +1,221 @@
+//! Integration tests for migration generation to prevent duplicate migrations
+//!
+//! Tests that ensure makemigrations doesn't create duplicate migration files
+//! when run multiple times without model changes.
+
+#[cfg(test)]
+mod tests {
+	use reinhardt_db::migrations::{
+		AutoMigrationGenerator, DatabaseSchema, schema_diff::SchemaDiff,
+	};
+	use tempfile::TempDir;
+
+	/// Test that system tables (like reinhardt_migrations) are excluded from schema diff
+	#[test]
+	fn test_system_tables_excluded_from_diff() {
+		// Create a schema with user tables and system table
+		let mut current_schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+
+		// Add system table (reinhardt_migrations)
+		current_schema.tables.insert(
+			"reinhardt_migrations".to_string(),
+			reinhardt_db::migrations::schema_diff::TableSchema {
+				name: "reinhardt_migrations",
+				columns: std::collections::HashMap::new(),
+				indexes: Vec::new(),
+				constraints: Vec::new(),
+			},
+		);
+
+		// Add user table
+		current_schema.tables.insert(
+			"users".to_string(),
+			reinhardt_db::migrations::schema_diff::TableSchema {
+				name: "users",
+				columns: std::collections::HashMap::new(),
+				indexes: Vec::new(),
+				constraints: Vec::new(),
+			},
+		);
+
+		// Target schema has only the user table (no system tables)
+		let mut target_schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+		target_schema.tables.insert(
+			"users".to_string(),
+			reinhardt_db::migrations::schema_diff::TableSchema {
+				name: "users",
+				columns: std::collections::HashMap::new(),
+				indexes: Vec::new(),
+				constraints: Vec::new(),
+			},
+		);
+
+		// Create diff
+		let diff = SchemaDiff::new(current_schema, target_schema);
+		let diff_result = diff.detect();
+
+		// System table should NOT appear in tables_to_remove
+		assert!(
+			!diff_result
+				.tables_to_remove
+				.contains(&"reinhardt_migrations"),
+			"System table 'reinhardt_migrations' should not be included in tables to remove"
+		);
+
+		// Generate operations
+		let operations = diff.generate_operations();
+
+		// Verify no DropTable operation for reinhardt_migrations
+		for op in &operations {
+			if let reinhardt_db::migrations::Operation::DropTable { name } = op {
+				assert_ne!(
+					*name, "reinhardt_migrations",
+					"Should not generate DropTable operation for system table"
+				);
+			}
+		}
+	}
+
+	/// Test that no changes are detected when schema hasn't changed
+	#[test]
+	fn test_no_changes_when_schema_unchanged() {
+		// Create identical schemas
+		let mut schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+
+		schema.tables.insert(
+			"users".to_string(),
+			reinhardt_db::migrations::schema_diff::TableSchema {
+				name: "users",
+				columns: std::collections::HashMap::new(),
+				indexes: Vec::new(),
+				constraints: Vec::new(),
+			},
+		);
+
+		let diff = SchemaDiff::new(schema.clone(), schema.clone());
+		let diff_result = diff.detect();
+
+		// No changes should be detected
+		assert!(diff_result.tables_to_add.is_empty());
+		assert!(diff_result.tables_to_remove.is_empty());
+		assert!(diff_result.columns_to_add.is_empty());
+		assert!(diff_result.columns_to_remove.is_empty());
+
+		// Generate operations should return empty
+		let operations = diff.generate_operations();
+		assert!(
+			operations.is_empty(),
+			"No operations should be generated when schemas are identical"
+		);
+	}
+
+	/// Test auto-migration generator with no changes
+	#[tokio::test]
+	async fn test_auto_migration_no_changes_detected() {
+		let temp_dir = TempDir::new().unwrap();
+		let output_dir = temp_dir.path().to_path_buf();
+
+		// Create identical schemas
+		let schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+
+		let generator = AutoMigrationGenerator::new(schema.clone(), output_dir);
+
+		// Generate should return NoChangesDetected error
+		let result = generator.generate(schema, None).await;
+
+		assert!(
+			matches!(
+				result,
+				Err(reinhardt_db::migrations::AutoMigrationError::NoChangesDetected)
+			),
+			"Should return NoChangesDetected error when schemas are identical"
+		);
+	}
+
+	/// Integration test: Simulate makemigrations workflow
+	///
+	/// This test verifies that:
+	/// 1. First makemigrations creates a migration
+	/// 2. After applying migration, second makemigrations detects no changes
+	///
+	/// Note: This is a unit-level test. A full integration test would require:
+	/// - Actually running migrate command to apply migrations to a test database
+	/// - Running makemigrations command via CLI
+	/// - Verifying filesystem state
+	///
+	/// TODO: Implement full integration test once FilesystemSource can parse
+	/// operations from migration files (currently extract_operations returns empty vec)
+	#[tokio::test]
+	async fn test_makemigrations_workflow_unit() {
+		let temp_dir = TempDir::new().unwrap();
+		let output_dir = temp_dir.path().to_path_buf();
+
+		// Step 1: Empty current schema, target has tables
+		let current_schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+
+		let mut target_schema = DatabaseSchema {
+			tables: std::collections::HashMap::new(),
+		};
+
+		// Add a table to target schema
+		let mut columns = std::collections::HashMap::new();
+		columns.insert(
+			"id".to_string(),
+			reinhardt_db::migrations::schema_diff::ColumnSchema {
+				name: "id",
+				data_type: "INTEGER".to_string(),
+				nullable: false,
+				default: None,
+				primary_key: true,
+				auto_increment: true,
+				max_length: None,
+			},
+		);
+
+		target_schema.tables.insert(
+			"users".to_string(),
+			reinhardt_db::migrations::schema_diff::TableSchema {
+				name: "users",
+				columns,
+				indexes: Vec::new(),
+				constraints: Vec::new(),
+			},
+		);
+
+		// Generate first migration
+		let generator = AutoMigrationGenerator::new(target_schema.clone(), output_dir);
+		let result = generator.generate(current_schema.clone(), None).await;
+
+		assert!(result.is_ok(), "First migration generation should succeed");
+		let migration_result = result.unwrap();
+		assert_eq!(
+			migration_result.operation_count, 1,
+			"Should have 1 operation (CreateTable)"
+		);
+
+		// Step 2: After "applying" migration, schemas should be identical
+		// Simulate post-migration state: current schema now has the table
+		let generator2 =
+			AutoMigrationGenerator::new(target_schema.clone(), temp_dir.path().to_path_buf());
+		let result2 = generator2.generate(target_schema, None).await;
+
+		// Should return NoChangesDetected
+		assert!(
+			matches!(
+				result2,
+				Err(reinhardt_db::migrations::AutoMigrationError::NoChangesDetected)
+			),
+			"Second migration generation should detect no changes"
+		);
+	}
+}
