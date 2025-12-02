@@ -148,16 +148,17 @@ impl MigrationService {
 
 		// Initialize graph
 		for migration in &migrations {
-			let key = (migration.app_label.clone(), migration.name.clone());
+			let key = (migration.app_label.to_string(), migration.name.to_string());
 			graph.insert(key.clone(), Vec::new());
 			in_degree.insert(key, 0);
 		}
 
 		// Build edges
 		for migration in &migrations {
-			let key = (migration.app_label.clone(), migration.name.clone());
+			let key = (migration.app_label.to_string(), migration.name.to_string());
 			for dep in &migration.dependencies {
-				if let Some(deps) = graph.get_mut(dep) {
+				let dep_key = (dep.0.to_string(), dep.1.to_string());
+				if let Some(deps) = graph.get_mut(&dep_key) {
 					deps.push(key.clone());
 				}
 				*in_degree.get_mut(&key).unwrap() += 1;
@@ -264,7 +265,7 @@ mod tests {
 	#[async_trait]
 	impl MigrationRepository for TestRepository {
 		async fn save(&mut self, migration: &Migration) -> Result<()> {
-			let key = (migration.app_label.clone(), migration.name.clone());
+			let key = (migration.app_label.to_string(), migration.name.to_string());
 			self.migrations.insert(key, migration.clone());
 			Ok(())
 		}
@@ -300,10 +301,10 @@ mod tests {
 		}
 	}
 
-	fn create_test_migration(app_label: &str, name: &str) -> Migration {
+	fn create_test_migration(app_label: &'static str, name: &'static str) -> Migration {
 		Migration {
-			app_label: app_label.to_string(),
-			name: name.to_string(),
+			app_label,
+			name,
 			operations: vec![],
 			dependencies: vec![],
 			atomic: true,
@@ -367,10 +368,10 @@ mod tests {
 			migrations: vec![
 				create_test_migration("polls", "0001_initial"),
 				Migration {
-					app_label: "polls".to_string(),
-					name: "0002_add_field".to_string(),
+					app_label: "polls",
+					name: "0002_add_field",
 					operations: vec![],
-					dependencies: vec![("polls".to_string(), "0001_initial".to_string())],
+					dependencies: vec![("polls", "0001_initial")],
 					atomic: true,
 					replaces: vec![],
 				},

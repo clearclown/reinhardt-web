@@ -28,10 +28,10 @@ impl MigrationRecorder {
 		}
 	}
 
-	pub fn record_applied(&mut self, app: String, name: String) {
+	pub fn record_applied(&mut self, app: &str, name: &str) {
 		self.records.push(MigrationRecord {
-			app,
-			name,
+			app: app.to_string(),
+			name: name.to_string(),
 			applied: Utc::now(),
 		});
 	}
@@ -65,8 +65,8 @@ impl MigrationRecorder {
 	pub async fn record_applied_async<T>(
 		&mut self,
 		_pool: &T,
-		app: String,
-		name: String,
+		app: &str,
+		name: &str,
 	) -> crate::Result<()> {
 		self.record_applied(app, name);
 		Ok(())
@@ -577,7 +577,7 @@ mod tests {
 	#[test]
 	fn test_record_applied() {
 		let mut recorder = MigrationRecorder::new();
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
+		recorder.record_applied("auth", "0001_initial");
 
 		assert_eq!(recorder.get_applied_migrations().len(), 1);
 		assert!(recorder.is_applied("auth", "0001_initial"));
@@ -589,7 +589,7 @@ mod tests {
 
 		assert!(!recorder.is_applied("auth", "0001_initial"));
 
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
+		recorder.record_applied("auth", "0001_initial");
 
 		assert!(recorder.is_applied("auth", "0001_initial"));
 		assert!(!recorder.is_applied("auth", "0002_add_field"));
@@ -599,9 +599,9 @@ mod tests {
 	fn test_get_applied_migrations() {
 		let mut recorder = MigrationRecorder::new();
 
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
-		recorder.record_applied("users".to_string(), "0001_initial".to_string());
-		recorder.record_applied("auth".to_string(), "0002_add_field".to_string());
+		recorder.record_applied("auth", "0001_initial");
+		recorder.record_applied("users", "0001_initial");
+		recorder.record_applied("auth", "0002_add_field");
 
 		let migrations = recorder.get_applied_migrations();
 		assert_eq!(migrations.len(), 3);
@@ -629,7 +629,7 @@ mod tests {
 		let mut recorder = MigrationRecorder::new();
 		let before = Utc::now();
 
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
+		recorder.record_applied("auth", "0001_initial");
 
 		let after = Utc::now();
 		let migrations = recorder.get_applied_migrations();
@@ -646,10 +646,10 @@ mod tests {
 	fn test_multiple_apps_migrations() {
 		let mut recorder = MigrationRecorder::new();
 
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
-		recorder.record_applied("auth".to_string(), "0002_add_field".to_string());
-		recorder.record_applied("users".to_string(), "0001_initial".to_string());
-		recorder.record_applied("posts".to_string(), "0001_initial".to_string());
+		recorder.record_applied("auth", "0001_initial");
+		recorder.record_applied("auth", "0002_add_field");
+		recorder.record_applied("users", "0001_initial");
+		recorder.record_applied("posts", "0001_initial");
 
 		assert!(recorder.is_applied("auth", "0001_initial"));
 		assert!(recorder.is_applied("auth", "0002_add_field"));
@@ -664,7 +664,7 @@ mod tests {
 		let mut recorder = MigrationRecorder::new();
 
 		recorder
-			.record_applied_async(&(), "auth".to_string(), "0001_initial".to_string())
+			.record_applied_async(&(), "auth", "0001_initial")
 			.await
 			.unwrap();
 
@@ -675,7 +675,7 @@ mod tests {
 	async fn test_async_is_applied() {
 		let mut recorder = MigrationRecorder::new();
 
-		recorder.record_applied("auth".to_string(), "0001_initial".to_string());
+		recorder.record_applied("auth", "0001_initial");
 
 		let result = recorder
 			.is_applied_async(&(), "auth", "0001_initial")

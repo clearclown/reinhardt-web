@@ -249,7 +249,7 @@ impl MigrationExecutor {
 			// Check if already applied
 			let is_applied = self
 				.recorder
-				.is_applied_async(&self.pool, &migration.app_label, &migration.name)
+				.is_applied_async(&self.pool, migration.app_label, migration.name)
 				.await?;
 
 			if is_applied {
@@ -261,11 +261,7 @@ impl MigrationExecutor {
 
 			// Record migration as applied
 			self.recorder
-				.record_applied_async(
-					&self.pool,
-					migration.app_label.clone(),
-					migration.name.clone(),
-				)
+				.record_applied_async(&self.pool, migration.app_label, migration.name)
 				.await?;
 
 			applied.push(migration.id());
@@ -344,7 +340,7 @@ impl MigrationExecutor {
 			// Check if already applied
 			let is_applied = self
 				.recorder
-				.is_applied_async(&self.pool, &migration.app_label, &migration.name)
+				.is_applied_async(&self.pool, migration.app_label, migration.name)
 				.await?;
 
 			if is_applied {
@@ -366,11 +362,7 @@ impl MigrationExecutor {
 
 			// Record migration
 			self.recorder
-				.record_applied_async(
-					&self.pool,
-					migration.app_label.clone(),
-					migration.name.clone(),
-				)
+				.record_applied_async(&self.pool, migration.app_label, migration.name)
 				.await?;
 			applied.push(migration.id());
 		}
@@ -384,7 +376,6 @@ impl MigrationExecutor {
 	/// Build migration plan - returns list of migrations to apply
 	///
 	/// Returns (app_label, migration_name) tuples in dependency order
-	#[allow(dead_code)]
 	pub async fn build_plan(&self, service: &MigrationService) -> Result<Vec<(String, String)>> {
 		let graph = service.build_dependency_graph().await?;
 		let mut plan = Vec::new();
@@ -392,11 +383,11 @@ impl MigrationExecutor {
 		for migration in graph {
 			let is_applied = self
 				.recorder
-				.is_applied_async(&self.pool, &migration.app_label, &migration.name)
+				.is_applied_async(&self.pool, migration.app_label, migration.name)
 				.await?;
 
 			if !is_applied {
-				plan.push((migration.app_label, migration.name));
+				plan.push((migration.app_label.to_string(), migration.name.to_string()));
 			}
 		}
 
@@ -405,13 +396,11 @@ impl MigrationExecutor {
 
 	/// Record a migration as applied without actually running it
 	pub fn record_migration(&mut self, app_label: &str, migration_name: &str) -> Result<()> {
-		self.recorder
-			.record_applied(app_label.to_string(), migration_name.to_string());
+		self.recorder.record_applied(app_label, migration_name);
 		Ok(())
 	}
 
 	/// Execute a migration by loading it from the service
-	#[allow(dead_code)]
 	pub async fn execute_migration(
 		&mut self,
 		app_label: &str,
@@ -425,11 +414,7 @@ impl MigrationExecutor {
 
 		// Record as applied
 		self.recorder
-			.record_applied_async(
-				&self.pool,
-				migration.app_label.clone(),
-				migration.name.clone(),
-			)
+			.record_applied_async(&self.pool, migration.app_label, migration.name)
 			.await?;
 
 		Ok(())
@@ -470,6 +455,63 @@ impl DatabaseMigrationExecutor {
 		self.db_type
 	}
 
+	/// Check if a table exists in the database
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	/// use reinhardt_backends::{DatabaseConnection, DatabaseType};
+	///
+	/// # async fn example() {
+	/// let db = DatabaseConnection::connect_sqlite(":memory:").await.unwrap();
+	/// let executor = DatabaseMigrationExecutor::new(db, DatabaseType::Sqlite);
+	/// let exists = executor.table_exists("users").await.unwrap();
+	/// # }
+	/// ```
+	async fn table_exists(&self, table_name: &str) -> Result<bool> {
+		match self.db_type {
+			DatabaseType::Postgres => {
+				let query = format!(
+					"SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = '{}')",
+					table_name
+				);
+
+				// For PostgreSQL, EXISTS returns a boolean value
+				let result = self.connection.fetch_one(&query, vec![]).await?;
+				match result.data.get("exists") {
+					Some(reinhardt_backends::types::QueryValue::Bool(b)) => Ok(*b),
+					_ => Ok(false),
+				}
+			}
+			DatabaseType::Sqlite => {
+				let query = format!(
+					"SELECT name FROM sqlite_master WHERE type='table' AND name = '{}'",
+					table_name
+				);
+
+				// For SQLite, check if any row is returned
+				let result = self.connection.fetch_optional(&query, vec![]).await?;
+				Ok(result.is_some())
+			}
+			DatabaseType::Mysql => {
+				let query = format!(
+					"SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = '{}'",
+					table_name
+				);
+
+				// For MySQL, check if any row is returned
+				let result = self.connection.fetch_optional(&query, vec![]).await?;
+				Ok(result.is_some())
+			}
+			#[cfg(feature = "mongodb-backend")]
+			DatabaseType::MongoDB => {
+				// MongoDB is schemaless, tables always "exist" conceptually
+				Ok(true)
+			}
+		}
+	}
+
 	/// Apply a list of migrations
 	///
 	/// # Examples
@@ -496,7 +538,7 @@ impl DatabaseMigrationExecutor {
 			// Check if already applied
 			if self
 				.recorder
-				.is_applied(&migration.app_label, &migration.name)
+				.is_applied(migration.app_label, migration.name)
 				.await?
 			{
 				continue;
@@ -507,7 +549,7 @@ impl DatabaseMigrationExecutor {
 
 			// Record migration as applied
 			self.recorder
-				.record_applied(&migration.app_label, &migration.name)
+				.record_applied(migration.app_label, migration.name)
 				.await?;
 
 			applied.push(migration.id());
@@ -539,6 +581,18 @@ impl DatabaseMigrationExecutor {
 		};
 
 		for operation in &migration.operations {
+			// Check if this is a CreateTable operation and if the table already exists
+			if let Operation::CreateTable { name, .. } = operation {
+				let table_exists = self.table_exists(name).await?;
+				if table_exists {
+					eprintln!(
+						"⏭️  Table '{}' already exists, skipping CREATE TABLE operation",
+						name
+					);
+					continue;
+				}
+			}
+
 			let sql = operation.to_sql(&dialect);
 
 			// 診断出力: 元のSQL
@@ -612,7 +666,7 @@ impl DatabaseMigrationExecutor {
 			// Check if already applied
 			if self
 				.recorder
-				.is_applied(&migration.app_label, &migration.name)
+				.is_applied(migration.app_label, migration.name)
 				.await?
 			{
 				continue;
@@ -626,6 +680,18 @@ impl DatabaseMigrationExecutor {
 
 			if !is_mongodb {
 				for operation in &migration.operations {
+					// Check if this is a CreateTable operation and if the table already exists
+					if let Operation::CreateTable { name, .. } = operation {
+						let table_exists = self.table_exists(name).await?;
+						if table_exists {
+							eprintln!(
+								"⏭️  Table '{}' already exists, skipping CREATE TABLE operation",
+								name
+							);
+							continue;
+						}
+					}
+
 					let sql = operation.to_sql(&dialect);
 
 					// Split SQL into individual statements to handle PostgreSQL's
@@ -641,7 +707,7 @@ impl DatabaseMigrationExecutor {
 
 			// Record migration as applied
 			self.recorder
-				.record_applied(&migration.app_label, &migration.name)
+				.record_applied(migration.app_label, migration.name)
 				.await?;
 
 			applied.push(migration.id());
@@ -664,11 +730,11 @@ impl DatabaseMigrationExecutor {
 		for migration in graph {
 			let is_applied = self
 				.recorder
-				.is_applied(&migration.app_label, &migration.name)
+				.is_applied(migration.app_label, migration.name)
 				.await?;
 
 			if !is_applied {
-				plan.push((migration.app_label, migration.name));
+				plan.push((migration.app_label.to_string(), migration.name.to_string()));
 			}
 		}
 
@@ -698,7 +764,7 @@ impl DatabaseMigrationExecutor {
 
 		// Record as applied
 		self.recorder
-			.record_applied(&migration.app_label, &migration.name)
+			.record_applied(migration.app_label, migration.name)
 			.await?;
 
 		Ok(())
@@ -717,11 +783,11 @@ impl DatabaseMigrationExecutor {
 ///
 /// let ops = vec![
 ///     Operation::AddColumn {
-///         table: "users".to_string(),
+///         table: "users",
 ///         column: ColumnDefinition::new("name", "VARCHAR(100)"),
 ///     },
 ///     Operation::CreateTable {
-///         name: "users".to_string(),
+///         name: "users",
 ///         columns: vec![],
 ///         constraints: vec![],
 ///     },
@@ -759,7 +825,7 @@ impl OperationOptimizer {
 	///
 	/// let ops = vec![
 	///     Operation::CreateTable {
-	///         name: "users".to_string(),
+	///         name: "users",
 	///         columns: vec![],
 	///         constraints: vec![],
 	///     },
@@ -829,7 +895,7 @@ impl OperationOptimizer {
 							self.extract_foreign_key_reference(constraint)
 						{
 							// Check if the referenced table has been created
-							if !created_tables.contains(&referenced_table)
+							if !created_tables.contains(&referenced_table.as_str())
 								&& referenced_table != *name
 							{
 								depends_on_uncreated = true;
@@ -840,8 +906,11 @@ impl OperationOptimizer {
 
 					// If this table doesn't depend on any uncreated table, we can create it now
 					if !depends_on_uncreated {
-						created_tables.insert(name.clone());
-						ordered.push(create_table_ops.remove(i));
+						// Copy the name before removing the operation
+						let name_copy = *name;
+						let op = create_table_ops.remove(i);
+						created_tables.insert(name_copy);
+						ordered.push(op);
 						found_independent = true;
 						break;
 					}
@@ -852,8 +921,8 @@ impl OperationOptimizer {
 			// (this handles circular dependencies or malformed constraints)
 			if !found_independent {
 				for op in create_table_ops.drain(..) {
-					if let Operation::CreateTable { name, .. } = &op {
-						created_tables.insert(name.clone());
+					if let Operation::CreateTable { name, .. } = op {
+						created_tables.insert(name);
 					}
 					ordered.push(op);
 				}
@@ -918,7 +987,7 @@ impl OperationOptimizer {
 				Operation::AddColumn { table, .. }
 				| Operation::DropColumn { table, .. }
 				| Operation::AlterColumn { table, .. } => {
-					by_table.entry(table.clone()).or_default().push(op);
+					by_table.entry(table.to_string()).or_default().push(op);
 				}
 				_ => {
 					other_ops.push(op);
@@ -1031,7 +1100,7 @@ impl OperationOptimizer {
 			match &operation {
 				Operation::CreateTable { name, .. } => {
 					// Last CreateTable for same table wins
-					create_table_map.insert(name.clone(), operation.clone());
+					create_table_map.insert(name.to_string(), operation.clone());
 				}
 				_ => {
 					// Flush accumulated CreateTable operations before non-CreateTable operation
@@ -1059,7 +1128,7 @@ impl OperationOptimizer {
 					column,
 					new_definition: _,
 				} => {
-					let key = (table.clone(), column.clone());
+					let key = (table.to_string(), column.to_string());
 					// Last AlterColumn wins (overwrites previous)
 					alter_column_map.insert(key, operation.clone());
 				}
@@ -1080,7 +1149,7 @@ impl OperationOptimizer {
 
 		// Pass 3: Chain consecutive RenameTable operations
 		let mut chained = Vec::new();
-		let mut rename_chain: IndexMap<String, String> = IndexMap::new(); // original_name -> current_name
+		let mut rename_chain: IndexMap<&'static str, &'static str> = IndexMap::new(); // original_name -> current_name
 
 		for operation in merged {
 			match &operation {
@@ -1089,17 +1158,21 @@ impl OperationOptimizer {
 					let mut found_chain = None;
 					for (original, current) in &rename_chain {
 						if current == old_name {
-							found_chain = Some(original.clone());
+							found_chain = Some(original);
 							break;
 						}
 					}
 
 					if let Some(original) = found_chain {
 						// Extend existing chain: original -> new_name
-						rename_chain.insert(original, new_name.clone());
+						rename_chain
+							.insert(original, Box::leak(new_name.to_string().into_boxed_str()));
 					} else {
 						// Start new chain: old_name -> new_name
-						rename_chain.insert(old_name.clone(), new_name.clone());
+						rename_chain.insert(
+							Box::leak(old_name.to_string().into_boxed_str()),
+							Box::leak(new_name.to_string().into_boxed_str()),
+						);
 					}
 				}
 				_ => {
@@ -1152,11 +1225,11 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("name", "VARCHAR(100)"),
 			},
 			Operation::CreateTable {
-				name: "users".to_string(),
+				name: "users",
 				columns: vec![],
 				constraints: vec![],
 			},
@@ -1175,12 +1248,12 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "users".to_string(),
+				name: "users",
 				columns: vec![],
 				constraints: vec![],
 			},
 			Operation::CreateTable {
-				name: "users".to_string(),
+				name: "users",
 				columns: vec![],
 				constraints: vec![],
 			},
@@ -1196,16 +1269,16 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("name", "VARCHAR(100)"),
 			},
 			Operation::CreateTable {
-				name: "posts".to_string(),
+				name: "posts",
 				columns: vec![],
 				constraints: vec![],
 			},
 			Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("email", "VARCHAR(255)"),
 			},
 		];

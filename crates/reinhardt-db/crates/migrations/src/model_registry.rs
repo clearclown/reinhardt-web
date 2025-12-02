@@ -86,6 +86,10 @@ impl ModelMetadata {
 	pub fn to_model_state(&self) -> ModelState {
 		let mut model_state = ModelState::new(&self.app_label, &self.model_name);
 
+		// Set the correct table name from metadata
+		// This overrides the default snake_case conversion in ModelState::new
+		model_state.table_name = self.table_name.clone();
+
 		// Convert fields
 		for (name, field_meta) in &self.fields {
 			let mut field_state = FieldState::new(

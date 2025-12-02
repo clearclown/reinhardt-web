@@ -74,8 +74,8 @@ impl OutputFormat {
 /// use reinhardt_migrations::visualization::HistoryEntry;
 ///
 /// let entry = HistoryEntry {
-///     app_label: "myapp".to_string(),
-///     migration_name: "0001_initial".to_string(),
+///     app_label: "myapp",
+///     migration_name: "0001_initial",
 ///     applied_at: "2025-01-01 00:00:00".to_string(),
 ///     operations_count: 5,
 /// };
@@ -169,8 +169,8 @@ impl MigrationVisualizer {
 	///
 	/// let entries = vec![
 	///     HistoryEntry {
-	///         app_label: "myapp".to_string(),
-	///         migration_name: "0001_initial".to_string(),
+	///         app_label: "myapp",
+	///         migration_name: "0001_initial",
 	///         applied_at: "2025-01-01 00:00:00".to_string(),
 	///         operations_count: 3,
 	///     },
@@ -217,7 +217,7 @@ impl MigrationVisualizer {
 		let mut by_app: HashMap<String, Vec<&Migration>> = HashMap::new();
 		for migration in migrations {
 			by_app
-				.entry(migration.app_label.clone())
+				.entry(migration.app_label.to_string())
 				.or_default()
 				.push(migration);
 		}
@@ -407,11 +407,11 @@ impl MigrationStats {
 		let mut total_operations = 0;
 
 		for migration in migrations {
-			*by_app.entry(migration.app_label.clone()).or_insert(0) += 1;
+			*by_app.entry(migration.app_label.to_string()).or_insert(0) += 1;
 			total_operations += migration.operations.len();
 		}
 
-		let apps: HashSet<_> = migrations.iter().map(|m| m.app_label.clone()).collect();
+		let apps: HashSet<_> = migrations.iter().map(|m| m.app_label).collect();
 
 		Self {
 			total_migrations: migrations.len(),

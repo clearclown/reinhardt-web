@@ -146,14 +146,14 @@ impl MigrationSquasher {
 		}
 
 		// Create squashed migration
-		let mut squashed = Migration::new(squashed_name, app_label.clone());
+		let mut squashed = Migration::new(squashed_name, *app_label);
 		squashed.operations = operations;
 
 		// Record which migrations this replaces
 		for migration in migrations {
 			squashed
 				.replaces
-				.push((migration.app_label.clone(), migration.name.clone()));
+				.push((migration.app_label, migration.name));
 		}
 
 		// Collect dependencies from first migration (external dependencies only)
@@ -165,9 +165,7 @@ impl MigrationSquasher {
 						.iter()
 						.any(|m| m.app_label == *dep_app && m.name == *dep_name)
 				{
-					squashed
-						.dependencies
-						.push((dep_app.clone(), dep_name.clone()));
+					squashed.dependencies.push((dep_app, dep_name));
 				}
 			}
 		}
@@ -188,12 +186,12 @@ impl MigrationSquasher {
 	/// // Create table then drop it - both can be removed
 	/// let ops = vec![
 	///     Operation::CreateTable {
-	///         name: "temp".to_string(),
+	///         name: "temp",
 	///         columns: vec![ColumnDefinition::new("id", "INTEGER")],
 	///         constraints: vec![],
 	///     },
 	///     Operation::DropTable {
-	///         name: "temp".to_string(),
+	///         name: "temp",
 	///     },
 	/// ];
 	///
@@ -206,68 +204,65 @@ impl MigrationSquasher {
 		let mut dropped_tables = HashSet::new();
 
 		for operation in operations {
-			match &operation {
+			let should_push = match &operation {
 				Operation::CreateTable { name, .. } => {
 					// Skip if this table will be dropped later
-					if !dropped_tables.contains(name) {
-						created_tables.insert(name.clone());
-						optimized.push(operation);
+					if !dropped_tables.contains(*name) {
+						created_tables.insert(*name);
+						true
+					} else {
+						false
 					}
 				}
 				Operation::DropTable { name } => {
 					// If table was just created, remove both operations
-					if created_tables.contains(name) {
+					if created_tables.contains(*name) {
 						optimized.retain(
 							|op| !matches!(op, Operation::CreateTable { name: table_name, .. } if table_name == name),
 						);
-						created_tables.remove(name);
+						created_tables.remove(*name);
+						false
 					} else {
-						dropped_tables.insert(name.clone());
-						optimized.push(operation);
+						dropped_tables.insert(*name);
+						true
 					}
 				}
-				Operation::AddColumn { table, column: _ } => {
+				Operation::AddColumn { table, .. } => {
 					// Skip if table was dropped
-					if !dropped_tables.contains(table) {
-						optimized.push(operation);
-					}
+					!dropped_tables.contains(*table)
 				}
 				Operation::DropColumn { table, column } => {
 					// Remove corresponding AddColumn if exists
 					let had_add = optimized.iter().any(|op| {
-                        matches!(op, Operation::AddColumn { table: t, column: c } if t == table && &c.name == column)
-                    });
+                    matches!(op, Operation::AddColumn { table: t, column: c } if *t == *table && c.name == *column)
+                });
 
 					if had_add {
 						optimized.retain(|op| {
-                            !matches!(op, Operation::AddColumn { table: t, column: c } if t == table && &c.name == column)
-                        });
-					} else if !dropped_tables.contains(table) {
-						optimized.push(operation);
+                        !matches!(op, Operation::AddColumn { table: t, column: c } if *t == *table && c.name == *column)
+                    });
+						false
+					} else {
+						!dropped_tables.contains(*table)
 					}
 				}
 				Operation::AlterColumn { table, .. } => {
 					// Skip if table was dropped
-					if !dropped_tables.contains(table) {
-						optimized.push(operation);
-					}
+					!dropped_tables.contains(*table)
 				}
 				Operation::RenameTable { old_name, .. } => {
 					// Skip if table was dropped
-					if !dropped_tables.contains(old_name) {
-						optimized.push(operation);
-					}
+					!dropped_tables.contains(*old_name)
 				}
 				Operation::RenameColumn { table, .. } => {
 					// Skip if table was dropped
-					if !dropped_tables.contains(table) {
-						optimized.push(operation);
-					}
+					!dropped_tables.contains(*table)
 				}
-				_ => {
-					// Keep other operations as-is
-					optimized.push(operation);
-				}
+				_ => true,
+			};
+
+			if should_push {
+				optimized.push(operation);
 			}
 		}
 
@@ -331,13 +326,11 @@ mod tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "temp".to_string(),
+				name: "temp",
 				columns: vec![ColumnDefinition::new("id", "INTEGER")],
 				constraints: vec![],
 			},
-			Operation::DropTable {
-				name: "temp".to_string(),
-			},
+			Operation::DropTable { name: "temp" },
 		];
 
 		let optimized = squasher.optimize_operations(ops);
@@ -350,12 +343,12 @@ mod tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("temp_field", "VARCHAR(100)"),
 			},
 			Operation::DropColumn {
-				table: "users".to_string(),
-				column: "temp_field".to_string(),
+				table: "users",
+				column: "temp_field",
 			},
 		];
 
@@ -369,12 +362,12 @@ mod tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "users".to_string(),
+				name: "users",
 				columns: vec![ColumnDefinition::new("id", "INTEGER")],
 				constraints: vec![],
 			},
 			Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("name", "VARCHAR(100)"),
 			},
 		];
@@ -387,7 +380,7 @@ mod tests {
 	fn test_squash_with_operations() {
 		let migration1 =
 			Migration::new("0001_initial", "myapp").add_operation(Operation::CreateTable {
-				name: "users".to_string(),
+				name: "users",
 				columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
 				constraints: vec![],
 			});
@@ -395,7 +388,7 @@ mod tests {
 		let migration2 = Migration::new("0002_add_field", "myapp")
 			.add_dependency("myapp", "0001_initial")
 			.add_operation(Operation::AddColumn {
-				table: "users".to_string(),
+				table: "users",
 				column: ColumnDefinition::new("name", "VARCHAR(100)"),
 			});
 
