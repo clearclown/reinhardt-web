@@ -23,6 +23,12 @@ pub struct Migration {
 
 	/// Whether this is wrapped in a transaction
 	pub atomic: bool,
+
+	/// Whether this is an initial migration (explicit or inferred from dependencies)
+	/// - `Some(true)`: Explicitly marked as initial
+	/// - `Some(false)`: Explicitly marked as non-initial
+	/// - `None`: Auto-infer from `dependencies.is_empty()`
+	pub initial: Option<bool>,
 }
 
 impl Migration {
@@ -46,6 +52,7 @@ impl Migration {
 			dependencies: Vec::new(),
 			replaces: Vec::new(),
 			atomic: true,
+			initial: None,
 		}
 	}
 	/// Add an operation to this migration
@@ -117,6 +124,61 @@ impl Migration {
 	/// ```
 	pub fn id(&self) -> String {
 		format!("{}.{}", self.app_label, self.name)
+	}
+
+	/// Set initial attribute explicitly
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_migrations::Migration;
+	///
+	/// let migration = Migration::new("0001_initial", "myapp")
+	///     .initial(true);
+	///
+	/// assert!(migration.is_initial());
+	/// ```
+	pub fn initial(mut self, initial: bool) -> Self {
+		self.initial = Some(initial);
+		self
+	}
+
+	/// Check if this is an initial migration
+	///
+	/// Returns `true` if:
+	/// - `initial` is explicitly set to `Some(true)`, OR
+	/// - `initial` is `None` and `dependencies` is empty
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_migrations::Migration;
+	///
+	/// // Explicitly marked as initial
+	/// let migration1 = Migration::new("0001_initial", "myapp")
+	///     .initial(true);
+	/// assert!(migration1.is_initial());
+	///
+	/// // Auto-inferred from empty dependencies
+	/// let migration2 = Migration::new("0001_initial", "myapp");
+	/// assert!(migration2.is_initial());
+	///
+	/// // Has dependencies, not initial
+	/// let migration3 = Migration::new("0002_add_field", "myapp")
+	///     .add_dependency("myapp", "0001_initial");
+	/// assert!(!migration3.is_initial());
+	///
+	/// // Explicitly marked as non-initial
+	/// let migration4 = Migration::new("0001_custom", "myapp")
+	///     .initial(false);
+	/// assert!(!migration4.is_initial());
+	/// ```
+	pub fn is_initial(&self) -> bool {
+		match self.initial {
+			Some(true) => true,
+			Some(false) => false,
+			None => self.dependencies.is_empty(),
+		}
 	}
 }
 
