@@ -94,6 +94,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();
@@ -105,6 +106,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();
@@ -130,6 +132,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();
@@ -141,6 +144,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();
@@ -152,6 +156,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();
@@ -181,6 +186,7 @@ mod tests {
 				operations: vec![],
 				dependencies: vec![],
 				atomic: true,
+				initial: None,
 				replaces: vec![],
 			})
 			.unwrap();

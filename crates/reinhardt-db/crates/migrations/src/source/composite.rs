@@ -49,8 +49,14 @@ impl CompositeSource {
 	///
 	/// Migrations with the same (app_label, name) are deduplicated,
 	/// with migrations from later sources taking precedence.
+	///
+	/// **Warning**: If migrations with the same key but different operations
+	/// are detected, a warning is printed to stderr. This helps identify
+	/// situations where `makemigrations` was run multiple times or where
+	/// migration history is inconsistent.
 	async fn merge_migrations(&self) -> Result<Vec<Migration>> {
 		let mut merged: HashMap<(String, String), Migration> = HashMap::new();
+		let mut conflicts: Vec<(String, String)> = Vec::new(); // (app_label, name)
 
 		// Collect migrations from all sources
 		for source in &self.sources {
@@ -58,8 +64,34 @@ impl CompositeSource {
 
 			for migration in migrations {
 				let key = (migration.app_label.to_string(), migration.name.to_string());
+
+				// Check if migration with this key already exists
+				if let Some(existing) = merged.get(&key) {
+					// Compare operations to detect content differences
+					if existing.operations != migration.operations {
+						// Conflict detected: same key, different operations
+						conflicts.push(key.clone());
+					}
+				}
+
+				// Later sources take precedence
 				merged.insert(key, migration);
 			}
+		}
+
+		// Print warnings for detected conflicts
+		if !conflicts.is_empty() {
+			eprintln!("⚠️  Migration merge conflicts detected:");
+			for (app, name) in &conflicts {
+				eprintln!(
+					"  - {}.{} has different operations from multiple sources",
+					app, name
+				);
+			}
+			eprintln!(
+				"This may indicate that makemigrations was run multiple times \
+				or that the migration history is inconsistent."
+			);
 		}
 
 		// Convert to Vec
@@ -120,6 +152,7 @@ mod tests {
 			operations: vec![],
 			dependencies: vec![],
 			atomic: true,
+			initial: None,
 			replaces: vec![],
 		}
 	}
