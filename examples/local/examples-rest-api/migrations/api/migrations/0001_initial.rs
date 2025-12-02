@@ -2,13 +2,13 @@ use reinhardt_migrations::prelude::*;
 pub fn migration() -> Migration {
 	Migration {
 		app_label: "api",
-		name: "auto_migration_20251202_061405",
+		name: "0001_initial",
 		operations: vec![Operation::CreateTable {
 			name: "articles",
 			columns: vec![
 				ColumnDefinition {
-					name: "updated_at",
-					type_definition: DateTimeField,
+					name: "content",
+					type_definition: CharField,
 					not_null: true,
 					unique: false,
 					primary_key: false,
@@ -27,7 +27,7 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "content",
+					name: "title",
 					type_definition: CharField,
 					not_null: true,
 					unique: false,
@@ -47,18 +47,8 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "title",
-					type_definition: CharField,
-					not_null: true,
-					unique: false,
-					primary_key: false,
-					auto_increment: false,
-					default: None,
-					max_length: None,
-				},
-				ColumnDefinition {
-					name: "author",
-					type_definition: CharField,
+					name: "updated_at",
+					type_definition: DateTimeField,
 					not_null: true,
 					unique: false,
 					primary_key: false,
@@ -72,6 +62,16 @@ pub fn migration() -> Migration {
 					not_null: true,
 					unique: false,
 					primary_key: true,
+					auto_increment: false,
+					default: None,
+					max_length: None,
+				},
+				ColumnDefinition {
+					name: "author",
+					type_definition: CharField,
+					not_null: true,
+					unique: false,
+					primary_key: false,
 					auto_increment: false,
 					default: None,
 					max_length: None,

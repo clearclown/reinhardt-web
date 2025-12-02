@@ -1,11 +1,21 @@
 use reinhardt_migrations::prelude::*;
 pub fn migration() -> Migration {
 	Migration {
-		app_label: "users",
-		name: "auto_migration_20251202_060231",
+		app_label: "snippets",
+		name: "0001_initial",
 		operations: vec![Operation::CreateTable {
-			name: "users",
+			name: "snippets",
 			columns: vec![
+				ColumnDefinition {
+					name: "language",
+					type_definition: CharField,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+					max_length: None,
+				},
 				ColumnDefinition {
 					name: "id",
 					type_definition: BigIntegerField,
@@ -17,7 +27,7 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "email",
+					name: "code",
 					type_definition: CharField,
 					not_null: true,
 					unique: false,
@@ -37,7 +47,7 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "name",
+					name: "title",
 					type_definition: CharField,
 					not_null: true,
 					unique: false,

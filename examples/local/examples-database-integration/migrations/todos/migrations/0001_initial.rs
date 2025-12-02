@@ -1,10 +1,10 @@
 use reinhardt_migrations::prelude::*;
 pub fn migration() -> Migration {
 	Migration {
-		app_label: "snippets",
-		name: "auto_migration_20251202_061505",
+		app_label: "todos",
+		name: "0001_initial",
 		operations: vec![Operation::CreateTable {
-			name: "snippets",
+			name: "todos",
 			columns: vec![
 				ColumnDefinition {
 					name: "id",
@@ -27,8 +27,8 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "code",
-					type_definition: CharField,
+					name: "updated_at",
+					type_definition: DateTimeField,
 					not_null: true,
 					unique: false,
 					primary_key: false,
@@ -37,7 +37,7 @@ pub fn migration() -> Migration {
 					max_length: None,
 				},
 				ColumnDefinition {
-					name: "language",
+					name: "description",
 					type_definition: CharField,
 					not_null: true,
 					unique: false,
@@ -49,6 +49,16 @@ pub fn migration() -> Migration {
 				ColumnDefinition {
 					name: "title",
 					type_definition: CharField,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+					max_length: None,
+				},
+				ColumnDefinition {
+					name: "completed",
+					type_definition: BooleanField,
 					not_null: true,
 					unique: false,
 					primary_key: false,
