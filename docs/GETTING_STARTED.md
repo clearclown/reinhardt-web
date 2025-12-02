@@ -217,7 +217,13 @@ cargo run --bin manage startapp myapp --template-type restful
 cargo run --bin manage runserver
 
 # Database migrations (when using database features)
+# Auto-detects app label if single app has models
 cargo run --bin manage makemigrations
+
+# Or specify app label explicitly (when multiple apps exist)
+cargo run --bin manage makemigrations <app_label>
+
+# Apply migrations
 cargo run --bin manage migrate
 
 # Check project for issues
@@ -229,6 +235,8 @@ cargo run --bin manage collectstatic
 # Interactive shell
 cargo run --bin manage shell
 ```
+
+**Note on makemigrations:** The command now automatically detects the app label when only one app has registered models. For projects with multiple apps, you must specify the app label explicitly.
 
 ### Global CLI Tool
 
