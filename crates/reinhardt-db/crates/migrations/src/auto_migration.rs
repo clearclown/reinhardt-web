@@ -48,6 +48,7 @@ impl AutoMigrationGenerator {
 	pub async fn generate(
 		&self,
 		current_schema: DatabaseSchema,
+		last_migration_operations: Option<Vec<Operation>>,
 	) -> Result<AutoMigrationResult, AutoMigrationError> {
 		// Detect schema differences
 		let diff = SchemaDiff::new(current_schema.clone(), self.target_schema.clone());
@@ -55,6 +56,13 @@ impl AutoMigrationGenerator {
 
 		if operations.is_empty() {
 			return Err(AutoMigrationError::NoChangesDetected);
+		}
+
+		// Check for duplicate migration
+		if let Some(last_ops) = last_migration_operations
+			&& operations == last_ops
+		{
+			return Err(AutoMigrationError::DuplicateMigration);
 		}
 
 		let has_destructive = diff.has_destructive_changes();
@@ -69,8 +77,8 @@ impl AutoMigrationGenerator {
 		// FilesystemRepository now available for persistence
 		// Use FilesystemRepository::save() via MigrationService
 		let _migration = Migration {
-			name: migration_name.clone(),
-			app_label: "auto".to_string(),
+			name: Box::leak(migration_name.clone().into_boxed_str()),
+			app_label: "auto",
 			dependencies: Vec::new(),
 			operations: operations.clone(),
 			replaces: Vec::new(),
@@ -108,19 +116,17 @@ impl AutoMigrationGenerator {
 			.rev()
 			.filter_map(|op| match op {
 				// Table operations
-				Operation::CreateTable { name, .. } => {
-					Some(Operation::DropTable { name: name.clone() })
-				}
+				Operation::CreateTable { name, .. } => Some(Operation::DropTable { name }),
 				Operation::DropTable { .. } => None, // Cannot rollback - data is lost
 				Operation::RenameTable { old_name, new_name } => Some(Operation::RenameTable {
-					old_name: new_name.clone(),
-					new_name: old_name.clone(),
+					old_name: new_name,
+					new_name: old_name,
 				}),
 
 				// Column operations
 				Operation::AddColumn { table, column } => Some(Operation::DropColumn {
-					table: table.clone(),
-					column: column.name.clone(),
+					table,
+					column: column.name,
 				}),
 				Operation::DropColumn { .. } => None, // Cannot rollback - data is lost
 				Operation::RenameColumn {
@@ -128,9 +134,9 @@ impl AutoMigrationGenerator {
 					old_name,
 					new_name,
 				} => Some(Operation::RenameColumn {
-					table: table.clone(),
-					old_name: new_name.clone(),
-					new_name: old_name.clone(),
+					table,
+					old_name: new_name,
+					new_name: old_name,
 				}),
 				Operation::AlterColumn { .. } => None, // Cannot safely rollback without old definition
 
@@ -140,7 +146,7 @@ impl AutoMigrationGenerator {
 
 				// Index operations
 				Operation::CreateIndex { table, columns, .. } => Some(Operation::DropIndex {
-					table: table.clone(),
+					table,
 					columns: columns.clone(),
 				}),
 				Operation::DropIndex { .. } => None, // Cannot rollback without index definition
@@ -148,13 +154,13 @@ impl AutoMigrationGenerator {
 				// Special operations
 				Operation::RunSQL { reverse_sql, .. } => {
 					reverse_sql.as_ref().map(|sql| Operation::RunSQL {
-						sql: sql.clone(),
+						sql,
 						reverse_sql: None,
 					})
 				}
 				Operation::RunRust { reverse_code, .. } => {
 					reverse_code.as_ref().map(|code| Operation::RunRust {
-						code: code.clone(),
+						code,
 						reverse_code: None,
 					})
 				}
@@ -239,6 +245,11 @@ pub enum AutoMigrationError {
 
 	#[error("Migration validation failed: {0}")]
 	ValidationError(String),
+
+	#[error(
+		"Duplicate migration detected: generated operations are identical to the last migration.\nThis usually means you're trying to generate the same migration twice.\nIf you need to modify the previous migration, delete it first and run makemigrations again."
+	)]
+	DuplicateMigration,
 }
 
 impl From<std::io::Error> for AutoMigrationError {
@@ -258,7 +269,7 @@ mod tests {
 		let generator = AutoMigrationGenerator::new(target_schema, PathBuf::from("/tmp"));
 
 		let operations = vec![Operation::CreateTable {
-			name: "users".to_string(),
+			name: "users",
 			columns: Vec::new(),
 			constraints: Vec::new(),
 		}];
@@ -274,7 +285,7 @@ mod tests {
 
 		let mut current = DatabaseSchema::default();
 		let mut current_table = TableSchema {
-			name: "users".to_string(),
+			name: "users",
 			columns: HashMap::new(),
 			indexes: Vec::new(),
 			constraints: Vec::new(),
@@ -282,7 +293,7 @@ mod tests {
 		current_table.columns.insert(
 			"email".to_string(),
 			ColumnSchema {
-				name: "email".to_string(),
+				name: "email",
 				data_type: "VARCHAR(255)".to_string(),
 				nullable: true,
 				default: None,
@@ -295,7 +306,7 @@ mod tests {
 
 		let mut target = DatabaseSchema::default();
 		let mut target_table = TableSchema {
-			name: "users".to_string(),
+			name: "users",
 			columns: HashMap::new(),
 			indexes: Vec::new(),
 			constraints: Vec::new(),
@@ -303,7 +314,7 @@ mod tests {
 		target_table.columns.insert(
 			"email".to_string(),
 			ColumnSchema {
-				name: "email".to_string(),
+				name: "email",
 				data_type: "VARCHAR(255)".to_string(),
 				nullable: false, // Changed to non-nullable
 				default: None,

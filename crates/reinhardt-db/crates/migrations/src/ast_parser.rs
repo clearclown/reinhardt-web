@@ -14,26 +14,45 @@ pub fn extract_migration_metadata(ast: &File, app_label: &str, name: &str) -> Re
 	let operations = extract_operations(ast).unwrap_or_default();
 
 	Ok(Migration {
-		app_label: app_label.to_string(),
-		name: name.to_string(),
+		app_label: Box::leak(app_label.to_string().into_boxed_str()) as &'static str,
+		name: Box::leak(name.to_string().into_boxed_str()) as &'static str,
 		operations,
-		dependencies,
+		dependencies: dependencies
+			.into_iter()
+			.map(|(a, n)| {
+				(
+					Box::leak(a.into_boxed_str()) as &'static str,
+					Box::leak(n.into_boxed_str()) as &'static str,
+				)
+			})
+			.collect(),
 		atomic,
-		replaces,
+		replaces: replaces
+			.into_iter()
+			.map(|(a, n)| {
+				(
+					Box::leak(a.into_boxed_str()) as &'static str,
+					Box::leak(n.into_boxed_str()) as &'static str,
+				)
+			})
+			.collect(),
 	})
 }
 
-/// Extract dependencies from `dependencies()` function
+/// Extract dependencies from `migration()` function
 fn extract_dependencies(ast: &File) -> Result<Vec<(String, String)>> {
+	// Find the migration() function
 	for item in &ast.items {
 		if let Item::Fn(func) = item
-			&& func.sig.ident == "dependencies"
+			&& func.sig.ident == "migration"
 		{
-			// Simple implementation: assumes the function returns a literal vec!
-			// In a real implementation, we would need to parse the function body properly
-			// or use runtime evaluation (which is not possible here).
-			// For now, we'll try to extract string literals from a vec! macro if present.
-			return parse_vec_of_tuples(func);
+			// Look for the Migration struct literal in the return value
+			if let Some(Stmt::Expr(expr, _)) = func.block.stmts.last()
+				&& let Some(dependencies) =
+					extract_field_from_migration_struct(expr, "dependencies")
+			{
+				return parse_tuple_vec_expr(&dependencies);
+			}
 		}
 	}
 	Ok(vec![])
@@ -51,51 +70,529 @@ fn extract_atomic(ast: &File) -> Option<bool> {
 	None
 }
 
-/// Extract replaces from `replaces()` function
+/// Extract replaces from `migration()` function
 fn extract_replaces(ast: &File) -> Option<Vec<(String, String)>> {
+	// Find the migration() function
 	for item in &ast.items {
 		if let Item::Fn(func) = item
-			&& func.sig.ident == "replaces"
+			&& func.sig.ident == "migration"
 		{
-			return parse_vec_of_tuples(func).ok();
+			// Look for the Migration struct literal in the return value
+			if let Some(Stmt::Expr(expr, _)) = func.block.stmts.last()
+				&& let Some(replaces) = extract_field_from_migration_struct(expr, "replaces")
+			{
+				return parse_tuple_vec_expr(&replaces).ok();
+			}
 		}
 	}
 	None
 }
 
 /// Extract operations from `migration()` function
-fn extract_operations(_ast: &File) -> Result<Vec<crate::Operation>> {
-	// This is the tricky part. Parsing full Operation structs from AST is complex.
-	// For now, we will return an empty vector and rely on the fact that
-	// we typically don't need to inspect operations of existing migrations
-	// unless we are applying them.
-	//
-	// If we need to load operations for application, we should dynamically load/compile
-	// the migration module, but Rust doesn't support dynamic loading easily.
-	//
-	// The current architecture relies on static compilation of migrations via `mod` declarations.
-	// The FilesystemSource/Repository is mainly for management (creating files, listing).
-	//
-	// However, to solve the TODO completely, we would need a way to reconstruct Operation objects.
-	// Given the complexity, we will note this limitation.
+fn extract_operations(ast: &File) -> Result<Vec<crate::Operation>> {
+	let mut operations = Vec::new();
 
-	Ok(vec![])
+	// Find the migration() function
+	for item in &ast.items {
+		if let Item::Fn(func) = item
+			&& func.sig.ident == "migration"
+		{
+			// Look for the Migration struct literal in the return value
+			if let Some(Stmt::Expr(expr, _)) = func.block.stmts.last()
+				&& let Some(ops_expr) = extract_field_from_migration_struct(expr, "operations")
+			{
+				operations = parse_operations_vec(&ops_expr);
+			}
+		}
+	}
+
+	Ok(operations)
 }
 
-/// Helper to parse `vec![("app", "name"), ...]`
-fn parse_vec_of_tuples(func: &ItemFn) -> Result<Vec<(String, String)>> {
-	let result = Vec::new();
+/// Parse operations from vec![...] expression
+fn parse_operations_vec(expr: &Expr) -> Vec<crate::Operation> {
+	let mut operations = Vec::new();
 
-	// Look for the last expression in the block
-	if let Some(Stmt::Expr(expr, _)) = func.block.stmts.last()
-		&& let Expr::Macro(expr_macro) = expr
-		&& expr_macro.mac.path.is_ident("vec")
-	{
-		// This requires parsing tokens inside vec! which is hard without more syn features
-		// For the scope of this task, we'll assume empty or implement basic parsing if needed
+	match expr {
+		// Handle vec![...] macro
+		Expr::Macro(expr_macro) if expr_macro.mac.path.is_ident("vec") => {
+			let tokens = &expr_macro.mac.tokens;
+			// The tokens contain the operation expressions separated by commas
+			// We need to parse them as expressions
+			if let Ok(parsed) = syn::parse2::<syn::ExprArray>(quote::quote! { [#tokens] }) {
+				for elem in &parsed.elems {
+					if let Some(op) = parse_single_operation(elem) {
+						operations.push(op);
+					}
+				}
+			}
+		}
+		// Handle array literal [...]
+		Expr::Array(expr_array) => {
+			for elem in &expr_array.elems {
+				if let Some(op) = parse_single_operation(elem) {
+					operations.push(op);
+				}
+			}
+		}
+		_ => {}
+	}
+
+	operations
+}
+
+/// Parse a single Operation from an expression
+fn parse_single_operation(expr: &Expr) -> Option<crate::Operation> {
+	// Handle Operation::CreateTable { ... }
+	if let Expr::Struct(expr_struct) = expr {
+		// Extract the variant name
+		let variant_name = expr_struct.path.segments.last()?.ident.to_string();
+
+		match variant_name.as_str() {
+			"CreateTable" => {
+				let name = extract_static_str_field(&expr_struct.fields, "name")?;
+				let columns = extract_columns_field(&expr_struct.fields)?;
+				let constraints = extract_constraints_field(&expr_struct.fields);
+
+				return Some(crate::Operation::CreateTable {
+					name: Box::leak(name.into_boxed_str()),
+					columns,
+					constraints,
+				});
+			}
+			"DropTable" => {
+				let name = extract_static_str_field(&expr_struct.fields, "name")?;
+				return Some(crate::Operation::DropTable {
+					name: Box::leak(name.into_boxed_str()),
+				});
+			}
+			"AddColumn" => {
+				let table = extract_static_str_field(&expr_struct.fields, "table")?;
+				let column = extract_column_definition_field(&expr_struct.fields, "column")?;
+				return Some(crate::Operation::AddColumn {
+					table: Box::leak(table.into_boxed_str()),
+					column,
+				});
+			}
+			"DropColumn" => {
+				let table = extract_static_str_field(&expr_struct.fields, "table")?;
+				let column = extract_static_str_field(&expr_struct.fields, "column")?;
+				return Some(crate::Operation::DropColumn {
+					table: Box::leak(table.into_boxed_str()),
+					column: Box::leak(column.into_boxed_str()),
+				});
+			}
+			"RenameTable" => {
+				let old_name = extract_static_str_field(&expr_struct.fields, "old_name")?;
+				let new_name = extract_static_str_field(&expr_struct.fields, "new_name")?;
+				return Some(crate::Operation::RenameTable {
+					old_name: Box::leak(old_name.into_boxed_str()),
+					new_name: Box::leak(new_name.into_boxed_str()),
+				});
+			}
+			"RenameColumn" => {
+				let table = extract_static_str_field(&expr_struct.fields, "table")?;
+				let old_name = extract_static_str_field(&expr_struct.fields, "old_name")?;
+				let new_name = extract_static_str_field(&expr_struct.fields, "new_name")?;
+				return Some(crate::Operation::RenameColumn {
+					table: Box::leak(table.into_boxed_str()),
+					old_name: Box::leak(old_name.into_boxed_str()),
+					new_name: Box::leak(new_name.into_boxed_str()),
+				});
+			}
+			"CreateIndex" => {
+				let table = extract_static_str_field(&expr_struct.fields, "table")?;
+				let columns = extract_string_vec_field(&expr_struct.fields, "columns");
+				let unique = extract_bool_field(&expr_struct.fields, "unique").unwrap_or(false);
+				return Some(crate::Operation::CreateIndex {
+					table: Box::leak(table.into_boxed_str()),
+					columns: columns
+						.into_iter()
+						.map(|s| Box::leak(s.into_boxed_str()) as &'static str)
+						.collect(),
+					unique,
+				});
+			}
+			"DropIndex" => {
+				let table = extract_static_str_field(&expr_struct.fields, "table")?;
+				let columns = extract_string_vec_field(&expr_struct.fields, "columns");
+				return Some(crate::Operation::DropIndex {
+					table: Box::leak(table.into_boxed_str()),
+					columns: columns
+						.into_iter()
+						.map(|s| Box::leak(s.into_boxed_str()) as &'static str)
+						.collect(),
+				});
+			}
+			"RunSQL" => {
+				let sql = extract_static_str_field(&expr_struct.fields, "sql")?;
+				let reverse_sql = extract_optional_str_field(&expr_struct.fields, "reverse_sql");
+				return Some(crate::Operation::RunSQL {
+					sql: Box::leak(sql.into_boxed_str()),
+					reverse_sql: reverse_sql.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
+				});
+			}
+			_ => {
+				// Log unhandled operation types
+				eprintln!(
+					"Warning: Unhandled operation type in AST parser: {}",
+					variant_name
+				);
+			}
+		}
+	}
+
+	None
+}
+
+/// Extract a string field from struct fields
+fn extract_static_str_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Option<String> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+		{
+			return extract_string_literal(&field.expr);
+		}
+	}
+	None
+}
+
+/// Extract a boolean field from struct fields
+fn extract_bool_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Option<bool> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+			&& let Expr::Lit(expr_lit) = &field.expr
+			&& let syn::Lit::Bool(lit_bool) = &expr_lit.lit
+		{
+			return Some(lit_bool.value);
+		}
+	}
+	None
+}
+
+/// Extract an optional string field (Option<&'static str>)
+fn extract_optional_str_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Option<String> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+		{
+			// Check for None
+			if let Expr::Path(expr_path) = &field.expr
+				&& expr_path.path.is_ident("None")
+			{
+				return None;
+			}
+			// Check for Some(...)
+			if let Expr::Call(expr_call) = &field.expr
+				&& let Expr::Path(func_path) = &*expr_call.func
+				&& func_path.path.is_ident("Some")
+				&& !expr_call.args.is_empty()
+			{
+				return extract_string_literal(&expr_call.args[0]);
+			}
+		}
+	}
+	None
+}
+
+/// Extract a Vec<&'static str> field
+fn extract_string_vec_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Vec<String> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+		{
+			return extract_string_vec(&field.expr);
+		}
+	}
+	Vec::new()
+}
+
+/// Extract Vec<String> from expression
+fn extract_string_vec(expr: &Expr) -> Vec<String> {
+	let mut result = Vec::new();
+
+	match expr {
+		Expr::Macro(expr_macro) if expr_macro.mac.path.is_ident("vec") => {
+			let tokens = &expr_macro.mac.tokens;
+			if let Ok(parsed) = syn::parse2::<syn::ExprArray>(quote::quote! { [#tokens] }) {
+				for elem in &parsed.elems {
+					if let Some(s) = extract_string_literal(elem) {
+						result.push(s);
+					}
+				}
+			}
+		}
+		Expr::Array(expr_array) => {
+			for elem in &expr_array.elems {
+				if let Some(s) = extract_string_literal(elem) {
+					result.push(s);
+				}
+			}
+		}
+		_ => {}
+	}
+
+	result
+}
+
+/// Extract columns (Vec<ColumnDefinition>) field from struct
+fn extract_columns_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+) -> Option<Vec<crate::ColumnDefinition>> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == "columns"
+		{
+			return Some(parse_columns_vec(&field.expr));
+		}
+	}
+	None
+}
+
+/// Extract constraints (Vec<&'static str>) field from struct
+fn extract_constraints_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+) -> Vec<&'static str> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == "constraints"
+		{
+			let strings = extract_string_vec(&field.expr);
+			return strings
+				.into_iter()
+				.map(|s| Box::leak(s.into_boxed_str()) as &'static str)
+				.collect();
+		}
+	}
+	Vec::new()
+}
+
+/// Extract a single ColumnDefinition field
+fn extract_column_definition_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Option<crate::ColumnDefinition> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+		{
+			return parse_column_definition(&field.expr);
+		}
+	}
+	None
+}
+
+/// Parse Vec<ColumnDefinition> from expression
+fn parse_columns_vec(expr: &Expr) -> Vec<crate::ColumnDefinition> {
+	let mut columns = Vec::new();
+
+	match expr {
+		Expr::Macro(expr_macro) if expr_macro.mac.path.is_ident("vec") => {
+			let tokens = &expr_macro.mac.tokens;
+			if let Ok(parsed) = syn::parse2::<syn::ExprArray>(quote::quote! { [#tokens] }) {
+				for elem in &parsed.elems {
+					if let Some(col) = parse_column_definition(elem) {
+						columns.push(col);
+					}
+				}
+			}
+		}
+		Expr::Array(expr_array) => {
+			for elem in &expr_array.elems {
+				if let Some(col) = parse_column_definition(elem) {
+					columns.push(col);
+				}
+			}
+		}
+		_ => {}
+	}
+
+	columns
+}
+
+/// Parse a single ColumnDefinition from struct expression
+fn parse_column_definition(expr: &Expr) -> Option<crate::ColumnDefinition> {
+	if let Expr::Struct(expr_struct) = expr {
+		// Verify it's a ColumnDefinition struct
+		let struct_name = expr_struct.path.segments.last()?.ident.to_string();
+		if struct_name != "ColumnDefinition" {
+			return None;
+		}
+
+		let name = extract_static_str_field(&expr_struct.fields, "name")?;
+		let type_definition = extract_type_definition_field(&expr_struct.fields)
+			.unwrap_or_else(|| "VARCHAR".to_string());
+		let not_null = extract_bool_field(&expr_struct.fields, "not_null").unwrap_or(false);
+		let unique = extract_bool_field(&expr_struct.fields, "unique").unwrap_or(false);
+		let primary_key = extract_bool_field(&expr_struct.fields, "primary_key").unwrap_or(false);
+		let auto_increment =
+			extract_bool_field(&expr_struct.fields, "auto_increment").unwrap_or(false);
+		let default = extract_optional_str_field(&expr_struct.fields, "default");
+		let max_length = extract_u32_field(&expr_struct.fields, "max_length");
+
+		return Some(crate::ColumnDefinition {
+			name: Box::leak(name.into_boxed_str()),
+			type_definition: Box::leak(type_definition.into_boxed_str()),
+			not_null,
+			unique,
+			primary_key,
+			auto_increment,
+			default: default.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
+			max_length,
+		});
+	}
+
+	None
+}
+
+/// Extract type_definition field (handles both string literals and type paths like CharField)
+fn extract_type_definition_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+) -> Option<String> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == "type_definition"
+		{
+			// Try string literal first
+			if let Some(s) = extract_string_literal(&field.expr) {
+				return Some(s);
+			}
+			// Try path (e.g., CharField, BigIntegerField)
+			if let Expr::Path(expr_path) = &field.expr {
+				let type_name = expr_path
+					.path
+					.segments
+					.iter()
+					.map(|s| s.ident.to_string())
+					.collect::<Vec<_>>()
+					.join("::");
+				return Some(type_name);
+			}
+		}
+	}
+	None
+}
+
+/// Extract an Option<u32> field
+fn extract_u32_field(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+	field_name: &str,
+) -> Option<u32> {
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == field_name
+		{
+			// Check for None
+			if let Expr::Path(expr_path) = &field.expr
+				&& expr_path.path.is_ident("None")
+			{
+				return None;
+			}
+			// Check for Some(n)
+			if let Expr::Call(expr_call) = &field.expr
+				&& let Expr::Path(func_path) = &*expr_call.func
+				&& func_path.path.is_ident("Some")
+				&& !expr_call.args.is_empty()
+				&& let Expr::Lit(expr_lit) = &expr_call.args[0]
+				&& let syn::Lit::Int(lit_int) = &expr_lit.lit
+			{
+				return lit_int.base10_parse().ok();
+			}
+		}
+	}
+	None
+}
+
+/// Extract a field value from Migration struct literal
+fn extract_field_from_migration_struct(expr: &Expr, field_name: &str) -> Option<Expr> {
+	if let Expr::Struct(expr_struct) = expr {
+		// Check if this is a Migration struct
+		if expr_struct.path.segments.last()?.ident == "Migration" {
+			// Find the field we're looking for
+			for field in &expr_struct.fields {
+				if let syn::Member::Named(ident) = &field.member
+					&& ident == field_name
+				{
+					return Some(field.expr.clone());
+				}
+			}
+		}
+	}
+	None
+}
+
+/// Parse a vec![...] or array expression containing tuples of strings
+fn parse_tuple_vec_expr(expr: &Expr) -> Result<Vec<(String, String)>> {
+	let mut result = Vec::new();
+
+	match expr {
+		// Handle vec![...] macro
+		Expr::Macro(expr_macro) if expr_macro.mac.path.is_ident("vec") => {
+			// Parse the tokens inside vec! as an array expression
+			let tokens = &expr_macro.mac.tokens;
+			// Try to parse as array
+			if let Ok(array) = syn::parse2::<Expr>(tokens.clone()) {
+				if let Expr::Array(expr_array) = array {
+					for item in &expr_array.elems {
+						if let Some(tuple) = extract_string_tuple(item) {
+							result.push(tuple);
+						}
+					}
+				} else {
+					// Try parsing as single tuple
+					if let Some(tuple) = extract_string_tuple(&array) {
+						result.push(tuple);
+					}
+				}
+			}
+		}
+		// Handle array literal [...]
+		Expr::Array(expr_array) => {
+			for item in &expr_array.elems {
+				if let Some(tuple) = extract_string_tuple(item) {
+					result.push(tuple);
+				}
+			}
+		}
+		_ => {}
 	}
 
 	Ok(result)
+}
+
+/// Extract a tuple of two strings from an expression like ("app", "name")
+fn extract_string_tuple(expr: &Expr) -> Option<(String, String)> {
+	if let Expr::Tuple(expr_tuple) = expr
+		&& expr_tuple.elems.len() == 2
+	{
+		let first = extract_string_literal(&expr_tuple.elems[0])?;
+		let second = extract_string_literal(&expr_tuple.elems[1])?;
+		return Some((first, second));
+	}
+	None
+}
+
+/// Extract string value from a literal expression
+fn extract_string_literal(expr: &Expr) -> Option<String> {
+	if let Expr::Lit(expr_lit) = expr
+		&& let syn::Lit::Str(lit_str) = &expr_lit.lit
+	{
+		return Some(lit_str.value());
+	}
+	None
 }
 
 /// Helper to parse `true` or `false` return
