@@ -66,41 +66,47 @@ impl FilesystemSource {
 
 	/// Extract app_label and migration name from file path
 	///
-	/// Expected format: <root_dir>/<app_label>/migrations/<name>.rs
+	/// Expected format: .../<app_label>/migrations/<name>.rs
+	///
+	/// This implementation is flexible and works with any directory structure,
+	/// as long as the path contains a 'migrations' directory with the app_label
+	/// as the parent directory.
 	fn extract_app_and_name(&self, path: &Path) -> Result<(String, String)> {
-		// Get relative path from root_dir
-		let rel_path = path.strip_prefix(&self.root_dir).map_err(|_| {
-			MigrationError::InvalidMigration(format!(
-				"Path {} is not under root {}",
-				path.display(),
-				self.root_dir.display()
-			))
-		})?;
+		// Collect path components
+		let components: Vec<_> = path
+			.components()
+			.filter_map(|c| match c {
+				std::path::Component::Normal(s) => s.to_str(),
+				_ => None,
+			})
+			.collect();
 
-		// Split into components: <app_label>/migrations/<name>.rs
-		let components: Vec<_> = rel_path.components().collect();
-		if components.len() < 3 {
-			return Err(MigrationError::InvalidMigration(format!(
-				"Invalid migration path structure: {}",
-				rel_path.display()
-			)));
-		}
-
-		let app_label = components[0]
-			.as_os_str()
-			.to_str()
+		// Find 'migrations' directory in the path
+		let migrations_idx = components
+			.iter()
+			.rposition(|&c| c == "migrations")
 			.ok_or_else(|| {
-				MigrationError::InvalidMigration("Invalid app_label encoding".to_string())
-			})?
-			.to_string();
+				MigrationError::InvalidMigration(
+					"Path does not contain 'migrations' directory".to_string(),
+				)
+			})?;
 
-		let name = path
+		// The app_label is the directory immediately before 'migrations'
+		let app_label = if migrations_idx > 0 {
+			components[migrations_idx - 1].to_string()
+		} else {
+			return Err(MigrationError::InvalidMigration(
+				"Cannot determine app_label: 'migrations' is at the root".to_string(),
+			));
+		};
+
+		// Extract migration name from file name (without extension)
+		let file_name = path
 			.file_stem()
 			.and_then(|s| s.to_str())
-			.ok_or_else(|| MigrationError::InvalidMigration("Invalid migration name".to_string()))?
-			.to_string();
+			.ok_or_else(|| MigrationError::InvalidMigration("Invalid file name".to_string()))?;
 
-		Ok((app_label, name))
+		Ok((app_label, file_name.to_string()))
 	}
 }
 
