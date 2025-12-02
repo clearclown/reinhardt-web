@@ -116,6 +116,7 @@ mod tests {
 			dependencies: vec![],
 			replaces: vec![],
 			atomic: true,
+			initial: None,
 		};
 
 		registry.register(migration.clone()).unwrap();
@@ -138,6 +139,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -149,6 +151,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -160,6 +163,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -184,6 +188,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -195,6 +200,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -206,6 +212,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -226,6 +233,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -249,6 +257,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -260,6 +269,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -284,6 +294,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 
@@ -295,6 +306,7 @@ mod tests {
 				dependencies: vec![],
 				replaces: vec![],
 				atomic: true,
+				initial: None,
 			})
 			.unwrap();
 

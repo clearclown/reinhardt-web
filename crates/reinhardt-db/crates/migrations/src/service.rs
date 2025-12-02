@@ -308,6 +308,7 @@ mod tests {
 			operations: vec![],
 			dependencies: vec![],
 			atomic: true,
+			initial: None,
 			replaces: vec![],
 		}
 	}
@@ -373,6 +374,7 @@ mod tests {
 					operations: vec![],
 					dependencies: vec![("polls", "0001_initial")],
 					atomic: true,
+					initial: None,
 					replaces: vec![],
 				},
 			],
