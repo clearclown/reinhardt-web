@@ -1,10 +1,10 @@
 //! Tests for project state management
 //! Adapted from Django's test_state.py
 
-use reinhardt_migrations::{FieldState, ModelState, ProjectState};
+use reinhardt_migrations::{FieldState, FieldType, ModelState, ProjectState};
 
-fn create_field(name: &str, field_type: &str, nullable: bool) -> FieldState {
-	FieldState::new(name.to_string(), field_type.to_string(), nullable)
+fn create_field(name: &str, field_type: FieldType, nullable: bool) -> FieldState {
+	FieldState::new(name.to_string(), field_type, nullable)
 }
 
 #[test]
@@ -20,8 +20,8 @@ fn test_project_state_add_model() {
 	let mut state = ProjectState::new();
 
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("name", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("name", FieldType::Text, false));
 
 	state.add_model(model);
 
@@ -39,7 +39,7 @@ fn test_project_state_get_model() {
 	let mut state = ProjectState::new();
 
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
 
 	state.add_model(model);
 
@@ -54,7 +54,7 @@ fn test_project_state_clone() {
 	let mut state = ProjectState::new();
 
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
 
 	state.add_model(model);
 
@@ -81,8 +81,8 @@ fn test_model_state_add_field() {
 	// Test adding fields to ModelState
 	let mut model = ModelState::new("myapp", "User");
 
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("name", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("name", FieldType::Text, false));
 
 	assert_eq!(model.fields.len(), 2);
 	assert!(model.fields.contains_key("id"));
@@ -93,11 +93,11 @@ fn test_model_state_add_field() {
 fn test_model_state_get_field() {
 	// Test retrieving a field from ModelState
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("email", "TEXT", false));
+	model.add_field(create_field("email", FieldType::Text, false));
 
 	let field = model.get_field("email");
 	let field_state = field.unwrap();
-	assert_eq!(field_state.field_type, "TEXT");
+	assert_eq!(field_state.field_type, FieldType::Text);
 }
 
 #[test]
@@ -105,8 +105,8 @@ fn test_model_state_remove_field() {
 	// Test removing a field from ModelState
 	let mut model = ModelState::new("myapp", "User");
 
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("temp", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("temp", FieldType::Text, false));
 
 	assert_eq!(model.fields.len(), 2);
 
@@ -118,8 +118,8 @@ fn test_model_state_remove_field() {
 #[test]
 fn test_field_state_create() {
 	// Test creating a FieldState
-	let field = FieldState::new("id".to_string(), "INTEGER".to_string(), false);
-	assert_eq!(field.field_type, "INTEGER");
+	let field = FieldState::new("id".to_string(), FieldType::Integer, false);
+	assert_eq!(field.field_type, FieldType::Integer);
 	assert_eq!(field.name, "id");
 	assert!(!field.nullable);
 }
@@ -127,7 +127,7 @@ fn test_field_state_create() {
 #[test]
 fn test_field_state_with_params() {
 	// Test FieldState with parameters
-	let mut field = FieldState::new("email".to_string(), "TEXT".to_string(), true);
+	let mut field = FieldState::new("email".to_string(), FieldType::Text, true);
 	field
 		.params
 		.insert("max_length".to_string(), "255".to_string());
@@ -144,10 +144,10 @@ fn test_project_state_multiple_apps() {
 	let mut state = ProjectState::new();
 
 	let mut user_model = ModelState::new("users", "User");
-	user_model.add_field(create_field("id", "INTEGER", false));
+	user_model.add_field(create_field("id", FieldType::Integer, false));
 
 	let mut post_model = ModelState::new("posts", "Post");
-	post_model.add_field(create_field("id", "INTEGER", false));
+	post_model.add_field(create_field("id", FieldType::Integer, false));
 
 	state.add_model(user_model);
 	state.add_model(post_model);
@@ -176,13 +176,13 @@ fn test_project_state_model_diff() {
 	let mut new_state = ProjectState::new();
 
 	let mut old_model = ModelState::new("myapp", "User");
-	old_model.add_field(create_field("id", "INTEGER", false));
+	old_model.add_field(create_field("id", FieldType::Integer, false));
 
 	old_state.add_model(old_model);
 
 	let mut new_model = ModelState::new("myapp", "User");
-	new_model.add_field(create_field("id", "INTEGER", false));
-	new_model.add_field(create_field("email", "TEXT", false));
+	new_model.add_field(create_field("id", FieldType::Integer, false));
+	new_model.add_field(create_field("email", FieldType::Text, false));
 	new_state.add_model(new_model);
 
 	// Both states should have the User model
@@ -202,9 +202,9 @@ fn test_model_state_field_order() {
 	// Test that field order is preserved
 	let mut model = ModelState::new("myapp", "User");
 
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("name", "TEXT", false));
-	model.add_field(create_field("email", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("name", FieldType::Text, false));
+	model.add_field(create_field("email", FieldType::Text, false));
 
 	let field_names: Vec<_> = model.fields.keys().cloned().collect();
 
@@ -220,7 +220,7 @@ fn test_project_state_remove_model() {
 	let mut state = ProjectState::new();
 
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
 
 	state.add_model(model);
 	assert_eq!(state.models.len(), 1);
@@ -232,7 +232,7 @@ fn test_project_state_remove_model() {
 #[test]
 fn test_field_state_clone() {
 	// Test cloning FieldState
-	let mut field = FieldState::new("email".to_string(), "TEXT".to_string(), false);
+	let mut field = FieldState::new("email".to_string(), FieldType::Text, false);
 	field
 		.params
 		.insert("max_length".to_string(), "100".to_string());
@@ -249,8 +249,8 @@ fn test_field_state_clone() {
 fn test_model_state_clone() {
 	// Test cloning ModelState
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("name", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("name", FieldType::Text, false));
 
 	let cloned = model.clone();
 	assert_eq!(cloned.name, model.name);
@@ -265,10 +265,10 @@ fn test_project_state_equality() {
 	let mut state2 = ProjectState::new();
 
 	let mut model1 = ModelState::new("myapp", "User");
-	model1.add_field(create_field("id", "INTEGER", false));
+	model1.add_field(create_field("id", FieldType::Integer, false));
 
 	let mut model2 = ModelState::new("myapp", "User");
-	model2.add_field(create_field("id", "INTEGER", false));
+	model2.add_field(create_field("id", FieldType::Integer, false));
 
 	state1.add_model(model1);
 	state2.add_model(model2);
@@ -280,7 +280,7 @@ fn test_project_state_equality() {
 fn test_model_with_table_name() {
 	// Test model with custom table name
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
 
 	// NOTE: Test verifies basic ModelState creation without custom table_name support
 	// Production ModelState would accept table_name parameter for custom table naming
@@ -291,8 +291,8 @@ fn test_model_with_table_name() {
 fn test_model_state_has_field() {
 	// Test has_field method
 	let mut model = ModelState::new("myapp", "User");
-	model.add_field(create_field("id", "INTEGER", false));
-	model.add_field(create_field("name", "TEXT", false));
+	model.add_field(create_field("id", FieldType::Integer, false));
+	model.add_field(create_field("name", FieldType::Text, false));
 
 	assert!(model.has_field("id"));
 	assert!(model.has_field("name"));

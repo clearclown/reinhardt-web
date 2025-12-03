@@ -4,14 +4,14 @@
 //! Django reference: django/tests/migrations/test_autodetector.py
 
 use reinhardt_migrations::{
-	ConstraintDefinition, FieldState, IndexDefinition, MigrationAutodetector, ModelState,
-	ProjectState,
+	ConstraintDefinition, FieldState, FieldType, IndexDefinition, MigrationAutodetector,
+	ModelState, ProjectState,
 };
 use std::collections::HashSet;
 
 /// Helper function to create a simple field
-fn field(name: &str, field_type: &str, nullable: bool) -> FieldState {
-	FieldState::new(name.to_string(), field_type.to_string(), nullable)
+fn field(name: &str, field_type: FieldType, nullable: bool) -> FieldState {
+	FieldState::new(name.to_string(), field_type, nullable)
 }
 
 #[test]
@@ -22,8 +22,8 @@ fn test_create_model_simple() {
 	let mut to_state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -42,8 +42,8 @@ fn test_delete_model() {
 	let to_state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	from_state.add_model(book_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -63,15 +63,15 @@ fn test_add_field() {
 
 	// Create initial model
 	let mut book_model_old = ModelState::new("testapp", "Book");
-	book_model_old.add_field(field("id", "INTEGER", false));
-	book_model_old.add_field(field("title", "VARCHAR(200)", false));
+	book_model_old.add_field(field("id", FieldType::Integer, false));
+	book_model_old.add_field(field("title", FieldType::VarChar(200), false));
 	from_state.add_model(book_model_old);
 
 	// Add a field to the model
 	let mut book_model_new = ModelState::new("testapp", "Book");
-	book_model_new.add_field(field("id", "INTEGER", false));
-	book_model_new.add_field(field("title", "VARCHAR(200)", false));
-	book_model_new.add_field(field("author", "VARCHAR(100)", false));
+	book_model_new.add_field(field("id", FieldType::Integer, false));
+	book_model_new.add_field(field("title", FieldType::VarChar(200), false));
+	book_model_new.add_field(field("author", FieldType::VarChar(100), false));
 	to_state.add_model(book_model_new);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -92,15 +92,15 @@ fn test_remove_field() {
 
 	// Create initial model with three fields
 	let mut book_model_old = ModelState::new("testapp", "Book");
-	book_model_old.add_field(field("id", "INTEGER", false));
-	book_model_old.add_field(field("title", "VARCHAR(200)", false));
-	book_model_old.add_field(field("author", "VARCHAR(100)", false));
+	book_model_old.add_field(field("id", FieldType::Integer, false));
+	book_model_old.add_field(field("title", FieldType::VarChar(200), false));
+	book_model_old.add_field(field("author", FieldType::VarChar(100), false));
 	from_state.add_model(book_model_old);
 
 	// Remove a field from the model
 	let mut book_model_new = ModelState::new("testapp", "Book");
-	book_model_new.add_field(field("id", "INTEGER", false));
-	book_model_new.add_field(field("title", "VARCHAR(200)", false));
+	book_model_new.add_field(field("id", FieldType::Integer, false));
+	book_model_new.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model_new);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -121,14 +121,14 @@ fn test_alter_field() {
 
 	// Create initial model
 	let mut book_model_old = ModelState::new("testapp", "Book");
-	book_model_old.add_field(field("id", "INTEGER", false));
-	book_model_old.add_field(field("title", "VARCHAR(100)", false));
+	book_model_old.add_field(field("id", FieldType::Integer, false));
+	book_model_old.add_field(field("title", FieldType::VarChar(100), false));
 	from_state.add_model(book_model_old);
 
 	// Change field type
 	let mut book_model_new = ModelState::new("testapp", "Book");
-	book_model_new.add_field(field("id", "INTEGER", false));
-	book_model_new.add_field(field("title", "VARCHAR(200)", false));
+	book_model_new.add_field(field("id", FieldType::Integer, false));
+	book_model_new.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model_new);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -149,14 +149,14 @@ fn test_alter_field_nullable() {
 
 	// Create initial model with nullable field
 	let mut book_model_old = ModelState::new("testapp", "Book");
-	book_model_old.add_field(field("id", "INTEGER", false));
-	book_model_old.add_field(field("title", "VARCHAR(200)", true));
+	book_model_old.add_field(field("id", FieldType::Integer, false));
+	book_model_old.add_field(field("title", FieldType::VarChar(200), true));
 	from_state.add_model(book_model_old);
 
 	// Change to not nullable
 	let mut book_model_new = ModelState::new("testapp", "Book");
-	book_model_new.add_field(field("id", "INTEGER", false));
-	book_model_new.add_field(field("title", "VARCHAR(200)", false));
+	book_model_new.add_field(field("id", FieldType::Integer, false));
+	book_model_new.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model_new);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -175,8 +175,8 @@ fn test_no_changes() {
 	let mut state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	state.add_model(book_model.clone());
 
 	let autodetector = MigrationAutodetector::new(state.clone(), state);
@@ -198,13 +198,13 @@ fn test_multiple_apps() {
 
 	// Add models to two different apps
 	let mut book_model = ModelState::new("books", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model);
 
 	let mut author_model = ModelState::new("authors", "Author");
-	author_model.add_field(field("id", "INTEGER", false));
-	author_model.add_field(field("name", "VARCHAR(100)", false));
+	author_model.add_field(field("id", FieldType::Integer, false));
+	author_model.add_field(field("name", FieldType::VarChar(100), false));
 	to_state.add_model(author_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -235,16 +235,16 @@ fn test_rename_model_detected_as_rename() {
 
 	// Old model with complete field set
 	let mut old_model = ModelState::new("testapp", "OldBook");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("title", "VARCHAR(200)", false));
-	old_model.add_field(field("author", "VARCHAR(100)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("title", FieldType::VarChar(200), false));
+	old_model.add_field(field("author", FieldType::VarChar(100), false));
 	from_state.add_model(old_model);
 
 	// New model with identical fields (high field similarity)
 	let mut new_model = ModelState::new("testapp", "NewBook");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("title", "VARCHAR(200)", false));
-	new_model.add_field(field("author", "VARCHAR(100)", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("title", FieldType::VarChar(200), false));
+	new_model.add_field(field("author", FieldType::VarChar(100), false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -272,16 +272,16 @@ fn test_rename_model_detected_as_delete_and_create() {
 
 	// Old model
 	let mut old_model = ModelState::new("testapp", "OldBook");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("old_field1", "VARCHAR(100)", false));
-	old_model.add_field(field("old_field2", "INTEGER", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("old_field1", FieldType::VarChar(100), false));
+	old_model.add_field(field("old_field2", FieldType::Integer, false));
 	from_state.add_model(old_model);
 
 	// New model with completely different fields (low similarity)
 	let mut new_model = ModelState::new("testapp", "NewBook");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("new_field1", "TEXT", false));
-	new_model.add_field(field("new_field2", "BOOLEAN", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("new_field1", FieldType::Text, false));
+	new_model.add_field(field("new_field2", FieldType::Boolean, false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -315,14 +315,14 @@ fn test_rename_field_detected_as_rename() {
 
 	// Old model with original field name
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("old_title", "VARCHAR(200)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("old_title", FieldType::VarChar(200), false));
 	from_state.add_model(old_model);
 
 	// New model with renamed field (same type)
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("new_title", "VARCHAR(200)", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("new_title", FieldType::VarChar(200), false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -350,14 +350,14 @@ fn test_rename_field_detected_as_add_and_remove() {
 
 	// Old model with original field
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("old_field", "VARCHAR(100)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("old_field", FieldType::VarChar(100), false));
 	from_state.add_model(old_model);
 
 	// New model with different field (different type)
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("new_field", "TEXT", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("new_field", FieldType::Text, false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -391,14 +391,14 @@ fn test_add_index() {
 
 	// Model without index
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("title", "VARCHAR(200)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("title", FieldType::VarChar(200), false));
 	from_state.add_model(old_model);
 
 	// Model with index
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("title", "VARCHAR(200)", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("title", FieldType::VarChar(200), false));
 	new_model.indexes.push(IndexDefinition {
 		name: "idx_title".to_string(),
 		fields: vec!["title".to_string()],
@@ -424,8 +424,8 @@ fn test_remove_index() {
 
 	// Model with index
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("title", "VARCHAR(200)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("title", FieldType::VarChar(200), false));
 	old_model.indexes.push(IndexDefinition {
 		name: "idx_title".to_string(),
 		fields: vec!["title".to_string()],
@@ -435,8 +435,8 @@ fn test_remove_index() {
 
 	// Model without index
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("title", "VARCHAR(200)", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -457,14 +457,28 @@ fn test_add_constraint() {
 
 	// Model without constraint
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("price", "DECIMAL", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field(
+		"price",
+		FieldType::Decimal {
+			precision: 10,
+			scale: 2,
+		},
+		false,
+	));
 	from_state.add_model(old_model);
 
 	// Model with constraint
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("price", "DECIMAL", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field(
+		"price",
+		FieldType::Decimal {
+			precision: 10,
+			scale: 2,
+		},
+		false,
+	));
 	new_model.constraints.push(ConstraintDefinition {
 		name: "chk_price_positive".to_string(),
 		constraint_type: "check".to_string(),
@@ -491,8 +505,15 @@ fn test_remove_constraint() {
 
 	// Model with constraint
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("price", "DECIMAL", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field(
+		"price",
+		FieldType::Decimal {
+			precision: 10,
+			scale: 2,
+		},
+		false,
+	));
 	old_model.constraints.push(ConstraintDefinition {
 		name: "chk_price_positive".to_string(),
 		constraint_type: "check".to_string(),
@@ -503,8 +524,15 @@ fn test_remove_constraint() {
 
 	// Model without constraint
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("price", "DECIMAL", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field(
+		"price",
+		FieldType::Decimal {
+			precision: 10,
+			scale: 2,
+		},
+		false,
+	));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -525,16 +553,16 @@ fn test_multiple_changes_same_model() {
 
 	// Old model
 	let mut old_model = ModelState::new("testapp", "Book");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("title", "VARCHAR(100)", false));
-	old_model.add_field(field("old_field", "VARCHAR(50)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("title", FieldType::VarChar(100), false));
+	old_model.add_field(field("old_field", FieldType::VarChar(50), false));
 	from_state.add_model(old_model);
 
 	// New model with multiple changes
 	let mut new_model = ModelState::new("testapp", "Book");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("title", "VARCHAR(200)", false)); // altered
-	new_model.add_field(field("new_field", "VARCHAR(50)", false)); // added
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("title", FieldType::VarChar(200), false)); // altered
+	new_model.add_field(field("new_field", FieldType::VarChar(50), false)); // added
 	// old_field removed
 	to_state.add_model(new_model);
 
@@ -554,11 +582,18 @@ fn test_create_model_with_multiple_fields() {
 	let mut to_state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
-	book_model.add_field(field("author", "VARCHAR(100)", false));
-	book_model.add_field(field("price", "DECIMAL", false));
-	book_model.add_field(field("published_date", "DATE", true));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
+	book_model.add_field(field("author", FieldType::VarChar(100), false));
+	book_model.add_field(field(
+		"price",
+		FieldType::Decimal {
+			precision: 10,
+			scale: 2,
+		},
+		false,
+	));
+	book_model.add_field(field("published_date", FieldType::Date, true));
 	to_state.add_model(book_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state.clone());
@@ -575,8 +610,8 @@ fn test_unchanged_model_with_index() {
 	let mut state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	book_model.indexes.push(IndexDefinition {
 		name: "idx_title".to_string(),
 		fields: vec!["title".to_string()],
@@ -598,8 +633,8 @@ fn test_generate_operations_from_changes() {
 	let mut to_state = ProjectState::new();
 
 	let mut book_model = ModelState::new("testapp", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
 	to_state.add_model(book_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -622,11 +657,11 @@ fn test_generate_migrations() {
 
 	// Add models to two different apps
 	let mut book_model = ModelState::new("books", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
 	to_state.add_model(book_model);
 
 	let mut author_model = ModelState::new("authors", "Author");
-	author_model.add_field(field("id", "INTEGER", false));
+	author_model.add_field(field("id", FieldType::Integer, false));
 	to_state.add_model(author_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -729,16 +764,16 @@ fn test_cross_app_model_move_detected_as_move() {
 
 	// Model in app1 with complete field set
 	let mut old_model = ModelState::new("app1", "User");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("email", "VARCHAR(200)", false));
-	old_model.add_field(field("username", "VARCHAR(100)", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("email", FieldType::VarChar(200), false));
+	old_model.add_field(field("username", FieldType::VarChar(100), false));
 	from_state.add_model(old_model);
 
 	// Same model moved to app2 (identical fields)
 	let mut new_model = ModelState::new("app2", "User");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("email", "VARCHAR(200)", false));
-	new_model.add_field(field("username", "VARCHAR(100)", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("email", FieldType::VarChar(200), false));
+	new_model.add_field(field("username", FieldType::VarChar(100), false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -766,16 +801,16 @@ fn test_cross_app_model_move_detected_as_delete_and_create() {
 
 	// Model in app1
 	let mut old_model = ModelState::new("app1", "User");
-	old_model.add_field(field("id", "INTEGER", false));
-	old_model.add_field(field("old_field1", "VARCHAR(100)", false));
-	old_model.add_field(field("old_field2", "INTEGER", false));
+	old_model.add_field(field("id", FieldType::Integer, false));
+	old_model.add_field(field("old_field1", FieldType::VarChar(100), false));
+	old_model.add_field(field("old_field2", FieldType::Integer, false));
 	from_state.add_model(old_model);
 
 	// Different model in app2 (different fields)
 	let mut new_model = ModelState::new("app2", "User");
-	new_model.add_field(field("id", "INTEGER", false));
-	new_model.add_field(field("new_field1", "TEXT", false));
-	new_model.add_field(field("new_field2", "BOOLEAN", false));
+	new_model.add_field(field("id", FieldType::Integer, false));
+	new_model.add_field(field("new_field1", FieldType::Text, false));
+	new_model.add_field(field("new_field2", FieldType::Boolean, false));
 	to_state.add_model(new_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -805,15 +840,19 @@ fn test_model_dependencies_simple() {
 
 	// Create User model
 	let mut user_model = ModelState::new("accounts", "User");
-	user_model.add_field(field("id", "INTEGER", false));
-	user_model.add_field(field("email", "VARCHAR(200)", false));
+	user_model.add_field(field("id", FieldType::Integer, false));
+	user_model.add_field(field("email", FieldType::VarChar(200), false));
 	to_state.add_model(user_model);
 
 	// Create Post model that depends on User
 	let mut post_model = ModelState::new("blog", "Post");
-	post_model.add_field(field("id", "INTEGER", false));
-	post_model.add_field(field("title", "VARCHAR(200)", false));
-	post_model.add_field(field("author", "ForeignKey(accounts.User)", false));
+	post_model.add_field(field("id", FieldType::Integer, false));
+	post_model.add_field(field("title", FieldType::VarChar(200), false));
+	post_model.add_field(field(
+		"author",
+		FieldType::Custom("ForeignKey(accounts.User)".to_string()),
+		false,
+	));
 	to_state.add_model(post_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
@@ -841,15 +880,19 @@ fn test_model_dependencies_many_to_many() {
 
 	// Create Author model
 	let mut author_model = ModelState::new("authors", "Author");
-	author_model.add_field(field("id", "INTEGER", false));
-	author_model.add_field(field("name", "VARCHAR(100)", false));
+	author_model.add_field(field("id", FieldType::Integer, false));
+	author_model.add_field(field("name", FieldType::VarChar(100), false));
 	to_state.add_model(author_model);
 
 	// Create Book model with ManyToMany to Author
 	let mut book_model = ModelState::new("books", "Book");
-	book_model.add_field(field("id", "INTEGER", false));
-	book_model.add_field(field("title", "VARCHAR(200)", false));
-	book_model.add_field(field("authors", "ManyToManyField(authors.Author)", false));
+	book_model.add_field(field("id", FieldType::Integer, false));
+	book_model.add_field(field("title", FieldType::VarChar(200), false));
+	book_model.add_field(field(
+		"authors",
+		FieldType::Custom("ManyToManyField(authors.Author)".to_string()),
+		false,
+	));
 	to_state.add_model(book_model);
 
 	let autodetector = MigrationAutodetector::new(from_state, to_state);

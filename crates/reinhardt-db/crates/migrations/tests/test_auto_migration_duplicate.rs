@@ -5,35 +5,34 @@
 
 use reinhardt_migrations::{
 	AutoMigrationError, AutoMigrationGenerator, ColumnDefinition, ColumnSchema, DatabaseSchema,
-	Operation, TableSchema,
+	FieldType, FilesystemRepository, Operation, TableSchema,
 };
-use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
 /// Helper to create a simple table schema
 fn create_table_schema(table_name: &'static str) -> TableSchema {
-	let mut columns = HashMap::new();
+	let mut columns = BTreeMap::new();
 	columns.insert(
 		"id".to_string(),
 		ColumnSchema {
 			name: "id",
-			data_type: "INTEGER".to_string(),
+			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
 			primary_key: true,
 			auto_increment: true,
-			max_length: None,
 		},
 	);
 	columns.insert(
 		"name".to_string(),
 		ColumnSchema {
 			name: "name",
-			data_type: "VARCHAR(100)".to_string(),
+			data_type: FieldType::VarChar(100),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(100),
 		},
 	);
 
@@ -55,20 +54,25 @@ async fn test_duplicate_migration_detection() {
 
 	// Create generator with temp directory
 	let temp_dir = std::env::temp_dir().join("test_duplicate_migration");
-	let generator = AutoMigrationGenerator::new(target_schema.clone(), temp_dir);
+	let _ = std::fs::remove_dir_all(&temp_dir); // Clean up from previous runs
+	std::fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
+
+	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
+		temp_dir.clone(),
+	)));
+	let generator =
+		AutoMigrationGenerator::new(target_schema.clone(), temp_dir.clone(), repository.clone());
 
 	// First generation should succeed (no previous migration)
 	let empty_schema = DatabaseSchema::default();
-	let result1 = generator.generate(empty_schema.clone(), None).await;
+	let result1 = generator.generate("test_app", empty_schema.clone()).await;
 	assert!(result1.is_ok(), "First generation should succeed");
 
 	let operations = result1.unwrap().operations;
 	assert!(!operations.is_empty(), "Should generate operations");
 
-	// Second generation with same operations should fail with DuplicateMigration error
-	let result2 = generator
-		.generate(empty_schema, Some(operations.clone()))
-		.await;
+	// Second generation with same schema should fail with DuplicateMigration error
+	let result2 = generator.generate("test_app", empty_schema).await;
 
 	match result2 {
 		Err(AutoMigrationError::DuplicateMigration) => {
@@ -77,6 +81,9 @@ async fn test_duplicate_migration_detection() {
 		Err(e) => panic!("Expected DuplicateMigration error, got: {:?}", e),
 		Ok(_) => panic!("Expected DuplicateMigration error, but generation succeeded"),
 	}
+
+	// Clean up
+	let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
 #[tokio::test]
@@ -88,14 +95,21 @@ async fn test_different_migrations_allowed() {
 		.insert("users".to_string(), create_table_schema("users"));
 
 	let temp_dir = std::env::temp_dir().join("test_different_migrations");
-	let generator = AutoMigrationGenerator::new(target_schema1.clone(), temp_dir.clone());
+	let _ = std::fs::remove_dir_all(&temp_dir); // Clean up from previous runs
+	std::fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
+
+	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
+		temp_dir.clone(),
+	)));
+	let generator =
+		AutoMigrationGenerator::new(target_schema1.clone(), temp_dir.clone(), repository.clone());
 
 	// First generation
 	let empty_schema = DatabaseSchema::default();
-	let result1 = generator.generate(empty_schema, None).await;
+	let result1 = generator.generate("test_app", empty_schema).await;
 	assert!(result1.is_ok(), "First generation should succeed");
 
-	let operations1 = result1.unwrap().operations;
+	let _operations1 = result1.unwrap().operations;
 
 	// Create different target schema with additional table
 	let mut target_schema2 = DatabaseSchema::default();
@@ -106,10 +120,10 @@ async fn test_different_migrations_allowed() {
 		.tables
 		.insert("posts".to_string(), create_table_schema("posts"));
 
-	let generator2 = AutoMigrationGenerator::new(target_schema2, temp_dir);
+	let generator2 = AutoMigrationGenerator::new(target_schema2, temp_dir.clone(), repository);
 
 	// Second generation with different operations should succeed
-	let result2 = generator2.generate(target_schema1, Some(operations1)).await;
+	let result2 = generator2.generate("test_app", target_schema1).await;
 
 	assert!(
 		result2.is_ok(),
@@ -118,6 +132,9 @@ async fn test_different_migrations_allowed() {
 
 	let operations2 = result2.unwrap().operations;
 	assert!(!operations2.is_empty(), "Should generate new operations");
+
+	// Clean up
+	let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
 #[tokio::test]
@@ -129,10 +146,16 @@ async fn test_no_changes_error() {
 		.insert("users".to_string(), create_table_schema("users"));
 
 	let temp_dir = std::env::temp_dir().join("test_no_changes");
-	let generator = AutoMigrationGenerator::new(schema.clone(), temp_dir);
+	let _ = std::fs::remove_dir_all(&temp_dir); // Clean up from previous runs
+	std::fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
+
+	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
+		temp_dir.clone(),
+	)));
+	let generator = AutoMigrationGenerator::new(schema.clone(), temp_dir.clone(), repository);
 
 	// Should fail with NoChangesDetected error
-	let result = generator.generate(schema, None).await;
+	let result = generator.generate("test_app", schema).await;
 
 	match result {
 		Err(AutoMigrationError::NoChangesDetected) => {
@@ -141,6 +164,9 @@ async fn test_no_changes_error() {
 		Err(e) => panic!("Expected NoChangesDetected error, got: {:?}", e),
 		Ok(_) => panic!("Expected NoChangesDetected error, but generation succeeded"),
 	}
+
+	// Clean up
+	let _ = std::fs::remove_dir_all(&temp_dir);
 }
 
 #[test]
@@ -148,24 +174,22 @@ fn test_operation_equality() {
 	// Test that identical operations are considered equal
 	let col1 = ColumnDefinition {
 		name: "id",
-		type_definition: "INTEGER",
+		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
 		primary_key: true,
 		auto_increment: false,
 		default: None,
-		max_length: None,
 	};
 
 	let col2 = ColumnDefinition {
 		name: "id",
-		type_definition: "INTEGER",
+		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
 		primary_key: true,
 		auto_increment: false,
 		default: None,
-		max_length: None,
 	};
 
 	assert_eq!(col1, col2, "Identical column definitions should be equal");
@@ -187,13 +211,12 @@ fn test_operation_equality() {
 	// Test different operations are not equal
 	let col3 = ColumnDefinition {
 		name: "id",
-		type_definition: "INTEGER",
+		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
 		primary_key: true,
 		auto_increment: false,
 		default: None,
-		max_length: None,
 	};
 
 	let op3 = Operation::CreateTable {

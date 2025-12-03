@@ -3,7 +3,7 @@
 //! This test file verifies that the Operation enum correctly implements
 //! the MigrationOperation trait for Django-style migration naming.
 
-use reinhardt_migrations::{ColumnDefinition, MigrationOperation, Operation};
+use reinhardt_migrations::{ColumnDefinition, FieldType, MigrationOperation, Operation};
 
 /// Helper function to leak a string to get a 'static lifetime
 fn leak_str(s: impl Into<String>) -> &'static str {
@@ -52,7 +52,7 @@ fn test_drop_table_fragment() {
 fn test_add_column_fragment() {
 	let op = Operation::AddColumn {
 		table: leak_str("Users"),
-		column: ColumnDefinition::new("email", "VARCHAR(255)"),
+		column: ColumnDefinition::new("email", FieldType::Custom("VARCHAR(255)".to_string())),
 	};
 
 	assert_eq!(
@@ -91,7 +91,7 @@ fn test_alter_column_fragment() {
 	let op = Operation::AlterColumn {
 		table: leak_str("Users"),
 		column: leak_str("Email"),
-		new_definition: ColumnDefinition::new("email", "TEXT"),
+		new_definition: ColumnDefinition::new("email", FieldType::Custom("TEXT".to_string())),
 	};
 
 	assert_eq!(
@@ -392,7 +392,7 @@ fn test_case_insensitive_naming() {
 		},
 		Operation::AddColumn {
 			table: leak_str("MyTable"),
-			column: ColumnDefinition::new("MyField", "TEXT"),
+			column: ColumnDefinition::new("MyField", FieldType::Custom("TEXT".to_string())),
 		},
 		Operation::DropColumn {
 			table: leak_str("MyTable"),

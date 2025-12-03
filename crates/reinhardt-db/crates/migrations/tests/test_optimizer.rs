@@ -1,9 +1,9 @@
 //! Tests for migration optimizer
 //! Adapted from Django's test_optimizer.py
 
-use reinhardt_migrations::{ColumnDefinition, Migration, Operation, OperationOptimizer};
+use reinhardt_migrations::{ColumnDefinition, FieldType, Migration, Operation, OperationOptimizer};
 
-fn create_column(name: &'static str, type_def: &'static str) -> ColumnDefinition {
+fn create_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
 		name,
 		type_definition: type_def,
@@ -12,7 +12,6 @@ fn create_column(name: &'static str, type_def: &'static str) -> ColumnDefinition
 		primary_key: false,
 		auto_increment: false,
 		default: None,
-		max_length: None,
 	}
 }
 
@@ -22,7 +21,10 @@ fn test_create_delete_table_optimization() {
 	let operations = vec![
 		Operation::CreateTable {
 			name: "test_table",
-			columns: vec![create_column("id", "INTEGER PRIMARY KEY")],
+			columns: vec![create_column(
+				"id",
+				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+			)],
 			constraints: vec![],
 		},
 		Operation::DropTable { name: "test_table" },
@@ -41,7 +43,7 @@ fn test_add_remove_field_optimization() {
 	let operations = vec![
 		Operation::AddColumn {
 			table: "test_table",
-			column: create_column("temp", "TEXT"),
+			column: create_column("temp", FieldType::Text),
 		},
 		Operation::DropColumn {
 			table: "test_table",
@@ -63,12 +65,15 @@ fn test_consecutive_alter_optimization() {
 		Operation::AlterColumn {
 			table: "test_table",
 			column: "field",
-			new_definition: create_column("field", "INTEGER"),
+			new_definition: create_column("field", FieldType::Integer),
 		},
 		Operation::AlterColumn {
 			table: "test_table",
 			column: "field",
-			new_definition: create_column("field", "INTEGER NOT NULL"),
+			new_definition: create_column(
+				"field",
+				FieldType::Custom("INTEGER NOT NULL".to_string()),
+			),
 		},
 	];
 
@@ -85,7 +90,10 @@ fn test_consecutive_alter_optimization() {
 		} => {
 			assert_eq!(*table, "test_table");
 			assert_eq!(*column, "field");
-			assert_eq!(new_definition.type_definition, "INTEGER NOT NULL");
+			assert_eq!(
+				new_definition.type_definition.to_sql_string(),
+				FieldType::Custom("INTEGER NOT NULL".to_string()).to_sql_string()
+			);
 		}
 		_ => panic!("Expected AlterColumn operation"),
 	}
@@ -128,12 +136,15 @@ fn test_create_table_with_add_column() {
 	let operations = vec![
 		Operation::CreateTable {
 			name: "test_table",
-			columns: vec![create_column("id", "INTEGER PRIMARY KEY")],
+			columns: vec![create_column(
+				"id",
+				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+			)],
 			constraints: vec![],
 		},
 		Operation::AddColumn {
 			table: "test_table",
-			column: create_column("name", "TEXT"),
+			column: create_column("name", FieldType::Text),
 		},
 	];
 
@@ -152,12 +163,18 @@ fn test_no_optimization_needed() {
 	let operations = vec![
 		Operation::CreateTable {
 			name: "table1",
-			columns: vec![create_column("id", "INTEGER PRIMARY KEY")],
+			columns: vec![create_column(
+				"id",
+				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+			)],
 			constraints: vec![],
 		},
 		Operation::CreateTable {
 			name: "table2",
-			columns: vec![create_column("id", "INTEGER PRIMARY KEY")],
+			columns: vec![create_column(
+				"id",
+				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+			)],
 			constraints: vec![],
 		},
 	];
@@ -236,14 +253,22 @@ fn test_migration_optimization_preserves_order() {
 	let operations = vec![
 		Operation::CreateTable {
 			name: "table1",
-			columns: vec![create_column("id", "INTEGER PRIMARY KEY")],
+			columns: vec![create_column(
+				"id",
+				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+			)],
 			constraints: vec![],
 		},
 		Operation::CreateTable {
 			name: "table2",
 			columns: vec![
-				create_column("id", "INTEGER PRIMARY KEY"),
-				create_column("table1_id", "INTEGER"),
+				create_column(
+					"id",
+					FieldType::Custom(
+						FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string(),
+					),
+				),
+				create_column("table1_id", FieldType::Integer),
 			],
 			constraints: vec!["FOREIGN KEY (table1_id) REFERENCES table1(id)"],
 		},

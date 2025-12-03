@@ -16,7 +16,7 @@
 
 use reinhardt_backends::DatabaseConnection;
 use reinhardt_migrations::{
-	ColumnDefinition, Migration, Operation, executor::DatabaseMigrationExecutor,
+	ColumnDefinition, FieldType, Migration, Operation, executor::DatabaseMigrationExecutor,
 	recorder::DatabaseMigrationRecorder,
 };
 use reinhardt_test::fixtures::postgres_container;
@@ -51,7 +51,7 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: &'static str) -> ColumnDefinition {
+fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
 		name,
 		type_definition: type_def,
@@ -60,7 +60,6 @@ fn create_basic_column(name: &'static str, type_def: &'static str) -> ColumnDefi
 		primary_key: false,
 		auto_increment: false,
 		default: None,
-		max_length: None,
 	}
 }
 
@@ -98,8 +97,8 @@ async fn test_executor_basic_run(
 		vec![Operation::CreateTable {
 			name: leak_str("test_author"),
 			columns: vec![
-				create_basic_column("id", "SERIAL PRIMARY KEY"),
-				create_basic_column("name", "TEXT NOT NULL"),
+				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+				create_basic_column("name", FieldType::Custom("TEXT NOT NULL".to_string())),
 			],
 			constraints: vec![],
 		}],
@@ -111,9 +110,9 @@ async fn test_executor_basic_run(
 		vec![Operation::CreateTable {
 			name: leak_str("test_book"),
 			columns: vec![
-				create_basic_column("id", "SERIAL PRIMARY KEY"),
-				create_basic_column("title", "TEXT NOT NULL"),
-				create_basic_column("author_id", "INTEGER"),
+				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+				create_basic_column("title", FieldType::Custom("TEXT NOT NULL".to_string())),
+				create_basic_column("author_id", FieldType::Custom("INTEGER".to_string())),
 			],
 			constraints: vec![],
 		}],
@@ -176,7 +175,10 @@ async fn test_executor_rollback(
 		"0001_initial",
 		vec![Operation::CreateTable {
 			name: leak_str("rollback_test"),
-			columns: vec![create_basic_column("id", "SERIAL PRIMARY KEY")],
+			columns: vec![create_basic_column(
+				"id",
+				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		}],
 	);
@@ -245,7 +247,10 @@ async fn test_executor_already_applied(
 		"0001_initial",
 		vec![Operation::CreateTable {
 			name: leak_str("skip_test"),
-			columns: vec![create_basic_column("id", "SERIAL PRIMARY KEY")],
+			columns: vec![create_basic_column(
+				"id",
+				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		}],
 	);
@@ -313,7 +318,10 @@ async fn test_executor_with_dependencies(
 		name: leak_str("0001_initial"),
 		operations: vec![Operation::CreateTable {
 			name: leak_str("dep_table1"),
-			columns: vec![create_basic_column("id", "SERIAL PRIMARY KEY")],
+			columns: vec![create_basic_column(
+				"id",
+				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		}],
 		dependencies: vec![],
@@ -327,7 +335,10 @@ async fn test_executor_with_dependencies(
 		name: leak_str("0001_initial"),
 		operations: vec![Operation::CreateTable {
 			name: leak_str("dep_table2"),
-			columns: vec![create_basic_column("id", "SERIAL PRIMARY KEY")],
+			columns: vec![create_basic_column(
+				"id",
+				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		}],
 		dependencies: vec![("app1", "0001_initial")],
@@ -458,8 +469,8 @@ async fn test_executor_add_column_migration(
 		vec![Operation::CreateTable {
 			name: "evolving_table",
 			columns: vec![
-				create_basic_column("id", "SERIAL PRIMARY KEY"),
-				create_basic_column("name", "TEXT"),
+				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+				create_basic_column("name", FieldType::Custom("TEXT".to_string())),
 			],
 			constraints: vec![],
 		}],
@@ -483,7 +494,7 @@ async fn test_executor_add_column_migration(
 		"0002_add_email",
 		vec![Operation::AddColumn {
 			table: "evolving_table",
-			column: create_basic_column("email", "TEXT"),
+			column: create_basic_column("email", FieldType::Custom("TEXT".to_string())),
 		}],
 	);
 
@@ -545,14 +556,14 @@ async fn test_executor_complex_migration(
 			Operation::CreateTable {
 				name: "complex_table",
 				columns: vec![
-					create_basic_column("id", "SERIAL PRIMARY KEY"),
-					create_basic_column("username", "TEXT NOT NULL"),
+					create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+					create_basic_column("username", FieldType::Custom("TEXT NOT NULL".to_string())),
 				],
 				constraints: vec![],
 			},
 			Operation::AddColumn {
 				table: "complex_table",
-				column: create_basic_column("email", "TEXT"),
+				column: create_basic_column("email", FieldType::Custom("TEXT".to_string())),
 			},
 		],
 	);

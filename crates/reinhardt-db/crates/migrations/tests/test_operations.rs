@@ -1,7 +1,7 @@
 //! Tests for migration operations
 //! Translated and adapted from Django's test_operations.py
 
-use reinhardt_migrations::{ColumnDefinition, Operation, SqlDialect};
+use reinhardt_migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
 
 /// Helper function to leak a string to get a 'static lifetime
 fn leak_str(s: impl Into<String>) -> &'static str {
@@ -14,8 +14,8 @@ fn test_create_table_basic() {
 	let operation = Operation::CreateTable {
 		name: leak_str("test_table"),
 		columns: vec![
-			ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-			ColumnDefinition::new("name", "TEXT NOT NULL"),
+			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+			ColumnDefinition::new("name", FieldType::Custom("TEXT NOT NULL".to_string())),
 		],
 		constraints: vec![],
 	};
@@ -50,8 +50,8 @@ fn test_create_table_with_constraints() {
 	let operation = Operation::CreateTable {
 		name: leak_str("test_table"),
 		columns: vec![
-			ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-			ColumnDefinition::new("email", "TEXT NOT NULL"),
+			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+			ColumnDefinition::new("email", FieldType::Custom("TEXT NOT NULL".to_string())),
 		],
 		constraints: vec!["UNIQUE(email)"],
 	};
@@ -94,7 +94,7 @@ fn test_add_column() {
 	// Test AddColumn operation
 	let operation = Operation::AddColumn {
 		table: leak_str("test_table"),
-		column: ColumnDefinition::new("new_field", "TEXT"),
+		column: ColumnDefinition::new("new_field", FieldType::Custom("TEXT".to_string())),
 	};
 
 	let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -120,7 +120,10 @@ fn test_add_column_with_default() {
 	// Test AddColumn with default value
 	let operation = Operation::AddColumn {
 		table: leak_str("test_table"),
-		column: ColumnDefinition::new("status", "TEXT DEFAULT 'pending'"),
+		column: ColumnDefinition::new(
+			"status",
+			FieldType::Custom("TEXT DEFAULT 'pending'".to_string()),
+		),
 	};
 
 	let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -168,7 +171,10 @@ fn test_alter_column() {
 	let operation = Operation::AlterColumn {
 		table: leak_str("test_table"),
 		column: leak_str("field_name"),
-		new_definition: ColumnDefinition::new("field_name", "INTEGER NOT NULL"),
+		new_definition: ColumnDefinition::new(
+			"field_name",
+			FieldType::Custom("INTEGER NOT NULL".to_string()),
+		),
 	};
 
 	// SQLite doesn't support ALTER COLUMN natively
@@ -361,8 +367,8 @@ fn test_postgres_sql_generation() {
 	let operation = Operation::CreateTable {
 		name: leak_str("test_table"),
 		columns: vec![
-			ColumnDefinition::new("id", "SERIAL PRIMARY KEY"),
-			ColumnDefinition::new("data", "JSONB"),
+			ColumnDefinition::new("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+			ColumnDefinition::new("data", FieldType::Custom("JSONB".to_string())),
 		],
 		constraints: vec![],
 	};
@@ -391,8 +397,11 @@ fn test_mysql_sql_generation() {
 	let operation = Operation::CreateTable {
 		name: leak_str("test_table"),
 		columns: vec![
-			ColumnDefinition::new("id", "INT AUTO_INCREMENT PRIMARY KEY"),
-			ColumnDefinition::new("name", "VARCHAR(100)"),
+			ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INT AUTO_INCREMENT PRIMARY KEY".to_string()),
+			),
+			ColumnDefinition::new("name", FieldType::Custom("VARCHAR(100)".to_string())),
 		],
 		constraints: vec![],
 	};
@@ -415,7 +424,10 @@ fn test_operation_reversibility() {
 	// Test that operations can be reversed
 	let forward_op = Operation::CreateTable {
 		name: leak_str("test_table"),
-		columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+		columns: vec![ColumnDefinition::new(
+			"id",
+			FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+		)],
 		constraints: vec![],
 	};
 
@@ -444,9 +456,15 @@ fn test_column_definition_with_multiple_constraints() {
 	let operation = Operation::CreateTable {
 		name: leak_str("users"),
 		columns: vec![
-			ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-			ColumnDefinition::new("email", "TEXT NOT NULL UNIQUE"),
-			ColumnDefinition::new("age", "INTEGER CHECK(age >= 0)"),
+			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+			ColumnDefinition::new(
+				"email",
+				FieldType::Custom("TEXT NOT NULL UNIQUE".to_string()),
+			),
+			ColumnDefinition::new(
+				"age",
+				FieldType::Custom("INTEGER CHECK(age >= 0)".to_string()),
+			),
 		],
 		constraints: vec![],
 	};
@@ -475,8 +493,8 @@ fn test_migrations_foreign_key_constraint() {
 	let operation = Operation::CreateTable {
 		name: leak_str("orders"),
 		columns: vec![
-			ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-			ColumnDefinition::new("user_id", "INTEGER NOT NULL"),
+			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+			ColumnDefinition::new("user_id", FieldType::Custom("INTEGER NOT NULL".to_string())),
 		],
 		constraints: vec!["FOREIGN KEY (user_id) REFERENCES users(id)"],
 	};
@@ -523,7 +541,10 @@ fn test_alter_column_multi_db() {
 	let operation = Operation::AlterColumn {
 		table: leak_str("users"),
 		column: leak_str("status"),
-		new_definition: ColumnDefinition::new("status", "VARCHAR(20) NOT NULL"),
+		new_definition: ColumnDefinition::new(
+			"status",
+			FieldType::Custom("VARCHAR(20) NOT NULL".to_string()),
+		),
 	};
 
 	// PostgreSQL: ALTER COLUMN ... TYPE
@@ -629,9 +650,12 @@ fn test_create_table_same_across_databases() {
 	let operation = Operation::CreateTable {
 		name: leak_str("products"),
 		columns: vec![
-			ColumnDefinition::new("id", "SERIAL PRIMARY KEY"),
-			ColumnDefinition::new("name", "VARCHAR(255) NOT NULL"),
-			ColumnDefinition::new("price", "DECIMAL(10,2)"),
+			ColumnDefinition::new("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
+			ColumnDefinition::new(
+				"name",
+				FieldType::Custom("VARCHAR(255) NOT NULL".to_string()),
+			),
+			ColumnDefinition::new("price", FieldType::Custom("DECIMAL(10,2)".to_string())),
 		],
 		constraints: vec!["UNIQUE(name)"],
 	};
