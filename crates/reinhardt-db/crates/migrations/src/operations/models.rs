@@ -996,7 +996,13 @@ mod tests {
 
 	#[test]
 	fn test_field_definition_with_default() {
-		let field = FieldDefinition::new("status", FieldType::VarChar(20), false, false, Some("'pending'"));
+		let field = FieldDefinition::new(
+			"status",
+			FieldType::VarChar(20),
+			false,
+			false,
+			Some("'pending'"),
+		);
 
 		assert_eq!(field.default, Some("'pending'".to_string()));
 
