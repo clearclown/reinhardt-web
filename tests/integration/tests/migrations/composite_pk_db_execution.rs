@@ -5,6 +5,7 @@
 use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
 use reinhardt_migrations::operations::models::CreateModel;
 use reinhardt_migrations::operations::FieldDefinition;
+use reinhardt_migrations::FieldType;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serial_test::serial;
@@ -30,9 +31,15 @@ async fn test_composite_pk_create_table_execution_postgresql(
 	let create_model = CreateModel::new(
 		"post_tags",
 		vec![
-			FieldDefinition::new("post_id", "BIGINT", true, false, None::<&str>),
-			FieldDefinition::new("tag_id", "BIGINT", true, false, None::<&str>),
-			FieldDefinition::new("description", "VARCHAR(200)", false, false, None::<&str>),
+			FieldDefinition::new("post_id", FieldType::BigInteger, true, false, None::<&str>),
+			FieldDefinition::new("tag_id", FieldType::BigInteger, true, false, None::<&str>),
+			FieldDefinition::new(
+				"description",
+				FieldType::VarChar(200),
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])

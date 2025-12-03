@@ -3,6 +3,7 @@
 use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 use reinhardt_migrations::operations::models::{CreateModel, ValidationError};
 use reinhardt_migrations::operations::FieldDefinition;
+use reinhardt_migrations::FieldType;
 
 /// Mock schema editor for testing SQL generation
 struct MockSchemaEditor;
@@ -20,8 +21,8 @@ fn test_composite_pk_empty_list_error() {
 	let result = CreateModel::new(
 		"users",
 		vec![
-			FieldDefinition::new("id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("name", "VARCHAR(100)", false, false, None::<&str>),
+			FieldDefinition::new("id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("name", FieldType::VarChar(100), false, false, None::<&str>),
 		],
 	)
 	.with_composite_primary_key(vec![]);
@@ -53,8 +54,8 @@ fn test_composite_pk_nonexistent_field_error() {
 	let result = CreateModel::new(
 		"posts",
 		vec![
-			FieldDefinition::new("id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("title", "VARCHAR(200)", false, false, None::<&str>),
+			FieldDefinition::new("id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("title", FieldType::VarChar(200), false, false, None::<&str>),
 		],
 	)
 	.with_composite_primary_key(vec!["id".to_string(), "author_id".to_string()]);
@@ -105,9 +106,15 @@ fn test_composite_pk_fields_not_null_constraint() {
 	let create = CreateModel::new(
 		"post_tags",
 		vec![
-			FieldDefinition::new("post_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("tag_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("description", "VARCHAR(200)", false, true, None::<&str>),
+			FieldDefinition::new("post_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("tag_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new(
+				"description",
+				FieldType::VarChar(200),
+				false,
+				true,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])

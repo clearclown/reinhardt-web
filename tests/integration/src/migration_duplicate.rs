@@ -7,10 +7,10 @@
 mod tests {
 	use async_trait::async_trait;
 	use reinhardt_db::migrations::{
-		AutoMigrationGenerator, DatabaseSchema, Migration, MigrationRepository,
+		AutoMigrationGenerator, DatabaseSchema, FieldType, Migration, MigrationRepository,
 		schema_diff::SchemaDiff,
 	};
-	use std::collections::HashMap;
+	use std::collections::{BTreeMap, HashMap};
 	use std::sync::Arc;
 	use tempfile::TempDir;
 
@@ -76,7 +76,7 @@ mod tests {
 	fn test_system_tables_excluded_from_diff() {
 		// Create a schema with user tables and system table
 		let mut current_schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 
 		// Add system table (reinhardt_migrations)
@@ -84,7 +84,7 @@ mod tests {
 			"reinhardt_migrations".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
 				name: "reinhardt_migrations",
-				columns: std::collections::HashMap::new(),
+				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
 			},
@@ -95,7 +95,7 @@ mod tests {
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
 				name: "users",
-				columns: std::collections::HashMap::new(),
+				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
 			},
@@ -103,13 +103,13 @@ mod tests {
 
 		// Target schema has only the user table (no system tables)
 		let mut target_schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 		target_schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
 				name: "users",
-				columns: std::collections::HashMap::new(),
+				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
 			},
@@ -146,14 +146,14 @@ mod tests {
 	fn test_no_changes_when_schema_unchanged() {
 		// Create identical schemas
 		let mut schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 
 		schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
 				name: "users",
-				columns: std::collections::HashMap::new(),
+				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
 			},
@@ -184,7 +184,7 @@ mod tests {
 
 		// Create identical schemas
 		let schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 
 		let repository: Arc<tokio::sync::Mutex<dyn MigrationRepository>> =
@@ -224,25 +224,24 @@ mod tests {
 
 		// Step 1: Empty current schema, target has tables
 		let current_schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 
 		let mut target_schema = DatabaseSchema {
-			tables: std::collections::HashMap::new(),
+			tables: BTreeMap::new(),
 		};
 
 		// Add a table to target schema
-		let mut columns = std::collections::HashMap::new();
+		let mut columns = BTreeMap::new();
 		columns.insert(
 			"id".to_string(),
 			reinhardt_db::migrations::schema_diff::ColumnSchema {
 				name: "id",
-				data_type: "INTEGER".to_string(),
+				data_type: FieldType::Integer,
 				nullable: false,
 				default: None,
 				primary_key: true,
 				auto_increment: true,
-				max_length: None,
 			},
 		);
 

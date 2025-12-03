@@ -43,40 +43,67 @@ pub async fn setup_test_db() -> Pool<Postgres> {
 // Note: Test helper function - may appear unused but available for flatpages integration tests
 #[allow(dead_code)]
 pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
-	use reinhardt_db::migrations::{ColumnDefinition, Migration, Operation, SqlDialect};
+	use reinhardt_db::migrations::{ColumnDefinition, FieldType, Migration, Operation, SqlDialect};
 
 	// Define flatpages migration with all required tables
 	let flatpages_migration = Migration::new("test_flatpages_schema", "test")
 		.add_operation(Operation::CreateTable {
 			name: "flatpages",
 			columns: vec![
-				ColumnDefinition::new("id", "BIGSERIAL PRIMARY KEY"),
-				ColumnDefinition::new("url", "VARCHAR(255) NOT NULL UNIQUE"),
-				ColumnDefinition::new("title", "VARCHAR(255) NOT NULL"),
-				ColumnDefinition::new("content", "TEXT NOT NULL"),
-				ColumnDefinition::new("enable_comments", "BOOLEAN NOT NULL DEFAULT FALSE"),
-				ColumnDefinition::new("template_name", "VARCHAR(255)"),
-				ColumnDefinition::new("registration_required", "BOOLEAN NOT NULL DEFAULT FALSE"),
-				ColumnDefinition::new("created_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
-				ColumnDefinition::new("updated_at", "TIMESTAMPTZ NOT NULL DEFAULT NOW()"),
+				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"url",
+					FieldType::Custom("VARCHAR(255) NOT NULL UNIQUE".to_string()),
+				),
+				ColumnDefinition::new(
+					"title",
+					FieldType::Custom("VARCHAR(255) NOT NULL".to_string()),
+				),
+				ColumnDefinition::new("content", FieldType::Custom("TEXT NOT NULL".to_string())),
+				ColumnDefinition::new(
+					"enable_comments",
+					FieldType::Custom("BOOLEAN NOT NULL DEFAULT FALSE".to_string()),
+				),
+				ColumnDefinition::new("template_name", FieldType::VarChar(255)),
+				ColumnDefinition::new(
+					"registration_required",
+					FieldType::Custom("BOOLEAN NOT NULL DEFAULT FALSE".to_string()),
+				),
+				ColumnDefinition::new(
+					"created_at",
+					FieldType::Custom("TIMESTAMPTZ NOT NULL DEFAULT NOW()".to_string()),
+				),
+				ColumnDefinition::new(
+					"updated_at",
+					FieldType::Custom("TIMESTAMPTZ NOT NULL DEFAULT NOW()".to_string()),
+				),
 			],
 			constraints: vec![],
 		})
 		.add_operation(Operation::CreateTable {
 			name: "sites",
 			columns: vec![
-				ColumnDefinition::new("id", "BIGSERIAL PRIMARY KEY"),
-				ColumnDefinition::new("domain", "VARCHAR(255) NOT NULL UNIQUE"),
-				ColumnDefinition::new("name", "VARCHAR(255) NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"domain",
+					FieldType::Custom("VARCHAR(255) NOT NULL UNIQUE".to_string()),
+				),
+				ColumnDefinition::new(
+					"name",
+					FieldType::Custom("VARCHAR(255) NOT NULL".to_string()),
+				),
 			],
 			constraints: vec![],
 		})
 		.add_operation(Operation::CreateTable {
 			name: "flatpage_sites",
 			columns: vec![
-				ColumnDefinition::new("id", "BIGSERIAL PRIMARY KEY"),
-				ColumnDefinition::new("flatpage_id", "BIGINT NOT NULL"),
-				ColumnDefinition::new("site_id", "BIGINT NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"flatpage_id",
+					FieldType::Custom("BIGINT NOT NULL".to_string()),
+				),
+				ColumnDefinition::new("site_id", FieldType::Custom("BIGINT NOT NULL".to_string())),
 			],
 			constraints: vec![
 				"FOREIGN KEY (flatpage_id) REFERENCES flatpages(id) ON DELETE CASCADE",

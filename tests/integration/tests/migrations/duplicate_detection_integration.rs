@@ -5,7 +5,8 @@
 //! 2. makemigrations → makemigrations (rapid successive calls)
 
 use reinhardt_migrations::{
-	AutoMigrationError, AutoMigrationGenerator, Migration, MigrationRepository, Operation,
+	AutoMigrationError, AutoMigrationGenerator, FieldType, Migration, MigrationRepository,
+	Operation,
 };
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
@@ -74,24 +75,22 @@ fn create_users_schema() -> DatabaseSchema {
 		"id".to_string(),
 		ColumnSchema {
 			name: "id",
-			data_type: "INTEGER".to_string(),
+			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
 			primary_key: true,
 			auto_increment: true,
-			max_length: None,
 		},
 	);
 	table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
 			name: "name",
-			data_type: "VARCHAR(255)".to_string(),
+			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(255),
 		},
 	);
 	schema.tables.insert("users".to_string(), table);
@@ -111,24 +110,22 @@ fn create_users_and_posts_schema() -> DatabaseSchema {
 		"id".to_string(),
 		ColumnSchema {
 			name: "id",
-			data_type: "INTEGER".to_string(),
+			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
 			primary_key: true,
 			auto_increment: true,
-			max_length: None,
 		},
 	);
 	posts_table.columns.insert(
 		"title".to_string(),
 		ColumnSchema {
 			name: "title",
-			data_type: "TEXT".to_string(),
+			data_type: FieldType::Text,
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: None,
 		},
 	);
 	schema.tables.insert("posts".to_string(), posts_table);
@@ -365,36 +362,33 @@ async fn test_semantic_duplicate_with_different_column_order() {
 		"id".to_string(),
 		ColumnSchema {
 			name: "id",
-			data_type: "INTEGER".to_string(),
+			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
 			primary_key: true,
 			auto_increment: true,
-			max_length: None,
 		},
 	);
 	table1.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
 			name: "name",
-			data_type: "VARCHAR(255)".to_string(),
+			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(255),
 		},
 	);
 	table1.columns.insert(
 		"email".to_string(),
 		ColumnSchema {
 			name: "email",
-			data_type: "VARCHAR(255)".to_string(),
+			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(255),
 		},
 	);
 	schema1.tables.insert("users".to_string(), table1);
@@ -424,36 +418,33 @@ async fn test_semantic_duplicate_with_different_column_order() {
 		"email".to_string(),
 		ColumnSchema {
 			name: "email",
-			data_type: "VARCHAR(255)".to_string(),
+			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(255),
 		},
 	);
 	table2.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
 			name: "id",
-			data_type: "INTEGER".to_string(),
+			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
 			primary_key: true,
 			auto_increment: true,
-			max_length: None,
 		},
 	);
 	table2.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
 			name: "name",
-			data_type: "VARCHAR(255)".to_string(),
+			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
 			primary_key: false,
 			auto_increment: false,
-			max_length: Some(255),
 		},
 	);
 	schema2.tables.insert("users".to_string(), table2);

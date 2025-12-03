@@ -3,6 +3,7 @@
 use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 use reinhardt_migrations::operations::models::CreateModel;
 use reinhardt_migrations::operations::FieldDefinition;
+use reinhardt_migrations::FieldType;
 
 /// Mock schema editor for testing SQL generation
 struct MockSchemaEditor;
@@ -20,8 +21,8 @@ fn test_create_model_with_single_primary_key() {
 	let create = CreateModel::new(
 		"users",
 		vec![
-			FieldDefinition::new("id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("name", "VARCHAR(100)", false, false, None::<&str>),
+			FieldDefinition::new("id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("name", FieldType::VarChar(100), false, false, None::<&str>),
 		],
 	);
 
@@ -44,9 +45,15 @@ fn test_create_model_with_composite_primary_key() {
 	let create = CreateModel::new(
 		"post_tags",
 		vec![
-			FieldDefinition::new("post_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("tag_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("description", "VARCHAR(200)", false, false, None::<&str>),
+			FieldDefinition::new("post_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("tag_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new(
+				"description",
+				FieldType::VarChar(200),
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])
@@ -81,9 +88,15 @@ fn test_create_model_composite_pk_three_fields() {
 	let create = CreateModel::new(
 		"user_role_permission",
 		vec![
-			FieldDefinition::new("user_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("role_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("permission_id", "INTEGER", true, false, None::<&str>),
+			FieldDefinition::new("user_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("role_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new(
+				"permission_id",
+				FieldType::Integer,
+				true,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec![
@@ -109,10 +122,19 @@ fn test_create_model_composite_pk_with_additional_fields() {
 	let create = CreateModel::new(
 		"order_items",
 		vec![
-			FieldDefinition::new("order_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("item_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("quantity", "INTEGER", false, false, Some("1")),
-			FieldDefinition::new("price", "DECIMAL(10, 2)", false, false, None::<&str>),
+			FieldDefinition::new("order_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("item_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("quantity", FieldType::Integer, false, false, Some("1")),
+			FieldDefinition::new(
+				"price",
+				FieldType::Decimal {
+					precision: 10,
+					scale: 2,
+				},
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["order_id".to_string(), "item_id".to_string()])

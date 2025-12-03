@@ -4,7 +4,8 @@
 //! with the migration system.
 
 use reinhardt_migrations::{
-	ColumnDefinition, Migration, MigrationNamer, MigrationNumbering, MigrationOperation, Operation,
+	ColumnDefinition, FieldType, Migration, MigrationNamer, MigrationNumbering, MigrationOperation,
+	Operation,
 };
 use std::fs;
 use tempfile::TempDir;
@@ -67,7 +68,7 @@ fn test_migration_numbering_for_new_app() {
 fn test_migration_naming_with_single_operation() {
 	let operations = vec![Operation::CreateTable {
 		name: leak_str("users"),
-		columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+		columns: vec![ColumnDefinition::new("id", FieldType::Integer)],
 		constraints: vec![],
 	}];
 
@@ -81,11 +82,11 @@ fn test_migration_naming_with_multiple_operations() {
 	let operations = vec![
 		Operation::AddColumn {
 			table: leak_str("users"),
-			column: ColumnDefinition::new("email", "VARCHAR(255)"),
+			column: ColumnDefinition::new("email", FieldType::VarChar(255)),
 		},
 		Operation::AddColumn {
 			table: leak_str("users"),
-			column: ColumnDefinition::new("phone", "VARCHAR(20)"),
+			column: ColumnDefinition::new("phone", FieldType::VarChar(20)),
 		},
 	];
 
@@ -140,7 +141,7 @@ fn test_full_migration_name_generation() {
 	// Generate migration name
 	let operations = vec![Operation::AddColumn {
 		table: leak_str("users"),
-		column: ColumnDefinition::new("status", "VARCHAR(20)"),
+		column: ColumnDefinition::new("status", FieldType::VarChar(20)),
 	}];
 	let name = MigrationNamer::generate_name(&operations, false);
 
@@ -159,8 +160,8 @@ fn test_migration_struct_with_generated_name() {
 		Operation::CreateTable {
 			name: leak_str("posts"),
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "TEXT"),
+				ColumnDefinition::new("id", FieldType::Integer),
+				ColumnDefinition::new("title", FieldType::Text),
 			],
 			constraints: vec![],
 		},
@@ -229,7 +230,10 @@ fn test_migration_naming_truncation() {
 	for i in 0..20 {
 		operations.push(Operation::AddColumn {
 			table: leak_str(format!("table_{}", i)),
-			column: ColumnDefinition::new(leak_str(format!("field_{}", i)), "VARCHAR(255)"),
+			column: ColumnDefinition::new(
+				leak_str(format!("field_{}", i)),
+				FieldType::VarChar(255),
+			),
 		});
 	}
 
@@ -257,7 +261,7 @@ fn test_migration_operation_describe_for_logging() {
 		},
 		Operation::AddColumn {
 			table: leak_str("posts"),
-			column: ColumnDefinition::new("author_id", "INTEGER"),
+			column: ColumnDefinition::new("author_id", FieldType::Integer),
 		},
 		Operation::CreateIndex {
 			table: leak_str("posts"),
@@ -320,9 +324,15 @@ fn test_combined_workflow_new_migration() {
 		Operation::CreateTable {
 			name: leak_str("products"),
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "TEXT NOT NULL"),
-				ColumnDefinition::new("price", "DECIMAL(10, 2)"),
+				ColumnDefinition::new("id", FieldType::Integer),
+				ColumnDefinition::new("name", FieldType::Text),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec!["CHECK(price >= 0)"],
 		},

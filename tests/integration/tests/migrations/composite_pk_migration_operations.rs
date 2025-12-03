@@ -5,6 +5,7 @@
 use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 use reinhardt_migrations::operations::models::{CreateModel, DeleteModel};
 use reinhardt_migrations::operations::FieldDefinition;
+use reinhardt_migrations::FieldType;
 
 /// Mock schema editor for testing SQL generation
 struct MockSchemaEditor;
@@ -23,9 +24,15 @@ fn test_composite_pk_rollback_migration() {
 	let create = CreateModel::new(
 		"post_tags",
 		vec![
-			FieldDefinition::new("post_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("tag_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("created_at", "TIMESTAMP", false, false, None::<&str>),
+			FieldDefinition::new("post_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("tag_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new(
+				"created_at",
+				FieldType::DateTime,
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])
@@ -64,10 +71,19 @@ fn test_composite_pk_sql_syntax_validation() {
 	let create = CreateModel::new(
 		"order_items",
 		vec![
-			FieldDefinition::new("order_id", "BIGINT", true, false, None::<&str>),
-			FieldDefinition::new("item_id", "BIGINT", true, false, None::<&str>),
-			FieldDefinition::new("quantity", "INTEGER", false, false, Some("1")),
-			FieldDefinition::new("price", "DECIMAL(10,2)", false, false, None::<&str>),
+			FieldDefinition::new("order_id", FieldType::BigInteger, true, false, None::<&str>),
+			FieldDefinition::new("item_id", FieldType::BigInteger, true, false, None::<&str>),
+			FieldDefinition::new("quantity", FieldType::Integer, false, false, Some("1")),
+			FieldDefinition::new(
+				"price",
+				FieldType::Decimal {
+					precision: 10,
+					scale: 2,
+				},
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["order_id".to_string(), "item_id".to_string()])
@@ -138,7 +154,7 @@ fn test_composite_pk_sql_syntax_validation() {
 		sql
 	);
 	assert!(
-		sql.contains("price DECIMAL(10,2)") || sql.contains("\"price\" DECIMAL(10,2)"),
+		sql.contains("price DECIMAL(10, 2)") || sql.contains("\"price\" DECIMAL(10, 2)"),
 		"price field should exist with correct type: {}",
 		sql
 	);
@@ -156,9 +172,21 @@ fn test_composite_pk_with_unique_constraint() {
 	let create = CreateModel::new(
 		"user_sessions",
 		vec![
-			FieldDefinition::new("user_id", "INTEGER", true, true, None::<&str>), // Primary + Unique
-			FieldDefinition::new("session_id", "VARCHAR(255)", true, false, None::<&str>),
-			FieldDefinition::new("created_at", "TIMESTAMP", false, false, None::<&str>),
+			FieldDefinition::new("user_id", FieldType::Integer, true, true, None::<&str>), // Primary + Unique
+			FieldDefinition::new(
+				"session_id",
+				FieldType::VarChar(255),
+				true,
+				false,
+				None::<&str>,
+			),
+			FieldDefinition::new(
+				"created_at",
+				FieldType::DateTime,
+				false,
+				false,
+				None::<&str>,
+			),
 		],
 	)
 	.with_composite_primary_key(vec!["user_id".to_string(), "session_id".to_string()])
@@ -211,9 +239,9 @@ fn test_composite_pk_forward_backward_consistency() {
 	let create = CreateModel::new(
 		table_name,
 		vec![
-			FieldDefinition::new("product_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("category_id", "INTEGER", true, false, None::<&str>),
-			FieldDefinition::new("display_order", "INTEGER", false, false, Some("0")),
+			FieldDefinition::new("product_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("category_id", FieldType::Integer, true, false, None::<&str>),
+			FieldDefinition::new("display_order", FieldType::Integer, false, false, Some("0")),
 		],
 	)
 	.with_composite_primary_key(pk_fields.clone())
