@@ -223,8 +223,6 @@ impl ToTokens for Operation {
 impl ToTokens for ColumnDefinition {
 	fn to_tokens(&self, tokens: &mut TokenStream) {
 		let name = &self.name;
-		// Convert type_definition string to an identifier (e.g., "CharField" -> CharField)
-		let type_definition = syn::Ident::new(self.type_definition, proc_macro2::Span::call_site());
 		let not_null = self.not_null;
 		let unique = self.unique;
 		let primary_key = self.primary_key;
@@ -235,21 +233,33 @@ impl ToTokens for ColumnDefinition {
 			None => quote! { None },
 		};
 
-		let max_length_token = match self.max_length {
-			Some(l) => quote! { Some(#l) },
-			None => quote! { None },
+		// Generate FieldType token based on the actual type
+		let field_type_token = match &self.type_definition {
+			crate::FieldType::Integer => quote! { crate::FieldType::Integer },
+			crate::FieldType::VarChar(len) => quote! { crate::FieldType::VarChar(#len) },
+			crate::FieldType::Char(len) => quote! { crate::FieldType::Char(#len) },
+			crate::FieldType::Text => quote! { crate::FieldType::Text },
+			crate::FieldType::Boolean => quote! { crate::FieldType::Boolean },
+			crate::FieldType::Decimal { precision, scale } => {
+				quote! { crate::FieldType::Decimal { precision: #precision, scale: #scale } }
+			}
+			crate::FieldType::Custom(s) => quote! { crate::FieldType::Custom(#s.to_string()) },
+			// For all other types, generate Custom variant with SQL string representation
+			other => {
+				let sql_str = other.to_sql_string();
+				quote! { crate::FieldType::Custom(#sql_str.to_string()) }
+			}
 		};
 
 		tokens.extend(quote! {
 			ColumnDefinition {
 				name: #name,
-				type_definition: #type_definition,
+				type_definition: #field_type_token,
 				not_null: #not_null,
 				unique: #unique,
 				primary_key: #primary_key,
 				auto_increment: #auto_increment,
 				default: #default_token,
-				max_length: #max_length_token,
 			}
 		});
 	}

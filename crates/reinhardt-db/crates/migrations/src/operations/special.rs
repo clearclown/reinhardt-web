@@ -336,6 +336,7 @@ impl RunCode {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::FieldType;
 
 	#[test]
 	fn test_run_sql_basic() {
@@ -407,7 +408,7 @@ mod tests {
 			"User",
 			vec![FieldDefinition::new(
 				"id",
-				"INTEGER",
+				FieldType::Integer,
 				true,
 				false,
 				None::<String>,

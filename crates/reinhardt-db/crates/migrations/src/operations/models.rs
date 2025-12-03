@@ -8,7 +8,7 @@
 //! ```rust
 //! use reinhardt_migrations::operations::models::{CreateModel, DeleteModel};
 //! use reinhardt_migrations::operations::FieldDefinition;
-//! use reinhardt_migrations::ProjectState;
+//! use reinhardt_migrations::{ProjectState, FieldType};
 //!
 //! let mut state = ProjectState::new();
 //!
@@ -16,8 +16,8 @@
 //! let create = CreateModel::new(
 //!     "User",
 //!     vec![
-//!         FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None),
-//!         FieldDefinition::new("email", "VARCHAR(255)", false, false, Option::<&str>::None),
+//!         FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None),
+//!         FieldDefinition::new("email", FieldType::VarChar(255), false, false, Option::<&str>::None),
 //!     ],
 //! );
 //! create.state_forwards("myapp", &mut state);
@@ -87,10 +87,11 @@ pub type ValidationResult<T> = Result<T, ValidationError>;
 ///
 /// ```rust
 /// use reinhardt_migrations::operations::FieldDefinition;
+/// use reinhardt_migrations::FieldType;
 ///
-/// let field = FieldDefinition::new("email", "VARCHAR(255)", false, false, Some("''"));
+/// let field = FieldDefinition::new("email", FieldType::VarChar(255), false, false, Some("''"));
 /// assert_eq!(field.name, "email");
-/// assert_eq!(field.field_type, "VARCHAR(255)");
+/// assert_eq!(field.field_type, FieldType::VarChar(255));
 /// assert!(!field.primary_key);
 /// assert!(!field.unique);
 /// assert_eq!(field.default, Some("''".to_string()));
@@ -98,7 +99,7 @@ pub type ValidationResult<T> = Result<T, ValidationError>;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FieldDefinition {
 	pub name: String,
-	pub field_type: String,
+	pub field_type: crate::FieldType,
 	pub primary_key: bool,
 	pub unique: bool,
 	pub default: Option<String>,
@@ -112,21 +113,22 @@ impl FieldDefinition {
 	///
 	/// ```rust
 	/// use reinhardt_migrations::operations::FieldDefinition;
+	/// use reinhardt_migrations::FieldType;
 	///
-	/// let field = FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None);
+	/// let field = FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None);
 	/// assert_eq!(field.name, "id");
 	/// assert!(field.primary_key);
 	/// ```
 	pub fn new(
 		name: impl Into<String>,
-		field_type: impl Into<String>,
+		field_type: crate::FieldType,
 		primary_key: bool,
 		unique: bool,
 		default: Option<impl Into<String>>,
 	) -> Self {
 		Self {
 			name: name.into(),
-			field_type: field_type.into(),
+			field_type,
 			primary_key,
 			unique,
 			default: default.map(|d| d.into()),
@@ -146,15 +148,16 @@ impl FieldDefinition {
 	///
 	/// ```rust
 	/// use reinhardt_migrations::operations::FieldDefinition;
+	/// use reinhardt_migrations::FieldType;
 	///
-	/// let field = FieldDefinition::new("email", "VARCHAR(255)", false, true, Some("''"));
+	/// let field = FieldDefinition::new("email", FieldType::VarChar(255), false, true, Some("''"));
 	/// let sql = field.to_sql_definition();
 	/// assert!(sql.contains("VARCHAR(255)"));
 	/// assert!(sql.contains("UNIQUE"));
 	/// assert!(sql.contains("DEFAULT ''"));
 	/// ```
 	pub fn to_sql_definition(&self) -> String {
-		let mut parts = vec![self.field_type.clone()];
+		let mut parts = vec![self.field_type.to_sql_string()];
 
 		if self.primary_key {
 			parts.push("PRIMARY KEY".to_string());
@@ -183,14 +186,14 @@ impl FieldDefinition {
 /// ```rust
 /// use reinhardt_migrations::operations::models::CreateModel;
 /// use reinhardt_migrations::operations::FieldDefinition;
-/// use reinhardt_migrations::ProjectState;
+/// use reinhardt_migrations::{ProjectState, FieldType};
 ///
 /// let mut state = ProjectState::new();
 /// let create = CreateModel::new(
 ///     "User",
 ///     vec![
-///         FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None),
-///         FieldDefinition::new("name", "VARCHAR(100)", false, false, Option::<&str>::None),
+///         FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None),
+///         FieldDefinition::new("name", FieldType::VarChar(100), false, false, Option::<&str>::None),
 ///     ],
 /// );
 ///
@@ -244,15 +247,16 @@ impl CreateModel {
 	/// ```rust
 	/// use reinhardt_migrations::operations::models::CreateModel;
 	/// use reinhardt_migrations::operations::FieldDefinition;
+	/// use reinhardt_migrations::FieldType;
 	///
 	/// let create = CreateModel::new(
 	///     "post_tags",
 	///     vec![
-	///         FieldDefinition::new("post_id", "INTEGER", false, false, Option::<&str>::None),
-	///         FieldDefinition::new("tag_id", "INTEGER", false, false, Option::<&str>::None),
+	///         FieldDefinition::new("post_id", FieldType::Integer, false, false, Option::<&str>::None),
+	///         FieldDefinition::new("tag_id", FieldType::Integer, false, false, Option::<&str>::None),
 	///     ],
 	/// )
-	/// .with_composite_primary_key(vec!["post_id", "tag_id"])
+	/// .with_composite_primary_key(vec!["post_id".to_string(), "tag_id".to_string()])
 	/// .expect("Valid composite primary key");
 	///
 	/// assert!(create.composite_primary_key.is_some());
@@ -306,12 +310,13 @@ impl CreateModel {
 	/// ```rust
 	/// use reinhardt_migrations::operations::models::CreateModel;
 	/// use reinhardt_migrations::operations::FieldDefinition;
+	/// use reinhardt_migrations::FieldType;
 	///
 	/// let create = CreateModel::new(
 	///     "users",
 	///     vec![
-	///         FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None),
-	///         FieldDefinition::new("email", "VARCHAR(255)", false, false, Option::<&str>::None),
+	///         FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None),
+	///         FieldDefinition::new("email", FieldType::VarChar(255), false, false, Option::<&str>::None),
 	///     ],
 	/// );
 	///
@@ -338,7 +343,7 @@ impl CreateModel {
 			.map(|f| {
 				// For composite PKs, don't add PRIMARY KEY to individual field definitions
 				if has_composite_pk && f.primary_key {
-					let mut parts = vec![f.field_type.clone()];
+					let mut parts = vec![f.field_type.to_sql_string()];
 					if f.unique {
 						parts.push("UNIQUE".to_string());
 					}
@@ -393,14 +398,14 @@ impl CreateModel {
 /// ```rust
 /// use reinhardt_migrations::operations::models::{CreateModel, DeleteModel};
 /// use reinhardt_migrations::operations::FieldDefinition;
-/// use reinhardt_migrations::ProjectState;
+/// use reinhardt_migrations::{ProjectState, FieldType};
 ///
 /// let mut state = ProjectState::new();
 ///
 // First create a model
 /// let create = CreateModel::new(
 ///     "User",
-///     vec![FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None)],
+///     vec![FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None)],
 /// );
 /// create.state_forwards("myapp", &mut state);
 /// assert!(state.get_model("myapp", "User").is_some());
@@ -456,14 +461,14 @@ impl DeleteModel {
 /// ```rust
 /// use reinhardt_migrations::operations::models::{CreateModel, RenameModel};
 /// use reinhardt_migrations::operations::FieldDefinition;
-/// use reinhardt_migrations::ProjectState;
+/// use reinhardt_migrations::{ProjectState, FieldType};
 ///
 /// let mut state = ProjectState::new();
 ///
 // Create a model
 /// let create = CreateModel::new(
 ///     "User",
-///     vec![FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None)],
+///     vec![FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None)],
 /// );
 /// create.state_forwards("myapp", &mut state);
 ///
@@ -534,14 +539,14 @@ impl RenameModel {
 /// ```rust
 /// use reinhardt_migrations::operations::models::{CreateModel, MoveModel};
 /// use reinhardt_migrations::operations::FieldDefinition;
-/// use reinhardt_migrations::ProjectState;
+/// use reinhardt_migrations::{ProjectState, FieldType};
 ///
 /// let mut state = ProjectState::new();
 ///
 /// // Create a model in myapp
 /// let create = CreateModel::new(
 ///     "User",
-///     vec![FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None)],
+///     vec![FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None)],
 /// );
 /// create.state_forwards("myapp", &mut state);
 ///
@@ -781,11 +786,12 @@ mod tests {
 
 	#[test]
 	fn test_field_definition_to_sql() {
-		let field = FieldDefinition::new("id", "INTEGER", true, false, None::<String>);
+		let field = FieldDefinition::new("id", FieldType::Integer, true, false, None::<String>);
 		let sql = field.to_sql_definition();
 		assert_eq!(sql, "INTEGER PRIMARY KEY");
 
-		let field2 = FieldDefinition::new("email", "VARCHAR(255)", false, true, Some("''"));
+		let field2 =
+			FieldDefinition::new("email", FieldType::VarChar(255), false, true, Some("''"));
 		let sql2 = field2.to_sql_definition();
 		assert_eq!(sql2, "VARCHAR(255) UNIQUE NOT NULL DEFAULT ''");
 	}
@@ -796,8 +802,14 @@ mod tests {
 		let create = CreateModel::new(
 			"User",
 			vec![
-				FieldDefinition::new("id", "INTEGER", true, false, None::<String>),
-				FieldDefinition::new("name", "VARCHAR(100)", false, false, None::<String>),
+				FieldDefinition::new("id", FieldType::Integer, true, false, None::<String>),
+				FieldDefinition::new(
+					"name",
+					FieldType::VarChar(100),
+					false,
+					false,
+					None::<String>,
+				),
 			],
 		);
 
@@ -888,8 +900,14 @@ mod tests {
 
 	#[test]
 	fn test_field_definition_nullable() {
-		let field = FieldDefinition::new("email", "VARCHAR(255)", false, false, None::<String>)
-			.nullable(true);
+		let field = FieldDefinition::new(
+			"email",
+			FieldType::VarChar(255),
+			false,
+			false,
+			None::<String>,
+		)
+		.nullable(true);
 
 		assert!(field.null);
 		let sql = field.to_sql_definition();
@@ -947,10 +965,22 @@ mod tests {
 		let create = CreateModel::new(
 			"User",
 			vec![
-				FieldDefinition::new("id", "INTEGER", true, false, None::<String>),
-				FieldDefinition::new("username", "VARCHAR(50)", false, true, None::<String>),
-				FieldDefinition::new("email", "VARCHAR(255)", false, true, None::<String>),
-				FieldDefinition::new("is_active", "BOOLEAN", false, false, Some("true")),
+				FieldDefinition::new("id", FieldType::Integer, true, false, None::<String>),
+				FieldDefinition::new(
+					"username",
+					FieldType::VarChar(50),
+					false,
+					true,
+					None::<String>,
+				),
+				FieldDefinition::new(
+					"email",
+					FieldType::VarChar(255),
+					false,
+					true,
+					None::<String>,
+				),
+				FieldDefinition::new("is_active", FieldType::Boolean, false, false, Some("true")),
 			],
 		);
 
@@ -966,7 +996,7 @@ mod tests {
 
 	#[test]
 	fn test_field_definition_with_default() {
-		let field = FieldDefinition::new("status", "VARCHAR(20)", false, false, Some("'pending'"));
+		let field = FieldDefinition::new("status", FieldType::VarChar(20), false, false, Some("'pending'"));
 
 		assert_eq!(field.default, Some("'pending'".to_string()));
 
@@ -1022,8 +1052,14 @@ mod tests {
 		let create = CreateModel::new(
 			"User",
 			vec![
-				FieldDefinition::new("id", "INTEGER", true, false, None::<String>),
-				FieldDefinition::new("name", "VARCHAR(100)", false, false, None::<String>),
+				FieldDefinition::new("id", FieldType::Integer, true, false, None::<String>),
+				FieldDefinition::new(
+					"name",
+					FieldType::VarChar(100),
+					false,
+					false,
+					None::<String>,
+				),
 			],
 		);
 		create.state_forwards("myapp", &mut state);
@@ -1078,9 +1114,21 @@ mod tests {
 		let create = CreateModel::new(
 			"User",
 			vec![
-				FieldDefinition::new("id", "INTEGER", true, false, None::<String>),
-				FieldDefinition::new("email", "VARCHAR(255)", false, false, None::<String>),
-				FieldDefinition::new("name", "VARCHAR(100)", false, false, None::<String>),
+				FieldDefinition::new("id", FieldType::Integer, true, false, None::<String>),
+				FieldDefinition::new(
+					"email",
+					FieldType::VarChar(255),
+					false,
+					false,
+					None::<String>,
+				),
+				FieldDefinition::new(
+					"name",
+					FieldType::VarChar(100),
+					false,
+					false,
+					None::<String>,
+				),
 			],
 		);
 		create.state_forwards("myapp", &mut state);

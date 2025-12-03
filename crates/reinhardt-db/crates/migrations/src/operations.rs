@@ -16,7 +16,7 @@
 //!     special::RunSQL,
 //!     FieldDefinition,
 //! };
-//! use reinhardt_migrations::ProjectState;
+//! use reinhardt_migrations::{ProjectState, FieldType};
 //!
 //! let mut state = ProjectState::new();
 //!
@@ -24,14 +24,14 @@
 //! let create = CreateModel::new(
 //!     "User",
 //!     vec![
-//!         FieldDefinition::new("id", "INTEGER", true, false, Option::<&str>::None),
-//!         FieldDefinition::new("name", "VARCHAR(100)", false, false, Option::<&str>::None),
+//!         FieldDefinition::new("id", FieldType::Integer, true, false, Option::<&str>::None),
+//!         FieldDefinition::new("name", FieldType::VarChar(100), false, false, Option::<&str>::None),
 //!     ],
 //! );
 //! create.state_forwards("myapp", &mut state);
 //!
 //! // Add a field
-//! let add = AddField::new("User", FieldDefinition::new("email", "VARCHAR(255)", false, false, Option::<&str>::None));
+//! let add = AddField::new("User", FieldDefinition::new("email", FieldType::VarChar(255), false, false, Option::<&str>::None));
 //! add.state_forwards("myapp", &mut state);
 //!
 //! // Run custom SQL
@@ -159,7 +159,7 @@ impl Operation {
 				for column in columns {
 					let field = FieldState::new(
 						column.name.to_string(),
-						column.type_definition.to_string(),
+						column.type_definition.clone(),
 						false,
 					);
 					model.add_field(field);
@@ -173,7 +173,7 @@ impl Operation {
 				if let Some(model) = state.get_model_mut(app_label, table) {
 					let field = FieldState::new(
 						column.name.to_string(),
-						column.type_definition.to_string(),
+						column.type_definition.clone(),
 						false,
 					);
 					model.add_field(field);
@@ -192,7 +192,7 @@ impl Operation {
 				if let Some(model) = state.get_model_mut(app_label, table) {
 					let field = FieldState::new(
 						column.to_string(),
-						new_definition.type_definition.to_string(),
+						new_definition.type_definition.clone(),
 						false,
 					);
 					model.alter_field(column, field);
@@ -222,7 +222,7 @@ impl Operation {
 
 				let join_field = FieldState::new(
 					join_column.to_string(),
-					format!("INTEGER REFERENCES {}(id)", base_table),
+					crate::FieldType::Custom(format!("INTEGER REFERENCES {}(id)", base_table)),
 					false,
 				);
 				model.add_field(join_field);
@@ -230,7 +230,7 @@ impl Operation {
 				for column in columns {
 					let field = FieldState::new(
 						column.name.to_string(),
-						column.type_definition.to_string(),
+						column.type_definition.clone(),
 						false,
 					);
 					model.add_field(field);
@@ -247,7 +247,10 @@ impl Operation {
 					model.inheritance_type = Some("single_table".to_string());
 					let field = FieldState::new(
 						column_name.to_string(),
-						format!("VARCHAR(50) DEFAULT '{}'", default_value),
+						crate::FieldType::Custom(format!(
+							"VARCHAR(50) DEFAULT '{}'",
+							default_value
+						)),
 						false,
 					);
 					model.add_field(field);
@@ -459,7 +462,7 @@ impl Operation {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ColumnDefinition {
 	pub name: &'static str,
-	pub type_definition: &'static str,
+	pub type_definition: crate::FieldType,
 	#[serde(default)]
 	pub not_null: bool,
 	#[serde(default)]
@@ -470,22 +473,19 @@ pub struct ColumnDefinition {
 	pub auto_increment: bool,
 	#[serde(default)]
 	pub default: Option<&'static str>,
-	#[serde(default)]
-	pub max_length: Option<u32>,
 }
 
 impl ColumnDefinition {
 	/// Create a new column definition
-	pub fn new(name: impl Into<String>, type_def: impl Into<String>) -> Self {
+	pub fn new(name: impl Into<String>, type_def: crate::FieldType) -> Self {
 		Self {
 			name: Box::leak(name.into().into_boxed_str()),
-			type_definition: Box::leak(type_def.into().into_boxed_str()),
+			type_definition: type_def,
 			not_null: false,
 			unique: false,
 			primary_key: false,
 			auto_increment: false,
 			default: None,
-			max_length: None,
 		}
 	}
 }
@@ -701,7 +701,7 @@ impl Operation {
 				// Add other columns
 				for col in columns {
 					let mut column = ColumnDef::new(Alias::new(col.name));
-					self.apply_column_type(&mut column, col.type_definition, col.max_length);
+					self.apply_column_type(&mut column, &col.type_definition);
 					stmt.col(&mut column);
 				}
 
@@ -744,7 +744,7 @@ impl Operation {
 
 		for col in columns {
 			let mut column = ColumnDef::new(Alias::new(col.name));
-			self.apply_column_type(&mut column, col.type_definition, col.max_length);
+			self.apply_column_type(&mut column, &col.type_definition);
 
 			if col.not_null {
 				column.not_null();
@@ -783,7 +783,7 @@ impl Operation {
 		stmt.table(Alias::new(table));
 
 		let mut col_def = ColumnDef::new(Alias::new(column.name));
-		self.apply_column_type(&mut col_def, column.type_definition, column.max_length);
+		self.apply_column_type(&mut col_def, &column.type_definition);
 
 		if column.not_null {
 			col_def.not_null();
@@ -815,11 +815,7 @@ impl Operation {
 		stmt.table(Alias::new(table));
 
 		let mut col_def = ColumnDef::new(Alias::new(column));
-		self.apply_column_type(
-			&mut col_def,
-			new_definition.type_definition,
-			new_definition.max_length,
-		);
+		self.apply_column_type(&mut col_def, &new_definition.type_definition);
 
 		if new_definition.not_null {
 			col_def.not_null();
@@ -864,72 +860,42 @@ impl Operation {
 	}
 
 	/// Apply column type to ColumnDef using SeaQuery's fluent API
-	fn apply_column_type(&self, col_def: &mut ColumnDef, col_type: &str, max_length: Option<u32>) {
-		match col_type.to_uppercase().as_str() {
-			"INTEGER" | "INT" | "INT4" => {
-				col_def.integer();
+	fn apply_column_type(&self, col_def: &mut ColumnDef, field_type: &crate::FieldType) {
+		use crate::FieldType;
+		match field_type {
+			FieldType::Integer => col_def.integer(),
+			FieldType::BigInteger => col_def.big_integer(),
+			FieldType::SmallInteger => col_def.small_integer(),
+			FieldType::TinyInt => col_def.tiny_integer(),
+			FieldType::VarChar(max_length) => col_def.string_len(*max_length),
+			FieldType::Char(max_length) => col_def.char_len(*max_length),
+			FieldType::Text | FieldType::TinyText | FieldType::MediumText | FieldType::LongText => {
+				col_def.text()
 			}
-			"BIGINT" | "INT8" => {
-				col_def.big_integer();
+			FieldType::Boolean => col_def.boolean(),
+			FieldType::DateTime | FieldType::TimestampTz => col_def.timestamp(),
+			FieldType::Date => col_def.date(),
+			FieldType::Time => col_def.time(),
+			FieldType::Decimal { precision, scale } => col_def.decimal_len(*precision, *scale),
+			FieldType::Float => col_def.float(),
+			FieldType::Double | FieldType::Real => col_def.double(),
+			FieldType::Json => col_def.json(),
+			FieldType::JsonBinary => col_def.json_binary(),
+			FieldType::Uuid => col_def.uuid(),
+			FieldType::Binary | FieldType::Bytea => col_def.binary(),
+			FieldType::Blob | FieldType::TinyBlob | FieldType::MediumBlob | FieldType::LongBlob => {
+				col_def.binary()
 			}
-			"SMALLINT" | "INT2" => {
-				col_def.small_integer();
+			FieldType::MediumInt => col_def.integer(),
+			FieldType::Year => col_def.small_integer(),
+			FieldType::Enum { values } => {
+				col_def.custom(Alias::new(format!("ENUM({})", values.join(","))))
 			}
-			"VARCHAR" => {
-				if let Some(len) = max_length {
-					col_def.string_len(len);
-				} else {
-					col_def.string();
-				}
+			FieldType::Set { values } => {
+				col_def.custom(Alias::new(format!("SET({})", values.join(","))))
 			}
-			"TEXT" => {
-				col_def.text();
-			}
-			"CHAR" => {
-				if let Some(len) = max_length {
-					col_def.char_len(len);
-				} else {
-					col_def.char();
-				}
-			}
-			"BOOLEAN" | "BOOL" => {
-				col_def.boolean();
-			}
-			"TIMESTAMP" | "TIMESTAMPTZ" => {
-				col_def.timestamp();
-			}
-			"DATE" => {
-				col_def.date();
-			}
-			"TIME" => {
-				col_def.time();
-			}
-			"DECIMAL" | "NUMERIC" => {
-				col_def.decimal();
-			}
-			"REAL" | "FLOAT4" => {
-				col_def.float();
-			}
-			"DOUBLE" | "FLOAT8" | "DOUBLE PRECISION" => {
-				col_def.double();
-			}
-			"JSON" => {
-				col_def.json();
-			}
-			"JSONB" => {
-				col_def.json_binary();
-			}
-			"UUID" => {
-				col_def.uuid();
-			}
-			"BYTEA" => {
-				col_def.binary();
-			}
-			_ => {
-				// Custom type: use custom() method
-				col_def.custom(Alias::new(col_type));
-			}
-		}
+			FieldType::Custom(custom_type) => col_def.custom(Alias::new(custom_type)),
+		};
 	}
 
 	/// Convert default value string to SeaQuery Value
@@ -1251,23 +1217,21 @@ mod tests {
 			columns: vec![
 				ColumnDefinition {
 					name: "id",
-					type_definition: "INTEGER",
+					type_definition: crate::FieldType::Integer,
 					not_null: false,
 					unique: false,
 					primary_key: true,
 					auto_increment: true,
 					default: None,
-					max_length: None,
 				},
 				ColumnDefinition {
 					name: "name",
-					type_definition: "VARCHAR",
+					type_definition: crate::FieldType::VarChar(100),
 					not_null: true,
 					unique: false,
 					primary_key: false,
 					auto_increment: false,
 					default: None,
-					max_length: Some(100),
 				},
 			],
 			constraints: vec![],
@@ -1321,13 +1285,12 @@ mod tests {
 			table: "users",
 			column: ColumnDefinition {
 				name: "email",
-				type_definition: "VARCHAR",
+				type_definition: crate::FieldType::VarChar(255),
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: Some("''"),
-				max_length: Some(255),
 			},
 		};
 
@@ -1393,13 +1356,12 @@ mod tests {
 			column: "age",
 			new_definition: ColumnDefinition {
 				name: "age",
-				type_definition: "BIGINT",
+				type_definition: crate::FieldType::BigInteger,
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: None,
-				max_length: None,
 			},
 		};
 
@@ -1762,13 +1724,12 @@ mod tests {
 			name: "admin_users",
 			columns: vec![ColumnDefinition {
 				name: "admin_level",
-				type_definition: "INTEGER",
+				type_definition: crate::FieldType::Integer,
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: Some("1"),
-				max_length: None,
 			}],
 			base_table: "users",
 			join_column: "user_id",
@@ -1833,23 +1794,21 @@ mod tests {
 			columns: vec![
 				ColumnDefinition {
 					name: "id",
-					type_definition: "INTEGER",
+					type_definition: crate::FieldType::Integer,
 					not_null: false,
 					unique: false,
 					primary_key: true,
 					auto_increment: true,
 					default: None,
-					max_length: None,
 				},
 				ColumnDefinition {
 					name: "name",
-					type_definition: "VARCHAR",
+					type_definition: crate::FieldType::VarChar(100),
 					not_null: true,
 					unique: false,
 					primary_key: false,
 					auto_increment: false,
 					default: None,
-					max_length: Some(100),
 				},
 			],
 			constraints: vec![],
@@ -1881,7 +1840,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"id".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		state.add_model(model);
@@ -1901,7 +1860,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"id".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		state.add_model(model);
@@ -1910,13 +1869,12 @@ mod tests {
 			table: "users",
 			column: ColumnDefinition {
 				name: "email",
-				type_definition: "VARCHAR",
+				type_definition: crate::FieldType::VarChar(255),
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: None,
-				max_length: Some(255),
 			},
 		};
 
@@ -1940,12 +1898,12 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"id".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		model.add_field(FieldState::new(
 			"email".to_string(),
-			"VARCHAR".to_string(),
+			crate::FieldType::VarChar(255),
 			false,
 		));
 		state.add_model(model);
@@ -1975,7 +1933,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"id".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		state.add_model(model);
@@ -2002,7 +1960,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"name".to_string(),
-			"VARCHAR".to_string(),
+			crate::FieldType::VarChar(255),
 			false,
 		));
 		state.add_model(model);
@@ -2068,13 +2026,12 @@ mod tests {
 			table: "users",
 			column: ColumnDefinition {
 				name: "email",
-				type_definition: "VARCHAR",
+				type_definition: crate::FieldType::VarChar(255),
 				not_null: false,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: None,
-				max_length: None,
 			},
 		};
 
@@ -2132,11 +2089,12 @@ mod tests {
 
 	#[test]
 	fn test_column_definition_new() {
-		let col = ColumnDefinition::new("id", "INTEGER");
+		let col = ColumnDefinition::new("id", crate::FieldType::Integer);
 		assert_eq!(col.name, "id", "Column name should be 'id'");
 		assert_eq!(
-			col.type_definition, "INTEGER",
-			"Column type should be 'INTEGER'"
+			col.type_definition,
+			crate::FieldType::Integer,
+			"Column type should be Integer"
 		);
 		assert!(!col.not_null, "not_null should default to false");
 		assert!(!col.unique, "unique should default to false");
@@ -2146,7 +2104,6 @@ mod tests {
 			"auto_increment should default to false"
 		);
 		assert!(col.default.is_none(), "default should be None");
-		assert!(col.max_length.is_none(), "max_length should be None");
 	}
 
 	#[test]
@@ -2238,7 +2195,7 @@ mod tests {
 			constraints: vec![],
 		};
 		let mut col = ColumnDef::new(Alias::new("id"));
-		op.apply_column_type(&mut col, "INTEGER", None);
+		op.apply_column_type(&mut col, &crate::FieldType::Integer);
 		// This test verifies that INTEGER type application doesn't panic
 		// Internal state cannot be easily asserted with sea_query's ColumnDef API
 	}
@@ -2251,7 +2208,7 @@ mod tests {
 			constraints: vec![],
 		};
 		let mut col = ColumnDef::new(Alias::new("name"));
-		op.apply_column_type(&mut col, "VARCHAR", Some(100));
+		op.apply_column_type(&mut col, &crate::FieldType::VarChar(100));
 		// This test verifies that VARCHAR(100) type application doesn't panic
 		// Internal state cannot be easily asserted with sea_query's ColumnDef API
 	}
@@ -2264,7 +2221,10 @@ mod tests {
 			constraints: vec![],
 		};
 		let mut col = ColumnDef::new(Alias::new("data"));
-		op.apply_column_type(&mut col, "CUSTOM_TYPE", None);
+		op.apply_column_type(
+			&mut col,
+			&crate::FieldType::Custom("CUSTOM_TYPE".to_string()),
+		);
 		// This test verifies that custom type application doesn't panic
 		// Internal state cannot be easily asserted with sea_query's ColumnDef API
 	}
@@ -2322,7 +2282,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"age".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		state.add_model(model);
@@ -2332,13 +2292,12 @@ mod tests {
 			column: "age",
 			new_definition: ColumnDefinition {
 				name: "age",
-				type_definition: "BIGINT",
+				type_definition: crate::FieldType::BigInteger,
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: None,
-				max_length: None,
 			},
 		};
 
@@ -2346,8 +2305,9 @@ mod tests {
 		let model = state.get_model("myapp", "users").unwrap();
 		let field = model.fields.get("age").unwrap();
 		assert_eq!(
-			field.field_type, "BIGINT",
-			"Field type should be updated to BIGINT, got: {}",
+			field.field_type,
+			crate::FieldType::BigInteger,
+			"Field type should be updated to BigInteger, got: {}",
 			field.field_type
 		);
 	}
@@ -2359,13 +2319,12 @@ mod tests {
 			name: "admin_users",
 			columns: vec![ColumnDefinition {
 				name: "admin_level",
-				type_definition: "INTEGER",
+				type_definition: crate::FieldType::Integer,
 				not_null: true,
 				unique: false,
 				primary_key: false,
 				auto_increment: false,
 				default: None,
-				max_length: None,
 			}],
 			base_table: "users",
 			join_column: "user_id",
@@ -2396,7 +2355,7 @@ mod tests {
 		let mut model = ModelState::new("myapp", "users");
 		model.add_field(FieldState::new(
 			"id".to_string(),
-			"INTEGER".to_string(),
+			crate::FieldType::Integer,
 			false,
 		));
 		state.add_model(model);
