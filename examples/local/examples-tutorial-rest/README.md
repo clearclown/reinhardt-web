@@ -185,9 +185,9 @@ pub async fn create(mut req: Request) -> Result<Response, Box<dyn std::error::Er
 UnifiedRouter::new()
     .function("/", Method::GET, super::views::list)
     .function("/", Method::POST, super::views::create)
-    .function("/:id/", Method::GET, super::views::retrieve)
-    .function("/:id/", Method::PUT, super::views::update)
-    .function("/:id/", Method::DELETE, super::views::delete)
+    .function("/{id}/", Method::PUT, super::views::update)
+    .function("/{id}/", Method::GET, super::views::retrieve)
+    .function("/{id}/", Method::DELETE, super::views::delete)
 ```
 
 ### 5. Validation

@@ -159,9 +159,9 @@ pub async fn detail(req: Request) -> Result<Response, Box<dyn std::error::Error 
 ```rust
 UnifiedRouter::new()
     .function("/", Method::GET, super::views::index)
-    .function("/:question_id/", Method::GET, super::views::detail)
-    .function("/:question_id/results/", Method::GET, super::views::results)
-    .function("/:question_id/vote/", Method::POST, super::views::vote)
+    .function("/{question_id}/", Method::GET, super::views::detail)
+    .function("/{question_id}/results/", Method::GET, super::views::results)
+    .function("/{question_id}/vote/", Method::POST, super::views::vote)
 ```
 
 ### 4. Configuration (config/)
