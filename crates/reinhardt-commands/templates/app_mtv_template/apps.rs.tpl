@@ -1,6 +1,6 @@
 //! App configuration for {{ app_name }}
 
-use reinhardt_core::AppConfig;
+use reinhardt::core::AppConfig;
 
 pub fn app_config() -> AppConfig {
     AppConfig {

@@ -15,9 +15,9 @@ pub mod tests {
     #[cfg(test)]
     mod tests {
         // Uncomment the imports you need for your tests
-        // use reinhardt_http::{Request, Response, StatusCode};
-        // use reinhardt_orm::{Model, Query};
-        // use reinhardt_test::{TestCase, TestClient};
+        // use reinhardt::http::{Request, Response, StatusCode};
+        // use reinhardt::db::orm::{Model, Query};
+        // use reinhardt::test::{TestCase, TestClient};
 
         // Example: Test model creation and validation
         #[test]

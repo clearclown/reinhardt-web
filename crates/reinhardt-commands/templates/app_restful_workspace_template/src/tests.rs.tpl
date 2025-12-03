@@ -11,11 +11,11 @@
 #[cfg(test)]
 mod tests {
     // Uncomment the imports you need for your tests
-    // use reinhardt_http::{Request, Response, StatusCode};
-    // use reinhardt_orm::{Model, Query};
-    // use reinhardt_serializers::{Serializer, ModelSerializer};
-    // use reinhardt_test::{APITestCase, APIClient};
-    // use reinhardt_viewsets::ViewSet;
+    // use reinhardt::http::{Request, Response, StatusCode};
+    // use reinhardt::db::orm::{Model, Query};
+    // use reinhardt::rest::serializers::{Serializer, ModelSerializer};
+    // use reinhardt::test::{APITestCase, APIClient};
+    // use reinhardt::viewsets::ViewSet;
 
     // Example: Test model serializer
     #[test]

@@ -4,7 +4,7 @@
 pub use self::views::*;
 
 pub mod views {
-    use reinhardt_core::{Request, Response};
+    use reinhardt::{Request, Response};
 
     // Define your views here
     // Example:

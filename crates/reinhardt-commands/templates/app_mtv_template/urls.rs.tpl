@@ -1,6 +1,6 @@
 //! URL patterns for {{ app_name }}
 
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::UnifiedRouter;
 
 pub fn url_patterns() -> UnifiedRouter {
     let router = UnifiedRouter::builder()

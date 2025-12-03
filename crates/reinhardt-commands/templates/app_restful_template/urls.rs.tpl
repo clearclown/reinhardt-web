@@ -1,6 +1,6 @@
 //! URL configuration for {{ app_name }} app (RESTful)
 
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::UnifiedRouter;
 
 pub fn url_patterns() -> UnifiedRouter {
     let router = UnifiedRouter::builder()

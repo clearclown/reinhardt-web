@@ -1,6 +1,6 @@
 //! {{ app_name }} application module
 
-use reinhardt_macros::AppConfig;
+use reinhardt::AppConfig;
 
 pub mod admin;
 pub mod models;
