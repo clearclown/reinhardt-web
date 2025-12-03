@@ -60,12 +60,12 @@ impl Migration {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_migrations::{Migration, Operation, ColumnDefinition};
+	/// use reinhardt_migrations::{Migration, Operation, ColumnDefinition, FieldType};
 	///
 	/// let migration = Migration::new("0001_initial", "myapp")
 	///     .add_operation(Operation::CreateTable {
 	///         name: "users",
-	///         columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+	///         columns: vec![ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string()))],
 	///         constraints: vec![],
 	///     });
 	///
@@ -188,6 +188,8 @@ impl Migration {
 
 #[cfg(test)]
 mod migrations_extended_tests {
+	use crate::FieldType;
+
 	#[test]
 	// From: Django/migrations
 	fn test_add_alter_order_with_respect_to() {
@@ -200,8 +202,8 @@ mod migrations_extended_tests {
 		let create_categories = Operation::CreateTable {
 			name: "categories",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -211,9 +213,12 @@ mod migrations_extended_tests {
 		let create_items = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(200)"),
-				ColumnDefinition::new("category_id", "INTEGER REFERENCES categories(id)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(200)),
+				ColumnDefinition::new(
+					"category_id",
+					FieldType::Custom("INTEGER REFERENCES categories(id)".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -222,7 +227,10 @@ mod migrations_extended_tests {
 		// Add order_with_respect_to field (_order)
 		let add_order = Operation::AddColumn {
 			table: "items",
-			column: ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+			column: ColumnDefinition::new(
+				"_order",
+				FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+			),
 		};
 		add_order.state_forwards("testapp", &mut state);
 
@@ -249,7 +257,10 @@ mod migrations_extended_tests {
 		// Create parent
 		let create_parent = Operation::CreateTable {
 			name: "authors",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_parent.state_forwards("app", &mut state);
@@ -258,9 +269,12 @@ mod migrations_extended_tests {
 		let create_child = Operation::CreateTable {
 			name: "books",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(255)"),
-				ColumnDefinition::new("author_id", "INTEGER REFERENCES authors(id)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(255)),
+				ColumnDefinition::new(
+					"author_id",
+					FieldType::Custom("INTEGER REFERENCES authors(id)".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -269,7 +283,10 @@ mod migrations_extended_tests {
 		// Add _order field for order_with_respect_to
 		let add_order = Operation::AddColumn {
 			table: "books",
-			column: ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+			column: ColumnDefinition::new(
+				"_order",
+				FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+			),
 		};
 		add_order.state_forwards("app", &mut state);
 
@@ -292,7 +309,7 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "items",
-			columns: vec![ColumnDefinition::new("name", "VARCHAR(255)")],
+			columns: vec![ColumnDefinition::new("name", FieldType::VarChar(255))],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -300,7 +317,10 @@ mod migrations_extended_tests {
 		// AutoField doesn't need default - it's auto-incrementing
 		let add_op = Operation::AddColumn {
 			table: "items",
-			column: ColumnDefinition::new("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+			column: ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY AUTOINCREMENT".to_string()),
+			),
 		};
 		add_op.state_forwards("testapp", &mut state);
 
@@ -323,14 +343,17 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "entries",
-			columns: vec![ColumnDefinition::new("title", "TEXT")],
+			columns: vec![ColumnDefinition::new("title", FieldType::Text)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "entries",
-			column: ColumnDefinition::new("entry_id", "SERIAL PRIMARY KEY"),
+			column: ColumnDefinition::new(
+				"entry_id",
+				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+			),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -347,7 +370,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "articles",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -355,13 +381,13 @@ mod migrations_extended_tests {
 		// Add blank=True text fields (nullable)
 		let add_text = Operation::AddColumn {
 			table: "articles",
-			column: ColumnDefinition::new("content", "TEXT"),
+			column: ColumnDefinition::new("content", FieldType::Text),
 		};
 		add_text.state_forwards("testapp", &mut state);
 
 		let add_char = Operation::AddColumn {
 			table: "articles",
-			column: ColumnDefinition::new("title", "VARCHAR(255)"),
+			column: ColumnDefinition::new("title", FieldType::VarChar(255)),
 		};
 		add_char.state_forwards("testapp", &mut state);
 
@@ -380,14 +406,20 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "posts",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "posts",
-			column: ColumnDefinition::new("description", "TEXT NULL"),
+			column: ColumnDefinition::new(
+				"description",
+				FieldType::Custom("TEXT NULL".to_string()),
+			),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -412,9 +444,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "order_items",
 			columns: vec![
-				ColumnDefinition::new("order_id", "INTEGER"),
-				ColumnDefinition::new("product_id", "INTEGER"),
-				ColumnDefinition::new("quantity", "INTEGER"),
+				ColumnDefinition::new("order_id", FieldType::Integer),
+				ColumnDefinition::new("product_id", FieldType::Integer),
+				ColumnDefinition::new("quantity", FieldType::Integer),
 			],
 			constraints: vec!["PRIMARY KEY (order_id, product_id)"],
 		};
@@ -436,8 +468,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "user_roles",
 			columns: vec![
-				ColumnDefinition::new("user_id", "INTEGER"),
-				ColumnDefinition::new("role_id", "INTEGER"),
+				ColumnDefinition::new("user_id", FieldType::Integer),
+				ColumnDefinition::new("role_id", FieldType::Integer),
 			],
 			constraints: vec!["PRIMARY KEY (user_id, role_id)"],
 		};
@@ -489,9 +521,21 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("price", "DECIMAL(10,2)"),
-				ColumnDefinition::new("discount_price", "DECIMAL(10,2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
+				ColumnDefinition::new(
+					"discount_price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec!["CHECK (price >= 0)", "CHECK (discount_price <= price)"],
 		};
@@ -513,8 +557,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("age", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("age", FieldType::Integer),
 			],
 			constraints: vec!["CHECK (age >= 0 AND age <= 150)"],
 		};
@@ -535,8 +579,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("age", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("age", FieldType::Integer),
 			],
 			constraints: vec!["CHECK (age >= 18)"],
 		};
@@ -558,8 +602,14 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("price", "DECIMAL(10,2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec!["CHECK (price > 0)"],
 		};
@@ -579,7 +629,10 @@ mod migrations_extended_tests {
 		// Create referenced table first
 		let create_users = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_users.state_forwards("testapp", &mut state);
@@ -588,8 +641,8 @@ mod migrations_extended_tests {
 		let create_posts = Operation::CreateTable {
 			name: "posts",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("author_id", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("author_id", FieldType::Integer),
 			],
 			constraints: vec!["FOREIGN KEY (author_id) REFERENCES users(id)"],
 		};
@@ -614,7 +667,10 @@ mod migrations_extended_tests {
 
 		let create_categories = Operation::CreateTable {
 			name: "categories",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_categories.state_forwards("app", &mut state);
@@ -622,8 +678,11 @@ mod migrations_extended_tests {
 		let create_products = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("category_id", "INTEGER REFERENCES categories(id)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"category_id",
+					FieldType::Custom("INTEGER REFERENCES categories(id)".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -642,7 +701,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "posts",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -650,7 +712,13 @@ mod migrations_extended_tests {
 		// auto_now_add simulated with DEFAULT CURRENT_TIMESTAMP
 		let add_op = Operation::AddColumn {
 			table: "posts",
-			column: ColumnDefinition::new("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+			column: ColumnDefinition::new(
+				"created_at",
+				FieldType::Custom(
+					FieldType::Custom("TIMESTAMP DEFAULT CURRENT_TIMESTAMP".to_string())
+						.to_string(),
+				),
+			),
 		};
 		add_op.state_forwards("testapp", &mut state);
 
@@ -673,14 +741,20 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "articles",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "articles",
-			column: ColumnDefinition::new("published_at", "TIMESTAMP DEFAULT NOW()"),
+			column: ColumnDefinition::new(
+				"published_at",
+				FieldType::Custom("TIMESTAMP DEFAULT NOW()".to_string()),
+			),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -697,7 +771,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "events",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -707,7 +784,7 @@ mod migrations_extended_tests {
 			table: "events",
 			column: ColumnDefinition::new(
 				"created_at",
-				"TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+				FieldType::Custom("TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string()),
 			),
 		};
 		add_op.state_forwards("testapp", &mut state);
@@ -731,7 +808,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "logs",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -740,7 +820,7 @@ mod migrations_extended_tests {
 			table: "logs",
 			column: ColumnDefinition::new(
 				"timestamp",
-				"DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+				FieldType::Custom("DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string()),
 			),
 		};
 		add_op.state_forwards("app", &mut state);
@@ -758,7 +838,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "records",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -767,7 +850,7 @@ mod migrations_extended_tests {
 		// For migration testing, we just add the field
 		let add_op = Operation::AddColumn {
 			table: "records",
-			column: ColumnDefinition::new("updated_at", "TIMESTAMP"),
+			column: ColumnDefinition::new("updated_at", FieldType::Custom("TIMESTAMP".to_string())),
 		};
 		add_op.state_forwards("testapp", &mut state);
 
@@ -790,14 +873,17 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "profiles",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "profiles",
-			column: ColumnDefinition::new("modified", "DATETIME"),
+			column: ColumnDefinition::new("modified", FieldType::Custom("DATETIME".to_string())),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -815,7 +901,10 @@ mod migrations_extended_tests {
 		// Create a table first
 		let create_op = Operation::CreateTable {
 			name: "test_table",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -823,7 +912,7 @@ mod migrations_extended_tests {
 		// Add a field
 		let add_op = Operation::AddColumn {
 			table: "test_table",
-			column: ColumnDefinition::new("name", "VARCHAR(255)"),
+			column: ColumnDefinition::new("name", FieldType::VarChar(255)),
 		};
 		add_op.state_forwards("testapp", &mut state);
 
@@ -841,14 +930,17 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "users",
-			column: ColumnDefinition::new("email", "VARCHAR(255)"),
+			column: ColumnDefinition::new("email", FieldType::VarChar(255)),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -872,8 +964,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("email", "VARCHAR(255)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("email", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
 		};
@@ -881,7 +973,7 @@ mod migrations_extended_tests {
 
 		let add_op = Operation::AddColumn {
 			table: "users",
-			column: ColumnDefinition::new("username", "VARCHAR(100)"),
+			column: ColumnDefinition::new("username", FieldType::VarChar(100)),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -911,8 +1003,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "posts",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(255)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
 		};
@@ -920,7 +1012,7 @@ mod migrations_extended_tests {
 
 		let add_op = Operation::AddColumn {
 			table: "posts",
-			column: ColumnDefinition::new("slug", "VARCHAR(255)"),
+			column: ColumnDefinition::new("slug", FieldType::VarChar(255)),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -951,9 +1043,15 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("price", "DECIMAL(10,2)"),
-				ColumnDefinition::new("quantity", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
+				ColumnDefinition::new("quantity", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -962,7 +1060,10 @@ mod migrations_extended_tests {
 		// Add a regular field before adding a generated field
 		let add_discount = Operation::AddColumn {
 			table: "products",
-			column: ColumnDefinition::new("discount", "DECIMAL(10,2) DEFAULT 0"),
+			column: ColumnDefinition::new(
+				"discount",
+				FieldType::Custom("DECIMAL(10,2) DEFAULT 0".to_string()),
+			),
 		};
 		add_discount.state_forwards("testapp", &mut state);
 
@@ -972,7 +1073,9 @@ mod migrations_extended_tests {
 			table: "products",
 			column: ColumnDefinition::new(
 				"total",
-				"DECIMAL(10,2) GENERATED ALWAYS AS (price * quantity) STORED",
+				FieldType::Custom(
+					"DECIMAL(10,2) GENERATED ALWAYS AS (price * quantity) STORED".to_string(),
+				),
 			),
 		};
 		add_generated.state_forwards("testapp", &mut state);
@@ -993,9 +1096,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("first_name", "VARCHAR(100)"),
-				ColumnDefinition::new("last_name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("first_name", FieldType::VarChar(100)),
+				ColumnDefinition::new("last_name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1004,7 +1107,7 @@ mod migrations_extended_tests {
 		// Add regular field
 		let add_email = Operation::AddColumn {
 			table: "users",
-			column: ColumnDefinition::new("email", "VARCHAR(255)"),
+			column: ColumnDefinition::new("email", FieldType::VarChar(255)),
 		};
 		add_email.state_forwards("app", &mut state);
 
@@ -1013,7 +1116,10 @@ mod migrations_extended_tests {
 			table: "users",
 			column: ColumnDefinition::new(
 				"full_name",
-				"VARCHAR(200) GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED",
+				FieldType::Custom(
+					"VARCHAR(200) GENERATED ALWAYS AS (first_name || ' ' || last_name) STORED"
+						.to_string(),
+				),
 			),
 		};
 		add_generated.state_forwards("app", &mut state);
@@ -1038,7 +1144,10 @@ mod migrations_extended_tests {
 		// Create a table
 		let create_op = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -1046,7 +1155,10 @@ mod migrations_extended_tests {
 		// Add a field with default value in type definition
 		let add_op = Operation::AddColumn {
 			table: "users",
-			column: ColumnDefinition::new("status", "VARCHAR(50) DEFAULT 'active'"),
+			column: ColumnDefinition::new(
+				"status",
+				FieldType::Custom("VARCHAR(50) DEFAULT 'active'".to_string()),
+			),
 		};
 		add_op.state_forwards("testapp", &mut state);
 
@@ -1064,14 +1176,20 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "products",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "products",
-			column: ColumnDefinition::new("price", "DECIMAL(10,2) DEFAULT 0.00"),
+			column: ColumnDefinition::new(
+				"price",
+				FieldType::Custom("DECIMAL(10,2) DEFAULT 0.00".to_string()),
+			),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -1096,8 +1214,8 @@ mod migrations_extended_tests {
 		let create_categories = Operation::CreateTable {
 			name: "categories",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1107,9 +1225,15 @@ mod migrations_extended_tests {
 		let create_products = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(200)"),
-				ColumnDefinition::new("price", "DECIMAL(10,2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(200)),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec![],
 		};
@@ -1118,7 +1242,10 @@ mod migrations_extended_tests {
 		// Add FK field
 		let add_fk = Operation::AddColumn {
 			table: "products",
-			column: ColumnDefinition::new("category_id", "INTEGER REFERENCES categories(id)"),
+			column: ColumnDefinition::new(
+				"category_id",
+				FieldType::Custom("INTEGER REFERENCES categories(id)".to_string()),
+			),
 		};
 		add_fk.state_forwards("testapp", &mut state);
 
@@ -1127,7 +1254,10 @@ mod migrations_extended_tests {
 			table: "products",
 			column: ColumnDefinition::new(
 				"display_price",
-				"VARCHAR(50) GENERATED ALWAYS AS ('$' || CAST(price AS TEXT)) STORED",
+				FieldType::Custom(
+					"VARCHAR(50) GENERATED ALWAYS AS ('$' || CAST(price AS TEXT)) STORED"
+						.to_string(),
+				),
 			),
 		};
 		add_generated.state_forwards("testapp", &mut state);
@@ -1147,7 +1277,10 @@ mod migrations_extended_tests {
 
 		let create_users = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_users.state_forwards("app", &mut state);
@@ -1155,8 +1288,14 @@ mod migrations_extended_tests {
 		let create_orders = Operation::CreateTable {
 			name: "orders",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("total", "DECIMAL(10,2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"total",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec![],
 		};
@@ -1165,7 +1304,10 @@ mod migrations_extended_tests {
 		// Add FK
 		let add_fk = Operation::AddColumn {
 			table: "orders",
-			column: ColumnDefinition::new("user_id", "INTEGER REFERENCES users(id)"),
+			column: ColumnDefinition::new(
+				"user_id",
+				FieldType::Custom("INTEGER REFERENCES users(id)".to_string()),
+			),
 		};
 		add_fk.state_forwards("app", &mut state);
 
@@ -1174,7 +1316,9 @@ mod migrations_extended_tests {
 			table: "orders",
 			column: ColumnDefinition::new(
 				"total_with_tax",
-				"DECIMAL(10,2) GENERATED ALWAYS AS (total * 1.1) STORED",
+				FieldType::Custom(
+					"DECIMAL(10,2) GENERATED ALWAYS AS (total * 1.1) STORED".to_string(),
+				),
 			),
 		};
 		add_generated.state_forwards("app", &mut state);
@@ -1194,8 +1338,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("email", "VARCHAR(255)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("email", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
 		};
@@ -1224,8 +1368,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("sku", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("sku", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1290,8 +1434,8 @@ mod migrations_extended_tests {
 		let create_students = Operation::CreateTable {
 			name: "students",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1301,8 +1445,8 @@ mod migrations_extended_tests {
 		let create_courses = Operation::CreateTable {
 			name: "courses",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(200)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(200)),
 			],
 			constraints: vec![],
 		};
@@ -1312,8 +1456,14 @@ mod migrations_extended_tests {
 		let create_m2m = Operation::CreateTable {
 			name: "students_courses",
 			columns: vec![
-				ColumnDefinition::new("student_id", "INTEGER REFERENCES students(id)"),
-				ColumnDefinition::new("course_id", "INTEGER REFERENCES courses(id)"),
+				ColumnDefinition::new(
+					"student_id",
+					FieldType::Custom("INTEGER REFERENCES students(id)".to_string()),
+				),
+				ColumnDefinition::new(
+					"course_id",
+					FieldType::Custom("INTEGER REFERENCES courses(id)".to_string()),
+				),
 			],
 			constraints: vec!["PRIMARY KEY (student_id, course_id)"],
 		};
@@ -1333,8 +1483,8 @@ mod migrations_extended_tests {
 		let create_tags = Operation::CreateTable {
 			name: "tags",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(50)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(50)),
 			],
 			constraints: vec![],
 		};
@@ -1343,8 +1493,8 @@ mod migrations_extended_tests {
 		let create_posts = Operation::CreateTable {
 			name: "posts",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(255)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
 		};
@@ -1354,8 +1504,14 @@ mod migrations_extended_tests {
 		let create_assoc = Operation::CreateTable {
 			name: "posts_tags",
 			columns: vec![
-				ColumnDefinition::new("post_id", "INTEGER REFERENCES posts(id)"),
-				ColumnDefinition::new("tag_id", "INTEGER REFERENCES tags(id)"),
+				ColumnDefinition::new(
+					"post_id",
+					FieldType::Custom("INTEGER REFERENCES posts(id)".to_string()),
+				),
+				ColumnDefinition::new(
+					"tag_id",
+					FieldType::Custom("INTEGER REFERENCES tags(id)".to_string()),
+				),
 			],
 			constraints: vec!["PRIMARY KEY (post_id, tag_id)"],
 		};
@@ -1375,7 +1531,10 @@ mod migrations_extended_tests {
 		// Create with order_with_respect_to from the start
 		let create_parent = Operation::CreateTable {
 			name: "parent",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_parent.state_forwards("app", &mut state);
@@ -1383,9 +1542,15 @@ mod migrations_extended_tests {
 		let create_child = Operation::CreateTable {
 			name: "child",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("parent_id", "INTEGER REFERENCES parent(id)"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"parent_id",
+					FieldType::Custom("INTEGER REFERENCES parent(id)".to_string()),
+				),
+				ColumnDefinition::new(
+					"_order",
+					FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -1411,9 +1576,12 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "ordered_items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("container_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("container_id", FieldType::Integer),
+				ColumnDefinition::new(
+					"_order",
+					FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -1433,9 +1601,12 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("parent_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("parent_id", FieldType::Integer),
+				ColumnDefinition::new(
+					"_order",
+					FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+				),
 			],
 			constraints: vec!["CHECK (_order >= 0)"],
 		};
@@ -1455,9 +1626,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "entries",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("group_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("group_id", FieldType::Integer),
+				ColumnDefinition::new("_order", FieldType::Custom("INTEGER NOT NULL".to_string())),
 			],
 			constraints: vec!["CHECK (_order >= 0)"],
 		};
@@ -1477,9 +1648,12 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("parent_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL DEFAULT 0"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("parent_id", FieldType::Integer),
+				ColumnDefinition::new(
+					"_order",
+					FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -1506,9 +1680,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "tasks",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("project_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("project_id", FieldType::Integer),
+				ColumnDefinition::new("_order", FieldType::Custom("INTEGER NOT NULL".to_string())),
 			],
 			constraints: vec![],
 		};
@@ -1528,9 +1702,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("parent_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("parent_id", FieldType::Integer),
+				ColumnDefinition::new("_order", FieldType::Custom("INTEGER NOT NULL".to_string())),
 			],
 			constraints: vec![],
 		};
@@ -1556,9 +1730,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "slides",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("deck_id", "INTEGER"),
-				ColumnDefinition::new("_order", "INTEGER NOT NULL"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("deck_id", FieldType::Integer),
+				ColumnDefinition::new("_order", FieldType::Custom("INTEGER NOT NULL".to_string())),
 			],
 			constraints: vec![],
 		};
@@ -1587,9 +1761,9 @@ mod migrations_extended_tests {
 		let create_base = Operation::CreateTable {
 			name: "employees",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
-				ColumnDefinition::new("email", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
+				ColumnDefinition::new("email", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1599,8 +1773,14 @@ mod migrations_extended_tests {
 		let create_inherited = Operation::CreateInheritedTable {
 			name: "managers",
 			columns: vec![
-				ColumnDefinition::new("department", "VARCHAR(100)"),
-				ColumnDefinition::new("budget", "DECIMAL(10,2)"),
+				ColumnDefinition::new("department", FieldType::VarChar(100)),
+				ColumnDefinition::new(
+					"budget",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			base_table: "employees",
 			join_column: "employee_id",
@@ -1632,14 +1812,14 @@ mod migrations_extended_tests {
 		let create_base = Operation::CreateTable {
 			name: "persons",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
-				ColumnDefinition::new("email", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
+				ColumnDefinition::new("email", FieldType::VarChar(100)),
 				// Fields for all child types in single table
-				ColumnDefinition::new("student_id", "VARCHAR(20)"),
-				ColumnDefinition::new("grade", "VARCHAR(10)"),
-				ColumnDefinition::new("employee_id", "VARCHAR(20)"),
-				ColumnDefinition::new("department", "VARCHAR(100)"),
+				ColumnDefinition::new("student_id", FieldType::VarChar(20)),
+				ColumnDefinition::new("grade", FieldType::VarChar(10)),
+				ColumnDefinition::new("employee_id", FieldType::VarChar(20)),
+				ColumnDefinition::new("department", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -1675,7 +1855,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "articles",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -1683,13 +1866,19 @@ mod migrations_extended_tests {
 		// Add non-blank fields (NOT NULL with defaults or constraints)
 		let add_text = Operation::AddColumn {
 			table: "articles",
-			column: ColumnDefinition::new("content", "TEXT NOT NULL DEFAULT ''"),
+			column: ColumnDefinition::new(
+				"content",
+				FieldType::Custom("TEXT NOT NULL DEFAULT ''".to_string()),
+			),
 		};
 		add_text.state_forwards("testapp", &mut state);
 
 		let add_char = Operation::AddColumn {
 			table: "articles",
-			column: ColumnDefinition::new("title", "VARCHAR(255) NOT NULL DEFAULT ''"),
+			column: ColumnDefinition::new(
+				"title",
+				FieldType::Custom("VARCHAR(255) NOT NULL DEFAULT ''".to_string()),
+			),
 		};
 		add_char.state_forwards("testapp", &mut state);
 
@@ -1708,14 +1897,17 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "posts",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "posts",
-			column: ColumnDefinition::new("body", "TEXT NOT NULL"),
+			column: ColumnDefinition::new("body", FieldType::Custom("TEXT NOT NULL".to_string())),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -1738,7 +1930,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -1748,7 +1943,7 @@ mod migrations_extended_tests {
 			table: "users",
 			column: ColumnDefinition::new(
 				"created_at",
-				"TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP",
+				FieldType::Custom("TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP".to_string()),
 			),
 		};
 		add_op.state_forwards("testapp", &mut state);
@@ -1767,14 +1962,20 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "orders",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
 
 		let add_op = Operation::AddColumn {
 			table: "orders",
-			column: ColumnDefinition::new("status", "VARCHAR(50) NOT NULL DEFAULT 'pending'"),
+			column: ColumnDefinition::new(
+				"status",
+				FieldType::Custom("VARCHAR(50) NOT NULL DEFAULT 'pending'".to_string()),
+			),
 		};
 		add_op.state_forwards("app", &mut state);
 
@@ -1798,9 +1999,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(255)"),
-				ColumnDefinition::new("sku", "VARCHAR(50)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(255)),
+				ColumnDefinition::new("sku", FieldType::VarChar(50)),
 			],
 			constraints: vec![],
 		};
@@ -1826,10 +2027,10 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "books",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(255)"),
-				ColumnDefinition::new("author", "VARCHAR(255)"),
-				ColumnDefinition::new("isbn", "VARCHAR(20)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(255)),
+				ColumnDefinition::new("author", FieldType::VarChar(255)),
+				ColumnDefinition::new("isbn", FieldType::VarChar(20)),
 			],
 			constraints: vec![],
 		};
@@ -1901,7 +2102,10 @@ mod migrations_extended_tests {
 		// Create with default name
 		let create_op = Operation::CreateTable {
 			name: "myapp_user",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -1926,7 +2130,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "app_product",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -1951,7 +2158,10 @@ mod migrations_extended_tests {
 		// Create a table
 		let create_op = Operation::CreateTable {
 			name: "old_table",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -1977,7 +2187,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -2118,7 +2331,10 @@ mod migrations_extended_tests {
 		// Create a table
 		let create_op = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -2144,7 +2360,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "products",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -2169,7 +2388,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "custom_table",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("testapp", &mut state);
@@ -2194,7 +2416,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "old_custom",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -2219,8 +2444,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2235,7 +2460,7 @@ mod migrations_extended_tests {
 
 		let add_field = Operation::AddColumn {
 			table: "custom_users",
-			column: ColumnDefinition::new("email", "VARCHAR(255)"),
+			column: ColumnDefinition::new("email", FieldType::VarChar(255)),
 		};
 		add_field.state_forwards("testapp", &mut state);
 
@@ -2253,7 +2478,10 @@ mod migrations_extended_tests {
 
 		let create_op = Operation::CreateTable {
 			name: "items",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_op.state_forwards("app", &mut state);
@@ -2279,8 +2507,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "test_table",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2290,7 +2518,7 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "test_table",
 			column: "name",
-			new_definition: ColumnDefinition::new("name", "VARCHAR(255)"),
+			new_definition: ColumnDefinition::new("name", FieldType::VarChar(255)),
 		};
 		alter_op.state_forwards("testapp", &mut state);
 
@@ -2309,8 +2537,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("email", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("email", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2319,7 +2547,7 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "users",
 			column: "email",
-			new_definition: ColumnDefinition::new("email", "TEXT"),
+			new_definition: ColumnDefinition::new("email", FieldType::Text),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2343,9 +2571,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("code", "VARCHAR(50)"),
-				ColumnDefinition::new("category", "VARCHAR(50)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("code", FieldType::VarChar(50)),
+				ColumnDefinition::new("category", FieldType::VarChar(50)),
 			],
 			constraints: vec![],
 		};
@@ -2360,7 +2588,7 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "items",
 			column: "code",
-			new_definition: ColumnDefinition::new("code", "VARCHAR(100)"),
+			new_definition: ColumnDefinition::new("code", FieldType::VarChar(100)),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2378,9 +2606,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "orders",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("order_number", "VARCHAR(20)"),
-				ColumnDefinition::new("year", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("order_number", FieldType::VarChar(20)),
+				ColumnDefinition::new("year", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2395,7 +2623,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "orders",
 			column: "year",
-			new_definition: ColumnDefinition::new("year", "SMALLINT"),
+			new_definition: ColumnDefinition::new(
+				"year",
+				FieldType::Custom("SMALLINT".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2413,7 +2644,10 @@ mod migrations_extended_tests {
 		// Create referenced table in another "app"
 		let create_users = Operation::CreateTable {
 			name: "users",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_users.state_forwards("auth_app", &mut state);
@@ -2422,8 +2656,8 @@ mod migrations_extended_tests {
 		let create_posts = Operation::CreateTable {
 			name: "posts",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("author_id", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("author_id", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2433,7 +2667,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "posts",
 			column: "author_id",
-			new_definition: ColumnDefinition::new("author_id", "INTEGER REFERENCES users(id)"),
+			new_definition: ColumnDefinition::new(
+				"author_id",
+				FieldType::Custom("INTEGER REFERENCES users(id)".to_string()),
+			),
 		};
 		alter_op.state_forwards("blog_app", &mut state);
 
@@ -2456,7 +2693,10 @@ mod migrations_extended_tests {
 
 		let create_categories = Operation::CreateTable {
 			name: "categories",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_categories.state_forwards("catalog", &mut state);
@@ -2464,8 +2704,8 @@ mod migrations_extended_tests {
 		let create_items = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("cat_id", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("cat_id", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2474,7 +2714,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "items",
 			column: "cat_id",
-			new_definition: ColumnDefinition::new("cat_id", "INTEGER REFERENCES categories(id)"),
+			new_definition: ColumnDefinition::new(
+				"cat_id",
+				FieldType::Custom("INTEGER REFERENCES categories(id)".to_string()),
+			),
 		};
 		alter_op.state_forwards("store", &mut state);
 
@@ -2492,8 +2735,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("nickname", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("nickname", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2506,7 +2749,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "users",
 			column: "nickname",
-			new_definition: ColumnDefinition::new("nickname", "VARCHAR(100) NOT NULL"),
+			new_definition: ColumnDefinition::new(
+				"nickname",
+				FieldType::Custom("VARCHAR(100) NOT NULL".to_string()),
+			),
 		};
 		alter_op.state_forwards("testapp", &mut state);
 
@@ -2530,8 +2776,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "profiles",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("bio", "TEXT"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("bio", FieldType::Text),
 			],
 			constraints: vec![],
 		};
@@ -2540,7 +2786,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "profiles",
 			column: "bio",
-			new_definition: ColumnDefinition::new("bio", "TEXT NOT NULL"),
+			new_definition: ColumnDefinition::new(
+				"bio",
+				FieldType::Custom("TEXT NOT NULL".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2564,8 +2813,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("quantity", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("quantity", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2575,7 +2824,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "products",
 			column: "quantity",
-			new_definition: ColumnDefinition::new("quantity", "INTEGER NOT NULL DEFAULT 0"),
+			new_definition: ColumnDefinition::new(
+				"quantity",
+				FieldType::Custom("INTEGER NOT NULL DEFAULT 0".to_string()),
+			),
 		};
 		alter_op.state_forwards("testapp", &mut state);
 
@@ -2599,8 +2851,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "items",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("available", "BOOLEAN"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("available", FieldType::Boolean),
 			],
 			constraints: vec![],
 		};
@@ -2609,7 +2861,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "items",
 			column: "available",
-			new_definition: ColumnDefinition::new("available", "BOOLEAN NOT NULL DEFAULT TRUE"),
+			new_definition: ColumnDefinition::new(
+				"available",
+				FieldType::Custom("BOOLEAN NOT NULL DEFAULT TRUE".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2633,8 +2888,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("status", "VARCHAR(50)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("status", FieldType::VarChar(50)),
 			],
 			constraints: vec![],
 		};
@@ -2646,7 +2901,7 @@ mod migrations_extended_tests {
 			column: "status",
 			new_definition: ColumnDefinition::new(
 				"status",
-				"VARCHAR(50) NOT NULL DEFAULT 'active'",
+				FieldType::Custom("VARCHAR(50) NOT NULL DEFAULT 'active'".to_string()),
 			),
 		};
 		alter_op.state_forwards("testapp", &mut state);
@@ -2671,8 +2926,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("active", "BOOLEAN"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("active", FieldType::Boolean),
 			],
 			constraints: vec![],
 		};
@@ -2681,7 +2936,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "products",
 			column: "active",
-			new_definition: ColumnDefinition::new("active", "BOOLEAN NOT NULL DEFAULT TRUE"),
+			new_definition: ColumnDefinition::new(
+				"active",
+				FieldType::Custom("BOOLEAN NOT NULL DEFAULT TRUE".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2705,8 +2963,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "users",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("email", "VARCHAR(255)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("email", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
 		};
@@ -2716,7 +2974,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "users",
 			column: "email",
-			new_definition: ColumnDefinition::new("email", "VARCHAR(255) NOT NULL"),
+			new_definition: ColumnDefinition::new(
+				"email",
+				FieldType::Custom("VARCHAR(255) NOT NULL".to_string()),
+			),
 		};
 		alter_op.state_forwards("testapp", &mut state);
 
@@ -2740,8 +3001,8 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "orders",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("customer_id", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("customer_id", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2750,7 +3011,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "orders",
 			column: "customer_id",
-			new_definition: ColumnDefinition::new("customer_id", "INTEGER NOT NULL"),
+			new_definition: ColumnDefinition::new(
+				"customer_id",
+				FieldType::Custom("INTEGER NOT NULL".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2773,14 +3037,20 @@ mod migrations_extended_tests {
 
 		let create_old = Operation::CreateTable {
 			name: "old_table",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_old.state_forwards("testapp", &mut state);
 
 		let create_new = Operation::CreateTable {
 			name: "new_table",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_new.state_forwards("testapp", &mut state);
@@ -2788,8 +3058,11 @@ mod migrations_extended_tests {
 		let create_ref = Operation::CreateTable {
 			name: "referencing",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("ref_id", "INTEGER REFERENCES old_table(id)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"ref_id",
+					FieldType::Custom("INTEGER REFERENCES old_table(id)".to_string()),
+				),
 			],
 			constraints: vec![],
 		};
@@ -2799,7 +3072,10 @@ mod migrations_extended_tests {
 		let alter_fk = Operation::AlterColumn {
 			table: "referencing",
 			column: "ref_id",
-			new_definition: ColumnDefinition::new("ref_id", "INTEGER REFERENCES new_table(id)"),
+			new_definition: ColumnDefinition::new(
+				"ref_id",
+				FieldType::Custom("INTEGER REFERENCES new_table(id)".to_string()),
+			),
 		};
 		alter_fk.state_forwards("testapp", &mut state);
 
@@ -2821,7 +3097,10 @@ mod migrations_extended_tests {
 
 		let create_categories = Operation::CreateTable {
 			name: "categories",
-			columns: vec![ColumnDefinition::new("id", "INTEGER PRIMARY KEY")],
+			columns: vec![ColumnDefinition::new(
+				"id",
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			)],
 			constraints: vec![],
 		};
 		create_categories.state_forwards("app", &mut state);
@@ -2829,8 +3108,8 @@ mod migrations_extended_tests {
 		let create_products = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("cat_id", "INTEGER"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("cat_id", FieldType::Integer),
 			],
 			constraints: vec![],
 		};
@@ -2840,7 +3119,10 @@ mod migrations_extended_tests {
 		let alter_op = Operation::AlterColumn {
 			table: "products",
 			column: "cat_id",
-			new_definition: ColumnDefinition::new("cat_id", "INTEGER NULL"),
+			new_definition: ColumnDefinition::new(
+				"cat_id",
+				FieldType::Custom("INTEGER NULL".to_string()),
+			),
 		};
 		alter_op.state_forwards("app", &mut state);
 
@@ -2860,8 +3142,8 @@ mod migrations_extended_tests {
 		let create_authors = Operation::CreateTable {
 			name: "authors",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2870,8 +3152,8 @@ mod migrations_extended_tests {
 		let create_books = Operation::CreateTable {
 			name: "books",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(200)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(200)),
 			],
 			constraints: vec![],
 		};
@@ -2881,9 +3163,15 @@ mod migrations_extended_tests {
 		let create_assoc = Operation::CreateTable {
 			name: "authors_books",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("author_id", "INTEGER REFERENCES authors(id)"),
-				ColumnDefinition::new("book_id", "INTEGER REFERENCES books(id)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"author_id",
+					FieldType::Custom("INTEGER REFERENCES authors(id)".to_string()),
+				),
+				ColumnDefinition::new(
+					"book_id",
+					FieldType::Custom("INTEGER REFERENCES books(id)".to_string()),
+				),
 			],
 			constraints: vec!["UNIQUE(author_id, book_id)"],
 		};
@@ -2892,13 +3180,19 @@ mod migrations_extended_tests {
 		// Alter the association table by adding extra metadata fields
 		let add_created_at = Operation::AddColumn {
 			table: "authors_books",
-			column: ColumnDefinition::new("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+			column: ColumnDefinition::new(
+				"created_at",
+				FieldType::Custom(
+					FieldType::Custom("TIMESTAMP DEFAULT CURRENT_TIMESTAMP".to_string())
+						.to_string(),
+				),
+			),
 		};
 		add_created_at.state_forwards("library", &mut state);
 
 		let add_role = Operation::AddColumn {
 			table: "authors_books",
-			column: ColumnDefinition::new("contribution_role", "VARCHAR(50)"),
+			column: ColumnDefinition::new("contribution_role", FieldType::VarChar(50)),
 		};
 		add_role.state_forwards("library", &mut state);
 
@@ -2923,8 +3217,8 @@ mod migrations_extended_tests {
 		let create_students = Operation::CreateTable {
 			name: "students",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(100)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
 		};
@@ -2933,8 +3227,8 @@ mod migrations_extended_tests {
 		let create_courses = Operation::CreateTable {
 			name: "courses",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(200)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(200)),
 			],
 			constraints: vec![],
 		};
@@ -2944,10 +3238,16 @@ mod migrations_extended_tests {
 		let create_enrollment = Operation::CreateTable {
 			name: "enrollments",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("student_id", "INTEGER REFERENCES students(id)"),
-				ColumnDefinition::new("course_id", "INTEGER REFERENCES courses(id)"),
-				ColumnDefinition::new("grade", "VARCHAR(2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new(
+					"student_id",
+					FieldType::Custom("INTEGER REFERENCES students(id)".to_string()),
+				),
+				ColumnDefinition::new(
+					"course_id",
+					FieldType::Custom("INTEGER REFERENCES courses(id)".to_string()),
+				),
+				ColumnDefinition::new("grade", FieldType::VarChar(2)),
 			],
 			constraints: vec![],
 		};
@@ -2957,7 +3257,13 @@ mod migrations_extended_tests {
 		let alter_grade = Operation::AlterColumn {
 			table: "enrollments",
 			column: "grade",
-			new_definition: ColumnDefinition::new("grade", "DECIMAL(3,2)"),
+			new_definition: ColumnDefinition::new(
+				"grade",
+				FieldType::Decimal {
+					precision: 3,
+					scale: 2,
+				},
+			),
 		};
 		alter_grade.state_forwards("school", &mut state);
 
@@ -3021,9 +3327,9 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "articles",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("title", "VARCHAR(255)"),
-				ColumnDefinition::new("created_at", "TIMESTAMP"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("title", FieldType::VarChar(255)),
+				ColumnDefinition::new("created_at", FieldType::Custom("TIMESTAMP".to_string())),
 			],
 			constraints: vec![],
 		};
@@ -3054,9 +3360,15 @@ mod migrations_extended_tests {
 		let create_op = Operation::CreateTable {
 			name: "products",
 			columns: vec![
-				ColumnDefinition::new("id", "INTEGER PRIMARY KEY"),
-				ColumnDefinition::new("name", "VARCHAR(255)"),
-				ColumnDefinition::new("price", "DECIMAL(10,2)"),
+				ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
+				ColumnDefinition::new("name", FieldType::VarChar(255)),
+				ColumnDefinition::new(
+					"price",
+					FieldType::Decimal {
+						precision: 10,
+						scale: 2,
+					},
+				),
 			],
 			constraints: vec![],
 		};
