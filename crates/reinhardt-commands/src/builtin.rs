@@ -1776,32 +1776,97 @@ mod tests {
 
 	#[tokio::test]
 	#[serial_test::serial(env_change)]
+	#[cfg(feature = "migrations")]
 	async fn test_makemigrations_command() {
-		unsafe { std::env::set_var("DATABASE_URL", "sqlite://:memory:") };
-		let cmd = MakeMigrationsCommand;
-		let ctx = CommandContext::default();
+		use reinhardt_db::migrations::model_registry::{
+			FieldMetadata, ModelMetadata, global_registry,
+		};
+		use reinhardt_db::prelude::FieldType;
+		use tempfile::TempDir;
 
-		let _result = cmd.execute(&ctx).await;
+		// Create a temporary directory for migrations
+		let temp_dir = TempDir::new().unwrap();
+		let migrations_dir = temp_dir.path().join("migrations");
+		std::fs::create_dir_all(&migrations_dir).unwrap();
+
+		// Register a test model
+		let registry = global_registry();
+		let mut metadata = ModelMetadata::new("testapp", "TestModel", "testapp_testmodel");
+		metadata.add_field(
+			"id".to_string(),
+			FieldMetadata::new(FieldType::Integer).with_param("primary_key", "true"),
+		);
+		metadata.add_field(
+			"name".to_string(),
+			FieldMetadata::new(FieldType::VarChar(100)).with_param("max_length", "100"),
+		);
+		registry.register_model(metadata);
+
+		// Set up test environment
+		unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:") };
+
+		let cmd = MakeMigrationsCommand;
+		let mut ctx = CommandContext::default();
+		ctx.add_arg("testapp".to_string());
+		ctx.set_option(
+			"migrations-dir".to_string(),
+			migrations_dir.to_string_lossy().to_string(),
+		);
+		ctx.set_option("empty".to_string(), "true".to_string());
+
+		let result = cmd.execute(&ctx).await;
 		unsafe { std::env::remove_var("DATABASE_URL") };
 
-		// Should succeed (either creates migrations or reports "No changes detected")
-		#[cfg(feature = "sqlite")]
-		assert!(_result.is_ok(), "Failed with: {:?}", _result.err());
+		// Should succeed (creates an empty migration)
+		assert!(result.is_ok(), "Failed with: {:?}", result.err());
 	}
 
 	#[tokio::test]
 	#[serial_test::serial(env_change)]
+	#[cfg(feature = "migrations")]
 	async fn test_makemigrations_with_dry_run() {
-		unsafe { std::env::set_var("DATABASE_URL", "sqlite://:memory:") };
+		use reinhardt_db::{
+			migrations::model_registry::{FieldMetadata, ModelMetadata, global_registry},
+			prelude::FieldType,
+		};
+		use tempfile::TempDir;
+
+		// Create a temporary directory for migrations
+		let temp_dir = TempDir::new().unwrap();
+		let migrations_dir = temp_dir.path().join("migrations");
+		std::fs::create_dir_all(&migrations_dir).unwrap();
+
+		// Register a test model
+		let registry = global_registry();
+		let mut metadata = ModelMetadata::new("testapp2", "TestModel2", "testapp2_testmodel");
+		metadata.add_field(
+			"id".to_string(),
+			FieldMetadata::new(FieldType::Integer).with_param("primary_key", "true"),
+		);
+		metadata.add_field(
+			"email".to_string(),
+			FieldMetadata::new(FieldType::VarChar(255)).with_param("max_length", "255"),
+		);
+		registry.register_model(metadata);
+
+		// Set up test environment
+		unsafe { std::env::set_var("DATABASE_URL", "sqlite::memory:") };
+
 		let cmd = MakeMigrationsCommand;
 		let mut ctx = CommandContext::default();
+		ctx.add_arg("testapp2".to_string());
+		ctx.set_option(
+			"migrations-dir".to_string(),
+			migrations_dir.to_string_lossy().to_string(),
+		);
 		ctx.set_option("dry-run".to_string(), "true".to_string());
+		ctx.set_option("empty".to_string(), "true".to_string());
 
-		let _result = cmd.execute(&ctx).await;
+		let result = cmd.execute(&ctx).await;
 		unsafe { std::env::remove_var("DATABASE_URL") };
 
-		#[cfg(feature = "sqlite")]
-		assert!(_result.is_ok(), "Failed with: {:?}", _result.err());
+		// Should succeed (dry-run mode, no actual files created)
+		assert!(result.is_ok(), "Failed with: {:?}", result.err());
 	}
 
 	#[tokio::test]

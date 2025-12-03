@@ -3,12 +3,11 @@
 //! This module provides a unified interface for executing commands from generated `manage.rs` files.
 //! It handles argument parsing, command context creation, and command execution.
 
+#[cfg(feature = "migrations")]
+use crate::MakeMigrationsCommand;
 use crate::base::BaseCommand;
 use crate::collectstatic::{CollectStaticCommand, CollectStaticOptions};
-use crate::{
-	CheckCommand, CommandContext, MakeMigrationsCommand, MigrateCommand, RunServerCommand,
-	ShellCommand,
-};
+use crate::{CheckCommand, CommandContext, MigrateCommand, RunServerCommand, ShellCommand};
 use clap::{Parser, Subcommand};
 use reinhardt_conf::settings::builder::SettingsBuilder;
 use reinhardt_conf::settings::profile::Profile;
@@ -42,6 +41,7 @@ struct Cli {
 #[derive(Debug, Clone, Subcommand)]
 pub enum Commands {
 	/// Create new migrations based on model changes
+	#[cfg(feature = "migrations")]
 	Makemigrations {
 		/// App labels to create migrations for
 		#[arg(value_name = "APP_LABEL")]
@@ -210,6 +210,7 @@ pub async fn run_command(
 	verbosity: u8,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	match command {
+		#[cfg(feature = "migrations")]
 		Commands::Makemigrations {
 			app_labels,
 			dry_run,
@@ -269,6 +270,7 @@ pub async fn run_command(
 }
 
 /// Execute the makemigrations command
+#[cfg(feature = "migrations")]
 async fn execute_makemigrations(
 	app_labels: Vec<String>,
 	dry_run: bool,

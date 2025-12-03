@@ -212,16 +212,16 @@ impl BaseCommand for StartAppCommand {
 			);
 		} else {
 			// Create as module (default)
-			// Create apps directory if it doesn't exist
-			let apps_dir = PathBuf::from("apps");
+			// Create src/apps directory if it doesn't exist
+			let apps_dir = PathBuf::from("src/apps");
 			if !apps_dir.exists() {
 				std::fs::create_dir_all(&apps_dir).map_err(|e| {
 					CommandError::ExecutionError(format!("Failed to create apps directory: {}", e))
 				})?;
-				ctx.verbose("Created apps/ directory");
+				ctx.verbose("Created src/apps/ directory");
 			}
 
-			// Set target to apps/{app_name} if no custom target is specified
+			// Set target to src/apps/{app_name} if no custom target is specified
 			let app_target = if target.is_some() {
 				target
 			} else {
@@ -261,10 +261,10 @@ impl BaseCommand for StartAppCommand {
 			update_apps_export(&app_name)?;
 
 			ctx.success(&format!(
-				"{} app '{}' created successfully in apps/{}!",
+				"{} app '{}' created successfully in src/apps/{}!",
 				app_type, app_name, app_name
 			));
-			ctx.info("The app has been added to apps.rs");
+			ctx.info("The app has been added to src/apps.rs");
 			ctx.info("Don't forget to add it to INSTALLED_APPS in your settings.rs");
 		}
 

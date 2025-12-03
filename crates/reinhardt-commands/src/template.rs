@@ -280,9 +280,15 @@ impl TemplateCommand {
 		let mut result = template.to_string();
 
 		// Replace all {{ variable_name }} with values from context
+		// Support both {{key}} and {{ key }} formats
 		for (key, value) in &context.variables {
-			let placeholder = format!("{{{{{}}}}}", key);
-			result = result.replace(&placeholder, value);
+			// Pattern without spaces: {{key}}
+			let placeholder_no_space = format!("{{{{{}}}}}", key);
+			result = result.replace(&placeholder_no_space, value);
+
+			// Pattern with spaces: {{ key }}
+			let placeholder_with_space = format!("{{{{ {} }}}}", key);
+			result = result.replace(&placeholder_with_space, value);
 		}
 
 		result
@@ -357,4 +363,71 @@ pub fn to_camel_case(s: &str) -> String {
 			}
 		})
 		.collect()
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_render_template_without_spaces() {
+		let template_cmd = TemplateCommand::new();
+		let mut context = TemplateContext::new();
+		context.insert("project_name", "my_project");
+		context.insert("version", "1.0.0");
+
+		let template = "name = \"{{project_name}}\"\nversion = \"{{version}}\"";
+		let result = template_cmd.render_template(template, &context);
+
+		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
+	}
+
+	#[test]
+	fn test_render_template_with_spaces() {
+		let template_cmd = TemplateCommand::new();
+		let mut context = TemplateContext::new();
+		context.insert("project_name", "my_project");
+		context.insert("version", "1.0.0");
+
+		let template = "name = \"{{ project_name }}\"\nversion = \"{{ version }}\"";
+		let result = template_cmd.render_template(template, &context);
+
+		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
+	}
+
+	#[test]
+	fn test_render_template_mixed_formats() {
+		let template_cmd = TemplateCommand::new();
+		let mut context = TemplateContext::new();
+		context.insert("project_name", "my_project");
+		context.insert("version", "1.0.0");
+
+		let template = "name = \"{{ project_name }}\"\nversion = \"{{version}}\"";
+		let result = template_cmd.render_template(template, &context);
+
+		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
+	}
+
+	#[test]
+	fn test_render_template_no_variables() {
+		let template_cmd = TemplateCommand::new();
+		let context = TemplateContext::new();
+
+		let template = "name = \"static_value\"\nversion = \"1.0.0\"";
+		let result = template_cmd.render_template(template, &context);
+
+		assert_eq!(result, template);
+	}
+
+	#[test]
+	fn test_render_template_undefined_variable() {
+		let template_cmd = TemplateCommand::new();
+		let context = TemplateContext::new();
+
+		let template = "name = \"{{ undefined_var }}\"";
+		let result = template_cmd.render_template(template, &context);
+
+		// Undefined variables should remain unchanged
+		assert_eq!(result, "name = \"{{ undefined_var }}\"");
+	}
 }
