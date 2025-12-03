@@ -187,8 +187,45 @@ struct FieldInfo {
 	config: FieldConfig,
 }
 
+/// Rustの型からフィールドメタデータ文字列を生成
+fn field_type_to_metadata_string(ty: &Type, _config: &FieldConfig) -> Result<String> {
+	let (_is_option, inner_ty) = extract_option_type(ty);
+
+	match inner_ty {
+		Type::Path(type_path) => {
+			let last_segment = type_path
+				.path
+				.segments
+				.last()
+				.ok_or_else(|| syn::Error::new_spanned(ty, "Invalid type path"))?;
+
+			let type_name = match last_segment.ident.to_string().as_str() {
+				"i32" => "IntegerField",
+				"i64" => "BigIntegerField",
+				"String" => "CharField",
+				"bool" => "BooleanField",
+				"f32" | "f64" => "FloatField",
+				"DateTime" => "DateTimeField",
+				"Date" => "DateField",
+				"Time" => "TimeField",
+				"Decimal" => "DecimalField",
+				"Uuid" => "UuidField",
+				other => {
+					return Err(syn::Error::new_spanned(
+						ty,
+						format!("Unsupported field type: {}", other),
+					));
+				}
+			};
+
+			Ok(format!("reinhardt.orm.models.{}", type_name))
+		}
+		_ => Err(syn::Error::new_spanned(ty, "Unsupported field type")),
+	}
+}
+
 /// Map Rust type to ORM field type
-fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<String> {
+fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<TokenStream> {
 	// Extract the inner type if it's Option<T>
 	let (_is_option, inner_ty) = extract_option_type(ty);
 
@@ -201,22 +238,39 @@ fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<String> {
 				.ok_or_else(|| syn::Error::new_spanned(ty, "Invalid type path"))?;
 
 			match last_segment.ident.to_string().as_str() {
-				"i32" => "IntegerField",
-				"i64" => "BigIntegerField",
-				"String" => {
-					if config.max_length.is_none() {
-						return Err(syn::Error::new_spanned(
-							ty,
-							"String fields require max_length attribute",
-						));
-					}
-					"CharField"
+				"i32" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Integer }
 				}
-				"bool" => "BooleanField",
-				"DateTime" => "DateTimeField",
-				"Date" => "DateField",
-				"Time" => "TimeField",
-				"f32" | "f64" => "FloatField",
+				"i64" => {
+					quote! { ::reinhardt::db::migrations::FieldType::BigInteger }
+				}
+				"String" => {
+					let max_length = config.max_length.ok_or_else(|| {
+						syn::Error::new_spanned(ty, "String fields require max_length attribute")
+					})? as u32;
+					quote! { ::reinhardt::db::migrations::FieldType::VarChar(#max_length) }
+				}
+				"bool" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Boolean }
+				}
+				"DateTime" => {
+					quote! { ::reinhardt::db::migrations::FieldType::DateTime }
+				}
+				"Date" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Date }
+				}
+				"Time" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Time }
+				}
+				"f32" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Float }
+				}
+				"f64" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Double }
+				}
+				"Uuid" => {
+					quote! { ::reinhardt::db::migrations::FieldType::Uuid }
+				}
 				_ => {
 					return Err(syn::Error::new_spanned(
 						ty,
@@ -230,7 +284,7 @@ fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<String> {
 		}
 	};
 
-	Ok(field_type.to_string())
+	Ok(field_type)
 }
 
 /// Extract Option<T> and return (is_option, inner_type)
@@ -598,8 +652,8 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 
 	for field_info in field_infos {
 		let name = field_info.name.to_string();
-		let field_type = map_type_to_field_type(&field_info.ty, &field_info.config)?;
-		let field_type_path = format!("reinhardt.orm.models.{}", field_type);
+		let field_type_path = field_type_to_metadata_string(&field_info.ty, &field_info.config)?;
+		let _field_type = map_type_to_field_type(&field_info.ty, &field_info.config)?;
 		let config = &field_info.config;
 
 		let (is_option, _) = extract_option_type(&field_info.ty);
@@ -666,6 +720,11 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 			});
 		}
 
+		let db_column_value = match &config.db_column {
+			Some(col) => quote! { Some(#col.to_string()) },
+			None => quote! { None },
+		};
+
 		let item = quote! {
 			{
 				let mut attributes = ::std::collections::HashMap::new();
@@ -681,7 +740,7 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 					editable: #editable,
 					default: None,
 					db_default: None,
-					db_column: None,
+					db_column: #db_column_value,
 					choices: None,
 					attributes,
 				}

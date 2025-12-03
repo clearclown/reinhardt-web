@@ -434,56 +434,27 @@ fn parse_column_definition(expr: &Expr) -> Option<crate::ColumnDefinition> {
 		}
 
 		let name = extract_static_str_field(&expr_struct.fields, "name")?;
-		let type_definition = extract_type_definition_field(&expr_struct.fields)
-			.unwrap_or_else(|| "VARCHAR".to_string());
+		let type_definition = extract_field_type(&expr_struct.fields)
+			.unwrap_or(crate::FieldType::Custom("VARCHAR".to_string()));
 		let not_null = extract_bool_field(&expr_struct.fields, "not_null").unwrap_or(false);
 		let unique = extract_bool_field(&expr_struct.fields, "unique").unwrap_or(false);
 		let primary_key = extract_bool_field(&expr_struct.fields, "primary_key").unwrap_or(false);
 		let auto_increment =
 			extract_bool_field(&expr_struct.fields, "auto_increment").unwrap_or(false);
 		let default = extract_optional_str_field(&expr_struct.fields, "default");
-		let max_length = extract_u32_field(&expr_struct.fields, "max_length");
+		let _max_length = extract_u32_field(&expr_struct.fields, "max_length"); // Not used in current implementation
 
 		return Some(crate::ColumnDefinition {
 			name: Box::leak(name.into_boxed_str()),
-			type_definition: Box::leak(type_definition.into_boxed_str()),
+			type_definition,
 			not_null,
 			unique,
 			primary_key,
 			auto_increment,
 			default: default.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
-			max_length,
 		});
 	}
 
-	None
-}
-
-/// Extract type_definition field (handles both string literals and type paths like CharField)
-fn extract_type_definition_field(
-	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
-) -> Option<String> {
-	for field in fields {
-		if let syn::Member::Named(ident) = &field.member
-			&& ident == "type_definition"
-		{
-			// Try string literal first
-			if let Some(s) = extract_string_literal(&field.expr) {
-				return Some(s);
-			}
-			// Try path (e.g., CharField, BigIntegerField)
-			if let Expr::Path(expr_path) = &field.expr {
-				let type_name = expr_path
-					.path
-					.segments
-					.iter()
-					.map(|s| s.ident.to_string())
-					.collect::<Vec<_>>()
-					.join("::");
-				return Some(type_name);
-			}
-		}
-	}
 	None
 }
 
@@ -602,6 +573,121 @@ fn parse_bool_return(func: &ItemFn) -> Option<bool> {
 		&& let syn::Lit::Bool(lit_bool) = &expr_lit.lit
 	{
 		return Some(lit_bool.value);
+	}
+	None
+}
+
+/// Extract FieldType from type_definition field
+fn extract_field_type(
+	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
+) -> Option<crate::FieldType> {
+	use crate::FieldType;
+
+	for field in fields {
+		if let syn::Member::Named(ident) = &field.member
+			&& ident == "type_definition"
+		{
+			// Handle FieldType::Variant or path::to::FieldType::Variant
+			if let Expr::Path(expr_path) = &field.expr {
+				let segments: Vec<_> = expr_path
+					.path
+					.segments
+					.iter()
+					.map(|s| s.ident.to_string())
+					.collect();
+
+				// Get the last segment as the variant name
+				if let Some(last_segment) = expr_path.path.segments.last() {
+					let variant = last_segment.ident.to_string();
+
+					return match variant.as_str() {
+						"Integer" => Some(FieldType::Integer),
+						"BigInteger" => Some(FieldType::BigInteger),
+						"SmallInteger" => Some(FieldType::SmallInteger),
+						"TinyInt" => Some(FieldType::TinyInt),
+						"MediumInt" => Some(FieldType::MediumInt),
+						"Text" => Some(FieldType::Text),
+						"TinyText" => Some(FieldType::TinyText),
+						"MediumText" => Some(FieldType::MediumText),
+						"LongText" => Some(FieldType::LongText),
+						"Date" => Some(FieldType::Date),
+						"Time" => Some(FieldType::Time),
+						"DateTime" => Some(FieldType::DateTime),
+						"TimestampTz" => Some(FieldType::TimestampTz),
+						"Float" => Some(FieldType::Float),
+						"Double" => Some(FieldType::Double),
+						"Real" => Some(FieldType::Real),
+						"Boolean" => Some(FieldType::Boolean),
+						"Binary" => Some(FieldType::Binary),
+						"Blob" => Some(FieldType::Blob),
+						"TinyBlob" => Some(FieldType::TinyBlob),
+						"MediumBlob" => Some(FieldType::MediumBlob),
+						"LongBlob" => Some(FieldType::LongBlob),
+						"Bytea" => Some(FieldType::Bytea),
+						"Json" => Some(FieldType::Json),
+						"JsonBinary" => Some(FieldType::JsonBinary),
+						"Uuid" => Some(FieldType::Uuid),
+						"Year" => Some(FieldType::Year),
+						_ => Some(FieldType::Custom(segments.join("::"))),
+					};
+				}
+			}
+			// Handle FieldType::VarChar(n) or FieldType::Char(n)
+			else if let Expr::Call(expr_call) = &field.expr {
+				if let Expr::Path(func_path) = &*expr_call.func
+					&& let Some(last_segment) = func_path.path.segments.last()
+				{
+					let variant = last_segment.ident.to_string();
+
+					if !expr_call.args.is_empty()
+						&& let Expr::Lit(expr_lit) = &expr_call.args[0]
+						&& let syn::Lit::Int(lit_int) = &expr_lit.lit
+						&& let Ok(size) = lit_int.base10_parse::<u32>()
+					{
+						return match variant.as_str() {
+							"VarChar" => Some(FieldType::VarChar(size)),
+							"Char" => Some(FieldType::Char(size)),
+							_ => None,
+						};
+					}
+				}
+			}
+			// Handle FieldType::Decimal { precision, scale }
+			else if let Expr::Struct(expr_struct) = &field.expr {
+				if let Some(last_segment) = expr_struct.path.segments.last()
+					&& last_segment.ident == "Decimal"
+				{
+					let mut precision = 10u32;
+					let mut scale = 0u32;
+
+					for field_value in &expr_struct.fields {
+						if let syn::Member::Named(field_ident) = &field_value.member
+							&& let Expr::Lit(expr_lit) = &field_value.expr
+							&& let syn::Lit::Int(lit_int) = &expr_lit.lit
+							&& let Ok(val) = lit_int.base10_parse::<u32>()
+						{
+							if field_ident == "precision" {
+								precision = val;
+							} else if field_ident == "scale" {
+								scale = val;
+							}
+						}
+					}
+
+					return Some(FieldType::Decimal { precision, scale });
+				}
+			}
+			// Handle FieldType::Custom("...")
+			else if let Expr::Call(expr_call) = &field.expr
+				&& let Expr::Path(func_path) = &*expr_call.func
+				&& let Some(last_segment) = func_path.path.segments.last()
+				&& last_segment.ident == "Custom"
+				&& !expr_call.args.is_empty()
+				&& let Some(s) = extract_string_literal(&expr_call.args[0])
+			{
+				return Some(FieldType::Custom(s));
+			}
+		}
 	}
 	None
 }
