@@ -5,63 +5,119 @@ use serde::{Deserialize, Serialize};
 /// データベースフィールドタイプを表現
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FieldType {
+	// 整数型
 	BigInteger,
 	Integer,
 	SmallInteger,
-	Char {
-		max_length: usize,
-	},
+	TinyInt,   // MySQL固有
+	MediumInt, // MySQL固有
+
+	// 文字列型（パラメータ付き）
+	Char(u32),
+	VarChar(u32),
 	Text,
-	DateTime,
+	TinyText,   // MySQL固有
+	MediumText, // MySQL固有
+	LongText,   // MySQL固有
+
+	// 日時型
 	Date,
 	Time,
+	DateTime,
+	TimestampTz, // PostgreSQL TIMESTAMPTZ
+
+	// 数値型
+	Decimal { precision: u32, scale: u32 },
+	Float,
+	Double,
+	Real,
+
+	// 真偽値型
 	Boolean,
-	Decimal {
-		max_digits: usize,
-		decimal_places: usize,
-	},
+
+	// バイナリ型
 	Binary,
+	Blob,       // MySQL固有
+	TinyBlob,   // MySQL固有
+	MediumBlob, // MySQL固有
+	LongBlob,   // MySQL固有
+	Bytea,      // PostgreSQL固有
+
+	// JSON型
 	Json,
+	JsonBinary, // PostgreSQL JSONB
+
+	// その他
 	Uuid,
+	Year, // MySQL固有
+
+	// MySQL固有のコレクション型
+	Enum { values: Vec<String> },
+	Set { values: Vec<String> },
+
+	// カスタム型
 	Custom(String),
 }
 
 impl FieldType {
-	/// 文字列表現から変換（後方互換性）
-	pub fn from_string(s: &str) -> Self {
-		match s {
-			"BigIntegerField" => FieldType::BigInteger,
-			"IntegerField" => FieldType::Integer,
-			"SmallIntegerField" => FieldType::SmallInteger,
-			"CharField" => FieldType::Char { max_length: 255 },
-			"TextField" => FieldType::Text,
-			"DateTimeField" => FieldType::DateTime,
-			"DateField" => FieldType::Date,
-			"TimeField" => FieldType::Time,
-			"BooleanField" => FieldType::Boolean,
-			"UUIDField" => FieldType::Uuid,
-			"JSONField" => FieldType::Json,
-			_ => FieldType::Custom(s.to_string()),
+	/// FieldTypeをSQL文字列に変換
+	pub fn to_sql_string(&self) -> String {
+		match self {
+			FieldType::BigInteger => "BIGINT".to_string(),
+			FieldType::Integer => "INTEGER".to_string(),
+			FieldType::SmallInteger => "SMALLINT".to_string(),
+			FieldType::TinyInt => "TINYINT".to_string(),
+			FieldType::MediumInt => "MEDIUMINT".to_string(),
+			FieldType::Char(max_length) => format!("CHAR({})", max_length),
+			FieldType::VarChar(max_length) => format!("VARCHAR({})", max_length),
+			FieldType::Text => "TEXT".to_string(),
+			FieldType::TinyText => "TINYTEXT".to_string(),
+			FieldType::MediumText => "MEDIUMTEXT".to_string(),
+			FieldType::LongText => "LONGTEXT".to_string(),
+			FieldType::Date => "DATE".to_string(),
+			FieldType::Time => "TIME".to_string(),
+			FieldType::DateTime => "DATETIME".to_string(),
+			FieldType::TimestampTz => "TIMESTAMPTZ".to_string(),
+			FieldType::Decimal { precision, scale } => format!("DECIMAL({}, {})", precision, scale),
+			FieldType::Float => "FLOAT".to_string(),
+			FieldType::Double => "DOUBLE".to_string(),
+			FieldType::Real => "REAL".to_string(),
+			FieldType::Boolean => "BOOLEAN".to_string(),
+			FieldType::Binary => "BINARY".to_string(),
+			FieldType::Blob => "BLOB".to_string(),
+			FieldType::TinyBlob => "TINYBLOB".to_string(),
+			FieldType::MediumBlob => "MEDIUMBLOB".to_string(),
+			FieldType::LongBlob => "LONGBLOB".to_string(),
+			FieldType::Bytea => "BYTEA".to_string(),
+			FieldType::Json => "JSON".to_string(),
+			FieldType::JsonBinary => "JSONB".to_string(),
+			FieldType::Uuid => "UUID".to_string(),
+			FieldType::Year => "YEAR".to_string(),
+			FieldType::Enum { values } => {
+				let values_str = values
+					.iter()
+					.map(|v| format!("'{}'", v))
+					.collect::<Vec<_>>()
+					.join(",");
+				format!("ENUM({})", values_str)
+			}
+			FieldType::Set { values } => {
+				let values_str = values
+					.iter()
+					.map(|v| format!("'{}'", v))
+					.collect::<Vec<_>>()
+					.join(",");
+				format!("SET({})", values_str)
+			}
+			FieldType::Custom(custom_type) => custom_type.clone(),
 		}
 	}
 
-	/// フィールド名表現に変換
-	pub fn to_field_name(&self) -> &'static str {
+	/// Get max_length if this type has one
+	pub fn max_length(&self) -> Option<u32> {
 		match self {
-			FieldType::BigInteger => "BigIntegerField",
-			FieldType::Integer => "IntegerField",
-			FieldType::SmallInteger => "SmallIntegerField",
-			FieldType::Char { .. } => "CharField",
-			FieldType::Text => "TextField",
-			FieldType::DateTime => "DateTimeField",
-			FieldType::Date => "DateField",
-			FieldType::Time => "TimeField",
-			FieldType::Boolean => "BooleanField",
-			FieldType::Decimal { .. } => "DecimalField",
-			FieldType::Binary => "BinaryField",
-			FieldType::Json => "JSONField",
-			FieldType::Uuid => "UUIDField",
-			FieldType::Custom(_) => "CustomField",
+			FieldType::Char(max_length) | FieldType::VarChar(max_length) => Some(*max_length),
+			_ => None,
 		}
 	}
 }
@@ -143,4 +199,287 @@ pub mod prelude {
 		DecimalField, FieldTypeName, IntegerField, JSONField, SmallIntegerField, TextField,
 		TimeField, UUIDField,
 	};
+}
+
+// Into implementations for database-specific types
+
+/// PostgreSQL Type → FieldType conversion
+impl From<&sea_schema::postgres::def::Type> for FieldType {
+	fn from(col_type: &sea_schema::postgres::def::Type) -> Self {
+		use sea_schema::postgres::def::Type;
+		match col_type {
+			// Integer types
+			Type::Serial | Type::Integer => FieldType::Integer,
+			Type::BigSerial | Type::BigInt => FieldType::BigInteger,
+			Type::SmallSerial | Type::SmallInt => FieldType::SmallInteger,
+
+			// String types
+			Type::Varchar(attr) => {
+				let max_length = attr.length.unwrap_or(255).into();
+				FieldType::VarChar(max_length)
+			}
+			Type::Char(attr) => {
+				let max_length = attr.length.unwrap_or(1).into();
+				FieldType::Char(max_length)
+			}
+			Type::Text => FieldType::Text,
+
+			// Date/Time types
+			Type::Date => FieldType::Date,
+			Type::Time(_) => FieldType::Time,
+			Type::Timestamp(_) => FieldType::DateTime,
+			Type::TimestampWithTimeZone(_) => FieldType::TimestampTz,
+
+			// Numeric types
+			Type::Decimal(attr) | Type::Numeric(attr) => {
+				let precision = attr.precision.unwrap_or(10).into();
+				let scale = attr.scale.unwrap_or(2).into();
+				FieldType::Decimal { precision, scale }
+			}
+			Type::Real => FieldType::Real,
+			Type::DoublePrecision => FieldType::Double,
+
+			// Boolean
+			Type::Boolean => FieldType::Boolean,
+
+			// Binary
+			Type::Bytea => FieldType::Bytea,
+
+			// JSON
+			Type::Json => FieldType::Json,
+			Type::JsonBinary => FieldType::JsonBinary,
+
+			// UUID
+			Type::Uuid => FieldType::Uuid,
+
+			// Unknown/Custom types
+			Type::Unknown(type_name) => FieldType::Custom(type_name.clone()),
+			Type::PgLsn => FieldType::Custom("PG_LSN".to_string()),
+			Type::Money => FieldType::Custom("MONEY".to_string()),
+
+			// Array types (store as Custom with array notation)
+			Type::Array(inner_array) => {
+				if let Some(ref inner_type) = inner_array.col_type {
+					let inner_field_type: FieldType = inner_type.as_ref().into();
+					FieldType::Custom(format!("{}[]", inner_field_type.to_sql_string()))
+				} else {
+					FieldType::Custom("ARRAY[]".to_string())
+				}
+			}
+
+			// Time with time zone
+			Type::TimeWithTimeZone(_) => FieldType::Time,
+
+			// Interval types
+			Type::Interval(_) => FieldType::Custom("INTERVAL".to_string()),
+
+			// Geometric types
+			Type::Point => FieldType::Custom("POINT".to_string()),
+			Type::Line => FieldType::Custom("LINE".to_string()),
+			Type::Lseg => FieldType::Custom("LSEG".to_string()),
+			Type::Box => FieldType::Custom("BOX".to_string()),
+			Type::Path => FieldType::Custom("PATH".to_string()),
+			Type::Polygon => FieldType::Custom("POLYGON".to_string()),
+			Type::Circle => FieldType::Custom("CIRCLE".to_string()),
+
+			// Network address types
+			Type::Cidr => FieldType::Custom("CIDR".to_string()),
+			Type::Inet => FieldType::Custom("INET".to_string()),
+			Type::MacAddr => FieldType::Custom("MACADDR".to_string()),
+			Type::MacAddr8 => FieldType::Custom("MACADDR8".to_string()),
+
+			// Bit string types
+			Type::Bit(_) => FieldType::Custom("BIT".to_string()),
+			Type::VarBit(_) => FieldType::Custom("VARBIT".to_string()),
+
+			// Text search types
+			Type::TsVector => FieldType::Custom("TSVECTOR".to_string()),
+			Type::TsQuery => FieldType::Custom("TSQUERY".to_string()),
+
+			// XML type
+			Type::Xml => FieldType::Custom("XML".to_string()),
+
+			// Range types
+			Type::Int4Range => FieldType::Custom("INT4RANGE".to_string()),
+			Type::Int8Range => FieldType::Custom("INT8RANGE".to_string()),
+			Type::NumRange => FieldType::Custom("NUMRANGE".to_string()),
+			Type::TsRange => FieldType::Custom("TSRANGE".to_string()),
+			Type::TsTzRange => FieldType::Custom("TSTZRANGE".to_string()),
+			Type::DateRange => FieldType::Custom("DATERANGE".to_string()),
+
+			// Enum types
+			Type::Enum(enum_def) => FieldType::Enum {
+				values: enum_def.values.clone(),
+			},
+		}
+	}
+}
+
+/// MySQL Type → FieldType conversion
+impl From<&sea_schema::mysql::def::Type> for FieldType {
+	fn from(col_type: &sea_schema::mysql::def::Type) -> Self {
+		use sea_schema::mysql::def::Type;
+		match col_type {
+			// Integer types
+			Type::TinyInt(_) => FieldType::TinyInt,
+			Type::SmallInt(_) => FieldType::SmallInteger,
+			Type::MediumInt(_) => FieldType::MediumInt,
+			Type::Int(_) => FieldType::Integer,
+			Type::BigInt(_) => FieldType::BigInteger,
+
+			// String types
+			Type::Varchar(attr) | Type::NVarchar(attr) => {
+				let max_length = attr.length.unwrap_or(255);
+				FieldType::VarChar(max_length)
+			}
+			Type::Char(attr) | Type::NChar(attr) => {
+				let max_length = attr.length.unwrap_or(1);
+				FieldType::Char(max_length)
+			}
+			Type::Text(_) => FieldType::Text,
+			Type::TinyText(_) => FieldType::TinyText,
+			Type::MediumText(_) => FieldType::MediumText,
+			Type::LongText(_) => FieldType::LongText,
+
+			// Date/Time types
+			Type::Date => FieldType::Date,
+			Type::Time(_) => FieldType::Time,
+			Type::DateTime(_) => FieldType::DateTime,
+			Type::Timestamp(_) => FieldType::DateTime,
+			Type::Year => FieldType::Year,
+
+			// Numeric types
+			Type::Decimal(attr) => {
+				let precision = attr.maximum.unwrap_or(10);
+				let scale = attr.decimal.unwrap_or(2);
+				FieldType::Decimal { precision, scale }
+			}
+			Type::Float(_) => FieldType::Float,
+			Type::Double(_) => FieldType::Double,
+
+			// Binary types
+			Type::Binary(_) | Type::Varbinary(_) => FieldType::Binary,
+			Type::Blob(_) => FieldType::Blob,
+			Type::TinyBlob => FieldType::TinyBlob,
+			Type::MediumBlob => FieldType::MediumBlob,
+			Type::LongBlob => FieldType::LongBlob,
+
+			// Boolean (MySQL doesn't have native BOOLEAN, uses TINYINT(1))
+			Type::Bool => FieldType::Boolean,
+			Type::Bit(_) => FieldType::Boolean,
+
+			// JSON
+			Type::Json => FieldType::Json,
+
+			// MySQL-specific collection types
+			Type::Enum(enum_def) => FieldType::Enum {
+				values: enum_def.values.clone(),
+			},
+			Type::Set(set_def) => FieldType::Set {
+				values: set_def.members.clone(),
+			},
+
+			// Spatial types (store as Custom)
+			Type::Geometry(_)
+			| Type::Point(_)
+			| Type::LineString(_)
+			| Type::Polygon(_)
+			| Type::MultiPoint(_)
+			| Type::MultiLineString(_)
+			| Type::MultiPolygon(_)
+			| Type::GeometryCollection(_) => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Unknown types
+			Type::Unknown(type_name) => FieldType::Custom(type_name.clone()),
+
+			// Serial is auto_increment BIGINT
+			Type::Serial => FieldType::BigInteger,
+		}
+	}
+}
+
+/// SeaQuery ColumnType → FieldType conversion (for SQLite)
+impl From<&sea_schema::sea_query::ColumnType> for FieldType {
+	fn from(col_type: &sea_schema::sea_query::ColumnType) -> Self {
+		use sea_schema::sea_query::ColumnType;
+		match col_type {
+			// Integer types
+			ColumnType::TinyInteger => FieldType::TinyInt,
+			ColumnType::SmallInteger => FieldType::SmallInteger,
+			ColumnType::Integer => FieldType::Integer,
+			ColumnType::BigInteger => FieldType::BigInteger,
+
+			// Floating point types
+			ColumnType::Float => FieldType::Float,
+			ColumnType::Double => FieldType::Double,
+			ColumnType::Decimal(Some((precision, scale))) => FieldType::Decimal {
+				precision: *precision,
+				scale: *scale,
+			},
+			ColumnType::Decimal(None) => FieldType::Decimal {
+				precision: 10,
+				scale: 2,
+			},
+
+			// String types
+			ColumnType::String(str_len) => match str_len {
+				sea_schema::sea_query::StringLen::N(length) => FieldType::VarChar(*length),
+				sea_schema::sea_query::StringLen::None => FieldType::VarChar(255),
+				sea_schema::sea_query::StringLen::Max => FieldType::Text,
+			},
+			ColumnType::Text => FieldType::Text,
+			ColumnType::Char(length) => {
+				if let Some(len) = length {
+					FieldType::Char(*len)
+				} else {
+					FieldType::Char(1)
+				}
+			}
+
+			// Binary
+			ColumnType::Binary(_) => FieldType::Binary,
+
+			// Boolean
+			ColumnType::Boolean => FieldType::Boolean,
+
+			// Date/Time types
+			ColumnType::Date => FieldType::Date,
+			ColumnType::Time => FieldType::Time,
+			ColumnType::DateTime => FieldType::DateTime,
+			ColumnType::TimestampWithTimeZone => FieldType::TimestampTz,
+			ColumnType::Timestamp => FieldType::DateTime,
+
+			// UUID
+			ColumnType::Uuid => FieldType::Uuid,
+
+			// JSON
+			ColumnType::Json => FieldType::Json,
+			ColumnType::JsonBinary => FieldType::JsonBinary,
+
+			// Arrays (store as Custom)
+			ColumnType::Array(_) => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Custom types
+			ColumnType::Custom(_) => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Enum
+			ColumnType::Enum { .. } => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Cidr/Inet (PostgreSQL network types)
+			ColumnType::Cidr | ColumnType::Inet => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Money
+			ColumnType::Money(_) => FieldType::Custom(format!("{:?}", col_type)),
+
+			// Unknown types
+			_ => FieldType::Custom(format!("{:?}", col_type)),
+		}
+	}
+}
+
+/// Display implementation for FieldType
+impl std::fmt::Display for FieldType {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", self.to_sql_string())
+	}
 }
