@@ -7,7 +7,8 @@
 //! ```rust,ignore
 //! use reinhardt_orm::prelude::*;
 //!
-//! #[derive(Model, QueryFields)]
+//! #[model(app_label = "users", table_name = "users")]
+//! #[derive(QueryFields)]
 //! struct User {
 //!     id: i64,
 //!     email: String,

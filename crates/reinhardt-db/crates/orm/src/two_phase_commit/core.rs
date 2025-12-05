@@ -721,7 +721,7 @@ impl TwoPhaseCoordinator {
 			*state = TransactionState::Preparing;
 		}
 
-		// Phase 1: Prepare all participants
+		// Prepare all participants
 		{
 			let mut participants = self.participants.lock().await;
 
@@ -776,7 +776,7 @@ impl TwoPhaseCoordinator {
 		{
 			let mut participants = self.participants.lock().await;
 
-			// Phase 2: Commit all participants
+			// Commit all participants
 			for participant in participants.iter_mut() {
 				match participant.commit(self.transaction_id.clone()).await {
 					Ok(_) => {

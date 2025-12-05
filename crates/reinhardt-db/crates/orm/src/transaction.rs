@@ -1169,7 +1169,7 @@ where
 /// let user_id: i64 = transaction(&conn, |tx| {
 ///     Box::pin(async move {
 ///         tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Bob".into()]).await?;
-///         Ok(42) // Example return value
+///         Ok(42_i64) // Example return value
 ///     }) as Pin<Box<dyn Future<Output = Result<i64, anyhow::Error>> + Send + '_>>
 /// }).await?;
 ///

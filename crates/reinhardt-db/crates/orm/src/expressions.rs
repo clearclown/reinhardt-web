@@ -66,10 +66,9 @@ impl fmt::Display for F {
 ///
 /// ```ignore
 /// use reinhardt_orm::expressions::FieldRef;
-/// use reinhardt_core::macros::Model;
+/// use reinhardt_core::macros::model;
 ///
-/// #[derive(Model)]
-/// #[model(table_name = "users")]
+/// #[model(app_label = "users", table_name = "users")]
 /// struct User {
 ///     #[field(primary_key = true)]
 ///     id: i64,
@@ -77,7 +76,7 @@ impl fmt::Display for F {
 ///     email: String,
 /// }
 ///
-/// // The #[derive(Model)] macro automatically generates:
+/// // The #[model] attribute macro automatically generates:
 /// // impl User {
 /// //     pub const fn field_id() -> FieldRef<User, i64> {
 /// //         FieldRef::new("id")
