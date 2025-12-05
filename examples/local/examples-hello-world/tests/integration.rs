@@ -6,6 +6,7 @@
 //! - When feature is disabled, this entire test file is excluded from compilation
 
 use example_test_macros::example_test;
+use reinhardt::core::serde::json;
 use reinhardt::prelude::*;
 use reinhardt::test::client::APIClient;
 use reinhardt::test::fixtures::test_server_guard;
@@ -73,7 +74,7 @@ async fn test_health_check_endpoint(
 		content_type
 	);
 
-	let body: serde_json::Value = response.json().expect("Failed to parse JSON response");
+	let body: json::Value = response.json().expect("Failed to parse JSON response");
 	assert_eq!(body["status"], "ok");
 
 	println!("✅ GET /health returned valid JSON health status");
@@ -112,7 +113,7 @@ async fn test_405_method_not_allowed(
 
 	// Send POST request to root endpoint (only GET is allowed)
 	let client = APIClient::with_base_url(&server.url);
-	let empty_data = serde_json::json!({});
+	let empty_data = json::json!({});
 	let response = client
 		.post("/", &empty_data, "json")
 		.await
