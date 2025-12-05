@@ -21,11 +21,15 @@ inventory = "0.3"
 
 [features]
 full = []
+db-postgres = []
+db-mysql = []
+db-sqlite = []
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
 trybuild = "1.0"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 reinhardt-db = { workspace = true, features = ["orm", "migrations"] }
 reinhardt-signals = { path = "../signals", version = "0.1.0-alpha.1" }
 serial_test = { workspace = true }

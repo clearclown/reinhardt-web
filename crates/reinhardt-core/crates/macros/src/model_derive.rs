@@ -5,12 +5,46 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Result, Type, parse_quote};
+use syn::{Ident, LitStr, bracketed, parenthesized};
+
+use crate::rel::RelAttribute;
+
+/// Constraint specification from #[model(constraints = [...])]
+#[derive(Debug, Clone)]
+enum ConstraintSpec {
+	/// unique(fields = [...], name = "...", condition = "...")
+	Unique {
+		fields: Vec<String>,
+		name: Option<String>,
+		condition: Option<String>,
+	},
+}
+
+/// Parsed model attributes (intermediate representation)
+struct ModelAttributesParsed {
+	app_label: Option<String>,
+	table_name: Option<String>,
+	constraints: Option<Vec<ConstraintSpec>>,
+	unique_together: Vec<Vec<String>>, // Multiple Django-style unique_together constraints
+	#[cfg(feature = "db-sqlite")]
+	strict: Option<bool>,
+	#[cfg(feature = "db-sqlite")]
+	without_rowid: Option<bool>,
+}
 
 /// Model configuration from #[model(...)] attribute
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // Phase 3.2 fields (strict, without_rowid) parsed but not yet used
 struct ModelConfig {
 	app_label: String,
 	table_name: String,
+	constraints: Vec<ConstraintSpec>,
+
+	// Phase 3.2: Table-level attributes (SQLite)
+	#[cfg(feature = "db-sqlite")]
+	strict: Option<bool>,
+	#[cfg(feature = "db-sqlite")]
+	without_rowid: Option<bool>,
 }
 
 impl ModelConfig {
@@ -18,25 +52,54 @@ impl ModelConfig {
 	fn from_attrs(attrs: &[syn::Attribute], struct_name: &syn::Ident) -> Result<Self> {
 		let mut app_label = None;
 		let mut table_name = None;
+		let mut constraints = Vec::new();
+
+		#[cfg(feature = "db-sqlite")]
+		let mut strict = None;
+		#[cfg(feature = "db-sqlite")]
+		let mut without_rowid = None;
 
 		for attr in attrs {
-			if !attr.path().is_ident("model") {
+			// Accept both #[model(...)] and #[model_config(...)] helper attributes
+			if !attr.path().is_ident("model") && !attr.path().is_ident("model_config") {
 				continue;
 			}
 
-			attr.parse_nested_meta(|meta| {
-				if meta.path.is_ident("app_label") {
-					let value: syn::LitStr = meta.value()?.parse()?;
-					app_label = Some(value.value());
-					Ok(())
-				} else if meta.path.is_ident("table_name") {
-					let value: syn::LitStr = meta.value()?.parse()?;
-					table_name = Some(value.value());
-					Ok(())
-				} else {
-					Err(meta.error("unsupported model attribute"))
+			// Use custom parser for all model attributes
+			let model_attr = attr
+				.parse_args_with(|input: syn::parse::ParseStream| {
+					Self::parse_model_attributes(input)
+				})
+				.map_err(|e| {
+					syn::Error::new_spanned(attr, format!("parse_args_with failed: {}", e))
+				})?;
+
+			if let Some(c) = model_attr.constraints {
+				constraints = c;
+			}
+			// Convert each unique_together to ConstraintSpec::Unique
+			for fields in model_attr.unique_together {
+				constraints.push(ConstraintSpec::Unique {
+					fields,
+					name: None, // Auto-generate name
+					condition: None,
+				});
+			}
+			if let Some(al) = model_attr.app_label {
+				app_label = Some(al);
+			}
+			if let Some(tn) = model_attr.table_name {
+				table_name = Some(tn);
+			}
+			#[cfg(feature = "db-sqlite")]
+			{
+				if let Some(s) = model_attr.strict {
+					strict = Some(s);
 				}
-			})?;
+				if let Some(wr) = model_attr.without_rowid {
+					without_rowid = Some(wr);
+				}
+			}
 		}
 
 		let table_name = table_name.ok_or_else(|| {
@@ -49,8 +112,217 @@ impl ModelConfig {
 		Ok(Self {
 			app_label: app_label.unwrap_or_else(|| "default".to_string()),
 			table_name,
+			constraints,
+			#[cfg(feature = "db-sqlite")]
+			strict,
+			#[cfg(feature = "db-sqlite")]
+			without_rowid,
 		})
 	}
+
+	/// Parse all model attributes using custom parser
+	fn parse_model_attributes(input: syn::parse::ParseStream) -> Result<ModelAttributesParsed> {
+		use syn::Token;
+
+		let mut app_label = None;
+		let mut table_name = None;
+		let mut constraints = None;
+		let mut unique_together = Vec::new();
+		#[cfg(feature = "db-sqlite")]
+		let mut strict = None;
+		#[cfg(feature = "db-sqlite")]
+		let mut without_rowid = None;
+
+		while !input.is_empty() {
+			let ident: Ident = input.parse()?;
+			input.parse::<Token![=]>()?;
+
+			if ident == "app_label" {
+				let value: LitStr = input.parse()?;
+				app_label = Some(value.value());
+			} else if ident == "table_name" {
+				let value: LitStr = input.parse()?;
+				table_name = Some(value.value());
+			} else if ident == "unique_together" {
+				// Tuple syntax: unique_together = ("field1", "field2")
+				use syn::punctuated::Punctuated;
+				let content;
+				parenthesized!(content in input);
+				let fields: Punctuated<LitStr, Token![,]> =
+					content.call(Punctuated::parse_terminated)?;
+				unique_together.push(fields.iter().map(|lit| lit.value()).collect());
+			} else if ident == "constraints" {
+				// Parse array: [unique(...), ...]
+				let array_content;
+				bracketed!(array_content in input);
+
+				let mut specs = Vec::new();
+				while !array_content.is_empty() {
+					specs.push(Self::parse_constraint(&array_content)?);
+
+					if array_content.peek(Token![,]) {
+						array_content.parse::<Token![,]>()?;
+					} else {
+						break;
+					}
+				}
+				constraints = Some(specs);
+			} else if ident == "strict" {
+				#[cfg(feature = "db-sqlite")]
+				{
+					let value: syn::LitBool = input.parse()?;
+					strict = Some(value.value);
+				}
+				#[cfg(not(feature = "db-sqlite"))]
+				{
+					// Just skip the value
+					let _value: syn::LitBool = input.parse()?;
+				}
+			} else if ident == "without_rowid" {
+				#[cfg(feature = "db-sqlite")]
+				{
+					let value: syn::LitBool = input.parse()?;
+					without_rowid = Some(value.value);
+				}
+				#[cfg(not(feature = "db-sqlite"))]
+				{
+					// Just skip the value
+					let _value: syn::LitBool = input.parse()?;
+				}
+			} else {
+				return Err(syn::Error::new_spanned(
+					&ident,
+					format!("Unknown model attribute: {}", ident),
+				));
+			}
+
+			// Parse optional comma
+			if input.peek(Token![,]) {
+				input.parse::<Token![,]>()?;
+			} else {
+				break;
+			}
+		}
+
+		Ok(ModelAttributesParsed {
+			app_label,
+			table_name,
+			constraints,
+			unique_together,
+			#[cfg(feature = "db-sqlite")]
+			strict,
+			#[cfg(feature = "db-sqlite")]
+			without_rowid,
+		})
+	}
+
+	/// Parse constraint specification: unique(fields = [...], name = "...", condition = "...")
+	fn parse_constraint(input: syn::parse::ParseStream) -> Result<ConstraintSpec> {
+		use syn::Token;
+		use syn::punctuated::Punctuated;
+
+		// Define custom keyword for "unique"
+		mod kw {
+			syn::custom_keyword!(unique);
+		}
+
+		// Parse constraint type using custom keyword
+		let _unique_keyword = input.parse::<kw::unique>()?;
+
+		// Parse parentheses with parameters
+		let content;
+		parenthesized!(content in input);
+
+		let mut fields = None;
+		let mut name = None;
+		let mut condition = None;
+
+		// Parse named parameters (fields = [...], name = "...", condition = "...")
+		loop {
+			if content.is_empty() {
+				break;
+			}
+
+			let param_name: Ident = content.parse()?;
+			content.parse::<Token![=]>()?;
+
+			if param_name == "fields" {
+				// Parse array using Punctuated for proper comma handling
+				let array_content;
+				bracketed!(array_content in content);
+
+				// Use Punctuated::parse_terminated for robust comma-separated parsing
+				let field_literals: Punctuated<LitStr, Token![,]> =
+					array_content.call(Punctuated::parse_terminated)?;
+
+				fields = Some(field_literals.iter().map(|lit| lit.value()).collect());
+			} else if param_name == "name" {
+				// Parse string: "constraint_name"
+				let value: LitStr = content.parse()?;
+				name = Some(value.value());
+			} else if param_name == "condition" {
+				// Parse string: "WHERE clause"
+				let value: LitStr = content.parse()?;
+				condition = Some(value.value());
+			} else {
+				return Err(syn::Error::new_spanned(
+					param_name,
+					"Unknown parameter. Supported: fields, name, condition",
+				));
+			}
+
+			// Parse optional comma between parameters
+			if content.peek(Token![,]) {
+				content.parse::<Token![,]>()?;
+			} else {
+				break;
+			}
+		}
+
+		// fields is required
+		let fields = fields.ok_or_else(|| {
+			syn::Error::new(
+				proc_macro2::Span::call_site(),
+				"unique constraint requires 'fields' parameter",
+			)
+		})?;
+
+		Ok(ConstraintSpec::Unique {
+			fields,
+			name,
+			condition,
+		})
+	}
+}
+
+/// Foreign key specification
+#[derive(Debug, Clone)]
+enum ForeignKeySpec {
+	/// Type directly: #[field(foreign_key = User)]
+	Type(syn::Type),
+	/// app_label.model_name format: #[field(foreign_key = "users.User")]
+	AppModel {
+		app_label: String,
+		model_name: String,
+	},
+}
+
+/// Storage strategy for PostgreSQL columns
+#[cfg(feature = "db-postgres")]
+#[derive(Debug, Clone)]
+enum StorageStrategy {
+	Plain,
+	Extended,
+	External,
+	Main,
+}
+
+/// Compression method for PostgreSQL columns
+#[cfg(feature = "db-postgres")]
+#[derive(Debug, Clone)]
+enum CompressionMethod {
+	Pglz,
+	Lz4,
 }
 
 /// Field configuration from #[field(...)] attribute
@@ -76,7 +348,56 @@ struct FieldConfig {
 	auto_now_add: Option<bool>,
 	auto_now: Option<bool>,
 	// Relationship fields
-	foreign_key: Option<syn::Path>,
+	foreign_key: Option<ForeignKeySpec>,
+
+	// Generated Columns (all DBMS)
+	generated: Option<String>,
+	generated_stored: Option<bool>,
+	#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
+	generated_virtual: Option<bool>,
+
+	// Identity/Auto-increment
+	#[cfg(feature = "db-postgres")]
+	identity_always: Option<bool>,
+	#[cfg(feature = "db-postgres")]
+	identity_by_default: Option<bool>,
+	#[cfg(feature = "db-mysql")]
+	auto_increment: Option<bool>,
+	#[cfg(feature = "db-sqlite")]
+	autoincrement: Option<bool>,
+
+	// Character Set & Collation
+	collate: Option<String>,
+	#[cfg(feature = "db-mysql")]
+	character_set: Option<String>,
+
+	// Comment
+	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+	comment: Option<String>,
+
+	// Phase 2.1: Storage Optimization (PostgreSQL)
+	#[cfg(feature = "db-postgres")]
+	storage: Option<StorageStrategy>,
+	#[cfg(feature = "db-postgres")]
+	compression: Option<CompressionMethod>,
+
+	// Phase 2.2: ON UPDATE Trigger (MySQL)
+	#[cfg(feature = "db-mysql")]
+	on_update_current_timestamp: Option<bool>,
+
+	// Phase 2.2: Invisible Columns (MySQL)
+	#[cfg(feature = "db-mysql")]
+	invisible: Option<bool>,
+
+	// Phase 2.3: Full-Text Index (PostgreSQL, MySQL)
+	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+	fulltext: Option<bool>,
+
+	// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+	#[cfg(feature = "db-mysql")]
+	unsigned: Option<bool>,
+	#[cfg(feature = "db-mysql")]
+	zerofill: Option<bool>,
 }
 
 impl FieldConfig {
@@ -165,10 +486,255 @@ impl FieldConfig {
 					config.auto_now = Some(value.value);
 					Ok(())
 				} else if meta.path.is_ident("foreign_key") {
+					// Try parsing as Type first (direct type specification)
+					if let Ok(ty) = meta.value()?.parse::<syn::Type>() {
+						config.foreign_key = Some(ForeignKeySpec::Type(ty));
+						return Ok(());
+					}
+
+					// Fall back to string specification
+					if let Ok(value) = meta.value()?.parse::<syn::LitStr>() {
+						let spec_str = value.value();
+
+						if spec_str.contains('.') {
+							// app_label.model_name format
+							let parts: Vec<&str> = spec_str.split('.').collect();
+							if parts.len() == 2 {
+								config.foreign_key = Some(ForeignKeySpec::AppModel {
+									app_label: parts[0].to_string(),
+									model_name: parts[1].to_string(),
+								});
+								return Ok(());
+							} else {
+								return Err(meta.error(
+									"foreign_key must be in 'app_label.model_name' format",
+								));
+							}
+						} else {
+							// Type name only (for backward compatibility)
+							if let Ok(ty) = syn::parse_str::<syn::Type>(&spec_str) {
+								config.foreign_key = Some(ForeignKeySpec::Type(ty));
+								return Ok(());
+							} else {
+								return Err(meta.error("Invalid foreign_key specification"));
+							}
+						}
+					}
+
+					Err(meta.error("foreign_key must be a type (User) or string (\"users.User\")"))
+				}
+				// Generated Columns
+				else if meta.path.is_ident("generated") {
 					let value: syn::LitStr = meta.value()?.parse()?;
-					let path: syn::Path = syn::parse_str(&value.value())?;
-					config.foreign_key = Some(path);
+					config.generated = Some(value.value());
 					Ok(())
+				} else if meta.path.is_ident("generated_stored") {
+					let value: syn::LitBool = meta.value()?.parse()?;
+					config.generated_stored = Some(value.value);
+					Ok(())
+				} else if meta.path.is_ident("generated_virtual") {
+					#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.generated_virtual = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(any(feature = "db-mysql", feature = "db-sqlite")))]
+					{
+						Err(meta.error(
+							"generated_virtual is only available with db-mysql or db-sqlite features",
+						))
+					}
+				}
+				// Identity/Auto-increment
+				else if meta.path.is_ident("identity_always") {
+					#[cfg(feature = "db-postgres")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.identity_always = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-postgres"))]
+					{
+						Err(meta
+							.error("identity_always is only available with db-postgres feature"))
+					}
+				} else if meta.path.is_ident("identity_by_default") {
+					#[cfg(feature = "db-postgres")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.identity_by_default = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-postgres"))]
+					{
+						Err(meta.error(
+							"identity_by_default is only available with db-postgres feature",
+						))
+					}
+				} else if meta.path.is_ident("auto_increment") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.auto_increment = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error("auto_increment is only available with db-mysql feature"))
+					}
+				} else if meta.path.is_ident("autoincrement") {
+					#[cfg(feature = "db-sqlite")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.autoincrement = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-sqlite"))]
+					{
+						Err(meta.error("autoincrement is only available with db-sqlite feature"))
+					}
+				}
+				// Character Set & Collation
+				else if meta.path.is_ident("collate") {
+					let value: syn::LitStr = meta.value()?.parse()?;
+					config.collate = Some(value.value());
+					Ok(())
+				} else if meta.path.is_ident("character_set") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitStr = meta.value()?.parse()?;
+						config.character_set = Some(value.value());
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error("character_set is only available with db-mysql feature"))
+					}
+				}
+				// Comment
+				else if meta.path.is_ident("comment") {
+					#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+					{
+						let value: syn::LitStr = meta.value()?.parse()?;
+						config.comment = Some(value.value());
+						Ok(())
+					}
+					#[cfg(not(any(feature = "db-postgres", feature = "db-mysql")))]
+					{
+						Err(meta.error(
+							"comment is only available with db-postgres or db-mysql features",
+						))
+					}
+				}
+				// Phase 2.1: Storage Optimization
+				else if meta.path.is_ident("storage") {
+					#[cfg(feature = "db-postgres")]
+					{
+						let value: syn::LitStr = meta.value()?.parse()?;
+						let storage_str = value.value();
+						let storage = match storage_str.to_lowercase().as_str() {
+							"plain" => StorageStrategy::Plain,
+							"extended" => StorageStrategy::Extended,
+							"external" => StorageStrategy::External,
+							"main" => StorageStrategy::Main,
+							_ => {
+								return Err(meta.error(
+									"storage must be one of: plain, extended, external, main",
+								));
+							}
+						};
+						config.storage = Some(storage);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-postgres"))]
+					{
+						Err(meta.error("storage is only available with db-postgres feature"))
+					}
+				} else if meta.path.is_ident("compression") {
+					#[cfg(feature = "db-postgres")]
+					{
+						let value: syn::LitStr = meta.value()?.parse()?;
+						let compression_str = value.value();
+						let compression = match compression_str.to_lowercase().as_str() {
+							"pglz" => CompressionMethod::Pglz,
+							"lz4" => CompressionMethod::Lz4,
+							_ => return Err(meta.error("compression must be one of: pglz, lz4")),
+						};
+						config.compression = Some(compression);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-postgres"))]
+					{
+						Err(meta.error("compression is only available with db-postgres feature"))
+					}
+				}
+				// Phase 2.2: ON UPDATE Trigger
+				else if meta.path.is_ident("on_update_current_timestamp") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.on_update_current_timestamp = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error(
+							"on_update_current_timestamp is only available with db-mysql feature",
+						))
+					}
+				}
+				// Phase 2.2: Invisible Columns
+				else if meta.path.is_ident("invisible") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.invisible = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error("invisible is only available with db-mysql feature"))
+					}
+				}
+				// Phase 2.3: Full-Text Index
+				else if meta.path.is_ident("fulltext") {
+					#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.fulltext = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(any(feature = "db-postgres", feature = "db-mysql")))]
+					{
+						Err(meta.error(
+							"fulltext is only available with db-postgres or db-mysql features",
+						))
+					}
+				}
+				// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+				else if meta.path.is_ident("unsigned") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.unsigned = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error("unsigned is only available with db-mysql feature"))
+					}
+				} else if meta.path.is_ident("zerofill") {
+					#[cfg(feature = "db-mysql")]
+					{
+						let value: syn::LitBool = meta.value()?.parse()?;
+						config.zerofill = Some(value.value);
+						Ok(())
+					}
+					#[cfg(not(feature = "db-mysql"))]
+					{
+						Err(meta.error("zerofill is only available with db-mysql feature"))
+					}
 				} else {
 					Err(meta.error("unsupported field attribute"))
 				}
@@ -176,6 +742,78 @@ impl FieldConfig {
 		}
 
 		Ok(config)
+	}
+
+	/// Validate field configuration for mutual exclusivity and logical consistency
+	fn validate(&self) -> Result<()> {
+		// Check mutual exclusivity of auto-increment attributes
+		#[allow(unused_mut)]
+		let mut auto_increment_count = 0;
+
+		#[cfg(feature = "db-postgres")]
+		{
+			if self.identity_always.is_some() {
+				auto_increment_count += 1;
+			}
+			if self.identity_by_default.is_some() {
+				auto_increment_count += 1;
+			}
+		}
+
+		#[cfg(feature = "db-mysql")]
+		{
+			if self.auto_increment.is_some() {
+				auto_increment_count += 1;
+			}
+		}
+
+		#[cfg(feature = "db-sqlite")]
+		{
+			if self.autoincrement.is_some() {
+				auto_increment_count += 1;
+			}
+		}
+
+		if auto_increment_count > 1 {
+			return Err(syn::Error::new(
+				proc_macro2::Span::call_site(),
+				"Only one auto-increment attribute (identity_always, identity_by_default, auto_increment, autoincrement) can be specified per field",
+			));
+		}
+
+		// Generated columns cannot have default values
+		if self.generated.is_some() && self.default.is_some() {
+			return Err(syn::Error::new(
+				proc_macro2::Span::call_site(),
+				"Generated columns cannot have default values",
+			));
+		}
+
+		// Generated columns should have either generated_stored or generated_virtual
+		if self.generated.is_some() {
+			let has_stored = self.generated_stored.unwrap_or(false);
+
+			#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
+			let has_virtual = self.generated_virtual.unwrap_or(false);
+			#[cfg(not(any(feature = "db-mysql", feature = "db-sqlite")))]
+			let has_virtual = false;
+
+			if !has_stored && !has_virtual {
+				return Err(syn::Error::new(
+					proc_macro2::Span::call_site(),
+					"Generated columns must specify either generated_stored=true or generated_virtual=true",
+				));
+			}
+
+			if has_stored && has_virtual {
+				return Err(syn::Error::new(
+					proc_macro2::Span::call_site(),
+					"Generated columns cannot be both STORED and VIRTUAL",
+				));
+			}
+		}
+
+		Ok(())
 	}
 }
 
@@ -185,6 +823,9 @@ struct FieldInfo {
 	name: syn::Ident,
 	ty: Type,
 	config: FieldConfig,
+	/// Optional relationship attribute from `#[rel(...)]`
+	#[allow(dead_code)]
+	rel: Option<RelAttribute>,
 }
 
 /// Rustの型からフィールドメタデータ文字列を生成
@@ -369,6 +1010,7 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 
 	// Process all fields
 	let mut field_infos = Vec::new();
+	let mut rel_fields = Vec::new();
 	for field in fields {
 		let name = field
 			.ident
@@ -376,8 +1018,27 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 			.ok_or_else(|| syn::Error::new_spanned(field, "Field must have a name"))?;
 		let ty = field.ty.clone();
 		let config = FieldConfig::from_attrs(&field.attrs)?;
+		config.validate()?;
 
-		field_infos.push(FieldInfo { name, ty, config });
+		// Parse #[rel(...)] attribute if present
+		let rel = field
+			.attrs
+			.iter()
+			.find(|attr| attr.path().is_ident("rel"))
+			.map(RelAttribute::from_attribute)
+			.transpose()?;
+
+		// Collect relationship fields for later processing
+		if let Some(ref rel_attr) = rel {
+			rel_fields.push((name.clone(), rel_attr.clone()));
+		}
+
+		field_infos.push(FieldInfo {
+			name,
+			ty,
+			config,
+			rel,
+		});
 	}
 
 	// Find all primary key fields
@@ -414,14 +1075,52 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		})
 		.collect();
 
-	// Extract constraint names and expressions for code generation
-	let constraint_names: Vec<String> = check_constraints
+	// Extract check constraint names and expressions for code generation
+	let check_constraint_names: Vec<String> = check_constraints
 		.iter()
 		.map(|(field_name, _)| format!("{}_check", field_name))
 		.collect();
-	let constraint_expressions: Vec<String> = check_constraints
+	let check_constraint_expressions: Vec<String> = check_constraints
 		.iter()
 		.map(|(_, expr)| expr.clone())
+		.collect();
+
+	// Process unique constraints from model config
+	let unique_constraints: Vec<(Vec<String>, Option<String>, Option<String>)> = model_config
+		.constraints
+		.iter()
+		.map(|c| match c {
+			ConstraintSpec::Unique {
+				fields,
+				name,
+				condition,
+			} => (fields.clone(), name.clone(), condition.clone()),
+		})
+		.collect();
+
+	// Generate unique constraint names and definitions for code generation
+	let unique_constraint_names: Vec<String> = unique_constraints
+		.iter()
+		.map(|(fields, name, _)| {
+			if let Some(n) = name {
+				n.clone()
+			} else {
+				// Auto-generate name: {table_name}_{field1}_{field2}_uniq
+				format!("{}_{}_uniq", table_name, fields.join("_"))
+			}
+		})
+		.collect();
+
+	let unique_constraint_definitions: Vec<String> = unique_constraints
+		.iter()
+		.map(|(fields, _, condition)| {
+			let fields_str = fields.join(", ");
+			if let Some(cond) = condition {
+				format!("UNIQUE ({}) WHERE {}", fields_str, cond)
+			} else {
+				format!("UNIQUE ({})", fields_str)
+			}
+		})
 		.collect();
 
 	// Define composite_pk_type_def and holder for code generation
@@ -579,6 +1278,9 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	// Generate field accessor methods
 	let field_accessors = generate_field_accessors(struct_name, &field_infos);
 
+	// Generate relationship metadata
+	let relationship_metadata = generate_relationship_metadata(&rel_fields, app_label, struct_name);
+
 	// Generate the Model implementation
 	let expanded = quote! {
 		// Generate composite PK type definition if needed
@@ -628,16 +1330,27 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 			}
 
 			fn constraint_metadata() -> Vec<::reinhardt::db::orm::inspection::ConstraintInfo> {
-				vec![
-					#(
-						::reinhardt::db::orm::inspection::ConstraintInfo {
-							name: #constraint_names.to_string(),
-							constraint_type: ::reinhardt::db::orm::inspection::ConstraintType::Check,
-							definition: #constraint_expressions.to_string(),
-						}
-					),*
-				]
+				let mut constraints = Vec::new();
+				// Check constraints
+				#(
+					constraints.push(::reinhardt::db::orm::inspection::ConstraintInfo {
+						name: #check_constraint_names.to_string(),
+						constraint_type: ::reinhardt::db::orm::inspection::ConstraintType::Check,
+						definition: #check_constraint_expressions.to_string(),
+					});
+				)*
+				// Unique constraints
+				#(
+					constraints.push(::reinhardt::db::orm::inspection::ConstraintInfo {
+						name: #unique_constraint_names.to_string(),
+						constraint_type: ::reinhardt::db::orm::inspection::ConstraintType::Unique,
+						definition: #unique_constraint_definitions.to_string(),
+					});
+				)*
+				constraints
 			}
+
+			#relationship_metadata
 		}
 
 		#registration_code
@@ -720,6 +1433,184 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 			});
 		}
 
+		// Generated Columns
+		if let Some(ref generated_expr) = config.generated {
+			attrs.push(quote! {
+				attributes.insert(
+					"generated".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#generated_expr.to_string())
+				);
+			});
+		}
+		if let Some(generated_stored) = config.generated_stored {
+			attrs.push(quote! {
+				attributes.insert(
+					"generated_stored".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_stored)
+				);
+			});
+		}
+		#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
+		if let Some(generated_virtual) = config.generated_virtual {
+			attrs.push(quote! {
+				attributes.insert(
+					"generated_virtual".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_virtual)
+				);
+			});
+		}
+
+		// Identity/Auto-increment
+		#[cfg(feature = "db-postgres")]
+		if let Some(identity_always) = config.identity_always {
+			attrs.push(quote! {
+				attributes.insert(
+					"identity_always".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_always)
+				);
+			});
+		}
+		#[cfg(feature = "db-postgres")]
+		if let Some(identity_by_default) = config.identity_by_default {
+			attrs.push(quote! {
+				attributes.insert(
+					"identity_by_default".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_by_default)
+				);
+			});
+		}
+		#[cfg(feature = "db-mysql")]
+		if let Some(auto_increment) = config.auto_increment {
+			attrs.push(quote! {
+				attributes.insert(
+					"auto_increment".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#auto_increment)
+				);
+			});
+		}
+		#[cfg(feature = "db-sqlite")]
+		if let Some(autoincrement) = config.autoincrement {
+			attrs.push(quote! {
+				attributes.insert(
+					"autoincrement".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#autoincrement)
+				);
+			});
+		}
+
+		// Character Set & Collation
+		if let Some(ref collate) = config.collate {
+			attrs.push(quote! {
+				attributes.insert(
+					"collate".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#collate.to_string())
+				);
+			});
+		}
+		#[cfg(feature = "db-mysql")]
+		if let Some(ref character_set) = config.character_set {
+			attrs.push(quote! {
+				attributes.insert(
+					"character_set".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#character_set.to_string())
+				);
+			});
+		}
+
+		// Comment
+		#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+		if let Some(ref comment) = config.comment {
+			attrs.push(quote! {
+				attributes.insert(
+					"comment".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#comment.to_string())
+				);
+			});
+		}
+
+		// Phase 2.1: Storage Optimization (PostgreSQL)
+		#[cfg(feature = "db-postgres")]
+		if let Some(ref storage) = config.storage {
+			let storage_str = match storage {
+				StorageStrategy::Plain => "plain",
+				StorageStrategy::Extended => "extended",
+				StorageStrategy::External => "external",
+				StorageStrategy::Main => "main",
+			};
+			attrs.push(quote! {
+				attributes.insert(
+					"storage".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#storage_str.to_string())
+				);
+			});
+		}
+		#[cfg(feature = "db-postgres")]
+		if let Some(ref compression) = config.compression {
+			let compression_str = match compression {
+				CompressionMethod::Pglz => "pglz",
+				CompressionMethod::Lz4 => "lz4",
+			};
+			attrs.push(quote! {
+				attributes.insert(
+					"compression".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::String(#compression_str.to_string())
+				);
+			});
+		}
+
+		// Phase 2.2: ON UPDATE Trigger (MySQL)
+		#[cfg(feature = "db-mysql")]
+		if let Some(on_update_current_timestamp) = config.on_update_current_timestamp {
+			attrs.push(quote! {
+				attributes.insert(
+					"on_update_current_timestamp".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#on_update_current_timestamp)
+				);
+			});
+		}
+
+		// Phase 2.3: Invisible Columns (MySQL)
+		#[cfg(feature = "db-mysql")]
+		if let Some(invisible) = config.invisible {
+			attrs.push(quote! {
+				attributes.insert(
+					"invisible".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#invisible)
+				);
+			});
+		}
+
+		// Phase 2.4: Full-Text Index (PostgreSQL, MySQL)
+		#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
+		if let Some(fulltext) = config.fulltext {
+			attrs.push(quote! {
+				attributes.insert(
+					"fulltext".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#fulltext)
+				);
+			});
+		}
+
+		// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+		#[cfg(feature = "db-mysql")]
+		if let Some(unsigned) = config.unsigned {
+			attrs.push(quote! {
+				attributes.insert(
+					"unsigned".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#unsigned)
+				);
+			});
+		}
+		#[cfg(feature = "db-mysql")]
+		if let Some(zerofill) = config.zerofill {
+			attrs.push(quote! {
+				attributes.insert(
+					"zerofill".to_string(),
+					::reinhardt::db::orm::fields::FieldKwarg::Bool(#zerofill)
+				);
+			});
+		}
+
 		let db_column_value = match &config.db_column {
 			Some(col) => quote! { Some(#col.to_string()) },
 			None => quote! { None },
@@ -794,20 +1685,66 @@ fn generate_registration_code(
 			params.push(quote! { .with_param("unique", "true") });
 		}
 
+		// Generate ForeignKey information if present
+		let fk_registration = if let Some(fk_spec) = &config.foreign_key {
+			match fk_spec {
+				ForeignKeySpec::Type(ty) => {
+					// For direct type reference, extract type name and convert to snake_case
+					let type_name_str = quote! { #ty }.to_string();
+					quote! {
+						.with_foreign_key({
+							// Extract last segment of type path and convert to snake_case
+							let type_name = #type_name_str;
+							let last_segment = type_name.split("::").last().unwrap_or(&type_name);
+							let referenced_table = ::reinhardt::db::migrations::to_snake_case(last_segment);
+
+							::reinhardt::db::migrations::ForeignKeyInfo {
+								referenced_table,
+								referenced_column: "id".to_string(),
+								on_delete: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+								on_update: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+							}
+						})
+					}
+				}
+				ForeignKeySpec::AppModel {
+					app_label,
+					model_name,
+				} => {
+					let table_name_str = format!("{}_{}", app_label, model_name.to_lowercase());
+					quote! {
+						.with_foreign_key(::reinhardt::db::migrations::ForeignKeyInfo {
+							referenced_table: #table_name_str.to_string(),
+							referenced_column: "id".to_string(),
+							on_delete: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+							on_update: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+						})
+					}
+				}
+			}
+		} else {
+			quote! {}
+		};
+
 		field_registrations.push(quote! {
 			metadata.add_field(
 				#field_name.to_string(),
 				::reinhardt::db::migrations::model_registry::FieldMetadata::new(#field_type)
 					#(#params)*
+					#fk_registration
 			);
 		});
 	}
+
+	// Generate type path for global model registry
+	let type_path = quote! { #struct_name }.to_string();
 
 	let code = quote! {
 		#[::ctor::ctor]
 		fn #register_fn_name() {
 			use ::reinhardt::db::migrations::model_registry::ModelMetadata;
 
+			// Register in migration registry
 			let mut metadata = ModelMetadata::new(
 				#app_label,
 				#model_name,
@@ -817,6 +1754,16 @@ fn generate_registration_code(
 			#(#field_registrations)*
 
 			::reinhardt::db::migrations::model_registry::global_registry().register_model(metadata);
+
+			// Register in global model registry for foreign_key resolution
+			::reinhardt::db::orm::registry::global_model_registry().register(
+				::reinhardt::db::orm::registry::ModelInfo {
+					app_label: #app_label.to_string(),
+					model_name: #model_name.to_string(),
+					type_path: #type_path.to_string(),
+					table_name: #table_name.to_string(),
+				}
+			);
 		}
 	};
 
@@ -945,6 +1892,97 @@ fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]
 				)*
 				write!(f, ")")
 			}
+		}
+	}
+}
+
+/// Generate relationship metadata code for `#[rel]` attributes
+///
+/// Generates two methods:
+/// - `relationship_metadata()` for Model trait (returns `Vec<RelationInfo>`)
+/// - `__migration_relationships()` for migration system (returns `Vec<RelationshipMetadata>`)
+fn generate_relationship_metadata(
+	rel_fields: &[(Ident, RelAttribute)],
+	_app_label: &str,
+	_struct_name: &Ident,
+) -> TokenStream {
+	use crate::rel::RelationType;
+
+	if rel_fields.is_empty() {
+		return quote! {
+			fn relationship_metadata() -> Vec<::reinhardt::db::orm::inspection::RelationInfo> {
+				Vec::new()
+			}
+		};
+	}
+
+	let relation_info_items: Vec<TokenStream> = rel_fields
+		.iter()
+		.map(|(field_name, rel)| {
+			let field_name_str = field_name.to_string();
+
+			// Map RelationType to RelationshipType
+			let relationship_type = match rel.rel_type {
+				RelationType::ForeignKey => {
+					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
+				}
+				RelationType::OneToOne => {
+					quote! { ::reinhardt::db::orm::relationship::RelationshipType::OneToOne }
+				}
+				RelationType::OneToMany => {
+					quote! { ::reinhardt::db::orm::relationship::RelationshipType::OneToMany }
+				}
+				RelationType::ManyToMany | RelationType::PolymorphicManyToMany => {
+					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToMany }
+				}
+				RelationType::Polymorphic => {
+					// Polymorphic is treated as ManyToOne for now
+					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
+				}
+			};
+
+			let related_model = rel.to.as_ref().map_or_else(
+				|| quote! { "" },
+				|path| {
+					let path_str = quote! { #path }.to_string();
+					quote! { #path_str }
+				},
+			);
+
+			let back_populates = rel.related_name.as_ref().map_or_else(
+				|| quote! { None },
+				|name| quote! { Some(#name.to_string()) },
+			);
+
+			// For ForeignKey, the foreign key field is the field itself
+			let foreign_key = match rel.rel_type {
+				RelationType::ForeignKey | RelationType::OneToOne => {
+					quote! { Some(#field_name_str.to_string()) }
+				}
+				RelationType::OneToMany => rel
+					.foreign_key
+					.as_ref()
+					.map_or_else(|| quote! { None }, |fk| quote! { Some(#fk.to_string()) }),
+				_ => quote! { None },
+			};
+
+			quote! {
+				::reinhardt::db::orm::inspection::RelationInfo {
+					name: #field_name_str.to_string(),
+					relationship_type: #relationship_type,
+					foreign_key: #foreign_key,
+					related_model: #related_model.to_string(),
+					back_populates: #back_populates,
+				}
+			}
+		})
+		.collect();
+
+	quote! {
+		fn relationship_metadata() -> Vec<::reinhardt::db::orm::inspection::RelationInfo> {
+			vec![
+				#(#relation_info_items),*
+			]
 		}
 	}
 }
