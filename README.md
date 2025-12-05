@@ -382,7 +382,7 @@ Reinhardt provides a ready-to-use `DefaultUser` implementation (requires `argon2
 ```rust
 // users/models.rs
 use reinhardt::prelude::*;
-use reinhardt_auth::DefaultUser;
+use reinhardt::DefaultUser;
 
 // Re-export DefaultUser as User for your app
 pub type User = DefaultUser;
@@ -417,7 +417,6 @@ use reinhardt::prelude::*;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
 
-#[derive(Model, Serialize, Deserialize, Clone)]
 #[model(app_label = "users", table_name = "users")]
 pub struct CustomUser {
 	#[field(primary_key = true)]
@@ -458,6 +457,8 @@ The `#[derive(Model)]` macro automatically generates:
 - `#[field(null = true)]` - Allow NULL values
 - `#[field(unique = true)]` - Enforce uniqueness constraint
 
+For a complete list of field attributes, see the [Field Attributes Guide](docs/field_attributes.md).
+
 The generated field accessors enable type-safe field references in queries:
 
 ```rust
@@ -477,7 +478,7 @@ impl DefaultUser {
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_auth::DefaultUser;
+use reinhardt::DefaultUser;
 
 // Django-style F/Q object queries with type-safe field references
 async fn complex_user_query() -> Result<Vec<DefaultUser>, Box<dyn std::error::Error>> {
@@ -538,7 +539,6 @@ installed_apps! {
 	auth: "reinhardt.contrib.auth",
 	contenttypes: "reinhardt.contrib.contenttypes",
 	sessions: "reinhardt.contrib.sessions",
-	drf: "reinhardt.drf",
 	users: "users",
 }
 
@@ -600,7 +600,7 @@ Use the built-in `DefaultUser` in `users/models.rs`:
 
 ```rust
 // users/models.rs
-use reinhardt_auth::DefaultUser;
+use reinhardt::DefaultUser;
 
 // Re-export DefaultUser as your User type
 pub type User = DefaultUser;
@@ -623,7 +623,6 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 
-#[derive(Model, Serialize, Deserialize, Clone)]
 #[model(app_label = "users", table_name = "users")]
 pub struct CustomUser {
 	#[field(primary_key = true)]
@@ -690,13 +689,11 @@ Use JWT authentication in your app's `views/profile.rs`:
 ```rust
 // users/views/profile.rs
 use reinhardt_auth::{JwtAuth, BaseUser};
-use reinhardt::{Request, Response, StatusCode};
+use reinhardt::{Request, Response, StatusCode, ViewResult};
 use reinhardt::endpoint;
-use reinhardt_db::DatabaseConnection;
+use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
-
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_profile(
@@ -738,21 +735,17 @@ Reinhardt provides a FastAPI-inspired `#[endpoint]` macro for clean, declarative
 
 First, define your view result type:
 
-```rust
-// Common pattern: use a boxed error for flexibility
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+Reinhardt provides `ViewResult<T>` as a pre-defined result type. Import it from `reinhardt::ViewResult`:
 
-// Or use a specific error type
-pub type ViewResult<T> = Result<T, MyAppError>;
+```rust
+use reinhardt::ViewResult;  // Pre-defined result type
 ```
 
 **Basic Endpoint:**
 
 ```rust
-use reinhardt::{Request, Response, StatusCode};
+use reinhardt::{Request, Response, StatusCode, ViewResult};
 use reinhardt::endpoint;
-
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn hello(req: Request) -> ViewResult<Response> {
@@ -768,11 +761,10 @@ pub async fn hello(req: Request) -> ViewResult<Response> {
 The `#[inject]` attribute automatically injects dependencies from the application context:
 
 ```rust
-use reinhardt::{Request, Response, StatusCode};
+use reinhardt::{Request, Response, StatusCode, ViewResult};
 use reinhardt::endpoint;
+use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
-
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_user_from_db(
@@ -822,12 +814,11 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt::{Request, Response, StatusCode};
+use reinhardt::{Request, Response, StatusCode, ViewResult};
 use reinhardt::endpoint;
+use reinhardt::db::DatabaseConnection;
 use crate::models::User;
 use std::sync::Arc;
-
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn get_user(
@@ -919,14 +910,13 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt::{Request, Response, StatusCode};
+use reinhardt::{Request, Response, StatusCode, ViewResult};
 use reinhardt::endpoint;
+use reinhardt::db::DatabaseConnection;
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserResponse};
 use validator::Validate;
 use std::sync::Arc;
-
-pub type ViewResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[endpoint]
 pub async fn create_user(

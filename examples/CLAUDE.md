@@ -201,6 +201,11 @@ use reinhardt::endpoint;
 // Pattern 3: Module-qualified imports
 use reinhardt::db::orm::Manager;
 use reinhardt::db::DatabaseConnection;
+
+// Pattern 4: External dependencies via reinhardt re-exports
+use reinhardt::core::serde::{Serialize, Deserialize};
+use reinhardt::core::serde::json::json;
+use reinhardt::core::async_trait;
 ```
 
 #### ❌ INCORRECT Import Patterns
@@ -216,6 +221,11 @@ use reinhardt_test::fixtures::postgres_container;
 
 // ❌ NEVER import from hyper directly (use reinhardt re-exports)
 use hyper::{Method, StatusCode};
+
+// ❌ NEVER import external dependencies directly when re-exports exist
+use serde::{Serialize, Deserialize};  // Use reinhardt::core::serde instead
+use serde_json::json;                 // Use reinhardt::core::serde::json::json instead
+use async_trait::async_trait;         // Use reinhardt::core::async_trait instead
 ```
 
 ---

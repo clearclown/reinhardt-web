@@ -99,12 +99,11 @@ impl DependencyGraph {
 		let _type_name = type_names.get(&root)?.to_string();
 		let mut visited = HashSet::new();
 
-		self.build_tree_recursive(root, &all_deps, &type_names, &mut visited)
+		Self::build_tree_recursive(root, &all_deps, &type_names, &mut visited)
 	}
 
 	/// Recursive helper for building dependency tree
 	fn build_tree_recursive(
-		&self,
 		current: TypeId,
 		graph: &HashMap<TypeId, Vec<TypeId>>,
 		type_names: &HashMap<TypeId, &'static str>,
@@ -133,7 +132,7 @@ impl DependencyGraph {
 
 		let child_nodes: Vec<DependencyNode> = deps
 			.iter()
-			.filter_map(|&dep_id| self.build_tree_recursive(dep_id, graph, type_names, visited))
+			.filter_map(|&dep_id| Self::build_tree_recursive(dep_id, graph, type_names, visited))
 			.collect();
 
 		visited.remove(&current);

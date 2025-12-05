@@ -29,6 +29,7 @@ args = [
   "--all-targets",
   "--profile",
   "test",
+  "--tests"
 ]
 
 [tasks.build]

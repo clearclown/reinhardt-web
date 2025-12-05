@@ -97,3 +97,4 @@ docs/Gemfile.lock
 !.env.sample
 .ignore/
 .claude/
+:memory:

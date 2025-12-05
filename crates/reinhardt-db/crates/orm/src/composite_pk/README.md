@@ -42,8 +42,7 @@ let pk = CompositePrimaryKey::with_name(
 ```rust
 use reinhardt_orm::{Model, composite_pk::CompositePrimaryKey};
 
-#[derive(Model)]
-#[reinhardt(
+#[model(
     table_name = "user_roles",
     composite_pk = ["user_id", "role_id"]
 )]
@@ -158,8 +157,7 @@ assert_eq!(value.to_sql_string(), "'O''Brien'");  // Single quotes escaped
 ### 1. Many-to-Many Join Tables
 
 ```rust
-#[derive(Model)]
-#[reinhardt(
+#[model(
     table_name = "user_groups",
     composite_pk = ["user_id", "group_id"]
 )]
@@ -173,8 +171,7 @@ pub struct UserGroup {
 ### 2. Multi-Tenant Systems
 
 ```rust
-#[derive(Model)]
-#[reinhardt(
+#[model(
     table_name = "tenant_resources",
     composite_pk = ["tenant_id", "resource_id"]
 )]
@@ -188,8 +185,8 @@ pub struct TenantResource {
 ### 3. Time-Series Data
 
 ```rust
-#[derive(Model)]
-#[reinhardt(
+
+#[model(
     table_name = "metrics",
     composite_pk = ["device_id", "timestamp"]
 )]
@@ -203,8 +200,8 @@ pub struct Metric {
 ### 4. Geographical Data
 
 ```rust
-#[derive(Model)]
-#[reinhardt(
+
+#[model(
     table_name = "locations",
     composite_pk = ["country_code", "city_code", "postal_code"]
 )]

@@ -163,7 +163,6 @@ When using the `#[derive(Model)]` macro with multiple `primary_key = true` field
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "myapp", table_name = "post_tags")]
 struct PostTag {
     #[field(primary_key = true)]

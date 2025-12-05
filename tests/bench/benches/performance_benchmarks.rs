@@ -225,7 +225,7 @@ fn benchmark_test_response_operations(c: &mut Criterion) {
 	});
 }
 
-// Note: SettingsManager and fixture-related benchmarks are disabled
+// TODO: SettingsManager and fixture-related benchmarks are disabled
 // because these APIs have been refactored or are not available in the current version.
 
 /// Benchmark proxy operations
@@ -313,10 +313,10 @@ fn benchmark_orm_relationship_operations(c: &mut Criterion) {
 	});
 }
 
-// Note: Template operation benchmarks are disabled
+// TODO: Template operation benchmarks are disabled
 // because TemplateLoader API has been refactored.
 
-// Note: JWT and Permission benchmarks are disabled
+// TODO: JWT and Permission benchmarks are disabled
 // because these APIs require Request context and have been refactored.
 
 /// Benchmark serialization operations
@@ -349,7 +349,7 @@ fn benchmark_serialization_operations(c: &mut Criterion) {
 	});
 }
 
-// Note: Concurrent operation benchmarks are disabled
+// TODO: Concurrent operation benchmarks are disabled
 // because they require significant API refactoring to work with current implementation.
 
 /// Benchmark memory usage

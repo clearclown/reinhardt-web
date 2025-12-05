@@ -130,6 +130,8 @@ reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }
 
 **Note**: The `full` feature now recursively enables all `-full` features in sub-crates, ensuring comprehensive activation of all functionality.
 
+**Feature Inheritance Note**: Bundle features use inheritance (`full` includes `standard`, which includes `minimal`). This means features like `database` and `auth` may appear in multiple bundles' definitions in `Cargo.toml`. This is intentional and ensures each bundle works independently without requiring lower-level bundles. Cargo handles duplicate feature activations efficiently.
+
 ---
 
 ### Recursive `-full` Feature Structure

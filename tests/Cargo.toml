@@ -29,6 +29,7 @@ reinhardt-db = { workspace = true, features = [
     "migrations",
     "contenttypes",
 ] }
+reinhardt-migrations = { path = "../crates/reinhardt-db/crates/migrations" }
 reinhardt-conf = { workspace = true, features = ["settings"] }
 reinhardt-settings = { path = "../crates/reinhardt-conf/crates/settings", features = [
 	"async",

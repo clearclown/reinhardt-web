@@ -259,7 +259,7 @@ fn bench_user_profile_tera_vs_runtime() {
 		})
 		.collect();
 
-	// Note: Runtime renderer doesn't support {% if %} blocks,
+	// TODO: Runtime renderer doesn't support {% if %} blocks,
 	// so this is a simplified comparison without conditional logic
 	let template_str = r#"
 <div class="profile">

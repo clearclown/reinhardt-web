@@ -123,7 +123,6 @@ The `#[derive(Model)]` macro automatically generates type-safe field accessor me
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "users", table_name = "users")]
 struct User {
     #[field(primary_key = true)]
@@ -434,7 +433,6 @@ Example:
 use reinhardt_macros::Model;
 use serde::{Deserialize, Serialize};
 
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "test_app", table_name = "post_tags")]
 struct PostTag {
     #[field(primary_key = true)]
@@ -464,7 +462,6 @@ let pk_values = post_tag.get_composite_pk_values();
 Example:
 
 ```rust
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "test_app", table_name = "users")]
 struct User {
     #[field(primary_key = true)]
@@ -491,7 +488,6 @@ assert_eq!(indexes.len(), 2);
 Example:
 
 ```rust
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "test_app", table_name = "products")]
 struct Product {
     #[field(primary_key = true)]
@@ -528,7 +524,6 @@ Validators are stored in field metadata attributes and can be accessed at runtim
 Example:
 
 ```rust
-#[derive(Model, Serialize, Deserialize, Clone, Debug)]
 #[model(app_label = "test_app", table_name = "users")]
 struct User {
     #[field(primary_key = true)]
