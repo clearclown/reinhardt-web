@@ -101,11 +101,22 @@ impl ModelMetadata {
 			for (key, value) in &field_meta.params {
 				field_state.params.insert(key.clone(), value.clone());
 			}
+			// Set ForeignKey information if present
+			if let Some(ref fk_info) = field_meta.foreign_key {
+				field_state.foreign_key = Some(fk_info.clone());
+			}
 			model_state.add_field(field_state);
 		}
 
 		// Copy options
 		model_state.options = self.options.clone();
+
+		// Generate ForeignKey constraints from fields
+		for (field_name, field_meta) in &self.fields {
+			if field_meta.foreign_key.is_some() {
+				model_state.add_foreign_key_constraint_from_field(field_name);
+			}
+		}
 
 		model_state
 	}
@@ -118,6 +129,8 @@ pub struct FieldMetadata {
 	pub field_type: crate::FieldType,
 	/// Field parameters (max_length, null, blank, default, etc.)
 	pub params: HashMap<String, String>,
+	/// ForeignKey information if this field is a foreign key
+	pub foreign_key: Option<crate::autodetector::ForeignKeyInfo>,
 }
 
 impl FieldMetadata {
@@ -125,12 +138,98 @@ impl FieldMetadata {
 		Self {
 			field_type,
 			params: HashMap::new(),
+			foreign_key: None,
 		}
 	}
 
 	pub fn with_param(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
 		self.params.insert(key.into(), value.into());
 		self
+	}
+
+	pub fn with_foreign_key(mut self, foreign_key: crate::autodetector::ForeignKeyInfo) -> Self {
+		self.foreign_key = Some(foreign_key);
+		self
+	}
+}
+
+/// Relationship metadata for `#[rel]` attributes
+///
+/// This structure holds metadata about relationships defined on model fields
+/// using the `#[rel(...)]` attribute.
+#[derive(Debug, Clone)]
+pub struct RelationshipMetadata {
+	/// Field name
+	pub field_name: String,
+	/// Relationship type (foreign_key, one_to_one, many_to_many, etc.)
+	pub rel_type: String,
+	/// Target model (e.g., "User", "auth.User")
+	pub to_model: Option<String>,
+	/// Related name for reverse accessor
+	pub related_name: Option<String>,
+	/// Through table name (for ManyToMany)
+	pub through_table: Option<String>,
+	/// Composite struct name (for additional through table fields)
+	pub composite: Option<String>,
+	/// Source model app label (for generating Through table foreign keys)
+	pub source_app_label: Option<String>,
+	/// Source model name (for generating Through table foreign keys)
+	pub source_model_name: Option<String>,
+}
+
+impl RelationshipMetadata {
+	/// Create a new RelationshipMetadata
+	pub fn new(field_name: impl Into<String>, rel_type: impl Into<String>) -> Self {
+		Self {
+			field_name: field_name.into(),
+			rel_type: rel_type.into(),
+			to_model: None,
+			related_name: None,
+			through_table: None,
+			composite: None,
+			source_app_label: None,
+			source_model_name: None,
+		}
+	}
+
+	/// Set target model
+	pub fn with_to_model(mut self, to_model: impl Into<String>) -> Self {
+		self.to_model = Some(to_model.into());
+		self
+	}
+
+	/// Set related name
+	pub fn with_related_name(mut self, related_name: impl Into<String>) -> Self {
+		self.related_name = Some(related_name.into());
+		self
+	}
+
+	/// Set through table name
+	pub fn with_through_table(mut self, through_table: impl Into<String>) -> Self {
+		self.through_table = Some(through_table.into());
+		self
+	}
+
+	/// Set composite struct name
+	pub fn with_composite(mut self, composite: impl Into<String>) -> Self {
+		self.composite = Some(composite.into());
+		self
+	}
+
+	/// Set source model information
+	pub fn with_source_info(
+		mut self,
+		app_label: impl Into<String>,
+		model_name: impl Into<String>,
+	) -> Self {
+		self.source_app_label = Some(app_label.into());
+		self.source_model_name = Some(model_name.into());
+		self
+	}
+
+	/// Check if this is a ManyToMany relationship
+	pub fn is_many_to_many(&self) -> bool {
+		self.rel_type == "many_to_many" || self.rel_type == "polymorphic_many_to_many"
 	}
 }
 

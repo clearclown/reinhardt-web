@@ -58,11 +58,14 @@ pub mod visualization;
 pub mod zero_downtime;
 
 pub use autodetector::{
-	// Phase 2: Pattern Learning and Inference
+	// Pattern Learning and Inference
 	ChangeTracker,
 	ConstraintDefinition,
 	DetectedChanges,
 	FieldState,
+	ForeignKeyAction,
+	ForeignKeyConstraintInfo,
+	ForeignKeyInfo,
 	IndexDefinition,
 	InferenceEngine,
 	InferenceRule,
@@ -86,10 +89,13 @@ pub use graph::{MigrationGraph, MigrationKey, MigrationNode};
 pub use migration::Migration;
 pub use migration_namer::MigrationNamer;
 pub use migration_numbering::MigrationNumbering;
-pub use model_registry::{FieldMetadata, ModelMetadata, ModelRegistry, global_registry};
+pub use model_registry::{
+	FieldMetadata, ModelMetadata, ModelRegistry, RelationshipMetadata, global_registry,
+};
 pub use operation_trait::MigrationOperation;
 pub use operations::{
-	AddColumn, AlterColumn, ColumnDefinition, CreateTable, DropColumn, Operation, SqlDialect,
+	AddColumn, AlterColumn, ColumnDefinition, Constraint, CreateTable, DropColumn, Operation,
+	SqlDialect,
 };
 pub use plan::{MigrationPlan, TransactionMode};
 
@@ -118,7 +124,8 @@ pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, Outpu
 pub use zero_downtime::{MigrationPhase, Strategy, ZeroDowntimeMigration};
 
 pub use introspection::{
-	ColumnInfo, DatabaseIntrospector, ForeignKeyInfo, IndexInfo, TableInfo, UniqueConstraintInfo,
+	ColumnInfo, DatabaseIntrospector, ForeignKeyInfo as IntrospectionForeignKeyInfo, IndexInfo,
+	TableInfo, UniqueConstraintInfo,
 };
 
 // Re-export types from reinhardt-backends for convenience
@@ -201,5 +208,5 @@ pub type Result<T> = std::result::Result<T, MigrationError>;
 // Prelude for migrations
 pub mod prelude {
 	pub use crate::fields::prelude::*;
-	pub use crate::{ColumnDefinition, Migration, Operation};
+	pub use crate::{ColumnDefinition, Constraint, ForeignKeyAction, Migration, Operation};
 }
