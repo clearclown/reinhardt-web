@@ -21,7 +21,7 @@
 //! ```
 
 use proc_macro::TokenStream;
-use syn::{ItemFn, parse_macro_input};
+use syn::{ItemFn, ItemStruct, parse_macro_input};
 
 mod action;
 mod api_view;
@@ -30,6 +30,7 @@ mod collect_migrations;
 mod endpoint;
 mod injectable_derive;
 mod installed_apps;
+mod model_attribute;
 mod model_derive;
 mod orm_reflectable_derive;
 mod path_macro;
@@ -37,6 +38,7 @@ mod permission_macro;
 mod permissions;
 mod query_fields;
 mod receiver;
+mod rel;
 mod routes;
 mod schema;
 
@@ -45,6 +47,7 @@ use api_view::api_view_impl;
 use endpoint::endpoint_impl;
 use injectable_derive::injectable_derive_impl;
 use installed_apps::installed_apps_impl;
+use model_attribute::model_attribute_impl;
 use model_derive::model_derive_impl;
 use orm_reflectable_derive::orm_reflectable_derive_impl;
 use path_macro::path_impl;
@@ -382,7 +385,8 @@ pub fn endpoint(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```ignore
 /// use reinhardt_orm::prelude::*;
 ///
-/// #[derive(Model, QueryFields)]
+/// #[model(app_label = "users", table_name = "users")]
+/// #[derive(QueryFields)]
 /// struct User {
 ///     id: i64,
 ///     email: String,
@@ -545,6 +549,46 @@ pub fn derive_injectable(input: TokenStream) -> TokenStream {
 		.into()
 }
 
+/// Attribute macro for Django-style model definition with automatic derive
+///
+/// Automatically adds `#[derive(Model)]` and keeps the `#[model(...)]` attribute.
+/// This provides a cleaner syntax by eliminating the need to explicitly write
+/// `#[derive(Model)]` on every model struct.
+///
+/// # Example
+///
+/// ```ignore
+/// use reinhardt_macros::model;
+/// use serde::{Serialize, Deserialize};
+///
+/// // Recommended pattern:
+/// #[model(app_label = "blog", table_name = "posts")]
+/// #[derive(Serialize, Deserialize)]
+/// struct Post {
+///     #[field(primary_key = true)]
+///     id: i64,
+///
+///     #[field(max_length = 200)]
+///     title: String,
+///
+///     #[field(null = true)]
+///     content: Option<String>,
+/// }
+/// ```
+///
+/// # Model Attributes
+///
+/// Same as `#[derive(Model)]`. See [`derive_model`] for details.
+///
+#[proc_macro_attribute]
+pub fn model(args: TokenStream, input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as ItemStruct);
+
+	model_attribute_impl(args.into(), input)
+		.unwrap_or_else(|e| e.to_compile_error())
+		.into()
+}
+
 /// Derive macro for automatic Model implementation and migration registration
 ///
 /// Automatically implements the `Model` trait and registers the model with the global
@@ -553,11 +597,11 @@ pub fn derive_injectable(input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```ignore
-/// use reinhardt_macros::Model;
+/// use reinhardt_macros::model;
 /// use serde::{Serialize, Deserialize};
 ///
-/// #[derive(Model, Serialize, Deserialize)]
 /// #[model(app_label = "blog", table_name = "posts")]
+/// #[derive(Serialize, Deserialize)]
 /// struct Post {
 ///     #[field(primary_key = true)]
 ///     id: i64,
@@ -574,6 +618,7 @@ pub fn derive_injectable(input: TokenStream) -> TokenStream {
 ///
 /// - `app_label`: Application label (default: "default")
 /// - `table_name`: Database table name (default: struct name in snake_case)
+/// - `constraints`: List of unique constraints (e.g., `unique(fields = ["field1", "field2"], name = "name")`)
 ///
 /// # Field Attributes
 ///
@@ -605,7 +650,7 @@ pub fn derive_injectable(input: TokenStream) -> TokenStream {
 /// - Exactly one field must be marked with `primary_key = true`
 /// - String fields must specify `max_length`
 ///
-#[proc_macro_derive(Model, attributes(model, field))]
+#[proc_macro_derive(Model, attributes(model, model_config, field, rel))]
 pub fn derive_model(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as syn::DeriveInput);
 
