@@ -25,6 +25,12 @@ reinhardt-negotiation = { version = "0.1.0-alpha.1", path = "crates/negotiation"
 reinhardt-parsers = { version = "0.1.0-alpha.1", path = "crates/parsers", optional = true }
 reinhardt-pagination = { version = "0.1.0-alpha.1", path = "crates/pagination", optional = true }
 
+# External dependencies for re-export
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+
 [features]
 default = [
   "types",

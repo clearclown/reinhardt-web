@@ -69,3 +69,13 @@ pub use reinhardt_pagination as pagination;
 // Re-export Handler and Middleware traits from reinhardt-types when http feature is enabled
 #[cfg(feature = "http")]
 pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
+
+// Re-export common external dependencies
+pub use async_trait::async_trait;
+pub use tokio;
+
+// Re-export serde with json as a submodule
+pub mod serde {
+	pub use ::serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
+	pub use ::serde_json as json;
+}

@@ -105,6 +105,12 @@ pub extern crate reinhardt_di;
 #[doc(hidden)]
 pub extern crate reinhardt_core;
 
+#[doc(hidden)]
+pub extern crate reinhardt_http;
+
+#[doc(hidden)]
+pub extern crate reinhardt_params;
+
 #[cfg(feature = "database")]
 #[doc(hidden)]
 pub extern crate linkme;
@@ -169,9 +175,9 @@ pub use reinhardt_apps::{
 #[cfg(feature = "core")]
 pub use reinhardt_macros::{AppConfig, installed_apps};
 
-// Re-export Model derive macro (requires database feature)
+// Re-export Model derive macro and model attribute macro (requires database feature)
 #[cfg(feature = "database")]
-pub use reinhardt_macros::Model;
+pub use reinhardt_macros::{Model, model};
 
 // Re-export collect_migrations macro (requires database feature)
 #[cfg(feature = "database")]
@@ -188,6 +194,13 @@ pub use migrations as reinhardt_migrations;
 
 // Re-export endpoint macro
 pub use reinhardt_macros::endpoint;
+
+// Re-export HTTP method macros
+pub use reinhardt_macros::{api_view, delete, get, patch, post, put};
+
+// Re-export Injectable derive macro (DI feature)
+#[cfg(feature = "di")]
+pub use reinhardt_macros::Injectable;
 
 // Re-export settings from dedicated crate
 #[cfg(feature = "conf")]
@@ -486,8 +499,8 @@ pub use reinhardt_urls::routers::{
 // Re-export auth
 #[cfg(feature = "auth")]
 pub use reinhardt_auth::{
-	AllowAny, AnonymousUser, AuthBackend, BaseUser, FullUser, IsAdminUser, IsAuthenticated,
-	PasswordHasher, Permission, PermissionsMixin, SimpleUser, User,
+	AllowAny, AnonymousUser, AuthBackend, BaseUser, DefaultUser, FullUser, IsAdminUser,
+	IsAuthenticated, PasswordHasher, Permission, PermissionsMixin, SimpleUser, User,
 };
 
 #[cfg(feature = "auth")]
@@ -867,11 +880,6 @@ pub use reinhardt_test::{APIClient, APIRequestFactory, APITestCase, TestResponse
 #[cfg(feature = "storage")]
 pub use reinhardt_utils::storage::{InMemoryStorage, LocalStorage, Storage};
 
-// Re-export common external dependencies
-pub use async_trait::async_trait;
-pub use serde::{Deserialize, Serialize};
-pub use tokio;
-
 pub mod prelude {
 	// Core types - always available
 	pub use crate::{
@@ -897,9 +905,11 @@ pub mod prelude {
 		register_router,
 	};
 
-	// External
-	pub use async_trait::async_trait;
-	pub use serde::{Deserialize, Serialize};
+	// External dependencies (via core)
+	#[cfg(feature = "core")]
+	pub use crate::core::async_trait;
+	#[cfg(feature = "core")]
+	pub use crate::core::serde::{Deserialize, Serialize};
 
 	// Core feature - types, signals, etc.
 	#[cfg(feature = "core")]
@@ -908,7 +918,10 @@ pub mod prelude {
 		m2m_changed, post_delete, post_save, pre_delete, pre_save,
 	};
 
-	// Database feature - ORM
+	// HTTP method macros and endpoint - always available
+	pub use crate::{api_view, delete, endpoint, get, patch, post, put};
+
+	// Database feature - ORM and Model macros
 	#[cfg(feature = "database")]
 	pub use crate::{
 		Aggregate,
@@ -924,6 +937,7 @@ pub mod prelude {
 		F,
 		ForeignKeyConstraint,
 		Lower,
+		// Model derive macro and attribute macro
 		Model,
 		Now,
 		Q,
@@ -940,6 +954,8 @@ pub mod prelude {
 		// Window functions (commonly used)
 		Window,
 		atomic,
+		// Model attribute macro for struct-level model definition
+		model,
 	};
 
 	// Auth feature
@@ -963,9 +979,13 @@ pub mod prelude {
 	// Note: When 'openapi' feature is enabled, types are available at top level
 	// Example: use reinhardt::prelude::*; or use reinhardt::{OpenApi, ApiDoc, Schema};
 
-	// DI params - FastAPI-style parameter extraction
-	#[cfg(any(feature = "minimal", feature = "standard"))]
+	// DI params - FastAPI-style parameter extraction and Injectable derive macro
+	#[cfg(any(feature = "minimal", feature = "standard", feature = "di"))]
 	pub use crate::{Body, Cookie, Header, Json, Path, Query};
+
+	// Injectable derive macro for DI
+	#[cfg(feature = "di")]
+	pub use crate::Injectable;
 
 	// REST feature - serializers, parsers, pagination, throttling, versioning, metadata
 	#[cfg(feature = "rest")]
@@ -1058,6 +1078,11 @@ pub mod db {
 
 	pub mod orm {
 		pub use reinhardt_db::orm::*;
+	}
+
+	// Re-export associations module for relationship definitions
+	pub mod associations {
+		pub use reinhardt_db::associations::*;
 	}
 
 	// Re-export prelude for convenience
