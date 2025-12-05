@@ -23,6 +23,7 @@ full = ["testcontainers", "static", "websockets"]
 
 [dependencies]
 reinhardt-db = { workspace = true, features = ["orm", "backends", "postgres", "mysql", "sqlite"] }
+reinhardt-di = { workspace = true }
 reinhardt-migrations = { workspace = true }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 reinhardt-auth = { workspace = true }

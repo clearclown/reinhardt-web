@@ -109,6 +109,9 @@ pub mod validator;
 // Migration registry test fixtures
 pub mod migrations;
 
+// Dependency Injection test fixtures
+pub mod di;
+
 // Re-export commonly used items from submodules
 
 // From loader module
@@ -150,3 +153,6 @@ pub use migrations::{
 	InMemoryRepository, TestMigrationSource, in_memory_repository, migration_registry,
 	test_migration_source,
 };
+
+// From di module
+pub use di::{injection_context, injection_context_with_overrides, singleton_scope};
