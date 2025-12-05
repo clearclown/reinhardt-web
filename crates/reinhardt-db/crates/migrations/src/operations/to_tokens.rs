@@ -1,6 +1,100 @@
-use crate::{ColumnDefinition, Operation};
+use crate::{ColumnDefinition, Constraint, ForeignKeyAction, Operation};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
+
+impl ToTokens for ForeignKeyAction {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			ForeignKeyAction::Restrict => quote! { ForeignKeyAction::Restrict },
+			ForeignKeyAction::Cascade => quote! { ForeignKeyAction::Cascade },
+			ForeignKeyAction::SetNull => quote! { ForeignKeyAction::SetNull },
+			ForeignKeyAction::NoAction => quote! { ForeignKeyAction::NoAction },
+			ForeignKeyAction::SetDefault => quote! { ForeignKeyAction::SetDefault },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for Constraint {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		match self {
+			Constraint::ForeignKey {
+				name,
+				columns,
+				referenced_table,
+				referenced_columns,
+				on_delete,
+				on_update,
+			} => {
+				let columns_iter = columns.iter();
+				let ref_columns_iter = referenced_columns.iter();
+				tokens.extend(quote! {
+					Constraint::ForeignKey {
+						name: #name.to_string(),
+						columns: vec![#(#columns_iter.to_string()),*],
+						referenced_table: #referenced_table.to_string(),
+						referenced_columns: vec![#(#ref_columns_iter.to_string()),*],
+						on_delete: #on_delete,
+						on_update: #on_update,
+					}
+				});
+			}
+			Constraint::Unique { name, columns } => {
+				let columns_iter = columns.iter();
+				tokens.extend(quote! {
+					Constraint::Unique {
+						name: #name.to_string(),
+						columns: vec![#(#columns_iter.to_string()),*],
+					}
+				});
+			}
+			Constraint::Check { name, expression } => {
+				tokens.extend(quote! {
+					Constraint::Check {
+						name: #name.to_string(),
+						expression: #expression.to_string(),
+					}
+				});
+			}
+			Constraint::OneToOne {
+				name,
+				column,
+				referenced_table,
+				referenced_column,
+				on_delete,
+				on_update,
+			} => {
+				tokens.extend(quote! {
+					Constraint::OneToOne {
+						name: #name.to_string(),
+						column: #column.to_string(),
+						referenced_table: #referenced_table.to_string(),
+						referenced_column: #referenced_column.to_string(),
+						on_delete: #on_delete,
+						on_update: #on_update,
+					}
+				});
+			}
+			Constraint::ManyToMany {
+				name,
+				through_table,
+				source_column,
+				target_column,
+				target_table,
+			} => {
+				tokens.extend(quote! {
+					Constraint::ManyToMany {
+						name: #name.to_string(),
+						through_table: #through_table.to_string(),
+						source_column: #source_column.to_string(),
+						target_column: #target_column.to_string(),
+						target_table: #target_table.to_string(),
+					}
+				});
+			}
+		}
+	}
+}
 
 impl ToTokens for Operation {
 	fn to_tokens(&self, tokens: &mut TokenStream) {
@@ -235,20 +329,91 @@ impl ToTokens for ColumnDefinition {
 
 		// Generate FieldType token based on the actual type
 		let field_type_token = match &self.type_definition {
-			crate::FieldType::Integer => quote! { crate::FieldType::Integer },
-			crate::FieldType::VarChar(len) => quote! { crate::FieldType::VarChar(#len) },
-			crate::FieldType::Char(len) => quote! { crate::FieldType::Char(#len) },
-			crate::FieldType::Text => quote! { crate::FieldType::Text },
-			crate::FieldType::Boolean => quote! { crate::FieldType::Boolean },
+			// Integer types
+			crate::FieldType::BigInteger => quote! { FieldType::BigInteger },
+			crate::FieldType::Integer => quote! { FieldType::Integer },
+			crate::FieldType::SmallInteger => quote! { FieldType::SmallInteger },
+			crate::FieldType::TinyInt => quote! { FieldType::TinyInt },
+			crate::FieldType::MediumInt => quote! { FieldType::MediumInt },
+
+			// String types
+			crate::FieldType::Char(len) => quote! { FieldType::Char(#len) },
+			crate::FieldType::VarChar(len) => quote! { FieldType::VarChar(#len) },
+			crate::FieldType::Text => quote! { FieldType::Text },
+			crate::FieldType::TinyText => quote! { FieldType::TinyText },
+			crate::FieldType::MediumText => quote! { FieldType::MediumText },
+			crate::FieldType::LongText => quote! { FieldType::LongText },
+
+			// Date/Time types
+			crate::FieldType::Date => quote! { FieldType::Date },
+			crate::FieldType::Time => quote! { FieldType::Time },
+			crate::FieldType::DateTime => quote! { FieldType::DateTime },
+			crate::FieldType::TimestampTz => quote! { FieldType::TimestampTz },
+
+			// Numeric types
 			crate::FieldType::Decimal { precision, scale } => {
-				quote! { crate::FieldType::Decimal { precision: #precision, scale: #scale } }
+				quote! { FieldType::Decimal { precision: #precision, scale: #scale } }
 			}
-			crate::FieldType::Custom(s) => quote! { crate::FieldType::Custom(#s.to_string()) },
-			// For all other types, generate Custom variant with SQL string representation
-			other => {
-				let sql_str = other.to_sql_string();
-				quote! { crate::FieldType::Custom(#sql_str.to_string()) }
+			crate::FieldType::Float => quote! { FieldType::Float },
+			crate::FieldType::Double => quote! { FieldType::Double },
+			crate::FieldType::Real => quote! { FieldType::Real },
+
+			// Boolean
+			crate::FieldType::Boolean => quote! { FieldType::Boolean },
+
+			// Binary types
+			crate::FieldType::Binary => quote! { FieldType::Binary },
+			crate::FieldType::Blob => quote! { FieldType::Blob },
+			crate::FieldType::TinyBlob => quote! { FieldType::TinyBlob },
+			crate::FieldType::MediumBlob => quote! { FieldType::MediumBlob },
+			crate::FieldType::LongBlob => quote! { FieldType::LongBlob },
+			crate::FieldType::Bytea => quote! { FieldType::Bytea },
+
+			// JSON types
+			crate::FieldType::Json => quote! { FieldType::Json },
+			crate::FieldType::JsonBinary => quote! { FieldType::JsonBinary },
+
+			// UUID and Year
+			crate::FieldType::Uuid => quote! { FieldType::Uuid },
+			crate::FieldType::Year => quote! { FieldType::Year },
+
+			// Collection types
+			crate::FieldType::Enum { values } => {
+				quote! { FieldType::Enum { values: vec![#(#values.to_string()),*] } }
 			}
+			crate::FieldType::Set { values } => {
+				quote! { FieldType::Set { values: vec![#(#values.to_string()),*] } }
+			}
+
+			// Relationship types
+			crate::FieldType::OneToOne {
+				to,
+				on_delete,
+				on_update,
+			} => {
+				quote! {
+					FieldType::OneToOne {
+						to: #to.to_string(),
+						on_delete: #on_delete,
+						on_update: #on_update,
+					}
+				}
+			}
+			crate::FieldType::ManyToMany { to, through } => {
+				let through_token = match through {
+					Some(t) => quote! { Some(#t.to_string()) },
+					None => quote! { None },
+				};
+				quote! {
+					FieldType::ManyToMany {
+						to: #to.to_string(),
+						through: #through_token,
+					}
+				}
+			}
+
+			// Custom types
+			crate::FieldType::Custom(s) => quote! { FieldType::Custom(#s.to_string()) },
 		};
 
 		tokens.extend(quote! {

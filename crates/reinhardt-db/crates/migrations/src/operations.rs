@@ -61,6 +61,98 @@ use sea_query::{
 };
 use serde::{Deserialize, Serialize};
 
+/// Constraint definition for tables
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(tag = "type")]
+pub enum Constraint {
+	/// ForeignKey constraint
+	ForeignKey {
+		name: String,
+		columns: Vec<String>,
+		referenced_table: String,
+		referenced_columns: Vec<String>,
+		on_delete: crate::ForeignKeyAction,
+		on_update: crate::ForeignKeyAction,
+	},
+	/// Unique constraint
+	Unique { name: String, columns: Vec<String> },
+	/// Check constraint
+	Check { name: String, expression: String },
+	/// OneToOne constraint (ForeignKey + Unique combination)
+	OneToOne {
+		name: String,
+		column: String,
+		referenced_table: String,
+		referenced_column: String,
+		on_delete: crate::ForeignKeyAction,
+		on_update: crate::ForeignKeyAction,
+	},
+	/// ManyToMany relationship metadata (intermediate table reference)
+	ManyToMany {
+		name: String,
+		through_table: String,
+		source_column: String,
+		target_column: String,
+		target_table: String,
+	},
+}
+
+impl std::fmt::Display for Constraint {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Constraint::ForeignKey {
+				name,
+				columns,
+				referenced_table,
+				referenced_columns,
+				on_delete,
+				on_update,
+			} => {
+				write!(
+					f,
+					"CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({}) ON DELETE {} ON UPDATE {}",
+					name,
+					columns.join(", "),
+					referenced_table,
+					referenced_columns.join(", "),
+					on_delete.to_sql_keyword(),
+					on_update.to_sql_keyword()
+				)
+			}
+			Constraint::Unique { name, columns } => {
+				write!(f, "CONSTRAINT {} UNIQUE ({})", name, columns.join(", "))
+			}
+			Constraint::Check { name, expression } => {
+				write!(f, "CONSTRAINT {} CHECK ({})", name, expression)
+			}
+			Constraint::OneToOne {
+				name,
+				column,
+				referenced_table,
+				referenced_column,
+				on_delete,
+				on_update,
+			} => {
+				write!(
+					f,
+					"CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({}) ON DELETE {} ON UPDATE {}, CONSTRAINT {}_unique UNIQUE ({})",
+					name,
+					column,
+					referenced_table,
+					referenced_column,
+					on_delete.to_sql_keyword(),
+					on_update.to_sql_keyword(),
+					name,
+					column
+				)
+			}
+			Constraint::ManyToMany { through_table, .. } => {
+				write!(f, "-- ManyToMany via {}", through_table)
+			}
+		}
+	}
+}
+
 /// A migration operation (legacy enum for backward compatibility)
 ///
 /// This enum is maintained for backward compatibility with existing code.
@@ -73,7 +165,7 @@ pub enum Operation {
 		name: &'static str,
 		columns: Vec<ColumnDefinition>,
 		#[serde(default)]
-		constraints: Vec<&'static str>,
+		constraints: Vec<Constraint>,
 	},
 	DropTable {
 		name: &'static str,
@@ -737,7 +829,7 @@ impl Operation {
 		&self,
 		name: &str,
 		columns: &[ColumnDefinition],
-		_constraints: &[&'static str],
+		constraints: &[Constraint],
 	) -> TableCreateStatement {
 		let mut stmt = Table::create();
 		stmt.table(Alias::new(name)).if_not_exists();
@@ -763,6 +855,78 @@ impl Operation {
 			}
 
 			stmt.col(&mut column);
+		}
+
+		// Add table-level constraints
+		for constraint in constraints {
+			match constraint {
+				Constraint::ForeignKey {
+					name,
+					columns,
+					referenced_table,
+					referenced_columns,
+					on_delete,
+					on_update,
+				} => {
+					let mut fk = sea_query::ForeignKey::create();
+					fk.name(name)
+						.from_tbl(Alias::new(name))
+						.to_tbl(Alias::new(referenced_table.as_str()));
+
+					for col in columns {
+						fk.from_col(Alias::new(col.as_str()));
+					}
+					for col in referenced_columns {
+						fk.to_col(Alias::new(col.as_str()));
+					}
+
+					fk.on_delete((*on_delete).into());
+					fk.on_update((*on_update).into());
+
+					stmt.foreign_key(&mut fk);
+				}
+				Constraint::Unique { name, columns } => {
+					let mut index = sea_query::Index::create();
+					index.name(name).table(Alias::new(name)).unique();
+					for col in columns {
+						index.col(Alias::new(col.as_str()));
+					}
+					// Note: SeaQuery doesn't support adding UNIQUE constraints directly in CREATE TABLE
+					// They should be added separately with CREATE INDEX or ALTER TABLE
+				}
+				Constraint::Check { name, expression } => {
+					// Note: SeaQuery doesn't have direct CHECK constraint support
+					// This would need to be handled with raw SQL if needed
+					let _ = (name, expression); // Suppress unused warnings
+				}
+				Constraint::OneToOne {
+					name,
+					column,
+					referenced_table,
+					referenced_column,
+					on_delete,
+					on_update,
+				} => {
+					// OneToOne is ForeignKey + Unique
+					let mut fk = sea_query::ForeignKey::create();
+					fk.name(name)
+						.from_tbl(Alias::new(name))
+						.to_tbl(Alias::new(referenced_table.as_str()))
+						.from_col(Alias::new(column.as_str()))
+						.to_col(Alias::new(referenced_column.as_str()))
+						.on_delete((*on_delete).into())
+						.on_update((*on_update).into());
+
+					stmt.foreign_key(&mut fk);
+
+					// Add UNIQUE constraint separately if needed
+					// Note: This should ideally be handled via UNIQUE column definition
+				}
+				Constraint::ManyToMany { .. } => {
+					// ManyToMany is metadata only, no actual constraint in this table
+					// The intermediate table handles the relationship
+				}
+			}
 		}
 
 		stmt.to_owned()
@@ -893,6 +1057,16 @@ impl Operation {
 			}
 			FieldType::Set { values } => {
 				col_def.custom(Alias::new(format!("SET({})", values.join(","))))
+			}
+			FieldType::OneToOne { .. } => {
+				// OneToOne is a relationship, not a column type
+				// The actual column will be a foreign key (typically BigInteger)
+				col_def.big_integer()
+			}
+			FieldType::ManyToMany { .. } => {
+				// ManyToMany is a relationship, not a column type
+				// No column is created in the model table (uses intermediate table)
+				col_def.big_integer()
 			}
 			FieldType::Custom(custom_type) => col_def.custom(Alias::new(custom_type)),
 		};

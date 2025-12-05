@@ -444,6 +444,7 @@ impl MigrationOperation for RenameField {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::FieldType;
 	use crate::operations::models::CreateModel;
 
 	#[test]
@@ -455,7 +456,7 @@ mod tests {
 			"User",
 			vec![FieldDefinition::new(
 				"id",
-				"INTEGER",
+				FieldType::Integer,
 				true,
 				false,
 				None::<String>,
@@ -545,7 +546,7 @@ mod tests {
 
 		let model = state.get_model("myapp", "User").unwrap();
 		let field = model.fields.get("email").unwrap();
-		assert_eq!(field.field_type, "VARCHAR(255)");
+		assert_eq!(field.field_type, FieldType::VarChar(255));
 	}
 
 	#[test]
