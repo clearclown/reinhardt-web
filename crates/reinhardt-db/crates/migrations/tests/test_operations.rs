@@ -1,7 +1,7 @@
 //! Tests for migration operations
 //! Translated and adapted from Django's test_operations.py
 
-use reinhardt_migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
+use reinhardt_migrations::{ColumnDefinition, Constraint, FieldType, Operation, SqlDialect};
 
 /// Helper function to leak a string to get a 'static lifetime
 fn leak_str(s: impl Into<String>) -> &'static str {
@@ -53,7 +53,10 @@ fn test_create_table_with_constraints() {
 			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
 			ColumnDefinition::new("email", FieldType::Custom("TEXT NOT NULL".to_string())),
 		],
-		constraints: vec!["UNIQUE(email)"],
+		constraints: vec![Constraint::Unique {
+			name: "unique_email".to_string(),
+			columns: vec!["email".to_string()],
+		}],
 	};
 
 	let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -496,7 +499,14 @@ fn test_migrations_foreign_key_constraint() {
 			ColumnDefinition::new("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
 			ColumnDefinition::new("user_id", FieldType::Custom("INTEGER NOT NULL".to_string())),
 		],
-		constraints: vec!["FOREIGN KEY (user_id) REFERENCES users(id)"],
+		constraints: vec![Constraint::ForeignKey {
+			name: "fk_orders_user".to_string(),
+			columns: vec!["user_id".to_string()],
+			referenced_table: "users".to_string(),
+			referenced_columns: vec!["id".to_string()],
+			on_delete: reinhardt_migrations::ForeignKeyAction::NoAction,
+			on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+		}],
 	};
 
 	let sql = operation.to_sql(&SqlDialect::Sqlite);
@@ -657,7 +667,10 @@ fn test_create_table_same_across_databases() {
 			),
 			ColumnDefinition::new("price", FieldType::Custom("DECIMAL(10,2)".to_string())),
 		],
-		constraints: vec!["UNIQUE(name)"],
+		constraints: vec![Constraint::Unique {
+			name: "unique_name".to_string(),
+			columns: vec!["name".to_string()],
+		}],
 	};
 
 	let sql_pg = operation.to_sql(&SqlDialect::Postgres);

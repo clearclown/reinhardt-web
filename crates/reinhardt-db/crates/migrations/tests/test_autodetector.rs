@@ -484,6 +484,7 @@ fn test_add_constraint() {
 		constraint_type: "check".to_string(),
 		fields: vec!["price".to_string()],
 		expression: Some("price > 0".to_string()),
+		foreign_key_info: None,
 	});
 	to_state.add_model(new_model);
 
@@ -519,6 +520,7 @@ fn test_remove_constraint() {
 		constraint_type: "check".to_string(),
 		fields: vec!["price".to_string()],
 		expression: Some("price > 0".to_string()),
+		foreign_key_info: None,
 	});
 	from_state.add_model(old_model);
 
@@ -680,7 +682,7 @@ fn test_generate_migrations() {
 }
 
 // ============================================================================
-// Phase 1.3 & 1.4 Tests: Hybrid Similarity and Dependency Checking
+// Hybrid Similarity and Dependency Checking
 // ============================================================================
 
 #[test]
@@ -1046,7 +1048,7 @@ fn test_no_circular_dependency() {
 }
 
 // ============================================================================
-// Phase 2 Tests: Pattern Learning and Inference
+// Pattern Learning and Inference
 // ============================================================================
 
 #[test]

@@ -1,7 +1,10 @@
 //! Tests for migration optimizer
 //! Adapted from Django's test_optimizer.py
 
-use reinhardt_migrations::{ColumnDefinition, FieldType, Migration, Operation, OperationOptimizer};
+use reinhardt_migrations::{
+	ColumnDefinition, Constraint, FieldType, ForeignKeyAction, Migration, Operation,
+	OperationOptimizer,
+};
 
 fn create_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
@@ -270,7 +273,14 @@ fn test_migration_optimization_preserves_order() {
 				),
 				create_column("table1_id", FieldType::Integer),
 			],
-			constraints: vec!["FOREIGN KEY (table1_id) REFERENCES table1(id)"],
+			constraints: vec![Constraint::ForeignKey {
+				name: "fk_table2_table1".to_string(),
+				columns: vec!["table1_id".to_string()],
+				referenced_table: "table1".to_string(),
+				referenced_columns: vec!["id".to_string()],
+				on_delete: ForeignKeyAction::Cascade,
+				on_update: ForeignKeyAction::NoAction,
+			}],
 		},
 	];
 

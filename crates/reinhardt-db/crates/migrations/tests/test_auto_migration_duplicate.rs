@@ -60,8 +60,7 @@ async fn test_duplicate_migration_detection() {
 	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
 		temp_dir.clone(),
 	)));
-	let generator =
-		AutoMigrationGenerator::new(target_schema.clone(), temp_dir.clone(), repository.clone());
+	let generator = AutoMigrationGenerator::new(target_schema.clone(), repository.clone());
 
 	// First generation should succeed (no previous migration)
 	let empty_schema = DatabaseSchema::default();
@@ -101,8 +100,7 @@ async fn test_different_migrations_allowed() {
 	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
 		temp_dir.clone(),
 	)));
-	let generator =
-		AutoMigrationGenerator::new(target_schema1.clone(), temp_dir.clone(), repository.clone());
+	let generator = AutoMigrationGenerator::new(target_schema1.clone(), repository.clone());
 
 	// First generation
 	let empty_schema = DatabaseSchema::default();
@@ -120,7 +118,7 @@ async fn test_different_migrations_allowed() {
 		.tables
 		.insert("posts".to_string(), create_table_schema("posts"));
 
-	let generator2 = AutoMigrationGenerator::new(target_schema2, temp_dir.clone(), repository);
+	let generator2 = AutoMigrationGenerator::new(target_schema2, repository);
 
 	// Second generation with different operations should succeed
 	let result2 = generator2.generate("test_app", target_schema1).await;
@@ -152,7 +150,7 @@ async fn test_no_changes_error() {
 	let repository = Arc::new(tokio::sync::Mutex::new(FilesystemRepository::new(
 		temp_dir.clone(),
 	)));
-	let generator = AutoMigrationGenerator::new(schema.clone(), temp_dir.clone(), repository);
+	let generator = AutoMigrationGenerator::new(schema.clone(), repository);
 
 	// Should fail with NoChangesDetected error
 	let result = generator.generate("test_app", schema).await;
