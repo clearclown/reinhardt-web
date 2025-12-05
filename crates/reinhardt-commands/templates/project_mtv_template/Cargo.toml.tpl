@@ -8,12 +8,7 @@ name = "manage"
 path = "src/bin/manage.rs"
 
 [dependencies]
-reinhardt = { version = "{{ reinhardt_version }}", features = ["standard", "server", "templates"] }
-tokio = { version = "1.44", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-clap = { version = "4", features = ["derive"] }
-console = "0.15"
+reinhardt = { version = "*", package = "reinhardt-web", features = ["full"] }
 
 [profile.release]
 opt-level = 3

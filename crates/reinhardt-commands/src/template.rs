@@ -111,8 +111,12 @@ impl TemplateCommand {
 			let file_name = entry.file_name();
 			let file_name_str = file_name.to_string_lossy();
 
-			// Skip hidden files and __pycache__
-			if file_name_str.starts_with('.') || file_name_str == "__pycache__" {
+			// Skip hidden files and __pycache__, but keep .gitkeep and .gitignore
+			if (file_name_str.starts_with('.')
+				&& file_name_str != ".gitkeep"
+				&& file_name_str != ".gitignore")
+				|| file_name_str == "__pycache__"
+			{
 				continue;
 			}
 
