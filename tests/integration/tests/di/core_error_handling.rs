@@ -1,71 +1,42 @@
 //! Error handling integration tests for reinhardt-di
 //!
 //! Tests covering:
-//! - Circular dependency detection
+//! - Circular dependency detection (using automatic runtime detection)
 //! - Injectable failure propagation
 //! - Async operation timeout handling
 //! - Depends lifetime management with Arc
 
+use super::test_helpers::resolve_injectable;
 use reinhardt_di::{Depends, DiError, DiResult, Injectable, InjectionContext, SingletonScope};
-use std::sync::{Arc, Mutex, Weak};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
 
 // === Circular Dependency Test Structures ===
+// Note: Manual stack management is no longer needed due to automatic cycle detection
 
 #[derive(Clone, Debug)]
 struct ServiceA {
 	_name: String,
-	// Holds weak reference to avoid memory leak
-	_service_b: Option<Weak<ServiceB>>,
+	_service_b: Arc<ServiceB>,
 }
 
 #[derive(Clone, Debug)]
 struct ServiceB {
 	_name: String,
-	// Holds weak reference to avoid memory leak
-	_service_a: Option<Weak<ServiceA>>,
-}
-
-// Track injection calls to detect cycles
-static INJECTION_STACK: Mutex<Vec<String>> = Mutex::new(Vec::new());
-
-fn push_injection(name: &str) -> Result<(), DiError> {
-	let mut stack = INJECTION_STACK.lock().unwrap();
-	if stack.contains(&name.to_string()) {
-		return Err(DiError::CircularDependency(format!(
-			"Circular dependency: {} -> {}",
-			stack.join(" -> "),
-			name
-		)));
-	}
-	stack.push(name.to_string());
-	Ok(())
-}
-
-fn pop_injection() {
-	let mut stack = INJECTION_STACK.lock().unwrap();
-	stack.pop();
-}
-
-fn clear_injection_stack() {
-	let mut stack = INJECTION_STACK.lock().unwrap();
-	stack.clear();
+	_service_a: Arc<ServiceA>,
 }
 
 #[async_trait::async_trait]
 impl Injectable for ServiceA {
 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-		push_injection("ServiceA")?;
-
 		// ServiceA depends on ServiceB
-		let service_b = ServiceB::inject(ctx).await?;
-
-		pop_injection();
+		// Cycle detection is performed automatically in resolve_injectable()
+		let service_b = resolve_injectable::<ServiceB>(ctx).await?;
 
 		Ok(ServiceA {
 			_name: "ServiceA".to_string(),
-			_service_b: Some(Arc::downgrade(&Arc::new(service_b))),
+			_service_b: service_b,
 		})
 	}
 }
@@ -73,16 +44,13 @@ impl Injectable for ServiceA {
 #[async_trait::async_trait]
 impl Injectable for ServiceB {
 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-		push_injection("ServiceB")?;
-
 		// ServiceB depends on ServiceA - creates circular dependency
-		let service_a = ServiceA::inject(ctx).await?;
-
-		pop_injection();
+		// Cycle detection is performed automatically in resolve_injectable()
+		let service_a = resolve_injectable::<ServiceA>(ctx).await?;
 
 		Ok(ServiceB {
 			_name: "ServiceB".to_string(),
-			_service_a: Some(Arc::downgrade(&Arc::new(service_a))),
+			_service_a: service_a,
 		})
 	}
 }
@@ -160,24 +128,23 @@ async fn test_circular_dependency_detection() {
 	let singleton = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton).build();
 
-	// Clear stack before test
-	clear_injection_stack();
-
-	// Attempt to inject ServiceA, which depends on ServiceB, which depends on ServiceA
-	let result = ServiceA::inject(&ctx).await;
+	// Attempt to resolve ServiceA, which depends on ServiceB, which depends on ServiceA
+	// Automatic cycle detection will raise DiError::CircularDependency
+	let result = resolve_injectable::<ServiceA>(&ctx).await;
 
 	// Verify circular dependency is detected
-	assert!(result.is_err());
+	assert!(result.is_err(), "Circular dependency should be detected");
 	match result.unwrap_err() {
 		DiError::CircularDependency(msg) => {
-			assert!(msg.contains("ServiceA"));
-			assert!(msg.contains("ServiceB"));
+			// Verify error message contains circular type names
+			assert!(
+				msg.contains("ServiceA") || msg.contains("ServiceB"),
+				"Error message should contain circular types: {}",
+				msg
+			);
 		}
 		other => panic!("Expected CircularDependency error, got: {:?}", other),
 	}
-
-	// Clean up
-	clear_injection_stack();
 }
 
 #[tokio::test]

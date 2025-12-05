@@ -1,19 +1,34 @@
 //! Tests for FastAPI-style Depends functionality
 
-use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
+#![cfg(feature = "macros")]
+
+use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope, injectable};
 use serial_test::serial;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[injectable]
 #[derive(Clone, Default, Debug, PartialEq)]
 struct CommonQueryParams {
+	#[no_inject]
 	q: Option<String>,
+	#[no_inject]
 	skip: usize,
+	#[no_inject]
 	limit: usize,
 }
 
+#[injectable]
 #[derive(Clone, Default)]
 struct Database {
+	#[no_inject]
 	connection_count: usize,
+}
+
+#[injectable]
+#[derive(Clone, Default)]
+struct Config {
+	#[no_inject]
+	api_key: String,
 }
 
 // Custom Injectable with instance counter (thread-safe using AtomicUsize)
@@ -141,11 +156,6 @@ async fn test_fastapi_depends_clone() {
 // FastAPI-style usage example
 #[tokio::test]
 async fn test_fastapi_style_usage() {
-	#[derive(Clone, Default)]
-	struct Config {
-		api_key: String,
-	}
-
 	async fn endpoint_handler(
 		config: Depends<Config>,
 		params: Depends<CommonQueryParams>,

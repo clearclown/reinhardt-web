@@ -7,6 +7,8 @@
 //!    it should only appear once in the schema
 //! 2. Shared dependencies are properly cached and reused
 
+#![cfg(feature = "params")]
+
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
 use std::sync::Arc;
 

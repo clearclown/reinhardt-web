@@ -1,15 +1,20 @@
 //! Tests for automatic Injectable implementation
 
-use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
+use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope, injectable};
 
 #[derive(Default, Clone, Debug, PartialEq)]
+#[injectable]
 struct SimpleConfig {
+	#[no_inject]
 	host: String,
+	#[no_inject]
 	port: u16,
 }
 
 #[derive(Default, Clone)]
+#[injectable]
 struct AnotherConfig {
+	#[no_inject]
 	api_key: String,
 }
 

@@ -7,6 +7,8 @@
 //! 2. Dependencies with default values work correctly
 //! 3. Multiple endpoints can share the same dependencies
 
+#![cfg(feature = "params")]
+
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
 use reinhardt_params::Query;
 use reinhardt_params::extract::FromRequest;

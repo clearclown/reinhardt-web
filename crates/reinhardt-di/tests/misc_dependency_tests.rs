@@ -10,6 +10,8 @@
 //! 2. Security dependencies can be overridden
 //! 3. Repeated dependencies are handled correctly
 
+#![cfg(feature = "params")]
+
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
 use reinhardt_params::Path;
 use reinhardt_params::extract::FromRequest;
