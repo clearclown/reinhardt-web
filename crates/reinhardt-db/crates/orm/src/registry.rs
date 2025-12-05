@@ -299,6 +299,101 @@ pub trait EntityType {
 	const TABLE_NAME: &'static str;
 }
 
+// ============================================================================
+// Global Model Registry for foreign_key resolution
+// ============================================================================
+
+/// Model information for foreign key resolution
+#[derive(Debug, Clone)]
+pub struct ModelInfo {
+	pub app_label: String,
+	pub model_name: String,
+	pub type_path: String,
+	pub table_name: String,
+}
+
+/// Global model registry for resolving foreign_key references
+pub struct GlobalModelRegistry {
+	models: Arc<RwLock<HashMap<String, ModelInfo>>>,
+}
+
+impl GlobalModelRegistry {
+	pub fn new() -> Self {
+		Self {
+			models: Arc::new(RwLock::new(HashMap::new())),
+		}
+	}
+
+	/// Register a model in the global registry
+	pub fn register(&self, model_info: ModelInfo) {
+		let key = format!("{}.{}", model_info.app_label, model_info.model_name);
+		if let Ok(mut models) = self.models.write() {
+			models.insert(key, model_info);
+		}
+	}
+
+	/// Get model info by app_label.model_name
+	pub fn get(&self, app_label: &str, model_name: &str) -> Option<ModelInfo> {
+		let key = format!("{}.{}", app_label, model_name);
+		if let Ok(models) = self.models.read() {
+			models.get(&key).cloned()
+		} else {
+			None
+		}
+	}
+
+	/// Find models by type name (may return multiple results)
+	pub fn find_by_type_name(&self, type_name: &str) -> Vec<ModelInfo> {
+		if let Ok(models) = self.models.read() {
+			models
+				.values()
+				.filter(|m| m.model_name == type_name)
+				.cloned()
+				.collect()
+		} else {
+			Vec::new()
+		}
+	}
+
+	/// Get all registered models
+	pub fn all(&self) -> Vec<ModelInfo> {
+		if let Ok(models) = self.models.read() {
+			models.values().cloned().collect()
+		} else {
+			Vec::new()
+		}
+	}
+
+	/// Clear all registered models
+	pub fn clear(&self) {
+		if let Ok(mut models) = self.models.write() {
+			models.clear();
+		}
+	}
+
+	/// Get the count of registered models
+	pub fn count(&self) -> usize {
+		if let Ok(models) = self.models.read() {
+			models.len()
+		} else {
+			0
+		}
+	}
+}
+
+impl Default for GlobalModelRegistry {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+/// Global model registry instance
+pub fn global_model_registry() -> &'static GlobalModelRegistry {
+	use once_cell::sync::Lazy;
+	static REGISTRY: Lazy<GlobalModelRegistry> = Lazy::new(GlobalModelRegistry::new);
+	&REGISTRY
+}
+
 impl MapperRegistry {
 	/// Type-safe get method
 	///
