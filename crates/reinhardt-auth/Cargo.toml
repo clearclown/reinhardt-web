@@ -33,6 +33,7 @@ auth-full = [
 ]
 
 [dependencies]
+reinhardt-di = { workspace = true }
 reinhardt-sessions = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
 reinhardt-throttling = { workspace = true }

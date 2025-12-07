@@ -16,6 +16,10 @@
 // Core authentication types and traits (migrated from reinhardt-core-auth)
 pub mod core;
 
+// CurrentUser injectable for dependency injection
+pub mod current_user;
+pub use current_user::CurrentUser;
+
 // Re-export core authentication types
 pub use core::{
 	AllowAny, AnonymousUser, AuthBackend, BaseUser, CompositeAuthBackend, FullUser, IsActiveUser,
@@ -127,6 +131,7 @@ pub enum AuthenticationError {
 	UserNotFound,
 	SessionExpired,
 	InvalidToken,
+	NotAuthenticated,
 	DatabaseError(String),
 	Unknown(String),
 }
@@ -138,6 +143,7 @@ impl std::fmt::Display for AuthenticationError {
 			AuthenticationError::UserNotFound => write!(f, "User not found"),
 			AuthenticationError::SessionExpired => write!(f, "Session expired"),
 			AuthenticationError::InvalidToken => write!(f, "Invalid token"),
+			AuthenticationError::NotAuthenticated => write!(f, "User is not authenticated"),
 			AuthenticationError::DatabaseError(msg) => write!(f, "Database error: {}", msg),
 			AuthenticationError::Unknown(msg) => write!(f, "Authentication error: {}", msg),
 		}
