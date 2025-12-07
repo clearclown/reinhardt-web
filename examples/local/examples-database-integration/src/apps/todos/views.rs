@@ -3,7 +3,8 @@
 //! CRUD operations for TODO items
 
 use reinhardt::{delete, get, post, put};
-use reinhardt::{Json, Path, Request, Response, StatusCode, ViewResult};
+use reinhardt::{Json, Path, Response, StatusCode};
+use reinhardt::http::ViewResult;
 use reinhardt::core::serde::json;
 use reinhardt::db::orm::Manager;
 use crate::apps::todos::models::Todo;
@@ -39,8 +40,8 @@ pub struct TodoRequest {
 ///   ]
 /// }
 /// ```
-#[get("/todos/")]
-pub async fn list_todos(_req: Request) -> ViewResult<Response> {
+#[get("/todos/", name = "todos_list")]
+pub async fn list_todos() -> ViewResult<Response> {
 	// Query all todos from database using ORM
 	let manager = Manager::<Todo>::new();
 	let todos = manager.all().all().await?;
@@ -69,7 +70,7 @@ pub async fn list_todos(_req: Request) -> ViewResult<Response> {
 ///   "completed": false
 /// }
 /// ```
-#[post("/todos/")]
+#[post("/todos/", name = "todos_create")]
 pub async fn create_todo(Json(todo_req): Json<TodoRequest>) -> ViewResult<Response> {
 	// Validate required fields
 	if todo_req.title.len() < 1 || todo_req.title.len() > 255 {
@@ -102,7 +103,7 @@ pub async fn create_todo(Json(todo_req): Json<TodoRequest>) -> ViewResult<Respon
 /// - 404 Not Found: Todo not found
 /// # Path Parameters
 /// - `id`: Todo ID (e.g., `/todos/1`)
-#[get("/todos/{id}/")]
+#[get("/todos/{id}/", name = "todos_get")]
 pub async fn get_todo(Path(id): Path<i64>) -> ViewResult<Response> {
 	// Get todo from database using ORM
 	let manager = Manager::<Todo>::new();
@@ -130,7 +131,7 @@ pub async fn get_todo(Path(id): Path<i64>) -> ViewResult<Response> {
 ///   "completed": true
 /// }
 /// ```
-#[put("/todos/{id}/")]
+#[put("/todos/{id}/", name = "todos_update")]
 pub async fn update_todo(
 	Path(id): Path<i64>,
 	Json(todo_req): Json<TodoRequest>,
@@ -169,7 +170,7 @@ pub async fn update_todo(
 ///
 /// # Response
 /// Returns 204 No Content on success
-#[delete("/todos/{id}/")]
+#[delete("/todos/{id}/", name = "todos_delete")]
 pub async fn delete_todo(Path(id): Path<i64>) -> ViewResult<Response> {
 	// Delete todo from database using ORM
 	let manager = Manager::<Todo>::new();

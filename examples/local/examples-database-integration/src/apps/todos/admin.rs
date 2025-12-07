@@ -1,6 +1,7 @@
 //! Admin configuration for todos app
 
-use reinhardt::admin::panel::ModelAdminConfig;
+use crate::apps::todos::models::Todo;
+use reinhardt::admin;
 
 /// Admin configuration for Todo model
 ///
@@ -10,28 +11,13 @@ use reinhardt::admin::panel::ModelAdminConfig;
 /// - Search by title and description
 /// - Sorted by creation date (newest first)
 /// - 50 items per page
+#[admin(model,
+	for = Todo,
+	name = "Todo",
+	list_display = [id, title, completed, created_at],
+	list_filter = [completed],
+	search_fields = [title, description],
+	ordering = [(created_at, desc)],
+	list_per_page = 50
+)]
 pub struct TodoAdmin;
-
-impl TodoAdmin {
-	/// Returns the ModelAdminConfig for Todo model
-	///
-	/// # Example
-	///
-	/// ```rust,ignore
-	/// use reinhardt_panel::AdminSite;
-	/// use crate::apps::todos::admin::TodoAdmin;
-	///
-	/// let mut admin = AdminSite::new("Todo Management");
-	/// admin.register("Todo", TodoAdmin::config())?;
-	/// ```
-	pub fn config() -> ModelAdminConfig {
-		ModelAdminConfig::builder()
-			.model_name("Todo")
-			.list_display(vec!["id", "title", "completed", "created_at"])
-			.list_filter(vec!["completed"])
-			.search_fields(vec!["title", "description"])
-			.ordering(vec!["-created_at"])
-			.list_per_page(50)
-			.build()
-	}
-}
