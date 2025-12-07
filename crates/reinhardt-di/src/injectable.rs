@@ -60,3 +60,31 @@ pub trait Injectable: Sized + Send + Sync + 'static {
 		Self::inject(ctx).await
 	}
 }
+
+/// Blanket implementation of Injectable for Arc<T>
+///
+/// This allows using `Arc<T>` directly in endpoint handlers with `#[inject]`:
+///
+/// ```rust,ignore
+/// #[endpoint]
+/// async fn handler(
+///     #[inject] db: Arc<DatabaseConnection>,
+/// ) -> ViewResult<Response> {
+///     // ...
+/// }
+/// ```
+///
+/// The implementation injects `T` first, then wraps it in `Arc`.
+#[async_trait::async_trait]
+impl<T> Injectable for std::sync::Arc<T>
+where
+	T: Injectable + Clone,
+{
+	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+		T::inject(ctx).await.map(std::sync::Arc::new)
+	}
+
+	async fn inject_uncached(ctx: &InjectionContext) -> DiResult<Self> {
+		T::inject_uncached(ctx).await.map(std::sync::Arc::new)
+	}
+}
