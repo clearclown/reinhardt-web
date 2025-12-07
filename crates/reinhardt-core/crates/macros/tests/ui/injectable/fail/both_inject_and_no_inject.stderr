@@ -1,0 +1,7 @@
+error: Field cannot have both #[inject] and #[no_inject] attributes
+  --> tests/ui/injectable/fail/both_inject_and_no_inject.rs:22:2
+   |
+22 | /     #[inject]
+23 | |     #[no_inject]  // Error: cannot have both
+24 | |     db: Database,
+   | |________________^
