@@ -66,6 +66,12 @@ pub use reinhardt_parsers as parsers;
 #[cfg(feature = "pagination")]
 pub use reinhardt_pagination as pagination;
 
+// Endpoint metadata trait for HTTP Method Macros
+#[cfg(feature = "http")]
+pub mod endpoint;
+#[cfg(feature = "http")]
+pub use endpoint::EndpointInfo;
+
 // Re-export Handler and Middleware traits from reinhardt-types when http feature is enabled
 #[cfg(feature = "http")]
 pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
