@@ -215,6 +215,8 @@ reinhardt-views = { workspace = true }
 reinhardt-http = { workspace = true }
 reinhardt-params = { workspace = true }
 reinhardt-macros = { workspace = true }
+reinhardt-types = { workspace = true }
+async-trait = { workspace = true }
 bytes = { workspace = true }
 hyper = { workspace = true }
 linkme = { workspace = true, optional = true }
