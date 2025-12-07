@@ -56,7 +56,7 @@ impl PoolConfig {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::pooling::{EmailPool, PoolConfig};
 /// use reinhardt_mail::{SmtpConfig, EmailMessage};
 ///
@@ -173,7 +173,7 @@ impl EmailPool {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::pooling::{BatchSender, PoolConfig};
 /// use reinhardt_mail::{SmtpConfig, EmailMessage};
 /// use std::time::Duration;
@@ -187,7 +187,7 @@ impl EmailPool {
 ///     .with_batch_size(50)
 ///     .with_delay(Duration::from_millis(100));
 ///
-/// let messages = vec![/* ... */];
+/// let messages = vec![];
 /// let sent_count = batch_sender.send_with_rate_limit(messages).await?;
 /// # Ok(())
 /// # }

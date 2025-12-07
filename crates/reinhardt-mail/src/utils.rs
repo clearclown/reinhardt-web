@@ -12,7 +12,9 @@ use reinhardt_conf::settings::EmailSettings;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use reinhardt_mail::send_mail;
 ///
 /// send_mail(
@@ -22,6 +24,8 @@ use reinhardt_conf::settings::EmailSettings;
 ///     vec!["user@example.com"],
 ///     None,
 /// ).await?;
+/// # Ok(())
+/// # }
 /// ```
 pub async fn send_mail(
 	subject: impl Into<String>,
@@ -54,7 +58,7 @@ pub async fn send_mail(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::{send_mail_with_backend, MemoryBackend};
 ///
 /// # #[tokio::main]
@@ -105,7 +109,7 @@ pub async fn send_mail_with_backend(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::{send_mass_mail, EmailMessage, MemoryBackend};
 ///
 /// # #[tokio::main]
@@ -117,18 +121,18 @@ pub async fn send_mail_with_backend(
 ///         .subject("Newsletter #1")
 ///         .body("This month's updates")
 ///         .from("newsletter@example.com")
-///         .to(vec!["user1@example.com"])
-///         .build()?,
+///         .to(vec!["user1@example.com".to_string()])
+///         .build(),
 ///     EmailMessage::builder()
 ///         .subject("Newsletter #1")
 ///         .body("This month's updates")
 ///         .from("newsletter@example.com")
-///         .to(vec!["user2@example.com"])
-///         .build()?,
+///         .to(vec!["user2@example.com".to_string()])
+///         .build(),
 /// ];
 ///
 /// let results = send_mass_mail(messages, &backend).await?;
-/// assert_eq!(results.len(), 2);
+/// assert_eq!(results, 2);
 /// assert_eq!(backend.count(), 2);
 /// # Ok(())
 /// # }
@@ -146,7 +150,7 @@ pub async fn send_mass_mail(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::{mail_admins, MemoryBackend};
 /// use reinhardt_conf::settings::EmailSettings;
 ///
@@ -228,7 +232,7 @@ pub async fn mail_admins(
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_mail::{mail_managers, MemoryBackend};
 /// use reinhardt_conf::settings::EmailSettings;
 ///

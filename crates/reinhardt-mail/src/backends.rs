@@ -68,13 +68,19 @@ impl EmailBackend for FileBackend {
 			);
 			let path = self.directory.join(filename);
 
-			let content = format!(
+			let mut content = format!(
 				"From: {}\nTo: {}\nSubject: {}\n\n{}",
 				msg.from_email,
 				msg.to.join(", "),
 				msg.subject,
 				msg.body
 			);
+
+			// Include HTML body if present
+			if let Some(ref html) = msg.html_body {
+				content.push_str("\n\n--- HTML Body ---\n");
+				content.push_str(html);
+			}
 
 			tokio::fs::write(path, content).await?;
 		}

@@ -47,7 +47,9 @@
 //!
 //! ### Simple Email
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use reinhardt_mail::send_mail;
 //!
 //! send_mail(
@@ -57,13 +59,15 @@
 //!     vec!["user@example.com"],
 //!     None,
 //! ).await?;
-//! ```
+//! # Ok(())
+//! # }
 //!
 //! ### Email with Attachments
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_mail::{EmailMessage, Attachment};
 //!
+//! let pdf_data = b"PDF content".to_vec();
 //! let attachment = Attachment::new("report.pdf", pdf_data);
 //!
 //! let email = EmailMessage::builder()
@@ -77,9 +81,10 @@
 //!
 //! ### HTML Email with Inline Images
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_mail::{EmailMessage, Attachment};
 //!
+//! let logo_data = b"PNG content".to_vec();
 //! let logo = Attachment::inline("logo.png", logo_data, "logo-cid");
 //!
 //! let email = EmailMessage::builder()
@@ -94,7 +99,8 @@
 //!
 //! ### Template-based Emails
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use reinhardt_mail::templates::{TemplateEmailBuilder, TemplateContext};
 //!
 //! let mut context = TemplateContext::new();
@@ -109,11 +115,14 @@
 //!     .html_template("<h1>Hello {{name}}</h1><p>Order {{order_id}} confirmed.</p>")
 //!     .context(context)
 //!     .build()?;
-//! ```
+//! # Ok(())
+//! # }
 //!
 //! ### SMTP with TLS
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use reinhardt_mail::{SmtpBackend, SmtpConfig, SmtpSecurity, EmailMessage};
 //! use std::time::Duration;
 //!
@@ -132,11 +141,14 @@
 //!     .build();
 //!
 //! email.send(&backend).await?;
-//! ```
+//! # Ok(())
+//! # }
 //!
 //! ### Bulk Sending with Connection Pool
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use reinhardt_mail::pooling::{EmailPool, PoolConfig};
 //! use reinhardt_mail::{SmtpConfig, EmailMessage};
 //!
@@ -156,7 +168,8 @@
 //! ];
 //!
 //! let sent_count = pool.send_bulk(messages).await?;
-//! ```
+//! # Ok(())
+//! # }
 
 pub mod backends;
 pub mod message;

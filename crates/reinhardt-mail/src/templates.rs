@@ -19,7 +19,8 @@ pub trait TemplateEngine: Send + Sync {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use reinhardt_mail::templates::{TemplateEmailBuilder, TemplateContext};
 /// use reinhardt_mail::EmailMessage;
 ///
@@ -35,6 +36,8 @@ pub trait TemplateEngine: Send + Sync {
 ///     .html_template("<h1>Hello {{name}}</h1><p>Order {{order_id}} confirmed.</p>")
 ///     .context(context)
 ///     .build()?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct TemplateEmailBuilder {
 	from_email: String,
