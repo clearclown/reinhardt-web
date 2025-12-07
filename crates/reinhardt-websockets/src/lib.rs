@@ -95,6 +95,7 @@ pub mod consumers;
 pub mod handler;
 pub mod metrics;
 pub mod middleware;
+pub mod protocol;
 pub mod reconnection;
 #[cfg(feature = "redis-channel")]
 pub mod redis_channel;
@@ -126,6 +127,7 @@ pub use middleware::{
 	MessageMiddleware, MessageSizeLimitMiddleware, MiddlewareChain, MiddlewareError,
 	MiddlewareResult,
 };
+pub use protocol::default_websocket_config;
 pub use reconnection::{ReconnectionConfig, ReconnectionStrategy};
 #[cfg(feature = "redis-channel")]
 pub use redis_channel::{RedisChannelLayer, RedisConfig};
