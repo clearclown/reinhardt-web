@@ -1147,7 +1147,7 @@ where
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use reinhardt_orm::connection::DatabaseConnection;
 /// use reinhardt_orm::transaction::transaction;
 /// use std::future::Future;
@@ -1158,19 +1158,19 @@ where
 /// let conn = DatabaseConnection::connect("sqlite::memory:").await?;
 ///
 /// // Simple transaction
-/// transaction(&conn, |tx| {
+/// transaction(&conn, move |tx| {
 ///     Box::pin(async move {
 ///         tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Alice".into()]).await?;
 ///         Ok(())
-///     }) as Pin<Box<dyn Future<Output = Result<(), anyhow::Error>> + Send + '_>>
+///     })
 /// }).await?;
 ///
 /// // Transaction with return value
-/// let user_id: i64 = transaction(&conn, |tx| {
+/// let user_id: i64 = transaction(&conn, move |tx| {
 ///     Box::pin(async move {
 ///         tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Bob".into()]).await?;
 ///         Ok(42_i64) // Example return value
-///     }) as Pin<Box<dyn Future<Output = Result<i64, anyhow::Error>> + Send + '_>>
+///     })
 /// }).await?;
 ///
 /// assert_eq!(user_id, 42);

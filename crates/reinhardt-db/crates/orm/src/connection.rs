@@ -110,6 +110,69 @@ impl DatabaseConnection {
 		Self::connect_with_pool_size(url, None).await
 	}
 
+	/// Connect to a PostgreSQL database
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # async fn example() {
+	/// use reinhardt_orm::connection::DatabaseConnection;
+	///
+	/// let conn = DatabaseConnection::connect_postgres("postgres://localhost/mydb").await.unwrap();
+	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
+	/// ```
+	#[cfg(feature = "postgres")]
+	pub async fn connect_postgres(url: &str) -> Result<Self, anyhow::Error> {
+		let inner = BackendsConnection::connect_postgres(url).await?;
+		Ok(Self {
+			backend: DatabaseBackend::Postgres,
+			inner,
+		})
+	}
+
+	/// Connect to a MySQL database
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # async fn example() {
+	/// use reinhardt_orm::connection::DatabaseConnection;
+	///
+	/// let conn = DatabaseConnection::connect_mysql("mysql://localhost/mydb").await.unwrap();
+	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
+	/// ```
+	#[cfg(feature = "mysql")]
+	pub async fn connect_mysql(url: &str) -> Result<Self, anyhow::Error> {
+		let inner = BackendsConnection::connect_mysql(url).await?;
+		Ok(Self {
+			backend: DatabaseBackend::MySql,
+			inner,
+		})
+	}
+
+	/// Connect to a SQLite database
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// # async fn example() {
+	/// use reinhardt_orm::connection::DatabaseConnection;
+	///
+	/// let conn = DatabaseConnection::connect_sqlite("sqlite::memory:").await.unwrap();
+	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
+	/// ```
+	#[cfg(feature = "sqlite")]
+	pub async fn connect_sqlite(url: &str) -> Result<Self, anyhow::Error> {
+		let inner = BackendsConnection::connect_sqlite(url).await?;
+		Ok(Self {
+			backend: DatabaseBackend::Sqlite,
+			inner,
+		})
+	}
+
 	/// Connect to a database with a specific connection pool size
 	///
 	/// # Arguments
@@ -184,6 +247,22 @@ impl DatabaseConnection {
 
 	pub fn backend(&self) -> DatabaseBackend {
 		self.backend
+	}
+
+	/// Get a reference to the inner backends connection
+	///
+	/// This provides access to the low-level connection for operations
+	/// that require direct database access.
+	pub fn inner(&self) -> &BackendsConnection {
+		&self.inner
+	}
+
+	/// Consume self and return the inner backends connection
+	///
+	/// This is useful when you need to pass ownership of the connection
+	/// to functions that expect a `BackendsConnection`.
+	pub fn into_inner(self) -> BackendsConnection {
+		self.inner
 	}
 
 	/// Execute a SQL query and return a single row
@@ -416,5 +495,58 @@ impl DatabaseExecutor for DatabaseConnection {
 
 	async fn query(&self, sql: &str) -> Result<Vec<QueryRow>, anyhow::Error> {
 		self.query(sql, vec![]).await
+	}
+}
+
+/// Injectable implementation for DatabaseConnection
+///
+/// DatabaseConnection must be explicitly registered in the DI context using
+/// `InjectionContextBuilder::singleton()`. It cannot be auto-injected because
+/// it requires runtime configuration (connection URL, pool settings, etc.).
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reinhardt_orm::DatabaseConnection;
+/// use reinhardt_di::InjectionContext;
+///
+/// # async fn example() {
+/// // First, establish a database connection
+/// let db = DatabaseConnection::connect("postgres://localhost/mydb").await.unwrap();
+///
+/// // Then register it in the DI context as a singleton
+/// let ctx = InjectionContext::builder()
+///     .singleton(db)
+///     .build();
+/// # }
+/// ```
+#[cfg(feature = "di")]
+#[async_trait]
+impl reinhardt_di::Injectable for DatabaseConnection {
+	async fn inject(ctx: &reinhardt_di::InjectionContext) -> reinhardt_di::DiResult<Self> {
+		// Try singleton scope first (primary expected location)
+		if let Some(conn) = ctx.get_singleton::<Self>() {
+			return Ok(std::sync::Arc::try_unwrap(conn).unwrap_or_else(|arc| (*arc).clone()));
+		}
+
+		// Try request scope as fallback
+		if let Some(conn) = ctx.get_request::<Self>() {
+			return Ok(std::sync::Arc::try_unwrap(conn).unwrap_or_else(|arc| (*arc).clone()));
+		}
+
+		// Not registered - provide helpful error
+		Err(reinhardt_di::DiError::NotRegistered {
+			type_name: std::any::type_name::<Self>().to_string(),
+			hint: "Use InjectionContextBuilder::singleton(db_connection) to register a \
+			       DatabaseConnection. Create it with DatabaseConnection::connect(), \
+			       connect_postgres(), connect_sqlite(), or connect_mysql()."
+				.to_string(),
+		})
+	}
+
+	async fn inject_uncached(ctx: &reinhardt_di::InjectionContext) -> reinhardt_di::DiResult<Self> {
+		// For DatabaseConnection, inject_uncached behaves the same as inject
+		// since database connections are typically shared (singleton or request-scoped)
+		Self::inject(ctx).await
 	}
 }
