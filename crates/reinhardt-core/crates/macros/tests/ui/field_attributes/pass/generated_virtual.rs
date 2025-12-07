@@ -1,10 +1,11 @@
 #[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
 use reinhardt_macros::model;
+#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
 use serde::{Deserialize, Serialize};
 
 #[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
 #[model(app_label = "test", table_name = "products")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Product {
 	#[field(primary_key = true)]
 	id: Option<i32>,

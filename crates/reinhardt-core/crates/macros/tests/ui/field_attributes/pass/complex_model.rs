@@ -1,9 +1,8 @@
 use reinhardt_macros::model;
 use serde::{Deserialize, Serialize};
-use chrono::NaiveDateTime;
 
 #[model(app_label = "test", table_name = "articles")]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Article {
 	#[cfg(feature = "db-postgres")]
 	#[field(primary_key = true, identity_by_default = true)]
@@ -17,28 +16,29 @@ struct Article {
 	title: String,
 
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
-	#[field(fulltext = true)]
+	#[field(max_length = 5000, fulltext = true)]
 	content: String,
 
 	#[cfg(not(any(feature = "db-postgres", feature = "db-mysql")))]
+	#[field(max_length = 5000)]
 	content: String,
 
-	#[field(generated = "UPPER(title)", generated_stored = true)]
+	#[field(max_length = 255, generated = "UPPER(title)", generated_stored = true)]
 	title_upper: String,
 
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 	#[field(comment = "Article creation timestamp")]
-	created_at: NaiveDateTime,
+	created_at: i64,
 
 	#[cfg(not(any(feature = "db-postgres", feature = "db-mysql")))]
-	created_at: NaiveDateTime,
+	created_at: i64,
 
 	#[cfg(feature = "db-mysql")]
 	#[field(on_update_current_timestamp = true)]
-	updated_at: NaiveDateTime,
+	updated_at: i64,
 
 	#[cfg(not(feature = "db-mysql"))]
-	updated_at: NaiveDateTime,
+	updated_at: i64,
 }
 
 fn main() {}
