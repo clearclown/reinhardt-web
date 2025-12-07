@@ -193,6 +193,7 @@ pub mod cycle_detection;
 pub mod depends;
 pub mod graph;
 pub mod injectable;
+pub mod injected;
 pub mod provider;
 pub mod registry;
 pub mod scope;
@@ -206,6 +207,9 @@ pub use cycle_detection::{CycleError, ResolutionGuard, begin_resolution, registe
 pub use context::{ParamContext, Request};
 pub use depends::{Depends, DependsBuilder};
 pub use injectable::Injectable;
+pub use injected::{
+	DependencyScope as InjectedScope, Injected, InjectionMetadata, OptionalInjected,
+};
 pub use provider::{Provider, ProviderFn};
 pub use registry::{
 	DependencyRegistration, DependencyRegistry, DependencyScope, FactoryTrait, global_registry,
