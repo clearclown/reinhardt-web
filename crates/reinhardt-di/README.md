@@ -23,11 +23,31 @@ Types implementing `Default + Clone + Send + Sync + 'static` automatically imple
 
 ### Core Dependency Injection
 
-- ✓ **`Depends<T>` Wrapper**: FastAPI-style dependency injection wrapper
+#### Dependency Wrappers
+
+`reinhardt-di` provides two wrapper types for dependency injection:
+
+- ✓ **`Injected<T>` Wrapper**: Low-level dependency wrapper with metadata
+  - `Arc<T>` wrapper with injection metadata (scope, cached status)
+  - `Deref` trait for transparent access to inner value
+  - `resolve(&ctx)` - Resolve with cache (default)
+  - `resolve_uncached(&ctx)` - Resolve without cache
+  - Metadata access via `.scope()` and `.is_cached()` methods
+  - Direct control over dependency resolution
+
+- ✓ **`Depends<T>` Wrapper**: High-level FastAPI-style builder
   - `Depends::<T>::new()` - Cache enabled (default)
   - `Depends::<T>::no_cache()` - Cache disabled
   - `resolve(&ctx)` - Dependency resolution
   - `from_value(value)` - Generate from value for testing
+  - More ergonomic API for most use cases
+
+- ✓ **`OptionalInjected<T>` Wrapper**: Optional dependency wrapper
+  - `Option<Injected<T>>` for dependencies that may not be available
+  - `resolve(&ctx)` - Returns `Ok(None)` if dependency not found
+  - Useful for optional features or fallback behavior
+
+**Recommendation**: Use `Depends<T>` for most cases (more ergonomic). Use `Injected<T>` when you need direct control or metadata access.
 
 - ✓ **Injectable Trait**: Define types that can be injected as dependencies
   - Auto-implementation: For types implementing `Default + Clone + Send + Sync + 'static`
@@ -177,7 +197,7 @@ impl Injectable for UserData {
 
 ## Usage Examples
 
-### Basic Usage
+### Basic Usage with `Depends<T>`
 
 ```rust
 use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
@@ -204,6 +224,47 @@ async fn main() {
         .unwrap();
 
     println!("API Key: {}", config.api_key);
+}
+```
+
+### Basic Usage with `Injected<T>`
+
+```rust
+use reinhardt_di::{Injected, OptionalInjected, Injectable, InjectionContext, SingletonScope};
+use std::sync::Arc;
+
+#[derive(Clone, Default)]
+struct Config {
+    api_key: String,
+    database_url: String,
+}
+
+#[derive(Clone, Default)]
+struct Cache {
+    enabled: bool,
+}
+
+#[tokio::main]
+async fn main() {
+    let singleton = Arc::new(SingletonScope::new());
+    let ctx = InjectionContext::builder(singleton).build();
+
+    // Resolve with cache (default)
+    let config: Injected<Config> = Injected::resolve(&ctx).await.unwrap();
+    println!("API Key: {}", config.api_key);  // Deref trait allows direct access
+
+    // Access metadata
+    println!("Scope: {:?}", config.scope());
+    println!("Cached: {}", config.is_cached());
+
+    // Resolve without cache
+    let fresh_config = Injected::<Config>::resolve_uncached(&ctx).await.unwrap();
+
+    // Optional dependency
+    let optional_cache: OptionalInjected<Cache> = OptionalInjected::resolve(&ctx).await.unwrap();
+    if let Some(cache) = optional_cache.as_ref() {
+        println!("Cache enabled: {}", cache.enabled);
+    }
 }
 ```
 

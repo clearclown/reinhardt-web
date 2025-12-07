@@ -349,34 +349,34 @@ impl InjectionContext {
 		let type_name = std::any::type_name::<T>();
 		let registry = global_registry();
 
-		// 型名を登録（エラーメッセージ用）
+		// Register type name (for error messages)
 		register_type_name::<T>(type_name);
 
-		// 【高速パス】キャッシュヒット時は循環検出をスキップ
+		// [Fast path] Skip circular detection on cache hit
 		let scope = registry
 			.get_scope::<T>()
 			.unwrap_or(DependencyScope::Singleton);
 		match scope {
 			DependencyScope::Singleton => {
 				if let Some(cached) = self.get_singleton::<T>() {
-					return Ok(cached); // ✓ < 5% オーバーヘッド
+					return Ok(cached); // ✓ < 5% overhead
 				}
 			}
 			DependencyScope::Request => {
 				if let Some(cached) = self.get_request::<T>() {
-					return Ok(cached); // ✓ < 5% オーバーヘッド
+					return Ok(cached); // ✓ < 5% overhead
 				}
 			}
 			_ => {}
 		}
 
-		// 【低速パス】キャッシュミス時のみ循環検出を実行
+		// [Slow path] Execute circular detection only on cache miss
 		let _guard = begin_resolution(type_id, type_name)
 			.map_err(|e| crate::DiError::CircularDependency(e.to_string()))?;
 
-		// 実際の解決処理（既存ロジック）
+		// Actual resolution processing (existing logic)
 		self.resolve_internal::<T>(scope).await
-		// ガードがDropされると自動的にクリーンアップ
+		// Guard is automatically cleaned up when dropped
 	}
 
 	async fn resolve_internal<T: Any + Send + Sync + 'static>(

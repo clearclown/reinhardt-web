@@ -3,7 +3,7 @@
 use crate::utils::extract_scope_from_args;
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DeriveInput, Fields, Result};
+use syn::{DeriveInput, Fields, GenericArgument, PathArguments, Result, Type};
 
 /// Check if a field has #[inject] attribute
 fn has_inject_attr(field: &syn::Field) -> bool {
@@ -26,6 +26,66 @@ fn should_use_cache(_field: &syn::Field) -> bool {
 	// Always use cache for injected fields
 	// Future: Could support per-field cache control with additional attributes
 	true
+}
+
+/// Injection field type classification
+#[derive(Debug, Clone)]
+enum InjectionType {
+	/// `Injected<T>` - required dependency
+	Injected(Type),
+	/// `OptionalInjected<T>` (= `Option<Injected<T>>`) - optional dependency
+	OptionalInjected(Type),
+}
+
+/// Extract inner type from `Injected<T>` or `OptionalInjected<T>`
+///
+/// Returns `Some(InjectionType)` if the type is a valid injection type,
+/// `None` otherwise.
+fn classify_injection_type(ty: &Type) -> Option<InjectionType> {
+	if let Type::Path(type_path) = ty {
+		let segments = &type_path.path.segments;
+		if segments.is_empty() {
+			return None;
+		}
+
+		let last_segment = segments.last()?;
+		let ident = &last_segment.ident;
+
+		// Check for Injected<T>
+		if ident == "Injected"
+			&& let PathArguments::AngleBracketed(args) = &last_segment.arguments
+			&& let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+		{
+			return Some(InjectionType::Injected(inner_ty.clone()));
+		}
+
+		// Check for OptionalInjected<T> (type alias for Option<Injected<T>>)
+		// Also check for Option<Injected<T>> directly
+		if ident == "OptionalInjected"
+			&& let PathArguments::AngleBracketed(args) = &last_segment.arguments
+			&& let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+		{
+			return Some(InjectionType::OptionalInjected(inner_ty.clone()));
+		}
+
+		// Check for Option<Injected<T>>
+		if ident == "Option"
+			&& let PathArguments::AngleBracketed(args) = &last_segment.arguments
+			&& let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+		{
+			// Check if inner type is Injected<T>
+			if let Type::Path(inner_path) = inner_ty
+				&& let Some(inner_seg) = inner_path.path.segments.last()
+				&& inner_seg.ident == "Injected"
+				&& let PathArguments::AngleBracketed(inner_args) = &inner_seg.arguments
+				&& let Some(GenericArgument::Type(innermost_ty)) = inner_args.args.first()
+			{
+				return Some(InjectionType::OptionalInjected(innermost_ty.clone()));
+			}
+		}
+	}
+
+	None
 }
 
 /// Implementation of the `#[injectable]` attribute macro
@@ -89,35 +149,56 @@ pub fn injectable_impl(args: TokenStream, input: DeriveInput) -> Result<TokenStr
 			}
 
 			if has_inject {
+				// Validate and classify the injection type
+				let injection_type = classify_injection_type(ty).ok_or_else(|| {
+					syn::Error::new_spanned(
+						field,
+						"#[inject] field must have type Injected<T> or OptionalInjected<T>",
+					)
+				})?;
+
 				// Inject this field
 				has_inject_fields = true;
 				let use_cache = should_use_cache(field);
 
-				// Generate Depends::<T>::resolve() call
-				let resolve_call = if use_cache {
-					quote! {
-						{
-							let __depends = ::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, true)
-								.await
-								.map_err(|e| {
-									eprintln!("Dependency injection failed for {} in {}: {:?}",
-										stringify!(#name), stringify!(#struct_name), e);
-									e
-								})?;
-							(*__depends).clone()
+				// Generate Injected::<T>::resolve() call based on injection type
+				let resolve_call = match injection_type {
+					InjectionType::Injected(inner_ty) => {
+						if use_cache {
+							quote! {
+								::reinhardt_di::Injected::<#inner_ty>::resolve(__di_ctx)
+									.await
+									.map_err(|e| {
+										eprintln!("Dependency injection failed for {} in {}: {:?}",
+											stringify!(#name), stringify!(#struct_name), e);
+										e
+									})?
+							}
+						} else {
+							quote! {
+								::reinhardt_di::Injected::<#inner_ty>::resolve_uncached(__di_ctx)
+									.await
+									.map_err(|e| {
+										eprintln!("Dependency injection failed for {} in {}: {:?}",
+											stringify!(#name), stringify!(#struct_name), e);
+										e
+									})?
+							}
 						}
 					}
-				} else {
-					quote! {
-						{
-							let __depends = ::reinhardt_di::Depends::<#ty>::resolve(__di_ctx, false)
-								.await
-								.map_err(|e| {
-									eprintln!("Dependency injection failed for {} in {}: {:?}",
-										stringify!(#name), stringify!(#struct_name), e);
-									e
-								})?;
-							(*__depends).clone()
+					InjectionType::OptionalInjected(inner_ty) => {
+						if use_cache {
+							quote! {
+								::reinhardt_di::Injected::<#inner_ty>::resolve(__di_ctx)
+									.await
+									.ok()
+							}
+						} else {
+							quote! {
+								::reinhardt_di::Injected::<#inner_ty>::resolve_uncached(__di_ctx)
+									.await
+									.ok()
+							}
 						}
 					}
 				};
