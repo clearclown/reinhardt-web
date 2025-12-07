@@ -26,14 +26,14 @@ use serde::{Deserialize, Serialize};
 // Section 1: Mixin traitの実装可能性検証
 // ============================================================================
 
-/// テスト用のモデル
+/// Model for testing
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Article {
 	id: i64,
 	title: String,
 }
 
-/// テスト用のシリアライザー
+/// Serializer for testing
 #[derive(Debug, Clone)]
 struct ArticleSerializer;
 
@@ -125,10 +125,10 @@ impl DestroyMixin for TestCrudViewSet {
 	}
 }
 
-// CrudMixinは自動的に実装される（blanket implementation）
-// ListMixin + RetrieveMixin + CreateMixin + UpdateMixin + DestroyMixinを実装すると
-// CrudMixinが自動的に提供される
-// このコンパイルが成功すれば、Mixin traitの組み合わせが正しく機能することを示す
+// CrudMixin is automatically implemented (blanket implementation)
+// When ListMixin + RetrieveMixin + CreateMixin + UpdateMixin + DestroyMixin are implemented,
+// CrudMixin is automatically provided.
+// If this compiles successfully, it demonstrates that the Mixin trait combination works correctly.
 
 // ============================================================================
 // Section 2: ViewSet構造体の生成と設定検証
@@ -140,9 +140,9 @@ impl DestroyMixin for TestCrudViewSet {
 async fn test_model_viewset_creation() {
 	let viewset = ModelViewSet::<Article, ArticleSerializer>::new("articles");
 
-	// ViewSet traitのメソッド検証
+	// ViewSet trait method verification
 	assert_eq!(viewset.get_basename(), "articles");
-	assert_eq!(viewset.get_lookup_field(), "id"); // デフォルト値
+	assert_eq!(viewset.get_lookup_field(), "id"); // Default value
 }
 
 /// ModelViewSetのカスタマイズ検証
@@ -191,9 +191,9 @@ async fn test_generic_viewset_creation() {
 // Section 3: Mixin trait境界の検証
 // ============================================================================
 
-/// Mixin traitの型境界が正しく機能することを検証する関数
+/// Function to verify that Mixin trait type bounds work correctly
 fn _assert_mixin_trait_bounds() {
-	// この関数は実行されないが、コンパイル時の型検証として機能する
+	// This function is not executed, but serves as compile-time type validation
 
 	fn _accepts_create_mixin<T: CreateMixin>(_t: T) {}
 	fn _accepts_update_mixin<T: UpdateMixin>(_t: T) {}
@@ -202,7 +202,7 @@ fn _assert_mixin_trait_bounds() {
 	fn _accepts_retrieve_mixin<T: RetrieveMixin>(_t: T) {}
 	fn _accepts_crud_mixin<T: CrudMixin>(_t: T) {}
 
-	// これらがコンパイルできれば、型境界が正しく機能している
+	// If these compile, the type bounds are functioning correctly
 	_accepts_create_mixin(TestCreateViewSet);
 	_accepts_update_mixin(TestUpdateViewSet);
 	_accepts_destroy_mixin(TestDestroyViewSet);

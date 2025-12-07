@@ -24,10 +24,6 @@ impl Default for QueueConfig {
 	}
 }
 
-// TODO: TaskQueue.config field was removed as it was unused
-// QueueConfig (including max_retries) is not currently utilized in enqueue()
-// If queue configuration (e.g., max_retries, timeout) is needed in the future,
-// the config should be properly integrated into the TaskQueue behavior
 pub struct TaskQueue;
 
 impl TaskQueue {

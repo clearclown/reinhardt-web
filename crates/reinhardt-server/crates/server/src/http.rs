@@ -5,6 +5,7 @@ use hyper::body::Incoming;
 use hyper::server::conn::http1;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
+use reinhardt_core::di::InjectionContext;
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::types::{Handler, Middleware, MiddlewareChain};
 use std::future::Future;
@@ -19,6 +20,7 @@ use crate::shutdown::ShutdownCoordinator;
 pub struct HttpServer {
 	handler: Arc<dyn Handler>,
 	pub(crate) middlewares: Vec<Arc<dyn Middleware>>,
+	di_context: Option<Arc<InjectionContext>>,
 }
 
 impl HttpServer {
@@ -46,6 +48,7 @@ impl HttpServer {
 		Self {
 			handler: Arc::new(handler),
 			middlewares: Vec::new(),
+			di_context: None,
 		}
 	}
 
@@ -83,6 +86,28 @@ impl HttpServer {
 	/// ```
 	pub fn with_middleware<M: Middleware + 'static>(mut self, middleware: M) -> Self {
 		self.middlewares.push(Arc::new(middleware));
+		self
+	}
+
+	/// Set the dependency injection context for the server
+	///
+	/// When set, the DI context will be automatically injected into each request,
+	/// making it available for endpoints that use `#[inject]` parameters.
+	///
+	/// # Examples
+	///
+	/// ```rust,ignore
+	/// use reinhardt_di::{InjectionContext, SingletonScope};
+	/// use std::sync::Arc;
+	///
+	/// let singleton = Arc::new(SingletonScope::new());
+	/// let di_context = Arc::new(InjectionContext::builder(singleton).build());
+	///
+	/// let server = HttpServer::new(router)
+	///     .with_di_context(di_context);
+	/// ```
+	pub fn with_di_context(mut self, context: Arc<InjectionContext>) -> Self {
+		self.di_context = Some(context);
 		self
 	}
 
@@ -143,13 +168,17 @@ impl HttpServer {
 
 		// Build the handler with middleware chain
 		let handler = self.build_handler();
+		let di_context = self.di_context.clone();
 
 		loop {
 			let (stream, socket_addr) = listener.accept().await?;
 			let handler = handler.clone();
+			let di_context = di_context.clone();
 
 			tokio::task::spawn(async move {
-				if let Err(err) = Self::handle_connection(stream, socket_addr, handler).await {
+				if let Err(err) =
+					Self::handle_connection(stream, socket_addr, handler, di_context).await
+				{
 					eprintln!("Error handling connection: {:?}", err);
 				}
 			});
@@ -198,6 +227,7 @@ impl HttpServer {
 
 		// Build the handler with middleware chain
 		let handler = self.build_handler();
+		let di_context = self.di_context.clone();
 
 		let mut shutdown_rx = coordinator.subscribe();
 
@@ -207,12 +237,13 @@ impl HttpServer {
 				result = listener.accept() => {
 					let (stream, socket_addr) = result?;
 					let handler = handler.clone();
+					let di_context = di_context.clone();
 					let mut conn_shutdown = coordinator.subscribe();
 
 					tokio::task::spawn(async move {
 						// Handle connection with shutdown support
 						tokio::select! {
-							result = Self::handle_connection(stream, socket_addr, handler) => {
+							result = Self::handle_connection(stream, socket_addr, handler, di_context) => {
 								if let Err(err) = result {
 									eprintln!("Error handling connection: {:?}", err);
 								}
@@ -263,7 +294,7 @@ impl HttpServer {
 	/// let addr: SocketAddr = "127.0.0.1:8080".parse()?;
 	/// let stream = TcpStream::connect(addr).await?;
 	/// let socket_addr = stream.peer_addr()?;
-	/// HttpServer::handle_connection(stream, socket_addr, Arc::new(MyHandler)).await?;
+	/// HttpServer::handle_connection(stream, socket_addr, Arc::new(MyHandler), None).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
@@ -271,11 +302,13 @@ impl HttpServer {
 		stream: TcpStream,
 		socket_addr: SocketAddr,
 		handler: Arc<dyn Handler>,
+		di_context: Option<Arc<InjectionContext>>,
 	) -> Result<(), Box<dyn std::error::Error>> {
 		let io = TokioIo::new(stream);
 		let service = RequestService {
 			handler,
 			remote_addr: socket_addr,
+			di_context,
 		};
 
 		http1::Builder::new().serve_connection(io, service).await?;
@@ -288,6 +321,7 @@ impl HttpServer {
 struct RequestService {
 	handler: Arc<dyn Handler>,
 	remote_addr: SocketAddr,
+	di_context: Option<Arc<InjectionContext>>,
 }
 
 impl Service<hyper::Request<Incoming>> for RequestService {
@@ -299,6 +333,7 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 	fn call(&self, req: hyper::Request<Incoming>) -> Self::Future {
 		let handler = self.handler.clone();
 		let remote_addr = self.remote_addr;
+		let di_context = self.di_context.clone();
 
 		Box::pin(async move {
 			// Extract request parts
@@ -308,7 +343,7 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 			let body_bytes = body.collect().await?.to_bytes();
 
 			// Create reinhardt Request
-			let request = Request::builder()
+			let mut request = Request::builder()
 				.method(parts.method)
 				.uri(parts.uri)
 				.version(parts.version)
@@ -317,6 +352,11 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 				.remote_addr(remote_addr)
 				.build()
 				.expect("Failed to build request");
+
+			// Set DI context if available
+			if let Some(ctx) = di_context {
+				request.set_di_context(ctx);
+			}
 
 			// Handle request
 			let response = handler.handle(request).await.unwrap_or_else(|err| {

@@ -27,6 +27,7 @@ use crate::{PathMatcher, Route, UrlReverser};
 use async_trait::async_trait;
 use hyper::Method;
 use matchit::Router as MatchitRouter;
+use reinhardt_core::EndpointInfo;
 use reinhardt_core::di::InjectionContext;
 use reinhardt_core::{
 	Handler, MiddlewareChain,
@@ -517,6 +518,34 @@ impl UnifiedRouter {
 		self
 	}
 
+	/// Register a route (alias for `function`)
+	///
+	/// This method is an alias for `function` and provides the same functionality.
+	/// Use it when you prefer the `route` naming convention.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_routers::UnifiedRouter;
+	/// use hyper::Method;
+	/// # use reinhardt_core::http::{Request, Response, Result};
+	///
+	/// async fn health_check(_req: Request) -> Result<Response> {
+	///     Ok(Response::ok())
+	/// }
+	///
+	/// let router = UnifiedRouter::new()
+	///     .route("/health", Method::GET, health_check);
+	/// ```
+	#[inline]
+	pub fn route<F, Fut>(self, path: &str, method: Method, func: F) -> Self
+	where
+		F: Fn(Request) -> Fut + Send + Sync + 'static,
+		Fut: std::future::Future<Output = Result<Response>> + Send + 'static,
+	{
+		self.function(path, method, func)
+	}
+
 	/// Register a named function-based route (FastAPI-style with URL reversal)
 	///
 	/// # Examples
@@ -553,6 +582,38 @@ impl UnifiedRouter {
 		self
 	}
 
+	/// Register a named route (alias for `function_named`)
+	///
+	/// This method is an alias for `function_named` and provides the same functionality.
+	/// Use it when you prefer the `route` naming convention.
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_routers::UnifiedRouter;
+	/// use hyper::Method;
+	/// # use reinhardt_core::http::{Request, Response, Result};
+	///
+	/// # async fn health_check(_req: Request) -> Result<Response> {
+	/// #     Ok(Response::ok())
+	/// # }
+	/// let mut router = UnifiedRouter::new()
+	///     .with_namespace("api")
+	///     .route_named("/health", Method::GET, "health", health_check);
+	///
+	/// router.register_all_routes();
+	/// let url = router.reverse("api:health", &[]).unwrap();
+	/// assert_eq!(url, "/health");
+	/// ```
+	#[inline]
+	pub fn route_named<F, Fut>(self, path: &str, method: Method, name: &str, func: F) -> Self
+	where
+		F: Fn(Request) -> Fut + Send + Sync + 'static,
+		Fut: std::future::Future<Output = Result<Response>> + Send + 'static,
+	{
+		self.function_named(path, method, name, func)
+	}
+
 	/// Register a ViewSet (DRF-style)
 	///
 	/// # Examples
@@ -576,6 +637,47 @@ impl UnifiedRouter {
 	/// ```
 	pub fn viewset<V: ViewSet + 'static>(mut self, prefix: &str, viewset: V) -> Self {
 		self.viewsets.insert(prefix.to_string(), Arc::new(viewset));
+		self
+	}
+
+	/// Register an endpoint using EndpointInfo trait
+	///
+	/// This method accepts a factory function that returns a View type implementing
+	/// both `EndpointInfo` and `Handler` traits. The path, HTTP method, and name
+	/// are automatically extracted from the `EndpointInfo` implementation.
+	///
+	/// # Examples
+	///
+	/// ```rust,ignore
+	/// use reinhardt::prelude::*;
+	///
+	/// // In views.rs - the #[get] macro generates a View type
+	/// #[get("/users", name = "list_users")]
+	/// pub async fn list_users(req: Request) -> ViewResult<Response> {
+	///     Ok(Response::ok())
+	/// }
+	///
+	/// // In urls.rs - pass the function directly (no () needed)
+	/// let router = UnifiedRouter::new()
+	///     .endpoint(views::list_users);
+	/// ```
+	pub fn endpoint<F, E>(mut self, f: F) -> Self
+	where
+		F: FnOnce() -> E,
+		E: EndpointInfo + Handler + 'static,
+	{
+		let view = f();
+		let path = E::path().to_string();
+		let method = E::method();
+		let name = E::name().to_string();
+
+		self.functions.push(FunctionRoute {
+			path,
+			method,
+			handler: Arc::new(view),
+			name: Some(name),
+			middleware: Vec::new(),
+		});
 		self
 	}
 

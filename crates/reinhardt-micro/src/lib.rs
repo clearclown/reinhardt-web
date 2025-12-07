@@ -76,13 +76,13 @@ pub use reinhardt_core::http::{Error, Request, Response, Result};
 pub use reinhardt_core::di::params::{Cookie, Form, Header, Json, Path, Query};
 
 #[cfg(feature = "di")]
-pub use reinhardt_core::di::Depends;
+pub use reinhardt_core::di::{Injected, InjectionMetadata, OptionalInjected};
 
 #[cfg(feature = "database")]
 pub use reinhardt_db::orm;
 
 // Re-export endpoint macros for FastAPI-style function-based endpoints
-pub use reinhardt_core::macros::{delete, endpoint, get, patch, post, put, use_injection};
+pub use reinhardt_core::macros::{delete, get, patch, post, put, use_inject};
 
 /// Built-in middleware shortcuts for common use cases
 pub mod middleware {
@@ -125,10 +125,10 @@ pub mod prelude {
 	pub use reinhardt_core::di::params::{Cookie, Form, Header, Json, Path, Query};
 
 	#[cfg(feature = "di")]
-	pub use reinhardt_core::di::Depends;
+	pub use reinhardt_core::di::{Injected, InjectionMetadata, OptionalInjected};
 
 	// Re-export endpoint macros
-	pub use reinhardt_core::macros::{delete, endpoint, get, patch, post, put, use_injection};
+	pub use reinhardt_core::macros::{delete, get, patch, post, put, use_inject};
 
 	// Re-export utils
 	pub use super::utils::*;

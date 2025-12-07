@@ -283,7 +283,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_views::DetailView;
 	/// use reinhardt_db::orm::{Model, QuerySet};
 	/// use serde::{Serialize, Deserialize};
