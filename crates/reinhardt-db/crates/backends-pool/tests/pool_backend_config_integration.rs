@@ -84,8 +84,9 @@ async fn test_pool_backend_url_parameters(
 ) {
 	let (_container, _pool, _port, url) = postgres_container.await;
 
-	// Add connection string parameters
-	let url_with_params = format!("{}?connect_timeout=10&statement_timeout=5000", url);
+	// Add connection string parameters (use & if URL already has query params)
+	let separator = if url.contains('?') { '&' } else { '?' };
+	let url_with_params = format!("{}{}connect_timeout=10&statement_timeout=5000", url, separator);
 
 	let config = PoolConfig::default();
 	let pool = ConnectionPool::new_postgres(&url_with_params, config)
@@ -256,8 +257,9 @@ async fn test_postgres_specific_pool_options(
 ) {
 	let (_container, _pool, _port, url) = postgres_container.await;
 
-	// Create pool with PostgreSQL-specific application_name
-	let url_with_app = format!("{}?application_name=reinhardt_test", url);
+	// Create pool with PostgreSQL-specific application_name (use & if URL already has query params)
+	let separator = if url.contains('?') { '&' } else { '?' };
+	let url_with_app = format!("{}{}application_name=reinhardt_test", url, separator);
 
 	let config = PoolConfig::default();
 	let pool = ConnectionPool::new_postgres(&url_with_app, config)

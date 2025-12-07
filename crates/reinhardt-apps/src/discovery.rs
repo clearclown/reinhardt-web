@@ -21,6 +21,7 @@ use crate::registry::{
 	ModelMetadata, ReverseRelationMetadata, ReverseRelationType, get_models_for_app,
 	get_registered_models, register_reverse_relation,
 };
+use std::borrow::Cow;
 
 /// Discover all models for a given application
 ///
@@ -145,15 +146,22 @@ impl RelationMetadata {
 	/// assert_eq!(relation.reverse_name(), "posts");
 	///
 	/// // Without related_name, generates default "{model}_set" format
-	/// // Note: This returns a static string, but the format would be "post_set"
-	/// // The actual dynamic generation happens in create_reverse_relation()
+	/// let relation = RelationMetadata::new(
+	///     "Post",
+	///     "User",
+	///     "author",
+	///     None,
+	///     RelationType::OneToMany,
+	/// );
+	/// assert_eq!(relation.reverse_name(), "post_set");
 	/// ```
-	pub fn reverse_name(&self) -> &str {
-		// Return related_name if specified
-		// TODO: Default name generation requires String allocation,
-		// which cannot be done in this method due to lifetime constraints.
-		// Callers should use create_reverse_relation() for full default name generation.
-		self.related_name.unwrap_or(self.field_name)
+	pub fn reverse_name(&self) -> Cow<'static, str> {
+		if let Some(name) = self.related_name {
+			Cow::Borrowed(name)
+		} else {
+			// Generate default name: {model}_set (e.g., post_set)
+			Cow::Owned(format!("{}_set", self.from_model.to_lowercase()))
+		}
 	}
 }
 
@@ -297,13 +305,8 @@ fn extract_model_relations(model: &ModelMetadata) -> Vec<RelationMetadata> {
 /// // Later: user.posts().all() returns QuerySet<Post>
 /// ```
 pub fn create_reverse_relation(relation: &RelationMetadata) {
-	// Generate reverse relation name
-	let reverse_name = if let Some(name) = relation.related_name {
-		name.to_string()
-	} else {
-		// Default naming: {model_name}_set (e.g., post_set)
-		format!("{}_set", relation.from_model.to_lowercase())
-	};
+	// Use reverse_name() which handles both explicit and default naming
+	let reverse_name = relation.reverse_name().into_owned();
 
 	// Map forward relation type to reverse relation type
 	let reverse_type = match relation.relation_type {
@@ -567,6 +570,7 @@ mod tests {
 
 	#[test]
 	fn test_relation_metadata_reverse_name() {
+		// With explicit related_name
 		let relation = RelationMetadata::new(
 			"Post",
 			"User",
@@ -576,10 +580,10 @@ mod tests {
 		);
 		assert_eq!(relation.reverse_name(), "posts");
 
+		// Without related_name, generates default "{model}_set" format
 		let relation =
 			RelationMetadata::new("Post", "User", "author", None, RelationType::OneToMany);
-		// Without related_name, returns field_name (full default name generated in create_reverse_relation)
-		assert_eq!(relation.reverse_name(), "author");
+		assert_eq!(relation.reverse_name(), "post_set");
 	}
 
 	#[test]

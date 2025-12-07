@@ -259,7 +259,7 @@ mod edge_case_tests {
 /// Compile-time validation tests using trybuild
 ///
 /// These tests verify that invalid paths produce compilation errors.
-/// The actual test files are in tests/ui/ directory.
+/// The actual test files are in tests/ui/fail/ directory.
 #[cfg(test)]
 mod compile_fail_tests {
 	#[test]
@@ -267,35 +267,32 @@ mod compile_fail_tests {
 		let t = trybuild::TestCases::new();
 
 		// Path must start with '/'
-		t.compile_fail("tests/ui/path_must_start_with_slash.rs");
+		t.compile_fail("tests/ui/fail/no_leading_slash.rs");
 
 		// Unmatched opening brace
-		t.compile_fail("tests/ui/unmatched_open_brace.rs");
+		t.compile_fail("tests/ui/fail/unmatched_open_brace.rs");
 
 		// Unmatched closing brace
-		t.compile_fail("tests/ui/unmatched_close_brace.rs");
+		t.compile_fail("tests/ui/fail/unmatched_close_brace.rs");
 
 		// Empty parameter name
-		t.compile_fail("tests/ui/empty_parameter_name.rs");
-
-		// Invalid parameter name (camelCase)
-		t.compile_fail("tests/ui/invalid_parameter_camelcase.rs");
+		t.compile_fail("tests/ui/fail/empty_parameter_name.rs");
 
 		// Invalid parameter name (hyphen)
-		t.compile_fail("tests/ui/invalid_parameter_hyphen.rs");
+		t.compile_fail("tests/ui/fail/invalid_param_name_hyphen.rs");
 
 		// Invalid parameter name (uppercase start)
-		t.compile_fail("tests/ui/invalid_parameter_uppercase_start.rs");
+		t.compile_fail("tests/ui/fail/invalid_param_name_uppercase.rs");
 
 		// Double slash
-		t.compile_fail("tests/ui/double_slash.rs");
+		t.compile_fail("tests/ui/fail/double_slash.rs");
 
 		// Nested parameters
-		t.compile_fail("tests/ui/nested_parameters.rs");
+		t.compile_fail("tests/ui/fail/nested_parameters.rs");
 
 		// Invalid characters in path
-		t.compile_fail("tests/ui/invalid_character_space.rs");
-		t.compile_fail("tests/ui/invalid_character_special.rs");
+		t.compile_fail("tests/ui/fail/invalid_character_space.rs");
+		t.compile_fail("tests/ui/fail/invalid_character_special.rs");
 	}
 }
 

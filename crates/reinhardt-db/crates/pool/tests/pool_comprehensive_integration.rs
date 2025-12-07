@@ -584,8 +584,9 @@ async fn test_postgres_connection_parameters(
 ) {
 	let (_container, _pool, _port, url): (_, _, _, String) = postgres_container.await;
 
-	// Add application_name parameter
-	let url_with_params = format!("{}?application_name=reinhardt_test", url);
+	// Add application_name parameter (use & if URL already has query params)
+	let separator = if url.contains('?') { '&' } else { '?' };
+	let url_with_params = format!("{}{}application_name=reinhardt_test", url, separator);
 
 	let config = PoolConfig::default();
 	let pool = ConnectionPool::new_postgres(&url_with_params, config)

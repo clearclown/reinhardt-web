@@ -326,8 +326,9 @@ async fn test_collection_proxy_database_views() {
 	assert!(proxy.is_view());
 }
 
-// TODO: Implement bulk_insert and clear operations tests after API stabilization
-// These operations require database source and are better tested with actual models
+// Note: bulk_insert and clear_on operations require Vec<Box<dyn Reflectable>> relationship type.
+// OrmReflectable derive generates Vec<T> for concrete types, causing type mismatch on downcast.
+// See proxy_advanced_features.rs for detailed explanation.
 
 /// Test CollectionProxy async loading support
 #[rstest]

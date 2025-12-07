@@ -214,8 +214,8 @@ mod tests {
 	/// - Running makemigrations command via CLI
 	/// - Verifying filesystem state
 	///
-	/// TODO: Implement full integration test once FilesystemSource can parse
-	/// operations from migration files (currently extract_operations returns empty vec)
+	/// Note: FilesystemSource now parses operations via ast_parser module.
+	/// Full CLI integration test can be implemented when needed.
 	#[tokio::test]
 	async fn test_makemigrations_workflow_unit() {
 		let _temp_dir = TempDir::new().unwrap();

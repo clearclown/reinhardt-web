@@ -330,8 +330,9 @@ async fn test_pool_backend_connection_string_parsing(
 ) {
 	let (_container, _pool, _port, url) = postgres_container.await;
 
-	// Add query parameters to connection string
-	let url_with_params = format!("{}?connect_timeout=10", url);
+	// Add query parameters to connection string (use & if URL already has query params)
+	let separator = if url.contains('?') { '&' } else { '?' };
+	let url_with_params = format!("{}{}connect_timeout=10", url, separator);
 
 	let pool_config = PoolConfig::default();
 	let pool = ConnectionPool::new_postgres(&url_with_params, pool_config)

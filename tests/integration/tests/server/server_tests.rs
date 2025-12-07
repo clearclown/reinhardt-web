@@ -37,7 +37,7 @@ async fn submit_handler(req: Request) -> ViewResult<Response> {
 #[post("/echo", name = "echo")]
 async fn echo_handler(req: Request) -> ViewResult<Response> {
 	let json: serde_json::Value = req.json()?;
-	Response::ok().with_json(&json).map_err(Into::into)
+	Response::ok().with_json(&json)
 }
 
 // Handler for exists endpoint
