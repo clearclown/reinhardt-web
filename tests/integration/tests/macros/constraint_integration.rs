@@ -1,6 +1,6 @@
 //! Integration tests for check constraint support in Model derive macro
 
-use reinhardt_macros::{model, Model};
+use reinhardt_macros::model;
 use reinhardt_orm::Model as ModelTrait;
 use serde::{Deserialize, Serialize};
 

@@ -8,7 +8,7 @@
 //!
 //! Run with: cargo test --test session_get_integration_tests
 
-use reinhardt_macros::{model, Model};
+use reinhardt_macros::model;
 use reinhardt_orm::{query_types::DbBackend, session::Session, DatabaseConnection};
 use reinhardt_test::fixtures::testcontainers::postgres_container;
 use rstest::*;

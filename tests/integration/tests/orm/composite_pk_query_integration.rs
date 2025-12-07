@@ -8,7 +8,7 @@
 //! Uses `reinhardt_test::fixtures::postgres_container` directly.
 //! Each test initializes its own database tables using the container's connection pool.
 
-use reinhardt_macros::{model, Model};
+use reinhardt_macros::model;
 use reinhardt_orm::{composite_pk::PkValue, manager::reinitialize_database, QuerySet};
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;

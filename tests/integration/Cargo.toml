@@ -44,7 +44,7 @@ reinhardt-parsers = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-types = { workspace = true }
 reinhardt-signals = { workspace = true }
-reinhardt-websockets = { workspace = true }
+reinhardt-websockets = { workspace = true, features = ["redis-channel"] }
 reinhardt-server = { workspace = true }
 reinhardt-logging = { workspace = true }
 reinhardt-mail = { workspace = true }

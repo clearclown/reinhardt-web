@@ -1,6 +1,6 @@
 //! Integration tests for composite primary key support
 
-use reinhardt_macros::{model, Model};
+use reinhardt_macros::model;
 use serde::{Deserialize, Serialize};
 
 /// Test models module to avoid "Self" resolution issues with proc macros

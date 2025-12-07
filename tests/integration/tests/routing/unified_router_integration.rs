@@ -1,8 +1,8 @@
 //! Integration tests for UnifiedRouter with hierarchical routing and namespace support
 
 use async_trait::async_trait;
-use hyper::Method;
-use reinhardt_http::{Request, Response, Result};
+use reinhardt_http::{Request, Response, Result, ViewResult};
+use reinhardt_macros::get;
 use reinhardt_routers::UnifiedRouter;
 use reinhardt_types::Handler;
 use reinhardt_viewsets::{Action, ActionType, ViewSet};
@@ -29,9 +29,25 @@ impl ViewSet for UserViewSet {
 	}
 }
 
-// Mock function handler
-async fn health_handler(_req: Request) -> Result<Response> {
+// Mock handlers using HTTP Method Macro
+#[get("/health", name = "health")]
+async fn health_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(b"OK".to_vec()))
+}
+
+#[get("/list", name = "list")]
+async fn list_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(b"List".to_vec()))
+}
+
+#[get("/action", name = "action")]
+async fn action_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(b"Action".to_vec()))
+}
+
+#[get("/export", name = "export")]
+async fn export_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(b"Export".to_vec()))
 }
 
 // Mock view handler
@@ -98,12 +114,9 @@ async fn test_unified_router_hierarchical_namespace() {
 
 #[tokio::test]
 async fn test_unified_router_url_reversal() {
-	let mut router = UnifiedRouter::new().with_namespace("api").function_named(
-		"/health",
-		Method::GET,
-		"health",
-		health_handler,
-	);
+	let mut router = UnifiedRouter::new()
+		.with_namespace("api")
+		.endpoint(health_handler);
 
 	router.register_all_routes();
 
@@ -115,12 +128,9 @@ async fn test_unified_router_url_reversal() {
 
 #[tokio::test]
 async fn test_unified_router_nested_namespace_reversal() {
-	let users = UnifiedRouter::new().with_namespace("users").function_named(
-		"/list",
-		Method::GET,
-		"list",
-		health_handler,
-	);
+	let users = UnifiedRouter::new()
+		.with_namespace("users")
+		.endpoint(list_handler);
 
 	let v1 = UnifiedRouter::new()
 		.with_namespace("v1")
@@ -141,12 +151,9 @@ async fn test_unified_router_multiple_children() {
 		.with_namespace("users")
 		.viewset("users", UserViewSet);
 
-	let posts = UnifiedRouter::new().with_namespace("posts").function_named(
-		"/list",
-		Method::GET,
-		"list",
-		health_handler,
-	);
+	let posts = UnifiedRouter::new()
+		.with_namespace("posts")
+		.endpoint(list_handler);
 
 	let router = UnifiedRouter::new()
 		.with_prefix("/api")
@@ -163,20 +170,26 @@ async fn test_unified_router_multiple_children() {
 async fn test_unified_router_mixed_api_styles() {
 	let router = UnifiedRouter::new()
 		.with_prefix("/api")
-		.function("/health", Method::GET, health_handler)
+		.endpoint(health_handler)
 		.viewset("users", UserViewSet)
 		.view("/about", AboutView);
 
 	let routes = router.get_all_routes();
-	// Should have routes from function, ViewSet, and view
+	// Should have routes from endpoint, ViewSet, and view
 	assert!(routes.len() >= 3);
 }
 
 #[tokio::test]
 async fn test_unified_router_deep_nesting() {
+	// Create a dedicated handler for the action endpoint with POST method
+	#[reinhardt_macros::post("/action", name = "action")]
+	async fn action_post_handler() -> ViewResult<Response> {
+		Ok(Response::ok().with_body(b"Action".to_vec()))
+	}
+
 	let resource = UnifiedRouter::new()
 		.with_namespace("resource")
-		.function_named("/action", Method::POST, "action", health_handler);
+		.endpoint(action_post_handler);
 
 	let v2 = UnifiedRouter::new()
 		.with_namespace("v2")
@@ -198,17 +211,14 @@ async fn test_unified_router_deep_nesting() {
 
 #[tokio::test]
 async fn test_unified_router_get_all_routes() {
-	let users = UnifiedRouter::new().with_namespace("users").function_named(
-		"/export",
-		Method::GET,
-		"export",
-		health_handler,
-	);
+	let users = UnifiedRouter::new()
+		.with_namespace("users")
+		.endpoint(export_handler);
 
 	let router = UnifiedRouter::new()
 		.with_prefix("/api")
 		.with_namespace("api")
-		.function_named("/health", Method::GET, "health", health_handler)
+		.endpoint(health_handler)
 		.mount("/users/", users);
 
 	let routes = router.get_all_routes();
@@ -242,8 +252,13 @@ async fn test_unified_router_viewset_url_reversal() {
 
 #[tokio::test]
 async fn test_unified_router_namespace_inheritance() {
-	let child =
-		UnifiedRouter::new().function_named("/action", Method::POST, "action", health_handler);
+	// Create a dedicated handler for this test with POST method
+	#[reinhardt_macros::post("/action", name = "action")]
+	async fn action_inherit_handler() -> ViewResult<Response> {
+		Ok(Response::ok().with_body(b"Action".to_vec()))
+	}
+
+	let child = UnifiedRouter::new().endpoint(action_inherit_handler);
 
 	let mut parent = UnifiedRouter::new()
 		.with_namespace("parent")

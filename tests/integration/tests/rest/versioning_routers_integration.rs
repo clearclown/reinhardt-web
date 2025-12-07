@@ -19,7 +19,9 @@ use std::sync::Arc;
 
 use bytes::Bytes;
 use hyper::StatusCode;
-use reinhardt_http::{Request, Response};
+use reinhardt_http::{Request, Response, ViewResult};
+use reinhardt_macros::get;
+use reinhardt_params::Path;
 use reinhardt_rest::versioning::{AcceptHeaderVersioning, BaseVersioning, URLPathVersioning};
 use reinhardt_routers::UnifiedRouter;
 use reinhardt_test::fixtures::server::test_server_guard;
@@ -29,58 +31,76 @@ use reinhardt_test::fixtures::server::test_server_guard;
 // ============================================================================
 
 /// Handler for v1 users endpoint
-async fn users_v1_handler(_req: Request) -> Result<Response, reinhardt_http::Error> {
+#[get("/v1/users", name = "users_v1")]
+async fn users_v1_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(r#"{"version":"v1","users":["alice","bob"]}"#)))
 }
 
 /// Handler for v2 users endpoint
-async fn users_v2_handler(_req: Request) -> Result<Response, reinhardt_http::Error> {
+#[get("/v2/users", name = "users_v2")]
+async fn users_v2_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(
 		r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 	)))
 }
 
 /// Handler for v1 users/{id}/posts endpoint
-async fn user_posts_v1_handler(req: Request) -> Result<Response, reinhardt_http::Error> {
-	let user_id = req
-		.path_params
-		.get("id")
-		.ok_or_else(|| reinhardt_http::Error::Validation("Missing user_id".to_string()))?
-		.to_string();
+#[get("/v1/users/{id}/posts", name = "user_posts_v1")]
+async fn user_posts_v1_handler(Path(id): Path<String>) -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(format!(
 		r#"{{"version":"v1","user_id":"{}","posts":["post1","post2"]}}"#,
-		user_id
+		id
 	))))
 }
 
 /// Handler for v2 users/{id}/posts endpoint
-async fn user_posts_v2_handler(req: Request) -> Result<Response, reinhardt_http::Error> {
-	let user_id = req
-		.path_params
-		.get("id")
-		.ok_or_else(|| reinhardt_http::Error::Validation("Missing user_id".to_string()))?
-		.to_string();
-	Ok(Response::ok()
-		.with_body(Bytes::from(format!(
-			r#"{{"version":"v2","user_id":"{}","posts":[{{"id":1,"title":"First"}},{{"id":2,"title":"Second"}}]}}"#,
-			user_id
-		))))
+#[get("/v2/users/{id}/posts", name = "user_posts_v2")]
+async fn user_posts_v2_handler(Path(id): Path<String>) -> ViewResult<Response> {
+	Ok(Response::ok().with_body(Bytes::from(format!(
+		r#"{{"version":"v2","user_id":"{}","posts":[{{"id":1,"title":"First"}},{{"id":2,"title":"Second"}}]}}"#,
+		id
+	))))
 }
 
 /// Default handler (no version specified)
-async fn users_default_handler(_req: Request) -> Result<Response, reinhardt_http::Error> {
+#[get("/users", name = "users_default")]
+async fn users_default_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(Bytes::from(
+		r#"{"version":"default","users":["default_user"]}"#,
+	)))
+}
+
+/// Handler for /api/v1/users
+#[get("/api/v1/users", name = "api_users_v1")]
+async fn api_users_v1_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(Bytes::from(r#"{"version":"v1","users":["alice","bob"]}"#)))
+}
+
+/// Handler for /api/v2/users
+#[get("/api/v2/users", name = "api_users_v2")]
+async fn api_users_v2_handler() -> ViewResult<Response> {
+	Ok(Response::ok().with_body(Bytes::from(
+		r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
+	)))
+}
+
+/// Handler for /api/users (default)
+#[get("/api/users", name = "api_users_default")]
+async fn api_users_default_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(
 		r#"{"version":"default","users":["default_user"]}"#,
 	)))
 }
 
 /// Handler for /docs/v1
-async fn docs_v1_handler(_req: Request) -> Result<Response, reinhardt_http::Error> {
+#[get("/docs/v1", name = "docs_v1")]
+async fn docs_v1_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(r#"{"docs":"API Documentation v1"}"#)))
 }
 
 /// Handler for /docs/v2
-async fn docs_v2_handler(_req: Request) -> Result<Response, reinhardt_http::Error> {
+#[get("/docs/v2", name = "docs_v2")]
+async fn docs_v2_handler() -> ViewResult<Response> {
 	Ok(Response::ok().with_body(Bytes::from(r#"{"docs":"API Documentation v2"}"#)))
 }
 
@@ -98,11 +118,11 @@ async fn docs_v2_handler(_req: Request) -> Result<Response, reinhardt_http::Erro
 #[rstest]
 #[tokio::test]
 async fn test_versioned_router_registration() {
-	// Create router with version-prefixed routes
+	// Create router with version-prefixed routes using endpoint()
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/v1/users", hyper::Method::GET, users_v1_handler)
-			.function("/v2/users", hyper::Method::GET, users_v2_handler),
+			.endpoint(users_v1_handler)
+			.endpoint(users_v2_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -154,19 +174,11 @@ async fn test_versioned_router_registration() {
 #[rstest]
 #[tokio::test]
 async fn test_url_path_versioning_with_nested_routes() {
-	// Create router with nested versioned routes
+	// Create router with nested versioned routes using endpoint()
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function(
-				"/v1/users/{id}/posts",
-				hyper::Method::GET,
-				user_posts_v1_handler,
-			)
-			.function(
-				"/v2/users/{id}/posts",
-				hyper::Method::GET,
-				user_posts_v2_handler,
-			),
+			.endpoint(user_posts_v1_handler)
+			.endpoint(user_posts_v2_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -234,14 +246,14 @@ async fn test_accept_header_versioning_with_routers() {
 	// integration requires more complex setup. In production, this would be
 	// done via middleware that extracts version and stores it in request extensions.
 
-	// Create router with version-prefixed routes
+	// Create router with version-prefixed routes using endpoint()
 	// Note: Real Accept-header versioning would use middleware to extract version
 	// and route dynamically. This test validates the routing layer separately.
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/api/v1/users", hyper::Method::GET, users_v1_handler)
-			.function("/api/v2/users", hyper::Method::GET, users_v2_handler)
-			.function("/api/users", hyper::Method::GET, users_default_handler),
+			.endpoint(api_users_v1_handler)
+			.endpoint(api_users_v2_handler)
+			.endpoint(api_users_default_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -348,28 +360,21 @@ async fn test_accept_header_versioning_with_routers() {
 #[tokio::test]
 async fn test_middleware_versioning_with_route_groups() {
 	// Create URLPathVersioning strategy
-	let allowed_versions = vec!["v1".to_string(), "v2".to_string()];
+	// URLPathVersioning's default regex captures numeric part only (e.g., "1" from "/v1/...")
+	let allowed_versions = vec!["1".to_string(), "2".to_string()];
 
 	let versioning = URLPathVersioning::new()
-		.with_default_version("v1")
+		.with_default_version("1")
 		.with_allowed_versions(allowed_versions);
 
-	// Create router with route groups for each version
+	// Create router with route groups for each version using endpoint()
 	// In production, route groups would have versioning middleware attached
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/v1/users", hyper::Method::GET, users_v1_handler)
-			.function(
-				"/v1/users/{id}/posts",
-				hyper::Method::GET,
-				user_posts_v1_handler,
-			)
-			.function("/v2/users", hyper::Method::GET, users_v2_handler)
-			.function(
-				"/v2/users/{id}/posts",
-				hyper::Method::GET,
-				user_posts_v2_handler,
-			),
+			.endpoint(users_v1_handler)
+			.endpoint(user_posts_v1_handler)
+			.endpoint(users_v2_handler)
+			.endpoint(user_posts_v2_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -458,8 +463,8 @@ async fn test_middleware_versioning_with_route_groups() {
 		.await
 		.expect("Failed to determine v1 version");
 	assert_eq!(
-		version_v1, "v1",
-		"URLPathVersioning should extract v1 from path"
+		version_v1, "1",
+		"URLPathVersioning should extract 1 from path"
 	);
 
 	let mock_request_v2 = Request::builder()
@@ -473,8 +478,8 @@ async fn test_middleware_versioning_with_route_groups() {
 		.await
 		.expect("Failed to determine v2 version");
 	assert_eq!(
-		version_v2, "v2",
-		"URLPathVersioning should extract v2 from nested path"
+		version_v2, "2",
+		"URLPathVersioning should extract 2 from nested path"
 	);
 }
 
@@ -487,12 +492,12 @@ async fn test_middleware_versioning_with_route_groups() {
 #[rstest]
 #[tokio::test]
 async fn test_versioned_fallback_routing() {
-	// Create router with version routes and a default fallback
+	// Create router with version routes and a default fallback using endpoint()
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/v1/users", hyper::Method::GET, users_v1_handler)
-			.function("/v2/users", hyper::Method::GET, users_v2_handler)
-			.function("/users", hyper::Method::GET, users_default_handler),
+			.endpoint(users_v1_handler)
+			.endpoint(users_v2_handler)
+			.endpoint(users_default_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -630,12 +635,12 @@ async fn test_version_negotiation_with_multiple_strategies() {
 		"URL path should extract numeric version '2' from '/v2/users'"
 	);
 
-	// Create router that demonstrates priority behavior via explicit routing
+	// Create router that demonstrates priority behavior via explicit routing using endpoint()
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/api/v1/users", hyper::Method::GET, users_v1_handler)
-			.function("/api/v2/users", hyper::Method::GET, users_v2_handler)
-			.function("/api/users", hyper::Method::GET, users_default_handler),
+			.endpoint(api_users_v1_handler)
+			.endpoint(api_users_v2_handler)
+			.endpoint(api_users_default_handler),
 	);
 
 	let server = test_server_guard(router).await;
@@ -681,11 +686,11 @@ async fn test_version_negotiation_with_multiple_strategies() {
 #[rstest]
 #[tokio::test]
 async fn test_versioned_api_documentation_routes() {
-	// Create router with versioned documentation routes
+	// Create router with versioned documentation routes using endpoint()
 	let router = Arc::new(
 		UnifiedRouter::new()
-			.function("/docs/v1", hyper::Method::GET, docs_v1_handler)
-			.function("/docs/v2", hyper::Method::GET, docs_v2_handler),
+			.endpoint(docs_v1_handler)
+			.endpoint(docs_v2_handler),
 	);
 
 	let server = test_server_guard(router).await;

@@ -548,8 +548,8 @@ async fn test_expired_session_access_denied(
 	let valid_count: i64 = result.get("count");
 	assert_eq!(valid_count, 1, "Session should be valid before expiration");
 
-	// Wait for session to expire
-	sleep(Duration::from_millis(150)).await;
+	// Wait for session to expire (wait longer than TTL to ensure expiration)
+	sleep(Duration::from_millis(200)).await;
 
 	// Verify session is expired
 	let result = sqlx::query(
