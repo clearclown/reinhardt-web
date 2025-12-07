@@ -145,7 +145,7 @@ impl<M: Model> Manager<M> {
 		QuerySet::new()
 	}
 
-	/// Filter records
+	/// Filter records by field, operator, and value
 	pub fn filter(
 		&self,
 		field: &str,
@@ -153,6 +153,20 @@ impl<M: Model> Manager<M> {
 		value: crate::query::FilterValue,
 	) -> QuerySet<M> {
 		let filter = crate::query::Filter::new(field.to_string(), operator, value);
+		QuerySet::new().filter(filter)
+	}
+
+	/// Filter records by a Filter object (Django-style)
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let users = User::objects()
+	///     .filter_by(User::field_name().eq("Alice"))
+	///     .all(&db)
+	///     .await?;
+	/// ```
+	pub fn filter_by(&self, filter: crate::query::Filter) -> QuerySet<M> {
 		QuerySet::new().filter(filter)
 	}
 
