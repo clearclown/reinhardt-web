@@ -39,10 +39,27 @@ async fn postgres_container() -> (PostgresContainer, Arc<PgPool>, u16, String) {
 		.await
 		.expect("Failed to start PostgreSQL container");
 
-	let port = postgres
-		.get_host_port_ipv4(5432)
-		.await
-		.expect("Failed to get PostgreSQL port");
+	// Retry port acquisition with exponential backoff (port mapping may not be immediately available)
+	let port = {
+		let mut retries = 0;
+		let max_retries = 5;
+		loop {
+			match postgres.get_host_port_ipv4(5432).await {
+				Ok(p) => break p,
+				Err(e) => {
+					if retries >= max_retries {
+						panic!(
+							"Failed to get PostgreSQL port after {} retries: {:?}",
+							max_retries, e
+						);
+					}
+					retries += 1;
+					let backoff = std::time::Duration::from_millis(100 * (1 << retries));
+					tokio::time::sleep(backoff).await;
+				}
+			}
+		}
+	};
 
 	let url = format!("postgresql://postgres:postgres@localhost:{}/postgres", port);
 

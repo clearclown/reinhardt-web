@@ -76,7 +76,9 @@ pub use collection::AssociationCollection;
 pub use foreign_key::{CascadeAction, ForeignKey};
 pub use loading::{EagerLoader, JoinedLoader, LazyLoader, LoadingStrategy, SelectInLoader};
 pub use many_to_many::ManyToMany;
-pub use markers::{ManyToManyField, OneToManyField, PolymorphicManyToManyField};
+pub use markers::{
+	ForeignKeyField, ManyToManyField, OneToManyField, OneToOneField, PolymorphicManyToManyField,
+};
 pub use one_to_many::OneToMany;
 pub use one_to_one::OneToOne;
 pub use polymorphic::{PolymorphicAssociation, PolymorphicManyToMany};

@@ -213,7 +213,12 @@ pub mod prelude {
 
 // Re-export top-level commonly used types
 #[cfg(feature = "backends")]
-pub use backends::{DatabaseBackend, DatabaseConnection, DatabaseError};
+pub use backends::{DatabaseBackend, DatabaseError};
+
+// Re-export ORM's DatabaseConnection which wraps BackendsConnection
+// This is the type used by Manager and other ORM components
+#[cfg(feature = "orm")]
+pub use orm::DatabaseConnection;
 
 #[cfg(feature = "pool")]
 pub use pool::{ConnectionPool, PoolConfig, PoolError};

@@ -119,18 +119,55 @@ Available features:
 ### Define Models
 
 ```rust
-use reinhardt_db::{Model, CharField, IntegerField, DateTimeField};
+use reinhardt::prelude::*;
+use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
 
-#[derive(Model)]
-struct User {
-    #[primary_key]
-    id: i32,
-    username: CharField<50>,
-    email: CharField<254>,
-    age: IntegerField,
-    created_at: DateTimeField,
+#[derive(Serialize, Deserialize)]
+#[model(app_label = "myapp", table_name = "users")]
+pub struct User {
+    /// Primary key
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    /// Username (max 50 characters, unique)
+    #[field(max_length = 50, unique = true)]
+    pub username: String,
+
+    /// Email address (max 254 characters)
+    #[field(max_length = 254)]
+    pub email: String,
+
+    /// User's age
+    pub age: i32,
+
+    /// Account creation timestamp (auto-populated on insert)
+    #[field(auto_now_add = true)]
+    pub created_at: DateTime<Utc>,
+
+    /// Last update timestamp (auto-updated on save)
+    #[field(auto_now = true)]
+    pub updated_at: DateTime<Utc>,
 }
 ```
+
+**Field Attributes:**
+- `#[field(primary_key = true)]` - Primary key
+- `#[field(max_length = N)]` - Maximum length for strings
+- `#[field(unique = true)]` - Unique constraint
+- `#[field(auto_now_add = true)]` - Auto-populate on creation
+- `#[field(auto_now = true)]` - Auto-update on save
+- `#[field(null = true)]` - Allow NULL values
+- `#[field(default = value)]` - Default value
+- `#[field(foreign_key = "ModelType")]` - Foreign key relationship
+
+For a complete list of field attributes, see the [Field Attributes Guide](../../docs/field_attributes.md).
+
+**Note**: The `#[model(...)]` attribute macro automatically generates:
+- `Model` trait implementation
+- Type-safe field accessors (`User::field_username()`, `User::field_email()`, etc.)
+- Global model registry registration
+- Support for composite primary keys
 
 ### Query with QuerySet
 
