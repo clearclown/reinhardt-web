@@ -727,47 +727,47 @@ pub async fn get_profile(
 }
 ```
 
-### FastAPI-Style Endpoint Definition
+### Endpoint Definition Patterns
 
-Reinhardt provides a FastAPI-inspired `#[endpoint]` macro for clean, declarative endpoint definitions with automatic dependency injection.
+Reinhardt provides two patterns for defining endpoints, each optimized for different use cases:
 
-**Result Type Definition:**
+#### Pattern 1: HTTP Method Decorators (Recommended for simple routes)
 
-First, define your view result type:
-
-Reinhardt provides `ViewResult<T>` as a pre-defined result type. Import it from `reinhardt::ViewResult`:
+Best for straightforward routes without dependency injection:
 
 ```rust
-use reinhardt::ViewResult;  // Pre-defined result type
-```
+use reinhardt::{get, post, Request, Response, ViewResult};
+use serde_json::json;
 
-**Basic Endpoint:**
+#[get("/")]
+pub async fn hello(_req: Request) -> ViewResult<Response> {
+	Ok(Response::ok().with_body("Hello, World!"))
+}
 
-```rust
-use reinhardt::{Request, Response, StatusCode, ViewResult};
-use reinhardt::endpoint;
-
-#[endpoint]
-pub async fn hello(req: Request) -> ViewResult<Response> {
-	let name = req.path_params.get("name").unwrap_or("World");
-	let message = format!("Hello, {}!", name);
-	Ok(Response::new(StatusCode::OK)
-		.with_body(message))
+#[post("/users")]
+pub async fn create_user(_req: Request) -> ViewResult<Response> {
+	let body = json!({"status": "created"});
+	Response::ok().with_json(&body).map_err(Into::into)
 }
 ```
 
-**Dependency Injection with `#[inject]`:**
+**Features:**
+- Compile-time path validation
+- Concise syntax
+- Automatic HTTP method binding
+- No DI overhead
 
-The `#[inject]` attribute automatically injects dependencies from the application context:
+#### Pattern 2: `#[endpoint]` with DI (Recommended when using dependency injection)
+
+Best for routes that need dependency injection:
 
 ```rust
-use reinhardt::{Request, Response, StatusCode, ViewResult};
-use reinhardt::endpoint;
+use reinhardt::{endpoint, Request, Response, StatusCode, ViewResult};
 use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 
 #[endpoint]
-pub async fn get_user_from_db(
+pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,  // Automatically injected
 ) -> ViewResult<Response> {
@@ -787,26 +787,30 @@ pub async fn get_user_from_db(
 }
 ```
 
-**Cache Control:**
+**Features:**
+- Automatic dependency injection via `#[inject]`
+- Cache control with `#[inject(cache = false)]`
+- FastAPI-inspired syntax
+- Works with any function, not just routes
 
-Disable dependency caching with `cache = false`:
+**Result Type:**
+
+Both patterns use `ViewResult<T>` as the return type:
 
 ```rust
-#[endpoint]
-pub async fn handler(
-	#[inject(cache = false)] fresh_data: DataService,  // Always creates new instance
-) -> ViewResult<Response> {
-	// fresh_data is not cached
-	Ok(Response::new(StatusCode::OK)
-		.with_body("OK"))
-}
+use reinhardt::ViewResult;  // Pre-defined result type
 ```
 
-**Key Features:**
-- Automatic dependency injection via `#[inject]`
-- Cache control with `cache` parameter
-- Clean, declarative syntax inspired by FastAPI
-- Compatible with `UnifiedRouter::function()` for registration
+**Pattern Comparison:**
+
+| Aspect | HTTP Method Decorators | `#[endpoint]` with DI |
+|--------|------------------------|------------------------|
+| Use Case | Simple routes | Routes with dependencies |
+| Syntax | `#[get("/path")]` | `#[endpoint]` + `#[inject]` |
+| Path Validation | Compile-time | Runtime |
+| DI Support | No | Yes |
+| Overhead | Minimal | Slight (DI resolution) |
+| Example | `examples/hello-world` | Most other examples |
 
 ### With Parameter Extraction
 

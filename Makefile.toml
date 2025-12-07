@@ -27,20 +27,19 @@ args = [
   "--all",
   "--all-features",
   "--all-targets",
-  "--profile",
-  "test",
-  "--tests"
+  "--tests",
+  "--quiet"
 ]
 
 [tasks.build]
 description = "Build workspace"
 command = "cargo"
-args = ["build", "--workspace", "--all", "--all-features", "--all-targets"]
+args = ["build", "--workspace", "--all", "--all-features", "--all-targets", "--quiet"]
 
 [tasks.build-release]
 description = "Build workspace in release mode"
 command = "cargo"
-args = ["build", "--workspace", "--all", "--all-features", "--release"]
+args = ["build", "--workspace", "--all", "--all-features", "--release", "--quiet"]
 
 [tasks.clean]
 description = "Clean build artifacts"
