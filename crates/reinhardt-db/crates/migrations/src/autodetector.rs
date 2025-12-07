@@ -7,6 +7,8 @@ use regex::Regex;
 use std::collections::{BTreeMap, HashMap};
 use strsim::{jaro_winkler, levenshtein};
 
+use crate::model_registry::ManyToManyMetadata;
+
 /// ForeignKey action for ON DELETE and ON UPDATE clauses
 #[derive(
 	Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
@@ -169,6 +171,8 @@ pub struct ModelState {
 	pub indexes: Vec<IndexDefinition>,
 	/// Constraints: constraint_name -> ConstraintDefinition
 	pub constraints: Vec<ConstraintDefinition>,
+	/// ManyToMany relationships
+	pub many_to_many_fields: Vec<ManyToManyMetadata>,
 }
 
 /// Index definition for a model
@@ -240,6 +244,7 @@ impl ModelState {
 			discriminator_column: None,
 			indexes: Vec::new(),
 			constraints: Vec::new(),
+			many_to_many_fields: Vec::new(),
 		}
 	}
 
@@ -1064,6 +1069,9 @@ pub struct DetectedChanges {
 	/// Maps (app_label, model_name) -> Vec<(dependent_app, dependent_model)>
 	/// A model depends on another if it has ForeignKey or ManyToMany fields pointing to it
 	pub model_dependencies: std::collections::HashMap<(String, String), Vec<(String, String)>>,
+	/// ManyToMany intermediate tables that were created
+	/// Contains (app_label, source_model, through_table, ManyToManyMetadata)
+	pub created_many_to_many: Vec<(String, String, String, ManyToManyMetadata)>,
 }
 
 impl DetectedChanges {
@@ -4002,63 +4010,111 @@ impl MigrationAutodetector {
 		migrations
 	}
 
-	/// Detect model dependencies for operation ordering
+	/// Detect newly created ManyToMany relationships
 	///
-	/// This method analyzes the final state (to_state) to build a dependency graph.
-	/// A model depends on another if it has ForeignKey or ManyToMany fields pointing to it.
+	/// This method compares ManyToMany fields between from_state and to_state
+	/// to detect new relationships that require intermediate table creation.
 	///
-	/// # Dependency Detection Rules
-	/// - ForeignKey: Model A depends on Model B if A has a ForeignKey field to B
-	/// - ManyToMany: Model A depends on Model B if A has a ManyToMany field to B
-	/// - Self-referential: A model can depend on itself (e.g., tree structures)
+	/// # Detection Logic
+	/// 1. Iterate through all models in to_state
+	/// 2. For each ManyToMany field, check if it exists in from_state
+	/// 3. If not, mark it as a newly created ManyToMany relationship
 	///
-	/// # Use Case
-	/// When moving models between apps, we must ensure:
-	/// 1. Referenced models are moved before referencing models
-	/// 2. Circular dependencies are detected and handled
+	/// # Intermediate Table Naming
+	/// Uses Django naming convention: `{app}_{model}_{field}`
+	/// Custom through table names are supported via `through` option.
 	///
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
+	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, ManyToManyMetadata};
 	///
 	/// let from_state = ProjectState::new();
 	/// let mut to_state = ProjectState::new();
 	///
-	/// // Create User model
-	/// let mut user = ModelState::new("accounts", "User");
-	/// user.add_field(FieldState::new("id", FieldType::Integer, false));
+	/// // Create User model with ManyToMany to Group
+	/// let mut user = ModelState::new("auth", "User");
+	/// user.many_to_many_fields.push(ManyToManyMetadata {
+	///     field_name: "groups".to_string(),
+	///     to_model: "Group".to_string(),
+	///     related_name: Some("users".to_string()),
+	///     through: None,
+	///     source_field: None,
+	///     target_field: None,
+	///     db_constraint_prefix: None,
+	/// });
 	/// to_state.add_model(user);
-	///
-	/// // Create Post model that depends on User
-	/// let mut post = ModelState::new("blog", "Post");
-	/// post.add_field(FieldState::new("id", FieldType::Integer, false));
-	/// post.add_field(FieldState::new("author", FieldType::Custom("ForeignKey(accounts.User)".to_string()), false));
-	/// to_state.add_model(post);
 	///
 	/// let detector = MigrationAutodetector::new(from_state, to_state);
 	/// let changes = detector.detect_changes();
 	///
-	/// // blog.Post depends on accounts.User
-	/// let post_deps = changes.model_dependencies.get(&("blog".to_string(), "Post".to_string()));
-	/// assert!(post_deps.is_some());
-	/// assert!(post_deps.unwrap().contains(&("accounts".to_string(), "User".to_string())));
+	/// // Should detect created ManyToMany relationship
+	/// assert_eq!(changes.created_many_to_many.len(), 1);
+	/// assert_eq!(changes.created_many_to_many[0].2, "auth_user_groups");
 	/// ```
-	fn detect_created_many_to_many(&self, _changes: &mut DetectedChanges) {
-		// TODO: Implement ManyToMany detection
-		// This requires:
-		// 1. ModelMetadata to be accessible from ModelState
-		// 2. derive(Model) macro to populate many_to_many_fields
-		// 3. Proper intermediate table generation logic
-		//
-		// The implementation will:
-		// - Iterate through all models in self.to_state.models
-		// - Extract ManyToMany metadata from each model
-		// - Generate CreateTable operations for intermediate tables
-		// - Add foreign key constraints and unique constraints
-		// - Use Django naming convention: {app}_{model}_{field}
-		//
-		// See plan in /Users/kent8192/.claude/plans/buzzing-forging-lamport.md
+	fn detect_created_many_to_many(&self, changes: &mut DetectedChanges) {
+		for ((app_label, model_name), model_state) in &self.to_state.models {
+			for m2m in &model_state.many_to_many_fields {
+				// Check if this ManyToMany already exists in from_state
+				let exists_in_from = self
+					.from_state
+					.get_model(app_label, model_name)
+					.map(|from_model| {
+						from_model
+							.many_to_many_fields
+							.iter()
+							.any(|f| f.field_name == m2m.field_name)
+					})
+					.unwrap_or(false);
+
+				if !exists_in_from {
+					// Generate through table name (Django naming convention)
+					let through_table = m2m.through.clone().unwrap_or_else(|| {
+						format!(
+							"{}_{}_{}",
+							app_label.to_lowercase(),
+							model_name.to_lowercase(),
+							m2m.field_name.to_lowercase()
+						)
+					});
+
+					// Add to created_many_to_many
+					changes.created_many_to_many.push((
+						app_label.clone(),
+						model_name.clone(),
+						through_table.clone(),
+						m2m.clone(),
+					));
+
+					// Add model dependencies
+					// The intermediate table depends on both source and target models
+					let target_app = self
+						.find_model_app(&m2m.to_model)
+						.unwrap_or_else(|| app_label.clone());
+
+					changes
+						.model_dependencies
+						.entry((app_label.clone(), through_table))
+						.or_default()
+						.extend(vec![
+							(app_label.clone(), model_name.clone()),
+							(target_app, m2m.to_model.clone()),
+						]);
+				}
+			}
+		}
+	}
+
+	/// Find the app_label for a given model name
+	///
+	/// Searches through to_state models to find the app that contains the model.
+	fn find_model_app(&self, model_name: &str) -> Option<String> {
+		for ((app_label, name), _) in &self.to_state.models {
+			if name == model_name {
+				return Some(app_label.clone());
+			}
+		}
+		None
 	}
 
 	/// Detect model dependencies for proper migration ordering

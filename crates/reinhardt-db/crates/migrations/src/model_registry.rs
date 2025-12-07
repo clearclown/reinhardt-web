@@ -125,6 +125,9 @@ impl ModelMetadata {
 			}
 		}
 
+		// Copy ManyToMany relationship metadata
+		model_state.many_to_many_fields = self.many_to_many_fields.clone();
+
 		model_state
 	}
 }

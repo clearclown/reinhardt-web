@@ -90,7 +90,8 @@ pub use migration::Migration;
 pub use migration_namer::MigrationNamer;
 pub use migration_numbering::MigrationNumbering;
 pub use model_registry::{
-	FieldMetadata, ModelMetadata, ModelRegistry, RelationshipMetadata, global_registry,
+	FieldMetadata, ManyToManyMetadata, ModelMetadata, ModelRegistry, RelationshipMetadata,
+	global_registry,
 };
 pub use operation_trait::MigrationOperation;
 pub use operations::{
