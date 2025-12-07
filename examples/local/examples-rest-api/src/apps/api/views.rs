@@ -5,7 +5,8 @@
 use chrono::Utc;
 use reinhardt::core::serde::json;
 use reinhardt::{delete, get, post, put};
-use reinhardt::{Json, Path, Request, Response, StatusCode, ViewResult};
+use reinhardt::{Json, Path, Response, StatusCode};
+use reinhardt::http::ViewResult;
 use validator::Validate;
 
 use super::models::Article;
@@ -33,8 +34,8 @@ use super::storage;
 ///   ]
 /// }
 /// ```
-#[get("/articles/")]
-pub async fn list_articles(_req: Request) -> ViewResult<Response> {
+#[get("/articles/", name = "articles_list")]
+pub async fn list_articles() -> ViewResult<Response> {
 	// Get all articles from in-memory storage
 	let articles = storage::get_all_articles();
 
@@ -60,7 +61,7 @@ pub async fn list_articles(_req: Request) -> ViewResult<Response> {
 ///   "published": true
 /// }
 /// ```
-#[post("/articles/")]
+#[post("/articles/", name = "articles_create")]
 pub async fn create_article(Json(create_req): Json<CreateArticleRequest>) -> ViewResult<Response> {
 	// Validate request
 	create_req.validate()?;
@@ -89,7 +90,7 @@ pub async fn create_article(Json(create_req): Json<CreateArticleRequest>) -> Vie
 /// GET /articles/{id}/
 /// # Path Parameters
 /// - `id`: Article ID (e.g., `/articles/1`)
-#[get("/articles/{id}/")]
+#[get("/articles/{id}/", name = "articles_get")]
 pub async fn get_article(Path(id): Path<i64>) -> ViewResult<Response> {
 	eprintln!("[DEBUG views::get_article] Looking for article id={}", id);
 
@@ -123,7 +124,7 @@ pub async fn get_article(Path(id): Path<i64>) -> ViewResult<Response> {
 ///   "published": false
 /// }
 /// ```
-#[put("/articles/{id}/")]
+#[put("/articles/{id}/", name = "articles_update")]
 pub async fn update_article(
 	Path(id): Path<i64>,
 	Json(update_data): Json<json::Value>,
@@ -177,7 +178,7 @@ pub async fn update_article(
 ///
 /// # Response
 /// Returns 204 No Content on success
-#[delete("/articles/{id}/")]
+#[delete("/articles/{id}/", name = "articles_delete")]
 pub async fn delete_article(Path(id): Path<i64>) -> ViewResult<Response> {
 
 	// Delete article from in-memory storage

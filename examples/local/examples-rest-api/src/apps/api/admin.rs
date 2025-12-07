@@ -1,6 +1,7 @@
 //! Admin configuration for api app
 
-use reinhardt::admin::ModelAdminConfig;
+use crate::apps::api::models::Article;
+use reinhardt::admin;
 
 /// Admin configuration for Article model
 ///
@@ -11,29 +12,14 @@ use reinhardt::admin::ModelAdminConfig;
 /// - Sorted by creation date (newest first)
 /// - Read-only fields: created_at, updated_at
 /// - 25 items per page
+#[admin(model,
+	for = Article,
+	name = "Article",
+	list_display = [id, title, author, published, created_at],
+	list_filter = [published, created_at],
+	search_fields = [title, author, content],
+	ordering = [(created_at, desc)],
+	readonly_fields = [created_at, updated_at],
+	list_per_page = 25
+)]
 pub struct ArticleAdmin;
-
-impl ArticleAdmin {
-	/// Returns the ModelAdminConfig for Article model
-	///
-	/// # Example
-	///
-	/// ```rust,ignore
-	/// use reinhardt_panel::AdminSite;
-	/// use crate::apps::api::admin::ArticleAdmin;
-	///
-	/// let mut admin = AdminSite::new("Article Management");
-	/// admin.register("Article", ArticleAdmin::config())?;
-	/// ```
-	pub fn config() -> ModelAdminConfig {
-		ModelAdminConfig::builder()
-			.model_name("Article")
-			.list_display(vec!["id", "title", "author", "published", "created_at"])
-			.list_filter(vec!["published", "created_at"])
-			.search_fields(vec!["title", "author", "content"])
-			.ordering(vec!["-created_at"])
-			.readonly_fields(vec!["created_at", "updated_at"])
-			.list_per_page(25)
-			.build()
-	}
-}
