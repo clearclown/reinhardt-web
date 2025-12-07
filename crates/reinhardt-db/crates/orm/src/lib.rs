@@ -139,6 +139,7 @@ pub mod execution;
 pub mod instrumentation;
 pub mod loading;
 pub mod many_to_many;
+pub mod many_to_many_accessor;
 pub mod polymorphic;
 pub mod query_execution;
 pub mod query_options;
@@ -252,6 +253,7 @@ pub use types::{
 pub use async_query::{AsyncQuery, AsyncSession};
 pub use engine::{Engine, EngineConfig, create_engine, create_engine_with_config};
 pub use many_to_many::{AssociationTable, ManyToMany, association_table};
+pub use many_to_many_accessor::ManyToManyAccessor;
 pub use query_execution::{ExecutableQuery, QueryCompiler};
 
 // Django ORM compatibility layer
