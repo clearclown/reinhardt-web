@@ -86,6 +86,8 @@ pub struct RelAttribute {
 	/// Relationship type (foreign_key, one_to_one, many_to_many, etc.)
 	pub rel_type: RelationType,
 	/// Target model type (e.g., `User`)
+	/// NOTE: For ForeignKey/OneToOne, this is extracted from field type (ForeignKeyField<T>).
+	/// The 'to' attribute is NOT allowed for these types.
 	pub to: Option<Path>,
 	/// Target field for foreign key (default: "id")
 	pub to_field: Option<String>,
@@ -99,6 +101,9 @@ pub struct RelAttribute {
 	pub null: Option<bool>,
 	/// Whether to create a database index
 	pub db_index: Option<bool>,
+	/// Custom database column name for foreign key field.
+	/// If not specified, defaults to `{field_name}_id`.
+	pub db_column: Option<String>,
 	/// Custom constraint name
 	pub db_constraint: Option<String>,
 	/// Parent link (for OneToOne inheritance)
@@ -109,6 +114,12 @@ pub struct RelAttribute {
 	pub composite: Option<Path>,
 	/// Foreign key field name (for one_to_many)
 	pub foreign_key: Option<String>,
+	/// Through table name (for many_to_many)
+	pub through: Option<String>,
+	/// Source field name in through table (for many_to_many)
+	pub source_field: Option<String>,
+	/// Target field name in through table (for many_to_many)
+	pub target_field: Option<String>,
 	/// Span for error reporting
 	pub span: Span,
 }
@@ -124,11 +135,15 @@ impl Default for RelAttribute {
 			on_update: CascadeAction::default(),
 			null: None,
 			db_index: None,
+			db_column: None,
 			db_constraint: None,
 			parent_link: None,
 			name: None,
 			composite: None,
 			foreign_key: None,
+			through: None,
+			source_field: None,
+			target_field: None,
 			span: Span::call_site(),
 		}
 	}
@@ -181,6 +196,9 @@ impl RelAttribute {
 			} else if path.is_ident("db_index") {
 				let value = parse_bool_value(&meta)?;
 				result.db_index = Some(value);
+			} else if path.is_ident("db_column") {
+				let value = parse_string_value(&meta)?;
+				result.db_column = Some(value);
 			} else if path.is_ident("db_constraint") {
 				let value = parse_string_value(&meta)?;
 				result.db_constraint = Some(value);
@@ -196,6 +214,15 @@ impl RelAttribute {
 			} else if path.is_ident("foreign_key") {
 				let value = parse_string_value(&meta)?;
 				result.foreign_key = Some(value);
+			} else if path.is_ident("through") {
+				let value = parse_string_value(&meta)?;
+				result.through = Some(value);
+			} else if path.is_ident("source_field") {
+				let value = parse_string_value(&meta)?;
+				result.source_field = Some(value);
+			} else if path.is_ident("target_field") {
+				let value = parse_string_value(&meta)?;
+				result.target_field = Some(value);
 			} else {
 				return Err(meta.error(format!("Unknown rel attribute: {:?}", path)));
 			}
@@ -213,12 +240,20 @@ impl RelAttribute {
 	fn validate(&self) -> syn::Result<()> {
 		match self.rel_type {
 			RelationType::ForeignKey | RelationType::OneToOne => {
-				if self.to.is_none() {
+				// ForeignKey/OneToOne uses ForeignKeyField<T>/OneToOneField<T> type parameters.
+				// The 'to' parameter is NOT allowed - target model is inferred from field type.
+				if self.to.is_some() {
 					return Err(syn::Error::new(
 						self.span,
 						format!(
-							"#[rel({}, ...)] requires 'to' parameter",
-							self.rel_type.as_str()
+							"#[rel({}, ...)] does not accept 'to' parameter. \
+							 Use {}Field<Target> type instead.",
+							self.rel_type.as_str(),
+							if self.rel_type == RelationType::ForeignKey {
+								"ForeignKey"
+							} else {
+								"OneToOne"
+							}
 						),
 					));
 				}
@@ -232,10 +267,13 @@ impl RelAttribute {
 				}
 			}
 			RelationType::ManyToMany => {
-				if self.to.is_none() {
+				// ManyToMany uses ManyToManyField<Source, Target> type parameters.
+				// The 'to' parameter is no longer supported.
+				if self.to.is_some() {
 					return Err(syn::Error::new(
 						self.span,
-						"#[rel(many_to_many, ...)] requires 'to' parameter",
+						"#[rel(many_to_many, ...)] does not accept 'to' parameter. \
+						 Use ManyToManyField<Source, Target> type parameters instead.",
 					));
 				}
 			}

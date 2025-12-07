@@ -41,6 +41,42 @@ pub(crate) fn model_attribute_impl(
 		})
 	}
 
+	// Process struct fields to add #[serde(skip)] to ManyToMany fields
+	if let syn::Fields::Named(ref mut fields) = input.fields {
+		for field in fields.named.iter_mut() {
+			// Check if this field has #[rel(many_to_many, ...)] attribute
+			let has_many_to_many = field.attrs.iter().any(|attr| {
+				if attr.path().is_ident("rel") {
+					// Parse the attribute to check for many_to_many
+					if let syn::Meta::List(meta_list) = &attr.meta {
+						let tokens_str = meta_list.tokens.to_string();
+						return tokens_str.contains("many_to_many");
+					}
+				}
+				false
+			});
+
+			if has_many_to_many {
+				// Check if #[serde(skip)] already exists
+				let has_serde_skip = field.attrs.iter().any(|attr| {
+					if attr.path().is_ident("serde")
+						&& let syn::Meta::List(meta_list) = &attr.meta
+					{
+						let tokens_str = meta_list.tokens.to_string();
+						return tokens_str.contains("skip");
+					}
+					false
+				});
+
+				// Add #[serde(skip)] if not already present
+				if !has_serde_skip {
+					let serde_skip_attr: Attribute = syn::parse_quote! { #[serde(skip)] };
+					field.attrs.push(serde_skip_attr);
+				}
+			}
+		}
+	}
+
 	// Create a #[model_config(...)] helper attribute with the arguments
 	// Using model_config instead of model to avoid name collision with the attribute macro
 	let config_attr: Attribute = if args.is_empty() {
@@ -49,11 +85,15 @@ pub(crate) fn model_attribute_impl(
 		syn::parse_quote! { #[model_config(#args)] }
 	};
 
-	// Build derive list with required traits
+	// Build derive attribute with Model using fully qualified path
 	// Model must be first for proper attribute processing
-	let mut derive_traits = vec!["Model"];
+	// Use reinhardt::Model for examples, reinhardt_macros::Model for internal use
+	// Try reinhardt first (for external users), fall back to reinhardt_macros (for internal)
+	let model_path: TokenStream = "reinhardt::Model"
+		.parse()
+		.expect("Failed to parse Model path");
 
-	// Add common traits if not already present
+	// Check which common traits need to be added
 	// Note: Eq and Hash are NOT included by default because:
 	// - Not all types implement Eq/Hash (e.g., f64, f32)
 	// - Most models don't need these traits for database operations
@@ -64,23 +104,24 @@ pub(crate) fn model_attribute_impl(
 	// - Users should manually add #[derive(Serialize, Deserialize)] when needed
 	let required_traits = ["Debug", "Clone", "PartialEq"];
 
-	for trait_name in &required_traits {
+	let mut additional_traits = Vec::new();
+	for &trait_name in &required_traits {
 		if !has_derive_trait(&input.attrs, trait_name) {
-			derive_traits.push(trait_name);
+			additional_traits.push(trait_name);
 		}
 	}
 
 	// Create derive attribute with all required traits
-	let derive_attr: Attribute = if derive_traits.len() == 1 {
+	let derive_attr: Attribute = if additional_traits.is_empty() {
 		// Only Model needed (user already has others)
-		syn::parse_quote! { #[derive(Model)] }
+		syn::parse_quote! { #[derive(#model_path)] }
 	} else {
-		// Build attribute with multiple traits
-		let traits_str = derive_traits.join(", ");
+		// Build attribute with Model and additional traits
+		let traits_str = additional_traits.join(", ");
 		let tokens: TokenStream = traits_str
 			.parse()
 			.expect("Failed to parse derive traits - this is a bug");
-		syn::parse_quote! { #[derive(#tokens)] }
+		syn::parse_quote! { #[derive(#model_path, #tokens)] }
 	};
 
 	// Insert at the beginning to ensure Model is processed first

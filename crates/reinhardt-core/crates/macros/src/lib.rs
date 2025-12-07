@@ -24,11 +24,13 @@ use proc_macro::TokenStream;
 use syn::{ItemFn, ItemStruct, parse_macro_input};
 
 mod action;
+mod admin;
 mod api_view;
 mod app_config_derive;
 mod collect_migrations;
-mod endpoint;
-mod injectable_derive;
+mod injectable_common;
+mod injectable_fn;
+mod injectable_struct;
 mod installed_apps;
 mod model_attribute;
 mod model_derive;
@@ -41,11 +43,13 @@ mod receiver;
 mod rel;
 mod routes;
 mod schema;
+mod use_inject;
 
 use action::action_impl;
+use admin::admin_impl;
 use api_view::api_view_impl;
-use endpoint::endpoint_impl;
-use injectable_derive::injectable_derive_impl;
+use injectable_fn::injectable_fn_impl;
+use injectable_struct::injectable_struct_impl;
 use installed_apps::installed_apps_impl;
 use model_attribute::model_attribute_impl;
 use model_derive::model_derive_impl;
@@ -56,6 +60,7 @@ use query_fields::derive_query_fields_impl;
 use receiver::receiver_impl;
 use routes::{delete_impl, get_impl, patch_impl, post_impl, put_impl};
 use schema::derive_schema_impl;
+use use_inject::use_inject_impl;
 
 /// Decorator for function-based API views
 ///
@@ -304,7 +309,7 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 /// # Example
 ///
 /// ```ignore
-/// use reinhardt_macros::use_injection;
+/// use reinhardt_macros::use_inject;
 /// use reinhardt_di::{Injectable, InjectionContext};
 ///
 /// #[derive(Clone, Default)]
@@ -313,7 +318,7 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 /// #[derive(Clone, Default)]
 /// struct Config;
 ///
-/// #[use_injection]
+/// #[use_inject]
 /// async fn my_handler(
 ///     #[inject] db: Database,
 ///     #[inject] config: Config,
@@ -324,7 +329,7 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 /// }
 ///
 // Works with any function
-/// #[use_injection]
+/// #[use_inject]
 /// async fn process_data(
 ///     #[inject] db: Database,
 ///     data: Vec<u8>,
@@ -338,7 +343,7 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 /// You can disable caching for specific dependencies:
 ///
 /// ```ignore
-/// #[use_injection]
+/// #[use_inject]
 /// async fn handler(
 ///     #[inject] db: Database,              // Cached (default)
 ///     #[inject(cache = false)] fresh: Data,  // Not cached
@@ -355,22 +360,10 @@ pub fn receiver(args: TokenStream, input: TokenStream) -> TokenStream {
 /// 3. Injecting dependencies at the start of the function
 ///
 #[proc_macro_attribute]
-pub fn use_injection(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn use_inject(args: TokenStream, input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as ItemFn);
 
-	endpoint_impl(args.into(), input)
-		.unwrap_or_else(|e| e.to_compile_error())
-		.into()
-}
-
-/// Alias for `use_injection` for FastAPI-style naming
-///
-/// See [`use_injection`] for documentation.
-#[proc_macro_attribute]
-pub fn endpoint(args: TokenStream, input: TokenStream) -> TokenStream {
-	let input = parse_macro_input!(input as ItemFn);
-
-	endpoint_impl(args.into(), input)
+	use_inject_impl(args.into(), input)
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
 }
@@ -475,48 +468,59 @@ pub fn derive_schema(input: TokenStream) -> TokenStream {
 		.into()
 }
 
-/// Derive macro for automatic Injectable implementation with field injection
+/// Attribute macro for injectable factory/provider functions and structs
 ///
-/// Automatically implements the `Injectable` trait for structs, injecting dependencies
-/// for fields marked with `#[inject]`. Non-injected fields use `Default::default()`.
+/// This macro can be applied to both functions and structs to enable dependency injection.
 ///
-/// # Example
+/// # Function Usage
+///
+/// Transforms a factory/provider function into an `Injectable` trait implementation
+/// for its return type.
 ///
 /// ```ignore
-/// use reinhardt_macros::Injectable;
-/// use reinhardt_di::{Injectable, InjectionContext};
+/// use reinhardt_macros::injectable;
+/// use reinhardt_di::Injectable;
 ///
-/// #[derive(Clone, Default)]
-/// struct Database {
-///     connection_string: String,
+/// struct UserService {
+///     db: Arc<Database>,
+///     cache: Arc<Cache>,
 /// }
 ///
-/// #[derive(Clone, Default)]
-/// struct RedisCache {
-///     host: String,
+/// #[injectable]
+/// fn create_user_service(
+///     #[inject] db: Arc<Database>,
+///     #[inject] cache: Arc<Cache>,
+/// ) -> UserService {
+///     UserService { db, cache }
 /// }
+/// ```
 ///
-/// #[derive(Clone, Injectable)]
+/// # Struct Usage
+///
+/// Generates an `Injectable` trait implementation for structs with `#[inject]` fields.
+///
+/// ```ignore
+/// #[injectable]
+/// #[derive(Clone)]
 /// struct UserViewSet {
 ///     #[inject]
 ///     db: Database,
 ///     #[inject]
 ///     cache: RedisCache,
-///     name: String,  // Uses Default::default()
+///     #[no_inject(default = Default)]
+///     name: String,
 /// }
+/// ```
 ///
-/// // Automatically generated:
-/// // impl Injectable for UserViewSet {
-/// //     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-/// //         let db = Depends::<Database>::resolve(ctx, true).await?;
-/// //         let cache = Depends::<RedisCache>::resolve(ctx, true).await?;
-/// //         Ok(Self {
-/// //             db,
-/// //             cache,
-/// //             name: Default::default(),
-/// //         })
-/// //     }
-/// // }
+/// # Async Support
+///
+/// Both sync and async provider functions are supported:
+///
+/// ```ignore
+/// #[injectable]
+/// async fn get_config() -> Config {
+///     Config::load().await
+/// }
 /// ```
 ///
 /// # Cache Control
@@ -524,7 +528,18 @@ pub fn derive_schema(input: TokenStream) -> TokenStream {
 /// You can disable caching for specific dependencies:
 ///
 /// ```ignore
-/// #[derive(Clone, Injectable)]
+/// // Function
+/// #[injectable]
+/// fn create_service(
+///     #[inject] db: Database,                // Cached (default)
+///     #[inject(cache = false)] fresh: Data,  // Not cached
+/// ) -> MyService {
+///     MyService { db, fresh }
+/// }
+///
+/// // Struct
+/// #[injectable]
+/// #[derive(Clone)]
 /// struct MyService {
 ///     #[inject]
 ///     db: Database,              // Cached (default)
@@ -533,20 +548,106 @@ pub fn derive_schema(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// # Requirements
+/// # Scope Control
 ///
+/// You can control the injection scope:
+///
+/// ```ignore
+/// #[injectable]
+/// #[derive(Clone)]
+/// struct AppConfig {
+///     #[inject(scope = Singleton)]
+///     global_settings: Settings,  // Singleton scope
+///     #[inject(scope = Request)]
+///     request_data: RequestData,  // Request scope (default)
+///     #[no_inject(default = Default)]
+///     config_name: String,
+/// }
+/// ```
+///
+/// # Field Attributes (Struct Only)
+///
+/// All struct fields must have either `#[inject]` or `#[no_inject]` attribute:
+///
+/// - **`#[inject]`**: Inject this field from the DI container
+/// - **`#[inject(cache = false)]`**: Inject without caching
+/// - **`#[inject(scope = Singleton)]`**: Use singleton scope
+/// - **`#[no_inject(default = Default)]`**: Initialize with `Default::default()`
+/// - **`#[no_inject(default = value)]`**: Initialize with specific value
+/// - **`#[no_inject]`**: Initialize with `None` (field must be `Option<T>`)
+///
+/// **Examples:**
+///
+/// ```ignore
+/// #[injectable]
+/// #[derive(Clone)]
+/// struct MyService {
+///     #[inject]
+///     db: Database,
+///
+///     #[no_inject(default = Default)]
+///     config: Config,
+///
+///     #[no_inject(default = 42)]
+///     max_retries: i32,
+///
+///     #[no_inject(default = "localhost")]
+///     host: &'static str,
+///
+///     #[no_inject]
+///     optional_cache: Option<Cache>,
+/// }
+/// ```
+///
+/// # Restrictions
+///
+/// **For functions:**
+/// - Function must have an explicit return type
+/// - All parameters must be marked with `#[inject]`
+///
+/// **For structs:**
 /// - Struct must have named fields
-/// - Non-injected fields must implement `Default`
+/// - All fields must have either `#[inject]` or `#[no_inject]` attribute
+/// - `#[no_inject]` without default value requires field type to be `Option<T>`
 /// - Struct must be `Clone` (required by `Injectable` trait)
 /// - All `#[inject]` field types must implement `Injectable`
 ///
-#[proc_macro_derive(Injectable, attributes(inject))]
-pub fn derive_injectable(input: TokenStream) -> TokenStream {
-	let input = parse_macro_input!(input as syn::DeriveInput);
+#[proc_macro_attribute]
+pub fn injectable(_args: TokenStream, input: TokenStream) -> TokenStream {
+	// Try to parse as ItemFn first
+	if let Ok(item_fn) = syn::parse::<ItemFn>(input.clone()) {
+		return injectable_fn_impl(proc_macro2::TokenStream::new(), item_fn)
+			.unwrap_or_else(|e| e.to_compile_error())
+			.into();
+	}
 
-	injectable_derive_impl(input)
-		.unwrap_or_else(|e| e.to_compile_error())
-		.into()
+	// Try to parse as ItemStruct
+	if let Ok(item_struct) = syn::parse::<ItemStruct>(input.clone()) {
+		// Convert ItemStruct to DeriveInput for compatibility
+		let derive_input = syn::DeriveInput {
+			attrs: item_struct.attrs,
+			vis: item_struct.vis,
+			ident: item_struct.ident,
+			generics: item_struct.generics,
+			data: syn::Data::Struct(syn::DataStruct {
+				struct_token: item_struct.struct_token,
+				fields: item_struct.fields,
+				semi_token: item_struct.semi_token,
+			}),
+		};
+
+		return injectable_struct_impl(derive_input)
+			.unwrap_or_else(|e| e.to_compile_error())
+			.into();
+	}
+
+	// Neither ItemFn nor ItemStruct
+	syn::Error::new(
+		proc_macro2::Span::call_site(),
+		"#[injectable] can only be applied to functions or structs",
+	)
+	.to_compile_error()
+	.into()
 }
 
 /// Attribute macro for Django-style model definition with automatic derive
@@ -823,6 +924,68 @@ pub fn derive_app_config(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn collect_migrations(input: TokenStream) -> TokenStream {
 	collect_migrations::collect_migrations_impl(input.into())
+		.unwrap_or_else(|e| e.to_compile_error())
+		.into()
+}
+
+/// Attribute macro for ModelAdmin configuration
+///
+/// Automatically implements the `ModelAdmin` trait for a struct with compile-time
+/// field validation against the specified model type.
+///
+/// # Example
+///
+/// ```ignore
+/// use crate::models::User;
+///
+/// #[admin(model,
+///     for = User,
+///     name = "User",
+///     list_display = [id, username, email, is_active, created_at],
+///     search_fields = [username, email],
+///     list_filter = [is_active, created_at],
+///     ordering = [(created_at, desc)],
+///     readonly_fields = [id, created_at, last_login],
+///     fields = [username, email, is_active],
+///     list_per_page = 50
+/// )]
+/// pub struct UserAdmin;
+/// ```
+///
+/// # Attributes
+///
+/// ## Required
+///
+/// - `for = ModelType` - The model type to validate fields against
+/// - `name = "ModelName"` - The display name for the model
+///
+/// ## Optional
+///
+/// - `list_display = [field1, field2, ...]` - Fields to display in list view (default: `[id]`)
+/// - `list_filter = [field1, field2, ...]` - Fields for filtering (default: `[]`)
+/// - `search_fields = [field1, field2, ...]` - Fields for search (default: `[]`)
+/// - `fields = [field1, field2, ...]` - Fields to display in forms (default: all)
+/// - `readonly_fields = [field1, field2, ...]` - Read-only fields (default: `[]`)
+/// - `ordering = [(field1, asc/desc), ...]` - Default ordering (default: `[(id, desc)]`)
+/// - `list_per_page = N` - Items per page (default: site default)
+///
+/// # Compile-time Field Validation
+///
+/// All field names are validated at compile time against the model's `field_xxx()` methods.
+/// If a field doesn't exist, compilation will fail with an error.
+///
+/// # Generated Code
+///
+/// The macro generates:
+/// 1. The struct definition
+/// 2. Compile-time field validation code
+/// 3. `ModelAdmin` trait implementation with `#[async_trait]`
+///
+#[proc_macro_attribute]
+pub fn admin(args: TokenStream, input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as ItemStruct);
+
+	admin_impl(args.into(), input)
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
 }

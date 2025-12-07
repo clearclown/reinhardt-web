@@ -398,6 +398,12 @@ struct FieldConfig {
 	unsigned: Option<bool>,
 	#[cfg(feature = "db-mysql")]
 	zerofill: Option<bool>,
+
+	// Constructor generation control
+	/// Whether to include this field in the new() function arguments
+	/// When true, field is included even if it would normally be auto-generated
+	/// When false, field is excluded and uses default value
+	include_in_new: Option<bool>,
 }
 
 impl FieldConfig {
@@ -735,6 +741,12 @@ impl FieldConfig {
 					{
 						Err(meta.error("zerofill is only available with db-mysql feature"))
 					}
+				}
+				// Constructor generation control
+				else if meta.path.is_ident("include_in_new") {
+					let value: syn::LitBool = meta.value()?.parse()?;
+					config.include_in_new = Some(value.value);
+					Ok(())
 				} else {
 					Err(meta.error("unsupported field attribute"))
 				}
@@ -826,6 +838,25 @@ struct FieldInfo {
 	/// Optional relationship attribute from `#[rel(...)]`
 	#[allow(dead_code)]
 	rel: Option<RelAttribute>,
+}
+
+
+/// Foreign key / One-to-one field information for automatic ID field generation
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // Fields will be used for accessor generation in future
+struct ForeignKeyFieldInfo {
+	/// Original field name (e.g., "author")
+	field_name: syn::Ident,
+	/// Target model type (e.g., User)
+	target_type: Type,
+	/// Generated ID column name (e.g., "author_id" or custom via db_column)
+	id_column_name: String,
+	/// Related name for reverse accessor
+	related_name: Option<String>,
+	/// Whether this is a OneToOne field (requires UNIQUE constraint)
+	is_one_to_one: bool,
+	/// The full RelAttribute for additional options
+	rel_attr: RelAttribute,
 }
 
 /// Rustの型からフィールドメタデータ文字列を生成
@@ -1041,6 +1072,48 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		});
 	}
 
+	// Extract ForeignKeyField and OneToOneField information
+	let mut fk_field_infos: Vec<ForeignKeyFieldInfo> = Vec::new();
+	for field_info in &field_infos {
+		if let Some(ref rel_attr) = field_info.rel {
+			// Check if this is a ForeignKeyField or OneToOneField type
+			if let Some(target_type) = extract_fk_target_type(&field_info.ty) {
+				let is_one_to_one = is_one_to_one_field_type(&field_info.ty);
+
+				// Validate relationship type matches field type
+				if is_one_to_one && rel_attr.rel_type != crate::rel::RelationType::OneToOne {
+					return Err(syn::Error::new(
+						rel_attr.span,
+						"OneToOneField must use #[rel(one_to_one, ...)]",
+					));
+				}
+				if is_foreign_key_field_type(&field_info.ty)
+					&& rel_attr.rel_type != crate::rel::RelationType::ForeignKey
+				{
+					return Err(syn::Error::new(
+						rel_attr.span,
+						"ForeignKeyField must use #[rel(foreign_key, ...)]",
+					));
+				}
+
+				// Generate ID column name: db_column or {field_name}_id
+				let id_column_name = rel_attr
+					.db_column
+					.clone()
+					.unwrap_or_else(|| format!("{}_id", field_info.name));
+
+				fk_field_infos.push(ForeignKeyFieldInfo {
+					field_name: field_info.name.clone(),
+					target_type: target_type.clone(),
+					id_column_name,
+					related_name: rel_attr.related_name.clone(),
+					is_one_to_one,
+					rel_attr: rel_attr.clone(),
+				});
+			}
+		}
+	}
+
 	// Find all primary key fields
 	let pk_fields: Vec<_> = field_infos
 		.iter()
@@ -1162,7 +1235,7 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	};
 
 	// Generate field_metadata implementation
-	let field_metadata_items = generate_field_metadata(&field_infos)?;
+	let field_metadata_items = generate_field_metadata(&field_infos, &fk_field_infos)?;
 
 	// Generate auto-registration code
 	let registration_code =
@@ -1281,10 +1354,16 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	// Generate relationship metadata
 	let relationship_metadata = generate_relationship_metadata(&rel_fields, app_label, struct_name);
 
+	// Generate new() constructor function
+	let new_fn_impl = generate_new_function(struct_name, &field_infos);
+
 	// Generate the Model implementation
 	let expanded = quote! {
 		// Generate composite PK type definition if needed
 		#composite_pk_type_def
+
+		// Generate new() constructor function
+		#new_fn_impl
 
 		// Generate field accessor methods for type-safe field references
 		#field_accessors
@@ -1360,10 +1439,33 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 }
 
 /// Generate FieldInfo construction for field_metadata()
-fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>> {
+fn generate_field_metadata(
+	field_infos: &[FieldInfo],
+	fk_field_infos: &[ForeignKeyFieldInfo],
+) -> Result<Vec<TokenStream>> {
 	let mut items = Vec::new();
 
-	for field_info in field_infos {
+	// Filter out ManyToMany, ForeignKeyField, and OneToOneField - they are virtual
+	let regular_fields: Vec<_> = field_infos
+		.iter()
+		.filter(|f| {
+			// Exclude ManyToMany
+			if f.rel
+				.as_ref()
+				.map(|r| matches!(r.rel_type, crate::rel::RelationType::ManyToMany))
+				.unwrap_or(false)
+			{
+				return false;
+			}
+			// Exclude ForeignKeyField and OneToOneField (we generate _id fields instead)
+			if is_relationship_field_type(&f.ty) {
+				return false;
+			}
+			true
+		})
+		.collect();
+
+	for field_info in regular_fields {
 		let name = field_info.name.to_string();
 		let field_type_path = field_type_to_metadata_string(&field_info.ty, &field_info.config)?;
 		let _field_type = map_type_to_field_type(&field_info.ty, &field_info.config)?;
@@ -1641,6 +1743,47 @@ fn generate_field_metadata(field_infos: &[FieldInfo]) -> Result<Vec<TokenStream>
 		items.push(item);
 	}
 
+	// Generate _id field metadata for ForeignKeyField and OneToOneField
+	for fk_info in fk_field_infos {
+		let name = &fk_info.id_column_name;
+		let nullable = fk_info.rel_attr.null.unwrap_or(false);
+		let unique = fk_info.is_one_to_one; // OneToOne fields have UNIQUE constraint
+		let db_index = fk_info.rel_attr.db_index.unwrap_or(true); // FK fields are indexed by default
+
+		// Generate the field type based on target model's primary key
+		// We use IntegerField as a safe default; runtime will resolve the actual type
+		let field_type_path = "IntegerField";
+
+		let item = quote! {
+			{
+				let mut attributes = ::std::collections::HashMap::new();
+				if #db_index {
+					attributes.insert(
+						"db_index".to_string(),
+						::reinhardt::db::orm::fields::FieldKwarg::Bool(true)
+					);
+				}
+
+				::reinhardt::db::orm::inspection::FieldInfo {
+					name: #name.to_string(),
+					field_type: #field_type_path.to_string(),
+					nullable: #nullable,
+					primary_key: false,
+					unique: #unique,
+					blank: false,
+					editable: true,
+					default: None,
+					db_default: None,
+					db_column: None,
+					choices: None,
+					attributes,
+				}
+			}
+		};
+
+		items.push(item);
+	}
+
 	Ok(items)
 }
 
@@ -1660,9 +1803,26 @@ fn generate_registration_code(
 		struct_name.span(),
 	);
 
-	// Generate field registration code
+	// Separate ManyToMany fields from regular fields (also exclude ForeignKeyField/OneToOneField)
+	let (m2m_fields, regular_fields): (Vec<_>, Vec<_>) = field_infos.iter().partition(|f| {
+		// Exclude ManyToMany
+		if f.rel
+			.as_ref()
+			.map(|r| matches!(r.rel_type, crate::rel::RelationType::ManyToMany))
+			.unwrap_or(false)
+		{
+			return true;
+		}
+		// Exclude ForeignKeyField and OneToOneField (they are virtual, we generate _id fields instead)
+		if is_relationship_field_type(&f.ty) {
+			return true;
+		}
+		false
+	});
+
+	// Generate field registration code for regular fields
 	let mut field_registrations = Vec::new();
-	for field_info in field_infos {
+	for field_info in &regular_fields {
 		let field_name = field_info.name.to_string();
 		let field_type = map_type_to_field_type(&field_info.ty, &field_info.config)?;
 		let config = &field_info.config;
@@ -1736,6 +1896,55 @@ fn generate_registration_code(
 		});
 	}
 
+	// Generate ManyToMany field registration code
+	let mut m2m_registrations = Vec::new();
+	for field_info in &m2m_fields {
+		let field_name = field_info.name.to_string();
+
+		if let Some(rel) = &field_info.rel {
+			let to_model = if let Some(to_type) = &rel.to {
+				quote! { #to_type }.to_string()
+			} else {
+				continue; // Skip if no 'to' parameter
+			};
+
+			let related_name = rel
+				.related_name
+				.as_ref()
+				.map(|r| quote! { Some(#r.to_string()) })
+				.unwrap_or(quote! { None });
+			let through = rel
+				.through
+				.as_ref()
+				.map(|t| quote! { Some(#t.to_string()) })
+				.unwrap_or(quote! { None });
+			let source_field = rel
+				.source_field
+				.as_ref()
+				.map(|s| quote! { Some(#s.to_string()) })
+				.unwrap_or(quote! { None });
+			let target_field = rel
+				.target_field
+				.as_ref()
+				.map(|t| quote! { Some(#t.to_string()) })
+				.unwrap_or(quote! { None });
+
+			m2m_registrations.push(quote! {
+				metadata.add_many_to_many(
+					::reinhardt::db::migrations::model_registry::ManyToManyMetadata {
+						field_name: #field_name.to_string(),
+						to_model: #to_model.to_string(),
+						related_name: #related_name,
+						through: #through,
+						source_field: #source_field,
+						target_field: #target_field,
+						db_constraint_prefix: None,
+					}
+				);
+			});
+		}
+	}
+
 	// Generate type path for global model registry
 	let type_path = quote! { #struct_name }.to_string();
 
@@ -1752,6 +1961,7 @@ fn generate_registration_code(
 			);
 
 			#(#field_registrations)*
+			#(#m2m_registrations)*
 
 			::reinhardt::db::migrations::model_registry::global_registry().register_model(metadata);
 
@@ -1983,6 +2193,239 @@ fn generate_relationship_metadata(
 			vec![
 				#(#relation_info_items),*
 			]
+		}
+	}
+}
+
+/// Check if a type is Uuid or Option<Uuid>
+fn is_uuid_type(ty: &Type) -> bool {
+	let (_, inner_ty) = extract_option_type(ty);
+	if let Type::Path(type_path) = inner_ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+	{
+		return last_segment.ident == "Uuid";
+	}
+	false
+}
+
+/// Check if a type is a ManyToManyField
+fn is_many_to_many_field_type(ty: &Type) -> bool {
+	if let Type::Path(type_path) = ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+	{
+		return last_segment.ident == "ManyToManyField";
+	}
+	false
+}
+
+
+/// Check if a type is a ForeignKeyField
+fn is_foreign_key_field_type(ty: &Type) -> bool {
+	if let Type::Path(type_path) = ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+	{
+		return last_segment.ident == "ForeignKeyField";
+	}
+	false
+}
+
+/// Check if a type is a OneToOneField
+fn is_one_to_one_field_type(ty: &Type) -> bool {
+	if let Type::Path(type_path) = ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+	{
+		return last_segment.ident == "OneToOneField";
+	}
+	false
+}
+
+/// Extract target type from ForeignKeyField<T> or OneToOneField<T>
+fn extract_fk_target_type(ty: &Type) -> Option<&Type> {
+	if let Type::Path(type_path) = ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+		&& (last_segment.ident == "ForeignKeyField" || last_segment.ident == "OneToOneField")
+		&& let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments
+		&& let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first()
+	{
+		return Some(inner_ty);
+	}
+	None
+}
+
+/// Check if a type is a relationship field type (ForeignKeyField or OneToOneField)
+fn is_relationship_field_type(ty: &Type) -> bool {
+	is_foreign_key_field_type(ty) || is_one_to_one_field_type(ty)
+}
+
+/// Determine if a field should be auto-generated (excluded from new() function arguments)
+fn is_auto_generated_field(field: &FieldInfo) -> bool {
+	let config = &field.config;
+
+	// If include_in_new is explicitly set to false, exclude from new()
+	if config.include_in_new == Some(false) {
+		return true;
+	}
+
+	// If include_in_new is explicitly set to true, always include in new()
+	if config.include_in_new == Some(true) {
+		return false;
+	}
+
+	// Time-related auto-generation
+	if config.auto_now_add == Some(true) || config.auto_now == Some(true) {
+		return true;
+	}
+
+	// Generated columns
+	if config.generated.is_some() {
+		return true;
+	}
+
+	// Database-specific ID auto-generation (PostgreSQL)
+	#[cfg(feature = "db-postgres")]
+	{
+		if config.identity_always == Some(true) || config.identity_by_default == Some(true) {
+			return true;
+		}
+	}
+
+	// Database-specific ID auto-generation (MySQL)
+	#[cfg(feature = "db-mysql")]
+	{
+		if config.auto_increment == Some(true) {
+			return true;
+		}
+	}
+
+	// Database-specific ID auto-generation (SQLite)
+	#[cfg(feature = "db-sqlite")]
+	{
+		if config.autoincrement == Some(true) {
+			return true;
+		}
+	}
+
+	// ManyToManyField - always auto-generated with Default::default()
+	if is_many_to_many_field_type(&field.ty) {
+		return true;
+	}
+
+	// ForeignKeyField/OneToOneField - always auto-generated with Default::default()
+	if is_relationship_field_type(&field.ty) {
+		return true;
+	}
+
+	// ManyToMany relationship via #[rel(many_to_many, ...)]
+	if let Some(rel) = &field.rel
+		&& matches!(rel.rel_type, crate::rel::RelationType::ManyToMany)
+	{
+		return true;
+	}
+
+	// UUID primary key is auto-generated with Uuid::new_v4()
+	if config.primary_key && is_uuid_type(&field.ty) {
+		return true;
+	}
+
+	false
+}
+
+/// Get the default value expression for an auto-generated field
+fn get_auto_field_default_value(field: &FieldInfo) -> TokenStream {
+	let config = &field.config;
+
+	// ManyToManyField or ManyToMany relationship
+	if is_many_to_many_field_type(&field.ty) {
+		return quote! { ::std::default::Default::default() };
+	}
+	if let Some(rel) = &field.rel
+		&& matches!(rel.rel_type, crate::rel::RelationType::ManyToMany)
+	{
+		return quote! { ::std::default::Default::default() };
+	}
+
+	// ForeignKeyField or OneToOneField - use Default::default()
+	if is_relationship_field_type(&field.ty) {
+		return quote! { ::std::default::Default::default() };
+	}
+
+	// auto_now_add or auto_now - use Utc::now()
+	if config.auto_now_add == Some(true) || config.auto_now == Some(true) {
+		return quote! { ::chrono::Utc::now() };
+	}
+
+	// UUID primary key - generate new UUID
+	if config.primary_key && is_uuid_type(&field.ty) {
+		let (is_option, _) = extract_option_type(&field.ty);
+		if is_option {
+			return quote! { Some(::uuid::Uuid::new_v4()) };
+		} else {
+			return quote! { ::uuid::Uuid::new_v4() };
+		}
+	}
+
+	// Generated columns, IDENTITY, or auto-increment fields
+	// These are set by the database, so use Default::default() (typically None for Option types)
+	quote! { ::std::default::Default::default() }
+}
+
+/// Generate the new() constructor function for the model
+fn generate_new_function(struct_name: &syn::Ident, field_infos: &[FieldInfo]) -> TokenStream {
+	// Separate user-specified fields from auto-generated fields
+	let user_fields: Vec<_> = field_infos
+		.iter()
+		.filter(|f| !is_auto_generated_field(f))
+		.collect();
+
+	let auto_fields: Vec<_> = field_infos
+		.iter()
+		.filter(|f| is_auto_generated_field(f))
+		.collect();
+
+	// Generate parameter list for new() function
+	let params: Vec<_> = user_fields
+		.iter()
+		.map(|f| {
+			let name = &f.name;
+			let ty = &f.ty;
+			quote! { #name: #ty }
+		})
+		.collect();
+
+	// Generate user field assignments (shorthand syntax)
+	let user_field_assignments: Vec<_> = user_fields
+		.iter()
+		.map(|f| {
+			let name = &f.name;
+			quote! { #name }
+		})
+		.collect();
+
+	// Generate auto field assignments with default values
+	let auto_field_assignments: Vec<_> = auto_fields
+		.iter()
+		.map(|f| {
+			let name = &f.name;
+			let default_value = get_auto_field_default_value(f);
+			quote! { #name: #default_value }
+		})
+		.collect();
+
+	quote! {
+		impl #struct_name {
+			/// Create a new instance with user-specified fields.
+			///
+			/// Auto-generated fields (timestamps, UUIDs, relationships) are initialized automatically:
+			/// - UUID primary keys: Generated with `Uuid::new_v4()`
+			/// - `auto_now_add`/`auto_now` fields: Set to `Utc::now()`
+			/// - ManyToManyField: Initialized with `Default::default()`
+			/// - Identity/AutoIncrement fields: Set to `Default::default()` (DB assigns value)
+			pub fn new(#(#params),*) -> Self {
+				Self {
+					#(#user_field_assignments,)*
+					#(#auto_field_assignments,)*
+				}
+			}
 		}
 	}
 }

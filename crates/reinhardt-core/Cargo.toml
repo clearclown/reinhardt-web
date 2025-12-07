@@ -30,6 +30,7 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
+hyper = { workspace = true, optional = true }
 
 [features]
 default = [
@@ -49,7 +50,7 @@ macros = ["dep:reinhardt-macros"]
 security = ["dep:reinhardt-security"]
 validators = ["dep:reinhardt-validators"]
 serializers = ["dep:reinhardt-core-serializers"]
-http = ["types-http", "dep:reinhardt-http"]
+http = ["types-http", "dep:reinhardt-http", "dep:hyper"]
 
 # New facade features
 messages = ["dep:reinhardt-messages"]
