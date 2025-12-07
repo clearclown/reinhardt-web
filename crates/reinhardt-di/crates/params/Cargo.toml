@@ -23,13 +23,15 @@ regex = { workspace = true }
 validator = { version = "0.20.0", features = ["derive"], optional = true }
 multer = { version = "3.1", optional = true }
 futures-util = { version = "0.3", optional = true }
+uuid = { workspace = true, optional = true }
 
 [features]
-default = ["multi-value-arrays"]
+default = ["multi-value-arrays", "uuid"]
 validation = ["reinhardt-validators", "validator"]
 multi-value-arrays = []
 multipart = ["multer", "futures-util"]
-full = ["validation", "multi-value-arrays", "multipart"]
+uuid = ["dep:uuid"]
+full = ["validation", "multi-value-arrays", "multipart", "uuid"]
 
 [dev-dependencies]
 tokio = { workspace = true }

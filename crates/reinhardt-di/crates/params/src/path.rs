@@ -100,6 +100,81 @@ impl_path_from_str!(
 	i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64, bool
 );
 
+// Implement for Uuid when the uuid feature is enabled
+#[cfg(feature = "uuid")]
+impl_path_from_str!(uuid::Uuid);
+
+// Implementation for 2-tuple path parameters
+// This enables extracting multiple path parameters like Path<(Uuid, Uuid)>
+macro_rules! impl_path_tuple2_from_str {
+    ($($t1:ty, $t2:ty);+ $(;)?) => {
+        $(
+            #[async_trait]
+            impl FromRequest for Path<($t1, $t2)> {
+                async fn from_request(_req: &Request, ctx: &ParamContext) -> ParamResult<Self> {
+                    if ctx.path_params.len() != 2 {
+                        return Err(ParamError::InvalidParameter {
+                            name: "path".to_string(),
+                            message: format!(
+                                "Expected exactly 2 path parameters for tuple type, found {}",
+                                ctx.path_params.len()
+                            ),
+                        });
+                    }
+
+                    // Get values in order (HashMap iteration order is not guaranteed,
+                    // but we assume the router provides them in order)
+                    let values: Vec<_> = ctx.path_params.values().collect();
+                    if values.len() != 2 {
+                        return Err(ParamError::InvalidParameter {
+                            name: "path".to_string(),
+                            message: "Expected exactly 2 path parameters".to_string(),
+                        });
+                    }
+
+                    let v1 = values[0].parse::<$t1>()
+                        .map_err(|e| ParamError::ParseError {
+                            name: "path[0]".to_string(),
+                            source: Box::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                format!("Failed to parse '{}' as {}: {}", values[0], stringify!($t1), e)
+                            )),
+                        })?;
+
+                    let v2 = values[1].parse::<$t2>()
+                        .map_err(|e| ParamError::ParseError {
+                            name: "path[1]".to_string(),
+                            source: Box::new(std::io::Error::new(
+                                std::io::ErrorKind::InvalidData,
+                                format!("Failed to parse '{}' as {}: {}", values[1], stringify!($t2), e)
+                            )),
+                        })?;
+
+                    Ok(Path((v1, v2)))
+                }
+            }
+        )+
+    };
+}
+
+// Common tuple combinations
+impl_path_tuple2_from_str!(
+    i64, i64;
+    String, i64;
+    i64, String;
+    String, String
+);
+
+// Uuid tuple combinations when uuid feature is enabled
+#[cfg(feature = "uuid")]
+impl_path_tuple2_from_str!(
+    uuid::Uuid, uuid::Uuid;
+    uuid::Uuid, i64;
+    i64, uuid::Uuid;
+    uuid::Uuid, String;
+    String, uuid::Uuid
+);
+
 // Special implementation for String (no parsing needed)
 #[async_trait]
 impl FromRequest for Path<String> {
