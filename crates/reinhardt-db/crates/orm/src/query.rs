@@ -58,6 +58,49 @@ impl Filter {
 	}
 }
 
+// From implementations for FilterValue
+impl From<String> for FilterValue {
+	fn from(s: String) -> Self {
+		FilterValue::String(s)
+	}
+}
+
+impl From<&str> for FilterValue {
+	fn from(s: &str) -> Self {
+		FilterValue::String(s.to_string())
+	}
+}
+
+impl From<i64> for FilterValue {
+	fn from(i: i64) -> Self {
+		FilterValue::Integer(i)
+	}
+}
+
+impl From<i32> for FilterValue {
+	fn from(i: i32) -> Self {
+		FilterValue::Integer(i as i64)
+	}
+}
+
+impl From<f64> for FilterValue {
+	fn from(f: f64) -> Self {
+		FilterValue::Float(f)
+	}
+}
+
+impl From<bool> for FilterValue {
+	fn from(b: bool) -> Self {
+		FilterValue::Boolean(b)
+	}
+}
+
+impl From<uuid::Uuid> for FilterValue {
+	fn from(u: uuid::Uuid) -> Self {
+		FilterValue::String(u.to_string())
+	}
+}
+
 #[derive(Debug, Clone)]
 pub struct Query {
 	filters: Vec<Filter>,
@@ -795,6 +838,111 @@ where
 				n
 			))),
 		}
+	}
+
+	/// Execute the queryset with an explicit database connection and return all records
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let db = get_database_connection().await?;
+	/// let users = User::objects()
+	///     .filter(User::field_status().eq("active"))
+	///     .all(&db)
+	///     .await?;
+	/// ```
+	pub async fn all_with_db(
+		&self,
+		conn: &crate::connection::DatabaseConnection,
+	) -> reinhardt_core::exception::Result<Vec<T>>
+	where
+		T: serde::de::DeserializeOwned,
+	{
+		let stmt = if self.select_related_fields.is_empty() {
+			let mut stmt = SeaQuery::select();
+			stmt.from(Alias::new(T::table_name())).column(Asterisk);
+
+			if let Some(cond) = self.build_where_condition() {
+				stmt.cond_where(cond);
+			}
+
+			stmt.to_owned()
+		} else {
+			self.select_related_query()
+		};
+
+		let sql = stmt.to_string(PostgresQueryBuilder);
+
+		let rows = conn.query(&sql, vec![]).await?;
+		rows.into_iter()
+			.map(|row| {
+				serde_json::from_value(serde_json::to_value(&row.data).map_err(|e| {
+					reinhardt_core::exception::Error::Database(format!(
+						"Serialization error: {}",
+						e
+					))
+				})?)
+				.map_err(|e| {
+					reinhardt_core::exception::Error::Database(format!(
+						"Deserialization error: {}",
+						e
+					))
+				})
+			})
+			.collect()
+	}
+
+	/// Execute the queryset with an explicit database connection and return a single record
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let db = get_database_connection().await?;
+	/// let user = User::objects()
+	///     .filter(User::field_id().eq(user_id))
+	///     .get(&db)
+	///     .await?;
+	/// ```
+	pub async fn get_with_db(
+		&self,
+		conn: &crate::connection::DatabaseConnection,
+	) -> reinhardt_core::exception::Result<T>
+	where
+		T: serde::de::DeserializeOwned,
+	{
+		let results = self.all_with_db(conn).await?;
+		match results.len() {
+			0 => Err(reinhardt_core::exception::Error::NotFound(
+				"No record found matching the query".to_string(),
+			)),
+			1 => Ok(results.into_iter().next().unwrap()),
+			n => Err(reinhardt_core::exception::Error::Database(format!(
+				"Multiple records found ({}), expected exactly one",
+				n
+			))),
+		}
+	}
+
+	/// Execute the queryset with an explicit database connection and return the first record
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let db = get_database_connection().await?;
+	/// let user = User::objects()
+	///     .filter(User::field_status().eq("active"))
+	///     .first(&db)
+	///     .await?;
+	/// ```
+	pub async fn first_with_db(
+		&self,
+		conn: &crate::connection::DatabaseConnection,
+	) -> reinhardt_core::exception::Result<Option<T>>
+	where
+		T: serde::de::DeserializeOwned,
+	{
+		let mut results = self.all_with_db(conn).await?;
+		Ok(results.drain(..).next())
 	}
 
 	/// Execute the queryset and return the count of matching records
