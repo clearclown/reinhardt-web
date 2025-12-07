@@ -1,19 +1,23 @@
 //! Test error for unknown rel attribute
 
+use reinhardt::db::associations::ForeignKeyField;
 use reinhardt::model;
+use serde::{Deserialize, Serialize};
 
-#[model(app_label = "test")]
+#[derive(Serialize, Deserialize)]
+#[model(app_label = "test", table_name = "users")]
 pub struct User {
 	#[field(primary_key = true)]
 	pub id: i64,
 }
 
-#[model(app_label = "test")]
+#[derive(Serialize, Deserialize)]
+#[model(app_label = "test", table_name = "posts")]
 pub struct Post {
 	#[field(primary_key = true)]
 	pub id: i64,
-	#[rel(foreign_key, to = User, unknown_option = true)]
-	pub author_id: i64,
+	#[rel(foreign_key, unknown_option = true)]
+	pub author: ForeignKeyField<User>,
 }
 
 fn main() {}
