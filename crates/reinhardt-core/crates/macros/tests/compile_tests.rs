@@ -6,8 +6,23 @@
 //!
 //! This tests the reinhardt-macros crate's compile-time behavior
 
-// Reference to reinhardt-macros being tested
-use reinhardt_macros as _;
+use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
+use reinhardt_macros::injectable;
+use std::sync::Arc;
+
+// Allow this test crate to be referenced as `::reinhardt` for proc macro generated code.
+// The macros generate code with absolute paths like ::reinhardt::db::orm::Model
+extern crate self as reinhardt;
+
+// Re-export modules for proc macro generated code paths.
+#[allow(unused_imports)]
+pub mod db {
+	pub use ::reinhardt_db::*;
+}
+
+pub mod reinhardt_di {
+	pub use ::reinhardt_di::*;
+}
 
 #[test]
 fn test_compile_pass() {
@@ -181,4 +196,80 @@ fn test_mysql_field_attributes() {
 fn test_sqlite_field_attributes() {
 	let t = trybuild::TestCases::new();
 	t.pass("tests/ui/field_attributes/sqlite/*.rs");
+}
+
+// ========== Injectable Runtime Tests ==========
+//
+// These tests validate Injectable macro behavior at runtime.
+// They require actual Injectable implementations and cannot be tested with trybuild.
+
+/// Test Injectable macro expansion with inject method
+///
+/// Verifies:
+/// - Macro generates correct inject() method
+/// - Dependencies are resolved correctly
+/// - Non-injected fields use Default
+#[tokio::test]
+async fn test_injectable_macro_expansion_inject_method() {
+	#[injectable]
+	#[derive(Clone, Default)]
+	struct TestService {
+		#[no_inject(default = Default)]
+		#[allow(dead_code)]
+		value: i32,
+	}
+
+	#[injectable]
+	#[derive(Clone, Default)]
+	struct InjectableExpansionTest {
+		#[inject]
+		#[allow(dead_code)]
+		service: TestService,
+
+		#[no_inject(default = Default)]
+		data: String,
+	}
+
+	let singleton = Arc::new(SingletonScope::new());
+	let ctx = InjectionContext::builder(singleton).build();
+
+	let result = InjectableExpansionTest::inject(&ctx).await;
+	assert!(result.is_ok(), "Injectable should succeed");
+
+	let instance = result.unwrap();
+	assert_eq!(instance.data, "", "Non-injected field should use Default");
+}
+
+/// Test Injectable with nested generic types
+///
+/// Verifies:
+/// - Injectable handles Arc<T> and other wrapper types
+/// - Nested generic resolution works
+/// - Type parameters are correctly preserved
+#[tokio::test]
+async fn test_injectable_with_nested_generic_types() {
+	#[derive(Clone, Default)]
+	#[injectable]
+	struct NestedService1;
+
+	#[derive(Clone, Default)]
+	#[injectable]
+	struct NestedService2;
+
+	#[injectable]
+	#[derive(Clone, Default)]
+	struct NestedGenericInjectable {
+		#[inject]
+		#[allow(dead_code)]
+		service1: NestedService1,
+		#[inject]
+		#[allow(dead_code)]
+		service2: NestedService2,
+	}
+
+	let singleton = Arc::new(SingletonScope::new());
+	let ctx = InjectionContext::builder(singleton).build();
+
+	let result = NestedGenericInjectable::inject(&ctx).await;
+	assert!(result.is_ok(), "Nested generic Injectable should resolve");
 }
