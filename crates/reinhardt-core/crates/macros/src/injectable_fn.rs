@@ -189,10 +189,28 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 		quote! { #impl_fn_name(#(#call_args),*) }
 	};
 
-	// Generate the expanded code
+	// Generate the expanded code with override support
 	let expanded = quote! {
 		// Original function implementation (renamed, private)
 		#impl_fn
+
+		/// Returns the function pointer for this injectable function.
+		///
+		/// This function is used to obtain the function pointer address
+		/// for use with `InjectionContext::dependency()` override API.
+		///
+		/// # Examples
+		///
+		/// ```rust,ignore
+		/// ctx.dependency(#fn_name).override_with(mock_value);
+		/// ```
+		#[allow(dead_code)]
+		pub fn #fn_name() -> #return_type {
+			panic!(
+				"This function should not be called directly. \
+				Use Injectable::inject() or InjectionContext::dependency() instead."
+			)
+		}
 
 		// Injectable trait implementation for the return type
 		#[::async_trait::async_trait]
@@ -200,6 +218,13 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 			async fn inject(__di_ctx: &::reinhardt_di::InjectionContext)
 				-> ::reinhardt_di::DiResult<Self>
 			{
+				// Check for override first
+				let __func_ptr = #fn_name as usize;
+				if let Some(__override_value) = __di_ctx.get_override::<Self>(__func_ptr) {
+					return Ok(__override_value);
+				}
+
+				// Normal dependency resolution
 				#(#resolve_stmts)*
 				Ok(#fn_call)
 			}
@@ -230,6 +255,9 @@ mod tests {
 		assert!(output.contains("inject"));
 		assert!(output.contains("MyService"));
 		assert!(output.contains("create_service_impl"));
+		// Check override support is generated
+		assert!(output.contains("get_override"));
+		assert!(output.contains("__func_ptr"));
 	}
 
 	#[test]
