@@ -191,9 +191,11 @@
 pub mod context;
 pub mod cycle_detection;
 pub mod depends;
+pub mod function_handle;
 pub mod graph;
 pub mod injectable;
 pub mod injected;
+pub mod override_registry;
 pub mod provider;
 pub mod registry;
 pub mod scope;
@@ -202,6 +204,8 @@ use thiserror::Error;
 
 pub use context::{InjectionContext, InjectionContextBuilder, RequestContext};
 pub use cycle_detection::{CycleError, ResolutionGuard, begin_resolution, register_type_name};
+pub use function_handle::FunctionHandle;
+pub use override_registry::OverrideRegistry;
 
 #[cfg(feature = "params")]
 pub use context::{ParamContext, Request};

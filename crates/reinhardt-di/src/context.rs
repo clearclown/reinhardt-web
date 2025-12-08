@@ -1,5 +1,7 @@
 //! Injection context for dependency resolution
 
+use crate::function_handle::FunctionHandle;
+use crate::override_registry::OverrideRegistry;
 use crate::scope::{RequestScope, SingletonScope};
 use std::any::Any;
 use std::sync::Arc;
@@ -8,10 +10,36 @@ use std::sync::Arc;
 #[cfg(feature = "params")]
 pub use reinhardt_params::{ParamContext, Request};
 
+/// The main injection context for dependency resolution.
+///
+/// `InjectionContext` manages both request-scoped and singleton-scoped dependencies,
+/// as well as dependency overrides for testing.
+///
+/// # Override Support
+///
+/// The context supports dependency overrides, which take precedence over normal
+/// dependency resolution. This is particularly useful for testing:
+///
+/// ```rust,ignore
+/// use reinhardt_di::{InjectionContext, SingletonScope};
+///
+/// #[injectable]
+/// fn create_database() -> Database {
+///     Database::connect("production://db")
+/// }
+///
+/// let singleton = SingletonScope::new();
+/// let ctx = InjectionContext::builder(singleton).build();
+///
+/// // Set override for testing
+/// ctx.dependency(create_database).override_with(Database::mock());
+/// ```
 #[derive(Clone)]
 pub struct InjectionContext {
 	request_scope: RequestScope,
 	singleton_scope: Arc<SingletonScope>,
+	/// Override registry for dependency substitution (e.g., for testing)
+	override_registry: Arc<OverrideRegistry>,
 	/// HTTP request for parameter extraction
 	#[cfg(feature = "params")]
 	request: Option<Arc<Request>>,
@@ -127,6 +155,7 @@ impl InjectionContextBuilder {
 		InjectionContext {
 			request_scope: RequestScope::new(),
 			singleton_scope: self.singleton_scope,
+			override_registry: Arc::new(OverrideRegistry::new()),
 			#[cfg(feature = "params")]
 			request: self.request.map(Arc::new),
 			#[cfg(feature = "params")]
@@ -322,6 +351,116 @@ impl InjectionContext {
 	/// ```
 	pub fn set_singleton<T: Any + Send + Sync>(&self, value: T) {
 		self.singleton_scope.set(value);
+	}
+
+	/// Returns a reference to the singleton scope.
+	///
+	/// This is useful for advanced scenarios where direct access to the
+	/// singleton scope is needed.
+	pub fn singleton_scope(&self) -> &Arc<SingletonScope> {
+		&self.singleton_scope
+	}
+
+	/// Returns a reference to the override registry.
+	///
+	/// The override registry stores function-level overrides that take
+	/// precedence over normal dependency resolution.
+	pub fn overrides(&self) -> &OverrideRegistry {
+		&self.override_registry
+	}
+
+	/// Creates a handle for the given injectable function.
+	///
+	/// This method provides a fluent API for setting and managing dependency
+	/// overrides. The function pointer is used as a unique key to identify
+	/// which injectable function should be overridden.
+	///
+	/// # Note
+	///
+	/// This method is designed to work with functions annotated with `#[injectable]`.
+	/// The `#[injectable]` macro generates a 0-argument function regardless of
+	/// the original function's parameter count, as all `#[inject]` parameters
+	/// are resolved internally by the DI system.
+	///
+	/// # Type Parameters
+	///
+	/// * `O` - The output type of the function (the dependency type)
+	///
+	/// # Arguments
+	///
+	/// * `func` - A function pointer to the injectable function
+	///
+	/// # Examples
+	///
+	/// ```rust,ignore
+	/// use reinhardt_di::{InjectionContext, SingletonScope};
+	///
+	/// // Even though the original function has parameters with #[inject],
+	/// // the macro generates a 0-argument function for the override API.
+	/// #[injectable]
+	/// fn create_database(#[inject] config: Config) -> Database {
+	///     Database::connect(config.url)
+	/// }
+	///
+	/// let singleton = SingletonScope::new();
+	/// let ctx = InjectionContext::builder(singleton).build();
+	///
+	/// // Set override - create_database is 0-argument after macro expansion
+	/// ctx.dependency(create_database).override_with(Database::mock());
+	///
+	/// // Check if override exists
+	/// assert!(ctx.dependency(create_database).has_override());
+	///
+	/// // Clear override
+	/// ctx.dependency(create_database).clear_override();
+	/// ```
+	pub fn dependency<O>(&self, func: fn() -> O) -> FunctionHandle<'_, O>
+	where
+		O: Clone + Send + Sync + 'static,
+	{
+		let func_ptr = func as usize;
+		FunctionHandle::new(self, func_ptr)
+	}
+
+	/// Gets an override value for a function pointer.
+	///
+	/// This is primarily used internally by the `#[injectable]` macro to check
+	/// for overrides before executing the actual function.
+	///
+	/// # Arguments
+	///
+	/// * `func_ptr` - The function pointer address as usize
+	///
+	/// # Returns
+	///
+	/// `Some(value)` if an override is set, `None` otherwise.
+	pub fn get_override<O: Clone + 'static>(&self, func_ptr: usize) -> Option<O> {
+		self.override_registry.get(func_ptr)
+	}
+
+	/// Clears all overrides from the context.
+	///
+	/// This is useful for cleanup in tests to ensure a clean state.
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_di::{InjectionContext, SingletonScope};
+	/// use std::sync::Arc;
+	///
+	/// fn my_factory() -> i32 { 42 }
+	///
+	/// let singleton = Arc::new(SingletonScope::new());
+	/// let ctx = InjectionContext::builder(singleton).build();
+	///
+	/// ctx.dependency(my_factory).override_with(100);
+	/// assert!(ctx.dependency(my_factory).has_override());
+	///
+	/// ctx.clear_overrides();
+	/// assert!(!ctx.dependency(my_factory).has_override());
+	/// ```
+	pub fn clear_overrides(&self) {
+		self.override_registry.clear();
 	}
 
 	/// Resolve a dependency from the global registry
