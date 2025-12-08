@@ -358,7 +358,6 @@ async fn test_collection_proxy_uniqueness() {
 /// These operations need either:
 /// - API modification to support `Vec<T: Reflectable>` via generic downcasting
 /// - Test models with `Vec<Box<dyn Reflectable>>` fields (not derivable via OrmReflectable)
-///
 /// See `crates/reinhardt-urls/crates/proxy/src/collection.rs:955-1025` for implementation.
 
 /// Test AssociationProxy with None relationships
