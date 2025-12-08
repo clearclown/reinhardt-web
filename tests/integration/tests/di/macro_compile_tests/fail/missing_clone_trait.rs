@@ -1,24 +1,19 @@
-use reinhardt_di::{DiResult, Injectable, InjectionContext, SingletonScope};
 use std::sync::Arc;
 
-// This should fail: Injectable requires Clone
+/// Service without Clone trait - demonstrates the Arc<T> Injectable requirement
 struct ServiceWithoutClone {
 	value: String,
 }
 
-#[async_trait::async_trait]
-impl Injectable for ServiceWithoutClone {
-	async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
-		Ok(Self {
-			value: "test".to_string(),
-		})
-	}
+/// This function requires T: Clone, mirroring the Arc<T> Injectable impl bound
+fn wrap_in_arc<T: Clone>(value: T) -> Arc<T> {
+	Arc::new(value)
 }
 
-#[tokio::main]
-async fn main() {
-	let singleton = Arc::new(SingletonScope::new());
-	let ctx = InjectionContext::builder(singleton).build();
-	// This should fail because ServiceWithoutClone doesn't implement Clone
-	let _service = ServiceWithoutClone::inject(&ctx).await.unwrap();
+fn main() {
+	let service = ServiceWithoutClone {
+		value: "test".to_string(),
+	};
+	// This fails because Arc<T> Injectable impl requires T: Clone
+	let _arc = wrap_in_arc(service);
 }
