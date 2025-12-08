@@ -4,8 +4,8 @@ use reinhardt::db::associations::ForeignKeyField;
 use reinhardt::model;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
 #[model(app_label = "test", table_name = "authors")]
+#[derive(Serialize, Deserialize)]
 pub struct Author {
 	#[field(primary_key = true)]
 	pub id: i64,
@@ -13,8 +13,8 @@ pub struct Author {
 	pub name: String,
 }
 
-#[derive(Serialize, Deserialize)]
 #[model(app_label = "test", table_name = "books")]
+#[derive(Serialize, Deserialize)]
 pub struct Book {
 	#[field(primary_key = true)]
 	pub id: i64,
