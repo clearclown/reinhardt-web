@@ -12,13 +12,11 @@ use bytes::Bytes;
 use reinhardt_core::types::Handler;
 use reinhardt_http::Request;
 use reinhardt_migrations::{Constraint, ForeignKeyAction};
+use reinhardt_server::{HttpServer, ShutdownCoordinator};
 use sqlx::{Pool, Postgres};
-// NOTE: AssertSqlSafe trait was removed in newer sqlx versions (v0.6+)
-// This import is no longer needed as the trait is not used in tests
-// Reference: https://github.com/launchbadge/sqlx/blob/main/CHANGELOG.md
-// use sqlx::AssertSqlSafe;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 // pub mod flatpages_app;
 pub mod message_middleware_mock;
@@ -162,44 +160,162 @@ pub async fn cleanup_test_tables(pool: &Pool<Postgres>) {
 	}
 }
 
+/// Test server operating mode
+#[allow(dead_code)]
+pub enum TestServerMode {
+	/// HTTP mode: Actual TCP port listener (for E2E tests)
+	Http {
+		addr: SocketAddr,
+		coordinator: ShutdownCoordinator,
+	},
+	/// Direct mode: Direct handler invocation (for fast unit tests)
+	Direct { handler: Arc<dyn Handler> },
+}
+
 /// Test server that can be spawned for integration tests
+///
+/// Supports two modes:
+/// - **HTTP mode**: Actual server listening on a TCP port (for E2E tests)
+/// - **Direct mode**: Direct handler invocation without network (for fast unit tests)
 #[allow(dead_code)]
 pub struct TestServer {
-	pub addr: SocketAddr,
+	mode: TestServerMode,
 	pub pool: Pool<Postgres>,
 }
 
 #[allow(dead_code)]
 impl TestServer {
-	/// Create a new test server with the given router
-	pub async fn new(_router: Arc<dyn Handler>) -> Self {
+	/// Create a test server in HTTP mode (actual TCP listener)
+	///
+	/// This mode is suitable for E2E tests that need to make real HTTP requests.
+	pub async fn new_http<H: Handler + 'static>(handler: H) -> Self {
 		let pool = setup_test_db().await;
 		create_flatpages_tables(&pool).await;
 
+		// Create ShutdownCoordinator with 30 second timeout
+		let coordinator = ShutdownCoordinator::new(Duration::from_secs(30));
+
+		// Bind to an available port
 		let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
 			.await
 			.expect("Failed to bind to address");
 		let addr = listener.local_addr().expect("Failed to get local address");
 
-		// TODO: Server functionality temporarily disabled
-		// until reinhardt-server provides a proper Server type
+		// Drop listener to release port for HttpServer
+		drop(listener);
 
-		// Give the server a moment to start
-		tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+		// Start server in background
+		let server = HttpServer::new(handler);
+		let coordinator_clone = coordinator.clone();
 
-		Self { addr, pool }
+		tokio::spawn(async move {
+			let _ = server.listen_with_shutdown(addr, coordinator_clone).await;
+		});
+
+		// Wait for server to start
+		tokio::time::sleep(Duration::from_millis(100)).await;
+
+		Self {
+			mode: TestServerMode::Http { addr, coordinator },
+			pool,
+		}
 	}
 
-	/// Get the base URL for the test server
+	/// Create a test server in Direct mode (handler invocation without network)
+	///
+	/// This mode is suitable for fast unit tests that don't need actual HTTP.
+	pub async fn new_direct<H: Handler + 'static>(handler: H) -> Self {
+		let pool = setup_test_db().await;
+		create_flatpages_tables(&pool).await;
+
+		Self {
+			mode: TestServerMode::Direct {
+				handler: Arc::new(handler),
+			},
+			pool,
+		}
+	}
+
+	/// Create a test server (backward compatible - uses Direct mode)
+	pub async fn new(router: Arc<dyn Handler>) -> Self {
+		let pool = setup_test_db().await;
+		create_flatpages_tables(&pool).await;
+
+		Self {
+			mode: TestServerMode::Direct { handler: router },
+			pool,
+		}
+	}
+
+	/// Get the address (HTTP mode only)
+	pub fn addr(&self) -> Option<SocketAddr> {
+		match &self.mode {
+			TestServerMode::Http { addr, .. } => Some(*addr),
+			TestServerMode::Direct { .. } => None,
+		}
+	}
+
+	/// Get the base URL for the test server (HTTP mode only)
+	///
+	/// # Panics
+	/// Panics if called in Direct mode
 	pub fn url(&self, path: &str) -> String {
-		format!("http://{}{}", self.addr, path)
+		match &self.mode {
+			TestServerMode::Http { addr, .. } => format!("http://{}{}", addr, path),
+			TestServerMode::Direct { .. } => panic!("url() is only available in HTTP mode"),
+		}
+	}
+
+	/// Execute a request using the appropriate method based on mode
+	///
+	/// - HTTP mode: Makes actual HTTP request via reqwest
+	/// - Direct mode: Invokes handler directly
+	pub async fn request(&self, request: Request) -> reinhardt_http::Response {
+		match &self.mode {
+			TestServerMode::Http { addr, .. } => {
+				let client = reqwest::Client::new();
+				let url = format!("http://{}{}", addr, request.uri);
+				let method = reqwest::Method::from_bytes(request.method.as_str().as_bytes())
+					.expect("Invalid method");
+
+				let mut req_builder = client.request(method, &url);
+
+				// Copy headers
+				for (name, value) in request.headers.iter() {
+					req_builder = req_builder.header(name.as_str(), value.to_str().unwrap_or(""));
+				}
+
+				// Set body
+				req_builder = req_builder.body(request.body().to_vec());
+
+				let resp = req_builder.send().await.expect("Failed to send request");
+
+				reinhardt_http::Response::new(
+					hyper::StatusCode::from_u16(resp.status().as_u16())
+						.unwrap_or(hyper::StatusCode::INTERNAL_SERVER_ERROR),
+				)
+				.with_body(resp.bytes().await.unwrap_or_default())
+			}
+			TestServerMode::Direct { handler } => {
+				handler.handle(request).await.expect("Handler error")
+			}
+		}
+	}
+
+	/// Graceful shutdown (HTTP mode only)
+	pub async fn shutdown(&self) {
+		if let TestServerMode::Http { coordinator, .. } = &self.mode {
+			coordinator.shutdown();
+			coordinator.wait_for_shutdown().await;
+		}
 	}
 }
 
 impl Drop for TestServer {
 	fn drop(&mut self) {
-		// Note: Cleanup is best-effort in Drop
-		// For proper cleanup, use an explicit cleanup function
+		if let TestServerMode::Http { coordinator, .. } = &self.mode {
+			coordinator.shutdown();
+		}
 	}
 }
 
