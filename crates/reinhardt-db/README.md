@@ -35,6 +35,10 @@ This parent crate re-exports functionality from the following sub-crates:
   - Schema versioning and dependency management
   - Migration operations (CreateModel, AddField, AlterField, etc.)
   - State management and autodetection
+  - **State Loader** (`MigrationStateLoader`): Django-style state reconstruction
+    - Build `ProjectState` by replaying migration history
+    - Avoid direct database introspection for schema detection
+    - Ensure consistency between migration files and actual schema state
 
 - **Pool** (`reinhardt-pool`): Connection pool management
   - Database connection pooling
@@ -81,6 +85,82 @@ This parent crate re-exports functionality from the following sub-crates:
   - Configurable default database
   - Per-model read and write database configuration
   - Multi-database support through hybrid module
+
+## Sub-crates Architecture
+
+The `reinhardt-db` crate is organized into three logical layers:
+
+### Core Layers
+
+High-level APIs for everyday database operations:
+
+- **reinhardt-orm**: High-level ORM API
+  - Use for model CRUD operations
+  - QuerySet API for building queries
+  - Relationship management
+  - **When to use**: Building application logic, working with models
+
+- **reinhardt-migrations**: Schema migration system
+  - Use for database schema changes
+  - Automatic migration generation
+  - Migration history tracking
+  - **When to use**: Managing database schema evolution
+
+### Database Backend Layers
+
+Low-level database connectivity and connection management:
+
+- **reinhardt-backends**: Low-level database drivers
+  - PostgreSQL, MySQL, SQLite support
+  - Query execution and schema operations
+  - SeaQuery integration for query building
+  - **When to use**: Need direct database access or custom queries
+
+- **reinhardt-pool**: Connection pooling implementation
+  - Direct connection pool management
+  - Multi-database pool support
+  - Event system for monitoring
+  - **When to use**: Managing connection pools directly
+
+- **reinhardt-backends-pool**: Pool backend abstractions for DI
+  - DI-compatible pool abstractions
+  - Injectable pool services
+  - **When to use**: Using dependency injection framework
+
+**Key difference**: Use `reinhardt-pool` for direct pool management. Use `reinhardt-backends-pool` when integrating with dependency injection systems.
+
+### Extension Layers
+
+Advanced features for specific use cases:
+
+- **reinhardt-associations**: Relationship management
+  - ForeignKey, OneToOne, OneToMany, ManyToMany
+  - Association proxies
+  - Loading strategies (lazy, eager, select-in, joined)
+  - **When to use**: Complex relationships between models
+
+- **reinhardt-hybrid**: Hybrid properties
+  - Instance-level and SQL-level properties
+  - Computed properties in queries
+  - **When to use**: Need computed properties usable in database queries
+
+- **reinhardt-contenttypes**: Generic relations
+  - Django-style content type framework
+  - Generic foreign keys
+  - **When to use**: Polymorphic relationships (comments, tags, etc.)
+
+### When to Use Which Crate?
+
+| Use Case | Recommended Crate |
+|----------|------------------|
+| Model CRUD operations | `reinhardt-orm` |
+| Schema migrations | `reinhardt-migrations` |
+| Connection pooling | `reinhardt-pool` |
+| Low-level SQL queries | `reinhardt-backends` |
+| DI-aware pooling | `reinhardt-backends-pool` |
+| Complex relationships | `reinhardt-associations` |
+| Computed properties in queries | `reinhardt-hybrid` |
+| Generic relations (polymorphic) | `reinhardt-contenttypes` |
 
 ## Installation
 

@@ -52,6 +52,12 @@ Database migration system for managing schema changes across PostgreSQL, MySQL, 
     - Fake migrations support
     - Migration plan preview
 
+- **Migration State Management**
+  - `MigrationStateLoader`: Django-style state reconstruction from migration history
+    - Build `ProjectState` by replaying applied migrations in topological order
+    - Avoid direct database introspection for change detection
+    - Ensure schema state consistency with migration files
+
 - **Database Backend Support**
   - SQLite support via sqlx
   - PostgreSQL support via reinhardt-database
@@ -157,7 +163,9 @@ let migration = Migration::new("0001_initial", "myapp")
 // );
 ```
 
-When using the `#[derive(Model)]` macro with multiple `primary_key = true` fields, migrations will automatically detect and generate composite primary key constraints:
+When using the `#[model(...)]` attribute macro with multiple `primary_key = true` fields, migrations will automatically detect and generate composite primary key constraints:
+
+> **Note**: The `#[model(...)]` attribute automatically applies `#[derive(Model)]`, so you should use only `#[model(...)]` without explicitly adding `#[derive(Model)]`.
 
 ```rust
 use reinhardt_macros::Model;

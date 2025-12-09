@@ -95,3 +95,71 @@ Provides efficient connection reuse, automatic cleanup, and configurable pool si
   - `PoolNotFound` - Named pool not found
 - **Type-safe results**: `PoolResult<T>` type alias
 - **Error propagation**: Automatic conversion from sqlx errors
+
+## Quick Start
+
+### PostgreSQL
+
+```rust
+use reinhardt_pool::{ConnectionPool, PoolConfig};
+
+let config = PoolConfig::default()
+    .with_max_connections(10);
+
+let pool = ConnectionPool::new_postgres(
+    "postgres://user:password@localhost/database",
+    config
+).await?;
+
+// Acquire a connection
+let conn = pool.acquire().await?;
+```
+
+### MySQL
+
+```rust
+use reinhardt_pool::{ConnectionPool, PoolConfig};
+
+let config = PoolConfig::default()
+    .with_max_connections(10);
+
+let pool = ConnectionPool::new_mysql(
+    "mysql://user:password@localhost/database",
+    config
+).await?;
+
+// Acquire a connection
+let conn = pool.acquire().await?;
+```
+
+### SQLite
+
+```rust
+use reinhardt_pool::{ConnectionPool, PoolConfig};
+
+let config = PoolConfig::new()
+    .with_min_connections(2)
+    .with_max_connections(5)
+    .with_test_before_acquire(true);
+
+let pool = ConnectionPool::new_sqlite(
+    "sqlite::memory:",
+    config
+).await?;
+
+// Acquire a connection
+let conn = pool.acquire().await?;
+```
+
+### Custom Configuration
+
+```rust
+use reinhardt_pool::PoolConfig;
+use std::time::Duration;
+
+let config = PoolConfig::new()
+    .with_min_connections(2)
+    .with_max_connections(10)
+    .with_acquire_timeout(Duration::from_secs(30))
+    .with_test_before_acquire(true);
+```

@@ -120,6 +120,10 @@ Useful for building flexible systems like comments, tags, or activity streams th
   - `delete()` - Delete content type within transaction
   - Full ACID transaction support for content type operations
 
+### Planned Features
+
+The following features are planned for future releases:
+
 #### Permission System Integration
 
 - Associate permissions with content types

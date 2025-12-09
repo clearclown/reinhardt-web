@@ -6,6 +6,18 @@ Django-inspired ORM with QuerySet API and database abstraction
 
 A powerful Object-Relational Mapping system inspired by Django's ORM and SQLAlchemy. Features include QuerySet API for chainable queries, model definitions, field types, validators, relationship management, and support for multiple database backends (PostgreSQL, MySQL, SQLite).
 
+## Documentation
+
+- **[README.md](README.md)** - Feature list and API reference (this file)
+- **[USAGE_GUIDE.md](USAGE_GUIDE.md)** - Comprehensive usage guide with examples and best practices
+
+**Quick Links:**
+- [Basic Model Definition](USAGE_GUIDE.md#1-basic-model-definition)
+- [CRUD Operations](USAGE_GUIDE.md#2-crud-operations)
+- [Query Building](USAGE_GUIDE.md#3-query-building)
+- [Transaction Management](USAGE_GUIDE.md#5-transaction-management)
+- [Best Practices](USAGE_GUIDE.md#7-best-practices)
+
 ## Implemented ✓
 
 ### Core Model System
@@ -117,7 +129,9 @@ A powerful Object-Relational Mapping system inspired by Django's ORM and SQLAlch
 
 #### Type-Safe Field References
 
-The `#[derive(Model)]` macro automatically generates type-safe field accessor methods that return `FieldRef<M, T>`:
+The `#[model(...)]` attribute macro automatically generates type-safe field accessor methods that return `FieldRef<M, T>`:
+
+> **Note**: The `#[model(...)]` attribute automatically applies `#[derive(Model)]`, so you should use only `#[model(...)]` without explicitly adding `#[derive(Model)]`.
 
 ```rust
 use reinhardt_macros::Model;

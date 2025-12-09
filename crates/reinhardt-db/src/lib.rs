@@ -41,6 +41,10 @@
 //! - **Auto-detection**: Automatically detect model changes
 //! - **Migration Files**: Generate migration files from model changes
 //! - **Rollback Support**: Reverse migrations when needed
+//! - **MigrationStateLoader**: Django-style approach for building `ProjectState`
+//!   - Replays applied migrations to reconstruct schema state
+//!   - Enables accurate change detection without database introspection
+//!   - Used internally by `makemigrations` command
 //!
 //! ## Available Database Backends
 //!
