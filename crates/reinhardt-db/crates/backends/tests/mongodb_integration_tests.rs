@@ -5,7 +5,7 @@
 #[cfg(feature = "mongodb-backend")]
 mod mongodb_tests {
 	use bson::doc;
-	use reinhardt_db::backends::mongodb::{
+	use reinhardt_backends::drivers::mongodb::{
 		MongoDBBackend, MongoDBBackendBuilder, MongoDBQueryBuilder, MongoDBSchemaEditor,
 	};
 	use rstest::*;

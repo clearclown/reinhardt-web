@@ -34,7 +34,6 @@ serial_test = { workspace = true }
 rstest = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
-reinhardt-db = { workspace = true, features = ["backends", "postgres"] }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
 uuid = { workspace = true }
 
