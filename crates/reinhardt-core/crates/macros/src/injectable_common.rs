@@ -154,3 +154,182 @@ pub fn parse_no_inject_options(attrs: &[syn::Attribute]) -> Option<NoInjectOptio
 
 	None
 }
+
+// ============================================================================
+// Code Generation Utilities for DI
+// ============================================================================
+
+use proc_macro2::TokenStream;
+use quote::quote;
+
+/// Information about #[inject] parameters (for code generation)
+///
+/// This struct is part of the DI code generation infrastructure and will be used
+/// by macro extensions like #[action] and #[receiver] with use_inject support.
+#[allow(dead_code)]
+#[derive(Clone)]
+pub struct InjectParamInfo {
+	/// Parameter pattern (variable name)
+	pub pat: Box<syn::Pat>,
+	/// Parameter type
+	pub ty: Box<syn::Type>,
+	/// Inject options (cache, scope)
+	pub options: InjectOptions,
+}
+
+/// Detect parameters with #[inject] attribute from function arguments
+///
+/// This function is part of the DI code generation infrastructure and will be used
+/// by macro extensions like #[action] and #[receiver] with use_inject support.
+#[allow(dead_code)]
+pub fn detect_inject_params(
+	inputs: &syn::punctuated::Punctuated<syn::FnArg, Token![,]>,
+) -> Vec<InjectParamInfo> {
+	let mut inject_params = Vec::new();
+
+	for input in inputs {
+		if let syn::FnArg::Typed(syn::PatType { attrs, pat, ty, .. }) = input {
+			let has_inject = attrs.iter().any(is_inject_attr);
+
+			if has_inject {
+				let options = parse_inject_options(attrs);
+				inject_params.push(InjectParamInfo {
+					pat: pat.clone(),
+					ty: ty.clone(),
+					options,
+				});
+			}
+		}
+	}
+
+	inject_params
+}
+
+/// Generate DI context extraction code from a Request
+///
+/// Generates code like:
+/// ```ignore
+/// let __di_ctx = request.get_di_context::<Arc<InjectionContext>>()
+///     .ok_or_else(|| Error::Internal("DI context not set".to_string()))?;
+/// ```
+#[allow(dead_code)]
+pub fn generate_di_context_extraction(request_ident: &syn::Ident) -> TokenStream {
+	quote! {
+		let __di_ctx = #request_ident.get_di_context::<::std::sync::Arc<::reinhardt::reinhardt_di::InjectionContext>>()
+			.ok_or_else(|| ::reinhardt::reinhardt_core::exception::Error::Internal(
+				"DI context not set. Ensure the router is configured with .with_di_context()".to_string()
+			))?;
+	}
+}
+
+/// Generate DI context extraction code from an optional Arc<InjectionContext>
+///
+/// Used for Signal receivers where DI context is passed as an Option
+#[allow(dead_code)]
+pub fn generate_di_context_extraction_from_option(ctx_ident: &syn::Ident) -> TokenStream {
+	quote! {
+		let __di_ctx = #ctx_ident.ok_or_else(|| ::reinhardt::reinhardt_core::exception::Error::Internal(
+			"DI context is required but not provided. Use send_with_context() instead of send()".to_string()
+		))?;
+	}
+}
+
+/// Generate injection resolution calls for a list of inject parameters
+///
+/// Generates code like:
+/// ```ignore
+/// let db: Arc<DatabaseConnection> = Injected::<Arc<DatabaseConnection>>::resolve(&__di_ctx)
+///     .await
+///     .map_err(|e| Error::Internal(...))?
+///     .into_inner();
+/// ```
+#[allow(dead_code)]
+pub fn generate_injection_calls(inject_params: &[InjectParamInfo]) -> Vec<TokenStream> {
+	inject_params
+		.iter()
+		.map(|param| {
+			let pat = &param.pat;
+			let ty = &param.ty;
+			let use_cache = param.options.use_cache;
+
+			if use_cache {
+				quote! {
+					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve(&__di_ctx)
+						.await
+						.map_err(|e| ::reinhardt::reinhardt_core::exception::Error::Internal(
+							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
+						))?
+						.into_inner();
+				}
+			} else {
+				quote! {
+					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve_uncached(&__di_ctx)
+						.await
+						.map_err(|e| ::reinhardt::reinhardt_core::exception::Error::Internal(
+							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
+						))?
+						.into_inner();
+				}
+			}
+		})
+		.collect()
+}
+
+/// Generate injection resolution calls with a custom error type
+///
+/// Used for WebSocket handlers and Signal receivers that use different error types
+#[allow(dead_code)]
+pub fn generate_injection_calls_with_error<F>(
+	inject_params: &[InjectParamInfo],
+	error_mapper: F,
+) -> Vec<TokenStream>
+where
+	F: Fn(&syn::Type) -> TokenStream,
+{
+	inject_params
+		.iter()
+		.map(|param| {
+			let pat = &param.pat;
+			let ty = &param.ty;
+			let use_cache = param.options.use_cache;
+			let error_code = error_mapper(ty);
+
+			if use_cache {
+				quote! {
+					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve(&__di_ctx)
+						.await
+						.map_err(|e| #error_code)?
+						.into_inner();
+				}
+			} else {
+				quote! {
+					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve_uncached(&__di_ctx)
+						.await
+						.map_err(|e| #error_code)?
+						.into_inner();
+				}
+			}
+		})
+		.collect()
+}
+
+/// Remove #[inject] attributes from function arguments
+///
+/// Returns a new list of FnArg with #[inject] attributes stripped
+#[allow(dead_code)]
+pub fn strip_inject_attrs(
+	inputs: &syn::punctuated::Punctuated<syn::FnArg, Token![,]>,
+) -> Vec<syn::FnArg> {
+	inputs
+		.iter()
+		.map(|arg| {
+			if let syn::FnArg::Typed(pat_type) = arg {
+				let mut pat_type = pat_type.clone();
+				pat_type.attrs.retain(|attr| !is_inject_attr(attr));
+				syn::FnArg::Typed(pat_type)
+			} else {
+				arg.clone()
+			}
+		})
+		.collect()
+}
