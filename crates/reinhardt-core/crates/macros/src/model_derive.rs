@@ -2369,17 +2369,24 @@ fn is_timestamp_field(field: &FieldInfo) -> bool {
 /// Extract the target model type from ForeignKeyField<T> or OneToOneField<T>
 fn extract_foreign_key_target_type(ty: &Type) -> Type {
 	// ForeignKeyField<User> -> User
-	if let Type::Path(type_path) = ty {
-		if let Some(segment) = type_path.path.segments.last() {
-			if let PathArguments::AngleBracketed(args) = &segment.arguments {
-				if let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-					return inner_ty.clone();
-				}
-			}
-		}
+	if let Type::Path(type_path) = ty
+		&& let Some(segment) = type_path.path.segments.last()
+		&& let PathArguments::AngleBracketed(args) = &segment.arguments
+		&& let Some(GenericArgument::Type(inner_ty)) = args.args.first()
+	{
+		return inner_ty.clone();
 	}
 	// フォールバック: 型全体を返す
 	ty.clone()
+}
+
+/// Check if a type is Option<T>
+fn is_option_type(ty: &syn::Type) -> bool {
+	if let syn::Type::Path(type_path) = ty
+		&& let Some(segment) = type_path.path.segments.last() {
+			return segment.ident == "Option";
+		}
+	false
 }
 
 /// Determine if a field should be auto-generated (excluded from new() function arguments)
@@ -2476,6 +2483,11 @@ fn get_auto_field_default_value(field: &FieldInfo) -> TokenStream {
 
 	// Timestamp fields - use Utc::now()（修正：is_timestamp_fieldを使用）
 	if is_timestamp_field(field) {
+		// Option<DateTime<Utc>> の場合は Some() でラップ
+		if is_option_type(&field.ty) {
+			return quote! { ::std::option::Option::Some(::chrono::Utc::now()) };
+		}
+		// DateTime<Utc> の場合はそのまま
 		return quote! { ::chrono::Utc::now() };
 	}
 
@@ -2543,11 +2555,14 @@ fn generate_new_function(
 		if let Some(fk_field_name) = fk_id_to_fk_field.get(&field_name_str) {
 			// これはFK _idフィールド（例: room_id）
 			// ジェネリック型パラメータを使用
-			let generic_param = syn::Ident::new(&format!("F{}", generic_counter), field_name.span());
+			let generic_param =
+				syn::Ident::new(&format!("F{}", generic_counter), field_name.span());
 			generic_counter += 1;
 
 			// 対応するFKフィールドを見つける
-			let fk_field_info = field_infos.iter().find(|fi| fi.name.to_string() == *fk_field_name);
+			let fk_field_info = field_infos
+				.iter()
+				.find(|fi| fi.name.to_string() == *fk_field_name);
 
 			if let Some(fk_info) = fk_field_info {
 				// ForeignKeyField<T>からT を抽出
@@ -2585,19 +2600,32 @@ fn generate_new_function(
 		});
 	}
 
+	// FK _idフィールドの初期化（#[fk_id_field] マーカー付きフィールド）
+	// これらは属性マクロで追加されたフィールドで、field_infos には含まれていない
+	for fk_id_name in fk_id_field_names.iter() {
+		fk_id_assignments.push(quote! {
+			#fk_id_name: ::std::default::Default::default()
+		});
+	}
+
+	// FK フィールド名のセットを作成（修正：キーではなく値を使用）
+	let fk_field_names: std::collections::HashSet<String> =
+		fk_id_to_fk_field.values().cloned().collect();
+
 	// 通常のユーザーフィールドの割り当て（FK関連以外）
 	let user_field_assignments: Vec<_> = user_fields
 		.iter()
-		.filter(|f| !fk_id_to_fk_field.contains_key(&f.name.to_string()))
+		.filter(|f| !fk_field_names.contains(&f.name.to_string()))
 		.map(|f| {
 			let name = &f.name;
 			quote! { #name }
 		})
 		.collect();
 
-	// Auto-generatedフィールドの割り当て
+	// Auto-generatedフィールドの割り当て（FK フィールドを除外）
 	let auto_field_assignments: Vec<_> = auto_fields
 		.iter()
+		.filter(|f| !fk_field_names.contains(&f.name.to_string()))
 		.map(|f| {
 			let name = &f.name;
 			let default_value = get_auto_field_default_value(f);
