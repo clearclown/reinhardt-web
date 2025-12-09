@@ -7,6 +7,7 @@
 //! - **Auto-detection**: Detects model changes and generates migrations
 //! - **Migration Graph**: Manages dependencies between migrations
 //! - **AST-Based Entry Points**: Generates Rust 2024 Edition-compliant module files
+//! - **State Reconstruction**: Django-style `ProjectState` building from migration history
 //! - **Zero Downtime**: Support for safe schema changes in production
 //!
 //! ## AST-Based Entry Point Generation

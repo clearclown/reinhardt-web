@@ -214,6 +214,77 @@ pub struct ForeignKeyConstraintInfo {
 	pub on_update: ForeignKeyAction,
 }
 
+impl ConstraintDefinition {
+	/// Convert ConstraintDefinition to operations::Constraint
+	pub fn to_constraint(&self) -> crate::operations::Constraint {
+		match self.constraint_type.as_str() {
+			"unique" => crate::operations::Constraint::Unique {
+				name: self.name.clone(),
+				columns: self.fields.clone(),
+			},
+			"check" => crate::operations::Constraint::Check {
+				name: self.name.clone(),
+				expression: self.expression.clone().unwrap_or_default(),
+			},
+			"foreign_key" => {
+				if let Some(fk_info) = &self.foreign_key_info {
+					crate::operations::Constraint::ForeignKey {
+						name: self.name.clone(),
+						columns: self.fields.clone(),
+						referenced_table: fk_info.referenced_table.clone(),
+						referenced_columns: fk_info.referenced_columns.clone(),
+						on_delete: fk_info.on_delete,
+						on_update: fk_info.on_update,
+					}
+				} else {
+					// Fallback if foreign_key_info is missing
+					crate::operations::Constraint::ForeignKey {
+						name: self.name.clone(),
+						columns: self.fields.clone(),
+						referenced_table: String::new(),
+						referenced_columns: vec!["id".to_string()],
+						on_delete: ForeignKeyAction::Cascade,
+						on_update: ForeignKeyAction::Cascade,
+					}
+				}
+			}
+			"one_to_one" => {
+				if let Some(fk_info) = &self.foreign_key_info {
+					crate::operations::Constraint::OneToOne {
+						name: self.name.clone(),
+						column: self.fields.first().cloned().unwrap_or_default(),
+						referenced_table: fk_info.referenced_table.clone(),
+						referenced_column: fk_info
+							.referenced_columns
+							.first()
+							.cloned()
+							.unwrap_or_else(|| "id".to_string()),
+						on_delete: fk_info.on_delete,
+						on_update: fk_info.on_update,
+					}
+				} else {
+					// Fallback
+					crate::operations::Constraint::OneToOne {
+						name: self.name.clone(),
+						column: self.fields.first().cloned().unwrap_or_default(),
+						referenced_table: String::new(),
+						referenced_column: "id".to_string(),
+						on_delete: ForeignKeyAction::Cascade,
+						on_update: ForeignKeyAction::Cascade,
+					}
+				}
+			}
+			_ => {
+				// Default to Check constraint with empty expression
+				crate::operations::Constraint::Check {
+					name: self.name.clone(),
+					expression: self.expression.clone().unwrap_or_default(),
+				}
+			}
+		}
+	}
+}
+
 impl ModelState {
 	/// Create a new ModelState with app_label and name
 	///
@@ -431,15 +502,24 @@ impl ProjectState {
 					},
 				);
 			}
-			// For now, no indexes or constraints from ModelState are converted.
-			// This is a simplification that might need to be refined later.
+			// Convert constraints from ModelState to ConstraintSchema
+			let constraints: Vec<crate::schema_diff::ConstraintSchema> = model_state
+				.constraints
+				.iter()
+				.map(|c| crate::schema_diff::ConstraintSchema {
+					name: c.name.clone(),
+					constraint_type: c.constraint_type.clone(),
+					definition: c.fields.join(", "),
+				})
+				.collect();
+
 			tables.insert(
 				model_state.table_name.clone(),
 				crate::schema_diff::TableSchema {
 					name: Box::leak(model_state.table_name.clone().into_boxed_str()),
 					columns,
 					indexes: Vec::new(),
-					constraints: Vec::new(),
+					constraints,
 				},
 			);
 		}
@@ -497,13 +577,24 @@ impl ProjectState {
 					);
 				}
 
+				// Convert constraints from ModelState to ConstraintSchema
+				let constraints: Vec<crate::schema_diff::ConstraintSchema> = model_state
+					.constraints
+					.iter()
+					.map(|c| crate::schema_diff::ConstraintSchema {
+						name: c.name.clone(),
+						constraint_type: c.constraint_type.clone(),
+						definition: c.fields.join(", "),
+					})
+					.collect();
+
 				tables.insert(
 					model_state.table_name.clone(),
 					crate::schema_diff::TableSchema {
 						name: Box::leak(model_state.table_name.clone().into_boxed_str()),
 						columns,
 						indexes: Vec::new(),
-						constraints: Vec::new(),
+						constraints,
 					},
 				);
 			}
@@ -588,6 +679,36 @@ impl ProjectState {
 	pub fn get_model_mut(&mut self, app_label: &str, model_name: &str) -> Option<&mut ModelState> {
 		self.models
 			.get_mut(&(app_label.to_string(), model_name.to_string()))
+	}
+
+	/// Filter models by app_label and return a new ProjectState containing only those models
+	///
+	/// This method is used to create app-specific ProjectState for per-app migration generation.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_migrations::{ProjectState, ModelState};
+	///
+	/// let mut state = ProjectState::new();
+	/// state.add_model(ModelState::new("users", "User"));
+	/// state.add_model(ModelState::new("users", "Profile"));
+	/// state.add_model(ModelState::new("posts", "Post"));
+	///
+	/// let users_state = state.filter_by_app("users");
+	/// assert_eq!(users_state.models.len(), 2);
+	/// assert!(users_state.get_model("users", "User").is_some());
+	/// assert!(users_state.get_model("users", "Profile").is_some());
+	/// assert!(users_state.get_model("posts", "Post").is_none());
+	/// ```
+	pub fn filter_by_app(&self, app_label: &str) -> Self {
+		let mut filtered = Self::new();
+		for ((app, _model_name), model_state) in &self.models {
+			if app == app_label {
+				filtered.add_model(model_state.clone());
+			}
+		}
+		filtered
 	}
 
 	/// Remove a model from this project state
@@ -3737,10 +3858,17 @@ impl MigrationAutodetector {
 					));
 				}
 
+				// Convert model constraints to operation constraints
+				let constraints: Vec<_> = model
+					.constraints
+					.iter()
+					.map(|c| c.to_constraint())
+					.collect();
+
 				operations.push(crate::Operation::CreateTable {
 					name: Box::leak(model.table_name.clone().into_boxed_str()),
 					columns,
-					constraints: Vec::new(),
+					constraints,
 				});
 			}
 		}
@@ -3890,13 +4018,20 @@ impl MigrationAutodetector {
 					));
 				}
 
+				// Convert ConstraintDefinition to operations::Constraint
+				let constraints: Vec<crate::operations::Constraint> = model
+					.constraints
+					.iter()
+					.map(|c| c.to_constraint())
+					.collect();
+
 				migrations_by_app
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::CreateTable {
 						name: Box::leak(model.table_name.clone().into_boxed_str()),
 						columns,
-						constraints: Vec::new(),
+						constraints,
 					});
 			}
 		}
@@ -3961,6 +4096,126 @@ impl MigrationAutodetector {
 						name: Box::leak(model.table_name.clone().into_boxed_str()),
 					});
 			}
+		}
+
+		// Generate intermediate tables for ManyToMany relationships
+		for (app_label, model_name, through_table, m2m) in &changes.created_many_to_many {
+			// Generate column names (Django-style naming convention)
+			let source_model_lower = model_name.to_lowercase();
+			let target_model_lower = m2m.to_model.to_lowercase();
+
+			// Check for self-referencing ManyToMany (e.g., User follows User)
+			let is_self_referencing = source_model_lower == target_model_lower;
+
+			// For self-referencing ManyToMany, use from_/to_ prefixes to avoid column name collision
+			// Django uses this convention: from_{model}_id and to_{model}_id
+			let source_column = m2m.source_field.clone().unwrap_or_else(|| {
+				if is_self_referencing {
+					format!("from_{}_id", source_model_lower)
+				} else {
+					format!("{}_id", source_model_lower)
+				}
+			});
+			let target_column = m2m.target_field.clone().unwrap_or_else(|| {
+				if is_self_referencing {
+					format!("to_{}_id", target_model_lower)
+				} else {
+					format!("{}_id", target_model_lower)
+				}
+			});
+
+			// Get source table name
+			let source_table = self
+				.to_state
+				.get_model(app_label, model_name)
+				.map(|m| m.table_name.clone())
+				.unwrap_or_else(|| format!("{}_{}", app_label, source_model_lower));
+
+			// Get target table name
+			// First try to_state, then fall back to global registry for cross-app references
+			let target_table = self
+				.find_model_app(&m2m.to_model)
+				.and_then(|target_app| {
+					// Try to_state first
+					if let Some(model) = self.to_state.get_model(&target_app, &m2m.to_model) {
+						return Some(model.table_name.clone());
+					}
+					// Fall back to global registry for cross-app references
+					for model_meta in crate::model_registry::global_registry().get_models() {
+						if model_meta.app_label == target_app
+							&& model_meta.model_name == m2m.to_model
+						{
+							return Some(model_meta.table_name.clone());
+						}
+					}
+					None
+				})
+				.unwrap_or_else(|| m2m.to_model.to_lowercase());
+
+			// Create intermediate table columns
+			let columns = vec![
+				crate::ColumnDefinition {
+					name: "id",
+					type_definition: crate::FieldType::Integer,
+					not_null: true,
+					unique: false,
+					primary_key: true,
+					auto_increment: true,
+					default: None,
+				},
+				crate::ColumnDefinition {
+					name: Box::leak(source_column.clone().into_boxed_str()),
+					type_definition: crate::FieldType::Uuid,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				crate::ColumnDefinition {
+					name: Box::leak(target_column.clone().into_boxed_str()),
+					type_definition: crate::FieldType::Uuid,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+			];
+
+			// Create FK constraints for the intermediate table
+			let constraints = vec![
+				crate::operations::Constraint::ForeignKey {
+					name: format!("fk_{}_{}", through_table, source_column),
+					columns: vec![source_column.clone()],
+					referenced_table: source_table.clone(),
+					referenced_columns: vec!["id".to_string()],
+					on_delete: ForeignKeyAction::Cascade,
+					on_update: ForeignKeyAction::Cascade,
+				},
+				crate::operations::Constraint::ForeignKey {
+					name: format!("fk_{}_{}", through_table, target_column),
+					columns: vec![target_column.clone()],
+					referenced_table: target_table,
+					referenced_columns: vec!["id".to_string()],
+					on_delete: ForeignKeyAction::Cascade,
+					on_update: ForeignKeyAction::Cascade,
+				},
+				// Add unique constraint on the combination of both FK columns
+				crate::operations::Constraint::Unique {
+					name: format!("{}_unique", through_table),
+					columns: vec![source_column, target_column],
+				},
+			];
+
+			migrations_by_app
+				.entry(app_label.clone())
+				.or_default()
+				.push(crate::Operation::CreateTable {
+					name: Box::leak(through_table.clone().into_boxed_str()),
+					columns,
+					constraints,
+				});
 		}
 
 		// Create Migration objects for each app
@@ -4108,12 +4363,23 @@ impl MigrationAutodetector {
 	/// Find the app_label for a given model name
 	///
 	/// Searches through to_state models to find the app that contains the model.
+	/// If not found in to_state, falls back to the global registry for cross-app references.
 	fn find_model_app(&self, model_name: &str) -> Option<String> {
+		// First, search in to_state
 		for (app_label, name) in self.to_state.models.keys() {
 			if name == model_name {
 				return Some(app_label.clone());
 			}
 		}
+
+		// If not found, search in global registry for cross-app references
+		// This is needed when generating migrations for one app that references models in another app
+		for model_meta in crate::model_registry::global_registry().get_models() {
+			if model_meta.model_name == model_name {
+				return Some(model_meta.app_label.clone());
+			}
+		}
+
 		None
 	}
 

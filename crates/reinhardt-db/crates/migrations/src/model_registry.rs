@@ -128,6 +128,26 @@ impl ModelMetadata {
 		// Copy ManyToMany relationship metadata
 		model_state.many_to_many_fields = self.many_to_many_fields.clone();
 
+		// Generate Unique constraints from field params
+		for (field_name, field_meta) in &self.fields {
+			if field_meta.params.get("unique").map(String::as_str) == Some("true") {
+				use crate::ConstraintDefinition;
+				let constraint = ConstraintDefinition {
+					name: format!(
+						"{}_{}_{}_uniq",
+						self.app_label,
+						self.model_name.to_lowercase(),
+						field_name
+					),
+					constraint_type: "unique".to_string(),
+					fields: vec![field_name.clone()],
+					expression: None,
+					foreign_key_info: None,
+				};
+				model_state.constraints.push(constraint);
+			}
+		}
+
 		model_state
 	}
 }
