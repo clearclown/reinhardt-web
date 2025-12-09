@@ -937,19 +937,42 @@ impl<M: Model> Default for Manager<M> {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use reinhardt_core::macros::model;
+	use crate::Model;
 	use serde::{Deserialize, Serialize};
+	use std::collections::HashMap;
 
-	#[model(table_name = "test_user")]
 	#[derive(Debug, Clone, Serialize, Deserialize)]
 	struct TestUser {
-		#[field(primary_key = true)]
 		id: Option<i64>,
-		#[field(max_length = 100)]
 		name: String,
-		#[field(max_length = 255)]
 		email: String,
+	}
+
+	impl TestUser {
+		#[allow(dead_code)]
+		fn new(name: String, email: String) -> Self {
+			Self {
+				id: None,
+				name,
+				email,
+			}
+		}
+	}
+
+	impl Model for TestUser {
+		type PrimaryKey = i64;
+
+		fn table_name() -> &'static str {
+			"test_user"
+		}
+
+		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
+			self.id.as_ref()
+		}
+
+		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
+			self.id = Some(value);
+		}
 	}
 
 	#[test]

@@ -1568,19 +1568,41 @@ where
 
 #[cfg(test)]
 mod tests {
-	use super::*;
-	use reinhardt_core::macros::model;
+	use crate::{Filter, FilterOperator, FilterValue, Model, QuerySet};
 	use serde::{Deserialize, Serialize};
 
-	#[model(table_name = "test_users")]
 	#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 	struct TestUser {
-		#[field(primary_key = true)]
 		id: Option<i64>,
-		#[field(max_length = 100)]
 		username: String,
-		#[field(max_length = 255)]
 		email: String,
+	}
+
+	impl TestUser {
+		#[allow(dead_code)]
+		fn new(username: String, email: String) -> Self {
+			Self {
+				id: None,
+				username,
+				email,
+			}
+		}
+	}
+
+	impl Model for TestUser {
+		type PrimaryKey = i64;
+
+		fn table_name() -> &'static str {
+			"test_users"
+		}
+
+		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
+			self.id.as_ref()
+		}
+
+		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
+			self.id = Some(value);
+		}
 	}
 
 	#[tokio::test]
