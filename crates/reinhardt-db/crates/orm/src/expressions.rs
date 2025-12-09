@@ -248,6 +248,13 @@ impl<M, T> fmt::Display for FieldRef<M, T> {
 	}
 }
 
+// Allow conversion from FieldRef to String for Manager::filter()
+impl<M, T> From<FieldRef<M, T>> for String {
+	fn from(field_ref: FieldRef<M, T>) -> Self {
+		field_ref.name.to_string()
+	}
+}
+
 // Allow conversion from FieldRef to F for backward compatibility
 impl<M, T> From<FieldRef<M, T>> for F {
 	fn from(field_ref: FieldRef<M, T>) -> Self {

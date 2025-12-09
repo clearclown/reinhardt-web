@@ -146,13 +146,25 @@ impl<M: Model> Manager<M> {
 	}
 
 	/// Filter records by field, operator, and value
-	pub fn filter(
+	///
+	/// Accepts both string literals and FieldRef for type-safe field references.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// // String literal
+	/// User::objects().filter("email", FilterOperator::Eq, FilterValue::String("alice@example.com".to_string()))
+	///
+	/// // Type-safe FieldRef
+	/// User::objects().filter(User::field_email(), FilterOperator::Eq, FilterValue::String("alice@example.com".to_string()))
+	/// ```
+	pub fn filter<F: Into<String>>(
 		&self,
-		field: &str,
+		field: F,
 		operator: crate::query::FilterOperator,
 		value: crate::query::FilterValue,
 	) -> QuerySet<M> {
-		let filter = crate::query::Filter::new(field.to_string(), operator, value);
+		let filter = crate::query::Filter::new(field.into(), operator, value);
 		QuerySet::new().filter(filter)
 	}
 
@@ -926,37 +938,23 @@ impl<M: Model> Default for Manager<M> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_core::validators::TableName;
+	use reinhardt_core::macros::model;
 	use serde::{Deserialize, Serialize};
 
+	#[model(table_name = "test_user")]
 	#[derive(Debug, Clone, Serialize, Deserialize)]
 	struct TestUser {
+		#[field(primary_key = true)]
 		id: Option<i64>,
+		#[field(max_length = 100)]
 		name: String,
+		#[field(max_length = 255)]
 		email: String,
-	}
-
-	const TEST_USER_TABLE: TableName = TableName::new_const("test_user");
-
-	impl crate::Model for TestUser {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			TEST_USER_TABLE.as_str()
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
 	}
 
 	#[test]
 	fn test_get_or_create_sql() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 		let mut lookup = HashMap::new();
 		lookup.insert("email".to_string(), "test@example.com".to_string());
 
@@ -978,7 +976,7 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_sql() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 		let fields = vec!["name".to_string(), "email".to_string()];
 		let values = vec![
 			vec!["Alice".to_string(), "alice@example.com".to_string()],
@@ -1000,7 +998,7 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_sql_with_conflict() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 		let fields = vec!["name".to_string(), "email".to_string()];
 		let values = vec![vec!["Alice".to_string(), "alice@example.com".to_string()]];
 
@@ -1011,7 +1009,7 @@ mod tests {
 
 	#[test]
 	fn test_bulk_update_sql() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 
 		let mut updates = Vec::new();
 		let mut user1_fields = HashMap::new();
@@ -1041,7 +1039,7 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_empty() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 		let fields: Vec<String> = vec![];
 		let values: Vec<Vec<String>> = vec![];
 
@@ -1051,7 +1049,7 @@ mod tests {
 
 	#[test]
 	fn test_bulk_update_empty() {
-		let manager = Manager::<TestUser>::new();
+		let manager = TestUser::objects();
 		let updates: Vec<(i64, HashMap<String, String>)> = vec![];
 		let fields = vec!["name".to_string()];
 

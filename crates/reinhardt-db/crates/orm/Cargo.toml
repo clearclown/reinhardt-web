@@ -70,6 +70,7 @@ regex = "1.10"
 smallvec = "1.13"
 
 [dev-dependencies]
+reinhardt = { path = "../../../..", package = "reinhardt-web" }
 reinhardt-migrations = { path = "../migrations", version = "0.1.0-alpha.1" }
 ctor = "0.6.1"
 serial_test = { workspace = true }

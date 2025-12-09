@@ -1569,37 +1569,24 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::Model;
-	use crate::manager::Manager;
+	use reinhardt_core::macros::model;
 	use serde::{Deserialize, Serialize};
 
+	#[model(table_name = "test_users")]
 	#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 	struct TestUser {
+		#[field(primary_key = true)]
 		id: Option<i64>,
+		#[field(max_length = 100)]
 		username: String,
+		#[field(max_length = 255)]
 		email: String,
-	}
-
-	impl Model for TestUser {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			"test_users"
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
 	}
 
 	#[tokio::test]
 	async fn test_queryset_create_with_manager() {
 		// Test QuerySet::create() with explicit manager
-		let manager = std::sync::Arc::new(Manager::<TestUser>::new());
+		let manager = std::sync::Arc::new(TestUser::objects());
 		let queryset = QuerySet::with_manager(manager);
 
 		let user = TestUser {
@@ -1637,7 +1624,7 @@ mod tests {
 
 	#[test]
 	fn test_queryset_with_manager() {
-		let manager = std::sync::Arc::new(Manager::<TestUser>::new());
+		let manager = std::sync::Arc::new(TestUser::objects());
 		let queryset = QuerySet::with_manager(manager.clone());
 
 		// Verify manager is set
@@ -1646,7 +1633,7 @@ mod tests {
 
 	#[test]
 	fn test_queryset_filter_preserves_manager() {
-		let manager = std::sync::Arc::new(Manager::<TestUser>::new());
+		let manager = std::sync::Arc::new(TestUser::objects());
 		let queryset = QuerySet::with_manager(manager);
 
 		let filter = Filter::new(
@@ -1663,7 +1650,7 @@ mod tests {
 
 	#[test]
 	fn test_queryset_select_related_preserves_manager() {
-		let manager = std::sync::Arc::new(Manager::<TestUser>::new());
+		let manager = std::sync::Arc::new(TestUser::objects());
 		let queryset = QuerySet::with_manager(manager);
 
 		let selected = queryset.select_related(&["profile", "posts"]);
@@ -1675,7 +1662,7 @@ mod tests {
 
 	#[test]
 	fn test_queryset_prefetch_related_preserves_manager() {
-		let manager = std::sync::Arc::new(Manager::<TestUser>::new());
+		let manager = std::sync::Arc::new(TestUser::objects());
 		let queryset = QuerySet::with_manager(manager);
 
 		let prefetched = queryset.prefetch_related(&["comments", "likes"]);

@@ -2,6 +2,11 @@
 //!
 //! Object-Relational Mapping for Reinhardt framework.
 //!
+//! ## Documentation
+//!
+//! - [README.md](../README.md) - Feature list and API reference
+//! - [USAGE_GUIDE.md](../USAGE_GUIDE.md) - Comprehensive usage guide with examples and best practices
+//!
 //! ## Transaction Management
 //!
 //! Reinhardt ORM provides a closure-based API for automatic transaction management:
@@ -100,6 +105,7 @@ pub mod functions;
 pub mod hybrid_dml;
 pub mod indexes;
 pub mod inspection;
+pub mod into_primary_key;
 pub mod model;
 pub mod query_fields;
 pub mod query_helpers; // Common query patterns using SeaQuery
@@ -175,6 +181,7 @@ pub use functions::{
 	Upper,
 };
 pub use indexes::{BTreeIndex, GinIndex, GistIndex, HashIndex, Index};
+pub use into_primary_key::IntoPrimaryKey;
 pub use model::{Model, SoftDeletable, SoftDelete, Timestamped, Timestamps};
 pub use query_fields::{
 	Comparable, DateTimeType, Field, Lookup, LookupType, LookupValue, NumericType,
