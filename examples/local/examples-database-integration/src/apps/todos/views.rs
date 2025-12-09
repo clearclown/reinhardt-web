@@ -43,7 +43,7 @@ pub struct TodoRequest {
 #[get("/todos/", name = "todos_list")]
 pub async fn list_todos() -> ViewResult<Response> {
 	// Query all todos from database using ORM
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 	let todos = manager.all().all().await?;
 
 	let response = json::json!({
@@ -88,7 +88,7 @@ pub async fn create_todo(Json(todo_req): Json<TodoRequest>) -> ViewResult<Respon
 		updated_at: now,
 	};
 
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 	let created_todo = manager.create(&todo).await?;
 
 	let body = json::to_vec(&created_todo)?;
@@ -106,7 +106,7 @@ pub async fn create_todo(Json(todo_req): Json<TodoRequest>) -> ViewResult<Respon
 #[get("/todos/{id}/", name = "todos_get")]
 pub async fn get_todo(Path(id): Path<i64>) -> ViewResult<Response> {
 	// Get todo from database using ORM
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 	let todo = manager
 		.get(id)
 		.first()
@@ -142,7 +142,7 @@ pub async fn update_todo(
 	}
 
 	// Get existing todo from database
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 	let mut todo = manager
 		.get(id)
 		.first()
@@ -173,7 +173,7 @@ pub async fn update_todo(
 #[delete("/todos/{id}/", name = "todos_delete")]
 pub async fn delete_todo(Path(id): Path<i64>) -> ViewResult<Response> {
 	// Delete todo from database using ORM
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 	manager
 		.delete(id)
 		.await

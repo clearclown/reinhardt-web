@@ -94,7 +94,7 @@ async fn test_database_connection(
 	let (_file, _conn) = db_with_migrations.await;
 
 	// Verify connection by querying users table
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 	let result = manager.all().all().await;
 	assert!(result.is_ok(), "Failed to query users table");
 }
@@ -109,12 +109,12 @@ async fn test_database_ready(
 	let (_file, _conn) = db_with_migrations.await;
 
 	// Verify users table is accessible
-	let user_manager = Manager::<User>::new();
+	let user_manager = User::objects();
 	let users_result = user_manager.all().all().await;
 	assert!(users_result.is_ok(), "Users table should be accessible");
 
 	// Verify todos table is accessible
-	let todo_manager = Manager::<Todo>::new();
+	let todo_manager = Todo::objects();
 	let todos_result = todo_manager.all().all().await;
 	assert!(todos_result.is_ok(), "Todos table should be accessible");
 
@@ -133,7 +133,7 @@ async fn test_create_user(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 
 	let new_user = User {
 		id: None, // Auto-increment by database
@@ -160,7 +160,7 @@ async fn test_read_users(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 
 	// Create test users
 	let user1 = User {
@@ -195,7 +195,7 @@ async fn test_update_user(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 
 	// Create user
 	let new_user = User {
@@ -224,7 +224,7 @@ async fn test_delete_user(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, conn) = db_with_migrations.await;
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 
 	// Create user
 	let new_user = User {
@@ -269,7 +269,7 @@ async fn test_transaction_commit(
 		.expect("Failed to begin transaction");
 
 	// Insert user using ORM Manager with explicit connection (transaction-aware)
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 	let user = User {
 		id: None, // Auto-increment by database
 		name: "Alice".to_string(),
@@ -351,7 +351,7 @@ async fn test_transaction_rollback(
 
 	// Verify rollback - user should NOT exist after rollback
 	// Using Manager here is safe because we're checking AFTER the transaction completed
-	let manager = Manager::<User>::new();
+	let manager = User::objects();
 	let count = manager.count_with_conn(&conn).await.unwrap();
 	assert_eq!(count, 0, "User should not be persisted after rollback");
 }
@@ -368,7 +368,7 @@ async fn test_orm_create_todo(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	let new_todo = Todo {
 		id: None,
@@ -395,7 +395,7 @@ async fn test_orm_list_todos(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	// Create test todos
 	let todo1 = Todo {
@@ -434,7 +434,7 @@ async fn test_orm_get_todo(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	// Create todo
 	let new_todo = Todo {
@@ -465,7 +465,7 @@ async fn test_orm_update_todo(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	// Create todo
 	let new_todo = Todo {
@@ -499,7 +499,7 @@ async fn test_orm_delete_todo(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	// Create todo
 	let new_todo = Todo {
@@ -532,7 +532,7 @@ async fn test_todo_default_values(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	let new_todo = Todo {
 		id: None,
@@ -558,7 +558,7 @@ async fn test_todo_timestamp_behavior(
 	#[future] db_with_migrations: (NamedTempFile, Arc<DatabaseConnection>),
 ) {
 	let (_file, _conn) = db_with_migrations.await;
-	let manager = Manager::<Todo>::new();
+	let manager = Todo::objects();
 
 	let new_todo = Todo {
 		id: None,
@@ -606,7 +606,7 @@ async fn test_complete_crud_cycle(
 	let final_count: std::result::Result<usize, anyhow::Error> =
 		atomic(&conn, || {
 			Box::pin(async move {
-				let manager = Manager::<Todo>::new();
+				let manager = Todo::objects();
 
 				// Create
 				let new_todo = Todo {
