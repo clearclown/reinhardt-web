@@ -1,0 +1,93 @@
+use reinhardt::db::migrations::FieldType;
+use reinhardt::db::migrations::prelude::*;
+pub fn migration() -> Migration {
+	Migration {
+		app_label: "profile",
+		name: "0001_initial",
+		initial: Some(true),
+		operations: vec![Operation::CreateTable {
+			name: "profile_profile",
+			columns: vec![
+				ColumnDefinition {
+					name: "avatar_url",
+					type_definition: FieldType::VarChar(255u32),
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "bio",
+					type_definition: FieldType::VarChar(500u32),
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "created_at",
+					type_definition: FieldType::DateTime,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "id",
+					type_definition: FieldType::Uuid,
+					not_null: true,
+					unique: true,
+					primary_key: true,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "location",
+					type_definition: FieldType::VarChar(255u32),
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "updated_at",
+					type_definition: FieldType::DateTime,
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "user_id",
+					type_definition: FieldType::Uuid,
+					not_null: true,
+					unique: true,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
+					name: "website",
+					type_definition: FieldType::VarChar(255u32),
+					not_null: true,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+			],
+			constraints: vec![Constraint::Unique {
+				name: "profile_profile_user_id_uniq".to_string(),
+				columns: vec!["user_id".to_string()],
+			}],
+		}],
+		dependencies: vec![],
+		atomic: true,
+		replaces: vec![],
+	}
+}

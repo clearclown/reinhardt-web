@@ -10,6 +10,10 @@ pub use reinhardt::reinhardt_params;
 
 pub mod config;
 pub mod apps;
+pub mod migrations;
+
+#[cfg(test)]
+pub mod test_utils;
 
 // Re-export commonly used items
 pub use config::settings::get_settings;
