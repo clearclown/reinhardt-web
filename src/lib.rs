@@ -217,6 +217,13 @@ pub use reinhardt_db::migrations;
 #[doc(hidden)]
 pub use migrations as reinhardt_migrations;
 
+// Re-export reinhardt_macros as a module for hierarchical imports
+// This allows macro-generated code to use ::reinhardt::macros::Model
+#[doc(hidden)]
+pub mod macros {
+	pub use reinhardt_macros::*;
+}
+
 // Re-export HTTP method macros
 pub use reinhardt_macros::{api_view, delete, get, patch, post, put};
 
@@ -964,8 +971,6 @@ pub mod prelude {
 		F,
 		ForeignKeyConstraint,
 		Lower,
-		// Model derive macro and attribute macro
-		Model,
 		Now,
 		Q,
 		QOperator,
@@ -984,6 +989,11 @@ pub mod prelude {
 		// Model attribute macro for struct-level model definition
 		model,
 	};
+
+	// Import Model trait directly from reinhardt_db to avoid name shadowing
+	// (crate::Model refers to the derive macro, not the trait)
+	#[cfg(feature = "database")]
+	pub use reinhardt_db::orm::Model;
 
 	// Auth feature
 	#[cfg(feature = "auth")]
