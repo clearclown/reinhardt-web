@@ -1,307 +1,323 @@
 # Field Attributes Reference
 
-このドキュメントは、`#[field(...)]`マクロで使用可能な全ての属性をリストアップしています。
+This document lists all available attributes for the `#[field(...)]` macro.
 
-## 概要
+## Overview
 
-Reinhardtの`#[derive(Model)]`マクロは、フィールドレベルの属性を通じて、データベーススキーマの詳細な制御を提供します。現在、**42個の属性**（既存20個 + 新規実装22個）がサポートされています。
+Reinhardt's `#[model(...)]` attribute macro automatically applies
+`#[derive(Model)]` and provides fine-grained control over database schema
+through field-level attributes. Currently, **42 attributes** are supported (20
+existing + 22 newly implemented).
 
-## 属性の分類
+**Note:** When using `#[model(...)]`, you don't need to explicitly add
+`#[derive(Model)]`.
 
-### 全DBMS共通
-- 基本属性（primary_key, unique, null, default など）
-- Generated Columns（generated, generated_stored）
-- 照合順序（collate）
+## Attribute Classification
 
-### PostgreSQL専用
-- Identity列（identity_always, identity_by_default）
-- ストレージ最適化（storage, compression）
+### Common to All DBMS
 
-### MySQL専用
-- 自動採番（auto_increment）
-- 文字セット（character_set）
-- ON UPDATE（on_update_current_timestamp）
-- 不可視カラム（invisible）
-- 数値型属性（unsigned, zerofill）※非推奨
+- Basic attributes (primary_key, unique, null, default, etc.)
+- Generated Columns (generated, generated_stored)
+- Collation (collate)
 
-### SQLite専用
-- 自動採番（autoincrement）
-- テーブルレベル属性（strict, without_rowid）
+### PostgreSQL-Specific
 
-### 複数DBMS対応
-- generated_virtual（MySQL, SQLite）
-- comment（PostgreSQL, MySQL）
-- fulltext（PostgreSQL, MySQL）
+- Identity columns (identity_always, identity_by_default)
+- Storage optimization (storage, compression)
+
+### MySQL-Specific
+
+- Auto-increment (auto_increment)
+- Character set (character_set)
+- ON UPDATE (on_update_current_timestamp)
+- Invisible columns (invisible)
+- Numeric type attributes (unsigned, zerofill) ※Deprecated
+
+### SQLite-Specific
+
+- Auto-increment (autoincrement)
+- Table-level attributes (strict, without_rowid)
+
+### Multiple DBMS Support
+
+- generated_virtual (MySQL, SQLite)
+- comment (PostgreSQL, MySQL)
+- fulltext (PostgreSQL, MySQL)
 
 ---
 
-## 既存の属性（20個）
+## Existing Attributes (20 items)
 
-### 基本制約
+### Basic Constraints
 
 #### `primary_key: bool`
-プライマリキーを指定します。
+
+Specifies the primary key.
 
 ```rust
 #[field(primary_key = true)]
 id: i32,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `PRIMARY KEY`
+**Supported DBMS**: All **SQL Output**: `PRIMARY KEY`
 
 #### `unique: bool`
-UNIQUE制約を指定します。
+
+Specifies a UNIQUE constraint.
 
 ```rust
 #[field(unique = true)]
 email: String,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `UNIQUE`
+**Supported DBMS**: All **SQL Output**: `UNIQUE`
 
 #### `null: bool`
-NULL許可を指定します。デフォルトは`false`（NOT NULL）。
+
+Allows NULL values. Default is `false` (NOT NULL).
 
 ```rust
 #[field(null = true)]
 optional_field: Option<String>,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: NULL許可時は何も出力、許可しない時は`NOT NULL`
+**Supported DBMS**: All **SQL Output**: No output when NULL is allowed,
+`NOT NULL` when not allowed
 
 #### `default: &str`
-デフォルト値を指定します。
+
+Specifies a default value.
 
 ```rust
 #[field(default = "'active'")]
 status: String,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `DEFAULT 'active'`
+**Supported DBMS**: All **SQL Output**: `DEFAULT 'active'`
 
 #### `db_default: &str`
-データベース関数をデフォルト値として指定します。
+
+Specifies a database function as the default value.
 
 ```rust
 #[field(db_default = "CURRENT_TIMESTAMP")]
 created_at: chrono::NaiveDateTime,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `DEFAULT CURRENT_TIMESTAMP`
+**Supported DBMS**: All **SQL Output**: `DEFAULT CURRENT_TIMESTAMP`
 
-### フィールド型・長さ
+### Field Types and Length
 
 #### `max_length: usize`
-VARCHAR型の最大長を指定します。
+
+Specifies the maximum length for VARCHAR type.
 
 ```rust
 #[field(max_length = 255)]
 name: String,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `VARCHAR(255)`
+**Supported DBMS**: All **SQL Output**: `VARCHAR(255)`
 
 #### `min_length: usize`
-最小長のバリデーション（アプリケーションレベル）。
+
+Minimum length validation (application-level).
 
 ```rust
 #[field(min_length = 3)]
 username: String,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
-### バリデーション
+### Validation
 
 #### `email: bool`
-メールアドレス形式のバリデーションを有効にします。
+
+Enables email address format validation.
 
 ```rust
 #[field(email = true)]
 email: String,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `url: bool`
-URL形式のバリデーションを有効にします。
+
+Enables URL format validation.
 
 ```rust
 #[field(url = true)]
 website: String,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `min_value: i64`
-最小値のバリデーション（アプリケーションレベル）。
+
+Minimum value validation (application-level).
 
 ```rust
 #[field(min_value = 0)]
 age: i32,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `max_value: i64`
-最大値のバリデーション（アプリケーションレベル）。
+
+Maximum value validation (application-level).
 
 ```rust
 #[field(max_value = 150)]
 age: i32,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `check: &str`
-CHECK制約を指定します。
+
+Specifies a CHECK constraint.
 
 ```rust
 #[field(check = "age >= 0 AND age <= 150")]
 age: i32,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `CHECK (age >= 0 AND age <= 150)`
+**Supported DBMS**: All **SQL Output**: `CHECK (age >= 0 AND age <= 150)`
 
-### リレーション
+### Relations
 
 #### `foreign_key: Type or &str`
-外部キーを指定します。型名または"app_label.ModelName"形式の文字列。
+
+Specifies a foreign key. Can be a type name or "app_label.ModelName" string
+format.
 
 ```rust
 #[field(foreign_key = User)]
 user_id: i32,
 
-// または
+// Or
 #[field(foreign_key = "users.User")]
 user_id: i32,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `REFERENCES users(id)`
+**Supported DBMS**: All **SQL Output**: `REFERENCES users(id)`
 
 #### `on_delete: &str`
-外部キー削除時の動作を指定します。
 
-値: `"CASCADE"`, `"SET NULL"`, `"RESTRICT"`, `"NO ACTION"`, `"SET DEFAULT"`
+Specifies the action when the foreign key is deleted.
+
+Values: `"CASCADE"`, `"SET NULL"`, `"RESTRICT"`, `"NO ACTION"`, `"SET DEFAULT"`
 
 ```rust
 #[field(foreign_key = User, on_delete = "CASCADE")]
 user_id: i32,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: `ON DELETE CASCADE`
+**Supported DBMS**: All **SQL Output**: `ON DELETE CASCADE`
 
-### その他
+### Other
 
 #### `db_column: &str`
-データベースカラム名を明示的に指定します。
+
+Explicitly specifies the database column name.
 
 ```rust
 #[field(db_column = "user_name")]
 username: String,
 ```
 
-**対応DBMS**: 全て
-**SQL出力**: カラム名が`user_name`になる
+**Supported DBMS**: All **SQL Output**: Column name becomes `user_name`
 
 #### `blank: bool`
-空文字列を許可するか（バリデーションレベル）。
+
+Whether to allow empty strings (validation level).
 
 ```rust
 #[field(blank = true)]
 description: String,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `editable: bool`
-フィールドが編集可能かどうか（アプリケーションレベル）。
+
+Whether the field is editable (application-level).
 
 ```rust
 #[field(editable = false)]
 created_at: chrono::NaiveDateTime,
 ```
 
-**対応DBMS**: 全て（メタデータのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (metadata only) **SQL Output**: None
 
 #### `choices: Vec<(Value, Display)>`
-選択肢を定義します（アプリケーションレベル）。
+
+Defines choices (application-level).
 
 ```rust
 #[field(choices = vec![("active", "Active"), ("inactive", "Inactive")])]
 status: String,
 ```
 
-**対応DBMS**: 全て（バリデーションのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (validation only) **SQL Output**: None
 
 #### `help_text: &str`
-ヘルプテキスト（ドキュメント用）。
+
+Help text (for documentation).
 
 ```rust
 #[field(help_text = "User's full name")]
 name: String,
 ```
 
-**対応DBMS**: 全て（メタデータのみ）
-**SQL出力**: なし
+**Supported DBMS**: All (metadata only) **SQL Output**: None
 
 ---
 
-## 新規実装属性（22個）
+## Newly Implemented Attributes (22 items)
 
-### Phase 1: 標準的かつ複数DBMS共通（10属性）
+### Phase 1: Standard and Cross-DBMS Common (10 attributes)
 
 #### `generated: &str`
-**対応DBMS**: 全て
-**Feature Flag**: なし
 
-生成列（計算列）の式を指定します。
+**Supported DBMS**: All **Feature Flag**: None
+
+Specifies the expression for a generated (computed) column.
 
 ```rust
 #[field(generated = "first_name || ' ' || last_name")]
 full_name: String,
 ```
 
-**SQL出力**:
+**SQL Output**:
+
 - PostgreSQL: `GENERATED ALWAYS AS (first_name || ' ' || last_name)`
 - MySQL: `GENERATED ALWAYS AS (first_name || ' ' || last_name)`
 - SQLite: `AS (first_name || ' ' || last_name)`
 
 #### `generated_stored: bool`
-**対応DBMS**: 全て
-**Feature Flag**: なし
 
-生成列を物理的に保存するかを指定します。`generated`と併用。
+**Supported DBMS**: All **Feature Flag**: None
+
+Specifies whether to physically store the generated column. Used with
+`generated`.
 
 ```rust
 #[field(generated = "price * quantity", generated_stored = true)]
 total: f64,
 ```
 
-**SQL出力**: `STORED`
+**SQL Output**: `STORED`
 
 #### `generated_virtual: bool`
-**対応DBMS**: MySQL, SQLite
-**Feature Flag**: `#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]`
 
-生成列を仮想列として定義します。`generated`と併用。
+**Supported DBMS**: MySQL, SQLite **Feature Flag**:
+`#[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]`
+
+Defines the generated column as a virtual column. Used with `generated`.
 
 ```rust
 #[cfg(any(feature = "db-mysql", feature = "db-sqlite"))]
@@ -309,15 +325,16 @@ total: f64,
 birth_year: i32,
 ```
 
-**SQL出力**: `VIRTUAL`
+**SQL Output**: `VIRTUAL`
 
-**注意**: PostgreSQLは仮想列をサポートしていません。
+**Note**: PostgreSQL does not support virtual columns.
 
 #### `identity_always: bool`
-**対応DBMS**: PostgreSQL
-**Feature Flag**: `#[cfg(feature = "db-postgres")]`
 
-PostgreSQL IDENTITY ALWAYS列を定義します。
+**Supported DBMS**: PostgreSQL **Feature Flag**:
+`#[cfg(feature = "db-postgres")]`
+
+Defines a PostgreSQL IDENTITY ALWAYS column.
 
 ```rust
 #[cfg(feature = "db-postgres")]
@@ -325,13 +342,14 @@ PostgreSQL IDENTITY ALWAYS列を定義します。
 id: i64,
 ```
 
-**SQL出力**: `GENERATED ALWAYS AS IDENTITY`
+**SQL Output**: `GENERATED ALWAYS AS IDENTITY`
 
 #### `identity_by_default: bool`
-**対応DBMS**: PostgreSQL
-**Feature Flag**: `#[cfg(feature = "db-postgres")]`
 
-PostgreSQL IDENTITY BY DEFAULT列を定義します。
+**Supported DBMS**: PostgreSQL **Feature Flag**:
+`#[cfg(feature = "db-postgres")]`
+
+Defines a PostgreSQL IDENTITY BY DEFAULT column.
 
 ```rust
 #[cfg(feature = "db-postgres")]
@@ -339,13 +357,13 @@ PostgreSQL IDENTITY BY DEFAULT列を定義します。
 id: i64,
 ```
 
-**SQL出力**: `GENERATED BY DEFAULT AS IDENTITY`
+**SQL Output**: `GENERATED BY DEFAULT AS IDENTITY`
 
 #### `auto_increment: bool`
-**対応DBMS**: MySQL
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
 
-MySQL AUTO_INCREMENT属性を指定します。
+**Supported DBMS**: MySQL **Feature Flag**: `#[cfg(feature = "db-mysql")]`
+
+Specifies MySQL AUTO_INCREMENT attribute.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -353,13 +371,13 @@ MySQL AUTO_INCREMENT属性を指定します。
 id: u32,
 ```
 
-**SQL出力**: `AUTO_INCREMENT`
+**SQL Output**: `AUTO_INCREMENT`
 
 #### `autoincrement: bool`
-**対応DBMS**: SQLite
-**Feature Flag**: `#[cfg(feature = "db-sqlite")]`
 
-SQLite AUTOINCREMENT属性を指定します。
+**Supported DBMS**: SQLite **Feature Flag**: `#[cfg(feature = "db-sqlite")]`
+
+Specifies SQLite AUTOINCREMENT attribute.
 
 ```rust
 #[cfg(feature = "db-sqlite")]
@@ -367,28 +385,30 @@ SQLite AUTOINCREMENT属性を指定します。
 id: i64,
 ```
 
-**SQL出力**: `AUTOINCREMENT`
+**SQL Output**: `AUTOINCREMENT`
 
-**相互排他**: `identity_always`, `identity_by_default`, `auto_increment`, `autoincrement`は相互排他です。1つのフィールドに複数指定するとコンパイルエラーになります。
+**Mutual Exclusion**: `identity_always`, `identity_by_default`,
+`auto_increment`, and `autoincrement` are mutually exclusive. Specifying
+multiple on a single field will result in a compile error.
 
 #### `collate: &str`
-**対応DBMS**: 全て
-**Feature Flag**: なし
 
-照合順序を指定します。
+**Supported DBMS**: All **Feature Flag**: None
+
+Specifies the collation.
 
 ```rust
 #[field(collate = "utf8mb4_unicode_ci")]
 name: String,
 ```
 
-**SQL出力**: `COLLATE utf8mb4_unicode_ci`
+**SQL Output**: `COLLATE utf8mb4_unicode_ci`
 
 #### `character_set: &str`
-**対応DBMS**: MySQL
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
 
-MySQL文字セットを指定します。
+**Supported DBMS**: MySQL **Feature Flag**: `#[cfg(feature = "db-mysql")]`
+
+Specifies MySQL character set.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -396,13 +416,14 @@ MySQL文字セットを指定します。
 description: String,
 ```
 
-**SQL出力**: `CHARACTER SET utf8mb4`
+**SQL Output**: `CHARACTER SET utf8mb4`
 
 #### `comment: &str`
-**対応DBMS**: PostgreSQL, MySQL
-**Feature Flag**: `#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]`
 
-カラムコメントを指定します。
+**Supported DBMS**: PostgreSQL, MySQL **Feature Flag**:
+`#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]`
+
+Specifies column comment.
 
 ```rust
 #[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
@@ -410,21 +431,23 @@ description: String,
 email: String,
 ```
 
-**SQL出力**:
-- PostgreSQL: 別SQL文 `COMMENT ON COLUMN table.column IS 'text'`
+**SQL Output**:
+
+- PostgreSQL: Separate SQL statement `COMMENT ON COLUMN table.column IS 'text'`
 - MySQL: `COMMENT 'text'`
 
 ---
 
-### Phase 2: 特定DBMSで重要（5属性）
+### Phase 2: DBMS-Specific Important Features (5 attributes)
 
 #### `storage: &str`
-**対応DBMS**: PostgreSQL
-**Feature Flag**: `#[cfg(feature = "db-postgres")]`
 
-PostgreSQLストレージ戦略を指定します。
+**Supported DBMS**: PostgreSQL **Feature Flag**:
+`#[cfg(feature = "db-postgres")]`
 
-値: `"plain"`, `"extended"`, `"external"`, `"main"`
+Specifies PostgreSQL storage strategy.
+
+Values: `"plain"`, `"extended"`, `"external"`, `"main"`
 
 ```rust
 #[cfg(feature = "db-postgres")]
@@ -432,21 +455,23 @@ PostgreSQLストレージ戦略を指定します。
 large_text: String,
 ```
 
-**SQL出力**: `STORAGE EXTERNAL`
+**SQL Output**: `STORAGE EXTERNAL`
 
-**ストレージ戦略の説明**:
-- `PLAIN`: インライン保存、圧縮なし
-- `EXTENDED`: インライン保存、圧縮あり
-- `EXTERNAL`: 別テーブル保存、圧縮なし
-- `MAIN`: 別テーブル保存、圧縮あり
+**Storage Strategy Descriptions**:
+
+- `PLAIN`: Inline storage, no compression
+- `EXTENDED`: Inline storage, with compression
+- `EXTERNAL`: External table storage, no compression
+- `MAIN`: External table storage, with compression
 
 #### `compression: &str`
-**対応DBMS**: PostgreSQL
-**Feature Flag**: `#[cfg(feature = "db-postgres")]`
 
-PostgreSQL圧縮方式を指定します。
+**Supported DBMS**: PostgreSQL **Feature Flag**:
+`#[cfg(feature = "db-postgres")]`
 
-値: `"pglz"`, `"lz4"`
+Specifies PostgreSQL compression method.
+
+Values: `"pglz"`, `"lz4"`
 
 ```rust
 #[cfg(feature = "db-postgres")]
@@ -454,13 +479,13 @@ PostgreSQL圧縮方式を指定します。
 data: Vec<u8>,
 ```
 
-**SQL出力**: `COMPRESSION lz4`
+**SQL Output**: `COMPRESSION lz4`
 
 #### `on_update_current_timestamp: bool`
-**対応DBMS**: MySQL
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
 
-MySQL ON UPDATE CURRENT_TIMESTAMPを指定します。
+**Supported DBMS**: MySQL **Feature Flag**: `#[cfg(feature = "db-mysql")]`
+
+Specifies MySQL ON UPDATE CURRENT_TIMESTAMP.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -468,13 +493,14 @@ MySQL ON UPDATE CURRENT_TIMESTAMPを指定します。
 updated_at: chrono::NaiveDateTime,
 ```
 
-**SQL出力**: `ON UPDATE CURRENT_TIMESTAMP`
+**SQL Output**: `ON UPDATE CURRENT_TIMESTAMP`
 
 #### `invisible: bool`
-**対応DBMS**: MySQL 8.0.23+
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
 
-MySQLカラムを不可視にします。
+**Supported DBMS**: MySQL 8.0.23+ **Feature Flag**:
+`#[cfg(feature = "db-mysql")]`
+
+Makes a MySQL column invisible.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -482,15 +508,16 @@ MySQLカラムを不可視にします。
 internal_metadata: String,
 ```
 
-**SQL出力**: `INVISIBLE`
+**SQL Output**: `INVISIBLE`
 
-**用途**: `SELECT *`で非表示にしたいカラム（監査用メタデータなど）。
+**Use Case**: Columns you want to hide from `SELECT *` (e.g., audit metadata).
 
 #### `fulltext: bool`
-**対応DBMS**: PostgreSQL, MySQL
-**Feature Flag**: `#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]`
 
-全文検索インデックスを作成する必要があることを示します。
+**Supported DBMS**: PostgreSQL, MySQL **Feature Flag**:
+`#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]`
+
+Indicates that a full-text search index should be created.
 
 ```rust
 #[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
@@ -498,17 +525,18 @@ internal_metadata: String,
 content: String,
 ```
 
-**SQL出力**: カラム定義には含まれず、別途インデックスとして作成される。
+**SQL Output**: Not included in column definition; created separately as an
+index.
 
 ---
 
-### Phase 3: 互換性・特殊用途（4属性）
+### Phase 3: Compatibility and Special Purpose (4 attributes)
 
-#### `unsigned: bool` ⚠️ 非推奨
-**対応DBMS**: MySQL
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
+#### `unsigned: bool` ⚠️ Deprecated
 
-MySQL符号なし整数型を指定します。
+**Supported DBMS**: MySQL **Feature Flag**: `#[cfg(feature = "db-mysql")]`
+
+Specifies MySQL unsigned integer type.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -516,15 +544,16 @@ MySQL符号なし整数型を指定します。
 count: i32,
 ```
 
-**SQL出力**: `UNSIGNED`
+**SQL Output**: `UNSIGNED`
 
-**⚠️ 注意**: MySQL 8.0.17以降で非推奨。CHECK制約を使用することを推奨。
+**⚠️ Warning**: Deprecated since MySQL 8.0.17. Using CHECK constraints is
+recommended.
 
-#### `zerofill: bool` ⚠️ 非推奨
-**対応DBMS**: MySQL
-**Feature Flag**: `#[cfg(feature = "db-mysql")]`
+#### `zerofill: bool` ⚠️ Deprecated
 
-MySQLゼロ埋め表示を指定します。
+**Supported DBMS**: MySQL **Feature Flag**: `#[cfg(feature = "db-mysql")]`
+
+Specifies MySQL zero-fill display.
 
 ```rust
 #[cfg(feature = "db-mysql")]
@@ -532,19 +561,20 @@ MySQLゼロ埋め表示を指定します。
 code: i32,
 ```
 
-**SQL出力**: `ZEROFILL`
+**SQL Output**: `ZEROFILL`
 
-**⚠️ 注意**: MySQL 8.0.17以降で非推奨。アプリケーションレベルでフォーマットすることを推奨。
+**⚠️ Warning**: Deprecated since MySQL 8.0.17. Application-level formatting is
+recommended.
 
 ---
 
-## テーブルレベル属性（`#[model(...)]`）
+## Table-Level Attributes (`#[model(...)]`)
 
 ### `strict: bool`
-**対応DBMS**: SQLite
-**Feature Flag**: `#[cfg(feature = "db-sqlite")]`
 
-SQLite STRICTテーブルを作成します。
+**Supported DBMS**: SQLite **Feature Flag**: `#[cfg(feature = "db-sqlite")]`
+
+Creates a SQLite STRICT table.
 
 ```rust
 #[cfg(feature = "db-sqlite")]
@@ -555,15 +585,15 @@ struct User {
 }
 ```
 
-**SQL出力**: `CREATE TABLE users (...) STRICT;`
+**SQL Output**: `CREATE TABLE users (...) STRICT;`
 
-**用途**: 型チェックを厳密にしたい場合。
+**Use Case**: When you want strict type checking.
 
 ### `without_rowid: bool`
-**対応DBMS**: SQLite
-**Feature Flag**: `#[cfg(feature = "db-sqlite")]`
 
-SQLite WITHOUT ROWIDテーブルを作成します。
+**Supported DBMS**: SQLite **Feature Flag**: `#[cfg(feature = "db-sqlite")]`
+
+Creates a SQLite WITHOUT ROWID table.
 
 ```rust
 #[cfg(feature = "db-sqlite")]
@@ -576,15 +606,15 @@ struct CacheEntry {
 }
 ```
 
-**SQL出力**: `CREATE TABLE cache (...) WITHOUT ROWID;`
+**SQL Output**: `CREATE TABLE cache (...) WITHOUT ROWID;`
 
-**用途**: プライマリキーが整数でない場合のパフォーマンス最適化。
+**Use Case**: Performance optimization when the primary key is not an integer.
 
 ---
 
 ## Feature Flags
 
-プロジェクトの`Cargo.toml`で必要なfeature flagsを有効にしてください：
+Enable the necessary feature flags in your project's `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -592,16 +622,17 @@ reinhardt-macros = { version = "0.1", features = ["db-postgres", "db-mysql", "db
 reinhardt-migrations = { version = "0.1", features = ["db-postgres", "db-mysql", "db-sqlite"] }
 ```
 
-利用可能なfeature flags:
-- `db-postgres`: PostgreSQL専用属性を有効化
-- `db-mysql`: MySQL専用属性を有効化
-- `db-sqlite`: SQLite専用属性を有効化
+Available feature flags:
+
+- `db-postgres`: Enable PostgreSQL-specific attributes
+- `db-mysql`: Enable MySQL-specific attributes
+- `db-sqlite`: Enable SQLite-specific attributes
 
 ---
 
-## 使用例
+## Usage Examples
 
-### 複雑なモデル例
+### Complex Model Example
 
 ```rust
 use reinhardt::db::orm::prelude::*;
@@ -626,20 +657,20 @@ struct Article {
 	#[field(primary_key = true, autoincrement = true)]
 	id: i64,
 
-	// 全DBMS: 基本的な制約
+	// All DBMS: Basic constraints
 	#[field(max_length = 255, unique = true, collate = "utf8mb4_unicode_ci")]
 	title: String,
 
-	// 全文検索対象
+	// Full-text search target
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 	#[field(fulltext = true)]
 	content: String,
 
-	// 生成列（保存型）
+	// Generated column (stored)
 	#[field(generated = "UPPER(title)", generated_stored = true)]
 	title_upper: String,
 
-	// コメント付き
+	// With comment
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 	#[field(comment = "Article creation timestamp")]
 	created_at: NaiveDateTime,
@@ -649,7 +680,7 @@ struct Article {
 	#[field(on_update_current_timestamp = true)]
 	updated_at: NaiveDateTime,
 
-	// PostgreSQL: 圧縮・ストレージ戦略
+	// PostgreSQL: Compression and storage strategy
 	#[cfg(feature = "db-postgres")]
 	#[field(storage = "external", compression = "lz4")]
 	large_data: Vec<u8>,
@@ -658,19 +689,20 @@ struct Article {
 
 ---
 
-## マイグレーション
+## Migrations
 
-新しい属性を使用すると、マイグレーションシステムが自動的に適切なSQLを生成します：
+When using new attributes, the migration system automatically generates the
+appropriate SQL:
 
 ```bash
-# マイグレーションファイルを生成
+# Generate migration files
 cargo run --bin manage makemigrations
 
-# マイグレーションを適用
+# Apply migrations
 cargo run --bin manage migrate
 ```
 
-生成されるSQL例（PostgreSQL）:
+Example generated SQL (PostgreSQL):
 
 ```sql
 CREATE TABLE articles (
@@ -688,37 +720,38 @@ CREATE INDEX idx_articles_content_fulltext ON articles USING GIN (to_tsvector('e
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### コンパイルエラー: 属性が認識されない
+### Compile Error: Attribute Not Recognized
 
-**原因**: 必要なfeature flagが有効になっていない。
+**Cause**: Required feature flag is not enabled.
 
-**解決策**: `Cargo.toml`で適切なfeature flagを有効にしてください。
+**Solution**: Enable the appropriate feature flag in `Cargo.toml`.
 
-### 相互排他エラー: 複数の自動採番属性
+### Mutual Exclusion Error: Multiple Auto-Increment Attributes
 
 ```
 error: Only one auto-increment attribute can be specified per field
 ```
 
-**原因**: `identity_always`, `identity_by_default`, `auto_increment`, `autoincrement`のうち、複数が指定されている。
+**Cause**: Multiple attributes from `identity_always`, `identity_by_default`,
+`auto_increment`, or `autoincrement` are specified.
 
-**解決策**: 1つだけを指定してください。
+**Solution**: Specify only one.
 
-### 生成列とデフォルト値の競合
+### Conflict Between Generated Column and Default Value
 
 ```
 error: Generated columns cannot have default values
 ```
 
-**原因**: `generated`と`default`が同時に指定されている。
+**Cause**: Both `generated` and `default` are specified simultaneously.
 
-**解決策**: 生成列にはデフォルト値を指定できません。どちらか一方を削除してください。
+**Solution**: Generated columns cannot have default values. Remove one of them.
 
 ---
 
-## 参考資料
+## References
 
 - [PostgreSQL Generated Columns](https://www.postgresql.org/docs/current/ddl-generated-columns.html)
 - [MySQL Generated Columns](https://dev.mysql.com/doc/refman/8.0/en/create-table-generated-columns.html)
