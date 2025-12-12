@@ -1,6 +1,11 @@
+use crate::crate_paths::get_reinhardt_crate;
+use crate::injectable_common::{
+	detect_inject_params, generate_di_context_extraction_from_option,
+	generate_injection_calls_with_error, strip_inject_attrs,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{ItemFn, Result};
+use syn::{FnArg, ItemFn, Result, Token, punctuated::Punctuated};
 
 /// Parse receiver macro arguments
 #[derive(Default)]
@@ -9,6 +14,7 @@ struct ReceiverArgs {
 	sender_type: Option<syn::Type>,
 	dispatch_uid: Option<String>,
 	priority: i32,
+	use_inject: bool,
 }
 
 fn parse_receiver_args(args: TokenStream) -> Result<ReceiverArgs> {
@@ -31,6 +37,9 @@ fn parse_receiver_args(args: TokenStream) -> Result<ReceiverArgs> {
 			Ok(())
 		} else if meta.path.is_ident("priority") {
 			result.priority = meta.value()?.parse::<syn::LitInt>()?.base10_parse()?;
+			Ok(())
+		} else if meta.path.is_ident("use_inject") {
+			result.use_inject = meta.value()?.parse::<syn::LitBool>()?.value();
 			Ok(())
 		} else {
 			Err(meta.error("unsupported receiver attribute"))
@@ -67,6 +76,8 @@ fn parse_receiver_args(args: TokenStream) -> Result<ReceiverArgs> {
 /// }
 /// ```
 pub fn receiver_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
+	let _reinhardt = get_reinhardt_crate();
+
 	let args = parse_receiver_args(args)?;
 
 	let fn_name = &input.sig.ident;
@@ -80,6 +91,7 @@ pub fn receiver_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 	let receiver_name = fn_name.to_string();
 	let dispatch_uid = args.dispatch_uid.as_deref();
 	let priority = args.priority;
+	let use_inject = args.use_inject;
 
 	// Validate that the function has at least one parameter
 	if fn_sig.inputs.is_empty() {
@@ -89,23 +101,16 @@ pub fn receiver_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 		));
 	}
 
-	// Build the receiver factory function with type erasure
-	let factory_fn = quote! {
-		|| -> ::std::sync::Arc<
-			dyn Fn(::std::sync::Arc<dyn ::std::any::Any + Send + Sync>)
-				-> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), reinhardt_signals::SignalError>> + Send>>
-				+ Send + Sync
-		> {
-			::std::sync::Arc::new(|data| {
-				Box::pin(async move {
-					// For type-erased data, we use Arc<dyn Any> directly
-					// The receiver function will need to accept Arc<dyn Any + Send + Sync>
-					// or we need runtime type checking
-					#fn_name(data).await
-				})
-			})
-		}
-	};
+	// Detect #[inject] parameters
+	let inject_params = detect_inject_params(&fn_sig.inputs);
+
+	// Validate: use_inject = false なのに #[inject] がある場合はエラー
+	if !use_inject && !inject_params.is_empty() {
+		return Err(syn::Error::new_spanned(
+			&inject_params[0].pat,
+			"#[inject] attribute requires use_inject = true option",
+		));
+	}
 
 	// Build dispatch_uid setter
 	let dispatch_uid_setter = if let Some(uid) = dispatch_uid {
@@ -129,25 +134,132 @@ pub fn receiver_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 		quote! {}
 	};
 
-	let expanded = quote! {
-		// Keep the original function
-		#(#fn_attrs)*
-		#fn_vis #fn_sig {
-			#fn_block
-		}
+	// DI対応の場合、ラッパー関数を生成
+	if use_inject && !inject_params.is_empty() {
+		let original_fn_name = quote::format_ident!("{}_impl", fn_name);
 
-		// Generate static registration
-		::inventory::submit! {
-			reinhardt_signals::ReceiverRegistryEntry::new(
-				#signal_name,
-				#receiver_name,
-				#factory_fn,
-			)
-			#dispatch_uid_setter
-			#priority_setter
-			#sender_type_setter
-		}
-	};
+		// 元の関数（#[inject]属性除去）
+		let stripped_inputs = strip_inject_attrs(&fn_sig.inputs);
+		let stripped_inputs = Punctuated::<FnArg, Token![,]>::from_iter(stripped_inputs);
 
-	Ok(expanded)
+		// DI context抽出コード（ReceiverContextから）
+		let ctx_ident = syn::Ident::new("__receiver_ctx", proc_macro2::Span::call_site());
+		let di_extraction = generate_di_context_extraction_from_option(&ctx_ident);
+
+		// Signal用のエラーマッパー
+		let error_mapper = |_ty: &syn::Type| {
+			quote! {
+				::reinhardt_signals::SignalError::new(
+					format!("Dependency injection failed for {}: {:?}", stringify!(#_ty), e)
+				)
+			}
+		};
+
+		let injection_calls = generate_injection_calls_with_error(&inject_params, error_mapper);
+
+		// 引数リスト
+		let inject_args: Vec<_> = inject_params.iter().map(|p| &p.pat).collect();
+		let regular_args: Vec<_> = stripped_inputs
+			.iter()
+			.filter_map(|arg| {
+				if let FnArg::Typed(pat_type) = arg {
+					Some(&pat_type.pat)
+				} else {
+					None
+				}
+			})
+			.collect();
+
+		// Build the receiver factory function with DI support
+		let factory_fn = quote! {
+			|| -> ::std::sync::Arc<
+				dyn Fn(
+					::std::sync::Arc<dyn ::std::any::Any + Send + Sync>,
+					::reinhardt_signals::ReceiverContext
+				) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), reinhardt_signals::SignalError>> + Send>>
+					+ Send + Sync
+			> {
+				::std::sync::Arc::new(|data, ctx| {
+					Box::pin(async move {
+						#fn_name(data, ctx).await
+					})
+				})
+			}
+		};
+
+		let expanded = quote! {
+			// 元の関数（リネーム）
+			#(#fn_attrs)*
+			async fn #original_fn_name(#stripped_inputs) -> Result<(), ::reinhardt_signals::SignalError> {
+				#fn_block
+			}
+
+			// DI対応ラッパー（ReceiverContext付き）
+			#(#fn_attrs)*
+			#fn_vis async fn #fn_name(
+				instance: ::std::sync::Arc<dyn ::std::any::Any + Send + Sync>,
+				__receiver_ctx: ::reinhardt_signals::ReceiverContext,
+			) -> Result<(), ::reinhardt_signals::SignalError> {
+				// DI context抽出
+				#di_extraction
+
+				// 依存性解決
+				#(#injection_calls)*
+
+				// 元の関数呼び出し
+				#original_fn_name(instance, #(#regular_args,)* #(#inject_args),*).await
+			}
+
+			// Generate static registration
+			::inventory::submit! {
+				reinhardt_signals::ReceiverRegistryEntry::new(
+					#signal_name,
+					#receiver_name,
+					#factory_fn,
+				)
+				#dispatch_uid_setter
+				#priority_setter
+				#sender_type_setter
+			}
+		};
+
+		Ok(expanded)
+	} else {
+		// DI不使用の場合は従来通り
+		let factory_fn = quote! {
+			|| -> ::std::sync::Arc<
+				dyn Fn(::std::sync::Arc<dyn ::std::any::Any + Send + Sync>)
+					-> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), reinhardt_signals::SignalError>> + Send>>
+					+ Send + Sync
+			> {
+				::std::sync::Arc::new(|data| {
+					Box::pin(async move {
+						#fn_name(data).await
+					})
+				})
+			}
+		};
+
+		let expanded = quote! {
+			// Keep the original function
+			#(#fn_attrs)*
+			#fn_vis #fn_sig {
+				#fn_block
+			}
+
+			// Generate static registration
+			::inventory::submit! {
+				reinhardt_signals::ReceiverRegistryEntry::new(
+					#signal_name,
+					#receiver_name,
+					#factory_fn,
+				)
+				#dispatch_uid_setter
+				#priority_setter
+				#sender_type_setter
+			}
+		};
+
+		Ok(expanded)
+	}
 }
