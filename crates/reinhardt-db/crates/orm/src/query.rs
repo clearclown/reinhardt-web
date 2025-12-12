@@ -140,6 +140,8 @@ where
 	deferred_fields: Vec<String>,
 	annotations: Vec<crate::annotation::Annotation>,
 	manager: Option<std::sync::Arc<crate::manager::Manager<T>>>,
+	limit: Option<usize>,
+	offset: Option<usize>,
 }
 
 impl<T> QuerySet<T>
@@ -158,6 +160,8 @@ where
 			deferred_fields: Vec::new(),
 			annotations: Vec::new(),
 			manager: None,
+			limit: None,
+			offset: None,
 		}
 	}
 
@@ -173,54 +177,14 @@ where
 			deferred_fields: Vec::new(),
 			annotations: Vec::new(),
 			manager: Some(manager),
+			limit: None,
+			offset: None,
 		}
 	}
 
 	pub fn filter(mut self, filter: Filter) -> Self {
 		self.filters.push(filter);
 		self
-	}
-
-	/// Convert FilterOperator to SQL operator string
-	#[allow(dead_code)]
-	fn operator_to_sql(operator: &FilterOperator) -> &'static str {
-		match operator {
-			FilterOperator::Eq => "=",
-			FilterOperator::Ne => "!=",
-			FilterOperator::Gt => ">",
-			FilterOperator::Gte => ">=",
-			FilterOperator::Lt => "<",
-			FilterOperator::Lte => "<=",
-			FilterOperator::In => "IN",
-			FilterOperator::NotIn => "NOT IN",
-			FilterOperator::Contains => "LIKE",
-			FilterOperator::StartsWith => "LIKE",
-			FilterOperator::EndsWith => "LIKE",
-		}
-	}
-
-	/// Convert FilterValue to SQL parameter placeholder and prepare value for binding
-	#[allow(dead_code)]
-	fn value_to_sql_placeholder(
-		value: &FilterValue,
-		operator: &FilterOperator,
-		param_index: usize,
-	) -> (String, String) {
-		let placeholder = format!("${}", param_index);
-		let formatted_value = match value {
-			FilterValue::String(s) => match operator {
-				FilterOperator::Contains => format!("%{}%", s),
-				FilterOperator::StartsWith => format!("{}%", s),
-				FilterOperator::EndsWith => format!("%{}", s),
-				_ => s.clone(),
-			},
-			FilterValue::Integer(i) | FilterValue::Int(i) => i.to_string(),
-			FilterValue::Float(f) => f.to_string(),
-			FilterValue::Boolean(b) | FilterValue::Bool(b) => b.to_string(),
-			FilterValue::Null => "NULL".to_string(),
-			FilterValue::Array(arr) => format!("[{}]", arr.join(",")),
-		};
-		(placeholder, formatted_value)
 	}
 
 	/// Build WHERE condition using SeaQuery from accumulated filters
@@ -540,6 +504,14 @@ where
 			} else {
 				stmt.order_by(col, Order::Asc);
 			}
+		}
+
+		// Apply LIMIT/OFFSET
+		if let Some(limit) = self.limit {
+			stmt.limit(limit as u64);
+		}
+		if let Some(offset) = self.offset {
+			stmt.offset(offset as u64);
 		}
 
 		stmt.to_owned()
@@ -1391,6 +1363,14 @@ where
 				}
 			}
 
+			// Apply LIMIT/OFFSET
+			if let Some(limit) = self.limit {
+				stmt.limit(limit as u64);
+			}
+			if let Some(offset) = self.offset {
+				stmt.offset(offset as u64);
+			}
+
 			stmt.to_owned()
 		} else {
 			// SELECT with JOINs for select_related
@@ -1483,6 +1463,62 @@ where
 	pub fn distinct(mut self) -> Self {
 		self.distinct_enabled = true;
 		self
+	}
+
+	/// Set LIMIT clause
+	///
+	/// Limits the number of records returned by the query.
+	/// Corresponds to Django's QuerySet slicing [:limit].
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects()
+	///     .limit(10)
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn limit(mut self, limit: usize) -> Self {
+		self.limit = Some(limit);
+		self
+	}
+
+	/// Set OFFSET clause
+	///
+	/// Skips the specified number of records before returning results.
+	/// Corresponds to Django's QuerySet slicing [offset:].
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects()
+	///     .offset(20)
+	///     .limit(10)
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn offset(mut self, offset: usize) -> Self {
+		self.offset = Some(offset);
+		self
+	}
+
+	/// Paginate results using page number and page size
+	///
+	/// Convenience method that calculates offset automatically.
+	/// Corresponds to Django REST framework's PageNumberPagination.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// // Page 3, 10 items per page (offset=20, limit=10)
+	/// let users = User::objects()
+	///     .paginate(3, 10)
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn paginate(self, page: usize, page_size: usize) -> Self {
+		let offset = page.saturating_sub(1) * page_size;
+		self.offset(offset).limit(page_size)
 	}
 
 	/// Convert QuerySet to a subquery
