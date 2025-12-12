@@ -4,9 +4,16 @@ gRPC foundation crate for the Reinhardt framework
 
 ## Overview
 
-This crate provides the foundation for gRPC functionality in the Reinhardt framework. It includes only framework-level common types and adapter traits, with domain-specific implementations left to users.
+This crate provides the foundation for gRPC functionality in the Reinhardt
+framework. It includes only framework-level common types and adapter traits,
+with domain-specific implementations left to users.
 
 ## Features
+
+- Common Protobuf types (Empty, Timestamp, Error, PageInfo, BatchResult)
+- Adapter traits for gRPC service integration
+- Error handling utilities
+- **Dependency injection support (optional, with `di` feature)**
 
 ### 1. Common Protobuf Types
 
@@ -48,7 +55,8 @@ message BatchResult {
 
 ### 2. Adapter Traits
 
-Traits for integrating gRPC services with other framework components (such as GraphQL):
+Traits for integrating gRPC services with other framework components (such as
+GraphQL):
 
 ```rust
 use reinhardt_grpc::{GrpcServiceAdapter, GrpcSubscriptionAdapter};
@@ -154,10 +162,77 @@ pub mod proto {
 use reinhardt_grpc::proto::common::{Empty, Timestamp, PageInfo};
 ```
 
+### Dependency Injection
+
+Enable the `di` feature to use dependency injection in gRPC handlers:
+
+```toml
+[dependencies]
+reinhardt-grpc = { version = "0.1", features = ["di"] }
+reinhardt-di = "0.1"
+```
+
+#### Basic Usage
+
+```rust
+use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
+use reinhardt_di::InjectionContext;
+use tonic::{Request, Response, Status};
+use std::sync::Arc;
+
+pub struct UserServiceImpl {
+    injection_context: Arc<InjectionContext>,
+}
+
+#[tonic::async_trait]
+impl UserService for UserServiceImpl {
+    async fn get_user(&self, mut request: Request<GetUserRequest>)
+        -> Result<Response<User>, Status>
+    {
+        // Set DI context in request extensions
+        request.extensions_mut().insert(self.injection_context.clone());
+
+        // Call handler with DI support
+        self.get_user_impl(request).await
+    }
+}
+
+impl UserServiceImpl {
+    #[grpc_handler]
+    async fn get_user_impl(
+        &self,
+        request: Request<GetUserRequest>,
+        #[inject] db: DatabaseConnection,  // Auto-injected
+    ) -> Result<Response<User>, Status> {
+        let user_id = request.into_inner().id;
+        let user = db.fetch_user(user_id).await?;
+        Ok(Response::new(user))
+    }
+}
+```
+
+#### Cache Control
+
+Control dependency caching with the `cache` parameter:
+
+```rust
+#[grpc_handler]
+async fn handler(
+    &self,
+    request: Request<Req>,
+    #[inject] cached_db: DatabaseConnection,          // Cached (default)
+    #[inject(cache = false)] fresh_db: DatabaseConnection,  // Not cached
+) -> Result<Response<Resp>, Status> {
+    // ...
+}
+```
+
 ### Integration with GraphQL
 
-When using with the `reinhardt-graphql` crate, refer to the [reinhardt-graphql documentation](../reinhardt-contrib/crates/graphql/README.md).
+When using with the `reinhardt-graphql` crate, refer to the
+[reinhardt-graphql documentation](../reinhardt-graphql/README.md).
 
 ## License
 
-Licensed under either of Apache License, Version 2.0 or MIT license at your option.
+Licensed under either of Apache License, Version 2.0 or MIT license at your
+option.
