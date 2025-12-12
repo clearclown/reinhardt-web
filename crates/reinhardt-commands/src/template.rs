@@ -3,11 +3,24 @@
 use crate::CommandResult;
 use crate::{BaseCommand, CommandContext};
 use async_trait::async_trait;
+use serde::Serialize;
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
+use tera::Tera;
 
 #[derive(Debug, Clone)]
 pub struct TemplateContext {
-	pub variables: HashMap<String, String>,
+	variables: HashMap<String, JsonValue>,
+}
+
+impl From<TemplateContext> for tera::Context {
+	fn from(ctx: TemplateContext) -> Self {
+		let mut tera_ctx = tera::Context::new();
+		for (key, value) in ctx.variables {
+			tera_ctx.insert(key, &value);
+		}
+		tera_ctx
+	}
 }
 
 impl TemplateContext {
@@ -17,8 +30,13 @@ impl TemplateContext {
 		}
 	}
 
-	pub fn insert(&mut self, key: impl Into<String>, value: impl Into<String>) {
-		self.variables.insert(key.into(), value.into());
+	pub fn insert<K, V>(&mut self, key: K, value: V)
+	where
+		K: Into<String>,
+		V: Serialize,
+	{
+		let json_value = serde_json::to_value(value).unwrap_or(JsonValue::Null);
+		self.variables.insert(key.into(), json_value);
 	}
 }
 
@@ -204,7 +222,7 @@ impl TemplateCommand {
 		})?;
 
 		// Replace template variables
-		let rendered_content = self.render_template(&template_content, context);
+		let rendered_content = self.render_template(&template_content, context)?;
 
 		// Write the file with .example suffix (if it has one)
 		let mut output_file = fs::File::create(&output_path_with_example).map_err(|e| {
@@ -280,22 +298,10 @@ impl TemplateCommand {
 		Ok(())
 	}
 
-	fn render_template(&self, template: &str, context: &TemplateContext) -> String {
-		let mut result = template.to_string();
-
-		// Replace all {{ variable_name }} with values from context
-		// Support both {{key}} and {{ key }} formats
-		for (key, value) in &context.variables {
-			// Pattern without spaces: {{key}}
-			let placeholder_no_space = format!("{{{{{}}}}}", key);
-			result = result.replace(&placeholder_no_space, value);
-
-			// Pattern with spaces: {{ key }}
-			let placeholder_with_space = format!("{{{{ {} }}}}", key);
-			result = result.replace(&placeholder_with_space, value);
-		}
-
-		result
+	fn render_template(&self, template: &str, context: &TemplateContext) -> CommandResult<String> {
+		let tera_context: tera::Context = context.clone().into();
+		Tera::one_off(template, &tera_context, false)
+			.map_err(|e| crate::CommandError::TemplateError(e.to_string()))
 	}
 }
 
@@ -381,7 +387,7 @@ mod tests {
 		context.insert("version", "1.0.0");
 
 		let template = "name = \"{{project_name}}\"\nversion = \"{{version}}\"";
-		let result = template_cmd.render_template(template, &context);
+		let result = template_cmd.render_template(template, &context).unwrap();
 
 		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
 	}
@@ -394,7 +400,7 @@ mod tests {
 		context.insert("version", "1.0.0");
 
 		let template = "name = \"{{ project_name }}\"\nversion = \"{{ version }}\"";
-		let result = template_cmd.render_template(template, &context);
+		let result = template_cmd.render_template(template, &context).unwrap();
 
 		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
 	}
@@ -407,7 +413,7 @@ mod tests {
 		context.insert("version", "1.0.0");
 
 		let template = "name = \"{{ project_name }}\"\nversion = \"{{version}}\"";
-		let result = template_cmd.render_template(template, &context);
+		let result = template_cmd.render_template(template, &context).unwrap();
 
 		assert_eq!(result, "name = \"my_project\"\nversion = \"1.0.0\"");
 	}
@@ -418,7 +424,7 @@ mod tests {
 		let context = TemplateContext::new();
 
 		let template = "name = \"static_value\"\nversion = \"1.0.0\"";
-		let result = template_cmd.render_template(template, &context);
+		let result = template_cmd.render_template(template, &context).unwrap();
 
 		assert_eq!(result, template);
 	}
@@ -431,7 +437,7 @@ mod tests {
 		let template = "name = \"{{ undefined_var }}\"";
 		let result = template_cmd.render_template(template, &context);
 
-		// Undefined variables should remain unchanged
-		assert_eq!(result, "name = \"{{ undefined_var }}\"");
+		// Undefined variables cause an error in Tera
+		assert!(result.is_err());
 	}
 }

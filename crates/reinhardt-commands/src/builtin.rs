@@ -826,11 +826,6 @@ impl BaseCommand for RunServerCommand {
 	fn options(&self) -> Vec<CommandOption> {
 		vec![
 			CommandOption::flag(None, "noreload", "Disable auto-reload"),
-			CommandOption::flag(
-				None,
-				"clear",
-				"Clear screen before each rebuild (requires cargo-watch)",
-			),
 			CommandOption::option(
 				None,
 				"watch-delay",
@@ -845,21 +840,7 @@ impl BaseCommand for RunServerCommand {
 	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
 		let address = ctx.arg(0).map(|s| s.as_str()).unwrap_or("127.0.0.1:8000");
 		let noreload = ctx.has_option("noreload");
-		#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
-		let clear = ctx.has_option("clear");
-		#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
-		let watch_delay = ctx
-			.option("watch-delay")
-			.and_then(|v| v.parse::<u64>().ok())
-			.unwrap_or(500);
 		let insecure = ctx.has_option("insecure");
-
-		// Check if cargo-watch-reload feature is enabled and cargo-watch is available
-		#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
-		if !noreload {
-			// Use cargo-watch integration (non-async)
-			return Self::run_with_cargo_watch(ctx, address, clear, watch_delay);
-		}
 
 		ctx.info(&format!(
 			"Starting development server at http://{}",
@@ -871,14 +852,10 @@ impl BaseCommand for RunServerCommand {
 			{
 				ctx.verbose("Auto-reload enabled (notify-based)");
 			}
-			#[cfg(all(
-				feature = "server",
-				not(feature = "autoreload"),
-				not(feature = "cargo-watch-reload")
-			))]
+			#[cfg(all(feature = "server", not(feature = "autoreload")))]
 			{
 				ctx.warning(
-					"Auto-reload disabled: Enable 'autoreload' or 'cargo-watch-reload' feature to use this functionality",
+					"Auto-reload disabled: Enable 'autoreload' feature to use this functionality",
 				);
 			}
 		}
@@ -924,7 +901,7 @@ impl RunServerCommand {
 	/// Run the development server
 	#[cfg(feature = "server")]
 	async fn run_server(
-		#[allow(unused_variables)] ctx: &CommandContext,
+		ctx: &CommandContext,
 		address: &str,
 		noreload: bool,
 		_insecure: bool,
@@ -1060,98 +1037,6 @@ impl RunServerCommand {
 
 		ctx.info("Auto-reload detected code change. Please restart the server.");
 		result
-	}
-
-	/// Check if cargo-watch is installed
-	#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
-	fn is_cargo_watch_installed() -> bool {
-		use std::process::{Command, Stdio};
-
-		Command::new("cargo")
-			.args(["watch", "--version"])
-			.stdout(Stdio::null())
-			.stderr(Stdio::null())
-			.status()
-			.map(|s| s.success())
-			.unwrap_or(false)
-	}
-
-	/// Run server with cargo-watch integration for automatic rebuild and restart
-	#[cfg(all(feature = "server", feature = "cargo-watch-reload"))]
-	fn run_with_cargo_watch(
-		ctx: &CommandContext,
-		addr: &str,
-		clear: bool,
-		watch_delay: u64,
-	) -> CommandResult<()> {
-		use std::process::{Command, Stdio};
-
-		// Check if cargo-watch is installed
-		if !Self::is_cargo_watch_installed() {
-			eprintln!("cargo-watch not found. Install with:");
-			eprintln!("  cargo install cargo-watch");
-			eprintln!();
-			return Err(crate::CommandError::ExecutionError(
-				"cargo-watch not installed".to_string(),
-			));
-		}
-
-		ctx.success("Starting development server with auto-reload (powered by cargo-watch)");
-		ctx.info(&format!("🚀 Server address: {}", addr));
-		ctx.info("🔍 Watching: src/, Cargo.toml, templates/, settings/");
-		ctx.info("");
-
-		// Build cargo-watch arguments
-		let mut args = vec![
-			"watch",
-			// Watch paths
-			"-w",
-			"src",
-			"-w",
-			"Cargo.toml",
-		];
-
-		// Add optional watch paths if they exist
-		if std::path::Path::new("templates").exists() {
-			args.extend_from_slice(&["-w", "templates"]);
-		}
-		if std::path::Path::new("settings").exists() {
-			args.extend_from_slice(&["-w", "settings"]);
-		}
-
-		// Ignore paths
-		args.extend_from_slice(&["-i", "target/", "-i", ".git/", "-i", "*.swp", "-i", "*~"]);
-
-		// Clear screen before each rebuild
-		if clear {
-			args.push("-c");
-		}
-
-		// Watch delay (debounce)
-		let delay_str = watch_delay.to_string();
-		args.extend_from_slice(&["--delay", &delay_str]);
-
-		// Execute command: cargo run --bin runserver -- <addr> --noreload
-		let run_cmd = format!("run --bin runserver -- {} --noreload", addr);
-		args.extend_from_slice(&["-x", &run_cmd]);
-
-		// Run cargo-watch
-		let status = Command::new("cargo")
-			.args(&args)
-			.stdout(Stdio::inherit())
-			.stderr(Stdio::inherit())
-			.status()
-			.map_err(|e| {
-				crate::CommandError::ExecutionError(format!("Failed to run cargo-watch: {}", e))
-			})?;
-
-		if !status.success() {
-			return Err(crate::CommandError::ExecutionError(
-				"cargo-watch exited with non-zero status".to_string(),
-			));
-		}
-
-		Ok(())
 	}
 }
 
@@ -1659,23 +1544,23 @@ impl BaseCommand for CheckDiCommand {
 					"No dependencies found".to_string(),
 				));
 			}
+
+			ctx.success("No circular dependencies detected at compile time");
+			ctx.success("All checks passed");
+			ctx.info("");
+			ctx.info("Note: Runtime circular dependency detection is active.");
+			ctx.info("      Any circular dependencies will be caught during resolution.");
+
+			Ok(())
 		}
 
 		#[cfg(not(feature = "di"))]
 		{
 			ctx.warning("DI feature is not enabled");
-			return Err(crate::CommandError::ExecutionError(
+			Err(crate::CommandError::ExecutionError(
 				"check-di command requires 'di' feature to be enabled".to_string(),
-			));
+			))
 		}
-
-		ctx.success("No circular dependencies detected at compile time");
-		ctx.success("All checks passed");
-		ctx.info("");
-		ctx.info("Note: Runtime circular dependency detection is active.");
-		ctx.info("      Any circular dependencies will be caught during resolution.");
-
-		Ok(())
 	}
 }
 

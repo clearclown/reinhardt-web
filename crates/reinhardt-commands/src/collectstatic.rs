@@ -118,7 +118,6 @@ impl CollectStaticCommand {
 
 			match self.copy_file(file_path)? {
 				CopyResult::Copied => stats.copied += 1,
-				CopyResult::Skipped => stats.skipped += 1,
 				CopyResult::Unmodified => stats.unmodified += 1,
 			}
 		}
@@ -317,8 +316,6 @@ impl CollectStaticCommand {
 #[derive(Debug, PartialEq)]
 enum CopyResult {
 	Copied,
-	#[allow(dead_code)]
-	Skipped,
 	Unmodified,
 }
 

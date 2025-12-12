@@ -416,37 +416,6 @@ msgstr ""
 
 		Ok(())
 	}
-
-	#[allow(dead_code)]
-	fn create_po_file(path: &Path, locale: &str) -> CommandResult<()> {
-		let content = format!(
-			r#"# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-msgid ""
-msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-01 00:00+0000\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: {}\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"#,
-			locale
-		);
-
-		std::fs::write(path, content)
-			.map_err(|e| CommandError::ExecutionError(format!("Failed to write PO file: {}", e)))?;
-
-		Ok(())
-	}
 }
 
 /// Compile messages command - compile .po files to .mo files

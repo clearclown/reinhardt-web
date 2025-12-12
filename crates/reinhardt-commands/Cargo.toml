@@ -68,8 +68,6 @@ routers = ["dep:reinhardt-urls"]
 di = ["dep:reinhardt-di"]
 server = ["dep:reinhardt-server", "routers"]
 autoreload = ["dep:notify", "server"]
-cargo-watch-reload = ["server"]
-watch = ["cargo-watch-reload"]                      # Convenient alias
 shell = ["dep:rustyline"]
 shell-rhai = ["shell", "dep:rhai"]
 shell-pyo3 = ["shell", "dep:pyo3"]
@@ -83,7 +81,6 @@ full = [
   "routers",
   "server",
   "autoreload",
-  "cargo-watch-reload",
   "shell",
   "shell-rhai",
   "shell-pyo3",

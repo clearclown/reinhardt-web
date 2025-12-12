@@ -11,7 +11,8 @@
 //! - **Interactive Mode**: Support for interactive prompts
 //! - **Colored Output**: Rich terminal output
 //! - **AST-Based Code Generation**: Robust code generation using Abstract Syntax Trees
-//! - **Auto-Reload**: Development server auto-reload with cargo-watch integration
+//! - **Auto-Reload**: Development server auto-reload with bacon integration
+//! - **Tera Template Engine**: Powerful template rendering for project/app generation
 //!
 //! ## Example
 //!
@@ -32,6 +33,34 @@
 //!     }
 //! }
 //! ```
+//!
+//! ## Template System
+//!
+//! The command framework uses [Tera](https://keats.github.io/tera/) for template rendering.
+//! Tera is a powerful template engine inspired by Jinja2/Django templates.
+//!
+//! ### Template Context
+//!
+//! Templates receive context variables through `TemplateContext`:
+//!
+//! ```rust
+//! use reinhardt_commands::TemplateContext;
+//!
+//! let mut context = TemplateContext::new();
+//! context.insert("project_name", "my_project");
+//! context.insert("version", "1.0.0");
+//! context.insert("features", vec!["auth", "admin"]);  // Any Serialize type
+//! ```
+//!
+//! ### Template Variables
+//!
+//! The `insert` method accepts any type implementing `serde::Serialize`:
+//!
+//! - Strings: `context.insert("name", "value")`
+//! - Numbers: `context.insert("count", 42)`
+//! - Booleans: `context.insert("enabled", true)`
+//! - Collections: `context.insert("items", vec!["a", "b"])`
+//! - Custom types: `context.insert("data", &my_struct)`
 //!
 //! ## AST-Based Code Generation
 //!
@@ -72,62 +101,38 @@
 //! ## Auto-Reload for Development Server
 //!
 //! The `runserver` command supports automatic reloading when code changes are detected,
-//! using cargo-watch for complete rebuild and restart functionality.
+//! using bacon for complete rebuild and restart functionality.
 //!
-//! ### Feature Flags
+//! ### Using bacon
 //!
-//! - `cargo-watch-reload`: Uses cargo-watch for automatic rebuild and restart (recommended)
-//! - `autoreload`: Uses notify for file watching only (legacy, requires manual restart)
-//!
-//! ### Using cargo-watch Integration
-//!
-//! Enable the `cargo-watch-reload` feature in your `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! reinhardt-commands = { version = "0.1.0-alpha.1", features = ["cargo-watch-reload"] }
-//! ```
-//!
-//! Install cargo-watch:
+//! Install bacon:
 //!
 //! ```bash
-//! cargo install cargo-watch
+//! cargo install --locked bacon
 //! ```
 //!
 //! Run the development server with auto-reload:
 //!
 //! ```bash
-//! cargo run --bin runserver
-//! # Or explicitly disable auto-reload:
-//! cargo run --bin runserver -- --noreload
-//! ```
+//! # Using bacon directly
+//! bacon runserver
 //!
-//! ### CLI Options
-//!
-//! - `--noreload`: Disable auto-reload
-//! - `--clear`: Clear screen before each rebuild
-//! - `--watch-delay <ms>`: File change debounce delay (default: 500ms)
-//!
-//! ### Example
-//!
-//! ```bash
-//! # Start server with auto-reload and screen clearing
-//! cargo run --bin runserver -- --clear
-//!
-//! # Start with custom watch delay
-//! cargo run --bin runserver -- --watch-delay 1000
+//! # Or using cargo make
+//! cargo make watch
 //! ```
 //!
 //! ### How It Works
 //!
-//! When `cargo-watch-reload` feature is enabled:
-//! 1. Detects file changes in `src/`, `Cargo.toml`, `templates/`, `settings/`
-//! 2. Automatically runs `cargo build` to recompile
-//! 3. Restarts the server with the new binary
-//! 4. Displays build output and errors
+//! Bacon provides a background code checker that:
+//! 1. Detects file changes in `src/`, `Cargo.toml`, and other watched paths
+//! 2. Automatically runs the configured job (check, clippy, test, runserver, etc.)
+//! 3. Displays build output and errors in real-time
+//! 4. Supports keyboard shortcuts for switching between different jobs
 //!
-//! Watched files: `.rs`, `.toml`, template files
-//! Ignored: `target/`, `.git/`, temporary files
+//! ### Configuration
+//!
+//! Bacon can be configured via `bacon.toml` in the project root. See the bacon
+//! documentation for more details: https://dystroy.org/bacon/
 
 pub mod base;
 pub mod builtin;
@@ -177,6 +182,15 @@ pub enum CommandError {
 
 	#[error("Parse error: {0}")]
 	ParseError(String),
+
+	#[error("Template error: {0}")]
+	TemplateError(String),
+}
+
+impl From<tera::Error> for CommandError {
+	fn from(err: tera::Error) -> Self {
+		CommandError::TemplateError(err.to_string())
+	}
 }
 
 pub type CommandResult<T> = std::result::Result<T, CommandError>;

@@ -37,11 +37,6 @@ impl TestEnvironment {
 	fn file_exists(&self, relative_path: &str) -> bool {
 		self.path().join(relative_path).exists()
 	}
-
-	#[allow(dead_code)]
-	fn read_file(&self, relative_path: &str) -> String {
-		fs::read_to_string(self.path().join(relative_path)).expect("Failed to read file")
-	}
 }
 
 // ============================================================================
