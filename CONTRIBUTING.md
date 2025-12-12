@@ -349,7 +349,7 @@ Always examine recent commits before writing new ones:
 git log --pretty=format:"%s%n%b" -10
 ```
 
-For detailed commit guidelines, see [CLAUDE.commit.md](CLAUDE.commit.md).
+For detailed commit guidelines, see [COMMIT_GUIDELINE.md](docs/COMMIT_GUIDELINE.md).
 
 ---
 
@@ -452,11 +452,11 @@ Update documentation for:
 
 ### Resources
 
-- =� [Getting Started Guide](docs/GETTING_STARTED.md)
-- =� [Feature Flags Guide](docs/FEATURE_FLAGS.md)
-- =� [Project Instructions](CLAUDE.md)
-- =� GitHub Discussions (for questions and ideas)
-- = GitHub Issues (for bug reports)
+- [Getting Started Guide](docs/GETTING_STARTED.md)
+- [Feature Flags Guide](docs/FEATURE_FLAGS.md)
+- [Project Instructions](CLAUDE.md)
+- GitHub Discussions (for questions and ideas)
+- GitHub Issues (for bug reports)
 
 ### Before Asking
 

@@ -2,7 +2,9 @@
 
 ## Purpose
 
-This document provides step-by-step procedures for releasing Reinhardt crates to crates.io, covering version selection, CHANGELOG management, automated publishing, and troubleshooting.
+This document provides step-by-step procedures for releasing Reinhardt crates to
+crates.io, covering version selection, CHANGELOG management, automated
+publishing, and troubleshooting.
 
 ---
 
@@ -47,6 +49,7 @@ cargo install cargo-workspaces --version 0.4.1
 ```
 
 **Key commands**:
+
 - `cargo ws changed` - Detect changed crates
 - `cargo ws publish --dry-run` - Validate
 - `cargo ws publish` - Publish
@@ -123,6 +126,7 @@ impl Pool {
 - [ ] No dev-dependencies on other Reinhardt crates (functional crates)
 
 **Verify with**:
+
 ```bash
 cargo publish --dry-run -p <crate-name>
 ```
@@ -138,6 +142,7 @@ cargo publish --dry-run -p <crate-name>
 **1. GitHub Secrets**
 
 Add `CARGO_REGISTRY_TOKEN`:
+
 - Settings → Secrets and variables → Actions
 - Name: `CARGO_REGISTRY_TOKEN`
 - Value: crates.io API token (from https://crates.io/settings/tokens)
@@ -145,6 +150,7 @@ Add `CARGO_REGISTRY_TOKEN`:
 **2. GitHub Labels**
 
 Create `release` label:
+
 - Issues → Labels → New label
 - Name: `release`, Color: `#0e8a16`
 
@@ -197,6 +203,7 @@ git push origin feature/update-reinhardt-orm
 3. `publish-dry-run.yml` workflow starts automatically
 
 **Workflow actions**:
+
 - Detects changed crates (`cargo ws changed`)
 - Runs `cargo ws publish --dry-run`
 - Reports results in PR checks
@@ -204,10 +211,12 @@ git push origin feature/update-reinhardt-orm
 #### Step 3: Review Dry-Run Results
 
 **Success indicators**:
+
 - ✅ Green check on "Publish Dry-Run"
 - No errors/warnings in logs
 
 **Common issues**:
+
 - Missing metadata fields
 - Unpublished dependencies
 - Version already published
@@ -217,6 +226,7 @@ git push origin feature/update-reinhardt-orm
 #### Step 4: Merge PR
 
 Merge after:
+
 - Dry-run passes
 - PR approved
 
@@ -234,6 +244,7 @@ Merge after:
 4. **Push tags**
 
 **Example output**:
+
 ```
 [1/2] Publishing reinhardt-types v0.2.0...
   ✅ Dry-run passed
@@ -251,14 +262,17 @@ Merge after:
 #### Step 6: Verify Publication
 
 **crates.io**:
+
 - Visit https://crates.io/crates/[crate-name]
 - Verify new version
 
 **GitHub Releases**:
+
 - Check tag `[crate-name]@v[version]`
 - Verify release notes
 
 **docs.rs**:
+
 - Documentation builds in ~5-10 minutes
 
 ### Multi-Crate Releases
@@ -281,11 +295,13 @@ git commit -m "chore(release): Bump reinhardt-types v0.2.0 and reinhardt-orm v0.
 ### Emergency Manual Publishing
 
 **Via GitHub Actions**:
+
 1. Actions → "Publish on Tag (Manual Only)"
 2. Enter tag: `reinhardt-orm@v0.2.0`
 3. Run workflow
 
 **Via Command Line** (if CI/CD unavailable):
+
 1. Update `Cargo.toml` and `CHANGELOG.md`
 2. Commit changes
 3. `cargo publish --dry-run -p <crate-name>`
@@ -300,31 +316,38 @@ git commit -m "chore(release): Bump reinhardt-types v0.2.0 and reinhardt-orm v0.
 ### Format (Keep a Changelog)
 
 **Structure**:
+
 ```markdown
 # Changelog
 
 ## [Unreleased]
 
 ### Added
+
 - Work in progress features
 
 ### Changed
+
 - N/A
 
 ## [0.2.0] - 2025-01-15
 
 ### Breaking Changes
+
 - List breaking changes first
 
 ### Added
+
 - New features
 
 ### Fixed
+
 - Bug fixes
 
 ## [0.1.0] - 2024-12-01
 
 ### Added
+
 - Initial release
 ```
 
@@ -338,6 +361,7 @@ git commit -m "chore(release): Bump reinhardt-types v0.2.0 and reinhardt-orm v0.
 3. **Use `###` for subsections**: `### Added`, `### Fixed`
 
 **Extraction logic**:
+
 ```bash
 awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | head -n -1
 ```
@@ -352,7 +376,8 @@ awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | head -n -1
 - **Fixed**: Bug fixes (include issue numbers)
 - **Security**: Vulnerabilities (highlight prominently)
 
-**"N/A" usage**: Only in `[Unreleased]` for empty categories. Released versions should omit empty sections.
+**"N/A" usage**: Only in `[Unreleased]` for empty categories. Released versions
+should omit empty sections.
 
 ---
 
@@ -369,11 +394,13 @@ awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | head -n -1
 **Automatic with cargo-workspaces**: Publishes in correct order.
 
 **Manual order** (if needed):
+
 1. Leaf crates (no internal deps)
 2. Mid-level crates
 3. Top-level crates (facades)
 
 **Example**:
+
 ```
 reinhardt-types → reinhardt-orm → reinhardt (facade)
 ```
@@ -381,6 +408,7 @@ reinhardt-types → reinhardt-orm → reinhardt (facade)
 ### Sub-Crate Structures
 
 **Nested crates** (e.g., `reinhardt-db/crates/orm/`):
+
 - Sub-crates published before parent
 - `cargo ws publish` handles automatically
 
@@ -395,11 +423,13 @@ cargo yank <crate-name> --version <version>
 ```
 
 **What it does**:
+
 - Prevents new projects from using version
 - Existing `Cargo.lock` still works
 - Cannot delete (remains on crates.io)
 
 **After yanking**:
+
 1. Fix issue
 2. Increment PATCH version
 3. Release fixed version
@@ -430,13 +460,15 @@ git reset --hard HEAD~1  # If not pushed
 
 ### Common Issues
 
-**Dry-run Failed**: Add missing metadata fields (`description`, `license`, `repository`) to `Cargo.toml`
+**Dry-run Failed**: Add missing metadata fields (`description`, `license`,
+`repository`) to `Cargo.toml`
 
 **Version Already Published**: Increment version and retry
 
 **No Crates Detected**: Verify version changes in `Cargo.toml` files
 
-**cargo-workspaces Issues**: Run `cargo ws changed` to check detection; use `--force` if needed
+**cargo-workspaces Issues**: Run `cargo ws changed` to check detection; use
+`--force` if needed
 
 ### Verification Checklist
 
@@ -452,5 +484,5 @@ git reset --hard HEAD~1  # If not pushed
 
 - **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)
 - **Main Standards**: @CLAUDE.md
-- **Commit Guidelines**: @CLAUDE.commit.md
+- **Commit Guidelines**: @COMMIT_GUIDELINE.md
 - **Version Policy**: See "Release & Publishing Policy" in CLAUDE.md

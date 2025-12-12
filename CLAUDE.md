@@ -46,6 +46,7 @@ See docs/MODULE_SYSTEM.md for comprehensive module system standards including:
 - NO deletion record comments in code
 - NO relative paths beyond `../` (use absolute paths)
 - Mark ALL placeholders with `todo!()` or `// TODO:` comment
+- Document ALL `#[allow(...)]` attributes with explanatory comments (see @docs/ANTI_PATTERNS.md)
 
 **Unimplemented Features Notation:**
 - `todo!()` - Features that WILL be implemented
@@ -339,6 +340,7 @@ Before submitting code:
 - Use glob imports (`use module::*`)
 - Create circular dependencies
 - Leave unmarked placeholder implementations
+- Use `#[allow(...)]` without explanatory comments
 - Use alternative TODO notations (`FIXME:`, `NOTE:` for unimplemented features)
 - Create batch commits without user confirmation
 - Use relative paths beyond `../`
