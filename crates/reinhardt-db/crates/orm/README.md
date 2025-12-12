@@ -426,6 +426,35 @@ async fn complex_operation(conn: &DatabaseConnection) -> Result<(), anyhow::Erro
 - **ManyToMany** - Many-to-many relationship helper
 - **AssociationTable** - Junction table representation
 - **association_table()** - Create association table
+- **Type-safe accessor methods** - Auto-generated `{field_name}_accessor()` methods for ManyToManyField
+
+The `#[model]` macro automatically generates type-safe accessor methods for each `ManyToManyField`:
+
+```rust
+use reinhardt_db::orm::associations::ManyToManyField;
+
+#[model(app_label = "users", table_name = "users")]
+struct User {
+    #[field(primary_key = true)]
+    id: Uuid,
+
+    #[field(many_to_many)]
+    following: ManyToManyField<User, User>,
+}
+
+// Auto-generated accessor method (type-safe, no string literals)
+let accessor = user.following_accessor(db);
+let followers = accessor.all().await?;
+
+// Old API (still supported for backward compatibility)
+let accessor = ManyToManyAccessor::<User, User>::new(&user, "following", db);
+```
+
+**Benefits:**
+- Compile-time field name validation (no typos)
+- Type inference for Source and Target models
+- IDE auto-completion support
+- Cleaner, more idiomatic API
 
 ### Bulk Operations
 
@@ -569,3 +598,63 @@ assert!(email_field.attributes.contains_key("email"));
 - **HybridProperty** - Properties that work at both instance and class level
 - **HybridMethod** - Methods that work at both instance and class level
 - **HybridComparator** - Custom comparison logic for hybrid properties
+
+## Testing
+
+### Prerequisites
+
+ORM tests require **Docker** for TestContainers integration:
+
+```bash
+# Verify Docker is running
+docker version
+docker ps
+```
+
+**Note**: Docker Desktop must be installed and running. See [Database Testing Guide](../../README.md#testing) for detailed setup instructions.
+
+### Running ORM Tests
+
+```bash
+# Run all ORM tests (requires Docker)
+cargo test --package reinhardt-orm --all-features
+
+# Run specific test suite
+cargo test --package reinhardt-orm --test orm_integration_tests
+
+# Run with custom database URL
+TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres cargo test
+```
+
+### TestContainers Usage
+
+ORM tests automatically use TestContainers to provide isolated database instances:
+
+```rust
+use reinhardt::test::fixtures::postgres_container;
+use rstest::*;
+
+#[rstest]
+#[tokio::test]
+async fn test_orm_operations(
+    #[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+) {
+    let (_container, pool, _port, _database_url) = postgres_container.await;
+
+    // Use ORM with the provided connection pool
+    let user = User {
+        id: 1,
+        username: "test_user".to_string(),
+        email: "test@example.com".to_string(),
+    };
+
+    // Perform ORM operations
+    user.save(&pool).await.unwrap();
+
+    // Container automatically cleaned up after test
+}
+```
+
+For comprehensive testing standards, see:
+- [Parent Database Testing Guide](../../README.md#testing)
+- [Testing Standards](../../../../docs/TESTING_STANDARDS.md)

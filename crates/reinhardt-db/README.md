@@ -332,6 +332,96 @@ reinhardt-db/
 - MySQL
 - SQLite
 
+## Testing
+
+### Prerequisites
+
+Database-related tests require **Docker** for TestContainers integration:
+
+```bash
+# Verify Docker is running
+docker version
+docker ps
+```
+
+**CRITICAL**: This project uses Docker for TestContainers integration, NOT Podman.
+
+- **MUST** ensure Docker Desktop is installed and running
+- **MUST** ensure `DOCKER_HOST` environment variable points to Docker socket:
+  - ✅ Correct: `unix:///var/run/docker.sock` or not set
+  - ❌ Incorrect: `unix:///.../podman/...` (will cause container startup failures)
+
+If both Docker and Podman are installed:
+- Use `.testcontainers.properties` to force Docker usage (already configured in project root)
+- Ensure `DOCKER_HOST` is not set to Podman socket
+
+### Running Database Tests
+
+```bash
+# Run all database tests (requires Docker)
+cargo test --package reinhardt-db --all-features
+
+# Run tests for specific sub-crate
+cargo test --package reinhardt-orm --all-features
+cargo test --package reinhardt-migrations --all-features
+
+# Run with PostgreSQL container (TestContainers automatically starts PostgreSQL)
+cargo test --package reinhardt-orm --test orm_integration_tests
+
+# Run with environment variable (for custom database)
+TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres cargo test
+```
+
+### TestContainers Integration
+
+Database tests automatically use TestContainers to:
+- Start PostgreSQL 17 Alpine container before tests
+- Provide isolated database instance per test suite
+- Clean up containers after tests complete
+
+**Standard Fixtures** from `reinhardt-test` are available:
+
+```rust
+use reinhardt::test::fixtures::postgres_container;
+use rstest::*;
+
+#[rstest]
+#[tokio::test]
+async fn test_with_database(
+    #[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+) {
+    let (_container, pool, _port, _database_url) = postgres_container.await;
+
+    // Use pool for database operations
+    let result = sqlx::query("SELECT 1").fetch_one(pool.as_ref()).await;
+    assert!(result.is_ok());
+
+    // Container is automatically cleaned up when dropped
+}
+```
+
+For comprehensive testing standards, see:
+- [Testing Standards](../../docs/TESTING_STANDARDS.md)
+- [Examples Database Integration](../../examples/local/examples-database-integration/README.md)
+
+### Troubleshooting
+
+**"Cannot connect to Docker daemon" or "IncompleteMessage" errors:**
+
+```bash
+# 1. Check Docker is running
+docker ps
+
+# 2. Check DOCKER_HOST environment variable
+echo $DOCKER_HOST
+
+# 3. If DOCKER_HOST points to Podman, unset it
+unset DOCKER_HOST
+
+# 4. Verify .testcontainers.properties exists in project root
+cat .testcontainers.properties
+```
+
 ## License
 
 Licensed under either of Apache License, Version 2.0 or MIT license at your option.

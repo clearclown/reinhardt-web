@@ -225,6 +225,63 @@ This crate is part of the Reinhardt framework and integrates with:
 - `reinhardt-di`: Dependency injection system
 - `reinhardt-orm`: Object-relational mapping (future integration)
 
+## Testing
+
+### Prerequisites
+
+Migration tests require **Docker** for TestContainers integration:
+
+```bash
+# Verify Docker is running
+docker version
+docker ps
+```
+
+**Note**: Docker Desktop must be installed and running. See [Database Testing Guide](../../README.md#testing) for detailed setup instructions.
+
+### Running Migration Tests
+
+```bash
+# Run all migration tests (requires Docker)
+cargo test --package reinhardt-migrations --all-features
+
+# Run specific test suite
+cargo test --package reinhardt-migrations --test migration_integration_tests
+
+# Run with custom database URL
+TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres cargo test
+```
+
+### TestContainers Usage
+
+Migration tests automatically use TestContainers to:
+- Start PostgreSQL 17 Alpine container before tests
+- Provide isolated database instance for migration operations
+- Clean up containers after tests complete
+
+```rust
+use reinhardt::test::fixtures::postgres_container;
+use rstest::*;
+
+#[rstest]
+#[tokio::test]
+async fn test_migrations(
+    #[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+) {
+    let (_container, pool, _port, _database_url) = postgres_container.await;
+
+    // Run migrations on the test database
+    let migrator = Migrator::new(pool.clone());
+    migrator.run_all().await.unwrap();
+
+    // Container automatically cleaned up after test
+}
+```
+
+For comprehensive testing standards, see:
+- [Parent Database Testing Guide](../../README.md#testing)
+- [Testing Standards](../../../../docs/TESTING_STANDARDS.md)
+
 ## License
 
 Licensed under either of:
