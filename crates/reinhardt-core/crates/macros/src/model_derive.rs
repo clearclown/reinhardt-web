@@ -1,6 +1,66 @@
 //! Model derive macro for automatic ORM model registration
 //!
 //! Provides automatic `Model` trait implementation and registration to the global ModelRegistry.
+//!
+//! # Automatic Relationship Discovery
+//!
+//! The `#[model(...)]` attribute macro automatically detects relationship fields and registers
+//! them in the global `RELATIONSHIPS` registry for reverse relation construction:
+//!
+//! - **ForeignKeyField<T>** → Registered as `RelationshipType::ForeignKey`
+//! - **OneToOneField<T>** → Registered as `RelationshipType::OneToOne`
+//! - **ManyToManyField<T, U>** → Registered as `RelationshipType::ManyToMany`
+//!
+//! # Type-Safe ManyToMany Accessor Methods
+//!
+//! The `#[model(...)]` macro automatically generates type-safe accessor methods for each `ManyToManyField`:
+//!
+//! ```rust
+//! use reinhardt::prelude::*;
+//!
+//! #[model(app_label = "users", table_name = "users")]
+//! pub struct User {
+//!     #[field(primary_key = true)]
+//!     pub id: Uuid,
+//!
+//!     #[field(many_to_many)]
+//!     pub following: ManyToManyField<User, User>,
+//! }
+//!
+//! // Auto-generated accessor method (compile-time type safety)
+//! async fn example(user: &User, db: DatabaseConnection) {
+//!     let accessor = user.following_accessor(db);
+//!     let followers = accessor.all().await?;
+//! }
+//! ```
+//!
+//! **Benefits:**
+//! - Compile-time field name validation (no typos)
+//! - Type inference for Source and Target models
+//! - IDE auto-completion support
+//! - Cleaner, more idiomatic API
+//!
+//! ## Examples
+//!
+//! ```rust
+//! use reinhardt::prelude::*;
+//!
+//! #[model(app_label = "blog", table_name = "posts")]
+//! pub struct Post {
+//!     #[field(primary_key = true)]
+//!     pub id: i64,
+//!
+//!     #[field(max_length = 200)]
+//!     pub title: String,
+//!
+//!     // Automatically detected and registered as ForeignKey relationship
+//!     #[rel(related_name = "posts", db_column = "author_id")]
+//!     pub author: ForeignKeyField<User>,
+//! }
+//! ```
+//!
+//! The macro generates linkme distributed_slice registrations for each relationship,
+//! enabling `build_reverse_relations()` to construct reverse accessors at runtime.
 
 use std::collections::HashMap;
 
@@ -9,6 +69,7 @@ use quote::quote;
 use syn::{Data, DeriveInput, Fields, GenericArgument, PathArguments, Result, Type, parse_quote};
 use syn::{Ident, LitStr, bracketed, parenthesized};
 
+use crate::crate_paths::get_reinhardt_crate;
 use crate::rel::RelAttribute;
 
 /// Constraint specification from #[model(constraints = [...])]
@@ -36,13 +97,23 @@ struct ModelAttributesParsed {
 
 /// Model configuration from #[model(...)] attribute
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // Phase 3.2 fields (strict, without_rowid) parsed but not yet used
+// Phase 3.2: SQLite table-level attributes (strict, without_rowid) are parsed but intentionally
+// excluded from current implementation. These fields are reserved for future SQLite-specific
+// constraint generation support, which requires additional database schema generation logic.
+// Implementation of these features would involve:
+// - SQLite STRICT mode enforcement at table creation
+// - WITHOUT ROWID optimization for specific table types
+// - Additional validation and constraint generation in migration system
+#[allow(dead_code)]
 struct ModelConfig {
 	app_label: String,
 	table_name: String,
 	constraints: Vec<ConstraintSpec>,
 
-	// Phase 3.2: Table-level attributes (SQLite)
+	// Phase 3.2: Table-level attributes (SQLite) - Intentionally excluded features
+	// These fields will remain unused until Phase 3.2 implementation:
+	// - strict: Enable SQLite STRICT mode (requires schema generator changes)
+	// - without_rowid: Enable WITHOUT ROWID optimization (requires migration system changes)
 	#[cfg(feature = "db-sqlite")]
 	strict: Option<bool>,
 	#[cfg(feature = "db-sqlite")]
@@ -838,6 +909,21 @@ struct FieldInfo {
 	ty: Type,
 	config: FieldConfig,
 	/// Optional relationship attribute from `#[rel(...)]`
+	///
+	/// This field is reserved for future accessor generation support.
+	/// Currently, relationship fields (ForeignKeyField, ManyToManyField) are processed
+	/// at runtime through their types, but this field will enable compile-time accessor
+	/// generation for relationship traversal methods.
+	///
+	/// Planned usage:
+	/// - Generate type-safe accessor methods (e.g., user.get_profile(), user.get_posts())
+	/// - Enable eager loading optimization hints
+	/// - Support relationship-specific query methods
+	///
+	/// Implementation requires architectural decisions on:
+	/// - Accessor naming conventions
+	/// - Async/sync accessor variants
+	/// - Relationship traversal API design
 	#[allow(dead_code)]
 	rel: Option<RelAttribute>,
 }
@@ -899,6 +985,8 @@ fn field_type_to_metadata_string(ty: &Type, _config: &FieldConfig) -> Result<Str
 
 /// Map Rust type to ORM field type
 fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<TokenStream> {
+	let reinhardt = get_reinhardt_crate();
+
 	// Extract the inner type if it's Option<T>
 	let (_is_option, inner_ty) = extract_option_type(ty);
 
@@ -912,37 +1000,37 @@ fn map_type_to_field_type(ty: &Type, config: &FieldConfig) -> Result<TokenStream
 
 			match last_segment.ident.to_string().as_str() {
 				"i32" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Integer }
+					quote! { #reinhardt::db::migrations::FieldType::Integer }
 				}
 				"i64" => {
-					quote! { ::reinhardt::db::migrations::FieldType::BigInteger }
+					quote! { #reinhardt::db::migrations::FieldType::BigInteger }
 				}
 				"String" => {
 					let max_length = config.max_length.ok_or_else(|| {
 						syn::Error::new_spanned(ty, "String fields require max_length attribute")
 					})? as u32;
-					quote! { ::reinhardt::db::migrations::FieldType::VarChar(#max_length) }
+					quote! { #reinhardt::db::migrations::FieldType::VarChar(#max_length) }
 				}
 				"bool" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Boolean }
+					quote! { #reinhardt::db::migrations::FieldType::Boolean }
 				}
 				"DateTime" => {
-					quote! { ::reinhardt::db::migrations::FieldType::DateTime }
+					quote! { #reinhardt::db::migrations::FieldType::DateTime }
 				}
 				"Date" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Date }
+					quote! { #reinhardt::db::migrations::FieldType::Date }
 				}
 				"Time" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Time }
+					quote! { #reinhardt::db::migrations::FieldType::Time }
 				}
 				"f32" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Float }
+					quote! { #reinhardt::db::migrations::FieldType::Float }
 				}
 				"f64" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Double }
+					quote! { #reinhardt::db::migrations::FieldType::Double }
 				}
 				"Uuid" => {
-					quote! { ::reinhardt::db::migrations::FieldType::Uuid }
+					quote! { #reinhardt::db::migrations::FieldType::Uuid }
 				}
 				_ => {
 					return Err(syn::Error::new_spanned(
@@ -983,6 +1071,8 @@ fn extract_option_type(ty: &Type) -> (bool, &Type) {
 /// }
 /// ```
 fn generate_field_accessors(struct_name: &syn::Ident, field_infos: &[FieldInfo]) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
+
 	let accessor_methods: Vec<_> = field_infos
 		.iter()
 		.map(|field| {
@@ -996,8 +1086,8 @@ fn generate_field_accessors(struct_name: &syn::Ident, field_infos: &[FieldInfo])
 				///
 				/// Returns a `FieldRef<#struct_name, #field_type>` that provides compile-time
 				/// type safety for field operations.
-				pub const fn #method_name() -> ::reinhardt::db::orm::expressions::FieldRef<#struct_name, #field_type> {
-					::reinhardt::db::orm::expressions::FieldRef::new(#field_name_str)
+				pub const fn #method_name() -> #reinhardt::db::orm::expressions::FieldRef<#struct_name, #field_type> {
+					#reinhardt::db::orm::expressions::FieldRef::new(#field_name_str)
 				}
 			}
 		})
@@ -1010,8 +1100,113 @@ fn generate_field_accessors(struct_name: &syn::Ident, field_infos: &[FieldInfo])
 	}
 }
 
+/// Generate accessor methods for ManyToMany relationships.
+///
+/// For each `ManyToManyField<Source, Target>` field, generates a method:
+/// ```ignore
+/// pub fn {field_name}_accessor(
+///     &self,
+///     db: DatabaseConnection
+/// ) -> ManyToManyAccessor<Source, Target>
+/// ```
+///
+/// The generated accessor method internally calls `ManyToManyAccessor::new()`
+/// with the field name, providing compile-time field name validation and
+/// improved IDE support.
+///
+/// # Example
+///
+/// Given:
+/// ```ignore
+/// #[model(app_label = "app", table_name = "users")]
+/// pub struct User {
+///     #[field(primary_key = true)]
+///     pub id: i64,
+///
+///     #[rel(many_to_many, related_name = "followers")]
+///     pub following: ManyToManyField<User, User>,
+/// }
+/// ```
+///
+/// Generates:
+/// ```ignore
+/// impl User {
+///     /// Create a ManyToManyAccessor for the 'following' relationship
+///     pub fn following_accessor(
+///         &self,
+///         db: DatabaseConnection
+///     ) -> ManyToManyAccessor<User, User> {
+///         ManyToManyAccessor::new(self, "following", db)
+///     }
+/// }
+/// ```
+///
+/// # Generated Code Characteristics
+///
+/// - **Method naming**: `{field_name}_accessor()`
+/// - **Visibility**: `pub` (same as model)
+/// - **Type parameters**: Inferred from `ManyToManyField<Source, Target>`
+/// - **Documentation**: Auto-generated with field name
+fn generate_m2m_accessor_methods(
+	struct_name: &syn::Ident,
+	field_infos: &[FieldInfo],
+) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
+
+	let accessor_methods: Vec<_> = field_infos
+		.iter()
+		// ManyToManyFieldのみをフィルタ
+		.filter(|field| is_many_to_many_field_type(&field.ty))
+		.filter_map(|field| {
+			let field_name = &field.name;
+			let field_name_str = field_name.to_string();
+
+			// メソッド名: {field_name}_accessor
+			let method_name = syn::Ident::new(
+				&format!("{}_accessor", field_name),
+				field_name.span()
+			);
+
+			// ManyToManyField<Source, Target>からTargetを抽出
+			let target_ty = extract_m2m_target_type(&field.ty)?;
+
+			let doc_comment = format!(
+				"Create a ManyToManyAccessor for the '{}' relationship",
+				field_name_str
+			);
+
+			Some(quote! {
+				#[doc = #doc_comment]
+				pub fn #method_name(
+					&self,
+					db: #reinhardt::db::orm::connection::DatabaseConnection
+				) -> #reinhardt::db::orm::ManyToManyAccessor<#struct_name, #target_ty> {
+					#reinhardt::db::orm::ManyToManyAccessor::new(
+						self,
+						#field_name_str,
+						db
+					)
+				}
+			})
+		})
+		.collect();
+
+	if accessor_methods.is_empty() {
+		quote! {}
+	} else {
+		quote! {
+			impl #struct_name {
+				#(#accessor_methods)*
+			}
+		}
+	}
+}
+
 /// Implementation of the `Model` derive macro
 pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
+	// Get the dynamically resolved reinhardt crate path
+	let reinhardt = get_reinhardt_crate();
+
 	let struct_name = &input.ident;
 	let generics = &input.generics;
 	let where_clause = &generics.where_clause;
@@ -1264,6 +1459,10 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		&fk_field_infos,
 	)?;
 
+	// Generate relationship registration code for RELATIONSHIPS registry
+	let relationship_registrations =
+		generate_relationship_registrations(struct_name, app_label, &field_infos, &fk_field_infos);
+
 	// Generate primary_key() and set_primary_key() implementations
 	let (pk_impl, set_pk_impl, composite_pk_impl) = if is_composite_pk {
 		// Composite primary key implementation
@@ -1374,6 +1573,9 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 	// Generate field accessor methods
 	let field_accessors = generate_field_accessors(struct_name, &field_infos);
 
+	// Generate ManyToMany accessor methods
+	let m2m_accessor_methods = generate_m2m_accessor_methods(struct_name, &field_infos);
+
 	// Generate relationship metadata
 	let relationship_metadata = generate_relationship_metadata(&rel_fields, app_label, struct_name);
 
@@ -1391,7 +1593,10 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		// Generate field accessor methods for type-safe field references
 		#field_accessors
 
-		impl #generics ::reinhardt::db::orm::Model for #struct_name #generics #where_clause {
+		// Generate ManyToMany accessor methods
+		#m2m_accessor_methods
+
+		impl #generics #reinhardt::db::orm::Model for #struct_name #generics #where_clause {
 			type PrimaryKey = #pk_type;
 
 			fn table_name() -> &'static str {
@@ -1412,17 +1617,17 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 
 			#composite_pk_impl
 
-			fn field_metadata() -> Vec<::reinhardt::db::orm::inspection::FieldInfo> {
+			fn field_metadata() -> Vec<#reinhardt::db::orm::inspection::FieldInfo> {
 				vec![
 					#(#field_metadata_items),*
 				]
 			}
 
-			fn index_metadata() -> Vec<::reinhardt::db::orm::inspection::IndexInfo> {
+			fn index_metadata() -> Vec<#reinhardt::db::orm::inspection::IndexInfo> {
 				vec![
 					#(
-						::reinhardt::db::orm::inspection::IndexInfo {
-							name: format!("{}_{}_idx", <Self as ::reinhardt::db::orm::Model>::table_name(), #indexed_fields),
+						#reinhardt::db::orm::inspection::IndexInfo {
+							name: format!("{}_{}_idx", <Self as #reinhardt::db::orm::Model>::table_name(), #indexed_fields),
 							fields: vec![#indexed_fields.to_string()],
 							unique: false,
 							condition: None,
@@ -1431,21 +1636,21 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 				]
 			}
 
-			fn constraint_metadata() -> Vec<::reinhardt::db::orm::inspection::ConstraintInfo> {
+			fn constraint_metadata() -> Vec<#reinhardt::db::orm::inspection::ConstraintInfo> {
 				let mut constraints = Vec::new();
 				// Check constraints
 				#(
-					constraints.push(::reinhardt::db::orm::inspection::ConstraintInfo {
+					constraints.push(#reinhardt::db::orm::inspection::ConstraintInfo {
 						name: #check_constraint_names.to_string(),
-						constraint_type: ::reinhardt::db::orm::inspection::ConstraintType::Check,
+						constraint_type: #reinhardt::db::orm::inspection::ConstraintType::Check,
 						definition: #check_constraint_expressions.to_string(),
 					});
 				)*
 				// Unique constraints
 				#(
-					constraints.push(::reinhardt::db::orm::inspection::ConstraintInfo {
+					constraints.push(#reinhardt::db::orm::inspection::ConstraintInfo {
 						name: #unique_constraint_names.to_string(),
-						constraint_type: ::reinhardt::db::orm::inspection::ConstraintType::Unique,
+						constraint_type: #reinhardt::db::orm::inspection::ConstraintType::Unique,
 						definition: #unique_constraint_definitions.to_string(),
 					});
 				)*
@@ -1456,6 +1661,9 @@ pub fn model_derive_impl(input: DeriveInput) -> Result<TokenStream> {
 		}
 
 		#registration_code
+
+		// Register relationships in RELATIONSHIPS distributed slice
+		#relationship_registrations
 	};
 
 	Ok(expanded)
@@ -1488,6 +1696,13 @@ fn generate_field_metadata(
 		})
 		.collect();
 
+	let reinhardt = get_reinhardt_crate();
+
+	// If there are no regular fields, return empty vec
+	if regular_fields.is_empty() {
+		let _ = &reinhardt; // Suppress unused warning
+	}
+
 	for field_info in regular_fields {
 		let name = field_info.name.to_string();
 		let field_type_path = field_type_to_metadata_string(&field_info.ty, &field_info.config)?;
@@ -1507,7 +1722,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"max_length".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Uint(#max_length)
+					#reinhardt::db::orm::fields::FieldKwarg::Uint(#max_length)
 				);
 			});
 		}
@@ -1519,7 +1734,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"email".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(true)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(true)
 				);
 			});
 		}
@@ -1529,7 +1744,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"url".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(true)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(true)
 				);
 			});
 		}
@@ -1537,7 +1752,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"min_length".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Uint(#min_length)
+					#reinhardt::db::orm::fields::FieldKwarg::Uint(#min_length)
 				);
 			});
 		}
@@ -1545,7 +1760,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"min_value".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Int(#min_value)
+					#reinhardt::db::orm::fields::FieldKwarg::Int(#min_value)
 				);
 			});
 		}
@@ -1553,7 +1768,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"max_value".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Int(#max_value)
+					#reinhardt::db::orm::fields::FieldKwarg::Int(#max_value)
 				);
 			});
 		}
@@ -1563,7 +1778,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"generated".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#generated_expr.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#generated_expr.to_string())
 				);
 			});
 		}
@@ -1571,7 +1786,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"generated_stored".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_stored)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_stored)
 				);
 			});
 		}
@@ -1580,7 +1795,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"generated_virtual".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_virtual)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#generated_virtual)
 				);
 			});
 		}
@@ -1591,7 +1806,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"identity_always".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_always)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_always)
 				);
 			});
 		}
@@ -1600,7 +1815,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"identity_by_default".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_by_default)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#identity_by_default)
 				);
 			});
 		}
@@ -1609,7 +1824,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"auto_increment".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#auto_increment)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#auto_increment)
 				);
 			});
 		}
@@ -1618,7 +1833,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"autoincrement".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#autoincrement)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#autoincrement)
 				);
 			});
 		}
@@ -1628,7 +1843,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"collate".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#collate.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#collate.to_string())
 				);
 			});
 		}
@@ -1637,7 +1852,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"character_set".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#character_set.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#character_set.to_string())
 				);
 			});
 		}
@@ -1648,7 +1863,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"comment".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#comment.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#comment.to_string())
 				);
 			});
 		}
@@ -1665,7 +1880,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"storage".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#storage_str.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#storage_str.to_string())
 				);
 			});
 		}
@@ -1678,7 +1893,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"compression".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::String(#compression_str.to_string())
+					#reinhardt::db::orm::fields::FieldKwarg::String(#compression_str.to_string())
 				);
 			});
 		}
@@ -1689,7 +1904,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"on_update_current_timestamp".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#on_update_current_timestamp)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#on_update_current_timestamp)
 				);
 			});
 		}
@@ -1700,7 +1915,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"invisible".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#invisible)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#invisible)
 				);
 			});
 		}
@@ -1711,7 +1926,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"fulltext".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#fulltext)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#fulltext)
 				);
 			});
 		}
@@ -1722,7 +1937,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"unsigned".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#unsigned)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#unsigned)
 				);
 			});
 		}
@@ -1731,7 +1946,7 @@ fn generate_field_metadata(
 			attrs.push(quote! {
 				attributes.insert(
 					"zerofill".to_string(),
-					::reinhardt::db::orm::fields::FieldKwarg::Bool(#zerofill)
+					#reinhardt::db::orm::fields::FieldKwarg::Bool(#zerofill)
 				);
 			});
 		}
@@ -1746,7 +1961,7 @@ fn generate_field_metadata(
 				let mut attributes = ::std::collections::HashMap::new();
 				#(#attrs)*
 
-				::reinhardt::db::orm::inspection::FieldInfo {
+				#reinhardt::db::orm::inspection::FieldInfo {
 					name: #name.to_string(),
 					field_type: #field_type_path.to_string(),
 					nullable: #nullable,
@@ -1768,6 +1983,8 @@ fn generate_field_metadata(
 
 	// Generate _id field metadata for ForeignKeyField and OneToOneField
 	for fk_info in fk_field_infos {
+		let reinhardt = &reinhardt;
+
 		let name = &fk_info.id_column_name;
 		let nullable = fk_info.rel_attr.null.unwrap_or(false);
 		let unique = fk_info.is_one_to_one; // OneToOne fields have UNIQUE constraint
@@ -1783,11 +2000,11 @@ fn generate_field_metadata(
 				if #db_index {
 					attributes.insert(
 						"db_index".to_string(),
-						::reinhardt::db::orm::fields::FieldKwarg::Bool(true)
+						#reinhardt::db::orm::fields::FieldKwarg::Bool(true)
 					);
 				}
 
-				::reinhardt::db::orm::inspection::FieldInfo {
+				#reinhardt::db::orm::inspection::FieldInfo {
 					name: #name.to_string(),
 					field_type: #field_type_path.to_string(),
 					nullable: #nullable,
@@ -1818,6 +2035,7 @@ fn generate_registration_code(
 	field_infos: &[FieldInfo],
 	fk_field_infos: &[ForeignKeyFieldInfo],
 ) -> Result<TokenStream> {
+	let reinhardt = get_reinhardt_crate();
 	let model_name = struct_name.to_string();
 	let register_fn_name = syn::Ident::new(
 		&format!(
@@ -1880,13 +2098,13 @@ fn generate_registration_code(
 							// Extract last segment of type path and convert to snake_case
 							let type_name = #type_name_str;
 							let last_segment = type_name.split("::").last().unwrap_or(&type_name);
-							let referenced_table = ::reinhardt::db::migrations::to_snake_case(last_segment);
+							let referenced_table = #reinhardt::db::migrations::to_snake_case(last_segment);
 
-							::reinhardt::db::migrations::ForeignKeyInfo {
+							#reinhardt::db::migrations::ForeignKeyInfo {
 								referenced_table,
 								referenced_column: "id".to_string(),
-								on_delete: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
-								on_update: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+								on_delete: #reinhardt::db::migrations::ForeignKeyAction::Cascade,
+								on_update: #reinhardt::db::migrations::ForeignKeyAction::Cascade,
 							}
 						})
 					}
@@ -1897,11 +2115,11 @@ fn generate_registration_code(
 				} => {
 					let table_name_str = format!("{}_{}", app_label, model_name.to_lowercase());
 					quote! {
-						.with_foreign_key(::reinhardt::db::migrations::ForeignKeyInfo {
+						.with_foreign_key(#reinhardt::db::migrations::ForeignKeyInfo {
 							referenced_table: #table_name_str.to_string(),
 							referenced_column: "id".to_string(),
-							on_delete: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
-							on_update: ::reinhardt::db::migrations::ForeignKeyAction::Cascade,
+							on_delete: #reinhardt::db::migrations::ForeignKeyAction::Cascade,
+							on_update: #reinhardt::db::migrations::ForeignKeyAction::Cascade,
 						})
 					}
 				}
@@ -1913,7 +2131,7 @@ fn generate_registration_code(
 		field_registrations.push(quote! {
 			metadata.add_field(
 				#field_name.to_string(),
-				::reinhardt::db::migrations::model_registry::FieldMetadata::new(#field_type)
+				#reinhardt::db::migrations::model_registry::FieldMetadata::new(#field_type)
 					#(#params)*
 					#fk_registration
 			);
@@ -1972,7 +2190,7 @@ fn generate_registration_code(
 
 		m2m_registrations.push(quote! {
 			metadata.add_many_to_many(
-				::reinhardt::db::migrations::model_registry::ManyToManyMetadata {
+				#reinhardt::db::migrations::model_registry::ManyToManyMetadata {
 					field_name: #field_name.to_string(),
 					to_model: #to_model.to_string(),
 					related_name: #related_name,
@@ -2011,8 +2229,8 @@ fn generate_registration_code(
 		fk_id_registrations.push(quote! {
 			metadata.add_field(
 				#id_column_name.to_string(),
-				::reinhardt::db::migrations::model_registry::FieldMetadata::new(
-					::reinhardt::db::migrations::FieldType::Uuid
+				#reinhardt::db::migrations::model_registry::FieldMetadata::new(
+					#reinhardt::db::migrations::FieldType::Uuid
 				)
 					.with_param("null", #nullable_str)
 					.with_param("unique", #unique_str)
@@ -2028,7 +2246,7 @@ fn generate_registration_code(
 	let code = quote! {
 		#[::ctor::ctor]
 		fn #register_fn_name() {
-			use ::reinhardt::db::migrations::model_registry::ModelMetadata;
+			use #reinhardt::db::migrations::model_registry::ModelMetadata;
 
 			// Register in migration registry
 			let mut metadata = ModelMetadata::new(
@@ -2041,11 +2259,11 @@ fn generate_registration_code(
 			#(#fk_id_registrations)*
 			#(#m2m_registrations)*
 
-			::reinhardt::db::migrations::model_registry::global_registry().register_model(metadata);
+			#reinhardt::db::migrations::model_registry::global_registry().register_model(metadata);
 
 			// Register in global model registry for foreign_key resolution
-			::reinhardt::db::orm::registry::global_model_registry().register(
-				::reinhardt::db::orm::registry::ModelInfo {
+			#reinhardt::db::orm::registry::global_model_registry().register(
+				#reinhardt::db::orm::registry::ModelInfo {
 					app_label: #app_label.to_string(),
 					model_name: #model_name.to_string(),
 					type_path: #type_path.to_string(),
@@ -2058,21 +2276,201 @@ fn generate_registration_code(
 	Ok(code)
 }
 
+/// Generate relationship registration code for RELATIONSHIPS registry
+///
+/// This function scans all fields in the model and detects relationship fields
+/// (ForeignKeyField, OneToOneField, ManyToManyField) automatically, then generates
+/// linkme distributed_slice registration code for each relationship.
+///
+/// # Arguments
+///
+/// * `struct_name` - The name of the model struct
+/// * `app_label` - The app label for the model
+/// * `field_infos` - All field information including relationship fields
+/// * `fk_field_infos` - Extracted ForeignKey field information
+///
+/// # Returns
+///
+/// TokenStream containing linkme distributed_slice registrations for all relationships
+fn generate_relationship_registrations(
+	struct_name: &syn::Ident,
+	app_label: &str,
+	field_infos: &[FieldInfo],
+	fk_field_infos: &[ForeignKeyFieldInfo],
+) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
+	let mut registrations = Vec::new();
+	let model_name = struct_name.to_string();
+
+	// Process ForeignKey and OneToOne fields
+	for fk_info in fk_field_infos {
+		let field_name = &fk_info.field_name;
+		let field_name_str = field_name.to_string();
+		let is_one_to_one = fk_info.is_one_to_one;
+
+		// Extract target model name from Type
+		let target_model_name = if let Type::Path(type_path) = &fk_info.target_type {
+			type_path
+				.path
+				.segments
+				.last()
+				.map(|seg| seg.ident.to_string())
+				.unwrap_or_else(|| "Unknown".to_string())
+		} else {
+			"Unknown".to_string()
+		};
+
+		// Get related_name from RelAttribute if present
+		let related_name = fk_info
+			.rel_attr
+			.related_name
+			.as_ref()
+			.map(|r| quote! { Some(#r) })
+			.unwrap_or(quote! { None });
+
+		// Get db_column from RelAttribute if present, otherwise use "{field_name}_id"
+		let db_column = fk_info
+			.rel_attr
+			.db_column
+			.as_ref()
+			.map(|c| quote! { Some(#c) })
+			.unwrap_or_else(|| {
+				let default_db_column = format!("{}_id", field_name_str);
+				quote! { Some(#default_db_column) }
+			});
+
+		// Determine relationship type
+		let relationship_type = if is_one_to_one {
+			quote! { #reinhardt::apps::registry::RelationshipType::OneToOne }
+		} else {
+			quote! { #reinhardt::apps::registry::RelationshipType::ForeignKey }
+		};
+
+		// Generate unique static variable name
+		let static_var_name = syn::Ident::new(
+			&format!(
+				"__REL_{}_{}_TO_{}",
+				model_name.to_uppercase(),
+				field_name_str.to_uppercase(),
+				target_model_name.to_uppercase()
+			),
+			struct_name.span(),
+		);
+
+		// Generate registration code
+		registrations.push(quote! {
+			#[::linkme::distributed_slice(#reinhardt::apps::registry::RELATIONSHIPS)]
+			static #static_var_name: #reinhardt::apps::registry::RelationshipMetadata =
+				#reinhardt::apps::registry::RelationshipMetadata {
+					from_model: concat!(#app_label, ".", #model_name),
+					to_model: #target_model_name,
+					relationship_type: #relationship_type,
+					field_name: #field_name_str,
+					related_name: #related_name,
+					db_column: #db_column,
+					through_table: None,
+				};
+		});
+	}
+
+	// Process ManyToMany fields
+	for field_info in field_infos {
+		// Check if this is a ManyToMany field
+		if !is_many_to_many_field_type(&field_info.ty) {
+			continue;
+		}
+
+		let field_name = &field_info.name;
+		let field_name_str = field_name.to_string();
+
+		// Extract target model name from ManyToManyField<Source, Target>
+		let target_model_name = if let Some(target_ty) = extract_m2m_target_type(&field_info.ty) {
+			if let Type::Path(type_path) = target_ty {
+				type_path
+					.path
+					.segments
+					.last()
+					.map(|seg| seg.ident.to_string())
+					.unwrap_or_else(|| "Unknown".to_string())
+			} else {
+				continue; // Skip if cannot extract target type
+			}
+		} else {
+			continue; // Skip if no target type
+		};
+
+		// Get relationship attributes from RelAttribute if present
+		let (related_name, through_table) = if let Some(rel) = &field_info.rel {
+			let related_name = rel
+				.related_name
+				.as_ref()
+				.map(|r| quote! { Some(#r) })
+				.unwrap_or(quote! { None });
+
+			let through_table = rel
+				.through
+				.as_ref()
+				.map(|t| {
+					let through_str = quote! { #t }.to_string();
+					quote! { Some(#through_str) }
+				})
+				.unwrap_or(quote! { None });
+
+			(related_name, through_table)
+		} else {
+			(quote! { None }, quote! { None })
+		};
+
+		// Generate unique static variable name
+		let static_var_name = syn::Ident::new(
+			&format!(
+				"__REL_M2M_{}_{}_TO_{}",
+				model_name.to_uppercase(),
+				field_name_str.to_uppercase(),
+				target_model_name.to_uppercase()
+			),
+			struct_name.span(),
+		);
+
+		// Generate registration code
+		registrations.push(quote! {
+			#[::linkme::distributed_slice(#reinhardt::apps::registry::RELATIONSHIPS)]
+			static #static_var_name: #reinhardt::apps::registry::RelationshipMetadata =
+				#reinhardt::apps::registry::RelationshipMetadata {
+					from_model: concat!(#app_label, ".", #model_name),
+					to_model: #target_model_name,
+					relationship_type: #reinhardt::apps::registry::RelationshipType::ManyToMany,
+					field_name: #field_name_str,
+					related_name: #related_name,
+					db_column: None,
+					through_table: #through_table,
+				};
+		});
+	}
+
+	// Combine all registrations
+	quote! {
+		#(#registrations)*
+	}
+}
+
 /// Generate composite primary key implementation
 fn generate_composite_pk_impl(pk_fields: &[&FieldInfo]) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
+
 	let field_name_strings: Vec<String> = pk_fields.iter().map(|f| f.name.to_string()).collect();
 
 	quote! {
-		fn composite_primary_key() -> Option<::reinhardt::db::orm::composite_pk::CompositePrimaryKey> {
+		fn composite_primary_key() -> Option<#reinhardt::db::orm::composite_pk::CompositePrimaryKey> {
 			Some(
-				::reinhardt::db::orm::composite_pk::CompositePrimaryKey::new(
+				#reinhardt::db::orm::composite_pk::CompositePrimaryKey::new(
 					vec![#(#field_name_strings.to_string()),*]
 				)
 				.expect("Invalid composite primary key")
 			)
 		}
 
-		fn get_composite_pk_values(&self) -> ::std::collections::HashMap<String, ::reinhardt::db::orm::composite_pk::PkValue> {
+		fn get_composite_pk_values(&self) -> ::std::collections::HashMap<String, #reinhardt::db::orm::composite_pk::PkValue> {
 			// Use the generated composite PK type's to_pk_values() method
 			if let Some(pk) = self.primary_key() {
 				pk.to_pk_values()
@@ -2091,6 +2489,8 @@ fn generate_composite_pk_impl(pk_fields: &[&FieldInfo]) -> TokenStream {
 /// - From/Into conversions for tuple types
 /// - Individual PkValue conversions for each field
 fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
+
 	// Generate composite PK struct name: {ModelName}CompositePk
 	let composite_pk_name =
 		syn::Ident::new(&format!("{}CompositePk", struct_name), struct_name.span());
@@ -2120,7 +2520,7 @@ fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]
 			quote! {
 				values.insert(
 					stringify!(#name).to_string(),
-					::reinhardt::db::orm::composite_pk::PkValue::from(&self.#name)
+					#reinhardt::db::orm::composite_pk::PkValue::from(&self.#name)
 				);
 			}
 		})
@@ -2142,7 +2542,7 @@ fn generate_composite_pk_type(struct_name: &syn::Ident, pk_fields: &[&FieldInfo]
 			}
 
 			/// Convert to a HashMap of PkValues for database operations
-			pub fn to_pk_values(&self) -> ::std::collections::HashMap<String, ::reinhardt::db::orm::composite_pk::PkValue> {
+			pub fn to_pk_values(&self) -> ::std::collections::HashMap<String, #reinhardt::db::orm::composite_pk::PkValue> {
 				let mut values = ::std::collections::HashMap::new();
 				#(#pk_value_conversions)*
 				values
@@ -2195,10 +2595,11 @@ fn generate_relationship_metadata(
 	_struct_name: &Ident,
 ) -> TokenStream {
 	use crate::rel::RelationType;
+	let reinhardt = get_reinhardt_crate();
 
 	if rel_fields.is_empty() {
 		return quote! {
-			fn relationship_metadata() -> Vec<::reinhardt::db::orm::inspection::RelationInfo> {
+			fn relationship_metadata() -> Vec<#reinhardt::db::orm::inspection::RelationInfo> {
 				Vec::new()
 			}
 		};
@@ -2212,20 +2613,20 @@ fn generate_relationship_metadata(
 			// Map RelationType to RelationshipType
 			let relationship_type = match rel.rel_type {
 				RelationType::ForeignKey => {
-					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
+					quote! { #reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
 				}
 				RelationType::OneToOne => {
-					quote! { ::reinhardt::db::orm::relationship::RelationshipType::OneToOne }
+					quote! { #reinhardt::db::orm::relationship::RelationshipType::OneToOne }
 				}
 				RelationType::OneToMany => {
-					quote! { ::reinhardt::db::orm::relationship::RelationshipType::OneToMany }
+					quote! { #reinhardt::db::orm::relationship::RelationshipType::OneToMany }
 				}
 				RelationType::ManyToMany | RelationType::PolymorphicManyToMany => {
-					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToMany }
+					quote! { #reinhardt::db::orm::relationship::RelationshipType::ManyToMany }
 				}
 				RelationType::Polymorphic => {
 					// Polymorphic is treated as ManyToOne for now
-					quote! { ::reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
+					quote! { #reinhardt::db::orm::relationship::RelationshipType::ManyToOne }
 				}
 			};
 
@@ -2255,7 +2656,7 @@ fn generate_relationship_metadata(
 			};
 
 			quote! {
-				::reinhardt::db::orm::inspection::RelationInfo {
+				#reinhardt::db::orm::inspection::RelationInfo {
 					name: #field_name_str.to_string(),
 					relationship_type: #relationship_type,
 					foreign_key: #foreign_key,
@@ -2267,7 +2668,7 @@ fn generate_relationship_metadata(
 		.collect();
 
 	quote! {
-		fn relationship_metadata() -> Vec<::reinhardt::db::orm::inspection::RelationInfo> {
+		fn relationship_metadata() -> Vec<#reinhardt::db::orm::inspection::RelationInfo> {
 			vec![
 				#(#relation_info_items),*
 			]
@@ -2282,6 +2683,32 @@ fn is_uuid_type(ty: &Type) -> bool {
 		&& let Some(last_segment) = type_path.path.segments.last()
 	{
 		return last_segment.ident == "Uuid";
+	}
+	false
+}
+
+/// Check if a type is DateTime<Utc> or Option<DateTime<Utc>>
+fn is_datetime_utc_type(ty: &Type) -> bool {
+	let (_, inner_ty) = extract_option_type(ty);
+	if let Type::Path(type_path) = inner_ty
+		&& let Some(last_segment) = type_path.path.segments.last()
+	{
+		// Check if the type is DateTime
+		if last_segment.ident != "DateTime" {
+			return false;
+		}
+
+		// Check if it has generic argument <Utc>
+		if let PathArguments::AngleBracketed(args) = &last_segment.arguments
+			&& let Some(GenericArgument::Type(Type::Path(arg_path))) = args.args.first()
+			&& let Some(arg_segment) = arg_path.path.segments.last()
+		{
+			return arg_segment.ident == "Utc";
+		}
+
+		// DateTime without generic argument might still be DateTime<Utc> if imported
+		// For safety, we treat it as DateTime<Utc>
+		return true;
 	}
 	false
 }
@@ -2383,9 +2810,10 @@ fn extract_foreign_key_target_type(ty: &Type) -> Type {
 /// Check if a type is Option<T>
 fn is_option_type(ty: &syn::Type) -> bool {
 	if let syn::Type::Path(type_path) = ty
-		&& let Some(segment) = type_path.path.segments.last() {
-			return segment.ident == "Option";
-		}
+		&& let Some(segment) = type_path.path.segments.last()
+	{
+		return segment.ident == "Option";
+	}
 	false
 }
 
@@ -2481,8 +2909,9 @@ fn get_auto_field_default_value(field: &FieldInfo) -> TokenStream {
 		return quote! { ::std::default::Default::default() };
 	}
 
-	// Timestamp fields - use Utc::now()（修正：is_timestamp_fieldを使用）
-	if is_timestamp_field(field) {
+	// Timestamp fields - use Utc::now() ONLY if the field type is DateTime<Utc>
+	// This prevents type mismatches when fields named 'created_at' are of type i64
+	if is_timestamp_field(field) && is_datetime_utc_type(&field.ty) {
 		// Option<DateTime<Utc>> の場合は Some() でラップ
 		if is_option_type(&field.ty) {
 			return quote! { ::std::option::Option::Some(::chrono::Utc::now()) };
@@ -2512,6 +2941,7 @@ fn generate_new_function(
 	field_infos: &[FieldInfo],
 	fk_id_field_names: &[syn::Ident],
 ) -> TokenStream {
+	let reinhardt = get_reinhardt_crate();
 	// Separate user-specified fields from auto-generated fields
 	let user_fields: Vec<_> = field_infos
 		.iter()
@@ -2560,9 +2990,7 @@ fn generate_new_function(
 			generic_counter += 1;
 
 			// 対応するFKフィールドを見つける
-			let fk_field_info = field_infos
-				.iter()
-				.find(|fi| fi.name.to_string() == *fk_field_name);
+			let fk_field_info = field_infos.iter().find(|fi| fi.name == fk_field_name);
 
 			if let Some(fk_info) = fk_field_info {
 				// ForeignKeyField<T>からT を抽出
@@ -2574,7 +3002,7 @@ fn generate_new_function(
 
 				// Where句: GenericParam: IntoPrimaryKey<RelatedModel>
 				where_clauses.push(quote! {
-					#generic_param: ::reinhardt::db::orm::IntoPrimaryKey<#related_model_type>
+					#generic_param: #reinhardt::db::orm::IntoPrimaryKey<#related_model_type>
 				});
 
 				// ジェネリックパラメータリスト

@@ -1,6 +1,6 @@
 //! Tests for automatic derive trait addition in #[model(...)] attribute macro
 
-use reinhardt_macros::model;
+use reinhardt::model;
 use serde::{Deserialize, Serialize};
 
 #[test]
@@ -172,4 +172,120 @@ fn test_partialeq() {
 	// PartialEq (auto-derived by #[model])
 	assert_eq!(item1, item2);
 	assert_ne!(item1, item3);
+}
+
+#[test]
+fn test_many_to_many_accessor_methods_generated() {
+	use reinhardt::db::associations::ManyToManyField;
+
+	// Test basic ManyToMany field generates accessor method
+	#[model(app_label = "test", table_name = "users")]
+	#[derive(Serialize, Deserialize)]
+	pub struct User {
+		#[field(primary_key = true)]
+		pub id: i64,
+		#[field(max_length = 255)]
+		pub username: String,
+		#[rel(many_to_many, related_name = "followers")]
+		pub following: ManyToManyField<User, User>,
+	}
+
+	// Verify the model compiles and has the expected structure
+	let _user = User {
+		id: 1,
+		username: "alice".to_string(),
+		following: Default::default(),
+	};
+
+	// The accessor method should exist (compile-time check)
+	// Note: We verify the method exists by type-checking a function pointer
+	// We can't actually call it without a database connection
+	let _accessor_method: fn(&User, _) -> _ = User::following_accessor;
+	let _ = _accessor_method;
+}
+
+#[test]
+fn test_self_referential_many_to_many() {
+	use reinhardt::db::associations::ManyToManyField;
+
+	// Test self-referential ManyToMany (User -> User)
+	#[model(app_label = "test", table_name = "social_users")]
+	#[derive(Serialize, Deserialize)]
+	pub struct SocialUser {
+		#[field(primary_key = true)]
+		pub id: i64,
+		#[rel(many_to_many, related_name = "followers")]
+		pub following: ManyToManyField<SocialUser, SocialUser>,
+		#[rel(many_to_many, related_name = "blocked_by")]
+		pub blocked_users: ManyToManyField<SocialUser, SocialUser>,
+	}
+
+	let _user = SocialUser {
+		id: 1,
+		following: Default::default(),
+		blocked_users: Default::default(),
+	};
+
+	// Both accessor methods should exist (compile-time check)
+	let _following: fn(&SocialUser, _) -> _ = SocialUser::following_accessor;
+	let _blocked: fn(&SocialUser, _) -> _ = SocialUser::blocked_users_accessor;
+	let _ = (_following, _blocked);
+}
+
+#[test]
+fn test_multiple_many_to_many_fields() {
+	use reinhardt::db::associations::ManyToManyField;
+
+	#[model(app_label = "test", table_name = "groups")]
+	#[derive(Serialize, Deserialize)]
+	pub struct Group {
+		#[field(primary_key = true)]
+		pub id: i64,
+		#[field(max_length = 255)]
+		pub name: String,
+	}
+
+	#[model(app_label = "test", table_name = "multi_users")]
+	#[derive(Serialize, Deserialize)]
+	pub struct MultiUser {
+		#[field(primary_key = true)]
+		pub id: i64,
+		#[rel(many_to_many, related_name = "users")]
+		pub groups: ManyToManyField<MultiUser, Group>,
+		#[rel(many_to_many, related_name = "friends_of")]
+		pub friends: ManyToManyField<MultiUser, MultiUser>,
+	}
+
+	let _user = MultiUser {
+		id: 1,
+		groups: Default::default(),
+		friends: Default::default(),
+	};
+
+	// Both accessor methods should exist with correct type parameters (compile-time check)
+	let _groups: fn(&MultiUser, _) -> _ = MultiUser::groups_accessor;
+	let _friends: fn(&MultiUser, _) -> _ = MultiUser::friends_accessor;
+	let _ = (_groups, _friends);
+}
+
+#[test]
+fn test_no_many_to_many_fields() {
+	// Model without ManyToMany fields should not generate accessor methods
+	#[model(app_label = "test", table_name = "simple_users")]
+	#[derive(Serialize, Deserialize)]
+	pub struct SimpleUser {
+		#[field(primary_key = true)]
+		pub id: i64,
+		#[field(max_length = 255)]
+		pub name: String,
+	}
+
+	let user = SimpleUser {
+		id: 1,
+		name: "Bob".to_string(),
+	};
+
+	// No accessor methods should exist
+	// This is a compile-time verification - the code compiles without errors
+	let _ = user;
 }

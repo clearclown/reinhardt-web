@@ -4,4 +4,4 @@ error: Generated columns must specify either generated_stored=true or generated_
 3 | #[model(app_label = "test", table_name = "users")]
   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   |
-  = note: this error originates in the derive macro `reinhardt::Model` (in Nightly builds, run with -Z macro-backtrace for more info)
+  = note: this error originates in the derive macro `::reinhardt::macros::Model` (in Nightly builds, run with -Z macro-backtrace for more info)
