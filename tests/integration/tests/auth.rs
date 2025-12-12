@@ -1,9 +1,6 @@
 // Auto-generated module file for auth integration tests
 // Each test file in auth/ subdirectory is explicitly included with #[path] attribute
 
-#[path = "auth/auth_integration.rs"]
-mod auth_integration;
-
 #[path = "auth/auth_security_integration.rs"]
 mod auth_security_integration;
 

@@ -43,7 +43,7 @@ async fn db_with_migrations() -> (NamedTempFile, Arc<DatabaseConnection>) {
 		.expect("Failed to connect to SQLite");
 
 	// Apply migrations using new migration system
-	// For now, we manually create tables for testing
+	// TODO: For now, we manually create tables for testing
 	let create_users_table = r#"
 		CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,

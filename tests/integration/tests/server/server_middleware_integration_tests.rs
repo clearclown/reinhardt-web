@@ -9,7 +9,7 @@ use reinhardt_types::Middleware;
 use std::sync::Arc;
 
 // Test helper modules - these need to be accessible from the server crate
-// For now, we'll inline a simple test handler
+// TODO: For now, we'll inline a simple test handler
 
 use async_trait::async_trait;
 use reinhardt_http::{Request, Response};
@@ -48,7 +48,7 @@ async fn test_middleware_integration_chain() {
 		.with_middleware(Arc::new(LoggingMiddleware::new()) as Arc<dyn Middleware>);
 
 	// In a full integration test, we would spawn a server here
-	// For now, we can test that the chain is constructed correctly
+	// TODO: For now, we can test that the chain is constructed correctly
 
 	// Create a test request
 	use hyper::{HeaderMap, Method, Version};

@@ -228,7 +228,10 @@ impl Drop for FileLockGuard {
 #[fixture]
 pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String)
 {
+	use testcontainers::core::IntoContainerPort;
+
 	let image = GenericImage::new("postgres", "17-alpine")
+		.with_exposed_port(5432.tcp())
 		.with_wait_for(WaitFor::message_on_stderr(
 			"database system is ready to accept connections",
 		))
@@ -389,7 +392,9 @@ pub async fn redis_container() -> (ContainerAsync<GenericImage>, u16, String) {
 				);
 				last_error = Some(e);
 
-				if attempt < MAX_RETRIES - 1 {}
+				if attempt < MAX_RETRIES - 1 {
+					tokio::time::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS)).await;
+				}
 			}
 		}
 	}
@@ -945,7 +950,15 @@ pub async fn redis_cluster_fixture() -> (
 
 	// Level 3: Start container and wait for ports
 	let (cluster, node_ports) = {
+		use testcontainers::core::IntoContainerPort;
+
 		let cluster = GenericImage::new("neohq/redis-cluster", "latest")
+			.with_exposed_port(7000.tcp())
+			.with_exposed_port(7001.tcp())
+			.with_exposed_port(7002.tcp())
+			.with_exposed_port(7003.tcp())
+			.with_exposed_port(7004.tcp())
+			.with_exposed_port(7005.tcp())
 			.with_wait_for(WaitFor::message_on_stdout("[OK] All 16384 slots covered."))
 			.with_startup_timeout(std::time::Duration::from_secs(180))
 			.start()
@@ -954,27 +967,27 @@ pub async fn redis_cluster_fixture() -> (
 
 		let node_ports = vec![
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7000))
+				.get_host_port_ipv4(7000)
 				.await
 				.expect("Failed to get port for node 7000"),
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7001))
+				.get_host_port_ipv4(7001)
 				.await
 				.expect("Failed to get port for node 7001"),
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7002))
+				.get_host_port_ipv4(7002)
 				.await
 				.expect("Failed to get port for node 7002"),
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7003))
+				.get_host_port_ipv4(7003)
 				.await
 				.expect("Failed to get port for node 7003"),
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7004))
+				.get_host_port_ipv4(7004)
 				.await
 				.expect("Failed to get port for node 7004"),
 			cluster
-				.get_host_port_ipv4(ContainerPort::Tcp(7005))
+				.get_host_port_ipv4(7005)
 				.await
 				.expect("Failed to get port for node 7005"),
 		];
@@ -1071,24 +1084,56 @@ pub async fn redis_cluster_fixture() -> (
 // MongoDB Container Fixture
 // ============================================================================
 
-pub async fn mongodb_container() -> (ContainerAsync<GenericImage>, String, u16) {
+async fn try_start_mongodb_container()
+-> Result<(ContainerAsync<GenericImage>, String, u16), Box<dyn std::error::Error>> {
 	use testcontainers::core::IntoContainerPort;
 
 	let mongo = GenericImage::new("mongo", "7.0")
 		.with_exposed_port(27017.tcp())
 		.with_wait_for(WaitFor::message_on_stdout("Waiting for connections"))
+		.with_startup_timeout(std::time::Duration::from_secs(60))
 		.start()
-		.await
-		.expect("Failed to start MongoDB container");
+		.await?;
 
-	let port = mongo
-		.get_host_port_ipv4(27017)
-		.await
-		.expect("Failed to get MongoDB port");
-
+	let port = mongo.get_host_port_ipv4(27017).await?;
 	let connection_string = format!("mongodb://127.0.0.1:{}", port);
 
-	(mongo, connection_string, port)
+	Ok((mongo, connection_string, port))
+}
+
+/// Fixture providing a MongoDB container
+///
+/// Starts a MongoDB 7.0 container for testing document operations.
+#[fixture]
+pub async fn mongodb_container() -> (ContainerAsync<GenericImage>, String, u16) {
+	const MAX_RETRIES: u32 = 3;
+	const RETRY_DELAY_MS: u64 = 2000;
+
+	let mut last_error = None;
+
+	for attempt in 0..MAX_RETRIES {
+		match try_start_mongodb_container().await {
+			Ok(result) => return result,
+			Err(e) => {
+				eprintln!(
+					"MongoDB container start attempt {} of {} failed: {:?}",
+					attempt + 1,
+					MAX_RETRIES,
+					e
+				);
+				last_error = Some(e);
+
+				if attempt < MAX_RETRIES - 1 {
+					tokio::time::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS)).await;
+				}
+			}
+		}
+	}
+
+	panic!(
+		"Failed to start MongoDB container after {} attempts: {:?}",
+		MAX_RETRIES, last_error
+	);
 }
 
 // ============================================================================

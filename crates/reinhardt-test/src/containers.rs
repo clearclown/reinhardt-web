@@ -146,8 +146,11 @@ impl PostgresContainer {
 	}
 	/// Create a PostgreSQL container with custom credentials
 	pub async fn with_credentials(username: &str, password: &str, database: &str) -> Self {
+		use testcontainers::core::IntoContainerPort;
+
 		// Use GenericImage to ensure port is properly exposed
 		let image = GenericImage::new("postgres", "16-alpine")
+			.with_exposed_port(5432.tcp())
 			.with_wait_for(WaitFor::message_on_stderr(
 				"database system is ready to accept connections",
 			))

@@ -141,7 +141,7 @@ async fn test_viewset_no_actions() {
 
 	// Should not include actions from previous tests (different type instance)
 	// In practice, we'd need to clear the registry between tests
-	// For now, just verify it returns a vec (len() is always >= 0, so no assertion needed)
+	// TODO: For now, just verify it returns a vec (len() is always >= 0, so no assertion needed)
 	let _ = actions.len(); // May contain actions from other tests
 }
 
