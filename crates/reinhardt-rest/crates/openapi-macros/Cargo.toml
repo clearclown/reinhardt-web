@@ -20,6 +20,7 @@ full = []
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = { version = "2.0", features = ["full", "extra-traits"] }
+proc-macro-crate = "3.1"
 
 [dev-dependencies]
 reinhardt-openapi = { path = "../openapi" }

@@ -7,6 +7,7 @@
 use proc_macro::TokenStream;
 use syn::{DeriveInput, ItemFn, parse_macro_input};
 
+mod crate_paths;
 mod injectable;
 mod injectable_factory;
 mod utils;

@@ -28,8 +28,10 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
+mod crate_paths;
 mod schema;
 
+use crate::crate_paths::get_reinhardt_openapi_crate;
 use schema::{FieldAttributes, extract_field_attributes};
 
 /// Derive macro for automatic OpenAPI schema generation.
@@ -147,10 +149,13 @@ pub fn derive_schema(input: TokenStream) -> TokenStream {
 		quote! {}
 	};
 
+	// Get dynamic crate path
+	let openapi_crate = get_reinhardt_openapi_crate();
+
 	let expanded = quote! {
-		impl #impl_generics ::reinhardt_openapi::ToSchema for #name #ty_generics #where_clause {
-			fn schema() -> ::reinhardt_openapi::Schema {
-				use ::reinhardt_openapi::Schema;
+		impl #impl_generics #openapi_crate::ToSchema for #name #ty_generics #where_clause {
+			fn schema() -> #openapi_crate::Schema {
+				use #openapi_crate::Schema;
 				use ::utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
 
 				let mut builder = ObjectBuilder::new()
@@ -183,8 +188,9 @@ fn is_option_type(ty: &syn::Type) -> bool {
 
 /// Build schema for a field type with attributes
 fn build_field_schema(field_type: &syn::Type, attrs: &FieldAttributes) -> proc_macro2::TokenStream {
+	let openapi_crate = get_reinhardt_openapi_crate();
 	let base_schema = quote! {
-		<#field_type as ::reinhardt_openapi::ToSchema>::schema()
+		<#field_type as #openapi_crate::ToSchema>::schema()
 	};
 
 	// If no attributes, return base schema

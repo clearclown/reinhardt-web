@@ -15,6 +15,7 @@ proc-macro = true
 syn = { version = "2.0", features = ["full", "extra-traits"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+proc-macro-crate = "3.1"
 nom = "8"
 ctor = "0.6.0"
 inventory = "0.3"
@@ -38,4 +39,6 @@ reinhardt-http = { workspace = true }
 async-trait = { workspace = true }
 reinhardt-apps = { workspace = true }
 reinhardt = { package = "reinhardt-web", path = "../../../../", version = "0.1.0-alpha.1", features = ["database"] }
+reinhardt-associations = { path = "../../../reinhardt-db/crates/associations", version = "0.1.0-alpha.1" }
 chrono = { workspace = true }
+linkme = { workspace = true }

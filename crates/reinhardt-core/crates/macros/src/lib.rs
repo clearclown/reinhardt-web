@@ -28,6 +28,7 @@ mod admin;
 mod api_view;
 mod app_config_derive;
 mod collect_migrations;
+mod crate_paths;
 mod injectable_common;
 mod injectable_fn;
 mod injectable_struct;
