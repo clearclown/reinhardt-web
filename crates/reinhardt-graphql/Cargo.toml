@@ -8,7 +8,7 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = []
+default = ["di"]
 # GraphQL facade over gRPC for Query/Mutation
 graphql-grpc = [
   "dep:reinhardt-grpc",
@@ -23,8 +23,10 @@ subscription = [
   "dep:tonic",
   "dep:chrono",
 ]
+# Dependency injection support
+di = ["dep:reinhardt-di", "dep:reinhardt-graphql-macros"]
 # All features enabled
-full = ["graphql-grpc", "subscription"]
+full = ["graphql-grpc", "subscription", "di"]
 
 [dependencies]
 # Core dependencies (merged from graphql-core)
@@ -45,6 +47,9 @@ uuid = { workspace = true }
 reinhardt-grpc = { workspace = true, optional = true }
 tonic = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
+
+# DI support (optional)
+reinhardt-di = { workspace = true, optional = true }
 
 # Re-export macros when features are enabled
 reinhardt-graphql-macros = { path = "crates/macros", version = "0.1.0-alpha.1", optional = true }

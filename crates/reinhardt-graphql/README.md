@@ -93,12 +93,24 @@ Users should depend on `reinhardt-graphql` (this facade crate), not the subcrate
 - **Network Communication**: Full TCP/HTTP2 support via tonic
 - **Streaming**: Efficient server-side streaming for real-time subscriptions
 
+#### Dependency Injection (Optional - `di` feature)
+
+- **`#[graphql_handler]` macro**: Attribute macro for resolvers with automatic dependency injection
+- **`GraphQLContextExt` trait**: Extension trait for extracting DI context from GraphQL context
+- **`SchemaBuilderExt` trait**: Convenience methods for adding DI context to schema
+- **Cache Control**: Per-parameter cache control with `#[inject(cache = false)]`
+- **Type Safety**: Full compile-time type checking for injected dependencies
+- **REST Consistency**: Same DI patterns as REST handlers for unified developer experience
+
 ## Installation
 
 ```toml
 [dependencies]
 # Basic GraphQL support
 reinhardt-graphql = "0.1.0-alpha.1"
+
+# With dependency injection
+reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["di"] }
 
 # With gRPC transport
 reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc"] }
@@ -125,6 +137,99 @@ async fn main() {
     let query = r#"{ hello(name: "World") }"#;
     let result = schema.execute(query).await;
     println!("{}", result.data);
+}
+```
+
+### Dependency Injection
+
+Enable the `di` feature to use dependency injection in GraphQL resolvers:
+
+```rust
+use async_graphql::{Context, Object, Result, ID, Schema, EmptyMutation, EmptySubscription};
+use reinhardt_graphql::{graphql_handler, SchemaBuilderExt};
+use reinhardt_di::InjectionContext;
+use std::sync::Arc;
+
+// Define your resolvers
+pub struct Query;
+
+#[Object]
+impl Query {
+    async fn user(&self, ctx: &Context<'_>, id: ID) -> Result<User> {
+        user_impl(ctx, id).await
+    }
+
+    async fn users(&self, ctx: &Context<'_>, limit: Option<i32>) -> Result<Vec<User>> {
+        users_impl(ctx, limit).await
+    }
+}
+
+// Use #[graphql_handler] for DI
+#[graphql_handler]
+async fn user_impl(
+    ctx: &Context<'_>,
+    id: ID,
+    #[inject] db: DatabaseConnection,  // Auto-injected
+    #[inject] cache: RedisCache,       // Auto-injected
+) -> Result<User> {
+    // Check cache first
+    if let Some(user) = cache.get(&id).await {
+        return Ok(user);
+    }
+
+    // Fetch from database
+    let user = db.fetch_user(&id).await?;
+
+    // Update cache
+    cache.set(&id, &user).await;
+
+    Ok(user)
+}
+
+#[graphql_handler]
+async fn users_impl(
+    ctx: &Context<'_>,
+    limit: Option<i32>,
+    #[inject] db: DatabaseConnection,
+) -> Result<Vec<User>> {
+    let limit = limit.unwrap_or(100);
+    let users = db.fetch_users(limit).await?;
+    Ok(users)
+}
+
+// Build schema with DI context
+#[tokio::main]
+async fn main() {
+    let injection_ctx = Arc::new(InjectionContext::new());
+
+    // Register dependencies
+    // injection_ctx.register(DatabaseConnection::new(...));
+    // injection_ctx.register(RedisCache::new(...));
+
+    let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
+        .with_di_context(injection_ctx)  // Helper method from SchemaBuilderExt
+        .finish();
+
+    // Execute query
+    let query = r#"{ user(id: "123") { id name email } }"#;
+    let result = schema.execute(query).await;
+    println!("{}", result.data);
+}
+```
+
+#### Cache Control
+
+Control dependency caching per parameter:
+
+```rust
+#[graphql_handler]
+async fn handler(
+    ctx: &Context<'_>,
+    id: ID,
+    #[inject] cached_db: DatabaseConnection,          // Cached (default)
+    #[inject(cache = false)] fresh_db: DatabaseConnection,  // Not cached
+) -> Result<User> {
+    // ...
 }
 ```
 
