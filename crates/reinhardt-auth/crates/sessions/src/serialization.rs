@@ -1,7 +1,14 @@
 //! Multiple serialization format support for sessions
 //!
 //! This module provides support for different serialization formats
-//! including JSON, MessagePack, and more.
+//! including JSON, MessagePack, CBOR, and Bincode.
+//!
+//! ## Available Serializers
+//!
+//! - **JSON** (always available): Human-readable, widely compatible
+//! - **MessagePack** (feature: `messagepack`): Compact binary format, cross-platform
+//! - **CBOR** (feature: `cbor`): RFC 7049 compliant, cross-platform
+//! - **Bincode** (feature: `bincode`): Fastest for Rust-to-Rust communication
 //!
 //! ## Example
 //!
@@ -30,6 +37,25 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+// Submodules
+mod json;
+pub use json::JsonSerializer;
+
+#[cfg(feature = "messagepack")]
+mod messagepack;
+#[cfg(feature = "messagepack")]
+pub use messagepack::MessagePackSerializer;
+
+#[cfg(feature = "cbor")]
+mod cbor;
+#[cfg(feature = "cbor")]
+pub use cbor::CborSerializer;
+
+#[cfg(feature = "bincode")]
+mod bincode;
+#[cfg(feature = "bincode")]
+pub use self::bincode::BincodeSerializer;
+
 /// Serialization errors
 #[derive(Debug, Error)]
 pub enum SerializationError {
@@ -46,6 +72,14 @@ pub enum SerializationError {
 	#[cfg(feature = "messagepack")]
 	#[error("MessagePack decode error: {0}")]
 	MessagePackDecodeError(#[from] rmp_serde::decode::Error),
+
+	/// Generic serialization failure
+	#[error("Serialization failed: {0}")]
+	SerializationFailed(String),
+
+	/// Generic deserialization failure
+	#[error("Deserialization failed: {0}")]
+	DeserializationFailed(String),
 
 	/// Unsupported format
 	#[error("Unsupported serialization format")]
@@ -88,83 +122,6 @@ pub trait Serializer: Send + Sync {
 	) -> Result<T, SerializationError>;
 }
 
-/// JSON serializer
-///
-/// # Example
-///
-/// ```rust
-/// use reinhardt_sessions::serialization::{Serializer, JsonSerializer};
-/// use serde_json::json;
-///
-/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let serializer = JsonSerializer;
-/// let data = json!({"key": "value"});
-///
-/// let bytes = serializer.serialize(&data)?;
-/// let restored: serde_json::Value = serializer.deserialize(&bytes)?;
-///
-/// assert_eq!(restored["key"], "value");
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone, Copy)]
-pub struct JsonSerializer;
-
-impl Serializer for JsonSerializer {
-	fn serialize<T: Serialize>(&self, data: &T) -> Result<Vec<u8>, SerializationError> {
-		Ok(serde_json::to_vec(data)?)
-	}
-
-	fn deserialize<T: for<'de> Deserialize<'de>>(
-		&self,
-		bytes: &[u8],
-	) -> Result<T, SerializationError> {
-		Ok(serde_json::from_slice(bytes)?)
-	}
-}
-
-/// MessagePack serializer (requires "messagepack" feature)
-///
-/// # Example
-///
-/// ```rust,no_run
-/// use reinhardt_sessions::serialization::{Serializer, MessagePackSerializer};
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Serialize, Deserialize, PartialEq, Debug)]
-/// struct Data {
-///     value: String,
-/// }
-///
-/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let serializer = MessagePackSerializer;
-/// let data = Data { value: "test".to_string() };
-///
-/// let bytes = serializer.serialize(&data)?;
-/// let restored: Data = serializer.deserialize(&bytes)?;
-///
-/// assert_eq!(data, restored);
-/// # Ok(())
-/// # }
-/// ```
-#[cfg(feature = "messagepack")]
-#[derive(Debug, Clone, Copy)]
-pub struct MessagePackSerializer;
-
-#[cfg(feature = "messagepack")]
-impl Serializer for MessagePackSerializer {
-	fn serialize<T: Serialize>(&self, data: &T) -> Result<Vec<u8>, SerializationError> {
-		Ok(rmp_serde::to_vec(data)?)
-	}
-
-	fn deserialize<T: for<'de> Deserialize<'de>>(
-		&self,
-		bytes: &[u8],
-	) -> Result<T, SerializationError> {
-		Ok(rmp_serde::from_slice(bytes)?)
-	}
-}
-
 /// Serialization format enum
 ///
 /// # Example
@@ -177,11 +134,17 @@ impl Serializer for MessagePackSerializer {
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SerializationFormat {
-	/// JSON format
+	/// JSON format (always available)
 	Json,
-	/// MessagePack format
+	/// MessagePack format (requires "messagepack" feature)
 	#[cfg(feature = "messagepack")]
 	MessagePack,
+	/// CBOR format (requires "cbor" feature)
+	#[cfg(feature = "cbor")]
+	Cbor,
+	/// Bincode format (requires "bincode" feature)
+	#[cfg(feature = "bincode")]
+	Bincode,
 }
 
 impl SerializationFormat {
@@ -199,6 +162,10 @@ impl SerializationFormat {
 			SerializationFormat::Json => "json",
 			#[cfg(feature = "messagepack")]
 			SerializationFormat::MessagePack => "messagepack",
+			#[cfg(feature = "cbor")]
+			SerializationFormat::Cbor => "cbor",
+			#[cfg(feature = "bincode")]
+			SerializationFormat::Bincode => "bincode",
 		}
 	}
 
@@ -226,6 +193,10 @@ impl SerializationFormat {
 			SerializationFormat::Json => JsonSerializer.serialize(data),
 			#[cfg(feature = "messagepack")]
 			SerializationFormat::MessagePack => MessagePackSerializer.serialize(data),
+			#[cfg(feature = "cbor")]
+			SerializationFormat::Cbor => CborSerializer.serialize(data),
+			#[cfg(feature = "bincode")]
+			SerializationFormat::Bincode => BincodeSerializer.serialize(data),
 		}
 	}
 
@@ -238,6 +209,10 @@ impl SerializationFormat {
 			SerializationFormat::Json => JsonSerializer.deserialize(bytes),
 			#[cfg(feature = "messagepack")]
 			SerializationFormat::MessagePack => MessagePackSerializer.deserialize(bytes),
+			#[cfg(feature = "cbor")]
+			SerializationFormat::Cbor => CborSerializer.deserialize(bytes),
+			#[cfg(feature = "bincode")]
+			SerializationFormat::Bincode => BincodeSerializer.deserialize(bytes),
 		}
 	}
 }
@@ -261,61 +236,6 @@ impl Default for SerializationFormat {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use serde::{Deserialize, Serialize};
-
-	#[derive(Serialize, Deserialize, PartialEq, Debug)]
-	struct TestData {
-		id: i32,
-		name: String,
-		active: bool,
-	}
-
-	#[test]
-	fn test_json_serializer() {
-		let serializer = JsonSerializer;
-		let data = TestData {
-			id: 42,
-			name: "test".to_string(),
-			active: true,
-		};
-
-		let bytes = serializer.serialize(&data).unwrap();
-		let restored: TestData = serializer.deserialize(&bytes).unwrap();
-
-		assert_eq!(data, restored);
-	}
-
-	#[test]
-	fn test_json_serializer_with_value() {
-		let serializer = JsonSerializer;
-		let data = serde_json::json!({
-			"user_id": 123,
-			"username": "alice",
-			"roles": ["admin", "user"],
-		});
-
-		let bytes = serializer.serialize(&data).unwrap();
-		let restored: serde_json::Value = serializer.deserialize(&bytes).unwrap();
-
-		assert_eq!(restored["user_id"], 123);
-		assert_eq!(restored["username"], "alice");
-	}
-
-	#[cfg(feature = "messagepack")]
-	#[test]
-	fn test_messagepack_serializer() {
-		let serializer = MessagePackSerializer;
-		let data = TestData {
-			id: 99,
-			name: "messagepack".to_string(),
-			active: false,
-		};
-
-		let bytes = serializer.serialize(&data).unwrap();
-		let restored: TestData = serializer.deserialize(&bytes).unwrap();
-
-		assert_eq!(data, restored);
-	}
 
 	#[test]
 	fn test_serialization_format_name() {
@@ -323,6 +243,12 @@ mod tests {
 
 		#[cfg(feature = "messagepack")]
 		assert_eq!(SerializationFormat::MessagePack.name(), "messagepack");
+
+		#[cfg(feature = "cbor")]
+		assert_eq!(SerializationFormat::Cbor.name(), "cbor");
+
+		#[cfg(feature = "bincode")]
+		assert_eq!(SerializationFormat::Bincode.name(), "bincode");
 	}
 
 	#[test]

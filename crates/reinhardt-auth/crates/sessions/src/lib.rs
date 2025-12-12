@@ -15,7 +15,11 @@
 //! - **Automatic Cleanup**: Remove expired sessions automatically
 //! - **Session Key Rotation**: Rotate session keys for enhanced security
 //! - **CSRF Protection**: Integration with reinhardt-forms CSRF tokens
-//! - **Multiple Serialization Formats**: JSON and MessagePack support
+//! - **Multiple Serialization Formats**: JSON, MessagePack, CBOR, and Bincode support
+//! - **Session Compression**: Zstd, Gzip, and Brotli compression algorithms
+//! - **Session Analytics**: Track and monitor session operations (Logger, Prometheus)
+//! - **Session Replication**: High availability with multi-backend replication
+//! - **Multi-Tenant Session Isolation**: Tenant-specific session namespaces
 //! - **Storage Migration**: Tools for migrating sessions between backends
 //!
 //! ## Quick Start
@@ -44,16 +48,20 @@
 //! # }
 //! ```
 
+pub mod analytics;
 pub mod backends;
 pub mod cleanup;
+pub mod compression;
 pub mod config;
 pub mod csrf;
 pub mod middleware;
 pub mod migration;
 pub mod models;
+pub mod replication;
 pub mod rotation;
 pub mod serialization;
 pub mod session;
+pub mod tenant;
 
 // Re-export common types
 pub use backends::cache::{SessionBackend, SessionError};
@@ -69,6 +77,7 @@ pub use backends::FileSessionBackend;
 pub use backends::{JwtConfig, JwtSessionBackend};
 
 pub use cleanup::{CleanupConfig, CleanupableBackend, SessionCleanupTask, SessionMetadata};
+pub use compression::{CompressedSessionBackend, CompressionError, Compressor};
 pub use csrf::{CsrfSessionManager, CsrfTokenData};
 pub use migration::{MigrationConfig, MigrationResult, Migrator, SessionMigrator};
 pub use rotation::{RotationMetadata, RotationPolicy, SessionRotator};
@@ -77,7 +86,32 @@ pub use serialization::{JsonSerializer, SerializationFormat, Serializer};
 #[cfg(feature = "messagepack")]
 pub use serialization::MessagePackSerializer;
 
+#[cfg(feature = "cbor")]
+pub use serialization::CborSerializer;
+
+#[cfg(feature = "bincode")]
+pub use serialization::BincodeSerializer;
+
+#[cfg(feature = "compression-zstd")]
+pub use compression::ZstdCompressor;
+
+#[cfg(feature = "compression-gzip")]
+pub use compression::GzipCompressor;
+
+#[cfg(feature = "compression-brotli")]
+pub use compression::BrotliCompressor;
+
+pub use analytics::{
+	CompositeAnalytics, DeletionReason, InstrumentedSessionBackend, LoggerAnalytics,
+	SessionAnalytics, SessionEvent,
+};
+
+#[cfg(feature = "analytics-prometheus")]
+pub use analytics::PrometheusAnalytics;
+
+pub use replication::{ReplicatedSessionBackend, ReplicationConfig, ReplicationStrategy};
 pub use session::Session;
+pub use tenant::{TenantConfig, TenantSessionBackend, TenantSessionOperations};
 
 #[cfg(feature = "middleware")]
 pub use middleware::{HttpSessionConfig, SameSite, SessionMiddleware};
