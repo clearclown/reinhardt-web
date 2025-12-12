@@ -3,6 +3,7 @@
 //! This macro generates a `MigrationProvider` implementation and registers it
 //! with the global migration registry using `linkme::distributed_slice`.
 
+use crate::crate_paths::get_reinhardt_migrations_crate;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
@@ -65,6 +66,8 @@ impl Parse for CollectMigrationsInput {
 
 /// Implementation of the `collect_migrations!` macro
 pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::Error> {
+	let migrations_crate = get_reinhardt_migrations_crate();
+
 	let input: CollectMigrationsInput = syn::parse2(input)?;
 
 	let app_label = &input.app_label;
@@ -85,8 +88,8 @@ pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::E
 		/// Auto-generated migration provider struct for app `#app_label`
 		pub struct #struct_name;
 
-		impl ::reinhardt::reinhardt_migrations::MigrationProvider for #struct_name {
-			fn migrations() -> Vec<::reinhardt::reinhardt_migrations::Migration> {
+		impl #migrations_crate::MigrationProvider for #struct_name {
+			fn migrations() -> Vec<#migrations_crate::Migration> {
 				vec![
 					#(#migration_calls),*
 				]
@@ -95,16 +98,16 @@ pub fn collect_migrations_impl(input: TokenStream) -> Result<TokenStream, syn::E
 
 		impl #struct_name {
 			/// Returns all migrations for this app
-			pub fn all() -> Vec<::reinhardt::reinhardt_migrations::Migration> {
-				<Self as ::reinhardt::reinhardt_migrations::MigrationProvider>::migrations()
+			pub fn all() -> Vec<#migrations_crate::Migration> {
+				<Self as #migrations_crate::MigrationProvider>::migrations()
 			}
 		}
 
 		// Use linkme's distributed_slice attribute directly
 		// Note: The calling crate must have `linkme` in dependencies for this to work
-		#[::linkme::distributed_slice(::reinhardt::reinhardt_migrations::registry::global::MIGRATION_PROVIDERS)]
-		static #static_name: ::reinhardt::reinhardt_migrations::registry::global::MigrationProvider =
-			<#struct_name as ::reinhardt::reinhardt_migrations::MigrationProvider>::migrations;
+		#[::linkme::distributed_slice(#migrations_crate::registry::global::MIGRATION_PROVIDERS)]
+		static #static_name: #migrations_crate::registry::global::MigrationProvider =
+			<#struct_name as #migrations_crate::MigrationProvider>::migrations;
 	};
 
 	Ok(expanded)

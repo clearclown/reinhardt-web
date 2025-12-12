@@ -1,3 +1,4 @@
+use crate::crate_paths::get_reinhardt_apps_crate;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Result, parse_macro_input};
@@ -74,6 +75,8 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 }
 
 fn derive_impl(input: DeriveInput) -> Result<TokenStream> {
+	let apps_crate = get_reinhardt_apps_crate();
+
 	let struct_name = &input.ident;
 	let config = AppConfigAttr::from_attrs(&input.attrs, struct_name)?;
 
@@ -82,19 +85,19 @@ fn derive_impl(input: DeriveInput) -> Result<TokenStream> {
 
 	let config_builder = if let Some(verbose_name) = &config.verbose_name {
 		quote! {
-			::reinhardt::reinhardt_apps::AppConfig::new(#name, #label)
+			#apps_crate::AppConfig::new(#name, #label)
 				.with_verbose_name(#verbose_name)
 		}
 	} else {
 		quote! {
-			::reinhardt::reinhardt_apps::AppConfig::new(#name, #label)
+			#apps_crate::AppConfig::new(#name, #label)
 		}
 	};
 
 	let expanded = quote! {
 		impl #struct_name {
 			/// Create AppConfig instance
-			pub fn config() -> ::reinhardt::reinhardt_apps::AppConfig {
+			pub fn config() -> #apps_crate::AppConfig {
 				#config_builder
 			}
 		}

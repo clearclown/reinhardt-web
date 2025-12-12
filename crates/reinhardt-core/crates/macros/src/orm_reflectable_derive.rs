@@ -3,6 +3,7 @@
 //! Provides automatic implementation of the OrmReflectable trait for structs,
 //! enabling reflection-based field and relationship access for association proxies.
 
+use crate::crate_paths::get_reinhardt_proxy_crate;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Type, parse_macro_input};
@@ -72,17 +73,20 @@ pub fn orm_reflectable_derive_impl(input: proc_macro::TokenStream) -> proc_macro
 		}
 	}
 
+	// Get dynamic crate path
+	let proxy_crate = get_reinhardt_proxy_crate();
+
 	// Generate method implementations
 	let clone_relationship_impl =
 		generate_clone_relationship(&collection_relationships, &scalar_relationships);
 	let get_relationship_mut_impl =
 		generate_get_relationship_mut(&collection_relationships, &scalar_relationships);
-	let get_field_value_impl = generate_get_field_value(&regular_fields);
-	let set_field_value_impl = generate_set_field_value(&regular_fields);
+	let get_field_value_impl = generate_get_field_value(&regular_fields, &proxy_crate);
+	let set_field_value_impl = generate_set_field_value(&regular_fields, &proxy_crate);
 
 	// Generate the impl block
 	let expanded = quote! {
-		impl ::reinhardt_proxy::orm_integration::OrmReflectable for #struct_name {
+		impl #proxy_crate::orm_integration::OrmReflectable for #struct_name {
 			fn clone_relationship(&self, name: &str) -> Option<Box<dyn std::any::Any + 'static>> {
 				#clone_relationship_impl
 			}
@@ -91,11 +95,11 @@ pub fn orm_reflectable_derive_impl(input: proc_macro::TokenStream) -> proc_macro
 				#get_relationship_mut_impl
 			}
 
-			fn get_field_value(&self, name: &str) -> Option<::reinhardt_proxy::ScalarValue> {
+			fn get_field_value(&self, name: &str) -> Option<#proxy_crate::ScalarValue> {
 				#get_field_value_impl
 			}
 
-			fn set_field_value(&mut self, name: &str, value: ::reinhardt_proxy::ScalarValue) -> ::reinhardt_proxy::ProxyResult<()> {
+			fn set_field_value(&mut self, name: &str, value: #proxy_crate::ScalarValue) -> #proxy_crate::ProxyResult<()> {
 				#set_field_value_impl
 			}
 		}
@@ -311,17 +315,20 @@ fn generate_get_relationship_mut(
 }
 
 /// Generate get_field_value method implementation
-fn generate_get_field_value(fields: &[(syn::Ident, String)]) -> TokenStream {
+fn generate_get_field_value(
+	fields: &[(syn::Ident, String)],
+	proxy_crate: &TokenStream,
+) -> TokenStream {
 	let arms: Vec<_> = fields
 		.iter()
 		.map(|(name, field_type)| {
 			let name_str = name.to_string();
 			let conversion = match field_type.as_str() {
-				"Integer" => quote! { ::reinhardt_proxy::ScalarValue::Integer(self.#name as i64) },
-				"String" => quote! { ::reinhardt_proxy::ScalarValue::String(self.#name.clone()) },
-				"Float" => quote! { ::reinhardt_proxy::ScalarValue::Float(self.#name as f64) },
-				"Boolean" => quote! { ::reinhardt_proxy::ScalarValue::Boolean(self.#name) },
-				_ => quote! { ::reinhardt_proxy::ScalarValue::Null },
+				"Integer" => quote! { #proxy_crate::ScalarValue::Integer(self.#name as i64) },
+				"String" => quote! { #proxy_crate::ScalarValue::String(self.#name.clone()) },
+				"Float" => quote! { #proxy_crate::ScalarValue::Float(self.#name as f64) },
+				"Boolean" => quote! { #proxy_crate::ScalarValue::Boolean(self.#name) },
+				_ => quote! { #proxy_crate::ScalarValue::Null },
 			};
 			quote! {
 				#name_str => Some(#conversion),
@@ -338,7 +345,10 @@ fn generate_get_field_value(fields: &[(syn::Ident, String)]) -> TokenStream {
 }
 
 /// Generate set_field_value method implementation
-fn generate_set_field_value(fields: &[(syn::Ident, String)]) -> TokenStream {
+fn generate_set_field_value(
+	fields: &[(syn::Ident, String)],
+	proxy_crate: &TokenStream,
+) -> TokenStream {
 	let arms: Vec<_> = fields
 		.iter()
 		.map(|(name, field_type)| {
@@ -361,7 +371,7 @@ fn generate_set_field_value(fields: &[(syn::Ident, String)]) -> TokenStream {
 					Ok(())
 				},
 				_ => quote! {
-					Err(::reinhardt_proxy::ProxyError::AttributeNotFound(name.to_string()))
+					Err(#proxy_crate::ProxyError::AttributeNotFound(name.to_string()))
 				},
 			};
 			quote! {
@@ -375,7 +385,7 @@ fn generate_set_field_value(fields: &[(syn::Ident, String)]) -> TokenStream {
 	quote! {
 		match name {
 			#(#arms)*
-			_ => Err(::reinhardt_proxy::ProxyError::AttributeNotFound(name.to_string())),
+			_ => Err(#proxy_crate::ProxyError::AttributeNotFound(name.to_string())),
 		}
 	}
 }

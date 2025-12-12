@@ -1,5 +1,9 @@
 //! HTTP method route macros
 
+use crate::crate_paths::{
+	get_reinhardt_core_crate, get_reinhardt_crate, get_reinhardt_di_crate,
+	get_reinhardt_http_crate, get_reinhardt_params_crate,
+};
 use crate::injectable_common::{InjectOptions, is_inject_attr, parse_inject_options};
 use crate::path_macro;
 use proc_macro2::{Span, TokenStream};
@@ -145,6 +149,10 @@ fn generate_wrapper_with_both(
 	extractors: &[ExtractorInfo],
 	inject_params: &[InjectInfo],
 ) -> (TokenStream, TokenStream) {
+	let di_crate = get_reinhardt_di_crate();
+	let core_crate = get_reinhardt_core_crate();
+	let params_crate = get_reinhardt_params_crate();
+
 	let fn_name = &original_fn.sig.ident;
 	let original_fn_name = quote::format_ident!("{}_original", fn_name);
 	let fn_attrs: Vec<_> = original_fn
@@ -175,8 +183,8 @@ fn generate_wrapper_with_both(
 	// Generate DI context extraction
 	let di_context_extraction = if !inject_params.is_empty() {
 		quote! {
-			let __di_ctx = req.get_di_context::<::std::sync::Arc<::reinhardt::reinhardt_di::InjectionContext>>()
-				.ok_or_else(|| ::reinhardt::reinhardt_core::exception::Error::Internal(
+			let __di_ctx = req.get_di_context::<::std::sync::Arc<#di_crate::InjectionContext>>()
+				.ok_or_else(|| #core_crate::exception::Error::Internal(
 					"DI context not set. Ensure the router is configured with .with_di_context()".to_string()
 				))?;
 		}
@@ -194,18 +202,18 @@ fn generate_wrapper_with_both(
 
 			if use_cache {
 				quote! {
-					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve(&__di_ctx)
+					let #pat: #ty = #di_crate::Injected::<#ty>::resolve(&__di_ctx)
 						.await
-						.map_err(|e| ::reinhardt::reinhardt_core::exception::Error::Internal(
+						.map_err(|e| #core_crate::exception::Error::Internal(
 							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
 						))?
 						.into_inner();
 				}
 			} else {
 				quote! {
-					let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve_uncached(&__di_ctx)
+					let #pat: #ty = #di_crate::Injected::<#ty>::resolve_uncached(&__di_ctx)
 						.await
-						.map_err(|e| ::reinhardt::reinhardt_core::exception::Error::Internal(
+						.map_err(|e| #core_crate::exception::Error::Internal(
 							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
 						))?
 						.into_inner();
@@ -221,9 +229,9 @@ fn generate_wrapper_with_both(
 			let pat = &ext.pat;
 			let ty = &ext.ty;
 			quote! {
-				let #pat = <#ty as ::reinhardt::reinhardt_params::FromRequest>::from_request(&req, &ctx)
+				let #pat = <#ty as #params_crate::FromRequest>::from_request(&req, &ctx)
 					.await
-					.map_err(|e| ::reinhardt::reinhardt_core::exception::Error::Validation(
+					.map_err(|e| #core_crate::exception::Error::Validation(
 						format!("Parameter extraction failed: {:?}", e)
 					))?;
 			}
@@ -245,7 +253,7 @@ fn generate_wrapper_with_both(
 		},
 		quote! {
 			// Build ParamContext for extractors
-			let ctx = ::reinhardt::reinhardt_params::ParamContext::with_path_params(req.path_params.clone());
+			let ctx = #params_crate::ParamContext::with_path_params(req.path_params.clone());
 
 			// Extract DI context (if needed)
 			#di_context_extraction
@@ -271,6 +279,10 @@ fn generate_view_type(
 	extractors: &[ExtractorInfo],
 	inject_params: &[InjectInfo],
 ) -> Result<TokenStream> {
+	let reinhardt = get_reinhardt_crate();
+	let core_crate = get_reinhardt_core_crate();
+	let http_crate = get_reinhardt_http_crate();
+
 	let fn_name = &input.sig.ident;
 	let fn_vis = &input.vis;
 	let fn_attrs: Vec<_> = input
@@ -297,13 +309,13 @@ fn generate_view_type(
 		#[doc = #route_doc]
 		#fn_vis struct #view_type_name;
 
-		impl ::reinhardt::reinhardt_core::endpoint::EndpointInfo for #view_type_name {
+		impl #core_crate::endpoint::EndpointInfo for #view_type_name {
 			fn path() -> &'static str {
 				#path
 			}
 
-			fn method() -> ::reinhardt::Method {
-				::reinhardt::Method::#method_ident
+			fn method() -> #reinhardt::Method {
+				#reinhardt::Method::#method_ident
 			}
 
 			fn name() -> &'static str {
@@ -311,9 +323,9 @@ fn generate_view_type(
 			}
 		}
 
-		#[::reinhardt::async_trait::async_trait]
-		impl ::reinhardt::reinhardt_core::Handler for #view_type_name {
-			async fn handle(&self, req: ::reinhardt::Request) -> ::reinhardt::reinhardt_http::Result<::reinhardt::Response> {
+		#[#reinhardt::async_trait::async_trait]
+		impl #core_crate::Handler for #view_type_name {
+			async fn handle(&self, req: #reinhardt::Request) -> #http_crate::Result<#reinhardt::Response> {
 				#view_type_name::#fn_name(req).await
 			}
 		}
@@ -321,7 +333,7 @@ fn generate_view_type(
 		impl #view_type_name {
 			/// Handler function for this view
 			#(#fn_attrs)*
-			#fn_vis #asyncness fn #fn_name(req: ::reinhardt::Request) #output {
+			#fn_vis #asyncness fn #fn_name(req: #reinhardt::Request) #output {
 				#wrapper_body
 			}
 		}
@@ -336,6 +348,10 @@ fn generate_view_type(
 }
 
 fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStream> {
+	let reinhardt = get_reinhardt_crate();
+	let core_crate = get_reinhardt_core_crate();
+	let http_crate = get_reinhardt_http_crate();
+
 	let mut path: Option<(String, Span)> = None;
 	let mut options = RouteOptions::default();
 
@@ -501,12 +517,12 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 	// Wrapper function signature and body based on whether original takes request
 	let (wrapper_sig, wrapper_body) = if has_request_param {
 		(
-			quote! { req: ::reinhardt::Request },
+			quote! { req: #reinhardt::Request },
 			quote! { #original_fn_name(req).await },
 		)
 	} else {
 		(
-			quote! { _req: ::reinhardt::Request },
+			quote! { _req: #reinhardt::Request },
 			quote! { #original_fn_name().await },
 		)
 	};
@@ -522,13 +538,13 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 		#[doc = #route_doc]
 		#fn_vis struct #view_type_name;
 
-		impl ::reinhardt::reinhardt_core::endpoint::EndpointInfo for #view_type_name {
+		impl #core_crate::endpoint::EndpointInfo for #view_type_name {
 			fn path() -> &'static str {
 				#path_str
 			}
 
-			fn method() -> ::reinhardt::Method {
-				::reinhardt::Method::#method_ident
+			fn method() -> #reinhardt::Method {
+				#reinhardt::Method::#method_ident
 			}
 
 			fn name() -> &'static str {
@@ -536,9 +552,9 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 			}
 		}
 
-		#[::reinhardt::async_trait::async_trait]
-		impl ::reinhardt::reinhardt_core::Handler for #view_type_name {
-			async fn handle(&self, req: ::reinhardt::Request) -> ::reinhardt::reinhardt_http::Result<::reinhardt::Response> {
+		#[#reinhardt::async_trait::async_trait]
+		impl #core_crate::Handler for #view_type_name {
+			async fn handle(&self, req: #reinhardt::Request) -> #http_crate::Result<#reinhardt::Response> {
 				#view_type_name::#fn_name(req).await
 			}
 		}

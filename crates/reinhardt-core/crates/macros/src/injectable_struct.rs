@@ -3,6 +3,7 @@
 //! Provides `#[injectable]` attribute macro that generates `Injectable` trait
 //! implementation for structs with `#[inject]` fields.
 
+use crate::crate_paths::get_reinhardt_di_crate;
 use crate::injectable_common::{
 	DefaultValue, InjectionScope, NoInjectOptions, is_inject_attr, is_no_inject_attr,
 	parse_inject_options, parse_no_inject_options,
@@ -112,6 +113,9 @@ pub fn injectable_struct_impl(mut input: DeriveInput) -> Result<TokenStream> {
 		}
 	}
 
+	// Get dynamic crate path
+	let di_crate = get_reinhardt_di_crate();
+
 	// Generate injection code for #[inject] fields
 	let mut inject_stmts = Vec::new();
 	for field_info in &field_infos {
@@ -129,9 +133,9 @@ pub fn injectable_struct_impl(mut input: DeriveInput) -> Result<TokenStream> {
 								(*cached).clone()
 							} else {
 								let __injected = if #use_cache {
-									::reinhardt_di::Injected::<#ty>::resolve(__di_ctx).await
+									#di_crate::Injected::<#ty>::resolve(__di_ctx).await
 								} else {
-									::reinhardt_di::Injected::<#ty>::resolve_uncached(__di_ctx).await
+									#di_crate::Injected::<#ty>::resolve_uncached(__di_ctx).await
 								}
 								.map_err(|e| {
 									eprintln!("Dependency injection failed for {} in {}: {:?}",
@@ -149,9 +153,9 @@ pub fn injectable_struct_impl(mut input: DeriveInput) -> Result<TokenStream> {
 					quote! {
 						{
 							let __injected = if #use_cache {
-								::reinhardt_di::Injected::<#ty>::resolve(__di_ctx).await
+								#di_crate::Injected::<#ty>::resolve(__di_ctx).await
 							} else {
-								::reinhardt_di::Injected::<#ty>::resolve_uncached(__di_ctx).await
+								#di_crate::Injected::<#ty>::resolve_uncached(__di_ctx).await
 							}
 							.map_err(|e| {
 								eprintln!("Dependency injection failed for {} in {}: {:?}",
@@ -215,9 +219,9 @@ pub fn injectable_struct_impl(mut input: DeriveInput) -> Result<TokenStream> {
 		#input
 
 		#[::async_trait::async_trait]
-		impl #generics ::reinhardt_di::Injectable for #struct_name #generics #where_clause {
-			async fn inject(__di_ctx: &::reinhardt_di::InjectionContext)
-				-> ::reinhardt_di::DiResult<Self>
+		impl #generics #di_crate::Injectable for #struct_name #generics #where_clause {
+			async fn inject(__di_ctx: &#di_crate::InjectionContext)
+				-> #di_crate::DiResult<Self>
 			{
 				#(#inject_stmts)*
 

@@ -11,6 +11,20 @@ use syn::{
 	punctuated::Punctuated,
 };
 
+/// Resolves the path to the Reinhardt crate dynamically.
+fn get_reinhardt_crate() -> TokenStream {
+	use proc_macro_crate::{FoundCrate, crate_name};
+
+	match crate_name("reinhardt").or_else(|_| crate_name("reinhardt-web")) {
+		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			quote!(::#ident)
+		}
+		Err(_) => quote!(::reinhardt),
+	}
+}
+
 /// Custom keywords for admin macro
 mod kw {
 	syn::custom_keyword!(model);
@@ -227,6 +241,8 @@ fn parse_ordering_array(input: ParseStream) -> Result<Vec<OrderingSpec>> {
 
 /// Generate the ModelAdmin trait implementation
 pub fn admin_impl(args: TokenStream, input: ItemStruct) -> Result<TokenStream> {
+	let reinhardt = get_reinhardt_crate();
+
 	let config: AdminModelConfig = syn::parse2(args)?;
 	let struct_name = &input.ident;
 	let struct_vis = &input.vis;
@@ -366,7 +382,7 @@ pub fn admin_impl(args: TokenStream, input: ItemStruct) -> Result<TokenStream> {
 		};
 
 		#[::async_trait::async_trait]
-		impl ::reinhardt::admin::panel::ModelAdmin for #struct_name {
+		impl #reinhardt::admin::panel::ModelAdmin for #struct_name {
 			fn model_name(&self) -> &str {
 				#name
 			}

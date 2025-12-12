@@ -4,6 +4,7 @@
 //! implementation for the return type of a function, enabling the function
 //! to be used as a factory/provider for dependency injection.
 
+use crate::crate_paths::get_reinhardt_di_crate;
 use crate::injectable_common::{InjectionScope, is_inject_attr, parse_inject_options};
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -127,6 +128,9 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 		}
 	}
 
+	// Get dynamic crate path
+	let di_crate = get_reinhardt_di_crate();
+
 	// Generate resolve statements with scope support
 	let resolve_stmts: Vec<_> = inject_params
 		.iter()
@@ -144,9 +148,9 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 								(*cached).clone()
 							} else {
 								let __injected = if #use_cache {
-									::reinhardt_di::Injected::<#ty>::resolve(__di_ctx).await
+									#di_crate::Injected::<#ty>::resolve(__di_ctx).await
 								} else {
-									::reinhardt_di::Injected::<#ty>::resolve_uncached(__di_ctx).await
+									#di_crate::Injected::<#ty>::resolve_uncached(__di_ctx).await
 								}
 								.map_err(|e| {
 									eprintln!("Injectable function dependency failed for {}: {:?}", stringify!(#ty), e);
@@ -163,9 +167,9 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 					quote! {
 						let #name: #ty = {
 							let __injected = if #use_cache {
-								::reinhardt_di::Injected::<#ty>::resolve(__di_ctx).await
+								#di_crate::Injected::<#ty>::resolve(__di_ctx).await
 							} else {
-								::reinhardt_di::Injected::<#ty>::resolve_uncached(__di_ctx).await
+								#di_crate::Injected::<#ty>::resolve_uncached(__di_ctx).await
 							}
 							.map_err(|e| {
 								eprintln!("Injectable function dependency failed for {}: {:?}", stringify!(#ty), e);
@@ -214,9 +218,9 @@ pub fn injectable_fn_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 
 		// Injectable trait implementation for the return type
 		#[::async_trait::async_trait]
-		impl ::reinhardt_di::Injectable for #return_type {
-			async fn inject(__di_ctx: &::reinhardt_di::InjectionContext)
-				-> ::reinhardt_di::DiResult<Self>
+		impl #di_crate::Injectable for #return_type {
+			async fn inject(__di_ctx: &#di_crate::InjectionContext)
+				-> #di_crate::DiResult<Self>
 			{
 				// Check for override first
 				let __func_ptr = #fn_name as usize;

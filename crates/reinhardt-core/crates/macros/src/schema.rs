@@ -3,11 +3,13 @@
 //! Automatically implements the `ToSchema` trait for structs,
 //! generating OpenAPI schemas from Rust type definitions.
 
+use crate::crate_paths::get_reinhardt_openapi_crate;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput, Fields, Lit, Meta, Type};
 
 pub fn derive_schema_impl(input: DeriveInput) -> syn::Result<TokenStream> {
+	let openapi_crate = get_reinhardt_openapi_crate();
 	let name = &input.ident;
 	let generics = &input.generics;
 	let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
@@ -16,11 +18,12 @@ pub fn derive_schema_impl(input: DeriveInput) -> syn::Result<TokenStream> {
 
 	match &input.data {
 		Data::Struct(data_struct) => {
-			let schema_body = generate_struct_schema(&data_struct.fields, &input.attrs)?;
+			let schema_body =
+				generate_struct_schema(&data_struct.fields, &input.attrs, &openapi_crate)?;
 
 			Ok(quote! {
-				impl #impl_generics ::reinhardt_openapi::ToSchema for #name #ty_generics #where_clause {
-					fn schema() -> ::reinhardt_openapi::Schema {
+				impl #impl_generics #openapi_crate::ToSchema for #name #ty_generics #where_clause {
+					fn schema() -> #openapi_crate::Schema {
 						#schema_body
 					}
 
@@ -39,9 +42,9 @@ pub fn derive_schema_impl(input: DeriveInput) -> syn::Result<TokenStream> {
 				.collect();
 
 			Ok(quote! {
-				impl #impl_generics ::reinhardt_openapi::ToSchema for #name #ty_generics #where_clause {
-					fn schema() -> ::reinhardt_openapi::Schema {
-						use ::reinhardt_openapi::Schema;
+				impl #impl_generics #openapi_crate::ToSchema for #name #ty_generics #where_clause {
+					fn schema() -> #openapi_crate::Schema {
+						use #openapi_crate::Schema;
 						use ::utoipa::openapi::schema::{SchemaType, Type, ObjectBuilder};
 
 						let obj = ObjectBuilder::new()
@@ -67,7 +70,11 @@ pub fn derive_schema_impl(input: DeriveInput) -> syn::Result<TokenStream> {
 	}
 }
 
-fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<TokenStream> {
+fn generate_struct_schema(
+	fields: &Fields,
+	_attrs: &[Attribute],
+	openapi_crate: &TokenStream,
+) -> syn::Result<TokenStream> {
 	match fields {
 		Fields::Named(fields) => {
 			let mut property_statements = Vec::new();
@@ -107,13 +114,13 @@ fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<
 						let obj = obj.property(
 							#schema_field_name,
 							{
-								let field_schema = <#field_type as ::reinhardt_openapi::ToSchema>::schema();
+								let field_schema = <#field_type as #openapi_crate::ToSchema>::schema();
 								// Add description if the schema is an Object
 								use ::utoipa::openapi::schema::ObjectBuilder;
 								match field_schema {
-									::reinhardt_openapi::Schema::Object(inner_obj) => {
+									#openapi_crate::Schema::Object(inner_obj) => {
 										// Convert Object to ObjectBuilder, add description, and build back
-										::reinhardt_openapi::Schema::Object(
+										#openapi_crate::Schema::Object(
 											ObjectBuilder::from(inner_obj)
 												.description(Some(#desc))
 												.build()
@@ -128,7 +135,7 @@ fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<
 					quote! {
 						let obj = obj.property(
 							#schema_field_name,
-							<#field_type as ::reinhardt_openapi::ToSchema>::schema()
+							<#field_type as #openapi_crate::ToSchema>::schema()
 						);
 					}
 				};
@@ -144,7 +151,7 @@ fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<
 
 			Ok(quote! {
 				{
-					use ::reinhardt_openapi::Schema;
+					use #openapi_crate::Schema;
 					use ::utoipa::openapi::schema::{SchemaType, Type, ObjectBuilder};
 
 					let obj = ObjectBuilder::new()
@@ -162,7 +169,7 @@ fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<
 			// Tuple structs - not commonly used for API schemas
 			Ok(quote! {
 				{
-					use ::reinhardt_openapi::Schema;
+					use #openapi_crate::Schema;
 					use ::utoipa::openapi::schema::{SchemaType, Type, ObjectBuilder};
 					Schema::Object(
 						ObjectBuilder::new()
@@ -176,7 +183,7 @@ fn generate_struct_schema(fields: &Fields, _attrs: &[Attribute]) -> syn::Result<
 			// Unit structs - represent as empty object
 			Ok(quote! {
 				{
-					use ::reinhardt_openapi::Schema;
+					use #openapi_crate::Schema;
 					use ::utoipa::openapi::schema::{SchemaType, Type, ObjectBuilder};
 					Schema::Object(
 						ObjectBuilder::new()

@@ -12,6 +12,20 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{Attribute, FnArg, ItemFn, Pat, PatType, Result, Type};
 
+/// Resolves the path to the Reinhardt crate dynamically.
+fn get_reinhardt_crate() -> TokenStream {
+	use proc_macro_crate::{FoundCrate, crate_name};
+
+	match crate_name("reinhardt").or_else(|_| crate_name("reinhardt-web")) {
+		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			quote!(::#ident)
+		}
+		Err(_) => quote!(::reinhardt),
+	}
+}
+
 /// Check if an attribute is #[inject]
 fn is_inject_attr(attr: &Attribute) -> bool {
 	attr.path().is_ident("inject")
@@ -96,6 +110,8 @@ impl ProcessedArg {
 /// - If present: DI context is extracted from that request
 /// - If not present: A Request parameter is automatically added to the wrapper
 pub fn use_inject_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream> {
+	let _reinhardt = get_reinhardt_crate();
+
 	let ItemFn {
 		attrs,
 		vis,
@@ -192,8 +208,8 @@ pub fn use_inject_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream>
 	// Generate DI context extraction (from Request)
 	let di_context_extraction = if !inject_params.is_empty() {
 		quote! {
-			let __di_ctx = #request_pat.get_di_context::<::std::sync::Arc<::reinhardt::reinhardt_di::InjectionContext>>()
-				.ok_or_else(|| ::reinhardt::reinhardt_core::exception::Error::Internal(
+			let __di_ctx = #request_pat.get_di_context::<::std::sync::Arc<::reinhardt_di::InjectionContext>>()
+				.ok_or_else(|| ::reinhardt_core::exception::Error::Internal(
 					"DI context not set. Ensure the router is configured with .with_di_context()".to_string()
 				))?;
 		}
@@ -209,11 +225,11 @@ pub fn use_inject_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream>
 
 		let injection_code = if arg.use_cache {
 			quote! {
-				let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve(&__di_ctx)
+				let #pat: #ty = ::reinhardt_di::Injected::<#ty>::resolve(&__di_ctx)
 					.await
 					.map_err(|e| {
 						eprintln!("Dependency injection failed for {}: {:?}", stringify!(#ty), e);
-						::reinhardt::reinhardt_core::exception::Error::Internal(
+						::reinhardt_core::exception::Error::Internal(
 							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
 						)
 					})?
@@ -221,11 +237,11 @@ pub fn use_inject_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream>
 			}
 		} else {
 			quote! {
-				let #pat: #ty = ::reinhardt::reinhardt_di::Injected::<#ty>::resolve_uncached(&__di_ctx)
+				let #pat: #ty = ::reinhardt_di::Injected::<#ty>::resolve_uncached(&__di_ctx)
 					.await
 					.map_err(|e| {
 						eprintln!("Dependency injection failed for {}: {:?}", stringify!(#ty), e);
-						::reinhardt::reinhardt_core::exception::Error::Internal(
+						::reinhardt_core::exception::Error::Internal(
 							format!("Dependency injection failed for {}: {:?}", stringify!(#ty), e)
 						)
 					})?
@@ -273,31 +289,31 @@ pub fn use_inject_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStream>
 		if has_request {
 			// Request was in original signature
 			if other_param_tokens.is_empty() {
-				quote! { #self_p, #request_pat: ::reinhardt::Request }
+				quote! { #self_p, #request_pat: ::Request }
 			} else {
-				quote! { #self_p, #request_pat: ::reinhardt::Request, #(#other_param_tokens),* }
+				quote! { #self_p, #request_pat: ::Request, #(#other_param_tokens),* }
 			}
 		} else {
 			// Request not in original, add it for DI
 			if other_param_tokens.is_empty() {
-				quote! { #self_p, #request_pat: ::reinhardt::Request }
+				quote! { #self_p, #request_pat: ::Request }
 			} else {
-				quote! { #self_p, #request_pat: ::reinhardt::Request, #(#other_param_tokens),* }
+				quote! { #self_p, #request_pat: ::Request, #(#other_param_tokens),* }
 			}
 		}
 	} else if has_request {
 		// Request was in original signature
 		if other_param_tokens.is_empty() {
-			quote! { #request_pat: ::reinhardt::Request }
+			quote! { #request_pat: ::Request }
 		} else {
-			quote! { #request_pat: ::reinhardt::Request, #(#other_param_tokens),* }
+			quote! { #request_pat: ::Request, #(#other_param_tokens),* }
 		}
 	} else {
 		// Request not in original, add it for DI
 		if other_param_tokens.is_empty() {
-			quote! { #request_pat: ::reinhardt::Request }
+			quote! { #request_pat: ::Request }
 		} else {
-			quote! { #request_pat: ::reinhardt::Request, #(#other_param_tokens),* }
+			quote! { #request_pat: ::Request, #(#other_param_tokens),* }
 		}
 	};
 

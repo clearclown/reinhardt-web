@@ -1,17 +1,41 @@
 //! action macro implementation
 
+use crate::injectable_common::{
+	detect_inject_params, generate_di_context_extraction, generate_injection_calls,
+	strip_inject_attrs,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Expr, ExprLit, ItemFn, Lit, Meta, Result, Token, parse::Parser, punctuated::Punctuated};
+use syn::{
+	Expr, ExprLit, FnArg, ItemFn, Lit, Meta, Result, Token, parse::Parser, punctuated::Punctuated,
+};
+
+/// Resolves the path to the Reinhardt crate dynamically.
+fn get_reinhardt_crate() -> TokenStream {
+	use proc_macro_crate::{FoundCrate, crate_name};
+
+	match crate_name("reinhardt").or_else(|_| crate_name("reinhardt-web")) {
+		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			quote!(::#ident)
+		}
+		Err(_) => quote!(::reinhardt),
+	}
+}
+
 /// Implementation of the `action` procedural macro
 ///
 /// This function is used internally by the `#[action]` attribute macro.
 /// Users should not call this function directly.
 pub fn action_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
+	let _reinhardt = get_reinhardt_crate();
+
 	let mut methods = Vec::new();
 	let mut detail = false;
 	let mut _url_path: Option<String> = None;
 	let mut _url_name: Option<String> = None;
+	let mut use_inject = false;
 	let mut methods_lit = None;
 	let mut has_methods = false;
 	let mut has_detail = false;
@@ -96,6 +120,19 @@ pub fn action_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 							"url_name parameter must be a string literal",
 						));
 					}
+				} else if nv.path.is_ident("use_inject") {
+					if let Expr::Lit(ExprLit {
+						lit: Lit::Bool(lit),
+						..
+					}) = &nv.value
+					{
+						use_inject = lit.value;
+					} else {
+						return Err(syn::Error::new_spanned(
+							&nv.value,
+							"use_inject parameter must be a boolean literal (true or false)",
+						));
+					}
 				}
 			}
 			Meta::Path(path) => {
@@ -165,13 +202,77 @@ pub fn action_impl(args: TokenStream, input: ItemFn) -> Result<TokenStream> {
 	let detail_flag = detail;
 	let method_list = methods.join(", ");
 
-	Ok(quote! {
-		#(#fn_attrs)*
-		#[doc = "Custom action"]
-		#[doc = concat!("Methods: ", #method_list)]
-		#[doc = concat!("Detail: ", stringify!(#detail_flag))]
-		#fn_vis #asyncness fn #fn_name #generics (#fn_inputs) #fn_output #where_clause {
-			#fn_block
-		}
-	})
+	// Detect #[inject] parameters
+	let inject_params = detect_inject_params(fn_inputs);
+
+	// Validate: use_inject = false なのに #[inject] がある場合はエラー
+	if !use_inject && !inject_params.is_empty() {
+		return Err(syn::Error::new_spanned(
+			&inject_params[0].pat,
+			"#[inject] attribute requires use_inject = true option",
+		));
+	}
+
+	// DI対応の場合、ラッパー関数を生成
+	if use_inject && !inject_params.is_empty() {
+		let original_fn_name = quote::format_ident!("{}_original", fn_name);
+
+		// 元の関数（#[inject]属性除去）
+		let stripped_inputs = strip_inject_attrs(fn_inputs);
+		let stripped_inputs = Punctuated::<FnArg, Token![,]>::from_iter(stripped_inputs);
+
+		// DI context抽出コード
+		let request_ident = syn::Ident::new("request", proc_macro2::Span::call_site());
+		let di_extraction = generate_di_context_extraction(&request_ident);
+
+		// Injection callsコード
+		let injection_calls = generate_injection_calls(&inject_params);
+
+		// 引数リスト
+		let inject_args: Vec<_> = inject_params.iter().map(|p| &p.pat).collect();
+		let regular_args: Vec<_> = stripped_inputs
+			.iter()
+			.filter_map(|arg| {
+				if let FnArg::Typed(pat_type) = arg {
+					Some(&pat_type.pat)
+				} else {
+					None
+				}
+			})
+			.collect();
+
+		Ok(quote! {
+			// 元の関数（リネーム、private）
+			#asyncness fn #original_fn_name #generics (#stripped_inputs) #fn_output #where_clause {
+				#fn_block
+			}
+
+			// ラッパー関数（DI対応）
+			#(#fn_attrs)*
+			#[doc = "Custom action with DI support"]
+			#[doc = concat!("Methods: ", #method_list)]
+			#[doc = concat!("Detail: ", stringify!(#detail_flag))]
+			#fn_vis #asyncness fn #fn_name(request: ::Request) #fn_output {
+				// DI context抽出
+				#di_extraction
+
+				// 依存性解決
+				#(#injection_calls)*
+
+				// 元の関数呼び出し
+				#original_fn_name(#(#regular_args,)* #(#inject_args),*).await
+			}
+		})
+	} else {
+		// DI不使用の場合は従来通り
+		Ok(quote! {
+			#(#fn_attrs)*
+			#[doc = "Custom action"]
+			#[doc = concat!("Methods: ", #method_list)]
+			#[doc = concat!("Detail: ", stringify!(#detail_flag))]
+			#fn_vis #asyncness fn #fn_name #generics (#fn_inputs) #fn_output #where_clause {
+				#fn_block
+			}
+		})
+	}
 }

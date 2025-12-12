@@ -3,6 +3,7 @@
 //! Provides compile-time validation for installed applications.
 //! This macro ensures that all referenced applications exist at compile time.
 
+use crate::crate_paths::get_reinhardt_core_crate;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
@@ -45,6 +46,7 @@ impl Parse for InstalledApps {
 /// This function is used internally by the `installed_apps!` macro.
 /// Users should not call this function directly.
 pub fn installed_apps_impl(input: TokenStream) -> Result<TokenStream> {
+	let core_crate = get_reinhardt_core_crate();
 	let InstalledApps { apps } = syn::parse2(input)?;
 
 	// Collect app labels and paths
@@ -88,18 +90,19 @@ pub fn installed_apps_impl(input: TokenStream) -> Result<TokenStream> {
 
 		// For reinhardt.contrib.* apps, we validate they exist in the crate
 		if parts.first() == Some(&"reinhardt") {
-			let module_check = parts[1..].iter().enumerate().fold(
-				quote! { ::reinhardt_core },
-				|acc, (i, part)| {
-					let part_ident = syn::Ident::new(part, proc_macro2::Span::call_site());
-					if i == parts.len() - 2 {
-						// Last part - try to reference it to check existence
-						quote! { #acc::#part_ident }
-					} else {
-						quote! { #acc::#part_ident }
-					}
-				},
-			);
+			let module_check =
+				parts[1..]
+					.iter()
+					.enumerate()
+					.fold(core_crate.clone(), |acc, (i, part)| {
+						let part_ident = syn::Ident::new(part, proc_macro2::Span::call_site());
+						if i == parts.len() - 2 {
+							// Last part - try to reference it to check existence
+							quote! { #acc::#part_ident }
+						} else {
+							quote! { #acc::#part_ident }
+						}
+					});
 
 			quote! {
 				// Compile-time check that the module exists

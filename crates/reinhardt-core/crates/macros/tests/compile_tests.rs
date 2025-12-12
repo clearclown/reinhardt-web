@@ -10,20 +10,6 @@ use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
 use reinhardt_macros::injectable;
 use std::sync::Arc;
 
-// Allow this test crate to be referenced as `::reinhardt` for proc macro generated code.
-// The macros generate code with absolute paths like ::reinhardt::db::orm::Model
-extern crate self as reinhardt;
-
-// Re-export modules for proc macro generated code paths.
-#[allow(unused_imports)]
-pub mod db {
-	pub use ::reinhardt_db::*;
-}
-
-pub mod reinhardt_di {
-	pub use ::reinhardt_di::*;
-}
-
 #[test]
 fn test_compile_pass() {
 	let t = trybuild::TestCases::new();
