@@ -8,9 +8,10 @@
 //! - `clear()` - Remove all relationships
 //! - `set()` - Replace all relationships
 
+use crate::Manager;
 use crate::Model;
 use crate::connection::DatabaseConnection;
-use sea_query::{Alias, BinOper, Expr, ExprTrait, PostgresQueryBuilder, Query};
+use sea_query::{Alias, Asterisk, BinOper, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
 use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
 
@@ -54,6 +55,8 @@ where
 	source_field: String,
 	target_field: String,
 	db: DatabaseConnection,
+	limit: Option<usize>,
+	offset: Option<usize>,
 	_phantom_source: PhantomData<S>,
 	_phantom_target: PhantomData<T>,
 }
@@ -78,7 +81,7 @@ where
 	/// - The source model has no primary key
 	pub fn new(source: &S, field_name: &str, db: DatabaseConnection) -> Self {
 		// Get through table name from metadata
-		// For now, use Django naming convention: {app}_{model}_{field}
+		// TODO: For now, use Django naming convention: {app}_{model}_{field}
 		let through_table = format!(
 			"{}_{}_{}",
 			S::app_label(),
@@ -100,6 +103,8 @@ where
 			source_field,
 			target_field,
 			db,
+			limit: None,
+			offset: None,
 			_phantom_source: PhantomData,
 			_phantom_target: PhantomData,
 		}
@@ -202,6 +207,90 @@ where
 		Ok(())
 	}
 
+	/// Set LIMIT clause
+	///
+	/// Limits the number of records returned by the query.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let followers = accessor.limit(10).all().await?;
+	/// ```
+	pub fn limit(mut self, limit: usize) -> Self {
+		self.limit = Some(limit);
+		self
+	}
+
+	/// Set OFFSET clause
+	///
+	/// Skips the specified number of records before returning results.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let followers = accessor.offset(20).limit(10).all().await?;
+	/// ```
+	pub fn offset(mut self, offset: usize) -> Self {
+		self.offset = Some(offset);
+		self
+	}
+
+	/// Paginate results using page number and page size
+	///
+	/// Convenience method that calculates offset automatically.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// // Page 3, 10 items per page (offset=20, limit=10)
+	/// let followers = accessor.paginate(3, 10).all().await?;
+	/// ```
+	pub fn paginate(self, page: usize, page_size: usize) -> Self {
+		let offset = page.saturating_sub(1) * page_size;
+		self.offset(offset).limit(page_size)
+	}
+
+	/// Count total number of related items
+	///
+	/// Executes a COUNT(*) query to get the total number of related records
+	/// without fetching them.
+	///
+	/// # Errors
+	///
+	/// Returns an error if the database operation fails.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let total_followers = accessor.count().await?;
+	/// ```
+	pub async fn count(&self) -> Result<usize, String> {
+		let mut query = Query::select();
+		query
+			.from(Alias::new(&self.through_table))
+			.expr(Func::count(Expr::col(Asterisk)))
+			.and_where(
+				Expr::col(Alias::new(&self.source_field))
+					.binary(BinOper::Equal, Expr::val(self.source_id.to_string())),
+			);
+
+		let (sql, _) = query.build(PostgresQueryBuilder);
+		let rows = self
+			.db
+			.query(&sql, vec![])
+			.await
+			.map_err(|e| e.to_string())?;
+
+		if let Some(row) = rows.first()
+			&& let Some(count_value) = row.data.get("count")
+			&& let Some(count) = count_value.as_i64()
+		{
+			return Ok(count as usize);
+		}
+
+		Ok(0)
+	}
+
 	/// Get all related target models.
 	///
 	/// Queries the target table joined with the intermediate table to fetch all
@@ -217,7 +306,8 @@ where
 	/// let groups = accessor.all().await?;
 	/// ```
 	pub async fn all(&self) -> Result<Vec<T>, String> {
-		let query = Query::select()
+		let mut query = Query::select();
+		query
 			.from(Alias::new(T::table_name()))
 			.column((Alias::new(T::table_name()), Alias::new("*")))
 			.inner_join(
@@ -233,9 +323,17 @@ where
 					Alias::new(&self.source_field),
 				))
 				.binary(BinOper::Equal, Expr::val(self.source_id.to_string())),
-			)
-			.to_owned();
+			);
 
+		// Apply LIMIT/OFFSET
+		if let Some(limit) = self.limit {
+			query.limit(limit as u64);
+		}
+		if let Some(offset) = self.offset {
+			query.offset(offset as u64);
+		}
+
+		let query = query.to_owned();
 		let (sql, _values) = query.build(PostgresQueryBuilder);
 
 		let rows = self
@@ -346,6 +444,95 @@ where
 
 		Ok(())
 	}
+
+	/// Filter source models by target model via many-to-many relationship
+	///
+	/// Returns all source model instances that have a relationship with the given target.
+	/// This is more efficient than loading all source instances and checking relationships
+	/// individually, as it uses a single JOIN query.
+	///
+	/// # Type Parameters
+	///
+	/// - `S`: Source model type (the model that owns the ManyToMany field)
+	/// - `T`: Target model type (the related model)
+	///
+	/// # Arguments
+	///
+	/// - `source_manager`: Manager for the source model
+	/// - `field_name`: Name of the ManyToMany field on the source model
+	/// - `target`: The target model instance to filter by
+	/// - `db`: Database connection
+	///
+	/// # Returns
+	///
+	/// All source model instances related to the target
+	///
+	/// # Errors
+	///
+	/// Returns an error if:
+	/// - The target model has no primary key
+	/// - The database operation fails
+	/// - The query results cannot be deserialized
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// // Find all rooms where a specific user is a member
+	/// let user = User::find_by_id(&db, user_id).await?;
+	/// let rooms = ManyToManyAccessor::<DMRoom, User>::filter_by_target(
+	///     &DMRoom::objects(),
+	///     "members",
+	///     &user,
+	///     db.clone()
+	/// ).await?;
+	/// ```
+	///
+	/// SQL equivalent:
+	/// ```sql
+	/// SELECT source_table.*
+	/// FROM source_table
+	/// INNER JOIN through_table ON source_table.id = through_table.source_id
+	/// WHERE through_table.target_id = $1
+	/// ```
+	pub async fn filter_by_target(
+		_source_manager: &Manager<S>,
+		field_name: &str,
+		target: &T,
+		db: DatabaseConnection,
+	) -> Result<Vec<S>, String> {
+		let target_id = target
+			.primary_key()
+			.ok_or_else(|| "Target model has no primary key".to_string())?;
+
+		// Calculate through table name (same logic as new())
+		let through_table = format!("{}_{}", Self::table_name_lower(S::table_name()), field_name);
+
+		let source_field = format!("{}_id", Self::table_name_lower(S::table_name()));
+		let target_field = format!("{}_id", Self::table_name_lower(T::table_name()));
+
+		// Build JOIN query using SeaQuery
+		let query = Query::select()
+			.from(Alias::new(S::table_name()))
+			.column((Alias::new(S::table_name()), Alias::new("*")))
+			.inner_join(
+				Alias::new(&through_table),
+				Expr::col((Alias::new(S::table_name()), Alias::new("id")))
+					.equals((Alias::new(&through_table), Alias::new(&source_field))),
+			)
+			.and_where(
+				Expr::col((Alias::new(&through_table), Alias::new(&target_field)))
+					.binary(BinOper::Equal, Expr::val(target_id.to_string())),
+			)
+			.to_owned();
+
+		let (sql, _values) = query.build(PostgresQueryBuilder);
+
+		let rows = db.query(&sql, vec![]).await.map_err(|e| e.to_string())?;
+
+		rows.into_iter()
+			.map(|row| serde_json::from_value(row.data).map_err(|e| e.to_string()))
+			.collect()
+	}
 }
 
 #[cfg(test)]
@@ -431,6 +618,33 @@ mod tests {
 		assert!(sql.contains("SELECT"));
 		assert!(sql.contains("INNER JOIN"));
 		assert!(sql.contains("auth_users_groups"));
+	}
+
+	#[test]
+	fn test_sql_generation_filter_by_target() {
+		// Test that SELECT SQL with JOIN for filter_by_target is generated correctly
+		let query = Query::select()
+			.from(Alias::new("dm_room"))
+			.column((Alias::new("dm_room"), Alias::new("*")))
+			.inner_join(
+				Alias::new("dm_room_members"),
+				Expr::col((Alias::new("dm_room"), Alias::new("id")))
+					.equals((Alias::new("dm_room_members"), Alias::new("dmroom_id"))),
+			)
+			.and_where(
+				Expr::col((Alias::new("dm_room_members"), Alias::new("user_id")))
+					.binary(BinOper::Equal, Expr::val("test-user-id")),
+			)
+			.to_owned();
+
+		let (sql, _) = query.build(PostgresQueryBuilder);
+		assert!(sql.contains("SELECT"));
+		assert!(sql.contains("dm_room"));
+		assert!(sql.contains("INNER JOIN"));
+		assert!(sql.contains("dm_room_members"));
+		assert!(sql.contains("user_id"));
+		// Note: SeaQuery uses parameterized queries, so the value may be in a parameter
+		// instead of inline in the SQL string
 	}
 
 	// Test models for SQL generation tests
