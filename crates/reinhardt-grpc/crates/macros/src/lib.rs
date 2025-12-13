@@ -11,65 +11,10 @@ mod grpc_handler;
 /// This macro enables the use of `#[inject]` parameters in gRPC service methods,
 /// allowing automatic dependency resolution from the `InjectionContext`.
 ///
-/// # Usage
-///
-/// ```rust,ignore
-/// use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
-/// use reinhardt_di::InjectionContext;
-/// use tonic::{Request, Response, Status};
-/// use std::sync::Arc;
-///
-/// pub struct UserServiceImpl {
-///     injection_context: Arc<InjectionContext>,
-/// }
-///
-/// #[tonic::async_trait]
-/// impl UserService for UserServiceImpl {
-///     async fn get_user(&self, mut request: Request<GetUserRequest>)
-///         -> Result<Response<User>, Status>
-///     {
-///         // Set DI context in request extensions
-///         request.extensions_mut().insert(self.injection_context.clone());
-///
-///         // Call handler with DI support
-///         self.get_user_impl(request).await
-///     }
-/// }
-///
-/// impl UserServiceImpl {
-///     #[grpc_handler]
-///     async fn get_user_impl(
-///         &self,
-///         request: Request<GetUserRequest>,
-///         #[inject] db: DatabaseConnection,
-///     ) -> Result<Response<User>, Status> {
-///         let user_id = request.into_inner().id;
-///         let user = db.fetch_user(user_id).await?;
-///         Ok(Response::new(user))
-///     }
-/// }
-/// ```
-///
 /// # Parameters
 ///
 /// Regular parameters are passed through as-is. Parameters marked with `#[inject]`
 /// are automatically resolved from the DI context.
-///
-/// ## Cache Control
-///
-/// By default, dependencies are cached. You can disable caching per parameter:
-///
-/// ```rust,ignore
-/// #[grpc_handler]
-/// async fn handler(
-///     &self,
-///     request: Request<Req>,
-///     #[inject] cached_db: DatabaseConnection,          // Cached (default)
-///     #[inject(cache = false)] fresh_db: DatabaseConnection,  // Not cached
-/// ) -> Result<Response<Resp>, Status> {
-///     // ...
-/// }
-/// ```
 ///
 /// # Requirements
 ///

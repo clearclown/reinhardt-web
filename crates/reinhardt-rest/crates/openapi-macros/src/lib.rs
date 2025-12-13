@@ -3,26 +3,6 @@
 //! This crate provides derive macros and attribute macros for automatic
 //! OpenAPI schema generation from Rust types.
 //!
-//! # Examples
-//!
-//! ```ignore
-//! use reinhardt_openapi_macros::Schema;
-//!
-//! #[derive(Schema)]
-//! struct User {
-//!     /// User's unique identifier
-//!     #[schema(example = "42")]
-//!     id: i64,
-//!
-//!     /// User's full name
-//!     #[schema(example = "John Doe")]
-//!     name: String,
-//!
-//!     /// User's email address (optional)
-//!     #[schema(example = "john@example.com")]
-//!     email: Option<String>,
-//! }
-//! ```
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -62,27 +42,6 @@ use schema::{FieldAttributes, extract_field_attributes};
 /// - `#[schema(max_length = N)]` - Maximum length for strings/arrays
 /// - `#[schema(pattern = "...")]` - Regex pattern for string validation
 ///
-/// # Examples
-///
-/// ```ignore
-/// use reinhardt_openapi_macros::Schema;
-///
-/// #[derive(Schema)]
-/// #[schema(title = "User", description = "A user account")]
-/// struct User {
-///     #[schema(description = "Unique user ID", example = "123")]
-///     id: i64,
-///
-///     #[schema(description = "Username", min_length = 3, max_length = 50)]
-///     username: String,
-///
-///     #[schema(description = "Email address", format = "email")]
-///     email: String,
-///
-///     #[schema(description = "User's age", minimum = 0, maximum = 150)]
-///     age: Option<i32>,
-/// }
-/// ```
 #[proc_macro_derive(Schema, attributes(schema))]
 pub fn derive_schema(input: TokenStream) -> TokenStream {
 	let input = parse_macro_input!(input as DeriveInput);
