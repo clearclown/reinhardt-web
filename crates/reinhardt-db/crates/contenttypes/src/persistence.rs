@@ -12,7 +12,7 @@
 //!
 //! ## Example
 //!
-//! ```ignore
+//! ```rust,ignore
 //! // This example requires the "database" feature
 //! use reinhardt_contenttypes::persistence::ContentTypePersistence;
 //! use reinhardt_contenttypes::ContentType;

@@ -22,8 +22,16 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///
-/// ```ignore
-/// use reinhardt_db::associations::ManyToManyManager;
+/// ```rust,ignore
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use reinhardt_associations::ManyToManyManager;
+/// # use uuid::Uuid;
+/// # let user_id = Uuid::new_v4();
+/// # struct Database;
+/// # let db = Database;
+/// # struct Group { id: Uuid }
+/// # let group = Group { id: Uuid::new_v4() };
 ///
 /// let manager = ManyToManyManager::new(
 ///     user_id,
@@ -46,6 +54,9 @@ use std::marker::PhantomData;
 ///
 /// // Clear all relationships
 /// manager.clear_with_db(&db).await?;
+///
+/// # Ok(())
+/// # }
 /// ```
 pub struct ManyToManyManager<S, T, PK> {
 	source_pk: PK,

@@ -5,9 +5,11 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use reinhardt::prelude::*;
-//! use reinhardt::db::associations::ManyToManyField;
+//! ```rust,ignore
+//! use reinhardt_orm::Model;
+//! use reinhardt_macros::model;
+//! use reinhardt_associations::ManyToManyField;
+//! use uuid::Uuid;
 //!
 //! #[model(app_label = "users")]
 //! pub struct User {
@@ -88,9 +90,13 @@ impl<PK> ManyToManyConfig<PK> {
 ///
 /// # Example
 ///
-/// ```ignore
-/// use reinhardt::prelude::*;
-/// use reinhardt::db::associations::ManyToManyField;
+/// ```rust,ignore
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use reinhardt_orm::Model;
+/// use reinhardt_macros::model;
+/// use reinhardt_associations::ManyToManyField;
+/// use uuid::Uuid;
 ///
 /// #[model(app_label = "auth", table_name = "users")]
 /// pub struct User {
@@ -132,6 +138,9 @@ impl<PK> ManyToManyConfig<PK> {
 ///
 /// // Clear all
 /// accessor.clear().await?;
+///
+/// # Ok(())
+/// # }
 /// ```
 /// Marker type for ManyToMany relationship.
 ///
@@ -378,9 +387,9 @@ where
 ///
 /// # Example
 ///
-/// ```ignore
-/// use reinhardt::db::associations::ForeignKeyField;
-/// use reinhardt::model;
+/// ```rust,ignore
+/// use reinhardt_associations::ForeignKeyField;
+/// use reinhardt_macros::model;
 ///
 /// #[model(app_label = "blog", table_name = "posts")]
 /// pub struct Post {
@@ -429,9 +438,9 @@ impl<T> ForeignKeyField<T> {
 ///
 /// # Example
 ///
-/// ```ignore
-/// use reinhardt::db::associations::OneToOneField;
-/// use reinhardt::model;
+/// ```rust,ignore
+/// use reinhardt_associations::OneToOneField;
+/// use reinhardt_macros::model;
 ///
 /// #[model(app_label = "auth", table_name = "profiles")]
 /// pub struct Profile {
@@ -474,7 +483,7 @@ impl<T> OneToOneField<T> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust,ignore
 /// // On User model
 /// #[rel(one_to_many, foreign_key = "author_id")]
 /// pub posts: OneToManyField<Post>,
@@ -503,7 +512,7 @@ impl<T, S> OneToManyField<T, S> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust,ignore
 /// #[rel(polymorphic_many_to_many, name = "taggable")]
 /// pub tags: PolymorphicManyToManyField<Uuid>,
 /// ```
