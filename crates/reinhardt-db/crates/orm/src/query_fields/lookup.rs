@@ -132,15 +132,29 @@ impl<M: Model> Lookup<M> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust
 	/// use reinhardt_orm::query_fields::{Lookup, LookupType, LookupValue};
+	/// # use reinhardt_orm::Model;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Serialize, Deserialize)]
+	/// # struct User { id: Option<i64> }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
 	///
-	/// let lookup = Lookup::new(
+	/// let lookup = Lookup::<User>::new(
 	///     vec!["name"],
 	///     LookupType::Exact,
 	///     LookupValue::String("Alice".to_string())
 	/// );
-	// Represents: WHERE name = 'Alice'
+	/// // Represents: WHERE name = 'Alice'
+	/// assert_eq!(lookup.field_path(), &["name"]);
+	/// assert_eq!(*lookup.lookup_type(), LookupType::Exact);
 	/// ```
 	pub fn new(field_path: Vec<&'static str>, lookup_type: LookupType, value: LookupValue) -> Self {
 		Self {

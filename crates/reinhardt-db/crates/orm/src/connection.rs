@@ -515,7 +515,8 @@ impl DatabaseExecutor for DatabaseConnection {
 /// let db = DatabaseConnection::connect("postgres://localhost/mydb").await.unwrap();
 ///
 /// // Then register it in the DI context as a singleton
-/// let ctx = InjectionContext::builder()
+/// let singleton_scope = reinhardt_di::SingletonScope::new();
+/// let ctx = InjectionContext::builder(singleton_scope)
 ///     .singleton(db)
 ///     .build();
 /// # }

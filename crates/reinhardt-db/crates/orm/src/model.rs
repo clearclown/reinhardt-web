@@ -107,11 +107,26 @@ pub trait Model: Serialize + for<'de> Deserialize<'de> + Send + Sync {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct MyModel { id: Option<i64> }
+	/// # impl Model for MyModel {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "table" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
 	///
+	/// # #[tokio::main]
+	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 	/// let manager = MyModel::objects();
 	/// let all_records = manager.all().all().await?;
+	/// # Ok(())
+	/// # }
 	/// ```
 	fn objects() -> crate::Manager<Self>
 	where

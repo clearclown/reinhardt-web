@@ -66,15 +66,19 @@ impl fmt::Display for F {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use reinhardt_orm::expressions::FieldRef;
 /// use reinhardt_core::macros::model;
+/// use serde::{Serialize, Deserialize};
 ///
 /// #[model(app_label = "users", table_name = "users")]
+/// #[derive(Serialize, Deserialize)]
 /// struct User {
 ///     #[field(primary_key = true)]
 ///     id: i64,
+///     #[field(max_length = 255)]
 ///     name: String,
+///     #[field(max_length = 255)]
 ///     email: String,
 /// }
 ///
@@ -100,20 +104,6 @@ impl fmt::Display for F {
 /// use reinhardt_orm::expressions::F;
 /// let f: F = User::field_name().into();
 /// assert_eq!(f.to_sql(), "name");
-/// ```
-///
-/// # Migration from `__` notation
-///
-/// Before (Python-style):
-/// ```ignore
-/// // Not type-safe, prone to typos
-/// let query = User::objects().filter("name__icontains", "alice");
-/// ```
-///
-/// After (Rust-idiomatic):
-/// ```ignore
-/// // Type-safe, compile-time checked
-/// let query = User::objects().filter(User::field_name(), "alice");
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct FieldRef<M, T> {

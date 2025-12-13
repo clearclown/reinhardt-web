@@ -265,7 +265,7 @@ impl<T: Model> SelectExecution<T> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_orm::execution::SelectExecution;
 	/// use reinhardt_orm::Model;
 	/// use sea_query::{Alias, Query};
@@ -279,9 +279,11 @@ impl<T: Model> SelectExecution<T> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     fn app_label() -> &'static str { "app" }
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn primary_key_field() -> &'static str { "id" }
 	/// }
 	///
 	/// let stmt = Query::select().from(Alias::new("users")).to_owned();
@@ -297,10 +299,10 @@ impl<T: Model> SelectExecution<T> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_orm::execution::SelectExecution;
 	/// use reinhardt_orm::Model;
-	/// use sea_query::{Alias, Expr, ExprTrait, Query};
+	/// use sea_query::{Alias, Expr, Query};
 	/// use serde::{Serialize, Deserialize};
 	///
 	/// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -311,9 +313,11 @@ impl<T: Model> SelectExecution<T> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     fn app_label() -> &'static str { "app" }
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn primary_key_field() -> &'static str { "id" }
 	/// }
 	///
 	/// let stmt = Query::select()

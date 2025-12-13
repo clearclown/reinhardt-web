@@ -20,7 +20,7 @@
 //! **Note:** `Engine` uses `sqlx::Any` which requires database-specific feature flags.
 //! For simpler usage in tests and applications, use `DatabaseEngine` instead.
 //!
-//! ```ignore
+//! ```rust,no_run
 //! use reinhardt_orm::engine::{EngineConfig, create_engine_with_config};
 //!
 //! # tokio::runtime::Runtime::new().unwrap().block_on(async {

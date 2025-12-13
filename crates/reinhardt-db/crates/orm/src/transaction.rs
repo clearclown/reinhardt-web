@@ -1147,7 +1147,9 @@ where
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_orm::connection::DatabaseConnection;
 /// use reinhardt_orm::transaction::transaction;
 /// use std::future::Future;
@@ -1158,25 +1160,22 @@ where
 /// let conn = DatabaseConnection::connect("sqlite::memory:").await?;
 ///
 /// // Simple transaction
-/// transaction(&conn, move |tx| {
-///     Box::pin(async move {
-///         tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Alice".into()]).await?;
-///         Ok(())
-///     })
+/// transaction(&conn, |tx| async {
+///     tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Alice".into()]).await?;
+///     Ok(())
 /// }).await?;
 ///
 /// // Transaction with return value
-/// let user_id: i64 = transaction(&conn, move |tx| {
-///     Box::pin(async move {
-///         tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Bob".into()]).await?;
-///         Ok(42_i64) // Example return value
-///     })
+/// let user_id: i64 = transaction(&conn, |tx| async {
+///     tx.execute("INSERT INTO users (name) VALUES (?)", vec!["Bob".into()]).await?;
+///     Ok(42_i64) // Example return value
 /// }).await?;
 ///
 /// assert_eq!(user_id, 42);
 /// # Ok(())
 /// # }
 /// # tokio::runtime::Runtime::new().unwrap().block_on(example());
+/// # }
 /// ```
 ///
 /// # Error Handling

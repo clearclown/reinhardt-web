@@ -5,7 +5,7 @@
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,ignore
 /// use reinhardt::db::orm::{Model, IntoPrimaryKey};
 /// use uuid::Uuid;
 ///

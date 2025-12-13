@@ -27,7 +27,9 @@ use std::marker::PhantomData;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,ignore
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_orm::{Model, ManyToManyAccessor};
 ///
 /// let user = User::find_by_id(&db, user_id).await?;
@@ -44,6 +46,8 @@ use std::marker::PhantomData;
 ///
 /// // Clear all relationships
 /// accessor.clear().await?;
+///
+/// # }
 /// ```
 pub struct ManyToManyAccessor<S, T>
 where
