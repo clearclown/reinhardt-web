@@ -15,12 +15,42 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-// This compiles: both fields are i64
-/// TypedJoin::on(User::id(), Post::user_id())
+/// ```rust,no_run
+/// # use reinhardt_orm::{Model, query_fields::Field};
+/// # use reinhardt_orm::typed_join::TypedJoin;
+/// # use serde::{Serialize, Deserialize};
+/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+/// # struct User { id: Option<i64> }
+/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+/// # struct Post { id: Option<i64> }
+/// # impl Model for User {
+/// #     type PrimaryKey = i64;
+/// #     fn app_label() -> &'static str { "app" }
+/// #     fn table_name() -> &'static str { "users" }
+/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn primary_key_field() -> &'static str { "id" }
+/// # }
+/// # impl Model for Post {
+/// #     type PrimaryKey = i64;
+/// #     fn app_label() -> &'static str { "app" }
+/// #     fn table_name() -> &'static str { "posts" }
+/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn primary_key_field() -> &'static str { "id" }
+/// # }
+/// # impl User {
+/// #     fn id() -> Field<Self, i64> { Field::new(vec!["id"]) }
+/// # }
+/// # impl Post {
+/// #     fn user_id() -> Field<Self, i64> { Field::new(vec!["user_id"]) }
+/// #     fn title() -> Field<Self, String> { Field::new(vec!["title"]) }
+/// # }
+/// // This compiles: both fields are i64
+/// TypedJoin::on(User::id(), Post::user_id());
 ///
-// This fails: i64 vs String type mismatch
-/// TypedJoin::on(User::id(), Post::title())
+/// // This fails: i64 vs String type mismatch
+/// // TypedJoin::on(User::id(), Post::title());
 /// ```
 pub struct TypedJoin<L: Model, R: Model> {
 	right_table: &'static str,
@@ -40,8 +70,37 @@ impl<L: Model, R: Model> TypedJoin<L, R> {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// TypedJoin::on(User::id(), Post::user_id())
+	/// ```rust,no_run
+	/// # use reinhardt_orm::{Model, query_fields::Field};
+	/// # use reinhardt_orm::typed_join::TypedJoin;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64> }
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct Post { id: Option<i64> }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl Model for Post {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "posts" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl User {
+	/// #     fn id() -> Field<Self, i64> { Field::new(vec!["id"]) }
+	/// # }
+	/// # impl Post {
+	/// #     fn user_id() -> Field<Self, i64> { Field::new(vec!["user_id"]) }
+	/// # }
+	/// TypedJoin::on(User::id(), Post::user_id());
 	/// ```
 	pub fn on<T>(left: Field<L, T>, right: Field<R, T>) -> Self {
 		Self {
@@ -57,8 +116,37 @@ impl<L: Model, R: Model> TypedJoin<L, R> {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// TypedJoin::left_on(User::id(), Post::user_id())
+	/// ```rust,no_run
+	/// # use reinhardt_orm::{Model, query_fields::Field};
+	/// # use reinhardt_orm::typed_join::TypedJoin;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64> }
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct Post { id: Option<i64> }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl Model for Post {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "posts" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl User {
+	/// #     fn id() -> Field<Self, i64> { Field::new(vec!["id"]) }
+	/// # }
+	/// # impl Post {
+	/// #     fn user_id() -> Field<Self, i64> { Field::new(vec!["user_id"]) }
+	/// # }
+	/// TypedJoin::left_on(User::id(), Post::user_id());
 	/// ```
 	pub fn left_on<T>(left: Field<L, T>, right: Field<R, T>) -> Self {
 		Self {
@@ -74,8 +162,37 @@ impl<L: Model, R: Model> TypedJoin<L, R> {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// TypedJoin::right_on(User::id(), Post::user_id())
+	/// ```rust,no_run
+	/// # use reinhardt_orm::{Model, query_fields::Field};
+	/// # use reinhardt_orm::typed_join::TypedJoin;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64> }
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct Post { id: Option<i64> }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl Model for Post {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "posts" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl User {
+	/// #     fn id() -> Field<Self, i64> { Field::new(vec!["id"]) }
+	/// # }
+	/// # impl Post {
+	/// #     fn user_id() -> Field<Self, i64> { Field::new(vec!["user_id"]) }
+	/// # }
+	/// TypedJoin::right_on(User::id(), Post::user_id());
 	/// ```
 	pub fn right_on<T>(left: Field<L, T>, right: Field<R, T>) -> Self {
 		Self {
@@ -91,8 +208,37 @@ impl<L: Model, R: Model> TypedJoin<L, R> {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// TypedJoin::full_on(User::id(), Post::user_id())
+	/// ```rust,no_run
+	/// # use reinhardt_orm::{Model, query_fields::Field};
+	/// # use reinhardt_orm::typed_join::TypedJoin;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64> }
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct Post { id: Option<i64> }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl Model for Post {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "posts" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	/// # impl User {
+	/// #     fn id() -> Field<Self, i64> { Field::new(vec!["id"]) }
+	/// # }
+	/// # impl Post {
+	/// #     fn user_id() -> Field<Self, i64> { Field::new(vec!["user_id"]) }
+	/// # }
+	/// TypedJoin::full_on(User::id(), Post::user_id());
 	/// ```
 	pub fn full_on<T>(left: Field<L, T>, right: Field<R, T>) -> Self {
 		Self {
