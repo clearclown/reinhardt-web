@@ -31,7 +31,9 @@ pub struct DatabaseConnection {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_di::{InjectionContext, SingletonScope};
 /// use reinhardt_db::backends::DatabaseConnection;
 /// use std::sync::Arc;
@@ -46,6 +48,8 @@ pub struct DatabaseConnection {
 /// let ctx = InjectionContext::builder(singleton_scope)
 ///     .singleton(db)
 ///     .build();
+///
+/// # }
 /// ```
 #[cfg(feature = "di")]
 #[async_trait::async_trait]

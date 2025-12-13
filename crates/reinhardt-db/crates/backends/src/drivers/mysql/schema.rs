@@ -15,13 +15,13 @@ fn quote_mysql_identifier(name: &str) -> String {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_db::backends::mysql::schema::MySQLSchemaEditor;
-///
+/// ```rust
+/// # use reinhardt_backends::drivers::mysql::schema::MySQLSchemaEditor;
 /// let editor = MySQLSchemaEditor::new();
 /// let sql = editor.rename_table_sql("users", "people");
 /// assert!(sql.contains("ALTER TABLE"));
 /// assert!(sql.contains("`users`"));
+/// assert!(sql.contains("`people`"));
 /// ```
 #[derive(Debug, Default, Clone)]
 pub struct MySQLSchemaEditor;
@@ -31,10 +31,10 @@ impl MySQLSchemaEditor {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::mysql::schema::MySQLSchemaEditor;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::drivers::mysql::schema::MySQLSchemaEditor;
 	/// let editor = MySQLSchemaEditor::new();
+	/// # drop(editor); // Verify it's creatable
 	/// ```
 	pub fn new() -> Self {
 		Self

@@ -15,7 +15,7 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust,no_run
 //! use reinhardt_db::backends::cockroachdb::{
 //!     CockroachDBBackend,
 //!     schema::CockroachDBSchemaEditor,
@@ -58,7 +58,9 @@ use crate::drivers::postgresql::schema::PostgreSQLSchemaEditor;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use reinhardt_db::backends::cockroachdb::CockroachDBBackend;
 /// use reinhardt_db::backends::postgresql::schema::PostgreSQLSchemaEditor;
 /// use sqlx::PgPool;
@@ -67,6 +69,8 @@ use crate::drivers::postgresql::schema::PostgreSQLSchemaEditor;
 /// let pool = PgPool::connect("postgresql://localhost:26257/mydb").await?;
 /// let pg_editor = PostgreSQLSchemaEditor::new(pool);
 /// let backend = CockroachDBBackend::new(pg_editor);
+/// # Ok(())
+/// # }
 /// # Ok(())
 /// # }
 /// ```

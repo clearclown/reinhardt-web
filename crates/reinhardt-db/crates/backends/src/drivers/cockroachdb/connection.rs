@@ -44,11 +44,11 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb");
 	/// assert_eq!(config.url, "postgresql://localhost:26257/mydb");
+	/// assert_eq!(config.max_connections, 10); // Default value
 	/// ```
 	pub fn new(url: impl Into<String>) -> Self {
 		Self {
@@ -61,12 +61,12 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
 	///     .with_max_connections(20);
 	/// assert_eq!(config.max_connections, 20);
+	/// assert_eq!(config.url, "postgresql://localhost:26257/mydb");
 	/// ```
 	pub fn with_max_connections(mut self, max: u32) -> Self {
 		self.max_connections = max;
@@ -77,12 +77,12 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
 	///     .with_min_connections(5);
 	/// assert_eq!(config.min_connections, 5);
+	/// assert_eq!(config.max_connections, 10); // Default value
 	/// ```
 	pub fn with_min_connections(mut self, min: u32) -> Self {
 		self.min_connections = min;
@@ -93,13 +93,13 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	/// use std::time::Duration;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+	/// # use std::time::Duration;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
 	///     .with_connect_timeout(Duration::from_secs(10));
 	/// assert_eq!(config.connect_timeout, Duration::from_secs(10));
+	/// assert_eq!(config.url, "postgresql://localhost:26257/mydb");
 	/// ```
 	pub fn with_connect_timeout(mut self, timeout: Duration) -> Self {
 		self.connect_timeout = timeout;
@@ -110,13 +110,13 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	/// use std::time::Duration;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
+	/// # use std::time::Duration;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
 	///     .with_idle_timeout(Duration::from_secs(300));
 	/// assert_eq!(config.idle_timeout, Duration::from_secs(300));
+	/// assert_eq!(config.connect_timeout, Duration::from_secs(30)); // Default value
 	/// ```
 	pub fn with_idle_timeout(mut self, timeout: Duration) -> Self {
 		self.idle_timeout = timeout;
@@ -127,12 +127,12 @@ impl CockroachDBConnectionConfig {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::cockroachdb::connection::CockroachDBConnectionConfig;
 	/// let config = CockroachDBConnectionConfig::new("postgresql://localhost:26257/mydb")
 	///     .with_application_name("my-app");
 	/// assert_eq!(config.application_name, Some("my-app".to_string()));
+	/// assert_eq!(config.url, "postgresql://localhost:26257/mydb");
 	/// ```
 	pub fn with_application_name(mut self, name: impl Into<String>) -> Self {
 		self.application_name = Some(name.into());

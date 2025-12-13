@@ -5,9 +5,8 @@
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_db::backends::schema::ddl_references::{Table, Columns};
-///
+/// ```rust
+/// # use reinhardt_backends::schema::ddl_references::{Table, Columns};
 /// let table = Table::new("users", Some("public"));
 /// assert_eq!(table.name(), "users");
 /// assert_eq!(table.schema(), Some("public"));
@@ -29,9 +28,8 @@ impl Table {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::Table;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::Table;
 	/// let table = Table::new("users", None::<String>);
 	/// assert_eq!(table.name(), "users");
 	/// assert_eq!(table.schema(), None);
@@ -84,9 +82,8 @@ impl Columns {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::Columns;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::Columns;
 	/// let columns = Columns::new("users", &["id", "name", "email"]);
 	/// assert_eq!(columns.table(), "users");
 	/// assert_eq!(columns.columns(), &["id", "name", "email"]);
@@ -133,9 +130,8 @@ impl IndexName {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::IndexName;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::IndexName;
 	/// let idx = IndexName::new("users", &["email"], "idx");
 	/// assert_eq!(idx.table(), "users");
 	/// assert_eq!(idx.suffix(), "idx");
@@ -171,9 +167,8 @@ impl IndexName {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::IndexName;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::IndexName;
 	/// let idx = IndexName::new("users", &["email"], "idx");
 	/// let name = idx.generate_name();
 	/// assert!(name.starts_with("users"));
@@ -213,9 +208,8 @@ impl ForeignKeyName {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::ForeignKeyName;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::ForeignKeyName;
 	/// let fk = ForeignKeyName::new(
 	///     "posts",
 	///     &["user_id"],
@@ -289,9 +283,8 @@ impl Statement {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::ddl_references::Statement;
-	///
+	/// ```rust
+	/// # use reinhardt_backends::schema::ddl_references::Statement;
 	/// let stmt = Statement::new("CREATE TABLE %(table)s (%(definition)s)");
 	/// assert!(stmt.template().contains("CREATE TABLE"));
 	/// ```

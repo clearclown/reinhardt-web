@@ -5,10 +5,8 @@
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, DDLStatement};
-///
-// Example of using schema editor to generate DDL
+/// ```rust
+/// # use reinhardt_db::backends::schema::DDLStatement;
 /// let create_table = DDLStatement::CreateTable {
 ///     table: "users".to_string(),
 ///     columns: vec![
@@ -65,9 +63,8 @@ impl DDLStatement {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::DDLStatement;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::schema::DDLStatement;
 	/// let stmt = DDLStatement::CreateTable {
 	///     table: "users".to_string(),
 	///     columns: vec![],
@@ -121,20 +118,23 @@ pub enum AlterTableChange {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-/// use async_trait::async_trait;
-///
+/// ```rust,no_run
+/// # use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+/// # use async_trait::async_trait;
 /// struct MySchemaEditor;
 ///
 /// #[async_trait]
 /// impl BaseDatabaseSchemaEditor for MySchemaEditor {
 ///     async fn execute(&mut self, sql: &str) -> SchemaEditorResult<()> {
-///         // Execute SQL
 ///         println!("Executing: {}", sql);
 ///         Ok(())
 ///     }
 /// }
+///
+/// # async fn example() {
+/// let mut editor = MySchemaEditor;
+/// editor.execute("CREATE TABLE users (id INT)").await.unwrap();
+/// # }
 /// ```
 #[async_trait::async_trait]
 pub trait BaseDatabaseSchemaEditor: Send + Sync {
@@ -145,11 +145,10 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-	/// use async_trait::async_trait;
-	/// use sea_query::PostgresQueryBuilder;
-	///
+	/// ```rust
+	/// # use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+	/// # use async_trait::async_trait;
+	/// # use sea_query::PostgresQueryBuilder;
 	/// struct TestEditor;
 	///
 	/// #[async_trait]
@@ -166,6 +165,7 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	/// ]);
 	/// let sql = stmt.to_string(PostgresQueryBuilder);
 	/// assert!(sql.contains("CREATE TABLE"));
+	/// assert!(sql.contains("\"users\""));
 	/// ```
 	fn create_table_statement(
 		&self,
