@@ -20,10 +20,36 @@
 //!
 //! Then use the `#[graphql_handler]` macro:
 //!
-//! ```rust,ignore
-//! use async_graphql::{Context, Object, Result, ID};
-//! use reinhardt_graphql::graphql_handler;
-//!
+//! ```rust,no_run
+//! # use async_graphql::{Context, Object, Result, ID, SimpleObject};
+//! # use reinhardt_graphql::{graphql_handler, GraphQLContextExt};
+//! # use reinhardt_di::{InjectionContext, Injectable, DiResult};
+//! # use async_trait::async_trait;
+//! #
+//! # #[derive(Clone, SimpleObject)]
+//! # struct User {
+//! #     id: ID,
+//! #     name: String,
+//! # }
+//! #
+//! # #[derive(Clone)]
+//! # struct DatabaseConnection;
+//! #
+//! # #[async_trait]
+//! # impl Injectable for DatabaseConnection {
+//! #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+//! #         Ok(DatabaseConnection)
+//! #     }
+//! # }
+//! #
+//! # impl DatabaseConnection {
+//! #     async fn fetch_user(&self, id: &ID) -> Result<User> {
+//! #         Ok(User { id: id.clone(), name: "Test User".to_string() })
+//! #     }
+//! # }
+//! #
+//! # struct Query;
+//! #
 //! #[Object]
 //! impl Query {
 //!     async fn user(&self, ctx: &Context<'_>, id: ID) -> Result<User> {
@@ -38,6 +64,7 @@
 //!     #[inject] db: DatabaseConnection,
 //! ) -> Result<User> {
 //!     // db is automatically resolved
+//!     db.fetch_user(&id).await
 //! }
 //! ```
 

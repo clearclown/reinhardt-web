@@ -9,9 +9,18 @@ use async_trait::async_trait;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use reinhardt_grpc::adapter::GrpcServiceAdapter;
 /// use async_trait::async_trait;
+/// # use tonic::Status;
+/// #
+/// # // Mock User type for doctest
+/// # struct User {
+/// #     id: String,
+/// #     name: String,
+/// # }
 ///
 /// struct UserServiceAdapter {
 ///     // gRPC client connection
@@ -21,7 +30,7 @@ use async_trait::async_trait;
 /// impl GrpcServiceAdapter for UserServiceAdapter {
 ///     type Input = String; // User ID
 ///     type Output = User;  // GraphQL User type
-///     type Error = anyhow::Error;
+///     type Error = Status;
 ///
 ///     async fn call(&self, input: Self::Input) -> Result<Self::Output, Self::Error> {
 ///         // Example implementation: Fetch user information using gRPC client
@@ -30,6 +39,8 @@ use async_trait::async_trait;
 ///         # unimplemented!("Replace with actual gRPC implementation")
 ///     }
 /// }
+/// # Ok(())
+/// # }
 /// ```
 #[async_trait]
 pub trait GrpcServiceAdapter: Send + Sync {
@@ -50,15 +61,29 @@ pub trait GrpcServiceAdapter: Send + Sync {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use reinhardt_grpc::adapter::GrpcSubscriptionAdapter;
+/// # use tonic::Status;
+/// #
+/// # // Mock types for doctest
+/// # struct User {
+/// #     id: String,
+/// #     name: String,
+/// # }
+/// #
+/// # mod proto {
+/// #     pub struct UserEvent {
+/// #         pub user_id: String,
+/// #         pub name: String,
+/// #     }
+/// # }
 ///
 /// struct UserEventsAdapter;
 ///
 /// impl GrpcSubscriptionAdapter for UserEventsAdapter {
 ///     type Proto = proto::UserEvent;
 ///     type GraphQL = User;
-///     type Error = anyhow::Error;
+///     type Error = Status;
 ///
 ///     fn map_event(&self, proto: Self::Proto) -> Option<Self::GraphQL> {
 ///         // Example implementation: Convert Protobuf event to GraphQL type

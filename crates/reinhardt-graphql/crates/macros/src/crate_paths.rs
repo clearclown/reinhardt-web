@@ -10,7 +10,7 @@ pub fn get_reinhardt_di_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
 	match crate_name("reinhardt-di") {
-		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Itself) => quote!(::reinhardt_di),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
 			quote!(::#ident)
@@ -26,7 +26,7 @@ pub fn get_reinhardt_graphql_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
 	match crate_name("reinhardt-graphql") {
-		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Itself) => quote!(::reinhardt_graphql),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
 			quote!(::#ident)

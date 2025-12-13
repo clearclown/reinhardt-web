@@ -27,8 +27,13 @@
 //! Then use the `#[grpc_handler]` macro:
 //!
 //! ```rust,ignore
-//! use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
-//!
+//! # use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
+//! # use tonic::{Request, Response, Status};
+//! # struct GetUserRequest;
+//! # struct User;
+//! # struct DatabaseConnection;
+//! # struct Handler;
+//! # impl Handler {
 //! #[grpc_handler]
 //! async fn get_user_impl(
 //!     &self,
@@ -36,7 +41,9 @@
 //!     #[inject] db: DatabaseConnection,
 //! ) -> Result<Response<User>, Status> {
 //!     // db is automatically resolved
+//! #   Ok(Response::new(User))
 //! }
+//! # }
 //! ```
 
 pub mod adapter;

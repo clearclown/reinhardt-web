@@ -9,12 +9,34 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
-//! use async_graphql::{Context, Object, Result, ID, Schema, EmptyMutation, EmptySubscription};
-//! use reinhardt_graphql::{GraphQLContextExt, SchemaBuilderExt, graphql_handler};
-//! use reinhardt_di::InjectionContext;
-//! use std::sync::Arc;
-//!
+//! ```rust,no_run
+//! # use async_graphql::{Context, Object, Result, ID, Schema, EmptyMutation, EmptySubscription, SimpleObject};
+//! # use reinhardt_graphql::{GraphQLContextExt, SchemaBuilderExt, graphql_handler};
+//! # use reinhardt_di::{InjectionContext, Injectable, DiResult, SingletonScope};
+//! # use async_trait::async_trait;
+//! # use std::sync::Arc;
+//! #
+//! # #[derive(Clone, SimpleObject)]
+//! # struct User {
+//! #     id: ID,
+//! #     name: String,
+//! # }
+//! #
+//! # #[derive(Clone)]
+//! # struct DatabaseConnection;
+//! #
+//! # #[async_trait]
+//! # impl Injectable for DatabaseConnection {
+//! #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+//! #         Ok(DatabaseConnection)
+//! #     }
+//! # }
+//! #
+//! # impl DatabaseConnection {
+//! #     async fn fetch_user(&self, id: &ID) -> Result<User> {
+//! #         Ok(User { id: id.clone(), name: "Test User".to_string() })
+//! #     }
+//! # }
 //! pub struct Query;
 //!
 //! #[Object]
@@ -34,10 +56,10 @@
 //!     Ok(user)
 //! }
 //!
-//! // Build schema with DI context
-//! let injection_ctx = Arc::new(InjectionContext::new());
+//! let singleton = Arc::new(SingletonScope::new());
+//! let injection_ctx = Arc::new(InjectionContext::builder(singleton).build());
 //! let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
-//!     .with_di_context(injection_ctx)  // Helper method
+//!     .with_di_context(injection_ctx)
 //!     .finish();
 //! ```
 
@@ -57,12 +79,15 @@ pub trait GraphQLContextExt {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_graphql::GraphQLContextExt;
-	/// use reinhardt_di::InjectionContext;
-	/// use std::sync::Arc;
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_graphql::GraphQLContextExt;
+	/// # use reinhardt_di::InjectionContext;
+	/// # use std::sync::Arc;
+	/// # use async_graphql::Context;
+	/// # fn example(ctx: &Context<'_>) -> async_graphql::Result<()> {
 	/// let di_ctx = ctx.get_di_context()?;
+	/// # Ok(())
+	/// # }
 	/// ```
 	fn get_di_context(&self) -> async_graphql::Result<&Arc<InjectionContext>>;
 }
@@ -79,13 +104,19 @@ impl GraphQLContextExt for Context<'_> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use async_graphql::{Schema, EmptyMutation, EmptySubscription};
-/// use reinhardt_graphql::SchemaBuilderExt;
-/// use reinhardt_di::InjectionContext;
-/// use std::sync::Arc;
-///
-/// let injection_ctx = Arc::new(InjectionContext::new());
+/// ```rust,no_run
+/// # use async_graphql::{Schema, EmptyMutation, EmptySubscription, Object};
+/// # use reinhardt_graphql::SchemaBuilderExt;
+/// # use reinhardt_di::InjectionContext;
+/// # use std::sync::Arc;
+/// # struct Query;
+/// # #[Object]
+/// # impl Query {
+/// #     async fn hello(&self) -> &str { "world" }
+/// # }
+/// # use reinhardt_di::SingletonScope;
+/// let singleton = Arc::new(SingletonScope::new());
+/// let injection_ctx = Arc::new(InjectionContext::builder(singleton).build());
 /// let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
 ///     .with_di_context(injection_ctx)
 ///     .finish();

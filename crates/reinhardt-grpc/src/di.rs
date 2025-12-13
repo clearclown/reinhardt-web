@@ -9,12 +9,21 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
-//! use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
-//! use reinhardt_di::InjectionContext;
-//! use tonic::{Request, Response, Status};
-//! use std::sync::Arc;
-//!
+//! ```rust,no_run
+//! # use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
+//! # use reinhardt_di::InjectionContext;
+//! # use tonic::{Request, Response, Status};
+//! # use std::sync::Arc;
+//! # struct GetUserRequest { id: i64 }
+//! # struct User;
+//! # struct DatabaseConnection;
+//! # impl DatabaseConnection {
+//! #     async fn fetch_user(&self, _id: i64) -> Result<User, Status> { Ok(User) }
+//! # }
+//! # #[tonic::async_trait]
+//! # trait UserService {
+//! #     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<User>, Status>;
+//! # }
 //! pub struct UserServiceImpl {
 //!     injection_context: Arc<InjectionContext>,
 //! }
@@ -24,10 +33,7 @@
 //!     async fn get_user(&self, mut request: Request<GetUserRequest>)
 //!         -> Result<Response<User>, Status>
 //!     {
-//!         // Set DI context in request extensions
 //!         request.extensions_mut().insert(self.injection_context.clone());
-//!
-//!         // Call handler with DI support
 //!         self.get_user_impl(request).await
 //!     }
 //! }
@@ -57,12 +63,15 @@ pub trait GrpcRequestExt {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_grpc::GrpcRequestExt;
-	/// use reinhardt_di::InjectionContext;
-	/// use std::sync::Arc;
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_grpc::GrpcRequestExt;
+	/// # use reinhardt_di::InjectionContext;
+	/// # use std::sync::Arc;
+	/// # use tonic::Request;
+	/// # fn example<T>(request: &Request<T>) -> Option<Arc<InjectionContext>> {
 	/// let di_ctx = request.get_di_context::<Arc<InjectionContext>>()?;
+	/// # Some(di_ctx)
+	/// # }
 	/// ```
 	fn get_di_context<T: Clone + Send + Sync + 'static>(&self) -> Option<T>;
 }
