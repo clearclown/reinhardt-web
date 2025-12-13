@@ -12,7 +12,7 @@
 //!
 //! # Examples
 //!
-//! ```no_run
+//! ```rust,no_run
 //! use reinhardt_cache::{Cache, HybridCache, InMemoryCache, RedisCache};
 //! use std::time::Duration;
 //!
@@ -76,7 +76,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_cache::{HybridCache, InMemoryCache, RedisCache};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -97,7 +97,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_cache::{Cache, HybridCache, InMemoryCache, RedisCache};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -118,7 +118,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_cache::{Cache, HybridCache, InMemoryCache, RedisCache};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

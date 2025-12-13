@@ -23,7 +23,7 @@
 //!
 //! ## Single Server
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_cache::{Cache, MemcachedCache};
 //!
 //! #[tokio::main]
@@ -40,7 +40,7 @@
 //!
 //! ## Multiple Servers with Failover
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_cache::{Cache, MemcachedCache, MemcachedConfig};
 //! use std::time::Duration;
 //!
@@ -87,7 +87,8 @@ type MemcachedProtocol = Protocol<Compat<TcpStream>>;
 ///
 /// Configure multiple servers for high availability and load balancing:
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_cache::MemcachedConfig;
 /// let config = MemcachedConfig {
 ///     servers: vec![
 ///         "127.0.0.1:11211".to_string(),

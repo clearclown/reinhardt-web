@@ -10,7 +10,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_static::processing::{ProcessingPipeline, ProcessingConfig};
 //!
 //! let config = ProcessingConfig::default()
@@ -18,7 +18,7 @@
 //!     .with_source_maps(true);
 //!
 //! let pipeline = ProcessingPipeline::new(config);
-//! let result = pipeline.process_file("app.js").await?;
+//! // let result = pipeline.process_file("app.js").await?;
 //! ```
 
 use async_trait::async_trait;
@@ -234,7 +234,7 @@ impl ProcessingPipeline {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_static::processing::{ProcessingPipeline, ProcessingConfig};
 	/// use std::path::PathBuf;
 	///

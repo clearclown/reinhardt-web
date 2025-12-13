@@ -70,8 +70,9 @@
 //! reinhardt-cache = { version = "0.1", features = ["memcached-backend"] }
 //! ```
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_cache::{Cache, MemcachedCache, MemcachedConfig};
+//! use std::time::Duration;
 //!
 //! # async fn example() {
 //! let config = MemcachedConfig {
@@ -81,7 +82,7 @@
 //! };
 //!
 //! let cache = MemcachedCache::new(config).await.unwrap();
-//! cache.set("key", b"value", Some(3600)).await.unwrap();
+//! cache.set("key", b"value", Some(Duration::from_secs(3600))).await.unwrap();
 //! # }
 //! ```
 //!

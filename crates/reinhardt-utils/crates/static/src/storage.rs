@@ -205,7 +205,7 @@ impl StaticFilesFinder {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_static::StaticFilesFinder;
 	/// use std::path::PathBuf;
 	///

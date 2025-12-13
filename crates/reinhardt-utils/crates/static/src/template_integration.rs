@@ -78,7 +78,7 @@ impl TemplateStaticConfig {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_static::template_integration::TemplateStaticConfig;
 	/// use reinhardt_static::ManifestStaticFilesStorage;
 	/// use std::path::PathBuf;
@@ -140,7 +140,7 @@ impl From<TemplateStaticConfig> for reinhardt_template::templates::r#static_filt
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_static::{StaticFilesConfig, template_integration};
 /// use std::path::PathBuf;
 ///
@@ -168,7 +168,7 @@ pub fn init_template_static_config(config: &StaticFilesConfig) {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_static::{ManifestStaticFilesStorage, template_integration};
 /// use std::path::PathBuf;
 ///

@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_cache::{CacheInvalidationChannel, CacheInvalidationMessage};
 //!
 //! #[tokio::main]

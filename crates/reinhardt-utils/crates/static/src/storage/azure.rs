@@ -30,7 +30,7 @@ impl AzureBlobConfig {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_static::storage::AzureBlobConfig;
 	///
 	/// let config = AzureBlobConfig::new(
@@ -83,7 +83,7 @@ impl AzureBlobConfig {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_static::storage::{AzureBlobStorage, AzureBlobConfig, Storage};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

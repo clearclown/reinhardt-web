@@ -28,7 +28,7 @@ impl GcsConfig {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_static::storage::GcsConfig;
 	///
 	/// let config = GcsConfig::new(
@@ -70,7 +70,7 @@ impl GcsConfig {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_static::storage::{GcsStorage, GcsConfig, Storage};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
