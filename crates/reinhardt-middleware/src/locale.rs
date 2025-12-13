@@ -102,7 +102,9 @@ impl Default for LocaleConfig {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::{LocaleMiddleware, locale::LocaleConfig};
 /// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
@@ -116,13 +118,12 @@ impl Default for LocaleConfig {
 ///     async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 ///         // Access detected locale from header
 ///         let locale = request.headers.get("X-Locale")
-///             .and_then(|h| h.to_str().ok())
-///             .unwrap_or("en");
+///             .and_then(|h| h.to_str().ok().map(String::from))
+///             .unwrap_or_else(|| "en".to_string());
 ///         Ok(Response::new(StatusCode::OK).with_body(Bytes::from(locale)))
 ///     }
 /// }
 ///
-/// # tokio_test::block_on(async {
 /// let config = LocaleConfig::with_locales(
 ///     "en".to_string(),
 ///     vec!["en".to_string(), "ja".to_string(), "fr".to_string()]
@@ -146,7 +147,8 @@ impl Default for LocaleConfig {
 /// let response = middleware.process(request, handler).await.unwrap();
 /// let body = String::from_utf8(response.body.to_vec()).unwrap();
 /// assert_eq!(body, "ja");
-/// # });
+/// # Ok(())
+/// # }
 /// ```
 pub struct LocaleMiddleware {
 	config: LocaleConfig,

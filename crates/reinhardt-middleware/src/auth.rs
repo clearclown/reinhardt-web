@@ -28,7 +28,9 @@ use reinhardt_auth::{AnonymousUser, AuthenticationBackend, User};
 ///
 /// Basic usage with in-memory session store:
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use std::sync::Arc;
 /// use reinhardt_middleware::AuthenticationMiddleware;
 /// use reinhardt_auth::session::InMemorySessionStore;
@@ -48,8 +50,9 @@ use reinhardt_auth::{AnonymousUser, AuthenticationBackend, User};
 /// #
 /// # // Simple test authentication backend
 /// # struct TestAuthBackend;
+/// # #[async_trait]
 /// # impl AuthenticationBackend for TestAuthBackend {
-/// #     fn authenticate(&self, _request: &Request) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
+/// #     async fn authenticate(&self, _request: &Request) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
 /// #         Ok(Some(Box::new(SimpleUser {
 /// #             id: Uuid::new_v4(),
 /// #             username: "testuser".to_string(),
@@ -60,7 +63,7 @@ use reinhardt_auth::{AnonymousUser, AuthenticationBackend, User};
 /// #             is_superuser: false,
 /// #         })))
 /// #     }
-/// #     fn get_user(&self, _user_id: &str) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
+/// #     async fn get_user(&self, _user_id: &str) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
 /// #         Ok(None)
 /// #     }
 /// # }
@@ -76,6 +79,8 @@ use reinhardt_auth::{AnonymousUser, AuthenticationBackend, User};
 /// # let handler = Arc::new(MyHandler);
 /// let app = MiddlewareChain::new(handler)
 ///     .with_middleware(Arc::new(auth_middleware));
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// Accessing authentication state in handlers:

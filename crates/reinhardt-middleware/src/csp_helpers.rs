@@ -14,7 +14,7 @@ use crate::csp::CspNonce;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use reinhardt_middleware::csp_helpers::get_csp_nonce;
 /// use reinhardt_core::http::Request;
 ///
@@ -37,7 +37,7 @@ pub fn get_csp_nonce(request: &Request) -> Option<String> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use reinhardt_middleware::csp_helpers::csp_nonce_attr;
 /// use reinhardt_core::http::Request;
 ///

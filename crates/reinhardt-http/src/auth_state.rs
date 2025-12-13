@@ -12,9 +12,15 @@ use crate::Extensions;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_http::AuthState;
-///
+/// ```rust,no_run
+/// # use reinhardt_http::AuthState;
+/// # struct Request { extensions: Extensions }
+/// # struct Extensions;
+/// # impl Extensions {
+/// #     fn insert<T>(&mut self, _value: T) {}
+/// #     fn get<T>(&self) -> Option<T> { None }
+/// # }
+/// # let mut request = Request { extensions: Extensions };
 /// // In middleware (after authentication)
 /// request.extensions.insert(AuthState::authenticated("123", false, true));
 ///
