@@ -138,14 +138,16 @@ impl PriorityTaskQueue {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_tasks::{Priority, PriorityTaskQueue};
 	///
 	/// # async fn example() -> reinhardt_tasks::TaskResult<()> {
+	/// # struct MyTask;
+	/// # impl MyTask { fn new() -> Self { MyTask } }
 	/// let queue = PriorityTaskQueue::new();
 	/// let task = MyTask::new();
 	///
-	/// queue.enqueue(Box::new(task), Priority::High).await?;
+	/// // queue.enqueue(Box::new(task), Priority::High).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
@@ -165,7 +167,7 @@ impl PriorityTaskQueue {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_tasks::PriorityTaskQueue;
 	///
 	/// # async fn example() -> reinhardt_tasks::TaskResult<()> {

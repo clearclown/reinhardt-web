@@ -26,11 +26,16 @@
 //!
 //! ## Example - Basic Usage
 //!
-//! ```rust,ignore
-//! use reinhardt_renderers::{JSONRenderer, Renderer};
-//!
+//! ```rust,no_run
+//! # use reinhardt_renderers::{JSONRenderer, Renderer};
+//! # use serde_json::json;
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let data = json!({"test": "value"});
 //! let renderer = JSONRenderer::new();
 //! let response = renderer.render(&data, None).await?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Example - Renderer Registry

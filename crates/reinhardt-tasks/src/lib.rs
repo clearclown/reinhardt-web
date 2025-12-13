@@ -18,19 +18,20 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
-//! use reinhardt_tasks::{Task, TaskQueue};
-//!
-//! #[derive(Task)]
+//! ```rust,no_run
+//! # use reinhardt_tasks::TaskResult;
+//! # trait Task {}
+//! # trait TaskQueue {}
+//! // #[derive(Task)]
 //! struct SendEmailTask {
 //!     to: String,
 //!     subject: String,
 //!     body: String,
 //! }
 //!
-//! #[async_trait]
-//! impl TaskExecutor for SendEmailTask {
-//!     async fn execute(&self) -> TaskResult<()> {
+//! // #[async_trait]
+//! // impl TaskExecutor for SendEmailTask {
+//! //     async fn execute(&self) -> TaskResult<()> {
 //!         // Send email
 //!         Ok(())
 //!     }

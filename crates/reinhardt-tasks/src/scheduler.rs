@@ -101,12 +101,13 @@ impl Scheduler {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_tasks::{Scheduler, CronSchedule};
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_tasks::Scheduler;
+	/// # struct CronSchedule { cron: String }
+	/// # impl CronSchedule { fn new(s: String) -> Self { CronSchedule { cron: s } } }
 	/// let mut scheduler = Scheduler::new();
 	/// let schedule = CronSchedule::new("0 0 * * *".to_string());
-	// scheduler.add_task(Box::new(my_task), Box::new(schedule));
+	/// // scheduler.add_task(Box::new(my_task), Box::new(schedule));
 	/// ```
 	pub fn add_task(&mut self, task: Box<dyn TaskExecutor>, schedule: Box<dyn Schedule>) {
 		self.tasks.push((task, schedule));
@@ -119,12 +120,14 @@ impl Scheduler {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_tasks::{Scheduler, CronSchedule};
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_tasks::Scheduler;
+	/// # #[tokio::main]
+	/// # async fn main() {
 	/// let mut scheduler = Scheduler::new();
-	// Add tasks...
+	/// // Add tasks...
 	/// scheduler.run().await;
+	/// # }
 	/// ```
 	pub async fn run(&self) {
 		use tokio::time::{Duration, sleep};

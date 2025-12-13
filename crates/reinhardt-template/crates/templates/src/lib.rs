@@ -17,7 +17,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use tera::{Context, Tera};
 //!
 //! let mut tera = Tera::default();
