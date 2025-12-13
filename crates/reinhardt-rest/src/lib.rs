@@ -19,15 +19,21 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
-//! use reinhardt_rest::{
-//!     JSONParser, JSONRenderer, Parser, Renderer,
-//!     BrowsableApiRenderer, DefaultRouter
-//! };
-//!
+//! ```rust,no_run
+//! # use reinhardt_rest::{JSONParser, JSONRenderer};
+//! # use reinhardt_rest::parsers::{Parser, ParseRequest};
+//! # use reinhardt_rest::renderers::Renderer;
+//! # use reinhardt_rest::routers::DefaultRouter;
+//! # use std::sync::Arc;
+//! # struct UserViewSet;
+//! #
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let request = ParseRequest::default();
+//! # let data = serde_json::json!({});
 //! // Parser
 //! let parser = JSONParser::new();
-//! let data = parser.parse(&request).await?;
+//! let parsed = parser.parse(request).await?;
 //!
 //! // Renderer
 //! let renderer = JSONRenderer::new();
@@ -36,6 +42,8 @@
 //! // Router
 //! let mut router = DefaultRouter::new();
 //! router.register_viewset("users", Arc::new(UserViewSet));
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ## Testing

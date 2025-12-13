@@ -22,7 +22,8 @@ pub enum EnumTagging {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use serde::Serialize;
 	/// #[derive(Serialize)]
 	/// #[serde(tag = "type")]
 	/// enum Message {
@@ -39,7 +40,8 @@ pub enum EnumTagging {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use serde::Serialize;
 	/// #[derive(Serialize)]
 	/// #[serde(tag = "tag", content = "content")]
 	/// enum Message {
@@ -58,7 +60,8 @@ pub enum EnumTagging {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use serde::Serialize;
 	/// #[derive(Serialize)]
 	/// #[serde(untagged)]
 	/// enum Value {

@@ -15,9 +15,10 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
-//! use reinhardt_schema::{SchemaGenerator, OpenApiSchema};
+//! ```rust,no_run
+//! use reinhardt_openapi::{SchemaGenerator, OpenApiSchema};
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // Generate schema from ViewSets
 //! let generator = SchemaGenerator::new()
 //!     .title("My API")
@@ -26,6 +27,8 @@
 //!
 //! let schema = generator.generate()?;
 //! let json = schema.to_json()?;
+//! # Ok(())
+//! # }
 //! ```
 
 pub mod auto_schema;

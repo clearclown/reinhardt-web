@@ -4,8 +4,10 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_rest::routers::DefaultRouter;
+//! # use std::sync::Arc;
+//! # struct UserViewSet;
 //!
 //! let mut router = DefaultRouter::new();
 //! router.register_viewset("users", Arc::new(UserViewSet));

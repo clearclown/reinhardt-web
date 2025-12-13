@@ -129,7 +129,9 @@ impl Default for IntrospectionCache {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::performance::BatchValidator;
 ///
 /// let mut validator = BatchValidator::new();
@@ -140,6 +142,8 @@ impl Default for IntrospectionCache {
 ///
 /// // Execute all checks in optimized query
 /// let results = validator.execute().await?;
+///
+/// # }
 /// ```
 #[derive(Debug)]
 pub struct BatchValidator {

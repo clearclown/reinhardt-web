@@ -20,23 +20,23 @@ use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use reinhardt_openapi::ViewSetInspector;
-/// use reinhardt_viewsets::ModelViewSet;
-///
-/// #[derive(Debug, Clone)]
-/// struct User {
-///     id: i64,
-///     username: String,
-/// }
-///
-/// #[derive(Debug, Clone)]
-/// struct UserSerializer;
-///
-/// let viewset = ModelViewSet::<User, UserSerializer>::new("users");
+/// ```rust,no_run
+/// # use reinhardt_openapi::ViewSetInspector;
+/// # use reinhardt_viewsets::ModelViewSet;
+/// #
+/// # #[derive(Debug, Clone)]
+/// # struct User {
+/// #     id: i64,
+/// #     username: String,
+/// # }
+/// #
+/// # #[derive(Debug, Clone)]
+/// # struct UserSerializer;
+/// #
+/// # let viewset = ModelViewSet::<User, UserSerializer>::new("users");
 /// let inspector = ViewSetInspector::new();
 ///
-// Extract path information
+/// // Extract path information
 /// let paths = inspector.extract_paths(&viewset, "/api/users");
 /// ```
 pub struct ViewSetInspector {
@@ -70,9 +70,8 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::ViewSetInspector;
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::ViewSetInspector;
 	/// let inspector = ViewSetInspector::new();
 	/// ```
 	pub fn new() -> Self {
@@ -85,9 +84,8 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::{ViewSetInspector, InspectorConfig};
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::{ViewSetInspector, InspectorConfig};
 	/// let config = InspectorConfig {
 	///     include_descriptions: false,
 	///     include_tags: true,
@@ -106,16 +104,16 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::ViewSetInspector;
-	/// use reinhardt_viewsets::ModelViewSet;
-	///
-	/// #[derive(Debug, Clone)]
-	/// struct User { id: i64, username: String }
-	/// #[derive(Debug, Clone)]
-	/// struct UserSerializer;
-	///
-	/// let viewset = ModelViewSet::<User, UserSerializer>::new("users");
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::ViewSetInspector;
+	/// # use reinhardt_viewsets::ModelViewSet;
+	/// #
+	/// # #[derive(Debug, Clone)]
+	/// # struct User { id: i64, username: String }
+	/// # #[derive(Debug, Clone)]
+	/// # struct UserSerializer;
+	/// #
+	/// # let viewset = ModelViewSet::<User, UserSerializer>::new("users");
 	/// let inspector = ViewSetInspector::new();
 	/// let paths = inspector.extract_paths(&viewset, "/api/users");
 	///
@@ -231,16 +229,16 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::ViewSetInspector;
-	/// use reinhardt_viewsets::ModelViewSet;
-	///
-	/// #[derive(Debug, Clone)]
-	/// struct User { id: i64 }
-	/// #[derive(Debug, Clone)]
-	/// struct UserSerializer;
-	///
-	/// let viewset = ModelViewSet::<User, UserSerializer>::new("users");
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::ViewSetInspector;
+	/// # use reinhardt_viewsets::ModelViewSet;
+	/// #
+	/// # #[derive(Debug, Clone)]
+	/// # struct User { id: i64 }
+	/// # #[derive(Debug, Clone)]
+	/// # struct UserSerializer;
+	/// #
+	/// # let viewset = ModelViewSet::<User, UserSerializer>::new("users");
 	/// let inspector = ViewSetInspector::new();
 	/// let operations = inspector.extract_operations(&viewset);
 	///
@@ -283,9 +281,8 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::{ViewSetInspector, Schema};
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::ViewSetInspector;
 	/// let inspector = ViewSetInspector::new();
 	/// let schema = inspector.extract_model_schema("User");
 	///
@@ -334,52 +331,51 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::{ViewSetInspector, ToSchema, Schema};
-	/// use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
-	///
-	/// #[derive(Debug, Clone)]
-	/// struct User {
-	///     id: i64,
-	///     username: String,
-	///     email: String,
-	///     is_active: bool,
-	/// }
-	///
-	/// impl ToSchema for User {
-	///     fn schema() -> Schema {
-	///         let id_schema = ObjectBuilder::new()
-	///             .schema_type(SchemaType::Type(Type::Integer))
-	///             .build();
-	///         let username_schema = ObjectBuilder::new()
-	///             .schema_type(SchemaType::Type(Type::String))
-	///             .build();
-	///         let email_schema = ObjectBuilder::new()
-	///             .schema_type(SchemaType::Type(Type::String))
-	///             .build();
-	///         let is_active_schema = ObjectBuilder::new()
-	///             .schema_type(SchemaType::Type(Type::Boolean))
-	///             .build();
-	///
-	///         Schema::Object(
-	///             ObjectBuilder::new()
-	///                 .schema_type(SchemaType::Type(Type::Object))
-	///                 .property("id", Schema::Object(id_schema))
-	///                 .property("username", Schema::Object(username_schema))
-	///                 .property("email", Schema::Object(email_schema))
-	///                 .property("is_active", Schema::Object(is_active_schema))
-	///                 .required("id")
-	///                 .required("username")
-	///                 .required("email")
-	///                 .build(),
-	///         )
-	///     }
-	///
-	///     fn schema_name() -> Option<String> {
-	///         Some("User".to_string())
-	///     }
-	/// }
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::{ViewSetInspector, ToSchema, Schema};
+	/// # use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
+	/// #
+	/// # #[derive(Debug, Clone)]
+	/// # struct User {
+	/// #     id: i64,
+	/// #     username: String,
+	/// #     email: String,
+	/// #     is_active: bool,
+	/// # }
+	/// #
+	/// # impl ToSchema for User {
+	/// #     fn schema() -> Schema {
+	/// #         let id_schema = ObjectBuilder::new()
+	/// #             .schema_type(SchemaType::Type(Type::Integer))
+	/// #             .build();
+	/// #         let username_schema = ObjectBuilder::new()
+	/// #             .schema_type(SchemaType::Type(Type::String))
+	/// #             .build();
+	/// #         let email_schema = ObjectBuilder::new()
+	/// #             .schema_type(SchemaType::Type(Type::String))
+	/// #             .build();
+	/// #         let is_active_schema = ObjectBuilder::new()
+	/// #             .schema_type(SchemaType::Type(Type::Boolean))
+	/// #             .build();
+	/// #
+	/// #         Schema::Object(
+	/// #             ObjectBuilder::new()
+	/// #                 .schema_type(SchemaType::Type(Type::Object))
+	/// #                 .property("id", Schema::Object(id_schema))
+	/// #                 .property("username", Schema::Object(username_schema))
+	/// #                 .property("email", Schema::Object(email_schema))
+	/// #                 .property("is_active", Schema::Object(is_active_schema))
+	/// #                 .required("id")
+	/// #                 .required("username")
+	/// #                 .required("email")
+	/// #                 .build(),
+	/// #         )
+	/// #     }
+	/// #
+	/// #     fn schema_name() -> Option<String> {
+	/// #         Some("User".to_string())
+	/// #     }
+	/// # }
 	/// let inspector = ViewSetInspector::new();
 	/// let schema = inspector.extract_schema::<User>();
 	///
@@ -410,9 +406,24 @@ impl ViewSetInspector {
 	///
 	/// # Example
 	///
-	/// ```rust,ignore
-	/// use reinhardt_openapi::ViewSetInspector;
-	///
+	/// ```rust,no_run
+	/// # use reinhardt_openapi::{ViewSetInspector, ToSchema, Schema};
+	/// # use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
+	/// #
+	/// # #[derive(Debug, Clone)]
+	/// # struct User {
+	/// #     id: i64,
+	/// #     username: String,
+	/// # }
+	/// #
+	/// # impl ToSchema for User {
+	/// #     fn schema() -> Schema {
+	/// #         Schema::Object(ObjectBuilder::new().build())
+	/// #     }
+	/// #     fn schema_name() -> Option<String> {
+	/// #         Some("User".to_string())
+	/// #     }
+	/// # }
 	/// let inspector = ViewSetInspector::new();
 	/// let (schema, name) = inspector.extract_schema_with_name::<User>();
 	///

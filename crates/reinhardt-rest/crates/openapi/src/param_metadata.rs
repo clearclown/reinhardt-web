@@ -14,23 +14,31 @@ use std::marker::PhantomData;
 ///
 /// # Example
 ///
-/// ```rust,ignore
-/// use openapi::param_metadata::ParameterMetadata;
-/// use openapi::{Parameter, ParameterIn};
+/// ```rust,no_run
+/// use reinhardt_openapi::param_metadata::ParameterMetadata;
+/// use reinhardt_openapi::{Parameter, ParameterLocation, ToSchema, Required};
+/// use utoipa::openapi::path::ParameterBuilder;
 ///
 /// struct PathExtractor<T> {
 ///     _marker: std::marker::PhantomData<T>,
 /// }
 ///
-/// impl<T: openapi::ToSchema> ParameterMetadata for PathExtractor<T> {
+/// impl<T: ToSchema> ParameterMetadata for PathExtractor<T> {
 ///     fn parameter_metadata(name: &str, include_in_schema: bool) -> Option<Parameter> {
 ///         if !include_in_schema {
 ///             return None;
 ///         }
-///         Some(Parameter::new(name, ParameterIn::Path).schema(T::schema()))
+///         Some(
+///             ParameterBuilder::new()
+///                 .name(name)
+///                 .parameter_in(ParameterLocation::Path)
+///                 .required(Required::True)
+///                 .schema(Some(T::schema()))
+///                 .build()
+///         )
 ///     }
 /// }
-/// ```ignore
+/// ```
 pub trait ParameterMetadata {
 	/// Generate OpenAPI parameter metadata
 	///

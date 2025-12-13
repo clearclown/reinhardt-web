@@ -14,7 +14,7 @@
 //!
 //! ## Usage Pattern
 //!
-//! ```ignore
+//! ```rust,no_run
 //! // 1. Load data with relationships using ORM
 //! let posts = Post::objects()
 //!     .select_related("author")  // Load author relationship
@@ -369,7 +369,9 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 /// ## Basic Usage with Manual ORM Integration
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::WritableNestedSerializer;
 /// use reinhardt_db::orm::{Model, Transaction};
 ///
@@ -409,7 +411,30 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 /// ## Advanced: Handling Both Create and Update
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # use serde_json::json;
+/// # use reinhardt_orm::{Model, Transaction};
+/// # use reinhardt_serializers::WritableNestedSerializer;
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Author { id: Option<i64>, name: String }
+/// # impl Model for Author {
+/// #     type PrimaryKey = i64;
+/// #     fn table_name() -> &'static str { "authors" }
+/// #     fn primary_key(&self) -> Option<&i64> { self.id.as_ref() }
+/// #     fn set_primary_key(&mut self, value: i64) { self.id = Some(value); }
+/// # }
+/// # #[derive(serde::Serialize, serde::Deserialize)]
+/// # struct Post { id: i64, title: String, author_id: i64 }
+/// # impl Model for Post {
+/// #     type PrimaryKey = i64;
+/// #     fn table_name() -> &'static str { "posts" }
+/// #     fn primary_key(&self) -> Option<&i64> { Some(&self.id) }
+/// #     fn set_primary_key(&mut self, value: i64) { self.id = value; }
+/// # }
+/// # let serializer = WritableNestedSerializer::<Post, Author>::new();
+/// # let json = json!({});
 /// if let Some(author_data) = serializer.extract_nested_data(json)? {
 ///     let mut tx = Transaction::new();
 ///     tx.begin()?;
@@ -428,6 +453,8 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 ///     tx.commit()?;
 /// }
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Error Handling

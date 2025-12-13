@@ -14,7 +14,9 @@ use std::sync::{Arc, RwLock};
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::pool_manager::ConnectionPoolManager;
 /// use reinhardt_db::pool::{ConnectionPool, PoolConfig};
 ///
@@ -27,6 +29,8 @@ use std::sync::{Arc, RwLock};
 ///
 /// // Acquire connections in serializers
 /// let conn = ConnectionPoolManager::acquire().await?;
+///
+/// # }
 /// ```
 pub struct ConnectionPoolManager {
 	pool: Option<Arc<ConnectionPool<sqlx::Postgres>>>,
@@ -125,9 +129,13 @@ impl Default for ConnectionPoolManager {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// let config = default_pool_config();
 /// let pool = ConnectionPool::new_postgres(url, config).await?;
+///
+/// # }
 /// ```
 pub fn default_pool_config() -> PoolConfig {
 	PoolConfig::default()

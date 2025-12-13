@@ -18,7 +18,7 @@ use std::sync::Arc;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use std::collections::HashMap;
 /// use reinhardt_serializers::UrlReverser;
 /// use reinhardt_routers::UrlReverser as RouterUrlReverser;

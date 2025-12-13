@@ -24,7 +24,9 @@ use std::collections::HashMap;
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::{Serializer, SerializerSaveMixin};
 ///
 /// #[derive(Serialize, Deserialize)]
@@ -53,6 +55,8 @@ use std::collections::HashMap;
 /// let data = json!({"username": "alice", "email": "alice@example.com"});
 /// // Verify create operation succeeds (requires database)
 /// let user = UserSerializer::create(data).await?;
+///
+/// # }
 /// ```
 #[async_trait]
 pub trait SerializerSaveMixin

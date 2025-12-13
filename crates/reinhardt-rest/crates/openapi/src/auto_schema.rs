@@ -12,9 +12,9 @@ use crate::openapi::Schema;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_openapi::{ToSchema, Schema};
-/// use utoipa::openapi::schema::{Object, SchemaType};
+/// use utoipa::openapi::schema::{ObjectBuilder, SchemaType, Type};
 ///
 /// struct User {
 ///     id: i64,
@@ -24,12 +24,21 @@ use crate::openapi::Schema;
 /// impl ToSchema for User {
 ///     fn schema() -> Schema {
 ///         Schema::Object(
-///             Object::new()
-///                 .schema_type(SchemaType::Object)
-///                 .property("id", Schema::from(SchemaType::Integer))
-///                 .property("name", Schema::from(SchemaType::String))
+///             ObjectBuilder::new()
+///                 .schema_type(SchemaType::Type(Type::Object))
+///                 .property("id", Schema::Object(
+///                     ObjectBuilder::new()
+///                         .schema_type(SchemaType::Type(Type::Integer))
+///                         .build()
+///                 ))
+///                 .property("name", Schema::Object(
+///                     ObjectBuilder::new()
+///                         .schema_type(SchemaType::Type(Type::String))
+///                         .build()
+///                 ))
 ///                 .required("id")
 ///                 .required("name")
+///                 .build()
 ///         )
 ///     }
 ///
@@ -37,7 +46,7 @@ use crate::openapi::Schema;
 ///         Some("User".to_string())
 ///     }
 /// }
-/// ```ignore
+/// ```
 pub trait ToSchema {
 	/// Generate an OpenAPI schema for this type
 	fn schema() -> Schema;
@@ -211,32 +220,32 @@ impl<T: ToSchema> ToSchema for Vec<T> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
-// Simple HashMap with primitive values
+/// // Simple HashMap with primitive values
 /// let schema = <HashMap<String, i32>>::schema();
-/// # // Verify it's a valid schema
-/// # match schema {
-/// #     reinhardt_openapi::Schema::Object(_) => {},
-/// #     _ => panic!("Expected Object schema"),
-/// # }
-/// ```ignore
+/// // Verify it's a valid schema
+/// match schema {
+///     reinhardt_openapi::Schema::Object(_) => {},
+///     _ => panic!("Expected Object schema"),
+/// }
+/// ```
 ///
 /// # Nested HashMaps
 ///
-/// ```rust,ignore
+/// ```rust
 /// use reinhardt_openapi::ToSchema;
 /// use std::collections::HashMap;
 ///
-// Nested HashMaps are supported
+/// // Nested HashMaps are supported
 /// let schema = <HashMap<String, HashMap<String, String>>>::schema();
-/// # match schema {
-/// #     reinhardt_openapi::Schema::Object(_) => {},
-/// #     _ => panic!("Expected Object schema"),
-/// # }
-/// ```ignore
+/// match schema {
+///     reinhardt_openapi::Schema::Object(_) => {},
+///     _ => panic!("Expected Object schema"),
+/// }
+/// ```
 impl<V: ToSchema> ToSchema for std::collections::HashMap<String, V> {
 	fn schema() -> Schema {
 		Schema::Object(

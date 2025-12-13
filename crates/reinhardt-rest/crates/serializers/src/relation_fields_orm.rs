@@ -117,7 +117,9 @@ impl<T, RelatedItem> Clone for SingleRelationResolverFn<T, RelatedItem> {
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::relation_fields_orm::PrimaryKeyRelatedFieldORM;
 ///
 /// // Field that references User by ID
@@ -128,6 +130,8 @@ impl<T, RelatedItem> Clone for SingleRelationResolverFn<T, RelatedItem> {
 ///
 /// // Get the user instance (database query)
 /// let user = field.get_instance(123).await?;
+///
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct PrimaryKeyRelatedFieldORM<T>
@@ -355,7 +359,9 @@ where
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
+/// # #[tokio::main]
+/// # async fn main() {
 /// use reinhardt_serializers::relation_fields_orm::SlugRelatedFieldORM;
 ///
 /// // Field that references User by username
@@ -367,6 +373,8 @@ where
 /// // Get the user instance (database query by slug)
 /// let user = field.get_instance("alice").await?;
 /// assert_eq!(user.username, "alice");
+///
+/// # }
 /// ```
 #[derive(Debug, Clone)]
 pub struct SlugRelatedFieldORM<T>
@@ -551,7 +559,7 @@ where
 ///
 /// # Examples
 ///
-/// ```ignore
+/// ```rust,no_run
 /// use reinhardt_serializers::relation_fields_orm::QueryOptimizer;
 ///
 /// let optimizer = QueryOptimizer::new()
