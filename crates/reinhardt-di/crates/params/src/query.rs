@@ -19,7 +19,12 @@ use std::collections::HashMap;
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::Query;
+/// # use reinhardt_macros::endpoint;
+/// # use reinhardt_exception::Result;
+/// # use serde::Deserialize;
+/// # struct User;
 /// #[derive(Deserialize)]
 /// struct Pagination {
 ///     page: Option<i32>,
@@ -30,13 +35,19 @@ use std::collections::HashMap;
 /// async fn list_users(query: Query<Pagination>) -> Result<Vec<User>> {
 ///     let page = query.page.unwrap_or(1);
 ///     let per_page = query.per_page.unwrap_or(10);
+///     # Ok(vec![])
 ///     // ...
 /// }
 /// ```
 ///
 /// # Multi-value Parameters
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::Query;
+/// # use reinhardt_macros::endpoint;
+/// # use reinhardt_exception::Result;
+/// # use serde::Deserialize;
+/// # struct Item;
 /// #[derive(Deserialize)]
 /// struct SearchQuery {
 ///     q: Vec<i64>,  // Supports repeated keys: ?q=5&q=6
@@ -45,6 +56,7 @@ use std::collections::HashMap;
 /// #[endpoint(GET "/search")]
 /// async fn search(query: Query<SearchQuery>) -> Result<Vec<Item>> {
 ///     // query.q will contain vec![5, 6]
+///     # Ok(vec![])
 ///     // ...
 /// }
 /// ```

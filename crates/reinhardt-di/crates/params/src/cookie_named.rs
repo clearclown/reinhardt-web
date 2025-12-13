@@ -35,9 +35,8 @@ impl CookieName for CsrfToken {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// use reinhardt_params::{CookieNamed, SessionId, CsrfToken};
-///
+/// ```rust,no_run
+/// # use reinhardt_params::{CookieNamed, SessionId, CsrfToken};
 /// async fn handler(session: CookieNamed<SessionId, String>) {
 ///     println!("Session ID: {}", *session);
 /// }

@@ -34,9 +34,8 @@ impl HeaderName for ContentType {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// use reinhardt_params::{HeaderNamed, Authorization, ContentType};
-///
+/// ```rust,no_run
+/// # use reinhardt_params::{HeaderNamed, Authorization, ContentType};
 /// async fn handler(auth: HeaderNamed<Authorization, String>) {
 ///     println!("Authorization: {}", *auth);
 /// }

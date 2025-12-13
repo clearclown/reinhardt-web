@@ -17,18 +17,23 @@
 //!
 //! # Quick Start
 //!
-//! ```rust,ignore
-//! use reinhardt_params::{Path, Query, WithValidation};
-//!
+//! ```rust,no_run
+//! # use reinhardt_params::{Path, Query, WithValidation};
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! # let req = ();
+//! # let ctx = ();
 //! // Extract and validate a path parameter
-//! let id = Path::<i32>::from_request(req, ctx).await?;
-//! let validated_id = id.min_value(1).max_value(1000);
-//! validated_id.validate_number(&validated_id.0)?;
+//! // let id = Path::<i32>::from_request(req, ctx).await?;
+//! // let validated_id = id.min_value(1).max_value(1000);
+//! // validated_id.validate_number(&validated_id.0)?;
 //!
 //! // Extract and validate a query parameter
-//! let email = Query::<String>::from_request(req, ctx).await?;
-//! let validated_email = email.min_length(5).max_length(100).email();
-//! validated_email.validate_string(&validated_email.0)?;
+//! // let email = Query::<String>::from_request(req, ctx).await?;
+//! // let validated_email = email.min_length(5).max_length(100).email();
+//! // validated_email.validate_string(&validated_email.0)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Type Aliases
@@ -43,40 +48,41 @@
 //!
 //! ## Numeric Range Validation
 //!
-//! ```rust,ignore
-//! use reinhardt_params::{Path, WithValidation};
-//!
+//! ```rust
+//! # use reinhardt_params::{Path, WithValidation};
 //! let age = Path(25);
 //! let validated = age.min_value(0).max_value(120);
 //!
 //! assert!(validated.validate_number(&25).is_ok());
 //! assert!(validated.validate_number(&150).is_err());
+//! assert!(validated.validate_number(&-10).is_err());
 //! ```
 //!
 //! ## Email Validation
 //!
-//! ```rust,ignore
-//! use reinhardt_params::{Query, WithValidation};
-//!
+//! ```rust
+//! # use reinhardt_params::{Query, WithValidation};
 //! let email = Query("user@example.com".to_string());
 //! let validated = email.email();
 //!
 //! assert!(validated.validate_string("user@example.com").is_ok());
 //! assert!(validated.validate_string("invalid").is_err());
+//! assert!(validated.validate_string("test@test.com").is_ok());
 //! ```
 //!
 //! ## Combined Constraints
 //!
-//! ```rust,ignore
-//! use reinhardt_params::{Path, WithValidation};
-//!
+//! ```rust
+//! # use reinhardt_params::{Path, WithValidation};
 //! let username = Path("alice".to_string());
 //! let validated = username
 //!     .min_length(3)
 //!     .max_length(20)
 //!     .regex(r"^[a-zA-Z0-9_]+$");
 //!
-//! validated.validate_string(&validated.0)?;
+//! assert!(validated.validate_string(&validated.0).is_ok());
+//! assert!(validated.validate_string("ab").is_err()); // Too short
+//! assert!(validated.validate_string("invalid-chars!").is_err()); // Invalid chars
 //! ```
 //!
 //! # Error Handling
@@ -106,14 +112,16 @@ use std::ops::Deref;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// use reinhardt_params::{Path, Validated};
-/// use reinhardt_validators::MinLengthValidator;
-///
-/// async fn handler(id: Validated<Path<String>, MinLengthValidator>) {
-///     // id is guaranteed to meet the validation constraints
-///     let value = id.into_inner().0;
-/// }
+/// ```rust,no_run
+/// # use reinhardt_params::{Path, Validated};
+/// # use reinhardt_validators::MinLengthValidator;
+/// # #[tokio::main]
+/// # async fn main() {
+/// // async fn handler(id: Validated<Path<String>, MinLengthValidator>) {
+/// //     // id is guaranteed to meet the validation constraints
+/// //     let value = id.into_inner().0;
+/// // }
+/// # }
 /// ```
 #[cfg(feature = "validation")]
 pub struct Validated<T, V> {
@@ -420,25 +428,30 @@ pub trait WithValidation: Sized {
 ///
 /// # Examples
 ///
-/// ```rust,ignore
-/// use reinhardt_params::{ValidatedPath, WithValidation};
-///
+/// ```rust,no_run
+/// # use reinhardt_params::{ValidatedPath, WithValidation, Path};
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # let req = ();
+/// # let ctx = ();
 // In your handler:
-/// async fn handler(
-///     // Extract path parameter "id" and validate it
-///     id: ValidatedPath<i32>,
-/// ) {
-///     // Use the validated value
-///     let value = id.0;
-/// }
+/// // async fn handler(
+/// //     // Extract path parameter "id" and validate it
+/// //     id: ValidatedPath<i32>,
+/// // ) {
+/// //     // Use the validated value
+/// //     let value = id.0;
+/// // }
 ///
 // Usage pattern:
 // 1. Extract Path<T> from request
 // 2. Apply validation constraints
 // 3. Validate
-/// let path = Path::<i32>::from_request(req, ctx).await?;
-/// let validated = path.min_value(1).max_value(100);
-/// validated.validate_number(&validated.0)?;
+/// // let path = Path::<i32>::from_request(req, ctx).await?;
+/// // let validated = path.min_value(1).max_value(100);
+/// // validated.validate_number(&validated.0)?;
+/// # Ok(())
+/// # }
 /// ```
 #[cfg(feature = "validation")]
 pub type ValidatedPath<T> = ValidationConstraints<crate::Path<T>>;

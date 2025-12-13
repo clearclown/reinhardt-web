@@ -5,9 +5,10 @@
 //!
 //! # Example
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! use reinhardt_params::Multipart;
 //!
+//! # type Error = Box<dyn std::error::Error>;
 //! async fn upload_handler(mut multipart: Multipart) -> Result<(), Error> {
 //!     while let Some(field) = multipart.next_field().await? {
 //!         let name = field.name().unwrap_or("unknown");

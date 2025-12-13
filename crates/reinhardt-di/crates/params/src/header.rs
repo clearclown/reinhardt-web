@@ -46,7 +46,9 @@ impl<T: Debug> Debug for Header<T> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::HeaderStruct;
+/// # use serde::Deserialize;
 /// #[derive(Deserialize)]
 /// struct MyHeaders {
 ///     #[serde(rename = "x-api-key")]

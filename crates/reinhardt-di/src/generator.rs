@@ -18,25 +18,28 @@
 //!
 //! # Examples
 //!
-//! ```rust,ignore
-//! use reinhardt_di::generator::DependencyGenerator;
-//!
+//! ```rust,no_run
+//! # #[cfg(feature = "generator")]
+//! # use reinhardt_di::generator::DependencyGenerator;
+//! # #[cfg(feature = "generator")]
+//! # async fn example() {
 //! // Create a generator that yields dependencies one by one
-//! let gen = DependencyGenerator::new(|co| async move {
-//!     let db = resolve_database().await;
-//!     co.yield_(db).await;
-//!
-//!     let cache = resolve_cache().await;
-//!     co.yield_(cache).await;
-//!
-//!     let service = resolve_service().await;
-//!     co.yield_(service).await;
-//! });
-//!
-//! // Consume dependencies as they become available
-//! while let Some(dep) = gen.next().await {
-//!     // Use dependency
-//! }
+//! // let gen = DependencyGenerator::new(|co| async move {
+//! //     let db = resolve_database().await;
+//! //     co.yield_(db).await;
+//! //
+//! //     let cache = resolve_cache().await;
+//! //     co.yield_(cache).await;
+//! //
+//! //     let service = resolve_service().await;
+//! //     co.yield_(service).await;
+//! // });
+//! //
+//! // // Consume dependencies as they become available
+//! // while let Some(dep) = gen.next().await {
+//! //     // Use dependency
+//! // }
+//! # }
 //! ```
 
 #[cfg(feature = "generator")]
@@ -77,11 +80,16 @@ where
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
-	/// let gen = DependencyGenerator::new(|co| async move {
-	///     let db = Database::connect().await;
-	///     co.yield_(db).await;
-	/// });
+	/// ```rust,no_run
+	/// # #[cfg(feature = "generator")]
+	/// # use reinhardt_di::generator::DependencyGenerator;
+	/// # #[cfg(feature = "generator")]
+	/// # async fn example() {
+	/// // let gen = DependencyGenerator::new(|co| async move {
+	/// //     let db = Database::connect().await;
+	/// //     co.yield_(db).await;
+	/// // });
+	/// # }
 	/// ```
 	pub fn new<F>(producer: F) -> Self
 	where

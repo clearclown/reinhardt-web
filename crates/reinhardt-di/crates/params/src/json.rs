@@ -12,7 +12,12 @@ use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::Json;
+/// # use reinhardt_macros::endpoint;
+/// # use reinhardt_exception::Result;
+/// # use serde::Deserialize;
+/// # struct User;
 /// #[derive(Deserialize)]
 /// struct CreateUser {
 ///     username: String,
@@ -23,6 +28,7 @@ use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 /// async fn create_user(user: Json<CreateUser>) -> Result<User> {
 ///     let username = &user.username;
 ///     let email = &user.email;
+///     # Ok(User)
 ///     // ...
 /// }
 /// ```

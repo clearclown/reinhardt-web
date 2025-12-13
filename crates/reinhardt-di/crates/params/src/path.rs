@@ -14,10 +14,15 @@ use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::Path;
+/// # use reinhardt_macros::endpoint;
+/// # use reinhardt_exception::Result;
+/// # struct User;
 /// #[endpoint(GET "/users/{id}")]
 /// async fn get_user(id: Path<i64>) -> Result<User> {
 ///     let user_id = id.0; // or *id
+///     # Ok(User)
 ///     // ...
 /// }
 /// ```
@@ -205,7 +210,12 @@ impl FromRequest for Path<String> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use serde::Deserialize;
+/// # use reinhardt_macros::endpoint;
+/// # use crate::PathStruct;
+/// # struct Post;
+/// # type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 /// #[derive(Deserialize)]
 /// struct UserPath {
 ///     user_id: i64,
@@ -217,6 +227,7 @@ impl FromRequest for Path<String> {
 ///     let user_id = path.user_id;
 ///     let post_id = path.post_id;
 ///     // ...
+/// #   Ok(Post)
 /// }
 /// ```
 pub struct PathStruct<T>(pub T);

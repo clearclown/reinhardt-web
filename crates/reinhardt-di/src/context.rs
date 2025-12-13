@@ -20,15 +20,19 @@ pub use reinhardt_params::{ParamContext, Request};
 /// The context supports dependency overrides, which take precedence over normal
 /// dependency resolution. This is particularly useful for testing:
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_di::{InjectionContext, SingletonScope};
+/// use std::sync::Arc;
 ///
-/// #[injectable]
-/// fn create_database() -> Database {
-///     Database::connect("production://db")
-/// }
+/// # #[derive(Clone)]
+/// # struct Database;
+/// # impl Database {
+/// #     fn connect(_url: &str) -> Self { Database }
+/// #     fn mock() -> Self { Database }
+/// # }
+/// # fn create_database() -> Database { Database::connect("production://db") }
 ///
-/// let singleton = SingletonScope::new();
+/// let singleton = Arc::new(SingletonScope::new());
 /// let ctx = InjectionContext::builder(singleton).build();
 ///
 /// // Set override for testing
@@ -392,17 +396,22 @@ impl InjectionContext {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// use reinhardt_di::{InjectionContext, SingletonScope};
+	/// use std::sync::Arc;
 	///
-	/// // Even though the original function has parameters with #[inject],
-	/// // the macro generates a 0-argument function for the override API.
-	/// #[injectable]
-	/// fn create_database(#[inject] config: Config) -> Database {
-	///     Database::connect(config.url)
-	/// }
+	/// # #[derive(Clone)]
+	/// # struct Database;
+	/// # impl Database {
+	/// #     fn connect(_url: &str) -> Self { Database }
+	/// #     fn mock() -> Self { Database }
+	/// # }
+	/// # struct Config { url: String }
+	/// # fn create_database() -> Database {
+	/// #     Database::connect("production://db")
+	/// # }
 	///
-	/// let singleton = SingletonScope::new();
+	/// let singleton = Arc::new(SingletonScope::new());
 	/// let ctx = InjectionContext::builder(singleton).build();
 	///
 	/// // Set override - create_database is 0-argument after macro expansion

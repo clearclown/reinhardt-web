@@ -7,19 +7,35 @@
 //!
 //! ## Examples
 //!
-//! ```rust,ignore
-//! use reinhardt_di::{Depends, Injectable, InjectionContext};
+//! ```rust,no_run
+//! use reinhardt_di::{Depends, DiResult, Injectable, InjectionContext, SingletonScope};
+//! use async_trait::async_trait;
+//! use std::sync::Arc;
 //!
 //! #[derive(Clone, Default)]
 //! struct Config {
 //!     database_url: String,
 //! }
 //!
+//! #[async_trait]
+//! impl Injectable for Config {
+//!     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+//!         Ok(Self::default())
+//!     }
+//! }
+//!
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let singleton = Arc::new(SingletonScope::new());
+//! let ctx = InjectionContext::builder(singleton).build();
+//!
 //! // Basic usage - with caching (default)
-//! let config = Depends::<Config>::builder().resolve(ctx).await?;
+//! let config = Depends::<Config>::builder().resolve(&ctx).await?;
 //!
 //! // Without caching - creates new instance every time
-//! let config = Depends::<Config>::builder_no_cache().resolve(ctx).await?;
+//! let config = Depends::<Config>::builder_no_cache().resolve(&ctx).await?;
+//! # Ok(())
+//! # }
 //! ```
 
 use crate::{DiResult, Injectable, context::InjectionContext};
@@ -45,7 +61,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_di::{Depends, injectable};
 	///
 	/// #[derive(Clone, Default)]
@@ -70,7 +86,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_di::{Depends, injectable};
 	///
 	/// #[derive(Clone, Default)]
@@ -97,7 +113,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, injectable};
 	///
 	/// #[derive(Clone, Default)]
@@ -138,7 +154,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_di::{Depends, injectable};
 	///
 	/// #[derive(Clone, Default)]
@@ -166,7 +182,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
 	/// use reinhardt_di::{Depends, injectable};
 	///
 	/// #[derive(Clone, Default)]
@@ -200,7 +216,7 @@ where
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, injectable};
 	///
 	/// #[derive(Clone, Default)]

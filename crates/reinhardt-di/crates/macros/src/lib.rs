@@ -22,6 +22,7 @@ mod utils;
 /// #[injectable]
 /// #[scope(singleton)]
 /// struct Config {
+///     #[no_inject]
 ///     database_url: String,
 /// }
 /// ```

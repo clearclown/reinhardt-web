@@ -13,9 +13,13 @@
 //!
 //! ## Example
 //!
-//! ```rust,ignore
-//! use reinhardt_params::{Path, Query, Json};
-//!
+//! ```rust,no_run
+//! # use reinhardt_params::{Path, Query, Json};
+//! # use reinhardt_macros::endpoint;
+//! # use reinhardt_exception::Result;
+//! # struct UserFilter;
+//! # struct UpdateUser;
+//! # struct User;
 //! #[endpoint(GET "/users/{id}")]
 //! async fn get_user(
 //!     id: Path<i64>,
@@ -25,6 +29,7 @@
 //!     // id.0 is the extracted i64
 //!     // filter.0 is the extracted UserFilter
 //!     // body.0 is the extracted UpdateUser
+//! #   Ok(User)
 //! }
 //! ```
 

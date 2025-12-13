@@ -20,8 +20,9 @@ use crate::{DiResult, context::InjectionContext};
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_di::{Injectable, InjectionContext, DiResult, Depends};
+/// use async_trait::async_trait;
 ///
 // Automatic injection for types with Default + Clone
 /// #[derive(Default, Clone)]
@@ -33,16 +34,21 @@ use crate::{DiResult, context::InjectionContext};
 // Can be used directly: Depends<Config>
 ///
 // Custom injection logic
+/// # #[derive(Clone)]
+/// # struct DbPool;
+/// # impl DbPool {
+/// #     async fn connect() -> DiResult<Self> { Ok(DbPool) }
+/// # }
 /// struct Database {
 ///     pool: DbPool,
 /// }
 ///
-/// #[async_trait::async_trait]
+/// #[async_trait]
 /// impl Injectable for Database {
-///     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+///     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
 ///         // Custom logic here
 ///         Ok(Database {
-///             pool: create_pool().await?,
+///             pool: DbPool::connect().await?,
 ///         })
 ///     }
 /// }
@@ -65,12 +71,19 @@ pub trait Injectable: Sized + Send + Sync + 'static {
 ///
 /// This allows using `Arc<T>` directly in endpoint handlers with `#[inject]`:
 ///
-/// ```rust,ignore
+/// ```ignore
+/// # use reinhardt_di::Injectable;
+/// # use std::sync::Arc;
+/// # struct DatabaseConnection;
+/// # struct Response;
+/// # type ViewResult<T> = Result<T, Box<dyn std::error::Error>>;
+/// # use reinhardt_core::endpoint;
 /// #[endpoint]
 /// async fn handler(
 ///     #[inject] db: Arc<DatabaseConnection>,
 /// ) -> ViewResult<Response> {
 ///     // ...
+/// #   Ok(Response)
 /// }
 /// ```
 ///

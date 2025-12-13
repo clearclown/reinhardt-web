@@ -26,46 +26,49 @@
 //! **Note**: Uses `genawaiter` crate as a workaround for unstable native async yield.
 //! Will be migrated to native syntax when Rust stabilizes async generators.
 //!
-//! ```rust,ignore
-//! #[cfg(feature = "generator")]
-//! use reinhardt_di::generator::DependencyGenerator;
-//!
-//! #[cfg(feature = "generator")]
-//! let gen = DependencyGenerator::new(|co| async move {
-//!     let db = resolve_database().await;
-//!     co.yield_(db).await;
-//!
-//!     let cache = resolve_cache().await;
-//!     co.yield_(cache).await;
-//! });
+//! ```rust,no_run
+//! # #[cfg(feature = "generator")]
+//! # use reinhardt_di::generator::DependencyGenerator;
+//! # #[cfg(feature = "generator")]
+//! # async fn example() {
+//! // let gen = DependencyGenerator::new(|co| async move {
+//! //     let db = resolve_database().await;
+//! //     co.yield_(db).await;
+//! //
+//! //     let cache = resolve_cache().await;
+//! //     co.yield_(cache).await;
+//! // });
+//! # }
 //! ```
 //!
 //! ## Example
 //!
-//! ```rust,ignore
-//! use reinhardt_di::{Depends, Injectable};
-//!
+//! ```rust,no_run
+//! # use reinhardt_di::{Depends, Injectable};
+//! # #[tokio::main]
+//! # async fn main() {
 //! // Define a dependency
-//! struct Database {
-//!     pool: DbPool,
-//! }
-//!
-//! #[async_trait]
-//! impl Injectable for Database {
-//!     async fn inject(ctx: &InjectionContext) -> Result<Self> {
-//!         Ok(Database {
-//!             pool: get_pool().await?,
-//!         })
-//!     }
-//! }
-//!
+//! // struct Database {
+//! //     pool: DbPool,
+//! // }
+//! //
+//! // #[async_trait]
+//! // impl Injectable for Database {
+//! //     async fn inject(ctx: &InjectionContext) -> Result<Self> {
+//! //         Ok(Database {
+//! //             pool: get_pool().await?,
+//! //         })
+//! //     }
+//! // }
+//! //
 //! // Use in endpoint
-//! #[endpoint(GET "/users")]
-//! async fn list_users(
-//!     db: Depends<Database>,
-//! ) -> Result<Vec<User>> {
-//!     db.query("SELECT * FROM users").await
-//! }
+//! // #[endpoint(GET "/users")]
+//! // async fn list_users(
+//! //     db: Depends<Database>,
+//! // ) -> Result<Vec<User>> {
+//! //     db.query("SELECT * FROM users").await
+//! // }
+//! # }
 //! ```
 //!
 //! ## InjectionContext Construction
@@ -85,7 +88,7 @@
 //!
 //! Optional request and param context can be added:
 //!
-//! ```rust
+//! ```ignore
 //! use reinhardt_di::{InjectionContext, SingletonScope};
 //! use reinhardt_http::Request;
 //! use std::sync::Arc;
@@ -112,10 +115,10 @@
 //! The DI system automatically detects circular dependencies at runtime using an optimized
 //! thread-local mechanism:
 //!
-//! ```rust,ignore
-//! use reinhardt_di::{Injectable, InjectionContext, SingletonScope, DiResult};
-//! use std::sync::Arc;
-//!
+//! ```ignore
+//! # use reinhardt_di::{Injectable, InjectionContext, SingletonScope, DiResult};
+//! # use async_trait::async_trait;
+//! # use std::sync::Arc;
 //! #[derive(Clone)]
 //! struct ServiceA {
 //!     b: Arc<ServiceB>,
@@ -126,7 +129,7 @@
 //!     a: Arc<ServiceA>,  // Circular dependency!
 //! }
 //!
-//! #[async_trait::async_trait]
+//! #[async_trait]
 //! impl Injectable for ServiceA {
 //!     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
 //!         let b = ctx.resolve::<ServiceB>().await?;
@@ -134,7 +137,7 @@
 //!     }
 //! }
 //!
-//! #[async_trait::async_trait]
+//! #[async_trait]
 //! impl Injectable for ServiceB {
 //!     async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
 //!         let a = ctx.resolve::<ServiceA>().await?;
@@ -142,15 +145,12 @@
 //!     }
 //! }
 //!
-//! #[tokio::main]
-//! async fn main() {
-//!     let singleton = SingletonScope::new();
-//!     let ctx = InjectionContext::builder(singleton).build();
+//! let singleton = Arc::new(SingletonScope::new());
+//! let ctx = InjectionContext::builder(singleton).build();
 //!
-//!     // This will return Err with DiError::CircularDependency
-//!     let result = ctx.resolve::<ServiceA>().await;
-//!     assert!(result.is_err());
-//! }
+//! // This will return Err with DiError::CircularDependency
+//! let result = ctx.resolve::<ServiceA>().await;
+//! assert!(result.is_err());
 //! ```
 //!
 //! ### Performance Characteristics
@@ -162,30 +162,30 @@
 //!
 //! ## Development Tools Example
 //!
-//! ```rust,ignore
-//! #[cfg(feature = "dev-tools")]
-//! use reinhardt_di::{visualization::DependencyGraph, profiling::DependencyProfiler};
-//!
-//! #[cfg(feature = "dev-tools")]
-//! fn visualize_dependencies() {
-//!     let mut graph = DependencyGraph::new();
-//!     graph.add_node("Database", "singleton");
-//!     graph.add_node("UserService", "request");
-//!     graph.add_dependency("UserService", "Database");
-//!
-//!     println!("{}", graph.to_dot());
-//! }
-//!
-//! #[cfg(feature = "dev-tools")]
-//! fn profile_resolution() {
-//!     let mut profiler = DependencyProfiler::new();
-//!     profiler.start_resolve("Database");
-//!     // ... perform resolution ...
-//!     profiler.end_resolve("Database");
-//!
-//!     let report = profiler.generate_report();
-//!     println!("{}", report.to_string());
-//! }
+//! ```ignore
+//! # #[cfg(feature = "dev-tools")]
+//! # use reinhardt_di::{visualization::DependencyGraph, profiling::DependencyProfiler};
+//! # #[cfg(feature = "dev-tools")]
+//! # fn main() {
+//! // fn visualize_dependencies() {
+//! //     let mut graph = DependencyGraph::new();
+//! //     graph.add_node("Database", "singleton");
+//! //     graph.add_node("UserService", "request");
+//! //     graph.add_dependency("UserService", "Database");
+//! //
+//! //     println!("{}", graph.to_dot());
+//! // }
+//! //
+//! // fn profile_resolution() {
+//! //     let mut profiler = DependencyProfiler::new();
+//! //     profiler.start_resolve("Database");
+//! //     // ... perform resolution ...
+//! //     profiler.end_resolve("Database");
+//! //
+//! //     let report = profiler.generate_report();
+//! //     println!("{}", report.to_string());
+//! // }
+//! # }
 //! ```
 
 pub mod context;

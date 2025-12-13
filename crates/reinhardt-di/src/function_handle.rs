@@ -20,15 +20,19 @@ use crate::InjectionContext;
 ///
 /// # Examples
 ///
-/// ```rust,ignore
+/// ```rust,no_run
 /// use reinhardt_di::{InjectionContext, SingletonScope};
+/// use std::sync::Arc;
 ///
-/// #[injectable]
-/// fn create_database() -> Database {
-///     Database::connect("production://db")
-/// }
+/// # #[derive(Clone)]
+/// # struct Database;
+/// # impl Database {
+/// #     fn connect(_url: &str) -> Self { Database }
+/// #     fn mock() -> Self { Database }
+/// # }
+/// # fn create_database() -> Database { Database::connect("production://db") }
 ///
-/// let singleton = SingletonScope::new();
+/// let singleton = Arc::new(SingletonScope::new());
 /// let ctx = InjectionContext::builder(singleton).build();
 ///
 /// // Set override using fluent API
@@ -67,7 +71,15 @@ impl<'a, O: Clone + Send + Sync + 'static> FunctionHandle<'a, O> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use reinhardt_di::{InjectionContext, SingletonScope};
+	/// # use std::sync::Arc;
+	/// # #[derive(Clone)]
+	/// # struct Database;
+	/// # fn create_database() -> Database { Database }
+	/// # let singleton = Arc::new(SingletonScope::new());
+	/// # let ctx = InjectionContext::builder(singleton).build();
+	/// # let mock_database = Database;
 	/// ctx.dependency(create_database)
 	///    .override_with(mock_database);
 	/// ```
@@ -87,7 +99,15 @@ impl<'a, O: Clone + Send + Sync + 'static> FunctionHandle<'a, O> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use reinhardt_di::{InjectionContext, SingletonScope};
+	/// # use std::sync::Arc;
+	/// # #[derive(Clone)]
+	/// # struct Database;
+	/// # fn create_database() -> Database { Database }
+	/// # let singleton = Arc::new(SingletonScope::new());
+	/// # let ctx = InjectionContext::builder(singleton).build();
+	/// # let mock_database = Database;
 	/// // Set override
 	/// ctx.dependency(create_database).override_with(mock_database);
 	///
@@ -107,7 +127,15 @@ impl<'a, O: Clone + Send + Sync + 'static> FunctionHandle<'a, O> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use reinhardt_di::{InjectionContext, SingletonScope};
+	/// # use std::sync::Arc;
+	/// # #[derive(Clone)]
+	/// # struct Database;
+	/// # fn create_database() -> Database { Database }
+	/// # let singleton = Arc::new(SingletonScope::new());
+	/// # let ctx = InjectionContext::builder(singleton).build();
+	/// # let mock_database = Database;
 	/// assert!(!ctx.dependency(create_database).has_override());
 	/// ctx.dependency(create_database).override_with(mock_database);
 	/// assert!(ctx.dependency(create_database).has_override());
@@ -124,7 +152,15 @@ impl<'a, O: Clone + Send + Sync + 'static> FunctionHandle<'a, O> {
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
+	/// # use reinhardt_di::{InjectionContext, SingletonScope};
+	/// # use std::sync::Arc;
+	/// # #[derive(Clone, PartialEq, Debug)]
+	/// # struct Database;
+	/// # fn create_database() -> Database { Database }
+	/// # let singleton = Arc::new(SingletonScope::new());
+	/// # let ctx = InjectionContext::builder(singleton).build();
+	/// # let mock_database = Database;
 	/// ctx.dependency(create_database).override_with(mock_database.clone());
 	/// let value = ctx.dependency(create_database).get_override();
 	/// assert_eq!(value, Some(mock_database));

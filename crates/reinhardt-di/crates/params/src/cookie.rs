@@ -46,7 +46,9 @@ impl<T: Debug> Debug for Cookie<T> {
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```rust,no_run
+/// # use reinhardt_params::CookieStruct;
+/// # use serde::Deserialize;
 /// #[derive(Deserialize)]
 /// struct MyCookies {
 ///     session_id: String,
