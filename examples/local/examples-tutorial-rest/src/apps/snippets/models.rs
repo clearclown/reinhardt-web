@@ -140,7 +140,10 @@ mod tests {
 		let html = snippet.highlighted();
 
 		// Should still produce output (plain text highlighting)
-		assert!(!html.is_empty(), "Expected non-empty output for unknown language");
+		assert!(
+			!html.is_empty(),
+			"Expected non-empty output for unknown language"
+		);
 		assert!(
 			html.contains("some unknown syntax here"),
 			"Expected original code to be present in output"
@@ -184,7 +187,10 @@ mod tests {
 		let html = snippet.highlighted();
 
 		// Verify HTML contains expected elements
-		assert!(html.contains("<span"), "Expected span tags in multiline output");
+		assert!(
+			html.contains("<span"),
+			"Expected span tags in multiline output"
+		);
 		assert!(html.contains("let"), "Expected 'let' keyword");
 		assert!(html.contains("42"), "Expected number literal");
 	}

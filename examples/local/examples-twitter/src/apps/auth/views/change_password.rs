@@ -7,8 +7,8 @@
 use crate::apps::auth::models::User;
 use crate::apps::auth::serializers::ChangePasswordRequest;
 use crate::config::settings::get_settings;
-use reinhardt::prelude::*;
 use reinhardt::db::orm::{FilterOperator, FilterValue};
+use reinhardt::prelude::*;
 use reinhardt::reinhardt_params::{Authorization, HeaderNamed};
 use reinhardt::{BaseUser, Error, Json, JwtAuth};
 use uuid::Uuid;
@@ -84,7 +84,9 @@ pub async fn change_password(
 		.map_err(|e| Error::Authentication(format!("Password verification failed: {}", e)))?;
 
 	if !current_password_valid {
-		return Err(Error::Authentication("Current password is incorrect".into()));
+		return Err(Error::Authentication(
+			"Current password is incorrect".into(),
+		));
 	}
 
 	// Set new password

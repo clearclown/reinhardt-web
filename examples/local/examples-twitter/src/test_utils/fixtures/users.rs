@@ -3,8 +3,8 @@
 //! Provides user creation fixtures and helpers.
 
 use crate::apps::auth::models::User;
-use crate::test_utils::fixtures::{test_database, TestDatabase};
-use argon2::password_hash::{rand_core::OsRng, SaltString};
+use crate::test_utils::fixtures::{TestDatabase, test_database};
+use argon2::password_hash::{SaltString, rand_core::OsRng};
 use argon2::{Argon2, PasswordHasher};
 use chrono::Utc;
 use reinhardt::db::DatabaseConnection;

@@ -8,9 +8,9 @@ use crate::apps::auth::models::User;
 use crate::apps::auth::serializers::{SigninRequest, SigninResponse, SigninUserInfo};
 use crate::config::settings::get_settings;
 use chrono::Utc;
-use reinhardt::prelude::*;
 use reinhardt::db::orm::{FilterOperator, FilterValue};
-use reinhardt::{BaseUser, Error, JwtAuth, Json};
+use reinhardt::prelude::*;
+use reinhardt::{BaseUser, Error, Json, JwtAuth};
 use validator::Validate;
 
 /// Sign in a user and return JWT token
@@ -100,5 +100,5 @@ pub async fn signin(
 		},
 	};
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }

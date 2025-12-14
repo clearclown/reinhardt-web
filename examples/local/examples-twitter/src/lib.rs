@@ -8,8 +8,8 @@ pub use reinhardt::reinhardt_core;
 pub use reinhardt::reinhardt_http;
 pub use reinhardt::reinhardt_params;
 
-pub mod config;
 pub mod apps;
+pub mod config;
 pub mod migrations;
 
 #[cfg(test)]

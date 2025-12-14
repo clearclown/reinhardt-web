@@ -4,13 +4,21 @@ use validator::Validate;
 /// Serializer for creating/updating snippets
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct SnippetSerializer {
-	#[validate(length(min = 1, max = 100, message = "Title must be between 1 and 100 characters"))]
+	#[validate(length(
+		min = 1,
+		max = 100,
+		message = "Title must be between 1 and 100 characters"
+	))]
 	pub title: String,
 
 	#[validate(length(min = 1, message = "Code cannot be empty"))]
 	pub code: String,
 
-	#[validate(length(min = 1, max = 50, message = "Language must be between 1 and 50 characters"))]
+	#[validate(length(
+		min = 1,
+		max = 50,
+		message = "Language must be between 1 and 50 characters"
+	))]
 	pub language: String,
 }
 

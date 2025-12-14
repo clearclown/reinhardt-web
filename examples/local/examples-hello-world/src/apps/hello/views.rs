@@ -1,7 +1,7 @@
 //! View handlers for hello app
 
-use reinhardt::{get, Request, Response, ViewResult};
 use reinhardt::core::serde::json::json;
+use reinhardt::{Request, Response, ViewResult, get};
 
 /// Root endpoint - returns "Hello, World!"
 #[get("/", name = "hello_world")]

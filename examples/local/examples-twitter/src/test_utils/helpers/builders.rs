@@ -2,7 +2,7 @@
 //!
 //! Provides builder patterns for creating test data.
 
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Builder for registration request JSON.
 pub struct RegisterRequestBuilder {

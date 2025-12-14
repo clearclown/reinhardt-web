@@ -4,9 +4,9 @@
 
 use crate::apps::auth::models::User;
 use crate::apps::relationship::serializers::BlockResponse;
-use reinhardt::db::orm::{ManyToManyAccessor, Model};
 use reinhardt::db::DatabaseConnection;
-use reinhardt::{delete, post, CurrentUser};
+use reinhardt::db::orm::{ManyToManyAccessor, Model};
+use reinhardt::{CurrentUser, delete, post};
 use reinhardt::{Path, Response, ViewResult};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -19,7 +19,11 @@ use uuid::Uuid;
 /// - 401 Unauthorized: Not authenticated
 /// - 404 Not Found: User not found
 /// - 409 Conflict: Already blocking this user
-#[post("/accounts/rel/block/{<uuid:user_id>}/", name = "block", use_inject = true)]
+#[post(
+	"/accounts/rel/block/{<uuid:user_id>}/",
+	name = "block",
+	use_inject = true
+)]
 pub async fn block_user(
 	Path(blocked_id): Path<Uuid>,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -42,10 +46,13 @@ pub async fn block_user(
 
 	// Add block relationship using ManyToManyAccessor
 	let accessor = ManyToManyAccessor::<User, User>::new(&blocker, "blocked_users", (*db).clone());
-	accessor.add(&target_user).await.map_err(|e| e.to_string())?;
+	accessor
+		.add(&target_user)
+		.await
+		.map_err(|e| e.to_string())?;
 
 	let response_data = BlockResponse::new(blocker.id, target_user.id);
-	Response::ok().with_json(&response_data).map_err(Into::into)
+	Response::ok().with_json(&response_data)
 }
 
 /// Unblock a user
@@ -56,7 +63,11 @@ pub async fn block_user(
 /// - 401 Unauthorized: Not authenticated
 /// - 404 Not Found: User not found or not blocking
 /// - 409 Conflict: Not blocking this user
-#[delete("/accounts/rel/block/{<uuid:user_id>}/", name = "unblock", use_inject = true)]
+#[delete(
+	"/accounts/rel/block/{<uuid:user_id>}/",
+	name = "unblock",
+	use_inject = true
+)]
 pub async fn unblock_user(
 	Path(blocked_id): Path<Uuid>,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -79,9 +90,10 @@ pub async fn unblock_user(
 
 	// Remove block relationship using ManyToManyAccessor
 	let accessor = ManyToManyAccessor::<User, User>::new(&blocker, "blocked_users", (*db).clone());
-	accessor.remove(&target_user).await.map_err(|e| e.to_string())?;
+	accessor
+		.remove(&target_user)
+		.await
+		.map_err(|e| e.to_string())?;
 
-	Response::ok()
-		.with_json(&serde_json::json!({"message": "Successfully unblocked"}))
-		.map_err(Into::into)
+	Response::ok().with_json(&serde_json::json!({"message": "Successfully unblocked"}))
 }

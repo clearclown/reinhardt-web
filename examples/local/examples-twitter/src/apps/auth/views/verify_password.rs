@@ -7,8 +7,8 @@
 use crate::apps::auth::models::User;
 use crate::apps::auth::serializers::{VerifyPasswordRequest, VerifyPasswordResponse};
 use crate::config::settings::get_settings;
-use reinhardt::db::orm::Model;
 use reinhardt::db::DatabaseConnection;
+use reinhardt::db::orm::Model;
 use reinhardt::post;
 use reinhardt::reinhardt_params::{Authorization, HeaderNamed};
 use reinhardt::{BaseUser, Error, Json, JwtAuth, Response, ViewResult};
@@ -72,5 +72,5 @@ pub async fn verify_password(
 
 	let response = VerifyPasswordResponse { valid };
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }

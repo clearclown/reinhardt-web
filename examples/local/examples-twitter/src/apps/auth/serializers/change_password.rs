@@ -14,7 +14,10 @@ pub struct ChangePasswordRequest {
 
 	/// New password (minimum 8 characters)
 	#[validate(length(min = 8, message = "New password must be at least 8 characters"))]
-	#[validate(custom(function = "validate_no_whitespace", message = "New password cannot contain only whitespace"))]
+	#[validate(custom(
+		function = "validate_no_whitespace",
+		message = "New password cannot contain only whitespace"
+	))]
 	pub new_password: String,
 
 	/// New password confirmation (must match new_password)

@@ -4,7 +4,11 @@ use validator::Validate;
 /// Serializer for creating/updating questions
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct QuestionSerializer {
-	#[validate(length(min = 1, max = 200, message = "Question text must be between 1 and 200 characters"))]
+	#[validate(length(
+		min = 1,
+		max = 200,
+		message = "Question text must be between 1 and 200 characters"
+	))]
 	pub question_text: String,
 }
 
@@ -33,7 +37,11 @@ impl QuestionResponse {
 pub struct ChoiceSerializer {
 	pub question_id: i64,
 
-	#[validate(length(min = 1, max = 200, message = "Choice text must be between 1 and 200 characters"))]
+	#[validate(length(
+		min = 1,
+		max = 200,
+		message = "Choice text must be between 1 and 200 characters"
+	))]
 	pub choice_text: String,
 }
 

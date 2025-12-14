@@ -19,9 +19,7 @@ use reinhardt::{Error, JwtAuth, Response, StatusCode, ViewResult};
 /// Error responses:
 /// - 401 Unauthorized: Missing or invalid token
 #[post("/signout/", name = "signout", use_inject = true)]
-pub async fn signout(
-	auth_header: HeaderNamed<Authorization, String>,
-) -> ViewResult<Response> {
+pub async fn signout(auth_header: HeaderNamed<Authorization, String>) -> ViewResult<Response> {
 	// Extract Bearer token from Authorization header
 	let token = auth_header
 		.strip_prefix("Bearer ")

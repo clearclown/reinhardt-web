@@ -1,14 +1,13 @@
 use chrono::Utc;
-use reinhardt::core::serde::json;
-use reinhardt::{delete, get, post, put};
-use reinhardt::{Json, Path, Response, StatusCode};
-use reinhardt::http::ViewResult;
 use json::json;
+use reinhardt::core::serde::json;
+use reinhardt::http::ViewResult;
+use reinhardt::{Json, Path, Response, StatusCode};
+use reinhardt::{delete, get, post, put};
 use validator::Validate;
 
 use super::models::Snippet;
 use super::serializers::{SnippetResponse, SnippetSerializer};
-
 
 /// Helper function to get sample snippets for demonstration
 fn get_sample_snippets() -> Vec<Snippet> {
@@ -48,10 +47,8 @@ pub async fn list() -> ViewResult<Response> {
 
 	// Demo mode: Use sample data
 	let snippets = get_sample_snippets();
-	let snippet_responses: Vec<SnippetResponse> = snippets
-		.iter()
-		.map(SnippetResponse::from_model)
-		.collect();
+	let snippet_responses: Vec<SnippetResponse> =
+		snippets.iter().map(SnippetResponse::from_model).collect();
 
 	let response_data = json!({
 		"snippets": snippet_responses
@@ -71,9 +68,7 @@ pub async fn list() -> ViewResult<Response> {
 /// Error responses:
 /// - 422 Unprocessable Entity: Validation errors
 #[post("/snippets/", name = "snippets_create")]
-pub async fn create(
-	Json(serializer): Json<SnippetSerializer>,
-) -> ViewResult<Response> {
+pub async fn create(Json(serializer): Json<SnippetSerializer>) -> ViewResult<Response> {
 	// Validate
 	serializer.validate()?;
 
@@ -113,9 +108,7 @@ pub async fn create(
 /// Error responses:
 /// - 404 Not Found: Snippet not found
 #[get("/snippets/{id}/", name = "snippets_retrieve")]
-pub async fn retrieve(
-	Path(snippet_id): Path<i64>,
-) -> ViewResult<Response> {
+pub async fn retrieve(Path(snippet_id): Path<i64>) -> ViewResult<Response> {
 	// Production ORM usage:
 	// let snippet = Manager::<Snippet>::new().get(snippet_id).await?;
 
@@ -193,9 +186,7 @@ pub async fn update(
 /// Error responses:
 /// - 404 Not Found: Snippet not found
 #[delete("/snippets/{id}/", name = "snippets_delete")]
-pub async fn delete(
-	Path(snippet_id): Path<i64>,
-) -> ViewResult<Response> {
+pub async fn delete(Path(snippet_id): Path<i64>) -> ViewResult<Response> {
 	// Production ORM usage:
 	// Manager::<Snippet>::new().delete(snippet_id).await?;
 

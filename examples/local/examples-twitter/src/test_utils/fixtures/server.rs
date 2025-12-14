@@ -2,11 +2,13 @@
 //!
 //! Provides TestServerGuard and APIClient fixtures for HTTP testing.
 
-use crate::config::urls::url_patterns;
-use crate::test_utils::fixtures::{create_test_user, generate_test_token, test_database, TestDatabase, TestUserParams};
 use crate::apps::auth::models::User;
-use reinhardt::db::DatabaseConnection;
+use crate::config::urls::url_patterns;
+use crate::test_utils::fixtures::{
+	TestDatabase, TestUserParams, create_test_user, generate_test_token, test_database,
+};
 use reinhardt::UnifiedRouter;
+use reinhardt::db::DatabaseConnection;
 use reinhardt::test::client::APIClient;
 use reinhardt::test::fixtures::TestServerGuard;
 use reinhardt::test::fixtures::test_server_guard;

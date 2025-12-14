@@ -7,8 +7,8 @@ use crate::apps::relationship::serializers::{
 	BlockingListResponse, FollowerListResponse, FollowingListResponse, PaginationParams,
 	UserSummary,
 };
-use reinhardt::db::orm::{FilterOperator, FilterValue, ManyToManyAccessor, Model};
 use reinhardt::db::DatabaseConnection;
+use reinhardt::db::orm::{FilterOperator, FilterValue, ManyToManyAccessor, Model};
 use reinhardt::get;
 use reinhardt::{CurrentUser, Error, Query, Response, StatusCode, ViewResult};
 use std::sync::Arc;

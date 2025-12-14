@@ -4,8 +4,8 @@
 
 use reinhardt::core::serde::json;
 use reinhardt::get;
-use reinhardt::{Response, StatusCode};
 use reinhardt::http::ViewResult;
+use reinhardt::{Response, StatusCode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

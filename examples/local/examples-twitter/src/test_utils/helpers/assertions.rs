@@ -63,7 +63,9 @@ impl DbAssertions {
 	/// Delete all users from the database (for cleanup).
 	pub async fn cleanup_users(db: &DatabaseConnection) {
 		let _ = db.execute("DELETE FROM auth_user_following", vec![]).await;
-		let _ = db.execute("DELETE FROM auth_user_blocked_users", vec![]).await;
+		let _ = db
+			.execute("DELETE FROM auth_user_blocked_users", vec![])
+			.await;
 		let _ = db.execute("DELETE FROM auth_user", vec![]).await;
 	}
 

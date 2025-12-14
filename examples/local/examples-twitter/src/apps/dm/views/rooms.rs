@@ -3,10 +3,10 @@
 use crate::apps::auth::models::User;
 use crate::apps::dm::models::DMRoom;
 use crate::apps::dm::serializers::{CreateRoomRequest, RoomResponse};
+use reinhardt::db::DatabaseConnection;
 use reinhardt::db::orm::{FilterOperator, FilterValue, Model};
 use reinhardt::db::prelude::ManyToManyAccessor;
-use reinhardt::db::DatabaseConnection;
-use reinhardt::{delete, get, post, CurrentUser, Json, Path, Response, StatusCode, ViewResult};
+use reinhardt::{CurrentUser, Json, Path, Response, StatusCode, ViewResult, delete, get, post};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -43,7 +43,7 @@ pub async fn list_rooms(
 
 	let response: Vec<RoomResponse> = user_rooms.into_iter().map(RoomResponse::from).collect();
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }
 
 /// Get a specific room by ID
@@ -75,7 +75,7 @@ pub async fn get_room(
 	}
 
 	let response = RoomResponse::from(room);
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }
 
 /// Create a new room (1-on-1 or group)
@@ -120,12 +120,7 @@ pub async fn create_room(
 		let members_query = User::objects().filter(
 			User::field_id(),
 			FilterOperator::In,
-			FilterValue::Array(
-				member_ids_vec
-					.iter()
-					.map(|id| id.to_string())
-					.collect(),
-			),
+			FilterValue::Array(member_ids_vec.iter().map(|id| id.to_string()).collect()),
 		);
 
 		let members = members_query.all().await.map_err(|e| e.to_string())?;
@@ -142,9 +137,7 @@ pub async fn create_room(
 	}
 
 	let response = RoomResponse::from(created);
-	Response::new(StatusCode::CREATED)
-		.with_json(&response)
-		.map_err(Into::into)
+	Response::new(StatusCode::CREATED).with_json(&response)
 }
 
 /// Delete a room (only if user is a member)

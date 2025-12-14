@@ -11,17 +11,26 @@ pub struct RegisterRequest {
 	/// User's email address
 	#[validate(email(message = "Invalid email format"))]
 	#[validate(length(min = 1, message = "Email cannot be empty"))]
-	#[validate(custom(function = "validate_no_whitespace", message = "Email cannot contain only whitespace"))]
+	#[validate(custom(
+		function = "validate_no_whitespace",
+		message = "Email cannot contain only whitespace"
+	))]
 	pub email: String,
 
 	/// Username
 	#[validate(length(min = 1, max = 150, message = "Username must be 1-150 characters"))]
-	#[validate(custom(function = "validate_no_whitespace", message = "Username cannot contain only whitespace"))]
+	#[validate(custom(
+		function = "validate_no_whitespace",
+		message = "Username cannot contain only whitespace"
+	))]
 	pub username: String,
 
 	/// Password (minimum 8 characters)
 	#[validate(length(min = 8, message = "Password must be at least 8 characters"))]
-	#[validate(custom(function = "validate_no_whitespace", message = "Password cannot contain only whitespace"))]
+	#[validate(custom(
+		function = "validate_no_whitespace",
+		message = "Password cannot contain only whitespace"
+	))]
 	pub password: String,
 
 	/// Password confirmation (must match password)

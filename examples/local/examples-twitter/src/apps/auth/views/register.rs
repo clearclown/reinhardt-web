@@ -6,8 +6,8 @@
 
 use crate::apps::auth::models::User;
 use crate::apps::auth::serializers::RegisterRequest;
-use reinhardt::db::orm::{FilterOperator, FilterValue, Model};
 use reinhardt::db::DatabaseConnection;
+use reinhardt::db::orm::{FilterOperator, FilterValue, Model};
 use reinhardt::post;
 use reinhardt::{BaseUser, Error, Json, Response, StatusCode, ViewResult};
 use validator::Validate;

@@ -4,15 +4,14 @@
 
 use chrono::Utc;
 use reinhardt::core::serde::json;
-use reinhardt::{delete, get, post, put};
-use reinhardt::{Json, Path, Response, StatusCode};
 use reinhardt::http::ViewResult;
+use reinhardt::{Json, Path, Response, StatusCode};
+use reinhardt::{delete, get, post, put};
 use validator::Validate;
 
 use super::models::Article;
 use super::serializers::{ArticleListResponse, ArticleResponse, CreateArticleRequest};
 use super::storage;
-
 
 /// List all articles
 ///
@@ -129,7 +128,6 @@ pub async fn update_article(
 	Path(id): Path<i64>,
 	Json(update_data): Json<json::Value>,
 ) -> ViewResult<Response> {
-
 	// Get existing article from storage
 	let mut article = match storage::get_article(id) {
 		Some(article) => article,
@@ -180,7 +178,6 @@ pub async fn update_article(
 /// Returns 204 No Content on success
 #[delete("/articles/{id}/", name = "articles_delete")]
 pub async fn delete_article(Path(id): Path<i64>) -> ViewResult<Response> {
-
 	// Delete article from in-memory storage
 	if !storage::delete_article(id) {
 		return Ok(Response::new(StatusCode::NOT_FOUND).with_body(

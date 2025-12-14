@@ -9,8 +9,8 @@ use crate::apps::profile::serializers::{
 	CreateProfileRequest, ProfileResponse, UpdateProfileRequest,
 };
 use chrono::Utc;
-use reinhardt::prelude::*;
 use reinhardt::db::orm::{FilterOperator, FilterValue};
+use reinhardt::prelude::*;
 use reinhardt::{Error, Json, Path};
 use uuid::Uuid;
 use validator::Validate;
@@ -39,9 +39,7 @@ pub async fn fetch_profile(
 		.ok_or_else(|| Error::Http("Profile not found".into()))?;
 
 	let response_data = ProfileResponse::from(profile);
-	Response::ok()
-		.with_json(&response_data)
-		.map_err(Into::into)
+	Response::ok().with_json(&response_data)
 }
 
 /// Create a new profile for a user
@@ -100,9 +98,7 @@ pub async fn create_profile(
 	let created = profile_manager.create_with_conn(&db, &profile).await?;
 
 	let response_data = ProfileResponse::from(created);
-	Response::ok()
-		.with_json(&response_data)
-		.map_err(Into::into)
+	Response::ok().with_json(&response_data)
 }
 
 /// Update an existing profile
@@ -162,7 +158,5 @@ pub async fn patch_profile(
 	let updated = profile_manager.update_with_conn(&db, &profile).await?;
 
 	let response_data = ProfileResponse::from(updated);
-	Response::ok()
-		.with_json(&response_data)
-		.map_err(Into::into)
+	Response::ok().with_json(&response_data)
 }

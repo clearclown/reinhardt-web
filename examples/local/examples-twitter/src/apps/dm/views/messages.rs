@@ -3,15 +3,19 @@
 use crate::apps::auth::models::User;
 use crate::apps::dm::models::{DMMessage, DMRoom};
 use crate::apps::dm::serializers::{CreateMessageRequest, MessageResponse};
-use reinhardt::db::orm::Model;
 use reinhardt::db::DatabaseConnection;
-use reinhardt::{get, post, CurrentUser, Json, Path, Response, StatusCode, ViewResult};
+use reinhardt::db::orm::Model;
+use reinhardt::{CurrentUser, Json, Path, Response, StatusCode, ViewResult, get, post};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
 /// List all messages in a room
-#[get("/rooms/{<uuid:room_id>}/messages", name = "messages_list", use_inject = true)]
+#[get(
+	"/rooms/{<uuid:room_id>}/messages",
+	name = "messages_list",
+	use_inject = true
+)]
 pub async fn list_messages(
 	Path(room_id): Path<Uuid>,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -42,11 +46,15 @@ pub async fn list_messages(
 
 	let response: Vec<MessageResponse> = messages.into_iter().map(MessageResponse::from).collect();
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }
 
 /// Send a message to a room
-#[post("/rooms/{<uuid:room_id>}/messages", name = "messages_send", use_inject = true)]
+#[post(
+	"/rooms/{<uuid:room_id>}/messages",
+	name = "messages_send",
+	use_inject = true
+)]
 pub async fn send_message(
 	Path(room_id): Path<Uuid>,
 	Json(request): Json<CreateMessageRequest>,
@@ -85,13 +93,15 @@ pub async fn send_message(
 	let created = manager.create_with_conn(&db, &message).await?;
 
 	let response = MessageResponse::from(created);
-	Response::new(StatusCode::CREATED)
-		.with_json(&response)
-		.map_err(Into::into)
+	Response::new(StatusCode::CREATED).with_json(&response)
 }
 
 /// Get a specific message
-#[get("/rooms/{<uuid:room_id>}/messages/{<uuid:message_id>}", name = "messages_get", use_inject = true)]
+#[get(
+	"/rooms/{<uuid:room_id>}/messages/{<uuid:message_id>}",
+	name = "messages_get",
+	use_inject = true
+)]
 pub async fn get_message(
 	Path((room_id, message_id)): Path<(Uuid, Uuid)>,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -121,5 +131,5 @@ pub async fn get_message(
 		.await?;
 
 	let response = MessageResponse::from(message);
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }

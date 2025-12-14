@@ -2,15 +2,14 @@
 //!
 //! CRUD operations for TODO items
 
-use reinhardt::{delete, get, post, put};
-use reinhardt::{Json, Path, Response, StatusCode};
-use reinhardt::http::ViewResult;
-use reinhardt::core::serde::json;
-use reinhardt::db::orm::Manager;
 use crate::apps::todos::models::Todo;
 use chrono::Utc;
+use reinhardt::core::serde::json;
+use reinhardt::db::orm::Manager;
+use reinhardt::http::ViewResult;
+use reinhardt::{Json, Path, Response, StatusCode};
+use reinhardt::{delete, get, post, put};
 use serde::Deserialize;
-
 
 /// Request body for creating/updating todos
 #[derive(Debug, Deserialize)]

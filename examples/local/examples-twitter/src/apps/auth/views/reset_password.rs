@@ -12,9 +12,9 @@ use crate::apps::auth::serializers::{
 	ResetPasswordResponse,
 };
 use chrono::{Duration, Utc};
+use reinhardt::db::DatabaseConnection;
 use reinhardt::db::associations::ForeignKeyField;
 use reinhardt::db::orm::{FilterOperator, FilterValue, Model};
-use reinhardt::db::DatabaseConnection;
 use reinhardt::post;
 use reinhardt::{BaseUser, Error, Json, Response, ViewResult};
 use uuid::Uuid;
@@ -101,7 +101,7 @@ pub async fn reset_password(
 
 	let response = ResetPasswordResponse { reset_token };
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }
 
 /// Confirm password reset with new password
@@ -165,7 +165,9 @@ pub async fn reset_password_confirm(
 
 	// Check if token is already used
 	if token_record.is_used {
-		return Err(Error::Validation("Reset token has already been used".to_string()));
+		return Err(Error::Validation(
+			"Reset token has already been used".to_string(),
+		));
 	}
 
 	// Check token expiration
@@ -213,5 +215,5 @@ pub async fn reset_password_confirm(
 		message: "Password has been reset successfully".to_string(),
 	};
 
-	Response::ok().with_json(&response).map_err(Into::into)
+	Response::ok().with_json(&response)
 }
