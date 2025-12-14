@@ -30,10 +30,13 @@
 //! ```
 
 use async_trait::async_trait;
+use chrono::Utc;
 use reinhardt_utils::cache::{Cache, InMemoryCache};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
+
+use crate::cleanup::{CleanupableBackend, SessionMetadata};
 
 /// Session backend errors
 #[derive(Debug, Error)]
@@ -158,6 +161,43 @@ impl SessionBackend for InMemorySessionBackend {
 			.has_key(session_key)
 			.await
 			.map_err(|e| SessionError::CacheError(e.to_string()))
+	}
+}
+
+#[async_trait]
+impl CleanupableBackend for InMemorySessionBackend {
+	/// Get all session keys
+	///
+	/// Returns all session keys stored in the backend,
+	/// including expired sessions that haven't been cleaned up.
+	async fn get_all_keys(&self) -> Result<Vec<String>, SessionError> {
+		Ok(self.cache.list_keys().await)
+	}
+
+	/// Get session metadata
+	///
+	/// Returns metadata for the specified session.
+	/// Returns `None` if the session does not exist.
+	///
+	/// ## Limitations
+	///
+	/// - `created_at` uses current timestamp (actual creation time is not tracked)
+	/// - `last_accessed` is always `None` (access tracking not implemented)
+	async fn get_metadata(
+		&self,
+		session_key: &str,
+	) -> Result<Option<SessionMetadata>, SessionError> {
+		// Check if session exists
+		if !self.exists(session_key).await? {
+			return Ok(None);
+		}
+
+		// Return minimal metadata
+		// TODO: Track actual creation and access times when CacheEntry is extended
+		Ok(Some(SessionMetadata {
+			created_at: Utc::now(),
+			last_accessed: None,
+		}))
 	}
 }
 
