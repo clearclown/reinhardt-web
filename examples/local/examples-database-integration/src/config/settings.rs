@@ -2,8 +2,10 @@
 //!
 //! This module provides environment-specific settings configuration using TOML files.
 
-use reinhardt::{Settings, SettingsBuilder, Profile, DefaultSource, LowPriorityEnvSource, TomlFileSource};
 use reinhardt::core::serde::json;
+use reinhardt::{
+	DefaultSource, LowPriorityEnvSource, Profile, Settings, SettingsBuilder, TomlFileSource,
+};
 use std::env;
 
 /// Get settings based on environment variable
@@ -30,13 +32,17 @@ pub fn get_settings() -> Settings {
 			DefaultSource::new()
 				.with_value("debug", json::Value::Bool(true))
 				.with_value("language_code", json::Value::String("en-us".to_string()))
-				.with_value("time_zone", json::Value::String("UTC".to_string()))
+				.with_value("time_zone", json::Value::String("UTC".to_string())),
 		)
 		.add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
 		.add_source(TomlFileSource::new(settings_dir.join("base.toml")))
-		.add_source(TomlFileSource::new(settings_dir.join(format!("{}.toml", profile_str))))
+		.add_source(TomlFileSource::new(
+			settings_dir.join(format!("{}.toml", profile_str)),
+		))
 		.build()
 		.expect("Failed to build settings");
 
-	merged.into_typed().expect("Failed to convert settings to Settings struct")
+	merged
+		.into_typed()
+		.expect("Failed to convert settings to Settings struct")
 }

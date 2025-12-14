@@ -27,8 +27,10 @@
 //!
 //! If `REINHARDT_ENV` is not set, it defaults to `local`.
 
-use reinhardt::{SettingsBuilder, Profile, DefaultSource, LowPriorityEnvSource, TomlFileSource, Settings};
 use reinhardt::core::serde::json;
+use reinhardt::{
+	DefaultSource, LowPriorityEnvSource, Profile, Settings, SettingsBuilder, TomlFileSource,
+};
 use std::env;
 
 /// Get settings based on environment variable

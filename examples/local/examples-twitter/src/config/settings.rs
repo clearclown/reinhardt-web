@@ -18,13 +18,13 @@
 //! - `local` or `development` → loads `local.toml`
 //! - `staging` → loads `staging.toml`
 //! - `production` → loads `production.toml`
-//! If `REINHARDT_ENV` is not set, it defaults to `local`.
+//!   If `REINHARDT_ENV` is not set, it defaults to `local`.
 
+use reinhardt::Settings;
 use reinhardt::conf::settings::builder::SettingsBuilder;
 use reinhardt::conf::settings::profile::Profile;
 use reinhardt::conf::settings::sources::{DefaultSource, LowPriorityEnvSource, TomlFileSource};
 use reinhardt::core::serde::json;
-use reinhardt::Settings;
 use std::env;
 /// Get settings based on environment variable
 ///
@@ -42,13 +42,13 @@ use std::env;
 /// - Settings cannot be deserialized
 /// - Required settings are missing
 pub fn get_settings() -> Settings {
-    let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
-    let profile = Profile::parse(&profile_str);
-    // Get the project root directory (parent of src/)
-    let base_dir = env::current_dir().expect("Failed to get current directory");
-    let settings_dir = base_dir.join("settings");
-    // Build settings by merging sources in priority order
-    let merged = SettingsBuilder::new()
+	let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
+	let profile = Profile::parse(&profile_str);
+	// Get the project root directory (parent of src/)
+	let base_dir = env::current_dir().expect("Failed to get current directory");
+	let settings_dir = base_dir.join("settings");
+	// Build settings by merging sources in priority order
+	let merged = SettingsBuilder::new()
         .profile(profile)
         // Lowest priority: Default values
         .add_source(
@@ -118,19 +118,19 @@ pub fn get_settings() -> Settings {
         ))
         .build()
         .expect("Failed to build settings");
-    // Convert MergedSettings to reinhardt_core::Settings
-    merged
-        .into_typed()
-        .expect("Failed to convert settings to Settings struct")
+	// Convert MergedSettings to reinhardt_core::Settings
+	merged
+		.into_typed()
+		.expect("Failed to convert settings to Settings struct")
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
-    #[test]
-    fn test_get_settings() {
-        // This test requires settings files to exist
-        // In a real project, you would set up test fixtures
-        let settings = get_settings();
-        assert!(!settings.secret_key.is_empty());
-    }
+	use super::*;
+	#[test]
+	fn test_get_settings() {
+		// This test requires settings files to exist
+		// In a real project, you would set up test fixtures
+		let settings = get_settings();
+		assert!(!settings.secret_key.is_empty());
+	}
 }
