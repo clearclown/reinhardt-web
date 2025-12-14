@@ -228,7 +228,8 @@ directory is specified by the `REINHARDT_TEMPLATE_DIR` environment variable (def
 **Current Implementation**: Basic variable substitution is supported using `{{ variable }}` syntax.
 Templates are rendered dynamically at runtime with simple placeholder replacement.
 
-#### `render_template(request: &Request, template_name: &str, context: HashMap) -> Result<Response, Response>`
+#### `render_template<K, V>(request: &Request, template_name: &str, context: HashMap<K, V>) -> Result<Response, Box<Response>>`
+where `K: AsRef<str>`, `V: Serialize`
 
 Template rendering with context. Loads a template file from the filesystem and returns
 an HTTP response with the template content. Context variables are displayed in debug mode
