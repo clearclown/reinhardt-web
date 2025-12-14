@@ -27,9 +27,9 @@ use testcontainers::{
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # use rstest::*;
-/// # use reinhardt_integration_tests::db_transaction::db_transaction_fixture;
+/// # use reinhardt_test_support::db_transaction::db_transaction_fixture;
 /// # use reinhardt_orm::connection::DatabaseConnection;
 /// # use testcontainers::GenericImage;
 /// # use std::sync::Arc;

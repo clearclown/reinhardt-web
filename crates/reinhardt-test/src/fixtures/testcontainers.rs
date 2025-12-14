@@ -1203,7 +1203,6 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 /// # Example
 ///
 /// ```rust,no_run
-/// # use reinhardt::collect_migrations;
 /// # use reinhardt_test::fixtures::postgres_with_migrations_from;
 /// # use reinhardt_migrations::MigrationProvider;
 /// # #[tokio::main]
@@ -1366,7 +1365,6 @@ pub async fn mysql_container() -> (
 /// # Example
 ///
 /// ```rust,no_run
-/// # use reinhardt::collect_migrations;
 /// # use reinhardt_test::fixtures::mysql_with_migrations_from;
 /// # use reinhardt_migrations::MigrationProvider;
 /// # #[tokio::main]
@@ -1435,7 +1433,6 @@ pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvid
 /// # Example
 ///
 /// ```rust,no_run
-/// # use reinhardt::collect_migrations;
 /// # use reinhardt_test::fixtures::sqlite_with_migrations_from;
 /// # use reinhardt_migrations::MigrationProvider;
 /// # #[tokio::main]
@@ -1506,7 +1503,7 @@ pub async fn sqlite_with_migrations_from<P: reinhardt_migrations::MigrationProvi
 /// # use rstest::*;
 /// # use std::sync::Arc;
 /// # use reinhardt_db::DatabaseConnection;
-/// # use testcontainers::{ContainerAsync, GenericImage};
+/// # use ::testcontainers::{ContainerAsync, GenericImage};
 /// #[rstest]
 /// #[tokio::test]
 /// async fn test_with_all_migrations(
@@ -1639,7 +1636,7 @@ pub async fn postgres_with_apps_migrations(
 /// # use rstest::*;
 /// # use std::sync::Arc;
 /// # use reinhardt_db::DatabaseConnection;
-/// # use testcontainers::{ContainerAsync, GenericImage};
+/// # use ::testcontainers::{ContainerAsync, GenericImage};
 /// #[rstest]
 /// #[tokio::test]
 /// async fn test_with_all_migrations(

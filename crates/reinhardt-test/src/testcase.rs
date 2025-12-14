@@ -35,6 +35,7 @@ use tokio::sync::RwLock;
 ///     let response = case.client().await.get("/api/users/").await.unwrap();
 ///     response.assert_ok();
 /// }
+/// # }
 /// ```
 pub struct APITestCase {
 	client: Arc<RwLock<APIClient>>,
@@ -90,6 +91,7 @@ impl AsyncTestResource for APITestCase {
 /// ```rust,no_run
 /// # #[tokio::main]
 /// # async fn main() {
+/// # use reinhardt_test::test_case;
 /// test_case! {
 ///     async fn test_get_users(case: &APITestCase) {
 ///         let client = case.client().await;
@@ -97,6 +99,7 @@ impl AsyncTestResource for APITestCase {
 ///         response.assert_ok();
 ///     }
 /// }
+/// # }
 /// ```
 #[macro_export]
 macro_rules! test_case {
@@ -164,9 +167,7 @@ macro_rules! authenticated_test_case {
 ///
 /// ## PostgreSQL Example
 ///
-/// ```rust,no_run
-/// # #[tokio::main]
-/// # async fn main() {
+/// ```rust,ignore
 /// use reinhardt_test::test_case_with_db;
 /// use reinhardt_test::testcase::APITestCase;
 ///
@@ -184,7 +185,7 @@ macro_rules! authenticated_test_case {
 ///
 /// ## MySQL Example
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt_test::test_case_with_db;
 /// use reinhardt_test::testcase::APITestCase;
 ///

@@ -21,25 +21,44 @@
 //! ```rust,no_run
 //! # use reinhardt_tasks::TaskResult;
 //! # trait Task {}
-//! # trait TaskQueue {}
-//! // #[derive(Task)]
-//! struct SendEmailTask {
-//!     to: String,
-//!     subject: String,
-//!     body: String,
-//! }
+//! # #[derive(Clone)]
+//! # struct SendEmailTask { to: String, subject: String, body: String }
+//! # trait TaskQueue {
+//! #     fn new() -> Self;
+//! #     async fn enqueue(&self, task: SendEmailTask) -> TaskResult<()>;
+//! # }
+//! # struct QueueImpl;
+//! # impl TaskQueue for QueueImpl {
+//! #     fn new() -> Self { QueueImpl }
+//! #     async fn enqueue(&self, task: SendEmailTask) -> TaskResult<()> { Ok(()) }
+//! # }
+//! #
+//! # #[tokio::main]
+//! # async fn main() -> TaskResult<()> {
+//! // Example: Define a task
+//! // struct SendEmailTask {
+//! //     to: String,
+//! //     subject: String,
+//! //     body: String,
+//! // }
 //!
 //! // #[async_trait]
 //! // impl TaskExecutor for SendEmailTask {
 //! //     async fn execute(&self) -> TaskResult<()> {
 //!         // Send email
-//!         Ok(())
-//!     }
-//! }
+//! //         Ok(())
+//! //     }
+//! // }
 //!
 //! // Queue the task
-//! let queue = TaskQueue::new();
-//! queue.enqueue(SendEmailTask { ... }).await?;
+//! let queue = QueueImpl::new();
+//! queue.enqueue(SendEmailTask {
+//!     to: "user@example.com".to_string(),
+//!     subject: "Hello".to_string(),
+//!     body: "Test email".to_string(),
+//! }).await?;
+//! # Ok(())
+//! # }
 //! ```
 
 pub mod backend;

@@ -45,13 +45,16 @@ pub type RequestHandler = Arc<dyn Fn(Request<Full<Bytes>>) -> Response<Full<Byte
 ///
 /// # Example
 /// ```rust,no_run
+/// use reinhardt_test::APIClient;
+/// use http::StatusCode;
+///
 /// # #[tokio::main]
-/// # async fn main() {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = APIClient::new();
 /// client.login("username", "password").await?;
 /// let response = client.get("/api/users/").await?;
 /// assert_eq!(response.status(), StatusCode::OK);
-///
+/// # Ok(())
 /// # }
 /// ```
 pub struct APIClient {

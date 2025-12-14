@@ -14,10 +14,13 @@
 //! // #[rstest]
 //! // fn test_migration_registration(migration_registry: LocalRegistry) {
 //! //     let migration = Migration {
-//! //         app_label: "polls".to_string(),
-//! //         name: "0001_initial".to_string(),
+//! //         app_label: "polls",
+//! //         name: "0001_initial",
 //! //         operations: vec![],
 //! //         dependencies: vec![],
+//! //         initial: None,
+//! //         atomic: true,
+//! //         replaces: vec![],
 //! //     };
 //! //
 //! //     migration_registry.register(migration).unwrap();
@@ -53,10 +56,13 @@ use std::collections::HashMap;
 /// //
 /// //     // Register a migration
 /// //     migration_registry.register(Migration {
-/// //         app_label: "polls".to_string(),
-/// //         name: "0001_initial".to_string(),
+/// //         app_label: "polls",
+/// //         name: "0001_initial",
 /// //         operations: vec![],
 /// //         dependencies: vec![],
+/// //         initial: None,
+/// //         atomic: true,
+/// //         replaces: vec![],
 /// //     }).unwrap();
 /// //
 /// //     // Verify registration
@@ -85,8 +91,8 @@ pub fn migration_registry() -> LocalRegistry {
 /// // async fn test_source() {
 /// let mut source = TestMigrationSource::new();
 /// source.add_migration(Migration {
-///     app_label: "polls".to_string(),
-///     name: "0001_initial".to_string(),
+///     app_label: "polls",
+///     name: "0001_initial",
 ///     operations: vec![],
 ///     dependencies: vec![],
 ///     initial: None,
@@ -168,8 +174,8 @@ impl MigrationSource for TestMigrationSource {
 /// let mut repo = InMemoryRepository::new();
 ///
 /// let migration = Migration {
-///     app_label: "polls".to_string(),
-///     name: "0001_initial".to_string(),
+///     app_label: "polls",
+///     name: "0001_initial",
 ///     operations: vec![],
 ///     dependencies: vec![],
 ///     initial: None,
@@ -277,8 +283,8 @@ impl MigrationRepository for InMemoryRepository {
 /// // async fn test_with_source(mut test_migration_source: TestMigrationSource) {
 /// let mut test_migration_source = TestMigrationSource::new();
 /// test_migration_source.add_migration(Migration {
-///     app_label: "polls".to_string(),
-///     name: "0001_initial".to_string(),
+///     app_label: "polls",
+///     name: "0001_initial",
 ///     operations: vec![],
 ///     dependencies: vec![],
 ///     initial: None,
@@ -313,10 +319,13 @@ pub fn test_migration_source() -> TestMigrationSource {
 /// // async fn test_with_repository(mut in_memory_repository: InMemoryRepository) {
 /// let mut in_memory_repository = InMemoryRepository::new();
 /// let migration = Migration {
-///         app_label: "polls".to_string(),
-///         name: "0001_initial".to_string(),
+///         app_label: "polls",
+///         name: "0001_initial",
 ///         operations: vec![],
 ///         dependencies: vec![],
+///         initial: None,
+///         atomic: true,
+///         replaces: vec![],
 ///     };
 ///
 ///     in_memory_repository.save(&migration).await.unwrap();

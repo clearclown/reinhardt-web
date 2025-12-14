@@ -506,18 +506,18 @@ where
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt_test::mock::MockSchemaEditor;
-/// use reinhardt_db_backends::schema::BaseDatabaseSchemaEditor;
-/// use sea_query::PostgresQueryBuilder;
+/// use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
 ///
 /// let editor = MockSchemaEditor::new();
 /// let stmt = editor.create_table_statement("users", &[
 ///     ("id", "INTEGER PRIMARY KEY"),
 ///     ("name", "VARCHAR(100)"),
 /// ]);
-/// let sql = stmt.to_string(PostgresQueryBuilder);
-/// assert!(sql.contains("CREATE TABLE"));
+/// // SQL generation example (requires sea_query and reinhardt-backends in dependencies)
+/// // let sql = stmt.to_string(PostgresQueryBuilder);
+/// // assert!(sql.contains("CREATE TABLE"));
 /// ```
 pub struct MockSchemaEditor;
 

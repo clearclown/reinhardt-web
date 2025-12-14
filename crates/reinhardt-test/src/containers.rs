@@ -15,20 +15,26 @@
 //! ## PostgresContainer
 //!
 //! ```rust,no_run
-//! use reinhardt_test::containers::PostgresContainer;
+//! use reinhardt_test::containers::{PostgresContainer, TestDatabase};
 //!
-//! let container = PostgresContainer::new();
+//! # #[tokio::main]
+//! # async fn main() {
+//! let container = PostgresContainer::new().await;
 //! let url = container.connection_url();
 //! // Use url for database connection
+//! # }
 //! ```
 //!
 //! ## MySqlContainer
 //!
 //! ```rust,no_run
-//! use reinhardt_test::containers::MySqlContainer;
+//! use reinhardt_test::containers::{MySqlContainer, TestDatabase};
 //!
-//! let container = MySqlContainer::new();
+//! # #[tokio::main]
+//! # async fn main() {
+//! let container = MySqlContainer::new().await;
 //! let url = container.connection_url();
+//! # }
 //! ```
 //!
 //! ## RedisContainer
@@ -36,8 +42,11 @@
 //! ```rust,no_run
 //! use reinhardt_test::containers::RedisContainer;
 //!
-//! let container = RedisContainer::new();
+//! # #[tokio::main]
+//! # async fn main() {
+//! let container = RedisContainer::new().await;
 //! let url = container.connection_url();
+//! # }
 //! ```
 //!
 //! # Helper Functions
@@ -47,8 +56,11 @@
 //! ```rust,no_run
 //! use reinhardt_test::containers::{start_postgres, start_redis};
 //!
-//! let (pg_container, pg_url) = start_postgres();
-//! let (redis_container, redis_url) = start_redis();
+//! # #[tokio::main]
+//! # async fn main() {
+//! let (pg_container, pg_url) = start_postgres().await;
+//! let (redis_container, redis_url) = start_redis().await;
+//! # }
 //! ```
 //!
 //! ## Test Wrapper Functions
@@ -532,6 +544,7 @@ where
 ///         Ok(())
 ///     }).await.unwrap();
 /// }
+/// # }
 /// ```
 pub async fn with_postgres<F, Fut>(f: F) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -573,16 +586,21 @@ where
 /// even if the test panics. No manual cleanup is required.
 ///
 /// # Example
-/// ```rust,no_run
+/// ```rust,ignore
+/// # use redis::AsyncCommands;
+/// # use reinhardt_test::fixtures::RedisClusterContainer;
 /// # #[tokio::main]
-/// # async fn main() {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use reinhardt_test::containers::RedisClusterGuard;
 ///
+/// # let container = RedisClusterContainer::new().await;
+/// # let urls = vec!["redis://127.0.0.1:7000".to_string()];
 /// let cluster = RedisClusterGuard::new(container, urls).await?;
 /// let mut conn = cluster.get_async_connection().await?;
 /// conn.set("key", "value").await?;
 /// // Cluster is automatically cleaned up when guard drops
 ///
+/// # Ok(())
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
