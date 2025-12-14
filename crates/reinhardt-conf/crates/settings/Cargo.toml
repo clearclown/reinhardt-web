@@ -84,7 +84,12 @@ async = ["async-trait"]
 dynamic-redis = ["redis", "async"]
 dynamic-database = ["sqlx", "sea-query", "async"]
 vault = ["reqwest", "async"]
-aws-secrets = ["aws-config", "aws-sdk-secretsmanager", "aws-smithy-runtime", "async"]
+aws-secrets = [
+  "aws-config",
+  "aws-sdk-secretsmanager",
+  "aws-smithy-runtime",
+  "async",
+]
 azure-keyvault = [
   "azure_identity",
   "azure_security_keyvault_secrets",

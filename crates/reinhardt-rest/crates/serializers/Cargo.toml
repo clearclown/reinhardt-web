@@ -45,7 +45,7 @@ serde_yaml = { version = "0.9.33", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-reinhardt-auth = { workspace = true }
+reinhardt-auth = { workspace = true, features = ["argon2-hasher"] }
 uuid = { workspace = true }
 testcontainers = { workspace = true }
 sea-orm = { workspace = true }
