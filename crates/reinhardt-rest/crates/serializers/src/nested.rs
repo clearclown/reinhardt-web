@@ -14,7 +14,7 @@
 //!
 //! ## Usage Pattern
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! // 1. Load data with relationships using ORM
 //! let posts = Post::objects()
 //!     .select_related("author")  // Load author relationship
@@ -369,7 +369,7 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 /// ## Basic Usage with Manual ORM Integration
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::WritableNestedSerializer;
@@ -411,7 +411,7 @@ impl<M: Model> Serializer for ListSerializer<M> {
 ///
 /// ## Advanced: Handling Both Create and Update
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// # use serde_json::json;

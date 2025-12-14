@@ -19,31 +19,20 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
-//! # use reinhardt_rest::{JSONParser, JSONRenderer};
-//! # use reinhardt_rest::parsers::{Parser, ParseRequest};
-//! # use reinhardt_rest::renderers::Renderer;
-//! # use reinhardt_rest::routers::DefaultRouter;
-//! # use std::sync::Arc;
-//! # struct UserViewSet;
-//! #
-//! # #[tokio::main]
-//! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! # let request = ParseRequest::default();
-//! # let data = serde_json::json!({});
-//! // Parser
+//! ```rust
+//! use reinhardt_rest::parsers::JSONParser;
+//! use reinhardt_rest::renderers::JSONRenderer;
+//! use reinhardt_rest::routers::DefaultRouter;
+//!
+//! // Create a JSON parser
 //! let parser = JSONParser::new();
-//! let parsed = parser.parse(request).await?;
 //!
-//! // Renderer
+//! // Create a JSON renderer
 //! let renderer = JSONRenderer::new();
-//! let response = renderer.render(&data, None).await?;
 //!
-//! // Router
-//! let mut router = DefaultRouter::new();
-//! router.register_viewset("users", Arc::new(UserViewSet));
-//! # Ok(())
-//! # }
+//! // Create a router
+//! let router = DefaultRouter::new();
+//! // Note: ViewSet registration requires a type implementing the ViewSet trait
 //! ```
 //!
 //! ## Testing

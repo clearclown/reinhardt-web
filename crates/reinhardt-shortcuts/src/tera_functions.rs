@@ -226,6 +226,12 @@ impl Function for StaticFunction {
 /// # Examples
 ///
 /// ```rust,no_run
+/// # use reinhardt_core::http::{Request, Response};
+/// # use reinhardt_core::exception::Error;
+/// #
+/// # async fn dummy_handler(_req: Request) -> Result<Response, Error> {
+/// #     Ok(Response::ok())
+/// # }
 /// use reinhardt_urls::routers::{UnifiedRouter, register_router};
 /// use reinhardt_shortcuts::tera_functions::UrlFunction;
 /// use tera::Function;
@@ -235,7 +241,7 @@ impl Function for StaticFunction {
 ///
 /// // Setup router
 /// let router = UnifiedRouter::new()
-///     .function_named("/users/{id}", Method::GET, dummy_handler, "user_profile");
+///     .function_named("/users/{id}", Method::GET, "user_profile", dummy_handler);
 /// register_router(router);
 ///
 /// // Use in template function

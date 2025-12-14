@@ -4,13 +4,12 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
+//! ```rust
 //! use reinhardt_rest::routers::DefaultRouter;
-//! # use std::sync::Arc;
-//! # struct UserViewSet;
 //!
-//! let mut router = DefaultRouter::new();
-//! router.register_viewset("users", Arc::new(UserViewSet));
+//! let router = DefaultRouter::new();
+//! // Note: To register a viewset, your type must implement the ViewSet trait
+//! // router.register_viewset("users", Arc::new(YourViewSet));
 //! ```
 
 // Re-export router types from reinhardt-routers

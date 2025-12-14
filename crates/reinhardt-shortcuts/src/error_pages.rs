@@ -193,6 +193,7 @@ fn render_error_page_internal(
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::render_error_page;
+/// # use reinhardt_core::http::{Request, Response};
 /// use std::collections::HashMap;
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
@@ -201,6 +202,7 @@ fn render_error_page_internal(
 ///
 ///     Err(render_error_page(&request, 404, Some(context)))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn render_error_page<K, V>(
@@ -370,9 +372,11 @@ fn render_debug_error_page_internal(
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::render_debug_error_page;
+/// # use reinhardt_core::http::{Request, Response};
 /// use std::collections::HashMap;
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
+/// #   let debug_info = "debug information";
 ///     let mut context = HashMap::new();
 ///     context.insert("local_vars", debug_info);
 ///
@@ -384,6 +388,7 @@ fn render_debug_error_page_internal(
 ///         Some(context)
 ///     ))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn render_debug_error_page<K, V>(
@@ -545,10 +550,12 @@ fn render_simple_debug_page(status_code: u16, error_message: &str, request: &Req
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::page_not_found;
+/// # use reinhardt_core::http::{Request, Response};
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
-///     Err(page_not_found(&request, None))
+///     Err(page_not_found::<String, String>(&request, None))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn page_not_found<K, V>(request: &Request, context: Option<HashMap<K, V>>) -> Response
@@ -567,6 +574,8 @@ where
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::server_error;
+/// # use reinhardt_core::http::{Request, Response};
+/// # use std::collections::HashMap;
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
 ///     let mut context = HashMap::new();
@@ -574,6 +583,7 @@ where
 ///
 ///     Err(server_error(&request, Some(context)))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn server_error<K, V>(request: &Request, context: Option<HashMap<K, V>>) -> Response
@@ -592,10 +602,12 @@ where
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::permission_denied;
+/// # use reinhardt_core::http::{Request, Response};
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
-///     Err(permission_denied(&request, None))
+///     Err(permission_denied::<String, String>(&request, None))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn permission_denied<K, V>(request: &Request, context: Option<HashMap<K, V>>) -> Response
@@ -614,6 +626,8 @@ where
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::error_pages::bad_request;
+/// # use reinhardt_core::http::{Request, Response};
+/// # use std::collections::HashMap;
 ///
 /// async fn my_handler(request: Request) -> Result<Response, Response> {
 ///     let mut context = HashMap::new();
@@ -621,6 +635,7 @@ where
 ///
 ///     Err(bad_request(&request, Some(context)))
 /// }
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn bad_request<K, V>(request: &Request, context: Option<HashMap<K, V>>) -> Response

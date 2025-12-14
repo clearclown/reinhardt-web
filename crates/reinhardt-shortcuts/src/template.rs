@@ -42,15 +42,18 @@ use tera::Context;
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::render_template;
+/// # use reinhardt_core::http::{Request, Response};
 /// use std::collections::HashMap;
 ///
-/// async fn index_view(request: Request) -> Result<Response, Response> {
+/// async fn index_view(request: Request) -> Result<Response, Box<Response>> {
+/// #   let user_name = "John";  // Simplified: request.user().name()
 ///     let mut context = HashMap::new();
 ///     context.insert("title", "Welcome");
-///     context.insert("user", request.user().name());
+///     context.insert("user", user_name);
 ///
 ///     render_template(&request, "index.html", context)
 /// }
+/// # }
 /// ```
 ///
 /// # Arguments
@@ -125,9 +128,10 @@ where
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::render_to_response;
+/// # use reinhardt_core::http::{Request, Response};
 /// use std::collections::HashMap;
 ///
-/// async fn custom_view(request: Request) -> Result<Response, Response> {
+/// async fn custom_view(request: Request) -> Result<Response, Box<Response>> {
 ///     let mut context = HashMap::new();
 ///     context.insert("message", "Custom response");
 ///
@@ -146,6 +150,7 @@ where
 ///
 ///     Ok(response)
 /// }
+/// # }
 /// ```
 ///
 /// # Arguments
@@ -261,16 +266,18 @@ mod tests {
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::{render_template_with_context, TemplateContext};
-/// use reinhardt_core::http::Request;
+/// # use reinhardt_core::http::{Request, Response};
 ///
 /// async fn index_view(request: Request) -> Result<Response, Box<Response>> {
+/// #   let user_name = "John";  // Simplified: request.user().name()
 ///     let mut context = TemplateContext::new();
 ///     context.insert("title", "Welcome");
-///     context.insert("user", request.user().name());
+///     context.insert("user", user_name);
 ///     context.insert("count", 42);
 ///
 ///     render_template_with_context(&request, "index.html", context)
 /// }
+/// # }
 /// ```
 ///
 /// # Arguments
@@ -339,7 +346,7 @@ pub fn render_template_with_context(
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_shortcuts::{render_to_response_with_context, TemplateContext};
-/// use reinhardt_core::http::Request;
+/// # use reinhardt_core::http::{Request, Response};
 ///
 /// async fn custom_view(request: Request) -> Result<Response, Box<Response>> {
 ///     let mut context = TemplateContext::new();
@@ -361,6 +368,7 @@ pub fn render_template_with_context(
 ///
 ///     Ok(response)
 /// }
+/// # }
 /// ```
 ///
 /// # Arguments

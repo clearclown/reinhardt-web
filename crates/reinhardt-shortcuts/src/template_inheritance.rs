@@ -156,7 +156,8 @@ fn register_custom_functions(tera: &mut Tera) {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```
+/// # fn example() -> Result<(), tera::Error> {
 /// use std::collections::HashMap;
 /// use reinhardt_shortcuts::template_inheritance::render_with_inheritance;
 ///
@@ -165,6 +166,8 @@ fn register_custom_functions(tera: &mut Tera) {
 /// context.insert("content", "Hello, World!");
 ///
 /// let html = render_with_inheritance("page.html", &context)?;
+/// # Ok(())
+/// # }
 /// ```
 #[cfg(feature = "templates")]
 pub fn render_with_inheritance<K, V>(

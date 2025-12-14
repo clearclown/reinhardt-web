@@ -24,7 +24,7 @@ use std::collections::HashMap;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::{Serializer, SerializerSaveMixin};

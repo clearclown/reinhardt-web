@@ -44,12 +44,20 @@ impl From<GetError> for Response {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```
+/// # fn query_database(id: i32) -> Result<Option<String>, String> {
+/// #     Ok(Some(format!("Object {}", id)))
+/// # }
+/// #
+/// # fn example() -> Result<(), reinhardt_shortcuts::GetError> {
 /// use reinhardt_shortcuts::get_or_404_response;
 ///
 /// // In a view handler:
+/// # let id = 1;
 /// let result = query_database(id);
 /// let object = get_or_404_response(result)?;  // GetError converts to Response automatically
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Arguments
@@ -74,11 +82,19 @@ pub fn get_or_404_response<T>(result: Result<Option<T>, String>) -> Result<T, Ge
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```
+/// # fn query_database_list(filters: &str) -> Result<Vec<String>, String> {
+/// #     Ok(vec!["item1".to_string(), "item2".to_string()])
+/// # }
+/// #
+/// # fn example() -> Result<(), reinhardt_shortcuts::GetError> {
 /// use reinhardt_shortcuts::get_list_or_404_response;
 ///
+/// # let filters = "some_filter";
 /// let results = query_database_list(filters);
 /// let list = get_list_or_404_response(results)?;  // GetError converts to Response automatically
+/// # Ok(())
+/// # }
 /// ```
 ///
 /// # Arguments

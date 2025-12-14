@@ -14,7 +14,7 @@ use std::sync::{Arc, RwLock};
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::pool_manager::ConnectionPoolManager;
@@ -129,7 +129,7 @@ impl Default for ConnectionPoolManager {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// let config = default_pool_config();

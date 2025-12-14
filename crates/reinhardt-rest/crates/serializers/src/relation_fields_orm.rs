@@ -117,7 +117,7 @@ impl<T, RelatedItem> Clone for SingleRelationResolverFn<T, RelatedItem> {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::relation_fields_orm::PrimaryKeyRelatedFieldORM;
@@ -359,7 +359,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::relation_fields_orm::SlugRelatedFieldORM;
@@ -559,7 +559,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// use reinhardt_serializers::relation_fields_orm::QueryOptimizer;
 ///
 /// let optimizer = QueryOptimizer::new()

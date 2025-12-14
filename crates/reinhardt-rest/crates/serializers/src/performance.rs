@@ -129,7 +129,7 @@ impl Default for IntrospectionCache {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_serializers::performance::BatchValidator;

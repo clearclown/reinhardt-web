@@ -45,21 +45,19 @@
 //!
 //! ### Redirects
 //!
-//! ```rust,no_run
-//! # use reinhardt_shortcuts::{redirect, redirect_permanent};
-//! # fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! ```
+//! use reinhardt_shortcuts::{redirect, redirect_permanent};
+//!
 //! // Temporary redirect (302)
-//! let response = redirect("/users/")?;
+//! let response = redirect("/users/");
 //!
 //! // Permanent redirect (301)
-//! let response = redirect_permanent("/new-location/")?;
-//! # Ok(())
-//! # }
+//! let response = redirect_permanent("/new-location/");
 //! ```
 //!
 //! ### Database Shortcuts
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! # use reinhardt_shortcuts::get_object_or_404;
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {

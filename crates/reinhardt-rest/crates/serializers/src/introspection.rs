@@ -81,7 +81,7 @@ impl FieldInfo {
 ///
 /// A proc-macro implementation is planned to automate field registration:
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// #[derive(Introspectable)]
 /// struct User {
 ///     id: i64,
