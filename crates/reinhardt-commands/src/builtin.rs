@@ -234,9 +234,11 @@ async fn build_from_state_from_db(
 	eprintln!("[DEBUG] Database URL: {}", database_url);
 
 	// 2. Connect to database
-	let connection = DatabaseConnection::connect(&database_url).await.map_err(|e| {
-		crate::CommandError::ExecutionError(format!("Database connection failed: {}", e))
-	})?;
+	let connection = DatabaseConnection::connect(&database_url)
+		.await
+		.map_err(|e| {
+			crate::CommandError::ExecutionError(format!("Database connection failed: {}", e))
+		})?;
 	eprintln!("[DEBUG] Database connection successful");
 
 	// 3. Build state from database history
@@ -244,7 +246,10 @@ async fn build_from_state_from_db(
 	let applied_records = recorder.get_applied_migrations().await.map_err(|e| {
 		crate::CommandError::ExecutionError(format!("Failed to get applied migrations: {}", e))
 	})?;
-	eprintln!("[DEBUG] Applied migrations count: {}", applied_records.len());
+	eprintln!(
+		"[DEBUG] Applied migrations count: {}",
+		applied_records.len()
+	);
 	for record in &applied_records {
 		eprintln!("[DEBUG]   - {}/{}", record.app, record.name);
 	}
@@ -260,13 +265,12 @@ async fn build_from_state_from_db(
 
 	let loader = MigrationStateLoader::new(recorder, source);
 
-	let state = loader
-		.build_current_state()
-		.await
-		.map_err(|e| crate::CommandError::ExecutionError(format!("Failed to build state: {}", e)))?;
+	let state = loader.build_current_state().await.map_err(|e| {
+		crate::CommandError::ExecutionError(format!("Failed to build state: {}", e))
+	})?;
 
 	eprintln!("[DEBUG] Built state - models count: {}", state.models.len());
-	for ((app, model_name), _) in &state.models {
+	for (app, model_name) in state.models.keys() {
 		eprintln!("[DEBUG]   - {}/{}", app, model_name);
 	}
 
@@ -645,16 +649,34 @@ impl BaseCommand for MakeMigrationsCommand {
 			for app_name in &app_names {
 				// Filter target state for this app only
 				let app_target_state = target_project_state.filter_by_app(app_name);
-				eprintln!("[DEBUG] app_target_state for '{}': {} models", app_name, app_target_state.models.len());
+				eprintln!(
+					"[DEBUG] app_target_state for '{}': {} models",
+					app_name,
+					app_target_state.models.len()
+				);
 				for ((app, model_name), model_state) in &app_target_state.models {
-					eprintln!("[DEBUG]   - {}/{} ({} fields)", app, model_name, model_state.fields.len());
+					eprintln!(
+						"[DEBUG]   - {}/{} ({} fields)",
+						app,
+						model_name,
+						model_state.fields.len()
+					);
 				}
 
 				// Filter from_state for this app only
 				let app_from_state = from_state.filter_by_app(app_name);
-				eprintln!("[DEBUG] app_from_state for '{}': {} models", app_name, app_from_state.models.len());
+				eprintln!(
+					"[DEBUG] app_from_state for '{}': {} models",
+					app_name,
+					app_from_state.models.len()
+				);
 				for ((app, model_name), model_state) in &app_from_state.models {
-					eprintln!("[DEBUG]   - {}/{} ({} fields)", app, model_name, model_state.fields.len());
+					eprintln!(
+						"[DEBUG]   - {}/{} ({} fields)",
+						app,
+						model_name,
+						model_state.fields.len()
+					);
 				}
 
 				// Use MigrationAutodetector for proper ManyToMany support
