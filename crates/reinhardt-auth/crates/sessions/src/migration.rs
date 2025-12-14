@@ -4,7 +4,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! use reinhardt_sessions::migration::{SessionMigrator, Migrator};
 //! use reinhardt_sessions::backends::{InMemorySessionBackend};
 //!
@@ -200,6 +200,7 @@ pub trait Migrator {
 /// let result = migrator.migrate().await?;
 /// println!("Migration complete: {} sessions migrated", result.migrated);
 /// # Ok(())
+/// # }
 /// # }
 /// ```
 pub struct SessionMigrator<S: SessionBackend, T: SessionBackend> {

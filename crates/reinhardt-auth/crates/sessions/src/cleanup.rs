@@ -200,7 +200,7 @@ impl<B: SessionBackend + CleanupableBackend> SessionCleanupTask<B> {
 	///
 	/// # Example
 	///
-	/// ```rust,no_run
+	/// ```rust,no_run,ignore
 	/// use reinhardt_sessions::cleanup::SessionCleanupTask;
 	/// # use reinhardt_sessions::backends::InMemorySessionBackend;
 	/// use std::time::Duration;

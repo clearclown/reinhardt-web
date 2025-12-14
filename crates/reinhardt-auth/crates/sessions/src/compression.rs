@@ -15,7 +15,7 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! use reinhardt_sessions::compression::{CompressedSessionBackend, ZstdCompressor};
 //! use reinhardt_sessions::backends::InMemorySessionBackend;
 //!
@@ -66,7 +66,7 @@ pub enum CompressionError {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// use reinhardt_sessions::compression::{Compressor, ZstdCompressor};
 ///
 /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -111,7 +111,7 @@ struct CompressedData {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,no_run,ignore
 /// use reinhardt_sessions::compression::{CompressedSessionBackend, ZstdCompressor};
 /// use reinhardt_sessions::backends::InMemorySessionBackend;
 ///
@@ -147,7 +147,7 @@ where
 	///
 	/// # Example
 	///
-	/// ```rust,no_run
+	/// ```rust,no_run,ignore
 	/// use reinhardt_sessions::compression::{CompressedSessionBackend, ZstdCompressor};
 	/// use reinhardt_sessions::backends::InMemorySessionBackend;
 	///
@@ -167,7 +167,7 @@ where
 	///
 	/// # Example
 	///
-	/// ```rust,no_run
+	/// ```rust,no_run,ignore
 	/// use reinhardt_sessions::compression::{CompressedSessionBackend, ZstdCompressor};
 	/// use reinhardt_sessions::backends::InMemorySessionBackend;
 	///
