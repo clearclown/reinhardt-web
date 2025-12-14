@@ -4,6 +4,7 @@ use crate::apps::auth::models::User;
 use crate::apps::dm::models::DMRoom;
 use crate::apps::dm::serializers::{CreateRoomRequest, RoomResponse};
 use reinhardt::db::orm::{FilterOperator, FilterValue, Model};
+use reinhardt::db::prelude::ManyToManyAccessor;
 use reinhardt::db::DatabaseConnection;
 use reinhardt::{delete, get, post, CurrentUser, Json, Path, Response, StatusCode, ViewResult};
 use std::sync::Arc;

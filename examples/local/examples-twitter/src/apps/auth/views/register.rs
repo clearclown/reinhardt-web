@@ -64,6 +64,7 @@ pub async fn register(
 		register_req.email.trim().to_string(),
 		None, // password_hash will be set after hashing
 		true, // is_active
+		None, // bio (optional)
 	);
 
 	// Hash password using BaseUser trait

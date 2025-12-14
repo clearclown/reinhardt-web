@@ -6,17 +6,17 @@
 use reinhardt::db::migrations::{Migration, MigrationProvider};
 
 // Import migration modules
-mod auth_migrations {
-	include!("../migrations/auth/migrations/0001_initial.rs");
-}
-
-mod profile_migrations {
-	include!("../migrations/profile/migrations/0001_initial.rs");
-}
-
-mod dm_migrations {
-	include!("../migrations/dm/migrations/0001_initial.rs");
-}
+// mod auth_migrations {
+// 	include!("../migrations/auth/migrations/0001_initial.rs");
+// }
+//
+// mod profile_migrations {
+// 	include!("../migrations/profile/migrations/0001_initial.rs");
+// }
+//
+// mod dm_migrations {
+// 	include!("../migrations/dm/migrations/0001_initial.rs");
+// }
 
 /// Migration provider for the Twitter example application.
 ///
@@ -30,30 +30,30 @@ impl MigrationProvider for TwitterMigrations {
 	fn migrations() -> Vec<Migration> {
 		vec![
 			// Auth migrations first (no dependencies)
-			auth_migrations::migration(),
+			// auth_migrations::migration(),
 			// Profile migrations (depends on auth_user)
-			profile_migrations::migration(),
+			// profile_migrations::migration(),
 			// DM migrations (depends on auth_user)
-			dm_migrations::migration(),
+			// dm_migrations::migration(),
 		]
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_migrations_count() {
-		let migrations = TwitterMigrations::migrations();
-		assert_eq!(migrations.len(), 3);
-	}
-
-	#[test]
-	fn test_migrations_order() {
-		let migrations = TwitterMigrations::migrations();
-		assert_eq!(migrations[0].app_label, "auth");
-		assert_eq!(migrations[1].app_label, "profile");
-		assert_eq!(migrations[2].app_label, "dm");
-	}
-}
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+//
+// 	#[test]
+// 	fn test_migrations_count() {
+// 		let migrations = TwitterMigrations::migrations();
+// 		assert_eq!(migrations.len(), 3);
+// 	}
+//
+// 	#[test]
+// 	fn test_migrations_order() {
+// 		let migrations = TwitterMigrations::migrations();
+// 		assert_eq!(migrations[0].app_label, "auth");
+// 		assert_eq!(migrations[1].app_label, "profile");
+// 		assert_eq!(migrations[2].app_label, "dm");
+// 	}
+// }

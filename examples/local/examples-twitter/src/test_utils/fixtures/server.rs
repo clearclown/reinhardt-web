@@ -3,13 +3,13 @@
 //! Provides TestServerGuard and APIClient fixtures for HTTP testing.
 
 use crate::config::urls::url_patterns;
-use crate::test_utils::fixtures::{create_test_user, generate_test_token, TestDatabase, TestUserParams};
+use crate::test_utils::fixtures::{create_test_user, generate_test_token, test_database, TestDatabase, TestUserParams};
 use crate::apps::auth::models::User;
 use reinhardt::db::DatabaseConnection;
 use reinhardt::UnifiedRouter;
-use reinhardt_test::client::APIClient;
-use reinhardt_test::fixtures::TestServerGuard;
-use reinhardt_test::server::test_server_guard;
+use reinhardt::test::client::APIClient;
+use reinhardt::test::fixtures::TestServerGuard;
+use reinhardt::test::fixtures::test_server_guard;
 use rstest::*;
 use std::sync::Arc;
 
@@ -56,10 +56,10 @@ pub async fn test_context(#[future] test_database: TestDatabase) -> TestContext 
 	let router = url_patterns();
 
 	// Start test server with database connection
-	let guard = test_server_guard((*router).clone(), Some(db.clone())).await;
+	let guard = test_server_guard(Arc::clone(&router)).await;
 
 	// Create API client pointing to test server
-	let client = APIClient::with_base_url(&guard.url());
+	let client = APIClient::with_base_url(&guard.url);
 
 	TestContext {
 		client,
@@ -93,7 +93,7 @@ pub async fn test_context(#[future] test_database: TestDatabase) -> TestContext 
 /// ```
 #[fixture]
 pub async fn authenticated_context(#[future] test_context: TestContext) -> (TestContext, User) {
-	let mut context = test_context.await;
+	let context = test_context.await;
 
 	// Create test user
 	let user = create_test_user(

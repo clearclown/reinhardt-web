@@ -3,13 +3,12 @@
 //! Provides user creation fixtures and helpers.
 
 use crate::apps::auth::models::User;
-use crate::test_utils::fixtures::TestDatabase;
+use crate::test_utils::fixtures::{test_database, TestDatabase};
 use argon2::password_hash::{rand_core::OsRng, SaltString};
 use argon2::{Argon2, PasswordHasher};
 use chrono::Utc;
 use reinhardt::db::DatabaseConnection;
 use rstest::*;
-use std::sync::Arc;
 use uuid::Uuid;
 
 /// Parameters for creating a test user.

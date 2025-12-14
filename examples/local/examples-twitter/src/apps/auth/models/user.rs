@@ -33,6 +33,9 @@ pub struct User {
 	#[field(auto_now_add = true)]
 	pub created_at: DateTime<Utc>,
 
+	#[field(max_length = 500, null = true)]
+	pub bio: Option<String>,
+
 	// ManyToMany relationships for following/blocking functionality
 	// ManyToManyField<Source, Target> format - intermediate table auto-generated:
 	// - auth_user_following (user_id -> user_id, following_id -> user_id)
