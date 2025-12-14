@@ -30,7 +30,7 @@
 //! ```
 
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use reinhardt_utils::cache::{Cache, InMemoryCache};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -178,26 +178,18 @@ impl CleanupableBackend for InMemorySessionBackend {
 	///
 	/// Returns metadata for the specified session.
 	/// Returns `None` if the session does not exist.
-	///
-	/// ## Limitations
-	///
-	/// - `created_at` uses current timestamp (actual creation time is not tracked)
-	/// - `last_accessed` is always `None` (access tracking not implemented)
 	async fn get_metadata(
 		&self,
 		session_key: &str,
 	) -> Result<Option<SessionMetadata>, SessionError> {
-		// Check if session exists
-		if !self.exists(session_key).await? {
-			return Ok(None);
+		match self.cache.inspect_entry_with_timestamps(session_key).await {
+			Ok(Some((created, accessed))) => Ok(Some(SessionMetadata {
+				created_at: DateTime::<Utc>::from(created),
+				last_accessed: accessed.map(DateTime::<Utc>::from),
+			})),
+			Ok(None) => Ok(None),
+			Err(e) => Err(SessionError::CacheError(e.to_string())),
 		}
-
-		// Return minimal metadata
-		// TODO: Track actual creation and access times when CacheEntry is extended
-		Ok(Some(SessionMetadata {
-			created_at: Utc::now(),
-			last_accessed: None,
-		}))
 	}
 }
 
