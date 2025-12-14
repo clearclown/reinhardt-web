@@ -251,6 +251,7 @@ impl Apps {
 	/// 1. Creating AppConfig instances for each installed app
 	/// 2. Calling the ready() method on each AppConfig
 	/// 3. Loading model definitions from the global registry
+	/// 4. Building reverse relations between models
 	///
 	/// # Examples
 	///
@@ -300,8 +301,9 @@ impl Apps {
 		// which automatically registers them at construction time
 
 		// 4. Build reverse relations between models
-		// This would require analyzing foreign key relationships
-		// TODO: For now, this is deferred until ORM relationship system is fully implemented
+		if !*self.models_ready.lock().unwrap() {
+			crate::discovery::build_reverse_relations();
+		}
 
 		// Mark as models_ready
 		*self.models_ready.lock().unwrap() = true;
