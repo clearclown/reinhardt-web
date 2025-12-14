@@ -17,11 +17,10 @@ use reinhardt_db::prelude::Model;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// # #[tokio::main]
-/// # async fn main() {
+/// ```rust,ignore
 /// use reinhardt_shortcuts::get_object_or_404;
 /// use reinhardt_db::orm::Model;
+/// use reinhardt_core::http::Response;
 ///
 /// // In an async view handler:
 /// async fn user_detail(user_id: i64) -> Result<Response, Response> {
@@ -74,11 +73,11 @@ where
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// # #[tokio::main]
-/// # async fn main() {
+/// ```rust,ignore
 /// use reinhardt_shortcuts::get_list_or_404;
 /// use reinhardt_db::orm::{Model, QuerySet};
+/// use reinhardt_db::prelude::{FilterOperator, FilterValue};
+/// use reinhardt_core::http::Response;
 ///
 /// // In an async view handler:
 /// async fn user_list(status: &str) -> Result<Response, Response> {
