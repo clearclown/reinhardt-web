@@ -13,7 +13,7 @@ use crate::proxy::ScalarValue;
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use crate::ScalarProxy;
+/// # use reinhardt_proxy::ScalarProxy;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// # #[derive(Clone)]

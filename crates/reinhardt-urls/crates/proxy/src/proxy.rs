@@ -12,7 +12,7 @@ use crate::{ProxyError, ProxyResult};
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use crate::AssociationProxy;
+/// # use reinhardt_proxy::AssociationProxy;
 /// # #[derive(Clone)]
 /// # struct UserKeyword;
 /// # #[derive(Clone)]

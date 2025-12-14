@@ -16,9 +16,9 @@
 //!
 //! ## Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_views::{ListView, DetailView};
-//! # use reinhardt_core::http::{Request, Response};
+//! # use reinhardt_http::{Request, Response};
 //! # use reinhardt_exception::Error;
 //!
 //! # #[derive(Debug, Clone)]

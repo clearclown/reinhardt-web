@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use crate::CollectionProxy;
+/// # use reinhardt_proxy::CollectionProxy;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// # struct User;

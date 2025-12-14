@@ -50,7 +50,7 @@ pub mod url_namespace;
 pub mod url_pattern;
 pub mod url_resolver;
 
-pub use builder::ProxyBuilder;
+pub use builder::{ProxyBuilder, association_proxy};
 pub use collection::{CollectionAggregations, CollectionOperations, CollectionProxy};
 pub use joins::{
 	CircularReferenceError, JoinConfig, NestedProxy, RelationshipPath, extract_through_path,

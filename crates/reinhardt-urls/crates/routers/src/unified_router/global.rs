@@ -18,6 +18,10 @@ static GLOBAL_ROUTER: OnceCell<StdRwLock<Option<Arc<UnifiedRouter>>>> = OnceCell
 /// ```rust,no_run
 /// use reinhardt_routers::{UnifiedRouter, register_router};
 /// use hyper::Method;
+/// # use reinhardt_core::http::{Request, Response, Result};
+/// # async fn health_handler(_req: Request) -> Result<Response> {
+/// #     Ok(Response::ok())
+/// # }
 ///
 /// let router = UnifiedRouter::new()
 ///     .with_prefix("/api/v1")
@@ -83,7 +87,7 @@ pub fn is_router_registered() -> bool {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_routers::clear_router;
+/// use reinhardt_routers::{clear_router, is_router_registered};
 ///
 /// clear_router();
 /// assert!(!is_router_registered());

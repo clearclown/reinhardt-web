@@ -239,10 +239,9 @@ impl Default for NestedProxy {
 ///
 /// // Circular path: posts -> author -> posts (ERROR)
 /// let result = RelationshipPath::new()
-///     .through("posts")
-///     .through("author")
-///     .through("posts")  // This creates a cycle
-///     .try_build();
+///     .try_through("posts").unwrap()
+///     .try_through("author").unwrap()
+///     .try_through("posts");  // This creates a cycle
 /// assert!(result.is_err());
 /// ```
 #[derive(Debug, Clone)]

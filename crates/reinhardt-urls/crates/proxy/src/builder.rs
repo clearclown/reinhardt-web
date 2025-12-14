@@ -411,8 +411,9 @@ impl<T, U> ProxyBuilder<T, U> {
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use crate::association_proxy;
-/// let proxy = association_proxy("user_keywords", "keyword");
+/// # use reinhardt_proxy::{AssociationProxy, association_proxy};
+/// # struct UserKeyword;
+/// let proxy: AssociationProxy<UserKeyword, String> = association_proxy("user_keywords", "keyword");
 /// ```
 pub fn association_proxy<T, U>(relationship: &str, attribute: &str) -> AssociationProxy<T, U> {
 	AssociationProxy::new(relationship, attribute)

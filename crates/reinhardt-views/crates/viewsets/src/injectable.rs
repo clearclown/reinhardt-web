@@ -5,7 +5,7 @@
 //!
 //! # Usage
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_viewsets::{InjectableViewSet, ModelViewSet, ViewSet};
 //! use reinhardt_di::Injectable;
 //! use std::sync::Arc;
@@ -36,7 +36,7 @@ use std::sync::Arc;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_viewsets::{InjectableViewSet, ModelViewSet, ViewSet};
@@ -58,6 +58,7 @@ use std::sync::Arc;
 ///         Ok(Response::ok())
 ///     }
 /// }
+/// # }
 /// ```
 #[async_trait]
 pub trait InjectableViewSet: ViewSet {

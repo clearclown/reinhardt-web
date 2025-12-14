@@ -649,6 +649,7 @@ impl UnifiedRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
+	/// use reinhardt_routers::UnifiedRouter;
 	/// # use reinhardt_core::{EndpointInfo, Handler, http::{Request, Response}};
 	/// # use hyper::Method;
 	/// # struct ListUsers;

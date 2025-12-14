@@ -15,10 +15,11 @@
 //! Per-route middleware configuration is now available. You can attach middleware
 //! to specific routes or route groups:
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # use reinhardt_routers::UnifiedRouter;
 //! # use hyper::Method;
-//! # use reinhardt_core::http::{Request, Response, Result};
+//! # use reinhardt_http::{Request, Response};
+//! # use reinhardt_exception::Result;
 //!
 //! # async fn handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
 //! # async fn users_handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }

@@ -87,25 +87,36 @@ impl<V: ViewSet + 'static> ViewSetBuilder<V> {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// # use crate::ViewSet;
+	/// # use reinhardt_viewsets::{ViewSet, Action};
 	/// # use hyper::Method;
 	/// # use reinhardt_core::exception::Error;
+	/// # use reinhardt_core::http::{Request, Response};
+	/// # use async_trait::async_trait;
 	/// # use std::sync::Arc;
 	/// # #[derive(Clone)]
 	/// # struct User { id: i64, name: String }
-	/// # struct UserViewSet;
-	/// # impl ViewSet for UserViewSet {
-	/// #     type Context = ();
-	/// # }
+	/// struct UserViewSet;
+	///
+	/// #[async_trait]
+	/// impl ViewSet for UserViewSet {
+	///     fn get_basename(&self) -> &str {
+	///         "user"
+	///     }
+	///
+	///     async fn dispatch(&self, _request: Request, _action: Action) -> Result<Response, Error> {
+	///         Ok(Response::ok())
+	///     }
+	/// }
+	///
 	/// # struct Router;
-	/// # impl crate::builder::RegisterViewSet for Router {
+	/// # impl reinhardt_viewsets::builder::RegisterViewSet for Router {
 	/// #     fn register_handler(&mut self, _path: &str, _handler: Arc<dyn reinhardt_core::Handler>) {}
 	/// # }
 	///
 	/// let mut router = Router;
 	/// let viewset = UserViewSet;
 	///
-	/// crate::builder::ViewSetBuilder::new(viewset)
+	/// reinhardt_viewsets::ViewSetBuilder::new(viewset)
 	///     .action(Method::GET, "list")
 	///     .action(Method::POST, "create")
 	///     .register_to(&mut router, "/users")?;

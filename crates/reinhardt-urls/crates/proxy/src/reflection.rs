@@ -14,8 +14,9 @@ use std::any::Any;
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use crate::{Reflectable, ScalarValue, ProxyResult};
+/// # use reinhardt_proxy::{Reflectable, ScalarValue, ProxyResult};
 /// # use std::any::Any;
+/// # #[derive(Clone)]
 /// # struct Post;
 /// struct User {
 ///     id: i64,
