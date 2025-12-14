@@ -9,14 +9,14 @@
 //! ```rust,no_run
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use reinhardt_signals::distributed::{DistributedSignal, MessageBroker, RedisAdapter};
+//! use reinhardt_signals::distributed::{DistributedSignal, InMemoryBroker};
 //!
-//! // Create a distributed signal with Redis
-//! let broker = RedisAdapter::new("redis://localhost").await?;
-//! let signal = DistributedSignal::<serde_json::Value, _>::new("user_created", broker);
+//! // Create a distributed signal with an in-memory broker
+//! let broker = InMemoryBroker::new();
+//! let signal = DistributedSignal::<serde_json::Value, _>::new("user_created", broker, "service-1");
 //!
 //! // Subscribe to signals from other services
-//! signal.subscribe(|event| async move {
+//! signal.subscribe(|event| {
 //!     println!("Received distributed signal: {:?}", event);
 //!     Ok(())
 //! }).await?;

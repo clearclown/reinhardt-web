@@ -14,17 +14,12 @@ use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// # use reinhardt_params::Path;
-/// # use reinhardt_macros::endpoint;
-/// # use reinhardt_exception::Result;
-/// # struct User;
-/// #[endpoint(GET "/users/{id}")]
-/// async fn get_user(id: Path<i64>) -> Result<User> {
-///     let user_id = id.0; // or *id
-///     # Ok(User)
-///     // ...
-/// }
+/// ```rust
+/// use reinhardt_params::Path;
+///
+/// let id = Path(42_i64);
+/// let user_id: i64 = id.0; // or *id
+/// assert_eq!(user_id, 42);
 /// ```
 pub struct Path<T>(pub T);
 
@@ -210,25 +205,21 @@ impl FromRequest for Path<String> {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust
+/// use reinhardt_params::PathStruct;
 /// # use serde::Deserialize;
-/// # use reinhardt_macros::endpoint;
-/// # use crate::PathStruct;
-/// # struct Post;
-/// # type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 /// #[derive(Deserialize)]
 /// struct UserPath {
 ///     user_id: i64,
 ///     post_id: i64,
 /// }
 ///
-/// #[endpoint(GET "/users/{user_id}/posts/{post_id}")]
-/// async fn get_post(path: PathStruct<UserPath>) -> Result<Post> {
-///     let user_id = path.user_id;
-///     let post_id = path.post_id;
-///     // ...
-/// #   Ok(Post)
-/// }
+/// let user_path = UserPath { user_id: 123, post_id: 456 };
+/// let path = PathStruct(user_path);
+/// let user_id = path.user_id;
+/// let post_id = path.post_id;
+/// assert_eq!(user_id, 123);
+/// assert_eq!(post_id, 456);
 /// ```
 pub struct PathStruct<T>(pub T);
 

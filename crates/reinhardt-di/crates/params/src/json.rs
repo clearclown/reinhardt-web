@@ -12,25 +12,22 @@ use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// # use reinhardt_params::Json;
-/// # use reinhardt_macros::endpoint;
-/// # use reinhardt_exception::Result;
+/// ```rust
+/// use reinhardt_params::Json;
 /// # use serde::Deserialize;
-/// # struct User;
 /// #[derive(Deserialize)]
 /// struct CreateUser {
 ///     username: String,
 ///     email: String,
 /// }
 ///
-/// #[endpoint(POST "/users")]
-/// async fn create_user(user: Json<CreateUser>) -> Result<User> {
-///     let username = &user.username;
-///     let email = &user.email;
-///     # Ok(User)
-///     // ...
-/// }
+/// let user_data = CreateUser {
+///     username: "alice".to_string(),
+///     email: "alice@example.com".to_string(),
+/// };
+/// let user = Json(user_data);
+/// let username = &user.username;
+/// let email = &user.email;
 /// ```
 pub struct Json<T>(pub T);
 

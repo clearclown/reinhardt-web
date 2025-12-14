@@ -6,24 +6,38 @@
 //! # Usage
 //!
 //! ```rust,no_run
-//! use reinhardt_signals::{Signal, ReceiverContext};
-//! use reinhardt_di::{InjectionContext, SingletonScope};
+//! use reinhardt_signals::{Signal, SignalName, SignalError, InjectableSignal};
 //! use std::sync::Arc;
 //!
+//! # #[cfg(feature = "di")]
+//! # use reinhardt_signals::ReceiverContext;
+//! # #[cfg(feature = "di")]
+//! # use reinhardt_di::{InjectionContext, SingletonScope};
+//! #
+//! # #[derive(Clone, Debug)]
+//! # struct User;
+//! #
+//! # #[cfg(feature = "di")]
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), SignalError> {
 //! // Create a signal and send with DI context
 //! let signal = Signal::<User>::new(SignalName::custom("user_created"));
-//! let singleton = Arc::new(SingletonScope::new());
+//! let singleton = SingletonScope::new();
 //! let di_ctx = Arc::new(InjectionContext::builder(singleton).build());
-//!
-//! // Send signal with DI context
-//! signal.send_with_di_context(user, di_ctx).await?;
 //!
 //! // In receiver, resolve dependencies from context
 //! signal.connect_with_context(|instance, ctx| async move {
-//!     let db: Arc<DatabaseConnection> = ctx.resolve().await?;
-//!     // Use dependency...
+//!     // Use context...
 //!     Ok(())
 //! });
+//!
+//! // Send signal with DI context
+//! let user = User;
+//! signal.send_with_di_context(user, di_ctx).await?;
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "di"))]
+//! # fn main() {}
 //! ```
 
 #[cfg(feature = "di")]

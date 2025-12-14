@@ -196,19 +196,19 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	///
 	/// # Example
 	/// ```rust,no_run
-	/// # use reinhardt_signals::Signal;
+	/// # use reinhardt_signals::{Signal, SignalName};
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
 	/// # #[tokio::main]
 	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-	/// let signal_a = Signal::<User>::new("user_created");
-	/// let signal_b = Signal::<User>::new("user_notified");
+	/// let signal_a = Signal::<User>::new(SignalName::custom("user_created"));
+	/// let signal_b = Signal::<User>::new(SignalName::custom("user_notified"));
 	///
 	/// signal_a.chain(&signal_b);
 	///
 	/// // Now sending signal_a will also trigger signal_b
-	/// # let user = User;
+	/// # let user = User { id: None };
 	/// signal_a.send(user).await?;
 	/// # Ok(())
 	/// # }
@@ -232,7 +232,7 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	///
 	/// # Example
 	/// ```rust,no_run
-	/// # use reinhardt_signals::Signal;
+	/// # use reinhardt_signals::{Signal, SignalName};
 	/// # use std::sync::Arc;
 	/// # struct User { id: i64 }
 	/// # struct NotificationPayload { user_id: i64 }
@@ -241,8 +241,8 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	/// #         Self { user_id: user.id }
 	/// #     }
 	/// # }
-	/// # let signal_a = Signal::<User>::new("user_created");
-	/// # let signal_b = Signal::<NotificationPayload>::new("notification");
+	/// # let signal_a = Signal::<User>::new(SignalName::custom("user_created"));
+	/// # let signal_b = Signal::<NotificationPayload>::new(SignalName::custom("notification"));
 	/// signal_a.chain_with(&signal_b, |user| {
 	///     // Transform User to NotificationPayload
 	///     NotificationPayload::from(user)
@@ -270,15 +270,15 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	///
 	/// # Example
 	/// ```rust,no_run
-	/// # use reinhardt_signals::Signal;
+	/// # use reinhardt_signals::{Signal, SignalName};
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
 	/// # #[tokio::main]
 	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-	/// # let signal_a = Signal::<User>::new("a");
-	/// # let signal_b = Signal::<User>::new("b");
-	/// # let signal_c = Signal::<User>::new("c");
+	/// # let signal_a = Signal::<User>::new(SignalName::custom("a"));
+	/// # let signal_b = Signal::<User>::new(SignalName::custom("b"));
+	/// # let signal_c = Signal::<User>::new(SignalName::custom("c"));
 	/// let merged = Signal::merge(vec![&signal_a, &signal_b, &signal_c]);
 	///
 	/// merged.connect(|instance| async move {
@@ -313,11 +313,12 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	///
 	/// # Example
 	/// ```rust,no_run
-	/// # use reinhardt_signals::Signal;
+	/// # use reinhardt_signals::{Signal, SignalName};
+	/// # #[derive(Clone)]
 	/// # struct User { is_admin: bool }
 	/// # #[tokio::main]
 	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-	/// # let user_signal = Signal::<User>::new("user");
+	/// # let user_signal = Signal::<User>::new(SignalName::custom("user"));
 	/// let admin_only = user_signal.filter(|user| user.is_admin);
 	///
 	/// admin_only.connect(|admin_user| async move {
@@ -357,12 +358,12 @@ impl<T: Send + Sync + 'static> Signal<T> {
 	///
 	/// # Example
 	/// ```rust,no_run
-	/// # use reinhardt_signals::Signal;
+	/// # use reinhardt_signals::{Signal, SignalName};
 	/// # use std::sync::Arc;
 	/// # struct User { id: i64 }
 	/// # #[tokio::main]
 	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
-	/// # let user_signal = Signal::<User>::new("user");
+	/// # let user_signal = Signal::<User>::new(SignalName::custom("user"));
 	/// let user_ids = user_signal.map(|user| user.id);
 	///
 	/// user_ids.connect(|id| async move {

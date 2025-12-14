@@ -19,46 +19,36 @@ use std::collections::HashMap;
 ///
 /// # Example
 ///
-/// ```rust,no_run
-/// # use reinhardt_params::Query;
-/// # use reinhardt_macros::endpoint;
-/// # use reinhardt_exception::Result;
+/// ```rust
+/// use reinhardt_params::Query;
 /// # use serde::Deserialize;
-/// # struct User;
 /// #[derive(Deserialize)]
 /// struct Pagination {
 ///     page: Option<i32>,
 ///     per_page: Option<i32>,
 /// }
 ///
-/// #[endpoint(GET "/users")]
-/// async fn list_users(query: Query<Pagination>) -> Result<Vec<User>> {
-///     let page = query.page.unwrap_or(1);
-///     let per_page = query.per_page.unwrap_or(10);
-///     # Ok(vec![])
-///     // ...
-/// }
+/// let pagination = Pagination { page: Some(2), per_page: Some(25) };
+/// let query = Query(pagination);
+/// let page = query.page.unwrap_or(1);
+/// let per_page = query.per_page.unwrap_or(10);
+/// assert_eq!(page, 2);
+/// assert_eq!(per_page, 25);
 /// ```
 ///
 /// # Multi-value Parameters
 ///
-/// ```rust,no_run
-/// # use reinhardt_params::Query;
-/// # use reinhardt_macros::endpoint;
-/// # use reinhardt_exception::Result;
+/// ```rust
+/// use reinhardt_params::Query;
 /// # use serde::Deserialize;
-/// # struct Item;
 /// #[derive(Deserialize)]
 /// struct SearchQuery {
 ///     q: Vec<i64>,  // Supports repeated keys: ?q=5&q=6
 /// }
 ///
-/// #[endpoint(GET "/search")]
-/// async fn search(query: Query<SearchQuery>) -> Result<Vec<Item>> {
-///     // query.q will contain vec![5, 6]
-///     # Ok(vec![])
-///     // ...
-/// }
+/// let search = SearchQuery { q: vec![5, 6] };
+/// let query = Query(search);
+/// assert_eq!(query.q, vec![5, 6]);
 /// ```
 pub struct Query<T>(pub T);
 

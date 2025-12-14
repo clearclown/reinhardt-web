@@ -320,11 +320,10 @@ impl WebSocketSignalBridge {
 	/// ```rust,no_run
 	/// use reinhardt_signals::websocket_integration::WebSocketSignalBridge;
 	/// use reinhardt_signals::post_save;
+	/// # use serde::{Serialize, Deserialize};
 	///
 	/// # #[tokio::main]
 	/// # async fn main() {
-	/// # #[derive(Clone, serde::Serialize)]
-	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
 	/// let bridge = WebSocketSignalBridge::new();

@@ -11,7 +11,7 @@
 //! # type Error = Box<dyn std::error::Error>;
 //! async fn upload_handler(mut multipart: Multipart) -> Result<(), Error> {
 //!     while let Some(field) = multipart.next_field().await? {
-//!         let name = field.name().unwrap_or("unknown");
+//!         let name = field.name().unwrap_or("unknown").to_string();
 //!         let data = field.bytes().await?;
 //!         println!("Field {}: {} bytes", name, data.len());
 //!     }

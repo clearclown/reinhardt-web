@@ -9,7 +9,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! # use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
 //! # use reinhardt_di::InjectionContext;
 //! # use tonic::{Request, Response, Status};

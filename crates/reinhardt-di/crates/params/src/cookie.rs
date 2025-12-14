@@ -56,7 +56,7 @@ impl<T: Debug> Debug for Cookie<T> {
 /// }
 ///
 /// async fn handler(cookies: CookieStruct<MyCookies>) {
-///     let session = cookies.session_id;
+///     let session = &cookies.session_id;
 /// }
 /// ```
 pub struct CookieStruct<T>(pub T);

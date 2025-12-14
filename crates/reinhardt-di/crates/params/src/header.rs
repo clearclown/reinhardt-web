@@ -59,7 +59,7 @@ impl<T: Debug> Debug for Header<T> {
 /// }
 ///
 /// async fn handler(headers: HeaderStruct<MyHeaders>) {
-///     let api_key = headers.api_key;
+///     let api_key = &headers.api_key;
 /// }
 /// ```
 pub struct HeaderStruct<T>(pub T);

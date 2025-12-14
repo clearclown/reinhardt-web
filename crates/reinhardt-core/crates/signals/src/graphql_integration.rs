@@ -7,8 +7,7 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_signals::graphql_integration::{GraphQLSubscriptionBridge, SubscriptionEvent};
-//! use reinhardt_signals::Signal;
-//! use reinhardt_signals::core::SignalName;
+//! use reinhardt_signals::{Signal, SignalName};
 //!
 //! # #[tokio::main]
 //! # async fn main() {
@@ -236,8 +235,7 @@ impl GraphQLSubscriptionBridge {
 	///
 	/// ```rust,no_run
 	/// use reinhardt_signals::graphql_integration::{GraphQLSubscriptionBridge, SubscriptionEvent};
-	/// use reinhardt_signals::Signal;
-	/// use reinhardt_signals::core::SignalName;
+	/// use reinhardt_signals::{Signal, SignalName};
 	///
 	/// # #[tokio::main]
 	/// # async fn main() {

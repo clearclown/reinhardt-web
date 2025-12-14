@@ -14,23 +14,26 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! # use reinhardt_params::{Path, Query, Json};
-//! # use reinhardt_macros::endpoint;
-//! # use reinhardt_exception::Result;
-//! # struct UserFilter;
-//! # struct UpdateUser;
-//! # struct User;
-//! #[endpoint(GET "/users/{id}")]
-//! async fn get_user(
-//!     id: Path<i64>,
-//!     filter: Query<UserFilter>,
-//!     body: Json<UpdateUser>,
-//! ) -> Result<User> {
-//!     // id.0 is the extracted i64
-//!     // filter.0 is the extracted UserFilter
-//!     // body.0 is the extracted UpdateUser
-//! #   Ok(User)
-//! }
+//! use reinhardt_params::{Path, Query, Json};
+//! # use serde::Deserialize;
+//! # #[derive(Deserialize)]
+//! # struct UserFilter { page: i32 }
+//! # #[derive(Deserialize)]
+//! # struct UpdateUser { name: String }
+//!
+//! // Extract path parameter
+//! let id = Path(42_i64);
+//! let user_id: i64 = id.0; // or *id
+//!
+//! // Extract query parameters
+//! # let filter_data = UserFilter { page: 1 };
+//! let filter = Query(filter_data);
+//! let page = filter.0.page;
+//!
+//! // Extract JSON body
+//! # let user_data = UpdateUser { name: "Alice".to_string() };
+//! let body = Json(user_data);
+//! let name = &body.0.name;
 //! ```
 
 pub mod body;

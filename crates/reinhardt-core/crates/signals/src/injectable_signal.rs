@@ -6,24 +6,38 @@
 //! # Usage
 //!
 //! ```rust,no_run
-//! use reinhardt_signals::{Signal, SignalName, InjectableSignal, ReceiverContext};
-//! use reinhardt_di::{InjectionContext, SingletonScope};
+//! use reinhardt_signals::{Signal, SignalName, SignalError, InjectableSignal};
 //! use std::sync::Arc;
 //!
+//! # #[cfg(feature = "di")]
+//! # use reinhardt_signals::ReceiverContext;
+//! # #[cfg(feature = "di")]
+//! # use reinhardt_di::{InjectionContext, SingletonScope};
+//! #
+//! # #[derive(Clone, Debug)]
+//! # struct User;
+//! #
+//! # #[cfg(feature = "di")]
+//! # #[tokio::main]
+//! # async fn main() -> Result<(), SignalError> {
 //! // Create a signal
 //! let signal = Signal::<User>::new(SignalName::custom("user_created"));
 //!
 //! // Connect a receiver with context
 //! signal.connect_with_context(|instance, ctx| async move {
-//!     let db: Arc<DatabaseConnection> = ctx.resolve().await?;
-//!     println!("User {:?} saved, using db connection", instance);
+//!     println!("User {:?} saved", instance);
 //!     Ok(())
 //! });
 //!
 //! // Send signal with DI context
-//! let singleton = Arc::new(SingletonScope::new());
+//! let singleton = SingletonScope::new();
 //! let di_ctx = Arc::new(InjectionContext::builder(singleton).build());
+//! let user = User;
 //! signal.send_with_di_context(user, di_ctx).await?;
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "di"))]
+//! # fn main() {}
 //! ```
 
 use crate::error::SignalError;
