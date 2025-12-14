@@ -2,6 +2,6 @@
 //!
 //! Re-exports all admin configurations from the admin/ directory
 
-mod admin;
+mod config;
 
-pub use admin::*;
+pub use config::*;
