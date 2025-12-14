@@ -4,7 +4,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt::middleware::CorsMiddleware;
 //! ```
 

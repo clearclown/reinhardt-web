@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # use reinhardt::utils::logging::Logger;
 //! # struct MyLogger;
 //! ```

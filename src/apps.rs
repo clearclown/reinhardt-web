@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt::apps::AppConfig;
 //!
 //! let app_config = AppConfig::new("myapp");

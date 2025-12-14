@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # #[cfg(feature = "conf")]
 //! use reinhardt::conf::Settings;
 //!

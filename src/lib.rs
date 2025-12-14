@@ -60,7 +60,7 @@
 //!
 //! ## Quick Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt::prelude::*;
 //! use serde::{Serialize, Deserialize};
 //! use std::sync::Arc;

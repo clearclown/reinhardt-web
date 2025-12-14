@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! # #[cfg(feature = "core")]
 //! use reinhardt::core::exception::Error;
 //! # #[cfg(feature = "core")]

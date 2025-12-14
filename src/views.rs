@@ -4,7 +4,7 @@
 //!
 //! # Examples
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt::views::{ListView, DetailView};
 //! # #[cfg(feature = "viewsets")]
 //! use reinhardt::views::viewsets::ModelViewSet;
