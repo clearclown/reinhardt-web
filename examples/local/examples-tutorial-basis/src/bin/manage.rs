@@ -13,7 +13,10 @@ async fn main() {
 	// Set settings module environment variable
 	// SAFETY: This is safe because we're setting it before any other code runs
 	unsafe {
-		std::env::set_var("REINHARDT_SETTINGS_MODULE", "examples_tutorial_basis.config.settings");
+		std::env::set_var(
+			"REINHARDT_SETTINGS_MODULE",
+			"examples_tutorial_basis.config.settings",
+		);
 	}
 
 	// Register router before executing commands
