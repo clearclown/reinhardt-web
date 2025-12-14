@@ -97,7 +97,7 @@ pub use model_permissions::{
 #[cfg(feature = "oauth")]
 pub use oauth2::{
 	AccessToken, AuthorizationCode, GrantType, InMemoryOAuth2Store, OAuth2Application,
-	OAuth2Authentication, OAuth2TokenStore,
+	OAuth2Authentication, OAuth2TokenStore, SimpleUserRepository, UserRepository,
 };
 pub use object_permissions::{ObjectPermission, ObjectPermissionChecker, ObjectPermissionManager};
 pub use permission_operators::{AndPermission, NotPermission, OrPermission};

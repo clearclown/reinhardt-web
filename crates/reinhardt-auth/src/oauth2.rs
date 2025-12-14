@@ -85,6 +85,34 @@ pub trait OAuth2TokenStore: Send + Sync {
 	async fn revoke_token(&self, token: &str) -> Result<(), String>;
 }
 
+/// User repository trait for OAuth2 authentication
+///
+/// Provides an abstraction for retrieving user data from various storage backends.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_auth::{UserRepository, User};
+/// use async_trait::async_trait;
+///
+/// struct MyUserRepository;
+///
+/// #[async_trait]
+/// impl UserRepository for MyUserRepository {
+///     async fn get_user_by_id(&self, user_id: &str) -> Result<Option<Box<dyn User>>, String> {
+///         // Custom implementation
+///         Ok(None)
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait UserRepository: Send + Sync {
+	/// Get user by ID
+	///
+	/// Returns `Ok(Some(user))` if found, `Ok(None)` if not found, or `Err` on error.
+	async fn get_user_by_id(&self, user_id: &str) -> Result<Option<Box<dyn User>>, String>;
+}
+
 /// In-memory OAuth2 token store
 ///
 /// # Examples
@@ -159,13 +187,57 @@ impl OAuth2TokenStore for InMemoryOAuth2Store {
 	}
 }
 
-/// OAuth2 authentication backend
+/// Simple in-memory user repository
+///
+/// Creates SimpleUser instances on-the-fly without database access.
+/// Suitable for testing and development environments.
 ///
 /// # Examples
 ///
 /// ```
+/// use reinhardt_auth::{SimpleUserRepository, UserRepository};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let repo = SimpleUserRepository;
+///     let user = repo.get_user_by_id("user_123").await.unwrap();
+///     assert!(user.is_some());
+/// }
+/// ```
+pub struct SimpleUserRepository;
+
+#[async_trait]
+impl UserRepository for SimpleUserRepository {
+	async fn get_user_by_id(&self, user_id: &str) -> Result<Option<Box<dyn User>>, String> {
+		// Create a simple user object for development/testing
+		Ok(Some(Box::new(SimpleUser {
+			id: Uuid::new_v4(),
+			username: user_id.to_string(),
+			email: format!("{}@example.com", user_id),
+			is_active: true,
+			is_admin: false,
+			is_staff: false,
+			is_superuser: false,
+		})))
+	}
+}
+
+/// OAuth2 authentication backend
+///
+/// Provides OAuth2 authorization flow support with customizable user storage.
+///
+/// # User Repository
+///
+/// By default, uses `SimpleUserRepository` which creates user objects on-the-fly.
+/// For production use, provide a custom `UserRepository` implementation that
+/// queries your user database.
+///
+/// # Examples
+///
+/// Basic usage with default repository:
+///
+/// ```
 /// use reinhardt_auth::{OAuth2Authentication, OAuth2Application, GrantType};
-/// use std::sync::Arc;
 ///
 /// let app = OAuth2Application {
 ///     client_id: "my_client".to_string(),
@@ -177,25 +249,63 @@ impl OAuth2TokenStore for InMemoryOAuth2Store {
 /// let auth = OAuth2Authentication::new();
 /// auth.register_application(app);
 /// ```
+///
+/// With custom user repository:
+///
+/// ```ignore
+/// use reinhardt_auth::{OAuth2Authentication, SimpleUserRepository};
+/// use std::sync::Arc;
+///
+/// let repo = Arc::new(SimpleUserRepository);
+/// let auth = OAuth2Authentication::with_repository(repo);
+/// ```
 pub struct OAuth2Authentication {
 	applications: Arc<Mutex<HashMap<String, OAuth2Application>>>,
 	token_store: Arc<dyn OAuth2TokenStore>,
+	user_repository: Arc<dyn UserRepository>,
 }
 
 impl OAuth2Authentication {
 	/// Create a new OAuth2 authentication backend
+	///
+	/// Uses default implementations:
+	/// - Token store: InMemoryOAuth2Store
+	/// - User repository: SimpleUserRepository
 	pub fn new() -> Self {
 		Self {
 			applications: Arc::new(Mutex::new(HashMap::new())),
 			token_store: Arc::new(InMemoryOAuth2Store::new()),
+			user_repository: Arc::new(SimpleUserRepository),
 		}
 	}
 
-	/// Create with custom token store
+	/// Create with custom token store and default user repository
 	pub fn with_store(token_store: Arc<dyn OAuth2TokenStore>) -> Self {
 		Self {
 			applications: Arc::new(Mutex::new(HashMap::new())),
 			token_store,
+			user_repository: Arc::new(SimpleUserRepository),
+		}
+	}
+
+	/// Create with custom user repository and default token store
+	pub fn with_repository(user_repository: Arc<dyn UserRepository>) -> Self {
+		Self {
+			applications: Arc::new(Mutex::new(HashMap::new())),
+			token_store: Arc::new(InMemoryOAuth2Store::new()),
+			user_repository,
+		}
+	}
+
+	/// Create with custom token store and user repository
+	pub fn with_store_and_repository(
+		token_store: Arc<dyn OAuth2TokenStore>,
+		user_repository: Arc<dyn UserRepository>,
+	) -> Self {
+		Self {
+			applications: Arc::new(Mutex::new(HashMap::new())),
+			token_store,
+			user_repository,
 		}
 	}
 
@@ -319,17 +429,10 @@ impl AuthenticationBackend for OAuth2Authentication {
 	}
 
 	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		// In a production system, this would query a user database
-		// TODO: For now, we create a simple user object
-		Ok(Some(Box::new(SimpleUser {
-			id: Uuid::new_v4(),
-			username: user_id.to_string(),
-			email: format!("{}@example.com", user_id),
-			is_active: true,
-			is_admin: false,
-			is_staff: false,
-			is_superuser: false,
-		})))
+		self.user_repository
+			.get_user_by_id(user_id)
+			.await
+			.map_err(|e| AuthenticationError::Unknown(format!("User repository error: {}", e)))
 	}
 }
 
@@ -439,5 +542,105 @@ mod tests {
 			.await;
 
 		assert!(result.is_err());
+	}
+
+	#[tokio::test]
+	async fn test_simple_user_repository() {
+		let repo = SimpleUserRepository;
+
+		// Get user by ID
+		let user = repo.get_user_by_id("test_user").await.unwrap();
+		assert!(user.is_some());
+
+		let user = user.unwrap();
+		assert_eq!(user.get_username(), "test_user");
+		assert!(user.is_authenticated());
+		assert!(user.is_active());
+	}
+
+	#[tokio::test]
+	async fn test_oauth2_with_default_repository() {
+		let auth = OAuth2Authentication::new();
+
+		// Get user via default SimpleUserRepository
+		let user = auth.get_user("user_456").await.unwrap();
+		assert!(user.is_some());
+
+		let user = user.unwrap();
+		assert_eq!(user.get_username(), "user_456");
+	}
+
+	#[tokio::test]
+	async fn test_oauth2_with_custom_repository() {
+		// Custom repository for testing
+		struct MockUserRepository {
+			username: String,
+		}
+
+		#[async_trait]
+		impl UserRepository for MockUserRepository {
+			async fn get_user_by_id(&self, user_id: &str) -> Result<Option<Box<dyn User>>, String> {
+				if user_id == "mock_user" {
+					Ok(Some(Box::new(SimpleUser {
+						id: Uuid::from_u128(999),
+						username: self.username.clone(),
+						email: "mock@example.com".to_string(),
+						is_active: true,
+						is_admin: true,
+						is_staff: true,
+						is_superuser: true,
+					})))
+				} else {
+					Ok(None)
+				}
+			}
+		}
+
+		let custom_repo = Arc::new(MockUserRepository {
+			username: "custom_mock_user".to_string(),
+		});
+
+		let auth = OAuth2Authentication::with_repository(custom_repo);
+
+		// Get user via custom repository
+		let user = auth.get_user("mock_user").await.unwrap();
+		assert!(user.is_some());
+
+		let user = user.unwrap();
+		assert_eq!(user.get_username(), "custom_mock_user");
+		assert!(user.is_admin());
+
+		// Non-existent user
+		let user = auth.get_user("nonexistent").await.unwrap();
+		assert!(user.is_none());
+	}
+
+	#[tokio::test]
+	async fn test_oauth2_with_store_and_repository() {
+		struct CustomRepository;
+
+		#[async_trait]
+		impl UserRepository for CustomRepository {
+			async fn get_user_by_id(&self, user_id: &str) -> Result<Option<Box<dyn User>>, String> {
+				Ok(Some(Box::new(SimpleUser {
+					id: Uuid::from_u128(777),
+					username: format!("custom_{}", user_id),
+					email: format!("{}@custom.com", user_id),
+					is_active: true,
+					is_admin: false,
+					is_staff: true,
+					is_superuser: false,
+				})))
+			}
+		}
+
+		let token_store = Arc::new(InMemoryOAuth2Store::new());
+		let user_repo = Arc::new(CustomRepository);
+
+		let auth = OAuth2Authentication::with_store_and_repository(token_store, user_repo);
+
+		// Verify custom repository is used
+		let user = auth.get_user("test").await.unwrap().unwrap();
+		assert_eq!(user.get_username(), "custom_test");
 	}
 }
