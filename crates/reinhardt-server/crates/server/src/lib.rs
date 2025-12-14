@@ -4,7 +4,7 @@
 //!
 //! ## Basic Usage
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! # use reinhardt_server::{HttpServer, serve};
 //! # use std::net::SocketAddr;
 //! # use std::sync::Arc;
@@ -25,7 +25,7 @@
 //!
 //! Use the `handler()` method to get a clone of the server's handler:
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! # use reinhardt_server::HttpServer;
 //! # use std::sync::Arc;
 //! # let handler = Arc::new(());

@@ -60,12 +60,12 @@ impl StorageRegistry {
 	///
 	/// ```rust,no_run
 	/// # use std::sync::Arc;
-	/// # struct MyCustomStorage;
-	/// # impl MyCustomStorage { fn new() -> Self { MyCustomStorage } }
-	/// # let mut registry = crate::storage::StorageRegistry::new();
+	/// # use reinhardt_static::StorageRegistry;
+	/// # use reinhardt_static::storage::FileSystemStorage;
+	/// # let mut registry = StorageRegistry::new();
 	/// registry.register(
 	///     "my-storage",
-	///     Box::new(|| Arc::new(MyCustomStorage::new()))
+	///     Box::new(|| Arc::new(FileSystemStorage::new("/tmp/static", "/static/")))
 	/// );
 	/// ```
 	pub fn register(&mut self, name: &str, factory: StorageFactory) -> io::Result<()> {

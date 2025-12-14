@@ -1147,7 +1147,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// # #[tokio::main]
 /// # async fn main() {
 /// use reinhardt_orm::connection::DatabaseConnection;

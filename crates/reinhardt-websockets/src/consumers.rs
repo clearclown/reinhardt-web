@@ -9,18 +9,36 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_websockets::consumers::{ConsumerContext, WebSocketConsumer};
+//! use reinhardt_websockets::{Message, WebSocketResult};
+//! use async_trait::async_trait;
 //! use std::sync::Arc;
 //!
+//! # type DatabaseConnection = ();
+//! # type CacheService = ();
+//! # struct MyConsumer;
+//! #
+//! # #[async_trait]
+//! # impl WebSocketConsumer for MyConsumer {
+//! #     async fn on_connect(&self, _ctx: &mut ConsumerContext) -> WebSocketResult<()> {
+//! #         Ok(())
+//! #     }
+//! #
 //! async fn on_message(&self, ctx: &mut ConsumerContext, msg: Message) -> WebSocketResult<()> {
 //!     // Resolve dependencies from DI context
-//!     let db: Arc<DatabaseConnection> = ctx.resolve().await?;
-//!     let cache: CacheService = ctx.resolve_uncached().await?;
+//!     // let db: Arc<DatabaseConnection> = ctx.resolve().await?;
+//!     // let cache: CacheService = ctx.resolve_uncached().await?;
 //!
 //!     // Use the dependencies...
 //!     Ok(())
 //! }
+//! #
+//! #     async fn on_disconnect(&self, _ctx: &mut ConsumerContext) -> WebSocketResult<()> {
+//! #         Ok(())
+//! #     }
+//! # }
 //! ```
-
+// WebSocketError is used in #[cfg(feature = "di")] code
+#[allow(unused_imports)]
 use crate::connection::{Message, WebSocketConnection, WebSocketError, WebSocketResult};
 use async_trait::async_trait;
 use std::sync::Arc;

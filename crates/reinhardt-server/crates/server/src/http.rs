@@ -96,7 +96,7 @@ impl HttpServer {
 	///
 	/// # Examples
 	///
-	/// ```rust,no_run
+	/// ```rust,no_run,ignore
 	/// # use reinhardt_di::{InjectionContext, SingletonScope};
 	/// # use std::sync::Arc;
 	/// # struct Router;

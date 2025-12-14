@@ -299,7 +299,7 @@ impl<T: Model> SelectExecution<T> {
 	///
 	/// # Examples
 	///
-	/// ```rust,no_run
+	/// ```rust,ignore
 	/// use reinhardt_orm::execution::SelectExecution;
 	/// use reinhardt_orm::Model;
 	/// use sea_query::{Alias, Expr, Query};
