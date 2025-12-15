@@ -143,6 +143,14 @@ fn validate_extractors(extractors: &[ExtractorInfo]) -> Result<()> {
 	Ok(())
 }
 
+/// Convert Option<String> to TokenStream for Option<&'static str> literal
+fn option_to_lit(opt: &Option<String>) -> TokenStream {
+	match opt {
+		Some(s) => quote! { Some(#s) },
+		None => quote! { None },
+	}
+}
+
 /// Generate wrapper function with both extractors and inject params
 fn generate_wrapper_with_both(
 	original_fn: &ItemFn,
@@ -302,7 +310,29 @@ fn generate_view_type(
 
 	let route_doc = format!("Route: {} {}", method, path);
 
+	// Generate inventory submission for endpoint metadata
+	let metadata_name = if route_name.is_empty() {
+		quote! { None }
+	} else {
+		quote! { Some(#route_name) }
+	};
+	let metadata_submission = quote! {
+		inventory::submit! {
+			#[allow(non_upper_case_globals)]
+			::reinhardt::EndpointMetadata {
+				path: #path,
+				method: #method,
+				name: #metadata_name,
+				function_name: stringify!(#fn_name),
+				module_path: module_path!(),
+			}
+		}
+	};
+
 	Ok(quote! {
+		// Submit endpoint metadata to global inventory
+		#metadata_submission
+
 		#original_fn
 
 		/// View type for route registration
@@ -527,7 +557,25 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 		)
 	};
 
+	// Generate inventory submission for endpoint metadata
+	let metadata_name = option_to_lit(&options.name);
+	let metadata_submission = quote! {
+		inventory::submit! {
+			#[allow(non_upper_case_globals)]
+			::reinhardt::EndpointMetadata {
+				path: #path_str,
+				method: #method,
+				name: #metadata_name,
+				function_name: stringify!(#fn_name),
+				module_path: module_path!(),
+			}
+		}
+	};
+
 	Ok(quote! {
+		// Submit endpoint metadata to global inventory
+		#metadata_submission
+
 		// Original function (renamed, private)
 		#(#fn_attrs)*
 		#asyncness fn #original_fn_name #generics (#fn_inputs) #fn_output #where_clause {
