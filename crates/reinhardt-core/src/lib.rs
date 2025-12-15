@@ -70,7 +70,7 @@ pub use reinhardt_pagination as pagination;
 #[cfg(feature = "http")]
 pub mod endpoint;
 #[cfg(feature = "http")]
-pub use endpoint::EndpointInfo;
+pub use endpoint::{EndpointInfo, EndpointMetadata};
 
 // Re-export Handler and Middleware traits from reinhardt-types when http feature is enabled
 #[cfg(feature = "http")]
