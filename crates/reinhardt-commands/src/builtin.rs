@@ -1045,6 +1045,7 @@ impl BaseCommand for RunServerCommand {
 		let address = ctx.arg(0).map(|s| s.as_str()).unwrap_or("127.0.0.1:8000");
 		let noreload = ctx.has_option("noreload");
 		let insecure = ctx.has_option("insecure");
+		let no_docs = ctx.has_option("no_docs");
 
 		ctx.info(&format!(
 			"Starting development server at http://{}",
@@ -1075,7 +1076,7 @@ impl BaseCommand for RunServerCommand {
 		// Server implementation with conditional features
 		#[cfg(feature = "server")]
 		{
-			Self::run_server(ctx, address, noreload, insecure).await
+			Self::run_server(ctx, address, noreload, insecure, no_docs).await
 		}
 
 		#[cfg(not(feature = "server"))]
@@ -1109,6 +1110,7 @@ impl RunServerCommand {
 		address: &str,
 		noreload: bool,
 		_insecure: bool,
+		no_docs: bool,
 	) -> CommandResult<()> {
 		use reinhardt_server::{HttpServer, ShutdownCoordinator};
 
@@ -1121,9 +1123,22 @@ impl RunServerCommand {
             ));
 		}
 
-		let router = reinhardt_urls::routers::get_router().ok_or_else(|| {
+		let base_router = reinhardt_urls::routers::get_router().ok_or_else(|| {
 			crate::CommandError::ExecutionError("Failed to get registered router".to_string())
 		})?;
+
+		// Wrap with OpenAPI endpoints if enabled
+		#[cfg(feature = "openapi")]
+		let router = if !no_docs {
+			use reinhardt_openapi::OpenApiRouter;
+			use reinhardt_types::Handler;
+			std::sync::Arc::new(OpenApiRouter::wrap(base_router)) as std::sync::Arc<dyn Handler>
+		} else {
+			base_router
+		};
+
+		#[cfg(not(feature = "openapi"))]
+		let router = base_router;
 
 		// Parse socket address
 		let addr: std::net::SocketAddr = address.parse().map_err(|e| {
@@ -1143,6 +1158,28 @@ impl RunServerCommand {
 			println!("\nReceived CTRL-C, shutting down gracefully...");
 			shutdown_tx.shutdown();
 		});
+
+		// OpenAPI documentation notice
+		#[cfg(feature = "openapi")]
+		if !no_docs {
+			ctx.info("");
+			ctx.info("📖 OpenAPI documentation available at:");
+			ctx.info(&format!("   Swagger UI:     http://{}/docs", address));
+			ctx.info(&format!("   Redoc UI:       http://{}/docs-redoc", address));
+			ctx.info(&format!(
+				"   OpenAPI JSON:   http://{}/api-docs/openapi.json",
+				address
+			));
+			ctx.info("");
+			ctx.info("💡 To enable automatic OpenAPI mounting, add to your router:");
+			ctx.info(
+				"   use reinhardt_openapi::endpoints::{swagger_docs, redoc_docs, openapi_json};",
+			);
+			ctx.info("   router.get(\"/docs\", swagger_docs);");
+			ctx.info("   router.get(\"/docs-redoc\", redoc_docs);");
+			ctx.info("   router.get(\"/api-docs/openapi.json\", openapi_json);");
+			ctx.info("");
+		}
 
 		// Create HTTP server
 		let server = HttpServer::new(router);

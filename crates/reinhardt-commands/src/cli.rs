@@ -109,6 +109,10 @@ pub enum Commands {
 		/// Serve static files in development mode
 		#[arg(long)]
 		insecure: bool,
+
+		/// Disable automatic OpenAPI documentation endpoints
+		#[arg(long)]
+		no_docs: bool,
 	},
 
 	/// Run an interactive Rust shell (REPL)
@@ -157,6 +161,22 @@ pub enum Commands {
 		/// Show only named URLs
 		#[arg(long)]
 		names: bool,
+	},
+
+	/// Generate OpenAPI 3.0 schema from registered endpoints
+	#[cfg(feature = "openapi")]
+	Generateopenapi {
+		/// Output format (json or yaml)
+		#[arg(short = 'f', long, default_value = "json")]
+		format: String,
+
+		/// Output file path
+		#[arg(short = 'o', long, default_value = "openapi.json")]
+		output: PathBuf,
+
+		/// Also generate Postman Collection
+		#[arg(long)]
+		postman: bool,
 	},
 }
 
@@ -242,7 +262,8 @@ pub async fn run_command(
 			address,
 			noreload,
 			insecure,
-		} => execute_runserver(address, noreload, insecure, verbosity).await,
+			no_docs,
+		} => execute_runserver(address, noreload, insecure, no_docs, verbosity).await,
 		Commands::Shell { command } => execute_shell(command, verbosity).await,
 		Commands::Check { app_label, deploy } => execute_check(app_label, deploy, verbosity).await,
 		Commands::Collectstatic {
@@ -253,6 +274,12 @@ pub async fn run_command(
 			ignore,
 		} => execute_collectstatic(clear, no_input, dry_run, link, ignore, verbosity).await,
 		Commands::Showurls { names } => execute_showurls(names, verbosity).await,
+		#[cfg(feature = "openapi")]
+		Commands::Generateopenapi {
+			format,
+			output,
+			postman,
+		} => execute_generateopenapi(format, output, postman, verbosity).await,
 	}
 }
 
@@ -338,6 +365,7 @@ async fn execute_runserver(
 	address: String,
 	noreload: bool,
 	insecure: bool,
+	no_docs: bool,
 	verbosity: u8,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let mut ctx = CommandContext::default();
@@ -349,6 +377,9 @@ async fn execute_runserver(
 	}
 	if insecure {
 		ctx.set_option("insecure".to_string(), "true".to_string());
+	}
+	if no_docs {
+		ctx.set_option("no_docs".to_string(), "true".to_string());
 	}
 
 	let cmd = RunServerCommand;
@@ -480,5 +511,102 @@ async fn execute_showurls(_names: bool, _verbosity: u8) -> Result<(), Box<dyn st
 	eprintln!("Enable it in your Cargo.toml:");
 	eprintln!("  [dependencies]");
 	eprintln!("  reinhardt-commands = {{ version = \"0.1.0\", features = [\"routers\"] }}");
+	std::process::exit(1);
+}
+
+/// Execute the generateopenapi command
+#[cfg(feature = "openapi")]
+async fn execute_generateopenapi(
+	format: String,
+	output: PathBuf,
+	postman: bool,
+	verbosity: u8,
+) -> Result<(), Box<dyn std::error::Error>> {
+	use colored::Colorize;
+
+	if verbosity > 0 {
+		println!("{}", "Generating OpenAPI schema...".cyan().bold());
+	}
+
+	// Create SchemaGenerator
+	let generator = reinhardt_openapi::SchemaGenerator::new()
+		.title(env::var("OPENAPI_TITLE").unwrap_or_else(|_| "API Documentation".to_string()))
+		.version(env::var("OPENAPI_VERSION").unwrap_or_else(|_| "1.0.0".to_string()))
+		.description(env::var("OPENAPI_DESCRIPTION").unwrap_or_default())
+		.add_function_based_endpoints();
+
+	// Generate content based on format
+	let content = match format.as_str() {
+		"yaml" | "yml" => generator.to_yaml()?,
+		_ => generator.to_json()?,
+	};
+
+	// Write to file
+	std::fs::write(&output, content)?;
+
+	if verbosity > 0 {
+		println!(
+			"{} {}",
+			"OpenAPI schema generated:".green().bold(),
+			output.display()
+		);
+	}
+
+	// Generate Postman Collection if requested
+	if postman {
+		let postman_output = output.with_extension("postman.json");
+
+		if verbosity > 0 {
+			println!("{}", "Generating Postman Collection...".cyan().bold());
+		}
+
+		// Use npx openapi-to-postmanv2 to convert
+		let status = std::process::Command::new("npx")
+			.args([
+				"openapi-to-postmanv2",
+				"-s",
+				output.to_str().unwrap(),
+				"-o",
+				postman_output.to_str().unwrap(),
+				"-p",
+			])
+			.status()?;
+
+		if !status.success() {
+			eprintln!("{}", "Failed to generate Postman Collection".red().bold());
+			eprintln!("Make sure Node.js and npx are installed:");
+			eprintln!("  npm install -g openapi-to-postmanv2");
+			std::process::exit(1);
+		}
+
+		if verbosity > 0 {
+			println!(
+				"{} {}",
+				"Postman Collection generated:".green().bold(),
+				postman_output.display()
+			);
+		}
+	}
+
+	Ok(())
+}
+
+#[cfg(not(feature = "openapi"))]
+async fn execute_generateopenapi(
+	_format: String,
+	_output: PathBuf,
+	_postman: bool,
+	_verbosity: u8,
+) -> Result<(), Box<dyn std::error::Error>> {
+	use colored::Colorize;
+	eprintln!(
+		"{}",
+		"generateopenapi command requires 'openapi' feature"
+			.red()
+			.bold()
+	);
+	eprintln!("Enable it in your Cargo.toml:");
+	eprintln!("  [dependencies]");
+	eprintln!("  reinhardt-commands = {{ version = \"0.1.0\", features = [\"openapi\"] }}");
 	std::process::exit(1);
 }

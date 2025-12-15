@@ -16,6 +16,8 @@ reinhardt-urls = { workspace = true, features = ["routers"], optional = true }
 reinhardt-db = { workspace = true, features = ["migrations", "backends-settings"], optional = true }
 reinhardt-test = { workspace = true, optional = true }
 reinhardt-di = { workspace = true, optional = true }
+reinhardt-openapi = { workspace = true, optional = true }
+reinhardt-types = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
 reinhardt-server = { workspace = true, optional = true }
 chrono = { workspace = true }
@@ -67,6 +69,7 @@ default = ["server"]
 migrations = ["dep:reinhardt-db"]
 routers = ["dep:reinhardt-urls"]
 di = ["dep:reinhardt-di"]
+openapi = ["dep:reinhardt-openapi", "dep:reinhardt-types"]
 server = ["dep:reinhardt-server", "routers"]
 autoreload = ["dep:notify", "server"]
 shell = ["dep:rustyline"]
@@ -88,6 +91,7 @@ full = [
   "shell-pyo3",
   "reinhardt-db",
   "di",
+  "openapi",
   "mongodb-backend",
   "postgres",
   "sqlite",
