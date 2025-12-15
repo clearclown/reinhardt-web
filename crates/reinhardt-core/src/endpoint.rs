@@ -5,6 +5,34 @@
 
 use hyper::Method;
 
+/// Endpoint metadata for OpenAPI generation
+///
+/// This struct is automatically submitted to the global inventory
+/// by HTTP method decorator macros (#[get], #[post], etc.) at compile time.
+/// It can be collected at runtime using `inventory::iter::<EndpointMetadata>()`.
+///
+/// # Example
+///
+/// ```rust,no_run,ignore
+/// use reinhardt_core::endpoint::EndpointMetadata;
+///
+/// // Collect all registered endpoints
+/// for metadata in inventory::iter::<EndpointMetadata>() {
+///     println!("{} {}", metadata.method, metadata.path);
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct EndpointMetadata {
+	pub path: &'static str,
+	pub method: &'static str,
+	pub name: Option<&'static str>,
+	pub function_name: &'static str,
+	pub module_path: &'static str,
+}
+
+// Register EndpointMetadata as a collectible type with inventory
+inventory::collect!(EndpointMetadata);
+
 /// Trait for endpoint metadata used by HTTP Method Macros
 ///
 /// This trait is automatically implemented by HTTP Method Macros (#[get], #[post], etc.)
