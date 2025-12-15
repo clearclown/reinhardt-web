@@ -253,6 +253,7 @@ pub use reinhardt_conf::settings::sources::{
 // Re-export core types
 #[cfg(feature = "core")]
 pub use reinhardt_core::{
+	endpoint::EndpointMetadata,
 	exception::{Error, Result},
 	http::{Request, Response},
 	types::{Handler, Middleware, MiddlewareChain},
