@@ -853,3 +853,68 @@ mod tests {
 		// If schemas field is not present or is null, that's also valid for empty components
 	}
 }
+
+//================================================================================
+// Global Schema Registry (Inventory-based Auto-registration)
+//================================================================================
+
+use crate::schema_registration::SchemaRegistration;
+use std::sync::LazyLock;
+
+/// Global schema registry initialized from inventory
+///
+/// This static registry is automatically populated at startup by collecting
+/// all `SchemaRegistration` entries submitted via the `inventory` crate.
+/// Types annotated with `#[derive(Schema)]` are automatically registered.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reinhardt_openapi::{Schema, ToSchema};
+///
+/// #[derive(Schema)]
+/// pub struct User {
+///     pub id: i64,
+///     pub name: String,
+/// }
+///
+/// // The macro automatically generates:
+/// // inventory::submit! {
+/// //     SchemaRegistration::new("User", User::schema)
+/// // }
+///
+/// // Later, access all registered schemas:
+/// use reinhardt_openapi::registry::get_all_schemas;
+/// let schemas = get_all_schemas();
+/// assert!(schemas.contains_key("User"));
+/// ```
+pub static GLOBAL_SCHEMA_REGISTRY: LazyLock<HashMap<&'static str, Schema>> = LazyLock::new(|| {
+	let mut registry = HashMap::new();
+
+	// Collect all registered schemas from inventory
+	for registration in inventory::iter::<SchemaRegistration> {
+		let schema = (registration.generator)();
+		registry.insert(registration.name, schema);
+	}
+
+	registry
+});
+
+/// Get all registered schemas from the global registry
+///
+/// Returns a reference to the global schema registry, which contains all schemas
+/// registered via `#[derive(Schema)]` macro.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use reinhardt_openapi::registry::get_all_schemas;
+///
+/// let schemas = get_all_schemas();
+/// for (name, schema) in schemas.iter() {
+///     println!("Registered schema: {}", name);
+/// }
+/// ```
+pub fn get_all_schemas() -> &'static HashMap<&'static str, Schema> {
+	&GLOBAL_SCHEMA_REGISTRY
+}

@@ -3,8 +3,11 @@
 //! This module provides the main schema generator that integrates with the schema registry,
 //! enum schema builder, and serde attributes support.
 
+use crate::endpoint_inspector::EndpointInspector;
+use crate::openapi::PathItem;
 use crate::registry::SchemaRegistry;
 use crate::{SchemaError, openapi::OpenApiSchema};
+use indexmap::IndexMap;
 
 /// Schema generator for OpenAPI schemas
 ///
@@ -41,6 +44,7 @@ pub struct SchemaGenerator {
 	version: String,
 	description: Option<String>,
 	registry: SchemaRegistry,
+	paths: IndexMap<String, PathItem>,
 }
 
 impl SchemaGenerator {
@@ -59,6 +63,7 @@ impl SchemaGenerator {
 			version: "1.0.0".to_string(),
 			description: None,
 			registry: SchemaRegistry::new(),
+			paths: IndexMap::new(),
 		}
 	}
 
@@ -139,6 +144,44 @@ impl SchemaGenerator {
 		&self.registry
 	}
 
+	/// Add function-based endpoints from HTTP method decorators
+	///
+	/// This method uses the `EndpointInspector` to collect endpoint metadata
+	/// from the global inventory and adds them to the OpenAPI schema as paths.
+	///
+	/// # Example
+	///
+	/// ```rust,no_run
+	/// use reinhardt_openapi::generator::SchemaGenerator;
+	///
+	/// let generator = SchemaGenerator::new()
+	///     .title("My API")
+	///     .version("1.0.0")
+	///     .add_function_based_endpoints();
+	///
+	/// // All endpoints decorated with #[get], #[post], etc. are now included
+	/// let schema = generator.generate().unwrap();
+	/// ```
+	pub fn add_function_based_endpoints(mut self) -> Self {
+		let inspector = EndpointInspector::new();
+
+		// Extract paths from inventory
+		match inspector.extract_paths() {
+			Ok(paths) => {
+				// Merge with existing paths
+				for (path, path_item) in paths {
+					self.paths.insert(path, path_item);
+				}
+			}
+			Err(e) => {
+				// Log error but don't fail the build
+				eprintln!("Warning: Failed to extract function-based endpoints: {}", e);
+			}
+		}
+
+		self
+	}
+
 	/// Generate the OpenAPI schema
 	///
 	/// This generates an OpenAPI 3.0 schema with all registered components.
@@ -169,10 +212,20 @@ impl SchemaGenerator {
 
 		let components = self.registry.to_components();
 
-		Ok(OpenApiBuilder::new()
+		let mut builder = OpenApiBuilder::new()
 			.info(info_builder.build())
-			.components(Some(components))
-			.build())
+			.components(Some(components));
+
+		// Add paths if any exist
+		if !self.paths.is_empty() {
+			let mut paths_builder = utoipa::openapi::PathsBuilder::new();
+			for (path, path_item) in &self.paths {
+				paths_builder = paths_builder.path(path, path_item.clone());
+			}
+			builder = builder.paths(paths_builder);
+		}
+
+		Ok(builder.build())
 	}
 
 	/// Generate OpenAPI schema as JSON string

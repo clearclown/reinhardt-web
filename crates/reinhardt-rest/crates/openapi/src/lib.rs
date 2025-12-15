@@ -32,11 +32,16 @@
 //! ```
 
 pub mod auto_schema;
+pub mod config;
+pub mod endpoint_inspector;
+pub mod endpoints;
 pub mod enum_schema;
 pub mod generator;
 pub mod openapi;
 pub mod param_metadata;
 pub mod registry;
+pub mod router_wrapper;
+pub mod schema_registration;
 pub mod serde_attrs;
 pub mod swagger;
 pub mod viewset_inspector;
@@ -44,6 +49,8 @@ pub mod viewset_inspector;
 use thiserror::Error;
 
 pub use auto_schema::{SchemaObject, ToSchema};
+pub use config::OpenApiConfig;
+pub use endpoint_inspector::EndpointInspector;
 pub use enum_schema::{EnumSchemaBuilder, EnumTagging};
 pub use generator::SchemaGenerator;
 pub use openapi::{
@@ -55,10 +62,16 @@ pub use openapi::{
 pub use param_metadata::{CookieParam, HeaderParam, ParameterMetadata, PathParam, QueryParam};
 pub use registry::SchemaRegistry;
 pub use reinhardt_openapi_macros::Schema;
+pub use router_wrapper::OpenApiRouter;
+pub use schema_registration::SchemaRegistration;
 pub use serde_attrs::{FieldMetadata, RenameAll, SchemaBuilderExt};
 pub use swagger::{RedocUI, SwaggerUI};
 pub use utoipa::Number;
 pub use viewset_inspector::{InspectorConfig, ViewSetInspector};
+
+// Re-export utoipa and inventory for macro-generated code
+pub use inventory;
+pub use utoipa;
 
 #[derive(Debug, Error)]
 pub enum SchemaError {

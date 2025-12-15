@@ -164,6 +164,26 @@ impl ToSchema for u64 {
 	}
 }
 
+impl ToSchema for usize {
+	fn schema() -> Schema {
+		Schema::Object(
+			ObjectBuilder::new()
+				.schema_type(SchemaType::Type(Type::Integer))
+				.build(),
+		)
+	}
+}
+
+impl ToSchema for isize {
+	fn schema() -> Schema {
+		Schema::Object(
+			ObjectBuilder::new()
+				.schema_type(SchemaType::Type(Type::Integer))
+				.build(),
+		)
+	}
+}
+
 impl ToSchema for f32 {
 	fn schema() -> Schema {
 		Schema::Object(
@@ -260,6 +280,32 @@ impl<V: ToSchema> ToSchema for std::collections::HashMap<String, V> {
 		V::schema_name()
 			.map(|name| format!("HashMap_String_{}", name))
 			.or(Some("HashMap_String_Value".into()))
+	}
+}
+
+// DateTime<Utc> support for OpenAPI schema generation
+impl ToSchema for chrono::DateTime<chrono::Utc> {
+	fn schema() -> Schema {
+		use utoipa::openapi::schema::{KnownFormat, SchemaFormat};
+		Schema::Object(
+			ObjectBuilder::new()
+				.schema_type(SchemaType::Type(Type::String))
+				.format(Some(SchemaFormat::KnownFormat(KnownFormat::DateTime)))
+				.build(),
+		)
+	}
+}
+
+// Uuid support for OpenAPI schema generation
+impl ToSchema for uuid::Uuid {
+	fn schema() -> Schema {
+		use utoipa::openapi::schema::{KnownFormat, SchemaFormat};
+		Schema::Object(
+			ObjectBuilder::new()
+				.schema_type(SchemaType::Type(Type::String))
+				.format(Some(SchemaFormat::KnownFormat(KnownFormat::Uuid)))
+				.build(),
+		)
 	}
 }
 
