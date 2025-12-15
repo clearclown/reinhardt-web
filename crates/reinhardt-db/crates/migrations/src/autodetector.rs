@@ -183,7 +183,7 @@ pub struct ModelState {
 	/// Database table name (e.g., "users", "blog_posts")
 	pub table_name: String,
 	/// Fields: field_name -> FieldState
-	pub fields: std::collections::HashMap<String, FieldState>,
+	pub fields: std::collections::BTreeMap<String, FieldState>,
 	/// Model options (db_table, ordering, etc.)
 	pub options: std::collections::HashMap<String, String>,
 	/// Base model for inheritance
@@ -333,7 +333,7 @@ impl ModelState {
 			app_label: app_label.into(),
 			name: name_str,
 			table_name,
-			fields: std::collections::HashMap::new(),
+			fields: std::collections::BTreeMap::new(),
 			options: std::collections::HashMap::new(),
 			base_model: None,
 			inheritance_type: None,
@@ -483,7 +483,7 @@ impl ModelState {
 #[derive(Debug, Clone)]
 pub struct ProjectState {
 	/// Models: (app_label, model_name) -> ModelState
-	pub models: std::collections::HashMap<(String, String), ModelState>,
+	pub models: std::collections::BTreeMap<(String, String), ModelState>,
 }
 
 impl Default for ProjectState {
@@ -640,7 +640,7 @@ impl ProjectState {
 	/// ```
 	pub fn new() -> Self {
 		Self {
-			models: std::collections::HashMap::new(),
+			models: std::collections::BTreeMap::new(),
 		}
 	}
 
@@ -1421,7 +1421,7 @@ pub struct DetectedChanges {
 	/// Model dependencies for ordering operations
 	/// Maps (app_label, model_name) -> Vec<(dependent_app, dependent_model)>
 	/// A model depends on another if it has ForeignKey or ManyToMany fields pointing to it
-	pub model_dependencies: std::collections::HashMap<(String, String), Vec<(String, String)>>,
+	pub model_dependencies: std::collections::BTreeMap<(String, String), Vec<(String, String)>>,
 	/// ManyToMany intermediate tables that were created
 	/// Contains (app_label, source_model, through_table, ManyToManyMetadata)
 	pub created_many_to_many: Vec<(String, String, String, ManyToManyMetadata)>,
@@ -1447,14 +1447,14 @@ impl DetectedChanges {
 	///
 	/// ```
 	/// use reinhardt_migrations::{DetectedChanges};
-	/// use std::collections::HashMap;
+	/// use std::collections::BTreeMap;
 	///
 	/// let mut changes = DetectedChanges::default();
 	/// changes.created_models.push(("accounts".to_string(), "User".to_string()));
 	/// changes.created_models.push(("blog".to_string(), "Post".to_string()));
 	///
 	/// // Post depends on User
-	/// let mut deps = HashMap::new();
+	/// let mut deps = BTreeMap::new();
 	/// deps.insert(
 	///     ("blog".to_string(), "Post".to_string()),
 	///     vec![("accounts".to_string(), "User".to_string())],
@@ -1557,12 +1557,12 @@ impl DetectedChanges {
 	///
 	/// ```
 	/// use reinhardt_migrations::{DetectedChanges};
-	/// use std::collections::HashMap;
+	/// use std::collections::BTreeMap;
 	///
 	/// let mut changes = DetectedChanges::default();
 	///
 	/// // Create circular dependency: A -> B -> C -> A
-	/// let mut deps = HashMap::new();
+	/// let mut deps = BTreeMap::new();
 	/// deps.insert(
 	///     ("app".to_string(), "A".to_string()),
 	///     vec![("app".to_string(), "B".to_string())],
@@ -1580,7 +1580,7 @@ impl DetectedChanges {
 	/// assert!(changes.check_circular_dependencies().is_err());
 	/// ```
 	pub fn check_circular_dependencies(&self) -> Result<(), Vec<(String, String)>> {
-		use std::collections::{HashMap, HashSet};
+		use std::collections::HashSet;
 
 		let mut visited: HashSet<(String, String)> = HashSet::new();
 		let mut rec_stack: HashSet<(String, String)> = HashSet::new();
@@ -1588,7 +1588,7 @@ impl DetectedChanges {
 
 		fn dfs(
 			model: &(String, String),
-			deps: &HashMap<(String, String), Vec<(String, String)>>,
+			deps: &BTreeMap<(String, String), Vec<(String, String)>>,
 			visited: &mut HashSet<(String, String)>,
 			rec_stack: &mut HashSet<(String, String)>,
 			path: &mut Vec<(String, String)>,
@@ -3277,6 +3277,29 @@ impl MigrationAutodetector {
 		// Detect model dependencies for operation ordering
 		self.detect_model_dependencies(&mut changes);
 
+		// Sort all changes to ensure deterministic ordering
+		// This guarantees that the same model set always produces the same migration order
+		changes.created_models.sort();
+		changes.deleted_models.sort();
+		changes.added_fields.sort();
+		changes.removed_fields.sort();
+		changes.altered_fields.sort();
+		changes.renamed_models.sort();
+		changes.renamed_fields.sort();
+
+		// Sort by (app_label, model_name) for index and constraint changes
+		changes
+			.added_indexes
+			.sort_by(|a, b| (&a.0, &a.1).cmp(&(&b.0, &b.1)));
+		changes.removed_indexes.sort();
+		changes
+			.added_constraints
+			.sort_by(|a, b| (&a.0, &a.1).cmp(&(&b.0, &b.1)));
+		changes.removed_constraints.sort();
+		changes
+			.created_many_to_many
+			.sort_by(|a, b| (&a.0, &a.1, &a.2).cmp(&(&b.0, &b.1, &b.2)));
+
 		changes
 	}
 
@@ -4258,8 +4281,8 @@ impl MigrationAutodetector {
 	/// ```
 	pub fn generate_migrations(&self) -> Vec<crate::Migration> {
 		let changes = self.detect_changes();
-		let mut migrations_by_app: std::collections::HashMap<String, Vec<crate::Operation>> =
-			std::collections::HashMap::new();
+		let mut migrations_by_app: std::collections::BTreeMap<String, Vec<crate::Operation>> =
+			std::collections::BTreeMap::new();
 
 		// Group created models by app
 		for (app_label, model_name) in &changes.created_models {

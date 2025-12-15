@@ -915,7 +915,7 @@ fn test_model_dependencies_many_to_many() {
 fn test_topological_sort_simple() {
 	// Test that models are ordered by dependencies
 	use reinhardt_migrations::DetectedChanges;
-	use std::collections::HashMap;
+	use std::collections::BTreeMap;
 
 	let mut changes = DetectedChanges::default();
 	changes
@@ -926,7 +926,7 @@ fn test_topological_sort_simple() {
 		.push(("blog".to_string(), "Post".to_string()));
 
 	// Post depends on User
-	let mut deps = HashMap::new();
+	let mut deps = BTreeMap::new();
 	deps.insert(
 		("blog".to_string(), "Post".to_string()),
 		vec![("accounts".to_string(), "User".to_string())],
@@ -951,7 +951,7 @@ fn test_topological_sort_simple() {
 fn test_topological_sort_complex() {
 	// Test complex dependency chain: A -> B -> C
 	use reinhardt_migrations::DetectedChanges;
-	use std::collections::HashMap;
+	use std::collections::BTreeMap;
 
 	let mut changes = DetectedChanges::default();
 	changes
@@ -965,7 +965,7 @@ fn test_topological_sort_complex() {
 		.push(("app".to_string(), "C".to_string()));
 
 	// C depends on B, B depends on A
-	let mut deps = HashMap::new();
+	let mut deps = BTreeMap::new();
 	deps.insert(
 		("app".to_string(), "B".to_string()),
 		vec![("app".to_string(), "A".to_string())],
@@ -999,12 +999,12 @@ fn test_topological_sort_complex() {
 fn test_circular_dependency_detection() {
 	// Test that circular dependencies are detected
 	use reinhardt_migrations::DetectedChanges;
-	use std::collections::HashMap;
+	use std::collections::BTreeMap;
 
 	let mut changes = DetectedChanges::default();
 
 	// Create circular dependency: A -> B -> C -> A
-	let mut deps = HashMap::new();
+	let mut deps = BTreeMap::new();
 	deps.insert(
 		("app".to_string(), "A".to_string()),
 		vec![("app".to_string(), "B".to_string())],
@@ -1027,12 +1027,12 @@ fn test_circular_dependency_detection() {
 fn test_no_circular_dependency() {
 	// Test that non-circular dependencies pass validation
 	use reinhardt_migrations::DetectedChanges;
-	use std::collections::HashMap;
+	use std::collections::BTreeMap;
 
 	let mut changes = DetectedChanges::default();
 
 	// Create non-circular dependency: A -> B, C -> D
-	let mut deps = HashMap::new();
+	let mut deps = BTreeMap::new();
 	deps.insert(
 		("app".to_string(), "B".to_string()),
 		vec![("app".to_string(), "A".to_string())],
@@ -1281,3 +1281,161 @@ fn test_migration_prompt_custom_threshold() {
 // - confirm_model_rename()
 // - confirm_field_rename()
 // - with_progress()
+
+/// Test that migration generation is deterministic
+///
+/// This test ensures that running makemigrations multiple times on the same
+/// model set produces identical results in the same order.
+#[test]
+fn test_deterministic_migration_generation() {
+	use reinhardt_migrations::{
+		FieldState, FieldType, MigrationAutodetector, ModelState, ProjectState,
+	};
+
+	// Create a ProjectState with multiple models and fields in random order
+	let mut to_state = ProjectState::new();
+
+	// Add models in non-alphabetical order
+	let mut blog_post = ModelState::new("blog", "Post");
+	blog_post.add_field(FieldState::new("title", FieldType::VarChar(255), false));
+	blog_post.add_field(FieldState::new("content", FieldType::Text, false));
+	blog_post.add_field(FieldState::new("created_at", FieldType::DateTime, false));
+	to_state.add_model(blog_post);
+
+	let mut auth_user = ModelState::new("auth", "User");
+	auth_user.add_field(FieldState::new("username", FieldType::VarChar(150), false));
+	auth_user.add_field(FieldState::new("email", FieldType::VarChar(255), false));
+	auth_user.add_field(FieldState::new("password", FieldType::VarChar(128), false));
+	to_state.add_model(auth_user);
+
+	let from_state = ProjectState::new();
+
+	// Generate migrations twice
+	let detector1 = MigrationAutodetector::new(from_state.clone(), to_state.clone());
+	let migrations1 = detector1.generate_migrations();
+
+	let detector2 = MigrationAutodetector::new(from_state.clone(), to_state.clone());
+	let migrations2 = detector2.generate_migrations();
+
+	// Verify the results are identical
+	assert_eq!(
+		migrations1.len(),
+		migrations2.len(),
+		"Migration generation must be deterministic: same number of migrations"
+	);
+
+	for (i, (m1, m2)) in migrations1.iter().zip(migrations2.iter()).enumerate() {
+		assert_eq!(
+			m1.app_label, m2.app_label,
+			"Migration {} app_label must match",
+			i
+		);
+		assert_eq!(
+			m1.operations.len(),
+			m2.operations.len(),
+			"Migration {} operations count must match",
+			i
+		);
+	}
+}
+
+/// Test that migrations are sorted by app_label
+///
+/// This test ensures that when multiple apps have migrations, they are
+/// generated in alphabetical order by app_label.
+#[test]
+fn test_migration_sorted_by_app_label() {
+	use reinhardt_migrations::{
+		FieldState, FieldType, MigrationAutodetector, ModelState, ProjectState,
+	};
+
+	let mut to_state = ProjectState::new();
+
+	// Add models from different apps in non-alphabetical order
+	let mut users_profile = ModelState::new("users", "Profile");
+	users_profile.add_field(FieldState::new("bio", FieldType::Text, false));
+	to_state.add_model(users_profile);
+
+	let mut auth_user = ModelState::new("auth", "User");
+	auth_user.add_field(FieldState::new("username", FieldType::VarChar(150), false));
+	to_state.add_model(auth_user);
+
+	let mut blog_post = ModelState::new("blog", "Post");
+	blog_post.add_field(FieldState::new("title", FieldType::VarChar(255), false));
+	to_state.add_model(blog_post);
+
+	let from_state = ProjectState::new();
+	let detector = MigrationAutodetector::new(from_state, to_state);
+	let migrations = detector.generate_migrations();
+
+	// Extract app_labels
+	let app_labels: Vec<_> = migrations.iter().map(|m| &m.app_label).collect();
+
+	// Create a sorted version
+	let mut sorted_app_labels = app_labels.clone();
+	sorted_app_labels.sort();
+
+	// Verify they are equal
+	assert_eq!(
+		app_labels, sorted_app_labels,
+		"App labels must be sorted alphabetically: expected {:?}, got {:?}",
+		sorted_app_labels, app_labels
+	);
+
+	// Verify the expected order
+	assert_eq!(app_labels, vec![&"auth", &"blog", &"users"]);
+}
+
+/// Test that fields within a model are sorted by name
+///
+/// This test ensures that fields within a CreateTable operation are
+/// sorted alphabetically by field name.
+#[test]
+fn test_fields_sorted_by_name() {
+	use reinhardt_migrations::{
+		FieldState, FieldType, MigrationAutodetector, ModelState, Operation, ProjectState,
+	};
+
+	let mut to_state = ProjectState::new();
+
+	// Add fields in non-alphabetical order
+	let mut user = ModelState::new("auth", "User");
+	user.add_field(FieldState::new("username", FieldType::VarChar(150), false));
+	user.add_field(FieldState::new("email", FieldType::VarChar(255), false));
+	user.add_field(FieldState::new("created_at", FieldType::DateTime, false));
+	user.add_field(FieldState::new("bio", FieldType::Text, true));
+	to_state.add_model(user);
+
+	let from_state = ProjectState::new();
+	let detector = MigrationAutodetector::new(from_state, to_state);
+	let migrations = detector.generate_migrations();
+
+	assert_eq!(migrations.len(), 1, "Should generate one migration");
+	assert_eq!(migrations[0].app_label, "auth");
+	assert_eq!(
+		migrations[0].operations.len(),
+		1,
+		"Should have one operation"
+	);
+
+	// Extract field names from the CreateTable operation
+	if let Operation::CreateTable { columns, .. } = &migrations[0].operations[0] {
+		let field_names: Vec<_> = columns.iter().map(|col| col.name).collect();
+
+		// Create a sorted version
+		let mut sorted_names = field_names.clone();
+		sorted_names.sort();
+
+		// Verify they are equal
+		assert_eq!(
+			field_names, sorted_names,
+			"Field names must be sorted alphabetically: expected {:?}, got {:?}",
+			sorted_names, field_names
+		);
+
+		// Verify the expected order
+		assert_eq!(field_names, vec!["bio", "created_at", "email", "username"]);
+	} else {
+		panic!("Expected CreateTable operation");
+	}
+}
