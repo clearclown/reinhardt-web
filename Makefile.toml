@@ -118,6 +118,9 @@ args = [
   "reinhardt-integration-tests",
   "--all-features",
   "--no-fail-fast",
+  "--show-progress=none",
+  "--status-level=none",
+  "--final-status-level=none"
 ]
 
 [tasks.intra-crate-integration-test]
@@ -133,6 +136,9 @@ args = [
   "reinhardt-integration-tests",
   "--all-features",
   "--no-fail-fast",
+  "--show-progress=none",
+  "--status-level=none",
+  "--final-status-level=none"
 ]
 
 [tasks.cross-crate-integration-test]
@@ -145,6 +151,9 @@ args = [
   "reinhardt-integration-tests",
   "--all-features",
   "--no-fail-fast",
+  "--show-progress=none",
+  "--status-level=none",
+  "--final-status-level=none"
 ]
 
 [tasks.integration-test]
