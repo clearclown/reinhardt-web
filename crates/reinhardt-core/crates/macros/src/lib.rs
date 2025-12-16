@@ -34,6 +34,7 @@ mod receiver;
 mod rel;
 mod routes;
 mod schema;
+mod url_patterns_registration;
 mod use_inject;
 
 use action::action_impl;
@@ -51,6 +52,7 @@ use query_fields::derive_query_fields_impl;
 use receiver::receiver_impl;
 use routes::{delete_impl, get_impl, patch_impl, post_impl, put_impl};
 use schema::derive_schema_impl;
+use url_patterns_registration::register_url_patterns_impl;
 use use_inject::use_inject_impl;
 
 /// Decorator for function-based API views
@@ -149,6 +151,47 @@ pub fn installed_apps(input: TokenStream) -> TokenStream {
 	installed_apps_impl(input.into())
 		.unwrap_or_else(|e| e.to_compile_error())
 		.into()
+}
+
+/// Register URL patterns for automatic discovery by the framework
+///
+/// This macro automatically registers your project's URL pattern functions
+/// with the framework using compile-time registration. The framework will
+/// discover and use these functions when running management commands.
+///
+/// # Usage
+///
+/// In your `src/config/urls.rs`:
+///
+/// ```rust,ignore
+/// use reinhardt::prelude::*;
+/// use reinhardt::register_url_patterns;
+///
+/// pub fn url_patterns() -> Arc<UnifiedRouter> {
+///     // Your router implementation
+/// }
+///
+/// // For standard projects (no admin)
+/// register_url_patterns!();
+/// ```
+///
+/// For projects with admin panel:
+///
+/// ```rust,ignore
+/// pub fn url_patterns() -> Arc<UnifiedRouter> {
+///     // Your router implementation
+/// }
+///
+/// pub fn url_patterns_with_admin(db: DatabaseConnection) -> Arc<UnifiedRouter> {
+///     // Your admin router implementation
+/// }
+///
+/// // For admin-enabled projects
+/// register_url_patterns!(admin);
+/// ```
+#[proc_macro]
+pub fn register_url_patterns(input: TokenStream) -> TokenStream {
+	register_url_patterns_impl(input)
 }
 
 /// Validate URL patterns at compile time

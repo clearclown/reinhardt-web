@@ -110,6 +110,7 @@ pub mod introspection;
 pub mod namespace;
 pub mod openapi_integration;
 pub mod pattern;
+pub mod registration;
 pub mod reverse;
 pub mod route;
 pub mod route_group;
@@ -129,6 +130,7 @@ pub use converters::{
 };
 pub use helpers::{IncludedRouter, include_routes, path, re_path};
 pub use pattern::{MatchingMode, PathMatcher, PathPattern, RadixRouter, RadixRouterError};
+pub use registration::UrlPatternsRegistration;
 pub use reverse::{
 	ReverseError,
 	ReverseResult,
