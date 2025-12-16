@@ -1,0 +1,72 @@
+[package]
+name = "reinhardt-dentdelion"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Plugin system for Reinhardt framework - easy to create, distribute, and install"
+
+[features]
+default = []
+full = ["wasm", "cli"]
+
+# WASM plugin support (requires wasmtime with Component Model)
+wasm = [
+	"dep:wasmtime",
+	"dep:rmp-serde",
+	"tokio/rt",
+	"tokio/fs",
+	"dep:reqwest",
+	"dep:reinhardt-backends",
+]
+
+# CLI support (for crates.io integration)
+cli = ["dep:crates_io_api", "dep:reqwest"]
+
+[dependencies]
+# Core dependencies
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Semantic versioning
+semver = "1.0"
+
+# TOML parsing and editing
+toml = "0.9"
+toml_edit = "0.23"
+
+# Compile-time registration (for static plugins)
+inventory = "0.3"
+
+# Thread-safe collections
+parking_lot = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# WASM runtime (optional)
+# Constraints:
+# - Memory limit: 128MB default (configurable via WasmPluginConfig)
+# - Execution timeout: 30 seconds default (configurable)
+# - Models capability is NOT supported in WASM (requires compile-time integration)
+wasmtime = { version = "39.0.1", optional = true, features = [
+	"component-model",
+	"async",
+	"cranelift",
+] }
+rmp-serde = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+
+# CLI support (optional)
+crates_io_api = { version = "0.12.0", optional = true }
+reqwest = { workspace = true, optional = true }
+
+# Database access (optional, for WASM plugins)
+reinhardt-backends = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tempfile = { workspace = true }

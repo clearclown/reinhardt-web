@@ -1,0 +1,1102 @@
+//! Plugin registry for managing installed plugins.
+//!
+//! The registry maintains the state of all registered plugins and manages
+//! their lifecycle transitions.
+
+use crate::capability::Capability;
+use crate::context::PluginContext;
+use crate::error::{PluginError, PluginResult, PluginState};
+use crate::plugin::{ArcPlugin, PluginLifecycle};
+use parking_lot::RwLock;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+/// Plugin registry entry containing plugin and its state.
+struct PluginEntry {
+	/// The plugin instance.
+	plugin: ArcPlugin,
+	/// Current lifecycle state.
+	state: PluginState,
+	/// Whether the plugin supports lifecycle hooks.
+	has_lifecycle: bool,
+}
+
+/// Central registry for all plugins.
+///
+/// The registry manages plugin registration, dependency resolution,
+/// and lifecycle state transitions.
+///
+/// # Thread Safety
+///
+/// The registry is thread-safe and can be accessed from multiple threads.
+pub struct PluginRegistry {
+	/// All registered plugins by name.
+	plugins: RwLock<HashMap<String, PluginEntry>>,
+
+	/// Capability to plugin mapping.
+	capability_map: RwLock<HashMap<Capability, Vec<String>>>,
+
+	/// Dependency graph (plugin -> its dependencies).
+	dependency_graph: RwLock<HashMap<String, Vec<String>>>,
+
+	/// Reverse dependency graph (plugin -> plugins that depend on it).
+	dependents: RwLock<HashMap<String, Vec<String>>>,
+}
+
+impl PluginRegistry {
+	/// Creates a new empty registry.
+	pub fn new() -> Self {
+		Self {
+			plugins: RwLock::new(HashMap::new()),
+			capability_map: RwLock::new(HashMap::new()),
+			dependency_graph: RwLock::new(HashMap::new()),
+			dependents: RwLock::new(HashMap::new()),
+		}
+	}
+
+	/// Registers a plugin.
+	///
+	/// # Errors
+	///
+	/// Returns an error if:
+	/// - A plugin with the same name but different version is already registered
+	pub fn register(&self, plugin: ArcPlugin) -> PluginResult<()> {
+		let metadata = plugin.metadata();
+		let name = metadata.name.clone();
+
+		// Check for duplicate registration
+		{
+			let plugins = self.plugins.read();
+			if let Some(existing) = plugins.get(&name) {
+				let existing_version = existing.plugin.metadata().version.clone();
+				if metadata.version != existing_version {
+					return Err(PluginError::VersionConflict {
+						plugin: name,
+						existing: existing_version,
+						new: metadata.version.clone(),
+					});
+				}
+				// Already registered with same version
+				return Ok(());
+			}
+		}
+
+		// Register capabilities
+		{
+			let mut cap_map = self.capability_map.write();
+			for capability in plugin.capabilities() {
+				cap_map
+					.entry(capability.clone())
+					.or_default()
+					.push(name.clone());
+			}
+		}
+
+		// Build dependency graph
+		{
+			let mut deps = self.dependency_graph.write();
+			let mut reverse = self.dependents.write();
+
+			for dep in &metadata.dependencies {
+				if !dep.optional {
+					deps.entry(name.clone()).or_default().push(dep.name.clone());
+
+					reverse
+						.entry(dep.name.clone())
+						.or_default()
+						.push(name.clone());
+				}
+			}
+		}
+
+		// Add plugin entry
+		{
+			let mut plugins = self.plugins.write();
+			plugins.insert(
+				name,
+				PluginEntry {
+					plugin,
+					state: PluginState::Registered,
+					has_lifecycle: false, // Will be updated when lifecycle is registered
+				},
+			);
+		}
+
+		Ok(())
+	}
+
+	/// Registers a plugin with lifecycle support.
+	pub fn register_with_lifecycle<P>(&self, plugin: Arc<P>) -> PluginResult<()>
+	where
+		P: PluginLifecycle + 'static,
+	{
+		let name = plugin.metadata().name.clone();
+		self.register(plugin.clone() as ArcPlugin)?;
+
+		// Mark as having lifecycle
+		if let Some(entry) = self.plugins.write().get_mut(&name) {
+			entry.has_lifecycle = true;
+		}
+
+		Ok(())
+	}
+
+	/// Gets a plugin by name.
+	pub fn get(&self, name: &str) -> Option<ArcPlugin> {
+		self.plugins.read().get(name).map(|e| e.plugin.clone())
+	}
+
+	/// Gets the state of a plugin.
+	pub fn get_state(&self, name: &str) -> Option<PluginState> {
+		self.plugins.read().get(name).map(|e| e.state)
+	}
+
+	/// Checks if a plugin is registered.
+	pub fn is_registered(&self, name: &str) -> bool {
+		self.plugins.read().contains_key(name)
+	}
+
+	/// Checks if a plugin is enabled.
+	pub fn is_enabled(&self, name: &str) -> bool {
+		self.plugins
+			.read()
+			.get(name)
+			.is_some_and(|e| e.state == PluginState::Enabled)
+	}
+
+	/// Returns the names of all registered plugins.
+	pub fn plugin_names(&self) -> Vec<String> {
+		self.plugins.read().keys().cloned().collect()
+	}
+
+	/// Returns the number of registered plugins.
+	pub fn len(&self) -> usize {
+		self.plugins.read().len()
+	}
+
+	/// Returns true if no plugins are registered.
+	pub fn is_empty(&self) -> bool {
+		self.plugins.read().is_empty()
+	}
+
+	/// Gets plugins providing a specific capability.
+	pub fn get_capability_providers(&self, capability: &Capability) -> Vec<ArcPlugin> {
+		let cap_map = self.capability_map.read();
+		let plugins = self.plugins.read();
+
+		cap_map
+			.get(capability)
+			.map(|names| {
+				names
+					.iter()
+					.filter_map(|name| {
+						plugins
+							.get(name)
+							.filter(|e| e.state == PluginState::Enabled)
+							.map(|e| e.plugin.clone())
+					})
+					.collect()
+			})
+			.unwrap_or_default()
+	}
+
+	/// Gets all enabled plugins with a specific capability.
+	pub fn enabled_with_capability(&self, capability: &Capability) -> Vec<ArcPlugin> {
+		self.get_capability_providers(capability)
+	}
+
+	/// Validates all dependencies are satisfied.
+	pub fn validate_dependencies(&self) -> PluginResult<()> {
+		let plugins = self.plugins.read();
+		let deps = self.dependency_graph.read();
+
+		for (plugin_name, dependencies) in deps.iter() {
+			for dep_name in dependencies {
+				if !plugins.contains_key(dep_name) {
+					return Err(PluginError::MissingDependency {
+						plugin: plugin_name.clone(),
+						dependency: dep_name.clone(),
+					});
+				}
+
+				// Validate version requirement
+				let plugin_metadata = plugins.get(plugin_name).unwrap().plugin.metadata();
+				let dep_spec = plugin_metadata
+					.dependencies
+					.iter()
+					.find(|d| &d.name == dep_name)
+					.unwrap();
+
+				let actual_version = &plugins.get(dep_name).unwrap().plugin.metadata().version;
+				if !dep_spec.version_req.matches(actual_version) {
+					return Err(PluginError::IncompatibleVersion {
+						plugin: plugin_name.clone(),
+						dependency: dep_name.clone(),
+						required: dep_spec.version_req.to_string(),
+						actual: actual_version.clone(),
+					});
+				}
+			}
+		}
+
+		Ok(())
+	}
+
+	/// Gets the topological order for enabling plugins.
+	///
+	/// Returns plugins in an order where dependencies come before dependents.
+	pub fn get_enable_order(&self) -> PluginResult<Vec<String>> {
+		let deps = self.dependency_graph.read();
+		let plugins = self.plugins.read();
+
+		// Kahn's algorithm for topological sort
+		let mut in_degree: HashMap<String, usize> = HashMap::new();
+
+		// Initialize in-degree for all plugins
+		for name in plugins.keys() {
+			in_degree.insert(name.clone(), 0);
+		}
+
+		// Count incoming edges
+		for dependencies in deps.values() {
+			for dep in dependencies {
+				if let Some(degree) = in_degree.get_mut(dep) {
+					*degree += 1;
+				}
+			}
+		}
+
+		// Find nodes with no incoming edges
+		let mut queue: Vec<String> = in_degree
+			.iter()
+			.filter(|&(_, &degree)| degree == 0)
+			.map(|(name, _)| name.clone())
+			.collect();
+
+		let mut result = Vec::new();
+
+		while let Some(name) = queue.pop() {
+			result.push(name.clone());
+
+			if let Some(dependencies) = deps.get(&name) {
+				for dep in dependencies {
+					if let Some(degree) = in_degree.get_mut(dep) {
+						*degree -= 1;
+						if *degree == 0 {
+							queue.push(dep.clone());
+						}
+					}
+				}
+			}
+		}
+
+		if result.len() != plugins.len() {
+			return Err(PluginError::CircularDependency);
+		}
+
+		// Reverse to get correct order (dependencies first)
+		result.reverse();
+		Ok(result)
+	}
+
+	/// Gets plugins that depend on the given plugin.
+	pub fn get_dependents(&self, name: &str) -> Vec<String> {
+		self.dependents
+			.read()
+			.get(name)
+			.cloned()
+			.unwrap_or_default()
+	}
+
+	/// Gets dependencies of the given plugin.
+	pub fn get_dependencies(&self, name: &str) -> Vec<String> {
+		self.dependency_graph
+			.read()
+			.get(name)
+			.cloned()
+			.unwrap_or_default()
+	}
+
+	/// Sets the state of a plugin.
+	///
+	/// This is an internal method used by lifecycle operations.
+	pub(crate) fn set_state(&self, name: &str, state: PluginState) -> PluginResult<()> {
+		let mut plugins = self.plugins.write();
+		if let Some(entry) = plugins.get_mut(name) {
+			entry.state = state;
+			Ok(())
+		} else {
+			Err(PluginError::NotFound(name.to_string()))
+		}
+	}
+
+	/// Loads all registered plugins.
+	pub async fn load_all(&self, ctx: &PluginContext) -> PluginResult<()> {
+		let order = self.get_enable_order()?;
+
+		for name in order {
+			self.load_plugin(&name, ctx).await?;
+		}
+
+		Ok(())
+	}
+
+	/// Loads a single plugin.
+	async fn load_plugin(&self, name: &str, _ctx: &PluginContext) -> PluginResult<()> {
+		let (_plugin, has_lifecycle) = {
+			let plugins = self.plugins.read();
+			let entry = plugins
+				.get(name)
+				.ok_or_else(|| PluginError::NotFound(name.to_string()))?;
+			(entry.plugin.clone(), entry.has_lifecycle)
+		};
+
+		if has_lifecycle {
+			// Try to downcast to PluginLifecycle
+			// Note: This is a simplified version; real implementation would need
+			// to store the lifecycle-capable plugin separately
+			tracing::debug!("Loading plugin with lifecycle: {}", name);
+		}
+
+		self.set_state(name, PluginState::Loaded)?;
+		tracing::info!("Loaded plugin: {}", name);
+
+		Ok(())
+	}
+
+	/// Enables all loaded plugins.
+	pub async fn enable_all(&self, ctx: &PluginContext) -> PluginResult<()> {
+		let order = self.get_enable_order()?;
+
+		for name in order {
+			if self.get_state(&name) == Some(PluginState::Loaded) {
+				self.enable_plugin(&name, ctx).await?;
+			}
+		}
+
+		Ok(())
+	}
+
+	/// Enables a single plugin.
+	async fn enable_plugin(&self, name: &str, _ctx: &PluginContext) -> PluginResult<()> {
+		// Check dependencies are enabled
+		for dep in self.get_dependencies(name) {
+			if !self.is_enabled(&dep) {
+				return Err(PluginError::MissingDependency {
+					plugin: name.to_string(),
+					dependency: dep,
+				});
+			}
+		}
+
+		self.set_state(name, PluginState::Enabled)?;
+		tracing::info!("Enabled plugin: {}", name);
+
+		Ok(())
+	}
+
+	/// Disables a plugin and all plugins that depend on it.
+	pub async fn disable_plugin(&self, name: &str, ctx: &PluginContext) -> PluginResult<()> {
+		// First disable all dependents
+		let dependents = self.get_dependents(name);
+		for dep in dependents {
+			if self.is_enabled(&dep) {
+				Box::pin(self.disable_plugin(&dep, ctx)).await?;
+			}
+		}
+
+		self.set_state(name, PluginState::Disabled)?;
+		tracing::info!("Disabled plugin: {}", name);
+
+		Ok(())
+	}
+
+	/// Unregisters a plugin.
+	///
+	/// The plugin must be disabled first.
+	pub fn unregister(&self, name: &str) -> PluginResult<()> {
+		let state = self
+			.get_state(name)
+			.ok_or_else(|| PluginError::NotFound(name.to_string()))?;
+
+		if state == PluginState::Enabled {
+			return Err(PluginError::InvalidStateTransition {
+				plugin: name.to_string(),
+				from: state,
+				to: PluginState::Registered,
+			});
+		}
+
+		// Remove from capability map
+		{
+			let mut cap_map = self.capability_map.write();
+			for providers in cap_map.values_mut() {
+				providers.retain(|n| n != name);
+			}
+		}
+
+		// Remove from dependency graphs
+		{
+			let mut deps = self.dependency_graph.write();
+			let mut reverse = self.dependents.write();
+
+			deps.remove(name);
+			reverse.remove(name);
+
+			for providers in deps.values_mut() {
+				providers.retain(|n| n != name);
+			}
+			for providers in reverse.values_mut() {
+				providers.retain(|n| n != name);
+			}
+		}
+
+		// Remove plugin
+		self.plugins.write().remove(name);
+		tracing::info!("Unregistered plugin: {}", name);
+
+		Ok(())
+	}
+}
+
+impl Default for PluginRegistry {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+impl std::fmt::Debug for PluginRegistry {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let plugins = self.plugins.read();
+		let plugin_info: Vec<(&String, PluginState)> =
+			plugins.iter().map(|(k, v)| (k, v.state)).collect();
+
+		f.debug_struct("PluginRegistry")
+			.field("plugins", &plugin_info)
+			.field(
+				"capabilities",
+				&self.capability_map.read().keys().collect::<Vec<_>>(),
+			)
+			.finish()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::capability::PluginCapability;
+	use crate::metadata::PluginMetadata;
+	use crate::plugin::Plugin;
+
+	struct TestPlugin {
+		metadata: PluginMetadata,
+		capabilities: Vec<Capability>,
+	}
+
+	impl TestPlugin {
+		fn new(name: &str, version: &str) -> Self {
+			Self {
+				metadata: PluginMetadata::builder(name, version).build().unwrap(),
+				capabilities: vec![],
+			}
+		}
+
+		fn with_capability(mut self, cap: PluginCapability) -> Self {
+			self.capabilities.push(Capability::Core(cap));
+			self
+		}
+
+		fn with_dependency(mut self, dep_name: &str, version_req: &str) -> Self {
+			self.metadata =
+				PluginMetadata::builder(&self.metadata.name, &self.metadata.version.to_string())
+					.depends_on(dep_name, version_req)
+					.build()
+					.unwrap();
+			self
+		}
+	}
+
+	impl Plugin for TestPlugin {
+		fn metadata(&self) -> &PluginMetadata {
+			&self.metadata
+		}
+
+		fn capabilities(&self) -> &[Capability] {
+			&self.capabilities
+		}
+	}
+
+	#[test]
+	fn test_register_plugin() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+
+		registry.register(plugin).unwrap();
+
+		assert!(registry.is_registered("test-delion"));
+		assert_eq!(registry.len(), 1);
+	}
+
+	#[test]
+	fn test_capability_providers() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_capability(PluginCapability::Auth),
+		);
+
+		registry.register(plugin).unwrap();
+		registry
+			.set_state("auth-delion", PluginState::Enabled)
+			.unwrap();
+
+		let providers =
+			registry.get_capability_providers(&Capability::Core(PluginCapability::Auth));
+		assert_eq!(providers.len(), 1);
+		assert_eq!(providers[0].name(), "auth-delion");
+	}
+
+	#[test]
+	fn test_dependency_validation() {
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "1.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		assert!(registry.validate_dependencies().is_ok());
+	}
+
+	#[test]
+	fn test_missing_dependency() {
+		let registry = PluginRegistry::new();
+
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(auth).unwrap();
+
+		let result = registry.validate_dependencies();
+		assert!(matches!(result, Err(PluginError::MissingDependency { .. })));
+	}
+
+	#[test]
+	fn test_enable_order() {
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "1.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+		let api = Arc::new(
+			TestPlugin::new("api-delion", "1.0.0").with_dependency("auth-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+		registry.register(api).unwrap();
+
+		let order = registry.get_enable_order().unwrap();
+
+		// core should come before auth, auth should come before api
+		let core_pos = order.iter().position(|n| n == "core-delion").unwrap();
+		let auth_pos = order.iter().position(|n| n == "auth-delion").unwrap();
+		let api_pos = order.iter().position(|n| n == "api-delion").unwrap();
+
+		assert!(core_pos < auth_pos);
+		assert!(auth_pos < api_pos);
+	}
+
+	// ==========================================================================
+	// Circular Dependency Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_circular_dependency_detection() {
+		let registry = PluginRegistry::new();
+
+		let a =
+			Arc::new(TestPlugin::new("a-delion", "1.0.0").with_dependency("b-delion", "^1.0.0"));
+		let b =
+			Arc::new(TestPlugin::new("b-delion", "1.0.0").with_dependency("a-delion", "^1.0.0"));
+
+		registry.register(a).unwrap();
+		registry.register(b).unwrap();
+
+		let result = registry.get_enable_order();
+		assert!(matches!(result, Err(PluginError::CircularDependency)));
+	}
+
+	#[test]
+	fn test_circular_dependency_three_plugins() {
+		let registry = PluginRegistry::new();
+
+		// A -> B -> C -> A (cycle)
+		let a =
+			Arc::new(TestPlugin::new("a-delion", "1.0.0").with_dependency("c-delion", "^1.0.0"));
+		let b =
+			Arc::new(TestPlugin::new("b-delion", "1.0.0").with_dependency("a-delion", "^1.0.0"));
+		let c =
+			Arc::new(TestPlugin::new("c-delion", "1.0.0").with_dependency("b-delion", "^1.0.0"));
+
+		registry.register(a).unwrap();
+		registry.register(b).unwrap();
+		registry.register(c).unwrap();
+
+		let result = registry.get_enable_order();
+		assert!(matches!(result, Err(PluginError::CircularDependency)));
+	}
+
+	// ==========================================================================
+	// Incompatible Version Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_incompatible_version() {
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "2.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		let result = registry.validate_dependencies();
+		assert!(matches!(
+			result,
+			Err(PluginError::IncompatibleVersion { .. })
+		));
+	}
+
+	#[test]
+	fn test_compatible_version_minor() {
+		let registry = PluginRegistry::new();
+
+		// core 1.5.0 should be compatible with ^1.0.0
+		let core = Arc::new(TestPlugin::new("core-delion", "1.5.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		assert!(registry.validate_dependencies().is_ok());
+	}
+
+	// ==========================================================================
+	// Unregister Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_unregister_nonexistent_fails() {
+		let registry = PluginRegistry::new();
+		let result = registry.unregister("nonexistent-delion");
+		assert!(matches!(result, Err(PluginError::NotFound(_))));
+	}
+
+	#[test]
+	fn test_unregister_enabled_plugin_fails() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+		registry
+			.set_state("test-delion", PluginState::Enabled)
+			.unwrap();
+
+		let result = registry.unregister("test-delion");
+		assert!(matches!(
+			result,
+			Err(PluginError::InvalidStateTransition { .. })
+		));
+	}
+
+	#[test]
+	fn test_unregister_loaded_plugin_succeeds() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+		registry
+			.set_state("test-delion", PluginState::Loaded)
+			.unwrap();
+
+		assert!(registry.unregister("test-delion").is_ok());
+		assert!(!registry.is_registered("test-delion"));
+	}
+
+	#[test]
+	fn test_unregister_disabled_plugin_succeeds() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+		registry
+			.set_state("test-delion", PluginState::Disabled)
+			.unwrap();
+
+		assert!(registry.unregister("test-delion").is_ok());
+		assert!(!registry.is_registered("test-delion"));
+	}
+
+	// ==========================================================================
+	// Register Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_register_same_version_twice_succeeds() {
+		let registry = PluginRegistry::new();
+		let plugin1 = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		let plugin2 = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+
+		registry.register(plugin1).unwrap();
+		// Same version should succeed (idempotent)
+		registry.register(plugin2).unwrap();
+
+		assert_eq!(registry.len(), 1);
+	}
+
+	#[test]
+	fn test_register_different_version_fails() {
+		let registry = PluginRegistry::new();
+		let plugin1 = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		let plugin2 = Arc::new(TestPlugin::new("test-delion", "2.0.0"));
+
+		registry.register(plugin1).unwrap();
+		let result = registry.register(plugin2);
+
+		assert!(matches!(result, Err(PluginError::VersionConflict { .. })));
+	}
+
+	// ==========================================================================
+	// Default and Debug Trait Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_registry_default() {
+		let registry = PluginRegistry::default();
+		assert!(registry.is_empty());
+		assert_eq!(registry.len(), 0);
+	}
+
+	#[test]
+	fn test_registry_debug() {
+		let registry = PluginRegistry::new();
+		let debug_str = format!("{:?}", registry);
+		assert!(debug_str.contains("PluginRegistry"));
+	}
+
+	// ==========================================================================
+	// State Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_get_state_nonexistent() {
+		let registry = PluginRegistry::new();
+		assert!(registry.get_state("nonexistent").is_none());
+	}
+
+	#[test]
+	fn test_get_state_registered() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		assert_eq!(
+			registry.get_state("test-delion"),
+			Some(PluginState::Registered)
+		);
+	}
+
+	#[test]
+	fn test_set_state_nonexistent_fails() {
+		let registry = PluginRegistry::new();
+		let result = registry.set_state("nonexistent", PluginState::Enabled);
+		assert!(matches!(result, Err(PluginError::NotFound(_))));
+	}
+
+	#[test]
+	fn test_is_enabled() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		assert!(!registry.is_enabled("test-delion"));
+
+		registry
+			.set_state("test-delion", PluginState::Enabled)
+			.unwrap();
+		assert!(registry.is_enabled("test-delion"));
+	}
+
+	// ==========================================================================
+	// Plugin Names and Getters Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_plugin_names() {
+		let registry = PluginRegistry::new();
+		registry
+			.register(Arc::new(TestPlugin::new("a-delion", "1.0.0")))
+			.unwrap();
+		registry
+			.register(Arc::new(TestPlugin::new("b-delion", "1.0.0")))
+			.unwrap();
+		registry
+			.register(Arc::new(TestPlugin::new("c-delion", "1.0.0")))
+			.unwrap();
+
+		let names = registry.plugin_names();
+		assert_eq!(names.len(), 3);
+		assert!(names.contains(&"a-delion".to_string()));
+		assert!(names.contains(&"b-delion".to_string()));
+		assert!(names.contains(&"c-delion".to_string()));
+	}
+
+	#[test]
+	fn test_get_plugin() {
+		let registry = PluginRegistry::new();
+		registry
+			.register(Arc::new(TestPlugin::new("test-delion", "1.0.0")))
+			.unwrap();
+
+		let plugin = registry.get("test-delion");
+		assert!(plugin.is_some());
+		assert_eq!(plugin.unwrap().name(), "test-delion");
+	}
+
+	#[test]
+	fn test_get_nonexistent_plugin() {
+		let registry = PluginRegistry::new();
+		assert!(registry.get("nonexistent").is_none());
+	}
+
+	// ==========================================================================
+	// Dependency Query Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_get_dependents() {
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "1.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		let dependents = registry.get_dependents("core-delion");
+		assert_eq!(dependents.len(), 1);
+		assert_eq!(dependents[0], "auth-delion");
+	}
+
+	#[test]
+	fn test_get_dependencies() {
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "1.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		let deps = registry.get_dependencies("auth-delion");
+		assert_eq!(deps.len(), 1);
+		assert_eq!(deps[0], "core-delion");
+	}
+
+	#[test]
+	fn test_get_dependencies_nonexistent() {
+		let registry = PluginRegistry::new();
+		let deps = registry.get_dependencies("nonexistent");
+		assert!(deps.is_empty());
+	}
+
+	// ==========================================================================
+	// Capability Tests
+	// ==========================================================================
+
+	#[test]
+	fn test_enabled_with_capability() {
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_capability(PluginCapability::Auth),
+		);
+
+		registry.register(plugin).unwrap();
+		registry
+			.set_state("auth-delion", PluginState::Enabled)
+			.unwrap();
+
+		let auth_providers =
+			registry.enabled_with_capability(&Capability::Core(PluginCapability::Auth));
+		assert!(!auth_providers.is_empty());
+
+		let services_providers =
+			registry.enabled_with_capability(&Capability::Core(PluginCapability::Services));
+		assert!(services_providers.is_empty());
+	}
+
+	#[test]
+	fn test_capability_providers_empty() {
+		let registry = PluginRegistry::new();
+		let providers =
+			registry.get_capability_providers(&Capability::Core(PluginCapability::Auth));
+		assert!(providers.is_empty());
+	}
+
+	// ==========================================================================
+	// Async Lifecycle Tests
+	// ==========================================================================
+
+	#[tokio::test]
+	async fn test_load_all_plugins() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_all(&ctx).await.unwrap();
+
+		assert_eq!(registry.get_state("test-delion"), Some(PluginState::Loaded));
+	}
+
+	#[tokio::test]
+	async fn test_enable_all_plugins() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_all(&ctx).await.unwrap();
+		registry.enable_all(&ctx).await.unwrap();
+
+		assert!(registry.is_enabled("test-delion"));
+	}
+
+	#[tokio::test]
+	async fn test_load_plugin_single() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_plugin("test-delion", &ctx).await.unwrap();
+
+		assert_eq!(registry.get_state("test-delion"), Some(PluginState::Loaded));
+	}
+
+	#[tokio::test]
+	async fn test_load_plugin_nonexistent() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+
+		let result = registry.load_plugin("nonexistent", &ctx).await;
+		assert!(matches!(result, Err(PluginError::NotFound(_))));
+	}
+
+	#[tokio::test]
+	async fn test_enable_plugin_single() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_plugin("test-delion", &ctx).await.unwrap();
+		registry.enable_plugin("test-delion", &ctx).await.unwrap();
+
+		assert!(registry.is_enabled("test-delion"));
+	}
+
+	#[tokio::test]
+	async fn test_enable_plugin_nonexistent() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+
+		let result = registry.enable_plugin("nonexistent", &ctx).await;
+		assert!(matches!(result, Err(PluginError::NotFound(_))));
+	}
+
+	#[tokio::test]
+	async fn test_disable_plugin() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let plugin = Arc::new(TestPlugin::new("test-delion", "1.0.0"));
+		registry.register(plugin).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_plugin("test-delion", &ctx).await.unwrap();
+		registry.enable_plugin("test-delion", &ctx).await.unwrap();
+		assert!(registry.is_enabled("test-delion"));
+
+		registry.disable_plugin("test-delion", &ctx).await.unwrap();
+		assert!(!registry.is_enabled("test-delion"));
+		assert_eq!(
+			registry.get_state("test-delion"),
+			Some(PluginState::Disabled)
+		);
+	}
+
+	#[tokio::test]
+	async fn test_disable_plugin_nonexistent() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+
+		let result = registry.disable_plugin("nonexistent", &ctx).await;
+		assert!(matches!(result, Err(PluginError::NotFound(_))));
+	}
+
+	#[tokio::test]
+	async fn test_lifecycle_order_with_dependencies() {
+		use crate::context::PluginContext;
+		use std::path::PathBuf;
+
+		let registry = PluginRegistry::new();
+
+		let core = Arc::new(TestPlugin::new("core-delion", "1.0.0"));
+		let auth = Arc::new(
+			TestPlugin::new("auth-delion", "1.0.0").with_dependency("core-delion", "^1.0.0"),
+		);
+
+		registry.register(core).unwrap();
+		registry.register(auth).unwrap();
+
+		let ctx = PluginContext::new(PathBuf::from("/tmp/test-project"));
+		registry.load_all(&ctx).await.unwrap();
+		registry.enable_all(&ctx).await.unwrap();
+
+		assert!(registry.is_enabled("core-delion"));
+		assert!(registry.is_enabled("auth-delion"));
+	}
+}
