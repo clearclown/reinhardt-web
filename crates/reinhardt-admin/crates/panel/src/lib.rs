@@ -112,6 +112,8 @@ pub mod auth;
 pub mod custom_views;
 pub mod dashboard;
 pub mod database;
+pub mod handlers;
+pub mod router;
 pub mod templates;
 
 // Re-exports
@@ -140,12 +142,18 @@ pub use filters::{
 	NumberRangeFilter,
 };
 pub use forms::{AdminForm, FieldType, FormBuilder, FormField};
+pub use handlers::{
+	AdminHandlers, BulkDeleteRequest, BulkDeleteResponse, DashboardResponse, DetailResponse,
+	ExportQueryParams, ImportResponse, ListQueryParams, ListResponse, ModelInfo, MutationRequest,
+	MutationResponse,
+};
 pub use import::{
 	CsvImporter, ImportBuilder, ImportConfig, ImportError, ImportFormat, ImportResult,
 	JsonImporter, TsvImporter,
 };
 pub use inline::{InlineForm, InlineFormset, InlineModelAdmin, InlineType};
 pub use model_admin::{ModelAdmin, ModelAdminConfig};
+pub use router::AdminRouter;
 pub use site::AdminSite;
 pub use templates::{
 	AdminContext, AdminTemplateRenderer, DashboardContext, DeleteConfirmationContext,
