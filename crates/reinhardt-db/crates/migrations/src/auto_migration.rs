@@ -187,7 +187,8 @@ impl AutoMigrationGenerator {
 				| Operation::AlterUniqueTogether { .. }
 				| Operation::AlterModelOptions { .. }
 				| Operation::CreateInheritedTable { .. }
-				| Operation::AddDiscriminatorColumn { .. } => None,
+				| Operation::AddDiscriminatorColumn { .. }
+				| Operation::MoveModel { .. } => None,
 			})
 			.collect()
 	}
