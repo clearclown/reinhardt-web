@@ -64,6 +64,12 @@ impl AdminContext {
 		self.extra.insert(key.into(), value);
 		self
 	}
+
+	/// Set available apps
+	pub fn with_available_apps(mut self, apps: Vec<AppContext>) -> Self {
+		self.available_apps = apps;
+		self
+	}
 }
 
 impl Default for AdminContext {
