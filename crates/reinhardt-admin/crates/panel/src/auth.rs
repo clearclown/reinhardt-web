@@ -125,6 +125,49 @@ impl AdminAuthBackend {
 		user.is_superuser()
 	}
 
+	/// Check a custom permission (for custom admin views)
+	///
+	/// Unlike `check_permission` which checks model-specific permissions,
+	/// this method checks arbitrary permission strings like "admin.view_reports".
+	///
+	/// # Arguments
+	///
+	/// * `user` - The user to check permission for
+	/// * `permission` - The permission string (e.g., "admin.view_reports")
+	///
+	/// # Returns
+	///
+	/// Returns `true` if the user has the permission, `false` otherwise.
+	/// Superusers always return `true`.
+	pub async fn check_custom_permission(&self, user: &SimpleUser, permission: &str) -> bool {
+		// Only authenticated users can have permissions
+		if !user.is_authenticated() {
+			return false;
+		}
+
+		// Inactive users have no permissions
+		if !user.is_active {
+			return false;
+		}
+
+		// Superusers have all permissions
+		if user.is_superuser {
+			return true;
+		}
+
+		// Staff users need the specific permission
+		if !user.is_staff {
+			return false;
+		}
+
+		// Check if user has the custom permission
+		self.model_permissions
+			.read()
+			.await
+			.user_has_permission(&user.username, permission)
+			.await
+	}
+
 	/// Add permission to a user
 	///
 	/// Grants a specific permission to the user. The permission should be in
@@ -599,6 +642,161 @@ mod tests {
 		assert!(
 			!auth
 				.check_permission(&bob, "Article", PermissionAction::Change)
+				.await
+		);
+	}
+
+	// ==================== check_custom_permission tests ====================
+
+	fn create_inactive_user() -> SimpleUser {
+		SimpleUser {
+			id: uuid::Uuid::from_u128(4),
+			username: "inactive".to_string(),
+			email: "inactive@example.com".to_string(),
+			is_staff: true,
+			is_superuser: false,
+			is_active: false,
+			is_admin: true,
+		}
+	}
+
+	fn create_unauthenticated_user() -> SimpleUser {
+		SimpleUser {
+			id: uuid::Uuid::from_u128(0),
+			username: "".to_string(),
+			email: "".to_string(),
+			is_staff: false,
+			is_superuser: false,
+			is_active: false,
+			is_admin: false,
+		}
+	}
+
+	#[tokio::test]
+	async fn test_check_custom_permission_superuser_allowed() {
+		let auth = AdminAuthBackend::new();
+		let user = create_superuser();
+
+		// Superuser should have any custom permission without explicit grant
+		assert!(
+			auth.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+		assert!(
+			auth.check_custom_permission(&user, "admin.manage_settings")
+				.await
+		);
+		assert!(
+			auth.check_custom_permission(&user, "custom.any_permission")
+				.await
+		);
+	}
+
+	#[tokio::test(flavor = "multi_thread")]
+	async fn test_check_custom_permission_staff_with_permission() {
+		let auth = AdminAuthBackend::new();
+		let user = create_staff_user();
+
+		// Grant custom permission
+		auth.add_user_permission("staff", "admin.view_reports")
+			.await;
+
+		// Should have the granted permission
+		assert!(
+			auth.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+	}
+
+	#[tokio::test]
+	async fn test_check_custom_permission_staff_without_permission() {
+		let auth = AdminAuthBackend::new();
+		let user = create_staff_user();
+
+		// No permissions granted - should be denied
+		assert!(
+			!auth
+				.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+	}
+
+	#[tokio::test]
+	async fn test_check_custom_permission_not_authenticated() {
+		let auth = AdminAuthBackend::new();
+		let user = create_unauthenticated_user();
+
+		// Unauthenticated user should be denied
+		assert!(
+			!auth
+				.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+	}
+
+	#[tokio::test]
+	async fn test_check_custom_permission_inactive_user() {
+		let auth = AdminAuthBackend::new();
+		let user = create_inactive_user();
+
+		// Inactive user should be denied even with staff status
+		assert!(
+			!auth
+				.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+	}
+
+	#[tokio::test]
+	async fn test_check_custom_permission_non_staff() {
+		let auth = AdminAuthBackend::new();
+		let user = create_regular_user();
+
+		// Non-staff user should be denied
+		assert!(
+			!auth
+				.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+	}
+
+	#[tokio::test(flavor = "multi_thread")]
+	async fn test_check_custom_permission_empty_string() {
+		let auth = AdminAuthBackend::new();
+		let user = create_staff_user();
+
+		// Empty permission string - staff without the permission should be denied
+		assert!(!auth.check_custom_permission(&user, "").await);
+
+		// Superuser should be allowed even with empty string
+		let superuser = create_superuser();
+		assert!(auth.check_custom_permission(&superuser, "").await);
+	}
+
+	#[tokio::test(flavor = "multi_thread")]
+	async fn test_check_custom_permission_multiple_permissions() {
+		let auth = AdminAuthBackend::new();
+		let user = create_staff_user();
+
+		// Grant multiple custom permissions
+		auth.add_user_permission("staff", "admin.view_reports")
+			.await;
+		auth.add_user_permission("staff", "admin.export_data").await;
+
+		// Should have all granted permissions
+		assert!(
+			auth.check_custom_permission(&user, "admin.view_reports")
+				.await
+		);
+		assert!(
+			auth.check_custom_permission(&user, "admin.export_data")
+				.await
+		);
+
+		// Should not have un-granted permissions
+		assert!(
+			!auth
+				.check_custom_permission(&user, "admin.delete_all")
 				.await
 		);
 	}
