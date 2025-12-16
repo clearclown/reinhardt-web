@@ -14,6 +14,31 @@ pub enum DatabaseType {
 	MongoDB,
 }
 
+impl DatabaseType {
+	/// Check if this database type supports transactional DDL
+	///
+	/// Transactional DDL means that DDL statements (CREATE TABLE, ALTER TABLE, etc.)
+	/// can be rolled back if the transaction fails.
+	///
+	/// - PostgreSQL: Supports transactional DDL
+	/// - SQLite: Supports transactional DDL
+	/// - MySQL/MariaDB: Does NOT support transactional DDL (DDL causes implicit commit)
+	/// - MongoDB: Not applicable (schemaless)
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_backends::types::DatabaseType;
+	///
+	/// assert!(DatabaseType::Postgres.supports_transactional_ddl());
+	/// assert!(DatabaseType::Sqlite.supports_transactional_ddl());
+	/// assert!(!DatabaseType::Mysql.supports_transactional_ddl());
+	/// ```
+	pub fn supports_transactional_ddl(&self) -> bool {
+		matches!(self, DatabaseType::Postgres | DatabaseType::Sqlite)
+	}
+}
+
 /// Query value types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QueryValue {

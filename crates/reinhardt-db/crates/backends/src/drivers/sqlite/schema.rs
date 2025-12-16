@@ -99,19 +99,36 @@ impl BaseDatabaseSchemaEditor for SQLiteSchemaEditor {
 
 	/// Override ALTER COLUMN statement for SQLite
 	///
-	/// SQLite does not support `ALTER COLUMN TYPE` directly. Column type changes
-	/// require a complex table recreation process:
+	/// SQLite does not support `ALTER COLUMN TYPE` or `ALTER COLUMN SET NOT NULL` directly.
+	/// This is a fundamental limitation of SQLite's architecture.
 	///
-	/// 1. Create temporary table with new schema
-	/// 2. Copy data from old table to temporary table
-	/// 3. Drop old table
-	/// 4. Rename temporary table to original name
+	/// ## Required Steps for Column Modification
 	///
-	/// This method returns a comment indicating that table recreation is required.
-	/// The actual implementation of table recreation should be handled by the
-	/// migration system in a future update.
+	/// Column type changes require a 12-step table recreation process:
 	///
-	/// TODO: For now, this serves as a clear indicator that SQLite requires special handling.
+	/// 1. Begin a transaction
+	/// 2. Disable foreign key checks: `PRAGMA foreign_keys = OFF`
+	/// 3. Create new table with desired schema: `CREATE TABLE "new_table" (...)`
+	/// 4. Copy data: `INSERT INTO "new_table" SELECT ... FROM "old_table"`
+	/// 5. Drop old table: `DROP TABLE "old_table"`
+	/// 6. Rename new table: `ALTER TABLE "new_table" RENAME TO "old_table"`
+	/// 7. Recreate indexes
+	/// 8. Recreate triggers
+	/// 9. Re-enable foreign key checks: `PRAGMA foreign_keys = ON`
+	/// 10. Verify foreign key integrity: `PRAGMA foreign_key_check`
+	/// 11. Commit transaction
+	/// 12. Vacuum database (optional, reclaims space)
+	///
+	/// ## Recommendation
+	///
+	/// Use the Reinhardt migration system (`reinhardt-migrations` crate) which handles
+	/// this process automatically when column modifications are detected. The migration
+	/// system generates the appropriate operations and handles data preservation.
+	///
+	/// ## Return Value
+	///
+	/// This method returns a SQL comment indicating that table recreation is required,
+	/// serving as a clear indicator that this operation needs special handling.
 	fn alter_column_statement(&self, table: &str, _column: &str, _new_type: &str) -> String {
 		self.alter_column_note(table)
 	}

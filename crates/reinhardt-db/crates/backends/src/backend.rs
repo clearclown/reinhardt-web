@@ -22,6 +22,18 @@ pub trait DatabaseBackend: Send + Sync {
 	/// Returns whether the database supports ON CONFLICT clause
 	fn supports_on_conflict(&self) -> bool;
 
+	/// Returns whether DDL statements can be rolled back in transactions
+	///
+	/// PostgreSQL and SQLite support transactional DDL - CREATE TABLE, etc.
+	/// can be rolled back if the transaction fails.
+	///
+	/// MySQL/MariaDB do NOT support transactional DDL - DDL statements cause
+	/// an implicit commit, so they cannot be rolled back.
+	fn supports_transactional_ddl(&self) -> bool {
+		// Default implementation: check database type
+		self.database_type().supports_transactional_ddl()
+	}
+
 	/// Executes a query that modifies the database
 	async fn execute(&self, sql: &str, params: Vec<QueryValue>) -> Result<QueryResult>;
 

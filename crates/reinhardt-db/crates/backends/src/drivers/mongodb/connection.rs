@@ -789,33 +789,46 @@ impl DatabaseBackend for MongoDBBackend {
 	}
 
 	async fn execute(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<QueryResult> {
-		// MongoDB doesn't execute SQL
-		// This would parse the "sql" as a collection name and operation
-		// TODO: For now, we'll return an error indicating this needs to be implemented
-		// via the query builder
+		// MongoDB does not support SQL queries.
+		// Use MongoDB-specific methods instead:
+		// - insert_one(), insert_many() for INSERT operations
+		// - update_one(), update_many() for UPDATE operations
+		// - delete_one(), delete_many() for DELETE operations
 		Err(crate::error::DatabaseError::QueryError(
-			"MongoDB requires using the query builder instead of raw SQL".to_string(),
+			"MongoDB does not support raw SQL. Use MongoDB-specific methods instead: \
+			insert_one/insert_many for inserts, update_one/update_many for updates, \
+			delete_one/delete_many for deletes. Access these via MongoDbConnection."
+				.to_string(),
 		))
 	}
 
 	async fn fetch_one(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Row> {
-		// Similar to execute, this would need to be implemented via query builder
+		// MongoDB does not support SQL queries.
+		// Use find_one() for single document retrieval.
 		Err(crate::error::DatabaseError::QueryError(
-			"MongoDB requires using the query builder instead of raw SQL".to_string(),
+			"MongoDB does not support raw SQL. Use find_one(collection, filter) instead. \
+			Access this method via MongoDbConnection."
+				.to_string(),
 		))
 	}
 
 	async fn fetch_all(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Vec<Row>> {
-		// Similar to execute, this would need to be implemented via query builder
+		// MongoDB does not support SQL queries.
+		// Use find() or aggregate() for document retrieval.
 		Err(crate::error::DatabaseError::QueryError(
-			"MongoDB requires using the query builder instead of raw SQL".to_string(),
+			"MongoDB does not support raw SQL. Use find(collection, filter) or \
+			aggregate(collection, pipeline) instead. Access these methods via MongoDbConnection."
+				.to_string(),
 		))
 	}
 
 	async fn fetch_optional(&self, _sql: &str, _params: Vec<QueryValue>) -> Result<Option<Row>> {
-		// Similar to execute, this would need to be implemented via query builder
+		// MongoDB does not support SQL queries.
+		// Use find_one() for optional single document retrieval.
 		Err(crate::error::DatabaseError::QueryError(
-			"MongoDB requires using the query builder instead of raw SQL".to_string(),
+			"MongoDB does not support raw SQL. Use find_one(collection, filter) instead. \
+			Access this method via MongoDbConnection."
+				.to_string(),
 		))
 	}
 

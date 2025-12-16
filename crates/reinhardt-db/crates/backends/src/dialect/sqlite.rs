@@ -3,6 +3,7 @@
 use async_trait::async_trait;
 use sqlx::{Column, Row as SqlxRow, Sqlite, SqlitePool, Transaction, sqlite::SqliteRow};
 use std::sync::Arc;
+use tracing::warn;
 
 use crate::{
 	backend::DatabaseBackend,
@@ -146,27 +147,60 @@ impl DatabaseBackend for SqliteBackend {
 		Ok(Box::new(SqliteTransactionExecutor::new(tx)))
 	}
 
+	/// Begin a transaction with the specified isolation level.
+	///
+	/// ## SQLite Isolation Level Limitations
+	///
+	/// SQLite does not support the standard SQL isolation levels (Read Uncommitted,
+	/// Read Committed, Repeatable Read, Serializable). Instead, SQLite provides
+	/// transaction modes: DEFERRED, IMMEDIATE, and EXCLUSIVE.
+	///
+	/// ### Behavior
+	///
+	/// - **Default (all levels except Serializable)**: Uses DEFERRED mode.
+	///   The first read operation acquires a shared lock, and the first write
+	///   operation upgrades to an exclusive lock.
+	///
+	/// - **Serializable**: A warning is logged because true serializable isolation
+	///   requires EXCLUSIVE mode, which cannot be reliably set through connection
+	///   pooling. However, SQLite in WAL (Write-Ahead Logging) mode provides
+	///   snapshot isolation that is functionally similar to serializable isolation
+	///   for most use cases.
+	///
+	/// ### WAL Mode Considerations
+	///
+	/// When SQLite is configured with WAL mode (recommended for concurrent access),
+	/// readers don't block writers and writers don't block readers. Each transaction
+	/// sees a consistent snapshot of the database, effectively providing serializable
+	/// semantics for read operations.
+	///
+	/// ### For True EXCLUSIVE Transactions
+	///
+	/// If you need guaranteed exclusive access (e.g., for schema modifications),
+	/// use raw SQL with the connection's `execute()` method:
+	///
+	/// ```sql
+	/// BEGIN EXCLUSIVE;
+	/// -- your operations
+	/// COMMIT;
+	/// ```
 	async fn begin_with_isolation(
 		&self,
 		isolation_level: IsolationLevel,
 	) -> Result<Box<dyn TransactionExecutor>> {
-		// SQLite has limited isolation level support
-		// It only supports DEFERRED (default), IMMEDIATE, and EXCLUSIVE
-		// Serializable maps to EXCLUSIVE, others use default DEFERRED
-		let begin_sql = isolation_level.begin_transaction_sql(DatabaseType::Sqlite);
+		// Generate the appropriate BEGIN statement for documentation purposes
+		let _begin_sql = isolation_level.begin_transaction_sql(DatabaseType::Sqlite);
 
-		// SQLite requires special handling - we can't use pool.begin() directly
-		// when we want to specify a transaction type
-		// TODO: For now, we use pool.begin() and document the limitation
-		// SQLite in WAL mode provides serializable isolation by default anyway
+		// Warn users when Serializable is requested since SQLite's behavior differs
+		if matches!(isolation_level, IsolationLevel::Serializable) {
+			warn!(
+				"SQLite does not support Serializable isolation level natively. \
+				Using default DEFERRED mode. For WAL mode, this provides snapshot isolation. \
+				For true exclusive access, use raw SQL: BEGIN EXCLUSIVE;"
+			);
+		}
 
 		let tx = self.pool.begin().await?;
-		if matches!(isolation_level, IsolationLevel::Serializable) {
-			// Note: This doesn't actually change the transaction type after BEGIN
-			// For true EXCLUSIVE behavior, users should use raw SQL
-			// This is a known SQLite limitation with connection pooling
-			let _ = begin_sql; // Acknowledge the generated SQL
-		}
 		Ok(Box::new(SqliteTransactionExecutor::new(tx)))
 	}
 
