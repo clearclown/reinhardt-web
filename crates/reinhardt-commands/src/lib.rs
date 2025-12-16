@@ -146,6 +146,8 @@ pub mod formatter;
 pub mod i18n_commands;
 pub mod mail_commands;
 pub mod output;
+#[cfg(feature = "plugins")]
+pub mod plugin_commands;
 pub mod registry;
 pub mod start_commands;
 pub mod template;
@@ -167,6 +169,12 @@ pub use output::OutputWrapper;
 pub use registry::CommandRegistry;
 pub use start_commands::{StartAppCommand, StartProjectCommand};
 pub use template::{TemplateCommand, TemplateContext, generate_secret_key, to_camel_case};
+
+#[cfg(feature = "plugins")]
+pub use plugin_commands::{
+	PluginDisableCommand, PluginEnableCommand, PluginInfoCommand, PluginInstallCommand,
+	PluginListCommand, PluginRemoveCommand, PluginSearchCommand, PluginUpdateCommand,
+};
 
 #[derive(Debug, Error)]
 pub enum CommandError {
