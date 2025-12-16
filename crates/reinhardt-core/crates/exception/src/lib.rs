@@ -1,5 +1,8 @@
 use thiserror::Error;
 
+pub mod param_error;
+pub use param_error::{ParamErrorContext, ParamType};
+
 /// The main error type for the Reinhardt framework.
 ///
 /// This enum represents all possible errors that can occur within the Reinhardt
@@ -242,6 +245,27 @@ pub enum Error {
 	#[error("Missing parameter: {0}")]
 	MissingParameter(String),
 
+	/// Parameter validation errors with detailed context (status code: 400)
+	///
+	/// This variant provides structured error information for HTTP parameter
+	/// extraction failures, including field names, expected types, and raw values.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_exception::{Error, ParamErrorContext, ParamType};
+	///
+	/// let ctx = ParamErrorContext::new(ParamType::Json, "missing field 'email'")
+	///     .with_field("email")
+	///     .with_expected_type::<String>();
+	/// let error = Error::ParamValidation(Box::new(ctx));
+	/// assert_eq!(error.status_code(), 400);
+	/// ```
+	#[error("{}", .0.format_error())]
+	// Box wrapper to reduce enum size (clippy::result_large_err mitigation)
+	// ParamErrorContext contains multiple String fields which make the enum large
+	ParamValidation(Box<ParamErrorContext>),
+
 	/// Wraps any other error type using `anyhow::Error` (status code: 500)
 	///
 	/// # Examples
@@ -305,6 +329,7 @@ pub enum ErrorKind {
 	ImproperlyConfigured,
 	BodyAlreadyConsumed,
 	Parse,
+	ParamValidation,
 	Other,
 }
 
@@ -377,6 +402,7 @@ impl Error {
 			Error::InvalidCursor(_) => 400,
 			Error::InvalidLimit(_) => 400,
 			Error::MissingParameter(_) => 400,
+			Error::ParamValidation(_) => 400,
 			Error::Other(_) => 500,
 		}
 	}
@@ -403,6 +429,7 @@ impl Error {
 			Error::InvalidCursor(_) => ErrorKind::Validation,
 			Error::InvalidLimit(_) => ErrorKind::Validation,
 			Error::MissingParameter(_) => ErrorKind::Validation,
+			Error::ParamValidation(_) => ErrorKind::ParamValidation,
 			Error::Other(_) => ErrorKind::Other,
 		}
 	}
