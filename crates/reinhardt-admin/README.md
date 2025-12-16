@@ -75,6 +75,59 @@ impl Default for UserAdmin {
 }
 ```
 
+## Panel Architecture
+
+The admin panel is built on several key components:
+
+### Database Layer
+
+Advanced filtering and query building with SeaQuery integration:
+
+- **FilterOperator**: Eq, Ne, Gt, Gte, Lt, Lte, Contains, StartsWith, EndsWith, In, NotIn, Between, Regex
+- **FilterCondition**: AND/OR conditions for complex queries
+- **FilterValue**: Type-safe value representation (String, Int, Float, Bool, Array)
+
+See [Panel README](crates/panel/README.md) for detailed database layer documentation.
+
+### Handlers
+
+HTTP request handlers for all CRUD operations:
+
+- `AdminHandlers::dashboard()` - Admin dashboard
+- `AdminHandlers::list()` - Model list view with pagination
+- `AdminHandlers::detail()` - Detail view
+- `AdminHandlers::create()` - Create new instance
+- `AdminHandlers::update()` - Update instance
+- `AdminHandlers::delete()` - Delete instance
+- `AdminHandlers::bulk_delete()` - Bulk delete operations
+- `AdminHandlers::export()` - Export data (CSV, JSON, XML)
+- `AdminHandlers::import()` - Import data
+
+### Routing
+
+Automatic route registration for models:
+
+```rust
+use reinhardt_panel::router::AdminRouter;
+
+let router = AdminRouter::new(site, db)
+    .with_favicon("static/favicon.ico")
+    .build();
+
+// Automatically creates routes:
+// GET    /admin/<model>/
+// GET    /admin/<model>/:id/
+// POST   /admin/<model>/
+// PUT    /admin/<model>/:id/
+// DELETE /admin/<model>/:id/
+// DELETE /admin/<model>/bulk/
+// GET    /admin/<model>/export/
+// POST   /admin/<model>/import/
+router.register_model_routes::<User>("/admin/user/")?;
+```
+
+For comprehensive panel documentation, see [`crates/panel/README.md`](crates/panel/README.md).
+
 ## Advanced Features
 
 ### Drag-and-Drop Reordering
