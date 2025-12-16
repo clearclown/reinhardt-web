@@ -110,6 +110,82 @@ impl CommandContext {
 	pub fn verbosity(&self) -> u8 {
 		self.verbosity
 	}
+
+	/// Prompt user for confirmation
+	///
+	/// Returns true if confirmed, false otherwise.
+	/// If testing mode or --yes flag is set, returns default_value.
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_commands::CommandContext;
+	///
+	/// let mut ctx = CommandContext::new(vec![]);
+	/// ctx.set_option("yes".to_string(), "true".to_string());
+	///
+	/// // With --yes flag, returns true without prompting
+	/// let confirmed = ctx.confirm("Continue?", true).unwrap();
+	/// assert!(confirmed);
+	/// ```
+	pub fn confirm(&self, prompt: &str, default_value: bool) -> Result<bool, std::io::Error> {
+		// テスト時は自動承認
+		if cfg!(test) {
+			return Ok(default_value);
+		}
+
+		// --yes フラグがある場合は自動承認
+		if self.has_option("yes") {
+			return Ok(true);
+		}
+
+		// dialoguer を使用してプロンプト
+		Ok(dialoguer::Confirm::new()
+			.with_prompt(prompt)
+			.default(default_value)
+			.interact()?)
+	}
+
+	/// Prompt user for text input
+	///
+	/// Returns user input or default_value if --yes flag is set.
+	/// In test mode, returns default_value or empty string.
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_commands::CommandContext;
+	///
+	/// let mut ctx = CommandContext::new(vec![]);
+	/// ctx.set_option("yes".to_string(), "true".to_string());
+	///
+	/// // With --yes flag, returns default value without prompting
+	/// let input = ctx.input("Enter name:", Some("default")).unwrap();
+	/// assert_eq!(input, "default");
+	/// ```
+	pub fn input(
+		&self,
+		prompt: &str,
+		default_value: Option<&str>,
+	) -> Result<String, std::io::Error> {
+		// テスト時はデフォルト値を返す
+		if cfg!(test) {
+			return Ok(default_value.unwrap_or("").to_string());
+		}
+
+		// --yes フラグがある場合はデフォルト値を返す
+		if self.has_option("yes") {
+			return Ok(default_value.unwrap_or("").to_string());
+		}
+
+		let mut builder = dialoguer::Input::<String>::new().with_prompt(prompt);
+
+		if let Some(default) = default_value {
+			builder = builder.default(default.to_string());
+		}
+
+		Ok(builder.interact()?)
+	}
 }
 
 impl Default for CommandContext {
