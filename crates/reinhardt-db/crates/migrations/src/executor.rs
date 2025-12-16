@@ -4,7 +4,7 @@
 
 use crate::{
 	DatabaseMigrationRecorder, Migration, MigrationPlan, MigrationRecorder, MigrationService,
-	Operation, Result, operations::SqlDialect,
+	Operation, Result, SchemaEditor, operations::SqlDialect,
 };
 use indexmap::IndexMap;
 use reinhardt_backends::{connection::DatabaseConnection, types::DatabaseType};
@@ -275,9 +275,13 @@ impl MigrationExecutor {
 
 	/// Apply a single migration
 	/// Translated from Django's MigrationExecutor.apply_migration()
+	///
+	/// Note: This legacy SQLite-only executor does not support atomic transactions.
+	/// Use `DatabaseMigrationExecutor` for multi-database support with atomic
+	/// transaction capabilities via `SchemaEditor`.
 	async fn apply_migration(&self, migration: &Migration) -> Result<()> {
-		// In Django, this uses schema_editor with atomic transaction support
-		// TODO: For now, we apply operations directly
+		// Note: For atomic transaction support, use DatabaseMigrationExecutor
+		// which leverages SchemaEditor for proper transaction handling
 		for operation in &migration.operations {
 			let sql = operation.to_sql(&SqlDialect::Sqlite);
 
@@ -561,7 +565,14 @@ impl DatabaseMigrationExecutor {
 		})
 	}
 
-	/// Apply a single migration
+	/// Apply a single migration with atomic transaction support
+	///
+	/// If the migration's `atomic` flag is true and the database supports
+	/// transactional DDL (PostgreSQL, SQLite), all operations are wrapped
+	/// in a transaction that can be rolled back on failure.
+	///
+	/// For databases that don't support transactional DDL (MySQL), operations
+	/// are executed directly without transaction wrapping, and a warning is logged.
 	async fn apply_migration(&self, migration: &Migration) -> Result<()> {
 		// Convert SqlDialect based on database type
 		#[cfg(feature = "mongodb-backend")]
@@ -580,13 +591,25 @@ impl DatabaseMigrationExecutor {
 			DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 		};
 
+		// Create schema editor with atomic support based on migration's atomic flag
+		let mut editor =
+			SchemaEditor::new(self.connection.clone(), migration.atomic, self.db_type).await?;
+
+		tracing::debug!(
+			"Applying migration '{}' (atomic={}, effective_atomic={})",
+			migration.id(),
+			migration.atomic,
+			editor.is_atomic()
+		);
+
+		// Execute operations through schema editor
 		for operation in &migration.operations {
 			// Check if this is a CreateTable operation and if the table already exists
 			if let Operation::CreateTable { name, .. } = operation {
 				let table_exists = self.table_exists(name).await?;
 				if table_exists {
-					eprintln!(
-						"⏭️  Table '{}' already exists, skipping CREATE TABLE operation",
+					tracing::info!(
+						"Table '{}' already exists, skipping CREATE TABLE operation",
 						name
 					);
 					continue;
@@ -595,38 +618,45 @@ impl DatabaseMigrationExecutor {
 
 			let sql = operation.to_sql(&dialect);
 
-			// 診断出力: 元のSQL
-			eprintln!("=== DatabaseMigrationExecutor: Original SQL ===");
-			eprintln!("{}", sql);
-			eprintln!("SQL length: {} characters", sql.len());
-			eprintln!("Semicolons: {}", sql.matches(';').count());
-			eprintln!("Database type: {:?}", self.db_type);
+			tracing::debug!(
+				"Executing migration SQL (length={}, semicolons={})",
+				sql.len(),
+				sql.matches(';').count()
+			);
 
 			// Split SQL into individual statements to handle PostgreSQL's
 			// prepared statement limitation (cannot execute multiple commands)
 			let statements = split_sql_statements(&sql);
 
-			// Diagnostic output: Number of split statements
-			tracing::debug!("\n=== Split into {} statements ===", statements.len());
+			tracing::debug!("Split into {} statements", statements.len());
 
 			for (i, statement) in statements.iter().enumerate() {
 				if !statement.trim().is_empty() {
-					// Diagnostic output: Each statement
 					tracing::debug!(
-						"\n--- Statement {} (length: {} chars) ---",
+						"Statement {} (length: {} chars): {}",
 						i + 1,
-						statement.len()
+						statement.len(),
+						&statement[..statement.len().min(100)]
 					);
-					tracing::debug!("{}", statement);
 
-					self.connection.execute(statement, vec![]).await?;
+					editor.execute(statement).await.map_err(|e| {
+						tracing::error!(
+							"Migration operation failed: {}. SQL: {}",
+							e,
+							&statement[..statement.len().min(200)]
+						);
+						e
+					})?;
 
-					tracing::debug!("✅ Statement {} executed successfully", i + 1);
-				} else {
-					eprintln!("\n--- Statement {} (EMPTY - skipped) ---", i + 1);
+					tracing::debug!("Statement {} executed successfully", i + 1);
 				}
 			}
 		}
+
+		// Finish (commits if atomic)
+		editor.finish().await?;
+
+		tracing::debug!("Migration '{}' applied successfully", migration.id());
 
 		Ok(())
 	}

@@ -68,11 +68,21 @@ impl From<introspection::DatabaseSchema> for DatabaseSchema {
 						uc.name,
 						uc.columns.join(", ")
 					),
+					foreign_key_info: None,
 				})
 				.collect();
 
-			// Process foreign keys
+			// Process foreign keys with structured information
 			for fk in &intro_table.foreign_keys {
+				let on_delete = fk
+					.on_delete
+					.clone()
+					.unwrap_or_else(|| "NO ACTION".to_string());
+				let on_update = fk
+					.on_update
+					.clone()
+					.unwrap_or_else(|| "NO ACTION".to_string());
+
 				let mut definition = format!(
 					"CONSTRAINT {} FOREIGN KEY ({}) REFERENCES {}({})",
 					fk.name,
@@ -81,11 +91,11 @@ impl From<introspection::DatabaseSchema> for DatabaseSchema {
 					fk.referenced_columns.join(", ")
 				);
 
-				if let Some(ref on_delete) = fk.on_delete {
+				if on_delete != "NO ACTION" {
 					definition.push_str(&format!(" ON DELETE {}", on_delete));
 				}
 
-				if let Some(ref on_update) = fk.on_update {
+				if on_update != "NO ACTION" {
 					definition.push_str(&format!(" ON UPDATE {}", on_update));
 				}
 
@@ -93,6 +103,13 @@ impl From<introspection::DatabaseSchema> for DatabaseSchema {
 					name: fk.name.clone(),
 					constraint_type: "FOREIGN KEY".to_string(),
 					definition,
+					foreign_key_info: Some(ForeignKeySchemaInfo {
+						columns: fk.columns.clone(),
+						referenced_table: fk.referenced_table.clone(),
+						referenced_columns: fk.referenced_columns.clone(),
+						on_delete,
+						on_update,
+					}),
 				});
 			}
 
@@ -190,8 +207,28 @@ pub struct ConstraintSchema {
 	pub name: String,
 	/// Constraint type (UNIQUE, FOREIGN KEY, CHECK, etc.)
 	pub constraint_type: String,
-	/// Definition
+	/// Definition (columns for UNIQUE, expression for CHECK, etc.)
 	pub definition: String,
+	/// Foreign key specific information (only for FOREIGN KEY / ONE_TO_ONE types)
+	pub foreign_key_info: Option<ForeignKeySchemaInfo>,
+}
+
+/// Foreign key constraint information for schema diff
+///
+/// This struct holds structured information about foreign key constraints,
+/// enabling proper constraint extraction and comparison.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForeignKeySchemaInfo {
+	/// Source columns in the referencing table
+	pub columns: Vec<String>,
+	/// Referenced table name
+	pub referenced_table: String,
+	/// Referenced columns in the target table
+	pub referenced_columns: Vec<String>,
+	/// ON DELETE action (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION)
+	pub on_delete: String,
+	/// ON UPDATE action (CASCADE, SET NULL, SET DEFAULT, RESTRICT, NO ACTION)
+	pub on_update: String,
 }
 
 /// Schema diff result
@@ -502,8 +539,8 @@ impl SchemaDiff {
 
 		// Extract constraints from table_schema.constraints (from model definitions)
 		for constraint_schema in &table_schema.constraints {
-			match constraint_schema.constraint_type.as_str() {
-				"unique" => {
+			match constraint_schema.constraint_type.to_uppercase().as_str() {
+				"UNIQUE" => {
 					constraints.push(crate::Constraint::Unique {
 						name: constraint_schema.name.clone(),
 						columns: constraint_schema
@@ -513,12 +550,37 @@ impl SchemaDiff {
 							.collect(),
 					});
 				}
-				"foreign_key" | "one_to_one" => {
-					// ForeignKey constraints need more information to properly construct
-					// TODO: For now, we skip them as they require referenced_table info
-					// They are handled separately in the autodetector
+				"FOREIGN KEY" | "FOREIGN_KEY" => {
+					// Use structured FK info if available
+					if let Some(ref fk_info) = constraint_schema.foreign_key_info {
+						constraints.push(crate::Constraint::ForeignKey {
+							name: constraint_schema.name.clone(),
+							columns: fk_info.columns.clone(),
+							referenced_table: fk_info.referenced_table.clone(),
+							referenced_columns: fk_info.referenced_columns.clone(),
+							on_delete: Self::parse_fk_action(&fk_info.on_delete),
+							on_update: Self::parse_fk_action(&fk_info.on_update),
+						});
+					}
 				}
-				"check" => {
+				"ONE_TO_ONE" => {
+					// OneToOne is similar to ForeignKey but typically single-column
+					if let Some(ref fk_info) = constraint_schema.foreign_key_info {
+						constraints.push(crate::Constraint::OneToOne {
+							name: constraint_schema.name.clone(),
+							column: fk_info.columns.first().cloned().unwrap_or_default(),
+							referenced_table: fk_info.referenced_table.clone(),
+							referenced_column: fk_info
+								.referenced_columns
+								.first()
+								.cloned()
+								.unwrap_or_else(|| "id".to_string()),
+							on_delete: Self::parse_fk_action(&fk_info.on_delete),
+							on_update: Self::parse_fk_action(&fk_info.on_update),
+						});
+					}
+				}
+				"CHECK" => {
 					constraints.push(crate::Constraint::Check {
 						name: constraint_schema.name.clone(),
 						expression: constraint_schema.definition.clone(),
@@ -529,6 +591,18 @@ impl SchemaDiff {
 		}
 
 		constraints
+	}
+
+	/// Parse FK action string to ForeignKeyAction enum
+	fn parse_fk_action(action: &str) -> crate::ForeignKeyAction {
+		match action.to_uppercase().as_str() {
+			"CASCADE" => crate::ForeignKeyAction::Cascade,
+			"SET NULL" => crate::ForeignKeyAction::SetNull,
+			"SET DEFAULT" => crate::ForeignKeyAction::SetDefault,
+			"RESTRICT" => crate::ForeignKeyAction::Restrict,
+			// "NO ACTION" is the default FK action in SQL, treat unknown actions as NoAction
+			_ => crate::ForeignKeyAction::NoAction,
+		}
 	}
 }
 
