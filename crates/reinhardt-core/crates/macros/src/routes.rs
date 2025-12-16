@@ -96,6 +96,53 @@ fn detect_extractors(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<ExtractorInfo
 	extractors
 }
 
+/// Extract request body information from function parameters
+///
+/// Detects body-consuming extractors (Json<T>, Form<T>, Body<T>) and extracts:
+/// - Type name T as string (e.g., "CreateUserRequest")
+/// - Content-Type based on extractor type
+///
+/// Returns None if no body-consuming extractor is found.
+fn extract_request_body_info(inputs: &Punctuated<FnArg, Token![,]>) -> Option<(String, String)> {
+	for input in inputs {
+		if let FnArg::Typed(pat_type) = input {
+			// Skip parameters with #[inject] attribute
+			if pat_type.attrs.iter().any(is_inject_attr) {
+				continue;
+			}
+
+			if let Type::Path(type_path) = &*pat_type.ty
+				&& let Some(segment) = type_path.path.segments.last()
+			{
+				let type_name = segment.ident.to_string();
+
+				// Check for body-consuming extractors
+				if matches!(type_name.as_str(), "Json" | "Form" | "Body") {
+					// Extract generic argument T
+					if let syn::PathArguments::AngleBracketed(args) = &segment.arguments
+						&& let Some(syn::GenericArgument::Type(inner_type)) = args.args.first()
+					{
+						// Convert inner type to string
+						let body_type_str = quote!(#inner_type).to_string();
+
+						// Determine content type based on extractor
+						let content_type = match type_name.as_str() {
+							"Json" => "application/json",
+							"Form" => "application/x-www-form-urlencoded",
+							"Body" => "application/octet-stream",
+							_ => "application/octet-stream",
+						};
+
+						return Some((body_type_str, content_type.to_string()));
+					}
+				}
+			}
+		}
+	}
+
+	None
+}
+
 /// Detect parameters with #[inject] attribute
 fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo> {
 	let mut inject_params = Vec::new();
@@ -316,8 +363,14 @@ fn generate_view_type(
 	} else {
 		quote! { Some(#route_name) }
 	};
+
+	// Extract request body information
+	let (request_body_type, request_content_type) = extract_request_body_info(&input.sig.inputs)
+		.map(|(ty, ct)| (quote!(Some(#ty)), quote!(Some(#ct))))
+		.unwrap_or((quote!(None), quote!(None)));
+
 	let metadata_submission = quote! {
-		inventory::submit! {
+		::reinhardt::inventory::submit! {
 			#[allow(non_upper_case_globals)]
 			::reinhardt::EndpointMetadata {
 				path: #path,
@@ -325,6 +378,8 @@ fn generate_view_type(
 				name: #metadata_name,
 				function_name: stringify!(#fn_name),
 				module_path: module_path!(),
+				request_body_type: #request_body_type,
+				request_content_type: #request_content_type,
 			}
 		}
 	};
@@ -559,8 +614,14 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 
 	// Generate inventory submission for endpoint metadata
 	let metadata_name = option_to_lit(&options.name);
+
+	// Extract request body information
+	let (request_body_type, request_content_type) = extract_request_body_info(&input.sig.inputs)
+		.map(|(ty, ct)| (quote!(Some(#ty)), quote!(Some(#ct))))
+		.unwrap_or((quote!(None), quote!(None)));
+
 	let metadata_submission = quote! {
-		inventory::submit! {
+		::reinhardt::inventory::submit! {
 			#[allow(non_upper_case_globals)]
 			::reinhardt::EndpointMetadata {
 				path: #path_str,
@@ -568,6 +629,8 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 				name: #metadata_name,
 				function_name: stringify!(#fn_name),
 				module_path: module_path!(),
+				request_body_type: #request_body_type,
+				request_content_type: #request_content_type,
 			}
 		}
 	};

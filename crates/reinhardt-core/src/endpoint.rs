@@ -28,6 +28,13 @@ pub struct EndpointMetadata {
 	pub name: Option<&'static str>,
 	pub function_name: &'static str,
 	pub module_path: &'static str,
+
+	/// Type name of the request body (e.g., "CreateUserRequest")
+	/// Extracted from parameter extractors like Json<T>, Form<T>, Body<T>
+	pub request_body_type: Option<&'static str>,
+
+	/// Content-Type of the request body (e.g., "application/json", "application/x-www-form-urlencoded")
+	pub request_content_type: Option<&'static str>,
 }
 
 // Register EndpointMetadata as a collectible type with inventory

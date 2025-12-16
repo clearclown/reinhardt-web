@@ -2594,6 +2594,20 @@ fn generate_relationship_metadata(
 				_ => quote! { None },
 			};
 
+			// ManyToMany relationship fields
+			let through_table = rel
+				.through
+				.as_ref()
+				.map_or_else(|| quote! { None }, |t| quote! { Some(#t.to_string()) });
+			let source_field = rel
+				.source_field
+				.as_ref()
+				.map_or_else(|| quote! { None }, |s| quote! { Some(#s.to_string()) });
+			let target_field = rel
+				.target_field
+				.as_ref()
+				.map_or_else(|| quote! { None }, |t| quote! { Some(#t.to_string()) });
+
 			quote! {
 				#reinhardt::db::orm::inspection::RelationInfo {
 					name: #field_name_str.to_string(),
@@ -2601,6 +2615,9 @@ fn generate_relationship_metadata(
 					foreign_key: #foreign_key,
 					related_model: #related_model.to_string(),
 					back_populates: #back_populates,
+					through_table: #through_table,
+					source_field: #source_field,
+					target_field: #target_field,
 				}
 			}
 		})
