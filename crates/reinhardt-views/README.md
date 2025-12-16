@@ -1,10 +1,14 @@
 # reinhardt-views
 
-View classes and response handling for the Reinhardt framework, inspired by Django's class-based views and Django REST Framework.
+View classes and response handling for the Reinhardt framework, inspired by
+Django's class-based views and Django REST Framework.
 
 ## Overview
 
-This crate provides the view layer for building RESTful APIs in Reinhardt. It includes base view traits, concrete view implementations for common CRUD operations, and utilities for OpenAPI schema generation and browsable API rendering.
+This crate provides the view layer for building RESTful APIs in Reinhardt. It
+includes base view traits, concrete view implementations for common CRUD
+operations, and utilities for OpenAPI schema generation and browsable API
+rendering.
 
 ## Features
 
@@ -46,20 +50,34 @@ This crate provides the view layer for building RESTful APIs in Reinhardt. It in
   - URL parameter configuration
   - Context data building
 
-#### Generic API Views (Partial Implementation)
+#### Generic API Views ✓
 
-⚠️ **Note**: These views currently have struct definitions but lack full dispatch implementation.
+- **ListAPIView** - List endpoint with pagination, filtering, and ordering
+  - GET/HEAD request support
+  - QuerySet integration
+  - JSON serialization
+  - Pagination metadata
+- **CreateAPIView** - Create endpoint for object creation
+  - POST request support
+  - Validation support (stub)
+- **UpdateAPIView** - Update endpoint for object modification
+  - PUT/PATCH request support
+  - Partial update support
+  - Lookup field configuration
+- **DestroyAPIView** - Delete endpoint for object deletion
+  - DELETE request support
+  - Lookup field configuration
+- **ListCreateAPIView** - Combined list/create endpoint
+  - GET/HEAD/POST request support
+  - Pagination and ordering for list operations
+- **RetrieveUpdateAPIView** - Combined retrieve/update endpoint
+  - GET/HEAD/PUT/PATCH request support (stub)
+- **RetrieveDestroyAPIView** - Combined retrieve/delete endpoint
+  - GET/HEAD/DELETE request support (stub)
+- **RetrieveUpdateDestroyAPIView** - Combined retrieve/update/delete endpoint
+  - GET/HEAD/PUT/PATCH/DELETE request support (stub)
 
-- **ListAPIView** - List endpoint (struct only)
-- **CreateAPIView** - Create endpoint (struct only)
-- **UpdateAPIView** - Update endpoint (struct only)
-- **DestroyAPIView** - Delete endpoint (struct only)
-- **ListCreateAPIView** - Combined list/create endpoint (struct only)
-- **RetrieveUpdateAPIView** - Combined retrieve/update endpoint (struct only)
-- **RetrieveDestroyAPIView** - Combined retrieve/delete endpoint (struct only)
-- **RetrieveUpdateDestroyAPIView** - Combined retrieve/update/delete endpoint (struct only)
-
-For now, use `ListView`, `DetailView`, or `ViewSet` from `reinhardt-viewsets` for full functionality.
+**Note**: Full ORM integration pending for create/update/delete operations.
 
 #### OpenAPI Schema Generation
 
@@ -179,6 +197,38 @@ let view = DetailView::<Article, JsonSerializer<Article>>::new()
     .with_object(article)
     .with_pk_url_kwarg("article_id")
     .with_context_object_name("article");
+```
+
+### Generic API Views Examples
+
+```rust
+use reinhardt_views::{
+    ListAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView,
+    ListCreateAPIView, View
+};
+use reinhardt_serializers::JsonSerializer;
+
+// List endpoint
+let list_view = ListAPIView::<Article, JsonSerializer<Article>>::new()
+    .with_paginate_by(10)
+    .with_ordering(vec!["-created_at".into()]);
+
+// Create endpoint
+let create_view = CreateAPIView::<Article, JsonSerializer<Article>>::new();
+
+// Update endpoint
+let update_view = UpdateAPIView::<Article, JsonSerializer<Article>>::new()
+    .with_lookup_field("id".into())
+    .with_partial(true);
+
+// Delete endpoint
+let destroy_view = DestroyAPIView::<Article>::new()
+    .with_lookup_field("id".into());
+
+// Combined list/create endpoint
+let list_create_view = ListCreateAPIView::<Article, JsonSerializer<Article>>::new()
+    .with_paginate_by(20)
+    .with_ordering(vec!["-id".into()]);
 ```
 
 ### OpenAPI Schema Generation

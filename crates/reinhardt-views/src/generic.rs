@@ -1,128 +1,65 @@
-//! Generic API views
+//! Generic API Views
+//!
+//! This module provides production-ready generic API views for common CRUD operations.
+//! These views are similar to Django REST Framework's generic views but designed for Rust.
+//!
+//! # Available Views
+//!
+//! ## Single Operation Views
+//! - [`ListAPIView`] - List objects (GET)
+//! - [`CreateAPIView`] - Create objects (POST)
+//! - [`UpdateAPIView`] - Update objects (PUT/PATCH)
+//! - [`DestroyAPIView`] - Delete objects (DELETE)
+//!
+//! ## Composite Views
+//! - [`ListCreateAPIView`] - List and create (GET, POST)
+//! - [`RetrieveUpdateAPIView`] - Retrieve and update (GET, PUT, PATCH)
+//! - [`RetrieveDestroyAPIView`] - Retrieve and delete (GET, DELETE)
+//! - [`RetrieveUpdateDestroyAPIView`] - Full CRUD except list (GET, PUT, PATCH, DELETE)
+//!
+//! # Examples
+//!
+//! ```rust,no_run
+//! use reinhardt_views::ListAPIView;
+//! use reinhardt_db::orm::Model;
+//! use reinhardt_serializers::JsonSerializer;
+//! use serde::{Serialize, Deserialize};
+//!
+//! #[derive(Debug, Clone, Serialize, Deserialize)]
+//! struct Article {
+//!     id: Option<i64>,
+//!     title: String,
+//!     content: String,
+//! }
+//!
+//! impl Model for Article {
+//!     type PrimaryKey = i64;
+//!     fn table_name() -> &'static str { "articles" }
+//!     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+//!     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+//! }
+//!
+//! let view = ListAPIView::<Article, JsonSerializer<Article>>::new()
+//!     .with_paginate_by(10)
+//!     .with_ordering(vec!["-created_at".into()]);
+//! ```
 
-use async_trait::async_trait;
-use reinhardt_core::exception::Result;
-use reinhardt_core::http::{Request, Response};
+// Submodules (Rust 2024 Edition: use module.rs + module/ directory)
+mod composite;
+mod create_api;
+mod destroy_api;
+mod list_api;
+mod update_api;
 
-/// Base trait for all generic views
-#[async_trait]
-pub trait View: Send + Sync {
-	async fn dispatch(&self, request: Request) -> Result<Response>;
+// Re-export all API views
+pub use composite::{
+	ListCreateAPIView, RetrieveDestroyAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView,
+};
+pub use create_api::CreateAPIView;
+pub use destroy_api::DestroyAPIView;
+pub use list_api::ListAPIView;
+pub use update_api::UpdateAPIView;
 
-	/// Returns the list of HTTP methods allowed by this view
-	fn allowed_methods(&self) -> Vec<&'static str> {
-		vec!["GET", "HEAD", "OPTIONS"]
-	}
-}
-
-pub struct ListAPIView;
-
-impl ListAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for ListAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct CreateAPIView;
-
-impl CreateAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for CreateAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct UpdateAPIView;
-
-impl UpdateAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for UpdateAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct DestroyAPIView;
-
-impl DestroyAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for DestroyAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct ListCreateAPIView;
-
-impl ListCreateAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for ListCreateAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct RetrieveUpdateAPIView;
-
-impl RetrieveUpdateAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for RetrieveUpdateAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct RetrieveDestroyAPIView;
-
-impl RetrieveDestroyAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for RetrieveDestroyAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-pub struct RetrieveUpdateDestroyAPIView;
-
-impl RetrieveUpdateDestroyAPIView {
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for RetrieveUpdateDestroyAPIView {
-	fn default() -> Self {
-		Self::new()
-	}
-}
+// Unit tests
+#[cfg(test)]
+mod tests;

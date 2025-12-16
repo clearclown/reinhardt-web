@@ -68,3 +68,9 @@ pub use core::{Context, View};
 pub use detail::DetailView;
 pub use list::ListView;
 pub use mixins::{MultipleObjectMixin, SingleObjectMixin};
+
+// Re-export Generic API Views
+pub use generic::{
+	CreateAPIView, DestroyAPIView, ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView,
+	RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView,
+};

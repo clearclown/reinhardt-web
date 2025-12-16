@@ -55,8 +55,7 @@ pub fn get_registered_actions(viewset_type: &str) -> Vec<ActionMetadata> {
 	GLOBAL_REGISTRY.get_actions(viewset_type)
 }
 
-/// Clear all registered actions
-#[allow(dead_code)]
+/// Clear all registered actions (primarily for testing)
 pub fn clear_actions() {
 	GLOBAL_REGISTRY.clear();
 }
