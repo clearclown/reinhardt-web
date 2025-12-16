@@ -185,6 +185,12 @@ pub enum Commands {
 /// This is the Django-style entry point that parses command-line arguments
 /// and executes the appropriate command. This should be called from `manage.rs`.
 ///
+/// # Automatic Router Registration
+///
+/// The framework automatically discovers and registers URL pattern functions
+/// from projects that use the `register_url_patterns!()` macro in their
+/// `src/config/urls.rs` file. No manual router registration is needed in `manage.rs`.
+///
 /// # Returns
 ///
 /// Returns `Ok(())` on success, or an error message on failure.
@@ -208,6 +214,9 @@ pub enum Commands {
 /// }
 /// ```
 pub async fn execute_from_command_line() -> Result<(), Box<dyn std::error::Error>> {
+	// Automatically discover and register URL patterns
+	auto_register_router().await?;
+
 	let cli = Cli::parse();
 	run_command(cli.command, cli.verbosity).await
 }
@@ -443,9 +452,49 @@ async fn execute_collectstatic(
 		.profile(profile)
 		.add_source(
 			DefaultSource::new()
+				.with_value(
+					"base_dir",
+					Value::String(
+						base_dir
+							.to_str()
+							.expect("base_dir contains invalid UTF-8")
+							.to_string(),
+					),
+				)
 				.with_value("debug", Value::Bool(true))
+				.with_value(
+					"secret_key",
+					Value::String("insecure-dev-key-change-in-production".to_string()),
+				)
+				.with_value("allowed_hosts", Value::Array(vec![]))
+				.with_value("installed_apps", Value::Array(vec![]))
+				.with_value("middleware", Value::Array(vec![]))
+				.with_value("root_urlconf", Value::String("config.urls".to_string()))
+				.with_value("databases", serde_json::json!({}))
+				.with_value("templates", Value::Array(vec![]))
+				.with_value("static_url", Value::String("/static/".to_string()))
+				.with_value(
+					"static_root",
+					Value::String(base_dir.join("staticfiles").to_string_lossy().to_string()),
+				)
+				.with_value("staticfiles_dirs", Value::Array(vec![]))
+				.with_value("media_url", Value::String("/media/".to_string()))
 				.with_value("language_code", Value::String("en-us".to_string()))
-				.with_value("time_zone", Value::String("UTC".to_string())),
+				.with_value("time_zone", Value::String("UTC".to_string()))
+				.with_value("use_i18n", Value::Bool(false))
+				.with_value("use_tz", Value::Bool(false))
+				.with_value(
+					"default_auto_field",
+					Value::String("reinhardt.db.models.BigAutoField".to_string()),
+				)
+				.with_value("secure_ssl_redirect", Value::Bool(false))
+				.with_value("secure_hsts_include_subdomains", Value::Bool(false))
+				.with_value("secure_hsts_preload", Value::Bool(false))
+				.with_value("session_cookie_secure", Value::Bool(false))
+				.with_value("csrf_cookie_secure", Value::Bool(false))
+				.with_value("append_slash", Value::Bool(false))
+				.with_value("admins", Value::Array(vec![]))
+				.with_value("managers", Value::Array(vec![])),
 		)
 		.add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
 		.add_source(TomlFileSource::new(settings_dir.join("base.toml")))
@@ -592,6 +641,7 @@ async fn execute_generateopenapi(
 }
 
 #[cfg(not(feature = "openapi"))]
+#[allow(dead_code)]
 async fn execute_generateopenapi(
 	_format: String,
 	_output: PathBuf,
@@ -609,4 +659,134 @@ async fn execute_generateopenapi(
 	eprintln!("  [dependencies]");
 	eprintln!("  reinhardt-commands = {{ version = \"0.1.0\", features = [\"openapi\"] }}");
 	std::process::exit(1);
+}
+
+// ============================================================================
+// Automatic Router Registration
+// ============================================================================
+
+/// Automatically discover and register URL pattern functions
+///
+/// This function uses the `inventory` crate to discover URL pattern functions
+/// that were registered at compile time using the `register_url_patterns!()`
+/// macro.
+///
+/// # Returns
+///
+/// Returns `Ok(())` on success, or an error if:
+/// - No URL patterns were registered
+/// - Database connection failed (for admin routers)
+#[cfg(feature = "routers")]
+async fn auto_register_router() -> Result<(), Box<dyn std::error::Error>> {
+	use reinhardt_urls::routers::{UrlPatternsRegistration, register_router_arc};
+
+	// Discover registrations from inventory
+	let registration = inventory::iter::<UrlPatternsRegistration>()
+		.next()
+		.ok_or_else(|| {
+			"No URL patterns registered.\n\
+				 Add 'register_url_patterns!();' or 'register_url_patterns!(admin);' \n\
+				 to your src/config/urls.rs file."
+				.to_string()
+		})?;
+
+	// If admin router is available, use it with database connection
+	if let Some(_get_admin_router) = registration.get_admin_router {
+		#[cfg(feature = "reinhardt-db")]
+		{
+			let db = get_database_connection().await?;
+			let router = _get_admin_router(db);
+			register_router_arc(router);
+		}
+		#[cfg(not(feature = "reinhardt-db"))]
+		{
+			return Err("Admin router requires 'reinhardt-db' feature. \
+			            Enable the feature or remove admin router registration."
+				.into());
+		}
+	} else {
+		// Use standard router
+		let router = (registration.get_router)();
+		register_router_arc(router);
+	}
+
+	Ok(())
+}
+
+/// Get database connection from DI container or environment variable
+///
+/// This function attempts to get a database connection in the following order:
+/// 1. From the DI container (if initialized)
+/// 2. From the DATABASE_URL environment variable
+/// 3. Default to "sqlite:db.sqlite3"
+#[cfg(all(feature = "routers", feature = "reinhardt-db"))]
+async fn get_database_connection()
+-> Result<reinhardt_db::DatabaseConnection, Box<dyn std::error::Error>> {
+	// 1. Try to get from DI container
+	if let Some(db) = try_get_from_di().await {
+		return Ok(db);
+	}
+
+	// 2. Create from DATABASE_URL environment variable
+	#[cfg(feature = "reinhardt-db")]
+	{
+		let database_url =
+			env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite:db.sqlite3".to_string());
+
+		use reinhardt_db::backends::DatabaseConnection as BackendsConnection;
+		use reinhardt_db::orm::DatabaseConnection as OrmConnection;
+
+		// Determine database backend type
+		let (backend_type, backends_conn) = if database_url.starts_with("postgres://")
+			|| database_url.starts_with("postgresql://")
+		{
+			let conn = BackendsConnection::connect_postgres_or_create(&database_url)
+				.await
+				.map_err(|e| format!("Failed to connect to PostgreSQL: {}", e))?;
+			(reinhardt_db::orm::DatabaseBackend::Postgres, conn)
+		} else if database_url.starts_with("mysql://") {
+			let conn = BackendsConnection::connect_mysql(&database_url)
+				.await
+				.map_err(|e| format!("Failed to connect to MySQL: {}", e))?;
+			(reinhardt_db::orm::DatabaseBackend::MySql, conn)
+		} else if database_url.starts_with("sqlite://") || database_url.starts_with("sqlite:") {
+			let conn = BackendsConnection::connect_sqlite(&database_url)
+				.await
+				.map_err(|e| format!("Failed to connect to SQLite: {}", e))?;
+			(reinhardt_db::orm::DatabaseBackend::Sqlite, conn)
+		} else {
+			return Err(format!("Unsupported database URL: {}", database_url).into());
+		};
+
+		// Wrap backends connection with ORM connection
+		Ok(OrmConnection::new(backend_type, backends_conn))
+	}
+
+	#[cfg(not(feature = "reinhardt-db"))]
+	{
+		Err("Database connection requires 'reinhardt-db' feature".into())
+	}
+}
+
+/// Try to get database connection from DI container
+///
+/// This function attempts to retrieve a database connection from the DI
+/// container if it has been initialized. Returns `None` if the DI container
+/// is not available or the database connection is not registered.
+#[cfg(all(feature = "routers", feature = "reinhardt-db"))]
+async fn try_get_from_di() -> Option<reinhardt_db::DatabaseConnection> {
+	// CLI commands do not use DI container, as they run in a separate process
+	// from the web application. Database connections are established via
+	// environment variables (DATABASE_URL) or configuration files.
+	//
+	// This design decision aligns with Django's approach where manage.py commands
+	// access database settings directly rather than through dependency injection.
+	None
+}
+
+/// No-op implementation when routers feature is disabled
+#[cfg(not(feature = "routers"))]
+async fn auto_register_router() -> Result<(), Box<dyn std::error::Error>> {
+	// No router registration needed when routers feature is disabled
+	Ok(())
 }
