@@ -111,6 +111,7 @@ pub mod query_fields;
 pub mod query_helpers; // Common query patterns using SeaQuery
 pub mod query_types; // Type definitions for passing SeaQuery objects
 pub mod set_operations;
+pub mod sql_condition_parser;
 pub mod transaction;
 pub mod typed_join;
 pub mod validators;
@@ -266,7 +267,7 @@ pub use query_execution::{ExecutableQuery, QueryCompiler};
 // Django ORM compatibility layer
 pub use manager::Manager;
 // Query types are always available
-pub use query::{Filter, FilterOperator, FilterValue, Query, QuerySet};
+pub use query::{Filter, FilterCondition, FilterOperator, FilterValue, Query, QuerySet};
 
 // Advanced ORM features
 pub use absolute_url_overrides::{HasAbsoluteUrl, clear_url_overrides, register_url_override};

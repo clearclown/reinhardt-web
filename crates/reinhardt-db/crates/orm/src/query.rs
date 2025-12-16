@@ -58,6 +58,109 @@ impl Filter {
 	}
 }
 
+/// Composite filter condition supporting AND/OR logic
+///
+/// This enum allows building complex filter expressions with nested AND/OR conditions.
+/// It's particularly useful for search functionality that needs to match across
+/// multiple fields using OR logic.
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_orm::{Filter, FilterCondition, FilterOperator, FilterValue};
+///
+/// // Simple single filter
+/// let single = FilterCondition::Single(Filter::new(
+///     "name".to_string(),
+///     FilterOperator::Eq,
+///     FilterValue::String("Alice".to_string()),
+/// ));
+///
+/// // OR condition across multiple fields (useful for search)
+/// let search = FilterCondition::Or(vec![
+///     FilterCondition::Single(Filter::new(
+///         "name".to_string(),
+///         FilterOperator::Contains,
+///         FilterValue::String("alice".to_string()),
+///     )),
+///     FilterCondition::Single(Filter::new(
+///         "email".to_string(),
+///         FilterOperator::Contains,
+///         FilterValue::String("alice".to_string()),
+///     )),
+/// ]);
+///
+/// // Complex nested condition: (status = 'active') AND (name LIKE '%alice%' OR email LIKE '%alice%')
+/// let complex = FilterCondition::And(vec![
+///     FilterCondition::Single(Filter::new(
+///         "status".to_string(),
+///         FilterOperator::Eq,
+///         FilterValue::String("active".to_string()),
+///     )),
+///     search,
+/// ]);
+/// ```
+#[derive(Debug, Clone)]
+pub enum FilterCondition {
+	/// A single filter expression
+	Single(Filter),
+	/// All conditions must match (AND logic)
+	And(Vec<FilterCondition>),
+	/// Any condition must match (OR logic)
+	Or(Vec<FilterCondition>),
+}
+
+impl FilterCondition {
+	/// Create a single filter condition
+	pub fn single(filter: Filter) -> Self {
+		Self::Single(filter)
+	}
+
+	/// Create an AND condition from multiple conditions
+	pub fn and(conditions: Vec<FilterCondition>) -> Self {
+		Self::And(conditions)
+	}
+
+	/// Create an OR condition from multiple conditions
+	pub fn or(conditions: Vec<FilterCondition>) -> Self {
+		Self::Or(conditions)
+	}
+
+	/// Create an OR condition from multiple filters (convenience method for search)
+	///
+	/// This is particularly useful for implementing search across multiple fields.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_orm::{Filter, FilterCondition, FilterOperator, FilterValue};
+	///
+	/// let search_filters = vec![
+	///     Filter::new("name".to_string(), FilterOperator::Contains, FilterValue::String("test".to_string())),
+	///     Filter::new("email".to_string(), FilterOperator::Contains, FilterValue::String("test".to_string())),
+	/// ];
+	/// let or_condition = FilterCondition::or_filters(search_filters);
+	/// ```
+	pub fn or_filters(filters: Vec<Filter>) -> Self {
+		Self::Or(filters.into_iter().map(FilterCondition::Single).collect())
+	}
+
+	/// Create an AND condition from multiple filters
+	pub fn and_filters(filters: Vec<Filter>) -> Self {
+		Self::And(filters.into_iter().map(FilterCondition::Single).collect())
+	}
+
+	/// Check if this condition is empty (no actual filters)
+	pub fn is_empty(&self) -> bool {
+		match self {
+			FilterCondition::Single(_) => false,
+			FilterCondition::And(conditions) | FilterCondition::Or(conditions) => {
+				conditions.is_empty() || conditions.iter().all(|c| c.is_empty())
+			}
+		}
+	}
+}
+
 // From implementations for FilterValue
 impl From<String> for FilterValue {
 	fn from(s: String) -> Self {
@@ -2060,5 +2163,248 @@ mod tests {
 		let (sql, params) = queryset.delete_sql();
 		assert_eq!(sql, "DELETE FROM \"test_users\" WHERE \"id\" = $1");
 		assert_eq!(params, vec!["1"]);
+	}
+
+	// ==================== FilterCondition tests ====================
+
+	use crate::FilterCondition;
+
+	#[test]
+	fn test_filter_condition_single() {
+		let filter = Filter::new(
+			"name".to_string(),
+			FilterOperator::Eq,
+			FilterValue::String("Alice".to_string()),
+		);
+
+		let condition = FilterCondition::Single(filter);
+
+		// Single condition should not be empty
+		assert!(!condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_single_helper() {
+		let filter = Filter::new(
+			"name".to_string(),
+			FilterOperator::Eq,
+			FilterValue::String("Alice".to_string()),
+		);
+
+		let condition = FilterCondition::single(filter);
+
+		assert!(!condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_or_filters() {
+		let filters = vec![
+			Filter::new(
+				"name".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("test".to_string()),
+			),
+			Filter::new(
+				"email".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("test".to_string()),
+			),
+		];
+
+		let condition = FilterCondition::or_filters(filters);
+
+		// OR condition with filters should not be empty
+		assert!(!condition.is_empty());
+
+		// Verify it's an Or variant
+		match &condition {
+			FilterCondition::Or(conditions) => {
+				assert_eq!(conditions.len(), 2);
+			}
+			_ => panic!("Expected Or variant"),
+		}
+	}
+
+	#[test]
+	fn test_filter_condition_and_filters() {
+		let filters = vec![
+			Filter::new(
+				"is_active".to_string(),
+				FilterOperator::Eq,
+				FilterValue::Boolean(true),
+			),
+			Filter::new(
+				"is_staff".to_string(),
+				FilterOperator::Eq,
+				FilterValue::Boolean(true),
+			),
+		];
+
+		let condition = FilterCondition::and_filters(filters);
+
+		// AND condition with filters should not be empty
+		assert!(!condition.is_empty());
+
+		// Verify it's an And variant
+		match &condition {
+			FilterCondition::And(conditions) => {
+				assert_eq!(conditions.len(), 2);
+			}
+			_ => panic!("Expected And variant"),
+		}
+	}
+
+	#[test]
+	fn test_filter_condition_nested_and_or() {
+		// Build: (name LIKE '%alice%' OR email LIKE '%alice%') AND status = 'active'
+		let filter_name = Filter::new(
+			"name".to_string(),
+			FilterOperator::Contains,
+			FilterValue::String("alice".to_string()),
+		);
+		let filter_email = Filter::new(
+			"email".to_string(),
+			FilterOperator::Contains,
+			FilterValue::String("alice".to_string()),
+		);
+		let filter_status = Filter::new(
+			"status".to_string(),
+			FilterOperator::Eq,
+			FilterValue::String("active".to_string()),
+		);
+
+		let or_condition = FilterCondition::or_filters(vec![filter_name, filter_email]);
+		let nested =
+			FilterCondition::And(vec![or_condition, FilterCondition::Single(filter_status)]);
+
+		// Nested condition should not be empty
+		assert!(!nested.is_empty());
+
+		// Verify structure
+		match &nested {
+			FilterCondition::And(conditions) => {
+				assert_eq!(conditions.len(), 2);
+				match &conditions[0] {
+					FilterCondition::Or(or_conds) => {
+						assert_eq!(or_conds.len(), 2);
+					}
+					_ => panic!("Expected first element to be Or"),
+				}
+			}
+			_ => panic!("Expected And variant at top level"),
+		}
+	}
+
+	#[test]
+	fn test_filter_condition_empty_or() {
+		let condition = FilterCondition::Or(vec![]);
+
+		// Empty OR should be empty
+		assert!(condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_empty_and() {
+		let condition = FilterCondition::And(vec![]);
+
+		// Empty AND should be empty
+		assert!(condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_deeply_nested() {
+		// Build a deeply nested structure:
+		// ((a = 1 OR b = 2) AND (c = 3 OR d = 4)) OR (e = 5)
+		let filter_a = Filter::new("a".to_string(), FilterOperator::Eq, FilterValue::Integer(1));
+		let filter_b = Filter::new("b".to_string(), FilterOperator::Eq, FilterValue::Integer(2));
+		let filter_c = Filter::new("c".to_string(), FilterOperator::Eq, FilterValue::Integer(3));
+		let filter_d = Filter::new("d".to_string(), FilterOperator::Eq, FilterValue::Integer(4));
+		let filter_e = Filter::new("e".to_string(), FilterOperator::Eq, FilterValue::Integer(5));
+
+		let or_ab = FilterCondition::or_filters(vec![filter_a, filter_b]);
+		let or_cd = FilterCondition::or_filters(vec![filter_c, filter_d]);
+		let and_inner = FilterCondition::And(vec![or_ab, or_cd]);
+		let outer = FilterCondition::Or(vec![and_inner, FilterCondition::Single(filter_e)]);
+
+		// Deeply nested condition should not be empty
+		assert!(!outer.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_is_empty_with_nested_empty() {
+		// Create an OR condition containing only empty ANDs
+		let condition = FilterCondition::Or(vec![
+			FilterCondition::And(vec![]),
+			FilterCondition::And(vec![]),
+		]);
+
+		// Should be considered empty since all nested conditions are empty
+		assert!(condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_is_empty_partial_nested() {
+		// Create an OR condition with one empty and one non-empty child
+		let filter = Filter::new(
+			"name".to_string(),
+			FilterOperator::Eq,
+			FilterValue::String("test".to_string()),
+		);
+
+		let condition = FilterCondition::Or(vec![
+			FilterCondition::And(vec![]),    // Empty
+			FilterCondition::Single(filter), // Not empty
+		]);
+
+		// Should NOT be empty since one child is non-empty
+		assert!(!condition.is_empty());
+	}
+
+	#[test]
+	fn test_filter_condition_or_helper() {
+		let inner1 = FilterCondition::single(Filter::new(
+			"a".to_string(),
+			FilterOperator::Eq,
+			FilterValue::Integer(1),
+		));
+		let inner2 = FilterCondition::single(Filter::new(
+			"b".to_string(),
+			FilterOperator::Eq,
+			FilterValue::Integer(2),
+		));
+
+		let condition = FilterCondition::or(vec![inner1, inner2]);
+
+		assert!(!condition.is_empty());
+		match &condition {
+			FilterCondition::Or(conditions) => {
+				assert_eq!(conditions.len(), 2);
+			}
+			_ => panic!("Expected Or variant"),
+		}
+	}
+
+	#[test]
+	fn test_filter_condition_and_helper() {
+		let inner1 = FilterCondition::single(Filter::new(
+			"a".to_string(),
+			FilterOperator::Eq,
+			FilterValue::Integer(1),
+		));
+		let inner2 = FilterCondition::single(Filter::new(
+			"b".to_string(),
+			FilterOperator::Eq,
+			FilterValue::Integer(2),
+		));
+
+		let condition = FilterCondition::and(vec![inner1, inner2]);
+
+		assert!(!condition.is_empty());
+		match &condition {
+			FilterCondition::And(conditions) => {
+				assert_eq!(conditions.len(), 2);
+			}
+			_ => panic!("Expected And variant"),
+		}
 	}
 }
