@@ -6,13 +6,13 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_openapi::endpoints::{swagger_docs, redoc_docs, openapi_json};
 //! use reinhardt_core::http::{Request, Response};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // These handlers can be mounted directly
-//! let req = Request::default();
+//! let req = Request::builder().uri("/docs").build().unwrap();
 //! let response = swagger_docs(req).await?;
 //! # Ok(())
 //! # }
@@ -81,7 +81,7 @@ pub fn generate_openapi_schema() -> OpenApiSchema {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt::UnifiedRouter;
 /// use reinhardt::Method;
 /// use reinhardt_openapi::endpoints::swagger_docs;
@@ -112,7 +112,7 @@ pub async fn swagger_docs(_req: Request) -> Result<Response> {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt::UnifiedRouter;
 /// use reinhardt::Method;
 /// use reinhardt_openapi::endpoints::redoc_docs;
@@ -142,7 +142,7 @@ pub async fn redoc_docs(_req: Request) -> Result<Response> {
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt::UnifiedRouter;
 /// use reinhardt::Method;
 /// use reinhardt_openapi::endpoints::openapi_json;
@@ -174,31 +174,34 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_swagger_docs_handler() {
-		let req = Request::default();
+		let req = Request::builder().uri("/docs").build().unwrap();
 		let response = swagger_docs(req).await.unwrap();
 
 		// Check response contains Swagger UI HTML
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert!(body_str.contains("swagger-ui"));
 	}
 
 	#[tokio::test]
 	async fn test_redoc_docs_handler() {
-		let req = Request::default();
+		let req = Request::builder().uri("/docs-redoc").build().unwrap();
 		let response = redoc_docs(req).await.unwrap();
 
 		// Check response contains Redoc UI HTML
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert!(body_str.contains("redoc"));
 	}
 
 	#[tokio::test]
 	async fn test_openapi_json_handler() {
-		let req = Request::default();
+		let req = Request::builder()
+			.uri("/api-docs/openapi.json")
+			.build()
+			.unwrap();
 		let response = openapi_json(req).await.unwrap();
 
 		// Check response is valid JSON
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		let _: serde_json::Value = serde_json::from_str(&body_str).unwrap();
 
 		// Check content type

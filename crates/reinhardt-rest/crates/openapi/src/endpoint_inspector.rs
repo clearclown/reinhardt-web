@@ -9,7 +9,11 @@ use regex::Regex;
 use reinhardt_core::endpoint::EndpointMetadata;
 use utoipa::openapi::{
 	HttpMethod, PathItem, ResponseBuilder,
-	path::{Operation, OperationBuilder, Parameter, ParameterBuilder, ParameterIn},
+	content::ContentBuilder,
+	path::{
+		Operation, OperationBuilder, Parameter, ParameterBuilder, ParameterIn, PathItemBuilder,
+	},
+	request_body::{RequestBody, RequestBodyBuilder},
 	schema::{ObjectBuilder, Schema, SchemaFormat, Type},
 };
 
@@ -57,18 +61,32 @@ impl EndpointInspector {
 	/// Collects endpoint metadata from the global inventory and
 	/// generates OpenAPI path items for each endpoint.
 	pub fn extract_paths(&self) -> Result<IndexMap<String, PathItem>, SchemaError> {
-		let mut paths = IndexMap::new();
+		// Step 1: Group endpoints by normalized path
+		let mut path_groups: IndexMap<String, Vec<&EndpointMetadata>> = IndexMap::new();
 
 		for metadata in inventory::iter::<EndpointMetadata>() {
 			let normalized_path = self.normalize_path(metadata.path);
-			let path_item = self.create_path_item(metadata)?;
+			path_groups
+				.entry(normalized_path)
+				.or_default()
+				.push(metadata);
+		}
 
-			// Merge with existing path item if the path already exists
-			if let Some(existing) = paths.get_mut(&normalized_path) {
-				self.merge_path_items(existing, path_item, metadata.method);
-			} else {
-				paths.insert(normalized_path, path_item);
+		// Step 2: Build PathItem for each path with all its operations
+		let mut paths = IndexMap::new();
+
+		for (path, endpoints) in path_groups {
+			let mut builder = PathItemBuilder::new();
+
+			for metadata in endpoints {
+				let parameters = self.extract_path_parameters(metadata.path)?;
+				let operation = self.create_operation(metadata, parameters);
+				let http_method = self.metadata_method_to_http_method(metadata.method)?;
+
+				builder = builder.operation(http_method, operation);
 			}
+
+			paths.insert(path, builder.build());
 		}
 
 		Ok(paths)
@@ -86,37 +104,59 @@ impl EndpointInspector {
 		re.replace_all(path, "{$1}").to_string()
 	}
 
-	/// Create a PathItem for a single endpoint
-	fn create_path_item(&self, metadata: &EndpointMetadata) -> Result<PathItem, SchemaError> {
-		let parameters = self.extract_path_parameters(metadata.path)?;
-		let operation = self.create_operation(metadata, parameters);
-
-		let http_method = match metadata.method {
-			"GET" => HttpMethod::Get,
-			"POST" => HttpMethod::Post,
-			"PUT" => HttpMethod::Put,
-			"PATCH" => HttpMethod::Patch,
-			"DELETE" => HttpMethod::Delete,
-			_ => {
-				return Err(SchemaError::InspectorError(format!(
-					"Unsupported HTTP method: {}",
-					metadata.method
-				)));
-			}
-		};
-
-		Ok(PathItem::new(http_method, operation))
+	/// Convert metadata method string to utoipa HttpMethod enum
+	fn metadata_method_to_http_method(&self, method: &str) -> Result<HttpMethod, SchemaError> {
+		match method {
+			"GET" => Ok(HttpMethod::Get),
+			"POST" => Ok(HttpMethod::Post),
+			"PUT" => Ok(HttpMethod::Put),
+			"PATCH" => Ok(HttpMethod::Patch),
+			"DELETE" => Ok(HttpMethod::Delete),
+			_ => Err(SchemaError::InspectorError(format!(
+				"Unsupported HTTP method: {}",
+				method
+			))),
+		}
 	}
 
-	/// Merge a new operation into an existing PathItem
-	fn merge_path_items(&self, _existing: &mut PathItem, _new: PathItem, method: &str) {
-		// PathItem in utoipa 5.x doesn't support direct field assignment
-		// We need to create a new PathItem with both operations
-		// For now, we'll just warn about duplicate paths
-		eprintln!(
-			"Warning: Duplicate path with different method {}. Only the last one will be kept.",
-			method
-		);
+	/// Create a RequestBody from endpoint metadata
+	///
+	/// Only POST/PUT/PATCH methods have request bodies.
+	/// Attempts to retrieve schema from global registry; falls back to placeholder if not found.
+	fn create_request_body(&self, metadata: &EndpointMetadata) -> Option<RequestBody> {
+		// Only POST/PUT/PATCH methods have request bodies
+		if !matches!(metadata.method, "POST" | "PUT" | "PATCH") {
+			return None;
+		}
+
+		let body_type = metadata.request_body_type?;
+		let content_type = metadata.request_content_type?;
+
+		// Try to get schema from global registry first
+		let schema =
+			if let Some(registered_schema) = crate::registry::get_all_schemas().get(body_type) {
+				// Use registered schema
+				registered_schema.clone()
+			} else {
+				// Fallback: Create placeholder schema (empty object)
+				Schema::Object(
+					ObjectBuilder::new()
+						.description(Some(format!("Request body for {}", body_type)))
+						.build(),
+				)
+			};
+
+		// Create Content with schema
+		let content = ContentBuilder::new().schema(Some(schema)).build();
+
+		// Create RequestBody
+		Some(
+			RequestBodyBuilder::new()
+				.description(Some(format!("Request body containing {}", body_type)))
+				.required(Some(utoipa::openapi::Required::True))
+				.content(content_type, content)
+				.build(),
+		)
 	}
 
 	/// Create an Operation object for an endpoint
@@ -137,6 +177,11 @@ impl EndpointInspector {
 		// Add parameters
 		for param in parameters {
 			builder = builder.parameter(param);
+		}
+
+		// Add request body (if applicable)
+		if let Some(request_body) = self.create_request_body(metadata) {
+			builder = builder.request_body(Some(request_body));
 		}
 
 		// Add default response
@@ -318,5 +363,100 @@ mod tests {
 			inspector.infer_tags("my_project::some_module::function"),
 			vec!["Default".to_string()]
 		);
+	}
+
+	#[test]
+	fn test_create_request_body_for_post() {
+		let inspector = EndpointInspector::new();
+
+		let metadata = EndpointMetadata {
+			path: "/api/users",
+			method: "POST",
+			name: Some("create_user"),
+			function_name: "create_user",
+			module_path: "users::views",
+			request_body_type: Some("CreateUserRequest"),
+			request_content_type: Some("application/json"),
+		};
+
+		let request_body = inspector.create_request_body(&metadata);
+		assert!(request_body.is_some());
+
+		let rb = request_body.unwrap();
+		assert!(rb.required.is_some());
+		assert!(matches!(
+			rb.required.unwrap(),
+			utoipa::openapi::Required::True
+		));
+		assert!(rb.content.contains_key("application/json"));
+	}
+
+	#[test]
+	fn test_create_request_body_for_get() {
+		let inspector = EndpointInspector::new();
+
+		let metadata = EndpointMetadata {
+			path: "/api/users",
+			method: "GET",
+			name: Some("list_users"),
+			function_name: "list_users",
+			module_path: "users::views",
+			request_body_type: None,
+			request_content_type: None,
+		};
+
+		let request_body = inspector.create_request_body(&metadata);
+		assert!(request_body.is_none());
+	}
+
+	#[test]
+	fn test_create_request_body_for_form() {
+		let inspector = EndpointInspector::new();
+
+		let metadata = EndpointMetadata {
+			path: "/api/login",
+			method: "POST",
+			name: Some("login"),
+			function_name: "login",
+			module_path: "auth::views",
+			request_body_type: Some("LoginForm"),
+			request_content_type: Some("application/x-www-form-urlencoded"),
+		};
+
+		let request_body = inspector.create_request_body(&metadata);
+		assert!(request_body.is_some());
+
+		let rb = request_body.unwrap();
+		assert!(rb.content.contains_key("application/x-www-form-urlencoded"));
+	}
+
+	#[test]
+	fn test_metadata_method_to_http_method() {
+		let inspector = EndpointInspector::new();
+
+		// Test valid methods
+		assert!(matches!(
+			inspector.metadata_method_to_http_method("GET"),
+			Ok(HttpMethod::Get)
+		));
+		assert!(matches!(
+			inspector.metadata_method_to_http_method("POST"),
+			Ok(HttpMethod::Post)
+		));
+		assert!(matches!(
+			inspector.metadata_method_to_http_method("PUT"),
+			Ok(HttpMethod::Put)
+		));
+		assert!(matches!(
+			inspector.metadata_method_to_http_method("PATCH"),
+			Ok(HttpMethod::Patch)
+		));
+		assert!(matches!(
+			inspector.metadata_method_to_http_method("DELETE"),
+			Ok(HttpMethod::Delete)
+		));
+
+		// Test invalid method
+		assert!(inspector.metadata_method_to_http_method("INVALID").is_err());
 	}
 }

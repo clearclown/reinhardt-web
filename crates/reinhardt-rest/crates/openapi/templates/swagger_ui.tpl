@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ title }} - Swagger UI</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,{{ favicon_base64 }}" />
     <link
       rel="stylesheet"
       type="text/css"

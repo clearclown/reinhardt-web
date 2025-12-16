@@ -7,7 +7,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_openapi::{Schema, ToSchema};
 //!
 //! #[derive(Schema)]

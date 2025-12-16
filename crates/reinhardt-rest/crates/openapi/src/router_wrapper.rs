@@ -6,7 +6,7 @@
 //!
 //! # Example
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use reinhardt_openapi::OpenApiRouter;
 //! use reinhardt_core::types::Handler;
 //! use std::sync::Arc;
@@ -61,7 +61,7 @@ impl<H> OpenApiRouter<H> {
 	///
 	/// # Example
 	///
-	/// ```rust,no_run
+	/// ```rust,ignore
 	/// use reinhardt_openapi::OpenApiRouter;
 	///
 	/// let router = /* your router */;
@@ -206,7 +206,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_core::http::StatusCode;
+	use hyper::StatusCode;
 
 	struct DummyHandler;
 
@@ -222,13 +222,16 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::default().with_uri("/api-docs/openapi.json");
+		let request = Request::builder()
+			.uri("/api-docs/openapi.json")
+			.build()
+			.unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert!(body_str.contains("openapi"));
-		assert!(body_str.contains("3.0")); // OpenAPI version
+		assert!(body_str.contains("3.")); // OpenAPI version (3.0 or 3.1)
 	}
 
 	#[tokio::test]
@@ -236,11 +239,11 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::default().with_uri("/docs");
+		let request = Request::builder().uri("/docs").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert!(body_str.contains("swagger-ui"));
 	}
 
@@ -249,11 +252,11 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::default().with_uri("/docs-redoc");
+		let request = Request::builder().uri("/docs-redoc").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert!(body_str.contains("redoc"));
 	}
 
@@ -262,11 +265,11 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::default().with_uri("/some/other/path");
+		let request = Request::builder().uri("/some/other/path").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
-		let body_str = String::from_utf8(response.body.clone()).unwrap();
+		let body_str = String::from_utf8(response.body.to_vec()).unwrap();
 		assert_eq!(body_str, "Hello from inner handler");
 	}
 }

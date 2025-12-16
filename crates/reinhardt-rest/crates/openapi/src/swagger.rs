@@ -3,11 +3,24 @@
 //! Provides Swagger UI for browsing generated OpenAPI schemas.
 
 use crate::{OpenApiSchema, SchemaResult};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 use once_cell::sync::Lazy;
 use reinhardt_core::http::{Request, Response, Result};
 use serde::Serialize;
 use std::sync::Arc;
 use tera::Tera;
+
+/// Embedded favicon for Swagger UI (loaded at compile time)
+const SWAGGER_FAVICON_PNG: &[u8] = include_bytes!(concat!(
+	env!("WORKSPACE_ROOT"),
+	"/branding/thirdparty/swagger.png"
+));
+
+/// Embedded favicon for Redoc UI (loaded at compile time)
+const REDOC_FAVICON_PNG: &[u8] = include_bytes!(concat!(
+	env!("WORKSPACE_ROOT"),
+	"/branding/thirdparty/redoc.png"
+));
 
 /// Lazy-initialized Tera instance
 static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
@@ -80,9 +93,13 @@ impl SwaggerUI {
 			spec_url: "/api-docs/openapi.json",
 		};
 
+		// Encode favicon as base64 for data URL embedding
+		let favicon_base64 = STANDARD.encode(SWAGGER_FAVICON_PNG);
+
 		let mut tera_context = tera::Context::new();
 		tera_context.insert("title", &context.title);
 		tera_context.insert("spec_url", &context.spec_url);
+		tera_context.insert("favicon_base64", &favicon_base64);
 
 		TEMPLATES
 			.render("swagger_ui.tpl", &tera_context)
@@ -198,9 +215,13 @@ impl RedocUI {
 			spec_url: "/api-docs/openapi.json",
 		};
 
+		// Encode favicon as base64 for data URL embedding
+		let favicon_base64 = STANDARD.encode(REDOC_FAVICON_PNG);
+
 		let mut tera_context = tera::Context::new();
 		tera_context.insert("title", &context.title);
 		tera_context.insert("spec_url", &context.spec_url);
+		tera_context.insert("favicon_base64", &favicon_base64);
 
 		TEMPLATES
 			.render("redoc_ui.tpl", &tera_context)

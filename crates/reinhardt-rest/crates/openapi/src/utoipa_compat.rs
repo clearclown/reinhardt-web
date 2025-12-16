@@ -369,73 +369,11 @@ fn convert_components(components: Components) -> utoipa::openapi::Components {
 
 	if let Some(security_schemes) = components.security_schemes {
 		for (name, scheme) in security_schemes {
-			builder = builder.security_scheme(name, convert_security_scheme(scheme));
+			builder = builder.security_scheme(name, scheme);
 		}
 	}
 
 	builder.build()
-}
-
-/// Convert Reinhardt's SecurityScheme to utoipa's SecurityScheme
-fn convert_security_scheme(
-	scheme: crate::openapi::SecurityScheme,
-) -> utoipa::openapi::SecurityScheme {
-	use utoipa::openapi::security::{ApiKey, ApiKeyValue, HttpAuthScheme, HttpBuilder};
-
-	match scheme {
-		crate::openapi::SecurityScheme::Http {
-			scheme,
-			bearer_format,
-		} => {
-			let auth_scheme = convert_http_scheme(scheme);
-			let mut builder = HttpBuilder::new().scheme(auth_scheme);
-
-			if let Some(bearer_format) = bearer_format {
-				builder = builder.bearer_format(bearer_format);
-			}
-
-			utoipa::openapi::SecurityScheme::Http(builder.build())
-		}
-		crate::openapi::SecurityScheme::ApiKey { name, location } => {
-			let api_key_value = ApiKeyValue::new(name);
-
-			match location.as_str() {
-				"query" => utoipa::openapi::SecurityScheme::ApiKey(ApiKey::Query(api_key_value)),
-				"header" => utoipa::openapi::SecurityScheme::ApiKey(ApiKey::Header(api_key_value)),
-				"cookie" => utoipa::openapi::SecurityScheme::ApiKey(ApiKey::Cookie(api_key_value)),
-				_ => utoipa::openapi::SecurityScheme::ApiKey(ApiKey::Header(api_key_value)),
-			}
-		}
-		crate::openapi::SecurityScheme::OAuth2 { flows: _ } => {
-			// TODO: For now, create a basic OAuth2 scheme
-			// Full implementation would need to convert flows properly
-			use utoipa::openapi::security::{Flow, Implicit, OAuth2, Scopes};
-
-			utoipa::openapi::SecurityScheme::OAuth2(OAuth2::new([Flow::Implicit(Implicit::new(
-				"https://example.com/auth",
-				Scopes::new(),
-			))]))
-		}
-	}
-}
-
-/// Convert string HTTP scheme to utoipa HttpScheme
-fn convert_http_scheme(scheme: String) -> utoipa::openapi::HttpScheme {
-	match scheme.as_str() {
-		"bearer" => utoipa::openapi::HttpScheme::Bearer,
-		"basic" => utoipa::openapi::HttpScheme::Basic,
-		_ => utoipa::openapi::HttpScheme::Bearer, // Default fallback
-	}
-}
-
-/// Convert string API key location to utoipa ApiKeyLocation
-fn convert_api_key_location(location: String) -> utoipa::openapi::ApiKeyLocation {
-	match location.as_str() {
-		"query" => utoipa::openapi::ApiKeyLocation::Query,
-		"header" => utoipa::openapi::ApiKeyLocation::Header,
-		"cookie" => utoipa::openapi::ApiKeyLocation::Cookie,
-		_ => utoipa::openapi::ApiKeyLocation::Header, // Default fallback
-	}
 }
 
 /// Convert Reinhardt's Servers to utoipa's Servers
