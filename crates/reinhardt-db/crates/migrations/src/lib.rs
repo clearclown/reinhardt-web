@@ -54,6 +54,7 @@ pub mod recorder;
 pub mod registry;
 pub mod repository;
 pub mod schema_diff;
+pub mod schema_editor;
 pub mod service;
 pub mod source;
 pub mod squash;
@@ -78,6 +79,7 @@ pub use autodetector::{
 	MigrationAutodetector,
 	MigrationPrompt,
 	ModelState,
+	OperationRef,
 	PatternMatcher,
 	ProjectState,
 	RuleCondition,
@@ -116,9 +118,10 @@ pub use operations::{
 pub use recorder::{DatabaseMigrationRecorder, MigrationRecord, MigrationRecorder};
 pub use repository::{MigrationRepository, filesystem::FilesystemRepository};
 pub use schema_diff::{
-	ColumnSchema, ConstraintSchema, DatabaseSchema, IndexSchema, SchemaDiff, SchemaDiffResult,
-	TableSchema,
+	ColumnSchema, ConstraintSchema, DatabaseSchema, ForeignKeySchemaInfo, IndexSchema, SchemaDiff,
+	SchemaDiffResult, TableSchema,
 };
+pub use schema_editor::SchemaEditor;
 pub use service::MigrationService;
 pub use source::{
 	MigrationSource, composite::CompositeSource, filesystem::FilesystemSource,
