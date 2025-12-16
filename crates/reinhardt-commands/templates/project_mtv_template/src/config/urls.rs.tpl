@@ -1,6 +1,7 @@
 //! URL configuration for {{ project_name }}
 
-use reinhardt::UnifiedRouter;
+use reinhardt::prelude::*;
+use reinhardt::register_url_patterns;
 use std::sync::Arc;
 
 /// Define URL patterns for the application
@@ -18,3 +19,6 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 
     Arc::new(router)
 }
+
+// Register URL patterns for automatic discovery by the framework
+register_url_patterns!();
