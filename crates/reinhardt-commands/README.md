@@ -217,6 +217,78 @@ let mut registry = CommandRegistry::new();
 registry.register(Box::new(MyCommand));
 ```
 
+## Plugin Command System
+
+The plugin command system integrates with `reinhardt-dentdelion` to provide CLI commands for managing plugins:
+
+### Available Commands
+
+| Command | Description |
+|---------|-------------|
+| `plugin list` | List all installed plugins |
+| `plugin info <name>` | Show detailed information about a plugin |
+| `plugin install <name>` | Install a plugin from crates.io |
+| `plugin remove <name>` | Remove an installed plugin |
+| `plugin enable <name>` | Enable a disabled plugin |
+| `plugin disable <name>` | Disable an active plugin |
+| `plugin search <query>` | Search for plugins on crates.io |
+| `plugin update <name>` | Update a plugin to the latest version |
+
+### Usage Examples
+
+```bash
+# List all plugins
+reinhardt plugin list
+
+# Install a plugin from crates.io
+reinhardt plugin install my-awesome-plugin
+
+# Show plugin details
+reinhardt plugin info my-awesome-plugin
+
+# Enable/disable plugins
+reinhardt plugin enable my-awesome-plugin
+reinhardt plugin disable my-awesome-plugin
+
+# Search for plugins
+reinhardt plugin search authentication
+
+# Update a plugin
+reinhardt plugin update my-awesome-plugin
+```
+
+### Integration with dentdelion.toml
+
+Plugin commands automatically update your project's `dentdelion.toml` manifest:
+
+```toml
+[plugins]
+my-awesome-plugin = { version = "1.0.0", enabled = true }
+auth-plugin = { version = "2.1.0", enabled = false }
+```
+
+### Implementation
+
+Plugin commands are implemented in `src/plugin_commands.rs` and use the `reinhardt-dentdelion` crate for plugin management:
+
+```rust
+use reinhardt_commands::BaseCommand;
+use reinhardt_dentdelion::{PluginInstaller, CratesIoClient};
+
+#[async_trait]
+impl BaseCommand for PluginInstallCommand {
+    fn name(&self) -> &str {
+        "plugin install"
+    }
+
+    async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
+        let installer = PluginInstaller::new()?;
+        installer.install(&plugin_name, None).await?;
+        Ok(())
+    }
+}
+```
+
 ## Project Templates
 
 `reinhardt-commands` includes project and app templates:
