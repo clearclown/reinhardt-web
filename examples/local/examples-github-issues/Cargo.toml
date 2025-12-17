@@ -1,0 +1,43 @@
+[package]
+name = "examples-github-issues"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "manage"
+path = "src/bin/manage.rs"
+
+[dependencies]
+reinhardt = { path = "../../..", package = "reinhardt-web", features = [
+	"full",
+	"auth-jwt",
+	"graphql",    # GraphQL support
+] }
+clap = { version = "4", features = ["derive"] }
+console = "0.16.1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+ctor = "0.6.3"
+# Required for #[model(...)] macro's automatic relationship registration
+linkme = "0.3"
+validator = { version = "0.20.0", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+inventory = "0.3"
+async-graphql = "7.0"
+tokio = { version = "1", features = ["full"] }
+
+[dev-dependencies]
+rstest = "0.26.1"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+argon2 = { version = "0.5", features = ["std"] }
+
+# Use reinhardt with test feature (NOT reinhardt-test sub-crate)
+[dev-dependencies.reinhardt]
+path = "../../.."
+package = "reinhardt-web"
+features = ["full", "auth-jwt", "test", "testcontainers", "graphql"]
+
+[patch.crates-io]
+reinhardt-web = { path = "../../.." }
