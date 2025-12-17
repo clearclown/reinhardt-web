@@ -398,10 +398,5 @@ impl std::fmt::Debug for WasmPluginInstance {
 	}
 }
 
-// TODO: Add integration tests with actual WASM components
-// Integration tests require sample WASM plugins implementing the dentdelion-plugin world.
-// Once sample plugins are available, add tests for:
-// - Full lifecycle (on_load -> on_enable -> on_disable -> on_unload)
-// - Host API calls from WASM (logging, config, services, http, db)
-// - Error handling and capability checks
-// - State transitions and validation
+// Integration tests are implemented in tests/wasm_integration.rs
+// See tests/fixtures/ for sample WASM plugins (minimal, logging, config)
