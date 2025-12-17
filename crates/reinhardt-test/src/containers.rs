@@ -422,8 +422,7 @@ impl MemcachedContainer {
 		use testcontainers::core::IntoContainerPort;
 
 		// Start Memcached container without WaitFor (we'll handle it manually)
-		let image = GenericImage::new("memcached", "1.6-alpine")
-			.with_exposed_port(11211.tcp());
+		let image = GenericImage::new("memcached", "1.6-alpine").with_exposed_port(11211.tcp());
 
 		let container = AsyncRunner::start(image)
 			.await
@@ -826,7 +825,7 @@ impl MailHogContainer {
 
 		let image = GenericImage::new("mailhog/mailhog", "latest")
 			.with_exposed_port(1025.tcp())      // SMTP port
-			.with_exposed_port(8025.tcp());     // HTTP API/UI port
+			.with_exposed_port(8025.tcp()); // HTTP API/UI port
 
 		let container = AsyncRunner::start(image)
 			.await
