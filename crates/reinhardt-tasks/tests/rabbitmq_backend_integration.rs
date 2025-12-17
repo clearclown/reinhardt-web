@@ -80,9 +80,9 @@ async fn test_task_enqueue_dequeue(
 
 /// Test: Task status operations (RabbitMQ specific behavior)
 ///
-/// Note: RabbitMQ is a message queue, not a data store.
-/// Status updates are no-ops and always return initial status (Pending).
-/// This is expected behavior for a pure queue-based backend.
+/// Note: RabbitMQ backend uses a pluggable metadata store for status tracking.
+/// Status updates are persisted via the metadata store (default: InMemory).
+/// This allows RabbitMQ to provide the same functionality as Redis backend.
 #[rstest]
 #[tokio::test]
 async fn test_task_status_operations(
@@ -106,12 +106,12 @@ async fn test_task_status_operations(
 		.await
 		.unwrap();
 
-	// Status remains Pending (RabbitMQ doesn't persist status updates)
+	// Status is now Running (RabbitMQ persists status updates via metadata store)
 	let status = backend.get_status(task_id).await.unwrap();
 	assert_eq!(
 		status,
-		TaskStatus::Pending,
-		"RabbitMQ backend doesn't persist status updates"
+		TaskStatus::Running,
+		"RabbitMQ backend persists status updates via metadata store"
 	);
 }
 
@@ -183,9 +183,9 @@ async fn test_concurrent_operations(
 
 /// Test: Task data retrieval (RabbitMQ specific behavior)
 ///
-/// Note: RabbitMQ is a message queue, not a data store.
-/// get_task_data always returns None because tasks are consumed during dequeue.
-/// This is expected behavior for a pure queue-based backend.
+/// Note: RabbitMQ backend uses a pluggable metadata store to persist task data.
+/// Task data can be retrieved by ID even after dequeue from the message queue.
+/// This allows RabbitMQ to provide the same functionality as Redis backend.
 #[rstest]
 #[tokio::test]
 async fn test_task_data_retrieval(
@@ -199,11 +199,11 @@ async fn test_task_data_retrieval(
 	let task_id = task.id();
 	backend.enqueue(Box::new(task)).await.unwrap();
 
-	// Task data is not retrievable by ID in RabbitMQ (pure queue behavior)
+	// Task data is retrievable by ID via metadata store
 	let task_data = backend.get_task_data(task_id).await.unwrap();
 	assert!(
-		task_data.is_none(),
-		"RabbitMQ backend doesn't support task data retrieval by ID"
+		task_data.is_some(),
+		"RabbitMQ backend supports task data retrieval via metadata store"
 	);
 
 	// Non-existent task also returns None
