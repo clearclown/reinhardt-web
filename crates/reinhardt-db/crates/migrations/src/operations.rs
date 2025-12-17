@@ -660,6 +660,61 @@ impl ColumnDefinition {
 			default: None,
 		}
 	}
+
+	/// Create a ColumnDefinition from FieldState with attribute parsing
+	///
+	/// This method reads field attributes (primary_key, not_null, unique, etc.) from
+	/// the FieldState.params HashMap and properly initializes ColumnDefinition fields.
+	///
+	/// # Arguments
+	///
+	/// * `name` - Column name
+	/// * `field_state` - FieldState containing field metadata and params
+	///
+	/// # Notes
+	///
+	/// - If `primary_key` is true, `not_null` is automatically set to true
+	/// - Default values are false/None for unspecified attributes
+	pub fn from_field_state(name: impl Into<String>, field_state: &FieldState) -> Self {
+		let name_str = name.into();
+		let params = &field_state.params;
+
+		// Parse attributes from params HashMap
+		let primary_key = params
+			.get("primary_key")
+			.and_then(|v| v.parse::<bool>().ok())
+			.unwrap_or(false);
+
+		let not_null = params
+			.get("not_null")
+			.and_then(|v| v.parse::<bool>().ok())
+			.or(if primary_key { Some(true) } else { None })
+			.unwrap_or(false);
+
+		let unique = params
+			.get("unique")
+			.and_then(|v| v.parse::<bool>().ok())
+			.unwrap_or(false);
+
+		let auto_increment = params
+			.get("auto_increment")
+			.and_then(|v| v.parse::<bool>().ok())
+			.unwrap_or(false);
+
+		let default = params
+			.get("default")
+			.map(|s| Box::leak(s.clone().into_boxed_str()) as &'static str);
+
+		Self {
+			name: Box::leak(name_str.into_boxed_str()),
+			type_definition: field_state.field_type.clone(),
+			not_null,
+			unique,
+			primary_key,
+			auto_increment,
+			default,
+		}
+	}
 }
 
 /// SQL dialect for generating database-specific SQL
