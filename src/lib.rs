@@ -174,20 +174,8 @@ pub mod views;
 
 // Contrib modules (Django-style)
 pub mod contrib {
-	#[cfg(feature = "admin")]
-	#[cfg_attr(docsrs, doc(cfg(feature = "admin")))]
-	pub use reinhardt_admin::panel as admin;
-}
-
-// Re-export admin at top level for convenience (accessible as reinhardt::admin)
-#[cfg(feature = "admin")]
-#[cfg_attr(docsrs, doc(cfg(feature = "admin")))]
-pub mod admin {
-	// Re-export panel module for direct access to types
-	pub use reinhardt_admin::panel;
-
-	// Re-export commonly used admin types at module level
-	pub use reinhardt_admin::panel::*;
+	// Admin functionality is available through reinhardt-admin-api crate
+	// See reinhardt-admin-types for type definitions
 }
 
 // Re-export app types from reinhardt-apps
@@ -760,128 +748,8 @@ pub use reinhardt_urls::routers::{
 	reverse,
 };
 
-// Re-export admin panel (admin feature)
-#[cfg(feature = "admin")]
-pub use reinhardt_admin::panel::{
-	// Actions
-	ActionRegistry,
-	ActionResult,
-	// Dashboard
-	Activity,
-	AdminAction,
-	// Auth
-	AdminAuthBackend,
-	AdminAuthMiddleware,
-	// Templates
-	AdminContext,
-	// Database
-	AdminDatabase,
-	// Error types
-	AdminError,
-	// Forms
-	AdminForm,
-	AdminPermissionChecker,
-	AdminResult,
-	// Core types
-	AdminSite,
-	AdminTemplateRenderer,
-	// Audit
-	AuditAction,
-	AuditLog,
-	AuditLogBuilder,
-	AuditLogQuery,
-	AuditLogQueryBuilder,
-	AuditLogger,
-	// Filters
-	BooleanFilter,
-	// Advanced features
-	BulkEdit,
-	BulkEditConfig,
-	BulkEditField,
-	BulkEditForm,
-	BulkEditResult,
-	ChartData,
-	ChartDataset,
-	ChartType,
-	ChartWidget,
-	ChoiceFilter,
-	// Views
-	CreateView as AdminCreateView,
-	// Export/Import
-	CsvExporter,
-	CsvImporter,
-	// Custom views
-	CustomView,
-	CustomViewRegistry,
-	DashboardContext,
-	DashboardUserInfo,
-	DashboardWidget,
-	DatabaseAuditLogger,
-	DateRangeFilter,
-	DeleteConfirmationContext,
-	DeleteSelectedAction,
-	DeleteView as AdminDeleteView,
-	DetailView as AdminDetailView,
-	DragDropConfig,
-	DragDropConfigBuilder,
-	// Widgets
-	EditorType,
-	ExportBuilder,
-	ExportConfig,
-	ExportFormat,
-	ExportResult,
-	FieldType as AdminFieldType,
-	FilterManager,
-	FilterSpec,
-	FormBuilder,
-	FormField,
-	FormViewContext,
-	ImageFormat,
-	ImageUploadConfig,
-	ImportBuilder,
-	ImportConfig,
-	ImportError,
-	ImportFormat,
-	ImportResult,
-	// Inline editing
-	InlineForm,
-	InlineFormset,
-	InlineModelAdmin,
-	InlineType,
-	JsonExporter,
-	JsonImporter,
-	ListFilter,
-	ListView as AdminListView,
-	ListViewContext,
-	MemoryAuditLogger,
-	ModelAdmin,
-	ModelAdminConfig,
-	NumberRangeFilter,
-	PaginationContext,
-	PermissionAction,
-	QuickLink,
-	QuickLinksWidget,
-	RecentActivityWidget,
-	ReorderHandler,
-	ReorderResult,
-	ReorderableModel,
-	RichTextEditorConfig,
-	StatWidget,
-	TableWidget,
-	TsvExporter,
-	TsvImporter,
-	UpdateView as AdminUpdateView,
-	UserContext,
-	ViewConfig,
-	ViewConfigBuilder,
-	Widget,
-	WidgetConfig,
-	WidgetContext,
-	WidgetFactory,
-	WidgetPosition,
-	WidgetRegistry,
-	WidgetType,
-};
+// Admin functionality is available through reinhardt-admin-api crate
+// See reinhardt-admin-types for type definitions
 
 // Re-export database related (database feature)
 #[cfg(feature = "database")]
@@ -1108,29 +976,7 @@ pub mod prelude {
 	#[cfg(feature = "cache")]
 	pub use crate::{Cache, InMemoryCache};
 
-	// Admin feature
-	#[cfg(feature = "admin")]
-	pub use crate::{
-		// Actions
-		ActionRegistry,
-		AdminAction,
-		AdminError,
-		// Forms
-		AdminFieldType as FieldType,
-		AdminForm,
-		AdminResult,
-		AdminSite,
-		// Filters
-		BooleanFilter,
-		ChoiceFilter,
-		DateRangeFilter,
-		DeleteSelectedAction,
-		FormBuilder,
-		FormField,
-		ListFilter,
-		ModelAdmin,
-		ModelAdminConfig,
-	};
+	// Admin feature - use reinhardt-admin-api crate directly for admin functionality
 }
 
 // Re-export database modules for Model derive macro generated code
