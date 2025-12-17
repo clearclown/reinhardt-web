@@ -399,7 +399,8 @@ reinhardt-utils = { path = "crates/reinhardt-utils", version = "0.1.0-alpha.1" }
 reinhardt-rest = { path = "crates/reinhardt-rest", version = "0.1.0-alpha.1" }
 reinhardt-auth = { path = "crates/reinhardt-auth", version = "0.1.0-alpha.1" }
 reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
-reinhardt-panel = { path = "crates/reinhardt-admin/crates/panel", version = "0.1.0-alpha.1" }
+reinhardt-admin-types = { path = "crates/reinhardt-admin/crates/types", version = "0.1.0-alpha.1" }
+reinhardt-admin-api = { path = "crates/reinhardt-admin/crates/api", version = "0.1.0-alpha.1" }
 reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
 reinhardt-graphql-macros = { path = "crates/reinhardt-graphql/crates/macros", version = "0.1.0-alpha.1" }
