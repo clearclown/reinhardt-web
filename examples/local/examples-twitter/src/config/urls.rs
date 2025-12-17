@@ -25,17 +25,41 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 
 /// Build URL patterns with admin panel
 ///
-/// Includes the admin panel under `/admin` prefix.
+/// Includes the admin panel under `/admin/api/` prefix.
+/// Admin UI (WASM) should be served at `/admin/` via static files.
 ///
 /// # Arguments
 ///
 /// * `db` - Database connection for admin CRUD operations
 pub fn url_patterns_with_admin(db: DatabaseConnection) -> Arc<UnifiedRouter> {
+	use reinhardt_admin_api::{admin_routes, AdminDatabase};
+	use reinhardt::reinhardt_di::SingletonScope;
+	use std::sync::Arc as StdArc;
+
 	let mut router = build_api_router();
 
-	// Include admin panel under /admin prefix
-	let admin_router = admin::configure_admin(db);
-	router = router.include("/admin/", admin_router);
+	// Configure admin site and register models
+	let admin_site = admin::configure_admin();
+
+	// Create AdminDatabase wrapper
+	let admin_db = AdminDatabase::new(db);
+
+	// Configure DI container for admin panel
+	let singleton = StdArc::new(SingletonScope::new());
+	reinhardt_admin_api::AdminSite::configure_di(
+		&singleton,
+		StdArc::new(admin_site),
+		admin_db,
+		None, // No favicon data for now
+	);
+
+	// Get admin routes and include under /admin/api/ prefix
+	let admin_router = admin_routes();
+	router = router.include("/admin/api/", admin_router);
+
+	// Admin UI static files (WASM)
+	// Note: HTTPメソッドデコレーター（#[get(...)]）を使用しているため、
+	// ここでの登録は不要（自動登録される）
 
 	// Register all routes before returning
 	router.register_all_routes();

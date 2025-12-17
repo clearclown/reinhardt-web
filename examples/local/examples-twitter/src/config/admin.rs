@@ -2,54 +2,33 @@
 //!
 //! Configures and builds the admin interface for examples-twitter.
 
-use reinhardt::UnifiedRouter;
-use reinhardt::admin::panel::AdminSite;
-use reinhardt::db::DatabaseConnection;
+use reinhardt_admin_api::AdminSite;
 
 use crate::apps;
 
-/// Build the admin panel router
+/// Configure the admin site
 ///
-/// Creates an AdminSite, registers all model admins from each app,
-/// and returns a UnifiedRouter with all admin endpoints.
+/// Creates an AdminSite and registers all model admins from each app.
+/// Database connection will be configured via DI container in urls.rs.
 ///
-/// # Endpoints
+/// # Endpoints (via admin_routes() in urls.rs)
 ///
-/// - `GET /` - Dashboard (list of registered models)
-/// - `GET /favicon.ico` - Favicon
-/// - `GET /{model}/` - List model instances
-/// - `GET /{model}/{id}/` - Get model instance detail
-/// - `POST /{model}/` - Create model instance
-/// - `PUT /{model}/{id}/` - Update model instance
-/// - `DELETE /{model}/{id}/` - Delete model instance
-/// - `POST /{model}/bulk-delete/` - Bulk delete model instances
-/// - `GET /{model}/export/` - Export model data
-/// - `POST /{model}/import/` - Import model data
-pub fn configure_admin(db: DatabaseConnection) -> UnifiedRouter {
-	let site = AdminSite::new("Twitter Admin");
+/// - `GET /admin/api/` - Dashboard (list of registered models)
+/// - `GET /admin/api/{model}/` - List model instances
+/// - `GET /admin/api/{model}/{id}/` - Get model instance detail
+/// - `POST /admin/api/{model}/` - Create model instance
+/// - `PUT /admin/api/{model}/{id}/` - Update model instance
+/// - `DELETE /admin/api/{model}/{id}/` - Delete model instance
+/// - `GET /admin/api/{model}/export/` - Export model data
+/// - `POST /admin/api/{model}/import/` - Import model data
+pub fn configure_admin() -> AdminSite {
+	let mut site = AdminSite::new("Twitter Admin");
 
 	// Register admin configurations from each app
-	apps::auth::admin::register_admins(&site);
-	apps::profile::admin::register_admins(&site);
-	apps::relationship::admin::register_admins(&site);
-	apps::dm::admin::register_admins(&site);
-
-	// Build router with favicon
-	site.get_router(db)
-		.with_favicon_file("branding/logo.png")
-		.build()
-}
-
-/// Get the admin site without building the router
-///
-/// Use this when you need more control over the admin configuration.
-pub fn get_admin_site() -> AdminSite {
-	let site = AdminSite::new("Twitter Admin");
-
-	apps::auth::admin::register_admins(&site);
-	apps::profile::admin::register_admins(&site);
-	apps::relationship::admin::register_admins(&site);
-	apps::dm::admin::register_admins(&site);
+	apps::auth::admin::register_admins(&mut site);
+	apps::profile::admin::register_admins(&mut site);
+	apps::relationship::admin::register_admins(&mut site);
+	apps::dm::admin::register_admins(&mut site);
 
 	site
 }
