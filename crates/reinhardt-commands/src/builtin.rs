@@ -300,7 +300,7 @@ async fn build_from_state_from_testcontainers(
 	};
 	use reinhardt_test::fixtures::postgres_container;
 
-	// 1. Start temporary PostgreSQL container
+	// 1. Start temporary PostgreSQL container (panics on failure during tests)
 	let (_container, _pool, _port, url) = postgres_container().await;
 
 	// 2. Connect to temporary database

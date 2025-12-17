@@ -701,7 +701,11 @@ impl RabbitMQContainer {
 
 	/// Create a RabbitMQ container with custom credentials
 	pub async fn with_credentials(username: &str, password: &str) -> Self {
+		use testcontainers::core::IntoContainerPort;
+
 		let image = GenericImage::new("rabbitmq", "3.12-management-alpine")
+			.with_exposed_port(5672.tcp())      // AMQP port
+			.with_exposed_port(15672.tcp())     // Management UI port
 			.with_wait_for(WaitFor::message_on_stdout("Server startup complete"))
 			.with_env_var("RABBITMQ_DEFAULT_USER", username)
 			.with_env_var("RABBITMQ_DEFAULT_PASS", password);
