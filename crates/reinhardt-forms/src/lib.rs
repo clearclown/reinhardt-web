@@ -22,6 +22,7 @@ pub mod media;
 pub mod model_form;
 pub mod model_formset;
 pub mod security;
+pub mod wasm_compat; // Week 5 Day 1: WASM compatibility layer
 pub mod wizard;
 pub mod xss_protection;
 
