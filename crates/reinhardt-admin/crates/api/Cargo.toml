@@ -20,10 +20,7 @@ full = ["file-uploads"]
 # Shared type definitions
 reinhardt-admin-types = { workspace = true }
 
-# Main Reinhardt crate (required for macros)
-reinhardt = { path = "../../../..", package = "reinhardt-web", default-features = false, features = ["minimal"] }
-
-# Reinhardt dependencies
+# Reinhardt dependencies (individual crates, not the umbrella crate)
 reinhardt-auth = { workspace = true }
 reinhardt-core = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
@@ -33,6 +30,7 @@ reinhardt-utils = { workspace = true, optional = true, features = ["storage"] }
 reinhardt-views = { workspace = true }
 reinhardt-di = { workspace = true }
 reinhardt-params = { workspace = true }
+reinhardt-macros = { workspace = true }
 
 # Core dependencies
 tokio = { workspace = true }
