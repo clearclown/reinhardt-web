@@ -1586,12 +1586,13 @@ pub async fn postgres_with_all_migrations() -> Result<
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::postgres_with_apps_migrations;
 /// # #[tokio::main]
-/// # async fn main() {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // #[tokio::test]
 /// // async fn test_polls_only() {
-/// let (_container, db) = postgres_with_apps_migrations(&["polls"]).await;
+/// let (_container, db) = postgres_with_apps_migrations(&["polls"]).await?;
 /// // Only polls app migrations are applied
 /// // }
+/// # Ok(())
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
