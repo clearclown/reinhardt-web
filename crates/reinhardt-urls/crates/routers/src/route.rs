@@ -165,7 +165,7 @@ impl Route {
 	/// # }
 	/// let handler = Arc::new(DummyHandler);
 	/// let route = Route::new("/users/", handler)
-	///     .with_middleware(Arc::new(LoggingMiddleware));
+	///     .with_middleware(Arc::new(LoggingMiddleware::new()));
 	/// assert_eq!(route.middleware.len(), 1);
 	/// ```
 	pub fn with_middleware(mut self, middleware: Arc<dyn Middleware>) -> Self {

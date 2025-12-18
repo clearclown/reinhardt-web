@@ -715,7 +715,8 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```ignore
+	/// # // This method is private and cannot be called from external code
 	/// use reinhardt_migrations::{ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut state = ProjectState::new();

@@ -30,7 +30,7 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 ///
 /// let mut group = RouteGroup::new()
 ///     .with_prefix("/api/v1")
-///     .with_middleware(LoggingMiddleware);
+///     .with_middleware(LoggingMiddleware::new());
 ///
 /// let router = group
 ///     .function("/users", Method::GET, users_list)
@@ -99,7 +99,7 @@ impl RouteGroup {
 	/// use reinhardt_middleware::LoggingMiddleware;
 	///
 	/// let group = RouteGroup::new()
-	///     .with_middleware(LoggingMiddleware);
+	///     .with_middleware(LoggingMiddleware::new());
 	///
 	/// // Middleware is applied to the router
 	/// let router = group.build();

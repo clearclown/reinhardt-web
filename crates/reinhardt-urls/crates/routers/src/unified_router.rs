@@ -340,7 +340,7 @@ impl UnifiedRouter {
 	/// use reinhardt_middleware::LoggingMiddleware;
 	///
 	/// let router = UnifiedRouter::new()
-	///     .with_middleware(LoggingMiddleware);
+	///     .with_middleware(LoggingMiddleware::new());
 	/// ```
 	pub fn with_middleware<M: Middleware + 'static>(mut self, mw: M) -> Self {
 		self.middleware.push(Arc::new(mw));
@@ -838,7 +838,7 @@ impl UnifiedRouter {
 	/// # }
 	/// let router = UnifiedRouter::new()
 	///     .function("/health", Method::GET, health)
-	///     .with_route_middleware(LoggingMiddleware);
+	///     .with_route_middleware(LoggingMiddleware::new());
 	/// ```
 	pub fn with_route_middleware<M: Middleware + 'static>(mut self, middleware: M) -> Self {
 		let middleware = Arc::new(middleware);

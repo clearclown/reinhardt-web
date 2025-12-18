@@ -76,7 +76,7 @@
 //! # }
 //! let router = UnifiedRouter::new()
 //!     .function("/api/users", Method::GET, handler)
-//!     .with_route_middleware(LoggingMiddleware);
+//!     .with_route_middleware(LoggingMiddleware::new());
 //! ```
 //!
 //! ## Route Group Middleware
@@ -96,7 +96,7 @@
 //! // Create a group with middleware
 //! let group = RouteGroup::new()
 //!     .with_prefix("/api/v1")
-//!     .with_middleware(LoggingMiddleware)
+//!     .with_middleware(LoggingMiddleware::new())
 //!     .function("/users", Method::GET, users_list)
 //!     .function("/users/{id}", Method::GET, users_detail);
 //!

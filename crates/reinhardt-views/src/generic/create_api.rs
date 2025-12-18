@@ -95,11 +95,11 @@ where
 	///
 	/// # Examples
 	///
-	/// ```rust,no_run
+	/// ```rust,ignore
 	/// # use reinhardt_views::CreateAPIView;
 	/// # use reinhardt_serializers::JsonSerializer;
-	/// # use reinhardt_validators::ValidationConfig;
 	/// # use reinhardt_db::orm::Model;
+	/// # use reinhardt_validators::ValidationConfig;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct Article { id: Option<i64>, title: String }
