@@ -4,15 +4,12 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_core::http::{Request, Response};
-use reinhardt_db::orm::Model;
-use reinhardt_serializers::Serializer;
+use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt_serializers::{Serializer, ValidatorConfig};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 use crate::core::View;
-
-// TODO: This type will be properly defined when fully integrating with validation system
-type ValidationConfig = ();
 
 /// CreateAPIView for creating new objects
 ///
@@ -53,8 +50,9 @@ where
 	M: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone,
 	S: Serializer<Input = M, Output = String> + Send + Sync,
 {
-	validation_config: Option<ValidationConfig>,
-	_model: PhantomData<M>,
+	queryset: Option<QuerySet<M>>,
+	#[allow(dead_code)] // TODO: Will be used when DB pool integration is complete
+	validation_config: Option<ValidatorConfig<M>>,
 	_serializer: PhantomData<S>,
 }
 
@@ -85,21 +83,31 @@ where
 	/// ```
 	pub fn new() -> Self {
 		Self {
+			queryset: None,
 			validation_config: None,
-			_model: PhantomData,
 			_serializer: PhantomData,
 		}
+	}
+
+	/// Sets the queryset for this view
+	pub fn with_queryset(mut self, queryset: QuerySet<M>) -> Self {
+		self.queryset = Some(queryset);
+		self
+	}
+
+	/// Gets the queryset, creating a default one if not set
+	fn get_queryset(&self) -> QuerySet<M> {
+		self.queryset.clone().unwrap_or_default()
 	}
 
 	/// Sets the validation configuration
 	///
 	/// # Examples
 	///
-	/// ```rust,ignore
+	/// ```rust,no_run
 	/// # use reinhardt_views::CreateAPIView;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_serializers::{JsonSerializer, ValidatorConfig};
 	/// # use reinhardt_db::orm::Model;
-	/// # use reinhardt_validators::ValidationConfig;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct Article { id: Option<i64>, title: String }
@@ -110,23 +118,33 @@ where
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// # }
 	///
-	/// let config = ValidationConfig::default();
+	/// let config = ValidatorConfig::<Article>::new();
 	/// let view = CreateAPIView::<Article, JsonSerializer<Article>>::new()
 	///     .with_validation_config(config);
 	/// ```
-	pub fn with_validation_config(mut self, config: ValidationConfig) -> Self {
+	pub fn with_validation_config(mut self, config: ValidatorConfig<M>) -> Self {
 		self.validation_config = Some(config);
 		self
 	}
 
 	/// Performs the object creation
-	async fn perform_create(&self, _request: &Request) -> Result<M> {
-		// TODO: Implement actual object creation with ORM
-		// - Parse request body
-		// - Deserialize to model
-		// - Apply validation if configured
-		// - Save object via Manager
-		todo!("Full ORM integration for object creation")
+	async fn perform_create(&self, request: &Request) -> Result<M> {
+		// Parse request body and deserialize to model
+		let data: M = request
+			.json()
+			.map_err(|e| Error::Http(format!("Invalid request body: {}", e)))?;
+
+		// TODO: Apply validation if configured (requires DB pool)
+		// if let Some(ref validators) = self.validation_config {
+		//     validators.validate_async(&pool, &data).await?;
+		// }
+
+		// Create via QuerySet
+		let queryset = self.get_queryset();
+		queryset
+			.create(data)
+			.await
+			.map_err(|e| Error::Http(format!("Failed to create: {}", e)))
 	}
 }
 

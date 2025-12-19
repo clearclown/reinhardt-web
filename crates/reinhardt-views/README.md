@@ -137,12 +137,12 @@ rendering.
 - Batch operations support
 - Optimistic locking support
 
-#### Template Support
+#### Component-Based Rendering (reinhardt-pages)
 
-- Template-based rendering
-- Context processors
-- Template inheritance
-- Custom template loaders
+- SSR (Server-Side Rendering) with WASM components
+- Reactive component rendering
+- Client-side hydration support
+- Type-safe view composition
 
 ## Usage
 

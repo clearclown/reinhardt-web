@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_core::http::{Request, Response};
-use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Manager, Model, QuerySet};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -115,27 +115,55 @@ where
 	}
 
 	/// Gets the queryset, creating a default one if not set
-	// TODO: Will be used when ORM query implementation is complete
-	#[allow(dead_code)]
 	fn get_queryset(&self) -> QuerySet<M> {
 		self.queryset.clone().unwrap_or_default()
 	}
 
-	/// Retrieves the object to delete
-	// TODO: Will be used when lookup implementation is complete
-	#[allow(dead_code)]
-	async fn get_object(&self, _request: &Request) -> Result<M> {
-		// TODO: Extract lookup value from URL parameters
-		// For now, return a placeholder error
-		Err(Error::Http("Object lookup not yet implemented".to_string()))
+	/// Retrieves the object to delete by lookup field value from request path params
+	async fn get_object(&self, request: &Request) -> Result<M>
+	where
+		M: serde::de::DeserializeOwned,
+	{
+		let lookup_value = request.path_params.get(&self.lookup_field).ok_or_else(|| {
+			Error::Http(format!(
+				"Missing lookup field '{}' in path parameters",
+				self.lookup_field
+			))
+		})?;
+
+		let filter = Filter::new(
+			self.lookup_field.clone(),
+			FilterOperator::Eq,
+			FilterValue::String(lookup_value.clone()),
+		);
+
+		self.get_queryset()
+			.filter(filter)
+			.get()
+			.await
+			.map_err(|e| Error::Http(format!("Object not found: {}", e)))
 	}
 
 	/// Performs the object deletion
-	async fn perform_destroy(&self, _request: &Request) -> Result<()> {
-		// TODO: Implement actual object deletion with ORM
-		// - Get object via Manager
-		// - Delete via Manager
-		todo!("Full ORM integration for object deletion")
+	async fn perform_destroy(&self, request: &Request) -> Result<()>
+	where
+		M: serde::de::DeserializeOwned,
+	{
+		// Get the object first to ensure it exists
+		let object = self.get_object(request).await?;
+
+		// Get the primary key for deletion
+		let pk = object
+			.primary_key()
+			.cloned()
+			.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
+
+		// Delete using Manager
+		let manager = Manager::<M>::new();
+		manager
+			.delete(pk)
+			.await
+			.map_err(|e| Error::Http(format!("Failed to delete: {}", e)))
 	}
 }
 

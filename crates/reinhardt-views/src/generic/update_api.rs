@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_core::http::{Request, Response};
-use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Manager, Model, QuerySet};
 use reinhardt_serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
@@ -61,7 +61,7 @@ where
 impl<M, S> UpdateAPIView<M, S>
 where
 	M: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
-	S: Serializer<Input = M, Output = String> + Send + Sync + 'static,
+	S: Serializer<Input = M, Output = String> + Send + Sync + 'static + Default,
 {
 	/// Creates a new `UpdateAPIView` with default settings
 	///
@@ -131,36 +131,95 @@ where
 	}
 
 	/// Gets the queryset, creating a default one if not set
-	// TODO: Will be used when ORM query implementation is complete
-	#[allow(dead_code)]
 	fn get_queryset(&self) -> QuerySet<M> {
 		self.queryset.clone().unwrap_or_default()
 	}
 
-	/// Retrieves the object to update
-	// TODO: Will be used when lookup implementation is complete
-	#[allow(dead_code)]
-	async fn get_object(&self, _request: &Request) -> Result<M> {
-		// TODO: Extract lookup value from URL parameters
-		// For now, return a placeholder error
-		Err(Error::Http("Object lookup not yet implemented".to_string()))
+	/// Retrieves the object to update by lookup field value from request path params
+	async fn get_object(&self, request: &Request) -> Result<M>
+	where
+		M: serde::de::DeserializeOwned,
+	{
+		let lookup_value = request.path_params.get(&self.lookup_field).ok_or_else(|| {
+			Error::Http(format!(
+				"Missing lookup field '{}' in path parameters",
+				self.lookup_field
+			))
+		})?;
+
+		let filter = Filter::new(
+			self.lookup_field.clone(),
+			FilterOperator::Eq,
+			FilterValue::String(lookup_value.clone()),
+		);
+
+		self.get_queryset()
+			.filter(filter)
+			.get()
+			.await
+			.map_err(|e| Error::Http(format!("Object not found: {}", e)))
 	}
 
 	/// Performs the object update
-	async fn perform_update(&self, _request: &Request) -> Result<M> {
-		// TODO: Implement actual object update with ORM
-		// - Get existing object via Manager
-		// - Parse request body
-		// - Merge or replace fields based on partial flag
-		// - Save via Manager
-		todo!("Full ORM integration for object update")
+	async fn perform_update(&self, request: &Request) -> Result<M>
+	where
+		M: serde::de::DeserializeOwned,
+	{
+		let mut object = self.get_object(request).await?;
+
+		if self.partial {
+			// PATCH: partial update - merge provided fields into existing object
+			let serializer = S::default();
+			let current_json = serializer
+				.serialize(&object)
+				.map_err(|e| Error::Http(e.to_string()))?;
+
+			let mut current: serde_json::Value = serde_json::from_str(&current_json)
+				.map_err(|e| Error::Http(format!("Serialization error: {}", e)))?;
+
+			let patch_data: serde_json::Value = request
+				.json()
+				.map_err(|e| Error::Http(format!("Invalid request body: {}", e)))?;
+
+			// Merge patch data into current object
+			if let (Some(current_obj), Some(patch_obj)) =
+				(current.as_object_mut(), patch_data.as_object())
+			{
+				for (key, value) in patch_obj {
+					current_obj.insert(key.clone(), value.clone());
+				}
+			}
+
+			object = serde_json::from_value(current)
+				.map_err(|e| Error::Http(format!("Failed to merge patch: {}", e)))?;
+		} else {
+			// PUT: full update - replace all fields but keep the same PK
+			let update_data: M = request
+				.json()
+				.map_err(|e| Error::Http(format!("Invalid request body: {}", e)))?;
+
+			let pk = object
+				.primary_key()
+				.cloned()
+				.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
+
+			object = update_data;
+			object.set_primary_key(pk);
+		}
+
+		// Update using Manager
+		let manager = Manager::<M>::new();
+		manager
+			.update(&object)
+			.await
+			.map_err(|e| Error::Http(format!("Failed to update: {}", e)))
 	}
 }
 
 impl<M, S> Default for UpdateAPIView<M, S>
 where
 	M: Model + Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone + 'static,
-	S: Serializer<Input = M, Output = String> + Send + Sync + 'static,
+	S: Serializer<Input = M, Output = String> + Send + Sync + 'static + Default,
 {
 	fn default() -> Self {
 		Self::new()

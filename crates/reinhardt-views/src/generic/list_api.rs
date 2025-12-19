@@ -4,16 +4,13 @@ use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_core::http::{Request, Response};
-use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QuerySet};
 use reinhardt_serializers::Serializer;
+use reinhardt_viewsets::{FilterConfig, PaginationConfig};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
 use crate::core::View;
-
-// TODO: These types will be properly defined when fully integrating with pagination/filtering systems
-type PaginationConfig = ();
-type FilterConfig = ();
 
 /// ListAPIView for displaying paginated lists of objects
 ///
@@ -147,9 +144,8 @@ where
 	/// let view = ListAPIView::<Article, JsonSerializer<Article>>::new()
 	///     .with_paginate_by(20);
 	/// ```
-	pub fn with_paginate_by(mut self, _page_size: usize) -> Self {
-		// TODO: Implement pagination configuration
-		self.pagination_config = Some(());
+	pub fn with_paginate_by(mut self, page_size: usize) -> Self {
+		self.pagination_config = Some(PaginationConfig::page_number(page_size, Some(100)));
 		self
 	}
 
@@ -193,7 +189,7 @@ where
 	}
 
 	/// Gets the objects to display
-	async fn get_objects(&self, _request: &Request) -> Result<Vec<M>> {
+	async fn get_objects(&self, request: &Request) -> Result<Vec<M>> {
 		let mut queryset = self.get_queryset();
 
 		// Apply ordering if configured
@@ -202,11 +198,58 @@ where
 			queryset = queryset.order_by(&order_fields);
 		}
 
-		// TODO: Apply filtering based on request parameters
+		// Apply filtering based on request query parameters
+		if let Some(ref filter_config) = self.filter_config {
+			for field in &filter_config.filterable_fields {
+				if let Some(value) = request.query_params.get(field) {
+					let filter = Filter::new(
+						field.clone(),
+						FilterOperator::Eq,
+						FilterValue::String(value.clone()),
+					);
+					queryset = queryset.filter(filter);
+				}
+			}
+		}
 
-		// TODO: Apply pagination based on request parameters
+		// Apply pagination based on request parameters
+		if let Some(ref pagination) = self.pagination_config {
+			match pagination {
+				PaginationConfig::PageNumber { page_size, .. } => {
+					let page = request
+						.query_params
+						.get("page")
+						.and_then(|p| p.parse::<usize>().ok())
+						.unwrap_or(1);
+					queryset = queryset.paginate(page, *page_size);
+				}
+				PaginationConfig::LimitOffset {
+					default_limit,
+					max_limit,
+				} => {
+					let limit = request
+						.query_params
+						.get("limit")
+						.and_then(|l| l.parse::<usize>().ok())
+						.unwrap_or(*default_limit)
+						.min(max_limit.unwrap_or(usize::MAX));
+					let offset = request
+						.query_params
+						.get("offset")
+						.and_then(|o| o.parse::<usize>().ok())
+						.unwrap_or(0);
+					queryset = queryset.offset(offset).limit(limit);
+				}
+				PaginationConfig::Cursor { page_size, .. } => {
+					// For cursor pagination, just apply page_size as limit
+					queryset = queryset.limit(*page_size);
+				}
+				PaginationConfig::None => {
+					// No pagination - return all objects
+				}
+			}
+		}
 
-		// For now, return all objects (pagination will be added later)
 		queryset.all().await.map_err(|e| Error::Http(e.to_string()))
 	}
 }
@@ -244,30 +287,59 @@ where
 					.collect::<Result<Vec<_>>>()?;
 
 				// Build response with pagination metadata
-				let response_body = if self.pagination_config.is_some() {
-					// TODO: Implement proper pagination
-					serde_json::json!({
-						"count": serialized.len(),
-						"page": 1,
-						"page_size": 10,
-						"total_pages": 1,
-						"next": null,
-						"previous": null,
-						"results": serialized.iter().map(|s| {
-							serde_json::from_str::<serde_json::Value>(s)
-								.unwrap_or(serde_json::Value::Null)
-						}).collect::<Vec<_>>()
-					})
-				} else {
-					serde_json::json!(
-						serialized
-							.iter()
-							.map(|s| {
-								serde_json::from_str::<serde_json::Value>(s)
-									.unwrap_or(serde_json::Value::Null)
+				let results: Vec<serde_json::Value> = serialized
+					.iter()
+					.filter_map(|s| serde_json::from_str::<serde_json::Value>(s).ok())
+					.collect();
+
+				let response_body = if let Some(ref pagination) = self.pagination_config {
+					match pagination {
+						PaginationConfig::PageNumber { page_size, .. } => {
+							let page = request
+								.query_params
+								.get("page")
+								.and_then(|p| p.parse::<usize>().ok())
+								.unwrap_or(1);
+							let count = results.len();
+							serde_json::json!({
+								"count": count,
+								"page": page,
+								"page_size": page_size,
+								"next": if count == *page_size { Some(format!("?page={}", page + 1)) } else { None::<String> },
+								"previous": if page > 1 { Some(format!("?page={}", page - 1)) } else { None::<String> },
+								"results": results
 							})
-							.collect::<Vec<_>>()
-					)
+						}
+						PaginationConfig::LimitOffset { .. } => {
+							let offset = request
+								.query_params
+								.get("offset")
+								.and_then(|o| o.parse::<usize>().ok())
+								.unwrap_or(0);
+							let limit = request
+								.query_params
+								.get("limit")
+								.and_then(|l| l.parse::<usize>().ok())
+								.unwrap_or(10);
+							let count = results.len();
+							serde_json::json!({
+								"count": count,
+								"offset": offset,
+								"limit": limit,
+								"next": if count == limit { Some(format!("?offset={}&limit={}", offset + limit, limit)) } else { None::<String> },
+								"previous": if offset > 0 { Some(format!("?offset={}&limit={}", offset.saturating_sub(limit), limit)) } else { None::<String> },
+								"results": results
+							})
+						}
+						_ => {
+							serde_json::json!({
+								"count": results.len(),
+								"results": results
+							})
+						}
+					}
+				} else {
+					serde_json::json!(results)
 				};
 
 				Response::ok().with_json(&response_body)

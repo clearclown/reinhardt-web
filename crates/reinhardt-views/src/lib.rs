@@ -53,8 +53,7 @@ pub mod browsable_api;
 pub mod generic;
 pub mod openapi;
 
-// Re-export viewsets if the feature is enabled
-#[cfg(feature = "viewsets")]
+// Re-export viewsets
 pub use reinhardt_viewsets as viewsets;
 
 // Module declarations
@@ -71,6 +70,6 @@ pub use mixins::{MultipleObjectMixin, SingleObjectMixin};
 
 // Re-export Generic API Views
 pub use generic::{
-	CreateAPIView, DestroyAPIView, ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView,
-	RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView,
+	CreateAPIView, DestroyAPIView, ListAPIView, ListCreateAPIView, RetrieveAPIView,
+	RetrieveDestroyAPIView, RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView,
 };
