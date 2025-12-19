@@ -44,11 +44,6 @@ pub use storage::{GcsConfig, GcsStorage};
 
 pub use template_integration::TemplateStaticConfig;
 
-#[cfg(feature = "templates-integration")]
-pub use template_integration::{
-	init_template_static_config, init_template_static_config_with_manifest,
-};
-
 pub use processing::{ProcessingConfig, ProcessingPipeline, ProcessingResult, Processor};
 
 #[cfg(feature = "dev-server")]

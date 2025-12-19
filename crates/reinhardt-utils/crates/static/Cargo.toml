@@ -12,7 +12,6 @@ description = "Static file serving and production utilities for Reinhardt with h
 # Internal dependencies
 reinhardt-core = { workspace = true, features = ["exception", "types", "http"] }
 reinhardt-storage = { version = "0.1.0-alpha.1", path = "../storage" }
-reinhardt-template = { workspace = true, optional = true }
 
 # Async runtime
 tokio = { workspace = true }
@@ -78,7 +77,6 @@ default = []
 s3 = ["dep:aws-config", "dep:aws-sdk-s3"]
 azure = ["dep:azure_storage", "dep:azure_storage_blobs"]
 gcs = ["dep:cloud-storage"]
-templates-integration = ["dep:reinhardt-template"]
 processing = []
 image-optimization = ["processing", "dep:oxipng", "dep:image", "dep:webp"]
 source-maps = ["processing"]
@@ -97,7 +95,6 @@ full = [
   "s3",
   "azure",
   "gcs",
-  "templates-integration",
   "processing",
   "image-optimization",
   "source-maps",
@@ -111,4 +108,3 @@ tokio-test = "0.4"
 tempfile = "3.8"
 serial_test = { workspace = true }
 reinhardt-test = { workspace = true, features = ["static"] }
-reinhardt-template = { workspace = true, features = ["templates"] }

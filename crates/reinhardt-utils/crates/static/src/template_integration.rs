@@ -1,7 +1,6 @@
 //! Template integration for static files
 //!
-//! Provides integration between reinhardt-static and reinhardt-templates,
-//! allowing templates to generate URLs to static files using the `static` filter.
+//! Provides configuration types for static file URL generation in templates.
 
 use crate::{ManifestStaticFilesStorage, StaticFilesConfig};
 use std::collections::HashMap;
@@ -9,8 +8,8 @@ use std::io;
 
 /// Configuration for static files in templates
 ///
-/// This is a simplified version of `reinhardt_template::templates::r#static_filters::StaticConfig`
-/// that can be constructed from `StaticFilesConfig`.
+/// This configuration can be used with template systems to generate URLs for static files.
+/// It can be constructed from `StaticFilesConfig`.
 #[derive(Debug, Clone)]
 pub struct TemplateStaticConfig {
 	/// Base URL for static files (e.g., "/static/")
@@ -119,77 +118,80 @@ impl TemplateStaticConfig {
 			manifest,
 		})
 	}
-}
 
-#[cfg(feature = "templates-integration")]
-impl From<TemplateStaticConfig> for reinhardt_template::templates::r#static_filters::StaticConfig {
-	fn from(config: TemplateStaticConfig) -> Self {
-		Self {
-			static_url: config.static_url,
-			use_manifest: config.use_manifest,
-			manifest: config.manifest,
+	/// Resolve a static file path to a URL
+	///
+	/// This method generates a URL for a static file, optionally using
+	/// manifest-based hashed filenames for cache busting.
+	///
+	/// # Arguments
+	///
+	/// * `name` - The file path relative to static root, optionally with query string and/or fragment
+	///
+	/// # Examples
+	///
+	/// Basic usage:
+	///
+	/// ```rust
+	/// use reinhardt_static::template_integration::TemplateStaticConfig;
+	///
+	/// let config = TemplateStaticConfig::new("/static/".to_string());
+	/// assert_eq!(config.resolve_url("css/style.css"), "/static/css/style.css");
+	/// ```
+	///
+	/// With manifest:
+	///
+	/// ```rust
+	/// use reinhardt_static::template_integration::TemplateStaticConfig;
+	/// use std::collections::HashMap;
+	///
+	/// let mut manifest = HashMap::new();
+	/// manifest.insert("css/style.css".to_string(), "css/style.abc123.css".to_string());
+	///
+	/// let config = TemplateStaticConfig::new("/static/".to_string())
+	///     .with_manifest(manifest);
+	///
+	/// assert_eq!(config.resolve_url("css/style.css"), "/static/css/style.abc123.css");
+	/// ```
+	///
+	/// With query string and fragment:
+	///
+	/// ```rust
+	/// use reinhardt_static::template_integration::TemplateStaticConfig;
+	///
+	/// let config = TemplateStaticConfig::new("/static/".to_string());
+	/// assert_eq!(
+	///     config.resolve_url("test.css?v=1#section"),
+	///     "/static/test.css?v=1#section"
+	/// );
+	/// ```
+	pub fn resolve_url(&self, name: &str) -> String {
+		// 1. Split path, query string, and fragment
+		let (path, query_fragment) = match name.split_once('?') {
+			Some((p, qf)) => (p, Some(qf)),
+			None => (name, None),
+		};
+
+		// 2. Check manifest for hashed filename
+		let resolved_path = if self.use_manifest {
+			self.manifest.get(path).map(|s| s.as_str()).unwrap_or(path)
+		} else {
+			path
+		};
+
+		// 3. Normalize and join URL
+		let base = self.static_url.trim_end_matches('/');
+		let path = resolved_path.trim_start_matches('/');
+		let mut url = format!("{}/{}", base, path);
+
+		// 4. Append query string and fragment
+		if let Some(qf) = query_fragment {
+			url.push('?');
+			url.push_str(qf);
 		}
+
+		url
 	}
-}
-
-#[cfg(feature = "templates-integration")]
-/// Initialize the global static configuration for templates
-///
-/// This should be called once at application startup to configure how
-/// templates generate URLs to static files.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_static::{StaticFilesConfig, template_integration};
-/// use std::path::PathBuf;
-///
-/// let config = StaticFilesConfig {
-///     static_root: PathBuf::from("/var/www/static"),
-///     static_url: "/static/".to_string(),
-///     staticfiles_dirs: vec![],
-///     media_url: None,
-/// };
-///
-/// template_integration::init_template_static_config(&config);
-/// ```
-pub fn init_template_static_config(config: &StaticFilesConfig) {
-	let template_config = TemplateStaticConfig::from(config);
-	let reinhardt_config =
-		reinhardt_template::templates::r#static_filters::StaticConfig::from(template_config);
-	reinhardt_template::templates::r#static_filters::init_static_config(reinhardt_config);
-}
-
-#[cfg(feature = "templates-integration")]
-/// Initialize the global static configuration with manifest support
-///
-/// This loads the manifest from storage and configures templates to use
-/// hashed filenames for cache busting.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_static::{ManifestStaticFilesStorage, template_integration};
-/// use std::path::PathBuf;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let storage = ManifestStaticFilesStorage::new(
-///     PathBuf::from("/var/www/static"),
-///     "/static/"
-/// );
-///
-/// template_integration::init_template_static_config_with_manifest(&storage).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn init_template_static_config_with_manifest(
-	storage: &ManifestStaticFilesStorage,
-) -> io::Result<()> {
-	let template_config = TemplateStaticConfig::from_storage(storage).await?;
-	let reinhardt_config =
-		reinhardt_template::templates::r#static_filters::StaticConfig::from(template_config);
-	reinhardt_template::templates::r#static_filters::init_static_config(reinhardt_config);
-	Ok(())
 }
 
 #[cfg(test)]
@@ -267,6 +269,119 @@ mod tests {
 		assert_eq!(
 			config.manifest.get("js/app.js"),
 			Some(&"js/app.def456.js".to_string())
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_basic() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(config.resolve_url("css/style.css"), "/static/css/style.css");
+	}
+
+	#[test]
+	fn test_resolve_url_with_leading_slash() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(
+			config.resolve_url("/css/style.css"),
+			"/static/css/style.css"
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_with_manifest() {
+		let mut manifest = HashMap::new();
+		manifest.insert(
+			"css/style.css".to_string(),
+			"css/style.abc123.css".to_string(),
+		);
+
+		let config = TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
+
+		assert_eq!(
+			config.resolve_url("css/style.css"),
+			"/static/css/style.abc123.css"
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_manifest_fallback() {
+		let mut manifest = HashMap::new();
+		manifest.insert(
+			"css/style.css".to_string(),
+			"css/style.abc123.css".to_string(),
+		);
+
+		let config = TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
+
+		// File not in manifest should fallback to original path
+		assert_eq!(config.resolve_url("js/app.js"), "/static/js/app.js");
+	}
+
+	#[test]
+	fn test_resolve_url_with_query_string() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(config.resolve_url("test.css?v=1"), "/static/test.css?v=1");
+	}
+
+	#[test]
+	fn test_resolve_url_with_fragment() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(
+			config.resolve_url("test.css#section"),
+			"/static/test.css#section"
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_with_query_and_fragment() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(
+			config.resolve_url("test.css?v=1#section"),
+			"/static/test.css?v=1#section"
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_manifest_with_query_string() {
+		let mut manifest = HashMap::new();
+		manifest.insert(
+			"css/style.css".to_string(),
+			"css/style.abc123.css".to_string(),
+		);
+
+		let config = TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
+
+		// Manifest lookup should work with query string
+		assert_eq!(
+			config.resolve_url("css/style.css?v=1"),
+			"/static/css/style.abc123.css?v=1"
+		);
+	}
+
+	#[test]
+	fn test_resolve_url_different_base_urls() {
+		let config1 = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(config1.resolve_url("test.txt"), "/static/test.txt");
+
+		let config2 = TemplateStaticConfig::new("/static".to_string());
+		assert_eq!(config2.resolve_url("test.txt"), "/static/test.txt");
+
+		let config3 = TemplateStaticConfig::new("static/".to_string());
+		assert_eq!(config3.resolve_url("test.txt"), "static/test.txt");
+	}
+
+	#[test]
+	fn test_resolve_url_empty_path() {
+		let config = TemplateStaticConfig::new("/static/".to_string());
+		assert_eq!(config.resolve_url(""), "/static/");
+	}
+
+	#[test]
+	fn test_resolve_url_cdn_url() {
+		let config = TemplateStaticConfig::new("https://cdn.example.com/static/".to_string());
+		assert_eq!(
+			config.resolve_url("css/style.css"),
+			"https://cdn.example.com/static/css/style.css"
 		);
 	}
 }

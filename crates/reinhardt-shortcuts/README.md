@@ -220,63 +220,54 @@ async fn user_list(status: &str) -> Result<Response, Response> {
 }
 ```
 
-### Template Integration (requires `templates` feature)
+### Server-Side Rendering (use `reinhardt-pages`)
 
-Templates are loaded from the file system using `FileSystemTemplateLoader`. The template
-directory is specified by the `REINHARDT_TEMPLATE_DIR` environment variable (defaults to `./templates`).
+For server-side rendering with components, use `reinhardt-pages` directly instead of template shortcuts.
+reinhardt-pages provides a modern WASM-based component system with SSR support.
 
-**Current Implementation**: Basic variable substitution is supported using `{{ variable }}` syntax.
-Templates are rendered dynamically at runtime with simple placeholder replacement.
+**Migration Note**: The `render_template` and `render_to_response` functions have been removed.
+Use `reinhardt-pages::ssr::SsrRenderer` for component-based SSR instead.
 
-#### `render_template<K, V>(request: &Request, template_name: &str, context: HashMap<K, V>) -> Result<Response, Box<Response>>`
-where `K: AsRef<str>`, `V: Serialize`
-
-Template rendering with context. Loads a template file from the filesystem and returns
-an HTTP response with the template content. Context variables are displayed in debug mode
-as HTML comments.
-
-**Example:**
+#### Example: Component-Based SSR
 
 ```rust
-use reinhardt_shortcuts::render_template;
-use std::collections::HashMap;
+use reinhardt_pages::prelude::*;
+use reinhardt_pages::ssr::{SsrRenderer, SsrOptions};
+use reinhardt_http::Response;
+
+#[component]
+fn IndexPage(title: String, user: String) -> impl IntoView {
+    div()
+        .child(h1().text(title))
+        .child(p().text(format!("Welcome, {}!", user)))
+}
 
 async fn index_view(request: Request) -> Result<Response, Response> {
-    let mut context = HashMap::new();
-    context.insert("title", "Welcome");
-    context.insert("user", request.user().name());
+    let renderer = SsrRenderer::new(SsrOptions {
+        include_hydration_markers: true,
+        serialize_state: true,
+        ..Default::default()
+    });
 
-    render_template(&request, "index.html", context)
+    let html = renderer.render_page(IndexPage {
+        title: "Welcome".to_string(),
+        user: request.user().name().to_string(),
+    })?;
+
+    Ok(Response::html(html))
 }
 ```
 
-#### `render_to_response(request: &Request, template_name: &str, context: HashMap) -> Result<Response, Response>`
+**Key Differences from Old Template System:**
 
-Advanced template rendering with custom response configuration. Similar to `render_template`
-but returns a mutable Response that can be further customized.
+| Feature | Old (Templates) | New (reinhardt-pages) |
+|---------|----------------|----------------------|
+| Rendering | Server-side only | SSR + Client hydration |
+| Syntax | Template files (`.html`) | Rust components |
+| Type Safety | Runtime errors | Compile-time checking |
+| Interactivity | None | Built-in with WASM |
 
-**Example:**
-
-```rust
-use reinhardt_shortcuts::render_to_response;
-use std::collections::HashMap;
-
-async fn custom_view(request: Request) -> Result<Response, Response> {
-    let mut context = HashMap::new();
-    context.insert("message", "Custom response");
-
-    let mut response = render_to_response(&request, "custom.html", context)?;
-
-    // Customize the response
-    response.status = hyper::StatusCode::CREATED;
-    response.headers.insert(
-        hyper::header::CACHE_CONTROL,
-        hyper::header::HeaderValue::from_static("no-cache"),
-    );
-
-    Ok(response)
-}
-```
+See [`reinhardt-pages` documentation](../../docs/api/README.md#reinhardt-pages) for more details.
 
 ## Usage Patterns
 

@@ -174,14 +174,10 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
     - Backend lifecycle management (register, unregister, clear)
 
 - **Template Integration** (`template_integration` module)
-  - Integration with `reinhardt-templates` for static file URLs in templates
   - `TemplateStaticConfig` - Configuration for template static file generation
-  - `init_template_static_config()` - Initialize from `StaticFilesConfig`
-  - `init_template_static_config_with_manifest()` - Initialize with manifest support
   - Automatic hashed filename resolution via manifest
-  - Works with Tera's `{{ "path/to/file.css"|static }}` filter syntax
   - Supports custom static URLs (CDN, etc.)
-  - Feature flag: `templates-integration` (optional)
+  - Can be integrated with any template system (reinhardt-pages SSR, etc.)
 
 - **File Processing Pipeline** (`processing` module)
   - CSS/JavaScript minification (basic whitespace and comment removal)
@@ -367,18 +363,15 @@ if report.is_healthy() {
 
 ### Template Integration
 
-**Feature flag**: `templates-integration`
-
 ```toml
 [dependencies]
-reinhardt-static = { version = "0.1.0-alpha.1", features = ["templates-integration"] }
-reinhardt-templates = "0.1.0-alpha.1"
+reinhardt-static = { version = "0.1.0-alpha.1" }
 ```
 
 #### Basic Template Integration
 
 ```rust
-use reinhardt_static::{StaticFilesConfig, init_template_static_config};
+use reinhardt_static::{StaticFilesConfig, TemplateStaticConfig};
 use std::path::PathBuf;
 
 // Initialize static files configuration
@@ -389,38 +382,32 @@ let config = StaticFilesConfig {
     media_url: None,
 };
 
-// Initialize template static config
-init_template_static_config(&config);
+// Create template static config for use in your template system
+let template_config = TemplateStaticConfig::from(&config);
+
+// Use template_config.resolve_url("css/style.css") to get "/static/css/style.css"
 ```
 
-Now in your Tera templates, you can use the `static` filter:
+With reinhardt-pages SSR, you can use the configuration directly:
 
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <link rel="stylesheet" href="{{ "css/style.css"|static }}">
-    <script src="{{ "js/app.js"|static }}"></script>
-</head>
-<body>
-    <img src="{{ "images/logo.png"|static }}" alt="Logo">
-</body>
-</html>
+```rust
+use reinhardt_pages::{SsrRenderer, SsrOptions};
+use reinhardt_static::TemplateStaticConfig;
+
+let static_config = TemplateStaticConfig::new("/static/".to_string());
+
+let renderer = SsrRenderer::with_options(
+    SsrOptions::new()
+        .css(static_config.resolve_url("css/style.css"))
+        .js(static_config.resolve_url("js/app.js"))
+);
 ```
 
-This will generate:
+This will generate static file URLs:
 
 ```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <link rel="stylesheet" href="/static/css/style.css" />
-    <script src="/static/js/app.js"></script>
-  </head>
-  <body>
-    <img src="/static/images/logo.png" alt="Logo" />
-  </body>
-</html>
+<link rel="stylesheet" href="/static/css/style.css" />
+<script src="/static/js/app.js"></script>
 ```
 
 #### Template Integration with Manifest (Hashed Filenames)
@@ -473,16 +460,15 @@ The same template will now generate hashed URLs for cache busting:
 
 ```rust
 use reinhardt_static::TemplateStaticConfig;
-use std::collections::HashMap;
 
 // Configure with CDN URL
 let config = TemplateStaticConfig::new(
     "https://cdn.example.com/assets/".to_string()
 );
 
-// Convert to reinhardt_templates::StaticConfig
-let static_config = reinhardt_templates::StaticConfig::from(config);
-reinhardt_templates::init_static_config(static_config);
+// Use config.resolve_url("css/style.css") to get CDN URL
+let css_url = config.resolve_url("css/style.css");
+// Returns: "https://cdn.example.com/assets/css/style.css"
 ```
 
 Templates will now generate CDN URLs:
@@ -506,8 +492,9 @@ manifest.insert("main.css".to_string(), "main.v1.2.3.css".to_string());
 let config = TemplateStaticConfig::new("/static/".to_string())
     .with_manifest(manifest);
 
-let static_config = reinhardt_templates::StaticConfig::from(config);
-reinhardt_templates::init_static_config(static_config);
+// Now resolve_url will use the manifest for hashed filenames
+let js_url = config.resolve_url("app.js");
+// Returns: "/static/app.v1.2.3.js"
 ```
 
 ### File Processing Pipeline
