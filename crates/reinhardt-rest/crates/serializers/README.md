@@ -142,12 +142,6 @@ Provides serializers for converting between Rust types and various formats (JSON
 - **`ContentNegotiator`**: Select appropriate response format based on client request
 - **`MediaType`**: Parse and compare media type strings
 
-#### Renderers (Re-exported from `reinhardt-renderers`)
-
-- **`JSONRenderer`**: Render data as JSON
-- **`XMLRenderer`**: Render data as XML
-- **`BrowsableAPIRenderer`**: Interactive HTML interface for API exploration
-
 #### Parsers (Re-exported from `reinhardt-parsers`)
 
 - **`JSONParser`**: Parse JSON request bodies
@@ -702,7 +696,6 @@ let renderer = negotiator.select("application/json")?;
 
 - `reinhardt-orm`: ORM integration for ModelSerializer
 - `reinhardt-parsers`: Request body parsing
-- `reinhardt-renderers`: Response rendering
 - `reinhardt-negotiation`: Content type negotiation
 - `serde`, `serde_json`: Serialization infrastructure
 - `sqlx`: Database operations for validators

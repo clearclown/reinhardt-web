@@ -8,6 +8,7 @@
 //! ```no_run
 //! use reinhardt_serializers::validators::{UniqueValidator, UniqueTogetherValidator};
 //! use reinhardt_db::orm::Model;
+//! use reinhardt_db::backends::DatabaseConnection;
 //! use serde::{Serialize, Deserialize};
 //!
 //! #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,11 +26,11 @@
 //! }
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let pool = sqlx::PgPool::connect("postgres://localhost/test").await?;
+//! let connection = DatabaseConnection::connect_postgres("postgres://localhost/test").await?;
 //!
 //! // Validate that username is unique
 //! let validator = UniqueValidator::<User>::new("username");
-//! validator.validate(&pool, "alice", None).await?;
+//! validator.validate(&connection, "alice", None).await?;
 //!
 //! // Validate that (username, email) combination is unique
 //! let mut values = std::collections::HashMap::new();
@@ -37,15 +38,15 @@
 //! values.insert("email".to_string(), "alice@example.com".to_string());
 //!
 //! let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"]);
-//! validator.validate(&pool, &values, None).await?;
+//! validator.validate(&connection, &values, None).await?;
 //! # Ok(())
 //! # }
 //! ```
 
 use crate::SerializerError;
+use reinhardt_db::backends::{DatabaseConnection, QueryValue};
 use reinhardt_db::orm::Model;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
-use sqlx::{Pool, Postgres, Row};
 use std::marker::PhantomData;
 use thiserror::Error;
 
@@ -116,6 +117,7 @@ impl From<DatabaseValidatorError> for SerializerError {
 /// ```no_run
 /// # use reinhardt_serializers::validators::UniqueValidator;
 /// # use reinhardt_db::orm::Model;
+/// # use reinhardt_db::backends::DatabaseConnection;
 /// # use serde::{Serialize, Deserialize};
 /// #
 /// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,15 +134,15 @@ impl From<DatabaseValidatorError> for SerializerError {
 /// # }
 /// #
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let pool = sqlx::PgPool::connect("postgres://localhost/test").await?;
+/// let connection = DatabaseConnection::connect_postgres("postgres://localhost/test").await?;
 /// let validator = UniqueValidator::<User>::new("username");
 ///
 /// // Check if "alice" is unique
-/// validator.validate(&pool, "alice", None).await?;
+/// validator.validate(&connection, "alice", None).await?;
 ///
 /// // Check if "alice" is unique, excluding user with id=1
 /// let user_id = 1i64;
-/// validator.validate(&pool, "alice", Some(&user_id)).await?;
+/// validator.validate(&connection, "alice", Some(&user_id)).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -217,7 +219,7 @@ impl<M: Model> UniqueValidator<M> {
 
 	pub async fn validate(
 		&self,
-		pool: &Pool<Postgres>,
+		connection: &DatabaseConnection,
 		value: &str,
 		instance_pk: Option<&M::PrimaryKey>,
 	) -> Result<(), DatabaseValidatorError>
@@ -239,29 +241,27 @@ impl<M: Model> UniqueValidator<M> {
 
 		let (query, _) = stmt.build(PostgresQueryBuilder);
 
-		let count: i64 = if let Some(pk) = instance_pk {
-			let pk_str = pk.to_string();
-			sqlx::query(query.as_str())
-				.bind(value)
-				.bind(pk_str)
-				.fetch_one(pool)
-				.await
-				.map_err(|e| DatabaseValidatorError::DatabaseError {
-					message: e.to_string(),
-					query: Some(query.clone()),
-				})?
-				.get("count")
-		} else {
-			sqlx::query(query.as_str())
-				.bind(value)
-				.fetch_one(pool)
-				.await
-				.map_err(|e| DatabaseValidatorError::DatabaseError {
-					message: e.to_string(),
-					query: Some(query.clone()),
-				})?
-				.get("count")
-		};
+		// Build params vector
+		let mut params = vec![QueryValue::from(value)];
+		if let Some(pk) = instance_pk {
+			params.push(QueryValue::from(pk.to_string()));
+		}
+
+		// Execute query using DatabaseConnection
+		let row = connection
+			.fetch_one(query.as_str(), params)
+			.await
+			.map_err(|e| DatabaseValidatorError::DatabaseError {
+				message: e.to_string(),
+				query: Some(query.clone()),
+			})?;
+
+		let count: i64 = row
+			.get("count")
+			.map_err(|e| DatabaseValidatorError::DatabaseError {
+				message: e.to_string(),
+				query: Some(query.clone()),
+			})?;
 
 		if count > 0 {
 			Err(DatabaseValidatorError::UniqueConstraintViolation {
@@ -287,6 +287,7 @@ impl<M: Model> UniqueValidator<M> {
 /// ```no_run
 /// # use reinhardt_serializers::validators::UniqueTogetherValidator;
 /// # use reinhardt_db::orm::Model;
+/// # use reinhardt_db::backends::DatabaseConnection;
 /// # use serde::{Serialize, Deserialize};
 /// # use std::collections::HashMap;
 /// #
@@ -305,14 +306,14 @@ impl<M: Model> UniqueValidator<M> {
 /// # }
 /// #
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let pool = sqlx::PgPool::connect("postgres://localhost/test").await?;
+/// let connection = DatabaseConnection::connect_postgres("postgres://localhost/test").await?;
 /// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"]);
 ///
 /// let mut values = HashMap::new();
 /// values.insert("username".to_string(), "alice".to_string());
 /// values.insert("email".to_string(), "alice@example.com".to_string());
 ///
-/// validator.validate(&pool, &values, None).await?;
+/// validator.validate(&connection, &values, None).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -389,7 +390,7 @@ impl<M: Model> UniqueTogetherValidator<M> {
 
 	pub async fn validate(
 		&self,
-		pool: &Pool<Postgres>,
+		connection: &DatabaseConnection,
 		values: &std::collections::HashMap<String, String>,
 		instance_pk: Option<&M::PrimaryKey>,
 	) -> Result<(), DatabaseValidatorError>
@@ -418,7 +419,8 @@ impl<M: Model> UniqueTogetherValidator<M> {
 
 		let (query, _) = stmt.build(PostgresQueryBuilder);
 
-		let mut query_builder = sqlx::query(query.as_str());
+		// Build params vector
+		let mut params = Vec::new();
 		let mut field_values = Vec::new();
 		for field_name in &self.field_names {
 			let value =
@@ -428,30 +430,28 @@ impl<M: Model> UniqueTogetherValidator<M> {
 						field: field_name.clone(),
 					})?;
 			field_values.push(value.clone());
-			query_builder = query_builder.bind(value);
+			params.push(QueryValue::from(value.clone()));
 		}
 
-		let count: i64 = if let Some(pk) = instance_pk {
-			let pk_str = pk.to_string();
-			query_builder = query_builder.bind(pk_str);
-			query_builder
-				.fetch_one(pool)
-				.await
-				.map_err(|e| DatabaseValidatorError::DatabaseError {
-					message: e.to_string(),
-					query: Some(query.clone()),
-				})?
-				.get("count")
-		} else {
-			query_builder
-				.fetch_one(pool)
-				.await
-				.map_err(|e| DatabaseValidatorError::DatabaseError {
-					message: e.to_string(),
-					query: Some(query.clone()),
-				})?
-				.get("count")
-		};
+		if let Some(pk) = instance_pk {
+			params.push(QueryValue::from(pk.to_string()));
+		}
+
+		// Execute query using DatabaseConnection
+		let row = connection
+			.fetch_one(query.as_str(), params)
+			.await
+			.map_err(|e| DatabaseValidatorError::DatabaseError {
+				message: e.to_string(),
+				query: Some(query.clone()),
+			})?;
+
+		let count: i64 = row
+			.get("count")
+			.map_err(|e| DatabaseValidatorError::DatabaseError {
+				message: e.to_string(),
+				query: Some(query.clone()),
+			})?;
 
 		if count > 0 {
 			Err(DatabaseValidatorError::UniqueTogetherViolation {

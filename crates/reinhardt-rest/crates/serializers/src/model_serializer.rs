@@ -9,8 +9,8 @@ use crate::nested_config::{NestedFieldConfig, NestedSerializerConfig};
 use crate::validator_config::ValidatorConfig;
 use crate::validators::{UniqueTogetherValidator, UniqueValidator};
 use crate::{Serializer, SerializerError, ValidatorError};
+use reinhardt_db::backends::DatabaseConnection;
 use reinhardt_db::orm::Model;
-use sqlx::{Pool, Postgres};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -442,7 +442,7 @@ where
 	///
 	/// # Arguments
 	///
-	/// * `pool` - PostgreSQL database connection pool
+	/// * `connection` - Database connection
 	/// * `instance` - The model instance to validate
 	///
 	/// # Returns
@@ -455,10 +455,11 @@ where
 	/// ```no_run
 	/// # use reinhardt_serializers::ModelSerializer;
 	/// # use reinhardt_auth::DefaultUser;
-	/// # use sqlx::{Pool, Postgres};
+	/// # use reinhardt_db::backends::DatabaseConnection;
 	/// # use uuid::Uuid;
 	/// #
-	/// # async fn example(pool: Pool<Postgres>) {
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// # let connection = DatabaseConnection::connect_postgres("postgres://localhost/test").await?;
 	/// let serializer = ModelSerializer::<DefaultUser>::new();
 	/// let user = DefaultUser {
 	///     id: Uuid::new_v4(),
@@ -466,15 +467,16 @@ where
 	///     ..Default::default()
 	/// };
 	///
-	/// match serializer.validate_async(&pool, &user).await {
+	/// match serializer.validate_async(&connection, &user).await {
 	///     Ok(()) => println!("Validation passed"),
 	///     Err(e) => println!("Validation failed: {}", e),
 	/// }
+	/// # Ok(())
 	/// # }
 	/// ```
 	pub async fn validate_async(
 		&self,
-		pool: &Pool<Postgres>,
+		connection: &DatabaseConnection,
 		instance: &M,
 	) -> Result<(), SerializerError>
 	where
@@ -497,7 +499,7 @@ where
 				};
 
 				validator
-					.validate(pool, &value_str, instance.primary_key())
+					.validate(connection, &value_str, instance.primary_key())
 					.await
 					.map_err(|e| {
 						SerializerError::Validation(ValidatorError::UniqueViolation {
@@ -525,7 +527,7 @@ where
 			}
 
 			validator
-				.validate(pool, &values, instance.primary_key())
+				.validate(connection, &values, instance.primary_key())
 				.await
 				.map_err(|e| {
 					SerializerError::Validation(ValidatorError::UniqueTogetherViolation {
