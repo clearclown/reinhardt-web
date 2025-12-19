@@ -3,6 +3,8 @@
 //! This crate provides Django-style validators for common validation needs,
 //! as well as compile-time validated database identifier types.
 
+pub(crate) mod lazy_patterns;
+
 pub mod color;
 pub mod composition;
 pub mod conditional;
@@ -23,6 +25,18 @@ pub mod reserved;
 pub mod string;
 pub mod uniqueness;
 pub mod url;
+
+#[cfg(feature = "serde")]
+pub mod serialization;
+
+#[cfg(feature = "jsonschema")]
+pub mod schema;
+
+#[cfg(feature = "parallel")]
+pub mod parallel;
+
+#[cfg(feature = "i18n")]
+pub mod i18n;
 
 pub use color::{ColorFormat, ColorValidator};
 pub use composition::{AndValidator, OrValidator};

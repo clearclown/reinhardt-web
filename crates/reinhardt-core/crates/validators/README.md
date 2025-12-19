@@ -379,21 +379,72 @@ assert!(detector.validate("  sw1a 1aa  ").is_ok()); // UK lowercase with spaces
 assert!(detector.validate("k1a 0b1").is_ok()); // Canada lowercase
 ```
 
+#### Image Dimension Validator (Implemented ✓)
+
+- **ImageDimensionValidator**: Validate image width/height dimensions
+  - **Min/max width constraints**: `min_width()`, `max_width()`
+  - **Min/max height constraints**: `min_height()`, `max_height()`
+  - **Aspect ratio validation**: `aspect_ratio()` with configurable tolerance
+  - **File validation**: `validate_file()` for file paths
+  - **Bytes validation**: `validate_bytes()` for in-memory images
+  - **Supported formats**: JPEG, PNG, GIF, WebP, BMP, TIFF, ICO, and more via `image` crate
+
+**Example**:
+```rust
+use reinhardt_validators::ImageDimensionValidator;
+
+// Basic dimension constraints
+let validator = ImageDimensionValidator::new()
+    .min_width(100)
+    .max_width(1920)
+    .min_height(100)
+    .max_height(1080);
+
+// With aspect ratio validation (16:9 with 1% tolerance)
+let hd_validator = ImageDimensionValidator::new()
+    .min_width(1280)
+    .min_height(720)
+    .aspect_ratio(16, 9)
+    .aspect_ratio_tolerance(0.01);
+
+// Validate from file path
+let result = validator.validate_file("image.jpg");
+
+// Validate from bytes
+let image_bytes: Vec<u8> = std::fs::read("image.png")?;
+let result = validator.validate_bytes(&image_bytes);
+```
+
+#### Conditional Validation (Implemented ✓)
+
+- **ConditionalValidator**: Apply validators based on runtime conditions
+  - **`when` condition**: Apply validator only when condition is true
+  - **`unless` condition**: Apply validator only when condition is false
+  - **Closure-based conditions**: Use custom logic for condition evaluation
+  - **Chainable API**: Combine with other validators
+
+**Example**:
+```rust
+use reinhardt_validators::{ConditionalValidator, MinLengthValidator, Validator};
+
+// Apply validation only when condition is true
+let validator = ConditionalValidator::when(
+    MinLengthValidator::new(10),
+    || some_condition(), // Closure returns bool
+);
+
+// Apply validation unless condition is true
+let validator = ConditionalValidator::unless(
+    MinLengthValidator::new(5),
+    || skip_condition(),
+);
+```
+
 #### Planned Features
 
 **Medium Priority (Phase 3):**
 
-1. **ImageDimensionValidator**: Validate image width/height dimensions
-   - Min/max width and height constraints
-   - Aspect ratio validation with tolerance
-   - Support for multiple image formats (JPEG, PNG, GIF, etc.)
-
-2. **Conditional Validation**: Apply validators based on runtime conditions
-   - `when`: Apply validator when condition is true
-   - `unless`: Apply validator when condition is false
-   - Closure-based condition support
-
-3. **Custom Error Messages (Extended)**: Extend `.with_message()` to all validators
+1. **Custom Error Messages (Extended)**: Extend `.with_message()` to all validators
    - Consistent API across all validators
    - Custom message templates
    - Maintain default error messages as fallback
