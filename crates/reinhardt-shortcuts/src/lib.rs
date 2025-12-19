@@ -5,42 +5,21 @@
 //!
 //! ## Core Shortcuts
 //!
-//! ### Rendering Templates (Tera)
+//! ### Rendering Responses
 //!
-//! ```rust,no_run
-//! # use reinhardt_shortcuts::render_template;
-//! # use std::collections::HashMap;
-//! # let request = ();
-//! # let user = ();
-//! // Render a Tera template with context
-//! // let mut context = HashMap::new();
-//! // context.insert("title", "Welcome");
-//! // context.insert("user", user.name());
-//! //
-//! // let response = render_template(&request, "index.html", context)?;
 //! ```
+//! use reinhardt_shortcuts::{render_json, render_html, render_text};
+//! use serde_json::json;
 //!
-//! ### Custom Error Pages
+//! // Render JSON response
+//! let data = json!({"status": "success"});
+//! let response = render_json(&data);
 //!
-//! ```rust,no_run
-//! # use reinhardt_shortcuts::{page_not_found, server_error, render_debug_error_page};
-//! # use std::collections::HashMap;
-//! # let request = ();
-//! // Return a 404 error page
-//! // return Err(page_not_found(&request, None));
-//! //
-//! // // Return a 500 error page with context
-//! // let mut context = HashMap::new();
-//! // context.insert("error_details", "Database connection failed");
-//! // return Err(server_error(&request, Some(context)));
-//! //
-//! // // Debug error page (development only)
-//! // let debug_response = render_debug_error_page(
-//! //     &request,
-//! //     500,
-//! //     "Detailed error message",
-//! //     Some(context)
-//! // );
+//! // Render HTML response
+//! let response = render_html("<h1>Hello</h1>");
+//!
+//! // Render text response
+//! let response = render_text("Plain text");
 //! ```
 //!
 //! ### Redirects
@@ -69,49 +48,27 @@
 //! # }
 //! ```
 //!
-//! ## Template Features
+//! ## Server-Side Rendering
 //!
-//! ### Custom Filters
+//! For server-side rendering with components, use `reinhardt-pages` directly:
 //!
-//! Available Tera filters:
+//! ```rust,ignore
+//! use reinhardt_pages::{SsrRenderer, SsrOptions, Component};
 //!
-//! ```jinja
-//! {{ long_text | truncate_chars(length=50, suffix="...") }}
-//! {{ number | intcomma }}  // 1234567 → 1,234,567
-//! {{ count }} item{{ count | pluralize }}
-//! {{ value | default(value="N/A") }}
-//! {{ field_html | add_class(class="form-control") }}
-//! ```
-//!
-//! ### Custom Functions/Tags
-//!
-//! Available Tera functions:
-//!
-//! ```jinja
-//! {% for i in range(start=0, end=10) %}
-//!   {{ i }}
-//! {% endfor %}
-//!
-//! {{ now(format="%Y-%m-%d %H:%M:%S") }}
-//!
-//! {% for item in items %}
-//!   <div class="{{ cycle(values=["odd", "even"], index=loop.index0) }}">
-//!     {{ item }}
-//!   </div>
-//! {% endfor %}
-//!
-//! <img src="{{ static(path="images/logo.png") }}">
-//! <a href="{{ url(name="user_profile", id=user.id) }}">Profile</a>
+//! let mut renderer = SsrRenderer::with_options(
+//!     SsrOptions::new()
+//!         .title("My Page")
+//!         .css("/styles.css")
+//! );
+//! let html = renderer.render_page(&my_component);
 //! ```
 //!
 //! ## Implemented Features
 //!
-//! - ✅ Custom error pages (404, 500, 403, 400, etc.)
-//! - ✅ Error page templates with Tera
-//! - ✅ Debug error pages for development environments
-//! - ✅ Template inheritance and includes (Tera-based)
-//! - ✅ Custom template filters (truncate_chars, intcomma, pluralize, default, add_class)
-//! - ✅ Custom template functions/tags (range, now, cycle, static, url)
+//! - ✅ JSON/HTML/Text response rendering
+//! - ✅ Redirect shortcuts (302, 301)
+//! - ✅ URL utilities
+//! - ✅ Database shortcuts (get_object_or_404, get_list_or_404)
 
 pub mod context;
 pub mod get_or_404;
@@ -122,30 +79,6 @@ pub mod url;
 // ORM integration (feature-gated)
 #[cfg(feature = "database")]
 pub mod orm;
-
-// Template integration (feature-gated)
-#[cfg(feature = "templates")]
-pub mod template;
-
-// Template caching for performance (feature-gated)
-#[cfg(feature = "templates")]
-pub mod template_cache;
-
-// Template inheritance support with Tera (feature-gated)
-#[cfg(feature = "templates")]
-pub mod template_inheritance;
-
-// Custom error pages (feature-gated)
-#[cfg(feature = "templates")]
-pub mod error_pages;
-
-// Custom Tera filters (feature-gated)
-#[cfg(feature = "templates")]
-pub mod tera_filters;
-
-// Custom Tera functions/tags (feature-gated)
-#[cfg(feature = "templates")]
-pub mod tera_functions;
 
 // Re-export core functions
 pub use context::TemplateContext;
@@ -159,21 +92,3 @@ pub use url::{Url, UrlError};
 // Re-export ORM functions (feature-gated)
 #[cfg(feature = "database")]
 pub use orm::{get_list_or_404, get_object_or_404};
-
-// Re-export template functions (feature-gated)
-#[cfg(feature = "templates")]
-pub use template::{
-	render_template, render_template_with_context, render_to_response,
-	render_to_response_with_context,
-};
-
-// Re-export error page functions (feature-gated)
-#[cfg(feature = "templates")]
-pub use error_pages::{
-	ErrorPageBuilder, bad_request, page_not_found, permission_denied, render_debug_error_page,
-	render_error_page, server_error,
-};
-
-// Re-export template cache types (feature-gated)
-#[cfg(feature = "templates")]
-pub use template_cache::{EvictedEntry, TemplateCacheError};

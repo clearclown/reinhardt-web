@@ -76,11 +76,6 @@ impl TemplateContext {
 		}
 		Self { inner }
 	}
-
-	/// Returns a reference to the inner HashMap.
-	pub(crate) fn as_map(&self) -> &HashMap<String, Value> {
-		&self.inner
-	}
 }
 
 impl<K, V> From<HashMap<K, V>> for TemplateContext

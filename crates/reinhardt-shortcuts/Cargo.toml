@@ -10,7 +10,6 @@ description = "Django-style shortcut functions for redirects, rendering, and 404
 [dependencies]
 reinhardt-core = { workspace = true }
 reinhardt-views = { workspace = true }
-reinhardt-template = { workspace = true, optional = true }
 reinhardt-db = { workspace = true, optional = true }
 reinhardt-urls = { workspace = true, features = ["routers"] }
 
@@ -18,16 +17,12 @@ bytes = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tera = { version = "1.20", optional = true }
-chrono = { version = "0.4", optional = true }
 hyper = { workspace = true }
-lru = { version = "0.16.2", optional = true }
 
 [features]
-default = ["templates"]
-templates = ["reinhardt-template", "lru", "tera", "chrono"]
+default = []
 database = ["reinhardt-db", "reinhardt-db/backends", "reinhardt-db/pool", "reinhardt-db/orm", "reinhardt-db/postgres"]
-full = ["templates", "database"]
+full = ["database"]
 
 [dev-dependencies]
 tokio = { workspace = true }
