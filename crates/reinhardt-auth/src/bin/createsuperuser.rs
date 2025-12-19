@@ -7,16 +7,25 @@ use console::style;
 use dialoguer::{Confirm, Input, Password};
 
 #[cfg(feature = "database")]
-use sqlx::{Pool, Sqlite, SqlitePool};
-
-#[cfg(feature = "database")]
 use argon2::Argon2;
 
 #[cfg(feature = "database")]
 use password_hash::{PasswordHasher, phc::Salt};
 
 #[cfg(feature = "database")]
+use chrono::Utc;
+
+#[cfg(feature = "database")]
+use reinhardt_db::{
+	DatabaseConnection,
+	prelude::{Model, model},
+};
+
+#[cfg(feature = "database")]
 use sea_query::{Alias, ColumnDef, Expr, Query, SqliteQueryBuilder, Table};
+
+#[cfg(feature = "database")]
+use sqlx::{Pool, Sqlite, SqlitePool};
 
 #[derive(Parser, Debug)]
 #[command(name = "createsuperuser")]
@@ -43,6 +52,19 @@ struct Args {
 	database: String,
 }
 
+#[cfg(feature = "database")]
+#[model(table_name = "auth_user", primary_key = "id")]
+pub struct AuthUser {
+	pub id: Option<i32>,
+	pub username: String,
+	pub email: String,
+	pub password_hash: Option<String>,
+	pub is_staff: bool,
+	pub is_active: bool,
+	pub is_superuser: bool,
+	pub date_joined: chrono::DateTime<Utc>,
+}
+
 fn validate_email(email: &str) -> bool {
 	email.contains('@') && email.contains('.')
 }
@@ -53,59 +75,11 @@ fn validate_username(username: &str) -> bool {
 
 #[cfg(feature = "database")]
 async fn create_user_in_database(
-	pool: &Pool<Sqlite>,
+	connection: &DatabaseConnection,
 	username: &str,
 	email: &str,
 	password: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	// Create users table if it doesn't exist
-	let stmt = Table::create()
-		.table(Alias::new("auth_user"))
-		.if_not_exists()
-		.col(
-			ColumnDef::new(Alias::new("id"))
-				.integer()
-				.not_null()
-				.auto_increment()
-				.primary_key(),
-		)
-		.col(
-			ColumnDef::new(Alias::new("username"))
-				.text()
-				.not_null()
-				.unique_key(),
-		)
-		.col(ColumnDef::new(Alias::new("email")).text().not_null())
-		.col(ColumnDef::new(Alias::new("password_hash")).text())
-		.col(
-			ColumnDef::new(Alias::new("is_staff"))
-				.boolean()
-				.not_null()
-				.default(0),
-		)
-		.col(
-			ColumnDef::new(Alias::new("is_active"))
-				.boolean()
-				.not_null()
-				.default(1),
-		)
-		.col(
-			ColumnDef::new(Alias::new("is_superuser"))
-				.boolean()
-				.not_null()
-				.default(0),
-		)
-		.col(
-			ColumnDef::new(Alias::new("date_joined"))
-				.date_time()
-				.not_null()
-				.default("CURRENT_TIMESTAMP"),
-		)
-		.to_owned();
-	let sql = stmt.to_string(SqliteQueryBuilder);
-
-	sqlx::query(&sql).execute(pool).await?;
-
 	// Hash the password if provided
 	let password_hash = if let Some(pwd) = password {
 		let salt = Salt::generate();
@@ -118,32 +92,20 @@ async fn create_user_in_database(
 		None
 	};
 
-	// Insert the superuser
-	let stmt = Query::insert()
-		.into_table(Alias::new("auth_user"))
-		.columns([
-			Alias::new("username"),
-			Alias::new("email"),
-			Alias::new("password_hash"),
-			Alias::new("is_staff"),
-			Alias::new("is_superuser"),
-		])
-		.values(
-			[
-				Expr::val(username),
-				Expr::val(email),
-				Expr::val(password_hash),
-				Expr::val(1),
-				Expr::val(1),
-			]
-			.into_iter()
-			.collect::<Vec<Expr>>(),
-		)
-		.unwrap()
-		.to_owned();
-	let sql = stmt.to_string(SqliteQueryBuilder);
+	// Create user with ORM
+	let user = AuthUser {
+		id: None,
+		username: username.to_string(),
+		email: email.to_string(),
+		password_hash,
+		is_staff: true,
+		is_superuser: true,
+		is_active: true,
+		date_joined: Utc::now(),
+	};
 
-	sqlx::query(&sql).execute(pool).await?;
+	let manager = AuthUser::objects(connection);
+	manager.create(&user).await?;
 
 	Ok(())
 }
@@ -314,20 +276,11 @@ async fn create_database_user(
 	email: &str,
 	password: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	use sqlx::sqlite::SqliteConnectOptions;
-	use std::str::FromStr;
-
-	// Parse database URL
-	let options = SqliteConnectOptions::from_str(database_url)?;
-
-	// Create connection pool
-	let pool = SqlitePool::connect_with(options).await?;
+	// Create database connection
+	let connection = DatabaseConnection::connect(database_url).await?;
 
 	// Create user
-	create_user_in_database(&pool, username, email, password).await?;
-
-	// Close pool
-	pool.close().await;
+	create_user_in_database(&connection, username, email, password).await?;
 
 	Ok(())
 }
