@@ -7,10 +7,9 @@ edition = "2024"
 reinhardt-core = { workspace = true }
 reinhardt-orm = { workspace = true }
 reinhardt-routers = { workspace = true }
-reinhardt-template = { workspace = true }
+reinhardt-pages = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
-tera = { workspace = true }
 
 [lib]
 name = "{{ app_name }}"

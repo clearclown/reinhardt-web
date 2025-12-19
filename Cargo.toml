@@ -38,8 +38,7 @@ standard = [
   "core",
   "reinhardt-core/signals",
   "reinhardt-rest/parsers",
-  "reinhardt-template",
-  "reinhardt-template/renderers",
+  "reinhardt-pages",
   "reinhardt-rest/versioning",
   "reinhardt-rest/metadata",
   "reinhardt-rest/negotiation",
@@ -62,11 +61,11 @@ auth = ["reinhardt-auth"]
 admin = [
   "reinhardt-admin",
   "reinhardt-forms",
-  "reinhardt-template",
+  "reinhardt-pages",
 ]
 forms = ["reinhardt-forms"]
 graphql = ["reinhardt-graphql"]
-templates = ["reinhardt-template"]
+templates = ["reinhardt-pages"]
 websockets = ["reinhardt-websockets"]
 cache = ["reinhardt-utils/cache"]
 redis-backend = ["cache"]
@@ -119,7 +118,7 @@ full = [
   "reinhardt-db/database-full",
   "reinhardt-core/core-full",
   "reinhardt-rest/rest-full",
-  "reinhardt-template/template-full",
+  "reinhardt-pages/pages-full",
   "reinhardt-urls/urls-full",
   "reinhardt-views/views-full",
   "reinhardt-auth/auth-full",
@@ -149,8 +148,7 @@ api-only = [
   "reinhardt-views/viewsets",
   "reinhardt-auth",
   "reinhardt-rest/parsers",
-  "reinhardt-template",
-  "reinhardt-template/renderers",
+  "reinhardt-pages",
   "reinhardt-rest/versioning",
   "reinhardt-rest/metadata",
   "reinhardt-rest/negotiation",
@@ -230,7 +228,7 @@ reinhardt-db = { workspace = true, optional = true }
 
 # External crates re-exported for macros
 inventory = { workspace = true, optional = true }
-reinhardt-template = { workspace = true, optional = true }
+reinhardt-pages = { workspace = true, optional = true }
 reinhardt-test = { workspace = true, optional = true }
 reinhardt-rest = { workspace = true, optional = true }
 reinhardt-auth = { workspace = true, optional = true }
@@ -290,7 +288,8 @@ members = [
   "crates/reinhardt-urls/crates/routers",
   "crates/reinhardt-urls/crates/routers-macros",
   "crates/reinhardt-middleware",
-  "crates/reinhardt-page",                              # WASM frontend framework
+  "crates/reinhardt-pages",                             # WASM frontend framework
+  "crates/reinhardt-pages/crates/macros",              # WASM frontend macros
   "crates/reinhardt-test",
   "crates/reinhardt-tasks",
   "crates/reinhardt-utils",
@@ -312,8 +311,11 @@ members = [
   "crates/reinhardt-auth/crates/sessions",
   "crates/reinhardt-admin",                            # Admin panel functionality
   "crates/reinhardt-admin/crates/types",
+  "crates/reinhardt-admin/crates/core",                # Admin panel core logic
+  "crates/reinhardt-admin/crates/server",              # Admin panel Server Functions
+  "crates/reinhardt-admin/crates/pages",               # Admin panel WASM frontend (new)
   "crates/reinhardt-admin/crates/api",
-  "crates/reinhardt-admin/crates/ui",                  # Admin panel WASM UI
+  "crates/reinhardt-admin/crates/ui",                  # Admin panel WASM UI (legacy)
   "crates/reinhardt-admin-cli",                        # Admin CLI tool
   "crates/reinhardt-grpc",
   "crates/reinhardt-commands",
@@ -329,10 +331,6 @@ members = [
   "crates/reinhardt-dispatch",
   "crates/reinhardt-shortcuts",
   "crates/reinhardt-forms",
-  "crates/reinhardt-template",
-  "crates/reinhardt-template/crates/renderers",
-  "crates/reinhardt-template/crates/templates",
-  "crates/reinhardt-template/crates/templates-macros",
   "crates/reinhardt-i18n",
   "crates/reinhardt-mail",
   "crates/reinhardt-graphql",
@@ -348,9 +346,6 @@ members = [
 # Exclude examples as they are independent workspaces
 # Each example has a binary named "manage" which would cause
 # output filename collisions if built together.
-# Examples should be built individually or in their own workspace:
-#   cd examples/local && cargo build
-#   cd examples/remote && cargo build
 exclude = ["examples"]
 
 default-members = [
@@ -389,7 +384,8 @@ reinhardt-views = { path = "crates/reinhardt-views", version = "0.1.0-alpha.1" }
 reinhardt-urls = { path = "crates/reinhardt-urls", version = "0.1.0-alpha.1" }
 reinhardt-routers = { path = "crates/reinhardt-urls/crates/routers", version = "0.1.0-alpha.1" }
 reinhardt-middleware = { path = "crates/reinhardt-middleware", version = "0.1.0-alpha.1" }
-reinhardt-template = { path = "crates/reinhardt-template", version = "0.1.0-alpha.1" }
+reinhardt-pages = { path = "crates/reinhardt-pages", version = "0.1.0-alpha.1" }
+reinhardt-pages-macros = { path = "crates/reinhardt-pages/crates/macros", version = "0.1.0-alpha.1" }
 reinhardt-forms = { path = "crates/reinhardt-forms", version = "0.1.0-alpha.1" }
 reinhardt-test = { path = "crates/reinhardt-test", version = "0.1.0-alpha.1" }
 reinhardt-tasks = { path = "crates/reinhardt-tasks", version = "0.1.0-alpha.1" }
@@ -398,6 +394,9 @@ reinhardt-rest = { path = "crates/reinhardt-rest", version = "0.1.0-alpha.1" }
 reinhardt-auth = { path = "crates/reinhardt-auth", version = "0.1.0-alpha.1" }
 reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
 reinhardt-admin-types = { path = "crates/reinhardt-admin/crates/types", version = "0.1.0-alpha.1" }
+reinhardt-admin-core = { path = "crates/reinhardt-admin/crates/core", version = "0.1.0-alpha.1" }
+reinhardt-admin-server = { path = "crates/reinhardt-admin/crates/server", version = "0.1.0-alpha.1" }
+reinhardt-admin-pages = { path = "crates/reinhardt-admin/crates/pages", version = "0.1.0-alpha.1" }
 reinhardt-admin-api = { path = "crates/reinhardt-admin/crates/api", version = "0.1.0-alpha.1" }
 reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
 reinhardt-grpc = { path = "crates/reinhardt-grpc", version = "0.1.0-alpha.1" }
@@ -450,11 +449,6 @@ reinhardt-static = { path = "crates/reinhardt-utils/crates/static", version = "0
 reinhardt-storage = { path = "crates/reinhardt-utils/crates/storage", version = "0.1.0-alpha.1" }
 reinhardt-utils-core = { path = "crates/reinhardt-utils/crates/utils-core", version = "0.1.0-alpha.1" }
 
-# Template subcrates
-reinhardt-renderers = { path = "crates/reinhardt-template/crates/renderers", version = "0.1.0-alpha.1" }
-reinhardt-templates = { path = "crates/reinhardt-template/crates/templates", version = "0.1.0-alpha.1" }
-reinhardt-templates-macros = { path = "crates/reinhardt-template/crates/templates-macros", version = "0.1.0-alpha.1" }
-
 # Auth subcrates
 reinhardt-sessions = { path = "crates/reinhardt-auth/crates/sessions", version = "0.1.0-alpha.1" }
 
@@ -491,8 +485,10 @@ reqwest = { version = "0.12", features = ["json"] }
 # Serialization
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+serde_bytes = "0.11"
 serde_yaml = "0.9"
 serde_urlencoded = "0.7.1"
+csv = "1.3"
 
 # Database
 sqlx = { version = "0.8", features = [

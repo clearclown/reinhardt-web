@@ -28,6 +28,8 @@ args = [
   "--all-features",
   "--all-targets",
   "--tests",
+  "--benches",
+  "--examples",
   "--quiet"
 ]
 
