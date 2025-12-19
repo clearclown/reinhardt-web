@@ -170,7 +170,7 @@ reinhardt = { features = ["full"] }
 | `reinhardt-db` | `database-full` | All 8 database sub-crates with their `full` features |
 | `reinhardt-core` | `core-full` | All 11 core sub-crates with their `full` features |
 | `reinhardt-rest` | `rest-full` | All 9 REST sub-crates with their `full` features |
-| `reinhardt-template` | `template-full` | All 3 template sub-crates with their `full` features |
+| `reinhardt-pages` | `pages-full` | SSR, renderers, and component sub-crates with their `full` features |
 | `reinhardt-urls` | `urls-full` | All 3 URL routing sub-crates with their `full` features |
 | `reinhardt-views` | `views-full` | ViewSets sub-crate with `full` feature |
 | `reinhardt-auth` | `auth-full` | Sessions sub-crate + all auth features |
@@ -329,7 +329,7 @@ async fn handler(
 
 | Feature | Description | Key Crates |
 |---------|-------------|------------|
-| `admin` | Admin panel | reinhardt-admin, reinhardt-forms, reinhardt-template |
+| `admin` | Admin panel | reinhardt-admin, reinhardt-forms, reinhardt-pages |
 | `graphql` | GraphQL API | reinhardt-graphql |
 | `websockets` | Real-time | reinhardt-websockets |
 | `i18n` | Internationalization | reinhardt-i18n |
