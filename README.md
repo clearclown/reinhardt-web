@@ -96,7 +96,7 @@ For most projects that don't need all features:
 reinhardt = { version = "0.1.0-alpha.1", package = "reinhardt-web", default-features = false, features = ["standard"] }
 ```
 
-**Includes:** Core, Database (PostgreSQL), REST API, Auth, Middleware, Templates
+**Includes:** Core, Database (PostgreSQL), REST API, Auth, Middleware, Pages (WASM Frontend with SSR)
 
 **Binary**: ~20-30 MB | **Compile**: Medium
 

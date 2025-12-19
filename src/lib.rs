@@ -678,10 +678,6 @@ pub use reinhardt_rest::parsers::{
 	Parser,
 };
 
-// Re-export renderers
-#[cfg(feature = "reinhardt-template")]
-pub use reinhardt_template::renderers::{BrowsableApiRenderer, JSONRenderer, TemplateHTMLRenderer};
-
 // Re-export versioning
 #[cfg(feature = "rest")]
 pub use reinhardt_rest::versioning::{
@@ -704,8 +700,7 @@ pub use reinhardt_rest::negotiation::*;
 // Re-export REST integration modules
 #[cfg(feature = "rest")]
 pub use reinhardt_rest::{
-	filters, metadata, negotiation, pagination, parsers, renderers, serializers, throttling,
-	versioning,
+	filters, metadata, negotiation, pagination, parsers, serializers, throttling, versioning,
 };
 
 // Re-export browsable API (from reinhardt-browsable-api via reinhardt-rest)
@@ -739,7 +734,7 @@ pub use reinhardt_rest::openapi::*;
 // Re-export shortcuts (Django-style convenience functions)
 #[cfg(feature = "shortcuts")]
 pub use reinhardt_shortcuts::{
-	get_list_or_404, get_object_or_404, redirect, render, render_json, render_template,
+	get_list_or_404, get_object_or_404, redirect, render_html, render_json, render_text,
 };
 
 // Re-export URL utilities
@@ -802,9 +797,8 @@ pub use reinhardt_core::di::{Depends, DiError, DiResult, InjectionContext, Reque
 #[cfg(any(feature = "minimal", feature = "standard", feature = "di"))]
 pub use reinhardt_core::di::params::{Body, Cookie, Header, Json, Path, Query};
 
-// Re-export templates
-#[cfg(feature = "templates")]
-pub use reinhardt_template::TemplateError;
+// Re-export template/rendering functionality from reinhardt-pages
+// Note: TemplateError was removed as Tera templating was replaced with reinhardt-pages SSR
 
 // Re-export tasks
 #[cfg(feature = "tasks")]
@@ -955,10 +949,6 @@ pub mod prelude {
 		UserRateThrottle,
 		VersioningMiddleware,
 	};
-
-	// Template renderer feature
-	#[cfg(feature = "reinhardt-template")]
-	pub use crate::JSONRenderer;
 
 	// Settings feature
 	#[cfg(feature = "conf")]
