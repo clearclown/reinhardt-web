@@ -95,3 +95,15 @@ pub struct ImportResponse {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub errors: Option<Vec<String>>,
 }
+
+/// Response for export endpoint
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportResponse {
+	/// Exported data (binary)
+	#[serde(with = "serde_bytes")]
+	pub data: Vec<u8>,
+	/// Filename for download
+	pub filename: String,
+	/// Content type (e.g., "application/json", "text/csv")
+	pub content_type: String,
+}
