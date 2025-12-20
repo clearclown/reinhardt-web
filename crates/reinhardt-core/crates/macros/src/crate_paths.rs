@@ -4,18 +4,32 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 /// Resolves the path to the Reinhardt crate dynamically.
-/// This supports different crate naming scenarios (reinhardt, reinhardt-web, etc.)
+/// This supports different crate naming scenarios (reinhardt, reinhardt-core, etc.)
 pub fn get_reinhardt_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
+	// Try reinhardt crate first
 	match crate_name("reinhardt") {
-		Ok(FoundCrate::Itself) => quote!(crate),
+		Ok(FoundCrate::Itself) => return quote!(crate),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			quote!(::#ident)
+			return quote!(::#ident);
 		}
-		Err(_) => quote!(::reinhardt), // Fallback
+		Err(_) => {
+			// Try via reinhardt-core crate
+			match crate_name("reinhardt-core") {
+				Ok(FoundCrate::Itself) => return quote!(crate),
+				Ok(FoundCrate::Name(name)) => {
+					let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+					return quote!(::#ident);
+				}
+				Err(_) => {}
+			}
+		}
 	}
+
+	// Final fallback
+	quote!(::reinhardt_core)
 }
 
 /// Resolves the path to the reinhardt_di crate dynamically.

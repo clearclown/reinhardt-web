@@ -30,7 +30,6 @@ reinhardt-di = { workspace = true, optional = true }
 reinhardt-conf = { workspace = true, optional = true }
 
 [dev-dependencies]
-reinhardt-db = { workspace = true, features = ["backends"] }
 tokio = { workspace = true, features = ["macros", "rt", "time"] }
 serial_test = { workspace = true }
 rstest = { workspace = true }
