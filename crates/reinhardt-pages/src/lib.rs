@@ -50,7 +50,6 @@
 //! ```
 
 #![warn(missing_docs)]
-#![cfg_attr(target_arch = "wasm32", no_std)]
 
 // Core modules
 pub mod builder;
@@ -63,6 +62,7 @@ pub mod component;
 // Form and security
 pub mod auth;
 pub mod csrf;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod form;
 
 // API and communication
@@ -90,6 +90,7 @@ pub use builder::{
 pub use component::{Component, ElementView, IntoView, Props, View};
 pub use csrf::{CsrfManager, get_csrf_token};
 pub use dom::{Document, Element, EventHandle, EventType, document};
+#[cfg(not(target_arch = "wasm32"))]
 pub use form::{FormBinding, FormComponent};
 pub use hydration::{HydrationContext, HydrationError, hydrate};
 pub use reactive::{Effect, Memo, Resource, ResourceState, Signal};

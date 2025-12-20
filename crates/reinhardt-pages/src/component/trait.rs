@@ -134,6 +134,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(unstable_name_collisions)]
 mod tests {
 	use super::*;
 	use crate::component::into_view::ElementView;

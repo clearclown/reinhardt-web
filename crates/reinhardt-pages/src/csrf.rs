@@ -170,11 +170,13 @@ pub fn get_csrf_token() -> Option<String> {
 /// Retrieves the CSRF token from the cookie.
 #[cfg(target_arch = "wasm32")]
 pub fn get_csrf_token_from_cookie() -> Option<String> {
-	use web_sys::window;
+	use wasm_bindgen::JsCast;
+	use web_sys::{HtmlDocument, window};
 
 	let window = window()?;
 	let document = window.document()?;
-	let cookie_str = document.cookie().ok()?;
+	let html_doc = document.dyn_ref::<HtmlDocument>()?;
+	let cookie_str = html_doc.cookie().ok()?;
 
 	parse_cookie_value(&cookie_str, CSRF_COOKIE_NAME)
 }

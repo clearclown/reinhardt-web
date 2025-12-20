@@ -72,6 +72,7 @@
 //! ```
 
 pub mod codec;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod injectable;
 pub mod server_fn_trait;
 
@@ -79,6 +80,7 @@ pub mod server_fn_trait;
 #[cfg(feature = "msgpack")]
 pub use codec::MessagePackCodec;
 pub use codec::{Codec, JsonCodec, UrlCodec};
+#[cfg(not(target_arch = "wasm32"))]
 pub use injectable::{ServerFnBody, ServerFnRequest};
 pub use server_fn_trait::{ServerFn, ServerFnError};
 

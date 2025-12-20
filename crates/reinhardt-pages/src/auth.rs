@@ -325,7 +325,6 @@ impl AuthState {
 	/// JSON-encoded authentication data.
 	#[cfg(target_arch = "wasm32")]
 	pub fn init_from_page(&self) {
-		use wasm_bindgen::JsCast;
 		use web_sys::window;
 
 		let Some(window) = window() else { return };

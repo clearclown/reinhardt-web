@@ -19,16 +19,8 @@ pages-full = ["msgpack", "static"]
 # Procedural macros
 reinhardt-pages-macros = { path = "crates/macros" }
 
-# Form integration
-reinhardt-forms = { path = "../reinhardt-forms" }
-
 # Static files integration (optional)
 reinhardt-static = { path = "../reinhardt-utils/crates/static", optional = true }
-
-# Dependency Injection (server-side only)
-reinhardt-di = { path = "../reinhardt-di" }
-reinhardt-http = { path = "../reinhardt-http" }
-async-trait = "0.1"
 
 # Core WASM bindings (low-level APIs only)
 wasm-bindgen = "0.2"
@@ -84,6 +76,13 @@ web-sys = { version = "0.3", features = [
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
 gloo-net = "0.6"
+
+# Server-side only dependencies (DI, HTTP, Forms)
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reinhardt-forms = { path = "../reinhardt-forms" }
+reinhardt-di = { path = "../reinhardt-di" }
+reinhardt-http = { path = "../reinhardt-http" }
+async-trait = "0.1"
 
 [dev-dependencies]
 reinhardt-static = { path = "../reinhardt-utils/crates/static" }

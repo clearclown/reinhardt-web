@@ -510,7 +510,7 @@ mod tests {
 				.css(static_config.resolve_url("css/style.css"))
 				.js(static_config.resolve_url("js/app.js"));
 
-			let mut renderer = SsrRenderer::with_options(opts);
+			let renderer = SsrRenderer::with_options(opts);
 			let html = renderer.wrap_in_html("<div>Test</div>");
 
 			assert!(html.contains("<link rel=\"stylesheet\" href=\"/static/css/style.css\">"));
