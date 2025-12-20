@@ -12,41 +12,55 @@
 //! - postgres_container: PostgreSQL database container (reinhardt-test)
 //! - mysql_suite: MySQL database container (reinhardt-test, planned)
 
-use reinhardt_core::validators::TableName;
-use reinhardt_orm::{
-	expressions::Q, query_execution::QueryCompiler, types::DatabaseDialect, Model,
+use reinhardt_db::{
+	orm::{model, Filter, FilterOperator, FilterValue, Manager},
+	DatabaseConnection,
 };
-use reinhardt_test::fixtures::postgres_container;
+use reinhardt_integration_tests::migrations::apply_async_query_test_migrations;
+use reinhardt_orm::{expressions::Q, query_execution::QueryCompiler, types::DatabaseDialect};
+use reinhardt_test::fixtures::postgres::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage};
 
-#[allow(dead_code)]
+/// Test model for async query tests
+#[model(table_name = "test_models", primary_key = "id")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct TestModel {
-	id: Option<i64>,
-	name: String,
+pub struct TestModel {
+	pub id: Option<i64>,
+	pub name: String,
 }
 
-#[allow(dead_code)]
-const TEST_MODEL_TABLE: TableName = TableName::new_const("test_model");
+// ========================================================================
+// Fixtures
+// ========================================================================
 
-impl Model for TestModel {
-	type PrimaryKey = i64;
+/// Async query integration tests用の専用フィクスチャ
+///
+/// postgres_container を使用してコンテナを取得し、
+/// async query test migrations を適用する
+#[fixture]
+async fn async_query_test_db(
+	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+) -> (
+	ContainerAsync<GenericImage>,
+	Arc<DatabaseConnection>,
+	u16,
+	String,
+) {
+	let (container, _pool, port, url) = postgres_container.await;
 
-	fn table_name() -> &'static str {
-		TEST_MODEL_TABLE.as_str()
-	}
+	// Create DatabaseConnection from URL (not from pool)
+	let connection = DatabaseConnection::connect(&url).await.unwrap();
 
-	fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-		self.id.as_ref()
-	}
+	// Apply async query test migrations using MigrationExecutor
+	apply_async_query_test_migrations(&connection)
+		.await
+		.unwrap();
 
-	fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-		self.id = Some(value);
-	}
+	(container, Arc::new(connection), port, url)
 }
 
 // ========================================================================
@@ -89,72 +103,73 @@ mod postgres_tests {
 
 	/// Test async query execution with real PostgreSQL database
 	///
-	/// **Test Intent**: Verify async query execution (CREATE TABLE, INSERT, SELECT COUNT)
-	/// works with real PostgreSQL database
+	/// **Test Intent**: Verify async query execution (INSERT, COUNT)
+	/// works with real PostgreSQL database using ORM
 	///
-	/// **Integration Point**: Async query API → PostgreSQL database operations
+	/// **Integration Point**: ORM Manager API → PostgreSQL database operations
 	///
 	/// **Not Intent**: Query optimization, complex queries
 	#[rstest]
 	#[tokio::test]
 	async fn test_postgres_async_query_execution(
-		#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+		#[future] async_query_test_db: (
+			ContainerAsync<GenericImage>,
+			Arc<DatabaseConnection>,
+			u16,
+			String,
+		),
 	) {
-		let (_container, pool, _port, _url) = postgres_container.await;
+		let (_container, connection, _port, _url) = async_query_test_db.await;
 
-		// Create table
-		sqlx::query("CREATE TABLE test_models (id SERIAL PRIMARY KEY, name TEXT)")
-			.execute(pool.as_ref())
-			.await
-			.expect("Failed to create table");
+		// No CREATE TABLE - migration handles it
 
-		// Insert data
-		sqlx::query("INSERT INTO test_models (name) VALUES ('Alice'), ('Bob')")
-			.execute(pool.as_ref())
-			.await
-			.expect("Failed to insert data");
+		// Insert data with ORM
+		let alice = TestModel::new("Alice".to_string());
+		let bob = TestModel::new("Bob".to_string());
 
-		// Count records
-		let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM test_models")
-			.fetch_one(pool.as_ref())
+		let manager = TestModel::objects(&connection);
+		manager
+			.create(&alice)
 			.await
-			.expect("Count failed");
+			.expect("Failed to insert Alice");
+		manager.create(&bob).await.expect("Failed to insert Bob");
+
+		// Count records with ORM
+		let count = manager.count().await.expect("Count failed");
 		assert_eq!(count, 2);
 	}
 
 	/// Test async session operations with PostgreSQL
 	///
 	/// **Test Intent**: Verify async session can perform basic database operations
-	/// (table creation, data insertion, existence check)
+	/// (data insertion, existence check) using ORM
 	///
-	/// **Integration Point**: Async session → PostgreSQL database
+	/// **Integration Point**: ORM Manager API → PostgreSQL database
 	///
 	/// **Not Intent**: Session management, transaction handling
 	#[rstest]
 	#[tokio::test]
 	async fn test_postgres_async_session(
-		#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+		#[future] async_query_test_db: (
+			ContainerAsync<GenericImage>,
+			Arc<DatabaseConnection>,
+			u16,
+			String,
+		),
 	) {
-		let (_container, pool, _port, _url) = postgres_container.await;
+		let (_container, connection, _port, _url) = async_query_test_db.await;
 
-		// Create table
-		sqlx::query("CREATE TABLE test_models (id SERIAL PRIMARY KEY, name TEXT)")
-			.execute(pool.as_ref())
-			.await
-			.unwrap();
+		// No CREATE TABLE - migration handles it
 
-		// Insert data
-		sqlx::query("INSERT INTO test_models (name) VALUES ('Test')")
-			.execute(pool.as_ref())
-			.await
-			.expect("Insert failed");
+		// Insert data with ORM
+		let test_model = TestModel::new("Test".to_string());
+
+		let manager = TestModel::objects(&connection);
+		manager.create(&test_model).await.expect("Insert failed");
 
 		// Check existence
-		let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM test_models)")
-			.fetch_one(pool.as_ref())
-			.await
-			.expect("Exists check failed");
-		assert!(exists);
+		let count = manager.count().await.expect("Exists check failed");
+		assert!(count > 0);
 	}
 }
 

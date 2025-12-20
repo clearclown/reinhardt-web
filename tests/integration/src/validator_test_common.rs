@@ -3,10 +3,10 @@
 //! This module provides shared functionality for testing validators
 //! in integration with ORM and Serializers.
 
-use reinhardt_core::validators::ValidationResult;
+use reinhardt_core::{macros::model, validators::ValidationResult};
 use reinhardt_db::{
 	DatabaseConnection,
-	orm::{Filter, Manager, model},
+	orm::{FilterOperator, FilterValue, Model},
 };
 use std::sync::Arc;
 use testcontainers::{
@@ -30,8 +30,6 @@ impl TestDatabase {
 	/// **Note**: This does NOT apply migrations. Each test fixture should call
 	/// `apply_basic_test_migrations()` from the migrations module.
 	pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-		use std::time::Duration;
-
 		// Try to use TestContainers first
 		let (database_url, container): (String, Option<_>) =
 			if let Ok(url) = std::env::var("TEST_DATABASE_URL") {
@@ -54,12 +52,14 @@ impl TestDatabase {
 			};
 
 		// Create DatabaseConnection
-		let connection = DatabaseConnection::connect(&database_url).await.map_err(|e| {
-			format!(
-				"Failed to connect to test database at '{}'. Error: {}",
-				database_url, e
-			)
-		})?;
+		let connection = DatabaseConnection::connect(&database_url)
+			.await
+			.map_err(|e| {
+				format!(
+					"Failed to connect to test database at '{}'. Error: {}",
+					database_url, e
+				)
+			})?;
 
 		Ok(Self {
 			connection: Arc::new(connection),
@@ -73,12 +73,14 @@ impl TestDatabase {
 	/// Resets IDENTITY columns and cascades to dependent tables.
 	pub async fn cleanup(&self) -> Result<(), Box<dyn std::error::Error>> {
 		// Use raw SQL for TRUNCATE (not available in ORM yet)
-		let pool = self.connection.pool();
-		let _ = sqlx::query(
-			"TRUNCATE TABLE test_orders, test_comments, test_posts, test_products, test_users RESTART IDENTITY CASCADE"
-		)
-		.execute(pool)
-		.await;
+
+		let _ = self
+			.connection
+			.execute(
+				"TRUNCATE TABLE test_orders, test_comments, test_posts, test_products, test_users RESTART IDENTITY CASCADE",
+				vec![],
+			)
+			.await;
 		Ok(())
 	}
 
@@ -88,8 +90,12 @@ impl TestDatabase {
 		username: &str,
 		email: &str,
 	) -> Result<i32, Box<dyn std::error::Error>> {
-		let user = TestUser::new(username.to_string(), email.to_string());
-		let manager = TestUser::objects(&self.connection);
+		let user = TestUser {
+			id: None,
+			username: username.to_string(),
+			email: email.to_string(),
+		};
+		let manager = TestUser::objects();
 		let created = manager.create(&user).await?;
 		Ok(created.id.unwrap())
 	}
@@ -99,9 +105,13 @@ impl TestDatabase {
 		&self,
 		username: &str,
 	) -> Result<bool, Box<dyn std::error::Error>> {
-		let manager = TestUser::objects(&self.connection);
+		let manager = TestUser::objects();
 		let count = manager
-			.filter(Filter::new("username", username))
+			.filter(
+				"username",
+				FilterOperator::Eq,
+				FilterValue::String(username.to_string()),
+			)
 			.count()
 			.await?;
 		Ok(count > 0)
@@ -109,8 +119,15 @@ impl TestDatabase {
 
 	/// Check if email exists using ORM
 	pub async fn email_exists(&self, email: &str) -> Result<bool, Box<dyn std::error::Error>> {
-		let manager = TestUser::objects(&self.connection);
-		let count = manager.filter(Filter::new("email", email)).count().await?;
+		let manager = TestUser::objects();
+		let count = manager
+			.filter(
+				"email",
+				FilterOperator::Eq,
+				FilterValue::String(email.to_string()),
+			)
+			.count()
+			.await?;
 		Ok(count > 0)
 	}
 
@@ -122,16 +139,29 @@ impl TestDatabase {
 		price: f64,
 		stock: i32,
 	) -> Result<i32, Box<dyn std::error::Error>> {
-		let product = TestProduct::new(name.to_string(), code.to_string(), price, stock);
-		let manager = TestProduct::objects(&self.connection);
+		let product = TestProduct {
+			id: None,
+			name: name.to_string(),
+			code: code.to_string(),
+			price,
+			stock,
+		};
+		let manager = TestProduct::objects();
 		let created = manager.create(&product).await?;
 		Ok(created.id.unwrap())
 	}
 
 	/// Check if user exists by ID using ORM
 	pub async fn user_exists(&self, user_id: i32) -> Result<bool, Box<dyn std::error::Error>> {
-		let manager = TestUser::objects(&self.connection);
-		let count = manager.filter(Filter::new("id", user_id)).count().await?;
+		let manager = TestUser::objects();
+		let count = manager
+			.filter(
+				"id",
+				FilterOperator::Eq,
+				FilterValue::Integer(user_id as i64),
+			)
+			.count()
+			.await?;
 		Ok(count > 0)
 	}
 
@@ -140,9 +170,13 @@ impl TestDatabase {
 		&self,
 		product_id: i32,
 	) -> Result<bool, Box<dyn std::error::Error>> {
-		let manager = TestProduct::objects(&self.connection);
+		let manager = TestProduct::objects();
 		let count = manager
-			.filter(Filter::new("id", product_id))
+			.filter(
+				"id",
+				FilterOperator::Eq,
+				FilterValue::Integer(product_id as i64),
+			)
 			.count()
 			.await?;
 		Ok(count > 0)
@@ -155,19 +189,27 @@ impl TestDatabase {
 		product_id: i32,
 		quantity: i32,
 	) -> Result<i32, Box<dyn std::error::Error>> {
-		let order = TestOrder::new(user_id, product_id, quantity);
-		let manager = TestOrder::objects(&self.connection);
+		let order = TestOrder {
+			id: None,
+			user_id,
+			product_id,
+			quantity,
+		};
+		let manager = TestOrder::objects();
 		let created = manager.create(&order).await?;
 		Ok(created.id.unwrap())
 	}
 }
 
 /// Test user model for validation tests
-#[model(table_name = "test_users", primary_key = "id")]
-#[derive(Debug, Clone)]
+#[model(table_name = "test_users")]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TestUser {
+	#[field(primary_key = true)]
 	pub id: Option<i32>,
+	#[field(max_length = 100)]
 	pub username: String,
+	#[field(max_length = 255)]
 	pub email: String,
 }
 
@@ -179,20 +221,24 @@ impl TestUser {
 }
 
 /// Test product model for validation tests
-#[model(table_name = "test_products", primary_key = "id")]
-#[derive(Debug, Clone)]
+#[model(table_name = "test_products")]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TestProduct {
+	#[field(primary_key = true)]
 	pub id: Option<i32>,
+	#[field(max_length = 200)]
 	pub name: String,
+	#[field(max_length = 50)]
 	pub code: String,
 	pub price: f64,
 	pub stock: i32,
 }
 
 /// Test order model for validation tests
-#[model(table_name = "test_orders", primary_key = "id")]
-#[derive(Debug, Clone)]
+#[model(table_name = "test_orders")]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TestOrder {
+	#[field(primary_key = true)]
 	pub id: Option<i32>,
 	pub user_id: i32,
 	pub product_id: i32,

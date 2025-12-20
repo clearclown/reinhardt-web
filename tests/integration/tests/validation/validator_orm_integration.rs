@@ -405,7 +405,10 @@ mod relationship_validation_tests {
 		let (_container, test_db, _port, _database_url) = validator_orm_test_db.await;
 
 		// Insert user and product for valid FK references using TestDatabase methods
-		let user_id = test_db.insert_user("alice", "alice@example.com").await.unwrap();
+		let user_id = test_db
+			.insert_user("alice", "alice@example.com")
+			.await
+			.unwrap();
 		let product_id = test_db
 			.insert_product("Laptop", "PROD001", 999.99, 10)
 			.await
@@ -533,13 +536,12 @@ mod relationship_validation_tests {
 
 		// Attempt to update order with non-existent user_id (should fail)
 		let pool = test_db.connection.pool().clone();
-		let update_result: Result<sqlx::postgres::PgQueryResult, sqlx::Error> = sqlx::query(
-			"UPDATE test_orders SET user_id = $1 WHERE id = $2",
-		)
-		.bind(99999)
-		.bind(order_id)
-		.execute(&pool)
-		.await;
+		let update_result: Result<sqlx::postgres::PgQueryResult, sqlx::Error> =
+			sqlx::query("UPDATE test_orders SET user_id = $1 WHERE id = $2")
+				.bind(99999)
+				.bind(order_id)
+				.execute(&pool)
+				.await;
 
 		assert!(update_result.is_err());
 		let error_message = update_result.unwrap_err().to_string();
