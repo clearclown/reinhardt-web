@@ -103,3 +103,4 @@ docs/Gemfile.lock
 # Bacon export files
 .bacon-locations
 *.log
+*.tmp
