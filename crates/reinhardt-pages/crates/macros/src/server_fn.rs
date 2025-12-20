@@ -126,28 +126,46 @@ struct InjectInfo {
 	ty: Box<syn::Type>,
 }
 
-/// Check if an attribute is #[inject]
+/// Check if an attribute is #[inject] or #[reinhardt::inject]
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
-/// #[inject] db: Database
+/// #[inject] db: Database              // Legacy (causes compiler errors on params)
+/// #[reinhardt::inject] db: Database   // Recommended tool attribute
 /// ```
 fn is_inject_attr(attr: &syn::Attribute) -> bool {
-	attr.path().is_ident("inject")
+	// Check for bare #[inject] (legacy, causes compiler errors on function params)
+	if attr.path().is_ident("inject") {
+		return true;
+	}
+
+	// Check for #[reinhardt::inject] (recommended tool attribute)
+	if let Some(seg0) = attr.path().segments.first() {
+		if seg0.ident == "reinhardt" {
+			if let Some(seg1) = attr.path().segments.iter().nth(1) {
+				return seg1.ident == "inject";
+			}
+		}
+	}
+
+	false
 }
 
-/// Detect parameters with #[inject] attribute (Week 4 Day 1-2)
+/// Detect parameters for dependency injection (Week 4 Day 1-2)
 ///
-/// This function scans function parameters and identifies those marked
-/// with `#[inject]` for dependency injection.
+/// This function scans function parameters and identifies those that should be
+/// injected by the DI system. Detection is based on:
+/// 1. Parameters with #[inject] or #[reinhardt::inject] attributes
+/// 2. Parameters with Arc<T> type (automatic detection)
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// async fn handler(
-///     id: u32,              // Regular parameter
-///     #[inject] db: Database, // DI parameter
+///     id: u32,                    // Regular parameter
+///     #[inject] db: Database,     // DI parameter (explicit)
+///     site: Arc<AdminSite>,       // DI parameter (auto-detected Arc<T>)
 /// ) -> Result<User, Error>
 /// ```
 fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo> {
@@ -155,9 +173,22 @@ fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo
 
 	for input in inputs {
 		if let FnArg::Typed(pat_type) = input {
-			let has_inject = pat_type.attrs.iter().any(is_inject_attr);
+			// Check for explicit #[inject] attribute
+			let has_inject_attr = pat_type.attrs.iter().any(is_inject_attr);
 
-			if has_inject {
+			// Check if type is Arc<T> (auto-detect for DI)
+			let is_arc_type = if let syn::Type::Path(type_path) = pat_type.ty.as_ref() {
+				type_path
+					.path
+					.segments
+					.last()
+					.map(|seg| seg.ident == "Arc")
+					.unwrap_or(false)
+			} else {
+				false
+			};
+
+			if has_inject_attr || is_arc_type {
 				inject_params.push(InjectInfo {
 					pat: pat_type.pat.clone(),
 					ty: pat_type.ty.clone(),

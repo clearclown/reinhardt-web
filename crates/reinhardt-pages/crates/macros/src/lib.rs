@@ -59,29 +59,8 @@ pub fn server_fn(args: TokenStream, input: TokenStream) -> TokenStream {
 	server_fn::server_fn_impl(args, input)
 }
 
-/// Dependency injection marker attribute (Week 4 Day 1-2)
-///
-/// This attribute marks parameters for dependency injection.
-/// It's processed by the `#[server_fn(use_inject = true)]` macro.
-///
-/// ## Usage
-///
-/// ```ignore
-/// #[server_fn(use_inject = true)]
-/// async fn handler(
-///     id: u32,              // Regular parameter
-///     #[inject] db: Database, // DI parameter
-/// ) -> Result<User, Error>
-/// ```
-///
-/// ## Implementation
-///
-/// This is a no-op attribute macro that allows the Rust compiler
-/// to recognize `#[inject]` on function parameters. The actual
-/// processing is done by the `#[server_fn]` macro.
-#[proc_macro_attribute]
-pub fn inject(_args: TokenStream, input: TokenStream) -> TokenStream {
-	// No-op: just pass through the input unchanged
-	// The actual processing is done by #[server_fn] macro
-	input
-}
+// Note: For dependency injection parameters, use the tool attribute #[reinhardt::inject]
+// instead of a bare #[inject]. This is because proc_macro_attribute doesn't support
+// helper attributes (unlike proc_macro_derive). Tool attributes provide namespace
+// clarity and prevent "cannot find attribute in scope" compiler errors.
+// The #[server_fn] macro detects and processes #[reinhardt::inject] during expansion.
