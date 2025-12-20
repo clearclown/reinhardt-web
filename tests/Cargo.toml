@@ -7,6 +7,7 @@ publish = false
 
 [dependencies]
 # Reinhardt crates
+reinhardt-backends = { workspace = true, features = ["postgres", "sqlite"] }
 reinhardt-commands = { workspace = true }
 reinhardt-auth = { workspace = true }
 reinhardt-graphql = { workspace = true }
