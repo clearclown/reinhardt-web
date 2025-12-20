@@ -307,8 +307,8 @@ pub fn search_bar(value: Signal<String>, placeholder: &str) -> View {
 			ElementView::new("input")
 				.attr("class", "form-control")
 				.attr("type", "text")
-				.attr("placeholder", placeholder)
-				.attr("value", &current_value),
+				.attr("placeholder", placeholder.to_string())
+				.attr("value", current_value),
 		)
 		.into_view()
 }

@@ -8,16 +8,8 @@
 //! - `Filters` - Filter panel
 //! - `DataTable` - Data table component
 
+use reinhardt_admin_types::ModelInfo;
 use reinhardt_pages::component::{ElementView, IntoView, View};
-
-/// Model information for dashboard cards
-#[derive(Debug, Clone)]
-pub struct DashboardModel {
-	/// Model name (display name)
-	pub name: String,
-	/// URL path for the model list view
-	pub url: String,
-}
 
 /// Dashboard component
 ///
@@ -26,15 +18,16 @@ pub struct DashboardModel {
 /// # Example
 ///
 /// ```ignore
-/// use reinhardt_admin_pages::components::features::{dashboard, DashboardModel};
+/// use reinhardt_admin_pages::components::features::dashboard;
+/// use reinhardt_admin_types::ModelInfo;
 ///
 /// let models = vec![
-///     DashboardModel { name: "Users".to_string(), url: "/admin/users/".to_string() },
-///     DashboardModel { name: "Posts".to_string(), url: "/admin/posts/".to_string() },
+///     ModelInfo { name: "Users".to_string(), list_url: "/admin/users/".to_string() },
+///     ModelInfo { name: "Posts".to_string(), list_url: "/admin/posts/".to_string() },
 /// ];
 /// dashboard("My Admin Panel", &models)
 /// ```
-pub fn dashboard(site_name: &str, models: &[DashboardModel]) -> View {
+pub fn dashboard(site_name: &str, models: &[ModelInfo]) -> View {
 	ElementView::new("div")
 		.attr("class", "dashboard")
 		.child(
@@ -51,7 +44,7 @@ pub fn dashboard(site_name: &str, models: &[DashboardModel]) -> View {
 }
 
 /// Generates a grid of model cards
-fn models_grid(models: &[DashboardModel]) -> View {
+fn models_grid(models: &[ModelInfo]) -> View {
 	if models.is_empty() {
 		return ElementView::new("div")
 			.attr("class", "col-12")
@@ -68,7 +61,7 @@ fn models_grid(models: &[DashboardModel]) -> View {
 		.map(|model| {
 			ElementView::new("div")
 				.attr("class", "col-md-4")
-				.child(model_card(&model.name, &model.url))
+				.child(model_card(&model.name, &model.list_url))
 				.into_view()
 		})
 		.collect();
@@ -93,7 +86,7 @@ fn model_card(name: &str, url: &str) -> View {
 				.child(
 					ElementView::new("h5")
 						.attr("class", "card-title")
-						.child(name),
+						.child(name.to_string()),
 				)
 				.child(
 					ElementView::new("p")
@@ -103,7 +96,7 @@ fn model_card(name: &str, url: &str) -> View {
 				.child(
 					ElementView::new("a")
 						.attr("class", "btn btn-primary")
-						.attr("href", url)
+						.attr("href", url.to_string())
 						.child(format!("View {}", name)),
 				),
 		)
@@ -228,15 +221,18 @@ fn table_row(
 	let data_cells: Vec<View> = columns
 		.iter()
 		.map(|col| {
-			let value = record.get(&col.field).map(|s| s.as_str()).unwrap_or("-");
+			let value = record
+				.get(&col.field)
+				.cloned()
+				.unwrap_or_else(|| "-".to_string());
 			ElementView::new("td").child(value).into_view()
 		})
 		.collect();
 
 	// Actions cell
-	let record_id = record.get("id").map(|s| s.as_str()).unwrap_or("0");
+	let record_id = record.get("id").cloned().unwrap_or_else(|| "0".to_string());
 	let actions_cell = ElementView::new("td")
-		.child(action_buttons(model_name, record_id))
+		.child(action_buttons(model_name, &record_id))
 		.into_view();
 
 	ElementView::new("tr")
@@ -394,7 +390,7 @@ pub fn model_form(model_name: &str, fields: &[FormField], record_id: Option<&str
 	let list_url = format!("/admin/{}/", model_name.to_lowercase());
 
 	// Add form fields
-	let form_groups: Vec<View> = fields.iter().map(|field| form_group(field)).collect();
+	let form_groups: Vec<View> = fields.iter().map(form_group).collect();
 
 	ElementView::new("div")
 		.attr("class", "model-form")

@@ -40,7 +40,7 @@ pub fn header(site_name: &str, user_name: Option<&str>) -> View {
 					ElementView::new("a")
 						.attr("class", "navbar-brand")
 						.attr("href", "/admin/")
-						.child(site_name),
+						.child(site_name.to_string()),
 				)
 				.child(
 					ElementView::new("span")
