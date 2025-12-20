@@ -72,6 +72,9 @@ web-sys = { version = "0.3", features = [
 	"DomTokenList",
 	"NamedNodeMap",
 	"Attr",
+	"HtmlCollection",
+	"NodeList",
+	"HtmlDocument",
 	# History API (for router)
 	"History",
 	"Location",

@@ -203,6 +203,41 @@ impl Element {
 		}
 	}
 
+	/// Add an event listener that receives the event object
+	///
+	/// Returns an `EventHandle` that automatically removes the listener when dropped.
+	///
+	/// # Arguments
+	///
+	/// * `event_type` - Event type (e.g., "click", "input")
+	/// * `callback` - Closure to call when event fires, receives the event object
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let handle = element.add_event_listener_with_event("click", |event| {
+	///     console::log_2(&"Event:".into(), &event);
+	/// });
+	/// ```
+	pub fn add_event_listener_with_event<F>(&self, event_type: &str, mut callback: F) -> EventHandle
+	where
+		F: FnMut(web_sys::Event) + 'static,
+	{
+		let closure = Closure::wrap(Box::new(move |event: web_sys::Event| {
+			callback(event);
+		}) as Box<dyn FnMut(web_sys::Event)>);
+
+		self.inner
+			.add_event_listener_with_callback(event_type, closure.as_ref().unchecked_ref())
+			.expect("Failed to add event listener");
+
+		EventHandle {
+			element: self.inner.clone(),
+			event_type: event_type.to_string(),
+			closure: Some(closure),
+		}
+	}
+
 	/// Set text content of this element
 	///
 	/// # Arguments
@@ -249,6 +284,462 @@ impl Element {
 			.map_err(|e| format!("Failed to append child: {:?}", e))?;
 		Ok(())
 	}
+
+	/// Get all child elements
+	///
+	/// Returns a vector of child elements, excluding text nodes.
+	///
+	/// # Returns
+	///
+	/// A vector of child elements. Returns an empty vector if there are no children.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::dom::document;
+	///
+	/// let doc = document();
+	/// let parent = doc.create_element("div")?;
+	/// let child = doc.create_element("span")?;
+	/// parent.append_child(child)?;
+	///
+	/// let children = parent.children();
+	/// assert_eq!(children.len(), 1);
+	/// ```
+	pub fn children(&self) -> Vec<Element> {
+		let collection = self.inner.children();
+		(0..collection.length())
+			.filter_map(|i| collection.item(i))
+			.map(Element::new)
+			.collect()
+	}
+
+	/// Get the tag name of this element
+	///
+	/// Returns the tag name in uppercase (e.g., "DIV", "SPAN").
+	/// Use `.to_lowercase()` on the result if you need lowercase.
+	///
+	/// # Returns
+	///
+	/// The tag name as a String.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::dom::document;
+	///
+	/// let doc = document();
+	/// let element = doc.create_element("div")?;
+	/// assert_eq!(element.tag_name().to_lowercase(), "div");
+	/// ```
+	pub fn tag_name(&self) -> String {
+		self.inner.tag_name()
+	}
+
+	/// Get a reference to the underlying web-sys Element
+	///
+	/// This method provides direct access to the wrapped `web_sys::Element`
+	/// for cases where you need to use web-sys APIs directly.
+	///
+	/// # Returns
+	///
+	/// A reference to the underlying `web_sys::Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::dom::document;
+	///
+	/// let doc = document();
+	/// let element = doc.create_element("button")?;
+	///
+	/// // Access web_sys API directly
+	/// let web_element = element.inner();
+	/// ```
+	///
+	/// # Note
+	///
+	/// This method is identical to `as_web_sys()` but provided for API consistency.
+	pub fn inner(&self) -> &web_sys::Element {
+		&self.inner
+	}
+
+	/// Get the parent element of this element.
+	///
+	/// Returns `None` if there is no parent element.
+	///
+	/// # Returns
+	///
+	/// An optional parent `Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::dom::document;
+	///
+	/// let doc = document();
+	/// let parent = doc.create_element("div")?;
+	/// let child = doc.create_element("span")?;
+	/// parent.append_child(child.clone())?;
+	///
+	/// let parent_elem = child.parent_element();
+	/// assert!(parent_elem.is_some());
+	/// ```
+	pub fn parent_element(&self) -> Option<Element> {
+		self.inner.parent_element().map(Element::new)
+	}
+
+	/// Get the next sibling element.
+	///
+	/// Returns `None` if there is no next sibling element.
+	///
+	/// # Returns
+	///
+	/// An optional next sibling `Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let sibling = element.next_element_sibling();
+	/// if let Some(next) = sibling {
+	///     println!("Next sibling: {}", next.tag_name());
+	/// }
+	/// ```
+	pub fn next_element_sibling(&self) -> Option<Element> {
+		self.inner.next_element_sibling().map(Element::new)
+	}
+
+	/// Get the previous sibling element.
+	///
+	/// Returns `None` if there is no previous sibling element.
+	///
+	/// # Returns
+	///
+	/// An optional previous sibling `Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let sibling = element.previous_element_sibling();
+	/// if let Some(prev) = sibling {
+	///     println!("Previous sibling: {}", prev.tag_name());
+	/// }
+	/// ```
+	pub fn previous_element_sibling(&self) -> Option<Element> {
+		self.inner.previous_element_sibling().map(Element::new)
+	}
+
+	/// Get the first child element.
+	///
+	/// Returns `None` if there are no child elements.
+	///
+	/// # Returns
+	///
+	/// An optional first child `Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// if let Some(first_child) = element.first_element_child() {
+	///     println!("First child: {}", first_child.tag_name());
+	/// }
+	/// ```
+	pub fn first_element_child(&self) -> Option<Element> {
+		self.inner.first_element_child().map(Element::new)
+	}
+
+	/// Get the last child element.
+	///
+	/// Returns `None` if there are no child elements.
+	///
+	/// # Returns
+	///
+	/// An optional last child `Element`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// if let Some(last_child) = element.last_element_child() {
+	///     println!("Last child: {}", last_child.tag_name());
+	/// }
+	/// ```
+	pub fn last_element_child(&self) -> Option<Element> {
+		self.inner.last_element_child().map(Element::new)
+	}
+
+	/// Get the number of child elements.
+	///
+	/// # Returns
+	///
+	/// The count of child elements (not including text nodes).
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let count = element.child_element_count();
+	/// println!("Element has {} children", count);
+	/// ```
+	pub fn child_element_count(&self) -> u32 {
+		self.inner.child_element_count()
+	}
+
+	/// Query for the first element matching a CSS selector.
+	///
+	/// Returns the first descendant element that matches the specified CSS selector,
+	/// or `None` if no matches are found.
+	///
+	/// # Arguments
+	///
+	/// * `selector` - A CSS selector string
+	///
+	/// # Returns
+	///
+	/// * `Ok(Some(Element))` - First matching element
+	/// * `Ok(None)` - No matches found
+	/// * `Err(String)` - Invalid selector or query failed
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let button = element.query_selector(".btn-primary")?;
+	/// if let Some(btn) = button {
+	///     btn.set_attribute("disabled", "true")?;
+	/// }
+	/// ```
+	pub fn query_selector(&self, selector: &str) -> Result<Option<Element>, String> {
+		self.inner
+			.query_selector(selector)
+			.map(|opt| opt.map(Element::new))
+			.map_err(|e| format!("Failed to query selector '{}': {:?}", selector, e))
+	}
+
+	/// Query for all elements matching a CSS selector.
+	///
+	/// Returns all descendant elements that match the specified CSS selector.
+	///
+	/// # Arguments
+	///
+	/// * `selector` - A CSS selector string
+	///
+	/// # Returns
+	///
+	/// * `Ok(Vec<Element>)` - Vector of matching elements (empty if no matches)
+	/// * `Err(String)` - Invalid selector or query failed
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let items = element.query_selector_all(".list-item")?;
+	/// for item in items {
+	///     item.add_class("processed")?;
+	/// }
+	/// ```
+	pub fn query_selector_all(&self, selector: &str) -> Result<Vec<Element>, String> {
+		use wasm_bindgen::JsCast;
+
+		let node_list = self
+			.inner
+			.query_selector_all(selector)
+			.map_err(|e| format!("Failed to query selector all '{}': {:?}", selector, e))?;
+
+		Ok((0..node_list.length())
+			.filter_map(|i| node_list.item(i))
+			.filter_map(|node| node.dyn_into::<web_sys::Element>().ok())
+			.map(Element::new)
+			.collect())
+	}
+
+	/// Find the closest ancestor element matching a CSS selector.
+	///
+	/// Traverses the element and its parents (heading toward the document root)
+	/// until it finds a node that matches the specified CSS selector.
+	///
+	/// # Arguments
+	///
+	/// * `selector` - A CSS selector string
+	///
+	/// # Returns
+	///
+	/// * `Ok(Some(Element))` - First matching ancestor (or self if it matches)
+	/// * `Ok(None)` - No matches found
+	/// * `Err(String)` - Invalid selector or query failed
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let form = element.closest("form")?;
+	/// if let Some(form_elem) = form {
+	///     form_elem.set_attribute("novalidate", "true")?;
+	/// }
+	/// ```
+	pub fn closest(&self, selector: &str) -> Result<Option<Element>, String> {
+		self.inner
+			.closest(selector)
+			.map(|opt| opt.map(Element::new))
+			.map_err(|e| format!("Failed to find closest '{}': {:?}", selector, e))
+	}
+
+	/// Get the element's ID.
+	///
+	/// Returns the value of the element's `id` attribute.
+	///
+	/// # Returns
+	///
+	/// The ID as a String (empty string if no ID is set).
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let id = element.id();
+	/// if !id.is_empty() {
+	///     println!("Element ID: {}", id);
+	/// }
+	/// ```
+	pub fn id(&self) -> String {
+		self.inner.id()
+	}
+
+	/// Set the element's ID.
+	///
+	/// Sets the value of the element's `id` attribute.
+	///
+	/// # Arguments
+	///
+	/// * `id` - The ID to set
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// element.set_id("my-element");
+	/// assert_eq!(element.id(), "my-element");
+	/// ```
+	pub fn set_id(&self, id: &str) {
+		self.inner.set_id(id);
+	}
+
+	/// Get the element's class list.
+	///
+	/// Returns a `DomTokenList` representing the element's `class` attribute.
+	/// This provides methods for manipulating individual classes.
+	///
+	/// # Returns
+	///
+	/// A `web_sys::DomTokenList` for class manipulation.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let class_list = element.class_list();
+	/// class_list.add_1("active").unwrap();
+	/// ```
+	pub fn class_list(&self) -> web_sys::DomTokenList {
+		self.inner.class_list()
+	}
+
+	/// Add a class to the element.
+	///
+	/// Adds the specified class to the element's class list if not already present.
+	///
+	/// # Arguments
+	///
+	/// * `class` - The class name to add
+	///
+	/// # Returns
+	///
+	/// * `Ok(())` - Class was added successfully
+	/// * `Err(String)` - Failed to add class
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// element.add_class("active")?;
+	/// element.add_class("highlight")?;
+	/// ```
+	pub fn add_class(&self, class: &str) -> Result<(), String> {
+		self.inner
+			.class_list()
+			.add_1(class)
+			.map_err(|e| format!("Failed to add class '{}': {:?}", class, e))
+	}
+
+	/// Remove a class from the element.
+	///
+	/// Removes the specified class from the element's class list if present.
+	///
+	/// # Arguments
+	///
+	/// * `class` - The class name to remove
+	///
+	/// # Returns
+	///
+	/// * `Ok(())` - Class was removed successfully
+	/// * `Err(String)` - Failed to remove class
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// element.remove_class("active")?;
+	/// ```
+	pub fn remove_class(&self, class: &str) -> Result<(), String> {
+		self.inner
+			.class_list()
+			.remove_1(class)
+			.map_err(|e| format!("Failed to remove class '{}': {:?}", class, e))
+	}
+
+	/// Check if the element has a specific class.
+	///
+	/// Returns `true` if the element's class list contains the specified class.
+	///
+	/// # Arguments
+	///
+	/// * `class` - The class name to check
+	///
+	/// # Returns
+	///
+	/// `true` if the class is present, `false` otherwise.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// if element.has_class("active") {
+	///     println!("Element is active");
+	/// }
+	/// ```
+	pub fn has_class(&self, class: &str) -> bool {
+		self.inner.class_list().contains(class)
+	}
+
+	/// Toggle a class on the element.
+	///
+	/// If the class is present, removes it. If the class is absent, adds it.
+	///
+	/// # Arguments
+	///
+	/// * `class` - The class name to toggle
+	///
+	/// # Returns
+	///
+	/// * `Ok(true)` - Class was added
+	/// * `Ok(false)` - Class was removed
+	/// * `Err(String)` - Failed to toggle class
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let is_active = element.toggle_class("active")?;
+	/// if is_active {
+	///     println!("Class was added");
+	/// } else {
+	///     println!("Class was removed");
+	/// }
+	/// ```
+	pub fn toggle_class(&self, class: &str) -> Result<bool, String> {
+		self.inner
+			.class_list()
+			.toggle(class)
+			.map_err(|e| format!("Failed to toggle class '{}': {:?}", class, e))
+	}
 }
 
 /// RAII wrapper for event listeners
@@ -266,6 +757,7 @@ impl Element {
 ///     // Listener is active here
 /// } // handle.drop() called here - listener automatically removed
 /// ```
+#[derive(Debug)]
 pub struct EventHandle {
 	/// The element this listener is attached to
 	element: web_sys::Element,
@@ -327,5 +819,212 @@ mod tests {
 
 		element.set_text_content("Hello, World!");
 		assert_eq!(element.text_content(), Some("Hello, World!".to_string()));
+	}
+
+	#[wasm_bindgen_test]
+	fn test_children() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent = document.create_element("div").unwrap();
+		let child1 = document.create_element("span").unwrap();
+		let child2 = document.create_element("p").unwrap();
+
+		parent.append_child(&child1).unwrap();
+		parent.append_child(&child2).unwrap();
+
+		let element = Element::new(parent);
+		let children = element.children();
+
+		assert_eq!(children.len(), 2);
+		assert_eq!(children[0].tag_name().to_lowercase(), "span");
+		assert_eq!(children[1].tag_name().to_lowercase(), "p");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_tag_name() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let web_element = document.create_element("div").unwrap();
+		let element = Element::new(web_element);
+
+		assert_eq!(element.tag_name().to_lowercase(), "div");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_inner() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let web_element = document.create_element("button").unwrap();
+		let element = Element::new(web_element.clone());
+
+		// inner() and as_web_sys() should return the same reference
+		assert_eq!(element.inner().tag_name(), element.as_web_sys().tag_name());
+	}
+
+	#[wasm_bindgen_test]
+	fn test_parent_element() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent_web = document.create_element("div").unwrap();
+		let child_web = document.create_element("span").unwrap();
+
+		parent_web.append_child(&child_web).unwrap();
+
+		let child_element = Element::new(child_web);
+		let parent_element = child_element.parent_element();
+
+		assert!(parent_element.is_some());
+		assert_eq!(parent_element.unwrap().tag_name().to_lowercase(), "div");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_siblings() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent = document.create_element("div").unwrap();
+		let child1 = document.create_element("span").unwrap();
+		let child2 = document.create_element("p").unwrap();
+		let child3 = document.create_element("a").unwrap();
+
+		parent.append_child(&child1).unwrap();
+		parent.append_child(&child2).unwrap();
+		parent.append_child(&child3).unwrap();
+
+		let middle = Element::new(child2);
+
+		let next = middle.next_element_sibling();
+		assert!(next.is_some());
+		assert_eq!(next.unwrap().tag_name().to_lowercase(), "a");
+
+		let prev = middle.previous_element_sibling();
+		assert!(prev.is_some());
+		assert_eq!(prev.unwrap().tag_name().to_lowercase(), "span");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_first_and_last_child() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent_web = document.create_element("div").unwrap();
+		let child1 = document.create_element("span").unwrap();
+		let child2 = document.create_element("p").unwrap();
+		let child3 = document.create_element("a").unwrap();
+
+		parent_web.append_child(&child1).unwrap();
+		parent_web.append_child(&child2).unwrap();
+		parent_web.append_child(&child3).unwrap();
+
+		let parent = Element::new(parent_web);
+
+		let first = parent.first_element_child();
+		assert!(first.is_some());
+		assert_eq!(first.unwrap().tag_name().to_lowercase(), "span");
+
+		let last = parent.last_element_child();
+		assert!(last.is_some());
+		assert_eq!(last.unwrap().tag_name().to_lowercase(), "a");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_child_element_count() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent_web = document.create_element("div").unwrap();
+		let child1 = document.create_element("span").unwrap();
+		let child2 = document.create_element("p").unwrap();
+
+		let parent = Element::new(parent_web.clone());
+		assert_eq!(parent.child_element_count(), 0);
+
+		parent_web.append_child(&child1).unwrap();
+		assert_eq!(parent.child_element_count(), 1);
+
+		parent_web.append_child(&child2).unwrap();
+		assert_eq!(parent.child_element_count(), 2);
+	}
+
+	#[wasm_bindgen_test]
+	fn test_query_selector() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent_web = document.create_element("div").unwrap();
+		let child = document.create_element("p").unwrap();
+		child.set_class_name("test-class");
+
+		parent_web.append_child(&child).unwrap();
+
+		let parent = Element::new(parent_web);
+		let found = parent.query_selector(".test-class").unwrap();
+
+		assert!(found.is_some());
+		assert_eq!(found.unwrap().tag_name().to_lowercase(), "p");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_query_selector_all() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let parent_web = document.create_element("div").unwrap();
+
+		for _ in 0..3 {
+			let child = document.create_element("span").unwrap();
+			child.set_class_name("item");
+			parent_web.append_child(&child).unwrap();
+		}
+
+		let parent = Element::new(parent_web);
+		let found = parent.query_selector_all(".item").unwrap();
+
+		assert_eq!(found.len(), 3);
+		for elem in found {
+			assert_eq!(elem.tag_name().to_lowercase(), "span");
+		}
+	}
+
+	#[wasm_bindgen_test]
+	fn test_closest() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let grandparent = document.create_element("div").unwrap();
+		grandparent.set_class_name("container");
+
+		let parent = document.create_element("section").unwrap();
+		let child_web = document.create_element("span").unwrap();
+
+		grandparent.append_child(&parent).unwrap();
+		parent.append_child(&child_web).unwrap();
+
+		let child = Element::new(child_web);
+		let container = child.closest(".container").unwrap();
+
+		assert!(container.is_some());
+		assert_eq!(container.unwrap().tag_name().to_lowercase(), "div");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_id_operations() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let web_element = document.create_element("div").unwrap();
+		let element = Element::new(web_element);
+
+		assert_eq!(element.id(), "");
+
+		element.set_id("my-element");
+		assert_eq!(element.id(), "my-element");
+	}
+
+	#[wasm_bindgen_test]
+	fn test_class_operations() {
+		let document = web_sys::window().unwrap().document().unwrap();
+		let web_element = document.create_element("div").unwrap();
+		let element = Element::new(web_element);
+
+		element.add_class("foo").unwrap();
+		assert!(element.has_class("foo"));
+
+		element.add_class("bar").unwrap();
+		assert!(element.has_class("bar"));
+
+		element.remove_class("foo").unwrap();
+		assert!(!element.has_class("foo"));
+		assert!(element.has_class("bar"));
+
+		let toggled = element.toggle_class("baz").unwrap();
+		assert!(toggled);
+		assert!(element.has_class("baz"));
+
+		let toggled_off = element.toggle_class("baz").unwrap();
+		assert!(!toggled_off);
+		assert!(!element.has_class("baz"));
 	}
 }
