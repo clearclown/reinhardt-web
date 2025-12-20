@@ -14,6 +14,7 @@ pub mod errors;
 pub mod models;
 pub mod requests;
 pub mod responses;
+pub mod wasm_stubs;
 
 // Re-export all public types
 pub use errors::*;

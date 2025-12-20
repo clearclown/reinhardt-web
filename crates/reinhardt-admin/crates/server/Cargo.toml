@@ -15,26 +15,30 @@ default = []
 full = []
 
 [dependencies]
-# Shared type definitions
+# Shared type definitions (both WASM and server)
 reinhardt-admin-types = { workspace = true }
 
+# Reinhardt dependencies (both WASM and server)
+reinhardt-pages = { workspace = true }  # Provides server_fn + inject macros
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }  # Needed for URL codec in server functions
+thiserror = { workspace = true }
+
+# Server-side only dependencies
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Core logic
 reinhardt-admin-core = { path = "../core" }
 
 # Reinhardt dependencies
-reinhardt-pages = { workspace = true }
-reinhardt-di = { workspace = true }
+reinhardt-di = { workspace = true }  # Moved from common deps - only needed on server
 reinhardt-http = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
 
 # Core dependencies
 tokio = { workspace = true }
 async-trait = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_urlencoded = { workspace = true }
 csv = { workspace = true }
-thiserror = { workspace = true }
 anyhow = { workspace = true }
 
 [dev-dependencies]
