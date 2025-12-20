@@ -19,8 +19,8 @@ oauth = []
 token = []
 argon2-hasher = []
 
-# Database and session storage
-database = ["sqlx", "sea-query"]
+# Database and session storage (ORM model support)
+database = ["sqlx", "sea-query", "reinhardt-orm", "reinhardt-migrations", "ctor"]
 redis-sessions = ["redis"]
 
 # Aggregate all auth features
@@ -37,6 +37,7 @@ auth-full = [
 ]
 
 [dependencies]
+reinhardt-core = { workspace = true, features = ["macros"] }
 reinhardt-di = { workspace = true }
 reinhardt-sessions = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
@@ -73,6 +74,9 @@ sea-query = { version = "1.0.0-rc.22", features = [
   "backend-sqlite",
   "sqlx-utils",
 ], optional = true }
+reinhardt-orm = { workspace = true, optional = true }
+reinhardt-migrations = { workspace = true, optional = true }
+ctor = { workspace = true, optional = true }
 redis = { workspace = true, optional = true }
 
 [dev-dependencies]

@@ -44,9 +44,9 @@
 
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
+use reinhardt_core::macros::model;
 use reinhardt_db::DatabaseConnection;
-use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Manager, Model};
-use reinhardt_macros::model;
+use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QueryValue};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -74,12 +74,14 @@ use super::cache::{SessionBackend, SessionError};
 ///     last_accessed: Some(now_ms),
 /// };
 /// ```
-#[model(table_name = "sessions", primary_key = "session_key")]
-#[derive(Debug, Clone)]
+#[model(table_name = "sessions")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Session {
 	/// Unique session key (primary key)
+	#[field(primary_key = true, max_length = 255)]
 	pub session_key: String,
 	/// Session data stored as JSON string
+	#[field(max_length = 65535)]
 	pub session_data: String,
 	/// Session expiration timestamp (Unix timestamp in milliseconds)
 	pub expire_date: i64,
@@ -216,15 +218,15 @@ impl DatabaseSessionBackend {
 	pub async fn cleanup_expired(&self) -> Result<u64, SessionError> {
 		let now_timestamp = Utc::now().timestamp_millis();
 
-		// Use ORM to delete expired sessions
-		let manager = Session::objects(&self.connection);
-		let filter = Filter::new("expire_date", now_timestamp).lt();
-		let result =
-			manager.filter(filter).delete().await.map_err(|e| {
-				SessionError::CacheError(format!("Failed to cleanup sessions: {}", e))
-			})?;
+		// Use raw SQL to delete expired sessions (ORM doesn't have bulk delete execution)
+		let sql = "DELETE FROM sessions WHERE expire_date < $1";
+		let rows_affected = self
+			.connection
+			.execute(sql, vec![QueryValue::Int(now_timestamp)])
+			.await
+			.map_err(|e| SessionError::CacheError(format!("Failed to cleanup sessions: {}", e)))?;
 
-		Ok(result as u64)
+		Ok(rows_affected)
 	}
 }
 
@@ -235,12 +237,16 @@ impl SessionBackend for DatabaseSessionBackend {
 		T: for<'de> Deserialize<'de> + Send,
 	{
 		// Use ORM to load session
-		let manager = Session::objects(&self.connection);
-		let session = manager
-			.filter(Filter::new("session_key", session_key))
+		let session = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::Eq,
+				FilterValue::String(session_key.to_string()),
+			))
 			.first()
 			.await
-			.ok();
+			.ok()
+			.flatten();
 
 		match session {
 			Some(session) => {
@@ -286,14 +292,17 @@ impl SessionBackend for DatabaseSessionBackend {
 		let expire_timestamp = expire_date.timestamp_millis();
 
 		// Use ORM to save session
-		let manager = Session::objects(&self.connection);
-
 		// Try to get existing session to preserve created_at
-		let existing = manager
-			.filter(Filter::new("session_key", session_key))
+		let existing = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::Eq,
+				FilterValue::String(session_key.to_string()),
+			))
 			.first()
 			.await
-			.ok();
+			.ok()
+			.flatten();
 
 		let created_at_timestamp = existing
 			.as_ref()
@@ -308,10 +317,11 @@ impl SessionBackend for DatabaseSessionBackend {
 			last_accessed: Some(now_timestamp),
 		};
 
+		let manager = Session::objects();
 		if existing.is_some() {
 			// Update existing session
 			manager
-				.update(session_key, &session)
+				.update(&session)
 				.await
 				.map_err(|e| SessionError::CacheError(format!("Failed to save session: {}", e)))?;
 		} else {
@@ -326,11 +336,10 @@ impl SessionBackend for DatabaseSessionBackend {
 	}
 
 	async fn delete(&self, session_key: &str) -> Result<(), SessionError> {
-		// Use ORM to delete session
-		let manager = Session::objects(&self.connection);
-		manager
-			.filter(Filter::new("session_key", session_key))
-			.delete()
+		// Use raw SQL to delete session (ORM doesn't have bulk delete execution)
+		let sql = "DELETE FROM sessions WHERE session_key = $1";
+		self.connection
+			.execute(sql, vec![QueryValue::String(session_key.to_string())])
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to delete session: {}", e)))?;
 
@@ -341,13 +350,21 @@ impl SessionBackend for DatabaseSessionBackend {
 		let now_timestamp = Utc::now().timestamp_millis();
 
 		// Use ORM to check if session exists and is not expired
-		let manager = Session::objects(&self.connection);
-		let session = manager
-			.filter(Filter::new("session_key", session_key))
-			.filter(Filter::new("expire_date", now_timestamp).gt())
+		let session = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::Eq,
+				FilterValue::String(session_key.to_string()),
+			))
+			.filter(Filter::new(
+				"expire_date".to_string(),
+				FilterOperator::Gt,
+				FilterValue::Integer(now_timestamp),
+			))
 			.first()
 			.await
-			.ok();
+			.ok()
+			.flatten();
 
 		Ok(session.is_some())
 	}
@@ -357,8 +374,9 @@ impl SessionBackend for DatabaseSessionBackend {
 impl CleanupableBackend for DatabaseSessionBackend {
 	async fn get_all_keys(&self) -> Result<Vec<String>, SessionError> {
 		// Use ORM to get all session keys
-		let manager = Session::objects(&self.connection);
-		let sessions = manager
+		// Manager::all() returns QuerySet, QuerySet::all() executes and returns Vec<T>
+		let sessions = Session::objects()
+			.all()
 			.all()
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to get all keys: {}", e)))?;
@@ -373,12 +391,16 @@ impl CleanupableBackend for DatabaseSessionBackend {
 		session_key: &str,
 	) -> Result<Option<SessionMetadata>, SessionError> {
 		// Use ORM to get session metadata
-		let manager = Session::objects(&self.connection);
-		let session = manager
-			.filter(Filter::new("session_key", session_key))
+		let session = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::Eq,
+				FilterValue::String(session_key.to_string()),
+			))
 			.first()
 			.await
-			.ok();
+			.ok()
+			.flatten();
 
 		match session {
 			Some(session) => {
@@ -400,10 +422,12 @@ impl CleanupableBackend for DatabaseSessionBackend {
 
 	async fn list_keys_with_prefix(&self, prefix: &str) -> Result<Vec<String>, SessionError> {
 		// Use ORM to list session keys with prefix
-		let manager = Session::objects(&self.connection);
-		let pattern = format!("{}%", prefix);
-		let sessions = manager
-			.filter(Filter::new("session_key", &pattern).like())
+		let sessions = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::StartsWith,
+				FilterValue::String(prefix.to_string()),
+			))
 			.all()
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to list session keys: {}", e)))?;
@@ -415,10 +439,12 @@ impl CleanupableBackend for DatabaseSessionBackend {
 
 	async fn count_keys_with_prefix(&self, prefix: &str) -> Result<usize, SessionError> {
 		// Use ORM to count session keys with prefix
-		let manager = Session::objects(&self.connection);
-		let pattern = format!("{}%", prefix);
-		let count = manager
-			.filter(Filter::new("session_key", &pattern).like())
+		let count = Session::objects()
+			.filter_by(Filter::new(
+				"session_key".to_string(),
+				FilterOperator::StartsWith,
+				FilterValue::String(prefix.to_string()),
+			))
 			.count()
 			.await
 			.map_err(|e| {
@@ -429,17 +455,17 @@ impl CleanupableBackend for DatabaseSessionBackend {
 	}
 
 	async fn delete_keys_with_prefix(&self, prefix: &str) -> Result<usize, SessionError> {
-		// Use ORM to delete session keys with prefix
-		let manager = Session::objects(&self.connection);
+		// Use raw SQL to delete session keys with prefix (ORM doesn't have bulk delete execution)
 		let pattern = format!("{}%", prefix);
-		let deleted = manager
-			.filter(Filter::new("session_key", &pattern).like())
-			.delete()
+		let sql = "DELETE FROM sessions WHERE session_key LIKE $1";
+		let rows_affected = self
+			.connection
+			.execute(sql, vec![QueryValue::String(pattern)])
 			.await
 			.map_err(|e| {
 				SessionError::CacheError(format!("Failed to delete session keys: {}", e))
 			})?;
 
-		Ok(deleted as usize)
+		Ok(rows_affected as usize)
 	}
 }

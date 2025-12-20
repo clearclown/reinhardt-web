@@ -14,13 +14,16 @@ async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-reinhardt-core = { workspace = true, features = ["exception", "types"] }
+reinhardt-core = { workspace = true, features = ["exception", "types", "macros"] }
 uuid = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
 
 # Optional dependencies for different backends
-reinhardt-db = { workspace = true, optional = true, features = ["orm"] }
+reinhardt-db = { workspace = true, optional = true, features = ["orm", "migrations"] }
+reinhardt-orm = { workspace = true, optional = true }
+reinhardt-migrations = { workspace = true, optional = true }
+ctor = { workspace = true, optional = true }
 sqlx = { workspace = true, features = ["any", "sqlite", "runtime-tokio"] }
 sea-query = { version = "1.0.0-rc.22", features = [
   "backend-postgres",
@@ -57,7 +60,7 @@ prometheus = { version = "0.14.0", optional = true }
 
 [features]
 default = []
-database = ["reinhardt-db", "sea-query"]
+database = ["reinhardt-db", "reinhardt-orm", "reinhardt-migrations", "ctor", "sea-query"]
 file = ["tokio", "fs2"]
 cookie = ["base64", "aes-gcm", "rand", "hmac", "sha2"]
 jwt = ["jsonwebtoken"]

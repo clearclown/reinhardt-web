@@ -16,16 +16,10 @@ use password_hash::{PasswordHasher, phc::Salt};
 use chrono::Utc;
 
 #[cfg(feature = "database")]
-use reinhardt_db::{
-	DatabaseConnection,
-	prelude::{Model, model},
-};
+use reinhardt_core::macros::model;
 
 #[cfg(feature = "database")]
-use sea_query::{Alias, ColumnDef, Expr, Query, SqliteQueryBuilder, Table};
-
-#[cfg(feature = "database")]
-use sqlx::{Pool, Sqlite, SqlitePool};
+use reinhardt_db::{DatabaseConnection, prelude::Model};
 
 #[derive(Parser, Debug)]
 #[command(name = "createsuperuser")]
@@ -53,11 +47,16 @@ struct Args {
 }
 
 #[cfg(feature = "database")]
-#[model(table_name = "auth_user", primary_key = "id")]
+#[model(table_name = "auth_user")]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct AuthUser {
+	#[field(primary_key = true)]
 	pub id: Option<i32>,
+	#[field(max_length = 150)]
 	pub username: String,
+	#[field(max_length = 254)]
 	pub email: String,
+	#[field(max_length = 255)]
 	pub password_hash: Option<String>,
 	pub is_staff: bool,
 	pub is_active: bool,
@@ -75,7 +74,6 @@ fn validate_username(username: &str) -> bool {
 
 #[cfg(feature = "database")]
 async fn create_user_in_database(
-	connection: &DatabaseConnection,
 	username: &str,
 	email: &str,
 	password: Option<&str>,
@@ -104,7 +102,7 @@ async fn create_user_in_database(
 		date_joined: Utc::now(),
 	};
 
-	let manager = AuthUser::objects(connection);
+	let manager = AuthUser::objects();
 	manager.create(&user).await?;
 
 	Ok(())
@@ -276,11 +274,11 @@ async fn create_database_user(
 	email: &str,
 	password: Option<&str>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-	// Create database connection
-	let connection = DatabaseConnection::connect(database_url).await?;
+	// Create database connection to initialize the ORM context
+	let _connection = DatabaseConnection::connect(database_url).await?;
 
 	// Create user
-	create_user_in_database(&connection, username, email, password).await?;
+	create_user_in_database(username, email, password).await?;
 
 	Ok(())
 }
