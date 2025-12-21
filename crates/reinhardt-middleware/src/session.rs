@@ -8,6 +8,7 @@ use reinhardt_core::{
 	Handler, Middleware,
 	http::{Request, Response, Result},
 };
+use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -800,5 +801,109 @@ mod tests {
 		// Custom cookie name should be used
 		assert!(cookie.starts_with("my_session="));
 		assert!(!cookie.starts_with("sessionid="));
+	}
+}
+
+// ============================================================================
+// Injectable Implementations for Dependency Injection
+// ============================================================================
+
+/// Helper function to extract session ID from HTTP request cookies.
+///
+/// Searches for a cookie with the specified name in the Cookie header.
+///
+/// # Arguments
+///
+/// * `request` - The HTTP request to extract the session ID from
+/// * `cookie_name` - The name of the session cookie (e.g., "sessionid")
+///
+/// # Returns
+///
+/// * `Ok(String)` - The session ID if found and valid
+/// * `Err(DiError)` - If the cookie header is missing, invalid, or the session cookie is not found
+fn extract_session_id_from_request(request: &Request, cookie_name: &str) -> DiResult<String> {
+	let cookie_header = request
+		.headers
+		.get(hyper::header::COOKIE)
+		.ok_or_else(|| DiError::NotFound("Cookie header not found".to_string()))?;
+
+	let cookie_str = cookie_header
+		.to_str()
+		.map_err(|e| DiError::ProviderError(format!("Invalid cookie header: {}", e)))?;
+
+	for cookie in cookie_str.split(';') {
+		let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
+		if parts.len() == 2 && parts[0] == cookie_name {
+			return Ok(parts[1].to_string());
+		}
+	}
+
+	Err(DiError::NotFound(format!(
+		"Session cookie '{}' not found",
+		cookie_name
+	)))
+}
+
+#[async_trait]
+impl Injectable for SessionData {
+	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+		// Get SessionStore from SingletonScope
+		let store = ctx.get_singleton::<Arc<SessionStore>>().ok_or_else(|| {
+			DiError::NotFound(
+				"SessionStore not found in SingletonScope. \
+                     Ensure SessionMiddleware is configured and its store is registered."
+					.to_string(),
+			)
+		})?;
+
+		// Get Request from context
+		let request = ctx.get_request::<Request>().ok_or_else(|| {
+			DiError::NotFound("Request not found in InjectionContext".to_string())
+		})?;
+
+		// Extract session ID from Cookie header
+		let session_id = extract_session_id_from_request(&request, "sessionid")?;
+
+		// Load SessionData from store
+		store
+			.get(&session_id)
+			.filter(|s| s.is_valid())
+			.ok_or_else(|| {
+				DiError::NotFound("Valid session not found. Session may have expired.".to_string())
+			})
+	}
+}
+
+/// Wrapper for Arc<SessionStore> to enable dependency injection
+///
+/// This wrapper type is necessary because we cannot implement Injectable
+/// for `Arc<SessionStore>` directly due to Rust's orphan rules.
+#[derive(Clone)]
+pub struct SessionStoreRef(pub Arc<SessionStore>);
+
+impl SessionStoreRef {
+	/// Get a reference to the inner SessionStore
+	pub fn inner(&self) -> &SessionStore {
+		&self.0
+	}
+
+	/// Get a clone of the inner Arc<SessionStore>
+	pub fn arc(&self) -> Arc<SessionStore> {
+		Arc::clone(&self.0)
+	}
+}
+
+#[async_trait]
+impl Injectable for SessionStoreRef {
+	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+		ctx.get_singleton::<Arc<SessionStore>>()
+			.map(|arc_store| SessionStoreRef(Arc::clone(&*arc_store)))
+			.ok_or_else(|| {
+				DiError::NotFound(
+					"SessionStore not found in SingletonScope. \
+                     Ensure SessionMiddleware is configured and its store is registered."
+						.to_string(),
+				)
+			})
 	}
 }

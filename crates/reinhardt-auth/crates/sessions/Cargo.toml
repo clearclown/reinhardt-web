@@ -23,6 +23,7 @@ tracing = { workspace = true }
 reinhardt-db = { workspace = true, optional = true, features = ["orm", "migrations"] }
 reinhardt-orm = { workspace = true, optional = true }
 reinhardt-migrations = { workspace = true, optional = true }
+reinhardt-apps = { workspace = true, optional = true }
 ctor = { workspace = true, optional = true }
 sqlx = { workspace = true, features = ["any", "sqlite", "runtime-tokio"] }
 sea-query = { version = "1.0.0-rc.22", features = [
@@ -60,7 +61,7 @@ prometheus = { version = "0.14.0", optional = true }
 
 [features]
 default = []
-database = ["reinhardt-db", "reinhardt-orm", "reinhardt-migrations", "ctor", "sea-query"]
+database = ["reinhardt-db", "reinhardt-orm", "reinhardt-migrations", "reinhardt-apps", "ctor", "sea-query"]
 file = ["tokio", "fs2"]
 cookie = ["base64", "aes-gcm", "rand", "hmac", "sha2"]
 jwt = ["jsonwebtoken"]

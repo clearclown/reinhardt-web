@@ -228,6 +228,46 @@ impl DatabaseSessionBackend {
 
 		Ok(rows_affected)
 	}
+
+	/// Create the sessions table
+	///
+	/// Creates the sessions table in the database. This is primarily intended for testing.
+	/// In production, migrations should be used to create the table.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_sessions::backends::DatabaseSessionBackend;
+	///
+	/// # async fn example() {
+	/// let backend = DatabaseSessionBackend::new("sqlite::memory:").await.unwrap();
+	/// backend.create_table().await.unwrap();
+	/// # }
+	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
+	/// ```
+	pub async fn create_table(&self) -> Result<(), SessionError> {
+		// Use ANSI SQL compatible syntax for cross-database support
+		let sql = r#"
+			CREATE TABLE IF NOT EXISTS sessions (
+				session_key VARCHAR(255) PRIMARY KEY,
+				session_data TEXT NOT NULL,
+				expire_date BIGINT NOT NULL,
+				created_at BIGINT NOT NULL,
+				last_accessed BIGINT
+			)
+		"#;
+
+		self.connection.execute(sql, vec![]).await.map_err(|e| {
+			SessionError::CacheError(format!("Failed to create sessions table: {}", e))
+		})?;
+
+		// Create index for expire_date
+		let index_sql =
+			"CREATE INDEX IF NOT EXISTS idx_sessions_expire_date ON sessions(expire_date)";
+		let _ = self.connection.execute(index_sql, vec![]).await;
+
+		Ok(())
+	}
 }
 
 #[async_trait]

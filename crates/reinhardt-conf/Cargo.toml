@@ -11,8 +11,8 @@ repository.workspace = true
 
 [dependencies]
 # Internal crates - made optional for re-export
-reinhardt-settings = { path = "crates/settings", version = "0.1.0-alpha.1", optional = true }
-reinhardt-settings-cli = { path = "crates/settings-cli", version = "0.1.0-alpha.1", optional = true }
+reinhardt-settings = { workspace = true, optional = true }
+reinhardt-settings-cli = { workspace = true, optional = true }
 
 [features]
 default = ["settings"]

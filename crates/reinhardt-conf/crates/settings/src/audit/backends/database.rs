@@ -245,15 +245,16 @@ mod tests {
 
 	async fn create_test_backend() -> DatabaseAuditBackend {
 		init_drivers();
-		// Use in-memory SQLite with shared cache mode
-		// This allows multiple connections from the pool to share the same in-memory database
-		let db_url = "sqlite::memory:?mode=rwc&cache=shared";
+		// Use named in-memory SQLite database with shared cache
+		// The "file:" prefix with "mode=memory" and "cache=shared" ensures
+		// all connections in the pool share the same in-memory database
+		let db_url = "sqlite:file:memdb1?mode=memory&cache=shared";
 
-		// Create backend with minimal connection pool for tests
+		// Create backend with AnyPool
 		use sqlx::any::AnyPoolOptions;
+
 		let pool = AnyPoolOptions::new()
-			.min_connections(1)
-			.max_connections(1)
+			.max_connections(5)
 			.connect(db_url)
 			.await
 			.expect("Failed to connect to test database");
@@ -272,13 +273,13 @@ mod tests {
 
 		// Verify tables were created
 		let stmt = Query::select()
-			.expr(Expr::col(Alias::new("*")).count())
+			.expr_as(Expr::col(Alias::new("*")).count(), Alias::new("count"))
 			.from(Alias::new("audit_events"))
 			.to_owned();
 		let sql = stmt.to_string(SqliteQueryBuilder);
 
-		let row = sqlx::query(&sql).fetch_one(&backend.pool).await.unwrap();
-		let count: i64 = row.try_get(0).unwrap();
+		let rows = sqlx::query(&sql).fetch_all(&backend.pool).await.unwrap();
+		let count: i64 = rows[0].try_get("count").unwrap();
 
 		assert_eq!(count, 0);
 	}

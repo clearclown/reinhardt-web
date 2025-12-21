@@ -32,6 +32,7 @@ reinhardt-core = { workspace = true, features = [
 reinhardt-auth = { workspace = true, features = ["sessions"] }
 reinhardt-mail = { workspace = true }
 reinhardt-conf = { workspace = true, features = ["settings"] }
+reinhardt-di = { workspace = true }
 async-trait = { workspace = true }
 chrono = { workspace = true }
 hyper = { workspace = true }
