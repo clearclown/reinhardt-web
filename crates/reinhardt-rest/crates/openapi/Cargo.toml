@@ -11,7 +11,7 @@ authors.workspace = true
 [dependencies]
 async-trait = { workspace = true }
 reinhardt-core = { workspace = true, features = ["serializers", "http"] }
-reinhardt-openapi-macros = { path = "../openapi-macros", version = "0.1.0-alpha.1" }
+reinhardt-openapi-macros = { workspace = true }
 reinhardt-urls = { workspace = true }
 reinhardt-viewsets = { workspace = true }
 serde = { workspace = true }

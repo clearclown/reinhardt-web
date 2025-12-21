@@ -19,6 +19,7 @@ full = ["json", "xml", "yaml"]
 [dependencies]
 # Base layer dependency (ORM-agnostic serialization)
 reinhardt-core = { workspace = true, features = ["serializers", "parsers"] }
+reinhardt-exception = { workspace = true }
 reinhardt-negotiation = { workspace = true }
 reinhardt-parsers = { workspace = true }
 

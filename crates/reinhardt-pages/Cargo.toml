@@ -17,10 +17,10 @@ pages-full = ["msgpack", "static"]
 
 [dependencies]
 # Procedural macros
-reinhardt-pages-macros = { path = "crates/macros" }
+reinhardt-pages-macros = { workspace = true }
 
 # Static files integration (optional)
-reinhardt-static = { path = "../reinhardt-utils/crates/static", optional = true }
+reinhardt-static = { workspace = true, optional = true }
 
 # Core WASM bindings (low-level APIs only)
 wasm-bindgen = "0.2"
@@ -79,20 +79,23 @@ gloo-net = "0.6"
 
 # Server-side only dependencies (DI, HTTP, Forms)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reinhardt-forms = { path = "../reinhardt-forms" }
-reinhardt-di = { path = "../reinhardt-di" }
-reinhardt-http = { path = "../reinhardt-http" }
+reinhardt-forms = { workspace = true }
+reinhardt-di = { workspace = true }
+reinhardt-http = { workspace = true }
+reinhardt-middleware = { workspace = true }
+hyper = { workspace = true }
 async-trait = "0.1"
 
 [dev-dependencies]
-reinhardt-static = { path = "../reinhardt-utils/crates/static" }
+reinhardt-static = { workspace = true }
+reinhardt-forms = { workspace = true }
 wasm-bindgen-test = "0.3"
 serial_test = "3"
 trybuild = "1.0"
 criterion = "0.5"
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [[bench]]
 name = "wasm_framework_benchmarks"

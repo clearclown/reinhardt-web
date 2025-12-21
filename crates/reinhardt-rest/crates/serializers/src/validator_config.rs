@@ -3,8 +3,10 @@
 //! This module provides configuration structures for managing validators
 //! in ModelSerializer instances.
 
-use crate::validators::{UniqueTogetherValidator, UniqueValidator};
+use crate::validators::{DatabaseValidatorError, UniqueTogetherValidator, UniqueValidator};
+use reinhardt_db::backends::DatabaseConnection;
 use reinhardt_db::orm::Model;
+use serde::Serialize;
 use std::marker::PhantomData;
 
 /// Configuration for field validators
@@ -152,6 +154,92 @@ impl<M: Model> ValidatorConfig<M> {
 	/// ```
 	pub fn has_validators(&self) -> bool {
 		!self.unique_validators.is_empty() || !self.unique_together_validators.is_empty()
+	}
+
+	/// Validate model instance asynchronously against configured validators
+	///
+	/// Performs database-backed validation checks (uniqueness constraints).
+	/// Converts the model instance to JSON for field extraction.
+	///
+	/// # Arguments
+	///
+	/// * `connection` - Database connection for validation queries
+	/// * `instance` - Model instance to validate
+	/// * `instance_pk` - Optional primary key (for update operations, excludes current record)
+	///
+	/// # Errors
+	///
+	/// Returns `DatabaseValidatorError` if:
+	/// - Serialization fails
+	/// - Field not found in serialized data
+	/// - Unique constraint violated
+	/// - Unique together constraint violated
+	/// - Database query fails
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_serializers::validator_config::ValidatorConfig;
+	/// use reinhardt_db::connection::DatabaseConnection;
+	///
+	/// let config = ValidatorConfig::new();
+	/// let user = User { id: None, username: "alice".into() };
+	/// config.validate_async(&connection, &user, None).await?;
+	/// ```
+	pub async fn validate_async(
+		&self,
+		connection: &DatabaseConnection,
+		instance: &M,
+		instance_pk: Option<&M::PrimaryKey>,
+	) -> Result<(), DatabaseValidatorError>
+	where
+		M: Serialize,
+		M::PrimaryKey: std::fmt::Display,
+	{
+		// Convert model instance to JSON for field extraction
+		let value =
+			serde_json::to_value(instance).map_err(|e| DatabaseValidatorError::DatabaseError {
+				message: format!("Failed to serialize model: {}", e),
+				query: None,
+			})?;
+
+		let obj = value
+			.as_object()
+			.ok_or_else(|| DatabaseValidatorError::DatabaseError {
+				message: "Model must serialize to an object".to_string(),
+				query: None,
+			})?;
+
+		// Validate unique constraints
+		for validator in &self.unique_validators {
+			let field_value = obj
+				.get(validator.field_name())
+				.and_then(|v| v.as_str())
+				.ok_or_else(|| DatabaseValidatorError::FieldNotFound {
+					field: validator.field_name().to_string(),
+				})?;
+
+			validator
+				.validate(connection, field_value, instance_pk)
+				.await?;
+		}
+
+		// Validate unique together constraints
+		for validator in &self.unique_together_validators {
+			let mut values = std::collections::HashMap::new();
+			for field in validator.field_names() {
+				let value = obj.get(field).and_then(|v| v.as_str()).ok_or_else(|| {
+					DatabaseValidatorError::FieldNotFound {
+						field: field.clone(),
+					}
+				})?;
+				values.insert(field.clone(), value.to_string());
+			}
+
+			validator.validate(connection, &values, instance_pk).await?;
+		}
+
+		Ok(())
 	}
 }
 

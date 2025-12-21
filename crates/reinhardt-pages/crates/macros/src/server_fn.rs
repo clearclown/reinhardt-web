@@ -24,6 +24,9 @@ use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::{FnArg, ItemFn, Meta, Token, parse_macro_input};
 
+// Import crate path helpers for dynamic resolution
+use crate::crate_paths::{get_reinhardt_di_crate, get_reinhardt_http_crate};
+
 /// Convert snake_case identifier to UpperCamelCase for struct naming
 ///
 /// # Examples
@@ -143,9 +146,10 @@ fn is_inject_attr(attr: &syn::Attribute) -> bool {
 	// Check for #[reinhardt::inject] (recommended tool attribute)
 	if let Some(seg0) = attr.path().segments.first()
 		&& seg0.ident == "reinhardt"
-			&& let Some(seg1) = attr.path().segments.iter().nth(1) {
-				return seg1.ident == "inject";
-			}
+		&& let Some(seg1) = attr.path().segments.iter().nth(1)
+	{
+		return seg1.ident == "inject";
+	}
 
 	false
 }
@@ -154,16 +158,15 @@ fn is_inject_attr(attr: &syn::Attribute) -> bool {
 ///
 /// This function scans function parameters and identifies those that should be
 /// injected by the DI system. Detection is based on:
-/// 1. Parameters with #[inject] or #[reinhardt::inject] attributes
-/// 2. Parameters with Arc<T> type (automatic detection)
+/// - Parameters with #[inject] attribute
 ///
 /// # Examples
 ///
 /// ```ignore
 /// async fn handler(
 ///     id: u32,                    // Regular parameter
-///     #[inject] db: Database,     // DI parameter (explicit)
-///     site: Arc<AdminSite>,       // DI parameter (auto-detected Arc<T>)
+///     #[inject] db: Arc<Database>, // DI parameter (explicit)
+///     #[inject] site: Arc<AdminSite>, // DI parameter (explicit)
 /// ) -> Result<User, Error>
 /// ```
 fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo> {
@@ -174,19 +177,7 @@ fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo
 			// Check for explicit #[inject] attribute
 			let has_inject_attr = pat_type.attrs.iter().any(is_inject_attr);
 
-			// Check if type is Arc<T> (auto-detect for DI)
-			let is_arc_type = if let syn::Type::Path(type_path) = pat_type.ty.as_ref() {
-				type_path
-					.path
-					.segments
-					.last()
-					.map(|seg| seg.ident == "Arc")
-					.unwrap_or(false)
-			} else {
-				false
-			};
-
-			if has_inject_attr || is_arc_type {
+			if has_inject_attr {
 				inject_params.push(InjectInfo {
 					pat: pat_type.pat.clone(),
 					ty: pat_type.ty.clone(),
@@ -610,15 +601,18 @@ fn generate_server_handler(
 	// Generate DI resolution code (Week 4 Day 4)
 	// Pattern copied from reinhardt-core/crates/macros/src/use_inject.rs
 	let di_resolution = if !inject_params.is_empty() {
+		// Dynamically resolve crate paths
+		let di_crate = get_reinhardt_di_crate();
+
 		quote! {
 			// Get DI context from request
-			let __di_ctx = __req.get_di_context::<::std::sync::Arc<::reinhardt_di::InjectionContext>>()
+			let __di_ctx = __req.get_di_context::<::std::sync::Arc<#di_crate::InjectionContext>>()
 				.ok_or_else(|| "DI context not set. Ensure the router is configured with .with_di_context()".to_string())?;
 
 			// Resolve each #[inject] parameter using reinhardt_di::Injected<T>
 			#(
 				let #inject_param_names: #inject_param_types =
-					::reinhardt_di::Injected::<#inject_param_types>::resolve(&__di_ctx)
+					#di_crate::Injected::<#inject_param_types>::resolve(&__di_ctx)
 						.await
 						.map_err(|e| format!("Dependency injection failed for {}: {:?}", stringify!(#inject_param_types), e))?
 						.into_inner();
@@ -692,10 +686,13 @@ fn generate_server_handler(
 
 	// Generate handler signature based on whether DI is needed
 	let (handler_signature, body_extraction) = if !inject_params.is_empty() {
+		// Dynamically resolve reinhardt_http crate path
+		let http_crate = get_reinhardt_http_crate();
+
 		// When we have inject params, handler receives Request to extract DI context
 		(
 			quote! {
-				pub async fn #handler_name(__req: ::reinhardt_http::Request) -> ::std::result::Result<::std::string::String, ::std::string::String>
+				pub async fn #handler_name(__req: #http_crate::Request) -> ::std::result::Result<::std::string::String, ::std::string::String>
 			},
 			quote! {
 				// Extract body from request

@@ -96,6 +96,11 @@ pub use hydration::{HydrationContext, HydrationError, hydrate};
 pub use reactive::{Effect, Memo, Resource, ResourceState, Signal};
 #[cfg(target_arch = "wasm32")]
 pub use reactive::{create_resource, create_resource_with_deps};
+#[cfg(not(target_arch = "wasm32"))]
+pub use reinhardt_forms::{
+	Widget,
+	wasm_compat::{FieldMetadata, FormMetadata},
+};
 pub use router::{Link, PathPattern, Route, Router, RouterOutlet};
 pub use server_fn::{ServerFn, ServerFnError};
 pub use ssr::{SsrOptions, SsrRenderer, SsrState};

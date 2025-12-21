@@ -24,6 +24,9 @@ darling = "0.20"
 # Case conversion for macro identifiers
 convert_case = "0.6"
 
+# Dynamic crate path resolution
+proc-macro-crate = "3.2.0"
+
 [dev-dependencies]
 # For testing macro expansion
 trybuild = "1.0"

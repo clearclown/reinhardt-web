@@ -12,7 +12,7 @@ full = []
 
 [dependencies]
 reinhardt-core = { workspace = true, features = ["exception"] }
-reinhardt-serializers = { path = "../serializers" }
+reinhardt-serializers = { workspace = true }
 async-trait = "0.1"
 regex = "1.11"
 serde = { version = "1.0", features = ["derive"] }

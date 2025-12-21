@@ -56,11 +56,11 @@ reinhardt-db = { workspace = true, optional = true, features = ["orm"] }
 reinhardt-auth = { workspace = true }
 
 # Internal crates (now part of reinhardt-rest)
-reinhardt-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers" }
-reinhardt-filters = { version = "0.1.0-alpha.1", path = "crates/filters" }
-reinhardt-throttling = { version = "0.1.0-alpha.1", path = "crates/throttling" }
-reinhardt-versioning = { version = "0.1.0-alpha.1", path = "crates/versioning" }
-reinhardt-metadata = { version = "0.1.0-alpha.1", path = "crates/metadata" }
+reinhardt-serializers = { workspace = true }
+reinhardt-filters = { workspace = true }
+reinhardt-throttling = { workspace = true }
+reinhardt-versioning = { workspace = true }
+reinhardt-metadata = { workspace = true }
 
 # Serialization
 serde = { workspace = true }

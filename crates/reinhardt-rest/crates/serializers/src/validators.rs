@@ -44,9 +44,9 @@
 //! ```
 
 use crate::SerializerError;
-use reinhardt_db::backends::{DatabaseConnection, QueryValue};
-use reinhardt_db::orm::Model;
-use sea_query::{Alias, Asterisk, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model};
+use reinhardt_exception;
 use std::marker::PhantomData;
 use thiserror::Error;
 
@@ -102,6 +102,50 @@ impl From<DatabaseValidatorError> for SerializerError {
 	fn from(err: DatabaseValidatorError) -> Self {
 		SerializerError::Other {
 			message: err.to_string(),
+		}
+	}
+}
+
+impl From<DatabaseValidatorError> for reinhardt_exception::Error {
+	fn from(err: DatabaseValidatorError) -> Self {
+		match err {
+			DatabaseValidatorError::UniqueConstraintViolation {
+				field,
+				value,
+				table,
+				message,
+			} => {
+				let msg = message.unwrap_or_else(|| {
+					format!(
+						"Field '{}' with value '{}' already exists in {}",
+						field, value, table
+					)
+				});
+				reinhardt_exception::Error::Conflict(msg)
+			}
+			DatabaseValidatorError::UniqueTogetherViolation {
+				fields,
+				values,
+				table,
+				message,
+			} => {
+				let msg = message.unwrap_or_else(|| {
+					format!(
+						"Combination of fields {:?} with values {:?} already exists in {}",
+						fields, values, table
+					)
+				});
+				reinhardt_exception::Error::Conflict(msg)
+			}
+			DatabaseValidatorError::FieldNotFound { field } => {
+				reinhardt_exception::Error::Validation(format!(
+					"Required field '{}' not found",
+					field
+				))
+			}
+			DatabaseValidatorError::DatabaseError { message, .. } => {
+				reinhardt_exception::Error::Database(message)
+			}
 		}
 	}
 }
@@ -219,7 +263,7 @@ impl<M: Model> UniqueValidator<M> {
 
 	pub async fn validate(
 		&self,
-		connection: &DatabaseConnection,
+		_connection: &DatabaseConnection,
 		value: &str,
 		instance_pk: Option<&M::PrimaryKey>,
 	) -> Result<(), DatabaseValidatorError>
@@ -227,40 +271,31 @@ impl<M: Model> UniqueValidator<M> {
 		M::PrimaryKey: std::fmt::Display,
 	{
 		let table_name = M::table_name();
-		let pk_field = M::primary_key_field();
 
-		// Build SeaQuery statement
-		let mut stmt = Query::select();
-		stmt.expr_as(Func::count(Expr::col(Asterisk)), Alias::new("count"))
-			.from(Alias::new(table_name))
-			.and_where(Expr::col(Alias::new(&self.field_name)).eq("$1"));
+		// Build QuerySet with filter
+		let mut qs = M::objects().all();
+		qs = qs.filter(Filter::new(
+			self.field_name.clone(),
+			FilterOperator::Eq,
+			FilterValue::String(value.to_string()),
+		));
 
-		if instance_pk.is_some() {
-			stmt.and_where(Expr::col(Alias::new(pk_field)).ne("$2"));
-		}
-
-		let (query, _) = stmt.build(PostgresQueryBuilder);
-
-		// Build params vector
-		let mut params = vec![QueryValue::from(value)];
+		// Exclude current instance if updating
 		if let Some(pk) = instance_pk {
-			params.push(QueryValue::from(pk.to_string()));
+			qs = qs.filter(Filter::new(
+				M::primary_key_field().to_string(),
+				FilterOperator::Ne,
+				FilterValue::String(pk.to_string()),
+			));
 		}
 
-		// Execute query using DatabaseConnection
-		let row = connection
-			.fetch_one(query.as_str(), params)
+		// Execute count query
+		let count = qs
+			.count()
 			.await
 			.map_err(|e| DatabaseValidatorError::DatabaseError {
 				message: e.to_string(),
-				query: Some(query.clone()),
-			})?;
-
-		let count: i64 = row
-			.get("count")
-			.map_err(|e| DatabaseValidatorError::DatabaseError {
-				message: e.to_string(),
-				query: Some(query.clone()),
+				query: None,
 			})?;
 
 		if count > 0 {
@@ -390,7 +425,7 @@ impl<M: Model> UniqueTogetherValidator<M> {
 
 	pub async fn validate(
 		&self,
-		connection: &DatabaseConnection,
+		_connection: &DatabaseConnection,
 		values: &std::collections::HashMap<String, String>,
 		instance_pk: Option<&M::PrimaryKey>,
 	) -> Result<(), DatabaseValidatorError>
@@ -398,30 +433,11 @@ impl<M: Model> UniqueTogetherValidator<M> {
 		M::PrimaryKey: std::fmt::Display,
 	{
 		let table_name = M::table_name();
-		let pk_field = M::primary_key_field();
 
-		// Build SeaQuery statement
-		let mut stmt = Query::select();
-		stmt.expr_as(Func::count(Expr::col(Asterisk)), Alias::new("count"))
-			.from(Alias::new(table_name));
-
-		// Add WHERE conditions for each field
-		for (i, field_name) in self.field_names.iter().enumerate() {
-			stmt.and_where(Expr::col(Alias::new(field_name)).eq(format!("${}", i + 1)));
-		}
-
-		// Add primary key exclusion condition if updating
-		if instance_pk.is_some() {
-			stmt.and_where(
-				Expr::col(Alias::new(pk_field)).ne(format!("${}", self.field_names.len() + 1)),
-			);
-		}
-
-		let (query, _) = stmt.build(PostgresQueryBuilder);
-
-		// Build params vector
-		let mut params = Vec::new();
+		// Build QuerySet with filters for all fields
+		let mut qs = M::objects().all();
 		let mut field_values = Vec::new();
+
 		for field_name in &self.field_names {
 			let value =
 				values
@@ -430,27 +446,30 @@ impl<M: Model> UniqueTogetherValidator<M> {
 						field: field_name.clone(),
 					})?;
 			field_values.push(value.clone());
-			params.push(QueryValue::from(value.clone()));
+
+			qs = qs.filter(Filter::new(
+				field_name.clone(),
+				FilterOperator::Eq,
+				FilterValue::String(value.clone()),
+			));
 		}
 
+		// Exclude current instance if updating
 		if let Some(pk) = instance_pk {
-			params.push(QueryValue::from(pk.to_string()));
+			qs = qs.filter(Filter::new(
+				M::primary_key_field().to_string(),
+				FilterOperator::Ne,
+				FilterValue::String(pk.to_string()),
+			));
 		}
 
-		// Execute query using DatabaseConnection
-		let row = connection
-			.fetch_one(query.as_str(), params)
+		// Execute count query
+		let count = qs
+			.count()
 			.await
 			.map_err(|e| DatabaseValidatorError::DatabaseError {
 				message: e.to_string(),
-				query: Some(query.clone()),
-			})?;
-
-		let count: i64 = row
-			.get("count")
-			.map_err(|e| DatabaseValidatorError::DatabaseError {
-				message: e.to_string(),
-				query: Some(query.clone()),
+				query: None,
 			})?;
 
 		if count > 0 {

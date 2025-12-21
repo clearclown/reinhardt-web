@@ -27,13 +27,14 @@
 //! - postgres_container: PostgreSQL database container (reinhardt-test)
 //! - filter_test_db: Custom fixture providing database connection with test schema
 
+use reinhardt_db::orm::{Filter, FilterCondition, FilterOperator, FilterValue};
 use reinhardt_filters::{
 	FilterBackend, FuzzyAlgorithm, FuzzySearchFilter, RangeFilter, SimpleOrderingBackend,
 	SimpleSearchBackend,
 };
 use reinhardt_test::fixtures::testcontainers::{ContainerAsync, GenericImage, postgres_container};
 use rstest::*;
-use sea_query::{Alias, Asterisk, Cond, Expr, ExprTrait, PostgresQueryBuilder, Query};
+use sea_query::{Alias, Asterisk, Condition, Expr, ExprTrait, PostgresQueryBuilder, Query};
 use sqlx::Row;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -648,221 +649,76 @@ fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 // ========================================================================
 
 // ========================================================================
-// Q Objects for Complex Queries
+// Helper Functions for FilterCondition → SeaQuery Conversion
 // ========================================================================
 
-/// Q objects for building complex query conditions with AND/OR/NOT logic
+/// Convert FilterCondition to SeaQuery Condition
 ///
-/// **Design**: Django-inspired Q objects for composable query conditions
-///
-/// **Supported Operations**:
-/// - AND: All conditions must be true
-/// - OR: At least one condition must be true
-/// - NOT: Negates a condition
-/// - Field: Basic field comparison (eq, ne, gt, gte, lt, lte, contains, startswith, endswith)
-#[derive(Debug, Clone)]
-enum QObject {
-	And(Vec<QObject>),
-	Or(Vec<QObject>),
-	Not(Box<QObject>),
-	Field {
-		name: String,
-		op: String,
-		value: String,
-	},
-}
-
-impl QObject {
-	fn and(conditions: Vec<QObject>) -> Self {
-		QObject::And(conditions)
-	}
-
-	fn or(conditions: Vec<QObject>) -> Self {
-		QObject::Or(conditions)
-	}
-
-	fn not(condition: QObject) -> Self {
-		QObject::Not(Box::new(condition))
-	}
-
-	fn field(name: &str, op: &str, value: &str) -> Self {
-		QObject::Field {
-			name: name.to_string(),
-			op: op.to_string(),
-			value: value.to_string(),
+/// This helper function converts reinhardt-orm FilterCondition to SeaQuery Condition,
+/// enabling integration testing with SeaQuery-generated SQL.
+fn filter_condition_to_sea_query(filter_condition: &FilterCondition) -> Option<Condition> {
+	match filter_condition {
+		FilterCondition::Single(filter) => {
+			let col = Expr::col(Alias::new(filter.field.as_str()));
+			let expr = match (&filter.operator, &filter.value) {
+				(FilterOperator::Eq, FilterValue::String(s)) => col.eq(s.as_str()),
+				(FilterOperator::Eq, FilterValue::Integer(i)) => col.eq(*i),
+				(FilterOperator::Eq, FilterValue::Boolean(b)) => col.eq(*b),
+				(FilterOperator::Ne, FilterValue::String(s)) => col.ne(s.as_str()),
+				(FilterOperator::Gt, FilterValue::Integer(i)) => col.gt(*i),
+				(FilterOperator::Gte, FilterValue::Integer(i)) => col.gte(*i),
+				(FilterOperator::Lt, FilterValue::Integer(i)) => col.lt(*i),
+				(FilterOperator::Lte, FilterValue::Integer(i)) => col.lte(*i),
+				(FilterOperator::Contains, FilterValue::String(s)) => col.like(format!("%{}%", s)),
+				(FilterOperator::StartsWith, FilterValue::String(s)) => col.like(format!("{}%", s)),
+				(FilterOperator::EndsWith, FilterValue::String(s)) => col.like(format!("%{}", s)),
+				_ => return None,
+			};
+			Some(Condition::all().add(expr))
 		}
-	}
-
-	/// Convert Q object to SeaQuery condition
-	///
-	/// **Integration Point**: Q objects → SeaQuery Cond
-	fn to_sea_query_cond(&self) -> Cond {
-		match self {
-			QObject::And(conditions) => {
-				let mut cond = Cond::all();
-				for c in conditions {
-					cond = cond.add(c.to_sea_query_cond());
+		FilterCondition::And(conditions) => {
+			if conditions.is_empty() {
+				return None;
+			}
+			let mut and_condition = Condition::all();
+			for cond in conditions {
+				if let Some(sub_cond) = filter_condition_to_sea_query(cond) {
+					and_condition = and_condition.add(sub_cond);
 				}
-				cond
 			}
-			QObject::Or(conditions) => {
-				let mut cond = Cond::any();
-				for c in conditions {
-					cond = cond.add(c.to_sea_query_cond());
+			Some(and_condition)
+		}
+		FilterCondition::Or(conditions) => {
+			if conditions.is_empty() {
+				return None;
+			}
+			let mut or_condition = Condition::any();
+			for cond in conditions {
+				if let Some(sub_cond) = filter_condition_to_sea_query(cond) {
+					or_condition = or_condition.add(sub_cond);
 				}
-				cond
 			}
-			QObject::Not(inner) => {
-				// NOT condition: Use Cond::not() which takes a Cond
-				let inner_cond = inner.to_sea_query_cond();
-				Cond::not(inner_cond)
-			}
-			QObject::Field { name, op, value } => {
-				let col = Expr::col(Alias::new(name.as_str()));
-				let expr = match op.as_str() {
-					"eq" => col.eq(value.as_str()),
-					"ne" => col.ne(value.as_str()),
-					"gt" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.gt(num)
-						} else {
-							return Cond::all();
-						}
-					}
-					"gte" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.gte(num)
-						} else {
-							return Cond::all();
-						}
-					}
-					"lt" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.lt(num)
-						} else {
-							return Cond::all();
-						}
-					}
-					"lte" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.lte(num)
-						} else {
-							return Cond::all();
-						}
-					}
-					"contains" => col.like(format!("%{}%", value)),
-					"startswith" => col.like(format!("{}%", value)),
-					"endswith" => col.like(format!("%{}", value)),
-					_ => return Cond::all(),
-				};
-				Cond::all().add(expr)
-			}
+			Some(or_condition)
 		}
-	}
-}
-
-// ========================================================================
-// Advanced Filter Builder
-// ========================================================================
-
-/// Advanced filter builder combining simple filters and Q objects
-///
-/// **Design**: Builder pattern for composing complex queries
-///
-/// **Features**:
-/// - Simple filters (key-value pairs)
-/// - Q objects (complex AND/OR/NOT logic)
-/// - SeaQuery integration for SQL generation
-struct AdvancedFilterBuilder {
-	table: String,
-	filters: HashMap<String, String>,
-	q_object: Option<QObject>,
-}
-
-impl AdvancedFilterBuilder {
-	fn new(table: &str) -> Self {
-		Self {
-			table: table.to_string(),
-			filters: HashMap::new(),
-			q_object: None,
-		}
-	}
-
-	fn with_filters(mut self, filters: HashMap<String, String>) -> Self {
-		self.filters = filters;
-		self
-	}
-
-	fn with_q_object(mut self, q: QObject) -> Self {
-		self.q_object = Some(q);
-		self
-	}
-
-	fn build_query(&self) -> String {
-		let mut query = Query::select();
-		query.from(Alias::new(self.table.as_str())).column(Asterisk);
-
-		// Apply Q object
-		if let Some(ref q) = self.q_object {
-			query.cond_where(q.to_sea_query_cond());
-		}
-
-		// Apply simple filters
-		for (key, value) in &self.filters {
-			if let Some((field, op)) = key.split_once("__") {
-				let col = Expr::col(Alias::new(field));
-				let expr = match op {
-					"gt" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.gt(num)
-						} else {
-							continue;
-						}
-					}
-					"gte" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.gte(num)
-						} else {
-							continue;
-						}
-					}
-					"lt" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.lt(num)
-						} else {
-							continue;
-						}
-					}
-					"lte" => {
-						if let Ok(num) = value.parse::<i64>() {
-							col.lte(num)
-						} else {
-							continue;
-						}
-					}
-					"contains" => col.like(format!("%{}%", value)),
-					_ => continue,
-				};
-				query.and_where(expr);
+		FilterCondition::Not(inner) => {
+			if let Some(inner_cond) = filter_condition_to_sea_query(inner) {
+				Some(inner_cond.not())
 			} else {
-				let expr = Expr::col(Alias::new(key.as_str())).eq(value.as_str());
-				query.and_where(expr);
+				None
 			}
 		}
-
-		query.to_string(PostgresQueryBuilder)
 	}
 }
 
 // ========================================================================
-// Test 8: Q Objects AND Condition
+// Test 8: FilterCondition AND Condition
 // ========================================================================
 
-/// Test Q objects with AND condition
+/// Test FilterCondition with AND logic
 ///
-/// **Test Intent**: Verify Q objects can build AND conditions and convert to SeaQuery.
+/// **Test Intent**: Verify FilterCondition::And can build AND conditions and convert to SeaQuery.
 ///
-/// **Integration Point**: QObject::and → SeaQuery Cond::all()
+/// **Integration Point**: FilterCondition::And → SeaQuery Condition::all()
 ///
 /// **Verification**:
 /// - AND logic combines multiple conditions
@@ -875,18 +731,27 @@ async fn test_q_object_and_condition(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create Q object with AND condition: age >= 25 AND email LIKE '%example%'
-	let q = QObject::and(vec![
-		QObject::field("age", "gte", "25"),
-		QObject::field("email", "contains", "example"),
+	// Create FilterCondition with AND condition: age >= 25 AND email LIKE '%example%'
+	let filter_condition = FilterCondition::And(vec![
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Gte,
+			FilterValue::Integer(25),
+		)),
+		FilterCondition::Single(Filter::new(
+			"email".to_string(),
+			FilterOperator::Contains,
+			FilterValue::String("example".to_string()),
+		)),
 	]);
 
-	// Build query using Q object
+	// Build query using FilterCondition
+	let condition = filter_condition_to_sea_query(&filter_condition).unwrap();
 	let mut query = Query::select();
 	query
 		.from(Alias::new("users"))
 		.column(Asterisk)
-		.cond_where(q.to_sea_query_cond());
+		.cond_where(condition);
 	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains AND condition
@@ -935,18 +800,27 @@ async fn test_q_object_or_condition(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create Q object with OR condition: age < 20 OR age > 60
-	let q = QObject::or(vec![
-		QObject::field("age", "lt", "20"),
-		QObject::field("age", "gt", "60"),
+	// Create FilterCondition with OR condition: age < 20 OR age > 60
+	let filter_condition = FilterCondition::Or(vec![
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Lt,
+			FilterValue::Integer(20),
+		)),
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Gt,
+			FilterValue::Integer(60),
+		)),
 	]);
 
-	// Build query using Q object
+	// Build query using FilterCondition
+	let condition = filter_condition_to_sea_query(&filter_condition).unwrap();
 	let mut query = Query::select();
 	query
 		.from(Alias::new("users"))
 		.column(Asterisk)
-		.cond_where(q.to_sea_query_cond());
+		.cond_where(condition);
 	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains OR condition
@@ -991,15 +865,20 @@ async fn test_q_object_not_condition(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create Q object with NOT condition: NOT is_active
-	let q = QObject::not(QObject::field("is_active", "eq", "true"));
+	// Create FilterCondition with NOT condition: NOT is_active
+	let filter_condition = FilterCondition::Not(Box::new(FilterCondition::Single(Filter::new(
+		"is_active".to_string(),
+		FilterOperator::Eq,
+		FilterValue::Boolean(true),
+	))));
 
-	// Build query using Q object
+	// Build query using FilterCondition
+	let condition = filter_condition_to_sea_query(&filter_condition).unwrap();
 	let mut query = Query::select();
 	query
 		.from(Alias::new("users"))
 		.column(Asterisk)
-		.cond_where(q.to_sea_query_cond());
+		.cond_where(condition);
 	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains NOT condition
@@ -1043,21 +922,34 @@ async fn test_q_object_nested_and_or(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create nested Q object: age >= 25 AND (email LIKE '%alice%' OR email LIKE '%bob%')
-	let q = QObject::and(vec![
-		QObject::field("age", "gte", "25"),
-		QObject::or(vec![
-			QObject::field("email", "contains", "alice"),
-			QObject::field("email", "contains", "bob"),
+	// Create nested FilterCondition: age >= 25 AND (email LIKE '%alice%' OR email LIKE '%bob%')
+	let filter_condition = FilterCondition::And(vec![
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Gte,
+			FilterValue::Integer(25),
+		)),
+		FilterCondition::Or(vec![
+			FilterCondition::Single(Filter::new(
+				"email".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("alice".to_string()),
+			)),
+			FilterCondition::Single(Filter::new(
+				"email".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("bob".to_string()),
+			)),
 		]),
 	]);
 
-	// Build query using Q object
+	// Build query using FilterCondition
+	let condition = filter_condition_to_sea_query(&filter_condition).unwrap();
 	let mut query = Query::select();
 	query
 		.from(Alias::new("users"))
 		.column(Asterisk)
-		.cond_where(q.to_sea_query_cond());
+		.cond_where(condition);
 	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains nested conditions
@@ -1105,18 +997,26 @@ async fn test_q_object_with_additional_filters(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create Q object: age >= 25
-	let q = QObject::field("age", "gte", "25");
+	// Create FilterCondition: age >= 25
+	let filter_condition = FilterCondition::Single(Filter::new(
+		"age".to_string(),
+		FilterOperator::Gte,
+		FilterValue::Integer(25),
+	));
 
-	// Create simple filter: is_active = true
-	let mut filters = HashMap::new();
-	filters.insert("is_active".to_string(), "true".to_string());
+	// Build query combining FilterCondition and additional simple filter
+	let mut query = Query::select();
+	query.from(Alias::new("users")).column(Asterisk);
 
-	// Build query combining Q object and simple filters
-	let builder = AdvancedFilterBuilder::new("users")
-		.with_q_object(q)
-		.with_filters(filters);
-	let sql = builder.build_query();
+	// Apply FilterCondition
+	if let Some(cond) = filter_condition_to_sea_query(&filter_condition) {
+		query.cond_where(cond);
+	}
+
+	// Apply additional simple filter: is_active = true
+	query.and_where(Expr::col(Alias::new("is_active")).eq(true));
+
+	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains both conditions
 	assert!(sql.contains("WHERE"));
@@ -1147,11 +1047,11 @@ async fn test_q_object_with_additional_filters(
 // Test 13: Advanced Filter Builder Simple Query
 // ========================================================================
 
-/// Test AdvancedFilterBuilder generates basic SELECT query
+/// Test SeaQuery generates basic SELECT query
 ///
-/// **Test Intent**: Verify AdvancedFilterBuilder can build simple queries without filters.
+/// **Test Intent**: Verify SeaQuery can build simple queries without filters.
 ///
-/// **Integration Point**: AdvancedFilterBuilder → SeaQuery SELECT
+/// **Integration Point**: SeaQuery SELECT
 ///
 /// **Verification**:
 /// - SELECT * FROM table
@@ -1165,8 +1065,9 @@ async fn test_advanced_filter_builder_simple_query(
 	let (_container, pool) = filter_test_db.await;
 
 	// Build simple query without filters
-	let builder = AdvancedFilterBuilder::new("users");
-	let sql = builder.build_query();
+	let mut query = Query::select();
+	query.from(Alias::new("users")).column(Asterisk);
+	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL structure
 	assert!(sql.contains("SELECT"));
@@ -1187,11 +1088,11 @@ async fn test_advanced_filter_builder_simple_query(
 // Test 14: Advanced Filter Builder with Filters
 // ========================================================================
 
-/// Test AdvancedFilterBuilder with simple filters
+/// Test SeaQuery with simple filters
 ///
-/// **Test Intent**: Verify AdvancedFilterBuilder applies simple filters correctly.
+/// **Test Intent**: Verify SeaQuery applies simple filters correctly.
 ///
-/// **Integration Point**: AdvancedFilterBuilder + filters → WHERE clause
+/// **Integration Point**: SeaQuery + filters → WHERE clause
 ///
 /// **Verification**:
 /// - Simple filters converted to WHERE clause
@@ -1205,11 +1106,12 @@ async fn test_advanced_filter_builder_with_filters(
 	let (_container, pool) = filter_test_db.await;
 
 	// Build query with filters: age >= 30
-	let mut filters = HashMap::new();
-	filters.insert("age__gte".to_string(), "30".to_string());
-
-	let builder = AdvancedFilterBuilder::new("users").with_filters(filters);
-	let sql = builder.build_query();
+	let mut query = Query::select();
+	query
+		.from(Alias::new("users"))
+		.column(Asterisk)
+		.and_where(Expr::col(Alias::new("age")).gte(30));
+	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL contains WHERE clause with filter
 	assert!(sql.contains("WHERE"));
@@ -1253,16 +1155,33 @@ async fn test_advanced_filter_builder_with_q_object(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Build query with Q object: age >= 25 AND email LIKE '%example%'
-	let q = QObject::and(vec![
-		QObject::field("age", "gte", "25"),
-		QObject::field("email", "contains", "example"),
+	// Build query with FilterCondition: age >= 25 AND email LIKE '%example%'
+	let filter_condition = FilterCondition::And(vec![
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Gte,
+			FilterValue::Integer(25),
+		)),
+		FilterCondition::Single(Filter::new(
+			"email".to_string(),
+			FilterOperator::Contains,
+			FilterValue::String("example".to_string()),
+		)),
 	]);
 
-	let builder = AdvancedFilterBuilder::new("users").with_q_object(q);
-	let sql = builder.build_query();
+	// Convert to SeaQuery Condition
+	let condition = filter_condition_to_sea_query(&filter_condition)
+		.expect("Failed to convert FilterCondition to SeaQuery Condition");
 
-	// Verify SQL contains WHERE clause with Q object conditions
+	// Build query using SeaQuery
+	let mut query = Query::select();
+	query
+		.from(Alias::new("users"))
+		.column(Asterisk)
+		.cond_where(condition);
+	let sql = query.to_string(PostgresQueryBuilder);
+
+	// Verify SQL contains WHERE clause with conditions
 	assert!(sql.contains("WHERE"));
 	assert!(sql.contains("age"));
 	assert!(sql.contains("email"));
@@ -1307,23 +1226,35 @@ async fn test_q_object_to_sea_query_conversion(
 ) {
 	let (_container, pool) = filter_test_db.await;
 
-	// Create complex nested Q object:
+	// Create complex nested FilterCondition:
 	// age >= 25 AND (email LIKE '%alice%' OR email LIKE '%bob%')
-	let q = QObject::and(vec![
-		QObject::field("age", "gte", "25"),
-		QObject::or(vec![
-			QObject::field("email", "contains", "alice"),
-			QObject::field("email", "contains", "bob"),
+	let filter_condition = FilterCondition::And(vec![
+		FilterCondition::Single(Filter::new(
+			"age".to_string(),
+			FilterOperator::Gte,
+			FilterValue::Integer(25),
+		)),
+		FilterCondition::Or(vec![
+			FilterCondition::Single(Filter::new(
+				"email".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("alice".to_string()),
+			)),
+			FilterCondition::Single(Filter::new(
+				"email".to_string(),
+				FilterOperator::Contains,
+				FilterValue::String("bob".to_string()),
+			)),
 		]),
 	]);
 
-	// Convert to SeaQuery Cond and build query
-	let cond = q.to_sea_query_cond();
+	// Convert to SeaQuery Condition and build query
+	let condition = filter_condition_to_sea_query(&filter_condition).unwrap();
 	let mut query = Query::select();
 	query
 		.from(Alias::new("users"))
 		.column(Asterisk)
-		.cond_where(cond);
+		.cond_where(condition);
 	let sql = query.to_string(PostgresQueryBuilder);
 
 	// Verify SQL structure

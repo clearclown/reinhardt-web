@@ -79,6 +79,98 @@ impl Injectable for ServerFnBody {
 	}
 }
 
+/// Helper function to extract session ID from HTTP request cookies.
+///
+/// Searches for a cookie with the specified name in the Cookie header.
+///
+/// # Arguments
+///
+/// * `request` - The HTTP request to extract the session ID from
+/// * `cookie_name` - The name of the session cookie (e.g., "sessionid")
+///
+/// # Returns
+///
+/// * `Ok(String)` - The session ID if found and valid
+/// * `Err(DiError)` - If the cookie header is missing, invalid, or the session cookie is not found
+// TODO: This function may be used in future for session management
+#[allow(dead_code)]
+fn extract_session_id_from_request(request: &Request, cookie_name: &str) -> DiResult<String> {
+	let cookie_header = request
+		.headers
+		.get(hyper::header::COOKIE)
+		.ok_or_else(|| DiError::NotFound("Cookie header not found".to_string()))?;
+
+	let cookie_str = cookie_header
+		.to_str()
+		.map_err(|e| DiError::ProviderError(format!("Invalid cookie header: {}", e)))?;
+
+	for cookie in cookie_str.split(';') {
+		let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
+		if parts.len() == 2 && parts[0] == cookie_name {
+			return Ok(parts[1].to_string());
+		}
+	}
+
+	Err(DiError::NotFound(format!(
+		"Session cookie '{}' not found",
+		cookie_name
+	)))
+}
+
+// TODO: Move these Injectable implementations to reinhardt-middleware to avoid orphan rule violations
+// These implementations are commented out temporarily because they violate Rust's orphan rules:
+// - Injectable trait is defined in reinhardt-di
+// - SessionData and Arc<SessionStore> are defined in reinhardt-middleware
+// - Neither trait nor types are defined in this crate (reinhardt-pages)
+//
+// Proper solution: Move these implementations to reinhardt-middleware crate
+
+// #[async_trait]
+// impl Injectable for reinhardt_middleware::session::SessionData {
+// 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+// 		// Get SessionStore from SingletonScope
+// 		let store = ctx
+// 			.get_singleton::<Arc<reinhardt_middleware::session::SessionStore>>()
+// 			.ok_or_else(|| {
+// 				DiError::NotFound(
+// 					"SessionStore not found in SingletonScope. \
+//                  Ensure SessionMiddleware is configured and its store is registered."
+// 						.to_string(),
+// 				)
+// 			})?;
+//
+// 		// Get Request from context
+// 		let request = ctx.get_request::<Request>().ok_or_else(|| {
+// 			DiError::NotFound("Request not found in InjectionContext".to_string())
+// 		})?;
+//
+// 		// Extract session ID from Cookie header
+// 		let session_id = extract_session_id_from_request(&*request, "sessionid")?;
+//
+// 		// Load SessionData from store
+// 		store
+// 			.get(&session_id)
+// 			.filter(|s| s.is_valid())
+// 			.ok_or_else(|| {
+// 				DiError::NotFound("Valid session not found. Session may have expired.".to_string())
+// 			})
+// 	}
+// }
+//
+// #[async_trait]
+// impl Injectable for Arc<reinhardt_middleware::session::SessionStore> {
+// 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
+// 		ctx.get_singleton::<Arc<reinhardt_middleware::session::SessionStore>>()
+// 			.ok_or_else(|| {
+// 				DiError::NotFound(
+// 					"SessionStore not found in SingletonScope. \
+//                  Ensure SessionMiddleware is configured and its store is registered."
+// 						.to_string(),
+// 				)
+// 			})
+// 	}
+// }
+
 #[cfg(test)]
 mod tests {
 	use super::*;

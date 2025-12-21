@@ -18,10 +18,8 @@
 //!
 //! Total: 18 tests
 
-use reinhardt_forms::Widget;
-use reinhardt_forms::wasm_compat::{FieldMetadata, FormMetadata};
-use reinhardt_pages::form::{FormBinding, FormComponent};
 use reinhardt_pages::reactive::Signal;
+use reinhardt_pages::{FieldMetadata, FormBinding, FormComponent, FormMetadata, Widget};
 use serial_test::serial;
 use std::collections::HashMap;
 

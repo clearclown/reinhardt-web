@@ -21,9 +21,7 @@
 //! Note: DOM rendering tests require WASM environment and will be
 //! implemented in Phase 8 with WASM test infrastructure.
 
-use reinhardt_forms::Widget;
-use reinhardt_forms::wasm_compat::{FieldMetadata, FormMetadata};
-use reinhardt_pages::form::FormComponent;
+use reinhardt_pages::{FieldMetadata, FormComponent, FormMetadata, Widget};
 use std::collections::HashMap;
 
 // ============================================================================

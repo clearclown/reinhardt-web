@@ -252,7 +252,7 @@ use reinhardt_serializers::HyperlinkedModelSerializer;
 let serializer = HyperlinkedModelSerializer::<User>::new("user-detail", None);
 // Generates URLs like: {"url": "/api/users/123/", "username": "alice"}
 
-// UrlReverserを使用する場合
+// When using UrlReverser
 // let reverser: Arc<dyn UrlReverser> = Arc::new(MyUrlReverser);
 // let serializer = HyperlinkedModelSerializer::<User>::new("user-detail", Some(reverser));
 ```
