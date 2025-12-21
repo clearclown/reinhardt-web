@@ -7,7 +7,10 @@
 use crate::MakeMigrationsCommand;
 use crate::base::BaseCommand;
 use crate::collectstatic::{CollectStaticCommand, CollectStaticOptions};
-use crate::{CheckCommand, CommandContext, MigrateCommand, RunServerCommand, ShellCommand};
+use crate::{
+	CheckCommand, CommandContext, MigrateCommand, RunAllCommand, RunServerCommand,
+	ServePagesCommand, ShellCommand,
+};
 use clap::{Parser, Subcommand};
 use reinhardt_conf::settings::builder::SettingsBuilder;
 use reinhardt_conf::settings::profile::Profile;
@@ -178,6 +181,48 @@ pub enum Commands {
 		#[arg(long)]
 		postman: bool,
 	},
+
+	/// Start WASM frontend development server (Trunk)
+	Servepages {
+		/// Frontend server port
+		#[arg(long, default_value = "8080")]
+		port: String,
+
+		/// Server address
+		#[arg(long, default_value = "127.0.0.1")]
+		address: String,
+
+		/// Open browser automatically
+		#[arg(long)]
+		open: bool,
+
+		/// Build in release mode
+		#[arg(long)]
+		release: bool,
+	},
+
+	/// Start both backend server and WASM frontend development server
+	Runall {
+		/// Backend server address
+		#[arg(value_name = "BACKEND_ADDRESS", default_value = "127.0.0.1:8000")]
+		backend_address: String,
+
+		/// Frontend server port
+		#[arg(long, default_value = "8080")]
+		frontend_port: String,
+
+		/// Disable backend auto-reload
+		#[arg(long)]
+		noreload: bool,
+
+		/// Serve static files in development mode
+		#[arg(long)]
+		insecure: bool,
+
+		/// Disable automatic OpenAPI documentation endpoints
+		#[arg(long)]
+		no_docs: bool,
+	},
 }
 
 /// Execute commands from command-line arguments
@@ -289,6 +334,29 @@ pub async fn run_command(
 			output,
 			postman,
 		} => execute_generateopenapi(format, output, postman, verbosity).await,
+		Commands::Servepages {
+			port,
+			address,
+			open,
+			release,
+		} => execute_servepages(port, address, open, release, verbosity).await,
+		Commands::Runall {
+			backend_address,
+			frontend_port,
+			noreload,
+			insecure,
+			no_docs,
+		} => {
+			execute_runall(
+				backend_address,
+				frontend_port,
+				noreload,
+				insecure,
+				no_docs,
+				verbosity,
+			)
+			.await
+		}
 	}
 }
 
@@ -789,4 +857,56 @@ async fn try_get_from_di() -> Option<reinhardt_db::DatabaseConnection> {
 async fn auto_register_router() -> Result<(), Box<dyn std::error::Error>> {
 	// No router registration needed when routers feature is disabled
 	Ok(())
+}
+
+/// Execute the servepages command
+async fn execute_servepages(
+	port: String,
+	address: String,
+	open: bool,
+	release: bool,
+	verbosity: u8,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let mut ctx = CommandContext::default();
+	ctx.set_verbosity(verbosity);
+
+	ctx.set_option("port".to_string(), port);
+	ctx.set_option("address".to_string(), address);
+	if open {
+		ctx.set_option("open".to_string(), "true".to_string());
+	}
+	if release {
+		ctx.set_option("release".to_string(), "true".to_string());
+	}
+
+	let cmd = ServePagesCommand;
+	cmd.execute(&ctx).await.map_err(|e| e.into())
+}
+
+/// Execute the runall command
+async fn execute_runall(
+	backend_address: String,
+	frontend_port: String,
+	noreload: bool,
+	insecure: bool,
+	no_docs: bool,
+	verbosity: u8,
+) -> Result<(), Box<dyn std::error::Error>> {
+	let mut ctx = CommandContext::default();
+	ctx.set_verbosity(verbosity);
+	ctx.add_arg(backend_address);
+
+	ctx.set_option("frontend-port".to_string(), frontend_port);
+	if noreload {
+		ctx.set_option("noreload".to_string(), "true".to_string());
+	}
+	if insecure {
+		ctx.set_option("insecure".to_string(), "true".to_string());
+	}
+	if no_docs {
+		ctx.set_option("no_docs".to_string(), "true".to_string());
+	}
+
+	let cmd = RunAllCommand;
+	cmd.execute(&ctx).await.map_err(|e| e.into())
 }

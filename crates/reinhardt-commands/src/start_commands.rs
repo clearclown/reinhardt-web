@@ -45,12 +45,12 @@ impl BaseCommand for StartProjectCommand {
 				"The file extension(s) to render (default: \"rs\")",
 			)
 			.with_default("rs"),
+			CommandOption::flag(None, "restful", "Create a RESTful API project (default)"),
 			CommandOption::flag(
 				None,
-				"mtv",
-				"Create a MTV-style project (Model-Template-View, Django-style)",
+				"with-pages",
+				"Create a project with reinhardt-pages (WASM + SSR)",
 			),
-			CommandOption::flag(None, "restful", "Create a RESTful API project (default)"),
 		]
 	}
 
@@ -65,14 +65,23 @@ impl BaseCommand for StartProjectCommand {
 		let target = ctx.arg(1).map(PathBuf::from);
 
 		// Determine project type
-		let is_mtv = ctx.has_option("mtv");
-		let is_restful = ctx.has_option("restful") || !is_mtv; // RESTful is default
+		let is_restful = ctx.has_option("restful");
+		let with_pages = ctx.has_option("with-pages");
 
-		let project_type = if is_mtv {
-			"MTV (Model-Template-View)"
+		// Validate exclusive flags
+		if is_restful && with_pages {
+			return Err(CommandError::InvalidArguments(
+				"Only one of --restful or --with-pages can be specified".to_string(),
+			));
+		}
+
+		// Determine project type and template key
+		let (project_type, template_key) = if with_pages {
+			("Pages (WASM + SSR)", "pages")
 		} else {
-			"RESTful API"
+			("RESTful API", "restful") // Default
 		};
+
 		ctx.info(&format!(
 			"Creating {} project '{}'...",
 			project_type, project_name
@@ -87,19 +96,15 @@ impl BaseCommand for StartProjectCommand {
 		context.insert("secret_key", &secret_key);
 		context.insert("camel_case_project_name", to_camel_case(&project_name));
 		context.insert("reinhardt_version", env!("CARGO_PKG_VERSION"));
-		context.insert("is_mtv", if is_mtv { "true" } else { "false" });
-		context.insert("is_restful", if is_restful { "true" } else { "false" });
+		context.insert("is_restful", if !with_pages { "true" } else { "false" });
+		context.insert("with_pages", if with_pages { "true" } else { "false" });
 
 		// Determine template directory
 		let template_dir = if let Some(template_path) = ctx.option("template") {
 			PathBuf::from(template_path)
 		} else {
 			// Use built-in template based on project type
-			if is_mtv {
-				get_project_template_dir("mtv")?
-			} else {
-				get_project_template_dir("restful")?
-			}
+			get_project_template_dir(template_key)?
 		};
 
 		// Create project using TemplateCommand
@@ -117,7 +122,18 @@ impl BaseCommand for StartProjectCommand {
 			project_type, project_name
 		));
 		ctx.info(&format!("  cd {}", project_name));
-		ctx.info("  cargo run");
+
+		// Display appropriate next steps based on project type
+		if with_pages {
+			ctx.info("  # Install Trunk (if not already installed)");
+			ctx.info("  cargo install trunk");
+			ctx.info("  # Build WASM client");
+			ctx.info("  trunk build");
+			ctx.info("  # Run development server");
+			ctx.info("  trunk serve");
+		} else {
+			ctx.info("  cargo run");
+		}
 
 		Ok(())
 	}
@@ -154,12 +170,12 @@ impl BaseCommand for StartAppCommand {
 				"The file extension(s) to render (default: \"rs\")",
 			)
 			.with_default("rs"),
+			CommandOption::flag(None, "restful", "Create a RESTful API app (default)"),
 			CommandOption::flag(
 				None,
-				"mtv",
-				"Create a MTV-style app (Model-Template-View, Django-style)",
+				"with-pages",
+				"Create an app with reinhardt-pages (WASM + SSR)",
 			),
-			CommandOption::flag(None, "restful", "Create a RESTful API app (default)"),
 			CommandOption::flag(
 				None,
 				"workspace",
@@ -179,15 +195,24 @@ impl BaseCommand for StartAppCommand {
 		let target = ctx.arg(1).map(PathBuf::from);
 
 		// Determine app type and structure
-		let is_mtv = ctx.has_option("mtv");
-		let is_restful = ctx.has_option("restful") || !is_mtv; // RESTful is default
+		let is_restful = ctx.has_option("restful");
+		let with_pages = ctx.has_option("with-pages");
 		let is_workspace = ctx.has_option("workspace");
 
-		let app_type = if is_mtv {
-			"MTV (Model-Template-View)"
+		// Validate exclusive flags
+		if is_restful && with_pages {
+			return Err(CommandError::InvalidArguments(
+				"Only one of --restful or --with-pages can be specified".to_string(),
+			));
+		}
+
+		// Determine app type and template key
+		let (app_type, template_key) = if with_pages {
+			("Pages (WASM + SSR)", "pages")
 		} else {
-			"RESTful API"
+			("RESTful API", "restful") // Default
 		};
+
 		let structure_type = if is_workspace {
 			"workspace crate"
 		} else {
@@ -200,7 +225,7 @@ impl BaseCommand for StartAppCommand {
 
 		if is_workspace {
 			// Create as workspace crate
-			create_workspace_app(&app_name, target.as_deref(), is_mtv, ctx).await?;
+			create_workspace_app(&app_name, target.as_deref(), with_pages, ctx).await?;
 
 			ctx.success(&format!(
 				"{} app '{}' created successfully as a workspace crate in apps/{}!",
@@ -232,19 +257,15 @@ impl BaseCommand for StartAppCommand {
 			let mut context = TemplateContext::new();
 			context.insert("app_name", &app_name);
 			context.insert("camel_case_app_name", to_camel_case(&app_name));
-			context.insert("is_mtv", if is_mtv { "true" } else { "false" });
-			context.insert("is_restful", if is_restful { "true" } else { "false" });
+			context.insert("is_restful", if !with_pages { "true" } else { "false" });
+			context.insert("with_pages", if with_pages { "true" } else { "false" });
 
 			// Determine template directory
 			let template_dir = if let Some(template_path) = ctx.option("template") {
 				PathBuf::from(template_path)
 			} else {
 				// Use built-in template based on app type
-				if is_mtv {
-					get_app_template_dir("mtv")?
-				} else {
-					get_app_template_dir("restful")?
-				}
+				get_app_template_dir(template_key)?
 			};
 
 			// Create app using TemplateCommand
@@ -312,7 +333,7 @@ fn get_app_template_dir(template_type: &str) -> CommandResult<PathBuf> {
 async fn create_workspace_app(
 	app_name: &str,
 	target: Option<&Path>,
-	is_mtv: bool,
+	with_pages: bool,
 	ctx: &CommandContext,
 ) -> CommandResult<()> {
 	// Create apps directory if it doesn't exist
@@ -335,15 +356,12 @@ async fn create_workspace_app(
 	let mut context = TemplateContext::new();
 	context.insert("app_name", app_name);
 	context.insert("camel_case_app_name", to_camel_case(app_name));
-	context.insert("is_mtv", if is_mtv { "true" } else { "false" });
-	context.insert("is_restful", if !is_mtv { "true" } else { "false" });
+	context.insert("is_restful", if !with_pages { "true" } else { "false" });
+	context.insert("with_pages", if with_pages { "true" } else { "false" });
 
 	// Determine template directory for workspace apps
-	let template_dir = if is_mtv {
-		get_app_workspace_template_dir("mtv")?
-	} else {
-		get_app_workspace_template_dir("restful")?
-	};
+	let template_key = if with_pages { "pages" } else { "restful" };
+	let template_dir = get_app_workspace_template_dir(template_key)?;
 
 	// Create app using TemplateCommand
 	let template_cmd = TemplateCommand::new();
@@ -547,6 +565,56 @@ mod tests {
 	fn test_startapp_command_name() {
 		let cmd = StartAppCommand;
 		assert_eq!(cmd.name(), "startapp");
+	}
+
+	#[test]
+	fn test_with_pages_flag_exists() {
+		let cmd = StartProjectCommand;
+		let options = cmd.options();
+		assert!(
+			options.iter().any(|opt| opt.long == "with-pages"),
+			"--with-pages flag should exist"
+		);
+	}
+
+	#[test]
+	fn test_restful_flag_exists() {
+		let cmd = StartProjectCommand;
+		let options = cmd.options();
+		assert!(
+			options.iter().any(|opt| opt.long == "restful"),
+			"--restful flag should exist"
+		);
+	}
+
+	#[test]
+	fn test_mtv_flag_removed() {
+		let cmd = StartProjectCommand;
+		let options = cmd.options();
+		assert!(
+			!options.iter().any(|opt| opt.long == "mtv"),
+			"--mtv flag should be removed"
+		);
+	}
+
+	#[test]
+	fn test_startapp_with_pages_flag_exists() {
+		let cmd = StartAppCommand;
+		let options = cmd.options();
+		assert!(
+			options.iter().any(|opt| opt.long == "with-pages"),
+			"--with-pages flag should exist in StartAppCommand"
+		);
+	}
+
+	#[test]
+	fn test_startapp_mtv_flag_removed() {
+		let cmd = StartAppCommand;
+		let options = cmd.options();
+		assert!(
+			!options.iter().any(|opt| opt.long == "mtv"),
+			"--mtv flag should be removed from StartAppCommand"
+		);
 	}
 
 	#[rstest]

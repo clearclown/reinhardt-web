@@ -2,7 +2,9 @@
 //!
 //! Standard management commands included with Reinhardt.
 
-use crate::{BaseCommand, CommandArgument, CommandContext, CommandOption, CommandResult};
+use crate::{
+	BaseCommand, CommandArgument, CommandContext, CommandError, CommandOption, CommandResult,
+};
 use async_trait::async_trait;
 
 #[cfg(feature = "migrations")]
@@ -18,6 +20,10 @@ use reinhardt_db::backends::DatabaseConnection;
 // Import DatabaseType for connect_database helper
 #[cfg(all(feature = "reinhardt-db", not(feature = "migrations")))]
 use reinhardt_db::backends::DatabaseType;
+
+// Import ShutdownCoordinator for runall command
+#[cfg(feature = "server")]
+use reinhardt_server::ShutdownCoordinator;
 
 /// Database migration command
 pub struct MigrateCommand;
@@ -1237,13 +1243,13 @@ impl RunServerCommand {
 			#[cfg(not(feature = "autoreload"))]
 			{
 				server
-					.listen_with_shutdown(addr, coordinator)
+					.listen_with_shutdown(addr, ShutdownCoordinator::clone(&coordinator))
 					.await
 					.map_err(|e| crate::CommandError::ExecutionError(e.to_string()))
 			}
 		} else {
 			server
-				.listen_with_shutdown(addr, coordinator)
+				.listen_with_shutdown(addr, ShutdownCoordinator::clone(&coordinator))
 				.await
 				.map_err(|e| crate::CommandError::ExecutionError(e.to_string()))
 		}
@@ -1962,6 +1968,538 @@ impl BaseCommand for CheckDiCommand {
 			Err(crate::CommandError::ExecutionError(
 				"check-di command requires 'di' feature to be enabled".to_string(),
 			))
+		}
+	}
+}
+
+// ============================================================================
+// WASM Frontend Server Commands
+// ============================================================================
+
+/// Helper function to check if Trunk is installed
+async fn ensure_trunk_available() -> CommandResult<()> {
+	let output = tokio::process::Command::new("trunk")
+		.arg("--version")
+		.output()
+		.await;
+
+	match output {
+		Ok(output) if output.status.success() => Ok(()),
+		_ => Err(CommandError::ExecutionError(
+			"Trunk is not installed.\n\
+			 \n\
+			 Install with: cargo install trunk\n\
+			 \n\
+			 For WASM target support:\n\
+			   rustup target add wasm32-unknown-unknown\n\
+			   cargo install wasm-bindgen-cli\n\
+			 \n\
+			 Documentation: https://trunkrs.dev/"
+				.to_string(),
+		)),
+	}
+}
+
+/// Helper function to find Trunk.toml in current directory or parent directories
+async fn find_trunk_toml() -> CommandResult<std::path::PathBuf> {
+	let current_dir = std::env::current_dir().map_err(|e| {
+		CommandError::ExecutionError(format!("Failed to get current directory: {}", e))
+	})?;
+
+	let mut dir = current_dir.as_path();
+
+	loop {
+		let trunk_toml = dir.join("Trunk.toml");
+		if trunk_toml.exists() {
+			return Ok(dir.to_path_buf());
+		}
+
+		match dir.parent() {
+			Some(parent) => dir = parent,
+			None => break,
+		}
+	}
+
+	Err(CommandError::ExecutionError(
+		"Trunk.toml not found in current directory or parent directories.\n\
+		 \n\
+		 Create one with:\n\
+		   trunk init\n\
+		 \n\
+		 Or navigate to a directory with Trunk.toml\n\
+		 Example: cd examples/local/examples-twitter"
+			.to_string(),
+	))
+}
+
+/// ServePagesCommand - Start WASM frontend development server (Trunk)
+pub struct ServePagesCommand;
+
+#[async_trait]
+impl BaseCommand for ServePagesCommand {
+	fn name(&self) -> &str {
+		"servepages"
+	}
+
+	fn description(&self) -> &str {
+		"Start WASM frontend development server (Trunk)"
+	}
+
+	fn arguments(&self) -> Vec<CommandArgument> {
+		vec![]
+	}
+
+	fn options(&self) -> Vec<CommandOption> {
+		vec![
+			CommandOption::option(None, "port", "Frontend server port (default: 8080)")
+				.with_default("8080"),
+			CommandOption::option(None, "address", "Server address (default: 127.0.0.1)")
+				.with_default("127.0.0.1"),
+			CommandOption::flag(None, "open", "Open browser automatically"),
+			CommandOption::flag(None, "release", "Build in release mode"),
+		]
+	}
+
+	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
+		// Check if Trunk is installed
+		ensure_trunk_available().await?;
+
+		// Find Trunk.toml
+		let project_dir = find_trunk_toml().await?;
+
+		let port = ctx.option("port").map(|s| s.as_str()).unwrap_or("8080");
+		let address = ctx
+			.option("address")
+			.map(|s| s.as_str())
+			.unwrap_or("127.0.0.1");
+		let open = ctx.has_option("open");
+		let release = ctx.has_option("release");
+
+		ctx.info(&format!(
+			"Starting WASM frontend development server at http://{}:{}",
+			address, port
+		));
+		ctx.verbose(&format!(
+			"Trunk project directory: {}",
+			project_dir.display()
+		));
+		ctx.info("");
+		ctx.info("Quit the server with CTRL-C");
+		ctx.info("");
+
+		// Build trunk command
+		let mut cmd = tokio::process::Command::new("trunk");
+		cmd.arg("serve")
+			.arg(format!("--port={}", port))
+			.arg(format!("--address={}", address))
+			.current_dir(&project_dir)
+			.stdout(std::process::Stdio::inherit())
+			.stderr(std::process::Stdio::inherit());
+
+		if open {
+			cmd.arg("--open");
+		}
+
+		if release {
+			cmd.arg("--release");
+		}
+
+		// Spawn trunk process
+		let mut child = cmd
+			.spawn()
+			.map_err(|e| CommandError::ExecutionError(format!("Failed to start trunk: {}", e)))?;
+
+		// Wait for either process completion or CTRL-C
+		tokio::select! {
+			status = child.wait() => {
+				match status {
+					Ok(exit_status) if exit_status.success() => Ok(()),
+					Ok(exit_status) => Err(CommandError::ExecutionError(
+						format!("Trunk exited with error: {}", exit_status)
+					)),
+					Err(e) => Err(CommandError::ExecutionError(
+						format!("Failed to wait for trunk: {}", e)
+					)),
+				}
+			}
+			_ = tokio::signal::ctrl_c() => {
+				ctx.info("\nReceived CTRL-C, shutting down...");
+
+				// Send SIGTERM to trunk process
+				#[cfg(unix)]
+				if let Some(pid) = child.id() {
+					use nix::sys::signal::{kill, Signal};
+					use nix::unistd::Pid;
+					let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
+				}
+
+				#[cfg(windows)]
+				{
+					let _ = child.kill().await;
+				}
+
+				// Wait for process to exit
+				let _ = child.wait().await;
+				Ok(())
+			}
+		}
+	}
+}
+
+/// RunAllCommand - Start both backend server and WASM frontend development server
+pub struct RunAllCommand;
+
+#[async_trait]
+impl BaseCommand for RunAllCommand {
+	fn name(&self) -> &str {
+		"runall"
+	}
+
+	fn description(&self) -> &str {
+		"Start both backend server and WASM frontend development server"
+	}
+
+	fn arguments(&self) -> Vec<CommandArgument> {
+		vec![
+			CommandArgument::optional(
+				"backend-address",
+				"Backend server address (default: 127.0.0.1:8000)",
+			)
+			.with_default("127.0.0.1:8000"),
+		]
+	}
+
+	fn options(&self) -> Vec<CommandOption> {
+		vec![
+			CommandOption::option(
+				None,
+				"frontend-port",
+				"Frontend server port (default: 8080)",
+			)
+			.with_default("8080"),
+			CommandOption::flag(None, "noreload", "Disable backend auto-reload"),
+			CommandOption::flag(None, "insecure", "Serve static files"),
+			CommandOption::flag(None, "no-docs", "Disable OpenAPI docs"),
+		]
+	}
+
+	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
+		use std::sync::Arc;
+
+		let backend_addr = ctx.arg(0).map(|s| s.as_str()).unwrap_or("127.0.0.1:8000");
+		let frontend_port = ctx
+			.option("frontend-port")
+			.map(|s| s.as_str())
+			.unwrap_or("8080");
+
+		// Check if Trunk is installed
+		ensure_trunk_available().await?;
+
+		// Find Trunk.toml
+		let project_dir = find_trunk_toml().await?;
+
+		ctx.info("Starting both backend and frontend servers...");
+		ctx.info(&format!("Backend:  http://{}", backend_addr));
+		ctx.info(&format!("Frontend: http://127.0.0.1:{}", frontend_port));
+		ctx.verbose(&format!(
+			"Trunk project directory: {}",
+			project_dir.display()
+		));
+		ctx.info("");
+		ctx.info("Quit the servers with CTRL-C");
+		ctx.info("");
+
+		// Create ShutdownCoordinator for backend
+		#[cfg(feature = "server")]
+		let backend_coordinator = Arc::new(reinhardt_server::ShutdownCoordinator::new(
+			std::time::Duration::from_secs(30),
+		));
+
+		// Spawn CTRL-C signal handler
+		#[cfg(feature = "server")]
+		{
+			let shutdown_tx = backend_coordinator.clone();
+			tokio::spawn(async move {
+				if let Err(e) = tokio::signal::ctrl_c().await {
+					eprintln!("Failed to listen for CTRL-C: {}", e);
+					return;
+				}
+				println!("\nReceived CTRL-C, shutting down gracefully...");
+				shutdown_tx.shutdown();
+			});
+		}
+
+		// Start backend server
+		#[cfg(feature = "server")]
+		let backend_handle = {
+			let ctx = ctx.clone();
+			let coordinator = backend_coordinator.clone();
+			let addr = backend_addr.to_string();
+			tokio::spawn(async move { Self::start_backend_server(&ctx, &addr, coordinator).await })
+		};
+
+		// Start frontend server (Trunk)
+		let frontend_handle = {
+			let port = frontend_port.to_string();
+			#[cfg(feature = "server")]
+			let coordinator = backend_coordinator.clone();
+			tokio::spawn(async move {
+				#[cfg(feature = "server")]
+				{
+					Self::start_frontend_server(&project_dir, &port, coordinator).await
+				}
+				#[cfg(not(feature = "server"))]
+				{
+					Self::start_frontend_server_standalone(&project_dir, &port).await
+				}
+			})
+		};
+
+		// Wait for both servers to complete
+		#[cfg(feature = "server")]
+		let (backend_result, frontend_result) = tokio::join!(backend_handle, frontend_handle);
+
+		#[cfg(not(feature = "server"))]
+		let frontend_result = frontend_handle.await;
+
+		// Handle errors
+		#[cfg(feature = "server")]
+		if let Err(e) = backend_result {
+			ctx.warning(&format!("Backend task error: {:?}", e));
+		}
+
+		if let Err(e) = frontend_result {
+			ctx.warning(&format!("Frontend task error: {:?}", e));
+		}
+
+		Ok(())
+	}
+}
+
+impl RunAllCommand {
+	/// Start backend server (reuses RunServerCommand logic)
+	#[cfg(feature = "server")]
+	async fn start_backend_server(
+		ctx: &CommandContext,
+		address: &str,
+		coordinator: std::sync::Arc<reinhardt_server::ShutdownCoordinator>,
+	) -> CommandResult<()> {
+		use reinhardt_server::HttpServer;
+
+		let noreload = ctx.has_option("noreload");
+		let _insecure = ctx.has_option("insecure");
+		let no_docs = ctx.has_option("no-docs");
+
+		// Get registered router
+		if !reinhardt_urls::routers::is_router_registered() {
+			return Err(CommandError::ExecutionError(
+                "No router registered. Call reinhardt_urls::routers::register_router() or reinhardt_urls::routers::register_router_arc() before running the server.".to_string()
+            ));
+		}
+
+		let base_router = reinhardt_urls::routers::get_router().ok_or_else(|| {
+			CommandError::ExecutionError("Failed to get registered router".to_string())
+		})?;
+
+		// Wrap with OpenAPI endpoints if enabled
+		#[cfg(feature = "openapi")]
+		let router = if !no_docs {
+			use reinhardt_openapi::OpenApiRouter;
+			use reinhardt_types::Handler;
+			std::sync::Arc::new(OpenApiRouter::wrap(base_router)) as std::sync::Arc<dyn Handler>
+		} else {
+			base_router
+		};
+
+		#[cfg(not(feature = "openapi"))]
+		let router = base_router;
+
+		// Parse socket address
+		let addr: std::net::SocketAddr = address.parse().map_err(|e| {
+			CommandError::ExecutionError(format!("Invalid address '{}': {}", address, e))
+		})?;
+
+		// Create DI context for dependency injection
+		let singleton_scope = std::sync::Arc::new(reinhardt_di::SingletonScope::new());
+
+		// Register DatabaseConnection as singleton when database feature is enabled
+		#[cfg(feature = "reinhardt-db")]
+		{
+			use reinhardt_db::DatabaseConnection;
+
+			// Try to connect to database and register connection
+			match get_database_url() {
+				Ok(url) => {
+					ctx.verbose(&format!(
+						"Connecting to database: {}...",
+						&url[..url.len().min(50)]
+					));
+					match DatabaseConnection::connect(&url).await {
+						Ok(db_conn) => {
+							singleton_scope.set(db_conn);
+							ctx.verbose("✅ Database connection registered in DI context");
+						}
+						Err(e) => {
+							ctx.warning(&format!(
+								"⚠️ Failed to connect to database: {}. DI injection for DatabaseConnection will fail.",
+								e
+							));
+						}
+					}
+				}
+				Err(e) => {
+					ctx.warning(&format!(
+						"⚠️ No DATABASE_URL configured: {}. DI injection for DatabaseConnection will fail.",
+						e
+					));
+				}
+			}
+		}
+
+		let di_context =
+			std::sync::Arc::new(reinhardt_di::InjectionContext::builder(singleton_scope).build());
+
+		// Create HTTP server with DI context and logging middleware
+		let server = HttpServer::new(router)
+			.with_di_context(di_context)
+			.with_middleware(reinhardt_middleware::LoggingMiddleware::new());
+
+		// Start server with shutdown coordinator (auto-reload not supported in runall)
+		if noreload {
+			server
+				.listen_with_shutdown(addr, ShutdownCoordinator::clone(&coordinator))
+				.await
+				.map_err(|e| CommandError::ExecutionError(e.to_string()))
+		} else {
+			ctx.warning(
+				"Auto-reload is not supported in runall command. Use --noreload to suppress this warning.",
+			);
+			server
+				.listen_with_shutdown(addr, ShutdownCoordinator::clone(&coordinator))
+				.await
+				.map_err(|e| CommandError::ExecutionError(e.to_string()))
+		}
+	}
+
+	/// Start frontend server with ShutdownCoordinator integration
+	#[cfg(feature = "server")]
+	async fn start_frontend_server(
+		project_dir: &std::path::Path,
+		port: &str,
+		coordinator: std::sync::Arc<reinhardt_server::ShutdownCoordinator>,
+	) -> CommandResult<()> {
+		// Spawn trunk process
+		let mut child = tokio::process::Command::new("trunk")
+			.arg("serve")
+			.arg(format!("--port={}", port))
+			.current_dir(project_dir)
+			.stdout(std::process::Stdio::inherit())
+			.stderr(std::process::Stdio::inherit())
+			.spawn()
+			.map_err(|e| CommandError::ExecutionError(format!("Failed to start trunk: {}", e)))?;
+
+		let pid = child.id();
+		let mut shutdown_rx = coordinator.subscribe();
+
+		// Wait for either process completion or shutdown signal
+		tokio::select! {
+			status = child.wait() => {
+				match status {
+					Ok(exit_status) if exit_status.success() => {
+						println!("Trunk process exited normally");
+						Ok(())
+					}
+					Ok(exit_status) => Err(CommandError::ExecutionError(
+						format!("Trunk exited with error: {}", exit_status)
+					)),
+					Err(e) => Err(CommandError::ExecutionError(
+						format!("Failed to wait for trunk: {}", e)
+					)),
+				}
+			}
+			_ = shutdown_rx.recv() => {
+				println!("Shutting down Trunk process...");
+
+				// Send SIGTERM to trunk process
+				#[cfg(unix)]
+				if let Some(pid) = pid {
+					use nix::sys::signal::{kill, Signal};
+					use nix::unistd::Pid;
+					let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
+				}
+
+				#[cfg(windows)]
+				{
+					let _ = child.kill().await;
+				}
+
+				// Wait for process to exit with timeout
+				match tokio::time::timeout(
+					std::time::Duration::from_secs(5),
+					child.wait()
+				).await {
+					Ok(_) => {
+						println!("Trunk process stopped");
+						Ok(())
+					}
+					Err(_) => {
+						eprintln!("Trunk process did not stop within timeout, force killing");
+						let _ = child.kill().await;
+						let _ = child.wait().await;
+						Ok(())
+					}
+				}
+			}
+		}
+	}
+
+	/// Start frontend server without ShutdownCoordinator (when server feature is disabled)
+	#[cfg(not(feature = "server"))]
+	async fn start_frontend_server_standalone(
+		project_dir: &std::path::Path,
+		port: &str,
+	) -> CommandResult<()> {
+		// Spawn trunk process
+		let mut child = tokio::process::Command::new("trunk")
+			.arg("serve")
+			.arg(format!("--port={}", port))
+			.current_dir(project_dir)
+			.stdout(std::process::Stdio::inherit())
+			.stderr(std::process::Stdio::inherit())
+			.spawn()
+			.map_err(|e| CommandError::ExecutionError(format!("Failed to start trunk: {}", e)))?;
+
+		// Wait for either process completion or CTRL-C
+		tokio::select! {
+			status = child.wait() => {
+				match status {
+					Ok(exit_status) if exit_status.success() => Ok(()),
+					Ok(exit_status) => Err(CommandError::ExecutionError(
+						format!("Trunk exited with error: {}", exit_status)
+					)),
+					Err(e) => Err(CommandError::ExecutionError(
+						format!("Failed to wait for trunk: {}", e)
+					)),
+				}
+			}
+			_ = tokio::signal::ctrl_c() => {
+				println!("\nReceived CTRL-C, shutting down...");
+
+				#[cfg(unix)]
+				if let Some(pid) = child.id() {
+					use nix::sys::signal::{kill, Signal};
+					use nix::unistd::Pid;
+					let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
+				}
+
+				#[cfg(windows)]
+				{
+					let _ = child.kill().await;
+				}
+
+				let _ = child.wait().await;
+				Ok(())
+			}
 		}
 	}
 }
