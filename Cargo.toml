@@ -60,6 +60,9 @@ api = [
 auth = ["reinhardt-auth"]
 admin = [
   "reinhardt-admin",
+  "reinhardt-admin-adapters",
+  "reinhardt-admin-server",
+  "reinhardt-admin-pages",
   "reinhardt-forms",
   "reinhardt-pages",
 ]
@@ -236,6 +239,9 @@ reinhardt-auth = { workspace = true, optional = true }
 
 # Additional optional dependencies
 reinhardt-admin = { workspace = true, optional = true }
+reinhardt-admin-adapters = { workspace = true, optional = true }
+reinhardt-admin-server = { workspace = true, optional = true }
+reinhardt-admin-pages = { workspace = true, optional = true }
 reinhardt-browsable-api = { workspace = true, optional = true }
 reinhardt-commands = { workspace = true, optional = true }
 reinhardt-di = { workspace = true, optional = true }
@@ -315,8 +321,7 @@ members = [
   "crates/reinhardt-admin/crates/core",                # Admin panel core logic
   "crates/reinhardt-admin/crates/server",              # Admin panel Server Functions
   "crates/reinhardt-admin/crates/pages",               # Admin panel WASM frontend (new)
-  "crates/reinhardt-admin/crates/api",
-  "crates/reinhardt-admin/crates/ui",                  # Admin panel WASM UI (legacy)
+  "crates/reinhardt-admin/crates/adapters",            # Admin panel database adapters
   "crates/reinhardt-admin-cli",                        # Admin CLI tool
   "crates/reinhardt-grpc",
   "crates/reinhardt-commands",
