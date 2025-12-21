@@ -3,15 +3,16 @@ name = "examples-rest-api"
 version = "0.1.0-alpha.1"
 edition = "2024"
 publish = false
+default-run = "examples-rest-api"
 
 [[bin]]
-name = "manage"
+name = "examples-rest-api"
 path = "src/bin/manage.rs"
 
 [dependencies]
 # Use local workspace version directly via path
 # package="reinhardt-web" maps the crate name to the actual package name
-reinhardt = { path = "../../..", package = "reinhardt-web", features = [
+reinhardt = { workspace = true, features = [
     "full",
     "db-sqlite",
 ] }

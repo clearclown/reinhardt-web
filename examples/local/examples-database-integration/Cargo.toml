@@ -3,15 +3,16 @@ name = "examples-database-integration"
 version = "0.1.0-alpha.1"
 edition = "2024"
 publish = false
+default-run = "examples-database-integration"
 
 [[bin]]
-name = "manage"
+name = "examples-database-integration"
 path = "src/bin/manage.rs"
 
 [dependencies]
 # Use local workspace version directly via path
 # package="reinhardt-web" maps the crate name to the actual package name
-reinhardt = { path = "../../..", package = "reinhardt-web", features = ["full", "db-sqlite", "db-postgres"] }
+reinhardt = { workspace = true, features = ["full", "db-sqlite", "db-postgres"] }
 
 # Required for collect_migrations! macro
 linkme = "0.3"
@@ -48,9 +49,9 @@ sqlx = { version = "0.8", features = [
 anyhow = "1.0"
 serial_test = "3.2"
 tempfile = "3.15"
-reinhardt-test = { path = "../../../crates/reinhardt-test", features = ["testcontainers"] }
-reinhardt-backends = { path = "../../../crates/reinhardt-db/crates/backends" }
-reinhardt_db = { path = "../../../crates/reinhardt-db", package = "reinhardt-db" }
+reinhardt-test = { workspace = true, features = ["testcontainers"] }
+reinhardt-backends = { workspace = true }
+reinhardt-db = { workspace = true }
 testcontainers = "0.25.2"
 
 [build-dependencies]

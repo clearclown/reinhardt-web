@@ -2,13 +2,14 @@
 name = "examples-github-issues"
 version = "0.1.0"
 edition = "2024"
+default-run = "examples-github-issues"
 
 [[bin]]
-name = "manage"
+name = "examples-github-issues"
 path = "src/bin/manage.rs"
 
 [dependencies]
-reinhardt = { path = "../../..", package = "reinhardt-web", features = [
+reinhardt = { workspace = true, features = [
 	"full",
 	"auth-jwt",
 	"graphql",    # GraphQL support
@@ -38,6 +39,3 @@ argon2 = { version = "0.5", features = ["std"] }
 path = "../../.."
 package = "reinhardt-web"
 features = ["full", "auth-jwt", "test", "testcontainers", "graphql"]
-
-[patch.crates-io]
-reinhardt-web = { path = "../../.." }

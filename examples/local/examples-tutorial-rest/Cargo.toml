@@ -4,13 +4,14 @@ version = "0.1.0-alpha.1"
 edition = "2024"
 publish = false
 description = "Reinhardt REST tutorial example - Code snippet management API"
+default-run = "examples-tutorial-rest"
 
 [[bin]]
-name = "manage"
+name = "examples-tutorial-rest"
 path = "src/bin/manage.rs"
 
 [dependencies]
-reinhardt = { path = "../../..", package = "reinhardt-web", features = [
+reinhardt = { workspace = true, features = [
     "minimal",
     "core",
     "conf",
@@ -29,6 +30,7 @@ sea-query = "1.0.0-rc.22"
 syntect = "5.2"
 example-common = { path = "../../remote/common" }
 ctor = "0.6.1"
+inventory = "0.3"
 
 [dev-dependencies]
 example-test-macros = { path = "../../remote/test-macros" }
