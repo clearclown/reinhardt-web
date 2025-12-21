@@ -24,6 +24,7 @@
 
 use proc_macro::TokenStream;
 
+mod crate_paths;
 mod server_fn;
 
 /// Server Function macro
