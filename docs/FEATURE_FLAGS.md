@@ -330,6 +330,7 @@ async fn handler(
 | Feature | Description | Key Crates |
 |---------|-------------|------------|
 | `admin` | Admin panel | reinhardt-admin, reinhardt-forms, reinhardt-pages |
+| `pages` | WASM-based frontend with SSR | reinhardt-pages |
 | `graphql` | GraphQL API | reinhardt-graphql |
 | `websockets` | Real-time | reinhardt-websockets |
 | `i18n` | Internationalization | reinhardt-i18n |
@@ -365,6 +366,69 @@ reinhardt-dentdelion = { version = "0.1", features = ["full"] }
 ```
 
 See [`reinhardt plugin`](../crates/reinhardt-commands/README.md#plugin-command-system) commands for managing plugins.
+
+---
+
+### reinhardt-pages
+
+WASM-based reactive frontend framework with server-side rendering (SSR) support.
+
+**Usage with reinhardt-admin-cli:**
+
+```bash
+# Create a pages-based project
+reinhardt-admin startproject myapp --with-pages
+
+# Create a pages-based app
+reinhardt-admin startapp myfeature --with-pages
+```
+
+**Architecture:**
+- **3-layer structure**: `client/` (WASM UI), `server/` (server functions), `shared/` (common types)
+- **WASM frontend**: Runs in browser using wasm-bindgen
+- **Server-side rendering (SSR)**: Pre-render pages on server
+- **Client-side hydration**: Interactive after initial load
+- **Type-safe server functions**: RPC-style communication with `#[server_fn]` macro
+
+**Key Features:**
+- Reactive UI components
+- Conditional compilation (`cfg(target_arch = "wasm32")`)
+- Trunk integration for development and build
+- Bootstrap UI integration
+- History API routing
+- Global state management
+
+**Configuration Example:**
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]  # cdylib for WASM, rlib for server
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Document", "Element"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tokio = { version = "1", features = ["full"] }
+```
+
+**Development Workflow:**
+
+```bash
+# Install Trunk (WASM build tool)
+cargo install trunk
+
+# Build WASM client
+trunk build
+
+# Run development server with hot reload
+trunk serve
+```
+
+See [examples/local/examples-twitter](../examples/local/examples-twitter) for a complete implementation.
 
 ---
 

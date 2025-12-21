@@ -26,12 +26,9 @@ cargo install reinhardt-admin-cli
 ### Step 2: Create a New Project
 
 ```bash
-# Create a RESTful API project
-reinhardt-admin startproject my-api --template-type restful
+# Create a RESTful API project (default)
+reinhardt-admin startproject my-api
 cd my-api
-
-# Or create a Model-Template-View (MTV) project
-reinhardt-admin startproject my-web --template-type mtv
 ```
 
 This generates a complete project structure:
@@ -57,6 +54,43 @@ my-api/
 │       └── apps.rs
 └── README.md
 ```
+
+### Step 2b: Create a reinhardt-pages Project (Alternative)
+
+For a modern WASM-based frontend with SSR:
+
+```bash
+# Create a reinhardt-pages project
+reinhardt-admin startproject my-app --with-pages
+cd my-app
+
+# Install Trunk (if not already installed)
+cargo install trunk
+
+# Build WASM client
+trunk build
+
+# Run development server with hot reload
+trunk serve
+```
+
+This generates a project with 3-layer architecture:
+
+```
+my-app/
+├── Cargo.toml
+├── Trunk.toml
+├── index.html
+├── src/
+│   ├── client/       # WASM UI (runs in browser)
+│   ├── server/       # Server functions (runs on server)
+│   ├── shared/       # Shared types (used by both)
+│   └── ...
+```
+
+Visit `http://127.0.0.1:8080/` in your browser.
+
+See [examples/local/examples-twitter](../examples/local/examples-twitter) for a complete implementation.
 
 ### Step 3: Choose Your Flavor
 
@@ -256,11 +290,10 @@ You already installed `reinhardt-admin` in Step 1. Use it for:
 
 ```bash
 # Create new projects
-reinhardt-admin startproject myproject --template-type restful
-reinhardt-admin startproject myweb --template-type mtv
+reinhardt-admin startproject myproject
 
 # Create new apps (from project root)
-reinhardt-admin startapp myapp --template-type restful
+reinhardt-admin startapp myapp
 ```
 
 For more details, see the

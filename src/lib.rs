@@ -140,6 +140,12 @@ pub mod linkme {
 	pub use linkme::*;
 }
 
+#[cfg(feature = "database")]
+#[doc(hidden)]
+pub mod reinhardt_orm {
+	pub use reinhardt_db::orm::*;
+}
+
 // Module re-exports following Django's structure
 #[cfg(feature = "admin")]
 pub mod admin;
@@ -175,11 +181,6 @@ pub mod test;
 pub mod urls;
 pub mod utils;
 pub mod views;
-
-// Contrib modules (Django-style)
-pub mod contrib {
-	// Admin functionality is available through reinhardt::admin module
-}
 
 // Re-export app types from reinhardt-apps
 #[cfg(feature = "core")]
@@ -258,7 +259,7 @@ pub use reinhardt_core::{
 pub use reinhardt_http::ViewResult;
 
 // Re-export inventory crate (used by HTTP method macros for endpoint registration)
-#[cfg(feature = "core")]
+#[doc(hidden)]
 pub use inventory;
 
 // Re-export ORM
@@ -978,6 +979,7 @@ pub mod prelude {
 pub mod db {
 	// Re-export commonly used types at module level for easier access
 	pub use reinhardt_db::DatabaseConnection;
+	pub use reinhardt_db::DatabaseError as Error;
 
 	// Explicitly re-export modules used by Model derive macro
 	pub mod migrations {

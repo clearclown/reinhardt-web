@@ -221,7 +221,7 @@ When a local example is stable and reinhardt is published:
    ```toml
    # Cargo.toml
    [dependencies]
-   example-common = { path = "../common" }  # Note: ../ not ../../
+   example-common = { workspace = true }  # Note: ../ not ../../
 
    [dev-dependencies]
    example-test-macros = { path = "../test-macros" }

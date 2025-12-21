@@ -163,10 +163,20 @@ description = "Run all integration tests"
 dependencies = ["intra-crate-integration-test", "cross-crate-integration-test"]
 
 [tasks.local-examples-test]
-description = "Test local examples (uses local reinhardt workspace)"
-cwd = "examples/local"
+description = "Test local examples (now part of workspace)"
 command = "cargo"
-args = ["nextest", "run", "--workspace", "--verbose"]
+args = [
+  "nextest",
+  "run",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues",
+  "--verbose"
+]
 
 [tasks.remote-examples-test]
 description = "Test remote examples (uses crates.io published versions)"
@@ -285,23 +295,19 @@ fi
 # ============================================================================
 
 [tasks.local-examples-build]
-description = "Build local examples individually (auto-detect examples-* directories)"
-script = '''
-#!/bin/bash
-set -e
-
-# Change to examples/local directory
-cd examples/local
-
-# Find all directories starting with "examples-"
-for example_dir in examples-*; do
-  if [ -d "$example_dir" ]; then
-    example_name=$(basename "$example_dir")
-    echo "Building $example_name..."
-    cargo build -p "$example_name" --release
-  fi
-done
-'''
+description = "Build local examples (now part of workspace)"
+command = "cargo"
+args = [
+  "build",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues",
+  "--release"
+]
 
 [tasks.remote-examples-build]
 description = "Build remote examples individually (auto-detect examples-* directories)"
@@ -359,10 +365,18 @@ description = "Build all examples (local + remote)"
 dependencies = ["local-examples-build", "remote-examples-build"]
 
 [tasks.local-examples-clean]
-description = "Clean local examples build artifacts"
-cwd = "examples/local"
+description = "Clean local examples build artifacts (now part of workspace clean)"
 command = "cargo"
-args = ["clean"]
+args = [
+  "clean",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues"
+]
 
 [tasks.remote-examples-clean]
 description = "Clean remote examples build artifacts"

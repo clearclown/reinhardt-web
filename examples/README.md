@@ -47,7 +47,7 @@ examples/
 ```toml
 # examples/local/Cargo.toml
 [patch.crates-io]
-reinhardt = { path = "../..", package = "reinhardt-web", version = "0.1.0-alpha.1" }
+reinhardt = { path = "../../..", package = "reinhardt-web", version = "0.1.0-alpha.1" }
 ```
 
 ### Remote Examples (`examples/remote/`)

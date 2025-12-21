@@ -157,12 +157,9 @@ cargo install reinhardt-admin-cli
 ### 2. Create a New Project
 
 ```bash
-# Create a RESTful API project
-reinhardt-admin startproject my-api --template-type restful
+# Create a RESTful API project (default)
+reinhardt-admin startproject my-api
 cd my-api
-
-# Or create a Model-Template-View (MTV) project
-reinhardt-admin startproject my-web --template-type mtv
 ```
 
 This generates a complete project structure:
@@ -186,6 +183,23 @@ my-api/
 │   └── bin/
 │       └── manage.rs
 └── README.md
+```
+
+**Alternative: Create a reinhardt-pages Project (WASM + SSR)**
+
+For a modern WASM-based frontend with SSR:
+
+```bash
+# Create a pages project
+reinhardt-admin startproject my-app --with-pages
+cd my-app
+
+# Install Trunk (if not already installed)
+cargo install trunk
+
+# Build and run
+trunk serve
+# Visit http://127.0.0.1:8080/
 ```
 
 ### 3. Run the Development Server
@@ -218,8 +232,14 @@ bacon test
 ### 4. Create Your First App
 
 ```bash
-# Create a new app
-cargo run --bin manage startapp users --template-type restful
+# Create a RESTful API app (default)
+cargo run --bin manage startapp users
+
+# Or explicitly specify type
+cargo run --bin manage startapp users --restful
+
+# Create a Pages app (WASM + SSR)
+cargo run --bin manage startapp dashboard --with-pages
 ```
 
 This creates an app structure:
