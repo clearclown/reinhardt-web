@@ -2,8 +2,8 @@
 //!
 //! The `url_patterns` routes URLs to handlers.
 
-use reinhardt::db::DatabaseConnection;
 use reinhardt::UnifiedRouter;
+use reinhardt::db::DatabaseConnection;
 use reinhardt::register_url_patterns;
 use std::sync::Arc;
 
@@ -14,8 +14,7 @@ use super::views;
 /// Use this when database connection is not available
 /// or when you don't need the admin panel.
 pub fn url_patterns() -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::new()
-		.endpoint(views::health_check);
+	let router = UnifiedRouter::new().endpoint(views::health_check);
 
 	Arc::new(router)
 }
@@ -28,8 +27,7 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 ///
 /// * `_db` - Database connection for admin CRUD operations
 pub fn url_patterns_with_admin(_db: DatabaseConnection) -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::new()
-		.endpoint(views::health_check);
+	let router = UnifiedRouter::new().endpoint(views::health_check);
 
 	// TODO: Include admin panel when implemented
 	// let admin_router = admin::configure_admin(_db);

@@ -2,8 +2,8 @@
 //!
 //! This is the project-specific management command interface (equivalent to Django's manage.py).
 
+use examples_github_issues::config; // Explicitly reference config module
 use reinhardt::commands::execute_from_command_line;
-use examples_github_issues::config;  // Explicitly reference config module
 use std::process;
 
 #[tokio::main]
@@ -11,7 +11,10 @@ async fn main() {
 	// Set settings module environment variable
 	// SAFETY: This is safe because we're setting it before any other code runs
 	unsafe {
-		std::env::set_var("REINHARDT_SETTINGS_MODULE", "examples_github_issues.config.settings");
+		std::env::set_var(
+			"REINHARDT_SETTINGS_MODULE",
+			"examples_github_issues.config.settings",
+		);
 	}
 
 	// Ensure config module is loaded (triggers register_url_patterns! macro)

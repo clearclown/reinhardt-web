@@ -23,27 +23,27 @@ pub enum ProjectVisibility {
 pub struct Project {
 	/// Primary key
 	#[field(primary_key = true)]
-	pub id: Uuid,
+	id: Uuid,
 
 	/// Project name (unique)
 	#[field(max_length = 255, unique = true)]
-	pub name: String,
+	name: String,
 
 	/// Project description
 	#[field(max_length = 1000)]
-	pub description: String,
+	description: String,
 
 	/// Project visibility (public or private)
 	/// Stored as string: "public" or "private"
 	#[field(max_length = 20, default = "public")]
-	pub visibility: String,
+	visibility: String,
 
 	/// Owner user ID (references User model)
-	pub owner_id: Uuid,
+	owner_id: Uuid,
 
 	/// Creation timestamp
 	#[field(auto_now_add = true)]
-	pub created_at: DateTime<Utc>,
+	created_at: DateTime<Utc>,
 }
 
 /// ProjectMember role levels
@@ -69,20 +69,20 @@ pub enum MemberRole {
 pub struct ProjectMember {
 	/// Primary key
 	#[field(primary_key = true)]
-	pub id: Uuid,
+	id: Uuid,
 
 	/// Project ID (references Project model)
-	pub project_id: Uuid,
+	project_id: Uuid,
 
 	/// User ID (references User model)
-	pub user_id: Uuid,
+	user_id: Uuid,
 
 	/// Member role in the project
 	/// Stored as string: "owner", "maintainer", "member", or "viewer"
 	#[field(max_length = 20, default = "member")]
-	pub role: String,
+	role: String,
 
 	/// Join timestamp
 	#[field(auto_now_add = true)]
-	pub joined_at: DateTime<Utc>,
+	joined_at: DateTime<Utc>,
 }
