@@ -342,12 +342,18 @@ members = [
   "tests/integration",
   # Benchmark tests
   "tests/bench",
+  # Local examples (integrated into workspace)
+  "examples/local/examples-hello-world",
+  "examples/local/examples-rest-api",
+  "examples/local/examples-database-integration",
+  "examples/local/examples-tutorial-basis",
+  "examples/local/examples-tutorial-rest",
+  "examples/local/examples-twitter",
+  "examples/local/examples-github-issues",
 ]
 
-# Exclude examples as they are independent workspaces
-# Each example has a binary named "manage" which would cause
-# output filename collisions if built together.
-exclude = ["examples"]
+# Exclude remote examples (independent workspace for crates.io testing)
+exclude = ["examples/remote"]
 
 default-members = [
   "crates/reinhardt-views",
