@@ -25,20 +25,21 @@ use std::sync::Arc;
 /// let router = admin_routes();
 /// ```
 pub fn admin_routes() -> UnifiedRouter {
-	// TODO: Implement when Server Functions are integrated
-	// This will be replaced with reinhardt-pages routing
+	// Server Functions are automatically registered via #[server_fn] macro
+	// No manual route registration needed - the macro generates routes at /api/server_fn/{function_name}
+	//
+	// Available Server Functions (from reinhardt-admin-server crate):
+	// - get_dashboard() -> DashboardResponse
+	// - get_list() -> ListResponse
+	// - get_detail() -> DetailResponse
+	// - create_record() -> MutationResponse
+	// - update_record() -> MutationResponse
+	// - delete_record() -> MutationResponse
+	// - bulk_delete_records() -> BulkDeleteResponse
+	// - export_data() -> ExportResponse
+	// - import_data() -> ImportResponse
+	// - get_fields() -> FieldsResponse
 	UnifiedRouter::new().with_namespace("admin")
-	// Old REST API handlers (from api/ crate) will be replaced with Server Functions
-	// .endpoint(crate::handlers::dashboard)
-	// .endpoint(crate::handlers::favicon)
-	// .endpoint(crate::handlers::list)
-	// .endpoint(crate::handlers::detail)
-	// .endpoint(crate::handlers::create)
-	// .endpoint(crate::handlers::update)
-	// .endpoint(crate::handlers::delete)
-	// .endpoint(crate::handlers::bulk_delete)
-	// .endpoint(crate::handlers::export)
-	// .endpoint(crate::handlers::import)
 }
 
 /// Admin router builder (for backward compatibility)

@@ -2,9 +2,7 @@
 //!
 //! Provides dashboard data retrieval functionality.
 
-#[cfg(not(target_arch = "wasm32"))]
-use reinhardt_admin_core::AdminSite;
-use reinhardt_admin_types::{DashboardResponse, ModelInfo};
+use reinhardt_admin_adapters::{AdminSite, DashboardResponse, ModelInfo};
 use reinhardt_pages::server_fn::{ServerFnError, server_fn};
 use std::sync::Arc;
 
@@ -27,7 +25,9 @@ use std::sync::Arc;
 /// println!("Site: {}", dashboard.site_name);
 /// ```
 #[server_fn(use_inject = true)]
-pub async fn get_dashboard(site: Arc<AdminSite>) -> Result<DashboardResponse, ServerFnError> {
+pub async fn get_dashboard(
+	#[inject] site: Arc<AdminSite>,
+) -> Result<DashboardResponse, ServerFnError> {
 	// Collect model information
 	let models: Vec<ModelInfo> = site
 		.registered_models()

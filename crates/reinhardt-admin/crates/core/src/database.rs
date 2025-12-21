@@ -136,6 +136,9 @@ fn build_composite_filter_condition(filter_condition: &FilterCondition) -> Optio
 			}
 			Some(or_condition)
 		}
+		FilterCondition::Not(inner) => {
+			build_composite_filter_condition(inner).map(|inner_cond| inner_cond.not())
+		}
 	}
 }
 

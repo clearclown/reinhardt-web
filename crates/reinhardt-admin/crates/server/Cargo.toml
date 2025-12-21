@@ -17,6 +17,7 @@ full = []
 [dependencies]
 # Shared type definitions (both WASM and server)
 reinhardt-admin-types = { workspace = true }
+reinhardt-admin-adapters = { workspace = true }
 
 # Reinhardt dependencies (both WASM and server)
 reinhardt-pages = { workspace = true }  # Provides server_fn + inject macros
@@ -28,7 +29,7 @@ thiserror = { workspace = true }
 # Server-side only dependencies
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Core logic
-reinhardt-admin-core = { path = "../core" }
+reinhardt-admin-core = { workspace = true }
 
 # Reinhardt dependencies
 reinhardt-di = { workspace = true }  # Moved from common deps - only needed on server

@@ -8,8 +8,16 @@
 //! - `Filters` - Filter panel
 //! - `DataTable` - Data table component
 
-use reinhardt_admin_types::ModelInfo;
+use reinhardt_admin_types::{FilterInfo, FilterType, ModelInfo};
+use reinhardt_pages::Signal;
 use reinhardt_pages::component::{ElementView, IntoView, View};
+use std::collections::HashMap;
+
+#[cfg(target_arch = "wasm32")]
+use reinhardt_pages::dom::EventType;
+
+#[cfg(target_arch = "wasm32")]
+use std::sync::Arc;
 
 /// Dashboard component
 ///
@@ -129,6 +137,8 @@ pub struct ListViewData {
 	pub total_pages: u64,
 	/// Total number of records
 	pub total_count: u64,
+	/// Filter information
+	pub filters: Vec<FilterInfo>,
 }
 
 /// List view component
@@ -140,6 +150,7 @@ pub struct ListViewData {
 /// ```ignore
 /// use reinhardt_admin_pages::components::features::{list_view, ListViewData, Column};
 /// use reinhardt_pages::Signal;
+/// use std::collections::HashMap;
 ///
 /// let data = ListViewData {
 ///     model_name: "User".to_string(),
@@ -151,11 +162,17 @@ pub struct ListViewData {
 ///     current_page: 1,
 ///     total_pages: 5,
 ///     total_count: 42,
+///     filters: vec![],
 /// };
 /// let page_signal = Signal::new(1u64);
-/// list_view(&data, page_signal)
+/// let filters_signal = Signal::new(HashMap::new());
+/// list_view(&data, page_signal, filters_signal)
 /// ```
-pub fn list_view(data: &ListViewData, current_page_signal: reinhardt_pages::Signal<u64>) -> View {
+pub fn list_view(
+	data: &ListViewData,
+	current_page_signal: reinhardt_pages::Signal<u64>,
+	filters_signal: Signal<HashMap<String, String>>,
+) -> View {
 	ElementView::new("div")
 		.attr("class", "list-view")
 		.child(
@@ -163,6 +180,7 @@ pub fn list_view(data: &ListViewData, current_page_signal: reinhardt_pages::Sign
 				.attr("class", "mb-4")
 				.child(format!("{} List", data.model_name)),
 		)
+		.child(filters(&data.filters, filters_signal))
 		.child(ElementView::new("div").attr("class", "mb-3").child(format!(
 			"Showing {} {} (Page {} of {})",
 			data.total_count, data.model_name, data.current_page, data.total_pages
@@ -455,10 +473,197 @@ fn form_element(field: &FormField, input_id: &str) -> View {
 	input_builder.into_view()
 }
 
+/// Convert FilterType to choice list
+///
+/// Generates a list of (value, label) pairs for select options.
+/// Always includes an "All" option as the first choice.
+fn filter_type_to_choices(filter_type: &FilterType) -> Vec<(String, String)> {
+	let mut choices = vec![("".to_string(), "All".to_string())];
+
+	match filter_type {
+		FilterType::Boolean => {
+			choices.push(("true".to_string(), "Yes".to_string()));
+			choices.push(("false".to_string(), "No".to_string()));
+		}
+		FilterType::Choice {
+			choices: filter_choices,
+		} => {
+			for choice in filter_choices {
+				choices.push((choice.value.clone(), choice.label.clone()));
+			}
+		}
+		FilterType::DateRange { ranges } => {
+			for range in ranges {
+				choices.push((range.value.clone(), range.label.clone()));
+			}
+		}
+		FilterType::NumberRange { ranges } => {
+			for range in ranges {
+				choices.push((range.value.clone(), range.label.clone()));
+			}
+		}
+	}
+
+	choices
+}
+
+/// Create filter select element
+///
+/// Generates a <select> element for a filter field.
+/// Includes SSR/WASM conditional compilation for event handlers.
+fn create_filter_select(
+	field: &str,
+	filter_type: &FilterType,
+	current_value: Option<&str>,
+	_filters_signal: Signal<HashMap<String, String>>,
+) -> View {
+	let choices = filter_type_to_choices(filter_type);
+	let current_val = current_value.unwrap_or("");
+
+	// Generate <option> elements
+	let options: Vec<View> = choices
+		.iter()
+		.map(|(value, label)| {
+			let mut opt = ElementView::new("option")
+				.attr("value", value.clone())
+				.child(label.clone());
+
+			if value == current_val {
+				opt = opt.attr("selected", "true");
+			}
+
+			opt.into_view()
+		})
+		.collect();
+
+	// WASM: Add event handler for filter changes
+	#[cfg(target_arch = "wasm32")]
+	let select_view = {
+		use wasm_bindgen::JsCast;
+		use web_sys::HtmlSelectElement;
+
+		let field_clone = field.to_string();
+		let filters_signal = _filters_signal;
+
+		ElementView::new("select")
+			.attr("class", "form-select form-select-sm")
+			.attr("data-filter-field", field.to_string())
+			.children(options)
+			.on(
+				EventType::Change,
+				Arc::new(move |event: web_sys::Event| {
+					if let Some(target) = event.target() {
+						if let Ok(select) = target.dyn_into::<HtmlSelectElement>() {
+							let value = select.value();
+							let field_name = field_clone.clone();
+
+							filters_signal.update(move |map| {
+								if value.is_empty() {
+									map.remove(&field_name);
+								} else {
+									map.insert(field_name, value);
+								}
+							});
+						}
+					}
+				}),
+			)
+	};
+
+	// SSR: No event handler (will be hydrated on client)
+	#[cfg(not(target_arch = "wasm32"))]
+	let select_view = {
+		ElementView::new("select")
+			.attr("class", "form-select form-select-sm")
+			.attr("data-filter-field", field.to_string())
+			.attr("data-reactive", "true") // Marker for client-side hydration
+			.children(options)
+	};
+
+	select_view.into_view()
+}
+
+/// Create filter control (label + select)
+///
+/// Generates a complete filter control with label and select element.
+fn create_filter_control(
+	filter_info: &FilterInfo,
+	current_value: Option<&str>,
+	filters_signal: Signal<HashMap<String, String>>,
+) -> View {
+	ElementView::new("div")
+		.attr("class", "col-md-3")
+		.child(
+			ElementView::new("div")
+				.attr("class", "mb-2")
+				.child(
+					ElementView::new("label")
+						.attr("class", "form-label")
+						.child(filter_info.title.clone()),
+				)
+				.child(create_filter_select(
+					&filter_info.field,
+					&filter_info.filter_type,
+					current_value,
+					filters_signal,
+				)),
+		)
+		.into_view()
+}
+
 /// Filters component
 ///
 /// Displays filter controls for list views.
-pub fn filters() {
-	// TODO: Implement Filters component
-	todo!("Implement Filters component using reinhardt-pages view! macro and Signal")
+/// Uses Signal to track current filter values.
+///
+/// # Example
+///
+/// ```ignore
+/// use reinhardt_admin_pages::components::features::filters;
+/// use reinhardt_admin_types::{FilterInfo, FilterType};
+/// use reinhardt_pages::Signal;
+/// use std::collections::HashMap;
+///
+/// let filters_signal = Signal::new(HashMap::new());
+/// let filter_infos = vec![
+///     FilterInfo {
+///         field: "status".to_string(),
+///         title: "Status".to_string(),
+///         filter_type: FilterType::Boolean,
+///         current_value: None,
+///     },
+/// ];
+/// filters(&filter_infos, filters_signal)
+/// ```
+pub fn filters(
+	filters_info: &[FilterInfo],
+	filters_signal: Signal<HashMap<String, String>>,
+) -> View {
+	if filters_info.is_empty() {
+		return ElementView::new("div").into_view();
+	}
+
+	let current_filters = filters_signal.get();
+
+	let filter_controls: Vec<View> = filters_info
+		.iter()
+		.map(|info| {
+			let current_value = current_filters.get(&info.field).map(|s| s.as_str());
+			create_filter_control(info, current_value, filters_signal.clone())
+		})
+		.collect();
+
+	ElementView::new("div")
+		.attr("class", "filters mb-3")
+		.child(
+			ElementView::new("h5")
+				.attr("class", "mb-2")
+				.child("Filters"),
+		)
+		.child(
+			ElementView::new("div")
+				.attr("class", "row g-2")
+				.children(filter_controls),
+		)
+		.into_view()
 }

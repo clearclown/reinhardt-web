@@ -151,6 +151,8 @@ fn list_view_component(model_name: String) -> View {
 			move || match resource.get() {
 				ResourceState::Loading => loading_view(),
 				ResourceState::Success(response) => {
+					use std::collections::HashMap;
+
 					// ListResponse → ListViewData変換
 					let data = ListViewData {
 						model_name: response.model_name.clone(),
@@ -165,9 +167,11 @@ fn list_view_component(model_name: String) -> View {
 						current_page: response.page,
 						total_pages: response.total_pages,
 						total_count: response.count,
+						filters: response.available_filters.unwrap_or_default(),
 					};
 					let page_signal = Signal::new(response.page);
-					list_view(&data, page_signal)
+					let filters_signal = Signal::new(HashMap::new());
+					list_view(&data, page_signal, filters_signal)
 				}
 				ResourceState::Error(err) => error_view(&err),
 			}
@@ -178,6 +182,8 @@ fn list_view_component(model_name: String) -> View {
 /// List view component for router (non-WASM fallback)
 #[cfg(not(target_arch = "wasm32"))]
 fn list_view_component(model_name: String) -> View {
+	use std::collections::HashMap;
+
 	// Dummy data for non-WASM environments (tests, etc.)
 	let data = ListViewData {
 		model_name: model_name.clone(),
@@ -197,10 +203,12 @@ fn list_view_component(model_name: String) -> View {
 		current_page: 1,
 		total_pages: 1,
 		total_count: 0,
+		filters: vec![],
 	};
 
 	let page_signal = Signal::new(1u64);
-	list_view(&data, page_signal)
+	let filters_signal = Signal::new(HashMap::new());
+	list_view(&data, page_signal, filters_signal)
 }
 
 /// Detail view component for router
@@ -240,14 +248,8 @@ fn detail_view_component(model_name: String, record_id: String) -> View {
 fn detail_view_component(model_name: String, record_id: String) -> View {
 	// Dummy data for non-WASM environments (tests, etc.)
 	let mut record = HashMap::new();
-	record.insert(
-		"id".to_string(),
-		serde_json::Value::String(record_id.clone()),
-	);
-	record.insert(
-		"name".to_string(),
-		serde_json::Value::String("Sample Record".to_string()),
-	);
+	record.insert("id".to_string(), record_id.clone());
+	record.insert("name".to_string(), "Sample Record".to_string());
 
 	detail_view(&model_name, &record_id, &record)
 }

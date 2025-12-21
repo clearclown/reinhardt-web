@@ -10,7 +10,7 @@ keywords = ["reinhardt", "admin", "wasm", "ui", "framework"]
 categories = ["web-programming", "wasm"]
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [features]
 default = []
@@ -58,11 +58,11 @@ serde-wasm-bindgen = "0.6"
 wasm-bindgen-futures = "0.4"
 gloo-net = "0.6"
 getrandom = { workspace = true }
-reinhardt-admin-server = { path = "../server" }
+reinhardt-admin-server = { workspace = true }
 
 # Server Functions (サーバーサイドのみ)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reinhardt-admin-server = { path = "../server" }
+reinhardt-admin-server = { workspace = true }
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3"

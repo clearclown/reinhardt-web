@@ -21,3 +21,13 @@ pub use errors::*;
 pub use models::*;
 pub use requests::*;
 pub use responses::*;
+
+// WASM-only type stubs
+//
+// For WASM targets, re-export stub types from wasm_stubs module
+// These stubs allow Server Function client code to type-check correctly
+#[cfg(target_arch = "wasm32")]
+pub use wasm_stubs::{
+	AdminDatabase, AdminRecord, AdminSite, ExportFormat, ImportBuilder, ImportError, ImportFormat,
+	ImportResult, ModelAdmin,
+};
