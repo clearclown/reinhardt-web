@@ -59,6 +59,19 @@ pub(crate) fn model_attribute_impl(
 		})
 	}
 
+	/// Check if field has #[rel(foreign_key, ...)] or #[rel(one_to_one, ...)] attribute
+	fn has_fk_or_one_to_one_rel(attrs: &[Attribute]) -> bool {
+		attrs.iter().any(|attr| {
+			if attr.path().is_ident("rel")
+				&& let syn::Meta::List(meta_list) = &attr.meta
+			{
+				let tokens_str = meta_list.tokens.to_string();
+				return tokens_str.contains("foreign_key") || tokens_str.contains("one_to_one");
+			}
+			false
+		})
+	}
+
 	// Collect existing field names to avoid duplicates
 	let existing_field_names: std::collections::HashSet<String> =
 		if let syn::Fields::Named(ref fields) = input.fields {
@@ -71,29 +84,57 @@ pub(crate) fn model_attribute_impl(
 			std::collections::HashSet::new()
 		};
 
-	// Collect FK fields and generate corresponding _id fields
-	let mut fk_id_fields: Vec<Field> = Vec::new();
+	// Validate that users have not manually defined _id fields for relationships
 	if let syn::Fields::Named(ref fields) = input.fields {
 		for field in fields.named.iter() {
-			if let Some(field_name) = &field.ident
+			if has_fk_or_one_to_one_rel(&field.attrs)
+				&& let Some(field_name) = &field.ident
+			{
+				let id_field_name_str = format!("{}_id", field_name);
+				if existing_field_names.contains(&id_field_name_str) {
+					return Err(syn::Error::new_spanned(
+						field,
+						format!(
+							"Field '{}' must not be manually defined. It will be auto-generated from the '{}' relationship field.",
+							id_field_name_str, field_name
+						),
+					));
+				}
+			}
+		}
+	}
+
+	// Collect FK fields and generate corresponding _id fields
+	// Only generate _id fields for fields with #[rel(foreign_key, ...)] or #[rel(one_to_one, ...)]
+	let mut fk_id_fields: Vec<Field> = Vec::new();
+	// Track generated _id field names to prevent duplicates
+	let mut generated_id_field_names: std::collections::HashSet<String> =
+		std::collections::HashSet::new();
+
+	if let syn::Fields::Named(ref fields) = input.fields {
+		for field in fields.named.iter() {
+			// Check if this field has #[rel(foreign_key, ...)] or #[rel(one_to_one, ...)]
+			if has_fk_or_one_to_one_rel(&field.attrs)
+				&& let Some(field_name) = &field.ident
 				&& let Some(target_ty) = extract_fk_target_type(&field.ty)
 			{
 				let id_field_name_str = format!("{}_id", field_name);
 
-				// Only add if not already defined by user
-				if !existing_field_names.contains(&id_field_name_str) {
+				// Only add if not already defined by user OR already generated
+				if !existing_field_names.contains(&id_field_name_str)
+					&& !generated_id_field_names.contains(&id_field_name_str)
+				{
 					let id_field_name = syn::Ident::new(&id_field_name_str, field_name.span());
 
 					// Generate _id field with the target model's PrimaryKey type
 					// The type will be resolved at compile time via Model trait
-					// #[fk_id_field] marks this as auto-generated for Model derive to skip
 					let new_field: Field = syn::parse_quote! {
-						#[fk_id_field]
 						#[serde(default)]
-						pub #id_field_name: <#target_ty as #orm_crate::Model>::PrimaryKey
+						#id_field_name: <#target_ty as #orm_crate::Model>::PrimaryKey
 					};
 
 					fk_id_fields.push(new_field);
+					generated_id_field_names.insert(id_field_name_str);
 				}
 			}
 		}

@@ -17,7 +17,7 @@ yaml = ["serde_yaml"]
 full = ["json", "xml", "yaml"]
 
 [dependencies]
-reinhardt-types = { path = "../types" }
+reinhardt-types = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }

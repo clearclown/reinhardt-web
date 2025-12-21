@@ -12,7 +12,7 @@ full = []
 
 [dependencies]
 async-trait = "0.1"
-reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
+reinhardt-exception = { workspace = true }
 base64 = "0.22"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

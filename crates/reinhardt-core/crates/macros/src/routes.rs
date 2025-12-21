@@ -1,8 +1,8 @@
 //! HTTP method route macros
 
 use crate::crate_paths::{
-	get_reinhardt_core_crate, get_reinhardt_di_crate, get_reinhardt_http_crate,
-	get_reinhardt_params_crate,
+	get_async_trait_crate, get_reinhardt_core_crate, get_reinhardt_di_crate,
+	get_reinhardt_http_crate, get_reinhardt_params_crate,
 };
 use crate::injectable_common::{InjectOptions, is_inject_attr, parse_inject_options};
 use crate::path_macro;
@@ -334,8 +334,10 @@ fn generate_view_type(
 	extractors: &[ExtractorInfo],
 	inject_params: &[InjectInfo],
 ) -> Result<TokenStream> {
+	let reinhardt_crate = crate::crate_paths::get_reinhardt_crate();
 	let core_crate = get_reinhardt_core_crate();
 	let http_crate = get_reinhardt_http_crate();
+	let async_trait_crate = get_async_trait_crate();
 
 	let fn_name = &input.sig.ident;
 	let fn_vis = &input.vis;
@@ -368,8 +370,9 @@ fn generate_view_type(
 		.map(|(ty, ct)| (quote!(Some(#ty)), quote!(Some(#ct))))
 		.unwrap_or((quote!(None), quote!(None)));
 
+	let inventory_crate = crate::crate_paths::get_inventory_crate();
 	let metadata_submission = quote! {
-		::inventory::submit! {
+		#inventory_crate::submit! {
 			#[allow(non_upper_case_globals)]
 			#core_crate::EndpointMetadata {
 				path: #path,
@@ -398,8 +401,8 @@ fn generate_view_type(
 				#path
 			}
 
-			fn method() -> ::hyper::Method {
-				::hyper::Method::#method_ident
+			fn method() -> #reinhardt_crate::Method {
+				#reinhardt_crate::Method::#method_ident
 			}
 
 			fn name() -> &'static str {
@@ -407,7 +410,7 @@ fn generate_view_type(
 			}
 		}
 
-		#[::async_trait::async_trait]
+		#[#async_trait_crate::async_trait]
 		impl #core_crate::Handler for #view_type_name {
 			async fn handle(&self, req: #http_crate::Request) -> #http_crate::Result<#http_crate::Response> {
 				#view_type_name::#fn_name(req).await
@@ -432,8 +435,10 @@ fn generate_view_type(
 }
 
 fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStream> {
+	let reinhardt_crate = crate::crate_paths::get_reinhardt_crate();
 	let core_crate = get_reinhardt_core_crate();
 	let http_crate = get_reinhardt_http_crate();
+	let async_trait_crate = get_async_trait_crate();
 
 	let mut path: Option<(String, Span)> = None;
 	let mut options = RouteOptions::default();
@@ -618,8 +623,9 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 		.map(|(ty, ct)| (quote!(Some(#ty)), quote!(Some(#ct))))
 		.unwrap_or((quote!(None), quote!(None)));
 
+	let inventory_crate = crate::crate_paths::get_inventory_crate();
 	let metadata_submission = quote! {
-		::inventory::submit! {
+		#inventory_crate::submit! {
 			#[allow(non_upper_case_globals)]
 			#core_crate::EndpointMetadata {
 				path: #path_str,
@@ -652,8 +658,8 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 				#path_str
 			}
 
-			fn method() -> ::hyper::Method {
-				::hyper::Method::#method_ident
+			fn method() -> #reinhardt_crate::Method {
+				#reinhardt_crate::Method::#method_ident
 			}
 
 			fn name() -> &'static str {
@@ -661,7 +667,7 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 			}
 		}
 
-		#[::async_trait::async_trait]
+		#[#async_trait_crate::async_trait]
 		impl #core_crate::Handler for #view_type_name {
 			async fn handle(&self, req: #http_crate::Request) -> #http_crate::Result<#http_crate::Response> {
 				#view_type_name::#fn_name(req).await

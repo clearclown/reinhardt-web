@@ -227,7 +227,8 @@ fn parse_ordering_array(input: ParseStream) -> Result<Vec<OrderingSpec>> {
 
 /// Generate the ModelAdmin trait implementation
 pub fn admin_impl(args: TokenStream, input: ItemStruct) -> Result<TokenStream> {
-	let admin_api = crate::crate_paths::get_reinhardt_admin_api_crate();
+	let admin_api = crate::crate_paths::get_reinhardt_admin_adapters_crate();
+	let async_trait = crate::crate_paths::get_async_trait_crate();
 
 	let config: AdminModelConfig = syn::parse2(args)?;
 	let struct_name = &input.ident;
@@ -367,7 +368,7 @@ pub fn admin_impl(args: TokenStream, input: ItemStruct) -> Result<TokenStream> {
 			#(#field_checks)*
 		};
 
-		#[::async_trait::async_trait]
+		#[#async_trait::async_trait]
 		impl #admin_api::ModelAdmin for #struct_name {
 			fn model_name(&self) -> &str {
 				#name

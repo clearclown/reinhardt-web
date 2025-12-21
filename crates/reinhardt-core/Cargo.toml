@@ -9,21 +9,21 @@ description = "Core components for Reinhardt framework"
 
 [dependencies]
 # Re-export all internal crates
-reinhardt-types = { version = "0.1.0-alpha.1", path = "crates/types", optional = true }
-reinhardt-exception = { version = "0.1.0-alpha.1", path = "crates/exception", optional = true }
-reinhardt-signals = { version = "0.1.0-alpha.1", path = "crates/signals", optional = true }
-reinhardt-macros = { version = "0.1.0-alpha.1", path = "crates/macros", optional = true }
-reinhardt-security = { version = "0.1.0-alpha.1", path = "crates/security", optional = true }
-reinhardt-validators = { version = "0.1.0-alpha.1", path = "crates/validators", optional = true }
-reinhardt-core-serializers = { version = "0.1.0-alpha.1", path = "crates/serializers", optional = true }
+reinhardt-types = { workspace = true, optional = true }
+reinhardt-exception = { workspace = true, optional = true }
+reinhardt-signals = { workspace = true, optional = true }
+reinhardt-macros = { workspace = true, optional = true }
+reinhardt-security = { workspace = true, optional = true }
+reinhardt-validators = { workspace = true, optional = true }
+reinhardt-core-serializers = { workspace = true, optional = true }
 
 # New facade subcrates
-reinhardt-messages = { version = "0.1.0-alpha.1", path = "crates/messages", optional = true }
+reinhardt-messages = { workspace = true, optional = true }
 reinhardt-http = { workspace = true, optional = true }
 reinhardt-di = { workspace = true, optional = true }
-reinhardt-negotiation = { version = "0.1.0-alpha.1", path = "crates/negotiation", optional = true }
-reinhardt-parsers = { version = "0.1.0-alpha.1", path = "crates/parsers", optional = true }
-reinhardt-pagination = { version = "0.1.0-alpha.1", path = "crates/pagination", optional = true }
+reinhardt-negotiation = { workspace = true, optional = true }
+reinhardt-parsers = { workspace = true, optional = true }
+reinhardt-pagination = { workspace = true, optional = true }
 
 # External dependencies for re-export
 tokio = { workspace = true }

@@ -3546,6 +3546,7 @@ mod tests {
 			pub struct TestModel {
 				#[field(primary_key = true)]
 				pub id: i64,
+				#[field(max_length = 255)]
 				pub name: String,
 			}
 		};
@@ -3565,6 +3566,7 @@ mod tests {
 			pub struct TestModel {
 				#[field(primary_key = true)]
 				pub id: i64,
+				#[field(max_length = 255)]
 				pub name: String,
 			}
 		};
@@ -3584,6 +3586,7 @@ mod tests {
 			pub struct TestModel {
 				#[field(primary_key = true)]
 				pub id: i64,
+				#[field(max_length = 255)]
 				pub name: String,
 				#[field(auto_now_add = true)]
 				pub created_at: DateTime<Utc>,

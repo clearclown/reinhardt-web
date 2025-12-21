@@ -13,7 +13,7 @@ categories = ["web-programming"]
 full = []
 
 [dependencies]
-reinhardt-exception = { path = "../exception", version = "0.1.0-alpha.1" }
+reinhardt-exception = { workspace = true }
 async-trait = "0.1"
 bytes = "1.0"
 serde = { version = "1.0", features = ["derive"] }
