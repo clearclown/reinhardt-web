@@ -141,6 +141,8 @@ pub mod linkme {
 }
 
 // Module re-exports following Django's structure
+#[cfg(feature = "admin")]
+pub mod admin;
 #[cfg(feature = "core")]
 pub mod apps;
 #[cfg(feature = "commands")]
@@ -156,6 +158,8 @@ pub mod forms;
 pub mod http;
 #[cfg(any(feature = "standard", feature = "middleware"))]
 pub mod middleware;
+#[cfg(feature = "pages")]
+pub mod pages;
 #[cfg(feature = "rest")]
 pub mod rest;
 #[cfg(feature = "server")]
@@ -174,8 +178,7 @@ pub mod views;
 
 // Contrib modules (Django-style)
 pub mod contrib {
-	// Admin functionality is available through reinhardt-admin-api crate
-	// See reinhardt-admin-types for type definitions
+	// Admin functionality is available through reinhardt::admin module
 }
 
 // Re-export app types from reinhardt-apps
