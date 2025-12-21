@@ -143,6 +143,7 @@ pub mod declarative;
 pub mod engine;
 pub mod events;
 pub mod execution;
+pub mod fk_accessor;
 pub mod instrumentation;
 pub mod loading;
 pub mod many_to_many;
@@ -153,6 +154,7 @@ pub mod query_options;
 pub mod reflection;
 pub mod registry;
 pub mod relationship;
+pub mod reverse_accessor;
 pub mod session;
 pub mod sqlalchemy_query;
 pub mod types;
@@ -260,9 +262,11 @@ pub use types::{
 // New features - engine, migrations, many-to-many, async queries
 pub use async_query::{AsyncQuery, AsyncSession};
 pub use engine::{Engine, EngineConfig, create_engine, create_engine_with_config};
+pub use fk_accessor::ForeignKeyAccessor;
 pub use many_to_many::{AssociationTable, ManyToMany, association_table};
 pub use many_to_many_accessor::ManyToManyAccessor;
 pub use query_execution::{ExecutableQuery, QueryCompiler};
+pub use reverse_accessor::ReverseAccessor;
 
 // Django ORM compatibility layer
 pub use manager::Manager;
