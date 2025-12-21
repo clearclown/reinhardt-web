@@ -49,9 +49,9 @@ pub struct Filter {
 }
 
 impl Filter {
-	pub fn new(field: String, operator: FilterOperator, value: FilterValue) -> Self {
+	pub fn new(field: impl Into<String>, operator: FilterOperator, value: FilterValue) -> Self {
 		Self {
-			field,
+			field: field.into(),
 			operator,
 			value,
 		}
@@ -108,6 +108,8 @@ pub enum FilterCondition {
 	And(Vec<FilterCondition>),
 	/// Any condition must match (OR logic)
 	Or(Vec<FilterCondition>),
+	/// Negates the inner condition (NOT logic)
+	Not(Box<FilterCondition>),
 }
 
 impl FilterCondition {
@@ -124,6 +126,29 @@ impl FilterCondition {
 	/// Create an OR condition from multiple conditions
 	pub fn or(conditions: Vec<FilterCondition>) -> Self {
 		Self::Or(conditions)
+	}
+
+	/// Create a NOT condition that negates the given condition
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_orm::{Filter, FilterCondition, FilterOperator, FilterValue};
+	///
+	/// let condition = FilterCondition::not(
+	///     FilterCondition::Single(Filter::new(
+	///         "is_active".to_string(),
+	///         FilterOperator::Eq,
+	///         FilterValue::Boolean(true),
+	///     ))
+	/// );
+	/// ```
+	// This method is intentionally named `not` for API consistency with Django's Q object.
+	// It does not implement std::ops::Not because it constructs a FilterCondition variant,
+	// not a boolean negation.
+	#[allow(clippy::should_implement_trait)]
+	pub fn not(condition: FilterCondition) -> Self {
+		Self::Not(Box::new(condition))
 	}
 
 	/// Create an OR condition from multiple filters (convenience method for search)
@@ -157,6 +182,7 @@ impl FilterCondition {
 			FilterCondition::And(conditions) | FilterCondition::Or(conditions) => {
 				conditions.is_empty() || conditions.iter().all(|c| c.is_empty())
 			}
+			FilterCondition::Not(condition) => condition.is_empty(),
 		}
 	}
 }
@@ -1702,6 +1728,19 @@ where
 {
 	fn default() -> Self {
 		Self::new()
+	}
+}
+
+// Convenience conversions for FilterValue
+impl FilterValue {
+	/// Create a String variant from any value that can be converted to String
+	///
+	/// Accepts any type that implements `ToString`, including:
+	/// - String, &str
+	/// - Uuid (via Display)
+	/// - Numeric types (i64, u64, etc. via Display)
+	pub fn string(value: impl ToString) -> Self {
+		Self::String(value.to_string())
 	}
 }
 

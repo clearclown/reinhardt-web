@@ -27,8 +27,8 @@ full = ["pooling", "migrations", "advanced-queries", "di", "postgres", "sqlite",
 
 [dependencies]
 reinhardt-core = { workspace = true, features = ["exception", "types", "validators", "macros"] }
-reinhardt-backends = { path = "../backends", version = "0.1.0-alpha.1" }
-reinhardt-hybrid = { path = "../hybrid", version = "0.1.0-alpha.1" }
+reinhardt-backends = { workspace = true }
+reinhardt-hybrid = { workspace = true }
 reinhardt-di = { workspace = true, optional = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
@@ -70,7 +70,7 @@ regex = "1.10"
 smallvec = "1.13"
 
 [dev-dependencies]
-reinhardt-migrations = { path = "../migrations", version = "0.1.0-alpha.1" }
+reinhardt-migrations = { workspace = true }
 reinhardt-test = { workspace = true }
 ctor = "0.6.1"
 serial_test = { workspace = true }
