@@ -26,6 +26,7 @@ pg_escape = "0.1.1"
 mongodb = { version = "3.0", optional = true, features = ["bson-3"] }
 bson = { version = "3.0.0", optional = true }
 futures = { workspace = true }
+rust_decimal = { workspace = true }
 reinhardt-di = { workspace = true, optional = true }
 reinhardt-conf = { workspace = true, optional = true }
 

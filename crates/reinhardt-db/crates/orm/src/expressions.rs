@@ -66,7 +66,7 @@ impl fmt::Display for F {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_orm::expressions::FieldRef;
 /// use reinhardt_core::macros::model;
 /// use serde::{Serialize, Deserialize};

@@ -247,10 +247,27 @@ impl<M: Model> Manager<M> {
 		let mut stmt = Query::insert();
 		stmt.into_table(Alias::new(M::table_name()));
 
-		// Filter out null values (e.g., id field when creating new records)
+		// Get the primary key field name to filter out auto-increment fields
+		let pk_field = M::primary_key_field();
+
+		// Filter out fields that should not be included in INSERT:
+		// - Null values (e.g., Optional fields with None)
+		// - Primary key field with default value 0 (auto-increment integer PKs)
 		let (fields, values): (Vec<_>, Vec<_>) = obj
 			.iter()
-			.filter(|(_, v)| !v.is_null())
+			.filter(|(k, v)| {
+				// Always exclude null values
+				if v.is_null() {
+					return false;
+				}
+				// Exclude primary key field if it's an integer with value 0
+				// This allows the database to auto-generate the value
+				if k.as_str() == pk_field
+					&& let Some(n) = v.as_i64() {
+						return n != 0;
+					}
+				true
+			})
 			.map(|(k, v)| {
 				(
 					Alias::new(k.as_str()),
@@ -262,16 +279,18 @@ impl<M: Model> Manager<M> {
 		stmt.columns(fields);
 		stmt.values_panic(values);
 
-		// Add RETURNING * support
-		stmt.returning(Query::returning().columns([sea_query::Asterisk]));
+		// Add RETURNING clause with explicit column names from JSON object
+		// Note: Using Asterisk in columns() may not work correctly with SeaQuery
+		let all_columns: Vec<_> = obj.keys().map(|k| Alias::new(k.as_str())).collect();
+		stmt.returning(Query::returning().columns(all_columns));
 
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
 		let row = conn.query_one(&sql, vec![]).await?;
-		let value = serde_json::to_value(&row.data)
-			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
-		serde_json::from_value(value)
+
+		// row.dataは既にserde_json::Value::Objectなので直接デシリアライズ
+		serde_json::from_value(row.data.clone())
 			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))
 	}
 
@@ -393,16 +412,17 @@ impl<M: Model> Manager<M> {
 		let pk_value = sea_query::Value::String(Some(pk.to_string()));
 		stmt.and_where(Expr::col(Alias::new(M::primary_key_field())).eq(pk_value));
 
-		// Add RETURNING * support
-		stmt.returning(Query::returning().columns([sea_query::Asterisk]));
+		// Add RETURNING clause with explicit column names from JSON object
+		// Note: Using Asterisk in columns() may not work correctly with SeaQuery
+		let all_columns: Vec<_> = obj.keys().map(|k| Alias::new(k.as_str())).collect();
+		stmt.returning(Query::returning().columns(all_columns));
 
 		use sea_query::PostgresQueryBuilder;
 		let sql = stmt.to_string(PostgresQueryBuilder);
 
 		let row = conn.query_one(&sql, vec![]).await?;
-		let value = serde_json::to_value(&row.data)
-			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
-		serde_json::from_value(value)
+		// row.dataは既にserde_json::Value::Objectなので直接デシリアライズ
+		serde_json::from_value(row.data.clone())
 			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))
 	}
 
@@ -599,9 +619,8 @@ impl<M: Model> Manager<M> {
 			self.get_or_create_sql(&lookup_fields, &defaults.clone().unwrap_or_default());
 
 		if let Ok(Some(row)) = conn.query_optional(&select_sql, vec![]).await {
-			let value = serde_json::to_value(&row.data)
-				.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
-			let model: M = serde_json::from_value(value)
+			// row.dataは既にserde_json::Value::Objectなので直接デシリアライズ
+			let model: M = serde_json::from_value(row.data.clone())
 				.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
 			return Ok((model, false));
 		}
@@ -623,9 +642,8 @@ impl<M: Model> Manager<M> {
 		);
 
 		let row = conn.query_one(&insert_sql, vec![]).await?;
-		let value = serde_json::to_value(&row.data)
-			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
-		let model: M = serde_json::from_value(value)
+		// row.dataは既にserde_json::Value::Objectなので直接デシリアライズ
+		let model: M = serde_json::from_value(row.data.clone())
 			.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
 
 		Ok((model, true))
@@ -703,9 +721,8 @@ impl<M: Model> Manager<M> {
 				let sql_with_returning = sql + " RETURNING *";
 				let rows = conn.query(&sql_with_returning, vec![]).await?;
 				for row in rows {
-					let value = serde_json::to_value(&row.data)
-						.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
-					let model: M = serde_json::from_value(value)
+					// row.dataは既にserde_json::Value::Objectなので直接デシリアライズ
+					let model: M = serde_json::from_value(row.data.clone())
 						.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
 					results.push(model);
 				}

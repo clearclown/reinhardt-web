@@ -53,12 +53,14 @@ impl SqliteBackend {
 		let mut row = Row::new();
 		for column in sqlite_row.columns() {
 			let column_name = column.name();
-			if let Ok(value) = sqlite_row.try_get::<bool, _>(column_name) {
-				row.insert(column_name.to_string(), QueryValue::Bool(value));
-			} else if let Ok(value) = sqlite_row.try_get::<i64, _>(column_name) {
+			// Note: i64/i32 must be tried before bool because SQLite stores booleans as integers
+			// and try_get::<bool, _> would incorrectly interpret any non-zero integer as true
+			if let Ok(value) = sqlite_row.try_get::<i64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value));
 			} else if let Ok(value) = sqlite_row.try_get::<i32, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value as i64));
+			} else if let Ok(value) = sqlite_row.try_get::<bool, _>(column_name) {
+				row.insert(column_name.to_string(), QueryValue::Bool(value));
 			} else if let Ok(value) = sqlite_row.try_get::<f64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Float(value));
 			} else if let Ok(value) = sqlite_row.try_get::<String, _>(column_name) {
@@ -239,12 +241,14 @@ impl SqliteTransactionExecutor {
 		let mut row = Row::new();
 		for column in sqlite_row.columns() {
 			let column_name = column.name();
-			if let Ok(value) = sqlite_row.try_get::<bool, _>(column_name) {
-				row.insert(column_name.to_string(), QueryValue::Bool(value));
-			} else if let Ok(value) = sqlite_row.try_get::<i64, _>(column_name) {
+			// Note: i64/i32 must be tried before bool because SQLite stores booleans as integers
+			// and try_get::<bool, _> would incorrectly interpret any non-zero integer as true
+			if let Ok(value) = sqlite_row.try_get::<i64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value));
 			} else if let Ok(value) = sqlite_row.try_get::<i32, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value as i64));
+			} else if let Ok(value) = sqlite_row.try_get::<bool, _>(column_name) {
+				row.insert(column_name.to_string(), QueryValue::Bool(value));
 			} else if let Ok(value) = sqlite_row.try_get::<f64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Float(value));
 			} else if let Ok(value) = sqlite_row.try_get::<String, _>(column_name) {

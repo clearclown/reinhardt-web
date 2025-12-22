@@ -1,7 +1,7 @@
 //! PostgreSQL dialect implementation
 
 use async_trait::async_trait;
-use sqlx::{Column, PgPool, Postgres, Row as SqlxRow, Transaction, postgres::PgRow};
+use sqlx::{Column, PgPool, Postgres, Transaction, postgres::PgRow};
 use std::sync::Arc;
 
 use crate::{
@@ -173,15 +173,24 @@ impl PgTransactionExecutor {
 impl PostgresBackend {
 	/// Internal row conversion method shared between backend and transaction executor
 	pub(crate) fn convert_row_internal(pg_row: PgRow) -> Result<Row> {
+		use rust_decimal::prelude::ToPrimitive;
+		use sqlx::Row as SqlxRow;
+
 		let mut row = Row::new();
 		for column in pg_row.columns() {
 			let column_name = column.name();
+
 			if let Ok(value) = pg_row.try_get::<bool, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Bool(value));
 			} else if let Ok(value) = pg_row.try_get::<i64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value));
 			} else if let Ok(value) = pg_row.try_get::<i32, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Int(value as i64));
+			} else if let Ok(value) = pg_row.try_get::<rust_decimal::Decimal, _>(column_name) {
+				// Convert DECIMAL/NUMERIC to f64 for Float storage
+				if let Some(f) = value.to_f64() {
+					row.insert(column_name.to_string(), QueryValue::Float(f));
+				}
 			} else if let Ok(value) = pg_row.try_get::<f64, _>(column_name) {
 				row.insert(column_name.to_string(), QueryValue::Float(value));
 			} else if let Ok(value) = pg_row.try_get::<String, _>(column_name) {

@@ -137,7 +137,7 @@ fn convert_value_to_query_value(value: sea_query::Value) -> QueryValue {
 }
 
 /// Convert sea_query::Values (Vec<Value>) to Vec<QueryValue>
-fn convert_values(values: sea_query::Values) -> Vec<QueryValue> {
+pub fn convert_values(values: sea_query::Values) -> Vec<QueryValue> {
 	values
 		.0
 		.into_iter()

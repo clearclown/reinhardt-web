@@ -1080,11 +1080,14 @@ where
 			stmt.cond_where(cond);
 		}
 
-		// Convert to SQL
-		let (sql, _values) = stmt.build(PostgresQueryBuilder);
+		// Convert to SQL and extract parameter values
+		let (sql, values) = stmt.build(PostgresQueryBuilder);
 
-		// Execute query
-		let rows = conn.query(&sql, vec![]).await?;
+		// Convert sea_query::Values to QueryValue
+		let params = crate::execution::convert_values(values);
+
+		// Execute query with parameters
+		let rows = conn.query(&sql, params).await?;
 		if let Some(row) = rows.first() {
 			// Extract count from first row
 			if let Some(count_value) = row.data.get("count")
