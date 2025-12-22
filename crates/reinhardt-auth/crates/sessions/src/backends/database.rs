@@ -84,10 +84,13 @@ pub struct Session {
 	#[field(max_length = 65535)]
 	pub session_data: String,
 	/// Session expiration timestamp (Unix timestamp in milliseconds)
+	#[field]
 	pub expire_date: i64,
 	/// Session creation timestamp (Unix timestamp in milliseconds)
+	#[field]
 	pub created_at: i64,
 	/// Last accessed timestamp (Unix timestamp in milliseconds)
+	#[field]
 	pub last_accessed: Option<i64>,
 }
 
@@ -119,11 +122,12 @@ pub struct Session {
 /// use reinhardt_sessions::backends::{DatabaseSessionBackend, SessionBackend};
 /// use serde_json::json;
 /// use reinhardt_db::DatabaseConnection;
+/// use std::sync::Arc;
 ///
 /// # async fn example() {
 /// // Initialize backend with database connection
-/// let connection = DatabaseConnection::new("sqlite::memory:").await.unwrap();
-/// let backend = DatabaseSessionBackend::from_connection(connection);
+/// let connection = DatabaseConnection::connect("sqlite::memory:").await.unwrap();
+/// let backend = DatabaseSessionBackend::from_connection(Arc::new(connection));
 ///
 /// // Note: Table should be created via migrations
 ///
@@ -184,7 +188,7 @@ impl DatabaseSessionBackend {
 	/// use std::sync::Arc;
 	///
 	/// # async fn example() {
-	/// let connection = DatabaseConnection::new("sqlite::memory:").await.unwrap();
+	/// let connection = DatabaseConnection::connect("sqlite::memory:").await.unwrap();
 	/// let backend = DatabaseSessionBackend::from_connection(Arc::new(connection));
 	/// // Backend created from existing connection
 	/// # }
@@ -192,6 +196,19 @@ impl DatabaseSessionBackend {
 	/// ```
 	pub fn from_connection(connection: Arc<DatabaseConnection>) -> Self {
 		Self { connection }
+	}
+
+	/// Get database-specific placeholder for the given parameter index
+	///
+	/// Returns the appropriate placeholder syntax for the current database:
+	/// - PostgreSQL: `$1`, `$2`, etc.
+	/// - SQLite/MySQL: `?`
+	fn placeholder(&self, index: usize) -> String {
+		use reinhardt_db::orm::DatabaseBackend;
+		match self.connection.backend() {
+			DatabaseBackend::Postgres => format!("${}", index),
+			DatabaseBackend::MySql | DatabaseBackend::Sqlite => "?".to_string(),
+		}
 	}
 
 	/// Clean up expired sessions
@@ -219,10 +236,12 @@ impl DatabaseSessionBackend {
 		let now_timestamp = Utc::now().timestamp_millis();
 
 		// Use raw SQL to delete expired sessions (ORM doesn't have bulk delete execution)
-		let sql = "DELETE FROM sessions WHERE expire_date < $1";
+		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
+		let placeholder = self.placeholder(1);
+		let sql = format!("DELETE FROM sessions WHERE expire_date < {}", placeholder);
 		let rows_affected = self
 			.connection
-			.execute(sql, vec![QueryValue::Int(now_timestamp)])
+			.execute(&sql, vec![QueryValue::Int(now_timestamp)])
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to cleanup sessions: {}", e)))?;
 
@@ -377,9 +396,11 @@ impl SessionBackend for DatabaseSessionBackend {
 
 	async fn delete(&self, session_key: &str) -> Result<(), SessionError> {
 		// Use raw SQL to delete session (ORM doesn't have bulk delete execution)
-		let sql = "DELETE FROM sessions WHERE session_key = $1";
+		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
+		let placeholder = self.placeholder(1);
+		let sql = format!("DELETE FROM sessions WHERE session_key = {}", placeholder);
 		self.connection
-			.execute(sql, vec![QueryValue::String(session_key.to_string())])
+			.execute(&sql, vec![QueryValue::String(session_key.to_string())])
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to delete session: {}", e)))?;
 
@@ -496,11 +517,16 @@ impl CleanupableBackend for DatabaseSessionBackend {
 
 	async fn delete_keys_with_prefix(&self, prefix: &str) -> Result<usize, SessionError> {
 		// Use raw SQL to delete session keys with prefix (ORM doesn't have bulk delete execution)
+		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
 		let pattern = format!("{}%", prefix);
-		let sql = "DELETE FROM sessions WHERE session_key LIKE $1";
+		let placeholder = self.placeholder(1);
+		let sql = format!(
+			"DELETE FROM sessions WHERE session_key LIKE {}",
+			placeholder
+		);
 		let rows_affected = self
 			.connection
-			.execute(sql, vec![QueryValue::String(pattern)])
+			.execute(&sql, vec![QueryValue::String(pattern)])
 			.await
 			.map_err(|e| {
 				SessionError::CacheError(format!("Failed to delete session keys: {}", e))
