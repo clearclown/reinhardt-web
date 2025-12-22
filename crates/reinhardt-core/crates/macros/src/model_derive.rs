@@ -913,7 +913,7 @@ struct ForeignKeyFieldInfo {
 	rel_attr: RelAttribute,
 }
 
-/// Rustの型からフィールドメタデータ文字列を生成
+/// Generate field metadata string from Rust type
 fn field_type_to_metadata_string(ty: &Type, _config: &FieldConfig) -> Result<String> {
 	let (_is_option, inner_ty) = extract_option_type(ty);
 
@@ -1099,19 +1099,19 @@ fn generate_m2m_accessor_methods(
 
 	let accessor_methods: Vec<_> = field_infos
 		.iter()
-		// ManyToManyFieldのみをフィルタ
+		// Filter only ManyToManyField types
 		.filter(|field| is_many_to_many_field_type(&field.ty))
 		.filter_map(|field| {
 			let field_name = &field.name;
 			let field_name_str = field_name.to_string();
 
-			// メソッド名: {field_name}_accessor
+			// Method name: {field_name}_accessor
 			let method_name = syn::Ident::new(
 				&format!("{}_accessor", field_name),
 				field_name.span()
 			);
 
-			// ManyToManyField<Source, Target>からTargetを抽出
+			// Extract Target from ManyToManyField<Source, Target>
 			let target_ty = extract_m2m_target_type(&field.ty)?;
 
 			let doc_comment = format!(
@@ -1322,7 +1322,7 @@ fn make_fields_private(input: &mut DeriveInput) {
 
 /// Check if a type is Copy (returns value instead of reference)
 fn is_copy_type(ty: &Type) -> bool {
-	// プリミティブ型やCopy derivableな型を判定
+	// Determine if type is primitive or Copy-derivable
 	matches!(
 		ty,
 		Type::Path(path) if matches!(
@@ -1352,7 +1352,7 @@ fn generate_getter_methods(struct_name: &syn::Ident, field_infos: &[FieldInfo]) 
 			let field_type = &field.ty;
 			let method_name = field_name;
 
-			// Copy型は値を返す、それ以外は参照を返す
+			// Copy types return value, others return reference
 			if is_copy_type(field_type) {
 				quote! {
 					#[doc = concat!("Get ", stringify!(#field_name))]
@@ -2465,7 +2465,7 @@ fn generate_registration_code(
 		let unique_str = unique.to_string();
 		let db_index_str = db_index.to_string();
 
-		// ForeignKeyField<User> → "User" を抽出
+		// Extract "User" from ForeignKeyField<User>
 		let target_model_name = if let Type::Path(type_path) = &fk_info.target_type {
 			type_path
 				.path
@@ -3142,12 +3142,12 @@ fn is_relationship_field_type(ty: &Type) -> bool {
 fn is_timestamp_field(field: &FieldInfo) -> bool {
 	let config = &field.config;
 
-	// 1. 明示的な属性指定
+	// 1. Explicit attribute specification
 	if config.auto_now_add == Some(true) || config.auto_now == Some(true) {
 		return true;
 	}
 
-	// 2. フィールド名による自動検出
+	// 2. Auto-detection by field name
 	let field_name = field.name.to_string();
 	matches!(
 		field_name.as_str(),
@@ -3165,7 +3165,7 @@ fn extract_foreign_key_target_type(ty: &Type) -> Type {
 	{
 		return inner_ty.clone();
 	}
-	// フォールバック: 型全体を返す
+	// Fallback: return the entire type
 	ty.clone()
 }
 
@@ -3198,7 +3198,7 @@ fn is_auto_generated_field(field: &FieldInfo) -> bool {
 		return false;
 	}
 
-	// タイムスタンプフィールドの自動検出（新規追加）
+	// Auto-detect timestamp fields
 	if is_timestamp_field(field) {
 		return true;
 	}
@@ -3290,11 +3290,11 @@ fn get_auto_field_default_value(field: &FieldInfo) -> TokenStream {
 	// Timestamp fields - use Utc::now() ONLY if the field type is DateTime<Utc>
 	// This prevents type mismatches when fields named 'created_at' are of type i64
 	if is_timestamp_field(field) && is_datetime_utc_type(&field.ty) {
-		// Option<DateTime<Utc>> の場合は Some() でラップ
+		// Wrap with Some() for Option<DateTime<Utc>>
 		if is_option_type(&field.ty) {
 			return quote! { ::std::option::Option::Some(::chrono::Utc::now()) };
 		}
-		// DateTime<Utc> の場合はそのまま
+		// Return as-is for DateTime<Utc>
 		return quote! { ::chrono::Utc::now() };
 	}
 
@@ -3344,7 +3344,7 @@ fn generate_new_function(
 		.filter(|f| is_auto_generated_field(f))
 		.collect();
 
-	// FK_idフィールドのマップを作成（例: room_id -> room）
+	// Create a map of FK _id fields (e.g., room_id -> room)
 	let fk_id_to_fk_field: HashMap<String, String> = fk_id_field_names
 		.iter()
 		.filter_map(|id_name| {
@@ -3358,62 +3358,62 @@ fn generate_new_function(
 		})
 		.collect();
 
-	// パラメータリストの生成
+	// Generate parameter list
 	let mut params = Vec::new();
 	let mut where_clauses = Vec::new();
 	let mut generic_params = Vec::new();
 	let mut fk_field_assignments = Vec::new();
 	let mut fk_id_assignments = Vec::new();
 
-	// ジェネリック型パラメータのカウンター（F0, F1, F2, ...）
+	// Generic type parameter counter (F0, F1, F2, ...)
 	let mut generic_counter = 0;
 
-	// String型フィールドを追跡（フィールド名 -> Option情報）
-	// Into<String>を使用するためにフィールド割り当て時に.into()を呼び出す必要がある
+	// Track String type fields (field_name -> Option info)
+	// Need to call .into() during field assignment to use Into<String>
 	let mut string_fields: HashMap<String, bool> = HashMap::new(); // value: is_option
 
 	for f in user_fields.iter() {
 		let field_name = &f.name;
 		let field_name_str = field_name.to_string();
 
-		// このフィールドがFK _idフィールドかチェック
+		// Check if this field is a FK _id field
 		if let Some(fk_field_name) = fk_id_to_fk_field.get(&field_name_str) {
-			// これはFK _idフィールド（例: room_id）
-			// ジェネリック型パラメータを使用
+			// This is a FK _id field (e.g., room_id)
+			// Use generic type parameter
 			let generic_param =
 				syn::Ident::new(&format!("F{}", generic_counter), field_name.span());
 			generic_counter += 1;
 
-			// 対応するFKフィールドを見つける
+			// Find the corresponding FK field
 			let fk_field_info = field_infos.iter().find(|fi| fi.name == fk_field_name);
 
 			if let Some(fk_info) = fk_field_info {
-				// ForeignKeyField<T>からT を抽出
+				// Extract T from ForeignKeyField<T>
 				let related_model_type = extract_foreign_key_target_type(&fk_info.ty);
 
-				// パラメータ: fk_field_name: GenericParam
+				// Parameter: fk_field_name: GenericParam
 				let fk_field_ident = syn::Ident::new(fk_field_name, field_name.span());
 				params.push(quote! { #fk_field_ident: #generic_param });
 
-				// Where句: GenericParam: IntoPrimaryKey<RelatedModel>
+				// Where clause: GenericParam: IntoPrimaryKey<RelatedModel>
 				where_clauses.push(quote! {
 					#generic_param: #orm_crate::IntoPrimaryKey<#related_model_type>
 				});
 
-				// ジェネリックパラメータリスト
+				// Generic parameter list
 				generic_params.push(quote! { #generic_param });
 
-				// フィールド割り当て: room_id: fk_field_name.into_primary_key()
+				// Field assignment: room_id: fk_field_name.into_primary_key()
 				fk_id_assignments.push(quote! {
 					#field_name: #fk_field_ident.into_primary_key()
 				});
 			}
 		} else {
-			// 通常のユーザーフィールド
+			// Regular user field
 			let ty = &f.ty;
 
-			// String型フィールドの場合はジェネリック型パラメータを使用
-			// ただし、Option<String>はNone渡しで型推論が失敗するためそのまま残す
+			// Use generic type parameter for String fields
+			// However, keep Option<String> as-is because type inference fails when passing None
 			let (is_option, _) = extract_option_type(ty);
 			if is_string_type(ty) && !is_option {
 				// String -> S where S: Into<String>
@@ -3432,7 +3432,7 @@ fn generate_new_function(
 		}
 	}
 
-	// ForeignKeyFieldフィールドの割り当て（ForeignKeyField::new()）
+	// ForeignKeyField field assignment (ForeignKeyField::new())
 	for (_fk_id_str, fk_name_str) in fk_id_to_fk_field.iter() {
 		let fk_name = syn::Ident::new(fk_name_str, proc_macro2::Span::call_site());
 		fk_field_assignments.push(quote! {
@@ -3440,62 +3440,62 @@ fn generate_new_function(
 		});
 	}
 
-	// FK _idフィールドの初期化（#[fk_id_field] マーカー付きフィールド）
-	// これらは属性マクロで追加されたフィールドで、field_infos には含まれていない
+	// Initialize FK _id fields (fields marked with #[fk_id_field])
+	// These are fields added by the attribute macro and not included in field_infos
 	for fk_id_name in fk_id_field_names.iter() {
 		let fk_id_str = fk_id_name.to_string();
 		if let Some(fk_field_name) = fk_id_to_fk_field.get(&fk_id_str) {
-			// 対応するFKフィールドを見つける
+			// Find the corresponding FK field
 			let fk_field_info = field_infos.iter().find(|fi| fi.name == fk_field_name);
 
 			if let Some(fk_info) = fk_field_info {
-				// ForeignKeyField<T>からT を抽出
+				// Extract T from ForeignKeyField<T>
 				let related_model_type = extract_foreign_key_target_type(&fk_info.ty);
 
-				// ジェネリック型パラメータ
+				// Generic type parameter
 				let generic_param =
 					syn::Ident::new(&format!("F{}", generic_counter), fk_id_name.span());
 				generic_counter += 1;
 
-				// パラメータ: user: GenericParam
+				// Parameter: user: GenericParam
 				let fk_field_ident = syn::Ident::new(fk_field_name, fk_id_name.span());
 				params.push(quote! { #fk_field_ident: #generic_param });
 
-				// Where句: GenericParam: IntoPrimaryKey<RelatedModel>
+				// Where clause: GenericParam: IntoPrimaryKey<RelatedModel>
 				where_clauses.push(quote! {
 					#generic_param: #orm_crate::IntoPrimaryKey<#related_model_type>
 				});
 
-				// ジェネリックパラメータリスト
+				// Generic parameter list
 				generic_params.push(quote! { #generic_param });
 
-				// フィールド割り当て: user_id: user.into_primary_key()
+				// Field assignment: user_id: user.into_primary_key()
 				fk_id_assignments.push(quote! {
 					#fk_id_name: #fk_field_ident.into_primary_key()
 				});
 			} else {
-				// FKフィールド情報が見つからない場合は Default::default()
+				// If FK field info not found, use Default::default()
 				fk_id_assignments.push(quote! {
 					#fk_id_name: ::std::default::Default::default()
 				});
 			}
 		} else {
-			// マップにない場合は Default::default()
+			// If not in map, use Default::default()
 			fk_id_assignments.push(quote! {
 				#fk_id_name: ::std::default::Default::default()
 			});
 		}
 	}
 
-	// FK フィールド名のセットを作成（修正：キーではなく値を使用）
+	// Create a set of FK field names (fix: use values, not keys)
 	let fk_field_names: std::collections::HashSet<String> =
 		fk_id_to_fk_field.values().cloned().collect();
 
-	// FK _idフィールド名のセットを作成（例: user_id, room_id など）
+	// Create a set of FK _id field names (e.g., user_id, room_id, etc.)
 	let fk_id_field_names_set: std::collections::HashSet<String> =
 		fk_id_to_fk_field.keys().cloned().collect();
 
-	// 通常のユーザーフィールドの割り当て（FK関連以外）
+	// Assign regular user fields (excluding FK-related fields)
 	let user_field_assignments: Vec<_> = user_fields
 		.iter()
 		.filter(|f| {
@@ -3506,8 +3506,8 @@ fn generate_new_function(
 			let name = &f.name;
 			let name_str = name.to_string();
 
-			// String型フィールドの場合は.into()を呼び出す
-			// (Option<String>はジェネリック化されないのでstring_fieldsに含まれない)
+			// Call .into() for String type fields
+			// (Option<String> is not generified, so it's not in string_fields)
 			if string_fields.contains_key(&name_str) {
 				quote! { #name: #name.into() }
 			} else {
@@ -3516,7 +3516,7 @@ fn generate_new_function(
 		})
 		.collect();
 
-	// Auto-generatedフィールドの割り当て（FKフィールドとFK _idフィールドを除外）
+	// Assign auto-generated fields (excluding FK fields and FK _id fields)
 	let auto_field_assignments: Vec<_> = auto_fields
 		.iter()
 		.filter(|f| {
@@ -3530,7 +3530,7 @@ fn generate_new_function(
 		})
 		.collect();
 
-	// ジェネリック関数シグネチャの生成
+	// Generate generic function signature
 	let generic_signature = if generic_params.is_empty() {
 		quote! {}
 	} else {
@@ -3594,7 +3594,7 @@ mod tests {
 		let output = model_derive_impl(syn::parse2(input).unwrap()).unwrap();
 		let output_str = output.to_string();
 
-		// フィールドがpubでないことを確認
+		// Verify that fields are not pub
 		assert!(!output_str.contains("pub id"));
 		assert!(!output_str.contains("pub name"));
 	}
@@ -3614,7 +3614,7 @@ mod tests {
 		let output = model_derive_impl(syn::parse2(input).unwrap()).unwrap();
 		let output_str = output.to_string();
 
-		// getterメソッドが生成されていることを確認
+		// Verify that getter methods are generated
 		assert!(output_str.contains("pub fn id"));
 		assert!(output_str.contains("pub fn name"));
 	}
@@ -3636,10 +3636,10 @@ mod tests {
 		let output = model_derive_impl(syn::parse2(input).unwrap()).unwrap();
 		let output_str = output.to_string();
 
-		// nameのsetterは生成される
+		// Setter for name is generated
 		assert!(output_str.contains("pub fn set_name"));
 
-		// id, created_atのsetterは生成されない
+		// Setters for id and created_at are not generated
 		assert!(!output_str.contains("pub fn set_id"));
 		assert!(!output_str.contains("pub fn set_created_at"));
 	}

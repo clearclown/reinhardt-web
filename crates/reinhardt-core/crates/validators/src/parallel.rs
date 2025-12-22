@@ -434,12 +434,13 @@ where
 ///
 /// ```rust
 /// use reinhardt_validators::parallel::validate_with_multiple;
-/// use reinhardt_validators::string::{MinLengthValidator, MaxLengthValidator};
+/// use reinhardt_validators::string::MinLengthValidator;
 /// use reinhardt_validators::Validator;
 ///
-/// let validators: Vec<Box<dyn Validator<str> + Sync>> = vec![
-///     Box::new(MinLengthValidator::new(3)),
-///     Box::new(MaxLengthValidator::new(10)),
+/// // Use validators of the same concrete type
+/// let validators = vec![
+///     MinLengthValidator::new(3),
+///     MinLengthValidator::new(5),
 /// ];
 ///
 /// let result = validate_with_multiple(&validators, "hello");

@@ -30,10 +30,13 @@
 //!
 //! ## Example (Submodule Access)
 //!
-//! ```rust
+//! ```ignore
+//! // Server-side (non-wasm32):
 //! use reinhardt::admin::adapters::AdminSite;
 //! use reinhardt::admin::server::get_dashboard;
-//! use reinhardt::admin::pages::AdminRouter;
+//!
+//! // Client-side (wasm32 only):
+//! // use reinhardt::admin::pages::AdminRouter;
 //! ```
 
 // Re-export submodules for structured access
