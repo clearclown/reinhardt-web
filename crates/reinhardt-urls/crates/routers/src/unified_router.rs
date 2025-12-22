@@ -1421,6 +1421,15 @@ impl UnifiedRouter {
 
 		let full_path = format!("{}{}", self.prefix, path);
 
+		// Normalize path for matchit lookup - routes are registered with leading slash
+		// When prefix is "/" and path is "/health", strip_prefix yields "health" but
+		// the route was registered as "/health". We need to ensure we search with "/health".
+		let search_path = if path.starts_with('/') {
+			path.to_string()
+		} else {
+			format!("/{}", path)
+		};
+
 		// Use matchit to find matching route - O(m) complexity
 		let router_lock = match *method {
 			Method::GET => &self.get_router,
@@ -1434,27 +1443,46 @@ impl UnifiedRouter {
 		};
 
 		let router = router_lock.read().expect("RwLock poisoned");
-		if let Ok(matched) = router.at(path) {
-			let route_handler = matched.value;
 
-			// Extract parameters from matchit
-			let params: HashMap<String, String> = matched
-				.params
-				.iter()
-				.map(|(k, v)| (k.to_string(), v.to_string()))
-				.collect();
+		// Try matching with the original path first
+		// If that fails, try with trailing slash toggled (Django-style APPEND_SLASH behavior)
+		let paths_to_try = if search_path.ends_with('/') {
+			// Path has trailing slash, try without if not found
+			let without_slash = search_path.trim_end_matches('/').to_string();
+			let without_slash = if without_slash.is_empty() {
+				"/".to_string()
+			} else {
+				without_slash
+			};
+			vec![search_path.clone(), without_slash]
+		} else {
+			// Path has no trailing slash, try with if not found
+			vec![search_path.clone(), format!("{}/", search_path)]
+		};
 
-			// Combine router-level and route-level middleware
-			let mut combined_middleware = middleware_stack.clone();
-			combined_middleware.extend(route_handler.middleware.iter().cloned());
+		for try_path in paths_to_try {
+			if let Ok(matched) = router.at(&try_path) {
+				let route_handler = matched.value;
 
-			return Some(RouteMatch {
-				handler: route_handler.handler.clone(),
-				params,
-				full_path,
-				middleware_stack: combined_middleware,
-				di_context,
-			});
+				// Extract parameters from matchit
+				let params: HashMap<String, String> = matched
+					.params
+					.iter()
+					.map(|(k, v)| (k.to_string(), v.to_string()))
+					.collect();
+
+				// Combine router-level and route-level middleware
+				let mut combined_middleware = middleware_stack.clone();
+				combined_middleware.extend(route_handler.middleware.iter().cloned());
+
+				return Some(RouteMatch {
+					handler: route_handler.handler.clone(),
+					params,
+					full_path,
+					middleware_stack: combined_middleware,
+					di_context,
+				});
+			}
 		}
 
 		None
@@ -1483,6 +1511,26 @@ impl UnifiedRouter {
 			path
 		};
 
+		// Normalize path - ensure leading slash
+		let search_path = if remaining_path.starts_with('/') {
+			remaining_path.to_string()
+		} else {
+			format!("/{}", remaining_path)
+		};
+
+		// Build paths to try with trailing slash toggled (Django-style APPEND_SLASH)
+		let paths_to_try = if search_path.ends_with('/') {
+			let without_slash = search_path.trim_end_matches('/').to_string();
+			let without_slash = if without_slash.is_empty() {
+				"/".to_string()
+			} else {
+				without_slash
+			};
+			vec![search_path.clone(), without_slash]
+		} else {
+			vec![search_path.clone(), format!("{}/", search_path)]
+		};
+
 		let method_routers = [
 			&self.get_router,
 			&self.post_router,
@@ -1495,15 +1543,19 @@ impl UnifiedRouter {
 
 		for router_lock in method_routers {
 			let router = router_lock.read().expect("RwLock poisoned");
-			if router.at(remaining_path).is_ok() {
-				return true;
+			for try_path in &paths_to_try {
+				if router.at(try_path).is_ok() {
+					return true;
+				}
 			}
 		}
 
 		// Also check children routers with remaining path
 		for child in &self.children {
-			if child.path_exists_for_any_method(remaining_path) {
-				return true;
+			for try_path in &paths_to_try {
+				if child.path_exists_for_any_method(try_path) {
+					return true;
+				}
 			}
 		}
 
