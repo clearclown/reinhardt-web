@@ -85,6 +85,232 @@ interface types {
 	}
 }
 
+/// Event data for inter-plugin communication.
+///
+/// Events allow plugins to communicate asynchronously through a publish-subscribe
+/// pattern without direct references to each other.
+interface events {
+	use types.{plugin-error};
+
+	/// Event data structure.
+	record event {
+		/// Event name (e.g., "user.created", "order.completed")
+		name: string,
+		/// MessagePack-serialized payload
+		payload: list<u8>,
+		/// Source plugin name that emitted the event
+		source: string,
+		/// Timestamp (Unix epoch milliseconds)
+		timestamp: u64,
+	}
+
+	/// Subscription identifier.
+	type subscription-id = u64;
+
+	/// Emit an event to all subscribers.
+	/// The event will be delivered to all plugins that have subscribed to matching patterns.
+	emit: func(name: string, payload: list<u8>) -> result<_, plugin-error>;
+
+	/// Subscribe to events matching the given pattern.
+	/// Pattern supports wildcards:
+	/// - "*" matches all events
+	/// - "user.*" matches "user.created", "user.deleted", etc.
+	/// - "user.created" matches only "user.created"
+	subscribe: func(pattern: string) -> result<subscription-id, plugin-error>;
+
+	/// Unsubscribe from a subscription.
+	unsubscribe: func(id: subscription-id) -> result<_, plugin-error>;
+
+	/// Poll for pending events on a subscription.
+	/// Returns up to `limit` events. Events are removed from the queue once polled.
+	poll-events: func(id: subscription-id, limit: u32) -> list<event>;
+}
+
+/// Model schema registration for database integration.
+///
+/// This interface allows WASM plugins to declare model schemas that can be
+/// used for migration generation and documentation purposes.
+///
+/// Note: Full ORM model integration with compile-time registration is only
+/// available for Static (Rust) plugins. WASM plugins can register schemas
+/// for runtime processing, but queries use the host database API.
+interface models {
+	use types.{plugin-error};
+
+	/// Database column type.
+	variant column-type {
+		/// Integer (4 bytes)
+		integer,
+		/// Big integer (8 bytes)
+		big-integer,
+		/// Variable-length text
+		text,
+		/// Fixed-length string with max length
+		varchar(u32),
+		/// Boolean
+		boolean,
+		/// Timestamp with timezone
+		timestamp,
+		/// UUID
+		uuid,
+		/// JSON/JSONB
+		json,
+		/// Decimal with precision and scale
+		decimal(tuple<u8, u8>),
+		/// Foreign key reference to another table
+		foreign-key(string),
+	}
+
+	/// Column definition for a model field.
+	record column-def {
+		/// Column name
+		name: string,
+		/// Column type
+		column-type: column-type,
+		/// Whether the column allows NULL values
+		nullable: bool,
+		/// Whether this is a primary key
+		primary-key: bool,
+		/// Whether this column has a unique constraint
+		unique-value: bool,
+		/// Default value expression (SQL literal or function call)
+		default-value: option<string>,
+	}
+
+	/// Index definition.
+	record index-def {
+		/// Index name
+		name: string,
+		/// Column names included in the index
+		columns: list<string>,
+		/// Whether this is a unique index
+		unique-value: bool,
+	}
+
+	/// Model schema definition.
+	record model-schema {
+		/// Database table name
+		table-name: string,
+		/// Column definitions
+		columns: list<column-def>,
+		/// Index definitions
+		indexes: list<index-def>,
+	}
+
+	/// Raw SQL migration for plugins that need full control.
+	record sql-migration {
+		/// Migration version/name (e.g., "0001_create_plugin_tables")
+		version: string,
+		/// Description of what this migration does
+		description: string,
+		/// SQL to apply when migrating up
+		up-sql: string,
+		/// SQL to apply when rolling back
+		down-sql: string,
+	}
+
+	/// Register a model schema with the host.
+	/// The host may use this for migration generation or documentation.
+	register-model: func(schema: model-schema) -> result<_, plugin-error>;
+
+	/// Register a raw SQL migration.
+	/// This allows plugins to define their own migration SQL directly.
+	register-migration: func(migration: sql-migration) -> result<_, plugin-error>;
+
+	/// List all registered model table names for this plugin.
+	list-models: func() -> list<string>;
+}
+
+/// Server-Side Rendering (SSR) interface.
+///
+/// This interface allows WASM plugins to request server-side rendering
+/// of React/Vue components through the host's TypeScript runtime.
+///
+/// Note: This feature requires the host to have TypeScript runtime support
+/// enabled. If TypeScript support is not available, all render functions
+/// will return an error.
+interface ssr {
+	use types.{plugin-error};
+
+	/// Render options for SSR.
+	record render-options {
+		/// Whether to include hydration script for client-side takeover
+		include-hydration: bool,
+		/// Whether to extract CSS from components
+		extract-css: bool,
+		/// Whether to extract meta tags (title, description, etc.)
+		extract-meta: bool,
+	}
+
+	/// Render result containing the HTML and optional extracted assets.
+	record render-result {
+		/// Rendered HTML string
+		html: string,
+		/// Extracted CSS (if extract-css was true)
+		css: option<string>,
+		/// Extracted meta tags as key-value pairs (if extract-meta was true)
+		meta: option<list<tuple<string, string>>>,
+		/// Hydration script to include in the page (if include-hydration was true)
+		hydration-script: option<string>,
+	}
+
+	/// Render a React component to HTML.
+	///
+	/// # Arguments
+	///
+	/// * `component-path` - Path to the component file (relative to plugin assets)
+	/// * `props` - MessagePack-serialized component props
+	/// * `options` - Rendering options
+	///
+	/// # Returns
+	///
+	/// Rendered HTML and optional extracted assets, or an error if rendering fails.
+	render-react: func(
+		component-path: string,
+		props: list<u8>,
+		options: render-options
+	) -> result<render-result, plugin-error>;
+
+	/// Render a Vue component to HTML.
+	///
+	/// # Arguments
+	///
+	/// * `component-path` - Path to the component file (relative to plugin assets)
+	/// * `props` - MessagePack-serialized component props
+	/// * `options` - Rendering options
+	///
+	/// # Returns
+	///
+	/// Rendered HTML and optional extracted assets, or an error if rendering fails.
+	render-vue: func(
+		component-path: string,
+		props: list<u8>,
+		options: render-options
+	) -> result<render-result, plugin-error>;
+
+	/// Execute arbitrary JavaScript code and return the result.
+	///
+	/// # Arguments
+	///
+	/// * `code` - JavaScript code to execute
+	///
+	/// # Returns
+	///
+	/// MessagePack-serialized result, or an error if execution fails.
+	///
+	/// # Security
+	///
+	/// This function should only be available to plugins with elevated trust levels.
+	eval-js: func(code: string) -> result<list<u8>, plugin-error>;
+
+	/// Check if SSR is available on the host.
+	///
+	/// # Returns
+	///
+	/// `true` if the host supports SSR (has TypeScript runtime enabled).
+	is-available: func() -> bool;
+}
+
 /// Host API - Functions provided by the Reinhardt host to plugins.
 ///
 /// These functions allow plugins to interact with the host environment
@@ -188,6 +414,15 @@ interface plugin {
 world dentdelion-plugin {
 	/// Import host functions
 	import host;
+
+	/// Import event bus functions for inter-plugin communication
+	import events;
+
+	/// Import model schema registration functions
+	import models;
+
+	/// Import server-side rendering functions (requires TypeScript runtime)
+	import ssr;
 
 	/// Export plugin functions
 	export plugin;

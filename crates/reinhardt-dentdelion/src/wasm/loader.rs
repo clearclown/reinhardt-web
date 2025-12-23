@@ -16,13 +16,13 @@ use super::types::ConfigValue;
 
 /// Default plugin directory relative to project root.
 #[allow(dead_code)] // Reserved for future auto-discovery from default location
-pub const DEFAULT_PLUGIN_DIR: &str = ".dentdelion/plugins";
+pub(super) const DEFAULT_PLUGIN_DIR: &str = ".dentdelion/plugins";
 
 /// WASM file extension.
-pub const WASM_EXTENSION: &str = "wasm";
+pub(super) const WASM_EXTENSION: &str = "wasm";
 
 /// Plugin manifest filename.
-pub const PLUGIN_MANIFEST_FILENAME: &str = "plugin.toml";
+pub(super) const PLUGIN_MANIFEST_FILENAME: &str = "plugin.toml";
 
 /// Information about a discovered plugin.
 #[derive(Debug, Clone)]

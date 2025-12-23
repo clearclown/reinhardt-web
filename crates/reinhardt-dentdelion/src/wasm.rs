@@ -36,16 +36,28 @@
 //! }
 //! ```
 
+mod events;
 mod host;
 mod instance;
 mod loader;
+mod models;
 mod runtime;
+mod ssr;
+#[cfg(feature = "ts")]
+mod ts_runtime;
 mod types;
 
+pub use events::{Event, EventBus, SharedEventBus};
 pub use host::{HostState, HostStateBuilder};
 pub use instance::WasmPluginInstance;
 pub use loader::WasmPluginLoader;
+pub use models::{
+	ColumnDef, ColumnType, IndexDef, ModelRegistry, ModelSchema, SharedModelRegistry, SqlMigration,
+};
 pub use runtime::{WasmRuntime, WasmRuntimeConfig, WasmRuntimeConfigBuilder};
+pub use ssr::{RenderOptions, RenderResult, SharedSsrProxy, SsrError, SsrProxy};
+#[cfg(feature = "ts")]
+pub use ts_runtime::{SharedTsRuntime, TsError, TsRuntime};
 pub use types::{ConfigValue, WitCapability, WitPluginError, WitPluginMetadata};
 
 /// WASM binary magic bytes (\0asm)

@@ -23,7 +23,7 @@ wasmtime::component::bindgen!({
 // Currently accessed via full path (crate::wasm::runtime::reinhardt::dentdelion)
 // but this re-export enables shorter import paths in the future
 #[allow(unused_imports)]
-pub use self::reinhardt::dentdelion;
+pub(super) use self::reinhardt::dentdelion;
 
 use crate::error::{PluginError, PluginResult};
 
@@ -37,10 +37,10 @@ use wasmtime_wasi::p2;
 use super::host::HostState;
 
 /// Default memory limit in megabytes.
-pub const DEFAULT_MEMORY_LIMIT_MB: u32 = 128;
+pub(super) const DEFAULT_MEMORY_LIMIT_MB: u32 = 128;
 
 /// Default execution timeout in seconds.
-pub const DEFAULT_TIMEOUT_SECS: u32 = 30;
+pub(super) const DEFAULT_TIMEOUT_SECS: u32 = 30;
 
 /// Configuration for the WASM runtime.
 #[derive(Debug, Clone)]

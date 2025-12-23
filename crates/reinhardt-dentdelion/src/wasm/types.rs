@@ -165,8 +165,17 @@ impl WitCapability {
 				PluginCapability::Handlers => Some(Self::Handlers),
 				PluginCapability::NetworkAccess => Some(Self::NetworkAccess),
 				PluginCapability::DatabaseAccess => Some(Self::DatabaseAccess),
-				// Models is NOT WASM-compatible
+				// BuildToolIntegration is WASM-compatible
+				PluginCapability::BuildToolIntegration => {
+					Some(Self::Custom("build_tool_integration".to_string()))
+				}
+				// These capabilities are NOT WASM-compatible (require compile-time integration or TypeScript runtime)
 				PluginCapability::Models => None,
+				PluginCapability::StaticSiteGeneration => None,
+				PluginCapability::FrontendSsr => None,
+				PluginCapability::FrontendHydration => None,
+				PluginCapability::TypeScriptRuntime => None,
+				PluginCapability::HotModuleReplacement => None,
 			},
 			Capability::Custom(name) => Some(Self::Custom(name.clone())),
 		}
