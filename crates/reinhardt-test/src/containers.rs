@@ -200,7 +200,7 @@ impl PostgresContainer {
 impl TestDatabase for PostgresContainer {
 	fn connection_url(&self) -> String {
 		format!(
-			"postgres://{}:{}@{}:{}/{}",
+			"postgres://{}:{}@{}:{}/{}?sslmode=disable",
 			self.username, self.password, self.host, self.port, self.database
 		)
 	}
