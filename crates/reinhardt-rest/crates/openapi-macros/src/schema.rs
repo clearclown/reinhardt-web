@@ -4,7 +4,7 @@ use syn::{Attribute, Lit, Meta, MetaNameValue};
 
 /// Field-level schema attributes
 #[derive(Debug, Default, Clone)]
-pub struct FieldAttributes {
+pub(crate) struct FieldAttributes {
 	pub description: Option<String>,
 	pub example: Option<String>,
 	pub format: Option<String>,
@@ -22,7 +22,7 @@ pub struct FieldAttributes {
 }
 
 impl FieldAttributes {
-	pub fn is_empty(&self) -> bool {
+	pub(crate) fn is_empty(&self) -> bool {
 		self.description.is_none()
 			&& self.example.is_none()
 			&& self.format.is_none()
@@ -40,7 +40,7 @@ impl FieldAttributes {
 }
 
 /// Extract schema attributes from field attributes
-pub fn extract_field_attributes(attrs: &[Attribute]) -> FieldAttributes {
+pub(crate) fn extract_field_attributes(attrs: &[Attribute]) -> FieldAttributes {
 	let mut field_attrs = FieldAttributes::default();
 
 	for attr in attrs {
@@ -79,16 +79,16 @@ pub fn extract_field_attributes(attrs: &[Attribute]) -> FieldAttributes {
 				{
 					if let Meta::NameValue(nv) = nested_meta
 						&& nv.path.is_ident("rename")
-							&& let syn::Expr::Lit(syn::ExprLit {
-								lit: Lit::Str(lit_str),
-								..
-							}) = nv.value
-							{
-								// Only set if not already set by #[schema(rename = "...")]
-								if field_attrs.rename.is_none() {
-									field_attrs.rename = Some(lit_str.value());
-								}
-							}
+						&& let syn::Expr::Lit(syn::ExprLit {
+							lit: Lit::Str(lit_str),
+							..
+						}) = nv.value
+					{
+						// Only set if not already set by #[schema(rename = "...")]
+						if field_attrs.rename.is_none() {
+							field_attrs.rename = Some(lit_str.value());
+						}
+					}
 				}
 			}
 			continue;

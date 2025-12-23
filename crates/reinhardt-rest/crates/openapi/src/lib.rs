@@ -1,19 +1,25 @@
-//! # Reinhardt Schema Generation
+//! # Reinhardt OpenAPI
 //!
 //! OpenAPI 3.0 schema generation for Reinhardt REST APIs.
+//!
+//! ## Overview
+//!
+//! This crate provides automatic OpenAPI documentation generation for Reinhardt
+//! REST APIs, including schema derivation, Swagger UI integration, and ViewSet
+//! inspection.
 //!
 //! ## Features
 //!
 //! - **OpenAPI 3.0**: Full OpenAPI 3.0 specification support
 //! - **Auto-generation**: Automatic schema generation from ViewSets
 //! - **Customization**: Override and extend generated schemas
-//! - **Swagger UI**: Built-in Swagger UI integration
+//! - **Swagger UI**: Built-in Swagger UI and ReDoc integration
 //! - **YAML/JSON**: Export schemas in both formats
-//! - **Schema Registry**: Centralized schema management with $ref references
+//! - **Schema Registry**: Centralized schema management with `$ref` references
 //! - **Enum Support**: Tagged, adjacently tagged, and untagged enum handling
 //! - **Serde Integration**: Support for `#[serde(rename)]`, `#[serde(skip)]`, and more
 //!
-//! ## Example
+//! ## Quick Start
 //!
 //! ```rust,no_run
 //! use reinhardt_openapi::{SchemaGenerator, OpenApiSchema};
@@ -29,6 +35,115 @@
 //! let json = schema.to_json()?;
 //! # Ok(())
 //! # }
+//! ```
+//!
+//! ## Schema Derive Macro
+//!
+//! The `#[derive(Schema)]` macro generates OpenAPI schema definitions from Rust types.
+//!
+//! ### Basic Usage
+//!
+//! ```rust,ignore
+//! use reinhardt_openapi::Schema;
+//!
+//! #[derive(Schema)]
+//! struct User {
+//!     id: i64,
+//!     username: String,
+//!     email: String,
+//!     #[schema(example = "true")]
+//!     is_active: bool,
+//! }
+//! ```
+//!
+//! ### Schema Attributes
+//!
+//! Field-level attributes:
+//!
+//! - `#[schema(example = "...")]`: Provide example value for documentation
+//! - `#[schema(skip)]`: Exclude field from schema
+//! - `#[schema(rename = "...")]`: Rename field in schema
+//! - `#[schema(description = "...")]`: Add field description
+//! - `#[schema(nullable)]`: Mark field as nullable
+//! - `#[schema(format = "...")]`: Specify format (e.g., "email", "uri", "date-time")
+//!
+//! Container-level attributes:
+//!
+//! - `#[schema(rename_all = "...")]`: Apply case transformation (camelCase, snake_case, etc.)
+//!
+//! ### Serde Integration
+//!
+//! The Schema derive macro automatically respects serde attributes:
+//!
+//! ```rust,ignore
+//! use serde::{Deserialize, Serialize};
+//! use reinhardt_openapi::Schema;
+//!
+//! #[derive(Serialize, Deserialize, Schema)]
+//! #[serde(rename_all = "camelCase")]
+//! struct UserResponse {
+//!     user_id: i64,           // Becomes "userId" in schema
+//!     #[serde(skip)]
+//!     internal_field: String, // Excluded from schema
+//!     #[serde(rename = "mail")]
+//!     email: String,          // Becomes "mail" in schema
+//! }
+//! ```
+//!
+//! ### Enum Schemas
+//!
+//! Support for various enum representations:
+//!
+//! ```rust,ignore
+//! use reinhardt_openapi::Schema;
+//!
+//! // Simple enum (string schema)
+//! #[derive(Schema)]
+//! enum Status {
+//!     Active,
+//!     Inactive,
+//!     Pending,
+//! }
+//!
+//! // Tagged enum (object schema with discriminator)
+//! #[derive(Schema)]
+//! #[serde(tag = "type")]
+//! enum Event {
+//!     Created { id: i64 },
+//!     Updated { id: i64, changes: Vec<String> },
+//!     Deleted { id: i64 },
+//! }
+//! ```
+//!
+//! ## Schema Registry
+//!
+//! Manage and reference schemas centrally:
+//!
+//! ```rust,ignore
+//! use reinhardt_openapi::SchemaRegistry;
+//!
+//! let mut registry = SchemaRegistry::new();
+//!
+//! // Register a schema
+//! registry.register::<User>();
+//!
+//! // Get reference to schema
+//! let user_ref = registry.get_ref::<User>(); // Returns "#/components/schemas/User"
+//! ```
+//!
+//! ## Swagger UI Integration
+//!
+//! ```rust,ignore
+//! use reinhardt_openapi::{SwaggerUI, RedocUI};
+//!
+//! // Swagger UI endpoint
+//! let swagger = SwaggerUI::new("/api/openapi.json")
+//!     .path("/docs")
+//!     .title("API Documentation");
+//!
+//! // ReDoc endpoint
+//! let redoc = RedocUI::new("/api/openapi.json")
+//!     .path("/redoc");
 //! ```
 
 pub mod auto_schema;

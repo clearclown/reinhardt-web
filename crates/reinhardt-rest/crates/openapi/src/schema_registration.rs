@@ -53,12 +53,24 @@ impl SchemaRegistration {
 	/// # Example
 	///
 	/// ```rust,no_run
-	/// use reinhardt_openapi::SchemaRegistration;
-	/// # use reinhardt_openapi::{Schema, ToSchema};
-	/// # struct User;
-	/// # impl ToSchema for User {
-	/// #     fn schema() -> Schema { todo!() }
-	/// # }
+	/// use reinhardt_openapi::{Schema, SchemaExt, SchemaRegistration, ToSchema};
+	///
+	/// struct User {
+	///     id: i64,
+	///     name: String,
+	/// }
+	///
+	/// impl ToSchema for User {
+	///     fn schema() -> Schema {
+	///         Schema::object_with_properties(
+	///             vec![
+	///                 ("id", Schema::integer()),
+	///                 ("name", Schema::string()),
+	///             ],
+	///             vec!["id", "name"],
+	///         )
+	///     }
+	/// }
 	///
 	/// const REGISTRATION: SchemaRegistration = SchemaRegistration::new("User", User::schema);
 	/// ```

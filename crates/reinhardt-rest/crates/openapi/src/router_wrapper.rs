@@ -8,21 +8,20 @@
 //!
 //! ```rust,ignore
 //! use reinhardt_openapi::OpenApiRouter;
-//! use reinhardt_core::types::Handler;
-//! use std::sync::Arc;
+//! use reinhardt_urls::routers::BasicRouter;
 //!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Wrap your existing router
-//! let router = /* your router */;
-//! # todo!();
-//! let wrapped = OpenApiRouter::wrap(router);
+//! fn main() {
+//!     // Create your existing router
+//!     let router = BasicRouter::new();
 //!
-//! // The wrapped router now serves:
-//! // - /api-docs/openapi.json (OpenAPI spec)
-//! // - /docs (Swagger UI)
-//! // - /docs-redoc (Redoc UI)
-//! # Ok(())
-//! # }
+//!     // Wrap with OpenAPI endpoints
+//!     let wrapped = OpenApiRouter::wrap(router);
+//!
+//!     // The wrapped router now serves:
+//!     // - /api-docs/openapi.json (OpenAPI spec)
+//!     // - /docs (Swagger UI)
+//!     // - /docs-redoc (Redoc UI)
+//! }
 //! ```
 
 use crate::endpoints::generate_openapi_schema;
@@ -63,9 +62,9 @@ impl<H> OpenApiRouter<H> {
 	///
 	/// ```rust,ignore
 	/// use reinhardt_openapi::OpenApiRouter;
+	/// use reinhardt_urls::routers::BasicRouter;
 	///
-	/// let router = /* your router */;
-	/// # todo!();
+	/// let router = BasicRouter::new();
 	/// let wrapped = OpenApiRouter::wrap(router);
 	/// ```
 	pub fn wrap(handler: H) -> Self {

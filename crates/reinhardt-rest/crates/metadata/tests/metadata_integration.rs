@@ -21,7 +21,7 @@ use std::collections::HashMap;
 // Fixtures
 // =============================================================================
 
-/// Test用のSerializerField情報を提供するfixture
+/// Fixture providing SerializerField information for testing
 #[fixture]
 fn test_serializer_fields() -> HashMap<String, SerializerFieldInfo> {
 	let mut fields = HashMap::new();
@@ -73,7 +73,7 @@ fn test_serializer_fields() -> HashMap<String, SerializerFieldInfo> {
 	fields
 }
 
-/// Test用のFieldInfo collectionを提供するfixture
+/// Fixture providing FieldInfo collection for testing
 #[fixture]
 fn test_field_infos() -> HashMap<String, FieldInfo> {
 	let mut fields = HashMap::new();

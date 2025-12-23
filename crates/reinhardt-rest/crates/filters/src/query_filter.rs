@@ -7,6 +7,7 @@ use crate::filter::{FilterBackend, FilterResult};
 use crate::ordering_field::OrderingField;
 use async_trait::async_trait;
 use reinhardt_db::orm::{Lookup, Model, QueryFieldCompiler};
+use sea_query::{Cond, Expr, MysqlQueryBuilder, Query};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -222,18 +223,18 @@ impl<M: Model> QueryFilter<M> {
 		&self.ordering
 	}
 
-	/// Compile lookups to SQL WHERE clause
+	/// Compile lookups to SQL WHERE clause using SeaQuery
 	fn compile_where_clause(&self) -> Option<String> {
-		let mut all_conditions = Vec::new();
+		if self.lookups.is_empty() && self.or_groups.is_empty() {
+			return None;
+		}
+
+		// Build the main AND condition using SeaQuery
+		let mut main_cond = Cond::all();
 
 		// Add regular AND conditions
-		if !self.lookups.is_empty() {
-			let conditions: Vec<String> = self
-				.lookups
-				.iter()
-				.map(|lookup| QueryFieldCompiler::compile(lookup))
-				.collect();
-			all_conditions.extend(conditions);
+		for lookup in &self.lookups {
+			main_cond = main_cond.add(QueryFieldCompiler::compile_to_expr(lookup));
 		}
 
 		// Add OR groups (each group is AND'd with others)
@@ -242,27 +243,27 @@ impl<M: Model> QueryFilter<M> {
 				continue;
 			}
 
-			let or_conditions: Vec<String> = or_group
-				.iter()
-				.map(|lookup| QueryFieldCompiler::compile(lookup))
-				.collect();
-
-			if or_conditions.len() == 1 {
-				all_conditions.push(or_conditions[0].clone());
+			if or_group.len() == 1 {
+				// Single condition, add directly
+				main_cond = main_cond.add(QueryFieldCompiler::compile_to_expr(&or_group[0]));
 			} else {
-				all_conditions.push(format!("({})", or_conditions.join(" OR ")));
+				// Multiple conditions, create OR group
+				let mut or_cond = Cond::any();
+				for lookup in or_group {
+					or_cond = or_cond.add(QueryFieldCompiler::compile_to_expr(lookup));
+				}
+				main_cond = main_cond.add(or_cond);
 			}
 		}
 
-		if all_conditions.is_empty() {
-			return None;
-		}
+		// Build a dummy query to extract just the WHERE clause
+		let query = Query::select()
+			.expr(Expr::val(1))
+			.cond_where(main_cond)
+			.to_string(MysqlQueryBuilder);
 
-		if all_conditions.len() == 1 {
-			Some(all_conditions[0].clone())
-		} else {
-			Some(format!("({})", all_conditions.join(" AND ")))
-		}
+		// Extract just the WHERE portion (after "WHERE ")
+		query.find("WHERE ").map(|idx| query[idx + 6..].to_string())
 	}
 
 	/// Compile ordering to SQL ORDER BY clause

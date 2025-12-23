@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-	// CARGO_MANIFEST_DIRから4階層遡ってワークスペースルートを取得
+	// Traverse 4 levels up from CARGO_MANIFEST_DIR to get workspace root
 	// crates/reinhardt-rest/crates/openapi -> crates/reinhardt-rest/crates
 	//                                       -> crates/reinhardt-rest
 	//                                       -> crates
@@ -16,13 +16,13 @@ fn main() {
 		.expect("Failed to determine workspace root")
 		.to_path_buf();
 
-	// ワークスペースルートを環境変数として設定
+	// Set workspace root as environment variable
 	println!(
 		"cargo:rustc-env=WORKSPACE_ROOT={}",
 		workspace_root.display()
 	);
 
-	// branding/thirdparty ディレクトリの変更を検知して再ビルド
+	// Trigger rebuild when branding/thirdparty directory changes
 	let branding_dir = workspace_root.join("branding/thirdparty");
 	println!("cargo:rerun-if-changed={}", branding_dir.display());
 }
