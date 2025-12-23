@@ -283,10 +283,7 @@ pub fn profile_edit(user_id: Uuid) -> View {
 										// Error message
 										error_alert(&msg, false)
 									} else {
-										page!(|| {
-	div {
-	}
-})()
+										page!(|| { div {} })()
 									}
 								})
 								.child(

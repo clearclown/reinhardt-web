@@ -63,40 +63,40 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 		let error = error.clone();
 
 		page!(|btn_class: String, btn_text: String, has_error: bool, error_text: String| {
-	div {
-		button {
-			r#type: "button",
-			class: btn_class,
-			@click: move | _event | { let is_following = is_following . clone () ; let loading = loading . clone () ; let error = error . clone () ; let currently_following = is_following . get () ; spawn_local (async move { loading . set (true) ; error . set (None) ; let result = if currently_following { unfollow_user (target_user_id) . await } else { follow_user (target_user_id) . await } ; match result { Ok (()) => { is_following . set (! currently_following) ; loading . set (false) ; } Err (e) => { error . set (Some (e . to_string ())) ; loading . set (false) ; } } }) ; },
-			{ btn_text }
-		}
-		if has_error {
 			div {
-				class: "alert alert-danger mt-2",
-				{ error_text }
+				button {
+					r#type: "button",
+					class: btn_class,
+					@click: move | _event | { let is_following = is_following.clone() ; let loading = loading.clone() ; let error = error.clone() ; let currently_following = is_following.get() ; spawn_local (async move { loading.set (true) ; error.set (None) ; let result = if currently_following { unfollow_user (target_user_id).await } else { follow_user (target_user_id).await } ; match result { Ok (()) => { is_following.set (! currently_following) ; loading.set (false) ; } Err (e) => { error.set (Some (e.to_string())) ; loading.set (false) ; } } }) ; },
+					{ btn_text }
+				}
+				if has_error {
+					div {
+						class: "alert alert-danger mt-2",
+						{ error_text }
+					}
+				}
 			}
-		}
-	}
-})(btn_class, btn_text, has_error, error_text)
+		})(btn_class, btn_text, has_error, error_text)
 	}
 
 	#[cfg(not(target_arch = "wasm32"))]
 	{
 		page!(|btn_class: String, btn_text: String, has_error: bool, error_text: String| {
-	div {
-		button {
-			r#type: "button",
-			class: { btn_class },
-			{ btn_text }
-		}
-		if has_error {
 			div {
-				class: "alert alert-danger mt-2",
-				{ error_text }
+				button {
+					r#type: "button",
+					class: { btn_class },
+					{ btn_text }
+				}
+				if has_error {
+					div {
+						class: "alert alert-danger mt-2",
+						{ error_text }
+					}
+				}
 			}
-		}
-	}
-})(btn_class, btn_text, has_error, error_text)
+		})(btn_class, btn_text, has_error, error_text)
 	}
 }
 
@@ -109,31 +109,31 @@ fn user_card(user: &UserInfo) -> View {
 	let profile_url = format!("/profile/{}", user.id);
 
 	page!(|username: String, email: String, profile_url: String| {
-	div {
-		class: "card mb-2",
 		div {
-			class: "card-body",
+			class: "card mb-2",
 			div {
-				class: "d-flex justify-content-between align-items-center",
+				class: "card-body",
 				div {
-					h6 {
-						class: "card-subtitle mb-1",
-						{ username }
+					class: "d-flex justify-content-between align-items-center",
+					div {
+						h6 {
+							class: "card-subtitle mb-1",
+							{ username }
+						}
+						small {
+							class: "text-muted",
+							{ email }
+						}
 					}
-					small {
-						class: "text-muted",
-						{ email }
+					a {
+						href: profile_url,
+						class: "btn btn-sm btn-outline-primary",
+						"View Profile"
 					}
-				}
-				a {
-					href: profile_url,
-					class: "btn btn-sm btn-outline-primary",
-					"View Profile"
 				}
 			}
 		}
-	}
-})(username, email, profile_url)
+	})(username, email, profile_url)
 }
 
 /// User list component
@@ -196,41 +196,41 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 	let user_cards_view = View::fragment(user_cards);
 
 	page!(|title: String, is_loading: bool, has_error: bool, error_text: String, is_empty: bool, empty_message: String, user_cards_view: View| {
-	div {
-		h3 {
-			class: "mb-4",
-			{ title }
-		}
-		if is_loading {
-			div {
-				class: "text-center py-5",
+		div {
+			h3 {
+				class: "mb-4",
+				{ title }
+			}
+			if is_loading {
 				div {
-					class: "spinner-border",
-					role: "status",
-					span {
-						class: "visually-hidden",
-						"Loading..."
+					class: "text-center py-5",
+					div {
+						class: "spinner-border",
+						role: "status",
+						span {
+							class: "visually-hidden",
+							"Loading..."
+						}
 					}
 				}
-			}
-		} else if has_error {
-			div {
-				class: "alert alert-danger",
-				{ error_text }
-			}
-		} else if is_empty {
-			div {
-				class: "text-center py-5",
-				p {
-					class: "text-muted",
-					{ empty_message }
+			} else if has_error {
+				div {
+					class: "alert alert-danger",
+					{ error_text }
 				}
+			} else if is_empty {
+				div {
+					class: "text-center py-5",
+					p {
+						class: "text-muted",
+						{ empty_message }
+					}
+				}
+			} else {
+				{ user_cards_view }
 			}
-		} else {
-			{ user_cards_view }
 		}
-	}
-})(
+	})(
 		title,
 		is_loading,
 		has_error,

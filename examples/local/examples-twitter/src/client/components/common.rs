@@ -80,28 +80,28 @@ pub fn button(text: &str, variant: ButtonVariant, disabled: bool, on_click: Sign
 	{
 		let on_click = on_click.clone();
 		page!(|class: String, text: String, disabled_attr: String| {
-	button {
-		class: class,
-		r#type: "button",
-		disabled: disabled_attr,
-		@click: move | _event | { on_click . set (true) ; },
-		{ text }
-	}
-})(class, text, disabled_attr)
+			button {
+				class: class,
+				r#type: "button",
+				disabled: disabled_attr,
+				@click: move | _event | { on_click.set (true) ; },
+				{ text }
+			}
+		})(class, text, disabled_attr)
 	}
 
 	#[cfg(not(target_arch = "wasm32"))]
 	{
 		let _ = on_click; // Suppress unused warning
 		page!(|class: String, text: String, disabled_attr: String| {
-	button {
-		class: { class },
-		r#type: "button",
-		disabled: { disabled_attr },
-		data_reactive: "true",
-		{ text }
-	}
-})(class, text, disabled_attr)
+			button {
+				class: { class },
+				r#type: "button",
+				disabled: { disabled_attr },
+				data_reactive: "true",
+				{ text }
+			}
+		})(class, text, disabled_attr)
 	}
 }
 
@@ -110,18 +110,18 @@ pub fn button(text: &str, variant: ButtonVariant, disabled: bool, on_click: Sign
 /// Displays a Bootstrap spinner animation while content is loading.
 pub fn loading_spinner() -> View {
 	page!(|| {
-	div {
-		class: "text-center py-5",
 		div {
-			class: "spinner-border",
-			role: "status",
-			span {
-				class: "visually-hidden",
-				"Loading..."
+			class: "text-center py-5",
+			div {
+				class: "spinner-border",
+				role: "status",
+				span {
+					class: "visually-hidden",
+					"Loading..."
+				}
 			}
 		}
-	}
-})()
+	})()
 }
 
 /// Error alert component
@@ -136,26 +136,26 @@ pub fn error_alert(message: &str, dismissible: bool) -> View {
 	let message = message.to_string();
 	if dismissible {
 		page!(|message: String| {
-	div {
-		class: "alert alert-danger alert-dismissible fade show",
-		role: "alert",
-		{ message }
-		button {
-			r#type: "button",
-			class: "btn-close",
-			data_bs_dismiss: "alert",
-			aria_label: "Close",
-		}
-	}
-})(message)
+			div {
+				class: "alert alert-danger alert-dismissible fade show",
+				role: "alert",
+				{ message }
+				button {
+					r#type: "button",
+					class: "btn-close",
+					data_bs_dismiss: "alert",
+					aria_label: "Close",
+				}
+			}
+		})(message)
 	} else {
 		page!(|message: String| {
-	div {
-		class: "alert alert-danger",
-		role: "alert",
-		{ message }
-	}
-})(message)
+			div {
+				class: "alert alert-danger",
+				role: "alert",
+				{ message }
+			}
+		})(message)
 	}
 }
 
@@ -169,12 +169,12 @@ pub fn error_alert(message: &str, dismissible: bool) -> View {
 pub fn success_alert(message: &str) -> View {
 	let message = message.to_string();
 	page!(|message: String| {
-	div {
-		class: "alert alert-success",
-		role: "alert",
-		{ message }
-	}
-})(message)
+		div {
+			class: "alert alert-success",
+			role: "alert",
+			{ message }
+		}
+	})(message)
 }
 
 /// Text input component
@@ -208,25 +208,25 @@ pub fn text_input(
 	{
 		let value = value.clone();
 		page!(|id_owned: String, label_owned: String, input_type_owned: String, placeholder_owned: String, current_value: String, required_attr: String| {
-	div {
-		class: "mb-3",
-		label {
-			r#for: id_owned . clone (),
-			class: "form-label",
-			{ label_owned }
-		}
-		input {
-			r#type: input_type_owned,
-			class: "form-control",
-			id: id_owned . clone (),
-			name: id_owned,
-			placeholder: placeholder_owned,
-			value: current_value,
-			required: required_attr,
-			@input: move | event : web_sys :: Event | { if let Some (target) = event . target () { if let Ok (input_el) = target . dyn_into :: < web_sys :: HtmlInputElement > () { value . set (input_el . value ()) ; } } },
-		}
-	}
-})(
+			div {
+				class: "mb-3",
+				label {
+					r#for: id_owned.clone(),
+					class: "form-label",
+					{ label_owned }
+				}
+				input {
+					r#type: input_type_owned,
+					class: "form-control",
+					id: id_owned.clone(),
+					name: id_owned,
+					placeholder: placeholder_owned,
+					value: current_value,
+					required: required_attr,
+					@input: move | event : web_sys :: Event | { if let Some (target) = event.target() { if let Ok (input_el) = target.dyn_into :: < web_sys :: HtmlInputElement >() { value.set (input_el.value()) ; } } },
+				}
+			}
+		})(
 			id_owned,
 			label_owned,
 			input_type_owned,
@@ -240,25 +240,25 @@ pub fn text_input(
 	{
 		let _ = value; // Suppress unused warning
 		page!(|id_owned: String, label_owned: String, input_type_owned: String, placeholder_owned: String, current_value: String, required_attr: String| {
-	div {
-		class: "mb-3",
-		label {
-			r#for: { id_owned . clone () },
-			class: "form-label",
-			{ label_owned }
-		}
-		input {
-			r#type: { input_type_owned },
-			class: "form-control",
-			id: { id_owned . clone () },
-			name: { id_owned },
-			placeholder: { placeholder_owned },
-			value: { current_value },
-			required: { required_attr },
-			data_reactive: "true",
-		}
-	}
-})(
+			div {
+				class: "mb-3",
+				label {
+					r#for: { id_owned.clone() },
+					class: "form-label",
+					{ label_owned }
+				}
+				input {
+					r#type: { input_type_owned },
+					class: "form-control",
+					id: { id_owned.clone() },
+					name: { id_owned },
+					placeholder: { placeholder_owned },
+					value: { current_value },
+					required: { required_attr },
+					data_reactive: "true",
+				}
+			}
+		})(
 			id_owned,
 			label_owned,
 			input_type_owned,
@@ -325,31 +325,31 @@ pub fn textarea(
 	{
 		let value = value.clone();
 		page!(|id_owned: String, label_owned: String, rows_str: String, placeholder_owned: String, current_value: String, maxlength_attr: String, show_count: bool, count_class: String, count_text: String| {
-	div {
-		class: "mb-3",
-		label {
-			r#for: id_owned . clone (),
-			class: "form-label",
-			{ label_owned }
-		}
-		textarea {
-			class: "form-control",
-			id: id_owned . clone (),
-			name: id_owned,
-			rows: rows_str,
-			placeholder: placeholder_owned,
-			maxlength: maxlength_attr,
-			@input: move | event : web_sys :: Event | { if let Some (target) = event . target () { if let Ok (textarea_el) = target . dyn_into :: < web_sys :: HtmlTextAreaElement > () { value . set (textarea_el . value ()) ; } } },
-			{ current_value }
-		}
-		if show_count {
-			small {
-				class: count_class,
-				{ count_text }
+			div {
+				class: "mb-3",
+				label {
+					r#for: id_owned.clone(),
+					class: "form-label",
+					{ label_owned }
+				}
+				textarea {
+					class: "form-control",
+					id: id_owned.clone(),
+					name: id_owned,
+					rows: rows_str,
+					placeholder: placeholder_owned,
+					maxlength: maxlength_attr,
+					@input: move | event : web_sys :: Event | { if let Some (target) = event.target() { if let Ok (textarea_el) = target.dyn_into :: < web_sys :: HtmlTextAreaElement >() { value.set (textarea_el.value()) ; } } },
+					{ current_value }
+				}
+				if show_count {
+					small {
+						class: count_class,
+						{ count_text }
+					}
+				}
 			}
-		}
-	}
-})(
+		})(
 			id_owned,
 			label_owned,
 			rows_str,
@@ -366,31 +366,31 @@ pub fn textarea(
 	{
 		let _ = value; // Suppress unused warning
 		page!(|id_owned: String, label_owned: String, rows_str: String, placeholder_owned: String, current_value: String, maxlength_attr: String, show_count: bool, count_class: String, count_text: String| {
-	div {
-		class: "mb-3",
-		label {
-			r#for: { id_owned . clone () },
-			class: "form-label",
-			{ label_owned }
-		}
-		textarea {
-			class: "form-control",
-			id: { id_owned . clone () },
-			name: { id_owned },
-			rows: { rows_str },
-			placeholder: { placeholder_owned },
-			maxlength: { maxlength_attr },
-			data_reactive: "true",
-			{ current_value }
-		}
-		if show_count {
-			small {
-				class: { count_class },
-				{ count_text }
+			div {
+				class: "mb-3",
+				label {
+					r#for: { id_owned.clone() },
+					class: "form-label",
+					{ label_owned }
+				}
+				textarea {
+					class: "form-control",
+					id: { id_owned.clone() },
+					name: { id_owned },
+					rows: { rows_str },
+					placeholder: { placeholder_owned },
+					maxlength: { maxlength_attr },
+					data_reactive: "true",
+					{ current_value }
+				}
+				if show_count {
+					small {
+						class: { count_class },
+						{ count_text }
+					}
+				}
 			}
-		}
-	}
-})(
+		})(
 			id_owned,
 			label_owned,
 			rows_str,
@@ -421,23 +421,20 @@ pub fn avatar(url: Option<&str>, alt: &str, size: u32) -> View {
 	let size_str = format!("{}px", size);
 
 	page!(|src: String, alt_text: String, size_str: String| {
-	img {
-		src: src . clone (),
-		alt: alt_text,
-		class: "rounded-circle",
-		width: size_str . clone (),
-		height: size_str,
-		style: "object-fit: cover;",
-	}
-})(src, alt_text, size_str)
+		img {
+			src: src.clone(),
+			alt: alt_text,
+			class: "rounded-circle",
+			width: size_str.clone(),
+			height: size_str,
+			style: "object-fit: cover;",
+		}
+	})(src, alt_text, size_str)
 }
 
 /// Empty placeholder component
 ///
 /// Displays an empty div (useful for conditional rendering).
 pub fn empty() -> View {
-	page!(|| {
-	div {
-	}
-})()
+	page!(|| { div {} })()
 }

@@ -96,31 +96,31 @@ fn init_router() -> Router {
 /// Home page view
 pub fn home_page_view() -> View {
 	page!(|| {
-	div {
-		class: "container mt-5",
-		h1 {
-			class: "mb-4",
-			"Twitter Clone - Home"
-		}
-		p {
-			class: "lead",
-			"Welcome to the Twitter Clone!"
-		}
 		div {
-			class: "mt-4",
-			a {
-				href: "/login",
-				class: "btn btn-primary me-2",
-				"Login"
+			class: "container mt-5",
+			h1 {
+				class: "mb-4",
+				"Twitter Clone - Home"
 			}
-			a {
-				href: "/register",
-				class: "btn btn-secondary",
-				"Register"
+			p {
+				class: "lead",
+				"Welcome to the Twitter Clone!"
+			}
+			div {
+				class: "mt-4",
+				a {
+					href: "/login",
+					class: "btn btn-primary me-2",
+					"Login"
+				}
+				a {
+					href: "/register",
+					class: "btn btn-secondary",
+					"Register"
+				}
 			}
 		}
-	}
-})()
+	})()
 }
 
 /// Login page view
@@ -146,14 +146,14 @@ pub fn profile_page_view(user_id_str: String) -> View {
 		Err(_) => {
 			// Invalid UUID - show error
 			page!(|| {
-	div {
-		class: "container mt-5",
-		div {
-			class: "alert alert-danger",
-			"Invalid user ID format"
-		}
-	}
-})()
+				div {
+					class: "container mt-5",
+					div {
+						class: "alert alert-danger",
+						"Invalid user ID format"
+					}
+				}
+			})()
 		}
 	}
 }
@@ -169,14 +169,14 @@ pub fn profile_edit_page_view(user_id_str: String) -> View {
 		Err(_) => {
 			// Invalid UUID - show error
 			page!(|| {
-	div {
-		class: "container mt-5",
-		div {
-			class: "alert alert-danger",
-			"Invalid user ID format"
-		}
-	}
-})()
+				div {
+					class: "container mt-5",
+					div {
+						class: "alert alert-danger",
+						"Invalid user ID format"
+					}
+				}
+			})()
 		}
 	}
 }
@@ -190,38 +190,38 @@ pub fn timeline_page_view() -> View {
 	let list_view = tweet_list(None);
 
 	page!(|form_view: View, list_view: View| {
-	div {
-		class: "container mt-5",
-		h1 {
-			class: "mb-4",
-			"Timeline"
+		div {
+			class: "container mt-5",
+			h1 {
+				class: "mb-4",
+				"Timeline"
+			}
+			{ form_view }
+			hr {
+				class: "my-4",
+			}
+			{ list_view }
 		}
-		{ form_view }
-		hr {
-			class: "my-4",
-		}
-		{ list_view }
-	}
-})(form_view, list_view)
+	})(form_view, list_view)
 }
 
 /// Not found page view
 pub fn not_found_page_view() -> View {
 	page!(|| {
-	div {
-		class: "container mt-5",
-		h1 {
-			class: "mb-4",
-			"404 - Page Not Found"
+		div {
+			class: "container mt-5",
+			h1 {
+				class: "mb-4",
+				"404 - Page Not Found"
+			}
+			p {
+				"The page you are looking for does not exist."
+			}
+			a {
+				href: "/",
+				class: "btn btn-primary",
+				"Go Home"
+			}
 		}
-		p {
-			"The page you are looking for does not exist."
-		}
-		a {
-			href: "/",
-			class: "btn btn-primary",
-			"Go Home"
-		}
-	}
-})()
+	})()
 }

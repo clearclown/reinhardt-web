@@ -319,14 +319,14 @@ pub fn tweet_list(user_id: Option<Uuid>) -> View {
 			let tweet_list = tweets.get();
 			if tweet_list.is_empty() {
 				page!(|| {
-	div {
-		class: "text-center py-5",
-		p {
-			class: "text-muted",
-			"No tweets yet. Be the first to post!"
-		}
-	}
-})()
+					div {
+						class: "text-center py-5",
+						p {
+							class: "text-muted",
+							"No tweets yet. Be the first to post!"
+						}
+					}
+				})()
 			} else {
 				ElementView::new("div")
 					.children(

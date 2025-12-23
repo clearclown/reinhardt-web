@@ -89,11 +89,11 @@ pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[Nav
 				.render();
 
 			page!(|link_view: View| {
-	li {
-		class: "nav-item",
-		{ link_view }
-	}
-})(link_view)
+				li {
+					class: "nav-item",
+					{ link_view }
+				}
+			})(link_view)
 		})
 		.collect();
 	let nav_links_view = View::fragment(nav_links);
@@ -111,20 +111,20 @@ pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[Nav
 			.render();
 
 		page!(|username: String, profile_link: View| {
-	div {
-		class: "d-flex align-items-center",
-		span {
-			class: "navbar-text me-3",
-			{ username }
-		}
-		{ profile_link }
-		a {
-			href: "/logout",
-			class: "btn btn-outline-light btn-sm",
-			"Logout"
-		}
-	}
-})(username, profile_link)
+			div {
+				class: "d-flex align-items-center",
+				span {
+					class: "navbar-text me-3",
+					{ username }
+				}
+				{ profile_link }
+				a {
+					href: "/logout",
+					class: "btn btn-outline-light btn-sm",
+					"Logout"
+				}
+			}
+		})(username, profile_link)
 	} else {
 		let login_link = Link::new("/login".to_string(), "Login".to_string())
 			.class("btn btn-outline-light btn-sm me-2")
@@ -134,44 +134,44 @@ pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[Nav
 			.render();
 
 		page!(|login_link: View, register_link: View| {
-	div {
-		class: "d-flex",
-		{ login_link }
-		{ register_link }
-	}
-})(login_link, register_link)
+			div {
+				class: "d-flex",
+				{ login_link }
+				{ register_link }
+			}
+		})(login_link, register_link)
 	};
 
 	page!(|brand_link: View, nav_links_view: View, user_menu: View| {
-	nav {
-		class: "navbar navbar-expand-lg navbar-dark bg-primary",
-		div {
-			class: "container-fluid",
-			{ brand_link }
-			button {
-				class: "navbar-toggler",
-				r#type: "button",
-				data_bs_toggle: "collapse",
-				data_bs_target: "#navbarNav",
-				aria_controls: "navbarNav",
-				aria_expanded: "false",
-				aria_label: "Toggle navigation",
-				span {
-					class: "navbar-toggler-icon",
-				}
-			}
+		nav {
+			class: "navbar navbar-expand-lg navbar-dark bg-primary",
 			div {
-				class: "collapse navbar-collapse",
-				id: "navbarNav",
-				ul {
-					class: "navbar-nav me-auto",
-					{ nav_links_view }
+				class: "container-fluid",
+				{ brand_link }
+				button {
+					class: "navbar-toggler",
+					r#type: "button",
+					data_bs_toggle: "collapse",
+					data_bs_target: "#navbarNav",
+					aria_controls: "navbarNav",
+					aria_expanded: "false",
+					aria_label: "Toggle navigation",
+					span {
+						class: "navbar-toggler-icon",
+					}
 				}
-				{ user_menu }
+				div {
+					class: "collapse navbar-collapse",
+					id: "navbarNav",
+					ul {
+						class: "navbar-nav me-auto",
+						{ nav_links_view }
+					}
+					{ user_menu }
+				}
 			}
 		}
-	}
-})(brand_link, nav_links_view, user_menu)
+	})(brand_link, nav_links_view, user_menu)
 }
 
 /// Sidebar component
@@ -192,32 +192,32 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 			let tweets_text = format!("{} tweets", topic.tweet_count);
 
 			page!(|href: String, name: String, tweets_text: String| {
-	a {
-		href: href,
-		class: "list-group-item list-group-item-action",
-		div {
-			class: "d-flex justify-content-between",
-			strong {
-				{ name }
-			}
-			small {
-				class: "text-muted",
-				{ tweets_text }
-			}
-		}
-	}
-})(href, name, tweets_text)
+				a {
+					href: href,
+					class: "list-group-item list-group-item-action",
+					div {
+						class: "d-flex justify-content-between",
+						strong {
+							{ name }
+						}
+						small {
+							class: "text-muted",
+							{ tweets_text }
+						}
+					}
+				}
+			})(href, name, tweets_text)
 		})
 		.collect();
 
 	let topics_empty = topics_list.is_empty();
 	let topics_view = if topics_empty {
 		page!(|| {
-	div {
-		class: "list-group-item text-muted",
-		"No trending topics"
-	}
-})()
+			div {
+				class: "list-group-item text-muted",
+				"No trending topics"
+			}
+		})()
 	} else {
 		View::fragment(topics_list)
 	};
@@ -237,75 +237,75 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 			let bio_text = user.bio.clone().unwrap_or_default();
 
 			page!(|profile_link: View, has_bio: bool, bio_text: String| {
-	div {
-		class: "list-group-item",
-		div {
-			class: "d-flex justify-content-between align-items-center",
-			div {
-				{ profile_link }
-				if has_bio {
-					small {
-						class: "text-muted d-block",
-						{ bio_text }
+				div {
+					class: "list-group-item",
+					div {
+						class: "d-flex justify-content-between align-items-center",
+						div {
+							{ profile_link }
+							if has_bio {
+								small {
+									class: "text-muted d-block",
+									{ bio_text }
+								}
+							}
+						}
+						button {
+							class: "btn btn-outline-primary btn-sm",
+							"Follow"
+						}
 					}
 				}
-			}
-			button {
-				class: "btn btn-outline-primary btn-sm",
-				"Follow"
-			}
-		}
-	}
-})(profile_link, has_bio, bio_text)
+			})(profile_link, has_bio, bio_text)
 		})
 		.collect();
 
 	let users_empty = users_list.is_empty();
 	let users_view = if users_empty {
 		page!(|| {
-	div {
-		class: "list-group-item text-muted",
-		"No suggestions"
-	}
-})()
+			div {
+				class: "list-group-item text-muted",
+				"No suggestions"
+			}
+		})()
 	} else {
 		View::fragment(users_list)
 	};
 
 	page!(|topics_view: View, users_view: View| {
-	div {
-		class: "sidebar",
-		style: "position: sticky; top: 80px;",
 		div {
-			class: "card mb-4",
+			class: "sidebar",
+			style: "position: sticky; top: 80px;",
 			div {
-				class: "card-header",
-				h6 {
-					class: "mb-0",
-					"Trending"
+				class: "card mb-4",
+				div {
+					class: "card-header",
+					h6 {
+						class: "mb-0",
+						"Trending"
+					}
+				}
+				div {
+					class: "list-group list-group-flush",
+					{ topics_view }
 				}
 			}
 			div {
-				class: "list-group list-group-flush",
-				{ topics_view }
-			}
-		}
-		div {
-			class: "card",
-			div {
-				class: "card-header",
-				h6 {
-					class: "mb-0",
-					"Who to follow"
+				class: "card",
+				div {
+					class: "card-header",
+					h6 {
+						class: "mb-0",
+						"Who to follow"
+					}
+				}
+				div {
+					class: "list-group list-group-flush",
+					{ users_view }
 				}
 			}
-			div {
-				class: "list-group list-group-flush",
-				{ users_view }
-			}
 		}
-	}
-})(topics_view, users_view)
+	})(topics_view, users_view)
 }
 
 /// Footer component
@@ -318,17 +318,17 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 pub fn footer(version: &str) -> View {
 	let version = version.to_string();
 	page!(|version: String| {
-	footer {
-		class: "bg-light text-center py-3 mt-auto border-top",
-		div {
-			class: "container",
-			span {
-				class: "text-muted",
-				{ format ! ("Twitter Clone v{} - Built with Reinhardt" , version) }
+		footer {
+			class: "bg-light text-center py-3 mt-auto border-top",
+			div {
+				class: "container",
+				span {
+					class: "text-muted",
+					{ format ! ("Twitter Clone v{} - Built with Reinhardt" , version) }
+				}
 			}
 		}
-	}
-})(version)
+	})(version)
 }
 
 /// Main layout wrapper
@@ -383,19 +383,19 @@ pub fn main_layout(
 	};
 
 	page!(|header_view: View, main_content: View, footer_view: View| {
-	div {
-		class: "d-flex flex-column min-vh-100",
-		{ header_view }
-		main {
-			class: "flex-grow-1",
-			div {
-				class: "container py-4",
-				{ main_content }
+		div {
+			class: "d-flex flex-column min-vh-100",
+			{ header_view }
+			main {
+				class: "flex-grow-1",
+				div {
+					class: "container py-4",
+					{ main_content }
+				}
 			}
+			{ footer_view }
 		}
-		{ footer_view }
-	}
-})(header_view, main_content, footer_view)
+	})(header_view, main_content, footer_view)
 }
 
 /// Simple page layout without sidebar
