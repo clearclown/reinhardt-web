@@ -48,7 +48,7 @@ impl<T: Component> IntoView for T {
 
 /// A boxed component for dynamic dispatch.
 #[allow(dead_code)]
-pub struct DynComponent {
+pub(super) struct DynComponent {
 	inner: Box<dyn Component>,
 	name: &'static str,
 }
@@ -56,7 +56,7 @@ pub struct DynComponent {
 #[allow(dead_code)]
 impl DynComponent {
 	/// Creates a new dynamic component.
-	pub fn new<T: Component>(component: T) -> Self {
+	pub(super) fn new<T: Component>(component: T) -> Self {
 		Self {
 			inner: Box::new(component),
 			name: T::name(),
@@ -64,12 +64,12 @@ impl DynComponent {
 	}
 
 	/// Returns the component's name.
-	pub fn name(&self) -> &'static str {
+	pub(super) fn name(&self) -> &'static str {
 		self.name
 	}
 
 	/// Renders the component.
-	pub fn render(&self) -> View {
+	pub(super) fn render(&self) -> View {
 		self.inner.render()
 	}
 }
@@ -86,7 +86,7 @@ impl std::fmt::Debug for DynComponent {
 ///
 /// This allows simple functions to be used as components.
 #[allow(dead_code)]
-pub trait FnComponent<Args> {
+pub(super) trait FnComponent<Args> {
 	/// The output type of the function.
 	type Output: IntoView;
 

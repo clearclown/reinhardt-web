@@ -1,6 +1,8 @@
 //! IntoView trait and View enum for component rendering.
 
-use crate::dom::{Element, EventType};
+#[cfg(target_arch = "wasm32")]
+use crate::dom::Element;
+use crate::dom::EventType;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -8,9 +10,22 @@ use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
 pub type ViewEventHandler = Arc<dyn Fn(web_sys::Event) + 'static>;
 
-/// Type alias for event handler functions (non-WASM placeholder).
+/// Dummy event type for non-WASM environments.
+///
+/// This type exists to maintain API compatibility between WASM and non-WASM builds.
+/// In non-WASM environments, event handlers still accept an argument (this dummy type)
+/// so that user code doesn't need conditional compilation for event handler signatures.
 #[cfg(not(target_arch = "wasm32"))]
-pub type ViewEventHandler = Arc<dyn Fn() + Send + Sync + 'static>;
+#[derive(Debug, Clone, Default)]
+pub struct DummyEvent;
+
+/// Type alias for event handler functions (non-WASM placeholder).
+///
+/// Uses `DummyEvent` to maintain API compatibility with the WASM version,
+/// allowing the same event handler signatures (e.g., `|_| { ... }`) to work
+/// in both WASM and non-WASM environments.
+#[cfg(not(target_arch = "wasm32"))]
+pub type ViewEventHandler = Arc<dyn Fn(DummyEvent) + Send + Sync + 'static>;
 
 /// Error type for mounting views to the DOM.
 #[derive(Debug, Clone)]
@@ -133,6 +148,54 @@ impl ElementView {
 	pub fn on(mut self, event_type: EventType, handler: ViewEventHandler) -> Self {
 		self.event_handlers.push((event_type, handler));
 		self
+	}
+
+	/// Adds an event listener using string event name (convenience method).
+	///
+	/// This is a convenience wrapper around [`on`] that accepts a string event name
+	/// and a closure. The event name is parsed to [`EventType`] at runtime.
+	///
+	/// # Arguments
+	///
+	/// * `event_name` - The event name (e.g., "click", "submit", "input")
+	/// * `handler` - The event handler closure
+	///
+	/// # Panics
+	///
+	/// Panics if the event name is not a recognized event type.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// ElementView::new("button")
+	///     .listener("click", |event| {
+	///         console::log_1(&"Button clicked!".into());
+	///     })
+	/// ```
+	#[cfg(target_arch = "wasm32")]
+	pub fn listener<F>(self, event_name: &str, handler: F) -> Self
+	where
+		F: Fn(web_sys::Event) + 'static,
+	{
+		use std::str::FromStr;
+		let event_type = EventType::from_str(event_name)
+			.unwrap_or_else(|_| panic!("Unknown event type: {}", event_name));
+		self.on(event_type, Arc::new(handler))
+	}
+
+	/// Adds an event listener using string event name (non-WASM stub).
+	///
+	/// In non-WASM environments, this is a stub that stores the handler
+	/// for API compatibility but won't actually attach to DOM events.
+	#[cfg(not(target_arch = "wasm32"))]
+	pub fn listener<F>(self, event_name: &str, handler: F) -> Self
+	where
+		F: Fn(DummyEvent) + Send + Sync + 'static,
+	{
+		use std::str::FromStr;
+		let event_type = EventType::from_str(event_name)
+			.unwrap_or_else(|_| panic!("Unknown event type: {}", event_name));
+		self.on(event_type, Arc::new(handler))
 	}
 
 	/// Returns the tag name.
@@ -281,8 +344,11 @@ impl View {
 	}
 
 	/// Mounts the view (non-WASM stub).
+	///
+	/// In non-WASM environments, this function is a no-op stub that always succeeds.
+	/// The `_parent` parameter is unused and exists only for API compatibility.
 	#[cfg(not(target_arch = "wasm32"))]
-	pub fn mount(self, _parent: &Element) -> Result<(), MountError> {
+	pub fn mount<T>(self, _parent: &T) -> Result<(), MountError> {
 		Ok(())
 	}
 }
@@ -313,6 +379,12 @@ impl IntoView for ElementView {
 impl IntoView for String {
 	fn into_view(self) -> View {
 		View::Text(Cow::Owned(self))
+	}
+}
+
+impl IntoView for &String {
+	fn into_view(self) -> View {
+		View::Text(Cow::Owned(self.clone()))
 	}
 }
 
@@ -369,17 +441,6 @@ impl<A: IntoView, B: IntoView, C: IntoView, D: IntoView> IntoView for (A, B, C, 
 			self.2.into_view(),
 			self.3.into_view(),
 		])
-	}
-}
-
-// Integration with existing Element type
-
-impl IntoView for Element {
-	fn into_view(self) -> View {
-		// Convert Element to ElementView by extracting tag and attributes
-		// This is a simplified implementation - in practice, we'd need
-		// to extract the actual DOM state
-		View::Empty // Placeholder - actual implementation would serialize the element
 	}
 }
 

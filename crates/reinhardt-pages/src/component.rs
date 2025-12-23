@@ -32,6 +32,8 @@ mod into_view;
 mod props;
 mod r#trait;
 
-pub use into_view::{ElementView, IntoView, MountError, View};
+#[cfg(not(target_arch = "wasm32"))]
+pub use into_view::DummyEvent;
+pub use into_view::{ElementView, IntoView, MountError, View, ViewEventHandler};
 pub use props::Props;
 pub use r#trait::Component;

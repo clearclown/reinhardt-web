@@ -40,7 +40,7 @@ pub trait Props: Default {
 /// Empty props for components that don't need any.
 #[derive(Debug, Clone, Default)]
 #[allow(dead_code)]
-pub struct EmptyProps;
+pub(super) struct EmptyProps;
 
 impl Props for EmptyProps {
 	fn from_attrs(_attrs: &HashMap<String, String>) -> Self {
@@ -51,31 +51,35 @@ impl Props for EmptyProps {
 /// Builder for constructing props dynamically.
 #[derive(Debug, Clone, Default)]
 #[allow(dead_code)]
-pub struct PropsBuilder {
+pub(super) struct PropsBuilder {
 	attrs: HashMap<String, String>,
 }
 
 #[allow(dead_code)]
 impl PropsBuilder {
 	/// Creates a new props builder.
-	pub fn new() -> Self {
+	pub(super) fn new() -> Self {
 		Self::default()
 	}
 
 	/// Sets an attribute value.
-	pub fn attr(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+	pub(super) fn attr(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
 		self.attrs.insert(name.into(), value.into());
 		self
 	}
 
 	/// Sets a boolean attribute.
-	pub fn bool_attr(mut self, name: impl Into<String>, value: bool) -> Self {
+	pub(super) fn bool_attr(mut self, name: impl Into<String>, value: bool) -> Self {
 		self.attrs.insert(name.into(), value.to_string());
 		self
 	}
 
 	/// Sets an optional attribute.
-	pub fn optional_attr(self, name: impl Into<String>, value: Option<impl Into<String>>) -> Self {
+	pub(super) fn optional_attr(
+		self,
+		name: impl Into<String>,
+		value: Option<impl Into<String>>,
+	) -> Self {
 		match value {
 			Some(v) => self.attr(name, v),
 			None => self,
@@ -83,19 +87,19 @@ impl PropsBuilder {
 	}
 
 	/// Builds the props.
-	pub fn build<P: Props>(self) -> P {
+	pub(super) fn build<P: Props>(self) -> P {
 		P::from_attrs(&self.attrs)
 	}
 
 	/// Returns the raw attributes.
-	pub fn into_attrs(self) -> HashMap<String, String> {
+	pub(super) fn into_attrs(self) -> HashMap<String, String> {
 		self.attrs
 	}
 }
 
 /// Serializes props to HTML attributes for SSR.
 #[allow(dead_code)]
-pub fn serialize_props<P: serde::Serialize>(
+pub(super) fn serialize_props<P: serde::Serialize>(
 	props: &P,
 ) -> Result<HashMap<String, String>, serde_json::Error> {
 	let json = serde_json::to_value(props)?;
@@ -119,7 +123,7 @@ pub fn serialize_props<P: serde::Serialize>(
 
 /// Deserializes props from HTML attributes for hydration.
 #[allow(dead_code)]
-pub fn deserialize_props<P: serde::de::DeserializeOwned>(
+pub(super) fn deserialize_props<P: serde::de::DeserializeOwned>(
 	attrs: &HashMap<String, String>,
 ) -> Result<P, serde_json::Error> {
 	let json = serde_json::to_value(attrs)?;

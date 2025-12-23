@@ -31,21 +31,20 @@
 //! ## Example
 //!
 //! ```ignore
-//! use reinhardt_pages::prelude::*;
+//! use reinhardt_pages::{Signal, View, page};
 //!
-//!
-//! #[component]
-//! fn Counter() -> impl IntoView {
+//! fn counter() -> View {
 //!     let count = Signal::new(0);
 //!
-//!     view! {
-//!         <div>
-//!             <p>"Count: " {count}</p>
-//!             <button on:click=move |_| count.update(|n| *n += 1)>
+//!     page!(|| {
+//!         div {
+//!             p { "Count: " }
+//!             button {
+//!                 @click: |_| count.update(|n| *n += 1),
 //!                 "Increment"
-//!             </button>
-//!         </div>
-//!     }
+//!             }
+//!         }
+//!     })
 //! }
 //! ```
 
@@ -53,6 +52,7 @@
 
 // Core modules
 pub mod builder;
+pub mod callback;
 pub mod dom;
 pub mod reactive;
 
@@ -87,6 +87,7 @@ pub use builder::{
 		a, button, div, form, h1, h2, h3, img, input, li, ol, option, p, select, span, textarea, ul,
 	},
 };
+pub use callback::{Callback, IntoEventHandler, into_event_handler};
 pub use component::{Component, ElementView, IntoView, Props, View};
 pub use csrf::{CsrfManager, get_csrf_token};
 pub use dom::{Document, Element, EventHandle, EventType, document};
@@ -96,6 +97,18 @@ pub use hydration::{HydrationContext, HydrationError, hydrate};
 pub use reactive::{Effect, Memo, Resource, ResourceState, Signal};
 #[cfg(target_arch = "wasm32")]
 pub use reactive::{create_resource, create_resource_with_deps};
+// Re-export Context system
+pub use reactive::{
+	Context, ContextGuard, create_context, get_context, provide_context, remove_context,
+};
+// Re-export Hooks API
+pub use reactive::{
+	ActionState, Dispatch, OptimisticState, Ref, SetState, SharedSetState, SharedSignal,
+	TransitionState, use_action_state, use_callback, use_context, use_debug_value,
+	use_deferred_value, use_effect, use_effect_event, use_id, use_layout_effect, use_memo,
+	use_optimistic, use_reducer, use_ref, use_shared_state, use_state, use_sync_external_store,
+	use_transition,
+};
 #[cfg(not(target_arch = "wasm32"))]
 pub use reinhardt_forms::{
 	Widget,
@@ -104,3 +117,6 @@ pub use reinhardt_forms::{
 pub use router::{Link, PathPattern, Route, Router, RouterOutlet};
 pub use server_fn::{ServerFn, ServerFnError};
 pub use ssr::{SsrOptions, SsrRenderer, SsrState};
+
+// Re-export procedural macros
+pub use reinhardt_pages_macros::page;
