@@ -1,4 +1,83 @@
-//! Application configuration and registry for Reinhardt
+//! # Reinhardt Apps
+//!
+//! Django-inspired application configuration and registry system for Reinhardt.
+//!
+//! ## Overview
+//!
+//! This crate provides the infrastructure for managing Django-style applications
+//! in a Reinhardt project. It handles application registration, configuration,
+//! model discovery, and lifecycle management.
+//!
+//! ## Features
+//!
+//! - **[`AppConfig`]**: Application configuration with metadata and settings
+//! - **[`Apps`]**: Central registry for all installed applications
+//! - **[`ApplicationBuilder`]**: Builder pattern for fluent application construction
+//! - **Model Discovery**: Automatic model and migration discovery via [`discovery`] module
+//! - **Signals**: Application lifecycle signals via [`signals`] module
+//! - **Validation**: Registry validation for circular dependencies and duplicates
+//!
+//! ## Modules
+//!
+//! - [`apps`]: Core [`AppConfig`] and [`Apps`] registry
+//! - [`builder`]: [`ApplicationBuilder`] for fluent application construction
+//! - [`discovery`]: Automatic model, migration, and relationship discovery
+//! - [`registry`]: Global model and relationship registry ([`MODELS`], [`RELATIONSHIPS`])
+//! - [`signals`]: Application lifecycle signals
+//! - [`validation`]: Registry validation utilities
+//!
+//! ## Quick Start
+//!
+//! ```rust,ignore
+//! use reinhardt_apps::{ApplicationBuilder, AppConfig, Settings};
+//!
+//! // Build an application with multiple apps
+//! let app = ApplicationBuilder::new()
+//!     .settings(Settings::default())
+//!     .add_app(AppConfig::new("users", "myproject.users"))
+//!     .add_app(AppConfig::new("blog", "myproject.blog"))
+//!     .build()
+//!     .expect("Failed to build application");
+//!
+//! // Check if an app is installed
+//! if app.apps_registry().is_installed("users") {
+//!     println!("Users app is installed");
+//! }
+//! ```
+//!
+//! ## Model Registry
+//!
+//! Models are automatically discovered and registered in the global registry:
+//!
+//! ```rust,ignore
+//! use reinhardt_apps::{get_registered_models, find_model};
+//!
+//! // Get all registered models
+//! let models = get_registered_models();
+//!
+//! // Find a specific model by name
+//! if let Some(user_model) = find_model("User") {
+//!     println!("Found User model in app: {}", user_model.app_label);
+//! }
+//! ```
+//!
+//! ## Application Lifecycle
+//!
+//! 1. **Configuration**: Define [`AppConfig`] for each application
+//! 2. **Registration**: Add apps to [`ApplicationBuilder`]
+//! 3. **Discovery**: Models and migrations are automatically discovered
+//! 4. **Validation**: Registry is validated for consistency
+//! 5. **Ready**: Application signals are fired when setup is complete
+//!
+//! ## Re-exports
+//!
+//! This crate re-exports commonly used types from other Reinhardt crates:
+//!
+//! - From `reinhardt-http`: [`Request`], [`Response`], [`StreamBody`]
+//! - From `reinhardt-settings`: [`Settings`], [`DatabaseConfig`], [`MiddlewareConfig`]
+//! - From `reinhardt-exception`: [`Error`], [`Result`]
+//! - From `reinhardt-server`: [`HttpServer`], [`serve`]
+//! - From `reinhardt-types`: [`Handler`], [`Middleware`], [`MiddlewareChain`]
 
 pub mod apps;
 pub mod builder;

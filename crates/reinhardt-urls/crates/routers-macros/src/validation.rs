@@ -2,7 +2,7 @@
 
 /// Errors that can occur during path validation
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum PathValidationError {
+pub(crate) enum PathValidationError {
 	/// Path does not start with '/'
 	MustStartWithSlash,
 	/// Unmatched opening brace '{'
@@ -22,7 +22,7 @@ pub enum PathValidationError {
 }
 
 /// Validates URL path syntax
-pub fn validate_path_syntax(path: &str) -> Result<(), PathValidationError> {
+pub(crate) fn validate_path_syntax(path: &str) -> Result<(), PathValidationError> {
 	// Check if path starts with '/'
 	if !path.starts_with('/') {
 		return Err(PathValidationError::MustStartWithSlash);

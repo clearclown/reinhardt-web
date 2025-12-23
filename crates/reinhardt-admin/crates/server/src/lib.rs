@@ -43,6 +43,10 @@ pub mod import;
 pub mod list;
 pub mod update;
 
+// Server-side only modules
+#[cfg(not(target_arch = "wasm32"))]
+pub mod type_inference;
+
 // Re-exports
 pub use create::*;
 pub use dashboard::*;

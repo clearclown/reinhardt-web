@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 #[derive(Args)]
-pub struct DiffArgs {
+pub(crate) struct DiffArgs {
 	/// First configuration file
 	#[arg(value_name = "FILE1")]
 	pub file1: PathBuf,
@@ -25,7 +25,7 @@ pub struct DiffArgs {
 }
 /// Documentation for `execute`
 ///
-pub async fn execute(args: DiffArgs) -> anyhow::Result<()> {
+pub(crate) async fn execute(args: DiffArgs) -> anyhow::Result<()> {
 	output::info("Comparing configuration files");
 
 	// Load both files

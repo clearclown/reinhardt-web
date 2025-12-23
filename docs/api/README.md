@@ -2,7 +2,8 @@
 
 Welcome to the Reinhardt API reference documentation. This guide provides comprehensive information about Reinhardt's APIs, modules, and components.
 
-> **Note**: Full API documentation is available at [docs.rs/reinhardt](https://docs.rs/reinhardt) (coming soon).
+> **Note**: Full API documentation will be available at [docs.rs/reinhardt](https://docs.rs/reinhardt) once published to crates.io.
+> In the meantime, comprehensive documentation is available in each crate's `lib.rs` file.
 
 ## Reinhardt Crate Structure
 
@@ -72,7 +73,8 @@ Core utilities and fundamental types used throughout the framework.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (available after crates.io publish)
+- See `crates/reinhardt-core/src/lib.rs` for current documentation
 
 ### reinhardt-views
 
@@ -104,7 +106,8 @@ async fn my_view(request: Request) -> ViewResult<Response> {
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-views) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-views) (available after crates.io publish)
+- See `crates/reinhardt-views/crates/viewsets/src/lib.rs` for comprehensive ViewSets documentation
 
 ### reinhardt-di::params
 
@@ -145,7 +148,8 @@ async fn get_user(
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-di) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-di) (available after crates.io publish)
+- See `crates/reinhardt-di/src/lib.rs` for comprehensive DI documentation
 - Feature flag: `reinhardt-di = { version = "...", features = ["params"] }`
 
 ### reinhardt-di
@@ -183,7 +187,8 @@ async fn handler(db: Depends<Database>) -> Result<Response> {
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-di) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-di) (available after crates.io publish)
+- See `crates/reinhardt-di/src/lib.rs` for comprehensive DI documentation
 - [Tutorial: Dependency Injection](../tutorials/en/07-dependency-injection.md)
 
 ## Database & ORM
@@ -263,7 +268,8 @@ let users = User::objects()
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-db) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-db) (available after crates.io publish)
+- See `crates/reinhardt-db/crates/orm/src/lib.rs` for ORM documentation
 - [SeaQuery Documentation](https://docs.rs/sea-query/)
 
 ### reinhardt-db::migrations
@@ -280,7 +286,8 @@ Database migration system.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-db) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-db) (available after crates.io publish)
+- See `crates/reinhardt-db/crates/migrations/src/lib.rs` for migrations documentation
 
 ### reinhardt-db
 
@@ -296,7 +303,8 @@ Low-level database operations and connection management.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-db) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-db) (available after crates.io publish)
+- See `crates/reinhardt-db/crates/backends/src/lib.rs` for backends documentation
 
 ## REST API Components
 
@@ -336,7 +344,8 @@ impl Serializer<User> for UserSerializer {
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (available after crates.io publish)
+- See `crates/reinhardt-rest/crates/serializers/src/lib.rs` for comprehensive serializers documentation
 - [Tutorial: Serialization](../tutorials/en/rest/1-serialization.md)
 
 ### reinhardt-views (viewsets feature)
@@ -370,7 +379,8 @@ reinhardt-views = { version = "0.1.0-alpha.1", features = ["viewsets"] }
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-views) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-views) (available after crates.io publish)
+- See `crates/reinhardt-views/crates/viewsets/src/lib.rs` for comprehensive ViewSets documentation
 - [Tutorial: ViewSets and Routers](../tutorials/en/rest/6-viewsets-and-routers.md)
 
 ### reinhardt-rest::routers / reinhardt-urls::routers
@@ -397,8 +407,9 @@ router.register("posts", post_viewset);
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
-- [Module documentation](https://docs.rs/reinhardt-urls) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (available after crates.io publish)
+- [Module documentation](https://docs.rs/reinhardt-urls) (available after crates.io publish)
+- See `crates/reinhardt-urls/src/lib.rs` for URL routing documentation
 
 ### reinhardt-core::pagination
 
@@ -422,7 +433,7 @@ let pagination = PageNumberPagination::new(25); // 25 items per page
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (available after crates.io publish)
 
 ### reinhardt-rest::filters
 
@@ -438,7 +449,7 @@ Query filtering for ViewSets.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (available after crates.io publish)
 
 ### reinhardt-rest::throttling
 
@@ -454,7 +465,7 @@ Rate limiting for API endpoints.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-rest) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-rest) (available after crates.io publish)
 
 ## Authentication & Security
 
@@ -485,7 +496,7 @@ let auth = JwtAuth::new(secret_key);
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-auth) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-auth) (available after crates.io publish)
 - [Tutorial: Authentication & Permissions](../tutorials/en/rest/4-authentication-and-permissions.md)
 
 ## Additional Components
@@ -496,7 +507,8 @@ Form handling and validation.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-forms) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-forms) (available after crates.io publish)
+- See `crates/reinhardt-forms/src/lib.rs` for comprehensive forms documentation
 
 ### reinhardt-pages
 
@@ -779,7 +791,7 @@ reinhardt-pages = { version = "0.1.0-alpha.1", features = ["pages-full"] }
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-pages) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-pages) (available after crates.io publish)
 - [Tutorial: Building Interactive UIs](../tutorials/en/pages/1-getting-started.md) (planned)
 
 ### reinhardt-core::backends (cache)
@@ -790,7 +802,7 @@ Caching backends (Redis, in-memory).
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (available after crates.io publish)
 
 ### reinhardt-auth::sessions
 
@@ -800,7 +812,7 @@ Session management.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-auth) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-auth) (available after crates.io publish)
 
 ### reinhardt-mail
 
@@ -808,7 +820,7 @@ Email utilities.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-mail) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-mail) (available after crates.io publish)
 
 ### reinhardt-utils::static
 
@@ -818,7 +830,7 @@ Static file serving.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-utils) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-utils) (available after crates.io publish)
 
 ### reinhardt-core::backends (storage)
 
@@ -828,7 +840,7 @@ File storage backends (S3, local).
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-core) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-core) (available after crates.io publish)
 
 ### reinhardt-websockets
 
@@ -836,7 +848,7 @@ WebSocket support.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-websockets) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-websockets) (available after crates.io publish)
 
 ### reinhardt-graphql
 
@@ -844,7 +856,7 @@ GraphQL schema and resolvers.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-graphql) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-graphql) (available after crates.io publish)
 
 ### reinhardt-i18n
 
@@ -852,7 +864,7 @@ Internationalization and localization.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-i18n) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-i18n) (available after crates.io publish)
 
 ## Configuration
 
@@ -865,7 +877,7 @@ Configuration system and settings management.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-conf) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-conf) (available after crates.io publish)
 
 ## Testing
 
@@ -875,7 +887,8 @@ Testing utilities and helpers.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-test) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-test) (available after crates.io publish)
+- See `crates/reinhardt-test/src/lib.rs` for comprehensive testing documentation
 
 ## Meta Packages
 
@@ -885,7 +898,7 @@ Main package that re-exports all components based on feature flags.
 
 **Documentation:**
 
-- [Main documentation](https://docs.rs/reinhardt) (coming soon)
+- [Main documentation](https://docs.rs/reinhardt) (available after crates.io publish)
 - [Feature Flags Guide](../FEATURE_FLAGS.md)
 
 ### reinhardt-micro
@@ -894,7 +907,7 @@ Lightweight version for microservices.
 
 **Documentation:**
 
-- [Module documentation](https://docs.rs/reinhardt-micro) (coming soon)
+- [Module documentation](https://docs.rs/reinhardt-micro) (available after crates.io publish)
 
 ## Common Patterns
 
@@ -958,4 +971,4 @@ Found an error in the documentation? Want to improve it?
 
 ---
 
-**Note**: This is a high-level overview. For detailed API documentation with all methods, types, and examples, visit [docs.rs/reinhardt](https://docs.rs/reinhardt) once published.
+**Note**: This is a high-level overview. Full API documentation will be available at [docs.rs/reinhardt](https://docs.rs/reinhardt) once published to crates.io. In the meantime, comprehensive documentation is available in each crate's `lib.rs` file.

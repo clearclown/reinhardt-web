@@ -6,7 +6,7 @@ use serde_json::Value;
 
 /// Output format for displaying values
 #[derive(Debug, Clone, Copy)]
-pub enum OutputFormat {
+pub(crate) enum OutputFormat {
 	Text,
 	Json,
 	Toml,
@@ -16,29 +16,29 @@ pub enum OutputFormat {
 // See OutputFormatArg in commands/show.rs
 /// Print a success message
 ///
-pub fn success(msg: &str) {
+pub(crate) fn success(msg: &str) {
 	println!("{} {}", "✓".green().bold(), msg);
 }
 /// Print an error message
 ///
-pub fn error(msg: &str) {
+pub(crate) fn error(msg: &str) {
 	eprintln!("{} {}", "✗".red().bold(), msg);
 }
 /// Print a warning message
 ///
-pub fn warning(msg: &str) {
+pub(crate) fn warning(msg: &str) {
 	println!("{} {}", "⚠".yellow().bold(), msg);
 }
 /// Print an info message
 ///
-pub fn info(msg: &str) {
+pub(crate) fn info(msg: &str) {
 	println!("{} {}", "ℹ".blue().bold(), msg);
 }
 // Note: key_value(), table_header(), and table_row() were removed as unused
 // These were placeholder utility functions that were never integrated into any command
 /// Format and print a value based on the output format
 ///
-pub fn print_value<T: Serialize>(value: &T, format: OutputFormat) -> anyhow::Result<()> {
+pub(crate) fn print_value<T: Serialize>(value: &T, format: OutputFormat) -> anyhow::Result<()> {
 	match format {
 		OutputFormat::Json => {
 			let json = serde_json::to_string_pretty(value)?;
@@ -88,7 +88,7 @@ fn print_value_text(value: &Value, indent: usize) {
 }
 /// Print a diff between two values
 ///
-pub fn print_diff(key: &str, old_value: Option<&str>, new_value: Option<&str>) {
+pub(crate) fn print_diff(key: &str, old_value: Option<&str>, new_value: Option<&str>) {
 	match (old_value, new_value) {
 		(Some(old), Some(new)) if old != new => {
 			println!(

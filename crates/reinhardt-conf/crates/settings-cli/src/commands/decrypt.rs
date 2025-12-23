@@ -5,7 +5,7 @@ use clap::Args;
 use std::path::PathBuf;
 
 #[derive(Args)]
-pub struct DecryptArgs {
+pub(crate) struct DecryptArgs {
 	/// Encrypted configuration file
 	#[arg(value_name = "FILE")]
 	pub file: PathBuf,
@@ -24,7 +24,7 @@ pub struct DecryptArgs {
 }
 /// Documentation for `execute`
 ///
-pub async fn execute(args: DecryptArgs) -> anyhow::Result<()> {
+pub(crate) async fn execute(args: DecryptArgs) -> anyhow::Result<()> {
 	{
 		output::info(&format!("Decrypting configuration file: {:?}", args.file));
 

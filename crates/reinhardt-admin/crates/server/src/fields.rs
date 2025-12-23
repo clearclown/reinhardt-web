@@ -9,6 +9,10 @@ use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::error::MapServerFnError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::type_inference::{get_field_metadata, infer_admin_field_type, infer_required};
+#[cfg(not(target_arch = "wasm32"))]
+use reinhardt_utils_core::text::humanize_field_name;
 
 /// Get field definitions for dynamic form generation
 ///
@@ -46,17 +50,27 @@ pub async fn get_fields(
 		.unwrap_or_else(|| model_admin.list_display());
 	let readonly_fields = model_admin.readonly_fields();
 
-	// Build field metadata
+	// Build field metadata with type inference from global registry
+	let table_name = model_admin.table_name();
 	let fields = field_names
 		.iter()
 		.map(|&name| {
 			let is_readonly = readonly_fields.contains(&name);
 
+			// Try to get field metadata from the global model registry
+			let (field_type, required) = get_field_metadata(table_name, name)
+				.map(|meta| {
+					let admin_type = infer_admin_field_type(&meta.field_type);
+					let is_required = infer_required(&meta);
+					(admin_type, is_required)
+				})
+				.unwrap_or_else(|| (FieldType::Text, false));
+
 			FieldInfo {
 				name: name.to_string(),
-				label: name.to_string(),     // TODO: Humanize field name
-				field_type: FieldType::Text, // TODO: Infer field type from schema
-				required: false,             // TODO: Infer required from schema
+				label: humanize_field_name(name),
+				field_type,
+				required,
 				readonly: is_readonly,
 				help_text: None,
 				placeholder: None,

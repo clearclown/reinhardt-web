@@ -6,7 +6,7 @@ use reinhardt_settings::prelude::*;
 use std::path::PathBuf;
 
 #[derive(Args)]
-pub struct ValidateArgs {
+pub(crate) struct ValidateArgs {
 	/// Configuration file to validate
 	#[arg(value_name = "FILE")]
 	pub file: PathBuf,
@@ -17,7 +17,7 @@ pub struct ValidateArgs {
 }
 /// Documentation for `execute`
 ///
-pub async fn execute(args: ValidateArgs) -> anyhow::Result<()> {
+pub(crate) async fn execute(args: ValidateArgs) -> anyhow::Result<()> {
 	output::info(&format!("Validating configuration file: {:?}", args.file));
 
 	// Check if file exists

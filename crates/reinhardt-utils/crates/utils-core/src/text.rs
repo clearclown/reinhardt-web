@@ -260,6 +260,22 @@ pub fn phone_format(number: &str) -> String {
 	}
 }
 
+/// Convert snake_case field names to human-readable labels
+///
+/// # Examples
+///
+/// ```
+/// use reinhardt_utils_core::text::humanize_field_name;
+///
+/// assert_eq!(humanize_field_name("created_at"), "Created At");
+/// assert_eq!(humanize_field_name("user_id"), "User Id");
+/// assert_eq!(humanize_field_name("is_active"), "Is Active");
+/// ```
+pub fn humanize_field_name(field_name: &str) -> String {
+	let with_spaces = field_name.replace('_', " ");
+	title(&with_spaces)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -476,6 +492,33 @@ mod tests {
 	#[test]
 	fn test_title_mixed_case() {
 		assert_eq!(title("hElLo WoRlD"), "Hello World");
+	}
+
+	#[test]
+	fn test_humanize_field_name() {
+		assert_eq!(humanize_field_name("created_at"), "Created At");
+		assert_eq!(humanize_field_name("user_id"), "User Id");
+		assert_eq!(humanize_field_name("is_active"), "Is Active");
+	}
+
+	#[test]
+	fn test_humanize_field_name_single_word() {
+		assert_eq!(humanize_field_name("name"), "Name");
+	}
+
+	#[test]
+	fn test_humanize_field_name_no_underscores() {
+		assert_eq!(humanize_field_name("username"), "Username");
+	}
+
+	#[test]
+	fn test_humanize_field_name_multiple_underscores() {
+		assert_eq!(humanize_field_name("user_full_name"), "User Full Name");
+	}
+
+	#[test]
+	fn test_humanize_field_name_empty() {
+		assert_eq!(humanize_field_name(""), "");
 	}
 }
 

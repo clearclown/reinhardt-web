@@ -7,7 +7,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 
 /// Global signal registry
-pub struct SignalRegistry {
+pub(crate) struct SignalRegistry {
 	signals: RwLock<HashMap<(TypeId, String), Box<dyn Any + Send + Sync>>>,
 }
 
@@ -19,7 +19,7 @@ impl SignalRegistry {
 	}
 
 	/// Get or create a signal for a specific type and name
-	pub fn get_or_create<T: Send + Sync + 'static>(&self, name: SignalName) -> Signal<T> {
+	pub(crate) fn get_or_create<T: Send + Sync + 'static>(&self, name: SignalName) -> Signal<T> {
 		let type_id = TypeId::of::<T>();
 		let key = (type_id, name.as_str().to_string());
 
@@ -41,7 +41,7 @@ impl SignalRegistry {
 
 	/// Get or create a signal with a string name (for backward compatibility)
 	#[doc(hidden)]
-	pub fn get_or_create_with_string<T: Send + Sync + 'static>(
+	pub(crate) fn get_or_create_with_string<T: Send + Sync + 'static>(
 		&self,
 		name: impl Into<String>,
 	) -> Signal<T> {

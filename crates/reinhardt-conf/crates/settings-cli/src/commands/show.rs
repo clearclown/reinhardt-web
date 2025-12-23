@@ -5,7 +5,7 @@ use clap::Args;
 use std::path::PathBuf;
 
 #[derive(Args)]
-pub struct ShowArgs {
+pub(crate) struct ShowArgs {
 	/// Configuration file to read
 	#[arg(value_name = "FILE")]
 	pub file: PathBuf,
@@ -24,7 +24,7 @@ pub struct ShowArgs {
 }
 
 #[derive(Debug, Clone, clap::ValueEnum)]
-pub enum OutputFormatArg {
+pub(crate) enum OutputFormatArg {
 	Text,
 	Json,
 	Toml,
@@ -41,7 +41,7 @@ impl From<OutputFormatArg> for OutputFormat {
 }
 /// Documentation for `execute`
 ///
-pub async fn execute(args: ShowArgs) -> anyhow::Result<()> {
+pub(crate) async fn execute(args: ShowArgs) -> anyhow::Result<()> {
 	output::info(&format!("Reading configuration file: {:?}", args.file));
 
 	// Check if file exists

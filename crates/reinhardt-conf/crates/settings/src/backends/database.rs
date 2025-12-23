@@ -175,26 +175,41 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn create_table(&self) -> Result<(), String> {
-		let sql = r#"
-            CREATE TABLE IF NOT EXISTS settings (
-                key VARCHAR(255) PRIMARY KEY,
-                value TEXT NOT NULL,
-                expire_date TEXT
-            )
-        "#;
+		use sea_query::{Alias, ColumnDef, Index, SqliteQueryBuilder, Table};
 
-		sqlx::query(sql)
+		// Build CREATE TABLE statement using sea-query
+		// Note: Using SqliteQueryBuilder as it produces standard SQL compatible with most databases
+		let stmt = Table::create()
+			.table(Alias::new("settings"))
+			.if_not_exists()
+			.col(
+				ColumnDef::new(Alias::new("key"))
+					.string_len(255)
+					.not_null()
+					.primary_key(),
+			)
+			.col(ColumnDef::new(Alias::new("value")).text().not_null())
+			.col(ColumnDef::new(Alias::new("expire_date")).text())
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		sqlx::query(&sql)
 			.execute(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to create table: {}", e))?;
 
-		// Create index on expire_date for efficient cleanup
-		let index_sql = r#"
-            CREATE INDEX IF NOT EXISTS idx_settings_expire_date
-            ON settings(expire_date)
-        "#;
+		// Create index on expire_date for efficient cleanup using sea-query
+		let index_stmt = Index::create()
+			.if_not_exists()
+			.name("idx_settings_expire_date")
+			.table(Alias::new("settings"))
+			.col(Alias::new("expire_date"))
+			.to_owned();
 
-		sqlx::query(index_sql)
+		let index_sql = index_stmt.to_string(SqliteQueryBuilder);
+
+		sqlx::query(&index_sql)
 			.execute(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to create index: {}", e))?;
@@ -225,10 +240,18 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn get(&self, key: &str) -> Result<Option<serde_json::Value>, String> {
-		let sql = "SELECT value, expire_date FROM settings WHERE key = ?";
+		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
 
-		let row = sqlx::query(sql)
-			.bind(key)
+		// Build SELECT query using sea-query
+		let stmt = Query::select()
+			.columns([Alias::new("value"), Alias::new("expire_date")])
+			.from(Alias::new("settings"))
+			.and_where(Expr::col(Alias::new("key")).eq(key))
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		let row = sqlx::query(&sql)
 			.fetch_optional(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to get setting: {}", e))?;
@@ -305,12 +328,32 @@ impl DatabaseBackend {
 		// Delete existing key first for simplicity (works across all databases)
 		let _ = self.delete(key).await;
 
-		let sql = "INSERT INTO settings (key, value, expire_date) VALUES (?, ?, ?)";
+		use sea_query::{Alias, Query, SqliteQueryBuilder};
 
-		sqlx::query(sql)
-			.bind(key)
-			.bind(value_str)
-			.bind(expire_date_str)
+		// Build INSERT query using sea-query
+		let mut stmt = Query::insert()
+			.into_table(Alias::new("settings"))
+			.columns([
+				Alias::new("key"),
+				Alias::new("value"),
+				Alias::new("expire_date"),
+			])
+			.to_owned();
+
+		// Add values based on whether expire_date is set
+		if let Some(expire_str) = &expire_date_str {
+			stmt.values_panic([key.into(), value_str.into(), expire_str.clone().into()]);
+		} else {
+			stmt.values_panic([
+				key.into(),
+				value_str.into(),
+				sea_query::Value::String(None).into(),
+			]);
+		}
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		sqlx::query(&sql)
 			.execute(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to set setting: {}", e))?;
@@ -339,10 +382,17 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn delete(&self, key: &str) -> Result<(), String> {
-		let sql = "DELETE FROM settings WHERE key = ?";
+		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
 
-		sqlx::query(sql)
-			.bind(key)
+		// Build DELETE query using sea-query
+		let stmt = Query::delete()
+			.from_table(Alias::new("settings"))
+			.and_where(Expr::col(Alias::new("key")).eq(key))
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		sqlx::query(&sql)
 			.execute(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to delete setting: {}", e))?;
@@ -372,13 +422,27 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn exists(&self, key: &str) -> Result<bool, String> {
-		let sql =
-			"SELECT 1 FROM settings WHERE key = ? AND (expire_date IS NULL OR expire_date > ?)";
+		use sea_query::{Alias, Cond, Expr, ExprTrait, Query, SqliteQueryBuilder};
+
 		let now = Utc::now().to_rfc3339();
 
-		let row = sqlx::query(sql)
-			.bind(key)
-			.bind(now)
+		// Build SELECT query using sea-query
+		// WHERE key = ? AND (expire_date IS NULL OR expire_date > ?)
+		let stmt = Query::select()
+			.expr(Expr::value(1))
+			.from(Alias::new("settings"))
+			.and_where(Expr::col(Alias::new("key")).eq(key))
+			.and_where(
+				Cond::any()
+					.add(Expr::col(Alias::new("expire_date")).is_null())
+					.add(Expr::col(Alias::new("expire_date")).gt(Expr::value(&now)))
+					.into(),
+			)
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		let row = sqlx::query(&sql)
 			.fetch_optional(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to check setting existence: {}", e))?;
@@ -410,11 +474,19 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn cleanup_expired(&self) -> Result<u64, String> {
-		let sql = "DELETE FROM settings WHERE expire_date < ?";
+		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
+
 		let now = Utc::now().to_rfc3339();
 
-		let result = sqlx::query(sql)
-			.bind(now)
+		// Build DELETE query using sea-query
+		let stmt = Query::delete()
+			.from_table(Alias::new("settings"))
+			.and_where(Expr::col(Alias::new("expire_date")).lt(Expr::value(&now)))
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		let result = sqlx::query(&sql)
 			.execute(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to cleanup settings: {}", e))?;
@@ -446,11 +518,26 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn keys(&self) -> Result<Vec<String>, String> {
-		let sql = "SELECT key FROM settings WHERE expire_date IS NULL OR expire_date > ?";
+		use sea_query::{Alias, Cond, Expr, ExprTrait, Query, SqliteQueryBuilder};
+
 		let now = Utc::now().to_rfc3339();
 
-		let rows = sqlx::query(sql)
-			.bind(now)
+		// Build SELECT query using sea-query
+		// WHERE expire_date IS NULL OR expire_date > ?
+		let stmt = Query::select()
+			.column(Alias::new("key"))
+			.from(Alias::new("settings"))
+			.and_where(
+				Cond::any()
+					.add(Expr::col(Alias::new("expire_date")).is_null())
+					.add(Expr::col(Alias::new("expire_date")).gt(Expr::value(&now)))
+					.into(),
+			)
+			.to_owned();
+
+		let sql = stmt.to_string(SqliteQueryBuilder);
+
+		let rows = sqlx::query(&sql)
 			.fetch_all(&*self.pool)
 			.await
 			.map_err(|e| format!("Failed to fetch keys: {}", e))?;

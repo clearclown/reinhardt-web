@@ -12,7 +12,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub use reinhardt_admin_core::{
 	AdminDatabase, AdminRecord, AdminSite, ExportFormat, ImportBuilder, ImportError, ImportFormat,
-	ImportResult, ModelAdmin, ModelAdminConfig,
+	ImportResult, ModelAdmin, ModelAdminConfig, ModelAdminConfigBuilder,
 };
 
 // WASM: Use stub types

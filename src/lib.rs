@@ -124,6 +124,12 @@ pub mod reinhardt_params {
 	pub use reinhardt_params::*;
 }
 
+#[cfg(feature = "pages")]
+#[doc(hidden)]
+pub mod reinhardt_pages {
+	pub use reinhardt_pages::*;
+}
+
 #[doc(hidden)]
 pub mod reinhardt_types {
 	pub use reinhardt_types::*;

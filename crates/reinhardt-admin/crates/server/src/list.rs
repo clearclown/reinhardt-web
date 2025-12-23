@@ -13,17 +13,32 @@ use std::sync::Arc;
 
 #[cfg(not(target_arch = "wasm32"))]
 use super::error::MapServerFnError;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::type_inference::{get_field_metadata, infer_admin_field_type, infer_filter_type};
+#[cfg(not(target_arch = "wasm32"))]
+use reinhardt_utils_core::text::humanize_field_name;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn build_filters(model_admin: &Arc<dyn ModelAdmin>) -> Vec<FilterInfo> {
+	let table_name = model_admin.table_name();
 	model_admin
 		.list_filter()
 		.iter()
-		.map(|field| FilterInfo {
-			field: field.to_string(),
-			title: field.to_string(),         // TODO: Humanize field name
-			filter_type: FilterType::Boolean, // TODO: Infer from field type
-			current_value: None,
+		.map(|field| {
+			// Infer filter type from field metadata in global registry
+			let filter_type = get_field_metadata(table_name, field)
+				.map(|meta| {
+					let admin_type = infer_admin_field_type(&meta.field_type);
+					infer_filter_type(&admin_type)
+				})
+				.unwrap_or(FilterType::Boolean);
+
+			FilterInfo {
+				field: field.to_string(),
+				title: humanize_field_name(field),
+				filter_type,
+				current_value: None,
+			}
 		})
 		.collect()
 }
@@ -35,7 +50,7 @@ fn build_columns(model_admin: &Arc<dyn ModelAdmin>) -> Vec<ColumnInfo> {
 		.iter()
 		.map(|field| ColumnInfo {
 			field: field.to_string(),
-			label: field.to_string(), // TODO: Humanize field name
+			label: humanize_field_name(field),
 			sortable: true,
 		})
 		.collect()

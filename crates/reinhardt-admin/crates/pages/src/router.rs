@@ -153,7 +153,7 @@ fn list_view_component(model_name: String) -> View {
 				ResourceState::Success(response) => {
 					use std::collections::HashMap;
 
-					// ListResponse → ListViewData変換
+					// Convert ListResponse to ListViewData
 					let data = ListViewData {
 						model_name: response.model_name.clone(),
 						columns: response.columns.unwrap_or_else(|| {
@@ -276,7 +276,7 @@ fn create_view_component(model_name: String) -> View {
 			move || match resource.get() {
 				ResourceState::Loading => loading_view(),
 				ResourceState::Success(response) => {
-					// FieldInfo → FormField変換
+					// Convert FieldInfo to FormField
 					let fields: Vec<FormField> = response
 						.fields
 						.into_iter()
@@ -344,12 +344,12 @@ fn edit_view_component(model_name: String, record_id: String) -> View {
 			move || match resource.get() {
 				ResourceState::Loading => loading_view(),
 				ResourceState::Success(response) => {
-					// FieldInfo + values → FormField変換
+					// Convert FieldInfo + values to FormField
 					let fields: Vec<FormField> = response
 						.fields
 						.into_iter()
 						.map(|field_info| {
-							// 既存値を取得
+							// Get existing value
 							let value = if let Some(ref values) = response.values {
 								values
 									.get(&field_info.name)
@@ -683,7 +683,7 @@ mod tests {
 	#[test]
 	#[should_panic(expected = "Router not initialized")]
 	fn test_with_router_panics_when_not_initialized() {
-		// ROUTERをクリア（この動作は実際には危険だが、テスト目的）
+		// Clear ROUTER (this operation is actually dangerous, but for test purposes)
 		ROUTER.with(|r| *r.borrow_mut() = None);
 
 		with_router(|_| {});
@@ -692,7 +692,7 @@ mod tests {
 	#[test]
 	fn test_list_view_with_model_name() {
 		let view = list_view_component("users".to_string());
-		// 基本的なレンダリングが成功することを確認
+		// Verify basic rendering succeeds
 		let html = view.render_to_string();
 		assert!(html.contains("users") || html.contains("List"));
 	}
@@ -700,7 +700,7 @@ mod tests {
 	#[test]
 	fn test_detail_view_with_params() {
 		let view = detail_view_component("users".to_string(), "42".to_string());
-		// 基本的なレンダリングが成功することを確認
+		// Verify basic rendering succeeds
 		let html = view.render_to_string();
 		assert!(!html.is_empty());
 	}

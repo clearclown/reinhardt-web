@@ -5,7 +5,7 @@ use clap::Args;
 use std::path::PathBuf;
 
 #[derive(Args)]
-pub struct SetArgs {
+pub(crate) struct SetArgs {
 	/// Configuration file to modify
 	#[arg(value_name = "FILE")]
 	pub file: PathBuf,
@@ -28,7 +28,7 @@ pub struct SetArgs {
 }
 /// Documentation for `execute`
 ///
-pub async fn execute(args: SetArgs) -> anyhow::Result<()> {
+pub(crate) async fn execute(args: SetArgs) -> anyhow::Result<()> {
 	output::info(&format!("Setting configuration value in: {:?}", args.file));
 
 	// Check if file exists

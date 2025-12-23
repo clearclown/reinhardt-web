@@ -465,20 +465,34 @@ where
 					use reinhardt_db::orm::manager::get_connection;
 					match get_connection().await {
 						Ok(conn) => {
-							// Build SQL query to fetch user from database
+							// Build SQL query using sea-query for type-safe query construction
 							use reinhardt_auth::DefaultUser;
-							use reinhardt_db::backends::types::QueryValue;
-							use reinhardt_db::orm::Model;
+							use reinhardt_db::orm::{
+								Alias, Asterisk, DatabaseBackend, Expr, ExprTrait, Model,
+								MysqlQueryBuilder, PostgresQueryBuilder, SeaQuery,
+								SqliteQueryBuilder,
+							};
 
 							let table_name = DefaultUser::table_name();
 							let pk_field = DefaultUser::primary_key_field();
-							let sql =
-								format!("SELECT * FROM {} WHERE {} = $1", table_name, pk_field);
 
-							// Execute query with parameter binding
-							let params = vec![QueryValue::String(user_uuid.to_string())];
+							// Build SELECT * query using sea-query
+							let stmt = SeaQuery::select()
+								.column(Asterisk)
+								.from(Alias::new(table_name))
+								.and_where(
+									Expr::col(Alias::new(pk_field))
+										.eq(Expr::value(user_uuid.to_string())),
+								)
+								.to_owned();
 
-							match conn.query_optional(&sql, params).await {
+							let sql = match conn.backend() {
+								DatabaseBackend::Postgres => stmt.to_string(PostgresQueryBuilder),
+								DatabaseBackend::MySql => stmt.to_string(MysqlQueryBuilder),
+								DatabaseBackend::Sqlite => stmt.to_string(SqliteQueryBuilder),
+							};
+
+							match conn.query_optional(&sql, vec![]).await {
 								Ok(Some(row)) => {
 									// Deserialize user from query result
 									match serde_json::from_value::<DefaultUser>(row.data) {

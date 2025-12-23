@@ -1,7 +1,192 @@
-//! ViewSets for Reinhardt framework
+//! # Reinhardt ViewSets
 //!
-//! This crate provides ViewSet functionality for building REST APIs with automatic
-//! routing, pagination, filtering, and caching support.
+//! Django REST Framework-inspired ViewSets for building REST APIs.
+//!
+//! ## Overview
+//!
+//! ViewSets combine common view patterns into a single class, providing automatic
+//! routing, pagination, filtering, and caching support. This crate is the core
+//! of Reinhardt's REST API functionality.
+//!
+//! ## Features
+//!
+//! - **[`ModelViewSet`]**: Full CRUD operations for a model
+//! - **[`ReadOnlyModelViewSet`]**: Read-only operations (list and retrieve)
+//! - **[`GenericViewSet`]**: Base viewset for custom implementations
+//! - **Mixins**: Composable behaviors ([`ListMixin`], [`CreateMixin`], [`RetrieveMixin`], etc.)
+//! - **Custom Actions**: Define custom endpoints with [`@action`](crate::action) decorator
+//! - **Batch Operations**: Bulk create, update, and delete support
+//! - **Pagination**: Built-in pagination with configurable page sizes
+//! - **Filtering**: Field filtering and ordering support
+//! - **Caching**: Response caching with cache invalidation
+//! - **Middleware**: Per-viewset middleware (authentication, permissions)
+//! - **Nested Resources**: Parent-child resource relationships
+//!
+//! ## Quick Start
+//!
+//! ### ModelViewSet (Full CRUD)
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{ModelViewSet, ViewSet};
+//!
+//! // Create a viewset for User model with UserSerializer
+//! let viewset: ModelViewSet<User, UserSerializer> = ModelViewSet::new("users");
+//!
+//! // Supports: list, create, retrieve, update, partial_update, destroy
+//! // GET    /users/      -> list
+//! // POST   /users/      -> create
+//! // GET    /users/{id}/ -> retrieve
+//! // PUT    /users/{id}/ -> update
+//! // PATCH  /users/{id}/ -> partial_update
+//! // DELETE /users/{id}/ -> destroy
+//! ```
+//!
+//! ### ReadOnlyModelViewSet
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{ReadOnlyModelViewSet, ViewSet};
+//!
+//! // Read-only viewset (list and retrieve only)
+//! let viewset: ReadOnlyModelViewSet<Post, PostSerializer> = ReadOnlyModelViewSet::new("posts");
+//!
+//! // Supports: list, retrieve
+//! // GET    /posts/      -> list
+//! // GET    /posts/{id}/ -> retrieve
+//! ```
+//!
+//! ## Available Mixins
+//!
+//! Mixins provide composable behaviors that can be combined:
+//!
+//! | Mixin | Action | HTTP Method | URL Pattern |
+//! |-------|--------|-------------|-------------|
+//! | [`ListMixin`] | list | GET | `/resources/` |
+//! | [`CreateMixin`] | create | POST | `/resources/` |
+//! | [`RetrieveMixin`] | retrieve | GET | `/resources/{id}/` |
+//! | [`UpdateMixin`] | update | PUT | `/resources/{id}/` |
+//! | [`DestroyMixin`] | destroy | DELETE | `/resources/{id}/` |
+//! | [`BulkCreateMixin`] | bulk_create | POST | `/resources/bulk/` |
+//! | [`BulkUpdateMixin`] | bulk_update | PUT | `/resources/bulk/` |
+//! | [`BulkDeleteMixin`] | bulk_delete | DELETE | `/resources/bulk/` |
+//!
+//! ## Custom Actions
+//!
+//! Define custom endpoints using the action registry:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{action, ActionType};
+//!
+//! // Register a detail action (operates on a single resource)
+//! #[action(detail = true, methods = ["POST"])]
+//! async fn activate(request: Request) -> Result<Response> {
+//!     // Activate a specific user
+//!     Ok(Response::ok())
+//! }
+//!
+//! // Register a list action (operates on the collection)
+//! #[action(detail = false, methods = ["GET"])]
+//! async fn recent(request: Request) -> Result<Response> {
+//!     // Get recent items
+//!     Ok(Response::ok())
+//! }
+//! ```
+//!
+//! ## Pagination
+//!
+//! Built-in pagination support:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{PaginatedViewSet, PaginationConfig};
+//!
+//! let config = PaginationConfig {
+//!     page_size: 20,
+//!     max_page_size: 100,
+//!     page_query_param: "page".to_string(),
+//!     page_size_query_param: "page_size".to_string(),
+//! };
+//!
+//! let viewset = PaginatedViewSet::new(viewset, config);
+//! ```
+//!
+//! ## Filtering
+//!
+//! Filter and order query results:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{FilterableViewSet, FilterConfig, OrderingConfig};
+//!
+//! let filter_config = FilterConfig {
+//!     filterable_fields: vec!["status", "category"],
+//!     search_fields: vec!["title", "description"],
+//! };
+//!
+//! let ordering_config = OrderingConfig {
+//!     ordering_fields: vec!["created_at", "updated_at", "title"],
+//!     default_ordering: vec!["-created_at"], // Descending by created_at
+//! };
+//!
+//! let viewset = FilterableViewSet::new(viewset, filter_config, ordering_config);
+//! ```
+//!
+//! ## Caching
+//!
+//! Response caching with automatic invalidation:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{CachedViewSet, CacheConfig};
+//!
+//! let config = CacheConfig {
+//!     ttl_seconds: 300,           // 5 minutes
+//!     vary_headers: vec!["Authorization"],
+//!     cache_methods: vec!["GET", "HEAD"],
+//! };
+//!
+//! let viewset = CachedViewSet::new(viewset, config);
+//! ```
+//!
+//! ## Middleware
+//!
+//! Apply middleware to viewsets:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{AuthenticationMiddleware, PermissionMiddleware};
+//!
+//! let viewset = viewset
+//!     .with_middleware(AuthenticationMiddleware::required())
+//!     .with_middleware(PermissionMiddleware::new(&["users.view", "users.edit"]));
+//! ```
+//!
+//! ## Nested Resources
+//!
+//! Define parent-child resource relationships:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{NestedViewSet, NestedResource};
+//!
+//! // /users/{user_id}/posts/
+//! let nested = NestedViewSet::new(post_viewset)
+//!     .parent::<User>("user_id")
+//!     .filter_by_parent(|query, user_id| {
+//!         query.filter("author_id", user_id)
+//!     });
+//! ```
+//!
+//! ## Batch Operations
+//!
+//! Process multiple records in a single request:
+//!
+//! ```rust,ignore
+//! use reinhardt_viewsets::{BatchProcessor, BatchRequest};
+//!
+//! // POST /users/bulk/
+//! // Body: [{"name": "Alice"}, {"name": "Bob"}]
+//!
+//! let result = BatchProcessor::new(&viewset)
+//!     .process_create(batch_request)
+//!     .await?;
+//!
+//! println!("Created: {}, Failed: {}", result.success_count, result.failure_count);
+//! ```
 
 pub mod actions;
 pub mod batch_operations;
