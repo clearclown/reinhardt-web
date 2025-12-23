@@ -25,16 +25,12 @@
 //! ## Module Organization
 //!
 //! - [`settings`]: Core settings management functionality
-//! - [`settings_cli`]: CLI tool for managing settings
 
 #![cfg_attr(not(feature = "settings"), allow(unused_imports))]
 
 // Re-export internal crates
 #[cfg(feature = "settings")]
 pub use reinhardt_settings as settings;
-
-#[cfg(feature = "settings-cli")]
-pub use reinhardt_settings_cli as settings_cli;
 
 // Re-export commonly used types at the crate root for convenience
 #[cfg(feature = "settings")]

@@ -12,12 +12,10 @@ repository.workspace = true
 [dependencies]
 # Internal crates - made optional for re-export
 reinhardt-settings = { workspace = true, optional = true }
-reinhardt-settings-cli = { workspace = true, optional = true }
 
 [features]
 default = ["settings"]
 settings = ["reinhardt-settings"]
-settings-cli = ["reinhardt-settings-cli"]
 
 # Expose internal crate features as-is
 async = ["reinhardt-settings?/async"]
