@@ -44,3 +44,6 @@ Thumbs.db
 
 # collectstatic output
 staticfiles/
+
+# Admin panel build artifacts (WASM, JS, CSS with hashes)
+static/admin/

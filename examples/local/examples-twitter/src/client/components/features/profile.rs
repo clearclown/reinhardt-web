@@ -1,45 +1,48 @@
-//! Profile components
+//! Profile components using React-like hooks
 //!
-//! Provides profile view and edit form components.
+//! Provides profile view and edit form components with hooks-styled state management.
 
 use crate::shared::types::{ProfileResponse, UpdateProfileRequest};
-use reinhardt_pages::Signal;
 use reinhardt_pages::component::{ElementView, IntoView, View};
+use reinhardt_pages::page;
+use reinhardt_pages::reactive::hooks::use_state;
 use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
 use {
-	crate::server::server_fn::profile::{fetch_profile, update_profile},
+	crate::server_fn::profile::{fetch_profile, update_profile},
 	wasm_bindgen_futures::spawn_local,
-	web_sys::HtmlInputElement,
 };
 
-/// Profile view component
+/// Profile view component using hooks
 ///
 /// Displays user profile information with loading and error states.
+/// Uses React-like hooks for state management.
 pub fn profile_view(user_id: Uuid) -> View {
-	let profile = Signal::new(None::<ProfileResponse>);
-	let loading = Signal::new(true);
-	let error = Signal::new(None::<String>);
+	// Hook-styled state management
+	let (profile, set_profile) = use_state(None::<ProfileResponse>);
+	let (loading, set_loading) = use_state(true);
+	let (error, set_error) = use_state(None::<String>);
 
 	#[cfg(target_arch = "wasm32")]
 	{
-		let profile = profile.clone();
-		let loading = loading.clone();
-		let error = error.clone();
+		// Clone setters for async use
+		let set_profile = set_profile.clone();
+		let set_loading = set_loading.clone();
+		let set_error = set_error.clone();
 
 		spawn_local(async move {
-			loading.set(true);
-			error.set(None);
+			set_loading(true);
+			set_error(None);
 
 			match fetch_profile(user_id).await {
 				Ok(profile_data) => {
-					profile.set(Some(profile_data));
-					loading.set(false);
+					set_profile(Some(profile_data));
+					set_loading(false);
 				}
 				Err(e) => {
-					error.set(Some(e.to_string()));
-					loading.set(false);
+					set_error(Some(e.to_string()));
+					set_loading(false);
 				}
 			}
 		});
@@ -61,27 +64,16 @@ pub fn profile_view(user_id: Uuid) -> View {
 										.child("Profile"),
 								)
 								.child({
+									use crate::client::components::common::{
+										error_alert, loading_spinner,
+									};
+
 									// Loading state
 									if loading.get() {
-										ElementView::new("div")
-											.attr("class", "text-center py-5")
-											.child(
-												ElementView::new("div")
-													.attr("class", "spinner-border")
-													.attr("role", "status")
-													.child(
-														ElementView::new("span")
-															.attr("class", "visually-hidden")
-															.child("Loading..."),
-													),
-											)
-											.into_view()
+										loading_spinner()
 									} else if let Some(err) = error.get() {
 										// Error state
-										ElementView::new("div")
-											.attr("class", "alert alert-danger")
-											.child(err)
-											.into_view()
+										error_alert(&err, false)
 									} else if let Some(profile_data) = profile.get() {
 										// Profile data
 										ElementView::new("div")
@@ -119,7 +111,7 @@ pub fn profile_view(user_id: Uuid) -> View {
 														if let Some(website) = profile_data.website
 														{
 															ElementView::new("a")
-																.attr("href", &website)
+																.attr("href", website.clone())
 																.attr("target", "_blank")
 																.attr("rel", "noopener noreferrer")
 																.child(website)
@@ -138,7 +130,7 @@ pub fn profile_view(user_id: Uuid) -> View {
 														ElementView::new("a")
 															.attr(
 																"href",
-																&format!(
+																format!(
 																	"/profile/{}/edit",
 																	user_id
 																),
@@ -159,41 +151,44 @@ pub fn profile_view(user_id: Uuid) -> View {
 		.into_view()
 }
 
-/// Profile edit component
+/// Profile edit component using hooks
 ///
 /// Provides form for editing user profile with validation.
+/// Uses React-like hooks for state management.
 pub fn profile_edit(user_id: Uuid) -> View {
-	let bio = Signal::new(String::new());
-	let avatar_url = Signal::new(String::new());
-	let location = Signal::new(String::new());
-	let website = Signal::new(String::new());
-	let error = Signal::new(None::<String>);
-	let loading = Signal::new(false);
-	let success = Signal::new(false);
+	// Hook-styled state for form fields
+	let (bio, set_bio) = use_state(String::new());
+	let (avatar_url, set_avatar_url) = use_state(String::new());
+	let (location, set_location) = use_state(String::new());
+	let (website, set_website) = use_state(String::new());
+	let (error, set_error) = use_state(None::<String>);
+	let (loading, set_loading) = use_state(false);
+	let (success, set_success) = use_state(false);
 
 	// Load current profile data
 	#[cfg(target_arch = "wasm32")]
 	{
-		let bio = bio.clone();
-		let avatar_url = avatar_url.clone();
-		let location = location.clone();
-		let website = website.clone();
+		let set_bio = set_bio.clone();
+		let set_avatar_url = set_avatar_url.clone();
+		let set_location = set_location.clone();
+		let set_website = set_website.clone();
 
 		spawn_local(async move {
 			if let Ok(profile_data) = fetch_profile(user_id).await {
-				bio.set(profile_data.bio.unwrap_or_default());
-				avatar_url.set(profile_data.avatar_url.unwrap_or_default());
-				location.set(profile_data.location.unwrap_or_default());
-				website.set(profile_data.website.unwrap_or_default());
+				set_bio(profile_data.bio.unwrap_or_default());
+				set_avatar_url(profile_data.avatar_url.unwrap_or_default());
+				set_location(profile_data.location.unwrap_or_default());
+				set_website(profile_data.website.unwrap_or_default());
 			}
 		});
 	}
 
+	// Submit handler using closures with Signal access
 	#[cfg(target_arch = "wasm32")]
 	let on_submit = {
-		let error = error.clone();
-		let loading = loading.clone();
-		let success = success.clone();
+		let set_error = set_error.clone();
+		let set_loading = set_loading.clone();
+		let set_success = set_success.clone();
 		let bio = bio.clone();
 		let avatar_url = avatar_url.clone();
 		let location = location.clone();
@@ -202,18 +197,18 @@ pub fn profile_edit(user_id: Uuid) -> View {
 		move |event: web_sys::Event| {
 			event.prevent_default();
 
-			let error = error.clone();
-			let loading = loading.clone();
-			let success = success.clone();
+			let set_error = set_error.clone();
+			let set_loading = set_loading.clone();
+			let set_success = set_success.clone();
 			let bio_value = bio.get();
 			let avatar_url_value = avatar_url.get();
 			let location_value = location.get();
 			let website_value = website.get();
 
 			spawn_local(async move {
-				loading.set(true);
-				error.set(None);
-				success.set(false);
+				set_loading(true);
+				set_error(None);
+				set_success(false);
 
 				let request = UpdateProfileRequest {
 					bio: if bio_value.is_empty() {
@@ -240,16 +235,16 @@ pub fn profile_edit(user_id: Uuid) -> View {
 
 				match update_profile(request).await {
 					Ok(_) => {
-						success.set(true);
-						loading.set(false);
-						// Redirect to profile view after 1 second
+						set_success(true);
+						set_loading(false);
+						// Redirect to profile view after success
 						if let Some(window) = web_sys::window() {
 							let _ = window.location().set_href(&format!("/profile/{}", user_id));
 						}
 					}
 					Err(e) => {
-						error.set(Some(e.to_string()));
-						loading.set(false);
+						set_error(Some(e.to_string()));
+						set_loading(false);
 					}
 				}
 			});
@@ -275,25 +270,23 @@ pub fn profile_edit(user_id: Uuid) -> View {
 										.child("Edit Profile"),
 								)
 								.child({
+									use crate::client::components::common::{
+										error_alert, success_alert,
+									};
+
 									// Success message
 									if success.get() {
-										ElementView::new("div")
-											.attr("class", "alert alert-success")
-											.child("Profile updated successfully! Redirecting...")
-											.into_view()
+										success_alert(
+											"Profile updated successfully! Redirecting...",
+										)
+									} else if let Some(msg) = error.get() {
+										// Error message
+										error_alert(&msg, false)
 									} else {
-										ElementView::new("div").into_view()
-									}
-								})
-								.child({
-									// Error message
-									if let Some(msg) = error.get() {
-										ElementView::new("div")
-											.attr("class", "alert alert-danger")
-											.child(msg)
-											.into_view()
-									} else {
-										ElementView::new("div").into_view()
+										page!(|| {
+	div {
+	}
+})()
 									}
 								})
 								.child(
@@ -387,7 +380,7 @@ pub fn profile_edit(user_id: Uuid) -> View {
 													ElementView::new("a")
 														.attr(
 															"href",
-															&format!("/profile/{}", user_id),
+															format!("/profile/{}", user_id),
 														)
 														.attr("class", "btn btn-secondary")
 														.child("Cancel"),

@@ -2,15 +2,15 @@
 //!
 //! This is the main entry point for the WASM application.
 
+use reinhardt_pages::dom::Element;
 use wasm_bindgen::prelude::*;
 
-mod router;
-mod state;
+// Use modules from parent `client` module via super::
+use super::router;
+use super::state;
 
 pub use router::{AppRoute, init_global_router, with_router};
-pub use state::{
-	auth_state, get_current_user, init_auth_state, is_authenticated, set_current_user,
-};
+pub use state::{get_current_user, init_auth_state, is_authenticated, set_current_user};
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
@@ -33,9 +33,11 @@ pub fn main() -> Result<(), JsValue> {
 	// Clear loading spinner
 	root.set_inner_html("");
 
-	// Mount the router
+	// Mount the router's current view
 	router::with_router(|router| {
-		router.mount(&root);
+		let view = router.render_current();
+		let root_element = Element::new(root.clone());
+		let _ = view.mount(&root_element);
 	});
 
 	Ok(())

@@ -10,10 +10,11 @@
 //! ## Design Note
 //!
 //! These components follow Bootstrap 5 styling conventions and use
-//! reinhardt-pages components for SPA navigation.
+//! the `page!` macro for JSX-like syntax with SPA navigation.
 
 use crate::shared::types::UserInfo;
 use reinhardt_pages::component::{Component, ElementView, IntoView, View};
+use reinhardt_pages::page;
 use reinhardt_pages::router::Link;
 
 /// Navigation item for the header menu
@@ -74,6 +75,7 @@ pub struct SuggestedUser {
 /// * `current_user` - Currently logged in user (None if not authenticated)
 /// * `nav_items` - Navigation menu items
 pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[NavItem]) -> View {
+	// Generate navigation links as Views
 	let nav_links: Vec<View> = nav_items
 		.iter()
 		.map(|item| {
@@ -82,88 +84,94 @@ pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[Nav
 			} else {
 				"nav-link"
 			};
+			let link_view = Link::new(item.href.clone(), item.label.clone())
+				.class(class)
+				.render();
 
-			ElementView::new("li")
-				.attr("class", "nav-item")
-				.child(
-					Link::new(item.href.clone(), item.label.clone())
-						.class(class)
-						.render(),
-				)
-				.into_view()
+			page!(|link_view: View| {
+	li {
+		class: "nav-item",
+		{ link_view }
+	}
+})(link_view)
 		})
 		.collect();
+	let nav_links_view = View::fragment(nav_links);
 
+	// Generate brand link
+	let brand_link = Link::new("/".to_string(), site_name.to_string())
+		.class("navbar-brand")
+		.render();
+
+	// Generate user menu based on authentication state
 	let user_menu = if let Some(user) = current_user {
-		ElementView::new("div")
-			.attr("class", "d-flex align-items-center")
-			.child(
-				ElementView::new("span")
-					.attr("class", "navbar-text me-3")
-					.child(format!("@{}", user.username)),
-			)
-			.child(
-				Link::new(format!("/profile/{}", user.id), "Profile".to_string())
-					.class("btn btn-outline-light btn-sm me-2")
-					.render(),
-			)
-			.child(
-				ElementView::new("a")
-					.attr("href", "/logout")
-					.attr("class", "btn btn-outline-light btn-sm")
-					.child("Logout"),
-			)
-			.into_view()
+		let username = format!("@{}", user.username);
+		let profile_link = Link::new(format!("/profile/{}", user.id), "Profile".to_string())
+			.class("btn btn-outline-light btn-sm me-2")
+			.render();
+
+		page!(|username: String, profile_link: View| {
+	div {
+		class: "d-flex align-items-center",
+		span {
+			class: "navbar-text me-3",
+			{ username }
+		}
+		{ profile_link }
+		a {
+			href: "/logout",
+			class: "btn btn-outline-light btn-sm",
+			"Logout"
+		}
+	}
+})(username, profile_link)
 	} else {
-		ElementView::new("div")
-			.attr("class", "d-flex")
-			.child(
-				Link::new("/login".to_string(), "Login".to_string())
-					.class("btn btn-outline-light btn-sm me-2")
-					.render(),
-			)
-			.child(
-				Link::new("/register".to_string(), "Register".to_string())
-					.class("btn btn-light btn-sm")
-					.render(),
-			)
-			.into_view()
+		let login_link = Link::new("/login".to_string(), "Login".to_string())
+			.class("btn btn-outline-light btn-sm me-2")
+			.render();
+		let register_link = Link::new("/register".to_string(), "Register".to_string())
+			.class("btn btn-light btn-sm")
+			.render();
+
+		page!(|login_link: View, register_link: View| {
+	div {
+		class: "d-flex",
+		{ login_link }
+		{ register_link }
+	}
+})(login_link, register_link)
 	};
 
-	ElementView::new("nav")
-		.attr("class", "navbar navbar-expand-lg navbar-dark bg-primary")
-		.child(
-			ElementView::new("div")
-				.attr("class", "container-fluid")
-				.child(
-					Link::new("/".to_string(), site_name.to_string())
-						.class("navbar-brand")
-						.render(),
-				)
-				.child(
-					ElementView::new("button")
-						.attr("class", "navbar-toggler")
-						.attr("type", "button")
-						.attr("data-bs-toggle", "collapse")
-						.attr("data-bs-target", "#navbarNav")
-						.attr("aria-controls", "navbarNav")
-						.attr("aria-expanded", "false")
-						.attr("aria-label", "Toggle navigation")
-						.child(ElementView::new("span").attr("class", "navbar-toggler-icon")),
-				)
-				.child(
-					ElementView::new("div")
-						.attr("class", "collapse navbar-collapse")
-						.attr("id", "navbarNav")
-						.child(
-							ElementView::new("ul")
-								.attr("class", "navbar-nav me-auto")
-								.children(nav_links),
-						)
-						.child(user_menu),
-				),
-		)
-		.into_view()
+	page!(|brand_link: View, nav_links_view: View, user_menu: View| {
+	nav {
+		class: "navbar navbar-expand-lg navbar-dark bg-primary",
+		div {
+			class: "container-fluid",
+			{ brand_link }
+			button {
+				class: "navbar-toggler",
+				r#type: "button",
+				data_bs_toggle: "collapse",
+				data_bs_target: "#navbarNav",
+				aria_controls: "navbarNav",
+				aria_expanded: "false",
+				aria_label: "Toggle navigation",
+				span {
+					class: "navbar-toggler-icon",
+				}
+			}
+			div {
+				class: "collapse navbar-collapse",
+				id: "navbarNav",
+				ul {
+					class: "navbar-nav me-auto",
+					{ nav_links_view }
+				}
+				{ user_menu }
+			}
+		}
+	}
+})(brand_link, nav_links_view, user_menu)
 }
 
 /// Sidebar component
@@ -175,115 +183,129 @@ pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[Nav
 /// * `trending_topics` - List of trending topics
 /// * `suggested_users` - List of suggested users to follow
 pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUser]) -> View {
+	// Generate trending topics list as Views
 	let topics_list: Vec<View> = trending_topics
 		.iter()
 		.map(|topic| {
-			ElementView::new("a")
-				.attr("href", &format!("/search?q={}", topic.name))
-				.attr("class", "list-group-item list-group-item-action")
-				.child(
-					ElementView::new("div")
-						.attr("class", "d-flex justify-content-between")
-						.child(ElementView::new("strong").child(&topic.name))
-						.child(
-							ElementView::new("small")
-								.attr("class", "text-muted")
-								.child(format!("{} tweets", topic.tweet_count)),
-						),
-				)
-				.into_view()
+			let href = format!("/search?q={}", topic.name);
+			let name = topic.name.clone();
+			let tweets_text = format!("{} tweets", topic.tweet_count);
+
+			page!(|href: String, name: String, tweets_text: String| {
+	a {
+		href: href,
+		class: "list-group-item list-group-item-action",
+		div {
+			class: "d-flex justify-content-between",
+			strong {
+				{ name }
+			}
+			small {
+				class: "text-muted",
+				{ tweets_text }
+			}
+		}
+	}
+})(href, name, tweets_text)
 		})
 		.collect();
 
+	let topics_empty = topics_list.is_empty();
+	let topics_view = if topics_empty {
+		page!(|| {
+	div {
+		class: "list-group-item text-muted",
+		"No trending topics"
+	}
+})()
+	} else {
+		View::fragment(topics_list)
+	};
+
+	// Generate suggested users list as Views
 	let users_list: Vec<View> = suggested_users
 		.iter()
 		.map(|user| {
-			ElementView::new("div")
-				.attr("class", "list-group-item")
-				.child(
-					ElementView::new("div")
-						.attr("class", "d-flex justify-content-between align-items-center")
-						.child(
-							ElementView::new("div")
-								.child(
-									Link::new(
-										format!("/profile/{}", user.id),
-										format!("@{}", user.username),
-									)
-									.class("fw-bold text-decoration-none")
-									.render(),
-								)
-								.child(if let Some(bio) = &user.bio {
-									ElementView::new("small")
-										.attr("class", "text-muted d-block")
-										.child(bio.clone())
-										.into_view()
-								} else {
-									ElementView::new("span").into_view()
-								}),
-						)
-						.child(
-							ElementView::new("button")
-								.attr("class", "btn btn-outline-primary btn-sm")
-								.child("Follow"),
-						),
-				)
-				.into_view()
+			let profile_link = Link::new(
+				format!("/profile/{}", user.id),
+				format!("@{}", user.username),
+			)
+			.class("fw-bold text-decoration-none")
+			.render();
+
+			let has_bio = user.bio.is_some();
+			let bio_text = user.bio.clone().unwrap_or_default();
+
+			page!(|profile_link: View, has_bio: bool, bio_text: String| {
+	div {
+		class: "list-group-item",
+		div {
+			class: "d-flex justify-content-between align-items-center",
+			div {
+				{ profile_link }
+				if has_bio {
+					small {
+						class: "text-muted d-block",
+						{ bio_text }
+					}
+				}
+			}
+			button {
+				class: "btn btn-outline-primary btn-sm",
+				"Follow"
+			}
+		}
+	}
+})(profile_link, has_bio, bio_text)
 		})
 		.collect();
 
-	ElementView::new("div")
-		.attr("class", "sidebar")
-		.attr("style", "position: sticky; top: 80px;")
-		// Trending Topics section
-		.child(
-			ElementView::new("div")
-				.attr("class", "card mb-4")
-				.child(
-					ElementView::new("div")
-						.attr("class", "card-header")
-						.child(ElementView::new("h6").attr("class", "mb-0").child("Trending")),
-				)
-				.child(
-					ElementView::new("div")
-						.attr("class", "list-group list-group-flush")
-						.children(if topics_list.is_empty() {
-							vec![ElementView::new("div")
-								.attr("class", "list-group-item text-muted")
-								.child("No trending topics")
-								.into_view()]
-						} else {
-							topics_list
-						}),
-				),
-		)
-		// Suggested Users section
-		.child(
-			ElementView::new("div")
-				.attr("class", "card")
-				.child(
-					ElementView::new("div")
-						.attr("class", "card-header")
-						.child(
-							ElementView::new("h6")
-								.attr("class", "mb-0")
-								.child("Who to follow"),
-						),
-				)
-				.child(
-					ElementView::new("div")
-						.attr("class", "list-group list-group-flush")
-						.children(if users_list.is_empty() {
-							vec![ElementView::new("div")
-								.attr("class", "list-group-item text-muted")
-								.child("No suggestions")
-								.into_view()]
-						} else {
-							users_list
-						}),
-				),
-		)
-		.into_view()
+	let users_empty = users_list.is_empty();
+	let users_view = if users_empty {
+		page!(|| {
+	div {
+		class: "list-group-item text-muted",
+		"No suggestions"
+	}
+})()
+	} else {
+		View::fragment(users_list)
+	};
+
+	page!(|topics_view: View, users_view: View| {
+	div {
+		class: "sidebar",
+		style: "position: sticky; top: 80px;",
+		div {
+			class: "card mb-4",
+			div {
+				class: "card-header",
+				h6 {
+					class: "mb-0",
+					"Trending"
+				}
+			}
+			div {
+				class: "list-group list-group-flush",
+				{ topics_view }
+			}
+		}
+		div {
+			class: "card",
+			div {
+				class: "card-header",
+				h6 {
+					class: "mb-0",
+					"Who to follow"
+				}
+			}
+			div {
+				class: "list-group list-group-flush",
+				{ users_view }
+			}
+		}
+	}
+})(topics_view, users_view)
 }
 
 /// Footer component
@@ -294,16 +316,19 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 ///
 /// * `version` - Application version string
 pub fn footer(version: &str) -> View {
-	ElementView::new("footer")
-		.attr("class", "bg-light text-center py-3 mt-auto border-top")
-		.child(
-			ElementView::new("div").attr("class", "container").child(
-				ElementView::new("span")
-					.attr("class", "text-muted")
-					.child(format!("Twitter Clone v{} - Built with Reinhardt", version)),
-			),
-		)
-		.into_view()
+	let version = version.to_string();
+	page!(|version: String| {
+	footer {
+		class: "bg-light text-center py-3 mt-auto border-top",
+		div {
+			class: "container",
+			span {
+				class: "text-muted",
+				{ format ! ("Twitter Clone v{} - Built with Reinhardt" , version) }
+			}
+		}
+	}
+})(version)
 }
 
 /// Main layout wrapper
@@ -327,6 +352,11 @@ pub fn main_layout(
 	show_sidebar: bool,
 	version: &str,
 ) -> View {
+	// Build component views
+	let header_view = header(site_name, current_user, nav_items);
+	let footer_view = footer(version);
+
+	// Build main content with conditional sidebar
 	let main_content = if show_sidebar {
 		ElementView::new("div")
 			.attr("class", "row")
@@ -352,18 +382,20 @@ pub fn main_layout(
 			.into_view()
 	};
 
-	ElementView::new("div")
-		.attr("class", "d-flex flex-column min-vh-100")
-		.child(header(site_name, current_user, nav_items))
-		.child(
-			ElementView::new("main").attr("class", "flex-grow-1").child(
-				ElementView::new("div")
-					.attr("class", "container py-4")
-					.child(main_content),
-			),
-		)
-		.child(footer(version))
-		.into_view()
+	page!(|header_view: View, main_content: View, footer_view: View| {
+	div {
+		class: "d-flex flex-column min-vh-100",
+		{ header_view }
+		main {
+			class: "flex-grow-1",
+			div {
+				class: "container py-4",
+				{ main_content }
+			}
+		}
+		{ footer_view }
+	}
+})(header_view, main_content, footer_view)
 }
 
 /// Simple page layout without sidebar

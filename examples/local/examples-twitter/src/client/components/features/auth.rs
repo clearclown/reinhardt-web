@@ -1,35 +1,38 @@
-//! Authentication components
+//! Authentication components using React-like hooks
 //!
-//! Provides login and registration form components.
+//! Provides login and registration form components with hooks-styled state management.
 
 use crate::shared::types::{LoginRequest, RegisterRequest};
-use reinhardt_pages::Signal;
 use reinhardt_pages::component::{ElementView, IntoView, View};
+use reinhardt_pages::reactive::hooks::use_state;
 
 #[cfg(target_arch = "wasm32")]
 use {
 	crate::client::state::set_current_user,
-	crate::server::server_fn::auth::{login, register},
+	crate::server_fn::auth::{login, register},
+	wasm_bindgen::JsCast,
 	wasm_bindgen_futures::spawn_local,
 	web_sys::HtmlInputElement,
 };
 
-/// Login form component
+/// Login form component using hooks
 ///
 /// Provides email/password login with validation and error display.
+/// Uses React-like hooks for state management.
 pub fn login_form() -> View {
-	let error = Signal::new(None::<String>);
-	let loading = Signal::new(false);
+	// Hook-styled state management
+	let (error, set_error) = use_state(None::<String>);
+	let (loading, set_loading) = use_state(false);
 
 	#[cfg(target_arch = "wasm32")]
 	let on_submit = {
-		let error = error.clone();
-		let loading = loading.clone();
+		let set_error = set_error.clone();
+		let set_loading = set_loading.clone();
 		move |event: web_sys::Event| {
 			event.prevent_default();
 
-			let error = error.clone();
-			let loading = loading.clone();
+			let set_error = set_error.clone();
+			let set_loading = set_loading.clone();
 
 			// Get form data
 			let form = event
@@ -52,8 +55,8 @@ pub fn login_form() -> View {
 					.unwrap_or_default();
 
 				spawn_local(async move {
-					loading.set(true);
-					error.set(None);
+					set_loading(true);
+					set_error(None);
 
 					let request = LoginRequest { email, password };
 
@@ -66,8 +69,8 @@ pub fn login_form() -> View {
 							}
 						}
 						Err(e) => {
-							error.set(Some(e.to_string()));
-							loading.set(false);
+							set_error(Some(e.to_string()));
+							set_loading(false);
 						}
 					}
 				});
@@ -183,22 +186,24 @@ pub fn login_form() -> View {
 		.into_view()
 }
 
-/// Registration form component
+/// Registration form component using hooks
 ///
 /// Provides username/email/password registration with validation.
+/// Uses React-like hooks for state management.
 pub fn register_form() -> View {
-	let error = Signal::new(None::<String>);
-	let loading = Signal::new(false);
+	// Hook-styled state management
+	let (error, set_error) = use_state(None::<String>);
+	let (loading, set_loading) = use_state(false);
 
 	#[cfg(target_arch = "wasm32")]
 	let on_submit = {
-		let error = error.clone();
-		let loading = loading.clone();
+		let set_error = set_error.clone();
+		let set_loading = set_loading.clone();
 		move |event: web_sys::Event| {
 			event.prevent_default();
 
-			let error = error.clone();
-			let loading = loading.clone();
+			let set_error = set_error.clone();
+			let set_loading = set_loading.clone();
 
 			// Get form data
 			let form = event
@@ -235,8 +240,8 @@ pub fn register_form() -> View {
 					.unwrap_or_default();
 
 				spawn_local(async move {
-					loading.set(true);
-					error.set(None);
+					set_loading(true);
+					set_error(None);
 
 					let request = RegisterRequest {
 						username,
@@ -253,8 +258,8 @@ pub fn register_form() -> View {
 							}
 						}
 						Err(e) => {
-							error.set(Some(e.to_string()));
-							loading.set(false);
+							set_error(Some(e.to_string()));
+							set_loading(false);
 						}
 					}
 				});

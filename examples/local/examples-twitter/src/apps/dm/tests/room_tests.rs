@@ -92,19 +92,13 @@ mod room_tests {
 
 	/// Helper to check if a room exists
 	async fn room_exists(db: &DatabaseConnection, room_id: Uuid) -> bool {
-		let sql = format!(
-			"SELECT COUNT(*) as count FROM dm_room WHERE id = '{}'",
-			room_id
-		);
+		use crate::apps::dm::models::DMRoom;
 
-		let result = db.query_one(&sql, vec![]).await;
-		match result {
-			Ok(row) => {
-				let count: i64 = row.get("count");
-				count > 0
-			}
-			Err(_) => false,
-		}
+		DMRoom::objects()
+			.get(room_id)
+			.with_conn(db)
+			.await
+			.is_ok()
 	}
 
 	/// Helper to call list_rooms endpoint directly
@@ -208,18 +202,20 @@ mod room_tests {
 			return Err(Error::Authorization("Not a member of this room".into()));
 		}
 
-		// Get room details
-		let sql = format!(
-			r#"SELECT id, name, is_group, created_at FROM dm_room WHERE id = '{}'"#,
-			room_id
-		);
+		// Get room details using ORM
+		use crate::apps::dm::models::DMRoom;
 
-		let row = db.query_one(&sql, vec![]).await?;
+		let room = DMRoom::objects()
+			.get(room_id)
+			.with_conn(db)
+			.await
+			.map_err(|e| Error::Http(e.to_string()))?;
+
 		Ok(RoomResponse {
-			id: row.get("id"),
-			name: row.get("name"),
-			is_group: row.get("is_group"),
-			created_at: row.get("created_at"),
+			id: room.id,
+			name: room.name,
+			is_group: room.is_group,
+			created_at: room.created_at,
 		})
 	}
 
@@ -231,7 +227,6 @@ mod room_tests {
 		name: Option<&str>,
 		member_ids: Vec<Uuid>,
 	) -> Result<RoomResponse, reinhardt::Error> {
-		use chrono::Utc;
 		use reinhardt::{Error, JwtAuth};
 
 		// Check authentication
@@ -258,45 +253,42 @@ mod room_tests {
 		};
 		request.validate().map_err(|e| Error::Validation(format!("Validation failed: {}", e)))?;
 
-		// Verify all member IDs exist
+		use crate::apps::auth::models::User;
+		use crate::apps::dm::models::DMRoom;
+		use reinhardt::db::orm::Manager;
+
+		// Verify all member IDs exist using ORM
 		for member_id in &member_ids {
-			let check_sql = format!("SELECT id FROM auth_user WHERE id = '{}'", member_id);
-			if db.query_one(&check_sql, vec![]).await.is_err() {
+			if User::objects().get(*member_id).with_conn(db).await.is_err() {
 				return Err(Error::Http("One or more member IDs not found".into()));
 			}
 		}
 
-		// Create room
-		let room_id = Uuid::new_v4();
+		// Create room using ORM
 		let is_group = member_ids.len() > 1;
-		let now = Utc::now();
+		let room = DMRoom::new(name.map(String::from), is_group);
 
-		let sql = format!(
-			r#"INSERT INTO dm_room (id, name, is_group, created_at, updated_at)
-			VALUES ('{}', {}, {}, '{}', '{}')"#,
-			room_id,
-			name.map_or("NULL".to_string(), |n| format!("'{}'", n)),
-			is_group,
-			now.format("%Y-%m-%d %H:%M:%S%.6f"),
-			now.format("%Y-%m-%d %H:%M:%S%.6f")
-		);
-		db.execute(&sql, vec![]).await?;
+		let created_room = DMRoom::objects()
+			.create(room)
+			.with_conn(db)
+			.await
+			.map_err(|e| Error::Http(e.to_string()))?;
 
 		// Add creator as member
-		add_room_member(db, room_id, current_user_id).await;
+		add_room_member(db, created_room.id, current_user_id).await;
 
 		// Add other members
 		for member_id in &member_ids {
 			if *member_id != current_user_id {
-				add_room_member(db, room_id, *member_id).await;
+				add_room_member(db, created_room.id, *member_id).await;
 			}
 		}
 
 		Ok(RoomResponse {
-			id: room_id,
-			name: name.map(|s| s.to_string()),
-			is_group,
-			created_at: now,
+			id: created_room.id,
+			name: created_room.name,
+			is_group: created_room.is_group,
+			created_at: created_room.created_at,
 		})
 	}
 
@@ -336,23 +328,46 @@ mod room_tests {
 			return Err(Error::Authorization("Not a member of this room".into()));
 		}
 
+		use crate::apps::dm::models::{DMMessage, DMRoom};
+		use reinhardt::db::orm::{FilterOperator, FilterValue, Manager};
+
+		// Get the room to clear its members
+		let room = DMRoom::objects()
+			.get(room_id)
+			.with_conn(db)
+			.await
+			.map_err(|e| Error::Http(e.to_string()))?;
+
 		// Delete room members first (foreign key constraint)
-		let delete_members_sql = format!(
-			"DELETE FROM dm_room_members WHERE dmroom_id = '{}'",
-			room_id
-		);
-		db.execute(&delete_members_sql, vec![]).await?;
+		room.members
+			.clear()
+			.with_conn(db)
+			.await
+			.map_err(|e| Error::Http(e.to_string()))?;
 
 		// Delete messages (foreign key constraint)
-		let delete_messages_sql = format!(
-			"DELETE FROM dm_message WHERE room_id = '{}'",
-			room_id
-		);
-		db.execute(&delete_messages_sql, vec![]).await?;
+		let messages = DMMessage::objects()
+			.filter(
+				DMMessage::field_room(),
+				FilterOperator::Eq,
+				FilterValue::Uuid(room_id),
+			)
+			.all_with_conn(db)
+			.await
+			.unwrap_or_default();
 
-		// Delete room
-		let delete_sql = format!("DELETE FROM dm_room WHERE id = '{}'", room_id);
-		db.execute(&delete_sql, vec![]).await?;
+		for message in messages {
+			DMMessage::objects()
+				.delete_with_conn(db, message.id)
+				.await
+				.map_err(|e| Error::Http(e.to_string()))?;
+		}
+
+		// Delete room using ORM
+		DMRoom::objects()
+			.delete_with_conn(db, room_id)
+			.await
+			.map_err(|e| Error::Http(e.to_string()))?;
 
 		Ok(())
 	}

@@ -12,11 +12,12 @@
 //!
 //! ## Design Note
 //!
-//! These components use ElementView for SSR compatibility.
+//! These components use the `page!` macro for JSX-like syntax.
 //! Interactive components with event handlers are hydrated on the client side.
 
 use reinhardt_pages::Signal;
-use reinhardt_pages::component::{ElementView, IntoView, View};
+use reinhardt_pages::component::View;
+use reinhardt_pages::page;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
@@ -72,51 +73,55 @@ pub fn button(text: &str, variant: ButtonVariant, disabled: bool, on_click: Sign
 	} else {
 		variant.class().to_string()
 	};
+	let text = text.to_string();
+	let disabled_attr = if disabled { "true" } else { "" }.to_string();
 
 	#[cfg(target_arch = "wasm32")]
-	let button_view = {
+	{
 		let on_click = on_click.clone();
-		ElementView::new("button")
-			.attr("class", &class)
-			.attr("type", "button")
-			.attr("disabled", if disabled { "true" } else { "" })
-			.listener("click", move |_event: web_sys::Event| {
-				on_click.set(true);
-			})
-			.child(text.to_string())
-	};
+		page!(|class: String, text: String, disabled_attr: String| {
+	button {
+		class: class,
+		r#type: "button",
+		disabled: disabled_attr,
+		@click: move | _event | { on_click . set (true) ; },
+		{ text }
+	}
+})(class, text, disabled_attr)
+	}
 
 	#[cfg(not(target_arch = "wasm32"))]
-	let button_view = {
+	{
 		let _ = on_click; // Suppress unused warning
-		ElementView::new("button")
-			.attr("class", &class)
-			.attr("type", "button")
-			.attr("disabled", if disabled { "true" } else { "" })
-			.attr("data-reactive", "true")
-			.child(text.to_string())
-	};
-
-	button_view.into_view()
+		page!(|class: String, text: String, disabled_attr: String| {
+	button {
+		class: { class },
+		r#type: "button",
+		disabled: { disabled_attr },
+		data_reactive: "true",
+		{ text }
+	}
+})(class, text, disabled_attr)
+	}
 }
 
 /// Loading spinner component
 ///
 /// Displays a Bootstrap spinner animation while content is loading.
 pub fn loading_spinner() -> View {
-	ElementView::new("div")
-		.attr("class", "text-center py-5")
-		.child(
-			ElementView::new("div")
-				.attr("class", "spinner-border")
-				.attr("role", "status")
-				.child(
-					ElementView::new("span")
-						.attr("class", "visually-hidden")
-						.child("Loading..."),
-				),
-		)
-		.into_view()
+	page!(|| {
+	div {
+		class: "text-center py-5",
+		div {
+			class: "spinner-border",
+			role: "status",
+			span {
+				class: "visually-hidden",
+				"Loading..."
+			}
+		}
+	}
+})()
 }
 
 /// Error alert component
@@ -128,28 +133,30 @@ pub fn loading_spinner() -> View {
 /// * `message` - Error message to display
 /// * `dismissible` - Whether the alert can be dismissed
 pub fn error_alert(message: &str, dismissible: bool) -> View {
-	let class = if dismissible {
-		"alert alert-danger alert-dismissible fade show"
-	} else {
-		"alert alert-danger"
-	};
-
-	let mut container = ElementView::new("div")
-		.attr("class", class)
-		.attr("role", "alert")
-		.child(message.to_string());
-
+	let message = message.to_string();
 	if dismissible {
-		container = container.child(
-			ElementView::new("button")
-				.attr("type", "button")
-				.attr("class", "btn-close")
-				.attr("data-bs-dismiss", "alert")
-				.attr("aria-label", "Close"),
-		);
+		page!(|message: String| {
+	div {
+		class: "alert alert-danger alert-dismissible fade show",
+		role: "alert",
+		{ message }
+		button {
+			r#type: "button",
+			class: "btn-close",
+			data_bs_dismiss: "alert",
+			aria_label: "Close",
+		}
 	}
-
-	container.into_view()
+})(message)
+	} else {
+		page!(|message: String| {
+	div {
+		class: "alert alert-danger",
+		role: "alert",
+		{ message }
+	}
+})(message)
+	}
 }
 
 /// Success alert component
@@ -160,11 +167,14 @@ pub fn error_alert(message: &str, dismissible: bool) -> View {
 ///
 /// * `message` - Success message to display
 pub fn success_alert(message: &str) -> View {
-	ElementView::new("div")
-		.attr("class", "alert alert-success")
-		.attr("role", "alert")
-		.child(message.to_string())
-		.into_view()
+	let message = message.to_string();
+	page!(|message: String| {
+	div {
+		class: "alert alert-success",
+		role: "alert",
+		{ message }
+	}
+})(message)
 }
 
 /// Text input component
@@ -188,51 +198,75 @@ pub fn text_input(
 	required: bool,
 ) -> View {
 	let current_value = value.get();
+	let id_owned = id.to_string();
+	let placeholder_owned = placeholder.to_string();
+	let input_type_owned = input_type.to_string();
+	let label_owned = label.to_string();
+	let required_attr = if required { "true" } else { "" }.to_string();
 
 	#[cfg(target_arch = "wasm32")]
-	let input = {
+	{
 		let value = value.clone();
-		ElementView::new("input")
-			.attr("type", input_type)
-			.attr("class", "form-control")
-			.attr("id", id)
-			.attr("name", id)
-			.attr("placeholder", placeholder)
-			.attr("value", &current_value)
-			.attr("required", if required { "true" } else { "" })
-			.listener("input", move |event: web_sys::Event| {
-				if let Some(target) = event.target() {
-					if let Ok(input) = target.dyn_into::<web_sys::HtmlInputElement>() {
-						value.set(input.value());
-					}
-				}
-			})
-	};
+		page!(|id_owned: String, label_owned: String, input_type_owned: String, placeholder_owned: String, current_value: String, required_attr: String| {
+	div {
+		class: "mb-3",
+		label {
+			r#for: id_owned . clone (),
+			class: "form-label",
+			{ label_owned }
+		}
+		input {
+			r#type: input_type_owned,
+			class: "form-control",
+			id: id_owned . clone (),
+			name: id_owned,
+			placeholder: placeholder_owned,
+			value: current_value,
+			required: required_attr,
+			@input: move | event : web_sys :: Event | { if let Some (target) = event . target () { if let Ok (input_el) = target . dyn_into :: < web_sys :: HtmlInputElement > () { value . set (input_el . value ()) ; } } },
+		}
+	}
+})(
+			id_owned,
+			label_owned,
+			input_type_owned,
+			placeholder_owned,
+			current_value,
+			required_attr,
+		)
+	}
 
 	#[cfg(not(target_arch = "wasm32"))]
-	let input = {
+	{
 		let _ = value; // Suppress unused warning
-		ElementView::new("input")
-			.attr("type", input_type)
-			.attr("class", "form-control")
-			.attr("id", id)
-			.attr("name", id)
-			.attr("placeholder", placeholder)
-			.attr("value", &current_value)
-			.attr("required", if required { "true" } else { "" })
-			.attr("data-reactive", "true")
-	};
-
-	ElementView::new("div")
-		.attr("class", "mb-3")
-		.child(
-			ElementView::new("label")
-				.attr("for", id)
-				.attr("class", "form-label")
-				.child(label.to_string()),
+		page!(|id_owned: String, label_owned: String, input_type_owned: String, placeholder_owned: String, current_value: String, required_attr: String| {
+	div {
+		class: "mb-3",
+		label {
+			r#for: { id_owned . clone () },
+			class: "form-label",
+			{ label_owned }
+		}
+		input {
+			r#type: { input_type_owned },
+			class: "form-control",
+			id: { id_owned . clone () },
+			name: { id_owned },
+			placeholder: { placeholder_owned },
+			value: { current_value },
+			required: { required_attr },
+			data_reactive: "true",
+		}
+	}
+})(
+			id_owned,
+			label_owned,
+			input_type_owned,
+			placeholder_owned,
+			current_value,
+			required_attr,
 		)
-		.child(input)
-		.into_view()
+	}
 }
 
 /// Textarea component with character count
@@ -257,78 +291,117 @@ pub fn textarea(
 ) -> View {
 	let current_value = value.get();
 	let char_count = current_value.len();
+	let id_owned = id.to_string();
+	let placeholder_owned = placeholder.to_string();
+	let label_owned = label.to_string();
+	let rows_str = rows.to_string();
 
-	#[cfg(target_arch = "wasm32")]
-	let textarea_elem = {
-		let value = value.clone();
-		let mut elem = ElementView::new("textarea")
-			.attr("class", "form-control")
-			.attr("id", id)
-			.attr("name", id)
-			.attr("rows", &rows.to_string())
-			.attr("placeholder", placeholder)
-			.child(&current_value);
-
-		if max_length > 0 {
-			elem = elem.attr("maxlength", &max_length.to_string());
-		}
-
-		elem.listener("input", move |event: web_sys::Event| {
-			if let Some(target) = event.target() {
-				if let Ok(textarea) = target.dyn_into::<web_sys::HtmlTextAreaElement>() {
-					value.set(textarea.value());
-				}
-			}
-		})
-	};
-
-	#[cfg(not(target_arch = "wasm32"))]
-	let textarea_elem = {
-		let _ = value; // Suppress unused warning
-		let mut elem = ElementView::new("textarea")
-			.attr("class", "form-control")
-			.attr("id", id)
-			.attr("name", id)
-			.attr("rows", &rows.to_string())
-			.attr("placeholder", placeholder)
-			.attr("data-reactive", "true")
-			.child(&current_value);
-
-		if max_length > 0 {
-			elem = elem.attr("maxlength", &max_length.to_string());
-		}
-
-		elem
-	};
-
-	let mut container = ElementView::new("div")
-		.attr("class", "mb-3")
-		.child(
-			ElementView::new("label")
-				.attr("for", id)
-				.attr("class", "form-label")
-				.child(label.to_string()),
-		)
-		.child(textarea_elem);
-
-	// Add character count if max_length is set
-	if max_length > 0 {
-		let count_class = if char_count > max_length {
+	// Determine character count display class
+	let count_class = if max_length > 0 {
+		if char_count > max_length {
 			"text-danger"
 		} else if char_count > max_length * 9 / 10 {
 			"text-warning"
 		} else {
 			"text-muted"
-		};
+		}
+		.to_string()
+	} else {
+		String::new()
+	};
+	let count_text = if max_length > 0 {
+		format!("{}/{}", char_count, max_length)
+	} else {
+		String::new()
+	};
+	let maxlength_attr = if max_length > 0 {
+		max_length.to_string()
+	} else {
+		String::new()
+	};
+	let show_count = max_length > 0;
 
-		container = container.child(
-			ElementView::new("small")
-				.attr("class", count_class)
-				.child(format!("{}/{}", char_count, max_length)),
-		);
+	#[cfg(target_arch = "wasm32")]
+	{
+		let value = value.clone();
+		page!(|id_owned: String, label_owned: String, rows_str: String, placeholder_owned: String, current_value: String, maxlength_attr: String, show_count: bool, count_class: String, count_text: String| {
+	div {
+		class: "mb-3",
+		label {
+			r#for: id_owned . clone (),
+			class: "form-label",
+			{ label_owned }
+		}
+		textarea {
+			class: "form-control",
+			id: id_owned . clone (),
+			name: id_owned,
+			rows: rows_str,
+			placeholder: placeholder_owned,
+			maxlength: maxlength_attr,
+			@input: move | event : web_sys :: Event | { if let Some (target) = event . target () { if let Ok (textarea_el) = target . dyn_into :: < web_sys :: HtmlTextAreaElement > () { value . set (textarea_el . value ()) ; } } },
+			{ current_value }
+		}
+		if show_count {
+			small {
+				class: count_class,
+				{ count_text }
+			}
+		}
+	}
+})(
+			id_owned,
+			label_owned,
+			rows_str,
+			placeholder_owned,
+			current_value,
+			maxlength_attr,
+			show_count,
+			count_class,
+			count_text,
+		)
 	}
 
-	container.into_view()
+	#[cfg(not(target_arch = "wasm32"))]
+	{
+		let _ = value; // Suppress unused warning
+		page!(|id_owned: String, label_owned: String, rows_str: String, placeholder_owned: String, current_value: String, maxlength_attr: String, show_count: bool, count_class: String, count_text: String| {
+	div {
+		class: "mb-3",
+		label {
+			r#for: { id_owned . clone () },
+			class: "form-label",
+			{ label_owned }
+		}
+		textarea {
+			class: "form-control",
+			id: { id_owned . clone () },
+			name: { id_owned },
+			rows: { rows_str },
+			placeholder: { placeholder_owned },
+			maxlength: { maxlength_attr },
+			data_reactive: "true",
+			{ current_value }
+		}
+		if show_count {
+			small {
+				class: { count_class },
+				{ count_text }
+			}
+		}
+	}
+})(
+			id_owned,
+			label_owned,
+			rows_str,
+			placeholder_owned,
+			current_value,
+			maxlength_attr,
+			show_count,
+			count_class,
+			count_text,
+		)
+	}
 }
 
 /// Avatar component
@@ -341,22 +414,30 @@ pub fn textarea(
 /// * `alt` - Alt text for the image
 /// * `size` - Size in pixels
 pub fn avatar(url: Option<&str>, alt: &str, size: u32) -> View {
-	let src = url.unwrap_or("https://via.placeholder.com/150?text=User");
+	let src = url
+		.map(|s| s.to_string())
+		.unwrap_or_else(|| "https://via.placeholder.com/150?text=User".to_string());
+	let alt_text = alt.to_string();
 	let size_str = format!("{}px", size);
 
-	ElementView::new("img")
-		.attr("src", src)
-		.attr("alt", alt)
-		.attr("class", "rounded-circle")
-		.attr("width", &size_str)
-		.attr("height", &size_str)
-		.attr("style", "object-fit: cover;")
-		.into_view()
+	page!(|src: String, alt_text: String, size_str: String| {
+	img {
+		src: src . clone (),
+		alt: alt_text,
+		class: "rounded-circle",
+		width: size_str . clone (),
+		height: size_str,
+		style: "object-fit: cover;",
+	}
+})(src, alt_text, size_str)
 }
 
 /// Empty placeholder component
 ///
 /// Displays an empty div (useful for conditional rendering).
 pub fn empty() -> View {
-	ElementView::new("div").into_view()
+	page!(|| {
+	div {
+	}
+})()
 }

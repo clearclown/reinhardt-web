@@ -28,6 +28,7 @@ pub struct User {
 	#[field(default = true)]
 	is_active: bool,
 
+	#[field(include_in_new = false)]
 	last_login: Option<DateTime<Utc>>,
 
 	#[field(auto_now_add = true)]

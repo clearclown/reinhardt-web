@@ -1,7 +1,7 @@
 //! Project and ProjectMember models
 
 use chrono::{DateTime, Utc};
-use reinhardt::prelude::*;
+use reinhardt::model;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

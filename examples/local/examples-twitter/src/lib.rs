@@ -15,19 +15,32 @@ pub mod shared {
 }
 
 // ============================================================================
+// Server functions (available on both WASM and server, target-specific code generated)
+// ============================================================================
+pub mod server_fn;
+
+// ============================================================================
 // Server-only modules (non-WASM)
 // ============================================================================
-// Re-export internal crates for macro-generated code
-pub use reinhardt::core::async_trait;
-pub use reinhardt::reinhardt_apps;
-pub use reinhardt::reinhardt_core;
-pub use reinhardt::reinhardt_http;
-pub use reinhardt::reinhardt_migrations;
-pub use reinhardt::reinhardt_params;
+#[cfg(not(target_arch = "wasm32"))]
+mod server_only {
+	// Re-export internal crates for macro-generated code
+	pub use reinhardt::core::async_trait;
+	pub use reinhardt::reinhardt_apps;
+	pub use reinhardt::reinhardt_core;
+	pub use reinhardt::reinhardt_http;
+	pub use reinhardt::reinhardt_migrations;
+	pub use reinhardt::reinhardt_params;
+}
+#[cfg(not(target_arch = "wasm32"))]
+pub use server_only::*;
 
-// Core modules
+// Core server modules (non-WASM only)
+#[cfg(not(target_arch = "wasm32"))]
 pub mod apps;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod config;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod migrations;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -41,7 +54,7 @@ pub mod server {
 	pub use crate::config::settings::get_settings;
 }
 
-#[cfg(any(test, feature = "e2e-tests"))]
+#[cfg(all(not(target_arch = "wasm32"), any(test, feature = "e2e-tests")))]
 pub mod test_utils;
 
 // ============================================================================

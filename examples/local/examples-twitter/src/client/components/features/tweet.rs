@@ -1,43 +1,48 @@
-//! Tweet components
+//! Tweet components using React-like hooks
 //!
-//! Provides tweet card, tweet form, and tweet list components.
+//! Provides tweet card, tweet form, and tweet list components with hooks-styled state management.
 
 use crate::shared::types::{CreateTweetRequest, TweetInfo};
-use reinhardt_pages::Signal;
 use reinhardt_pages::component::{ElementView, IntoView, View};
+use reinhardt_pages::page;
+use reinhardt_pages::reactive::hooks::use_state;
 use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
 use {
-	crate::server::server_fn::tweet::{create_tweet, delete_tweet, list_tweets},
+	crate::server_fn::tweet::{create_tweet, delete_tweet, list_tweets},
+	wasm_bindgen::JsCast,
 	wasm_bindgen_futures::spawn_local,
 	web_sys::HtmlTextAreaElement,
 };
 
-/// Tweet card component
+/// Tweet card component using hooks
 ///
 /// Displays a single tweet with delete button if owned by current user.
+/// Uses React-like hooks for state management.
 pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 	let tweet_id = tweet.id;
-	let deleted = Signal::new(false);
-	let error = Signal::new(None::<String>);
+
+	// Hook-styled state management
+	let (deleted, set_deleted) = use_state(false);
+	let (error, set_error) = use_state(None::<String>);
 
 	#[cfg(target_arch = "wasm32")]
 	let on_delete = {
-		let deleted = deleted.clone();
-		let error = error.clone();
+		let set_deleted = set_deleted.clone();
+		let set_error = set_error.clone();
 
 		move |_event: web_sys::Event| {
-			let deleted = deleted.clone();
-			let error = error.clone();
+			let set_deleted = set_deleted.clone();
+			let set_error = set_error.clone();
 
 			spawn_local(async move {
 				match delete_tweet(tweet_id).await {
 					Ok(()) => {
-						deleted.set(true);
+						set_deleted(true);
 					}
 					Err(e) => {
-						error.set(Some(e.to_string()));
+						set_error(Some(e.to_string()));
 					}
 				}
 			});
@@ -101,26 +106,28 @@ pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 		.into_view()
 }
 
-/// Tweet form component
+/// Tweet form component using hooks
 ///
 /// Provides form for creating a new tweet with 280 character limit.
+/// Uses React-like hooks for state management.
 pub fn tweet_form() -> View {
-	let content = Signal::new(String::new());
-	let error = Signal::new(None::<String>);
-	let loading = Signal::new(false);
-	let char_count = Signal::new(0);
+	// Hook-styled state for form fields
+	let (content, set_content) = use_state(String::new());
+	let (error, set_error) = use_state(None::<String>);
+	let (loading, set_loading) = use_state(false);
+	let (char_count, set_char_count) = use_state(0usize);
 
 	#[cfg(target_arch = "wasm32")]
 	let on_input = {
-		let content = content.clone();
-		let char_count = char_count.clone();
+		let set_content = set_content.clone();
+		let set_char_count = set_char_count.clone();
 
 		move |event: web_sys::Event| {
 			if let Some(target) = event.target() {
 				if let Ok(textarea) = target.dyn_into::<HtmlTextAreaElement>() {
 					let value = textarea.value();
-					char_count.set(value.len());
-					content.set(value);
+					set_char_count(value.len());
+					set_content(value);
 				}
 			}
 		}
@@ -131,23 +138,24 @@ pub fn tweet_form() -> View {
 
 	#[cfg(target_arch = "wasm32")]
 	let on_submit = {
-		let error = error.clone();
-		let loading = loading.clone();
+		let set_error = set_error.clone();
+		let set_loading = set_loading.clone();
 		let content = content.clone();
-		let char_count = char_count.clone();
+		let set_content = set_content.clone();
+		let set_char_count = set_char_count.clone();
 
 		move |event: web_sys::Event| {
 			event.prevent_default();
 
-			let error = error.clone();
-			let loading = loading.clone();
+			let set_error = set_error.clone();
+			let set_loading = set_loading.clone();
 			let content_value = content.get();
-			let content = content.clone();
-			let char_count = char_count.clone();
+			let set_content = set_content.clone();
+			let set_char_count = set_char_count.clone();
 
 			spawn_local(async move {
-				loading.set(true);
-				error.set(None);
+				set_loading(true);
+				set_error(None);
 
 				let request = CreateTweetRequest {
 					content: content_value,
@@ -156,17 +164,17 @@ pub fn tweet_form() -> View {
 				match create_tweet(request).await {
 					Ok(_) => {
 						// Clear form
-						content.set(String::new());
-						char_count.set(0);
-						loading.set(false);
+						set_content(String::new());
+						set_char_count(0);
+						set_loading(false);
 						// Reload page to show new tweet
 						if let Some(window) = web_sys::window() {
 							let _ = window.location().reload();
 						}
 					}
 					Err(e) => {
-						error.set(Some(e.to_string()));
-						loading.set(false);
+						set_error(Some(e.to_string()));
+						set_loading(false);
 					}
 				}
 			});
@@ -264,32 +272,36 @@ pub fn tweet_form() -> View {
 		.into_view()
 }
 
-/// Tweet list component
+/// Tweet list component using hooks
 ///
 /// Displays list of tweets with loading and error states.
+/// Uses React-like hooks for state management.
 pub fn tweet_list(user_id: Option<Uuid>) -> View {
-	let tweets = Signal::new(Vec::<TweetInfo>::new());
-	let loading = Signal::new(true);
-	let error = Signal::new(None::<String>);
+	use crate::client::components::common::{error_alert, loading_spinner};
+
+	// Hook-styled state management
+	let (tweets, set_tweets) = use_state(Vec::<TweetInfo>::new());
+	let (loading, set_loading) = use_state(true);
+	let (error, set_error) = use_state(None::<String>);
 
 	#[cfg(target_arch = "wasm32")]
 	{
-		let tweets = tweets.clone();
-		let loading = loading.clone();
-		let error = error.clone();
+		let set_tweets = set_tweets.clone();
+		let set_loading = set_loading.clone();
+		let set_error = set_error.clone();
 
 		spawn_local(async move {
-			loading.set(true);
-			error.set(None);
+			set_loading(true);
+			set_error(None);
 
 			match list_tweets(user_id, 0).await {
 				Ok(tweet_list) => {
-					tweets.set(tweet_list);
-					loading.set(false);
+					set_tweets(tweet_list);
+					set_loading(false);
 				}
 				Err(e) => {
-					error.set(Some(e.to_string()));
-					loading.set(false);
+					set_error(Some(e.to_string()));
+					set_loading(false);
 				}
 			}
 		});
@@ -297,38 +309,24 @@ pub fn tweet_list(user_id: Option<Uuid>) -> View {
 
 	ElementView::new("div")
 		.child(if loading.get() {
-			// Loading state
-			ElementView::new("div")
-				.attr("class", "text-center py-5")
-				.child(
-					ElementView::new("div")
-						.attr("class", "spinner-border")
-						.attr("role", "status")
-						.child(
-							ElementView::new("span")
-								.attr("class", "visually-hidden")
-								.child("Loading..."),
-						),
-				)
-				.into_view()
+			// Loading state - use shared component
+			loading_spinner()
 		} else if let Some(err) = error.get() {
-			// Error state
-			ElementView::new("div")
-				.attr("class", "alert alert-danger")
-				.child(err)
-				.into_view()
+			// Error state - use shared component
+			error_alert(&err, false)
 		} else {
 			// Tweet list
 			let tweet_list = tweets.get();
 			if tweet_list.is_empty() {
-				ElementView::new("div")
-					.attr("class", "text-center py-5")
-					.child(
-						ElementView::new("p")
-							.attr("class", "text-muted")
-							.child("No tweets yet. Be the first to post!"),
-					)
-					.into_view()
+				page!(|| {
+	div {
+		class: "text-center py-5",
+		p {
+			class: "text-muted",
+			"No tweets yet. Be the first to post!"
+		}
+	}
+})()
 			} else {
 				ElementView::new("div")
 					.children(

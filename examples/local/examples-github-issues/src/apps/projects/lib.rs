@@ -7,6 +7,8 @@ use reinhardt::AppConfig;
 pub mod admin;
 pub mod models;
 pub mod serializers;
+#[cfg(test)]
+pub mod tests;
 pub mod urls;
 pub mod views;
 
