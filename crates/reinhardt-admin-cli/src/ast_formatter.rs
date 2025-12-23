@@ -195,6 +195,21 @@ impl AstPageFormatter {
 		}
 	}
 
+	/// Calculate the base indentation level for a macro at the given position.
+	///
+	/// Returns the number of tabs from the start of the line to the macro position.
+	fn calculate_base_indent(content: &str, macro_start: usize) -> usize {
+		// Find the start of the line containing the macro
+		let line_start = content[..macro_start]
+			.rfind('\n')
+			.map(|pos| pos + 1)
+			.unwrap_or(0);
+
+		// Count tabs in the indentation
+		let indent_str = &content[line_start..macro_start];
+		indent_str.chars().filter(|&c| c == '\t').count()
+	}
+
 	/// Format the content of a Rust source file.
 	///
 	/// Uses AST parsing for accurate macro detection. Falls back to returning
@@ -224,8 +239,11 @@ impl AstPageFormatter {
 			// Copy content before this macro
 			result.push_str(&content[last_end..macro_info.start]);
 
+			// Calculate base indentation for this macro
+			let base_indent = Self::calculate_base_indent(content, macro_info.start);
+
 			// Try to parse and format the macro
-			match self.format_macro_tokens(&macro_info.tokens) {
+			match self.format_macro_tokens(&macro_info.tokens, base_indent) {
 				Ok(formatted) => {
 					result.push_str("page!(");
 					result.push_str(&formatted);
@@ -363,26 +381,56 @@ impl AstPageFormatter {
 	}
 
 	/// Format macro tokens to formatted string.
-	fn format_macro_tokens(&self, tokens: &proc_macro2::TokenStream) -> Result<String, String> {
+	fn format_macro_tokens(
+		&self,
+		tokens: &proc_macro2::TokenStream,
+		base_indent: usize,
+	) -> Result<String, String> {
 		// Parse tokens as PageMacro
 		let page_macro: PageMacro =
 			syn::parse2(tokens.clone()).map_err(|e| format!("Parse error: {}", e))?;
 
 		// Format the macro
-		self.format_page_macro(&page_macro)
+		self.format_page_macro(&page_macro, base_indent)
+	}
+
+	/// Check if a page macro body is simple and can be formatted on a single line.
+	fn is_simple_body(body: &PageBody) -> bool {
+		// Simple if it has exactly one element with no attributes, events, or children
+		if body.nodes.len() == 1
+			&& let PageNode::Element(elem) = &body.nodes[0] {
+				return elem.attrs.is_empty() && elem.events.is_empty() && elem.children.is_empty();
+			}
+		false
 	}
 
 	/// Format a PageMacro AST to string.
-	fn format_page_macro(&self, macro_ast: &PageMacro) -> Result<String, String> {
+	fn format_page_macro(
+		&self,
+		macro_ast: &PageMacro,
+		base_indent: usize,
+	) -> Result<String, String> {
 		let mut output = String::new();
 
 		// Format closure parameters
 		self.format_params(&mut output, &macro_ast.params);
 
-		// Format body
-		output.push_str(" {\n");
-		self.format_body(&mut output, &macro_ast.body, 1);
-		output.push('}');
+		// Check if body is simple enough for single-line format
+		if Self::is_simple_body(&macro_ast.body) {
+			// Single-line format: || { div {} }
+			output.push_str(" { ");
+			if let PageNode::Element(elem) = &macro_ast.body.nodes[0] {
+				output.push_str(&elem.tag.to_string());
+				output.push_str(" {}");
+			}
+			output.push_str(" }");
+		} else {
+			// Multi-line format
+			output.push_str(" {\n");
+			self.format_body(&mut output, &macro_ast.body, base_indent + 1);
+			output.push_str(&self.make_indent(base_indent));
+			output.push('}');
+		}
 
 		Ok(output)
 	}
@@ -424,49 +472,62 @@ impl AstPageFormatter {
 	fn format_element(&self, output: &mut String, elem: &PageElement, indent: usize) {
 		let ind = self.make_indent(indent);
 
+		// Check if element is empty (no attrs, events, or children)
+		let is_empty = elem.attrs.is_empty() && elem.events.is_empty() && elem.children.is_empty();
+
 		// Element tag
 		output.push_str(&ind);
 		output.push_str(&elem.tag.to_string());
-		output.push_str(" {\n");
 
-		// Attributes (one per line)
-		for attr in &elem.attrs {
-			self.format_attr(output, attr, indent + 1);
+		if is_empty {
+			// Empty element: single line format
+			output.push_str(" {}\n");
+		} else {
+			// Non-empty element: multi-line format
+			output.push_str(" {\n");
+
+			// Attributes (one per line)
+			for attr in &elem.attrs {
+				self.format_attr(output, attr, indent + 1);
+			}
+
+			// Event handlers (one per line)
+			for event in &elem.events {
+				self.format_event(output, event, indent + 1);
+			}
+
+			// Children
+			for child in &elem.children {
+				self.format_node(output, child, indent + 1);
+			}
+
+			// Closing brace
+			output.push_str(&ind);
+			output.push_str("}\n");
 		}
-
-		// Event handlers (one per line)
-		for event in &elem.events {
-			self.format_event(output, event, indent + 1);
-		}
-
-		// Children
-		for child in &elem.children {
-			self.format_node(output, child, indent + 1);
-		}
-
-		// Closing brace
-		output.push_str(&ind);
-		output.push_str("}\n");
 	}
 
 	/// Format an attribute.
 	fn format_attr(&self, output: &mut String, attr: &PageAttr, indent: usize) {
 		let ind = self.make_indent(indent);
+		let value_str = Self::clean_expression_spaces(&attr.value.to_token_stream().to_string());
 		output.push_str(&ind);
 		output.push_str(&attr.name.to_string());
 		output.push_str(": ");
-		output.push_str(&attr.value.to_token_stream().to_string());
+		output.push_str(&value_str);
 		output.push_str(",\n");
 	}
 
 	/// Format an event handler.
 	fn format_event(&self, output: &mut String, event: &PageEvent, indent: usize) {
 		let ind = self.make_indent(indent);
+		let handler_str =
+			Self::clean_expression_spaces(&event.handler.to_token_stream().to_string());
 		output.push_str(&ind);
 		output.push('@');
 		output.push_str(&event.event_type.to_string());
 		output.push_str(": ");
-		output.push_str(&event.handler.to_token_stream().to_string());
+		output.push_str(&handler_str);
 		output.push_str(",\n");
 	}
 
@@ -481,17 +542,29 @@ impl AstPageFormatter {
 		output.push_str("\"\n");
 	}
 
+	/// Clean up extra spaces in expression strings.
+	fn clean_expression_spaces(s: &str) -> String {
+		s.replace(" . ", ".")
+			.replace(" ( ", "(")
+			.replace(" )", ")")
+			.replace("( ", "(")
+			.replace(" )", ")")
+			.replace(" ()", "()")
+	}
+
 	/// Format an expression node.
 	fn format_expression(&self, output: &mut String, expr: &PageExpression, indent: usize) {
 		let ind = self.make_indent(indent);
 		output.push_str(&ind);
 
+		let expr_str = Self::clean_expression_spaces(&expr.expr.to_token_stream().to_string());
+
 		if expr.braced {
 			output.push_str("{ ");
-			output.push_str(&expr.expr.to_token_stream().to_string());
+			output.push_str(&expr_str);
 			output.push_str(" }\n");
 		} else {
-			output.push_str(&expr.expr.to_token_stream().to_string());
+			output.push_str(&expr_str);
 			output.push('\n');
 		}
 	}
