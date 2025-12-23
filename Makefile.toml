@@ -213,7 +213,7 @@ dependencies = [
 
 [tasks.ci]
 description = "Run all CI checks (check, fmt, clippy, examples-build, tests)"
-dependencies = ["check", "fmt-check", "clippy-check", "examples-build", "test"]
+dependencies = ["check", "fmt-check", "clippy-check", "fmt-page-check", "examples-build", "test"]
 
 # ============================================================================
 # Documentation Tasks
