@@ -1,7 +1,8 @@
 [build]
 target-dir = "target"
+rustflags = ["-Wunreachable_pub"]
 
-# rust-analyzerの設定
-# すべてのフィーチャを有効にして、エディタでの型チェックを改善
+# rust-analyzer settings
+# Enable all features to improve type checking in the editor
 [env]
 RUST_ANALYZER_CARGO_FEATURES = "all"

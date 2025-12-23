@@ -104,3 +104,5 @@ docs/Gemfile.lock
 .bacon-locations
 *.log
 *.tmp
+
+:file:memory:

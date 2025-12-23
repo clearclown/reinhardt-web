@@ -90,9 +90,19 @@ args = [
   "warnings",
 ]
 
+[tasks.fmt-page]
+description = "Format page! macro DSL in source files"
+command = "cargo"
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt", "."]
+
+[tasks.fmt-page-check]
+description = "Check page! macro DSL formatting (CI mode)"
+command = "cargo"
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt", "--check", "."]
+
 [tasks.auto-fix]
-description = "Run all tests"
-dependencies = ["fmt-fix", "clippy-fix"]
+description = "Run all auto-fixes"
+dependencies = ["fmt-fix", "clippy-fix", "fmt-page"]
 
 # ============================================================================
 # Testing Tasks
