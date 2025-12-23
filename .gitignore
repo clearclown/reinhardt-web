@@ -105,4 +105,4 @@ docs/Gemfile.lock
 *.log
 *.tmp
 
-:file:memory:
+file::memory:
