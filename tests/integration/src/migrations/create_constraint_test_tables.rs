@@ -12,7 +12,7 @@ use reinhardt_migrations::{
 /// Creates the following tables:
 /// - test_posts: Posts with composite UNIQUE constraint on (user_id, title)
 /// - test_comments: Comments with CASCADE DELETE on post_id
-pub fn migration() -> Migration {
+pub(super) fn migration() -> Migration {
 	Migration::new("0002_create_constraint_test_tables", "tests")
 		// Must depend on 0001 because test_posts references test_users
 		.add_dependency("tests", "0001_create_test_tables")

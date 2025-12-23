@@ -6,10 +6,15 @@
 //! 1. Path parameters can be used in both the endpoint and its dependencies
 //! 2. Dependencies can access path parameters without duplication
 
-use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
-use reinhardt_params::Path;
-use reinhardt_params::extract::FromRequest;
+use reinhardt_di::{DiResult, Injectable, InjectionContext, SingletonScope};
 use std::sync::Arc;
+
+#[cfg(feature = "params")]
+use reinhardt_di::DiError;
+#[cfg(feature = "params")]
+use reinhardt_params::Path;
+#[cfg(feature = "params")]
+use reinhardt_params::extract::FromRequest;
 
 // Path parameter wrapper
 #[derive(Clone, Debug)]
@@ -23,7 +28,8 @@ impl Injectable for UserId {
 			return Ok((*cached).clone());
 		}
 
-		// Extract from HTTP request if available
+		// Extract from HTTP request if available (requires params feature)
+		#[cfg(feature = "params")]
 		if let (Some(request), Some(param_ctx)) = (ctx.get_http_request(), ctx.get_param_context())
 		{
 			let path_param = Path::<i32>::from_request(request, param_ctx)

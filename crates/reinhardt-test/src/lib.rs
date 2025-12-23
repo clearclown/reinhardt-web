@@ -1,14 +1,130 @@
-//! Testing utilities for Reinhardt framework
+//! # Reinhardt Test
 //!
-//! This crate provides reusable testing utilities and helpers for the Reinhardt framework.
-//! Actual test cases for Reinhardt functionality should be placed in the `reinhardt-qa` crate.
+//! Testing utilities for the Reinhardt framework.
 //!
-//! This crate provides testing tools similar to Django REST Framework's test utilities:
-//! - APIClient: Test client for making API requests
-//! - APIRequestFactory: Factory for creating test requests
-//! - APITestCase: Base test case with common assertions
-//! - Response assertions and helpers
-//! - TestContainers integration for database testing (optional, requires `testcontainers` feature)
+//! ## Overview
+//!
+//! This crate provides comprehensive testing tools inspired by Django REST Framework,
+//! including API clients, request factories, assertions, and TestContainers integration
+//! for database testing.
+//!
+//! ## Features
+//!
+//! - **[`APIClient`]**: HTTP client for making test API requests
+//! - **[`APIRequestFactory`]**: Factory for creating mock HTTP requests
+//! - **[`APITestCase`]**: Base test case with common assertions
+//! - **Response Assertions**: Status, header, and body assertions
+//! - **[`Factory`]**: Model factory for generating test data
+//! - **[`DebugToolbar`]**: Debug panel for inspecting queries and timing
+//! - **[`WebSocketTestClient`]**: WebSocket connection testing
+//! - **TestContainers**: Database containers (PostgreSQL, MySQL, Redis) integration
+//!
+//! ## Quick Start
+//!
+//! ### API Client
+//!
+//! ```rust,ignore
+//! use reinhardt_test::{APIClient, assert_status};
+//! use hyper::StatusCode;
+//!
+//! #[tokio::test]
+//! async fn test_user_list() {
+//!     let client = APIClient::new("http://localhost:8000");
+//!
+//!     let response = client.get("/api/users/").await.unwrap();
+//!     assert_status(&response, StatusCode::OK);
+//!
+//!     let users: Vec<User> = response.json().await.unwrap();
+//!     assert!(!users.is_empty());
+//! }
+//! ```
+//!
+//! ### Request Factory
+//!
+//! ```rust,ignore
+//! use reinhardt_test::{APIRequestFactory, create_test_request};
+//!
+//! #[tokio::test]
+//! async fn test_view_directly() {
+//!     let factory = APIRequestFactory::new();
+//!
+//!     // Create a GET request
+//!     let request = factory.get("/api/users/").build();
+//!
+//!     // Create a POST request with JSON body
+//!     let request = factory.post("/api/users/")
+//!         .json(&json!({"name": "Alice"}))
+//!         .build();
+//!
+//!     // Pass to view handler directly
+//!     let response = my_view(request).await;
+//! }
+//! ```
+//!
+//! ### Assertions
+//!
+//! ```rust,ignore
+//! use reinhardt_test::{assert_status, assert_has_header, assert_header_equals, extract_json};
+//! use hyper::StatusCode;
+//!
+//! // Status assertions
+//! assert_status(&response, StatusCode::OK);
+//! assert_status(&response, StatusCode::CREATED);
+//!
+//! // Header assertions
+//! assert_has_header(&response, "Content-Type");
+//! assert_header_equals(&response, "Content-Type", "application/json");
+//!
+//! // Body extraction
+//! let data: MyStruct = extract_json(&response).await.unwrap();
+//! ```
+//!
+//! ### TestContainers (Database Testing)
+//!
+//! Requires the `testcontainers` feature:
+//!
+//! ```rust,ignore
+//! use reinhardt_test::{with_postgres, PostgresContainer};
+//!
+//! #[tokio::test]
+//! async fn test_with_database() {
+//!     with_postgres(|db: PostgresContainer| async move {
+//!         let connection_url = db.connection_url();
+//!
+//!         // Run tests against the database
+//!         let pool = create_pool(&connection_url).await;
+//!         // ...
+//!     }).await;
+//! }
+//! ```
+//!
+//! ### Model Factory
+//!
+//! ```rust,ignore
+//! use reinhardt_test::{Factory, FactoryBuilder};
+//!
+//! let user = FactoryBuilder::<User>::new()
+//!     .with("name", "Test User")
+//!     .with("email", "test@example.com")
+//!     .build();
+//! ```
+//!
+//! ## Modules
+//!
+//! - [`assertions`]: Response assertion utilities
+//! - [`client`]: [`APIClient`] for HTTP testing
+//! - [`factory`]: [`APIRequestFactory`] for request creation
+//! - [`fixtures`]: Test data generation and fixtures
+//! - [`http`]: HTTP helper functions
+//! - [`mock`]: Mock objects and spies
+//! - [`server`]: Test server utilities
+//! - [`testcase`]: [`APITestCase`] base class
+//! - [`containers`]: TestContainers integration (requires feature)
+//!
+//! ## Feature Flags
+//!
+//! - **`testcontainers`**: Enable TestContainers for database testing
+//! - **`static`**: Enable static file testing utilities
 
 pub mod assertions;
 pub mod client;

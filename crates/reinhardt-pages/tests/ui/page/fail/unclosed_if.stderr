@@ -1,0 +1,8 @@
+error: mismatched closing delimiter: `)`
+  --> tests/ui/page/fail/unclosed_if.rs:7:36
+   |
+ 7 |     let _invalid = page!(|show: bool| {
+   |                                       ^ unclosed delimiter
+...
+13 | });
+   |  ^ mismatched closing delimiter

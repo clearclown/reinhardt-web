@@ -1012,7 +1012,7 @@ fn levenshtein_distance(s1: &str, s2: &str) -> usize {
 		row[0] = i;
 	}
 
-	// 1行目を 0..=len2 で初期化
+	// Initialize first row with 0..=len2
 	for (j, cell) in matrix[0].iter_mut().enumerate().take(len2 + 1) {
 		*cell = j;
 	}

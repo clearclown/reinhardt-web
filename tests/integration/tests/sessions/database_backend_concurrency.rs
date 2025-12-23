@@ -33,14 +33,11 @@ use testcontainers::{ContainerAsync, GenericImage};
 ///
 /// **Not Intent**: Sequential writes, different session keys
 ///
-/// **Note**: Currently ignored because DatabaseSessionBackend::save() uses
-/// check-then-create pattern instead of UPSERT (INSERT ... ON CONFLICT DO UPDATE).
-/// This causes TOCTOU race conditions with concurrent writes.
-/// TODO: Implement UPSERT in ORM or use raw SQL with ON CONFLICT clause.
+/// **Note**: DatabaseSessionBackend::save() uses UPSERT (INSERT ... ON CONFLICT DO UPDATE)
+/// to handle concurrent writes atomically, eliminating TOCTOU race conditions.
 #[rstest]
 #[tokio::test]
 #[serial(sessions_db_concurrency)]
-#[ignore = "Requires UPSERT implementation in DatabaseSessionBackend::save()"]
 async fn test_concurrent_session_write_conflict(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {

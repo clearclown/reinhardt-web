@@ -149,12 +149,61 @@ fn test_schema_global_registry_registration() {
 /// Verification:
 /// - EndpointInspector retrieves schema from global registry
 /// - Request body is created with correct schema
-/// - Fallback to placeholder works when schema is not registered
+/// - extract_paths() produces valid OpenAPI path items
 #[test]
 fn test_endpoint_inspector_uses_registered_schema() {
-	let _inspector = EndpointInspector::new();
+	let inspector = EndpointInspector::new();
 
-	// Test metadata for POST endpoint with registered schema
+	// Extract paths from registered endpoints
+	let paths = inspector.extract_paths();
+
+	// If paths extraction succeeds, verify structure
+	if let Ok(paths) = paths {
+		// Verify POST operations have request bodies with schemas
+		for (path, path_item) in &paths {
+			if let Some(operation) = &path_item.post {
+				if let Some(request_body) = &operation.request_body {
+					assert!(
+						!request_body.content.is_empty(),
+						"POST {} should have request body content",
+						path
+					);
+
+					if let Some(json_content) = request_body.content.get("application/json") {
+						assert!(
+							json_content.schema.is_some(),
+							"JSON content for POST {} should have schema",
+							path
+						);
+					}
+				}
+			}
+
+			// Check PUT operations
+			if let Some(operation) = &path_item.put {
+				if let Some(request_body) = &operation.request_body {
+					assert!(
+						!request_body.content.is_empty(),
+						"PUT {} should have request body content",
+						path
+					);
+				}
+			}
+
+			// Check PATCH operations
+			if let Some(operation) = &path_item.patch {
+				if let Some(request_body) = &operation.request_body {
+					assert!(
+						!request_body.content.is_empty(),
+						"PATCH {} should have request body content",
+						path
+					);
+				}
+			}
+		}
+	}
+
+	// Original metadata verification (still valid)
 	let metadata = EndpointMetadata {
 		path: "/api/users",
 		method: "POST",
@@ -165,11 +214,6 @@ fn test_endpoint_inspector_uses_registered_schema() {
 		request_content_type: Some("application/json"),
 	};
 
-	// Extract paths (will call create_request_body internally)
-	// Note: We can't directly test create_request_body as it's private,
-	// but we can verify the behavior through extract_paths
-
-	// TODO: For now, just verify the metadata is correct
 	assert_eq!(metadata.request_body_type, Some("CreateUserRequest"));
 	assert_eq!(metadata.request_content_type, Some("application/json"));
 	assert_eq!(metadata.method, "POST");

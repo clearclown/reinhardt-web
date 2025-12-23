@@ -8,7 +8,7 @@ use reinhardt_migrations::{ColumnDefinition, FieldType, Migration, Operation};
 ///
 /// Creates the following table:
 /// - test_models: Simple model table for async query tests
-pub fn migration() -> Migration {
+pub(super) fn migration() -> Migration {
 	Migration::new("0003_create_async_query_test_tables", "tests").add_operation(
 		Operation::CreateTable {
 			name: "test_models",

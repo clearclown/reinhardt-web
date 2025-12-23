@@ -128,7 +128,7 @@ fn test_composite_pk_fields_not_null_constraint() {
 
 	println!("Generated SQL:\n{}", sql);
 
-	// 複合PKフィールドはNOT NULL制約を持つ必要がある
+	// Composite PK fields must have NOT NULL constraint
 	assert!(
 		sql.contains("post_id INTEGER NOT NULL") || sql.contains("\"post_id\" INTEGER NOT NULL"),
 		"post_id should have NOT NULL constraint in SQL: {}",
@@ -140,7 +140,7 @@ fn test_composite_pk_fields_not_null_constraint() {
 		sql
 	);
 
-	// 複合PKフィールドは個別のPRIMARY KEY制約を持たない
+	// Composite PK fields should not have individual PRIMARY KEY constraint
 	assert!(
 		!sql.contains("post_id INTEGER PRIMARY KEY"),
 		"post_id should NOT have individual PRIMARY KEY in SQL: {}",
@@ -152,7 +152,7 @@ fn test_composite_pk_fields_not_null_constraint() {
 		sql
 	);
 
-	// テーブルレベルのPRIMARY KEY制約を持つ
+	// Should have table-level PRIMARY KEY constraint
 	assert!(
 		sql.contains("PRIMARY KEY (post_id, tag_id)")
 			|| sql.contains("PRIMARY KEY (\"post_id\", \"tag_id\")"),
@@ -160,7 +160,7 @@ fn test_composite_pk_fields_not_null_constraint() {
 		sql
 	);
 
-	// NULLABLEなフィールドはNULL可能
+	// Nullable fields should allow NULL
 	assert!(
 		sql.contains("description VARCHAR(200)") || sql.contains("\"description\" VARCHAR(200)"),
 		"description should allow NULL in SQL: {}",

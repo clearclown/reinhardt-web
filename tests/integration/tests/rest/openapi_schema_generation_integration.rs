@@ -300,16 +300,16 @@ fn test_viewset_response_schema_generation(inspector: ViewSetInspector) {
 	);
 }
 
-/// Test 5: ViewSet InspectorConfigのカスタマイズ
+/// Test 5: ViewSet InspectorConfig Customization
 ///
-/// 検証内容:
-/// - カスタムInspectorConfigでのスキーマ生成
-/// - description, tagsの設定が反映される
-/// - 設定の柔軟性
+/// Verification:
+/// - Schema generation with custom InspectorConfig
+/// - description and tags settings are reflected
+/// - Configuration flexibility
 #[rstest]
 #[test]
 fn test_inspector_config_customization() {
-	// カスタムInspectorConfig
+	// Custom InspectorConfig
 	let config = InspectorConfig {
 		include_descriptions: false,
 		include_tags: true,
@@ -318,19 +318,19 @@ fn test_inspector_config_customization() {
 
 	let inspector = ViewSetInspector::with_config(config);
 
-	// ViewSet構築
+	// Build ViewSet
 	let viewset = ModelViewSet::<User, UserSerializer>::new("users");
 
-	// パス抽出
+	// Extract paths
 	let paths = inspector.extract_paths(&viewset, "/api/users");
 
-	// パスが生成されたことを確認
+	// Verify paths were generated
 	assert!(
 		!paths.is_empty(),
 		"Paths should be generated with custom config"
 	);
 
-	// コレクションエンドポイントの確認
+	// Verify collection endpoint
 	let collection = paths
 		.get("/api/users/")
 		.expect("Collection path should exist");
@@ -338,7 +338,7 @@ fn test_inspector_config_customization() {
 	// GET operation
 	let get_operation = collection.get.as_ref().expect("GET operation should exist");
 
-	// レスポンスの存在確認
+	// Verify response exists
 	let responses = &get_operation.responses;
 	assert!(
 		!responses.responses.is_empty(),
@@ -346,12 +346,12 @@ fn test_inspector_config_customization() {
 	);
 }
 
-/// Test 6: ViewSet複数のエンドポイント生成
+/// Test 6: Multiple ViewSet Endpoint Generation
 ///
-/// 検証内容:
-/// - 複数のViewSetからのスキーマ生成
-/// - 異なるbasePathでの正確なパス生成
-/// - パスの独立性
+/// Verification:
+/// - Schema generation from multiple ViewSets
+/// - Accurate path generation with different basePaths
+/// - Path independence
 #[rstest]
 #[test]
 fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
@@ -359,7 +359,7 @@ fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
 	let user_viewset = ModelViewSet::<User, UserSerializer>::new("users");
 	let user_paths = inspector.extract_paths(&user_viewset, "/api/users");
 
-	// Post ViewSetを仮定（Userと同じ構造でテスト）
+	// Assume Post ViewSet (test with same structure as User)
 	#[derive(Debug, Clone, Serialize, Deserialize)]
 	struct Post {
 		id: i64,
@@ -379,8 +379,8 @@ fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
 		"User collection path should exist"
 	);
 
-	// User detail path - 動的に検索
-	// NOTE: パスは "/api/users{id}/" の形式（"/api/users/{id}/" ではない）
+	// User detail path - dynamic search
+	// NOTE: Path format is "/api/users{id}/" (not "/api/users/{id}/")
 	let user_has_detail = user_paths
 		.keys()
 		.any(|k| k.starts_with("/api/users") && k.contains("{") && k.contains("id"));
@@ -395,8 +395,8 @@ fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
 		"Post collection path should exist"
 	);
 
-	// Post detail path - 動的に検索
-	// NOTE: パスは "/api/posts{id}/" の形式（"/api/posts/{id}/" ではない）
+	// Post detail path - dynamic search
+	// NOTE: Path format is "/api/posts{id}/" (not "/api/posts/{id}/")
 	let post_has_detail = post_paths
 		.keys()
 		.any(|k| k.starts_with("/api/posts") && k.contains("{") && k.contains("id"));
@@ -405,21 +405,21 @@ fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
 		"Post detail path with parameter should exist"
 	);
 
-	// パスの独立性（UserとPostのパスが混在しない）
+	// Path independence (User and Post paths are not mixed)
 	assert_eq!(user_paths.len(), 2, "User should have 2 paths");
 	assert_eq!(post_paths.len(), 2, "Post should have 2 paths");
 }
 
-/// Test 7: SchemaGeneratorのregistryとの統合
+/// Test 7: SchemaGenerator Integration with Registry
 ///
-/// 検証内容:
-/// - SchemaRegistryへのスキーマ登録
-/// - コンポーネント再利用
-/// - $ref参照の生成
+/// Verification:
+/// - Schema registration in SchemaRegistry
+/// - Component reuse
+/// - $ref reference generation
 #[rstest]
 #[test]
 fn test_schema_generator_registry_integration(mut generator: SchemaGenerator) {
-	// Userスキーマをregistryに登録
+	// Register User schema in registry
 	use reinhardt_openapi::{Schema, SchemaExt};
 
 	let user_schema = Schema::object_with_properties(
@@ -434,18 +434,18 @@ fn test_schema_generator_registry_integration(mut generator: SchemaGenerator) {
 
 	generator.registry().register("User", user_schema);
 
-	// レジストリにスキーマが登録されたことを確認
+	// Verify schema was registered in registry
 	assert!(
 		generator.registry().contains("User"),
 		"User schema should be registered"
 	);
 
-	// スキーマ生成
+	// Generate schema
 	let schema = generator
 		.generate()
 		.expect("Schema generation should succeed");
 
-	// componentsが生成されていることを確認
+	// Verify components were generated
 	assert!(
 		schema.components.is_some(),
 		"Components should be generated"
@@ -453,7 +453,7 @@ fn test_schema_generator_registry_integration(mut generator: SchemaGenerator) {
 
 	let components = schema.components.unwrap();
 
-	// User schemaがcomponents/schemasに存在することを確認
+	// Verify User schema exists in components/schemas
 	assert!(
 		components.schemas.contains_key("User"),
 		"User schema should be in components"

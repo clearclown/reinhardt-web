@@ -12,7 +12,7 @@ use reinhardt_migrations::{
 /// - test_users: User data with username and email
 /// - test_products: Product data with code, price, and stock
 /// - test_orders: Order data with references to users and products
-pub fn migration() -> Migration {
+pub(super) fn migration() -> Migration {
 	Migration::new("0001_create_test_tables", "tests")
 		// test_users table
 		.add_operation(Operation::CreateTable {

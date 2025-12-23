@@ -161,10 +161,7 @@ pub async fn apply_async_query_test_migrations(
 
 /// Detect database type from connection
 ///
-/// Currently only PostgreSQL is supported for test migrations.
-/// Returns DatabaseType::Postgres.
-fn detect_database_type(_connection: &DatabaseConnection) -> DatabaseType {
-	// TODO: Detect database type from connection
-	// For now, assume PostgreSQL as that's what TestContainers uses
-	DatabaseType::Postgres
+/// Uses the backend's database_type() method to determine the actual database type.
+fn detect_database_type(connection: &DatabaseConnection) -> DatabaseType {
+	connection.database_type()
 }

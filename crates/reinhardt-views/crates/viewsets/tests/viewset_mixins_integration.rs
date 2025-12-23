@@ -1,17 +1,17 @@
-//! ViewSet + Mixins統合テスト (サブクレート内)
+//! ViewSet + Mixins Integration Tests (within sub-crate)
 //!
-//! **テストカバレッジ:**
-//! - Section 1: Mixin traitの実装可能性検証 (コンパイル時検証)
-//! - Section 2: ViewSet構造体の生成と設定検証
-//! - Section 3: Mixin trait境界の検証
+//! **Test Coverage:**
+//! - Section 1: Mixin trait implementation verification (compile-time verification)
+//! - Section 2: ViewSet struct generation and configuration verification
+//! - Section 3: Mixin trait boundary verification
 //!
-//! **使用するReinhardtコンポーネント:**
+//! **Reinhardt Components Used:**
 //! - reinhardt-viewsets: ViewSet, ModelViewSet, ReadOnlyModelViewSet, GenericViewSet
 //! - reinhardt-viewsets: CreateMixin, UpdateMixin, DestroyMixin, ListMixin, RetrieveMixin
 //!
-//! **注意**: このテストはサブクレート内統合テストとして、Mixinの実装可能性と
-//! ViewSet構造体の基本機能を検証します。実際のHTTPリクエスト/レスポンスの統合は
-//! tests/integration/tests/viewsets/で実施されています。
+//! **Note**: This test serves as a sub-crate integration test to verify Mixin implementation
+//! capability and basic ViewSet struct functionality. Actual HTTP request/response integration
+//! is conducted in tests/integration/tests/viewsets/.
 
 use async_trait::async_trait;
 use reinhardt_core::http::{Request, Response, Result};
@@ -23,7 +23,7 @@ use rstest::*;
 use serde::{Deserialize, Serialize};
 
 // ============================================================================
-// Section 1: Mixin traitの実装可能性検証
+// Section 1: Mixin trait implementation verification
 // ============================================================================
 
 /// Model for testing
@@ -37,7 +37,7 @@ struct Article {
 #[derive(Debug, Clone)]
 struct ArticleSerializer;
 
-/// CreateMixinの実装検証
+/// CreateMixin implementation verification
 struct TestCreateViewSet;
 
 #[async_trait]
@@ -47,7 +47,7 @@ impl CreateMixin for TestCreateViewSet {
 	}
 }
 
-/// UpdateMixinの実装検証
+/// UpdateMixin implementation verification
 struct TestUpdateViewSet;
 
 #[async_trait]
@@ -57,7 +57,7 @@ impl UpdateMixin for TestUpdateViewSet {
 	}
 }
 
-/// DestroyMixinの実装検証
+/// DestroyMixin implementation verification
 struct TestDestroyViewSet;
 
 #[async_trait]
@@ -67,7 +67,7 @@ impl DestroyMixin for TestDestroyViewSet {
 	}
 }
 
-/// ListMixinの実装検証
+/// ListMixin implementation verification
 struct TestListViewSet;
 
 #[async_trait]
@@ -77,7 +77,7 @@ impl ListMixin for TestListViewSet {
 	}
 }
 
-/// RetrieveMixinの実装検証
+/// RetrieveMixin implementation verification
 struct TestRetrieveViewSet;
 
 #[async_trait]
@@ -87,7 +87,7 @@ impl RetrieveMixin for TestRetrieveViewSet {
 	}
 }
 
-/// CrudMixinの実装検証（全CRUD操作の組み合わせ）
+/// CrudMixin implementation verification (combination of all CRUD operations)
 struct TestCrudViewSet;
 
 #[async_trait]
@@ -131,10 +131,10 @@ impl DestroyMixin for TestCrudViewSet {
 // If this compiles successfully, it demonstrates that the Mixin trait combination works correctly.
 
 // ============================================================================
-// Section 2: ViewSet構造体の生成と設定検証
+// Section 2: ViewSet struct generation and configuration verification
 // ============================================================================
 
-/// ModelViewSetの生成とViewSet traitメソッド検証
+/// ModelViewSet generation and ViewSet trait method verification
 #[rstest]
 #[tokio::test]
 async fn test_model_viewset_creation() {
@@ -145,7 +145,7 @@ async fn test_model_viewset_creation() {
 	assert_eq!(viewset.get_lookup_field(), "id"); // Default value
 }
 
-/// ModelViewSetのカスタマイズ検証
+/// ModelViewSet customization verification
 #[rstest]
 #[tokio::test]
 async fn test_model_viewset_customization() {
@@ -156,7 +156,7 @@ async fn test_model_viewset_customization() {
 	assert_eq!(viewset.get_lookup_field(), "slug");
 }
 
-/// ReadOnlyModelViewSetの生成検証
+/// ReadOnlyModelViewSet generation verification
 #[rstest]
 #[tokio::test]
 async fn test_readonly_model_viewset_creation() {
@@ -166,7 +166,7 @@ async fn test_readonly_model_viewset_creation() {
 	assert_eq!(viewset.get_lookup_field(), "id");
 }
 
-/// ReadOnlyModelViewSetのカスタマイズ検証
+/// ReadOnlyModelViewSet customization verification
 #[rstest]
 #[tokio::test]
 async fn test_readonly_model_viewset_customization() {
@@ -177,7 +177,7 @@ async fn test_readonly_model_viewset_customization() {
 	assert_eq!(viewset.get_lookup_field(), "uuid");
 }
 
-/// GenericViewSetの生成検証
+/// GenericViewSet generation verification
 #[rstest]
 #[tokio::test]
 async fn test_generic_viewset_creation() {
@@ -188,7 +188,7 @@ async fn test_generic_viewset_creation() {
 }
 
 // ============================================================================
-// Section 3: Mixin trait境界の検証
+// Section 3: Mixin trait boundary verification
 // ============================================================================
 
 /// Function to verify that Mixin trait type bounds work correctly
@@ -211,7 +211,7 @@ fn _assert_mixin_trait_bounds() {
 	_accepts_crud_mixin(TestCrudViewSet);
 }
 
-/// Mixin traitのSend + Sync境界を検証
+/// Verify Mixin trait Send + Sync bounds
 #[rstest]
 #[tokio::test]
 async fn test_mixin_send_sync_bounds() {
@@ -240,5 +240,5 @@ async fn test_mixin_send_sync_bounds() {
 	assert_send_sync(&crud_viewset);
 }
 
-/// Send + Syncを検証するヘルパー関数
+/// Helper function to verify Send + Sync
 fn assert_send_sync<T: Send + Sync>(_t: &T) {}

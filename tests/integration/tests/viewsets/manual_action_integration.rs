@@ -76,7 +76,7 @@ async fn test_manual_action_registration() {
 		.collect();
 	assert_eq!(
 		actual_names, expected_names,
-		"アクション名が期待値と一致しません。期待: {:?}, 実際: {:?}",
+		"Action name does not match expected value. Expected: {:?}, Actual: {:?}",
 		expected_names, actual_names
 	);
 

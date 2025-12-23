@@ -1,40 +1,41 @@
 //! Tests for automatic Injectable implementation
+//!
+//! This module tests the `#[injectable]` macro for automatic dependency injection
+//! on structs with `#[inject]` and `#[no_inject]` fields.
 
-use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope, injectable};
+use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
+use reinhardt_macros::injectable;
+use std::sync::Arc;
 
 #[derive(Default, Clone, Debug, PartialEq)]
 #[injectable]
 struct SimpleConfig {
-	#[no_inject]
+	#[no_inject(default = Default)]
 	host: String,
-	#[no_inject]
+	#[no_inject(default = Default)]
 	port: u16,
 }
 
 #[derive(Default, Clone)]
 #[injectable]
 struct AnotherConfig {
-	#[no_inject]
+	#[no_inject(default = Default)]
 	api_key: String,
 }
 
 #[tokio::test]
 async fn test_auto_injectable_simple() {
-	let singleton_scope = SingletonScope::new();
+	let singleton_scope = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton_scope).build();
-
-	// SimpleConfig should be automatically injectable
-	let config = SimpleConfig::inject(&ctx).await.unwrap();
+	let config = <SimpleConfig as Injectable>::inject(&ctx).await.unwrap();
 	assert_eq!(config.host, "");
 	assert_eq!(config.port, 0);
 }
 
 #[tokio::test]
 async fn test_auto_injectable_with_depends() {
-	let singleton_scope = SingletonScope::new();
+	let singleton_scope = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton_scope).build();
-
-	// Should work with Depends wrapper
 	let depends_config = Depends::<SimpleConfig>::builder()
 		.resolve(&ctx)
 		.await
@@ -45,28 +46,19 @@ async fn test_auto_injectable_with_depends() {
 
 #[tokio::test]
 async fn test_auto_injectable_caching() {
-	let singleton_scope = SingletonScope::new();
+	let singleton_scope = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton_scope).build();
-
-	// First injection - creates new instance
-	let config1 = SimpleConfig::inject(&ctx).await.unwrap();
-
-	// Second injection - should get cached instance
-	let config2 = SimpleConfig::inject(&ctx).await.unwrap();
-
-	// They should be equal (same default values)
+	let config1 = <SimpleConfig as Injectable>::inject(&ctx).await.unwrap();
+	let config2 = <SimpleConfig as Injectable>::inject(&ctx).await.unwrap();
 	assert_eq!(config1, config2);
 }
 
 #[tokio::test]
 async fn test_multiple_auto_injectable_types() {
-	let singleton_scope = SingletonScope::new();
+	let singleton_scope = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton_scope).build();
-
-	// Multiple different types should work
-	let config1 = SimpleConfig::inject(&ctx).await.unwrap();
-	let config2 = AnotherConfig::inject(&ctx).await.unwrap();
-
+	let config1 = <SimpleConfig as Injectable>::inject(&ctx).await.unwrap();
+	let config2 = <AnotherConfig as Injectable>::inject(&ctx).await.unwrap();
 	assert_eq!(config1.host, "");
 	assert_eq!(config2.api_key, "");
 }
@@ -85,7 +77,7 @@ impl Injectable for CustomInjectable {
 
 #[tokio::test]
 async fn test_custom_injectable_override() {
-	let singleton_scope = SingletonScope::new();
+	let singleton_scope = Arc::new(SingletonScope::new());
 	let ctx = InjectionContext::builder(singleton_scope).build();
 
 	// Custom implementation should be used

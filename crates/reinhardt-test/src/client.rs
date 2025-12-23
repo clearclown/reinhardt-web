@@ -562,7 +562,7 @@ impl Default for APIClient {
 
 // Need to add base64 dependency
 mod base64 {
-	pub fn encode(input: String) -> String {
+	pub(super) fn encode(input: String) -> String {
 		// Simple base64 encoding (in production, use a proper library)
 		use base64_simd::STANDARD;
 		STANDARD.encode_to_string(input.as_bytes())
@@ -571,7 +571,7 @@ mod base64 {
 
 // Need to add urlencoding
 mod urlencoding {
-	pub fn encode(input: &str) -> String {
+	pub(super) fn encode(input: &str) -> String {
 		url::form_urlencoded::byte_serialize(input.as_bytes()).collect()
 	}
 }

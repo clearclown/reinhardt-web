@@ -22,10 +22,10 @@ use serial_test::serial;
 use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage};
 
-/// Validator ORM integration tests用の専用フィクスチャ
+/// Dedicated fixture for Validator ORM integration tests
 ///
-/// postgres_container を使用してコンテナを取得し、
-/// basic test migrations を適用する
+/// Uses postgres_container to obtain a container and
+/// applies basic test migrations
 #[fixture]
 async fn validator_orm_test_db(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String),
