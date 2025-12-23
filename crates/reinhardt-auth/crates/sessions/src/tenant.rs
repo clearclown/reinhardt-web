@@ -564,7 +564,7 @@ mod tests {
 		let tenant_backend =
 			TenantSessionBackend::new(backend, "tenant_123".to_string(), TenantConfig::default());
 
-		// Placeholder implementation returns 0
+		// count_sessions returns 0 when no sessions exist
 		let count = tenant_backend.count_sessions().await.unwrap();
 		assert_eq!(count, 0);
 	}

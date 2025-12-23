@@ -498,22 +498,45 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 			.await
 			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
 
-		// Build SQL query to fetch user from database
-		use reinhardt_db::backends::types::QueryValue;
-		use reinhardt_db::orm::Model;
+		// Build SQL query using sea-query for type-safe query construction
+		use reinhardt_db::orm::{DatabaseBackend, Model};
+		use sea_query::{
+			Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
+			SqliteQueryBuilder,
+		};
 
 		let table_name = DefaultUser::table_name();
-		let sql = format!(
-			"SELECT id, username, email, first_name, last_name, password_hash, last_login, \
-			 is_active, is_staff, is_superuser, date_joined, user_permissions, groups \
-			 FROM {} WHERE id = $1",
-			table_name
-		);
 
-		// Execute query with parameter binding
-		let params = vec![QueryValue::String(id.to_string())];
+		// Build SELECT query using sea-query
+		let stmt = Query::select()
+			.columns([
+				Alias::new("id"),
+				Alias::new("username"),
+				Alias::new("email"),
+				Alias::new("first_name"),
+				Alias::new("last_name"),
+				Alias::new("password_hash"),
+				Alias::new("last_login"),
+				Alias::new("is_active"),
+				Alias::new("is_staff"),
+				Alias::new("is_superuser"),
+				Alias::new("date_joined"),
+				Alias::new("user_permissions"),
+				Alias::new("groups"),
+			])
+			.from(Alias::new(table_name))
+			.and_where(Expr::col(Alias::new("id")).eq(Expr::value(id.to_string())))
+			.to_owned();
+
+		let sql = match conn.backend() {
+			DatabaseBackend::Postgres => stmt.to_string(PostgresQueryBuilder),
+			DatabaseBackend::MySql => stmt.to_string(MysqlQueryBuilder),
+			DatabaseBackend::Sqlite => stmt.to_string(SqliteQueryBuilder),
+		};
+
+		// Execute query
 		let row = conn
-			.query_one(&sql, params)
+			.query_one(&sql, vec![])
 			.await
 			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
 

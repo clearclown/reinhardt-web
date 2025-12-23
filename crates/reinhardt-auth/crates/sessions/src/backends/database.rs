@@ -46,7 +46,11 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use reinhardt_core::macros::model;
 use reinhardt_db::DatabaseConnection;
-use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QueryValue};
+use reinhardt_db::orm::{DatabaseBackend, Filter, FilterOperator, FilterValue, Model};
+use sea_query::{
+	Alias, ColumnDef, Expr, ExprTrait, Index, MysqlQueryBuilder, OnConflict, PostgresQueryBuilder,
+	Query, SqliteQueryBuilder, Table,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -198,16 +202,38 @@ impl DatabaseSessionBackend {
 		Self { connection }
 	}
 
-	/// Get database-specific placeholder for the given parameter index
+	/// Build SQL string for the current database backend
 	///
-	/// Returns the appropriate placeholder syntax for the current database:
-	/// - PostgreSQL: `$1`, `$2`, etc.
-	/// - SQLite/MySQL: `?`
-	fn placeholder(&self, index: usize) -> String {
-		use reinhardt_db::orm::DatabaseBackend;
+	/// Uses sea-query to generate database-specific SQL syntax.
+	fn build_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::QueryStatementWriter,
+	{
 		match self.connection.backend() {
-			DatabaseBackend::Postgres => format!("${}", index),
-			DatabaseBackend::MySql | DatabaseBackend::Sqlite => "?".to_string(),
+			DatabaseBackend::Postgres => statement.to_string(PostgresQueryBuilder),
+			DatabaseBackend::MySql => statement.to_string(MysqlQueryBuilder),
+			DatabaseBackend::Sqlite => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build table SQL string for the current database backend
+	fn build_table_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::SchemaStatementBuilder,
+	{
+		match self.connection.backend() {
+			DatabaseBackend::Postgres => statement.to_string(PostgresQueryBuilder),
+			DatabaseBackend::MySql => statement.to_string(MysqlQueryBuilder),
+			DatabaseBackend::Sqlite => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build index SQL string for the current database backend
+	fn build_index_sql(&self, statement: &sea_query::IndexCreateStatement) -> String {
+		match self.connection.backend() {
+			DatabaseBackend::Postgres => statement.to_string(PostgresQueryBuilder),
+			DatabaseBackend::MySql => statement.to_string(MysqlQueryBuilder),
+			DatabaseBackend::Sqlite => statement.to_string(SqliteQueryBuilder),
 		}
 	}
 
@@ -235,15 +261,17 @@ impl DatabaseSessionBackend {
 	pub async fn cleanup_expired(&self) -> Result<u64, SessionError> {
 		let now_timestamp = Utc::now().timestamp_millis();
 
-		// Use raw SQL to delete expired sessions (ORM doesn't have bulk delete execution)
-		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
-		let placeholder = self.placeholder(1);
-		let sql = format!("DELETE FROM sessions WHERE expire_date < {}", placeholder);
-		let rows_affected = self
-			.connection
-			.execute(&sql, vec![QueryValue::Int(now_timestamp)])
-			.await
-			.map_err(|e| SessionError::CacheError(format!("Failed to cleanup sessions: {}", e)))?;
+		// Build DELETE query using sea-query
+		let stmt = Query::delete()
+			.from_table(Alias::new("sessions"))
+			.and_where(Expr::col(Alias::new("expire_date")).lt(now_timestamp))
+			.to_owned();
+
+		let sql = self.build_sql(stmt);
+		let rows_affected =
+			self.connection.execute(&sql, vec![]).await.map_err(|e| {
+				SessionError::CacheError(format!("Failed to cleanup sessions: {}", e))
+			})?;
 
 		Ok(rows_affected)
 	}
@@ -265,25 +293,45 @@ impl DatabaseSessionBackend {
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
 	/// ```
 	pub async fn create_table(&self) -> Result<(), SessionError> {
-		// Use ANSI SQL compatible syntax for cross-database support
-		let sql = r#"
-			CREATE TABLE IF NOT EXISTS sessions (
-				session_key VARCHAR(255) PRIMARY KEY,
-				session_data TEXT NOT NULL,
-				expire_date BIGINT NOT NULL,
-				created_at BIGINT NOT NULL,
-				last_accessed BIGINT
+		// Build CREATE TABLE statement using sea-query
+		let stmt = Table::create()
+			.table(Alias::new("sessions"))
+			.if_not_exists()
+			.col(
+				ColumnDef::new(Alias::new("session_key"))
+					.string_len(255)
+					.not_null()
+					.primary_key(),
 			)
-		"#;
+			.col(ColumnDef::new(Alias::new("session_data")).text().not_null())
+			.col(
+				ColumnDef::new(Alias::new("expire_date"))
+					.big_integer()
+					.not_null(),
+			)
+			.col(
+				ColumnDef::new(Alias::new("created_at"))
+					.big_integer()
+					.not_null(),
+			)
+			.col(ColumnDef::new(Alias::new("last_accessed")).big_integer())
+			.to_owned();
 
-		self.connection.execute(sql, vec![]).await.map_err(|e| {
+		let sql = self.build_table_sql(stmt);
+		self.connection.execute(&sql, vec![]).await.map_err(|e| {
 			SessionError::CacheError(format!("Failed to create sessions table: {}", e))
 		})?;
 
-		// Create index for expire_date
-		let index_sql =
-			"CREATE INDEX IF NOT EXISTS idx_sessions_expire_date ON sessions(expire_date)";
-		let _ = self.connection.execute(index_sql, vec![]).await;
+		// Create index for expire_date using sea-query
+		let index_stmt = Index::create()
+			.if_not_exists()
+			.name("idx_sessions_expire_date")
+			.table(Alias::new("sessions"))
+			.col(Alias::new("expire_date"))
+			.to_owned();
+
+		let index_sql = self.build_index_sql(&index_stmt);
+		let _ = self.connection.execute(&index_sql, vec![]).await;
 
 		Ok(())
 	}
@@ -350,57 +398,54 @@ impl SessionBackend for DatabaseSessionBackend {
 		let now_timestamp = now.timestamp_millis();
 		let expire_timestamp = expire_date.timestamp_millis();
 
-		// Use ORM to save session
-		// Try to get existing session to preserve created_at
-		let existing = Session::objects()
-			.filter_by(Filter::new(
-				"session_key".to_string(),
-				FilterOperator::Eq,
-				FilterValue::String(session_key.to_string()),
-			))
-			.first()
+		// Build UPSERT statement using sea-query
+		// sea-query handles database-specific UPSERT syntax (ON CONFLICT vs ON DUPLICATE KEY)
+		let stmt = Query::insert()
+			.into_table(Alias::new("sessions"))
+			.columns([
+				Alias::new("session_key"),
+				Alias::new("session_data"),
+				Alias::new("expire_date"),
+				Alias::new("created_at"),
+				Alias::new("last_accessed"),
+			])
+			.values_panic([
+				session_key.into(),
+				session_data.into(),
+				expire_timestamp.into(),
+				now_timestamp.into(),
+				now_timestamp.into(),
+			])
+			.on_conflict(
+				OnConflict::column(Alias::new("session_key"))
+					.update_columns([
+						Alias::new("session_data"),
+						Alias::new("expire_date"),
+						Alias::new("last_accessed"),
+					])
+					.to_owned(),
+			)
+			.to_owned();
+
+		let sql = self.build_sql(stmt);
+		self.connection
+			.execute(&sql, vec![])
 			.await
-			.ok()
-			.flatten();
-
-		let created_at_timestamp = existing
-			.as_ref()
-			.map(|s| s.created_at)
-			.unwrap_or(now_timestamp);
-
-		let session = Session {
-			session_key: session_key.to_string(),
-			session_data,
-			expire_date: expire_timestamp,
-			created_at: created_at_timestamp,
-			last_accessed: Some(now_timestamp),
-		};
-
-		let manager = Session::objects();
-		if existing.is_some() {
-			// Update existing session
-			manager
-				.update(&session)
-				.await
-				.map_err(|e| SessionError::CacheError(format!("Failed to save session: {}", e)))?;
-		} else {
-			// Create new session
-			manager
-				.create(&session)
-				.await
-				.map_err(|e| SessionError::CacheError(format!("Failed to save session: {}", e)))?;
-		}
+			.map_err(|e| SessionError::CacheError(format!("Failed to save session: {}", e)))?;
 
 		Ok(())
 	}
 
 	async fn delete(&self, session_key: &str) -> Result<(), SessionError> {
-		// Use raw SQL to delete session (ORM doesn't have bulk delete execution)
-		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
-		let placeholder = self.placeholder(1);
-		let sql = format!("DELETE FROM sessions WHERE session_key = {}", placeholder);
+		// Build DELETE query using sea-query
+		let stmt = Query::delete()
+			.from_table(Alias::new("sessions"))
+			.and_where(Expr::col(Alias::new("session_key")).eq(session_key))
+			.to_owned();
+
+		let sql = self.build_sql(stmt);
 		self.connection
-			.execute(&sql, vec![QueryValue::String(session_key.to_string())])
+			.execute(&sql, vec![])
 			.await
 			.map_err(|e| SessionError::CacheError(format!("Failed to delete session: {}", e)))?;
 
@@ -516,22 +561,164 @@ impl CleanupableBackend for DatabaseSessionBackend {
 	}
 
 	async fn delete_keys_with_prefix(&self, prefix: &str) -> Result<usize, SessionError> {
-		// Use raw SQL to delete session keys with prefix (ORM doesn't have bulk delete execution)
-		// Use database-specific placeholder (e.g., $1 for PostgreSQL, ? for SQLite/MySQL)
+		// Build DELETE query with LIKE condition using sea-query
 		let pattern = format!("{}%", prefix);
-		let placeholder = self.placeholder(1);
-		let sql = format!(
-			"DELETE FROM sessions WHERE session_key LIKE {}",
-			placeholder
-		);
-		let rows_affected = self
-			.connection
-			.execute(&sql, vec![QueryValue::String(pattern)])
-			.await
-			.map_err(|e| {
-				SessionError::CacheError(format!("Failed to delete session keys: {}", e))
-			})?;
+		let stmt = Query::delete()
+			.from_table(Alias::new("sessions"))
+			.and_where(Expr::col(Alias::new("session_key")).like(&pattern))
+			.to_owned();
+
+		let sql = self.build_sql(stmt);
+		let rows_affected = self.connection.execute(&sql, vec![]).await.map_err(|e| {
+			SessionError::CacheError(format!("Failed to delete session keys: {}", e))
+		})?;
 
 		Ok(rows_affected as usize)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_session_struct_fields() {
+		let now_ms = Utc::now().timestamp_millis();
+		let session = Session::new(
+			"test_key".to_string(),
+			r#"{"user_id": 42}"#.to_string(),
+			now_ms + 3600000, // 1 hour from now
+			now_ms,
+			Some(now_ms),
+		);
+
+		assert_eq!(session.session_key, "test_key");
+		assert_eq!(session.session_data, r#"{"user_id": 42}"#);
+		assert_eq!(session.expire_date, now_ms + 3600000);
+		assert_eq!(session.created_at, now_ms);
+		assert_eq!(session.last_accessed, Some(now_ms));
+	}
+
+	#[test]
+	fn test_session_struct_without_last_accessed() {
+		let now_ms = Utc::now().timestamp_millis();
+		let session = Session::new(
+			"key".to_string(),
+			"{}".to_string(),
+			now_ms + 1000,
+			now_ms,
+			None,
+		);
+
+		assert!(session.last_accessed.is_none());
+	}
+
+	#[test]
+	fn test_session_clone() {
+		let now_ms = Utc::now().timestamp_millis();
+		let session = Session::new(
+			"clone_test".to_string(),
+			r#"{"data": "value"}"#.to_string(),
+			now_ms + 3600000,
+			now_ms,
+			Some(now_ms),
+		);
+
+		let cloned = session.clone();
+
+		assert_eq!(cloned.session_key, session.session_key);
+		assert_eq!(cloned.session_data, session.session_data);
+		assert_eq!(cloned.expire_date, session.expire_date);
+		assert_eq!(cloned.created_at, session.created_at);
+		assert_eq!(cloned.last_accessed, session.last_accessed);
+	}
+
+	#[test]
+	fn test_session_debug() {
+		let now_ms = Utc::now().timestamp_millis();
+		let session = Session::new(
+			"debug_key".to_string(),
+			"{}".to_string(),
+			now_ms,
+			now_ms,
+			None,
+		);
+
+		let debug_str = format!("{:?}", session);
+
+		assert!(debug_str.contains("Session"));
+		assert!(debug_str.contains("debug_key"));
+	}
+
+	#[test]
+	fn test_session_serialize() {
+		let now_ms = Utc::now().timestamp_millis();
+		let session = Session::new(
+			"serialize_key".to_string(),
+			r#"{"count": 10}"#.to_string(),
+			now_ms + 3600000,
+			now_ms,
+			Some(now_ms),
+		);
+
+		let json = serde_json::to_string(&session).unwrap();
+
+		assert!(json.contains("serialize_key"));
+		// session_data is serialized as a JSON string, so internal quotes are escaped
+		assert!(json.contains(r#"{\"count\": 10}"#));
+	}
+
+	#[test]
+	fn test_session_deserialize() {
+		let now_ms = 1700000000000_i64; // Fixed timestamp for test
+		let json = format!(
+			r#"{{
+				"session_key": "deserialize_key",
+				"session_data": "{{\"user\": \"test\"}}",
+				"expire_date": {},
+				"created_at": {},
+				"last_accessed": {}
+			}}"#,
+			now_ms + 3600000,
+			now_ms,
+			now_ms
+		);
+
+		let session: Session = serde_json::from_str(&json).unwrap();
+
+		assert_eq!(session.session_key, "deserialize_key");
+		assert_eq!(session.session_data, r#"{"user": "test"}"#);
+		assert_eq!(session.expire_date, now_ms + 3600000);
+		assert_eq!(session.created_at, now_ms);
+		assert_eq!(session.last_accessed, Some(now_ms));
+	}
+
+	#[test]
+	fn test_session_deserialize_without_last_accessed() {
+		let now_ms = 1700000000000_i64;
+		let json = format!(
+			r#"{{
+				"session_key": "no_access",
+				"session_data": "{{}}",
+				"expire_date": {},
+				"created_at": {},
+				"last_accessed": null
+			}}"#,
+			now_ms + 3600000,
+			now_ms
+		);
+
+		let session: Session = serde_json::from_str(&json).unwrap();
+
+		assert_eq!(session.session_key, "no_access");
+		assert!(session.last_accessed.is_none());
+	}
+
+	#[test]
+	fn test_database_session_backend_clone() {
+		// DatabaseSessionBackend implements Clone via Arc
+		// We can't test this without a real connection, but we can verify the trait is implemented
+		fn assert_clone<T: Clone>() {}
+		assert_clone::<DatabaseSessionBackend>();
 	}
 }
