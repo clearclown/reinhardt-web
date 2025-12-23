@@ -16,14 +16,14 @@ pub const HYDRATION_ATTR_PROPS: &str = "data-rh-props";
 static HYDRATION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Generates a unique hydration ID.
-pub fn generate_hydration_id() -> String {
+pub(super) fn generate_hydration_id() -> String {
 	let id = HYDRATION_COUNTER.fetch_add(1, Ordering::SeqCst);
 	format!("rh-{}", id)
 }
 
 /// Resets the hydration counter (for testing).
 #[cfg(test)]
-pub fn reset_hydration_counter() {
+pub(crate) fn reset_hydration_counter() {
 	HYDRATION_COUNTER.store(0, Ordering::SeqCst);
 }
 
@@ -104,13 +104,13 @@ fn html_escape_attr(s: &str) -> String {
 
 /// Generates a hydration boundary comment.
 #[cfg(test)]
-pub fn hydration_boundary_start(id: &str) -> String {
+pub(crate) fn hydration_boundary_start(id: &str) -> String {
 	format!("<!--rh-start:{}-->", id)
 }
 
 /// Generates a hydration boundary end comment.
 #[cfg(test)]
-pub fn hydration_boundary_end(id: &str) -> String {
+pub(crate) fn hydration_boundary_end(id: &str) -> String {
 	format!("<!--rh-end:{}-->", id)
 }
 
