@@ -1,15 +1,38 @@
-//! Procedural Macros for Reinhardt Page
+//! Procedural Macros for Reinhardt Pages
 //!
 //! This crate provides procedural macros for the reinhardt-pages WASM frontend framework.
 //!
 //! ## Available Macros
 //!
+//! - `page!` - Anonymous component DSL macro
 //! - `#[server_fn]` - Server Functions (RPC) macro
 //!
-//! ## Example
+//! ## page! Macro Example
 //!
 //! ```ignore
-//! use reinhardt_pagess_macros::server_fn;
+//! use reinhardt_pages::page;
+//!
+//! // Define an anonymous component with closure-style props
+//! let counter = page!(|initial: i32| {
+//!     div {
+//!         class: "counter",
+//!         h1 { "Counter" }
+//!         span { format!("Count: {}", initial) }
+//!         button {
+//!             @click: |_| { /* handler */ },
+//!             "+"
+//!         }
+//!     }
+//! });
+//!
+//! // Use like a function
+//! let view = counter(42);
+//! ```
+//!
+//! ## server_fn Example
+//!
+//! ```ignore
+//! use reinhardt_pages_macros::server_fn;
 //!
 //! #[server_fn]
 //! async fn get_user(id: u32) -> Result<User, ServerFnError> {
@@ -25,6 +48,7 @@
 use proc_macro::TokenStream;
 
 mod crate_paths;
+mod page;
 mod server_fn;
 
 /// Server Function macro
@@ -58,6 +82,98 @@ mod server_fn;
 #[proc_macro_attribute]
 pub fn server_fn(args: TokenStream, input: TokenStream) -> TokenStream {
 	server_fn::server_fn_impl(args, input)
+}
+
+/// Page component macro
+///
+/// Creates an anonymous component with a closure-style DSL for defining views.
+/// The component is returned as a callable function that takes props and returns a View.
+///
+/// ## Syntax
+///
+/// ```text
+/// page!(|prop1: Type1, prop2: Type2| {
+///     element {
+///         attr: "value",
+///         @event: |e| { handler(e) },
+///         child_element { ... }
+///         "text content"
+///     }
+/// })
+/// ```
+///
+/// ## Elements
+///
+/// HTML elements are written as `tag { ... }`:
+///
+/// ```ignore
+/// page!(|| {
+///     div {
+///         h1 { "Title" }
+///         p { "Paragraph" }
+///     }
+/// })
+/// ```
+///
+/// ## Attributes
+///
+/// Attributes use `key: value` syntax:
+///
+/// ```ignore
+/// page!(|| {
+///     div {
+///         class: "container",
+///         id: "main",
+///         data_testid: "test",  // Converts to data-testid
+///     }
+/// })
+/// ```
+///
+/// ## Events
+///
+/// Events use `@event: handler` syntax:
+///
+/// ```ignore
+/// page!(|| {
+///     button {
+///         @click: |_| { console_log!("Clicked!") },
+///         "Click me"
+///     }
+/// })
+/// ```
+///
+/// ## Conditional Rendering
+///
+/// Use `if` and `if/else`:
+///
+/// ```ignore
+/// page!(|show: bool| {
+///     div {
+///         if show {
+///             span { "Visible" }
+///         } else {
+///             span { "Hidden" }
+///         }
+///     }
+/// })
+/// ```
+///
+/// ## List Rendering
+///
+/// Use `for` loops:
+///
+/// ```ignore
+/// page!(|items: Vec<String>| {
+///     ul {
+///         for item in items {
+///             li { item }
+///         }
+///     }
+/// })
+/// ```
+#[proc_macro]
+pub fn page(input: TokenStream) -> TokenStream {
+	page::page_impl(input)
 }
 
 // Note: For dependency injection parameters, use the tool attribute #[reinhardt::inject]

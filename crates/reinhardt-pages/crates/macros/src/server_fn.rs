@@ -25,7 +25,10 @@ use syn::punctuated::Punctuated;
 use syn::{FnArg, ItemFn, Meta, Token, parse_macro_input};
 
 // Import crate path helpers for dynamic resolution
-use crate::crate_paths::{get_reinhardt_di_crate, get_reinhardt_http_crate};
+use crate::crate_paths::{
+	get_inventory_crate, get_reinhardt_di_crate, get_reinhardt_http_crate,
+	get_reinhardt_pages_crate,
+};
 
 /// Convert snake_case identifier to UpperCamelCase for struct naming
 ///
@@ -53,7 +56,7 @@ fn to_pascal_case_ident(ident: &proc_macro2::Ident) -> proc_macro2::Ident {
 /// These options are parsed from the attribute arguments.
 #[derive(Debug, Clone, FromMeta)]
 #[darling(default)]
-pub struct ServerFnOptions {
+pub(crate) struct ServerFnOptions {
 	/// Enable DI functionality with `use_inject = true`
 	///
 	/// When enabled, parameters marked with `#[inject]` will be resolved
@@ -279,7 +282,7 @@ impl ServerFnInfo {
 }
 
 /// Main entry point for #[server_fn] macro
-pub fn server_fn_impl(args: TokenStream, input: TokenStream) -> TokenStream {
+pub(crate) fn server_fn_impl(args: TokenStream, input: TokenStream) -> TokenStream {
 	// Parse attribute arguments
 	let attr_args = match syn::parse::Parser::parse(
 		syn::punctuated::Punctuated::<Meta, syn::Token![,]>::parse_terminated,
@@ -495,9 +498,11 @@ fn generate_client_stub(
 			#serialize_code
 
 			// Send HTTP POST request using gloo-net
+			// Note: gloo-net 0.6+ body() returns Result, so we need to handle the error
 			let __response = ::gloo_net::http::Request::post(__endpoint)
 				.header("Content-Type", #content_type)
 				.body(__body)
+				.map_err(|e| crate::server_fn::ServerFnError::network(e.to_string()))?
 				.send()
 				.await
 				.map_err(|e| crate::server_fn::ServerFnError::network(e.to_string()))?;
@@ -685,32 +690,65 @@ fn generate_server_handler(
 	};
 
 	// Generate handler signature based on whether DI is needed
-	let (handler_signature, body_extraction) = if !inject_params.is_empty() {
-		// Dynamically resolve reinhardt_http crate path
-		let http_crate = get_reinhardt_http_crate();
+	let (handler_signature, handler_body_extraction, wrapper_body_extraction, wrapper_call_args) =
+		if !inject_params.is_empty() {
+			// Dynamically resolve reinhardt_http crate path
+			let http_crate = get_reinhardt_http_crate();
 
-		// When we have inject params, handler receives Request to extract DI context
-		(
-			quote! {
-				pub async fn #handler_name(__req: #http_crate::Request) -> ::std::result::Result<::std::string::String, ::std::string::String>
-			},
-			quote! {
-				// Extract body from request
-				let body = __req.read_body()
-					.map_err(|e| format!("Failed to read body: {}", e))?;
-				let body = ::std::string::String::from_utf8(body.to_vec())
-					.map_err(|e| format!("Body is not valid UTF-8: {}", e))?;
-			},
-		)
-	} else {
-		// No DI needed, handler receives body directly
-		(
-			quote! {
-				pub async fn #handler_name(body: ::std::string::String) -> ::std::result::Result<::std::string::String, ::std::string::String>
-			},
-			quote! {},
-		)
-	};
+			// When we have inject params, handler receives Request to extract DI context
+			(
+				quote! {
+					pub async fn #handler_name(__req: #http_crate::Request) -> ::std::result::Result<::std::string::String, ::std::string::String>
+				},
+				// Handler body extraction (from __req parameter)
+				quote! {
+					// Extract body from request
+					let body = __req.read_body()
+						.map_err(|e| format!("Failed to read body: {}", e))?;
+					let body = ::std::string::String::from_utf8(body.to_vec())
+						.map_err(|e| format!("Body is not valid UTF-8: {}", e))?;
+				},
+				// Wrapper body extraction (from req parameter, rename to __req)
+				quote! {
+					let __req = req;
+					// Extract body from request
+					let body = __req.read_body()
+						.map_err(|e| format!("Failed to read body: {}", e))?;
+					let body = ::std::string::String::from_utf8(body.to_vec())
+						.map_err(|e| format!("Body is not valid UTF-8: {}", e))?;
+				},
+				vec![quote! { __req }],
+			)
+		} else {
+			// No DI needed, handler receives body directly
+			(
+				quote! {
+					pub async fn #handler_name(body: ::std::string::String) -> ::std::result::Result<::std::string::String, ::std::string::String>
+				},
+				// Handler doesn't need body extraction (body is already a parameter)
+				quote! {},
+				// Wrapper needs to extract body from req
+				quote! {
+					// Extract body from request
+					let body = req.read_body()
+						.map_err(|e| format!("Failed to read body: {}", e))?;
+					let body = ::std::string::String::from_utf8(body.to_vec())
+						.map_err(|e| format!("Body is not valid UTF-8: {}", e))?;
+				},
+				vec![quote! { body }],
+			)
+		};
+
+	// Generate unique name for the static wrapper function
+	let static_wrapper_name = quote::format_ident!("__server_fn_static_wrapper_{}", name);
+	let name_str = name.to_string();
+
+	// Dynamically resolve crate paths for all external dependencies
+	let pages_crate = get_reinhardt_pages_crate();
+	let inventory_crate = get_inventory_crate();
+	// Note: http_crate is already resolved above when inject_params is not empty,
+	// but we need it for the static wrapper regardless
+	let http_crate_for_wrapper = get_reinhardt_http_crate();
 
 	quote! {
 		#[cfg(not(target_arch = "wasm32"))]
@@ -728,7 +766,7 @@ fn generate_server_handler(
 			}
 
 			// Extract body if needed (when using DI)
-			#body_extraction
+			#handler_body_extraction
 
 			// Deserialize request body based on codec
 			#deserialize_code
@@ -769,6 +807,31 @@ fn generate_server_handler(
 		/// ```
 		pub fn #register_fn_name() -> &'static str {
 			#endpoint
+		}
+
+		// Static wrapper function for inventory registration
+		// This is necessary because inventory::submit! requires a function pointer,
+		// not a closure, and async functions require boxing.
+		#[cfg(not(target_arch = "wasm32"))]
+		fn #static_wrapper_name(
+			req: #http_crate_for_wrapper::Request
+		) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::string::String, ::std::string::String>> + ::std::marker::Send>> {
+			::std::boxed::Box::pin(async move {
+				// When DI is enabled, pass Request directly
+				// When DI is disabled, extract body from Request
+				#wrapper_body_extraction
+				#handler_name(#(#wrapper_call_args),*).await
+			})
+		}
+
+		// Automatic registration via inventory crate
+		#[cfg(not(target_arch = "wasm32"))]
+		#inventory_crate::submit! {
+			#pages_crate::server_fn::registry::ServerFnRoute {
+				path: #endpoint,
+				handler: #static_wrapper_name,
+				name: #name_str,
+			}
 		}
 	}
 }

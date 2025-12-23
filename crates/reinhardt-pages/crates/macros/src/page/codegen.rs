@@ -1,0 +1,506 @@
+//! Code generation for the page! macro.
+//!
+//! This module converts AST nodes into Rust code that uses the ElementView API.
+//!
+//! ## Generated Code Structure
+//!
+//! ```text
+//! page!(|initial: i32| {
+//!     div {
+//!         "hello"
+//!     }
+//! })
+//! ```
+//!
+//! Generates:
+//!
+//! ```text
+//! {
+//!     |initial: i32| -> View {
+//!         ElementView::new("div")
+//!             .child("hello")
+//!             .into_view()
+//!     }
+//! }
+//! ```
+
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
+use syn::LitStr;
+
+// Import AST types from reinhardt-pages-ast (re-exported via super)
+use crate::crate_paths::get_reinhardt_pages_crate_info;
+use reinhardt_pages_ast::{
+	PageAttr, PageBody, PageComponent, PageElement, PageElse, PageEvent, PageExpression, PageFor,
+	PageIf, PageMacro, PageNode, PageParam, PageText,
+};
+
+/// Generates code for the entire page! macro.
+///
+/// This function generates conditional code when both `reinhardt` and `reinhardt-pages`
+/// are dependencies, allowing the macro to work correctly for both WASM and server builds.
+pub(super) fn generate(macro_ast: &PageMacro) -> TokenStream {
+	let crate_info = get_reinhardt_pages_crate_info();
+	let use_statement = &crate_info.use_statement;
+	let pages_crate = &crate_info.ident;
+
+	// Generate closure parameters
+	let params = generate_params(&macro_ast.params);
+
+	// Generate body
+	let body = generate_body(&macro_ast.body, pages_crate);
+
+	// Wrap in a closure with conditional use statement if needed
+	quote! {
+		{
+			#use_statement
+			#params -> #pages_crate::component::View {
+				#body
+			}
+		}
+	}
+}
+
+/// Generates the closure parameter list.
+fn generate_params(params: &[PageParam]) -> TokenStream {
+	if params.is_empty() {
+		quote!(||)
+	} else {
+		let param_tokens: Vec<TokenStream> = params
+			.iter()
+			.map(|p| {
+				let name = &p.name;
+				let ty = &p.ty;
+				quote!(#name: #ty)
+			})
+			.collect();
+
+		quote!(|#(#param_tokens),*|)
+	}
+}
+
+/// Generates code for the page body.
+fn generate_body(body: &PageBody, pages_crate: &TokenStream) -> TokenStream {
+	let nodes = generate_nodes(&body.nodes, pages_crate);
+
+	// If there's exactly one node, return it directly
+	// Otherwise, wrap in a fragment
+	if body.nodes.len() == 1 {
+		nodes
+	} else {
+		quote! {
+			#pages_crate::component::View::fragment([#nodes])
+		}
+	}
+}
+
+/// Generates code for multiple nodes.
+fn generate_nodes(nodes: &[PageNode], pages_crate: &TokenStream) -> TokenStream {
+	let node_tokens: Vec<TokenStream> = nodes
+		.iter()
+		.map(|n| generate_node(n, pages_crate))
+		.collect();
+
+	if node_tokens.len() == 1 {
+		node_tokens.into_iter().next().unwrap()
+	} else {
+		quote!(#(#node_tokens),*)
+	}
+}
+
+/// Generates code for a single node.
+fn generate_node(node: &PageNode, pages_crate: &TokenStream) -> TokenStream {
+	match node {
+		PageNode::Element(elem) => generate_element(elem, pages_crate),
+		PageNode::Text(text) => generate_text(text, pages_crate),
+		PageNode::Expression(expr) => generate_expression(expr, pages_crate),
+		PageNode::If(if_node) => generate_if(if_node, pages_crate),
+		PageNode::For(for_node) => generate_for(for_node, pages_crate),
+		PageNode::Component(comp) => generate_component(comp, pages_crate),
+	}
+}
+
+/// Generates code for an element node.
+fn generate_element(elem: &PageElement, pages_crate: &TokenStream) -> TokenStream {
+	let tag = elem.tag.to_string();
+
+	// Generate attributes
+	let attrs: Vec<TokenStream> = elem.attrs.iter().map(generate_attr).collect();
+
+	// Generate event handlers
+	let events: Vec<TokenStream> = elem
+		.events
+		.iter()
+		.map(|event| generate_event(event, pages_crate))
+		.collect();
+
+	// Generate children
+	let children: Vec<TokenStream> = elem
+		.children
+		.iter()
+		.map(|child| generate_child(child, pages_crate))
+		.collect();
+
+	// Build the element
+	let mut builder = quote! {
+		#pages_crate::component::ElementView::new(#tag)
+	};
+
+	// Add attributes
+	for attr in attrs {
+		builder = quote! {
+			#builder
+			#attr
+		};
+	}
+
+	// Add event handlers
+	for event in events {
+		builder = quote! {
+			#builder
+			#event
+		};
+	}
+
+	// Add children
+	for child in children {
+		builder = quote! {
+			#builder
+			.child(#child)
+		};
+	}
+
+	// Convert to View using fully qualified path to avoid needing IntoView in scope
+	quote! {
+		#pages_crate::component::IntoView::into_view(#builder)
+	}
+}
+
+/// Generates code for an attribute.
+fn generate_attr(attr: &PageAttr) -> TokenStream {
+	let name = attr.html_name();
+	let value = &attr.value;
+
+	quote! {
+		.attr(#name, #value)
+	}
+}
+
+/// Generates code for an event handler.
+fn generate_event(event: &PageEvent, pages_crate: &TokenStream) -> TokenStream {
+	let event_type = event.dom_event_type();
+	let handler = &event.handler;
+
+	// Convert event type string to EventType enum variant
+	// NOTE: Variant names must match exactly with dom::EventType definition
+	let event_type_ident = match event_type.as_str() {
+		// Mouse events
+		"click" => quote!(Click),
+		"dblclick" => quote!(DblClick),
+		"mousedown" => quote!(MouseDown),
+		"mouseup" => quote!(MouseUp),
+		"mouseenter" => quote!(MouseEnter),
+		"mouseleave" => quote!(MouseLeave),
+		"mousemove" => quote!(MouseMove),
+		"mouseover" => quote!(MouseOver),
+		"mouseout" => quote!(MouseOut),
+		// Keyboard events
+		"keydown" => quote!(KeyDown),
+		"keyup" => quote!(KeyUp),
+		"keypress" => quote!(KeyPress),
+		// Form events
+		"input" => quote!(Input),
+		"change" => quote!(Change),
+		"submit" => quote!(Submit),
+		"focus" => quote!(Focus),
+		"blur" => quote!(Blur),
+		// Touch events
+		"touchstart" => quote!(TouchStart),
+		"touchend" => quote!(TouchEnd),
+		"touchmove" => quote!(TouchMove),
+		"touchcancel" => quote!(TouchCancel),
+		// Drag events
+		"dragstart" => quote!(DragStart),
+		"drag" => quote!(Drag),
+		"drop" => quote!(Drop),
+		"dragenter" => quote!(DragEnter),
+		"dragleave" => quote!(DragLeave),
+		"dragover" => quote!(DragOver),
+		"dragend" => quote!(DragEnd),
+		// Other events
+		"load" => quote!(Load),
+		"error" => quote!(Error),
+		"scroll" => quote!(Scroll),
+		"resize" => quote!(Resize),
+		other => {
+			// Unsupported event type - emit compile error
+			let error_msg = format!("unsupported event type: '{}'", other);
+			return quote! {
+				compile_error!(#error_msg)
+			};
+		}
+	};
+
+	quote! {
+		.on(
+			#pages_crate::dom::EventType::#event_type_ident,
+			#pages_crate::callback::into_event_handler(#handler)
+		)
+	}
+}
+
+/// Generates code for a child node (used in .child() calls).
+fn generate_child(node: &PageNode, pages_crate: &TokenStream) -> TokenStream {
+	match node {
+		PageNode::Text(text) => {
+			// Create a proper string literal token
+			let lit = LitStr::new(&text.content, Span::call_site());
+			quote!(#lit)
+		}
+		PageNode::Expression(expr) => {
+			let e = &expr.expr;
+			quote!(#e)
+		}
+		_ => generate_node(node, pages_crate),
+	}
+}
+
+/// Generates code for a text node.
+fn generate_text(text: &PageText, pages_crate: &TokenStream) -> TokenStream {
+	// Create a proper string literal token
+	let lit = LitStr::new(&text.content, Span::call_site());
+	quote! {
+		#pages_crate::component::View::text(#lit)
+	}
+}
+
+/// Generates code for an expression node.
+fn generate_expression(expr: &PageExpression, pages_crate: &TokenStream) -> TokenStream {
+	let e = &expr.expr;
+	quote! {
+		#pages_crate::component::IntoView::into_view(#e)
+	}
+}
+
+/// Generates code for an if node.
+fn generate_if(if_node: &PageIf, pages_crate: &TokenStream) -> TokenStream {
+	let condition = &if_node.condition;
+	let then_branch = generate_if_branch(&if_node.then_branch, pages_crate);
+
+	let else_branch = match &if_node.else_branch {
+		Some(PageElse::Block(nodes)) => {
+			let else_body = generate_if_branch(nodes, pages_crate);
+			quote! { else { #else_body } }
+		}
+		Some(PageElse::If(nested_if)) => {
+			let nested = generate_if(nested_if, pages_crate);
+			quote! { else #nested }
+		}
+		None => {
+			quote! { else { #pages_crate::component::View::Empty } }
+		}
+	};
+
+	quote! {
+		if #condition {
+			#then_branch
+		} #else_branch
+	}
+}
+
+/// Generates code for an if branch (then or else block).
+fn generate_if_branch(nodes: &[PageNode], pages_crate: &TokenStream) -> TokenStream {
+	if nodes.is_empty() {
+		quote! { #pages_crate::component::View::Empty }
+	} else if nodes.len() == 1 {
+		generate_node(&nodes[0], pages_crate)
+	} else {
+		let node_tokens: Vec<TokenStream> = nodes
+			.iter()
+			.map(|n| generate_node(n, pages_crate))
+			.collect();
+		quote! {
+			#pages_crate::component::View::fragment([#(#node_tokens),*])
+		}
+	}
+}
+
+/// Generates code for a for node.
+fn generate_for(for_node: &PageFor, pages_crate: &TokenStream) -> TokenStream {
+	let pat = &for_node.pat;
+	let iter = &for_node.iter;
+	let body = generate_if_branch(&for_node.body, pages_crate);
+
+	quote! {
+		#pages_crate::component::View::fragment(
+			(#iter).into_iter().map(|#pat| {
+				#body
+			}).collect::<::std::vec::Vec<_>>()
+		)
+	}
+}
+
+/// Generates code for a component call.
+///
+/// # Example
+///
+/// ```text
+/// // Input DSL
+/// MyButton(label: "Click", disabled: false)
+///
+/// // Generated code
+/// MyButton("Click", false)
+/// ```
+fn generate_component(comp: &PageComponent, pages_crate: &TokenStream) -> TokenStream {
+	let name = &comp.name;
+
+	// Generate argument values (names are discarded in generated code)
+	let args: Vec<TokenStream> = comp
+		.args
+		.iter()
+		.map(|arg| {
+			let value = &arg.value;
+			quote! { #value }
+		})
+		.collect();
+
+	// Generate the component call
+	if let Some(children) = &comp.children {
+		// With children: add children as last argument
+		let children_view = generate_if_branch(children, pages_crate);
+
+		if args.is_empty() {
+			quote! { #name(#children_view) }
+		} else {
+			quote! { #name(#(#args),*, #children_view) }
+		}
+	} else {
+		// Without children: simple function call
+		if args.is_empty() {
+			quote! { #name() }
+		} else {
+			quote! { #name(#(#args),*) }
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn parse_and_generate(input: TokenStream) -> TokenStream {
+		let macro_ast: PageMacro = syn::parse2(input).unwrap();
+		generate(&macro_ast)
+	}
+
+	#[test]
+	fn test_generate_simple_element() {
+		let input = quote::quote!(|| { div { "hello" } });
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// TokenStream stringification adds spaces between tokens
+		// e.g., "crate :: component :: ElementView :: new"
+		assert!(output_str.contains("ElementView"));
+		assert!(output_str.contains("new"));
+		assert!(output_str.contains("\"div\""));
+		assert!(output_str.contains("\"hello\""));
+	}
+
+	#[test]
+	fn test_generate_element_with_attr() {
+		let input = quote::quote!(|| {
+			div {
+				class: "container",
+				"hello"
+			}
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// TokenStream stringification adds spaces between tokens
+		assert!(output_str.contains(". attr"));
+		assert!(output_str.contains("\"class\""));
+		assert!(output_str.contains("\"container\""));
+	}
+
+	#[test]
+	fn test_generate_with_params() {
+		let input = quote::quote!(|name: String| {
+			div { "hello" }
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		assert!(output_str.contains("name : String"));
+	}
+
+	#[test]
+	fn test_generate_data_attr_conversion() {
+		let input = quote::quote!(|| {
+			div {
+				data_testid: "test",
+				"hello"
+			}
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// data_testid should become data-testid
+		assert!(output_str.contains("\"data-testid\""));
+	}
+
+	#[test]
+	fn test_generate_component_basic() {
+		let input = quote::quote!(|| {
+			MyButton(label: "Click")
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// Component call should be generated as a function call
+		assert!(output_str.contains("MyButton"));
+		assert!(output_str.contains("\"Click\""));
+	}
+
+	#[test]
+	fn test_generate_component_multiple_args() {
+		let input = quote::quote!(|| {
+			MyButton(label: "Click", disabled: true, count: 42)
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		assert!(output_str.contains("MyButton"));
+		assert!(output_str.contains("\"Click\""));
+		assert!(output_str.contains("true"));
+		assert!(output_str.contains("42"));
+	}
+
+	#[test]
+	fn test_generate_component_empty_args() {
+		let input = quote::quote!(|| { MyComponent() });
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// Should generate MyComponent()
+		assert!(output_str.contains("MyComponent"));
+		assert!(output_str.contains("()"));
+	}
+
+	#[test]
+	fn test_generate_component_with_children() {
+		let input = quote::quote!(|| {
+			MyWrapper(class: "container") {
+				div { "content" }
+			}
+		});
+		let output = parse_and_generate(input);
+		let output_str = output.to_string();
+
+		// Should include component name and the children view
+		assert!(output_str.contains("MyWrapper"));
+		assert!(output_str.contains("\"container\""));
+		assert!(output_str.contains("ElementView"));
+	}
+}
