@@ -77,14 +77,17 @@ web-sys = { version = "0.3", features = [
 wasm-bindgen-futures = "0.4"
 gloo-net = "0.6"
 
-# Server-side only dependencies (DI, HTTP, Forms)
+# Server-side only dependencies (DI, HTTP, Forms, Server Function Registry)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 reinhardt-forms = { workspace = true }
 reinhardt-di = { workspace = true }
 reinhardt-http = { workspace = true }
 reinhardt-middleware = { workspace = true }
+reinhardt-urls = { workspace = true }
 hyper = { workspace = true }
 async-trait = "0.1"
+# For automatic server function registration
+inventory = "0.3"
 
 [dev-dependencies]
 reinhardt-static = { workspace = true }

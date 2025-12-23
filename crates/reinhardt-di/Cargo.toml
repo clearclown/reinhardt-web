@@ -50,5 +50,6 @@ bytes.workspace = true
 hyper.workspace = true
 serial_test = { workspace = true }
 reinhardt-core = { workspace = true, features = ["types", "exception"] }
+reinhardt-macros = { workspace = true }
 reinhardt-params = { workspace = true }
 serde = { workspace = true }

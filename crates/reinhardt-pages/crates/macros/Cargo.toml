@@ -13,6 +13,9 @@ categories = ["wasm", "web-programming"]
 proc-macro = true
 
 [dependencies]
+# AST definitions shared with formatter
+reinhardt-pages-ast = { path = "../ast" }
+
 # Procedural macro essentials
 syn = { version = "2.0", features = ["full", "extra-traits"] }
 quote = "1.0"
@@ -28,5 +31,5 @@ convert_case = "0.6"
 proc-macro-crate = "3.2.0"
 
 [dev-dependencies]
-# For testing macro expansion
-trybuild = "1.0"
+# For testing macro expansion (unit tests only, not trybuild)
+# trybuild tests are in the parent reinhardt-pages crate to avoid circular deps

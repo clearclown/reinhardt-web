@@ -30,11 +30,14 @@ thiserror = { workspace = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # Core logic
 reinhardt-admin-core = { workspace = true }
+inventory = { workspace = true }  # Required for #[server_fn] macro
 
 # Reinhardt dependencies
 reinhardt-di = { workspace = true }  # Moved from common deps - only needed on server
 reinhardt-http = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
+reinhardt-migrations = { workspace = true }
+reinhardt-utils-core = { workspace = true }
 
 # Core dependencies
 tokio = { workspace = true }

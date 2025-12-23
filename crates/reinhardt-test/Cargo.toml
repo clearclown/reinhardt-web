@@ -30,6 +30,7 @@ reinhardt-auth = { workspace = true }
 reinhardt-server = { workspace = true }
 reinhardt-routers = { workspace = true }
 reinhardt-websockets = { workspace = true, optional = true }
+reinhardt-settings = { workspace = true, features = ["async"] }
 
 hyper = { workspace = true }
 tokio = { workspace = true }

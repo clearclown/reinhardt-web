@@ -115,7 +115,7 @@ mysql = [
   "reinhardt-migrations/mysql",
   "reinhardt-backends/mysql",
 ]
-mongodb-backend = []
+mongodb-backend = ["reinhardt-backends/mongodb-backend", "reinhardt-migrations?/mongodb-backend"]
 cockroachdb-backend = ["postgres"] # CockroachDB uses PostgreSQL protocol
 all-databases = [
   "postgres",
