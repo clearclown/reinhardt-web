@@ -245,6 +245,7 @@ impl OrmSubscriptionRoot {
 #[fixture]
 async fn postgres_with_schema() -> (ContainerAsync<GenericImage>, Arc<PgPool>, EventBroadcaster) {
 	let postgres = GenericImage::new("postgres", "17-alpine")
+		.with_exposed_port(5432.tcp())
 		.with_wait_for(
 			testcontainers_modules::testcontainers::core::WaitFor::message_on_stderr(
 				"database system is ready to accept connections",
@@ -256,7 +257,7 @@ async fn postgres_with_schema() -> (ContainerAsync<GenericImage>, Arc<PgPool>, E
 		.expect("Failed to start PostgreSQL container");
 
 	let port = postgres
-		.get_host_port_ipv4(5432.tcp())
+		.get_host_port_ipv4(5432)
 		.await
 		.expect("Failed to get PostgreSQL port");
 
