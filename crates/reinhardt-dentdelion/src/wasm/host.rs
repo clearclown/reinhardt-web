@@ -544,28 +544,6 @@ impl HostState {
 			.await
 	}
 
-	/// Render a Vue component to HTML.
-	///
-	/// # Arguments
-	///
-	/// * `component_path` - Path to the component file (relative to plugin assets)
-	/// * `props` - MessagePack-serialized component props
-	/// * `options` - Rendering options
-	///
-	/// # Returns
-	///
-	/// Rendered HTML and optional extracted assets, or an error if SSR is not available.
-	pub async fn render_vue(
-		&self,
-		component_path: &str,
-		props: &[u8],
-		options: RenderOptions,
-	) -> Result<RenderResult, SsrError> {
-		self.ssr_proxy
-			.render_vue(component_path, props, options)
-			.await
-	}
-
 	/// Execute arbitrary JavaScript code.
 	///
 	/// # Arguments
@@ -1179,22 +1157,6 @@ impl crate::wasm::runtime::reinhardt::dentdelion::ssr::Host for HostState {
 		Ok(result)
 	}
 
-	async fn render_vue(
-		&mut self,
-		component_path: String,
-		props: Vec<u8>,
-		options: GeneratedRenderOptions,
-	) -> Result<Result<GeneratedRenderResult, GeneratedPluginError>, anyhow::Error> {
-		let internal_options = from_generated_render_options(options);
-		let result = self
-			.ssr_proxy
-			.render_vue(&component_path, &props, internal_options)
-			.await
-			.map(to_generated_render_result)
-			.map_err(ssr_error_to_plugin_error);
-		Ok(result)
-	}
-
 	async fn eval_js(
 		&mut self,
 		code: String,
@@ -1473,18 +1435,6 @@ mod tests {
 
 		let result = state
 			.render_react("test.jsx", &[], RenderOptions::default())
-			.await;
-
-		// Should return NotAvailable error since SSR is disabled
-		assert!(matches!(result, Err(SsrError::NotAvailable)));
-	}
-
-	#[tokio::test]
-	async fn test_host_state_render_vue_not_available() {
-		let state = HostState::new("test-plugin");
-
-		let result = state
-			.render_vue("test.vue", &[], RenderOptions::default())
 			.await;
 
 		// Should return NotAvailable error since SSR is disabled

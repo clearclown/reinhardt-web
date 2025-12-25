@@ -271,23 +271,6 @@ interface ssr {
 		options: render-options
 	) -> result<render-result, plugin-error>;
 
-	/// Render a Vue component to HTML.
-	///
-	/// # Arguments
-	///
-	/// * `component-path` - Path to the component file (relative to plugin assets)
-	/// * `props` - MessagePack-serialized component props
-	/// * `options` - Rendering options
-	///
-	/// # Returns
-	///
-	/// Rendered HTML and optional extracted assets, or an error if rendering fails.
-	render-vue: func(
-		component-path: string,
-		props: list<u8>,
-		options: render-options
-	) -> result<render-result, plugin-error>;
-
 	/// Execute arbitrary JavaScript code and return the result.
 	///
 	/// # Arguments
