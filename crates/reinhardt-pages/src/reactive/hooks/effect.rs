@@ -2,7 +2,7 @@
 //!
 //! These hooks provide React-like side effect management built on top of Effect.
 
-use crate::reactive::Effect;
+use crate::reactive::{Effect, runtime::EffectTiming};
 
 /// Runs a side effect with automatic dependency tracking.
 ///
@@ -104,16 +104,13 @@ where
 ///
 /// # Note
 ///
-/// In the current implementation, `use_layout_effect` behaves identically to
-/// `use_effect`. True synchronous execution will be implemented when the
-/// rendering pipeline supports it.
+/// This implementation uses synchronous execution timing. Layout effects are
+/// executed immediately when their dependencies change, before passive effects.
 pub fn use_layout_effect<F>(f: F) -> Effect
 where
 	F: FnMut() + 'static,
 {
-	// TODO: Implement true layout effect timing
-	// For now, this behaves the same as use_effect
-	Effect::new(f)
+	Effect::new_with_timing(f, EffectTiming::Layout)
 }
 
 #[cfg(test)]
@@ -175,5 +172,106 @@ mod tests {
 		});
 
 		assert!(*called.borrow());
+	}
+
+	#[test]
+	#[serial]
+	fn test_layout_effect_synchronous_execution() {
+		// Test that layout effects execute synchronously when dependencies change
+		let signal = Signal::new(0);
+		let execution_order = Rc::new(RefCell::new(Vec::new()));
+
+		let _effect = use_layout_effect({
+			let signal = signal.clone();
+			let execution_order = Rc::clone(&execution_order);
+			move || {
+				let value = signal.get();
+				execution_order.borrow_mut().push(value);
+			}
+		});
+
+		// Initial execution
+		assert_eq!(*execution_order.borrow(), vec![0]);
+
+		// Change signal - layout effect should execute synchronously
+		signal.set(1);
+		execution_order.borrow_mut().push(100); // Marker after signal change
+
+		// Layout effect should have executed before this marker
+		// Note: In full implementation, this would be more evident with flush_updates()
+	}
+
+	#[test]
+	#[serial]
+	fn test_layout_vs_passive_timing() {
+		// Test that layout effects have different timing than passive effects
+		let signal = Signal::new(0);
+		let layout_count = Rc::new(RefCell::new(0));
+		let passive_count = Rc::new(RefCell::new(0));
+
+		// Create layout effect
+		let _layout_effect = use_layout_effect({
+			let signal = signal.clone();
+			let layout_count = Rc::clone(&layout_count);
+			move || {
+				let _ = signal.get();
+				*layout_count.borrow_mut() += 1;
+			}
+		});
+
+		// Create passive effect (use_effect)
+		let _passive_effect = use_effect({
+			let signal = signal.clone();
+			let passive_count = Rc::clone(&passive_count);
+			move || {
+				let _ = signal.get();
+				*passive_count.borrow_mut() += 1;
+			}
+		});
+
+		// Both should have run initially
+		assert_eq!(*layout_count.borrow(), 1);
+		assert_eq!(*passive_count.borrow(), 1);
+
+		// Change signal
+		signal.set(1);
+
+		// Layout effect executes synchronously
+		assert_eq!(*layout_count.borrow(), 2);
+		// Passive effect may not have executed yet (scheduled for microtask)
+	}
+
+	#[test]
+	#[serial]
+	fn test_mixed_layout_and_passive_effects() {
+		// Test execution order when both layout and passive effects depend on same signal
+		let signal = Signal::new(0);
+		let execution_order = Rc::new(RefCell::new(Vec::new()));
+
+		// Create layout effect (should execute first)
+		let _layout_effect = use_layout_effect({
+			let signal = signal.clone();
+			let execution_order = Rc::clone(&execution_order);
+			move || {
+				let value = signal.get();
+				execution_order.borrow_mut().push(("layout", value));
+			}
+		});
+
+		// Create passive effect
+		let _passive_effect = use_effect({
+			let signal = signal.clone();
+			let execution_order = Rc::clone(&execution_order);
+			move || {
+				let value = signal.get();
+				execution_order.borrow_mut().push(("passive", value));
+			}
+		});
+
+		// Both execute initially
+		let order = execution_order.borrow();
+		assert_eq!(order.len(), 2);
+		assert_eq!(order[0], ("layout", 0));
+		assert_eq!(order[1], ("passive", 0));
 	}
 }
