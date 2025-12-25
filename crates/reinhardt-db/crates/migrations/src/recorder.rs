@@ -380,10 +380,25 @@ impl DatabaseMigrationRecorder {
 					.values_panic([app.into(), name.into(), Expr::current_timestamp()])
 					.to_owned();
 
+				// Add conflict resolution for concurrent execution
 				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
-					DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
-					DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+					DatabaseType::Postgres => {
+						// PostgreSQL: ON CONFLICT DO NOTHING
+						format!(
+							"{} ON CONFLICT (app, name) DO NOTHING",
+							stmt.to_string(PostgresQueryBuilder)
+						)
+					}
+					DatabaseType::Mysql => {
+						// MySQL: INSERT IGNORE
+						let base_sql = stmt.to_string(MysqlQueryBuilder);
+						base_sql.replacen("INSERT", "INSERT IGNORE", 1)
+					}
+					DatabaseType::Sqlite => {
+						// SQLite: INSERT OR IGNORE
+						let base_sql = stmt.to_string(SqliteQueryBuilder);
+						base_sql.replacen("INSERT", "INSERT OR IGNORE", 1)
+					}
 					#[cfg(feature = "mongodb-backend")]
 					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 				};

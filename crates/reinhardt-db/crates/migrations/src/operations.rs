@@ -1276,6 +1276,10 @@ impl Operation {
 			FieldType::Set { values } => {
 				col_def.custom(Alias::new(format!("SET({})", values.join(","))))
 			}
+			FieldType::ForeignKey { .. } => {
+				// ForeignKey is a relationship, the actual column is typically an integer
+				col_def.integer()
+			}
 			FieldType::OneToOne { .. } => {
 				// OneToOne is a relationship, not a column type
 				// The actual column will be a foreign key (typically BigInteger)

@@ -982,17 +982,15 @@ impl ProjectState {
 
 		// Determine the primary key type for the source and target from the registry
 		let source_pk_type = self.get_primary_key_type(source_app_label, source_model_name);
-		let target_pk_type = {
-			// The target_model may be in the format “app_label.ModelName”.
-			let (target_app, target_model) = if m2m.to_model.contains('.') {
-				let parts: Vec<&str> = m2m.to_model.split('.').collect();
-				(parts[0], parts[1])
-			} else {
-				// Assuming the model is within the same application
-				(source_app_label, m2m.to_model.as_str())
-			};
-			self.get_primary_key_type(target_app, target_model)
+		// Extract target app_label from to_model (may be in "app.Model" format)
+		let (target_app, target_model) = if m2m.to_model.contains('.') {
+			let parts: Vec<&str> = m2m.to_model.split('.').collect();
+			(parts[0], parts[1])
+		} else {
+			(source_app_label, m2m.to_model.as_str())
 		};
+
+		let target_pk_type = self.get_primary_key_type(target_app, target_model);
 
 		// Add foreign key to source model: from_{source_model}_id
 		let mut from_field =
@@ -1010,7 +1008,11 @@ impl ProjectState {
 
 		// Add foreign key to target model: to_{target_model}_id
 		// Need to determine target table name - for now use pattern: {app_label}_{model_name_snake_case}
-		let target_table_name = format!("{}_{}", source_app_label, to_snake_case(&m2m.to_model));
+		// Get target table name from ProjectState
+		let target_table_name = self
+			.get_model(target_app, target_model)
+			.map(|m| m.table_name.clone())
+			.unwrap_or_else(|| format!("{}_{}", target_app, to_snake_case(target_model)));
 		let mut to_field = FieldState::new(target_field_name.clone(), target_pk_type, false);
 		to_field
 			.params
@@ -4448,6 +4450,52 @@ impl MigrationAutodetector {
 	///
 	/// assert!(!operations.is_empty());
 	/// ```
+	/// Sort operations by their dependencies to ensure correct execution order
+	///
+	/// This method reorders operations to prevent execution errors:
+	/// 1. CreateTable operations first (tables must exist before modification)
+	/// 2. AddColumn/AlterColumn operations next (field modifications)
+	/// 3. Other operations last (indexes, constraints, etc.)
+	fn sort_operations_by_dependency(
+		&self,
+		mut operations: Vec<crate::Operation>,
+	) -> Vec<crate::Operation> {
+		let mut sorted = Vec::new();
+
+		// Extract CreateTable operations (must be first)
+		let create_tables: Vec<_> = operations
+			.iter()
+			.filter(|op| matches!(op, crate::Operation::CreateTable { .. }))
+			.cloned()
+			.collect();
+		operations.retain(|op| !matches!(op, crate::Operation::CreateTable { .. }));
+
+		// Extract field operations (must be after CreateTable)
+		let field_ops: Vec<_> = operations
+			.iter()
+			.filter(|op| {
+				matches!(
+					op,
+					crate::Operation::AddColumn { .. } | crate::Operation::AlterColumn { .. }
+				)
+			})
+			.cloned()
+			.collect();
+		operations.retain(|op| {
+			!matches!(
+				op,
+				crate::Operation::AddColumn { .. } | crate::Operation::AlterColumn { .. }
+			)
+		});
+
+		// Assemble in correct order
+		sorted.extend(create_tables);
+		sorted.extend(field_ops);
+		sorted.extend(operations); // Remaining operations
+
+		sorted
+	}
+
 	pub fn generate_operations(&self) -> Vec<crate::Operation> {
 		let changes = self.detect_changes();
 		let mut operations = Vec::new();
@@ -4554,7 +4602,9 @@ impl MigrationAutodetector {
 		// and handled in generate_migrations() using Operation::MoveModel variant.
 		// The MoveModel variant was added to the Operation enum to support this use case.
 
-		operations
+		// Sort operations by dependency to ensure correct execution order
+
+		self.sort_operations_by_dependency(operations)
 	}
 
 	/// Generate migrations from detected changes
@@ -4748,6 +4798,23 @@ impl MigrationAutodetector {
 				})
 				.unwrap_or_else(|| m2m.to_model.to_lowercase());
 
+			// Get source model's primary key type
+			let source_pk_type = self.to_state.get_primary_key_type(app_label, model_name);
+
+			// Get target model's primary key type
+			// First extract target app_label from to_model (may be in "app.Model" format)
+			let (target_app, target_model) = if m2m.to_model.contains('.') {
+				let parts: Vec<&str> = m2m.to_model.split('.').collect();
+				(parts[0].to_string(), parts[1].to_string())
+			} else {
+				// Same app reference
+				(app_label.to_string(), m2m.to_model.clone())
+			};
+
+			let target_pk_type = self
+				.to_state
+				.get_primary_key_type(&target_app, &target_model);
+
 			// Create intermediate table columns
 			let columns = vec![
 				crate::ColumnDefinition {
@@ -4761,7 +4828,7 @@ impl MigrationAutodetector {
 				},
 				crate::ColumnDefinition {
 					name: Box::leak(source_column.clone().into_boxed_str()),
-					type_definition: crate::FieldType::Uuid,
+					type_definition: source_pk_type.clone(),
 					not_null: true,
 					unique: false,
 					primary_key: false,
@@ -4770,7 +4837,7 @@ impl MigrationAutodetector {
 				},
 				crate::ColumnDefinition {
 					name: Box::leak(target_column.clone().into_boxed_str()),
-					type_definition: crate::FieldType::Uuid,
+					type_definition: target_pk_type,
 					not_null: true,
 					unique: false,
 					primary_key: false,

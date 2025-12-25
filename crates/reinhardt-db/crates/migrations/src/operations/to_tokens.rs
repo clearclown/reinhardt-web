@@ -441,6 +441,21 @@ impl ToTokens for ColumnDefinition {
 
 			// Custom types
 			crate::FieldType::Custom(s) => quote! { FieldType::Custom(#s.to_string()) },
+
+			// Foreign key
+			crate::FieldType::ForeignKey {
+				to_table,
+				to_field,
+				on_delete,
+			} => {
+				quote! {
+					FieldType::ForeignKey {
+						to_table: #to_table.to_string(),
+						to_field: #to_field.to_string(),
+						on_delete: #on_delete,
+					}
+				}
+			}
 		};
 
 		tokens.extend(quote! {

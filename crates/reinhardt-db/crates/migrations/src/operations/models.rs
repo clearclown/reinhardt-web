@@ -130,25 +130,25 @@ pub struct FieldDefinition {
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 	pub comment: Option<String>,
 
-	// Phase 2.1: Storage Optimization (PostgreSQL)
+	// Storage Optimization (PostgreSQL)
 	#[cfg(feature = "db-postgres")]
 	pub storage: Option<String>,
 	#[cfg(feature = "db-postgres")]
 	pub compression: Option<String>,
 
-	// Phase 2.2: ON UPDATE Trigger (MySQL)
+	// ON UPDATE Trigger (MySQL)
 	#[cfg(feature = "db-mysql")]
 	pub on_update_current_timestamp: Option<bool>,
 
-	// Phase 2.3: Invisible Columns (MySQL)
+	// Invisible Columns (MySQL)
 	#[cfg(feature = "db-mysql")]
 	pub invisible: Option<bool>,
 
-	// Phase 2.4: Full-Text Index (PostgreSQL, MySQL)
+	// Full-Text Index (PostgreSQL, MySQL)
 	#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 	pub fulltext: Option<bool>,
 
-	// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+	// Numeric Attributes (MySQL, deprecated)
 	#[cfg(feature = "db-mysql")]
 	pub unsigned: Option<bool>,
 	#[cfg(feature = "db-mysql")]
@@ -203,21 +203,21 @@ impl FieldDefinition {
 			// Comment
 			#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 			comment: None,
-			// Phase 2.1: Storage Optimization
+			// Storage Optimization
 			#[cfg(feature = "db-postgres")]
 			storage: None,
 			#[cfg(feature = "db-postgres")]
 			compression: None,
-			// Phase 2.2: ON UPDATE Trigger
+			// ON UPDATE Trigger
 			#[cfg(feature = "db-mysql")]
 			on_update_current_timestamp: None,
-			// Phase 2.3: Invisible Columns
+			// Invisible Columns
 			#[cfg(feature = "db-mysql")]
 			invisible: None,
-			// Phase 2.4: Full-Text Index
+			// Full-Text Index
 			#[cfg(any(feature = "db-postgres", feature = "db-mysql"))]
 			fulltext: None,
-			// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+			// Numeric Attributes (MySQL, deprecated)
 			#[cfg(feature = "db-mysql")]
 			unsigned: None,
 			#[cfg(feature = "db-mysql")]
@@ -317,7 +317,7 @@ impl FieldDefinition {
 			parts.push(format!("COMMENT '{}'", comment.replace('\'', "''")));
 		}
 
-		// Phase 2.1: Storage Optimization (PostgreSQL)
+		// Storage Optimization (PostgreSQL)
 		#[cfg(feature = "db-postgres")]
 		if let Some(ref storage) = self.storage {
 			parts.push(format!("STORAGE {}", storage.to_uppercase()));
@@ -327,25 +327,25 @@ impl FieldDefinition {
 			parts.push(format!("COMPRESSION {}", compression));
 		}
 
-		// Phase 2.2: ON UPDATE Trigger (MySQL)
+		// ON UPDATE Trigger (MySQL)
 		#[cfg(feature = "db-mysql")]
 		if self.on_update_current_timestamp.unwrap_or(false) {
 			parts.push("ON UPDATE CURRENT_TIMESTAMP".to_string());
 		}
 
-		// Phase 2.3: Invisible Columns (MySQL)
+		// Invisible Columns (MySQL)
 		#[cfg(feature = "db-mysql")]
 		if self.invisible.unwrap_or(false) {
 			parts.push("INVISIBLE".to_string());
 		}
 
-		// Phase 2.4: Full-Text Index
+		// Full-Text Index
 		// Note: Full-text index is typically created separately as an index,
 		// not as part of the column definition. This field is used to mark
 		// columns that should have full-text indexes created for them.
 		// The actual index creation will be handled by the migration system.
 
-		// Phase 3.1: Numeric Attributes (MySQL, deprecated)
+		// Numeric Attributes (MySQL, deprecated)
 		#[cfg(feature = "db-mysql")]
 		if self.unsigned.unwrap_or(false) {
 			parts.push("UNSIGNED".to_string());
@@ -566,7 +566,7 @@ impl CreateModel {
 			create_sql.push_str(");");
 		}
 
-		// Phase 3.2: Table-level attributes (SQLite)
+		// Table-level attributes (SQLite)
 		// Add STRICT and/or WITHOUT ROWID if specified
 		#[cfg(feature = "db-sqlite")]
 		{

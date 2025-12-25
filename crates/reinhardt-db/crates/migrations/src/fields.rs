@@ -63,6 +63,13 @@ pub enum FieldType {
 	},
 
 	// Relationship field types
+	/// ForeignKey relationship field
+	ForeignKey {
+		to_table: String,
+		to_field: String,
+		on_delete: crate::ForeignKeyAction,
+	},
+
 	/// OneToOne relationship field
 	OneToOne {
 		to: String, // "app.Model" format
@@ -168,6 +175,9 @@ impl FieldType {
 					.collect::<Vec<_>>()
 					.join(",");
 				format!("SET({})", values_str)
+			}
+			FieldType::ForeignKey { to_table, .. } => {
+				format!("-- ForeignKey to {}", to_table)
 			}
 			FieldType::OneToOne { to, .. } => {
 				format!("-- OneToOne relationship to {}", to)

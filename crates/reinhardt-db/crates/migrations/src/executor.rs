@@ -162,6 +162,7 @@ fn split_sql_statements(sql: &str) -> Vec<String> {
 	statements
 }
 
+#[derive(Debug)]
 pub struct ExecutionResult {
 	pub applied: Vec<String>,
 	pub failed: Option<String>,
