@@ -56,12 +56,9 @@ impl FilesystemRepository {
 
 	/// Get the path for a migration file
 	///
-	/// Returns: `<root_dir>/<app_label>/migrations/<name>.rs`
+	/// Returns: `<root_dir>/<app_label>/<name>.rs`
 	fn migration_path(&self, app_label: &str, name: &str) -> PathBuf {
-		self.root_dir
-			.join(app_label)
-			.join("migrations")
-			.join(format!("{}.rs", name))
+		self.root_dir.join(app_label).join(format!("{}.rs", name))
 	}
 
 	/// Generate Rust code for a migration file
@@ -109,67 +106,11 @@ impl FilesystemRepository {
 			}
 		};
 
-		// Format with prettyplease first, then apply rustfmt
-		let prettyplease_output = prettyplease::unparse(&file);
-		let formatted = Self::format_with_rustfmt(&prettyplease_output)?;
+		// Format with prettyplease
+		let formatted = prettyplease::unparse(&file);
 		Ok(formatted)
 	}
 
-	/// Format code with rustfmt, applying project's rustfmt.toml settings (hard_tabs = true)
-	///
-	/// Falls back to prettyplease output if rustfmt is not available or fails.
-	fn format_with_rustfmt(code: &str) -> Result<String> {
-		use std::io::Write;
-		use std::process::{Command, Stdio};
-
-		// Try to run rustfmt
-		let child = Command::new("rustfmt")
-			.arg("--edition=2024")
-			.stdin(Stdio::piped())
-			.stdout(Stdio::piped())
-			.stderr(Stdio::piped())
-			.spawn();
-
-		match child {
-			Ok(mut child_process) => {
-				// Write code to stdin
-				if let Some(stdin) = child_process.stdin.as_mut() {
-					stdin.write_all(code.as_bytes()).map_err(|e| {
-						MigrationError::IoError(std::io::Error::other(format!(
-							"Failed to write to rustfmt stdin: {}",
-							e
-						)))
-					})?;
-				}
-
-				// Get formatted output
-				let output = child_process.wait_with_output().map_err(|e| {
-					MigrationError::IoError(std::io::Error::other(format!(
-						"Failed to read rustfmt output: {}",
-						e
-					)))
-				})?;
-
-				if output.status.success() {
-					String::from_utf8(output.stdout).map_err(|e| {
-						MigrationError::IoError(std::io::Error::other(format!(
-							"Invalid UTF-8 from rustfmt: {}",
-							e
-						)))
-					})
-				} else {
-					// rustfmt failed, fallback to prettyplease output
-					eprintln!("Warning: rustfmt failed, using prettyplease output");
-					Ok(code.to_string())
-				}
-			}
-			Err(_) => {
-				// rustfmt not available, use prettyplease output
-				eprintln!("Warning: rustfmt not found, using prettyplease output (space-indented)");
-				Ok(code.to_string())
-			}
-		}
-	}
 }
 
 #[async_trait]
@@ -229,7 +170,7 @@ impl MigrationRepository for FilesystemRepository {
 	}
 
 	async fn list(&self, app_label: &str) -> Result<Vec<Migration>> {
-		let migrations_dir = self.root_dir.join(app_label).join("migrations");
+		let migrations_dir = self.root_dir.join(app_label);
 
 		if !migrations_dir.exists() {
 			return Ok(vec![]);
