@@ -181,9 +181,12 @@ impl SuiteResource for MySqlSuiteResource {
 #[cfg(feature = "testcontainers")]
 impl MySqlSuiteResource {
 	async fn init_async() -> Self {
-		use testcontainers::{GenericImage, ImageExt, runners::AsyncRunner};
+		use testcontainers::{
+			GenericImage, ImageExt, core::IntoContainerPort, runners::AsyncRunner,
+		};
 
 		let mysql = GenericImage::new("mysql", "8.0")
+			.with_exposed_port(3306.tcp())
 			.with_wait_for(WaitFor::message_on_stderr("ready for connections"))
 			.with_env_var("MYSQL_ROOT_PASSWORD", "test")
 			.with_env_var("MYSQL_DATABASE", "test")

@@ -238,7 +238,8 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_INITDB_ARGS", "-c max_connections=200");
 
-	let postgres = AsyncRunner::start(image)
+	let postgres = image
+		.start()
 		.await
 		.expect("Failed to start PostgreSQL container");
 
