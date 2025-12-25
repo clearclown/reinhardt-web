@@ -18,6 +18,7 @@ default = ["routers", "routers-macros", "proxy"]
 routers = ["dep:reinhardt-routers"]
 routers-macros = ["dep:reinhardt-routers-macros"]
 proxy = ["dep:reinhardt-proxy"]
+database = ["reinhardt-routers?/database"]
 urls-full = [
   "routers",
   "routers-macros",
