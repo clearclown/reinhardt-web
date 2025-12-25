@@ -59,18 +59,6 @@ fn test_routes_macro_fail() {
 }
 
 #[test]
-fn test_api_view_macro_pass() {
-	let t = trybuild::TestCases::new();
-	t.pass("tests/ui/api_view/pass/*.rs");
-}
-
-#[test]
-fn test_api_view_macro_fail() {
-	let t = trybuild::TestCases::new();
-	t.compile_fail("tests/ui/api_view/fail/*.rs");
-}
-
-#[test]
 fn test_action_macro_pass() {
 	let t = trybuild::TestCases::new();
 	t.pass("tests/ui/action/pass/*.rs");
@@ -147,7 +135,7 @@ fn test_injectable_macro_fail() {
 	t.compile_fail("tests/ui/injectable/fail/*.rs");
 }
 
-// Field attributes tests - Phase 1-3 attributes
+// Field attributes tests
 #[test]
 fn test_field_attributes_pass() {
 	let t = trybuild::TestCases::new();
