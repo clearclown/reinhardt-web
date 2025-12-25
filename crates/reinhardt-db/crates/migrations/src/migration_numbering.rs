@@ -2,14 +2,70 @@
 //!
 //! Provides app-specific sequential numbering for migrations (0001, 0002, 0003, ...).
 
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, RwLock};
+
+/// Global cache for migration numbering
+///
+/// Key format: "{migrations_dir}:{app_label}"
+/// Value: highest migration number for that app
+static NUMBERING_CACHE: Lazy<Arc<RwLock<HashMap<String, u32>>>> =
+	Lazy::new(|| Arc::new(RwLock::new(HashMap::new())));
 
 /// Migration numbering system
 pub struct MigrationNumbering;
 
 impl MigrationNumbering {
-	/// Get next migration number for an app
+	/// Get next migration number for an app (cached version)
+	///
+	/// Uses a global cache to avoid repeated filesystem scans.
+	/// Thread-safe using RwLock.
+	///
+	/// # Arguments
+	///
+	/// * `migrations_dir` - Path to the migrations directory (e.g., `migrations/`)
+	/// * `app_label` - App label (e.g., `"myapp"`)
+	///
+	/// # Returns
+	///
+	/// Next migration number as 4-digit zero-padded string (e.g., `"0001"`, `"0002"`)
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_migrations::MigrationNumbering;
+	/// use std::path::Path;
+	///
+	/// let next_num = MigrationNumbering::next_number_cached(
+	///     Path::new("migrations"),
+	///     "myapp"
+	/// );
+	/// assert_eq!(next_num, "0001"); // First migration
+	/// ```
+	pub fn next_number_cached(migrations_dir: &Path, app_label: &str) -> String {
+		let cache_key = format!("{}:{}", migrations_dir.display(), app_label);
+
+		// Try to get from cache
+		{
+			let cache = NUMBERING_CACHE.read().unwrap();
+			if let Some(&cached_num) = cache.get(&cache_key) {
+				// Increment and update cache
+				drop(cache); // Release read lock
+				let next = cached_num + 1;
+				NUMBERING_CACHE.write().unwrap().insert(cache_key, next);
+				return format!("{:04}", next);
+			}
+		}
+
+		// Cache miss - scan filesystem
+		let highest = Self::get_highest_number(migrations_dir, app_label);
+		NUMBERING_CACHE.write().unwrap().insert(cache_key, highest);
+		format!("{:04}", highest + 1)
+	}
+
+	/// Get next migration number for an app (non-cached version)
 	///
 	/// Scans existing migration files in the app's migrations directory
 	/// and returns the next sequential number (4-digit zero-padded).
@@ -38,6 +94,23 @@ impl MigrationNumbering {
 	pub fn next_number(migrations_dir: &Path, app_label: &str) -> String {
 		let highest = Self::get_highest_number(migrations_dir, app_label);
 		format!("{:04}", highest + 1)
+	}
+
+	/// Invalidate the global cache
+	///
+	/// Call this when migrations are manually deleted or modified outside
+	/// of the normal flow to ensure cache consistency.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_migrations::MigrationNumbering;
+	///
+	/// // After manually deleting migrations
+	/// MigrationNumbering::invalidate_cache();
+	/// ```
+	pub fn invalidate_cache() {
+		NUMBERING_CACHE.write().unwrap().clear();
 	}
 
 	/// Get highest existing migration number for an app
