@@ -2,31 +2,48 @@
 //!
 //! This is the project-specific management command interface (equivalent to Django's manage.py).
 
-use examples_twitter::config; // Explicitly reference config module
-use reinhardt::commands::execute_from_command_line;
-use reinhardt::core::tokio;
-use std::process;
+// Server-side implementation
+#[cfg(not(target_arch = "wasm32"))]
+mod server {
+	use examples_twitter::config; // Explicitly reference config module
+	use reinhardt::commands::execute_from_command_line;
+	use reinhardt::core::tokio;
+	use std::process;
 
-#[tokio::main]
-async fn main() {
-	// Set settings module environment variable
-	// SAFETY: This is safe because we're setting it before any other code runs
-	unsafe {
-		std::env::set_var(
-			"REINHARDT_SETTINGS_MODULE",
-			"examples_twitter.config.settings",
-		);
+	#[tokio::main]
+	pub(crate) async fn main() {
+		// Set settings module environment variable
+		// SAFETY: This is safe because we're setting it before any other code runs
+		unsafe {
+			std::env::set_var(
+				"REINHARDT_SETTINGS_MODULE",
+				"examples_twitter.config.settings",
+			);
+		}
+
+		// Ensure config module is loaded (triggers register_url_patterns! macro)
+		let _ = &config::urls::url_patterns;
+
+		// Router registration and database connection are now automatic
+		// via register_url_patterns!() macro in src/config/urls.rs
+
+		// Execute command from command line
+		if let Err(e) = execute_from_command_line().await {
+			eprintln!("Error: {}", e);
+			process::exit(1);
+		}
 	}
+}
 
-	// Ensure config module is loaded (triggers register_url_patterns! macro)
-	let _ = &config::urls::url_patterns;
+// Entry point for server builds
+#[cfg(not(target_arch = "wasm32"))]
+fn main() {
+	server::main();
+}
 
-	// Router registration and database connection are now automatic
-	// via register_url_patterns!() macro in src/config/urls.rs
-
-	// Execute command from command line
-	if let Err(e) = execute_from_command_line().await {
-		eprintln!("Error: {}", e);
-		process::exit(1);
-	}
+// Dummy entry point for WASM builds (this binary is server-only)
+#[cfg(target_arch = "wasm32")]
+fn main() {
+	// This binary is not used in WASM builds
+	panic!("manage binary should not be run in WASM context");
 }

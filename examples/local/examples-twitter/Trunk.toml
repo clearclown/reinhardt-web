@@ -6,14 +6,12 @@ filehash = false
 
 [watch]
 watch = ["src/", "index.html"]
-ignore = ["target/"]
 
 [serve]
-address = "127.0.0.1"
+addresses = ["127.0.0.1"]
 port = 8080
 open = false
+aliases = []  # Disable automatic hostname detection
 
 [clean]
-# dist folder will be removed before each build
-dist = "dist"
 cargo = true

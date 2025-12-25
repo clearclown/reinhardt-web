@@ -5,19 +5,6 @@
 
 use reinhardt::db::migrations::{Migration, MigrationProvider};
 
-// Import migration modules
-// mod auth_migrations {
-// 	include!("../migrations/auth/migrations/0001_initial.rs");
-// }
-//
-// mod profile_migrations {
-// 	include!("../migrations/profile/migrations/0001_initial.rs");
-// }
-//
-// mod dm_migrations {
-// 	include!("../migrations/dm/migrations/0001_initial.rs");
-// }
-
 /// Migration provider for the Twitter example application.
 ///
 /// Provides migrations for all apps in dependency order:

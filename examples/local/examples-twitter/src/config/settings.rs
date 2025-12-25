@@ -21,6 +21,7 @@
 //!   If `REINHARDT_ENV` is not set, it defaults to `local`.
 
 use reinhardt::Settings;
+use reinhardt::conf::settings::AdvancedSettings;
 use reinhardt::conf::settings::builder::SettingsBuilder;
 use reinhardt::conf::settings::profile::Profile;
 use reinhardt::conf::settings::sources::{DefaultSource, LowPriorityEnvSource, TomlFileSource};
@@ -123,6 +124,73 @@ pub fn get_settings() -> Settings {
 		.into_typed()
 		.expect("Failed to convert settings to Settings struct")
 }
+/// Get advanced settings based on environment variable
+///
+/// Similar to `get_settings()`, but returns `AdvancedSettings` which provides
+/// more detailed configuration options including cache, CORS, email, logging, and sessions.
+///
+/// # Examples
+///
+/// ```no_run
+/// use examples_twitter::config::settings::get_advanced_settings;
+///
+/// let settings = get_advanced_settings();
+/// println!("Debug mode: {}", settings.debug);
+/// println!("Database URL: {}", settings.database.url);
+/// println!("Cache backend: {}", settings.cache.backend);
+/// ```
+///
+/// # Panics
+///
+/// Panics if:
+/// - Settings files cannot be read
+/// - Settings cannot be deserialized
+/// - Required settings are missing
+pub fn get_advanced_settings() -> AdvancedSettings {
+	let profile_str = env::var("REINHARDT_ENV").unwrap_or_else(|_| "local".to_string());
+	let profile = Profile::parse(&profile_str);
+
+	let base_dir = env::current_dir().expect("Failed to get current directory");
+	let settings_dir = base_dir.join("settings");
+
+	// Build settings by merging sources in priority order
+	let merged = SettingsBuilder::new()
+		.profile(profile)
+		// Lowest priority: Default values
+		.add_source(
+			DefaultSource::new()
+				.with_value("debug", json::Value::Bool(false))
+				.with_value(
+					"secret_key",
+					json::Value::String(
+						"change-me-in-production-must-be-at-least-32-chars".to_string(),
+					),
+				)
+				.with_value(
+					"allowed_hosts",
+					json::Value::Array(vec![
+						json::Value::String("localhost".to_string()),
+						json::Value::String("127.0.0.1".to_string()),
+					]),
+				),
+		)
+		// Low priority: Environment variables (for container overrides)
+		.add_source(LowPriorityEnvSource::new().with_prefix("REINHARDT_"))
+		// Medium priority: Base TOML file
+		.add_source(TomlFileSource::new(settings_dir.join("base.toml")))
+		// Highest priority: Environment-specific TOML file
+		.add_source(TomlFileSource::new(
+			settings_dir.join(format!("{}.toml", profile_str)),
+		))
+		.build()
+		.expect("Failed to build advanced settings");
+
+	// Convert MergedSettings to AdvancedSettings
+	merged
+		.into_typed::<AdvancedSettings>()
+		.expect("Failed to convert settings to AdvancedSettings struct")
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -132,5 +200,15 @@ mod tests {
 		// In a real project, you would set up test fixtures
 		let settings = get_settings();
 		assert!(!settings.secret_key.is_empty());
+	}
+
+	#[test]
+	fn test_get_advanced_settings() {
+		// This test requires settings files to exist
+		let settings = get_advanced_settings();
+		assert!(!settings.secret_key.is_empty());
+		// Verify default values from AdvancedSettings::default()
+		assert!(!settings.database.url.is_empty());
+		assert!(!settings.cache.backend.is_empty());
 	}
 }
