@@ -35,13 +35,8 @@ fn fixtures_dir() -> PathBuf {
 /// ```
 pub fn load_fixture(path: &str) -> String {
 	let full_path = fixtures_dir().join(path);
-	std::fs::read_to_string(&full_path).unwrap_or_else(|e| {
-		panic!(
-			"Failed to load fixture at {:?}: {}",
-			full_path.display(),
-			e
-		)
-	})
+	std::fs::read_to_string(&full_path)
+		.unwrap_or_else(|e| panic!("Failed to load fixture at {:?}: {}", full_path.display(), e))
 }
 
 /// Loads a JSON fixture and deserializes it
@@ -67,12 +62,8 @@ pub fn load_fixture(path: &str) -> String {
 /// ```
 pub fn load_json_fixture<T: serde::de::DeserializeOwned>(path: &str) -> T {
 	let content = load_fixture(path);
-	serde_json::from_str(&content).unwrap_or_else(|e| {
-		panic!(
-			"Failed to parse JSON fixture at {}: {}",
-			path, e
-		)
-	})
+	serde_json::from_str(&content)
+		.unwrap_or_else(|e| panic!("Failed to parse JSON fixture at {}: {}", path, e))
 }
 
 /// Lists all fixtures in a directory

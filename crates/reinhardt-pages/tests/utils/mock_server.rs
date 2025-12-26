@@ -242,7 +242,8 @@ impl MockServer {
 	pub fn assert_requested_once(&self, method: Method, path: &str) {
 		let count = self.request_count_for(method, path);
 		assert_eq!(
-			count, 1,
+			count,
+			1,
 			"Expected exactly one request to {} {} but {} were made",
 			method.as_str(),
 			path,
@@ -288,7 +289,10 @@ mod tests {
 		assert_eq!(response.status, 201);
 		assert_eq!(response.body, "Created");
 		assert_eq!(response.headers.len(), 1);
-		assert_eq!(response.headers[0], ("X-Custom".to_string(), "value".to_string()));
+		assert_eq!(
+			response.headers[0],
+			("X-Custom".to_string(), "value".to_string())
+		);
 	}
 
 	#[test]
@@ -297,9 +301,11 @@ mod tests {
 
 		assert_eq!(response.status, 200);
 		assert_eq!(response.body, r#"{"id": 1}"#);
-		assert!(response
-			.headers
-			.contains(&("Content-Type".to_string(), "application/json".to_string())));
+		assert!(
+			response
+				.headers
+				.contains(&("Content-Type".to_string(), "application/json".to_string()))
+		);
 	}
 
 	#[test]
@@ -342,7 +348,12 @@ mod tests {
 		server.mock_post("/test2", MockResponse::new());
 
 		server.handle_request(Method::GET, "/test1", HashMap::new(), None);
-		server.handle_request(Method::POST, "/test2", HashMap::new(), Some("body".to_string()));
+		server.handle_request(
+			Method::POST,
+			"/test2",
+			HashMap::new(),
+			Some("body".to_string()),
+		);
 
 		assert_eq!(server.history().len(), 2);
 		assert_eq!(server.history()[0].path, "/test1");
