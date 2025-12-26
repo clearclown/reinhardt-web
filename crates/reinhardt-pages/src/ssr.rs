@@ -36,6 +36,9 @@ mod markers;
 mod renderer;
 mod state;
 
-pub use markers::{HYDRATION_ATTR_ID, HYDRATION_ATTR_PROPS, HydrationMarker};
+pub use markers::{
+	HYDRATION_ATTR_ID, HYDRATION_ATTR_PROPS, HydrationMarker, HydrationMarkerBuilder,
+	HydrationStrategy,
+};
 pub use renderer::{SsrOptions, SsrRenderer};
 pub use state::{SsrState, StateEntry};

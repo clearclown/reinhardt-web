@@ -92,6 +92,57 @@ impl std::fmt::Display for ReconcileError {
 
 impl std::error::Error for ReconcileError {}
 
+/// Options for reconciliation (Phase 2-B).
+///
+/// Controls how reconciliation is performed during hydration,
+/// enabling selective reconciliation for Island Architecture.
+#[derive(Debug, Clone)]
+pub struct ReconcileOptions {
+	/// If true, only reconcile islands (interactive components).
+	/// Static content and full-hydration components are skipped.
+	pub island_only: bool,
+
+	/// If true, skip elements marked with `data-rh-static="true"`.
+	/// This is useful for preserving server-rendered static content.
+	pub skip_static: bool,
+
+	/// If true, log warnings for mismatches instead of failing.
+	/// Useful for graceful degradation.
+	pub warn_on_mismatch: bool,
+}
+
+impl Default for ReconcileOptions {
+	fn default() -> Self {
+		Self {
+			island_only: false,
+			skip_static: false,
+			warn_on_mismatch: true,
+		}
+	}
+}
+
+impl ReconcileOptions {
+	/// Creates options for island-only reconciliation.
+	pub fn island_only() -> Self {
+		Self {
+			island_only: true,
+			skip_static: true,
+			warn_on_mismatch: true,
+		}
+	}
+
+	/// Creates options for full reconciliation (default).
+	pub fn full_reconciliation() -> Self {
+		Self::default()
+	}
+
+	/// Sets the warn_on_mismatch option.
+	pub fn warn_on_mismatch(mut self, warn: bool) -> Self {
+		self.warn_on_mismatch = warn;
+		self
+	}
+}
+
 /// Reconciles the existing DOM with the expected View structure.
 ///
 /// This function verifies that the SSR-rendered HTML matches what
@@ -156,9 +207,118 @@ pub fn reconcile(element: &Element, view: &View) -> Result<(), ReconcileError> {
 	}
 }
 
+/// Reconciles the existing DOM with the expected View structure with options (Phase 2-B).
+///
+/// This function performs selective reconciliation based on the provided options,
+/// enabling Island Architecture by reconciling only interactive components.
+///
+/// # Arguments
+///
+/// * `element` - The DOM element to reconcile
+/// * `view` - The expected view structure
+/// * `options` - Reconciliation options
+///
+/// # Returns
+///
+/// `Ok(())` if reconciliation succeeds, or a `ReconcileError` if a mismatch is found.
+///
+/// # Behavior
+///
+/// - If `options.island_only` is true, only elements with `data-rh-island="true"` are reconciled
+/// - If `options.skip_static` is true, elements with `data-rh-static="true"` are skipped
+/// - If `options.warn_on_mismatch` is true, mismatches are logged as warnings instead of errors
+#[cfg(target_arch = "wasm32")]
+pub fn reconcile_with_options(
+	element: &Element,
+	view: &View,
+	options: &ReconcileOptions,
+) -> Result<(), ReconcileError> {
+	// Check if this element should be skipped
+	let should_skip = if options.skip_static {
+		element.get_attribute("data-rh-static").as_deref() == Some("true")
+	} else {
+		false
+	};
+
+	if should_skip {
+		return Ok(());
+	}
+
+	// Check if this is an island element
+	let is_island = element.get_attribute("data-rh-island").as_deref() == Some("true");
+
+	// Determine if we should reconcile this element
+	let should_reconcile = if options.island_only {
+		// In island-only mode, only reconcile island elements
+		is_island
+	} else {
+		// In full reconciliation mode, reconcile all non-static elements
+		true
+	};
+
+	// Perform reconciliation if applicable
+	if should_reconcile {
+		match reconcile(element, view) {
+			Ok(_) => {}
+			Err(err) => {
+				if options.warn_on_mismatch {
+					// Log warning instead of failing
+					#[cfg(debug_assertions)]
+					web_sys::console::warn_1(&format!("Reconciliation warning: {}", err).into());
+				} else {
+					return Err(err);
+				}
+			}
+		}
+	}
+
+	// Recursively process children, unless this is an island boundary
+	let should_recurse = if options.island_only && is_island {
+		// If we're in island-only mode and this is an island,
+		// don't recurse into children (they belong to this island's internal reconciliation)
+		false
+	} else {
+		// Otherwise, recurse into children
+		true
+	};
+
+	if should_recurse {
+		if let View::Element(el_view) = view {
+			let children = element.children();
+			let view_children = el_view.child_views();
+
+			for (i, child_view) in view_children.iter().enumerate() {
+				if i < children.len() {
+					reconcile_with_options(&children[i], child_view, options)?;
+				}
+			}
+		} else if let View::Fragment(views) = view {
+			let children = element.children();
+
+			for (i, child_view) in views.iter().enumerate() {
+				if i < children.len() {
+					reconcile_with_options(&children[i], child_view, options)?;
+				}
+			}
+		}
+	}
+
+	Ok(())
+}
+
 /// Non-WASM version for testing.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn reconcile(_element: &str, _view: &View) -> Result<(), ReconcileError> {
+	Ok(())
+}
+
+/// Non-WASM version for testing (Phase 2-B).
+#[cfg(not(target_arch = "wasm32"))]
+pub fn reconcile_with_options(
+	_element: &str,
+	_view: &View,
+	_options: &ReconcileOptions,
+) -> Result<(), ReconcileError> {
 	Ok(())
 }
 
@@ -282,6 +442,45 @@ pub(super) fn compare_structure(_element: &str, _view: &View) -> CompareResult {
 	CompareResult::success()
 }
 
+// Phase 2-B Tests: Selective Reconciliation
+
+#[test]
+fn test_reconcile_options_default() {
+	let options = ReconcileOptions::default();
+	assert!(!options.island_only);
+	assert!(!options.skip_static);
+	assert!(options.warn_on_mismatch);
+}
+
+#[test]
+fn test_reconcile_options_island_only() {
+	let options = ReconcileOptions::island_only();
+	assert!(options.island_only);
+	assert!(options.skip_static);
+	assert!(options.warn_on_mismatch);
+}
+
+#[test]
+fn test_reconcile_options_full_reconciliation() {
+	let options = ReconcileOptions::full_reconciliation();
+	assert!(!options.island_only);
+	assert!(!options.skip_static);
+	assert!(options.warn_on_mismatch);
+}
+
+#[test]
+fn test_reconcile_options_warn_on_mismatch() {
+	let options = ReconcileOptions::default().warn_on_mismatch(false);
+	assert!(!options.warn_on_mismatch);
+}
+
+#[test]
+fn test_reconcile_with_options_non_wasm() {
+	// Non-WASM version always succeeds
+	let view = View::Empty;
+	let options = ReconcileOptions::default();
+	assert!(reconcile_with_options("", &view, &options).is_ok());
+}
 #[cfg(test)]
 mod tests {
 	use super::*;

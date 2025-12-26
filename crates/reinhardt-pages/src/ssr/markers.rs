@@ -3,6 +3,13 @@
 //! These markers are embedded in the SSR-rendered HTML to enable
 //! client-side hydration. The hydration process uses these markers
 //! to reconnect reactive state with the existing DOM.
+//!
+//! ## Island Architecture (Phase 2-B)
+//!
+//! Supports selective hydration using the Island Architecture pattern:
+//! - **Full**: Traditional full hydration (default)
+//! - **Island**: Interactive components that require hydration
+//! - **Static**: Non-interactive content (no hydration needed)
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -27,6 +34,20 @@ pub(crate) fn reset_hydration_counter() {
 	HYDRATION_COUNTER.store(0, Ordering::SeqCst);
 }
 
+/// Hydration strategy for a component (Phase 2-B).
+///
+/// Defines how a component should be hydrated on the client side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HydrationStrategy {
+	/// Full hydration (default) - entire component tree is hydrated.
+	#[default]
+	Full,
+	/// Island hydration - only this component is hydrated (interactive island).
+	Island,
+	/// Static content - no hydration needed (non-interactive).
+	Static,
+}
+
 /// Represents a hydration marker embedded in SSR output.
 #[derive(Debug, Clone)]
 pub struct HydrationMarker {
@@ -36,6 +57,8 @@ pub struct HydrationMarker {
 	pub component_name: Option<String>,
 	/// Serialized props (JSON).
 	pub props: Option<String>,
+	/// Hydration strategy (Phase 2-B).
+	pub strategy: HydrationStrategy,
 }
 
 impl HydrationMarker {
@@ -45,6 +68,7 @@ impl HydrationMarker {
 			id: generate_hydration_id(),
 			component_name: None,
 			props: None,
+			strategy: HydrationStrategy::default(),
 		}
 	}
 
@@ -54,6 +78,7 @@ impl HydrationMarker {
 			id: generate_hydration_id(),
 			component_name: Some(name.into()),
 			props: None,
+			strategy: HydrationStrategy::default(),
 		}
 	}
 
@@ -63,9 +88,38 @@ impl HydrationMarker {
 		self
 	}
 
+	/// Sets the hydration strategy (Phase 2-B).
+	pub fn with_strategy(mut self, strategy: HydrationStrategy) -> Self {
+		self.strategy = strategy;
+		self
+	}
+
+	/// Creates an island marker (interactive component).
+	pub fn island() -> Self {
+		Self::new().with_strategy(HydrationStrategy::Island)
+	}
+
+	/// Creates a static marker (non-interactive component).
+	pub fn static_content() -> Self {
+		Self::new().with_strategy(HydrationStrategy::Static)
+	}
+
 	/// Generates the HTML attributes for this marker.
 	pub fn to_attrs(&self) -> Vec<(String, String)> {
 		let mut attrs = vec![(HYDRATION_ATTR_ID.to_string(), self.id.clone())];
+
+		// Add strategy-specific attributes (Phase 2-B)
+		match self.strategy {
+			HydrationStrategy::Island => {
+				attrs.push(("data-rh-island".to_string(), "true".to_string()));
+			}
+			HydrationStrategy::Static => {
+				attrs.push(("data-rh-static".to_string(), "true".to_string()));
+			}
+			HydrationStrategy::Full => {
+				// Default, no special marker
+			}
+		}
 
 		if let Some(ref props) = self.props {
 			attrs.push((HYDRATION_ATTR_PROPS.to_string(), props.clone()));
@@ -112,6 +166,80 @@ pub(crate) fn hydration_boundary_start(id: &str) -> String {
 #[cfg(test)]
 pub(crate) fn hydration_boundary_end(id: &str) -> String {
 	format!("<!--rh-end:{}-->", id)
+}
+
+/// Builder for creating HydrationMarker instances (Phase 2-B).
+///
+/// Provides a fluent API for constructing markers with various options.
+///
+/// # Example
+///
+/// ```ignore
+/// let marker = HydrationMarkerBuilder::new()
+///     .component_name("Counter")
+///     .strategy(HydrationStrategy::Island)
+///     .props(r#"{"count": 0}"#)
+///     .build();
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct HydrationMarkerBuilder {
+	component_name: Option<String>,
+	props: Option<String>,
+	strategy: Option<HydrationStrategy>,
+}
+
+impl HydrationMarkerBuilder {
+	/// Creates a new builder.
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	/// Sets the component name.
+	pub fn component_name(mut self, name: impl Into<String>) -> Self {
+		self.component_name = Some(name.into());
+		self
+	}
+
+	/// Sets the serialized props.
+	pub fn props(mut self, props: impl Into<String>) -> Self {
+		self.props = Some(props.into());
+		self
+	}
+
+	/// Sets the hydration strategy.
+	pub fn strategy(mut self, strategy: HydrationStrategy) -> Self {
+		self.strategy = Some(strategy);
+		self
+	}
+
+	/// Marks as an island (interactive component).
+	pub fn island(self) -> Self {
+		self.strategy(HydrationStrategy::Island)
+	}
+
+	/// Marks as static (non-interactive component).
+	pub fn static_content(self) -> Self {
+		self.strategy(HydrationStrategy::Static)
+	}
+
+	/// Builds the HydrationMarker.
+	pub fn build(self) -> HydrationMarker {
+		let mut marker = HydrationMarker::new();
+
+		if let Some(name) = self.component_name {
+			marker.component_name = Some(name);
+		}
+
+		if let Some(props) = self.props {
+			marker.props = Some(props);
+		}
+
+		if let Some(strategy) = self.strategy {
+			marker.strategy = strategy;
+		}
+
+		marker
+	}
 }
 
 #[cfg(test)]
@@ -180,5 +308,113 @@ mod tests {
 	fn test_hydration_boundaries() {
 		assert_eq!(hydration_boundary_start("rh-42"), "<!--rh-start:rh-42-->");
 		assert_eq!(hydration_boundary_end("rh-42"), "<!--rh-end:rh-42-->");
+	}
+
+	// Phase 2-B Tests
+
+	#[test]
+	fn test_hydration_strategy_default() {
+		assert_eq!(HydrationStrategy::default(), HydrationStrategy::Full);
+	}
+
+	#[test]
+	fn test_hydration_marker_with_strategy() {
+		reset_hydration_counter();
+		let marker = HydrationMarker::new().with_strategy(HydrationStrategy::Island);
+		assert_eq!(marker.strategy, HydrationStrategy::Island);
+	}
+
+	#[test]
+	fn test_hydration_marker_island() {
+		reset_hydration_counter();
+		let marker = HydrationMarker::island();
+		assert_eq!(marker.strategy, HydrationStrategy::Island);
+		let attrs = marker.to_attrs();
+		assert!(attrs.contains(&("data-rh-island".to_string(), "true".to_string())));
+	}
+
+	#[test]
+	fn test_hydration_marker_static() {
+		reset_hydration_counter();
+		let marker = HydrationMarker::static_content();
+		assert_eq!(marker.strategy, HydrationStrategy::Static);
+		let attrs = marker.to_attrs();
+		assert!(attrs.contains(&("data-rh-static".to_string(), "true".to_string())));
+	}
+
+	#[test]
+	fn test_hydration_marker_full_no_special_attr() {
+		reset_hydration_counter();
+		let marker = HydrationMarker::new(); // Default is Full
+		let attrs = marker.to_attrs();
+		assert!(!attrs.iter().any(|(k, _)| k == "data-rh-island"));
+		assert!(!attrs.iter().any(|(k, _)| k == "data-rh-static"));
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_basic() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new().build();
+		assert_eq!(marker.id, "rh-0");
+		assert_eq!(marker.strategy, HydrationStrategy::Full);
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_with_component() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new()
+			.component_name("Counter")
+			.build();
+		assert_eq!(marker.component_name, Some("Counter".to_string()));
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_with_props() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new()
+			.props(r#"{"count": 5}"#)
+			.build();
+		assert_eq!(marker.props, Some(r#"{"count": 5}"#.to_string()));
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_island() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new()
+			.island()
+			.component_name("Button")
+			.build();
+		assert_eq!(marker.strategy, HydrationStrategy::Island);
+		assert_eq!(marker.component_name, Some("Button".to_string()));
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_static() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new()
+			.static_content()
+			.component_name("Header")
+			.build();
+		assert_eq!(marker.strategy, HydrationStrategy::Static);
+	}
+
+	#[test]
+	fn test_hydration_marker_builder_complete() {
+		reset_hydration_counter();
+		let marker = HydrationMarkerBuilder::new()
+			.component_name("TodoList")
+			.props(r#"{"items": []}"#)
+			.strategy(HydrationStrategy::Island)
+			.build();
+
+		assert_eq!(marker.component_name, Some("TodoList".to_string()));
+		assert_eq!(marker.props, Some(r#"{"items": []}"#.to_string()));
+		assert_eq!(marker.strategy, HydrationStrategy::Island);
+
+		let attrs = marker.to_attrs();
+		assert!(attrs.contains(&("data-rh-id".to_string(), "rh-0".to_string())));
+		assert!(attrs.contains(&("data-rh-island".to_string(), "true".to_string())));
+		assert!(attrs.contains(&("data-rh-component".to_string(), "TodoList".to_string())));
+		assert!(attrs.contains(&("data-rh-props".to_string(), r#"{"items": []}"#.to_string())));
 	}
 }

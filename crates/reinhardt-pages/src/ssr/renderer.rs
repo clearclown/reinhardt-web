@@ -1,6 +1,6 @@
 //! SSR Renderer for Component-based server-side rendering.
 
-use super::markers::HydrationMarker;
+use super::markers::{HydrationMarker, HydrationStrategy};
 use super::state::SsrState;
 use crate::auth::AuthData;
 use crate::component::{Component, IntoView, View};
@@ -28,6 +28,18 @@ pub struct SsrOptions {
 	pub csrf_token: Option<String>,
 	/// Authentication data to embed.
 	pub auth_data: Option<AuthData>,
+	/// Enable partial hydration (Island Architecture, Phase 2-B).
+	///
+	/// When enabled, only components marked as islands are hydrated on the client.
+	/// Static content is preserved without hydration, improving performance.
+	pub enable_partial_hydration: bool,
+	/// Default hydration strategy for components (Phase 2-B).
+	///
+	/// Determines how unmarked components should be hydrated.
+	/// - `Full`: Traditional full hydration (default)
+	/// - `Island`: Mark as interactive islands
+	/// - `Static`: Mark as static content (no hydration)
+	pub default_hydration_strategy: HydrationStrategy,
 }
 
 impl Default for SsrOptions {
@@ -43,6 +55,8 @@ impl Default for SsrOptions {
 			lang: "en".to_string(),
 			csrf_token: None,
 			auth_data: None,
+			enable_partial_hydration: false,
+			default_hydration_strategy: HydrationStrategy::Full,
 		}
 	}
 }
@@ -104,6 +118,54 @@ impl SsrOptions {
 	/// Sets the authentication data.
 	pub fn auth(mut self, auth_data: AuthData) -> Self {
 		self.auth_data = Some(auth_data);
+		self
+	}
+
+	/// Enables partial hydration (Island Architecture, Phase 2-B).
+	///
+	/// When enabled, only components marked as islands will be hydrated on the client.
+	/// Static content is preserved without hydration, improving performance.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let options = SsrOptions::new()
+	///     .partial_hydration(true)
+	///     .default_strategy(HydrationStrategy::Static);
+	/// ```
+	pub fn partial_hydration(mut self, enable: bool) -> Self {
+		self.enable_partial_hydration = enable;
+		self
+	}
+
+	/// Sets the default hydration strategy (Phase 2-B).
+	///
+	/// Determines how unmarked components should be hydrated:
+	/// - `Full`: Traditional full hydration (default)
+	/// - `Island`: Mark as interactive islands
+	/// - `Static`: Mark as static content (no hydration)
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let options = SsrOptions::new()
+	///     .default_strategy(HydrationStrategy::Island);
+	/// ```
+	pub fn default_strategy(mut self, strategy: HydrationStrategy) -> Self {
+		self.default_hydration_strategy = strategy;
+		self
+	}
+
+	/// Enables island-only rendering (convenience method, Phase 2-B).
+	///
+	/// Shortcut for enabling partial hydration with island strategy.
+	/// Equivalent to:
+	/// ```ignore
+	/// options.partial_hydration(true).default_strategy(HydrationStrategy::Island)
+	/// ```
+	pub fn islands_only(mut self) -> Self {
+		self.enable_partial_hydration = true;
+		self.default_hydration_strategy = HydrationStrategy::Island;
 		self
 	}
 }
@@ -331,6 +393,40 @@ pub(super) fn render_page<C: Component>(component: &C, options: SsrOptions) -> S
 	renderer.render_page(component)
 }
 
+// Phase 2-B Tests: SsrOptions Extension
+
+#[test]
+fn test_ssr_options_partial_hydration_default() {
+	let opts = SsrOptions::default();
+	assert!(!opts.enable_partial_hydration);
+	assert_eq!(opts.default_hydration_strategy, HydrationStrategy::Full);
+}
+
+#[test]
+fn test_ssr_options_partial_hydration_builder() {
+	let opts = SsrOptions::new()
+		.partial_hydration(true)
+		.default_strategy(HydrationStrategy::Island);
+
+	assert!(opts.enable_partial_hydration);
+	assert_eq!(opts.default_hydration_strategy, HydrationStrategy::Island);
+}
+
+#[test]
+fn test_ssr_options_islands_only() {
+	let opts = SsrOptions::new().islands_only();
+
+	assert!(opts.enable_partial_hydration);
+	assert_eq!(opts.default_hydration_strategy, HydrationStrategy::Island);
+}
+
+#[test]
+fn test_ssr_options_default_strategy_static() {
+	let opts = SsrOptions::new().default_strategy(HydrationStrategy::Static);
+
+	assert!(!opts.enable_partial_hydration);
+	assert_eq!(opts.default_hydration_strategy, HydrationStrategy::Static);
+}
 #[cfg(test)]
 mod tests {
 	use super::*;

@@ -25,9 +25,13 @@
 //! ```
 
 mod events;
+pub use islands::{IslandDetector, IslandNode};
+mod islands;
 mod reconcile;
 mod runtime;
 
-pub use events::{EventBinding, EventRegistry, attach_event};
-pub use reconcile::{ReconcileError, reconcile};
+pub use events::{
+	AttachOptions, EventBinding, EventRegistry, attach_event, attach_events_recursive,
+};
+pub use reconcile::{ReconcileError, ReconcileOptions, reconcile, reconcile_with_options};
 pub use runtime::{HydrationContext, HydrationError, hydrate, hydrate_root};

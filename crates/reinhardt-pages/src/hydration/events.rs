@@ -150,6 +150,36 @@ pub type EventHandler = Arc<dyn Fn(web_sys::Event) + 'static>;
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) type EventHandler = Arc<dyn Fn() + Send + Sync + 'static>;
 
+/// Options for attaching events (Phase 2-B).
+///
+/// Controls how events are attached during hydration, enabling
+/// selective hydration for Island Architecture.
+#[derive(Debug, Clone, Default)]
+pub struct AttachOptions {
+	/// If true, only attach events to islands (interactive components).
+	/// Static content and full-hydration components are skipped.
+	pub island_only: bool,
+
+	/// If true, skip elements marked with `data-rh-static="true"`.
+	/// This is useful for preserving server-rendered static content.
+	pub skip_static: bool,
+}
+
+impl AttachOptions {
+	/// Creates options for island-only attachment.
+	pub fn island_only() -> Self {
+		Self {
+			island_only: true,
+			skip_static: true,
+		}
+	}
+
+	/// Creates options for full hydration (default).
+	pub fn full_hydration() -> Self {
+		Self::default()
+	}
+}
+
 /// Attaches an event handler to a DOM element.
 #[cfg(target_arch = "wasm32")]
 pub fn attach_event(
@@ -170,6 +200,102 @@ pub fn attach_event(
 	Ok(())
 }
 
+/// Recursively attaches event handlers to a DOM subtree (Phase 2-B).
+///
+/// This function traverses the DOM tree starting from the given element
+/// and attaches event handlers based on the provided options. It supports
+/// selective hydration through the Island Architecture pattern.
+///
+/// # Arguments
+///
+/// * `element` - The root element to start traversal from
+/// * `bindings` - Event bindings that specify which events to attach
+/// * `handlers` - Event handler functions
+/// * `options` - Options controlling which elements to hydrate
+/// * `registry` - Event registry for tracking attached events
+///
+/// # Returns
+///
+/// `Ok(())` on success, or an `EventAttachError` if attachment fails.
+///
+/// # Behavior
+///
+/// - If `options.island_only` is true, only elements with `data-rh-island="true"` are hydrated
+/// - If `options.skip_static` is true, elements with `data-rh-static="true"` are skipped
+/// - Recursively processes child elements
+#[cfg(target_arch = "wasm32")]
+pub fn attach_events_recursive(
+	element: &Element,
+	bindings: &[EventBinding],
+	handlers: &HashMap<String, EventHandler>,
+	options: &AttachOptions,
+	registry: &mut EventRegistry,
+) -> Result<(), EventAttachError> {
+	use crate::hydration::islands::IslandDetector;
+	use wasm_bindgen::JsCast;
+	use web_sys::Document;
+
+	// Check if this element should be skipped
+	let should_skip = if options.skip_static {
+		element.get_attribute("data-rh-static").as_deref() == Some("true")
+	} else {
+		false
+	};
+
+	if should_skip {
+		return Ok(());
+	}
+
+	// Check if this is an island element
+	let is_island = element.get_attribute("data-rh-island").as_deref() == Some("true");
+
+	// Determine if we should attach events to this element
+	let should_attach = if options.island_only {
+		// In island-only mode, only attach to island elements
+		is_island
+	} else {
+		// In full hydration mode, attach to all non-static elements
+		true
+	};
+
+	// Attach events to this element if applicable
+	if should_attach {
+		// Find event bindings for this element by checking data-rh-id
+		if let Some(element_id) = element.get_attribute("data-rh-id") {
+			for binding in bindings {
+				if binding.element_id == element_id {
+					if let Some(handler) = handlers.get(&binding.event_type) {
+						let event_type = event_type_from_string(&binding.event_type);
+						attach_event(element, &event_type, handler.clone(), registry)?;
+					}
+				}
+			}
+		}
+	}
+
+	// Recursively process children, unless this is an island boundary
+	// (islands manage their own hydration)
+	let should_recurse = if options.island_only && is_island {
+		// If we're in island-only mode and this is an island,
+		// don't recurse into children (they belong to this island's internal hydration)
+		false
+	} else {
+		// Otherwise, recurse into children
+		true
+	};
+
+	if should_recurse {
+		let children = element.children();
+		for i in 0..children.length() {
+			if let Some(child) = children.item(i) {
+				attach_events_recursive(&child, bindings, handlers, options, registry)?;
+			}
+		}
+	}
+
+	Ok(())
+}
+
 /// Non-WASM version for testing.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn attach_event(
@@ -179,6 +305,21 @@ pub fn attach_event(
 	registry: &mut EventRegistry,
 ) -> Result<(), EventAttachError> {
 	registry.register("test", event_type.to_string());
+	Ok(())
+}
+
+/// Non-WASM version for testing (Phase 2-B).
+#[cfg(not(target_arch = "wasm32"))]
+#[allow(dead_code)]
+pub fn attach_events_recursive(
+	_element: &str,
+	_bindings: &[EventBinding],
+	_handlers: &HashMap<String, EventHandler>,
+	_options: &AttachOptions,
+	registry: &mut EventRegistry,
+) -> Result<(), EventAttachError> {
+	// Non-WASM stub: just register a dummy event
+	registry.register("test-recursive", "recursive-event".to_string());
 	Ok(())
 }
 
@@ -268,6 +409,41 @@ pub(super) fn detach_all(registry: &mut EventRegistry) {
 	registry.clear();
 }
 
+// Phase 2-B Tests: Selective Event Attachment
+
+#[test]
+fn test_attach_options_default() {
+	let options = AttachOptions::default();
+	assert!(!options.island_only);
+	assert!(!options.skip_static);
+}
+
+#[test]
+fn test_attach_options_island_only() {
+	let options = AttachOptions::island_only();
+	assert!(options.island_only);
+	assert!(options.skip_static);
+}
+
+#[test]
+fn test_attach_options_full_hydration() {
+	let options = AttachOptions::full_hydration();
+	assert!(!options.island_only);
+	assert!(!options.skip_static);
+}
+
+#[test]
+fn test_attach_events_recursive_non_wasm() {
+	let mut registry = EventRegistry::new();
+	let bindings = vec![EventBinding::new("click", "el-1")];
+	let handlers: HashMap<String, EventHandler> = HashMap::new();
+	let options = AttachOptions::default();
+
+	let result = attach_events_recursive("root", &bindings, &handlers, &options, &mut registry);
+
+	assert!(result.is_ok());
+	assert!(!registry.is_empty());
+}
 #[cfg(test)]
 mod tests {
 	use super::*;
