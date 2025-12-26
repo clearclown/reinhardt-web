@@ -17,6 +17,7 @@ reinhardt-migrations = { workspace = true, optional = true }
 reinhardt-hybrid = { workspace = true, optional = true }
 reinhardt-associations = { workspace = true, optional = true }
 reinhardt-contenttypes = { workspace = true, optional = true }
+reinhardt-nosql = { workspace = true, optional = true }
 
 # Database drivers and query builders
 sqlx = { version = "0.8", features = [
@@ -73,6 +74,7 @@ migrations = ["dep:reinhardt-migrations"]
 hybrid = ["dep:reinhardt-hybrid"]
 associations = ["dep:reinhardt-associations"]
 contenttypes = ["dep:reinhardt-contenttypes"]
+nosql = ["dep:reinhardt-nosql"]
 
 # Aggregate all database features
 database-full = [
@@ -115,13 +117,19 @@ mysql = [
   "reinhardt-migrations/mysql",
   "reinhardt-backends/mysql",
 ]
-mongodb-backend = ["reinhardt-backends/mongodb-backend", "reinhardt-migrations?/mongodb-backend"]
+# NoSQL database features
+nosql-mongodb = ["nosql", "reinhardt-nosql/mongodb"]
+nosql-all = ["nosql", "reinhardt-nosql/nosql-all"]
+
+# Deprecated: Use nosql-mongodb instead
+mongodb-backend = ["nosql-mongodb"]
+
 cockroachdb-backend = ["postgres"] # CockroachDB uses PostgreSQL protocol
 all-databases = [
   "postgres",
   "sqlite",
   "mysql",
-  # "mongodb-backend", # Temporarily disabled: Missing bson dependencies
+  "nosql-mongodb",
   "cockroachdb-backend",
 ]
 

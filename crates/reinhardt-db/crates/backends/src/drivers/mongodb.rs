@@ -1,140 +1,38 @@
-//! MongoDB backend module
+//! MongoDB backend module (DEPRECATED)
 //!
-//! This module provides MongoDB-specific implementations for:
-//! - Connection management
-//! - BSON query building
-//! - Collection operations (schema-less)
+//! **DEPRECATED**: MongoDB has been moved to the `reinhardt-nosql` crate.
+//! Please use `reinhardt_nosql::backends::mongodb` instead.
 //!
-//! # Basic Connection Example
+//! This module provides backward compatibility re-exports and will be removed in v0.3.0.
 //!
-//! ```rust,no_run
+//! # Migration Guide
+//!
+//! **Before (deprecated)**:
+//! ```rust,ignore
 //! use reinhardt_backends::drivers::mongodb::MongoDBBackend;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Connect to MongoDB
-//! let backend = MongoDBBackend::connect("mongodb://localhost:27017").await?;
-//! let backend = backend.with_database("myapp");
-//! # Ok(())
-//! # }
+//! use reinhardt_backends::DatabaseBackend;
 //! ```
 //!
-//! # Query Builder Example
-//!
-//! ```rust
-//! use reinhardt_backends::drivers::mongodb::MongoDBQueryBuilder;
-//! use bson::doc;
-//!
-//! // Build a query
-//! let query = MongoDBQueryBuilder::new("users")
-//!     .filter(doc! { "age": { "$gte": 18 } })
-//!     .sort(doc! { "name": 1 })
-//!     .limit(10)
-//!     .skip(0);
-//!
-//! // Get the filter document
-//! let filter = query.build_filter();
-//! assert!(filter.contains_key("age"));
+//! **After (recommended)**:
+//! ```rust,ignore
+//! use reinhardt_nosql::backends::mongodb::MongoDBBackend;
+//! use reinhardt_nosql::traits::{NoSQLBackend, DocumentBackend};
 //! ```
 //!
-//! # Schema Editor Example
+//! # Why This Change?
 //!
-//! ```rust,no_run
-//! use reinhardt_backends::drivers::mongodb::MongoDBSchemaEditor;
-//! use bson::doc;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let editor = MongoDBSchemaEditor::new("mongodb://localhost:27017", "mydb").await?;
-//!
-//! // Create collection with validation
-//! editor.create_collection("users", Some(doc! {
-//!     "$jsonSchema": {
-//!         "required": ["name", "email"],
-//!         "properties": {
-//!             "name": { "bsonType": "string" },
-//!             "email": { "bsonType": "string" }
-//!         }
-//!     }
-//! })).await?;
-//!
-//! // Create an index
-//! editor.create_index("users", "idx_email", &["email"], true).await?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Aggregation Pipeline Example
-//!
-//! ```rust
-//! use reinhardt_backends::drivers::mongodb::MongoDBQueryBuilder;
-//! use bson::doc;
-//!
-//! let query = MongoDBQueryBuilder::new("users")
-//!     .filter(doc! { "active": true })
-//!     .sort(doc! { "created_at": -1 })
-//!     .limit(100);
-//!
-//! // Build aggregation pipeline
-//! let pipeline = query.build_aggregation_pipeline();
-//! assert!(!pipeline.is_empty());
-//! assert!(pipeline[0].contains_key("$match"));
-//! ```
-//!
-//! # Connection Pool Configuration
-//!
-//! ```rust,no_run
-//! use reinhardt_backends::drivers::mongodb::MongoDBBackendBuilder;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Configure connection pool
-//! let backend = MongoDBBackendBuilder::new()
-//!     .url("mongodb://localhost:27017")
-//!     .database("mydb")
-//!     .max_pool_size(100)
-//!     .min_pool_size(10)
-//!     .max_idle_time_secs(300)
-//!     .build()
-//!     .await?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Replica Set Connection
-//!
-//! ```rust,no_run
-//! use reinhardt_backends::drivers::mongodb::MongoDBBackend;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Connect to replica set
-//! let backend = MongoDBBackend::builder()
-//!     .url("mongodb://node1:27017,node2:27017,node3:27017/?replicaSet=myReplicaSet")
-//!     .database("mydb")
-//!     .build()
-//!     .await?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! # Sharded Cluster Connection
-//!
-//! ```rust,no_run
-//! use reinhardt_backends::drivers::mongodb::MongoDBBackend;
-//!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Connect to sharded cluster via mongos
-//! let backend = MongoDBBackend::builder()
-//!     .url("mongodb://mongos1:27017,mongos2:27017")
-//!     .database("mydb")
-//!     .max_pool_size(200) // Higher pool size for sharded clusters
-//!     .build()
-//!     .await?;
-//! # Ok(())
-//! # }
-//! ```
+//! MongoDB is a NoSQL database and does not fit the SQL-focused `DatabaseBackend` trait.
+//! The new `reinhardt-nosql` crate provides a proper trait hierarchy for different NoSQL paradigms:
+//! - `NoSQLBackend` (base trait)
+//! - `DocumentBackend` (for MongoDB, CouchDB, etc.)
+//! - `KeyValueBackend` (for Redis, DynamoDB, etc.)
+//! - `ColumnBackend` (for Cassandra, etc.)
+//! - `GraphBackend` (for Neo4j, etc.)
 
-pub mod connection;
-pub mod query_builder;
-pub mod schema_editor;
+#![deprecated(
+	since = "0.1.0",
+	note = "MongoDB has been moved to reinhardt-nosql. Use reinhardt_nosql::backends::mongodb instead."
+)]
 
-pub use connection::{MongoDBBackend, MongoDBBackendBuilder};
-pub use query_builder::MongoDBQueryBuilder;
-pub use schema_editor::MongoDBSchemaEditor;
+#[cfg(feature = "mongodb-backend")]
+pub use reinhardt_nosql::backends::mongodb::*;
