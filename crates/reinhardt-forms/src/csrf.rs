@@ -59,7 +59,7 @@ impl CsrfToken {
 
 	/// Generate a cryptographically secure random token
 	fn generate_secure_token() -> String {
-		let mut rng = rand::rng();
+		let mut rng = rand::thread_rng();
 		let mut random_bytes = [0u8; 32];
 		rng.fill_bytes(&mut random_bytes);
 

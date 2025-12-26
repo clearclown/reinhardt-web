@@ -48,6 +48,8 @@
 
 pub mod binding;
 pub mod component;
+pub mod validators;
 
 pub use binding::FormBinding;
 pub use component::FormComponent;
+pub use validators::{ClientValidator, ValidatorRegistry};

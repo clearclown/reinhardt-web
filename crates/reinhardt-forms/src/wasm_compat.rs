@@ -47,6 +47,54 @@ use crate::form::Form;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// Validation rule types for client-side validation (Phase 2-A)
+///
+/// These rules enable client-side validation for better UX, while
+/// server-side validation remains mandatory for security.
+///
+/// ## Security Note
+///
+/// Client-side validation is for UX enhancement only and MUST NOT
+/// be relied upon for security. Server-side validation is always required.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ValidationRule {
+	/// Field-level validation using JavaScript expression
+	FieldValidator {
+		/// Field name to validate
+		field_name: String,
+		/// JavaScript evaluable expression (e.g., "value.length >= 8")
+		/// The expression should return a boolean (true = valid, false = invalid)
+		expression: String,
+		/// Error message to display when validation fails
+		error_message: String,
+	},
+	/// Form-level cross-field validation using JavaScript expression
+	CrossFieldValidator {
+		/// Dependent field names involved in validation
+		field_names: Vec<String>,
+		/// JavaScript evaluable expression (e.g., "fields.password === fields.password_confirm")
+		/// The expression receives a `fields` object with field name -> value mapping
+		expression: String,
+		/// Error message to display when validation fails
+		error_message: String,
+		/// Target field for error display (None = non-field error)
+		target_field: Option<String>,
+	},
+	/// Reference to reinhardt-validators Validator
+	ValidatorRef {
+		/// Field name to validate
+		field_name: String,
+		/// Validator identifier (e.g., "email", "url", "min_length")
+		validator_id: String,
+		/// Validator parameters as JSON
+		/// Example: {"min": 8, "max": 20} for MinMaxLengthValidator
+		params: serde_json::Value,
+		/// Error message to display when validation fails
+		error_message: String,
+	},
+}
+
 /// Serializable form metadata for client-side rendering (Week 5 Day 1)
 ///
 /// This structure contains all information needed to render a form on the
@@ -60,6 +108,8 @@ use std::collections::HashMap;
 /// - `prefix`: Field name prefix (for multiple forms on same page)
 /// - `is_bound`: Whether the form has been bound with data
 /// - `errors`: Validation errors (if any)
+/// - `validation_rules`: Client-side validation rules (Phase 2-A)
+/// - `non_field_errors`: Form-level validation errors (Phase 2-A)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FormMetadata {
 	/// Field metadata list
@@ -79,6 +129,17 @@ pub struct FormMetadata {
 
 	/// Validation errors (field name -> error messages)
 	pub errors: HashMap<String, Vec<String>>,
+
+	/// Client-side validation rules (Phase 2-A)
+	/// These rules enable immediate feedback to users without server round-trips.
+	/// Server-side validation is still mandatory for security.
+	#[serde(default)]
+	pub validation_rules: Vec<ValidationRule>,
+
+	/// Non-field errors (form-level errors) (Phase 2-A)
+	/// These are errors that don't belong to a specific field (e.g., "Passwords don't match")
+	#[serde(default)]
+	pub non_field_errors: Vec<String>,
 }
 
 /// Serializable field metadata for client-side rendering (Week 5 Day 1)
@@ -167,6 +228,10 @@ impl FormExt for Form {
 			prefix: self.prefix().to_string(),
 			is_bound: self.is_bound(),
 			errors: self.errors().clone(),
+			// Phase 2-A: Clone validation rules from Form
+			validation_rules: self.validation_rules().to_vec(),
+			// TODO: Extract non-field errors from errors HashMap (key = ALL_FIELDS_KEY or "_all")
+			non_field_errors: Vec::new(),
 		}
 	}
 }

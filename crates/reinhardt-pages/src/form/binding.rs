@@ -417,6 +417,8 @@ mod tests {
 			prefix: String::new(),
 			is_bound: false,
 			errors: HashMap::new(),
+			validation_rules: Vec::new(),
+			non_field_errors: Vec::new(),
 		};
 
 		FormComponent::new(metadata, "/api/submit")

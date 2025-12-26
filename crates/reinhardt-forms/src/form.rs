@@ -2,6 +2,7 @@ use crate::bound_field::BoundField;
 use crate::csrf::CsrfToken;
 use crate::field::{FieldError, FormField};
 use crate::media::Media;
+use crate::wasm_compat::ValidationRule;
 use std::collections::HashMap;
 use std::ops::Index;
 
@@ -26,7 +27,7 @@ type FieldCleanFunction =
 /// to follow Rust conventions for internal/private identifiers.
 pub const ALL_FIELDS_KEY: &str = "_all";
 
-/// Form data structure
+/// Form data structure (Phase 2-A: Enhanced with client-side validation rules)
 pub struct Form {
 	fields: Vec<Box<dyn FormField>>,
 	data: HashMap<String, serde_json::Value>,
@@ -38,6 +39,10 @@ pub struct Form {
 	prefix: String,
 	use_csrf: bool,
 	csrf_token: Option<CsrfToken>,
+	/// Client-side validation rules (Phase 2-A)
+	/// These rules are transmitted to the client for UX enhancement.
+	/// Server-side validation is still mandatory for security.
+	validation_rules: Vec<ValidationRule>,
 }
 
 impl Form {
@@ -64,6 +69,7 @@ impl Form {
 			prefix: String::new(),
 			use_csrf: false,
 			csrf_token: None,
+			validation_rules: vec![], // Phase 2-A: Initialize client-side validation rules
 		}
 	}
 	/// Create a new form with initial data
@@ -93,6 +99,7 @@ impl Form {
 			prefix: String::new(),
 			use_csrf: false,
 			csrf_token: None,
+			validation_rules: vec![], // Phase 2-A
 		}
 	}
 	/// Create a new form with a field prefix
@@ -118,6 +125,7 @@ impl Form {
 			prefix,
 			use_csrf: false,
 			csrf_token: None,
+			validation_rules: vec![], // Phase 2-A
 		}
 	}
 	/// Enable CSRF protection for this form
@@ -404,6 +412,216 @@ impl Form {
 	{
 		self.field_clean_functions
 			.insert(field_name.to_string(), Box::new(f));
+	}
+
+	/// Get client-side validation rules (Phase 2-A)
+	///
+	/// # Returns
+	///
+	/// Reference to the validation rules vector
+	pub fn validation_rules(&self) -> &[ValidationRule] {
+		&self.validation_rules
+	}
+
+	/// Add a client-side field validator (Phase 2-A)
+	///
+	/// Adds a JavaScript expression-based validator for a specific field.
+	/// This validator is executed on the client-side for immediate feedback.
+	///
+	/// **Security Note**: Client-side validation is for UX enhancement only.
+	/// Server-side validation is still mandatory for security.
+	///
+	/// # Arguments
+	///
+	/// - `field_name`: Name of the field to validate
+	/// - `expression`: JavaScript expression (e.g., "value.length >= 8")
+	/// - `error_message`: Error message to display on validation failure
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// form.add_client_field_validator(
+	///     "password",
+	///     "value.length >= 8",
+	///     "Password must be at least 8 characters"
+	/// );
+	/// ```
+	pub fn add_client_field_validator(
+		&mut self,
+		field_name: impl Into<String>,
+		expression: impl Into<String>,
+		error_message: impl Into<String>,
+	) {
+		self.validation_rules.push(ValidationRule::FieldValidator {
+			field_name: field_name.into(),
+			expression: expression.into(),
+			error_message: error_message.into(),
+		});
+	}
+
+	/// Add a client-side cross-field validator (Phase 2-A)
+	///
+	/// Adds a JavaScript expression-based validator that involves multiple fields.
+	/// This validator is executed on the client-side for immediate feedback.
+	///
+	/// **Security Note**: Client-side validation is for UX enhancement only.
+	/// Server-side validation is still mandatory for security.
+	///
+	/// # Arguments
+	///
+	/// - `field_names`: Names of fields involved in validation
+	/// - `expression`: JavaScript expression (e.g., "fields.password === fields.password_confirm")
+	/// - `error_message`: Error message to display on validation failure
+	/// - `target_field`: Target field for error display (None = non-field error)
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// form.add_cross_field_validator(
+	///     vec!["password".to_string(), "password_confirm".to_string()],
+	///     "fields.password === fields.password_confirm",
+	///     "Passwords do not match",
+	///     Some("password_confirm")
+	/// );
+	/// ```
+	pub fn add_cross_field_validator(
+		&mut self,
+		field_names: Vec<String>,
+		expression: impl Into<String>,
+		error_message: impl Into<String>,
+		target_field: Option<String>,
+	) {
+		self.validation_rules
+			.push(ValidationRule::CrossFieldValidator {
+				field_names,
+				expression: expression.into(),
+				error_message: error_message.into(),
+				target_field,
+			});
+	}
+
+	/// Add a client-side validator reference (Phase 2-A)
+	///
+	/// Adds a reference to a reinhardt-validators Validator.
+	/// This validator is executed on the client-side for immediate feedback.
+	///
+	/// **Security Note**: Client-side validation is for UX enhancement only.
+	/// Server-side validation is still mandatory for security.
+	///
+	/// # Arguments
+	///
+	/// - `field_name`: Name of the field to validate
+	/// - `validator_id`: Validator identifier (e.g., "email", "url", "min_length")
+	/// - `params`: Validator parameters as JSON
+	/// - `error_message`: Error message to display on validation failure
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use serde_json::json;
+	///
+	/// form.add_validator_rule(
+	///     "email",
+	///     "email",
+	///     json!({}),
+	///     "Enter a valid email address"
+	/// );
+	///
+	/// form.add_validator_rule(
+	///     "username",
+	///     "min_length",
+	///     json!({"min": 3}),
+	///     "Username must be at least 3 characters"
+	/// );
+	/// ```
+	pub fn add_validator_rule(
+		&mut self,
+		field_name: impl Into<String>,
+		validator_id: impl Into<String>,
+		params: serde_json::Value,
+		error_message: impl Into<String>,
+	) {
+		self.validation_rules.push(ValidationRule::ValidatorRef {
+			field_name: field_name.into(),
+			validator_id: validator_id.into(),
+			params,
+			error_message: error_message.into(),
+		});
+	}
+
+	/// Helper: Add a date range validator (Phase 2-A)
+	///
+	/// Adds a cross-field validator that checks if end_date >= start_date.
+	///
+	/// # Arguments
+	///
+	/// - `start_field`: Name of the start date field
+	/// - `end_field`: Name of the end date field
+	/// - `error_message`: Error message (optional, defaults to a standard message)
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// form.add_date_range_validator("start_date", "end_date", None);
+	/// ```
+	pub fn add_date_range_validator(
+		&mut self,
+		start_field: impl Into<String>,
+		end_field: impl Into<String>,
+		error_message: Option<String>,
+	) {
+		let start = start_field.into();
+		let end = end_field.into();
+		let message = error_message
+			.unwrap_or_else(|| "End date must be after or equal to start date".to_string());
+
+		self.add_cross_field_validator(
+			vec![start.clone(), end.clone()],
+			format!(
+				"new Date(fields['{}']) <= new Date(fields['{}'])",
+				start, end
+			),
+			message,
+			Some(end),
+		);
+	}
+
+	/// Helper: Add a numeric range validator (Phase 2-A)
+	///
+	/// Adds a cross-field validator that checks if max >= min.
+	///
+	/// # Arguments
+	///
+	/// - `min_field`: Name of the minimum value field
+	/// - `max_field`: Name of the maximum value field
+	/// - `error_message`: Error message (optional, defaults to a standard message)
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// form.add_numeric_range_validator("min_price", "max_price", None);
+	/// ```
+	pub fn add_numeric_range_validator(
+		&mut self,
+		min_field: impl Into<String>,
+		max_field: impl Into<String>,
+		error_message: Option<String>,
+	) {
+		let min = min_field.into();
+		let max = max_field.into();
+		let message = error_message.unwrap_or_else(|| {
+			"Maximum value must be greater than or equal to minimum value".to_string()
+		});
+
+		self.add_cross_field_validator(
+			vec![min.clone(), max.clone()],
+			format!(
+				"parseFloat(fields['{}']) <= parseFloat(fields['{}'])",
+				min, max
+			),
+			message,
+			Some(max),
+		);
 	}
 	pub fn prefix(&self) -> &str {
 		&self.prefix

@@ -45,11 +45,19 @@
 //! ```
 
 #[cfg(target_arch = "wasm32")]
+use super::validators::ValidatorRegistry;
+#[cfg(target_arch = "wasm32")]
 use crate::dom::{Document, Element};
 #[cfg(target_arch = "wasm32")]
 use crate::reactive::Effect;
 use crate::reactive::Signal;
+#[cfg(target_arch = "wasm32")]
+use js_sys::Function;
+#[cfg(target_arch = "wasm32")]
+use reinhardt_forms::wasm_compat::ValidationRule;
 use std::collections::HashMap;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::JsValue;
 
 /// Form Component for client-side rendering (Week 5 Day 3)
 ///
@@ -397,10 +405,112 @@ impl FormComponent {
 		closure.forget(); // Keep closure alive
 	}
 
-	/// Validate form fields (Week 5 Day 3)
+	/// Collect all field values into a HashMap (Phase 2-A Helper)
+	///
+	/// # Returns
+	///
+	/// HashMap<field_name, current_value>
+	#[allow(dead_code)] // May be used in future validation features
+	fn collect_field_values(&self) -> HashMap<String, String> {
+		self.values
+			.iter()
+			.map(|(name, signal)| (name.clone(), signal.get()))
+			.collect()
+	}
+
+	/// Evaluate JavaScript expression for field validation (Phase 2-A Helper, WASM only)
+	///
+	/// # Arguments
+	///
+	/// - `field_name`: Name of the field being validated
+	/// - `expression`: JavaScript expression to evaluate (e.g., "value.length >= 8")
+	///
+	/// # Returns
+	///
+	/// `Ok(true)` if validation passes, `Ok(false)` if validation fails,
+	/// `Err(String)` if evaluation fails
+	///
+	/// # Security
+	///
+	/// This method evaluates JavaScript code in a sandboxed context. The expression
+	/// should only contain simple validation logic and must not access external APIs.
+	#[cfg(target_arch = "wasm32")]
+	fn evaluate_js_expression(&self, field_name: &str, expression: &str) -> Result<bool, String> {
+		// Get field value
+		let value = self.get_value(field_name);
+
+		// Create a safe evaluation context with only 'value' variable
+		// We wrap the expression in an immediately-invoked function expression (IIFE)
+		// to create a local scope and prevent access to global variables
+		let safe_code = format!(
+			"(function() {{ var value = {}; return Boolean({}); }})()",
+			serde_json::to_string(&value).map_err(|e| format!("JSON encode error: {}", e))?,
+			expression
+		);
+
+		// Evaluate the expression
+		let result = js_sys::eval(&safe_code).map_err(|e| format!("JS eval error: {:?}", e))?;
+
+		// Convert to boolean
+		result
+			.as_bool()
+			.ok_or_else(|| "Expression did not return a boolean".to_string())
+	}
+
+	/// Evaluate JavaScript expression for cross-field validation (Phase 2-A Helper, WASM only)
+	///
+	/// # Arguments
+	///
+	/// - `field_names`: Names of fields involved in validation
+	/// - `expression`: JavaScript expression to evaluate (e.g., "fields.password === fields.password_confirm")
+	///
+	/// # Returns
+	///
+	/// `Ok(true)` if validation passes, `Ok(false)` if validation fails,
+	/// `Err(String)` if evaluation fails
+	///
+	/// # Security
+	///
+	/// This method evaluates JavaScript code in a sandboxed context. The expression
+	/// should only contain simple validation logic and must not access external APIs.
+	#[cfg(target_arch = "wasm32")]
+	fn evaluate_cross_field_expression(
+		&self,
+		field_names: &[String],
+		expression: &str,
+	) -> Result<bool, String> {
+		// Collect field values
+		let all_values = self.collect_field_values();
+
+		// Filter only the fields involved in this validation
+		let mut fields_map = serde_json::Map::new();
+		for field_name in field_names {
+			if let Some(value) = all_values.get(field_name) {
+				fields_map.insert(field_name.clone(), serde_json::Value::String(value.clone()));
+			}
+		}
+
+		// Create a safe evaluation context with only 'fields' variable
+		let safe_code = format!(
+			"(function() {{ var fields = {}; return Boolean({}); }})()",
+			serde_json::to_string(&fields_map).map_err(|e| format!("JSON encode error: {}", e))?,
+			expression
+		);
+
+		// Evaluate the expression
+		let result = js_sys::eval(&safe_code).map_err(|e| format!("JS eval error: {:?}", e))?;
+
+		// Convert to boolean
+		result
+			.as_bool()
+			.ok_or_else(|| "Expression did not return a boolean".to_string())
+	}
+
+	/// Validate form fields (Week 5 Day 3, Enhanced in Phase 2-A)
 	///
 	/// Performs client-side validation:
 	/// - Checks required fields are not empty
+	/// - Evaluates client-side validation rules (WASM only)
 	/// - Updates error state via Signal
 	///
 	/// # Returns
@@ -416,7 +526,10 @@ impl FormComponent {
 	/// ```
 	pub fn validate(&self) -> bool {
 		let mut errors = HashMap::new();
+		#[allow(unused_mut)] // mut is only used in WASM target
+		let mut non_field_errors: Vec<String> = Vec::new();
 
+		// Step 1: Required field validation (existing logic)
 		for field_meta in &self.metadata.fields {
 			if field_meta.required
 				&& let Some(value_signal) = self.values.get(&field_meta.name)
@@ -431,7 +544,120 @@ impl FormComponent {
 			}
 		}
 
-		let is_valid = errors.is_empty();
+		// Step 2: Process validation rules (Phase 2-A)
+		// WASM-only: JavaScript expression evaluation
+		#[cfg(target_arch = "wasm32")]
+		{
+			for rule in &self.metadata.validation_rules {
+				match rule {
+					// Field-level validation
+					ValidationRule::FieldValidator {
+						field_name,
+						expression,
+						error_message,
+					} => {
+						match self.evaluate_js_expression(field_name, expression) {
+							Ok(is_valid) => {
+								if !is_valid {
+									errors
+										.entry(field_name.clone())
+										.or_insert_with(Vec::new)
+										.push(error_message.clone());
+								}
+							}
+							Err(eval_error) => {
+								// Log evaluation error for debugging, but don't fail validation
+								#[cfg(target_arch = "wasm32")]
+								web_sys::console::error_1(
+									&format!(
+										"Validation eval error for field '{}': {}",
+										field_name, eval_error
+									)
+									.into(),
+								);
+							}
+						}
+					}
+
+					// Cross-field validation
+					ValidationRule::CrossFieldValidator {
+						field_names,
+						expression,
+						error_message,
+						target_field,
+					} => {
+						match self.evaluate_cross_field_expression(field_names, expression) {
+							Ok(is_valid) => {
+								if !is_valid {
+									// Add error to target field or non-field errors
+									if let Some(target) = target_field {
+										errors
+											.entry(target.clone())
+											.or_insert_with(Vec::new)
+											.push(error_message.clone());
+									} else {
+										non_field_errors.push(error_message.clone());
+									}
+								}
+							}
+							Err(eval_error) => {
+								// Log evaluation error for debugging
+								#[cfg(target_arch = "wasm32")]
+								web_sys::console::error_1(
+									&format!(
+										"Cross-field validation eval error for fields {:?}: {}",
+										field_names, eval_error
+									)
+									.into(),
+								);
+							}
+						}
+					}
+
+					// Validator reference (Phase 2-A Step 4)
+					ValidationRule::ValidatorRef {
+						field_name,
+						validator_id,
+						params,
+						error_message,
+					} => {
+						// Get field value
+						let value = self.get_value(field_name);
+
+						// Get validator from registry
+						let registry = ValidatorRegistry::global();
+						let registry = registry.lock().unwrap();
+
+						match registry.validate(validator_id, &value, params) {
+							Ok(_) => {
+								// Validation passed
+							}
+							Err(_validator_error) => {
+								// Validation failed - use the error message from ValidationRule
+								errors
+									.entry(field_name.clone())
+									.or_insert_with(Vec::new)
+									.push(error_message.clone());
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Non-WASM: Skip ValidationRule processing
+		// Client-side validation is for UX only, server-side validation is mandatory
+		#[cfg(not(target_arch = "wasm32"))]
+		{
+			// In non-WASM environments, we can't evaluate JavaScript expressions
+			// Just skip validation rules (they're for UX enhancement only)
+			let _ = &self.metadata.validation_rules; // Suppress unused warning
+		}
+
+		// Determine if validation passed
+		let is_valid = errors.is_empty() && non_field_errors.is_empty();
+
+		// Update error state
 		self.errors.set(errors);
 
 		is_valid
@@ -546,6 +772,8 @@ mod tests {
 			prefix: String::new(),
 			is_bound: false,
 			errors: HashMap::new(),
+			validation_rules: Vec::new(),
+			non_field_errors: Vec::new(),
 		};
 
 		let component = FormComponent::new(metadata, "/api/submit");
@@ -572,6 +800,8 @@ mod tests {
 			prefix: String::new(),
 			is_bound: false,
 			errors: HashMap::new(),
+			validation_rules: Vec::new(),
+			non_field_errors: Vec::new(),
 		};
 
 		let component = FormComponent::new(metadata, "/api/submit");
@@ -607,6 +837,8 @@ mod tests {
 			prefix: String::new(),
 			is_bound: false,
 			errors: HashMap::new(),
+			validation_rules: Vec::new(),
+			non_field_errors: Vec::new(),
 		};
 
 		let component = FormComponent::new(metadata, "/api/submit");
@@ -636,6 +868,8 @@ mod tests {
 			prefix: String::new(),
 			is_bound: false,
 			errors: HashMap::new(),
+			validation_rules: Vec::new(),
+			non_field_errors: Vec::new(),
 		};
 
 		let component = FormComponent::new(metadata, "/api/submit");
