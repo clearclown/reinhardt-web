@@ -142,20 +142,12 @@ impl BaseCommand for MigrateCommand {
 			{
 				DatabaseConnection::connect_sqlite(&_database_url).await
 			} else if _database_url.starts_with("mongodb://") {
-				#[cfg(feature = "mongodb-backend")]
-				{
-					// MongoDB requires separate database name
-					// Extract database name from URL or use default
-					let db_name = _database_url.split('/').next_back().unwrap_or("reinhardt");
-					DatabaseConnection::connect_mongodb(&_database_url, db_name).await
-				}
-				#[cfg(not(feature = "mongodb-backend"))]
-				{
-					return Err(crate::CommandError::ExecutionError(
-						"MongoDB backend not enabled. Enable 'mongodb-backend' feature."
-							.to_string(),
-					));
-				}
+				// MongoDB has been moved to reinhardt-nosql crate.
+				// Use reinhardt_nosql::backends::mongodb::MongoDBBackend directly.
+				return Err(crate::CommandError::ExecutionError(
+					"MongoDB is not supported in management commands. Use reinhardt-nosql crate directly."
+						.to_string(),
+				));
 			} else {
 				return Err(crate::CommandError::ExecutionError(format!(
 					"Unsupported database URL scheme: {}",
@@ -435,6 +427,7 @@ impl BaseCommand for MakeMigrationsCommand {
 					table,
 					columns,
 					unique,
+					..
 				} => {
 					let index_type = if *unique { "unique index" } else { "index" };
 					format!(
@@ -1945,17 +1938,12 @@ async fn connect_database(url: &str) -> CommandResult<(DatabaseType, DatabaseCon
 		}
 		#[cfg(feature = "mongodb-backend")]
 		DatabaseType::MongoDB => {
-			// MongoDB URL format: mongodb://host:port/database
-			let database = url.split('/').next_back().unwrap_or("test");
-			let conn = DatabaseConnection::connect_mongodb(url, database)
-				.await
-				.map_err(|e| {
-					crate::CommandError::ExecutionError(format!(
-						"Database connection failed: {}",
-						e
-					))
-				})?;
-			Ok((db_type, conn))
+			// MongoDB has been moved to reinhardt-nosql crate.
+			// Use reinhardt_nosql::backends::mongodb::MongoDBBackend directly.
+			Err(crate::CommandError::ExecutionError(
+				"MongoDB is not supported in management commands. Use reinhardt-nosql crate directly."
+					.to_string(),
+			))
 		}
 		_ => {
 			// MySQL or other database types

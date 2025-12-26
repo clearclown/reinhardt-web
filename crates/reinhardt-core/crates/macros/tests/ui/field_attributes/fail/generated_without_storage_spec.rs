@@ -5,7 +5,7 @@ struct User {
 	#[field(primary_key = true)]
 	id: Option<i32>,
 
-	// ERROR: generated_stored または generated_virtual が必須
+	// ERROR: generated_stored or generated_virtual is required
 	#[field(generated = "id * 2")]
 	computed: i32,
 }

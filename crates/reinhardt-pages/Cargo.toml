@@ -96,6 +96,8 @@ wasm-bindgen-test = "0.3"
 serial_test = "3"
 trybuild = "1.0"
 criterion = "0.5"
+rstest = { workspace = true }
+proptest = { workspace = true }
 
 [lib]
 crate-type = ["rlib"]

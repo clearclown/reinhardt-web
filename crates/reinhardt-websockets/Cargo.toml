@@ -49,6 +49,8 @@ metrics = { version = "0.24", optional = true }
 [dev-dependencies]
 tokio-test = "0.4"
 futures = { workspace = true }
+rstest = { workspace = true }
+rand = { workspace = true }
 
 [features]
 default = []

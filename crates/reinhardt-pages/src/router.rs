@@ -15,13 +15,17 @@
 //!
 //! ```ignore
 //! use reinhardt_pages::router::{Router, Link, RouterOutlet};
+//! use std::sync::Arc;
 //!
 //! // Create a router
-//! let router = Router::new()
+//! let router = Arc::new(Router::new()
 //!     .route("/", home_page)
 //!     .route("/users/", user_list)
 //!     .route("/users/{id}/", user_detail)
-//!     .named_route("user_detail", "/users/{id}/", user_detail);
+//!     .named_route("user_detail", "/users/{id}/", user_detail));
+//!
+//! // Create a router outlet to render current route
+//! let outlet = RouterOutlet::new(router.clone());
 //!
 //! // Navigate programmatically
 //! router.push("/users/42/");

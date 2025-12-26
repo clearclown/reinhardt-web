@@ -58,7 +58,7 @@ impl ConfigEncryptor {
 		}
 		#[cfg(not(feature = "encryption"))]
 		{
-			// バリデーションのみ実行、keyは保存しない
+			// Only perform validation, key is not saved
 			if key.is_empty() {
 				return Err("Encryption key cannot be empty".to_string());
 			}

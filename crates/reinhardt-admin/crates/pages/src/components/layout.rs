@@ -138,17 +138,21 @@ pub fn footer(version: &str) -> View {
 ///
 /// ```ignore
 /// use reinhardt_admin_pages::components::layout::{main_layout, ModelInfo};
+/// use reinhardt_pages::router::Router;
+/// use std::sync::Arc;
 ///
 /// let models = vec![
 ///     ModelInfo { name: "Users".to_string(), url: "/admin/users/".to_string() },
 /// ];
-/// main_layout("My Admin", &models, None, "0.1.0")
+/// let router = Arc::new(Router::new());
+/// main_layout("My Admin", &models, None, "0.1.0", router)
 /// ```
 pub fn main_layout(
 	site_name: &str,
 	models: &[ModelInfo],
 	user_name: Option<&str>,
 	version: &str,
+	router: std::sync::Arc<reinhardt_pages::router::Router>,
 ) -> View {
 	use reinhardt_pages::component::Component;
 	use reinhardt_pages::router::RouterOutlet;
@@ -165,7 +169,7 @@ pub fn main_layout(
 					"margin-left: 250px; margin-top: 56px; padding: 20px; min-height: calc(100vh - 120px);",
 				)
 				.child(
-					RouterOutlet::new()
+					RouterOutlet::new(router)
 						.id("admin-outlet")
 						.class("router-content")
 						.render(),

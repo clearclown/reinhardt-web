@@ -96,6 +96,18 @@ impl ElementBuilder {
 		self
 	}
 
+	/// Remove an attribute
+	///
+	/// ## Example
+	///
+	/// ```ignore
+	/// div().remove_attr("disabled").build()
+	/// ```
+	pub fn remove_attr(self, name: &str) -> Self {
+		let _ = self.element.remove_attribute(name);
+		self
+	}
+
 	/// Set a reactive attribute bound to a Signal
 	///
 	/// The attribute will automatically update when the Signal changes.

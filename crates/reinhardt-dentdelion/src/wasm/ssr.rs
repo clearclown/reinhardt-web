@@ -540,7 +540,7 @@ fn validate_component_path(
 	// Construct full path
 	let full_path = base_dir.join(component_path);
 
-	// Canonicalize to resolve .. and symlinks (防止path traversal攻撃)
+	// Canonicalize to resolve .. and symlinks (prevent path traversal attacks)
 	let canonical_path = full_path
 		.canonicalize()
 		.map_err(|e| SsrError::ComponentNotFound(format!("Component file not found: {}", e)))?;

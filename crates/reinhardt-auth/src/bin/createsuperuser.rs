@@ -10,7 +10,7 @@ use dialoguer::{Confirm, Input, Password};
 use argon2::Argon2;
 
 #[cfg(feature = "database")]
-use password_hash::{PasswordHasher, phc::Salt};
+use password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
 
 #[cfg(feature = "database")]
 use chrono::Utc;
@@ -80,7 +80,7 @@ async fn create_user_in_database(
 ) -> Result<(), Box<dyn std::error::Error>> {
 	// Hash the password if provided
 	let password_hash = if let Some(pwd) = password {
-		let salt = Salt::generate();
+		let salt = SaltString::generate(&mut OsRng);
 		let argon2 = Argon2::default();
 		let hash = argon2
 			.hash_password(pwd.as_bytes(), &salt)

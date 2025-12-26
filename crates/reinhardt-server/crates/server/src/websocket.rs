@@ -13,6 +13,9 @@ use tokio::sync::{Mutex, RwLock, broadcast};
 #[cfg(feature = "websocket")]
 use tokio_tungstenite::{WebSocketStream, accept_async, tungstenite::Message};
 
+#[cfg(feature = "websocket")]
+use crate::shutdown::ShutdownCoordinator;
+
 /// Type alias for WebSocket stream writer
 #[cfg(feature = "websocket")]
 type WsWriter = futures_util::stream::SplitSink<WebSocketStream<TcpStream>, Message>;
@@ -182,6 +185,37 @@ impl WebSocketServer {
 		self
 	}
 
+	/// Create a new WebSocketServer from an existing `Arc<dyn WebSocketHandler>`
+	///
+	/// This is useful when you already have a handler wrapped in Arc,
+	/// such as in test fixtures or dependency injection scenarios.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use std::sync::Arc;
+	/// use reinhardt_server_core::WebSocketServer;
+	/// use reinhardt_server_core::WebSocketHandler;
+	///
+	/// struct EchoHandler;
+	///
+	/// #[async_trait::async_trait]
+	/// impl WebSocketHandler for EchoHandler {
+	///     async fn handle_message(&self, message: String) -> Result<String, String> {
+	///         Ok(format!("Echo: {}", message))
+	///     }
+	/// }
+	///
+	/// let handler: Arc<dyn WebSocketHandler> = Arc::new(EchoHandler);
+	/// let server = WebSocketServer::from_arc(handler);
+	/// ```
+	pub fn from_arc(handler: Arc<dyn WebSocketHandler>) -> Self {
+		Self {
+			handler,
+			broadcast_manager: None,
+		}
+	}
+
 	/// Get a reference to the broadcast manager if enabled
 	///
 	/// # Examples
@@ -257,6 +291,79 @@ impl WebSocketServer {
 			});
 		}
 	}
+
+	/// Start the WebSocket server with graceful shutdown support
+	///
+	/// This method starts the server and listens for connections until a shutdown
+	/// signal is received via the coordinator. It supports graceful shutdown.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use std::net::SocketAddr;
+	/// use reinhardt_server_core::{WebSocketServer, ShutdownCoordinator};
+	/// use reinhardt_server_core::WebSocketHandler;
+	///
+	/// struct EchoHandler;
+	///
+	/// #[async_trait::async_trait]
+	/// impl WebSocketHandler for EchoHandler {
+	///     async fn handle_message(&self, message: String) -> Result<String, String> {
+	///         Ok(message)
+	///     }
+	/// }
+	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let server = WebSocketServer::new(EchoHandler);
+	/// let addr: SocketAddr = "127.0.0.1:9001".parse()?;
+	/// let coordinator = ShutdownCoordinator::new();
+	/// server.listen_with_shutdown(addr, coordinator).await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn listen_with_shutdown(
+		self,
+		addr: SocketAddr,
+		coordinator: ShutdownCoordinator,
+	) -> Result<(), Box<dyn std::error::Error>> {
+		let listener = TcpListener::bind(addr).await?;
+		println!("WebSocket server listening on ws://{}", addr);
+
+		let broadcast_manager = self.broadcast_manager.clone();
+		let mut shutdown_rx = coordinator.subscribe();
+
+		loop {
+			tokio::select! {
+				result = listener.accept() => {
+					let (stream, peer_addr) = result?;
+					let handler = self.handler.clone();
+					let manager = broadcast_manager.clone();
+					let mut conn_shutdown = coordinator.subscribe();
+
+					tokio::spawn(async move {
+						tokio::select! {
+							result = Self::handle_connection(stream, handler, peer_addr, manager) => {
+								if let Err(e) = result {
+									eprintln!("Error handling WebSocket connection: {:?}", e);
+								}
+							}
+							_ = conn_shutdown.recv() => {
+								// Connection interrupted by shutdown
+							}
+						}
+					});
+				}
+				_ = shutdown_rx.recv() => {
+					println!("Shutdown signal received, stopping WebSocket server...");
+					break;
+				}
+			}
+		}
+
+		coordinator.notify_shutdown_complete();
+		Ok(())
+	}
+
 	/// Handle a single WebSocket connection
 	///
 	/// This is an internal method used by the server to process individual WebSocket connections.

@@ -5,7 +5,7 @@ struct User {
 	#[field(primary_key = true)]
 	id: Option<i32>,
 
-	// ERROR: generated + default は禁止
+	// ERROR: generated + default is prohibited
 	#[field(generated = "id * 2", generated_stored = true, default = "0")]
 	computed: i32,
 }

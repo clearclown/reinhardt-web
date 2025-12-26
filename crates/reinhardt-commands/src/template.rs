@@ -352,10 +352,10 @@ pub fn generate_secret_key() -> String {
                              ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                              0123456789\
                              !@#$%^&*(-_=+)";
-	let mut rng = rand::rng();
+	let mut rng = rand::thread_rng();
 	(0..50)
 		.map(|_| {
-			let idx = rng.random_range(0..CHARSET.len());
+			let idx = rng.gen_range(0..CHARSET.len());
 			CHARSET[idx] as char
 		})
 		.collect()

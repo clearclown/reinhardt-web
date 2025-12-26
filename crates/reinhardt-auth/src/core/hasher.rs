@@ -97,10 +97,10 @@ impl Default for Argon2Hasher {
 impl PasswordHasher for Argon2Hasher {
 	fn hash(&self, password: &str) -> Result<String, reinhardt_exception::Error> {
 		use argon2::Argon2;
-		use password_hash::{PasswordHasher as _, phc::Salt};
+		use password_hash::{PasswordHasher as _, SaltString, rand_core::OsRng};
 
 		// Generate salt using cryptographically secure randomness
-		let salt = Salt::generate();
+		let salt = SaltString::generate(&mut OsRng);
 
 		let argon2 = Argon2::default();
 
@@ -112,7 +112,7 @@ impl PasswordHasher for Argon2Hasher {
 
 	fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_exception::Error> {
 		use argon2::Argon2;
-		use password_hash::{PasswordVerifier, phc::PasswordHash};
+		use password_hash::{PasswordHash, PasswordVerifier};
 
 		let parsed_hash = PasswordHash::new(hash)
 			.map_err(|e| reinhardt_exception::Error::Authentication(e.to_string()))?;

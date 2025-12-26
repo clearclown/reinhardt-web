@@ -232,9 +232,8 @@ pub fn get_csrf_token_from_input() -> Option<String> {
 /// Parses a cookie value from a cookie string.
 ///
 /// The cookie string format is: "name1=value1; name2=value2; ..."
-// Only used in WASM builds by `get_csrf_token_from_cookie`
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-fn parse_cookie_value(cookie_str: &str, name: &str) -> Option<String> {
+// Exposed as public for testing purposes
+pub fn parse_cookie_value(cookie_str: &str, name: &str) -> Option<String> {
 	for part in cookie_str.split(';') {
 		let part = part.trim();
 		if let Some((key, value)) = part.split_once('=')

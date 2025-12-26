@@ -81,9 +81,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("disabled", "")
 		} else {
-			// Note: Removing attributes requires direct Element access
-			// For now, we just don't set it
-			self
+			self.remove_attr("disabled")
 		}
 	}
 
@@ -91,7 +89,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("checked", "")
 		} else {
-			self
+			self.remove_attr("checked")
 		}
 	}
 
@@ -99,7 +97,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("selected", "")
 		} else {
-			self
+			self.remove_attr("selected")
 		}
 	}
 
@@ -107,7 +105,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("readonly", "")
 		} else {
-			self
+			self.remove_attr("readonly")
 		}
 	}
 
@@ -115,7 +113,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("required", "")
 		} else {
-			self
+			self.remove_attr("required")
 		}
 	}
 
@@ -123,7 +121,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("autofocus", "")
 		} else {
-			self
+			self.remove_attr("autofocus")
 		}
 	}
 
@@ -131,7 +129,7 @@ impl BooleanAttributes for ElementBuilder {
 		if value {
 			self.attr("multiple", "")
 		} else {
-			self
+			self.remove_attr("multiple")
 		}
 	}
 }

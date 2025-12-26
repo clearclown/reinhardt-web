@@ -53,3 +53,5 @@ reinhardt-core = { workspace = true, features = ["types", "exception"] }
 reinhardt-macros = { workspace = true }
 reinhardt-params = { workspace = true }
 serde = { workspace = true }
+proptest = { workspace = true }
+rstest = { workspace = true }

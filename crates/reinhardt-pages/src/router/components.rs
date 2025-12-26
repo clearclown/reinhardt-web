@@ -129,12 +129,16 @@ impl Component for Link {
 /// # Example
 ///
 /// ```ignore
-/// use reinhardt_pages::router::RouterOutlet;
+/// use reinhardt_pages::router::{Router, RouterOutlet};
+/// use std::sync::Arc;
 ///
-/// let outlet = RouterOutlet::new();
+/// let router = Arc::new(Router::new().route("/", home_view));
+/// let outlet = RouterOutlet::new(router);
 /// ```
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RouterOutlet {
+	/// Reference to the router.
+	router: std::sync::Arc<super::Router>,
 	/// The ID attribute for the outlet element.
 	id: Option<String>,
 	/// CSS class for the outlet element.
@@ -142,9 +146,17 @@ pub struct RouterOutlet {
 }
 
 impl RouterOutlet {
-	/// Creates a new router outlet.
-	pub fn new() -> Self {
-		Self::default()
+	/// Creates a new router outlet with a router reference.
+	///
+	/// ## Arguments
+	///
+	/// * `router` - An Arc reference to the Router instance
+	pub fn new(router: std::sync::Arc<super::Router>) -> Self {
+		Self {
+			router,
+			id: None,
+			class: None,
+		}
 	}
 
 	/// Sets the ID attribute.
@@ -172,9 +184,8 @@ impl Component for RouterOutlet {
 			el = el.attr("class", class.clone());
 		}
 
-		// In actual implementation, this would be populated by the router
-		// For now, render an empty placeholder
-		el.into_view()
+		// Render current route inside the outlet container
+		el.child(self.router.render_current()).into_view()
 	}
 
 	fn name() -> &'static str {
@@ -300,12 +311,22 @@ mod tests {
 
 	#[test]
 	fn test_router_outlet() {
-		let outlet = RouterOutlet::new().id("main-outlet").class("content");
+		use super::super::Router;
+		use std::sync::Arc;
+
+		fn test_view() -> View {
+			View::text("Test Route")
+		}
+
+		let router = Arc::new(Router::new().route("/", test_view));
+		let outlet = RouterOutlet::new(router).id("main-outlet").class("content");
 
 		let html = outlet.render().render_to_string();
 		assert!(html.contains("data-router-outlet=\"true\""));
 		assert!(html.contains("id=\"main-outlet\""));
 		assert!(html.contains("class=\"content\""));
+		// Should render the current route content
+		assert!(html.contains("Test Route"));
 	}
 
 	#[test]
