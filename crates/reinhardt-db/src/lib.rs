@@ -140,8 +140,7 @@ pub mod backends {
 	#[cfg(feature = "sqlite")]
 	pub use ::reinhardt_backends::drivers::sqlite;
 
-	#[cfg(feature = "mongodb-backend")]
-	pub use ::reinhardt_backends::drivers::mongodb;
+	// Deprecated: MongoDB moved to nosql crate, use nosql::backends::mongodb instead
 
 	#[cfg(feature = "cockroachdb-backend")]
 	pub use ::reinhardt_backends::drivers::cockroachdb;
@@ -184,6 +183,9 @@ pub use reinhardt_associations as associations;
 #[cfg(feature = "contenttypes")]
 pub use reinhardt_contenttypes as contenttypes;
 
+#[cfg(feature = "nosql")]
+pub use reinhardt_nosql as nosql;
+
 /// Prelude module for convenient imports
 ///
 /// Imports commonly used types from all modules.
@@ -209,6 +211,9 @@ pub mod prelude {
 
 	#[cfg(feature = "contenttypes")]
 	pub use crate::contenttypes::*;
+
+	#[cfg(feature = "nosql")]
+	pub use crate::nosql::*;
 
 	// Re-export types needed by Model derive macro
 	#[cfg(feature = "migrations")]

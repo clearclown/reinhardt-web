@@ -15,7 +15,7 @@ pub mod sqlite;
 pub mod mongodb;
 
 #[cfg(feature = "mongodb-backend")]
-pub use mongodb::{MongoDBBackend, MongoDBQueryBuilder, MongoDBSchemaEditor};
+pub use mongodb::{MongoDBBackend, MongoDBBackendBuilder, MongoDBTransactionExecutor};
 
 #[cfg(feature = "cockroachdb-backend")]
 pub mod cockroachdb;

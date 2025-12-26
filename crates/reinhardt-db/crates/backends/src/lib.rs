@@ -180,7 +180,11 @@ pub use drivers::mysql::schema::MySQLSchemaEditor;
 pub use drivers::sqlite::schema::SQLiteSchemaEditor;
 
 #[cfg(feature = "mongodb-backend")]
-pub use drivers::mongodb::{MongoDBBackend, MongoDBQueryBuilder, MongoDBSchemaEditor};
+#[deprecated(
+	since = "0.1.0",
+	note = "MongoDB has been moved to reinhardt-nosql. Use reinhardt_nosql::backends::mongodb instead."
+)]
+pub use drivers::mongodb::{MongoDBBackend, MongoDBBackendBuilder, MongoDBTransactionExecutor};
 
 // Re-export two-phase commit implementations
 #[cfg(feature = "postgres")]
