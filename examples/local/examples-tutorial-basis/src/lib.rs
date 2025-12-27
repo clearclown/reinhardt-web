@@ -1,9 +1,9 @@
-//! Reinhardt Basis Tutorial Example - Polling Application
+//! Reinhardt Basis Tutorial Example - Polling Application with Pages
 //!
 //! This example demonstrates the concepts covered in the Reinhardt basis tutorial:
 //! - Project setup and configuration
 //! - Database models and ORM
-//! - Views and URL routing
+//! - Views with reinhardt-pages (WASM + SSR)
 //! - Forms and generic views
 //! - Testing
 //! - Static files
@@ -11,3 +11,13 @@
 
 pub mod apps;
 pub mod config;
+
+// Client-side modules (WASM only)
+#[cfg(target_arch = "wasm32")]
+pub mod client;
+
+// Server function definitions (both WASM and server)
+pub mod server_fn;
+
+// Shared types (both WASM and server)
+pub mod shared;

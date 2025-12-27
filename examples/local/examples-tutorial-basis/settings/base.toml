@@ -13,7 +13,7 @@ allowed_hosts = ["127.0.0.1", "localhost"]
 static_url = "/static/"
 static_root = "staticfiles"
 
-# Template configuration
+# Pages/Component rendering configuration (reinhardt-pages)
 template_debug = true
 
 # Database configuration

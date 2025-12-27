@@ -9,5 +9,5 @@ secret_key = "production-secret-key-MUST-use-env-var"
 # Restrictive allowed hosts for production
 allowed_hosts = ["example.com", "www.example.com"]
 
-# Disable template debug in production
+# Disable pages debug in production (reinhardt-pages)
 template_debug = false

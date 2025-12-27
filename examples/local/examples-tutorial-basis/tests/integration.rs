@@ -1,9 +1,10 @@
 //! Integration tests for polls application
 //!
 //! These tests use SQLite for database integration tests.
+//! Includes both database layer tests and server function tests.
 
 #[cfg(with_reinhardt)]
-mod tests {
+mod database_tests {
 	use rstest::*;
 	use sqlx::SqlitePool;
 	use std::sync::Arc;
@@ -461,5 +462,234 @@ mod tests {
 		let old_diff_seconds =
 			(now.and_utc().timestamp() - old_pub_date.and_utc().timestamp()).abs();
 		assert!(old_diff_seconds >= 86400); // 1 day in seconds
+	}
+}
+
+// ============================================================================
+// Server Function Tests
+// ============================================================================
+
+#[cfg(all(with_reinhardt, not(target_arch = "wasm32")))]
+mod server_fn_tests {
+	use rstest::*;
+	use sqlx::SqlitePool;
+	use std::sync::Arc;
+	use tempfile::NamedTempFile;
+
+	// Import server functions
+	use examples_tutorial_basis::server_fn::polls::{
+		get_question_detail, get_question_results, get_questions, vote,
+	};
+	use examples_tutorial_basis::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
+
+	/// Fixture: SQLite database with tables and test data
+	#[fixture]
+	async fn sqlite_with_test_data() -> (NamedTempFile, Arc<SqlitePool>) {
+		// Create temp file
+		let temp_file = NamedTempFile::new().expect("Failed to create temp file");
+		let db_path = temp_file.path().to_str().unwrap().to_string();
+		let database_url = format!("sqlite://{}?mode=rwc", db_path);
+
+		// Connect to SQLite
+		let pool = SqlitePool::connect(&database_url)
+			.await
+			.expect("Failed to connect to SQLite");
+		let pool = Arc::new(pool);
+
+		// Create tables
+		sqlx::query(
+			r#"
+			CREATE TABLE IF NOT EXISTS polls_question (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				question_text VARCHAR(200) NOT NULL,
+				pub_date DATETIME NOT NULL
+			)
+			"#,
+		)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to create polls_question table");
+
+		sqlx::query(
+			r#"
+			CREATE TABLE IF NOT EXISTS polls_choice (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				question_id INTEGER NOT NULL,
+				choice_text VARCHAR(200) NOT NULL,
+				votes INTEGER NOT NULL DEFAULT 0
+			)
+			"#,
+		)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to create polls_choice table");
+
+		// Insert test data
+		let question_id: i64 = sqlx::query_scalar(
+			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+		)
+		.bind("What's your favorite color?")
+		.fetch_one(pool.as_ref())
+		.await
+		.expect("Failed to insert test question");
+
+		sqlx::query(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
+		)
+		.bind(question_id)
+		.bind("Red")
+		.bind(0i32)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to insert choice 1");
+
+		sqlx::query(
+			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
+		)
+		.bind(question_id)
+		.bind("Blue")
+		.bind(0i32)
+		.execute(pool.as_ref())
+		.await
+		.expect("Failed to insert choice 2");
+
+		(temp_file, pool)
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_get_questions_server_fn(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Get questions via server function
+		let result = get_questions().await;
+		assert!(result.is_ok(), "get_questions should succeed");
+
+		let questions = result.unwrap();
+		assert_eq!(questions.len(), 1, "Should have 1 question");
+		assert_eq!(questions[0].question_text, "What's your favorite color?");
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_get_question_detail_server_fn(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Get question detail via server function
+		let result = get_question_detail(1).await;
+		assert!(result.is_ok(), "get_question_detail should succeed");
+
+		let (question, choices) = result.unwrap();
+		assert_eq!(question.question_text, "What's your favorite color?");
+		assert_eq!(choices.len(), 2, "Should have 2 choices");
+		assert_eq!(choices[0].choice_text, "Red");
+		assert_eq!(choices[1].choice_text, "Blue");
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_get_question_detail_not_found(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Get non-existent question
+		let result = get_question_detail(999).await;
+		assert!(
+			result.is_err(),
+			"get_question_detail should fail for non-existent question"
+		);
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_get_question_results_server_fn(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Get question results via server function
+		let result = get_question_results(1).await;
+		assert!(result.is_ok(), "get_question_results should succeed");
+
+		let (question, choices, total_votes) = result.unwrap();
+		assert_eq!(question.question_text, "What's your favorite color?");
+		assert_eq!(choices.len(), 2, "Should have 2 choices");
+		assert_eq!(total_votes, 0, "Should have 0 total votes initially");
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_vote_server_fn(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Vote for a choice
+		let vote_request = VoteRequest {
+			question_id: 1,
+			choice_id: 1, // Vote for "Red"
+		};
+
+		let result = vote(vote_request).await;
+		assert!(result.is_ok(), "vote should succeed");
+
+		let choice_info = result.unwrap();
+		assert_eq!(choice_info.votes, 1, "Choice should have 1 vote");
+
+		// Verify total votes increased
+		let results = get_question_results(1).await.unwrap();
+		assert_eq!(results.2, 1, "Total votes should be 1");
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_vote_wrong_question(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Vote with mismatched question_id and choice_id
+		let vote_request = VoteRequest {
+			question_id: 999, // Wrong question
+			choice_id: 1,
+		};
+
+		let result = vote(vote_request).await;
+		assert!(
+			result.is_err(),
+			"vote should fail when choice doesn't belong to question"
+		);
+	}
+
+	#[rstest]
+	#[tokio::test]
+	async fn test_vote_multiple_times(
+		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>),
+	) {
+		let (_file, _pool) = sqlite_with_test_data.await;
+
+		// Test: Vote multiple times for the same choice
+		let vote_request = VoteRequest {
+			question_id: 1,
+			choice_id: 2, // Vote for "Blue"
+		};
+
+		// First vote
+		vote(vote_request.clone()).await.unwrap();
+		// Second vote
+		vote(vote_request.clone()).await.unwrap();
+		// Third vote
+		vote(vote_request.clone()).await.unwrap();
+
+		// Verify votes counted correctly
+		let results = get_question_results(1).await.unwrap();
+		let blue_choice = results.1.iter().find(|c| c.choice_text == "Blue").unwrap();
+		assert_eq!(blue_choice.votes, 3, "Blue should have 3 votes");
+		assert_eq!(results.2, 3, "Total votes should be 3");
 	}
 }
