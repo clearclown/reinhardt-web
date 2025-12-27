@@ -127,6 +127,163 @@ let json = r#"{"id":2,"title":"Test","code":"fn main(){}","language":"rust"}"#;
 let snippet = serializer.deserialize(json.as_bytes()).unwrap();
 ```
 
+## Serialization Patterns in Reinhardt
+
+Reinhardt supports multiple serialization approaches. Choose the pattern that
+best fits your use case.
+
+### Pattern 1: Simple Serde (Most Common)
+
+For basic validation with standard rules, use serde with the `validator` crate:
+
+```rust
+use serde::{Serialize, Deserialize};
+use validator::Validate;
+
+#[derive(Serialize, Deserialize, Validate)]
+pub struct CreateUserRequest {
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(length(min = 3, max = 20))]
+    pub username: String,
+
+    #[validate(range(min = 18, max = 120))]
+    pub age: i32,
+}
+
+// Use in view
+let request: CreateUserRequest = request.json().await?;
+request.validate()?;  // Validates all fields
+```
+
+**When to use:**
+- Standard validation rules (email, length, range, regex)
+- REST API with JSON
+- No complex business logic needed
+
+**Benefits:**
+- Simple and declarative
+- Works with `#[derive]` macros
+- Well-documented validator crate
+
+---
+
+### Pattern 2: Custom `Serializer` Trait
+
+For complex validation logic or business rules:
+
+```rust
+use reinhardt::prelude::*;
+
+pub struct UserSerializer;
+
+impl Serializer<User> for UserSerializer {
+    fn validate(&self, instance: &User) -> ValidationResult {
+        let mut errors = Vec::new();
+
+        // Complex business rule: username must not contain admin keywords
+        if instance.username.to_lowercase().contains("admin") {
+            errors.push(ValidationError::new(
+                "username",
+                "Username cannot contain 'admin'"
+            ));
+        }
+
+        // Database lookup validation (async)
+        // Check if username is already taken
+        if User::exists_by_username(&instance.username).await {
+            errors.push(ValidationError::new(
+                "username",
+                "Username already taken"
+            ));
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+```
+
+**When to use:**
+- Complex business rules
+- Database lookups in validation
+- Custom error messages
+- Need async validation
+
+**Benefits:**
+- Full control over validation logic
+- Can access database or external services
+- Custom error formatting
+
+---
+
+### Pattern 3: GraphQL InputObject
+
+For GraphQL APIs, use `async-graphql`'s `InputObject`:
+
+```rust
+use async_graphql::InputObject;
+
+#[derive(InputObject)]
+pub struct CreateUserInput {
+    /// User's email address
+    pub email: String,
+
+    /// Username (3-20 characters)
+    pub username: String,
+
+    /// User's age
+    pub age: i32,
+}
+
+// Use in GraphQL mutation
+impl Mutation {
+    async fn create_user(&self, input: CreateUserInput) -> Result<User> {
+        // GraphQL handles deserialization automatically
+        User::create(input.username, input.email, input.age).await
+    }
+}
+```
+
+**When to use:**
+- Building GraphQL APIs
+- Need GraphQL-specific features (field descriptions, deprecation)
+- Want auto-generated GraphQL schema
+
+**Benefits:**
+- GraphQL schema auto-generation
+- Built-in introspection
+- Field-level documentation
+
+**Example:** See [examples/examples-github-issues](../../../../examples/local/examples-github-issues)
+for a complete GraphQL implementation with `InputObject`.
+
+---
+
+### Recommendation Summary
+
+| Use Case | Pattern | Crate |
+|----------|---------|-------|
+| **REST API with standard validation** | Pattern 1 | `serde` + `validator` |
+| **Complex business rules** | Pattern 2 | `reinhardt::Serializer` |
+| **GraphQL API** | Pattern 3 | `async-graphql::InputObject` |
+
+**Quick decision tree:**
+
+1. Are you building a GraphQL API?
+   - **Yes** → Use Pattern 3 (`InputObject`)
+   - **No** → Continue
+
+2. Do you need complex validation (database lookups, custom logic)?
+   - **Yes** → Use Pattern 2 (Custom `Serializer`)
+   - **No** → Use Pattern 1 (Simple Serde + `validator`)
+
+For most REST APIs, **Pattern 1** is the recommended starting point.
+
 ## Model Serializers
 
 For database models, use `ModelSerializer` with custom validation:
@@ -227,9 +384,9 @@ Typical validation workflow in an API view with Reinhardt:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::post;
 
-#[endpoint]
+#[post("/snippets", name = "create_snippet")]
 async fn create_snippet(mut request: Request) -> Result<Response> {
     // 1. Parse JSON from request body (automatic deserialization)
     let body_bytes = std::mem::take(&mut request.body);
@@ -252,7 +409,7 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
 ```
 
 **Key Points:**
-- **Automatic Parsing**: Reinhardt's `#[endpoint]` macro handles Content-Type checking
+- **Automatic Parsing**: Reinhardt's HTTP method decorators handle Content-Type checking
 - **serde_json**: Use `serde_json::from_slice` for JSON deserialization
 - **Validation**: Custom validators return `ValidationResult`
 - **Response Builder**: Use `.with_json()` for JSON responses

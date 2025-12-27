@@ -8,10 +8,10 @@ Reinhardt's `Request` object provides access to HTTP request data:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::get;
 use hyper::{Method, StatusCode};
 
-#[endpoint]
+#[get("/example", name = "my_view")]
 async fn my_view(request: Request) -> Result<Response> {
     // Access HTTP method
     match request.method {
@@ -103,7 +103,7 @@ Reinhardt provides convenient helper methods on the `Request` type for parsing r
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::post;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -113,7 +113,7 @@ struct CreateSnippet {
     language: String,
 }
 
-#[endpoint]
+#[post("/snippets", name = "create_snippet")]
 async fn create_snippet(mut request: Request) -> Result<Response> {
     // Recommended: Use request helper method for JSON parsing
     let data: CreateSnippet = request.json().await?;
@@ -124,6 +124,41 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
     Response::new(201)
         .with_json(&data)
 }
+```
+
+**What `request.json()` does:**
+
+1. **Content-Type validation** - Checks that `Content-Type: application/json` header is present
+   - Returns error if header is missing or incorrect
+   - Prevents attempting to parse non-JSON data
+
+2. **Deserialization** - Parses request body as JSON using serde
+   - Validates against type `T`'s schema
+   - Returns structured data or detailed error
+
+3. **Error handling** - Returns `Result<T, Box<dyn std::error::Error>>`
+   - Invalid JSON syntax → Parse error
+   - Missing required fields → Validation error
+   - Type mismatches → Deserialization error
+
+**Error handling examples:**
+
+```rust
+// Explicit error handling
+let data: CreateSnippet = match request.json().await {
+    Ok(d) => d,
+    Err(e) => {
+        // Handles: missing Content-Type, invalid JSON, validation errors
+        return Response::bad_request()
+            .with_body(&format!("Invalid request: {}", e));
+    }
+};
+```
+
+```rust
+// Using `?` operator (recommended - cleaner)
+let data: CreateSnippet = request.json().await?;
+// Automatically returns error response (400 Bad Request) on failure
 ```
 
 **Available Helper Methods:**
@@ -142,7 +177,7 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
 For special parsing requirements, you can manually parse the request body:
 
 ```rust
-#[endpoint]
+#[post("/snippets", name = "create_snippet_manual")]
 async fn create_snippet_manual(mut request: Request) -> Result<Response> {
     // Manual parsing for advanced use cases
     let body_bytes = std::mem::take(&mut request.body);
@@ -164,10 +199,10 @@ Reinhardt supports multiple content types:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::post;
 use serde_json::Value;
 
-#[endpoint]
+#[post("/handle", name = "handle_request")]
 async fn handle_request(mut request: Request) -> Result<Response> {
     let content_type = request.headers
         .get("content-type")
@@ -201,9 +236,9 @@ Handle errors gracefully:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::post;
 
-#[endpoint]
+#[post("/safe", name = "safe_view")]
 async fn safe_view(mut request: Request) -> Result<Response> {
     // Parse and validate data
     let body_bytes = std::mem::take(&mut request.body);
@@ -232,7 +267,7 @@ Full request/response handling using Reinhardt's helper methods:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::endpoint;
 use serde::{Serialize, Deserialize};
 use hyper::Method;
 
@@ -256,7 +291,7 @@ fn validate_snippet(snippet: &Snippet) -> Result<(), String> {
     Ok(())
 }
 
-#[endpoint]
+#[get("/snippets", name = "snippet_list")]
 async fn snippet_list(mut request: Request) -> Result<Response> {
     match request.method {
         Method::GET => {

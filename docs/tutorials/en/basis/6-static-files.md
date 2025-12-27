@@ -1,250 +1,759 @@
-# Part 6: Static Files
+# Part 6: Static Files and Styling
 
-In this tutorial, we'll add CSS stylesheets and images to make our polls application look better.
+In this tutorial, we'll add CSS stylesheets and images to make our polls application look better using reinhardt-pages' approach to static file management.
 
-## What are Static Files?
+## Understanding Static Files in reinhardt-pages
 
-Static files are assets like CSS, JavaScript, images, and fonts that don't change during runtime. Reinhardt provides a comprehensive system for managing and serving these files.
+Static files are assets like CSS, JavaScript, images, and fonts that don't change during runtime. In reinhardt-pages applications, static files are managed differently from traditional server-rendered frameworks:
 
-## Configuring Static Files
-
-First, add the static files dependency to `Cargo.toml`:
-
-```toml
-[dependencies]
-reinhardt = { version = "0.1.0-alpha.1", features = ["static"] }
+**Traditional Approach (Server-Side):**
+```html
+<!-- Tera template -->
+<link rel="stylesheet" href="{{ 'polls/css/style.css'|static }}">
 ```
 
-Create a directory structure for static files:
+**reinhardt-pages Approach (WASM + Trunk):**
+1. **CDN Resources**: External libraries loaded from CDNs (e.g., Bootstrap)
+2. **Local Assets**: Static files bundled by Trunk during build
+3. **Direct References**: Files referenced directly in `index.html`
 
-```bash
-mkdir -p static/polls/css
-mkdir -p static/polls/images
-```
+## Current Setup: Bootstrap Integration
 
-## Adding a Stylesheet
-
-Create `static/polls/css/style.css`:
-
-```css
-body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f5f5;
-  margin: 0;
-  padding: 20px;
-}
-
-h1 {
-  color: #2c3e50;
-  border-bottom: 3px solid #3498db;
-  padding-bottom: 10px;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  background-color: white;
-  margin: 10px 0;
-  padding: 15px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-li a {
-  color: #3498db;
-  text-decoration: none;
-  font-size: 18px;
-}
-
-li a:hover {
-  color: #2980b9;
-  text-decoration: underline;
-}
-
-form {
-  background-color: white;
-  padding: 20px;
-  border-radius: 5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-input[type="radio"] {
-  margin-right: 10px;
-}
-
-label {
-  font-size: 16px;
-  margin: 10px 0;
-  display: block;
-}
-
-input[type="submit"] {
-  background-color: #3498db;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 15px;
-}
-
-input[type="submit"]:hover {
-  background-color: #2980b9;
-}
-
-.no-polls {
-  text-align: center;
-  color: #7f8c8d;
-  font-size: 18px;
-  padding: 40px;
-}
-```
-
-## Using Static Files in Templates
-
-Update your templates to use the static files. Modify `templates/polls/index.html`:
+Our application already uses Bootstrap 5.3.0 from a CDN. Let's review the current `index.html`:
 
 ```html
+<!-- index.html -->
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Polls</title>
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="{{ 'polls/css/style.css'|static }}"
-    />
-  </head>
-  <body>
-    <h1>Latest Polls</h1>
-
-    {% if latest_question_list %}
-    <ul>
-      {% for question in latest_question_list %}
-      <li>
-        <a href="{% url 'polls:detail' question.id %}">
-          {{ question.question_text }}
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="no-polls">No polls are available.</p>
-    {% endif %}
-  </body>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Polls App - Reinhardt Tutorial</title>
+	<!-- Bootstrap CSS from CDN -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+	<div id="root">
+		<div class="container mt-5 text-center">
+			<div class="spinner-border text-primary" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	</div>
+</body>
 </html>
 ```
 
-The `{{ 'polls/css/style.css'|static }}` template tag generates the correct URL for the static file.
+**Benefits of CDN Approach:**
+- No bundling overhead for common libraries
+- Faster initial load (browser caching)
+- Automatic updates (use versioned URLs in production)
+- Reduced WASM bundle size
+
+## Adding Custom CSS
+
+To customize the appearance beyond Bootstrap's defaults, create a custom stylesheet.
+
+### Step 1: Create Static Directory
+
+```bash
+mkdir -p static/css
+mkdir -p static/images
+```
+
+### Step 2: Create Custom Stylesheet
+
+Create `static/css/polls.css`:
+
+```css
+/* Custom polls styling (extends Bootstrap) */
+
+/* Override Bootstrap defaults */
+:root {
+	--polls-primary: #4a90e2;
+	--polls-primary-dark: #357abd;
+	--polls-secondary: #6c757d;
+	--polls-success: #28a745;
+	--polls-danger: #dc3545;
+}
+
+/* Custom question card styling */
+.question-card {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	border-radius: 15px;
+	padding: 2rem;
+	margin-bottom: 2rem;
+	box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+}
+
+.question-card h1 {
+	font-weight: 700;
+	margin-bottom: 1.5rem;
+}
+
+/* Custom form check styling */
+.form-check-custom {
+	background-color: #f8f9fa;
+	border: 2px solid #e9ecef;
+	border-radius: 10px;
+	padding: 1rem;
+	margin-bottom: 1rem;
+	transition: all 0.3s ease;
+}
+
+.form-check-custom:hover {
+	border-color: var(--polls-primary);
+	background-color: #e7f3ff;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(74, 144, 226, 0.2);
+}
+
+.form-check-custom input[type="radio"]:checked + label {
+	color: var(--polls-primary);
+	font-weight: 600;
+}
+
+/* Results visualization */
+.result-bar-container {
+	background-color: #e9ecef;
+	border-radius: 10px;
+	overflow: hidden;
+	margin-bottom: 1rem;
+}
+
+.result-bar {
+	background: linear-gradient(90deg, var(--polls-primary), var(--polls-primary-dark));
+	color: white;
+	padding: 0.75rem 1rem;
+	font-weight: 600;
+	transition: width 0.5s ease;
+}
+
+.result-percentage {
+	float: right;
+	font-size: 0.9rem;
+}
+
+/* Loading spinner customization */
+.spinner-custom {
+	width: 3rem;
+	height: 3rem;
+	border-width: 0.3rem;
+}
+
+/* Alert customization */
+.alert-custom {
+	border-radius: 10px;
+	border: none;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Button enhancements */
+.btn-custom-primary {
+	background: linear-gradient(135deg, var(--polls-primary), var(--polls-primary-dark));
+	border: none;
+	padding: 0.75rem 2rem;
+	font-weight: 600;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-custom-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 12px rgba(74, 144, 226, 0.3);
+}
+
+.btn-custom-primary:active {
+	transform: translateY(0);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+	.question-card {
+		padding: 1.5rem;
+	}
+
+	.form-check-custom {
+		padding: 0.75rem;
+	}
+}
+```
+
+### Step 3: Reference in index.html
+
+Update `index.html` to include the custom stylesheet:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Polls App - Reinhardt Tutorial</title>
+
+	<!-- Bootstrap CSS from CDN -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+	<!-- Custom CSS -->
+	<link rel="stylesheet" href="/static/css/polls.css">
+</head>
+<body>
+	<div id="root">
+		<div class="container mt-5 text-center">
+			<div class="spinner-border text-primary spinner-custom" role="status">
+				<span class="visually-hidden">Loading...</span>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
+```
+
+### Step 4: Configure Trunk to Serve Static Files
+
+Update `Trunk.toml` to configure static file serving:
+
+```toml
+[build]
+target = "index.html"
+public-url = "/"
+dist = "dist"
+filehash = false  # Disable for development, enable for production
+
+[watch]
+watch = ["src/", "index.html", "static/"]  # Watch static files for changes
+
+[serve]
+addresses = ["127.0.0.1"]
+port = 8080
+open = false
+
+# Copy static directory to dist directory
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "mkdir -p dist/static && cp -r static/* dist/static/"]
+```
+
+**Alternative: Use `trunk` data attributes**
+
+You can also use Trunk's built-in asset handling:
+
+```html
+<!-- index.html -->
+<head>
+	<!-- Trunk will copy this file to dist/ -->
+	<link data-trunk rel="css" href="static/css/polls.css">
+</head>
+```
+
+With this approach, Trunk automatically copies and optionally processes the file.
+
+## Using Custom Styles in Components
+
+Apply the custom classes in your components:
+
+### Updated Index Page
+
+```rust
+// src/client/components/polls.rs
+pub fn polls_index() -> View {
+	// ... state management
+
+	page!(|questions_list: Vec<QuestionInfo>, loading_state: bool, error_state: Option<String>| {
+		div {
+			class: "container mt-5",
+
+			if let Some(ref err) = error_state {
+				div {
+					class: "alert alert-danger alert-custom",
+					{err}
+				}
+			} else if loading_state {
+				div {
+					class: "text-center",
+					div {
+						class: "spinner-border text-primary spinner-custom",
+						role: "status",
+						span {
+							class: "visually-hidden",
+							"Loading..."
+						}
+					}
+				}
+			} else {
+				div {
+					h1 { class: "mb-4 text-center", "Latest Polls" }
+
+					if questions_list.is_empty() {
+						div {
+							class: "alert alert-info alert-custom text-center",
+							"No polls are available."
+						}
+					} else {
+						div {
+							class: "list-group",
+							for question in &questions_list {
+								a {
+									href: format!("/polls/{}/", question.id),
+									class: "list-group-item list-group-item-action",
+									{&question.question_text}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	})(questions_list, loading_state, error_state)
+}
+```
+
+### Updated Detail Page with Custom Form Styling
+
+```rust
+pub fn polls_detail_page(question_id: i64) -> View {
+	// ... state management and event handlers
+
+	page!(|
+		question_data: Option<QuestionInfo>,
+		choices_data: Vec<ChoiceInfo>,
+		form_error_state: Option<String>,
+		voting_state: bool,
+		selected: Option<i64>,
+		handle_submit: impl Fn(web_sys::Event) + 'static,
+		handle_choice_change: impl Fn(web_sys::Event) + 'static
+	| {
+		div {
+			class: "container mt-5",
+
+			if let Some(ref q) = question_data {
+				// Question card with custom styling
+				div {
+					class: "question-card",
+					h1 { {&q.question_text} }
+				}
+
+				if let Some(ref form_err) = form_error_state {
+					div {
+						class: "alert alert-warning alert-custom",
+						{form_err}
+					}
+				}
+
+				form {
+					onsubmit: handle_submit,
+
+					div {
+						class: "mb-4",
+						for choice in &choices_data {
+							div {
+								class: "form-check form-check-custom",
+								input {
+									class: "form-check-input",
+									type: "radio",
+									name: "choice",
+									id: format!("choice{}", choice.id),
+									value: choice.id.to_string(),
+									onchange: handle_choice_change.clone(),
+									checked: selected == Some(choice.id)
+								}
+								label {
+									class: "form-check-label",
+									for: format!("choice{}", choice.id),
+									{&choice.choice_text}
+								}
+							}
+						}
+					}
+
+					button {
+						class: "btn btn-custom-primary",
+						type: "submit",
+						disabled: voting_state,
+						if voting_state {
+							"Voting..."
+						} else {
+							"Vote"
+						}
+					}
+
+					" "
+					a {
+						href: format!("/polls/{}/results/", q.id),
+						class: "btn btn-secondary",
+						"View Results"
+					}
+				}
+			}
+		}
+	})(
+		question_data,
+		choices_data,
+		form_error_state,
+		voting_state,
+		selected,
+		handle_submit,
+		handle_choice_change
+	)
+}
+```
+
+### Updated Results Page with Progress Bars
+
+```rust
+pub fn polls_results_page(question_id: i64) -> View {
+	// ... state management
+
+	page!(|
+		question_data: Option<QuestionInfo>,
+		choices_data: Vec<ChoiceInfo>,
+		total_votes: i32,
+		loading_state: bool,
+		error_state: Option<String>
+	| {
+		div {
+			class: "container mt-5",
+
+			if let Some(ref q) = question_data {
+				// Question card
+				div {
+					class: "question-card",
+					h1 { {&q.question_text} }
+					p {
+						class: "mb-0",
+						"Total votes: " {total_votes.to_string()}
+					}
+				}
+
+				// Results visualization
+				div {
+					class: "mt-4",
+					for choice in &choices_data {
+						let percentage = if total_votes > 0 {
+							(choice.votes as f64 / total_votes as f64 * 100.0) as i32
+						} else {
+							0
+						};
+
+						div {
+							class: "result-bar-container",
+							div {
+								class: "result-bar",
+								style: format!("width: {}%", percentage),
+								span { {&choice.choice_text} }
+								span {
+									class: "result-percentage",
+									{format!("{}% ({} votes)", percentage, choice.votes)}
+								}
+							}
+						}
+					}
+				}
+
+				// Actions
+				div {
+					class: "mt-4",
+					a {
+						href: format!("/polls/{}/", q.id),
+						class: "btn btn-primary",
+						"Vote Again"
+					}
+					" "
+					a {
+						href: "/",
+						class: "btn btn-secondary",
+						"← Back to Polls"
+					}
+				}
+			}
+		}
+	})(question_data, choices_data, total_votes, loading_state, error_state)
+}
+```
 
 ## Adding Images
 
-Let's add a background image. Download an image or create one, and save it as `static/polls/images/background.png`.
+To add images to your application:
 
-Update your CSS to use the image:
+### Step 1: Add Image Files
+
+```bash
+# Add a logo
+cp /path/to/logo.png static/images/logo.png
+
+# Add a background pattern
+cp /path/to/pattern.svg static/images/pattern.svg
+```
+
+### Step 2: Reference in CSS
+
+Update `static/css/polls.css`:
 
 ```css
+/* Add background pattern */
 body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-    url("../images/background.png");
-  background-size: cover;
-  background-attachment: fixed;
-  margin: 0;
-  padding: 20px;
+	background-image: url('/static/images/pattern.svg');
+	background-repeat: repeat;
+	background-size: 50px 50px;
+}
+
+/* Add logo to question card */
+.question-card::before {
+	content: '';
+	display: block;
+	width: 60px;
+	height: 60px;
+	background-image: url('/static/images/logo.png');
+	background-size: contain;
+	background-repeat: no-repeat;
+	margin-bottom: 1rem;
 }
 ```
 
-**Important**: In CSS files, use relative paths (like `../images/background.png`) instead of the `static` template tag. This ensures the paths work correctly regardless of your `STATIC_URL` configuration.
+### Step 3: Reference in Components (Alternative)
 
-## Configuring Static File Serving
-
-Update `src/main.rs` to serve static files:
+You can also reference images directly in components:
 
 ```rust
-use reinhardt::prelude::*;
-use reinhardt::static_files::{StaticFilesHandler, StaticFilesConfig};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // ... existing setup code ...
-
-    // Configure static files
-    let static_config = StaticFilesConfig {
-        static_root: "static".to_string(),
-        static_url: "/static/".to_string(),
-        staticfiles_dirs: vec![],
-    };
-
-    let static_handler = StaticFilesHandler::new(static_config);
-
-    // Add static file route
-    router.add_route(
-        path("/static/{path:.*}", static_handler)
-    );
-
-    // ... rest of setup ...
-}
+page!(|| {
+	div {
+		class: "text-center",
+		img {
+			src: "/static/images/logo.png",
+			alt: "Polls App Logo",
+			class: "img-fluid mb-4",
+			style: "max-width: 200px"
+		}
+		h1 { "Welcome to Polls App" }
+	}
+})()
 ```
 
-## Static File Namespacing
+## Building for Production
 
-Just like templates, it's a good practice to namespace your static files by putting them in a directory named after your app. This prevents naming conflicts:
+When building for production, Trunk optimizes static files automatically.
+
+### Step 1: Enable File Hashing
+
+Update `Trunk.toml`:
+
+```toml
+[build]
+target = "index.html"
+public-url = "/"
+dist = "dist"
+filehash = true  # Enable cache-busting file hashes
+minify = "on"    # Minify HTML, CSS, JS
+
+[watch]
+watch = ["src/", "index.html", "static/"]
+
+[[hooks]]
+stage = "pre_build"
+command = "sh"
+command_arguments = ["-c", "mkdir -p dist/static && cp -r static/* dist/static/"]
+```
+
+### Step 2: Build for Production
+
+```bash
+# Build with optimizations
+trunk build --release
+
+# Output will be in dist/
+# - index.html (minified)
+# - *.wasm (optimized WASM bundle)
+# - *.js (optimized JS glue code)
+# - static/ (copied assets with hashed filenames if enabled)
+```
+
+### Step 3: Deploy
+
+The `dist/` directory contains all files needed for deployment:
+
+```bash
+# Deploy to static hosting (e.g., Netlify, Vercel, GitHub Pages)
+cd dist
+# Upload to your hosting service
+
+# Or serve with a simple HTTP server
+python -m http.server 8080
+```
+
+## Static File Organization Best Practices
+
+### Recommended Directory Structure
+
+```
+project/
+├── static/
+│   ├── css/
+│   │   ├── polls.css
+│   │   └── admin.css
+│   ├── images/
+│   │   ├── logo.png
+│   │   ├── favicon.ico
+│   │   └── backgrounds/
+│   │       └── pattern.svg
+│   ├── fonts/
+│   │   └── custom-font.woff2
+│   └── icons/
+│       └── sprite.svg
+├── index.html
+├── Trunk.toml
+└── src/
+    └── ...
+```
+
+### Namespacing by Feature
+
+For larger applications, organize by feature:
 
 ```
 static/
-    polls/
-        css/
-            style.css
-        images/
-            background.png
-            logo.png
-    admin/
-        css/
-            admin.css
+├── common/
+│   ├── css/
+│   │   └── base.css
+│   └── images/
+│       └── logo.png
+├── polls/
+│   ├── css/
+│   │   └── polls.css
+│   └── images/
+│       └── poll-icon.svg
+└── admin/
+    ├── css/
+    │   └── admin.css
+    └── images/
+        └── admin-icon.svg
 ```
 
-## Collecting Static Files for Production
+Reference in `index.html`:
 
-In production, you'll want to collect all static files into a single directory for efficient serving. Reinhardt provides the `collectstatic` command through the `manage` binary:
+```html
+<link rel="stylesheet" href="/static/common/css/base.css">
+<link rel="stylesheet" href="/static/polls/css/polls.css">
+```
+
+## CDN Integration for Production
+
+For better performance in production, serve static files from a CDN:
+
+### Option 1: Use Existing CDNs
+
+```html
+<!-- Use popular CDN services -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+```
+
+### Option 2: Deploy to Your Own CDN
+
+```toml
+# Trunk.toml for CDN deployment
+[build]
+target = "index.html"
+public-url = "https://cdn.example.com/polls-app/"  # CDN URL
+dist = "dist"
+filehash = true
+minify = "on"
+```
+
+After building, upload `dist/` to your CDN, and the application will automatically use the CDN URLs.
+
+## Optimization Techniques
+
+### 1. Image Optimization
+
+Before adding images, optimize them:
 
 ```bash
-cargo run --bin manage collectstatic
+# Install image optimization tools
+brew install imageoptim-cli  # macOS
+# or
+sudo apt-get install imagemagick  # Linux
+
+# Optimize PNG
+imageoptim static/images/*.png
+
+# Convert to WebP for better compression
+convert static/images/logo.png static/images/logo.webp
 ```
 
-This collects all static files from your apps into a single `STATIC_ROOT` directory configured in your settings.
+Use WebP with fallback:
 
-## Static File Optimization
+```html
+<picture>
+	<source srcset="/static/images/logo.webp" type="image/webp">
+	<img src="/static/images/logo.png" alt="Logo">
+</picture>
+```
 
-For production, consider:
+### 2. CSS Optimization
 
-1. **File hashing**: Append hashes to filenames for cache busting
-2. **Compression**: Gzip or Brotli compression for faster transfers
-3. **CDN**: Serve static files from a CDN for better performance
-4. **Minification**: Minify CSS and JavaScript files
+Use CSS purging to remove unused styles:
 
-Reinhardt provides built-in support for these optimizations through the `static` feature.
+```bash
+# Install PurgeCSS
+npm install -g purgecss
+
+# Purge unused CSS
+purgecss --css static/css/polls.css --content src/**/*.rs dist/index.html --output static/css/
+```
+
+### 3. Font Loading Optimization
+
+Use `font-display: swap` for custom fonts:
+
+```css
+@font-face {
+	font-family: 'CustomFont';
+	src: url('/static/fonts/custom-font.woff2') format('woff2');
+	font-display: swap;  /* Show fallback font immediately */
+}
+```
+
+### 4. Lazy Loading Images
+
+For images below the fold:
+
+```rust
+img {
+	src: "/static/images/large-image.jpg",
+	loading: "lazy",  // Browser-native lazy loading
+	alt: "Description"
+}
+```
 
 ## Summary
 
 In this tutorial, you learned:
 
-- How to organize static files in your project
-- How to create and use CSS stylesheets
-- How to reference static files in templates using the `static` filter
-- How to use relative paths for resources in CSS files
-- How to configure static file serving
-- Best practices for static file namespacing
+- **Static File Management in reinhardt-pages**: Different from traditional server-rendered approaches
+- **Bootstrap Integration**: Using CDN for common libraries
+- **Custom CSS**: Creating and referencing custom stylesheets
+- **Trunk Configuration**: Configuring Trunk to handle static assets
+- **Component Styling**: Applying custom styles in reinhardt-pages components
+- **Image Assets**: Adding and optimizing images
+- **Production Build**: Optimizing for production with file hashing and minification
+- **CDN Integration**: Serving static files from CDNs for better performance
+- **Optimization Techniques**: Image optimization, CSS purging, font loading, lazy loading
 
-Your polls app now has a clean, professional appearance!
+**Key Differences from Traditional Approaches:**
+
+| Aspect | Traditional (Tera) | reinhardt-pages |
+|--------|-------------------|-----------------|
+| Asset Reference | `{{ 'file.css'\|static }}` tag | Direct URL in `index.html` or Trunk data attributes |
+| Build Tool | `collectstatic` command | Trunk build system |
+| Processing | Server-side collection | WASM bundling + Trunk asset pipeline |
+| Deployment | Separate static file server | Single `dist/` directory |
+| Optimization | Manual configuration | Trunk built-in optimizations |
+
+Your polls app now has a clean, professional appearance with custom styling!
 
 ## What's Next?
 
-In the final tutorial, we'll explore the Reinhardt admin interface and learn how to customize it for managing poll data.
+In the final tutorial, we'll explore the Reinhardt admin interface and learn how to customize it for managing poll data. Note that the admin panel uses a different rendering approach, so concepts from this tutorial will be adapted accordingly.
 
 Continue to [Part 7: Admin Customization](7-admin-customization.md).

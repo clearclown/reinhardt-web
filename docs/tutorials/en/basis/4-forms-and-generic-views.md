@@ -1,340 +1,771 @@
-# Part 4: Forms and Generic Views
+# Part 4: Client-Side Forms and Component Patterns
 
-In this tutorial, we'll process form submissions and refactor our views using generic views.
+In this tutorial, we'll implement form handling in reinhardt-pages using client-side components and server functions.
 
-## Writing a Simple Form
+## Understanding Form Handling in reinhardt-pages
 
-Let's implement the voting functionality using Reinhardt's modern endpoint system. Update the vote view in `polls/views.rs`:
+Unlike traditional server-rendered forms (using templates like Tera), reinhardt-pages handles forms on the client side with WASM components that communicate with server functions.
+
+**Key Concepts:**
+
+1. **Client-Side Form State**: Use `use_state()` to manage form data (selected choices, input values, etc.)
+2. **Event Handlers**: Attach event listeners to form elements for user interactions
+3. **Server Functions**: Call server functions for data persistence and validation
+4. **Error Handling**: Display validation errors and server errors to users
+5. **Navigation**: Client-side navigation after successful form submission
+
+## Writing a Client-Side Form
+
+Let's implement the voting functionality. We already created the form structure in Part 3, but now we'll add proper state management and error handling.
+
+### Update the Detail Page Component
+
+Update `src/client/components/polls.rs` to add comprehensive form handling:
 
 ```rust
-use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
-use reinhardt_db::backends::DatabaseConnection;
-use std::sync::Arc;
+// src/client/components/polls.rs
+use reinhardt_pages::prelude::*;
+use crate::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
+use crate::server_fn::polls::{get_question_detail, vote};
 
-#[derive(serde::Deserialize)]
-struct VoteForm {
-    choice: i64,
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_futures::spawn_local;
+
+pub fn polls_detail_page(question_id: i64) -> View {
+	// State management
+	let (question, set_question) = use_state(None::<QuestionInfo>);
+	let (choices, set_choices) = use_state(Vec::<ChoiceInfo>::new());
+	let (loading, set_loading) = use_state(true);
+	let (error, set_error) = use_state(None::<String>);
+
+	// Form state
+	let (selected_choice, set_selected_choice) = use_state(None::<i64>);
+	let (voting, set_voting) = use_state(false);
+	let (form_error, set_form_error) = use_state(None::<String>);
+
+	// Load question and choices on mount
+	#[cfg(target_arch = "wasm32")]
+	{
+		let set_question = set_question.clone();
+		let set_choices = set_choices.clone();
+		let set_loading = set_loading.clone();
+		let set_error = set_error.clone();
+
+		spawn_local(async move {
+			match get_question_detail(question_id).await {
+				Ok((q, c)) => {
+					set_question(Some(q));
+					set_choices(c);
+					set_loading(false);
+				}
+				Err(e) => {
+					set_error(Some(e.to_string()));
+					set_loading(false);
+				}
+			}
+		});
+	}
+
+	// Handle choice selection
+	let handle_choice_change = {
+		let set_selected_choice = set_selected_choice.clone();
+		let set_form_error = set_form_error.clone();
+
+		move |e: web_sys::Event| {
+			if let Some(target) = e.target() {
+				if let Some(input) = target.dyn_ref::<web_sys::HtmlInputElement>() {
+					if let Ok(choice_id) = input.value().parse::<i64>() {
+						set_selected_choice(Some(choice_id));
+						set_form_error(None); // Clear error when user selects
+					}
+				}
+			}
+		}
+	};
+
+	// Handle form submission
+	let handle_submit = {
+		let selected_choice = selected_choice.clone();
+		let set_voting = set_voting.clone();
+		let set_form_error = set_form_error.clone();
+		let question_id = question_id;
+
+		move |e: web_sys::Event| {
+			e.prevent_default();
+
+			// Client-side validation
+			let selected = selected_choice.get().clone();
+			if selected.is_none() {
+				set_form_error(Some("Please select a choice.".to_string()));
+				return;
+			}
+
+			let choice_id = selected.unwrap();
+			let set_voting = set_voting.clone();
+			let set_form_error = set_form_error.clone();
+
+			// Submit to server
+			#[cfg(target_arch = "wasm32")]
+			spawn_local(async move {
+				set_voting(true);
+
+				match vote(VoteRequest { question_id, choice_id }).await {
+					Ok(_) => {
+						// Navigate to results page
+						if let Some(window) = web_sys::window() {
+							if let Ok(location) = window.location() {
+								let _ = location.set_href(&format!("/polls/{}/results/", question_id));
+							}
+						}
+					}
+					Err(e) => {
+						set_form_error(Some(format!("Vote failed: {}", e)));
+						set_voting(false);
+					}
+				}
+			});
+		}
+	};
+
+	// Get current state for rendering
+	let question_data = question.get();
+	let choices_data = choices.get();
+	let loading_state = loading.get();
+	let error_state = error.get();
+	let form_error_state = form_error.get();
+	let voting_state = voting.get();
+	let selected = selected_choice.get();
+
+	page!(|
+		question_data: Option<QuestionInfo>,
+		choices_data: Vec<ChoiceInfo>,
+		loading_state: bool,
+		error_state: Option<String>,
+		form_error_state: Option<String>,
+		voting_state: bool,
+		selected: Option<i64>,
+		handle_submit: impl Fn(web_sys::Event) + 'static,
+		handle_choice_change: impl Fn(web_sys::Event) + 'static
+	| {
+		div {
+			class: "container mt-5",
+
+			if let Some(ref err) = error_state {
+				div {
+					class: "alert alert-danger",
+					{err}
+				}
+			} else if loading_state {
+				div {
+					class: "spinner-border text-primary",
+					role: "status",
+					span {
+						class: "visually-hidden",
+						"Loading..."
+					}
+				}
+			} else if let Some(ref q) = question_data {
+				div {
+					h1 { class: "mb-4", {&q.question_text} }
+
+					if let Some(ref form_err) = form_error_state {
+						div {
+							class: "alert alert-warning",
+							{form_err}
+						}
+					}
+
+					form {
+						onsubmit: handle_submit,
+
+						div {
+							class: "mb-3",
+							for choice in &choices_data {
+								div {
+									class: "form-check",
+									input {
+										class: "form-check-input",
+										type: "radio",
+										name: "choice",
+										id: format!("choice{}", choice.id),
+										value: choice.id.to_string(),
+										onchange: handle_choice_change.clone(),
+										checked: selected == Some(choice.id)
+									}
+									label {
+										class: "form-check-label",
+										for: format!("choice{}", choice.id),
+										{&choice.choice_text}
+									}
+								}
+							}
+						}
+
+						button {
+							class: "btn btn-primary",
+							type: "submit",
+							disabled: voting_state,
+							if voting_state {
+								"Voting..."
+							} else {
+								"Vote"
+							}
+						}
+
+						" "
+						a {
+							href: format!("/polls/{}/results/", q.id),
+							class: "btn btn-secondary",
+							"View Results"
+						}
+					}
+				}
+			} else {
+				div {
+					class: "alert alert-info",
+					"Question not found"
+				}
+			}
+
+			div {
+				class: "mt-3",
+				a {
+					href: "/",
+					class: "btn btn-link",
+					"← Back to Polls"
+				}
+			}
+		}
+	})(
+		question_data,
+		choices_data,
+		loading_state,
+		error_state,
+		form_error_state,
+		voting_state,
+		selected,
+		handle_submit,
+		handle_choice_change
+	)
 }
+```
 
-#[endpoint]
+**Key Features:**
+
+1. **Form State Management**:
+   - `selected_choice` - Currently selected radio button
+   - `voting` - Loading state during submission
+   - `form_error` - Client-side validation errors
+
+2. **Event Handlers**:
+   - `handle_choice_change` - Updates selected choice when user clicks radio button
+   - `handle_submit` - Validates and submits form
+
+3. **Client-Side Validation**:
+   - Check if a choice is selected before submission
+   - Clear error messages when user interacts with form
+
+4. **Error Display**:
+   - Show form validation errors
+   - Show server errors from failed submissions
+   - Different styling for different error types
+
+## Server-Side Validation and Processing
+
+The server function handles data persistence and server-side validation. Update `src/server_fn/polls.rs`:
+
+```rust
+// src/server_fn/polls.rs
+use crate::shared::types::{ChoiceInfo, VoteRequest};
+
+#[cfg(not(target_arch = "wasm32"))]
+use reinhardt::pages::server_fn::{server_fn, ServerFnError};
+#[cfg(target_arch = "wasm32")]
+use reinhardt_pages::server_fn::{server_fn, ServerFnError};
+
+/// Vote for a choice
+///
+/// Server-side validation and atomic database update.
+#[cfg(not(target_arch = "wasm32"))]
+#[server_fn(use_inject = true)]
 pub async fn vote(
-    request: Request,
-    #[inject] conn: Arc<DatabaseConnection>,
-) -> Result<Response> {
-    // Extract question_id from path parameters
-    let question_id: i64 = request.path_params
-        .get("question_id")
-        .ok_or("Missing question_id")?
-        .parse()?;
+	request: VoteRequest,
+	#[inject] _db: reinhardt::DatabaseConnection,
+) -> std::result::Result<ChoiceInfo, ServerFnError> {
+	use crate::apps::polls::models::Choice;
+	use reinhardt::Model;
 
-    // Get the question
-    let question = crate::models::Question::get(&conn, question_id)
-        .await?
-        .ok_or("Question not found")?;
+	let choice_manager = Choice::objects();
 
-    // Parse form data using Reinhardt's helper method
-    let form_data: VoteForm = request.parse_form().await?;
-    let choice_id = form_data.choice;
+	// Server-side validation: Get the choice
+	let mut choice = choice_manager
+		.get(request.choice_id)
+		.first()
+		.await
+		.map_err(|e| ServerFnError::ServerError(e.to_string()))?
+		.ok_or_else(|| ServerFnError::ServerError("Choice not found".to_string()))?;
 
-    // Verify the choice belongs to this question
-    let choice = crate::models::Choice::get(&conn, choice_id)
-        .await?
-        .ok_or("Choice not found")?;
+	// Server-side validation: Verify the choice belongs to the question
+	if choice.question_id != request.question_id {
+		return Err(ServerFnError::ServerError(
+			"Choice does not belong to this question".to_string(),
+		));
+	}
 
-    if choice.question_id != question_id {
-        return Err("Invalid choice for this question".into());
-    }
+	// Atomic increment using database-level operation
+	// This prevents race conditions
+	choice.votes += 1;
 
-    // Increment the vote count
-    crate::models::Choice::increment_votes(&conn, choice_id).await?;
+	// Update in database
+	let updated_choice = choice_manager
+		.update(&choice)
+		.await
+		.map_err(|e| ServerFnError::ServerError(e.to_string()))?;
 
-    // Redirect to results page
-    Response::redirect(&format!("/polls/{}/results/", question_id))
+	Ok(ChoiceInfo::from(updated_choice))
+}
+
+#[cfg(target_arch = "wasm32")]
+#[server_fn]
+pub async fn vote(_request: VoteRequest) -> std::result::Result<ChoiceInfo, ServerFnError> {
+	unreachable!()
 }
 ```
 
-**Key improvements:**
-- `#[endpoint]` macro for automatic request handling
-- `#[inject]` for dependency injection of database connection
-- `request.parse_form().await?` for clean form parsing
-- `Response::redirect()` for type-safe redirects
-- No manual `extensions.get()` - DI handles it
+**Server-Side Validation Benefits:**
 
-Since we're using `#[derive(Model)]`, the `get` method is automatically available through the QuerySet API. For incrementing votes, we'll use F expressions for atomic database updates:
+1. **Security**: Never trust client-side validation alone
+2. **Data Integrity**: Verify business rules at the server
+3. **Consistency**: Centralized validation logic
+4. **Error Messages**: Provide detailed feedback to clients
+
+**Race Condition Prevention:**
+
+For atomic updates, use database-level operations:
 
 ```rust
-use reinhardt::prelude::*;
+// Future enhancement: Use F expressions for atomic updates
+use reinhardt::db::orm::F;
 
-// Get a choice by ID (using generated QuerySet methods)
-let choice = Choice::objects()
-    .filter(Choice::field_id().eq(choice_id))
-    .first(&conn)
-    .await?;
-
-// Increment vote count using F expression (atomic operation)
 Choice::objects()
-    .filter(Choice::field_id().eq(choice_id))
-    .update()
-    .set(Choice::field_votes(), F::new(Choice::field_votes()) + 1)
-    .execute(&conn)
-    .await?;
+	.filter(Choice::field_id().eq(choice_id))
+	.update()
+	.set(Choice::field_votes(), F::new(Choice::field_votes()) + 1)
+	.execute(&db)
+	.await?;
 ```
 
-**Why F Expressions?**
-- **Atomic**: Database-level operation prevents race conditions
-- **Type-safe**: Compile-time verification of field types
-- **Efficient**: Single SQL UPDATE query, no SELECT needed
+**Why This Prevents Race Conditions:**
 
-## Race Condition Prevention
+1. **Single UPDATE Query**: Database executes the increment atomically
+2. **No SELECT Needed**: Avoids read-modify-write race condition
+3. **Database Guarantees**: ACID properties ensure consistency
 
-The F expression approach automatically prevents race conditions:
+## CSRF Protection in reinhardt-pages
 
-```rust
-// ✅ SAFE: Atomic database operation
-Choice::objects()
-    .filter(Choice::field_id().eq(choice_id))
-    .update()
-    .set(Choice::field_votes(), F::new(Choice::field_votes()) + 1)
-    .execute(&conn)
-    .await?;
-```
-
-**Why this is safe:**
-1. Single UPDATE query at database level
-2. No SELECT needed (avoids read-modify-write race)
-3. Database ensures atomicity of the increment
-
-**Unsafe alternative (DON'T DO THIS):**
-```rust
-// ❌ UNSAFE: Race condition possible
-let mut choice = Choice::objects()
-    .filter(Choice::field_id().eq(choice_id))
-    .first(&conn)
-    .await?;
-choice.votes += 1;  // Two requests could read same value
-choice.save(&conn).await?;  // Last write wins, lost update
-```
-
-## Adding CSRF Protection
-
-Forms should be protected against Cross-Site Request Forgery (CSRF) attacks. Update the detail template to include CSRF protection:
-
-`templates/polls/detail.html`:
+In traditional server-rendered applications, CSRF protection uses tokens embedded in templates:
 
 ```html
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>{{ question.question_text }}</title>
-  </head>
-  <body>
-    <h1>{{ question.question_text }}</h1>
-
-    {% if error_message %}
-    <p><strong>{{ error_message }}</strong></p>
-    {% endif %}
-
-    <form action="/polls/{{ question.id }}/vote/" method="post">
-      {% csrf_token %} {% for choice in question.choices %}
-      <input
-        type="radio"
-        name="choice"
-        id="choice{{ choice.id }}"
-        value="{{ choice.id }}"
-      />
-      <label for="choice{{ choice.id }}">{{ choice.choice_text }}</label><br />
-      {% endfor %}
-      <input type="submit" value="Vote" />
-    </form>
-  </body>
-</html>
+<!-- Old approach (Tera template) -->
+<form method="post">
+  {% csrf_token %}
+  <!-- form fields -->
+</form>
 ```
 
-## Use Generic Views: Less Code is Better
+In reinhardt-pages, CSRF protection is handled differently:
 
-Our index, detail, and results views are very simple and represent a common case of basic web development: getting data from the database according to a parameter passed in the URL, loading a template and returning the rendered template.
+### Future: Automatic CSRF Protection
 
-Reinhardt provides a shortcut called "generic views" to handle these patterns.
-
-Let's convert our views to use generic views. We'll need to update our code in several steps:
-
-1. Update URL configuration
-2. Delete old, unnecessary views
-3. Introduce new views based on generic views
-
-### Update URLs
-
-Currently, we're using function-based views. Let's convert to class-based generic views.
-
-Create a new file `src/views.rs`:
+reinhardt-pages will integrate with `reinhardt-middleware` for automatic CSRF token handling:
 
 ```rust
-use reinhardt::prelude::*;
-use std::sync::Arc;
+// Future implementation (not yet available)
+use reinhardt_pages::middleware::csrf;
 
-pub struct QuestionListView;
+// Server-side: Middleware automatically validates tokens
+#[server_fn(use_inject = true)]
+pub async fn vote(
+	request: VoteRequest,
+	#[inject] csrf_token: CsrfToken,  // Auto-injected and validated
+	#[inject] _db: reinhardt::DatabaseConnection,
+) -> Result<ChoiceInfo, ServerFnError> {
+	// CSRF validation happens automatically
+	// If token is invalid, request is rejected before this code runs
 
-impl ListView for QuestionListView {
-    type Model = crate::models::Question;
-
-    #[endpoint]
-    async fn get_queryset(
-        &self,
-        request: &Request,
-        #[inject] db: Arc<DatabaseConnection>,
-    ) -> Result<Vec<Self::Model>, Box<dyn std::error::Error + Send + Sync>> {
-        let questions = Question::objects()
-            .order_by(Question::field_pub_date(), false)
-            .limit(5)
-            .all(&db)
-            .await?;
-        Ok(questions)
-    }
-
-    fn get_template_name(&self) -> &str {
-        "polls/index.html"
-    }
-
-    fn get_context_object_name(&self) -> &str {
-        "latest_question_list"
-    }
+	// ... business logic
 }
 
-pub struct QuestionDetailView;
+// Client-side: Token automatically included in requests
+spawn_local(async move {
+	// CSRF token automatically added to request headers
+	let result = vote(VoteRequest { question_id, choice_id }).await;
+	// ... handle result
+});
+```
 
-impl DetailView for QuestionDetailView {
-    type Model = crate::models::Question;
+### Current: Manual CSRF Handling
 
-    #[endpoint]
-    async fn get_object(
-        &self,
-        request: &Request,
-        #[inject] db: Arc<DatabaseConnection>,
-    ) -> Result<Self::Model, Box<dyn std::error::Error + Send + Sync>> {
-        let question_id: i64 = request.path_params.get("question_id")
-            .and_then(|s| s.parse().ok())
-            .ok_or("Invalid question_id")?;
+Until automatic integration is available, implement CSRF protection manually:
 
-        Question::objects()
-            .filter(Question::field_id().eq(question_id))
-            .first(&db)
-            .await?
-            .ok_or("Question not found".into())
-    }
+```rust
+// Server-side: Generate and validate tokens
+#[cfg(not(target_arch = "wasm32"))]
+use reinhardt::middleware::csrf::{CsrfProtection, CsrfToken};
 
-    fn get_template_name(&self) -> &str {
-        "polls/detail.html"
-    }
+#[server_fn(use_inject = true)]
+pub async fn vote(
+	request: VoteRequest,
+	csrf_token: String,  // Client must provide token
+	#[inject] csrf_middleware: Arc<CsrfProtection>,
+	#[inject] _db: reinhardt::DatabaseConnection,
+) -> Result<ChoiceInfo, ServerFnError> {
+	// Validate CSRF token
+	csrf_middleware.verify_token(&csrf_token)
+		.map_err(|_| ServerFnError::ServerError("Invalid CSRF token".to_string()))?;
 
-    fn get_context_object_name(&self) -> &str {
-        "question"
-    }
-}
-
-pub struct ResultsView;
-
-impl DetailView for ResultsView {
-    type Model = crate::models::Question;
-
-    #[endpoint]
-    async fn get_object(
-        &self,
-        request: &Request,
-        #[inject] db: Arc<DatabaseConnection>,
-    ) -> Result<Self::Model, Box<dyn std::error::Error + Send + Sync>> {
-        let question_id: i64 = request.path_params.get("question_id")
-            .and_then(|s| s.parse().ok())
-            .ok_or("Invalid question_id")?;
-
-        Question::objects()
-            .filter(Question::field_id().eq(question_id))
-            .first(&db)
-            .await?
-            .ok_or("Question not found".into())
-    }
-
-    fn get_template_name(&self) -> &str {
-        "polls/results.html"
-    }
-
-    fn get_context_object_name(&self) -> &str {
-        "question"
-    }
-
-    #[endpoint]
-    async fn get_context_data(
-        &self,
-        request: &Request,
-        object: &Self::Model,
-        #[inject] db: Arc<DatabaseConnection>,
-    ) -> Result<HashMap<String, serde_json::Value>, Box<dyn std::error::Error + Send + Sync>> {
-        let choices = object.choices(&db).await?;
-
-        let mut context = HashMap::new();
-        context.insert("question".to_string(), serde_json::to_value(object)?);
-        context.insert("choices".to_string(), serde_json::to_value(&choices)?);
-
-        Ok(context)
-    }
+	// ... business logic
 }
 ```
 
-### Update main.rs
+**Note**: Full CSRF integration with reinhardt-pages is planned for future releases. See [reinhardt-middleware documentation](../../../crates/reinhardt-middleware/README.md) for current CSRF capabilities.
 
-Update `src/main.rs` to use the new views:
+## Component Patterns: Reusability Instead of Generic Views
+
+In traditional server-rendered frameworks, "generic views" provide reusable patterns for common tasks (list views, detail views, etc.). In reinhardt-pages, we achieve similar reusability through **component composition**.
+
+### Pattern 1: Reusable Loading Component
+
+Extract common loading patterns:
 
 ```rust
-mod models;
-mod polls;
-mod urls;
-mod views;
+// src/client/components/common.rs
+use reinhardt_pages::prelude::*;
 
-use reinhardt::prelude::*;
-use sqlx::SqlitePool;
-use std::sync::Arc;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let pool = SqlitePool::connect("sqlite:polls.db").await?;
-    sqlx::migrate!("./migrations").run(&pool).await?;
-
-    let template_loader = Arc::new(FileSystemTemplateLoader::new("templates"));
-
-    let mut router = DefaultRouter::new();
-    router.add_extension(pool.clone());
-    router.add_extension(template_loader);
-
-    for route in urls::url_patterns() {
-        router.add_route(route);
-    }
-
-    let server = Server::new("127.0.0.1:8000", router);
-
-    println!("Starting development server at http://127.0.0.1:8000/");
-    println!("Quit the server with CTRL-C.");
-
-    server.run().await?;
-
-    Ok(())
+pub fn loading_spinner() -> View {
+	page!(|| {
+		div {
+			class: "spinner-border text-primary",
+			role: "status",
+			span {
+				class: "visually-hidden",
+				"Loading..."
+			}
+		}
+	})()
 }
+
+pub fn error_alert(message: &str) -> View {
+	let msg = message.to_string();
+	page!(|msg: String| {
+		div {
+			class: "alert alert-danger",
+			{msg}
+		}
+	})(msg)
+}
+```
+
+Usage:
+
+```rust
+use crate::client::components::common::{loading_spinner, error_alert};
+
+pub fn polls_index() -> View {
+	// ... state management
+
+	page!(|loading_state: bool, error_state: Option<String>| {
+		div {
+			class: "container mt-5",
+
+			if let Some(ref err) = error_state {
+				{error_alert(err)}
+			} else if loading_state {
+				{loading_spinner()}
+			} else {
+				// ... content
+			}
+		}
+	})(loading_state, error_state)
+}
+```
+
+### Pattern 2: Form Field Components
+
+Create reusable form field components:
+
+```rust
+// src/client/components/forms.rs
+use reinhardt_pages::prelude::*;
+
+pub fn radio_choice(
+	id: &str,
+	name: &str,
+	value: &str,
+	label: &str,
+	checked: bool,
+	on_change: impl Fn(web_sys::Event) + 'static,
+) -> View {
+	let id = id.to_string();
+	let name = name.to_string();
+	let value = value.to_string();
+	let label = label.to_string();
+
+	page!(|
+		id: String,
+		name: String,
+		value: String,
+		label: String,
+		checked: bool,
+		on_change: impl Fn(web_sys::Event) + 'static
+	| {
+		div {
+			class: "form-check",
+			input {
+				class: "form-check-input",
+				type: "radio",
+				id: id.clone(),
+				name: name,
+				value: value,
+				checked: checked,
+				onchange: on_change
+			}
+			label {
+				class: "form-check-label",
+				for: id,
+				{label}
+			}
+		}
+	})(id, name, value, label, checked, on_change)
+}
+
+pub fn submit_button(
+	label: &str,
+	loading: bool,
+	loading_label: &str,
+) -> View {
+	let label = label.to_string();
+	let loading_label = loading_label.to_string();
+
+	page!(|label: String, loading: bool, loading_label: String| {
+		button {
+			class: "btn btn-primary",
+			type: "submit",
+			disabled: loading,
+			if loading {
+				{loading_label}
+			} else {
+				{label}
+			}
+		}
+	})(label, loading, loading_label)
+}
+```
+
+Usage in detail page:
+
+```rust
+use crate::client::components::forms::{radio_choice, submit_button};
+
+pub fn polls_detail_page(question_id: i64) -> View {
+	// ... state and event handlers
+
+	page!(|choices_data: Vec<ChoiceInfo>, ...| {
+		form {
+			onsubmit: handle_submit,
+
+			div {
+				class: "mb-3",
+				for choice in &choices_data {
+					{radio_choice(
+						&format!("choice{}", choice.id),
+						"choice",
+						&choice.id.to_string(),
+						&choice.choice_text,
+						selected == Some(choice.id),
+						handle_choice_change.clone()
+					)}
+				}
+			}
+
+			{submit_button("Vote", voting_state, "Voting...")}
+		}
+	})(choices_data, ...)
+}
+```
+
+### Pattern 3: Custom Hooks for Form State
+
+For complex forms, create custom hooks:
+
+```rust
+// src/client/hooks/form.rs
+use reinhardt_pages::prelude::*;
+
+pub struct FormState<T> {
+	pub value: T,
+	pub error: Option<String>,
+	pub loading: bool,
+}
+
+pub fn use_form_field<T: Clone + 'static>(
+	initial: T
+) -> (FormState<T>, impl Fn(T), impl Fn(Option<String>), impl Fn(bool)) {
+	let (value, set_value) = use_state(initial);
+	let (error, set_error) = use_state(None::<String>);
+	let (loading, set_loading) = use_state(false);
+
+	let state = FormState {
+		value: value.get().clone(),
+		error: error.get().clone(),
+		loading: loading.get(),
+	};
+
+	(state, set_value, set_error, set_loading)
+}
+```
+
+Usage:
+
+```rust
+use crate::client::hooks::form::use_form_field;
+
+pub fn polls_detail_page(question_id: i64) -> View {
+	let (choice_state, set_choice, set_choice_error, _) = use_form_field(None::<i64>);
+
+	let handle_choice_change = {
+		let set_choice = set_choice.clone();
+		let set_choice_error = set_choice_error.clone();
+
+		move |e: web_sys::Event| {
+			if let Some(target) = e.target() {
+				if let Some(input) = target.dyn_ref::<web_sys::HtmlInputElement>() {
+					if let Ok(choice_id) = input.value().parse::<i64>() {
+						set_choice(Some(choice_id));
+						set_choice_error(None);
+					}
+				}
+			}
+		}
+	};
+
+	// ... rest of component
+}
+```
+
+## Best Practices for Form Components
+
+### 1. Controlled Components
+
+Always use controlled components (state-driven):
+
+```rust
+// ✅ GOOD: Controlled component
+input {
+	value: email_state.clone(),
+	oninput: handle_email_change
+}
+
+// ❌ BAD: Uncontrolled component
+input {
+	placeholder: "Email"
+	// No value binding - state and UI can diverge
+}
+```
+
+### 2. Immediate Validation Feedback
+
+Clear errors when user starts typing:
+
+```rust
+let handle_email_change = {
+	let set_email = set_email.clone();
+	let set_email_error = set_email_error.clone();
+
+	move |e: web_sys::Event| {
+		if let Some(target) = e.target() {
+			if let Some(input) = target.dyn_ref::<web_sys::HtmlInputElement>() {
+				set_email(input.value());
+				set_email_error(None);  // Clear error on change
+			}
+		}
+	}
+};
+```
+
+### 3. Disable Buttons During Submission
+
+Prevent double submissions:
+
+```rust
+button {
+	type: "submit",
+	disabled: submitting_state || !is_valid_state,
+	class: "btn btn-primary",
+	if submitting_state {
+		"Submitting..."
+	} else {
+		"Submit"
+	}
+}
+```
+
+### 4. Progressive Enhancement
+
+Show loading states and optimistic updates:
+
+```rust
+spawn_local(async move {
+	set_submitting(true);
+
+	// Optimistic update (optional)
+	update_ui_optimistically();
+
+	match submit_form(data).await {
+		Ok(result) => {
+			// Success
+			navigate_to_success_page();
+		}
+		Err(e) => {
+			// Rollback optimistic update
+			rollback_ui();
+			set_error(Some(e.to_string()));
+			set_submitting(false);
+		}
+	}
+});
 ```
 
 ## Summary
 
 In this tutorial, you learned:
 
-- How to process form submissions
-- How to handle POST data
-- How to protect against race conditions using atomic database operations
-- How to add CSRF protection to forms
-- How to use generic views (`ListView` and `DetailView`)
-- How to reduce code by using class-based views
+- **Client-Side Form State**: Using `use_state()` for form data management
+- **Event Handlers**: Attaching listeners to form elements
+- **Client-Side Validation**: Immediate feedback before server submission
+- **Server-Side Validation**: Security and data integrity at the server
+- **CSRF Protection**: Current manual approach and future automatic integration
+- **Component Patterns**: Reusable components instead of generic views
+- **Custom Hooks**: Encapsulating form logic for reuse
+- **Best Practices**: Controlled components, validation feedback, and progressive enhancement
 
-Generic views provide a powerful way to reduce boilerplate code while maintaining flexibility.
+**Key Differences from Traditional Approaches:**
+
+| Aspect | Traditional (Tera) | reinhardt-pages |
+|--------|-------------------|-----------------|
+| Form Rendering | Server-side template | Client-side component |
+| State Management | Server session | Client state (`use_state`) |
+| Validation | Server-side only | Client + Server |
+| CSRF Protection | Template tags (`{% csrf_token %}`) | Middleware integration (future) |
+| Reusability | Generic views | Component composition |
+| User Experience | Full page reload | Dynamic updates, no reload |
 
 ## What's Next?
 
-In the next tutorial, we'll write automated tests for our application to ensure everything works correctly.
+In the next tutorial, we'll write automated tests for our reinhardt-pages application, including:
+
+- Component testing
+- Server function testing
+- Integration testing with browser automation
 
 Continue to [Part 5: Testing](5-testing.md).

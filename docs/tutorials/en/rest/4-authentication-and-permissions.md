@@ -25,7 +25,7 @@ Reinhardt includes common permission classes in `reinhardt_auth::drf_permissions
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_auth::drf_permissions::{DrfIsAuthenticated, DrfAllowAny};
+use reinhardt::auth::drf_permissions::{DrfIsAuthenticated, DrfAllowAny};
 
 // Use the standard IsAuthenticated permission
 let permissions = vec![
@@ -79,7 +79,7 @@ Reinhardt provides the following standard permission classes in `reinhardt_auth:
 Allows access to any user (authenticated or not). This is the default permission:
 
 ```rust
-use reinhardt_auth::drf_permissions::DrfAllowAny;
+use reinhardt::auth::drf_permissions::DrfAllowAny;
 
 let permission = Box::new(DrfAllowAny) as Box<dyn Permission>;
 ```
@@ -89,7 +89,7 @@ let permission = Box::new(DrfAllowAny) as Box<dyn Permission>;
 Only authenticated users can access:
 
 ```rust
-use reinhardt_auth::drf_permissions::DrfIsAuthenticated;
+use reinhardt::auth::drf_permissions::DrfIsAuthenticated;
 
 let permission = Box::new(DrfIsAuthenticated) as Box<dyn Permission>;
 ```
@@ -113,7 +113,7 @@ Admin-only permission (implementation planned):
 
 ```rust
 // Future implementation - not yet available
-use reinhardt_auth::drf_permissions::DrfIsAdminUser;
+use reinhardt::auth::drf_permissions::DrfIsAdminUser;
 
 let permission = Box::new(DrfIsAdminUser) as Box<dyn Permission>;
 ```
@@ -221,7 +221,7 @@ Full authentication and permission workflow using standard and custom permission
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_auth::drf_permissions::DrfIsAuthenticated;
+use reinhardt::auth::drf_permissions::DrfIsAuthenticated;
 use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
 use hyper::Method;

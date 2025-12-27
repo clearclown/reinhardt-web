@@ -55,7 +55,8 @@ polls_project/
 ```
 
 **Note**: For this tutorial, we're using the **MTV (Model-Template-View)**
-template which includes templates, forms, and the admin interface.
+architecture pattern (Django terminology), which provides components for models,
+views (using reinhardt-pages for rendering), forms, and the admin interface.
 
 ## Understanding the Project Structure
 
@@ -72,20 +73,96 @@ Let's understand the key elements of the generated project:
   - `runserver.rs` - Development server
   - `manage.rs` - Management commands (equivalent to Django's `manage.py`)
 
+## Understanding HTTP Method Decorators
+
+Reinhardt provides FastAPI-inspired HTTP method decorators that make routing
+concise and type-safe. These decorators automatically handle HTTP method
+validation and route binding.
+
+**Available decorators:**
+- `#[get("/path")]` - Handle GET requests
+- `#[post("/path")]` - Handle POST requests
+- `#[put("/path")]`, `#[delete("/path")]`, `#[patch("/path")]` - Other HTTP methods
+
+**Benefits:**
+- **Concise syntax** - Less boilerplate code than traditional routing
+- **Compile-time validation** - Path patterns are checked at compile time
+- **Automatic method binding** - No manual HTTP method checks needed
+- **Named routes** - Optional `name` parameter for URL reversal
+
+**Without decorator (traditional approach):**
+
+```rust
+async fn index(req: Request) -> Result<Response> {
+    // Manual method check needed
+    if req.method() != Method::GET {
+        return Err("Method not allowed".into());
+    }
+
+    // Handle the request
+    Response::ok().with_body("Hello")
+}
+```
+
+**With decorator (Reinhardt approach):**
+
+```rust
+#[get("/", name = "index")]
+async fn index() -> Result<Response> {
+    // Method check automatic!
+    Response::ok().with_body("Hello")
+}
+```
+
+The decorator approach reduces boilerplate and makes your code more maintainable.
+For more advanced routing patterns, see [Part 3: Views and URLs](3-views-and-urls.md).
+
 ## Creating Your First View
 
 A view in Reinhardt is a function that takes an HTTP request and returns an HTTP
-response. With Reinhardt, you can use the `#[endpoint]` macro for FastAPI-style
-dependency injection.
+response. With Reinhardt, you can use HTTP method decorators (`#[get]`, `#[post]`, etc.)
+for FastAPI-style routing and dependency injection.
+
+### View Return Types
+
+Reinhardt provides a convenient type alias `ViewResult<T>` for view function
+return types. This avoids repetitive error type annotations.
+
+```rust
+use reinhardt::ViewResult;  // Pre-defined: Result<T, Box<dyn std::error::Error>>
+
+#[get("/", name = "index")]
+async fn index() -> ViewResult<Response> {
+    Response::ok().with_body("Hello")
+}
+```
+
+**Why `ViewResult`?**
+
+- **Concise** - Avoids repeating `Result<Response, Box<dyn std::error::Error>>`
+- **Flexible** - Works with the `?` operator for automatic error conversion
+- **Consistent** - Standard error handling pattern across all views
+
+**Alternative (explicit typing):**
+
+```rust
+async fn index() -> Result<Response, Box<dyn std::error::Error>> {
+    // Same as ViewResult<Response>
+    Response::ok().with_body("Hello")
+}
+```
+
+For this tutorial, we use the shorter `Result<Response>` form (which is an alias
+to `ViewResult<Response>`), but both forms are equivalent.
 
 Edit `src/main.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::get;
 
 // Our first view - returns a simple text response
-#[endpoint]
+#[get("/", name = "index")]
 async fn index() -> Result<Response> {
     Response::ok()
         .with_body("Hello, world. You're at the polls index.")
@@ -93,8 +170,8 @@ async fn index() -> Result<Response> {
 }
 ```
 
-This is the simplest view possible in Reinhardt. The `#[endpoint]` macro handles
-the request parsing and dependency injection automatically.
+This is the simplest view possible in Reinhardt. The `#[get]` decorator handles
+the request parsing, routing, and dependency injection automatically.
 
 ## Mapping URLs to Views
 
@@ -104,7 +181,7 @@ for efficient O(m) route matching.
 Create `src/config/urls.rs`:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::routers::UnifiedRouter;
 use hyper::Method;
 use std::sync::Arc;
 
@@ -231,9 +308,9 @@ Edit `polls/views.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
+use reinhardt::get;
 
-#[endpoint]
+#[get("/", name = "index")]
 pub async fn index() -> Result<Response> {
     Response::ok()
         .with_body("Hello, world. You're at the polls index.")
@@ -246,7 +323,7 @@ pub async fn index() -> Result<Response> {
 Edit `polls/urls.rs`:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::routers::UnifiedRouter;
 use hyper::Method;
 use crate::views;
 
@@ -277,7 +354,7 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 Edit `src/config/apps.rs`:
 
 ```rust
-use reinhardt_macros::installed_apps;
+use reinhardt::installed_apps;
 
 installed_apps! {
     polls: "polls",
@@ -287,6 +364,75 @@ pub fn get_installed_apps() -> Vec<String> {
     InstalledApp::all_apps()
 }
 ```
+
+**Understanding `installed_apps!`**
+
+The `installed_apps!` macro registers your application modules with Reinhardt's
+app registry. This enables several framework features:
+
+**What it does:**
+
+1. **Auto-discovery** - Reinhardt automatically discovers:
+   - Models for migrations
+   - Admin panel registrations
+   - Static files and templates
+   - Management commands
+
+2. **Type-safe references** - Creates type-safe app identifiers:
+   ```rust
+   // You can reference apps by name in code
+   InstalledApp::Polls  // Type-safe reference to "polls" app
+   ```
+
+3. **Configuration registry** - Centralized app management
+   - Apps are initialized in declaration order
+   - Dependencies between apps can be managed
+   - Apps can be conditionally included based on features
+
+**Basic usage (single app):**
+
+```rust
+installed_apps! {
+    polls: "polls",  // Your app
+}
+```
+
+**With contrib apps (authentication, sessions, admin):**
+
+```rust
+use reinhardt::installed_apps;
+
+installed_apps! {
+    // Built-in framework apps
+    auth: "reinhardt.contrib.auth",
+    contenttypes: "reinhardt.contrib.contenttypes",
+    sessions: "reinhardt.contrib.sessions",
+    admin: "reinhardt.contrib.admin",
+
+    // Your custom apps
+    polls: "polls",
+}
+```
+
+**Equivalent to Django's `INSTALLED_APPS`:**
+
+```python
+# Django's settings.py
+INSTALLED_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.admin',
+    'polls',
+]
+```
+
+**Why the two-part syntax?**
+
+- `polls:` - The identifier used in Rust code (`InstalledApp::Polls`)
+- `"polls"` - The module path where the app is located
+
+This allows flexibility in naming while keeping code references clean.
 
 Restart your server (press Ctrl-C and run `cargo run --bin runserver` again) and
 visit `http://127.0.0.1:8000/polls/`. You should see the message.
@@ -298,17 +444,17 @@ Update `polls/views.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
-use reinhardt_http::Request;
+use reinhardt::{get, post};
+use reinhardt::http::Request;
 
-#[endpoint]
+#[get("/", name = "index")]
 pub async fn index() -> Result<Response> {
     Response::ok()
         .with_body("Hello, world. You're at the polls index.")
         .with_header("Content-Type", "text/plain")
 }
 
-#[endpoint]
+#[get("/{question_id}", name = "detail")]
 pub async fn detail(request: Request) -> Result<Response> {
     // Extract the question_id from path parameters
     let question_id = request.path_params
@@ -320,7 +466,7 @@ pub async fn detail(request: Request) -> Result<Response> {
         .with_header("Content-Type", "text/plain")
 }
 
-#[endpoint]
+#[get("/{question_id}/results", name = "results")]
 pub async fn results(request: Request) -> Result<Response> {
     let question_id = request.path_params
         .get("question_id")
@@ -331,7 +477,7 @@ pub async fn results(request: Request) -> Result<Response> {
         .with_header("Content-Type", "text/plain")
 }
 
-#[endpoint]
+#[post("/{question_id}/vote", name = "vote")]
 pub async fn vote(request: Request) -> Result<Response> {
     let question_id = request.path_params
         .get("question_id")
@@ -346,7 +492,7 @@ pub async fn vote(request: Request) -> Result<Response> {
 Update `polls/urls.rs` to wire these views:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::routers::UnifiedRouter;
 use hyper::Method;
 use crate::views;
 

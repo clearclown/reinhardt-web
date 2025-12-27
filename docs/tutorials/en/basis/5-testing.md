@@ -96,6 +96,73 @@ impl Question {
 }
 ```
 
+## Why TestContainers?
+
+Reinhardt uses **TestContainers** for database testing to ensure test isolation
+and reliability. TestContainers automatically manages Docker containers for your
+tests.
+
+**Benefits:**
+
+1. **Isolation** - Each test gets a fresh database
+   - No shared state between tests
+   - Tests can run in parallel safely
+   - No cleanup code needed
+
+2. **Real Database** - Tests use actual PostgreSQL/MySQL, not mocks
+   - Catches database-specific bugs (SQL syntax, transactions, indexes)
+   - Tests behavior matches production exactly
+   - No surprises when deploying to production
+
+3. **CI/CD Friendly** - Works anywhere Docker is available
+   - GitHub Actions, GitLab CI, local development
+   - No manual database setup required
+   - Consistent behavior across environments
+
+4. **Automatic Cleanup** - Containers are destroyed after tests
+   - No leftover data or processes
+   - No manual cleanup scripts needed
+   - Tests are self-contained
+
+**How it works:**
+
+```
+Test starts → Docker container launches → Test runs → Container auto-destroyed
+                     ↓
+              Fresh PostgreSQL
+              with migrations applied
+```
+
+**Prerequisites:**
+
+- **Docker must be running** (Docker Desktop on Mac/Windows, or Docker Engine on Linux)
+- No manual database setup needed - TestContainers handles everything
+
+**Alternative (Not Recommended):**
+
+```rust
+// ❌ Shared database - leads to test failures
+let conn = DatabaseConnection::connect("postgres://localhost/test_db").await?;
+// Multiple tests compete for same data
+// Tests fail randomly due to race conditions
+```
+
+**TestContainers Approach (Recommended):**
+
+```rust
+// ✅ Isolated database per test
+#[rstest]
+#[tokio::test]
+async fn test_user(
+    #[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)
+) {
+    let (_container, conn) = postgres_fixture.await;
+    // Each test gets its own PostgreSQL instance!
+}
+```
+
+For more details on testing infrastructure, see [Testing Standards](../../../TESTING_STANDARDS.md).
+
 ## Testing with Database using rstest + TestContainers
 
 Let's test database operations using rstest fixtures and TestContainers for isolation.
@@ -106,9 +173,9 @@ Reinhardt provides shared fixtures in `reinhardt-test/src/fixtures.rs`:
 
 ```rust
 use rstest::*;
-use reinhardt_test::fixtures::postgres_fixture;
+use reinhardt::test::fixtures::postgres_fixture;
 use testcontainers::{ContainerAsync, GenericImage};
-use reinhardt_db::backends::DatabaseConnection;
+use reinhardt::db::backends::DatabaseConnection;
 use std::sync::Arc;
 
 #[fixture]
@@ -129,9 +196,9 @@ Create `polls/tests/database_tests.rs`:
 
 ```rust
 use rstest::*;
-use reinhardt_test::fixtures::postgres_fixture;
+use reinhardt::test::fixtures::postgres_fixture;
 use testcontainers::{ContainerAsync, GenericImage};
-use reinhardt_db::backends::DatabaseConnection;
+use reinhardt::db::backends::DatabaseConnection;
 use std::sync::Arc;
 use chrono::Utc;
 use crate::models::{Question, Choice};
@@ -234,10 +301,10 @@ Create `polls/tests/view_tests.rs`:
 
 ```rust
 use rstest::*;
-use reinhardt_test::fixtures::postgres_fixture;
+use reinhardt::test::fixtures::postgres_fixture;
 use testcontainers::{ContainerAsync, GenericImage};
-use reinhardt_db::backends::DatabaseConnection;
-use reinhardt_http::{Request, Response};
+use reinhardt::db::backends::DatabaseConnection;
+use reinhardt::http::{Request, Response};
 use std::sync::Arc;
 use chrono::Utc;
 use bytes::Bytes;

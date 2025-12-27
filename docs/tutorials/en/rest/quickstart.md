@@ -73,17 +73,17 @@ This example uses simple data structures. In real applications, you can implemen
 
 ## Views
 
-Implement API endpoints using the `#[endpoint]` macro. Add to `users/views.rs`:
+Implement API endpoints using HTTP method decorators. Add to `users/views.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
-use reinhardt_db::backends::DatabaseConnection;
+use reinhardt::{get, post};
+use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
 use crate::serializers::UserSerializer;
 
-#[endpoint]
+#[get("/users", name = "list_users")]
 pub async fn list_users(
     #[inject] conn: Arc<DatabaseConnection>,
 ) -> Result<Response> {
@@ -96,7 +96,7 @@ pub async fn list_users(
         .with_json(&serialized)
 }
 
-#[endpoint]
+#[post("/users", name = "create_user")]
 pub async fn create_user(
     mut request: Request,
     #[inject] conn: Arc<DatabaseConnection>,
@@ -114,7 +114,7 @@ pub async fn create_user(
 }
 ```
 
-**Note**: ViewSets (like Django REST framework's ViewSets) are planned for future release. Currently, use function-based endpoints with `#[endpoint]` macro.
+**Note**: ViewSets (like Django REST framework's ViewSets) are planned for future release. Currently, use function-based endpoints with HTTP method decorators like `#[get]`, `#[post]`, etc.
 
 ## Routing
 
@@ -158,13 +158,13 @@ Edit `users/views.rs` to implement full CRUD operations:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_macros::endpoint;
-use reinhardt_db::backends::DatabaseConnection;
+use reinhardt::{get, post};
+use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
 use crate::serializers::UserSerializer;
 
-#[endpoint]
+#[get("/users", name = "list_users")]
 pub async fn list_users(
     #[inject] conn: Arc<DatabaseConnection>,
 ) -> Result<Response> {
@@ -176,7 +176,7 @@ pub async fn list_users(
     Response::ok().with_json(&serialized)
 }
 
-#[endpoint]
+#[get("/users/:id", name = "retrieve_user")]
 pub async fn retrieve_user(
     request: Request,
     #[inject] conn: Arc<DatabaseConnection>,
@@ -192,7 +192,7 @@ pub async fn retrieve_user(
     Response::ok().with_json(&serialized)
 }
 
-#[endpoint]
+#[post("/users", name = "create_user")]
 pub async fn create_user(
     mut request: Request,
     #[inject] conn: Arc<DatabaseConnection>,
@@ -212,7 +212,7 @@ pub async fn create_user(
 Edit `users/urls.rs` to register the view functions:
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::routers::UnifiedRouter;
 use hyper::Method;
 use crate::views;
 
@@ -249,7 +249,7 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
 Edit `src/config/apps.rs`:
 
 ```rust
-use reinhardt_macros::installed_apps;
+use reinhardt::installed_apps;
 
 installed_apps! {
     users: "users",
