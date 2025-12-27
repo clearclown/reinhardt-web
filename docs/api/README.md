@@ -45,9 +45,9 @@ Located under facade crates and accessed via parent crate:
 use reinhardt::prelude::*;
 
 // Or access individual crates directly
-use reinhardt_db::orm::Model;
-use reinhardt_di::params::{Path, Query};
-use reinhardt_rest::serializers::Serializer;
+use reinhardt::db::orm::Model;
+use reinhardt::di::params::{Path, Query};
+use reinhardt::rest::serializers::Serializer;
 ```
 
 ---
@@ -84,7 +84,7 @@ View functions and class-based views for handling HTTP requests.
 
 **Key Components:**
 
-- Function-based views with `#[endpoint]` macro
+- Function-based views with HTTP method decorators (`#[get]`, `#[post]`, etc.)
 - Class-based views
 - Generic views (ListView, DetailView, CreateView, UpdateView, DeleteView)
 - ViewSets (enabled via feature flag)
@@ -92,16 +92,16 @@ View functions and class-based views for handling HTTP requests.
 **Example:**
 
 ```rust
-use reinhardt_views::endpoint;
-use reinhardt_http::{Request, Response, ViewResult};
+use reinhardt::views::get;
+use reinhardt::http::{Request, Response, ViewResult};
 
-#[endpoint]
+#[get("/", name = "my_view")]
 async fn my_view(request: Request) -> ViewResult<Response> {
     // Handle request
     Ok(Response::new(200, "Hello, World!".into()))
 }
 
-// The #[endpoint] macro automatically registers this function as a route handler
+// HTTP method decorators automatically register this function as a route handler
 ```
 
 **Documentation:**
@@ -128,7 +128,7 @@ FastAPI-style parameter extractors for type-safe request data extraction.
 **Example:**
 
 ```rust
-use reinhardt_di::params::{Path, Query, Json};
+use reinhardt::di::params::{Path, Query, Json};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -166,7 +166,7 @@ Dependency injection system inspired by FastAPI.
 **Example:**
 
 ```rust
-use reinhardt_di::{Injectable, Depends};
+use reinhardt::di::{Injectable, Depends};
 
 #[derive(Clone)]
 struct Database {
@@ -218,7 +218,7 @@ ORM layer for database abstraction with SeaQuery v1.0.0-rc1 integration.
 **Example (Current API):**
 
 ```rust
-use reinhardt_db::orm::{Model, Manager};
+use reinhardt::db::orm::{Model, Manager};
 use sea_query::{Query, Expr, PostgresQueryBuilder};
 
 // Model definition (currently manual implementation)
@@ -248,7 +248,7 @@ let sql = query.to_string(PostgresQueryBuilder);
 
 ```rust
 // Planned Django-style API
-use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt::db::orm::{Model, QuerySet};
 
 #[derive(Model)]  // Macro is planned
 struct User {
@@ -324,7 +324,7 @@ Data serialization, deserialization, and validation.
 **Example:**
 
 ```rust
-use reinhardt_rest::serializers::{Serializer, ModelSerializer};
+use reinhardt::rest::serializers::{Serializer, ModelSerializer};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -364,7 +364,7 @@ CRUD views for models with automatic routing.
 **Example:**
 
 ```rust
-use reinhardt_views::viewsets::ModelViewSet;
+use reinhardt::views::viewsets::ModelViewSet;
 
 // Use with viewsets feature enabled
 let viewset = ModelViewSet::<User, UserSerializer>::new();
@@ -398,7 +398,7 @@ Automatic URL routing for ViewSets.
 **Example:**
 
 ```rust
-use reinhardt_rest::routers::{DefaultRouter, Router};
+use reinhardt::rest::routers::{DefaultRouter, Router};
 
 let mut router = DefaultRouter::new();
 router.register("users", user_viewset);
@@ -426,7 +426,7 @@ Pagination for large datasets.
 **Example:**
 
 ```rust
-use reinhardt_core::pagination::PageNumberPagination;
+use reinhardt::core::pagination::PageNumberPagination;
 
 let pagination = PageNumberPagination::new(25); // 25 items per page
 ```
@@ -484,7 +484,7 @@ Authentication backends and permission system.
 **Example:**
 
 ```rust
-use reinhardt_auth::{JwtAuth, IsAuthenticated};
+use reinhardt::auth::{JwtAuth, IsAuthenticated};
 
 // Configure JWT authentication
 let secret_key = b"your-secret-key";
@@ -546,7 +546,7 @@ Fine-grained reactivity system with automatic dependency tracking.
 
 **Example:**
 ```rust
-use reinhardt_pages::reactive::{Signal, Effect};
+use reinhardt::pages::reactive::{Signal, Effect};
 
 let count = Signal::new(0);
 let doubled = count.map(|n| n * 2);
@@ -567,8 +567,8 @@ Component system for building reusable UI elements.
 
 **Example:**
 ```rust
-use reinhardt_pages::component::{Component, IntoView, View};
-use reinhardt_pages::builder::html::{div, button};
+use reinhardt::pages::component::{Component, IntoView, View};
+use reinhardt::pages::builder::html::{div, button};
 
 #[component]
 fn Counter() -> impl IntoView {
@@ -593,8 +593,8 @@ Render components to HTML strings on the server.
 
 **Example:**
 ```rust
-use reinhardt_pages::ssr::{SsrRenderer, SsrOptions};
-use reinhardt_pages::component::Component;
+use reinhardt::pages::ssr::{SsrRenderer, SsrOptions};
+use reinhardt::pages::component::Component;
 
 let renderer = SsrRenderer::new(SsrOptions {
     include_hydration_markers: true,
@@ -615,7 +615,7 @@ Client-side hydration to make server-rendered HTML interactive.
 **Example:**
 ```rust
 #[cfg(target_arch = "wasm32")]
-use reinhardt_pages::hydration::hydrate;
+use reinhardt::pages::hydration::hydrate;
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -633,7 +633,7 @@ Type-safe RPC calls from client to server.
 
 **Example:**
 ```rust
-use reinhardt_pages::server_fn::server_fn;
+use reinhardt::pages::server_fn::server_fn;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -663,8 +663,8 @@ Django Form integration for client-side forms.
 
 **Example:**
 ```rust
-use reinhardt_pages::form::{FormBinding, FormComponent};
-use reinhardt_forms::FormMetadata;
+use reinhardt::pages::form::{FormBinding, FormComponent};
+use reinhardt::forms::FormMetadata;
 
 let form_metadata: FormMetadata = get_form_from_server().await?;
 let binding = FormBinding::new(form_metadata.clone());
@@ -691,7 +691,7 @@ Authentication state management.
 
 **Example:**
 ```rust
-use reinhardt_pages::auth::auth_state;
+use reinhardt::pages::auth::auth_state;
 
 let auth = auth_state();
 if auth.is_authenticated() {
@@ -708,7 +708,7 @@ Django QuerySet-like API client for WASM.
 
 **Example:**
 ```rust
-use reinhardt_pages::api::{ApiModel, ApiQuerySet};
+use reinhardt::pages::api::{ApiModel, ApiQuerySet};
 
 let users = User::objects()
     .filter("is_active", true)
@@ -727,7 +727,7 @@ Client-side routing compatible with reinhardt-urls.
 
 **Example:**
 ```rust
-use reinhardt_pages::router::{Router, Route};
+use reinhardt::pages::router::{Router, Route};
 
 let router = Router::new(vec![
     Route::new("/users/{id}/", UserDetail),
@@ -739,7 +739,7 @@ let router = Router::new(vec![
 
 ```rust
 // Shared code (server + client)
-use reinhardt_pages::prelude::*;
+use reinhardt::pages::prelude::*;
 
 #[component]
 fn App() -> impl IntoView {
@@ -915,8 +915,8 @@ Lightweight version for microservices.
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt_http::{Request, Response};
-use reinhardt_core::exception::Error;
+use reinhardt::http::{Request, Response};
+use reinhardt::core::exception::Error;
 
 async fn my_handler() -> Result<Response, Error> {
     let data = fetch_data().await?;
@@ -927,8 +927,8 @@ async fn my_handler() -> Result<Response, Error> {
 ### Middleware
 
 ```rust
-use reinhardt_middleware::Middleware;
-use reinhardt_http::{Request, Response};
+use reinhardt::middleware::Middleware;
+use reinhardt::http::{Request, Response};
 use async_trait::async_trait;
 
 struct LoggingMiddleware;
@@ -945,7 +945,7 @@ impl Middleware for LoggingMiddleware {
 ### Custom Validators
 
 ```rust
-use reinhardt_rest::serializers::{ValidationError, ValidationResult};
+use reinhardt::rest::serializers::{ValidationError, ValidationResult};
 
 fn validate_email(email: &str) -> ValidationResult {
     if !email.contains('@') {

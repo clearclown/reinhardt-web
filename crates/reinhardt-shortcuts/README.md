@@ -260,7 +260,7 @@ async fn index_view(request: Request) -> Result<Response, Response> {
 
 **Key Differences from Old Template System:**
 
-| Feature | Old (Templates) | New (reinhardt-pages) |
+| Feature | Old (Tera Template System) | New (reinhardt-pages) |
 |---------|----------------|----------------------|
 | Rendering | Server-side only | SSR + Client hydration |
 | Syntax | Template files (`.html`) | Rust components |

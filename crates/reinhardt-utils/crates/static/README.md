@@ -173,11 +173,11 @@ Static file handling for serving CSS, JavaScript, images, and other static asset
     - Factory pattern for creating storage instances
     - Backend lifecycle management (register, unregister, clear)
 
-- **Template Integration** (`template_integration` module)
-  - `TemplateStaticConfig` - Configuration for template static file generation
+- **Pages/SSR Integration** (`template_integration` module)
+  - `TemplateStaticConfig` - Configuration for static file generation in SSR contexts
   - Automatic hashed filename resolution via manifest
   - Supports custom static URLs (CDN, etc.)
-  - Can be integrated with any template system (reinhardt-pages SSR, etc.)
+  - Can be integrated with reinhardt-pages SSR and other rendering systems
 
 - **File Processing Pipeline** (`processing` module)
   - CSS/JavaScript minification (basic whitespace and comment removal)
@@ -361,14 +361,14 @@ if report.is_healthy() {
 }
 ```
 
-### Template Integration
+### Pages/SSR Integration
 
 ```toml
 [dependencies]
 reinhardt-static = { version = "0.1.0-alpha.1" }
 ```
 
-#### Basic Template Integration
+#### Basic Pages/SSR Integration
 
 ```rust
 use reinhardt_static::{StaticFilesConfig, TemplateStaticConfig};
@@ -410,7 +410,7 @@ This will generate static file URLs:
 <script src="/static/js/app.js"></script>
 ```
 
-#### Template Integration with Manifest (Hashed Filenames)
+#### Pages/SSR Integration with Manifest (Hashed Filenames)
 
 ```rust
 use reinhardt_static::{ManifestStaticFilesStorage, init_template_static_config_with_manifest};

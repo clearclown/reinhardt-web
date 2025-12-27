@@ -309,9 +309,9 @@ The `di` feature enables FastAPI-style dependency injection with parameter extra
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt::{Body, Cookie, Header, Json, Path, Query};
+use reinhardt::{post, Body, Cookie, Header, Json, Path, Query};
 
-#[endpoint]
+#[post("/handler/:id", name = "handler")]
 async fn handler(
     Path(id): Path<i64>,
     Query(params): Query<SearchParams>,

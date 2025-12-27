@@ -56,7 +56,7 @@ Django-inspired messaging framework for displaying one-time notification message
 
 - Request/response middleware for automatic message handling
 - Automatic message retrieval and storage during request lifecycle
-- Context processor for template integration
+- Context processor for pages/SSR integration
 
 #### Advanced Features
 
@@ -68,10 +68,10 @@ Django-inspired messaging framework for displaying one-time notification message
 - Message encryption for sensitive data
 - Rate limiting for message creation
 
-#### Template Integration
+#### Pages Integration
 
-- Template tags for message rendering
-- Default message templates with Bootstrap/Tailwind CSS styling
+- Component helpers for message rendering in reinhardt-pages
+- Default message styling with Bootstrap/Tailwind CSS
 - JavaScript integration for client-side message display
 - Toast notification support
 - Message dismissal tracking

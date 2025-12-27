@@ -340,10 +340,10 @@ Settings are automatically loaded in `src/config/settings.rs`:
 
 ```rust
 // src/config/settings.rs
-use reinhardt_conf::settings::builder::SettingsBuilder;
-use reinhardt_conf::settings::profile::Profile;
-use reinhardt_conf::settings::sources::{DefaultSource, LowPriorityEnvSource, TomlFileSource};
-use reinhardt_core::Settings;
+use reinhardt::conf::settings::builder::SettingsBuilder;
+use reinhardt::conf::settings::profile::Profile;
+use reinhardt::conf::settings::sources::{DefaultSource, LowPriorityEnvSource, TomlFileSource};
+use reinhardt::core::Settings;
 use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -548,7 +548,7 @@ Register in `src/config/apps.rs`:
 
 ```rust
 // src/config/apps.rs
-use reinhardt_macros::installed_apps;
+use reinhardt::installed_apps;
 
 // The installed_apps! macro generates:
 // - An enum InstalledApp with variants for each app
@@ -642,7 +642,7 @@ If you need additional fields beyond DefaultUser, define your own:
 
 ```rust
 // users/models.rs
-use reinhardt_auth::{BaseUser, FullUser, PermissionsMixin};
+use reinhardt::auth::{BaseUser, FullUser, PermissionsMixin};
 use uuid::Uuid;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
@@ -712,14 +712,13 @@ Use JWT authentication in your app's `views/profile.rs`:
 
 ```rust
 // users/views/profile.rs
-use reinhardt_auth::{JwtAuth, BaseUser};
-use reinhardt::{Request, Response, StatusCode, ViewResult};
-use reinhardt::endpoint;
+use reinhardt::auth::{JwtAuth, BaseUser};
+use reinhardt::{Request, Response, StatusCode, ViewResult, get};
 use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 use crate::models::User;
 
-#[endpoint]
+#[get("/profile", name = "get_profile")]
 pub async fn get_profile(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -751,13 +750,13 @@ pub async fn get_profile(
 }
 ```
 
-### Endpoint Definition Patterns
+### Endpoint Definition
 
-Reinhardt provides two patterns for defining endpoints, each optimized for different use cases:
+Reinhardt uses HTTP method decorators to define endpoints:
 
-#### Pattern 1: HTTP Method Decorators (Recommended for simple routes)
+#### HTTP Method Decorators
 
-Best for straightforward routes without dependency injection:
+Use `#[get]`, `#[post]`, `#[put]`, `#[delete]` to define routes:
 
 ```rust
 use reinhardt::{get, post, Request, Response, ViewResult};
@@ -779,18 +778,18 @@ pub async fn create_user(_req: Request) -> ViewResult<Response> {
 - Compile-time path validation
 - Concise syntax
 - Automatic HTTP method binding
-- No DI overhead
+- Support for dependency injection via `#[inject]`
 
-#### Pattern 2: `#[endpoint]` with DI (Recommended when using dependency injection)
+#### Using Dependency Injection
 
-Best for routes that need dependency injection:
+Combine HTTP method decorators with `#[inject]` for automatic dependency injection:
 
 ```rust
-use reinhardt::{endpoint, Request, Response, StatusCode, ViewResult};
+use reinhardt::{get, Request, Response, StatusCode, ViewResult};
 use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 
-#[endpoint]
+#[get("/users/:id", name = "get_user")]
 pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,  // Automatically injected
@@ -811,30 +810,19 @@ pub async fn get_user(
 }
 ```
 
-**Features:**
-- Automatic dependency injection via `#[inject]`
+**Dependency Injection Features:**
+- Automatic dependency injection via `#[inject]` attribute
 - Cache control with `#[inject(cache = false)]`
-- FastAPI-inspired syntax
-- Works with any function, not just routes
+- FastAPI-inspired dependency injection system
+- Works seamlessly with HTTP method decorators
 
 **Result Type:**
 
-Both patterns use `ViewResult<T>` as the return type:
+All view functions use `ViewResult<T>` as the return type:
 
 ```rust
 use reinhardt::ViewResult;  // Pre-defined result type
 ```
-
-**Pattern Comparison:**
-
-| Aspect | HTTP Method Decorators | `#[endpoint]` with DI |
-|--------|------------------------|------------------------|
-| Use Case | Simple routes | Routes with dependencies |
-| Syntax | `#[get("/path")]` | `#[endpoint]` + `#[inject]` |
-| Path Validation | Compile-time | Runtime |
-| DI Support | No | Yes |
-| Overhead | Minimal | Slight (DI resolution) |
-| Example | `examples/hello-world` | Most other examples |
 
 ### With Parameter Extraction
 
@@ -842,13 +830,12 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt::{Request, Response, StatusCode, ViewResult};
-use reinhardt::endpoint;
+use reinhardt::{Request, Response, StatusCode, ViewResult, get};
 use reinhardt::db::DatabaseConnection;
 use crate::models::User;
 use std::sync::Arc;
 
-#[endpoint]
+#[get("/users/:id", name = "get_user")]
 pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -938,15 +925,14 @@ In your app's `views/user.rs`:
 
 ```rust
 // users/views/user.rs
-use reinhardt::{Request, Response, StatusCode, ViewResult};
-use reinhardt::endpoint;
+use reinhardt::{Request, Response, StatusCode, ViewResult, post};
 use reinhardt::db::DatabaseConnection;
 use crate::models::User;
 use crate::serializers::{CreateUserRequest, UserResponse};
 use validator::Validate;
 use std::sync::Arc;
 
-#[endpoint]
+#[post("/users", name = "create_user")]
 pub async fn create_user(
 	mut req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
