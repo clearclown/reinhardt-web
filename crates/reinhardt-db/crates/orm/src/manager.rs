@@ -596,7 +596,16 @@ impl<M: Model> Manager<M> {
 		queryset: &QuerySet<M>,
 		updates: &[(&str, &str)],
 	) -> (String, Vec<String>) {
-		queryset.update_sql(updates)
+		use crate::query::UpdateValue;
+		use std::collections::HashMap;
+
+		// Convert &[(&str, &str)] to HashMap<String, UpdateValue>
+		let updates_map: HashMap<String, UpdateValue> = updates
+			.iter()
+			.map(|(key, value)| (key.to_string(), UpdateValue::String(value.to_string())))
+			.collect();
+
+		queryset.update_sql(&updates_map)
 	}
 
 	/// Generate DELETE query for QuerySet
@@ -695,25 +704,26 @@ impl<M: Model> Manager<M> {
 					"Model must serialize to object".to_string(),
 				)
 			})?;
-			let field_names: Vec<String> = obj.keys().cloned().collect();
+			// Exclude primary key field if it's Null (for auto-increment)
+			let pk_field = M::primary_key_field();
+			let field_names: Vec<String> = obj
+				.iter()
+				.filter_map(|(k, v)| {
+					if k == pk_field && v.is_null() {
+						None
+					} else {
+						Some(k.clone())
+					}
+				})
+				.collect();
 
 			// Extract values for all models in chunk
-			let value_rows: Vec<Vec<String>> = chunk
+			let value_rows: Vec<Vec<serde_json::Value>> = chunk
 				.iter()
 				.map(|model| {
 					let json = serde_json::to_value(model).unwrap();
 					let obj = json.as_object().unwrap();
-					field_names
-						.iter()
-						.map(|field| {
-							let val = &obj[field];
-							if val.is_string() {
-								val.as_str().unwrap().to_string()
-							} else {
-								val.to_string()
-							}
-						})
-						.collect()
+					field_names.iter().map(|field| obj[field].clone()).collect()
 				})
 				.collect();
 
@@ -766,7 +776,7 @@ impl<M: Model> Manager<M> {
 
 		for chunk in models.chunks(batch_size) {
 			// Build updates structure
-			let updates: Vec<(M::PrimaryKey, HashMap<String, String>)> = chunk
+			let updates: Vec<(M::PrimaryKey, HashMap<String, serde_json::Value>)> = chunk
 				.iter()
 				.filter_map(|model| {
 					let pk = model.primary_key()?.clone();
@@ -776,12 +786,7 @@ impl<M: Model> Manager<M> {
 					let mut field_map = HashMap::new();
 					for field in &fields {
 						if let Some(val) = obj.get(field) {
-							let val_str = if val.is_string() {
-								val.as_str().unwrap().to_string()
-							} else {
-								val.to_string()
-							};
-							field_map.insert(field.clone(), val_str);
+							field_map.insert(field.clone(), val.clone());
 						}
 					}
 
@@ -855,7 +860,7 @@ impl<M: Model> Manager<M> {
 	pub fn bulk_create_sql_detailed(
 		&self,
 		field_names: &[String],
-		value_rows: &[Vec<String>],
+		value_rows: &[Vec<serde_json::Value>],
 		ignore_conflicts: bool,
 	) -> String {
 		if value_rows.is_empty() {
@@ -867,7 +872,19 @@ impl<M: Model> Manager<M> {
 			.map(|row| {
 				let values = row
 					.iter()
-					.map(|v| format!("'{}'", v))
+					.map(|v| match v {
+						serde_json::Value::Null => "NULL".to_string(),
+						serde_json::Value::Number(n) => n.to_string(),
+						serde_json::Value::String(s) => {
+							// SQL injection prevention: Escape single quotes
+							format!("'{}'", s.replace("'", "''"))
+						}
+						serde_json::Value::Bool(b) => if *b { "TRUE" } else { "FALSE" }.to_string(),
+						serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+							// Treat arrays and objects as JSON strings
+							format!("'{}'", v.to_string().replace("'", "''"))
+						}
+					})
 					.collect::<Vec<_>>()
 					.join(", ");
 				format!("({})", values)
@@ -891,7 +908,7 @@ impl<M: Model> Manager<M> {
 	/// Bulk update using SeaQuery - SQL generation (for testing)
 	pub fn bulk_update_query_detailed(
 		&self,
-		updates: &[(M::PrimaryKey, HashMap<String, String>)],
+		updates: &[(M::PrimaryKey, HashMap<String, serde_json::Value>)],
 		fields: &[String],
 	) -> Option<UpdateStatement>
 	where
@@ -911,11 +928,27 @@ impl<M: Model> Manager<M> {
 
 			for (pk, field_map) in updates.iter() {
 				if let Some(value) = field_map.get(field) {
-					// WHEN id = pk THEN 'value'
-					case_expr = case_expr.case(
-						Expr::col(Alias::new("id")).eq(pk.to_string()),
-						Expr::val(value.clone()),
-					);
+					// WHEN id = pk THEN value
+					// Convert serde_json::Value to appropriate type for SeaQuery
+					let expr = match value {
+						serde_json::Value::Null => Expr::value(sea_query::Value::String(None)),
+						serde_json::Value::Bool(b) => Expr::value(*b),
+						serde_json::Value::Number(n) => {
+							if let Some(i) = n.as_i64() {
+								Expr::value(i)
+							} else if let Some(f) = n.as_f64() {
+								Expr::value(f)
+							} else {
+								Expr::value(n.to_string())
+							}
+						}
+						serde_json::Value::String(s) => Expr::value(s.clone()),
+						serde_json::Value::Array(_) | serde_json::Value::Object(_) => {
+							Expr::value(value.to_string())
+						}
+					};
+					case_expr =
+						case_expr.case(Expr::col(Alias::new("id")).eq(pk.to_string()), expr);
 				}
 			}
 
@@ -938,7 +971,7 @@ impl<M: Model> Manager<M> {
 	/// Bulk update - SQL generation (convenience method for testing)
 	pub fn bulk_update_sql_detailed(
 		&self,
-		updates: &[(M::PrimaryKey, HashMap<String, String>)],
+		updates: &[(M::PrimaryKey, HashMap<String, serde_json::Value>)],
 		fields: &[String],
 	) -> String
 	where
@@ -1023,11 +1056,12 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_sql() {
+		use serde_json::json;
 		let manager = TestUser::objects();
 		let fields = vec!["name".to_string(), "email".to_string()];
 		let values = vec![
-			vec!["Alice".to_string(), "alice@example.com".to_string()],
-			vec!["Bob".to_string(), "bob@example.com".to_string()],
+			vec![json!("Alice"), json!("alice@example.com")],
+			vec![json!("Bob"), json!("bob@example.com")],
 		];
 
 		let sql = manager.bulk_create_sql_detailed(&fields, &values, false);
@@ -1045,9 +1079,10 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_sql_with_conflict() {
+		use serde_json::json;
 		let manager = TestUser::objects();
 		let fields = vec!["name".to_string(), "email".to_string()];
-		let values = vec![vec!["Alice".to_string(), "alice@example.com".to_string()]];
+		let values = vec![vec![json!("Alice"), json!("alice@example.com")]];
 
 		let sql = manager.bulk_create_sql_detailed(&fields, &values, true);
 
@@ -1056,17 +1091,18 @@ mod tests {
 
 	#[test]
 	fn test_bulk_update_sql() {
+		use serde_json::json;
 		let manager = TestUser::objects();
 
 		let mut updates = Vec::new();
 		let mut user1_fields = HashMap::new();
-		user1_fields.insert("name".to_string(), "Alice Updated".to_string());
-		user1_fields.insert("email".to_string(), "alice_new@example.com".to_string());
+		user1_fields.insert("name".to_string(), json!("Alice Updated"));
+		user1_fields.insert("email".to_string(), json!("alice_new@example.com"));
 		updates.push((1i64, user1_fields));
 
 		let mut user2_fields = HashMap::new();
-		user2_fields.insert("name".to_string(), "Bob Updated".to_string());
-		user2_fields.insert("email".to_string(), "bob_new@example.com".to_string());
+		user2_fields.insert("name".to_string(), json!("Bob Updated"));
+		user2_fields.insert("email".to_string(), json!("bob_new@example.com"));
 		updates.push((2i64, user2_fields));
 
 		let fields = vec!["name".to_string(), "email".to_string()];
@@ -1086,9 +1122,10 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_empty() {
+		use serde_json::Value;
 		let manager = TestUser::objects();
 		let fields: Vec<String> = vec![];
-		let values: Vec<Vec<String>> = vec![];
+		let values: Vec<Vec<Value>> = vec![];
 
 		let sql = manager.bulk_create_sql_detailed(&fields, &values, false);
 		assert!(sql.is_empty());
@@ -1096,8 +1133,9 @@ mod tests {
 
 	#[test]
 	fn test_bulk_update_empty() {
+		use serde_json::Value;
 		let manager = TestUser::objects();
-		let updates: Vec<(i64, HashMap<String, String>)> = vec![];
+		let updates: Vec<(i64, HashMap<String, Value>)> = vec![];
 		let fields = vec!["name".to_string()];
 
 		let sql = manager.bulk_update_sql_detailed(&updates, &fields);
@@ -1153,9 +1191,10 @@ mod tests {
 
 	#[test]
 	fn test_bulk_create_sql_single_row() {
+		use serde_json::json;
 		let manager = TestUser::objects();
 		let fields = vec!["name".to_string()];
-		let values = vec![vec!["SingleUser".to_string()]];
+		let values = vec![vec![json!("SingleUser")]];
 
 		let sql = manager.bulk_create_sql_detailed(&fields, &values, false);
 
@@ -1166,11 +1205,12 @@ mod tests {
 
 	#[test]
 	fn test_bulk_update_sql_single_field() {
+		use serde_json::json;
 		let manager = TestUser::objects();
 
 		let mut updates = Vec::new();
 		let mut user1_fields = HashMap::new();
-		user1_fields.insert("name".to_string(), "Updated Name".to_string());
+		user1_fields.insert("name".to_string(), json!("Updated Name"));
 		updates.push((1i64, user1_fields));
 
 		let fields = vec!["name".to_string()];

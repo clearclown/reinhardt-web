@@ -230,6 +230,102 @@ impl<M, T> FieldRef<M, T> {
 	pub fn lte<V: Into<FilterValue>>(&self, value: V) -> Filter {
 		Filter::new(self.name.to_string(), FilterOperator::Lte, value.into())
 	}
+
+	/// Create an equality filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_discount_price().eq_field(Order::field_total_price());
+	/// // Results in: WHERE discount_price = total_price
+	/// ```
+	pub fn eq_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Eq,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
+
+	/// Create a not-equal filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_discount_price().ne_field(Order::field_total_price());
+	/// // Results in: WHERE discount_price != total_price
+	/// ```
+	pub fn ne_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Ne,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
+
+	/// Create a greater-than filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_total_price().gt_field(Order::field_discount_price());
+	/// // Results in: WHERE total_price > discount_price
+	/// ```
+	pub fn gt_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Gt,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
+
+	/// Create a greater-than-or-equal filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_total_price().gte_field(Order::field_discount_price());
+	/// // Results in: WHERE total_price >= discount_price
+	/// ```
+	pub fn gte_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Gte,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
+
+	/// Create a less-than filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_discount_price().lt_field(Order::field_total_price());
+	/// // Results in: WHERE discount_price < total_price
+	/// ```
+	pub fn lt_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Lt,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
+
+	/// Create a less-than-or-equal filter comparing this field to another field
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let filter = Order::field_discount_price().lte_field(Order::field_total_price());
+	/// // Results in: WHERE discount_price <= total_price
+	/// ```
+	pub fn lte_field<T2>(&self, other: FieldRef<M, T2>) -> Filter {
+		Filter::new(
+			self.name.to_string(),
+			FilterOperator::Lte,
+			FilterValue::FieldRef(F::new(other.name)),
+		)
+	}
 }
 
 impl<M, T> fmt::Display for FieldRef<M, T> {

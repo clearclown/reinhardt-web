@@ -1,5 +1,6 @@
 use crate::aggregation::Aggregate;
 use crate::expressions::{F, Q};
+use crate::postgres_features::{ArrayAgg, JsonbAgg, JsonbBuildObject, StringAgg, TsRank};
 use serde::{Deserialize, Serialize};
 
 /// Represents an annotation value that can be added to a QuerySet
@@ -15,6 +16,17 @@ pub enum AnnotationValue {
 	Expression(Expression),
 	/// A subquery (scalar subquery in SELECT clause)
 	Subquery(String),
+	// PostgreSQL-specific aggregations
+	/// PostgreSQL array_agg - aggregates values into an array
+	ArrayAgg(ArrayAgg<serde_json::Value>),
+	/// PostgreSQL string_agg - concatenates strings with delimiter
+	StringAgg(StringAgg),
+	/// PostgreSQL jsonb_agg - aggregates values into a JSONB array
+	JsonbAgg(JsonbAgg),
+	/// PostgreSQL jsonb_build_object - builds a JSONB object from key-value pairs
+	JsonbBuildObject(JsonbBuildObject),
+	/// PostgreSQL ts_rank - full-text search ranking score
+	TsRank(TsRank),
 }
 
 /// Constant value types for annotations
@@ -149,6 +161,12 @@ impl AnnotationValue {
 			AnnotationValue::Aggregate(a) => a.to_sql(),
 			AnnotationValue::Expression(e) => e.to_sql(),
 			AnnotationValue::Subquery(sql) => sql.clone(),
+			// PostgreSQL-specific aggregations
+			AnnotationValue::ArrayAgg(a) => a.to_sql(),
+			AnnotationValue::StringAgg(s) => s.to_sql(),
+			AnnotationValue::JsonbAgg(j) => j.to_sql(),
+			AnnotationValue::JsonbBuildObject(j) => j.to_sql(),
+			AnnotationValue::TsRank(t) => t.to_sql(),
 		}
 	}
 
@@ -160,6 +178,12 @@ impl AnnotationValue {
 			AnnotationValue::Aggregate(a) => a.to_sql_expr(), // Use to_sql_expr() for aggregates
 			AnnotationValue::Expression(e) => e.to_sql(),
 			AnnotationValue::Subquery(sql) => sql.clone(),
+			// PostgreSQL-specific aggregations (same as to_sql for these)
+			AnnotationValue::ArrayAgg(a) => a.to_sql(),
+			AnnotationValue::StringAgg(s) => s.to_sql(),
+			AnnotationValue::JsonbAgg(j) => j.to_sql(),
+			AnnotationValue::JsonbBuildObject(j) => j.to_sql(),
+			AnnotationValue::TsRank(t) => t.to_sql(),
 		}
 	}
 }

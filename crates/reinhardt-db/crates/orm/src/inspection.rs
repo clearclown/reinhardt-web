@@ -1293,7 +1293,7 @@ mod tests {
 	fn test_model_inspector_table_name() {
 		use serde::{Deserialize, Serialize};
 
-		#[derive(Serialize, Deserialize)]
+		#[derive(Clone, Serialize, Deserialize)]
 		struct TestModel {
 			id: i32,
 		}
@@ -1322,7 +1322,7 @@ mod tests {
 	fn test_model_inspector_primary_key_field() {
 		use serde::{Deserialize, Serialize};
 
-		#[derive(Serialize, Deserialize)]
+		#[derive(Clone, Serialize, Deserialize)]
 		struct Article {
 			article_id: u32,
 		}
@@ -1355,7 +1355,7 @@ mod tests {
 	fn test_model_inspector_get_field_nonexistent() {
 		use serde::{Deserialize, Serialize};
 
-		#[derive(Serialize, Deserialize)]
+		#[derive(Clone, Serialize, Deserialize)]
 		struct User {
 			id: i32,
 		}
@@ -1384,7 +1384,7 @@ mod tests {
 	fn test_model_inspector_get_fields_empty() {
 		use serde::{Deserialize, Serialize};
 
-		#[derive(Serialize, Deserialize)]
+		#[derive(Clone, Serialize, Deserialize)]
 		struct Empty {
 			id: i32,
 		}
@@ -1413,7 +1413,7 @@ mod tests {
 	fn test_model_inspector_get_relations_empty() {
 		use serde::{Deserialize, Serialize};
 
-		#[derive(Serialize, Deserialize)]
+		#[derive(Clone, Serialize, Deserialize)]
 		struct Simple {
 			id: i32,
 		}

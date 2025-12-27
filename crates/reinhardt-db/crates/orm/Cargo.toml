@@ -71,10 +71,11 @@ smallvec = "1.13"
 
 [dev-dependencies]
 reinhardt-migrations = { workspace = true }
-reinhardt-test = { workspace = true }
+reinhardt-test = { workspace = true, features = ["testcontainers"] }
 ctor = "0.6.1"
 serial_test = { workspace = true }
 tokio-test = "0.4"
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 rstest = { workspace = true }
+proptest = { workspace = true }

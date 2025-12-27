@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 /// Core trait for database models
 /// Uses composition instead of inheritance - models can implement multiple traits
-pub trait Model: Serialize + for<'de> Deserialize<'de> + Send + Sync {
+pub trait Model: Serialize + for<'de> Deserialize<'de> + Send + Sync + Clone {
 	/// The primary key type
 	type PrimaryKey: Send + Sync + Clone + std::fmt::Display;
 
@@ -133,6 +133,196 @@ pub trait Model: Serialize + for<'de> Deserialize<'de> + Send + Sync {
 		Self: Sized,
 	{
 		crate::Manager::new()
+	}
+
+	/// Save the model instance to the database with event dispatching
+	///
+	/// If the primary key is None, performs an INSERT and dispatches before_insert/after_insert events.
+	/// If the primary key is Some, performs an UPDATE and dispatches before_update/after_update events.
+	///
+	/// Event listeners can veto the operation by returning `EventResult::Veto`.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64>, name: String }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	///
+	/// # #[tokio::main]
+	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	/// let mut user = User { id: None, name: "John".to_string() };
+	///
+	/// // INSERT - triggers before_insert/after_insert events
+	/// user.save().await?;
+	///
+	/// // UPDATE - triggers before_update/after_update events
+	/// user.name = "Jane".to_string();
+	/// user.save().await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	fn save(
+		&mut self,
+	) -> impl std::future::Future<Output = reinhardt_core::exception::Result<()>> + Send
+	where
+		Self: Sized,
+	{
+		async move {
+			use crate::events::{EventResult, event_registry};
+			use crate::manager::get_connection;
+
+			let registry = event_registry();
+			let conn = get_connection().await?;
+			let manager = crate::Manager::<Self>::new();
+
+			let json = serde_json::to_value(&*self)
+				.map_err(|e| reinhardt_core::exception::Error::Database(e.to_string()))?;
+
+			if self.primary_key().is_none() {
+				// INSERT: new record
+				let instance_id = format!("{}-new-{}", Self::table_name(), uuid::Uuid::new_v4());
+
+				// Dispatch before_insert event
+				let result = registry
+					.dispatch_before_insert(Self::table_name(), &instance_id, &json)
+					.await;
+				if result == EventResult::Veto {
+					return Err(reinhardt_core::exception::Error::Database(
+						"Insert operation vetoed by event listener".to_string(),
+					));
+				}
+
+				// Perform the INSERT
+				let created = manager.create_with_conn(&conn, self).await?;
+				*self = created;
+
+				// Dispatch after_insert event
+				let final_id = format!(
+					"{}-{}",
+					Self::table_name(),
+					self.primary_key()
+						.map(|pk| pk.to_string())
+						.unwrap_or_default()
+				);
+				registry
+					.dispatch_after_insert(Self::table_name(), &final_id)
+					.await;
+			} else {
+				// UPDATE: existing record
+				let instance_id = format!(
+					"{}-{}",
+					Self::table_name(),
+					self.primary_key()
+						.map(|pk| pk.to_string())
+						.unwrap_or_default()
+				);
+
+				// Dispatch before_update event
+				let result = registry
+					.dispatch_before_update(Self::table_name(), &instance_id, &json)
+					.await;
+				if result == EventResult::Veto {
+					return Err(reinhardt_core::exception::Error::Database(
+						"Update operation vetoed by event listener".to_string(),
+					));
+				}
+
+				// Perform the UPDATE
+				let updated = manager.update_with_conn(&conn, self).await?;
+				*self = updated;
+
+				// Dispatch after_update event
+				registry
+					.dispatch_after_update(Self::table_name(), &instance_id)
+					.await;
+			}
+
+			Ok(())
+		}
+	}
+
+	/// Delete the model instance from the database with event dispatching
+	///
+	/// Dispatches before_delete/after_delete events. Event listeners can veto
+	/// the operation by returning `EventResult::Veto`.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct User { id: Option<i64>, name: String }
+	/// # impl Model for User {
+	/// #     type PrimaryKey = i64;
+	/// #     fn app_label() -> &'static str { "app" }
+	/// #     fn table_name() -> &'static str { "users" }
+	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn primary_key_field() -> &'static str { "id" }
+	/// # }
+	///
+	/// # #[tokio::main]
+	/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+	/// let mut user = User { id: Some(1), name: "John".to_string() };
+	///
+	/// // Triggers before_delete/after_delete events
+	/// user.delete().await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	fn delete(
+		&self,
+	) -> impl std::future::Future<Output = reinhardt_core::exception::Result<()>> + Send
+	where
+		Self: Sized,
+	{
+		async move {
+			use crate::events::{EventResult, event_registry};
+			use crate::manager::get_connection;
+
+			let pk = self.primary_key().ok_or_else(|| {
+				reinhardt_core::exception::Error::Database(
+					"Cannot delete model without primary key".to_string(),
+				)
+			})?;
+
+			let registry = event_registry();
+			let conn = get_connection().await?;
+			let manager = crate::Manager::<Self>::new();
+
+			let instance_id = format!("{}-{}", Self::table_name(), pk);
+
+			// Dispatch before_delete event
+			let result = registry
+				.dispatch_before_delete(Self::table_name(), &instance_id)
+				.await;
+			if result == EventResult::Veto {
+				return Err(reinhardt_core::exception::Error::Database(
+					"Delete operation vetoed by event listener".to_string(),
+				));
+			}
+
+			// Perform the DELETE
+			manager.delete_with_conn(&conn, pk.clone()).await?;
+
+			// Dispatch after_delete event
+			registry
+				.dispatch_after_delete(Self::table_name(), &instance_id)
+				.await;
+
+			Ok(())
+		}
 	}
 }
 

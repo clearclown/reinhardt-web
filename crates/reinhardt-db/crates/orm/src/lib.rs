@@ -153,6 +153,7 @@ pub mod query_execution;
 pub mod query_options;
 pub mod reflection;
 pub mod registry;
+pub mod relations;
 pub mod relationship;
 pub mod reverse_accessor;
 pub mod session;
@@ -222,7 +223,9 @@ pub use postgres_fields::{
 };
 
 // PostgreSQL-specific advanced features
-pub use postgres_features::{ArrayAgg, ArrayOverlap, FullTextSearch, JsonbBuildObject};
+pub use postgres_features::{
+	ArrayAgg, ArrayOverlap, FullTextSearch, JsonbAgg, JsonbBuildObject, StringAgg, TsRank,
+};
 
 // File field types
 pub use file_fields::{FileField, FileFieldError, ImageField};
@@ -250,6 +253,7 @@ pub use registry::{ColumnInfo, Mapper, MapperRegistry, TableInfo, registry};
 pub use reinhardt_hybrid::{
 	Comparator as HybridComparator, HybridMethod, HybridProperty, UpperCaseComparator,
 };
+pub use relations::{GenericRelationConfig, GenericRelationSet};
 pub use relationship::{CascadeOption, Relationship, RelationshipDirection, RelationshipType};
 pub use session::{Session, SessionError};
 pub use sqlalchemy_query::{Column as SqlColumn, JoinType, SelectQuery, column, select};
