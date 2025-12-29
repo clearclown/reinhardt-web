@@ -6,6 +6,28 @@ SQLAlchemy-style association proxies for transparent attribute access through re
 
 Association proxies allow you to access attributes on related objects as if they were attributes on the parent object. This is particularly useful for many-to-many relationships where you want to work with related objects' attributes directly.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["urls-proxy"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import proxy features:
+
+```rust
+use reinhardt::urls::proxy::{AssociationProxy, ScalarProxy, CollectionProxy};
+use reinhardt::urls::proxy::{ProxyBuilder, association_proxy};
+```
+
+**Note:** Proxy features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

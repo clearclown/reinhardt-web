@@ -8,6 +8,28 @@ Background task queue for executing long-running or scheduled tasks asynchronous
 
 Supports task scheduling, retries, task priorities, and multiple worker processes.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["tasks"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import task features:
+
+```rust
+use reinhardt::tasks::{Task, TaskQueue, TaskExecutor};
+use reinhardt::tasks::backend::{TaskBackend, RedisTaskBackend};
+```
+
+**Note:** Task features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
@@ -144,7 +166,7 @@ Supports task scheduling, retries, task priorities, and multiple worker processe
 The RabbitMQ backend provides production-ready message queue integration:
 
 ```rust
-use reinhardt_tasks::backends::rabbitmq::{RabbitMQBackend, RabbitMQConfig, DeliveryMode};
+use reinhardt::tasks::backends::rabbitmq::{RabbitMQBackend, RabbitMQConfig, DeliveryMode};
 
 let config = RabbitMQConfig {
     uri: "amqp://localhost:5672".to_string(),
@@ -175,7 +197,7 @@ let backend = RabbitMQBackend::new(config).await?;
 The metadata store provides task metadata persistence separate from the task queue:
 
 ```rust
-use reinhardt_tasks::backends::metadata_store::{MetadataStore, TaskMetadata, TaskStatus};
+use reinhardt::tasks::backends::metadata_store::{MetadataStore, TaskMetadata, TaskStatus};
 
 // Store task metadata
 let metadata = TaskMetadata {

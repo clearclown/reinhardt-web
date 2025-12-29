@@ -6,6 +6,28 @@ Email sending and templating
 
 Email framework for sending emails with support for HTML and plain text, attachments, inline images, and template-based emails. Supports multiple email backends including SMTP and development console backend.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["mail"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import mail features:
+
+```rust
+use reinhardt::mail::{EmailMessage, EmailBackend, send_mail};
+use reinhardt::mail::backends::{SmtpBackend, ConsoleBackend};
+```
+
+**Note:** Mail features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

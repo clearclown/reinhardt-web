@@ -39,35 +39,41 @@ This parent crate re-exports functionality from the `server` sub-crate:
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-server = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["server"] }
+
+# For WebSocket support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["server", "server-websocket"] }
+
+# For GraphQL support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["server", "server-graphql"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
 
-### Optional Features
+Then import server features:
 
-Enable specific features based on your needs:
-
-```toml
-[dependencies]
-reinhardt-server = { version = "0.1.0-alpha.1", features = ["websocket", "graphql"] }
+```rust
+use reinhardt::server::{serve, HttpServer};
+use reinhardt::server::{WebSocketServer, WebSocketHandler};  // WebSocket
+use reinhardt::server::graphql_handler;  // GraphQL
 ```
 
-Available features:
-
-- `server` (default): Core HTTP server
-- `websocket`: WebSocket support
-- `graphql`: GraphQL endpoint support
+**Note:** Server features are included in the `standard` and `full` feature presets.
 
 ## Usage
 
 ### Basic HTTP Server
 
 ```rust
-use reinhardt_server::{serve, HttpServer};
-use reinhardt_http::{Request, Response};
+use reinhardt::server::{serve, HttpServer};
+use reinhardt::http::{Request, Response};
+use reinhardt::core::exception::Error;
 use std::sync::Arc;
 
 async fn my_handler(req: Request) -> Result<Response, Error> {
@@ -85,9 +91,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### HTTP Server with Middleware
 
 ```rust
-use reinhardt_server::HttpServer;
-use reinhardt_types::{Handler, Middleware};
-use reinhardt_http::{Request, Response};
+use reinhardt::server::HttpServer;
+use reinhardt::core::types::{Handler, Middleware};
+use reinhardt::http::{Request, Response};
+use reinhardt::core::exception::Error;
 use std::sync::Arc;
 
 struct MyHandler;
@@ -127,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### WebSocket Server
 
 ```rust
-use reinhardt_server::{WebSocketServer, WebSocketHandler};
+use reinhardt::server::{WebSocketServer, WebSocketHandler};
 use std::sync::Arc;
 
 struct EchoHandler;
@@ -159,7 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### WebSocket Server with Broadcast
 
 ```rust
-use reinhardt_server::{WebSocketServer, WebSocketHandler};
+use reinhardt::server::{WebSocketServer, WebSocketHandler};
 use std::sync::Arc;
 
 struct ChatHandler;
@@ -196,7 +203,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### GraphQL Server
 
 ```rust
-use reinhardt_server::graphql_handler;
+use reinhardt::server::graphql_handler;
 use async_graphql::{Object, Schema, EmptyMutation, EmptySubscription};
 
 struct QueryRoot;

@@ -17,10 +17,24 @@ Procedural macros for URL routing in Reinhardt framework
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-reinhardt-routers-macros = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["urls-routers-macros"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import router macro features:
+
+```rust
+use reinhardt::urls::routers_macros::path;
+```
+
+**Note:** Router macro features are included in the `standard` and `full` feature presets.
 
 ## Usage Examples
 
@@ -29,7 +43,7 @@ reinhardt-routers-macros = "0.1.0-alpha.1"
 The `path!` macro validates URL path syntax at compile time:
 
 ```rust
-use reinhardt_routers_macros::path;
+use reinhardt::urls::routers_macros::path;
 
 // Simple static path
 let users_path = path!("/users/");
@@ -166,7 +180,7 @@ The macro provides detailed error messages with examples:
 The `path!` macro is typically used when defining routes:
 
 ```rust
-use reinhardt_routers_macros::path;
+use reinhardt::urls::routers_macros::path;
 
 // Define route patterns
 let list_path = path!("/users/");

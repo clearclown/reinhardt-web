@@ -6,6 +6,28 @@ Django-inspired form handling and validation for Rust
 
 `reinhardt-forms` provides a comprehensive form system for HTML form handling, validation, and rendering. Inspired by Django's forms framework, it offers both automatic form generation from models and manual form definitions with extensive validation capabilities.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["forms"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import form features:
+
+```rust
+use reinhardt::forms::{Form, Field, CharField, IntegerField};
+use reinhardt::forms::widgets::{TextInput, NumberInput};
+```
+
+**Note:** Form features are included in the `standard` and `full` feature presets.
+
 ## Features Status
 
 ### Core Form System
@@ -198,7 +220,7 @@ Django-inspired form handling and validation for Rust
 ### Basic Form
 
 ```rust
-use reinhardt_forms::{Form, CharField, IntegerField, FormField};
+use reinhardt::forms::{Form, CharField, IntegerField, FormField};
 use std::collections::HashMap;
 use serde_json::json;
 
@@ -217,7 +239,7 @@ assert!(form.is_valid());
 ### ModelForm
 
 ```rust
-use reinhardt_forms::{ModelForm, ModelFormBuilder};
+use reinhardt::forms::{ModelForm, ModelFormBuilder};
 
 let form = ModelFormBuilder::<User>::new()
     .include_fields(vec!["name", "email"])
@@ -227,7 +249,7 @@ let form = ModelFormBuilder::<User>::new()
 ### Custom Validation
 
 ```rust
-use reinhardt_forms::{Form, FormError};
+use reinhardt::forms::{Form, FormError};
 
 let mut form = Form::new();
 form.add_clean_function(|data| {

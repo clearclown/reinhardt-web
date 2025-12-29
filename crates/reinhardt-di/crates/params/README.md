@@ -2,6 +2,35 @@
 
 FastAPI-inspired parameter extraction system for Reinhardt.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["di-params"] }
+
+# For multipart support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["di-params", "di-params-multipart"] }
+
+# For validation support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["di-params", "di-params-validation"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import parameter extraction features:
+
+```rust
+use reinhardt::di::params::{Path, Query, Json};
+use reinhardt::di::params::{Header, Cookie, Form};
+use reinhardt::di::params::{PathStruct, HeaderStruct, CookieStruct};
+```
+
+**Note:** Parameter extraction features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
@@ -94,7 +123,7 @@ FastAPI-inspired parameter extraction system for Reinhardt.
 ## Quick Start
 
 ```rust
-use reinhardt_params::{Path, Query, Json};
+use reinhardt::di::params::{Path, Query, Json};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -197,7 +226,7 @@ async fn upload(mut multipart: Multipart) -> Result<()> {
 
 ```toml
 [dependencies]
-reinhardt-params = { version = "0.1", features = ["multipart", "validation"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["di-params", "di-params-multipart", "di-params-validation"] }
 ```
 
 - `multi-value-arrays` (default): Multi-value query parameters

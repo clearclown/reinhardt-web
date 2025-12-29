@@ -104,19 +104,34 @@ Users should depend on `reinhardt-graphql` (this facade crate), not the subcrate
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-# Basic GraphQL support
-reinhardt-graphql = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["graphql"] }
 
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import GraphQL features:
+
+```rust
+use reinhardt::graphql::{Schema, Query, Mutation};
+use reinhardt::graphql::types::{UserStorage, UserEvent};
+```
+
+**Note:** GraphQL features are included in the `standard` and `full` feature presets.
+
+### Optional Features
+
+```toml
 # With dependency injection
-reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["di"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["graphql", "di"] }
 
 # With gRPC transport
-reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc"] }
-
-# All features
-reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["graphql", "grpc"] }
 ```
 
 ## Examples
@@ -125,7 +140,7 @@ reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["full"] }
 
 ```rust
 use async_graphql::{EmptySubscription, Schema};
-use reinhardt_graphql::schema::{Mutation, Query, UserStorage};
+use reinhardt::graphql::schema::{Mutation, Query, UserStorage};
 
 #[tokio::main]
 async fn main() {
@@ -146,7 +161,7 @@ Enable the `di` feature to use dependency injection in GraphQL resolvers:
 
 ```rust
 use async_graphql::{Context, Object, Result, ID, Schema, EmptyMutation, EmptySubscription};
-use reinhardt_graphql::{graphql_handler, SchemaBuilderExt};
+use reinhardt::graphql::{graphql_handler, SchemaBuilderExt};
 use reinhardt_di::InjectionContext;
 use std::sync::Arc;
 
@@ -237,9 +252,9 @@ async fn handler(
 
 ```rust
 use async_graphql::{EmptySubscription, Schema};
-use reinhardt_graphql::grpc_service::GraphQLGrpcService;
-use reinhardt_graphql::schema::{Mutation, Query, UserStorage};
-use reinhardt_grpc::proto::graphql::graph_ql_service_server::GraphQlServiceServer;
+use reinhardt::graphql::grpc_service::GraphQLGrpcService;
+use reinhardt::graphql::schema::{Mutation, Query, UserStorage};
+use reinhardt::grpc::proto::graphql::graph_ql_service_server::GraphQlServiceServer;
 use tonic::transport::Server;
 
 #[tokio::main]
@@ -264,7 +279,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### GraphQL over gRPC Client
 
 ```rust
-use reinhardt_grpc::proto::graphql::{
+use reinhardt::grpc::proto::graphql::{
     graph_ql_service_client::GraphQlServiceClient,
     GraphQlRequest,
 };

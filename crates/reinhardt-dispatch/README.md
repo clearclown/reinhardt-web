@@ -6,6 +6,27 @@ HTTP request dispatching and handler system for the Reinhardt framework.
 
 `reinhardt-dispatch` provides the core request handling functionality, equivalent to Django's `django.core.handlers` and `django.dispatch`. It orchestrates the complete request lifecycle including middleware execution, signal emission, and exception handling.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["dispatch"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import dispatch features:
+
+```rust
+use reinhardt::dispatch::{BaseHandler, MiddlewareChain, Dispatcher};
+```
+
+**Note:** Dispatch features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 - **Request Lifecycle Management**: Handle HTTP requests from start to finish
@@ -28,8 +49,8 @@ Request → BaseHandler → Middleware Chain → URL Resolver → View → Respo
 ### Basic Request Handling
 
 ```rust
-use reinhardt_dispatch::{BaseHandler, DispatchError};
-use reinhardt_http::{Request, Response};
+use reinhardt::dispatch::{BaseHandler, DispatchError};
+use reinhardt::http::{Request, Response};
 
 async fn handle_request(request: Request) -> Result<Response, DispatchError> {
     let handler = BaseHandler::new();
@@ -40,8 +61,8 @@ async fn handle_request(request: Request) -> Result<Response, DispatchError> {
 ### With Middleware
 
 ```rust
-use reinhardt_dispatch::{BaseHandler, MiddlewareChain};
-use reinhardt_types::{Handler, Middleware};
+use reinhardt::dispatch::{BaseHandler, MiddlewareChain};
+use reinhardt::core::types::{Handler, Middleware};
 use std::sync::Arc;
 
 async fn setup_handler() -> Arc<dyn Handler> {
@@ -93,7 +114,7 @@ Middleware are executed in reverse order (LIFO), so the last middleware added is
 High-level dispatcher that coordinates between the handler and the rest of the framework:
 
 ```rust
-use reinhardt_dispatch::Dispatcher;
+use reinhardt::dispatch::Dispatcher;
 
 let dispatcher = Dispatcher::new(BaseHandler::new());
 let response = dispatcher.dispatch(request).await?;

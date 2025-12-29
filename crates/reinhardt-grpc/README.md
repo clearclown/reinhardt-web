@@ -8,6 +8,28 @@ This crate provides the foundation for gRPC functionality in the Reinhardt
 framework. It includes only framework-level common types and adapter traits,
 with domain-specific implementations left to users.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["grpc"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import gRPC features:
+
+```rust
+use reinhardt::grpc::{Empty, Timestamp, Error, PageInfo};
+use reinhardt::grpc::adapter::{GrpcServiceAdapter, ServiceContext};
+```
+
+**Note:** gRPC features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 - Common Protobuf types (Empty, Timestamp, Error, PageInfo, BatchResult)
@@ -59,7 +81,7 @@ Traits for integrating gRPC services with other framework components (such as
 GraphQL):
 
 ```rust
-use reinhardt_grpc::{GrpcServiceAdapter, GrpcSubscriptionAdapter};
+use reinhardt::grpc::{GrpcServiceAdapter, GrpcSubscriptionAdapter};
 
 /// Adapter for Query/Mutation
 #[async_trait]
@@ -86,7 +108,7 @@ pub trait GrpcSubscriptionAdapter: Send + Sync {
 gRPC error types and conversions:
 
 ```rust
-use reinhardt_grpc::{GrpcError, GrpcResult};
+use reinhardt::grpc::{GrpcError, GrpcResult};
 
 pub enum GrpcError {
     Connection(String),
@@ -159,7 +181,7 @@ pub mod proto {
 }
 
 // Use common types from reinhardt-grpc
-use reinhardt_grpc::proto::common::{Empty, Timestamp, PageInfo};
+use reinhardt::grpc::proto::common::{Empty, Timestamp, PageInfo};
 ```
 
 ### Dependency Injection
@@ -175,7 +197,7 @@ reinhardt-di = "0.1"
 #### Basic Usage
 
 ```rust
-use reinhardt_grpc::{GrpcRequestExt, grpc_handler};
+use reinhardt::grpc::{GrpcRequestExt, grpc_handler};
 use reinhardt_di::InjectionContext;
 use tonic::{Request, Response, Status};
 use std::sync::Arc;

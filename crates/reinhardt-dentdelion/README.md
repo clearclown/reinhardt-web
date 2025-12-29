@@ -17,12 +17,24 @@ Plugin system for the Reinhardt framework - easy to create, distribute, and inst
 
 ## Installation
 
-Add to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-dentdelion = { version = "0.1", features = ["full"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["dentdelion"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import dentdelion features:
+
+```rust
+use reinhardt::dentdelion::prelude::*;
+```
+
+**Note:** Dentdelion features are included in the `standard` and `full` feature presets.
 
 ### Feature Flags
 
@@ -38,7 +50,7 @@ reinhardt-dentdelion = { version = "0.1", features = ["full"] }
 ### Creating a Static Plugin
 
 ```rust
-use reinhardt_dentdelion::prelude::*;
+use reinhardt::dentdelion::prelude::*;
 
 pub struct MyPlugin {
     metadata: PluginMetadata,
@@ -73,7 +85,7 @@ impl Plugin for MyPlugin {
 ### Registering Plugins
 
 ```rust
-use reinhardt_dentdelion::prelude::*;
+use reinhardt::dentdelion::prelude::*;
 use std::sync::Arc;
 
 let mut registry = PluginRegistry::new();
@@ -92,7 +104,7 @@ let middleware_plugins = registry.plugins_with_capability(&Capability::Core(Plug
 ### Implementing Lifecycle Hooks
 
 ```rust
-use reinhardt_dentdelion::prelude::*;
+use reinhardt::dentdelion::prelude::*;
 
 #[async_trait]
 impl PluginLifecycle for MyPlugin {
@@ -238,7 +250,7 @@ interface plugin {
 ### WasmRuntime Configuration
 
 ```rust
-use reinhardt_dentdelion::wasm::{WasmRuntime, WasmRuntimeConfigBuilder};
+use reinhardt::dentdelion::wasm::{WasmRuntime, WasmRuntimeConfigBuilder};
 use std::time::Duration;
 
 let config = WasmRuntimeConfigBuilder::new()
@@ -285,7 +297,7 @@ Host functions check capabilities at runtime:
 ### Loading WASM Plugins
 
 ```rust
-use reinhardt_dentdelion::wasm::{WasmPluginLoader, WasmRuntime};
+use reinhardt::dentdelion::wasm::{WasmPluginLoader, WasmRuntime};
 use std::sync::Arc;
 
 let runtime = Arc::new(WasmRuntime::new(Default::default())?);

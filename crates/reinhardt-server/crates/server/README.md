@@ -6,6 +6,35 @@ High-performance HTTP server implementation
 
 High-performance HTTP server based on Hyper. Provides request routing, WebSocket connections, GraphQL support, and handles concurrent connections with async/await.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["server"] }
+
+# For WebSocket support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["server", "server-websocket"] }
+
+# For GraphQL support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["server", "server-graphql"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import server features:
+
+```rust
+use reinhardt::server::{serve, HttpServer};
+use reinhardt::server::{WebSocketServer, serve_websocket};  // WebSocket
+use reinhardt::server::graphql_handler;  // GraphQL
+```
+
+**Note:** Server features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
@@ -120,15 +149,15 @@ High-performance HTTP server based on Hyper. Provides request routing, WebSocket
 ```rust
 use std::sync::Arc;
 use std::net::SocketAddr;
-use reinhardt_server::{HttpServer, serve};
-use reinhardt_types::Handler;
-use reinhardt_http::{Request, Response};
+use reinhardt::server::{HttpServer, serve};
+use reinhardt::core::types::Handler;
+use reinhardt::http::{Request, Response};
 
 struct MyHandler;
 
 #[async_trait::async_trait]
 impl Handler for MyHandler {
-    async fn handle(&self, _req: Request) -> reinhardt_exception::Result<Response> {
+    async fn handle(&self, _req: Request) -> reinhardt::core::exception::Result<Response> {
         Ok(Response::ok().with_body("Hello, World!"))
     }
 }
@@ -154,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use std::sync::Arc;
 use std::net::SocketAddr;
-use reinhardt_server::{WebSocketServer, WebSocketHandler, serve_websocket};
+use reinhardt::server::{WebSocketServer, WebSocketHandler, serve_websocket};
 
 struct EchoHandler;
 
@@ -187,7 +216,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use std::sync::Arc;
 use std::net::SocketAddr;
-use reinhardt_server::{HttpServer, graphql_handler};
+use reinhardt::server::{HttpServer, graphql_handler};
 use async_graphql::Object;
 
 struct QueryRoot;

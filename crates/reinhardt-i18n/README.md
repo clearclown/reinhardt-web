@@ -6,6 +6,28 @@ Internationalization and localization support for Reinhardt, inspired by Django'
 
 Framework for translating applications into multiple languages with Django-style gettext API.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["i18n"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import i18n features:
+
+```rust
+use reinhardt::i18n::{gettext, ngettext, pgettext};
+use reinhardt::i18n::{activate, deactivate, MessageCatalog};
+```
+
+**Note:** I18n features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

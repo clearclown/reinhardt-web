@@ -6,6 +6,29 @@ Request/response processing pipeline for Reinhardt framework
 
 Middleware system for processing requests and responses. Provides comprehensive built-in middleware for security, performance optimization, authentication, and request handling.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["middleware"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import middleware features:
+
+```rust
+use reinhardt::middleware::{CsrfMiddleware, CorsMiddleware, GzipMiddleware};
+use reinhardt::middleware::{LoggingMiddleware, AuthenticationMiddleware};
+use reinhardt::middleware::{SecurityHeadersMiddleware, HttpsRedirectMiddleware};
+```
+
+**Note:** Middleware features are included in the `standard` and `full` feature presets.
+
 ## Implemented Features ✓
 
 ### Core Middleware System
@@ -172,8 +195,8 @@ The following middleware are implemented in separate crates:
 ### Basic Usage
 
 ```rust
-use reinhardt_middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
-use reinhardt_apps::{Handler, Middleware};
+use reinhardt::middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
+use reinhardt::core::types::{Handler, Middleware};
 use std::sync::Arc;
 
 // Default configuration

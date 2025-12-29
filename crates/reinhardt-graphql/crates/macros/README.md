@@ -8,26 +8,30 @@ Derive macros for GraphQL-gRPC integration in Reinhardt framework
 
 ## Important
 
-**This is an internal subcrate of `reinhardt-graphql`.** Users should depend on `reinhardt-graphql` (the parent facade crate) instead of this crate directly.
+**This is an internal subcrate of `reinhardt-graphql`.** Users should depend on `reinhardt` (the parent crate) instead of this crate directly.
 
 ```toml
-# ✅ Correct - use the facade crate
+# ✅ Correct - use the reinhardt parent crate
 [dependencies]
-reinhardt-graphql = { version = "0.1.0-alpha.1", features = ["graphql-grpc"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["graphql"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 
 # ❌ Incorrect - don't depend on this crate directly
 [dependencies]
 reinhardt-graphql-macros = "0.1.0-alpha.1"
 ```
 
-The macros are automatically re-exported by `reinhardt-graphql`:
+The macros are automatically re-exported by `reinhardt::graphql`:
 
 ```rust
-// ✅ Correct - import from the facade crate
-use reinhardt_graphql::{GrpcGraphQLConvert, GrpcSubscription};
+// ✅ Correct - import from the reinhardt parent crate
+use reinhardt::graphql::{GrpcGraphQLConvert, GrpcSubscription};
 
 // Or use the macros module
-use reinhardt_graphql::macros::{GrpcGraphQLConvert, GrpcSubscription};
+use reinhardt::graphql::macros::{GrpcGraphQLConvert, GrpcSubscription};
 ```
 
 ## Features
@@ -51,7 +55,7 @@ use reinhardt_graphql::macros::{GrpcGraphQLConvert, GrpcSubscription};
 ### Type Conversion
 
 ```rust
-use reinhardt_graphql::GrpcGraphQLConvert;
+use reinhardt::graphql::GrpcGraphQLConvert;
 
 #[derive(GrpcGraphQLConvert)]
 #[graphql(rename_all = "camelCase")]
@@ -71,7 +75,7 @@ This generates:
 ### gRPC Subscriptions
 
 ```rust
-use reinhardt_graphql::GrpcSubscription;
+use reinhardt::graphql::GrpcSubscription;
 
 #[derive(GrpcSubscription)]
 #[grpc(service = "UserEventsServiceClient", method = "subscribe_user_events")]

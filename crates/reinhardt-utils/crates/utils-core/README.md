@@ -32,10 +32,25 @@ Core utilities for Reinhardt framework
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-utils-core = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["utils-core"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import core utility features:
+
+```rust
+use reinhardt::utils::core::html::{escape, unescape, strip_tags};
+use reinhardt::utils::core::SafeString;
+```
+
+**Note:** Core utility features are included in the `standard` and `full` feature presets.
 
 ## Usage Examples
 
@@ -44,7 +59,7 @@ utils-core = "0.1.0-alpha.1"
 Escape HTML special characters to prevent XSS attacks:
 
 ```rust
-use reinhardt_utils_core::html::escape;
+use reinhardt::utils::core::html::escape;
 
 // Basic escaping
 assert_eq!(escape("Hello, World!"), "Hello, World!");
@@ -74,7 +89,7 @@ assert_eq!(escape("\"quoted\""), "&quot;quoted&quot;");
 Convert HTML entities back to their original characters:
 
 ```rust
-use reinhardt_utils_core::html::unescape;
+use reinhardt::utils::core::html::unescape;
 
 assert_eq!(unescape("&lt;div&gt;"), "<div>");
 assert_eq!(unescape("&amp;"), "&");
@@ -91,7 +106,7 @@ assert_eq!(unescape("&#60;"), "<");  // Decimal
 Remove all HTML tags from text, keeping only content:
 
 ```rust
-use reinhardt_utils_core::html::strip_tags;
+use reinhardt::utils::core::html::strip_tags;
 
 assert_eq!(strip_tags("<p>Hello <b>World</b></p>"), "Hello World");
 assert_eq!(strip_tags("<a href=\"#\">Link</a>"), "Link");
@@ -106,7 +121,7 @@ assert_eq!(strip_tags("<div><span>Test</span></div>"), "Test");
 Remove whitespace between HTML tags for minification:
 
 ```rust
-use reinhardt_utils_core::html::strip_spaces_between_tags;
+use reinhardt::utils::core::html::strip_spaces_between_tags;
 
 assert_eq!(
     strip_spaces_between_tags("<div>  <span>Test</span>  </div>"),
@@ -124,7 +139,7 @@ assert_eq!(
 Escape values for safe use in HTML attributes:
 
 ```rust
-use reinhardt_utils_core::html::escape_attr;
+use reinhardt::utils::core::html::escape_attr;
 
 assert_eq!(escape_attr("value"), "value");
 
@@ -151,7 +166,7 @@ assert_eq!(escape_attr("test\rvalue"), "test&#13;value");
 Simple placeholder-based templating:
 
 ```rust
-use reinhardt_utils_core::html::format_html;
+use reinhardt::utils::core::html::format_html;
 
 let template = "<div class=\"{class}\">{content}</div>";
 let args = [("class", "container"), ("content", "Hello")];
@@ -176,7 +191,7 @@ assert_eq!(
 Context-aware HTML escaping based on autoescape flag:
 
 ```rust
-use reinhardt_utils_core::html::conditional_escape;
+use reinhardt::utils::core::html::conditional_escape;
 
 // Escape when autoescape is true
 assert_eq!(conditional_escape("<script>", true), "&lt;script&gt;");
@@ -195,7 +210,7 @@ assert_eq!(conditional_escape("Hello", true), "Hello");
 Mark strings as safe to prevent automatic escaping:
 
 ```rust
-use reinhardt_utils_core::html::SafeString;
+use reinhardt::utils::core::html::SafeString;
 
 let safe = SafeString::new("<b>Bold</b>");
 assert_eq!(safe.as_str(), "<b>Bold</b>");
@@ -220,7 +235,7 @@ assert_eq!(safe3.as_str(), "<u>Underline</u>");
 Truncate HTML content to specified word count while preserving tags:
 
 ```rust
-use reinhardt_utils_core::html::truncate_html_words;
+use reinhardt::utils::core::html::truncate_html_words;
 
 let html = "<p>This is a <b>test</b> sentence with many words.</p>";
 let truncated = truncate_html_words(html, 5);
@@ -354,7 +369,7 @@ HTML utilities are used throughout the framework:
 
 **Template Rendering:**
 ```rust
-use reinhardt_utils_core::html::{escape, SafeString};
+use reinhardt::utils::core::html::{escape, SafeString};
 
 // Escape user input in templates
 let user_input = "<script>alert('XSS')</script>";
@@ -367,7 +382,7 @@ let safe = SafeString::new(trusted_html);
 
 **View Rendering:**
 ```rust
-use reinhardt_utils_core::html::strip_tags;
+use reinhardt::utils::core::html::strip_tags;
 
 // Generate plain text preview
 let html_content = "<p>Article content with <b>formatting</b></p>";
@@ -376,7 +391,7 @@ let preview = strip_tags(html_content);
 
 **Form Handling:**
 ```rust
-use reinhardt_utils_core::html::escape_attr;
+use reinhardt::utils::core::html::escape_attr;
 
 // Safely insert user data into form attributes
 let user_value = "value with \"quotes\"";

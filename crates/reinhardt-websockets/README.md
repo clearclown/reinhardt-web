@@ -6,6 +6,28 @@ WebSocket support for the Reinhardt framework.
 
 WebSocket protocol support for real-time bidirectional communication. Includes connection management, message routing, room management, and WebSocket handler traits for building interactive applications.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["websockets"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import WebSocket features:
+
+```rust
+use reinhardt::websockets::{WebSocketConnection, WebSocketHandler, Message};
+use reinhardt::websockets::{RoomManager, WebSocketMessage};
+```
+
+**Note:** WebSocket features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

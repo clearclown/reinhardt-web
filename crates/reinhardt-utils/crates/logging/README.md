@@ -8,6 +8,28 @@ Structured logging system with support for multiple log outputs, log levels, and
 
 Includes request logging, error logging, and integration with external logging services.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["utils-logging"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import logging features:
+
+```rust
+use reinhardt::utils::logging::{Logger, LoggerHandle, LogLevel};
+use reinhardt::utils::logging::security::{SecurityLogger, SecurityError};
+```
+
+**Note:** Logging features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
@@ -92,7 +114,7 @@ Includes request logging, error logging, and integration with external logging s
 **Usage Example**:
 
 ```rust
-use reinhardt_logging::security::{SecurityLogger, SecurityError};
+use reinhardt::utils::logging::security::{SecurityLogger, SecurityError};
 
 let logger = SecurityLogger::new();
 

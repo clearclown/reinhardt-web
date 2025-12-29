@@ -6,6 +6,28 @@ Static file serving and production utilities for Reinhardt
 
 Static file handling for serving CSS, JavaScript, images, and other static assets. Includes file collection, URL generation, storage backends, health checks, and metrics collection for production deployments.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["utils-static"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import static file features:
+
+```rust
+use reinhardt::utils::r#static::{StaticFilesConfig, StaticFilesFinder};
+use reinhardt::utils::r#static::{HashedFileStorage, ManifestStaticFilesStorage};
+```
+
+**Note:** Static file features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Core Functionality
@@ -259,7 +281,7 @@ The metrics system enables:
 ### Basic Configuration
 
 ```rust
-use reinhardt_static::StaticFilesConfig;
+use reinhardt::utils::r#static::StaticFilesConfig;
 use std::path::PathBuf;
 
 let config = StaticFilesConfig {
@@ -276,7 +298,7 @@ let config = StaticFilesConfig {
 ### Configuration Validation
 
 ```rust
-use reinhardt_static::checks::check_static_files_config;
+use reinhardt::utils::r#static::checks::check_static_files_config;
 
 let messages = check_static_files_config(&config);
 for message in messages {
@@ -290,7 +312,7 @@ for message in messages {
 ### Finding All Static Files
 
 ```rust
-use reinhardt_static::StaticFilesFinder;
+use reinhardt::utils::r#static::StaticFilesFinder;
 use std::path::PathBuf;
 
 let mut finder = StaticFilesFinder::new();
@@ -307,7 +329,7 @@ for file in all_files {
 ### Directory Serving with Index Files
 
 ```rust
-use reinhardt_static::StaticFileHandler;
+use reinhardt::utils::r#static::StaticFileHandler;
 use std::path::PathBuf;
 
 let handler = StaticFileHandler::new(PathBuf::from("/var/www/static"))
@@ -323,7 +345,7 @@ let handler = StaticFileHandler::new(PathBuf::from("/var/www/static"))
 ### Media Assets for Forms
 
 ```rust
-use reinhardt_static::media::{Media, HasMedia};
+use reinhardt::utils::r#static::media::{Media, HasMedia};
 
 let mut media = Media::new();
 media.add_css("all", "/static/css/forms.css");
@@ -337,7 +359,7 @@ let js_html = media.render_js();
 ### Health Checks
 
 ```rust
-use reinhardt_static::health::{HealthCheckManager, HealthCheck, HealthCheckResult};
+use reinhardt::utils::r#static::health::{HealthCheckManager, HealthCheck, HealthCheckResult};
 use async_trait::async_trait;
 use std::sync::Arc;
 
@@ -371,7 +393,7 @@ reinhardt-static = { version = "0.1.0-alpha.1" }
 #### Basic Pages/SSR Integration
 
 ```rust
-use reinhardt_static::{StaticFilesConfig, TemplateStaticConfig};
+use reinhardt::utils::r#static::{StaticFilesConfig, TemplateStaticConfig};
 use std::path::PathBuf;
 
 // Initialize static files configuration
@@ -392,7 +414,7 @@ With reinhardt-pages SSR, you can use the configuration directly:
 
 ```rust
 use reinhardt_pages::{SsrRenderer, SsrOptions};
-use reinhardt_static::TemplateStaticConfig;
+use reinhardt::utils::r#static::TemplateStaticConfig;
 
 let static_config = TemplateStaticConfig::new("/static/".to_string());
 
@@ -413,7 +435,7 @@ This will generate static file URLs:
 #### Pages/SSR Integration with Manifest (Hashed Filenames)
 
 ```rust
-use reinhardt_static::{ManifestStaticFilesStorage, init_template_static_config_with_manifest};
+use reinhardt::utils::r#static::{ManifestStaticFilesStorage, init_template_static_config_with_manifest};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -459,7 +481,7 @@ The same template will now generate hashed URLs for cache busting:
 #### CDN Integration
 
 ```rust
-use reinhardt_static::TemplateStaticConfig;
+use reinhardt::utils::r#static::TemplateStaticConfig;
 
 // Configure with CDN URL
 let config = TemplateStaticConfig::new(
@@ -480,7 +502,7 @@ Templates will now generate CDN URLs:
 #### Advanced: Custom Manifest Loading
 
 ```rust
-use reinhardt_static::TemplateStaticConfig;
+use reinhardt::utils::r#static::TemplateStaticConfig;
 use std::collections::HashMap;
 
 // Create custom manifest mapping
@@ -509,7 +531,7 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["processing"] }
 #### Basic CSS/JS Minification
 
 ```rust
-use reinhardt_static::processing::{ProcessingPipeline, ProcessingConfig};
+use reinhardt::utils::r#static::processing::{ProcessingPipeline, ProcessingConfig};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -541,7 +563,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Asset Bundling
 
 ```rust
-use reinhardt_static::processing::bundle::{AssetBundler, BundleConfig};
+use reinhardt::utils::r#static::processing::bundle::{AssetBundler, BundleConfig};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -578,7 +600,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Dependency Graph
 
 ```rust
-use reinhardt_static::DependencyGraph;
+use reinhardt::utils::r#static::DependencyGraph;
 
 let mut graph = DependencyGraph::new();
 
@@ -596,7 +618,7 @@ let order = graph.resolve_order();
 #### Custom Bundle Configuration
 
 ```rust
-use reinhardt_static::processing::bundle::{AssetBundler, BundleConfig};
+use reinhardt::utils::r#static::processing::bundle::{AssetBundler, BundleConfig};
 use std::path::PathBuf;
 
 let mut bundler = AssetBundler::new();
@@ -615,8 +637,8 @@ let bundle = bundler.bundle_files(&[
 #### Processing with Storage Integration
 
 ```rust,no_run
-# use reinhardt_static::processing::{ProcessingPipeline, ProcessingConfig};
-# use reinhardt_static::ManifestStaticFilesStorage;
+# use reinhardt::utils::r#static::processing::{ProcessingPipeline, ProcessingConfig};
+# use reinhardt::utils::r#static::ManifestStaticFilesStorage;
 # use std::path::PathBuf;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -654,8 +676,8 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["compression"] }
 ```
 
 ```rust
-use reinhardt_static::processing::compress::{GzipCompressor, BrotliCompressor, CompressionConfig};
-use reinhardt_static::processing::Processor;
+use reinhardt::utils::r#static::processing::compress::{GzipCompressor, BrotliCompressor, CompressionConfig};
+use reinhardt::utils::r#static::processing::Processor;
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -696,7 +718,7 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["source-maps"] }
 ```
 
 ```rust
-use reinhardt_static::processing::sourcemap::{SourceMap, SourceMapGenerator, SourceMapMerger};
+use reinhardt::utils::r#static::processing::sourcemap::{SourceMap, SourceMapGenerator, SourceMapMerger};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -748,8 +770,8 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["image-optimization"
 ```
 
 ```rust
-use reinhardt_static::processing::images::ImageOptimizer;
-use reinhardt_static::processing::Processor;
+use reinhardt::utils::r#static::processing::images::ImageOptimizer;
+use reinhardt::utils::r#static::processing::Processor;
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -785,8 +807,8 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["advanced-minificati
 Advanced minification using OXC provides production-grade optimization including variable renaming, dead code elimination, and advanced compression.
 
 ```rust
-use reinhardt_static::processing::advanced_minify::{AdvancedJsMinifier, AdvancedMinifyConfig};
-use reinhardt_static::processing::Processor;
+use reinhardt::utils::r#static::processing::advanced_minify::{AdvancedJsMinifier, AdvancedMinifyConfig};
+use reinhardt::utils::r#static::processing::Processor;
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -818,7 +840,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 **Custom Configuration**:
 
 ```rust
-use reinhardt_static::processing::advanced_minify::{AdvancedJsMinifier, AdvancedMinifyConfig};
+use reinhardt::utils::r#static::processing::advanced_minify::{AdvancedJsMinifier, AdvancedMinifyConfig};
 
 // Custom configuration
 let config = AdvancedMinifyConfig::new()
@@ -836,7 +858,7 @@ let minifier = AdvancedJsMinifier::with_config(config);
 **Development Mode** (minimal minification):
 
 ```rust
-use reinhardt_static::processing::advanced_minify::AdvancedJsMinifier;
+use reinhardt::utils::r#static::processing::advanced_minify::AdvancedJsMinifier;
 
 // Development minifier (preserves readability)
 let minifier = AdvancedJsMinifier::development();
@@ -861,7 +883,7 @@ let minifier = AdvancedJsMinifier::development();
 **Integration with Processing Pipeline**:
 
 ```rust
-use reinhardt_static::processing::{ProcessingPipeline, ProcessingConfig};
+use reinhardt::utils::r#static::processing::{ProcessingPipeline, ProcessingConfig};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -894,7 +916,7 @@ reinhardt-static = { version = "0.1.0-alpha.1", features = ["dev-server"] }
 #### File Watching and Auto-Reload
 
 ```rust,no_run
-use reinhardt_static::{DevServerConfig, FileWatcher, AutoReload};
+use reinhardt::utils::r#static::{DevServerConfig, FileWatcher, AutoReload};
 use std::path::PathBuf;
 
 #[tokio::main]
@@ -929,7 +951,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Auto-Reload with Broadcast Channels
 
 ```rust
-use reinhardt_static::{AutoReload, ReloadEvent};
+use reinhardt::utils::r#static::{AutoReload, ReloadEvent};
 
 #[tokio::main]
 async fn main() {
@@ -955,7 +977,7 @@ async fn main() {
 #### Smart CSS Reloading
 
 ```rust
-use reinhardt_static::{AutoReload, WatchEvent};
+use reinhardt::utils::r#static::{AutoReload, WatchEvent};
 use std::path::PathBuf;
 
 let reload = AutoReload::new();
@@ -974,7 +996,7 @@ reload.handle_watch_event(event);
 #### Development Error Pages
 
 ```rust
-use reinhardt_static::DevelopmentErrorHandler;
+use reinhardt::utils::r#static::DevelopmentErrorHandler;
 use std::io;
 
 let handler = DevelopmentErrorHandler::new()
@@ -999,7 +1021,7 @@ let text = handler.format_error_text(&error);
 #### Client Connection Tracking
 
 ```rust
-use reinhardt_static::AutoReload;
+use reinhardt::utils::r#static::AutoReload;
 
 #[tokio::main]
 async fn main() {

@@ -6,6 +6,28 @@ File storage backends
 
 Abstraction layer for file storage with support for local filesystem, cloud storage (S3, Azure, GCS), and custom storage backends. Handles file uploads, downloads, and URL generation.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["utils-storage"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import storage features:
+
+```rust
+use reinhardt::utils::storage::{Storage, LocalStorage};
+use reinhardt::utils::storage::{FileMetadata, StoredFile, StorageError};
+```
+
+**Note:** Storage features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

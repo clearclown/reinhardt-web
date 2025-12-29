@@ -6,6 +6,32 @@ Automatic URL routing configuration for Reinhardt framework
 
 `reinhardt-routers` provides Django-inspired URL routing functionality for Reinhardt applications. It automatically generates URL patterns for ViewSets, supports namespacing and versioning, and includes powerful URL reversal capabilities. This crate eliminates boilerplate code for defining common REST API URL patterns while maintaining type safety and flexibility.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["urls-routers"] }
+
+# For UnifiedRouter with DI and middleware:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["urls-routers", "urls-routers-unified"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import router features:
+
+```rust
+use reinhardt::urls::routers::{DefaultRouter, UnifiedRouter, Router};
+use reinhardt::urls::routers::{path, re_path, include_routes};
+use reinhardt::urls::routers::{reverse, UrlReverser};
+```
+
+**Note:** Router features are included in the `standard` and `full` feature presets.
+
 ## Implemented ✓
 
 ### Core Router Types
@@ -144,8 +170,8 @@ Automatic URL routing configuration for Reinhardt framework
 ### DefaultRouter (Traditional)
 
 ```rust
-use reinhardt_routers::{DefaultRouter, Router, path, include_routes};
-use reinhardt_viewsets::ViewSet;
+use reinhardt::urls::routers::{DefaultRouter, Router, path, include_routes};
+use reinhardt::views::viewsets::ViewSet;
 use std::sync::Arc;
 
 // Create a router
@@ -173,9 +199,9 @@ let user_url = router.reverse_with("users-detail", &[("id", "123")]).unwrap();
 ### UnifiedRouter (Hierarchical)
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
-use reinhardt_di::InjectionContext;
-use reinhardt_middleware::AuthMiddleware;
+use reinhardt::urls::routers::UnifiedRouter;
+use reinhardt::di::InjectionContext;
+use reinhardt::middleware::AuthMiddleware;
 use std::sync::Arc;
 
 // Create main router
@@ -219,7 +245,7 @@ let app = app
 ### Mixed API Styles with UnifiedRouter
 
 ```rust
-use reinhardt_routers::UnifiedRouter;
+use reinhardt::urls::routers::UnifiedRouter;
 use hyper::Method;
 use std::sync::Arc;
 

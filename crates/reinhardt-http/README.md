@@ -24,14 +24,11 @@ Core HTTP abstractions for the Reinhardt framework. Provides comprehensive reque
   - `.uri()` - Set URI (with automatic query parsing)
   - `.version()` - Set HTTP version (defaults to HTTP/1.1)
   - `.headers()` - Set headers
+  - `.header()` - Set single header
   - `.body()` - Set request body
+  - `.secure()` - Set HTTPS flag
+  - `.remote_addr()` - Set remote address
   - `.build()` - Finalize construction
-- **Convenience methods** for common operations
-  - `Request::get(uri)` - Create GET request
-  - `Request::post(uri)` - Create POST request
-  - `Request::put(uri)` - Create PUT request
-  - `Request::delete(uri)` - Create DELETE request
-  - `Request::patch(uri)` - Create PATCH request
 - **Request parsing** (with `parsers` feature)
   - JSON body parsing
   - Form data parsing
@@ -53,11 +50,11 @@ Core HTTP abstractions for the Reinhardt framework. Provides comprehensive reque
 - **Redirect responses**
   - `Response::permanent_redirect(url)` - 301 Moved Permanently
   - `Response::temporary_redirect(url)` - 302 Found
-  - `Response::see_other(url)` - 303 See Other
+  - `Response::temporary_redirect_preserve_method(url)` - 307 Temporary Redirect
 - **Builder pattern methods**
   - `.with_body(data)` - Set response body (bytes or string)
   - `.with_header(name, value)` - Add single header
-  - `.with_headers(map)` - Set multiple headers
+  - `.with_typed_header(header)` - Add typed header
   - `.with_json(data)` - Serialize data to JSON and set Content-Type
   - `.with_location(url)` - Set Location header (for redirects)
   - `.with_stop_chain(bool)` - Control middleware chain execution
@@ -85,56 +82,52 @@ Core HTTP abstractions for the Reinhardt framework. Provides comprehensive reque
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-reinhardt-http = "0.1.0-alpha.1"
+reinhardt = "0.1.0-alpha.1"
 
-# With parsers support (JSON, form data)
-reinhardt-http = { version = "0.1.0-alpha.1", features = ["parsers"] }
+# Or use a preset with parsers support:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+**Note:** HTTP types are available through the main `reinhardt` crate, which provides a unified interface to all framework components.
 
 ## Usage Examples
 
 ### Basic Request Construction
 
 ```rust
-use reinhardt_http::Request;
+use reinhardt::http::Request;
 use hyper::Method;
+use bytes::Bytes;
 
 // Using builder pattern
 let request = Request::builder()
-    .method(Method::POST)
-    .uri("/api/users?page=1")
-    .body(bytes::Bytes::from(r#"{"name": "Alice"}"#))
-    .build()
-    .unwrap();
+	.method(Method::POST)
+	.uri("/api/users?page=1")
+	.body(Bytes::from(r#"{"name": "Alice"}"#))
+	.build()
+	.unwrap();
 
 assert_eq!(request.method, Method::POST);
 assert_eq!(request.path(), "/api/users");
 assert_eq!(request.query_params.get("page"), Some(&"1".to_string()));
 ```
 
-### Convenience Methods
-
-```rust
-use reinhardt_http::Request;
-
-// Quick GET request
-let request = Request::get("/api/users");
-assert_eq!(request.method, hyper::Method::GET);
-
-// Quick POST request
-let request = Request::post("/api/users")
-    .with_body(r#"{"name": "Bob"}"#);
-assert_eq!(request.method, hyper::Method::POST);
-```
-
 ### Path and Query Parameters
 
 ```rust
-use reinhardt_http::Request;
+use reinhardt::http::Request;
+use hyper::Method;
 
-let mut request = Request::get("/api/users/123?sort=name&order=asc");
+let mut request = Request::builder()
+	.method(Method::GET)
+	.uri("/api/users/123?sort=name&order=asc")
+	.build()
+	.unwrap();
 
 // Access query parameters
 assert_eq!(request.query_params.get("sort"), Some(&"sort".to_string()));
@@ -148,12 +141,17 @@ assert_eq!(request.path_params.get("id"), Some(&"123".to_string()));
 ### Request Extensions
 
 ```rust
-use reinhardt_http::Request;
+use reinhardt::http::Request;
+use hyper::Method;
 
 #[derive(Clone)]
 struct UserId(i64);
 
-let mut request = Request::get("/api/profile");
+let mut request = Request::builder()
+	.method(Method::GET)
+	.uri("/api/profile")
+	.build()
+	.unwrap();
 
 // Store typed data in extensions
 request.extensions.insert(UserId(42));
@@ -166,7 +164,7 @@ assert_eq!(user_id.0, 42);
 ### Response Helpers
 
 ```rust
-use reinhardt_http::Response;
+use reinhardt::http::Response;
 
 // Success responses
 let response = Response::ok()
@@ -198,29 +196,29 @@ assert_eq!(response.status, hyper::StatusCode::NOT_FOUND);
 ### Redirect Responses
 
 ```rust
-use reinhardt_http::Response;
+use reinhardt::http::Response;
 
 // Permanent redirect (301)
 let response = Response::permanent_redirect("/new-location");
 assert_eq!(response.status, hyper::StatusCode::MOVED_PERMANENTLY);
 assert_eq!(
-    response.headers.get("location").unwrap().to_str().unwrap(),
-    "/new-location"
+	response.headers.get("location").unwrap().to_str().unwrap(),
+	"/new-location"
 );
 
 // Temporary redirect (302)
 let response = Response::temporary_redirect("/login");
 assert_eq!(response.status, hyper::StatusCode::FOUND);
 
-// See Other (303) - after POST
-let response = Response::see_other("/users/123");
-assert_eq!(response.status, hyper::StatusCode::SEE_OTHER);
+// Temporary redirect preserving method (307)
+let response = Response::temporary_redirect_preserve_method("/users/123");
+assert_eq!(response.status, hyper::StatusCode::TEMPORARY_REDIRECT);
 ```
 
 ### JSON Response
 
 ```rust
-use reinhardt_http::Response;
+use reinhardt::http::Response;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -248,7 +246,7 @@ assert_eq!(
 ### Middleware Chain Control
 
 ```rust
-use reinhardt_http::Response;
+use reinhardt::http::Response;
 
 // Stop middleware chain (useful for authentication, rate limiting)
 let response = Response::unauthorized()
@@ -262,23 +260,30 @@ assert!(response.should_stop_chain());
 ### Streaming Response
 
 ```rust
-use reinhardt_http::StreamingResponse;
+use reinhardt::http::StreamingResponse;
 use futures::stream::{self, StreamExt};
 use bytes::Bytes;
+use hyper::StatusCode;
 
 let data = vec![
-    Bytes::from("chunk1"),
-    Bytes::from("chunk2"),
-    Bytes::from("chunk3"),
+	Bytes::from("chunk1"),
+	Bytes::from("chunk2"),
+	Bytes::from("chunk3"),
 ];
 
 let stream = stream::iter(data.into_iter().map(Ok));
 
-let response = StreamingResponse::new(
-    hyper::StatusCode::OK,
-    Box::pin(stream),
+// Create streaming response (default status: 200 OK)
+let response = StreamingResponse::new(Box::pin(stream))
+	.status(StatusCode::OK)
+	.media_type("text/plain");
+
+// Or use with_status for custom status code
+let response = StreamingResponse::with_status(
+	Box::pin(stream),
+	StatusCode::OK,
 )
-.with_content_type("text/plain");
+.media_type("text/plain");
 
 // Use for large files, server-sent events, etc.
 ```
@@ -300,16 +305,19 @@ let response = StreamingResponse::new(
 
 **Methods:**
 - `Request::builder()` - Create builder
-- `Request::get(uri)` - Quick GET request
-- `Request::post(uri)` - Quick POST request
-- `Request::put(uri)` - Quick PUT request
-- `Request::delete(uri)` - Quick DELETE request
-- `Request::patch(uri)` - Quick PATCH request
 - `.path()` - Get URI path without query
-- `.body()` - Get request body as bytes
-- `.body_string()` - Get body as UTF-8 string
-- `.parse_json::<T>()` - Parse body as JSON (requires `parsers` feature)
-- `.parse_form()` - Parse body as form data (requires `parsers` feature)
+- `.body()` - Get request body as `Option<&Bytes>`
+- `.json::<T>()` - Parse body as JSON (requires `parsers` feature)
+- `.post()` - Parse POST data (form/JSON, requires `parsers` feature)
+- `.data()` - Get parsed data from body
+- `.set_di_context::<T>()` - Set DI context for type T
+- `.get_di_context::<T>()` - Get DI context for type T
+- `.decoded_query_params()` - Get URL-decoded query parameters
+- `.get_accepted_languages()` - Parse Accept-Language header
+- `.get_preferred_language()` - Get user's preferred language
+- `.is_secure()` - Check if request is over HTTPS
+- `.scheme()` - Get URI scheme
+- `.build_absolute_uri()` - Build absolute URI from request
 
 ### Response
 
@@ -331,12 +339,12 @@ let response = StreamingResponse::new(
 - `Response::internal_server_error()` - 500 Internal Server Error
 - `Response::permanent_redirect(url)` - 301 Moved Permanently
 - `Response::temporary_redirect(url)` - 302 Found
-- `Response::see_other(url)` - 303 See Other
+- `Response::temporary_redirect_preserve_method(url)` - 307 Temporary Redirect
 
 **Builder Methods:**
 - `.with_body(data)` - Set body (bytes or string)
 - `.with_header(name, value)` - Add header
-- `.with_headers(map)` - Set headers
+- `.with_typed_header(header)` - Add typed header
 - `.with_json(data)` - Serialize to JSON
 - `.with_location(url)` - Set Location header
 - `.with_stop_chain(bool)` - Control middleware chain

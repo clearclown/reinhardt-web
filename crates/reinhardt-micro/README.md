@@ -6,6 +6,43 @@ A lightweight microservice framework for Rust, providing the minimal subset of R
 
 Django is known for being "batteries-included", but this comes at a cost: simple services end up with unnecessary complexity and dependencies. Reinhardt Micro solves this problem by providing a **minimal, composable** framework that scales with your needs.
 
+## Installation
+
+Reinhardt Micro can be used in two ways:
+
+### Via Reinhardt Parent Crate (Recommended for integration)
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["micro"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import micro features:
+
+```rust
+use reinhardt::micro::prelude::*;
+```
+
+### As Standalone Crate (Recommended for microservices)
+
+```toml
+[dependencies]
+reinhardt-micro = "0.1.0-alpha.1"
+tokio = { version = "1", features = ["full"] }
+```
+
+Then import:
+
+```rust
+use reinhardt_micro::prelude::*;
+```
+
+**Note:** The standalone approach provides faster compilation and smaller binaries, ideal for microservices and serverless functions.
+
 ## Features
 
 ### Implemented ✓

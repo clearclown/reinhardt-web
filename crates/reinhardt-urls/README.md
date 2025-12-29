@@ -48,34 +48,36 @@ This parent crate re-exports functionality from the following sub-crates:
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-urls = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["urls"] }
+
+# For specific sub-features:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["urls-routers", "urls-proxy"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
 
-### Optional Features
+Then import URLs features:
 
-Enable specific sub-crates based on your needs:
-
-```toml
-[dependencies]
-reinhardt-urls = { version = "0.1.0-alpha.1", features = ["routers", "proxy"] }
+```rust
+use reinhardt::urls::{Router, DefaultRouter, Route};
+use reinhardt::urls::routers::{path, re_path, include_routes};
+use reinhardt::urls::proxy::{SimpleLazyObject, AssociationProxy};
 ```
 
-Available features:
-
-- `routers` (default): URL routing system
-- `routers-macros` (default): Routing macros
-- `proxy` (default): Lazy loading proxy
+**Note:** URLs features are included in the `standard` and `full` feature presets.
 
 ## Usage
 
 ### URL Routing
 
 ```rust
-use reinhardt_urls::{Router, DefaultRouter, Route};
+use reinhardt::urls::{Router, DefaultRouter, Route};
 
 // Create a router
 let mut router = DefaultRouter::new();
@@ -95,7 +97,7 @@ if let Some((handler, params)) = router.match_request(&request) {
 ### URL Reversal
 
 ```rust
-use reinhardt_urls::reverse;
+use reinhardt::urls::reverse;
 
 // Reverse URL by name
 let url = reverse("user-detail", &[("id", "123")]);
@@ -109,7 +111,7 @@ let url = reverse("api:v1:user-list", &[]);
 ### Lazy Loading Proxy
 
 ```rust
-use reinhardt_proxy::SimpleLazyObject;
+use reinhardt::urls::proxy::SimpleLazyObject;
 
 // Create lazy object
 let lazy_user = SimpleLazyObject::new(|| {

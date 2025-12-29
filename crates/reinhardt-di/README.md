@@ -8,6 +8,28 @@ Provides a FastAPI-style dependency injection system with support for request-sc
 
 Delivers the FastAPI development experience in Rust with type-safe and async-first design.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["di"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import DI features:
+
+```rust
+use reinhardt::di::{Depends, Injectable, InjectionContext};
+use reinhardt::di::{Injected, OptionalInjected, SingletonScope};
+```
+
+**Note:** DI features are included in the `standard` and `full` feature presets.
+
 ## Core Concepts
 
 ### Dependency Scopes
@@ -116,7 +138,7 @@ Types implementing `Default + Clone + Send + Sync + 'static` automatically imple
 - **WebSocket Support**: Integration with WebSocket handlers
 
 ```rust
-use reinhardt_di::{Injectable, InjectionContext};
+use reinhardt::di::{Injectable, InjectionContext};
 
 #[derive(Clone)]
 struct DatabaseConnection {
@@ -200,7 +222,7 @@ impl Injectable for UserData {
 ### Basic Usage with `Depends<T>`
 
 ```rust
-use reinhardt_di::{Depends, Injectable, InjectionContext, SingletonScope};
+use reinhardt::di::{Depends, Injectable, InjectionContext, SingletonScope};
 use std::sync::Arc;
 
 #[derive(Clone, Default)]
@@ -230,7 +252,7 @@ async fn main() {
 ### Basic Usage with `Injected<T>`
 
 ```rust
-use reinhardt_di::{Injected, OptionalInjected, Injectable, InjectionContext, SingletonScope};
+use reinhardt::di::{Injected, OptionalInjected, Injectable, InjectionContext, SingletonScope};
 use std::sync::Arc;
 
 #[derive(Clone, Default)]
@@ -271,7 +293,7 @@ async fn main() {
 ### Custom Injectable Implementation
 
 ```rust
-use reinhardt_di::{Injectable, InjectionContext, DiResult};
+use reinhardt::di::{Injectable, InjectionContext, DiResult};
 
 struct Database {
     pool: DbPool,

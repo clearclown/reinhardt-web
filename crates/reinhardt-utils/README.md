@@ -8,6 +8,30 @@ Collection of utility functions and helpers used throughout the framework.
 
 Includes date/time utilities, string manipulation, encoding/decoding, and other common operations.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["utils"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import utility features:
+
+```rust
+use reinhardt::utils::cache::{Cache, InMemoryCache};
+use reinhardt::utils::logging::{Logger, LogLevel};
+use reinhardt::utils::storage::{Storage, LocalStorage};
+use reinhardt::utils::core::html::{escape, unescape};
+```
+
+**Note:** Utility features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

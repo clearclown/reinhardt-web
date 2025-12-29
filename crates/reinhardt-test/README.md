@@ -8,6 +8,28 @@ Comprehensive testing utilities inspired by Django REST Framework's test utiliti
 
 Supports both unit testing and integration testing with real or test databases.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["test"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import testing features:
+
+```rust
+use reinhardt::test::{APIClient, APITestCase, TestResponse};
+use reinhardt::test::{FixtureLoader, Factory, MockFunction};
+```
+
+**Note:** Testing features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
