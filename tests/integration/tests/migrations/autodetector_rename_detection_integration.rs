@@ -102,17 +102,17 @@ fn test_rename_field_high_similarity() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 高い類似度なのでリネームとして検出されるべき
+	// Verify: High similarity should be detected as rename
 	assert!(
 		detected.renamed_fields.len() > 0 || detected.added_fields.len() > 0,
 		"Should detect field change (as rename or add/remove)"
 	);
 
-	// リネームとして検出された場合
+	// If detected as rename
 	if detected.renamed_fields.len() > 0 {
 		assert_eq!(detected.renamed_fields[0].0, "testapp");
 		assert_eq!(detected.renamed_fields[0].1, "User");
@@ -134,7 +134,7 @@ fn test_rename_field_high_similarity() {
 #[rstest]
 #[test]
 fn test_rename_field_threshold_boundary() {
-	// ケース1: やや類似（閾値付近）
+	// Case 1: Moderate similarity (near threshold)
 	// from_state: 'email' field
 	let mut from_state = ProjectState::new();
 	let user_model = create_model_with_fields(
@@ -161,11 +161,11 @@ fn test_rename_field_threshold_boundary() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行（デフォルト閾値 0.7/0.8）
+	// Execute Autodetector (default threshold 0.7/0.8)
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 類似度が閾値付近なので、リネームまたは追加/削除として検出される
+	// Verify: Similarity near threshold should be detected as rename or add/remove
 	let total_field_changes =
 		detected.renamed_fields.len() + detected.added_fields.len() + detected.removed_fields.len();
 	assert!(
@@ -218,11 +218,11 @@ fn test_rename_field_multiple_candidates() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 複数のフィールド変更が検出される
+	// Verify: Multiple field changes are detected
 	let total_field_changes =
 		detected.renamed_fields.len() + detected.added_fields.len() + detected.removed_fields.len();
 	assert!(
@@ -259,7 +259,7 @@ fn test_rename_model_with_field_changes() {
 	from_state.add_model(user_model);
 
 	// to_state: 'Account' model with 'email' + 'username' fields
-	// モデル名が変わり、かつフィールドも追加
+	// Model name changed and field added
 	let mut to_state = ProjectState::new();
 	let account_model = create_model_with_fields(
 		"testapp",
@@ -273,18 +273,18 @@ fn test_rename_model_with_field_changes() {
 	);
 	to_state.add_model(account_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: モデルの変更が検出される
-	// リネームとして検出されるか、削除+作成として検出されるか
+	// Verify: Model changes are detected
+	// Detected as rename or delete + create
 	let model_changes =
 		detected.renamed_models.len() + detected.created_models.len() + detected.deleted_models.len();
 	assert!(model_changes > 0, "Should detect model changes");
 
-	// フィールドの追加も検出される可能性がある
-	// (リネーム検出された場合のみ)
+	// Field addition may also be detected
+	// (only if rename is detected)
 }
 
 // ============================================================================
@@ -327,12 +327,12 @@ fn test_rename_field_with_type_change() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: リネーム検出アルゴリズムは型が一致するものを探すため、
-	// 型が異なる場合は削除+追加として検出される可能性が高い
+	// Verify: Rename detection algorithm looks for matching types,
+	// so different types are likely detected as remove + add
 	assert!(
 		detected.added_fields.len() > 0 || detected.removed_fields.len() > 0,
 		"Should detect field changes when both name and type change"
@@ -353,9 +353,9 @@ fn test_rename_field_with_type_change() {
 #[rstest]
 #[test]
 fn test_rename_detection_jaro_winkler_dominant() {
-	// Jaro-Winklerは接頭辞の一致を重視する
-	// 'user_email' → 'user_email_address' は高スコア（接頭辞一致）
-	// 'user_email' → 'email_address_user' は低スコア（接頭辞不一致）
+	// Jaro-Winkler emphasizes prefix matching
+	// 'user_email' → 'user_email_address' scores high (prefix match)
+	// 'user_email' → 'email_address_user' scores low (prefix mismatch)
 
 	// from_state: 'user_email' field
 	let mut from_state = ProjectState::new();
@@ -383,17 +383,17 @@ fn test_rename_detection_jaro_winkler_dominant() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 接頭辞一致により、リネームとして検出される可能性が高い
+	// Verify: Prefix match likely detected as rename
 	let total_changes =
 		detected.renamed_fields.len() + detected.added_fields.len() + detected.removed_fields.len();
 	assert!(total_changes > 0, "Should detect field changes");
 
-	// Jaro-Winklerの重み(70%)が効いていることを間接的に確認
-	// （リネーム検出された場合、Jaro-Winklerが高スコアだったことを示唆）
+	// Indirectly verify that Jaro-Winkler weight (70%) is effective
+	// (If rename is detected, it suggests Jaro-Winkler had high score)
 }
 
 // ============================================================================
@@ -436,20 +436,20 @@ fn test_custom_similarity_threshold() {
 	);
 	to_state.add_model(user_model);
 
-	// ケース1: 非常に緩い閾値（0.5）
+	// Case 1: Very loose threshold (0.5)
 	let config_loose = SimilarityConfig::new(0.5, 0.5);
 	let autodetector_loose =
 		MigrationAutodetector::with_config(from_state.clone(), to_state.clone(), config_loose);
 	let detected_loose = autodetector_loose.detect_changes();
 
-	// ケース2: 非常に厳しい閾値（0.95）
+	// Case 2: Very strict threshold (0.95)
 	let config_strict = SimilarityConfig::new(0.95, 0.95);
 	let autodetector_strict =
 		MigrationAutodetector::with_config(from_state.clone(), to_state.clone(), config_strict);
 	let detected_strict = autodetector_strict.detect_changes();
 
-	// 検証: 閾値が異なると結果も変わる可能性がある
-	// （少なくとも両方で何らかの変更が検出される）
+	// Verify: Different thresholds may produce different results
+	// (At least both should detect some changes)
 	assert!(
 		detected_loose.added_fields.len() > 0
 			|| detected_loose.removed_fields.len() > 0

@@ -89,11 +89,11 @@ fn test_detect_add_single_column_index() {
 	});
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_indexes.len(),
 		1,
@@ -136,11 +136,11 @@ fn test_detect_add_composite_index() {
 	});
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_indexes.len(),
 		1,
@@ -184,11 +184,11 @@ fn test_detect_remove_index() {
 	add_field(&mut user_model, "email", FieldType::VarChar(255), false);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.removed_indexes.len(),
 		1,
@@ -240,11 +240,11 @@ fn test_detect_add_check_constraint_postgres() {
 	});
 	to_state.add_model(product_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_constraints.len(),
 		1,
@@ -265,8 +265,8 @@ fn test_detect_add_check_constraint_postgres() {
 ///
 /// **Expected Behavior**: Partial index addition detected
 ///
-/// **Note**: Partial index は IndexDefinition に条件を含める必要があるが、
-/// 現在の実装では単純化のため、通常のインデックスとして扱う
+/// **Note**: Partial index requires condition in IndexDefinition,
+/// but current implementation treats it as regular index for simplicity
 #[rstest]
 #[test]
 fn test_detect_add_partial_index_postgres() {
@@ -282,8 +282,8 @@ fn test_detect_add_partial_index_postgres() {
 	let mut user_model = create_basic_model("testapp", "User", "testapp_user");
 	add_field(&mut user_model, "email", FieldType::VarChar(255), true);
 	add_field(&mut user_model, "is_active", FieldType::Boolean, false);
-	// Partial index (WHERE is_active = true) を表現
-	// 注: IndexDefinitionに条件フィールドがない場合は、コメントで表現
+	// Represent partial index (WHERE is_active = true)
+	// Note: If IndexDefinition doesn't have condition field, represent it via comment
 	user_model.indexes.push(IndexDefinition {
 		name: "idx_active_users_email".to_string(),
 		fields: vec!["email".to_string()],
@@ -291,11 +291,11 @@ fn test_detect_add_partial_index_postgres() {
 	});
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_indexes.len(),
 		1,
@@ -324,7 +324,7 @@ fn test_detect_add_enum_field_postgres() {
 	// to_state: User with status ENUM field
 	let mut to_state = ProjectState::new();
 	let mut user_model = create_basic_model("testapp", "User", "testapp_user");
-	// ENUM型（PostgreSQL）
+	// ENUM type (PostgreSQL)
 	add_field(
 		&mut user_model,
 		"status",
@@ -333,11 +333,11 @@ fn test_detect_add_enum_field_postgres() {
 	);
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_fields.len(),
 		1,
@@ -367,7 +367,7 @@ fn test_detect_add_array_field_postgres() {
 	// to_state: Post with tags array
 	let mut to_state = ProjectState::new();
 	let mut post_model = create_basic_model("testapp", "Post", "testapp_post");
-	// Array型（PostgreSQL）: text[]
+	// Array type (PostgreSQL): text[]
 	add_field(
 		&mut post_model,
 		"tags",
@@ -376,11 +376,11 @@ fn test_detect_add_array_field_postgres() {
 	);
 	to_state.add_model(post_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_fields.len(),
 		1,
@@ -410,7 +410,7 @@ fn test_detect_add_jsonb_field_postgres() {
 	// to_state: Product with metadata JSONB field
 	let mut to_state = ProjectState::new();
 	let mut product_model = create_basic_model("testapp", "Product", "testapp_product");
-	// JSONB型（PostgreSQL）
+	// JSONB type (PostgreSQL)
 	add_field(
 		&mut product_model,
 		"metadata",
@@ -419,11 +419,11 @@ fn test_detect_add_jsonb_field_postgres() {
 	);
 	to_state.add_model(product_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_fields.len(),
 		1,
@@ -444,8 +444,8 @@ fn test_detect_add_jsonb_field_postgres() {
 ///
 /// **Expected Behavior**: Expression index detected
 ///
-/// **Note**: 現在のIndexDefinitionは列名のみサポート。
-/// 式ベースインデックスは将来的な拡張として、コメントで表現
+/// **Note**: Current IndexDefinition only supports column names.
+/// Expression-based indexes are represented via comments for future extension
 #[rstest]
 #[test]
 fn test_detect_index_with_expression() {
@@ -459,20 +459,20 @@ fn test_detect_index_with_expression() {
 	let mut to_state = ProjectState::new();
 	let mut user_model = create_basic_model("testapp", "User", "testapp_user");
 	add_field(&mut user_model, "email", FieldType::VarChar(255), false);
-	// 式ベースインデックス: CREATE INDEX idx_email_lower ON users(LOWER(email))
-	// 現在のIndexDefinitionでは列名のみなので、単純化
+	// Expression-based index: CREATE INDEX idx_email_lower ON users(LOWER(email))
+	// Current IndexDefinition only supports column names, so simplified
 	user_model.indexes.push(IndexDefinition {
 		name: "idx_email_lower".to_string(),
-		fields: vec!["email".to_string()], // 実際は LOWER(email)
+		fields: vec!["email".to_string()], // Actually LOWER(email)
 		unique: false,
 	});
 	to_state.add_model(user_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_indexes.len(),
 		1,
@@ -506,7 +506,7 @@ fn test_detect_unique_together_constraint() {
 	let mut userrole_model = create_basic_model("testapp", "UserRole", "testapp_userrole");
 	add_field(&mut userrole_model, "user_id", FieldType::Integer, false);
 	add_field(&mut userrole_model, "role_id", FieldType::Integer, false);
-	// UNIQUE TOGETHER制約
+	// UNIQUE TOGETHER constraint
 	userrole_model.constraints.push(ConstraintDefinition {
 		name: "unique_user_role".to_string(),
 		constraint_type: "Unique".to_string(),
@@ -516,11 +516,11 @@ fn test_detect_unique_together_constraint() {
 	});
 	to_state.add_model(userrole_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert_eq!(
 		detected.added_constraints.len(),
 		1,

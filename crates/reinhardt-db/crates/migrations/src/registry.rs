@@ -94,36 +94,3 @@ pub mod traits;
 pub use global::{GlobalRegistry, MIGRATION_PROVIDERS, global_registry};
 pub use local::LocalRegistry;
 pub use traits::MigrationRegistry;
-
-// Deprecated compatibility exports (to be removed in next major version)
-#[deprecated(
-	since = "0.1.0",
-	note = "Use `global_registry().all_migrations()` instead"
-)]
-pub fn all_migrations() -> Vec<crate::Migration> {
-	global_registry().all_migrations()
-}
-
-#[deprecated(
-	since = "0.1.0",
-	note = "Use `global_registry().migrations_for_app(app_label)` instead"
-)]
-pub fn migrations_for_app(app_label: &str) -> Vec<crate::Migration> {
-	global_registry().migrations_for_app(app_label)
-}
-
-#[deprecated(
-	since = "0.1.0",
-	note = "Use `global_registry().registered_app_labels()` instead"
-)]
-pub fn registered_app_labels() -> Vec<String> {
-	global_registry().registered_app_labels()
-}
-
-#[deprecated(
-	since = "0.1.0",
-	note = "Use `global_registry().all_migrations().len()` instead"
-)]
-pub fn migration_count() -> usize {
-	global_registry().all_migrations().len()
-}

@@ -869,7 +869,7 @@ impl Operation {
 	/// * `Err(_)` - Error generating reverse SQL
 	pub fn to_reverse_sql(
 		&self,
-		dialect: &SqlDialect,
+		_dialect: &SqlDialect,
 		_project_state: &ProjectState,
 	) -> crate::Result<Option<String>> {
 		match self {
@@ -931,7 +931,10 @@ impl Operation {
 				)))
 			}
 			// Phase 2: Complex reverse operations
-			Operation::DropColumn { table, column } => {
+			Operation::DropColumn {
+				table: _,
+				column: _,
+			} => {
 				// TODO: In full implementation, retrieve original column definition from ProjectState
 				// For now, return None as we cannot reconstruct the full column definition
 				// A complete implementation would need to look up the column in project_state
@@ -939,9 +942,9 @@ impl Operation {
 				Ok(None)
 			}
 			Operation::AlterColumn {
-				table,
-				column,
-				new_definition,
+				table: _,
+				column: _,
+				new_definition: _,
 			} => {
 				// TODO: In full implementation, retrieve original column definition from ProjectState
 				// For now, return None as we cannot know the previous column state
@@ -961,8 +964,8 @@ impl Operation {
 				)))
 			}
 			Operation::DropConstraint {
-				table,
-				constraint_name,
+				table: _,
+				constraint_name: _,
 			} => {
 				// TODO: In full implementation, retrieve constraint definition from ProjectState
 				// Cannot reconstruct constraint SQL without knowing its type (CHECK, FOREIGN KEY, etc.)
@@ -970,7 +973,7 @@ impl Operation {
 				// and generate: ALTER TABLE {table} ADD CONSTRAINT {name} {definition}
 				Ok(None)
 			}
-			Operation::DropTable { name } => {
+			Operation::DropTable { name: _ } => {
 				// TODO: In full implementation, retrieve table definition from ProjectState
 				// Cannot reconstruct CREATE TABLE without knowing columns, constraints, etc.
 				// A complete implementation would need to look up the model in project_state
@@ -1006,7 +1009,7 @@ impl Operation {
 					.models
 					.remove(&(app_label.to_string(), name.to_string()));
 			}
-			Operation::DropTable { name } => {
+			Operation::DropTable { name: _ } => {
 				// TODO: Reverse: Add the model back to state
 				// Would need to reconstruct ModelState from somewhere
 				// For now, this is a no-op

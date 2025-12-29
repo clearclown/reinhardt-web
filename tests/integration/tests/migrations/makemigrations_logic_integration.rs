@@ -304,8 +304,8 @@ fn create_users_schema() -> DatabaseSchema {
 
 #[tokio::test]
 async fn nc_01_new_model_creates_create_table_migration() {
-	// Test: 新規モデル作成からのCreateTable生成
-	// 空の状態から新規モデルを追加し、CreateTableマイグレーションが正しく生成されるかを検証
+	// Test: Generate CreateTable from new model creation
+	// Verify that CreateTable migration is correctly generated when adding a new model from empty state
 
 	let app_label = "todos";
 	let empty_schema = DatabaseSchema::default();
@@ -319,7 +319,7 @@ async fn nc_01_new_model_creates_create_table_migration() {
 		.await
 		.expect("First makemigrations should succeed");
 
-	// Verify: 1つのCreateTable operationが生成される
+	// Verify: One CreateTable operation is generated
 	assert_eq!(
 		result.operation_count, 1,
 		"Should generate one CreateTable operation"
@@ -343,8 +343,8 @@ async fn nc_01_new_model_creates_create_table_migration() {
 
 #[tokio::test]
 async fn nc_02_field_addition_creates_add_column_migration() {
-	// Test: フィールド追加からのAddColumn生成
-	// 既存モデルにフィールドを追加し、AddColumnマイグレーションが生成されるかを検証
+	// Test: Generate AddColumn from field addition
+	// Verify that AddColumn migration is generated when adding a field to existing model
 
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
@@ -358,7 +358,7 @@ async fn nc_02_field_addition_creates_add_column_migration() {
 		.await
 		.expect("AddColumn generation should succeed");
 
-	// Verify: AddColumn operationが生成される
+	// Verify: AddColumn operation is generated
 	assert!(
 		result.operation_count >= 1,
 		"Should generate at least one operation"
@@ -383,7 +383,7 @@ async fn nc_02_field_addition_creates_add_column_migration() {
 
 #[tokio::test]
 async fn nc_03_field_deletion_creates_drop_column_migration() {
-	// Test: フィールド削除からのDropColumn生成
+	// Test: Generate DropColumn from field deletion
 
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
@@ -405,7 +405,7 @@ async fn nc_03_field_deletion_creates_drop_column_migration() {
 		.await
 		.expect("DropColumn generation should succeed");
 
-	// Verify: DropColumn operationが生成される
+	// Verify: DropColumn operation is generated
 	let has_drop_column = result.operations.iter().any(|op| {
 		matches!(
 			op,
@@ -424,7 +424,7 @@ async fn nc_03_field_deletion_creates_drop_column_migration() {
 
 #[tokio::test]
 async fn nc_04_field_type_change_creates_alter_column_migration() {
-	// Test: フィールド型変更からのAlterColumn生成
+	// Test: Generate AlterColumn from field type change
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -447,7 +447,7 @@ async fn nc_04_field_type_change_creates_alter_column_migration() {
 		.await
 		.expect("AlterColumn generation should succeed");
 
-	// Verify: AlterColumn operationが生成される
+	// Verify: AlterColumn operation is generated
 	let has_alter_column = result.operations.iter().any(|op| {
 		matches!(
 			op,
@@ -467,9 +467,9 @@ async fn nc_04_field_type_change_creates_alter_column_migration() {
 
 #[tokio::test]
 async fn nc_05_field_rename_creates_rename_column_migration() {
-	// Test: フィールドリネームからのRenameColumn生成
-	// Note: フィールドリネームは類似度分析により自動検出される
-	// このテストでは、RenameColumn operationが生成される可能性を検証
+	// Test: Generate RenameColumn from field rename
+	// Note: Field rename is automatically detected by similarity analysis
+	// This test verifies the possibility of RenameColumn operation generation
 
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
@@ -531,7 +531,7 @@ async fn nc_05_field_rename_creates_rename_column_migration() {
 
 #[tokio::test]
 async fn nc_06_index_addition_creates_create_index_migration() {
-	// Test: インデックス追加からのCreateIndex生成
+	// Test: Generate CreateIndex from index addition
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -574,7 +574,7 @@ async fn nc_06_index_addition_creates_create_index_migration() {
 
 #[tokio::test]
 async fn nc_07_foreign_key_addition_creates_add_column_and_constraint() {
-	// Test: ForeignKey追加からのAddColumn + AddConstraint生成
+	// Test: Generate AddColumn + AddConstraint from ForeignKey addition
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -640,8 +640,8 @@ async fn nc_07_foreign_key_addition_creates_add_column_and_constraint() {
 
 #[tokio::test]
 async fn nc_08_many_to_many_creates_junction_table() {
-	// Test: ManyToMany追加からのCreateTable（junction table）生成
-	// Note: ManyToMany関係は中間テーブルとして表現される
+	// Test: Generate CreateTable (junction table) from ManyToMany addition
+	// Note: ManyToMany relationships are represented as intermediate tables
 
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
@@ -754,7 +754,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 
 #[tokio::test]
 async fn nc_09_initial_migration_correctness() {
-	// Test: 初期マイグレーション（0001_initial）の正しい生成
+	// Test: Correct generation of initial migration (0001_initial)
 	let app_label = "myapp";
 	let empty_schema = DatabaseSchema::default();
 
@@ -827,8 +827,8 @@ async fn nc_09_initial_migration_correctness() {
 
 #[tokio::test]
 async fn nc_10_sequential_migrations_dependency_chain() {
-	// Test: 連続マイグレーション（0001 → 0002 → 0003）の正しい生成
-	// 連続したマイグレーションが正しい依存関係で生成されることを検証
+	// Test: Correct generation of sequential migrations (0001 → 0002 → 0003)
+	// Verify that consecutive migrations are generated with correct dependencies
 
 	let app_label = "todos";
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
@@ -895,9 +895,9 @@ async fn nc_10_sequential_migrations_dependency_chain() {
 
 #[tokio::test]
 async fn nc_11_generated_migration_executability() {
-	// Test: 生成されたマイグレーションの実行可能性検証
-	// Note: このテストでは、生成されたマイグレーションの構造的な正当性を検証
-	// 実際のDB実行はE2Eテストで行う
+	// Test: Verify executability of generated migration
+	// Note: This test verifies structural validity of generated migration
+	// Actual DB execution is done in E2E tests
 
 	let app_label = "todos";
 	let empty_schema = DatabaseSchema::default();
@@ -937,8 +937,8 @@ async fn nc_11_generated_migration_executability() {
 
 #[tokio::test]
 async fn nc_12_one_to_one_creates_unique_foreign_key() {
-	// Test: OneToOne追加からの適切なマイグレーション生成
-	// OneToOneは、UNIQUE制約付きのForeignKeyとして実装される
+	// Test: Generate appropriate migration from OneToOne addition
+	// OneToOne is implemented as ForeignKey with UNIQUE constraint
 
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
@@ -1007,7 +1007,7 @@ async fn nc_12_one_to_one_creates_unique_foreign_key() {
 
 #[tokio::test]
 async fn nc_13_default_value_addition_creates_alter_column() {
-	// Test: デフォルト値追加からのAlterColumn生成
+	// Test: Generate AlterColumn from default value addition
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -1055,7 +1055,7 @@ async fn nc_13_default_value_addition_creates_alter_column() {
 
 #[tokio::test]
 async fn nc_14_null_constraint_change_creates_alter_column() {
-	// Test: NULL制約変更からのAlterColumn生成
+	// Test: Generate AlterColumn from NULL constraint change
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -1122,7 +1122,7 @@ async fn nc_14_null_constraint_change_creates_alter_column() {
 
 #[tokio::test]
 async fn nc_15_unique_constraint_addition_creates_add_constraint() {
-	// Test: UNIQUE制約追加からのAddConstraint生成
+	// Test: Generate AddConstraint from UNIQUE constraint addition
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -1169,7 +1169,7 @@ async fn nc_15_unique_constraint_addition_creates_add_constraint() {
 
 #[tokio::test]
 async fn nc_16_index_deletion_creates_drop_index() {
-	// Test: インデックス削除からのDropIndex生成
+	// Test: Generate DropIndex from index deletion
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
 	let to_schema = create_todos_schema();
@@ -1214,7 +1214,7 @@ async fn nc_16_index_deletion_creates_drop_index() {
 
 #[tokio::test]
 async fn nc_17_constraint_deletion_creates_drop_constraint() {
-	// Test: 制約削除からのDropConstraint生成
+	// Test: Generate DropConstraint from constraint deletion
 	let app_label = "todos";
 	let mut from_schema = create_todos_schema();
 	let to_schema = create_todos_schema();
@@ -1261,7 +1261,7 @@ async fn nc_17_constraint_deletion_creates_drop_constraint() {
 
 #[tokio::test]
 async fn nc_18_multiple_changes_in_single_migration() {
-	// Test: 複数の変更を含むマイグレーション生成
+	// Test: Generate migration with multiple changes
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
 	let mut to_schema = create_todos_schema();
@@ -1345,8 +1345,8 @@ async fn nc_18_multiple_changes_in_single_migration() {
 
 #[tokio::test]
 async fn nc_19_multi_app_migrations_generation() {
-	// Test: 複数アプリの同時マイグレーション生成
-	// Note: 各アプリは独立したAutoMigrationGeneratorインスタンスで処理される
+	// Test: Generate migrations for multiple apps simultaneously
+	// Note: Each app is processed with independent AutoMigrationGenerator instance
 
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
 
@@ -1414,9 +1414,9 @@ async fn nc_19_multi_app_migrations_generation() {
 
 #[tokio::test]
 async fn nc_20_data_preservation_verification() {
-	// Test: データ保持検証（既存データが失われない）
-	// Note: このテストでは、マイグレーション操作がデータ破壊的でないことを構造的に検証
-	// 実際のデータ保持テストはE2Eテストで行う
+	// Test: Data preservation verification (existing data is not lost)
+	// Note: This test structurally verifies that migration operations are non-destructive
+	// Actual data preservation tests are done in E2E tests
 
 	let app_label = "todos";
 	let from_schema = create_todos_schema();
@@ -1467,8 +1467,8 @@ async fn nc_20_data_preservation_verification() {
 
 #[tokio::test]
 async fn nc_21_composite_primary_key_table_creation() {
-	// Test: 複合主キーを持つテーブルの新規作成
-	// 複合主キー（user_id, post_id）を持つuser_postsテーブルの作成
+	// Test: Create new table with composite primary key
+	// Create user_posts table with composite primary key (user_id, post_id)
 
 	let app_label = "testapp";
 	let empty_schema = DatabaseSchema::default();
@@ -1516,8 +1516,8 @@ async fn nc_21_composite_primary_key_table_creation() {
 
 #[tokio::test]
 async fn nc_22_add_composite_primary_key_to_existing_table() {
-	// Test: 既存テーブルへの複合主キー追加
-	// PKなしのuser_postsテーブルに、複合主キー（user_id, post_id）を追加
+	// Test: Add composite primary key to existing table
+	// Add composite primary key (user_id, post_id) to user_posts table without PK
 
 	let app_label = "testapp";
 	let from_schema = create_user_posts_no_pk_schema();
@@ -1531,7 +1531,7 @@ async fn nc_22_add_composite_primary_key_to_existing_table() {
 		.await
 		.expect("Adding composite PK should succeed");
 
-	// 複合主キーの追加は、AlterColumn（複数）またはAddConstraintとして生成される可能性がある
+	// Adding composite primary key may generate as AlterColumn (multiple) or AddConstraint
 	assert!(
 		result.operation_count >= 1,
 		"Should generate at least one operation for composite PK addition"
@@ -1544,7 +1544,7 @@ async fn nc_22_add_composite_primary_key_to_existing_table() {
 		.filter(|op| matches!(op, Operation::AlterColumn { .. }))
 		.collect();
 
-	// または AddConstraint operation
+	// or AddConstraint operation
 	let constraint_ops: Vec<_> = result
 		.operations
 		.iter()
@@ -1559,8 +1559,8 @@ async fn nc_22_add_composite_primary_key_to_existing_table() {
 
 #[tokio::test]
 async fn nc_23_drop_composite_primary_key() {
-	// Test: 複合主キーの削除
-	// 複合主キー付きuser_postsテーブルから、PKなしのテーブルへ変更
+	// Test: Drop composite primary key
+	// Change user_posts table with composite PK to table without PK
 
 	let app_label = "testapp";
 	let from_schema = create_composite_pk_schema();
@@ -1574,7 +1574,7 @@ async fn nc_23_drop_composite_primary_key() {
 		.await
 		.expect("Dropping composite PK should succeed");
 
-	// 複合主キーの削除は、AlterColumn（複数）またはDropConstraintとして生成される可能性がある
+	// Dropping composite primary key may generate as AlterColumn (multiple) or DropConstraint
 	assert!(
 		result.operation_count >= 1,
 		"Should generate at least one operation for composite PK deletion"
@@ -1587,7 +1587,7 @@ async fn nc_23_drop_composite_primary_key() {
 		.filter(|op| matches!(op, Operation::AlterColumn { .. }))
 		.collect();
 
-	// または DropConstraint operation
+	// or DropConstraint operation
 	let constraint_ops: Vec<_> = result
 		.operations
 		.iter()
@@ -1606,8 +1606,8 @@ async fn nc_23_drop_composite_primary_key() {
 
 #[tokio::test]
 async fn ec_01_no_models_error() {
-	// Test: モデルが存在しない場合のエラー
-	// 空のグローバルレジストリでmakemigrationsを実行するとエラーになることを検証
+	// Test: Error when no models exist
+	// Verify that makemigrations returns error when executed with empty global registry
 
 	let app_label = "emptyapp";
 	let empty_schema = DatabaseSchema::default();
@@ -1627,35 +1627,35 @@ async fn ec_01_no_models_error() {
 
 #[tokio::test]
 async fn ec_02_empty_flag_without_app_label_error() {
-	// Test: --empty指定時にapp_labelがない場合のエラー
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: Error when app_label is missing with --empty flag
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn ec_03_from_state_construction_failure_error() {
-	// Test: from_state構築失敗時のエラー
-	// NOTE: このテストはAutoMigrationGeneratorの前段階（ProjectState構築）の検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: Error on from_state construction failure
+	// NOTE: This test is for validation before AutoMigrationGenerator (ProjectState construction),
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn ec_04_invalid_field_definition_error() {
-	// Test: 無効なフィールド定義のエラー
-	// NOTE: このテストはスキーマ構築時の検証エラーなので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorはDatabaseSchemaを受け取るので、
-	// スキーマ検証は上位レイヤーの責務です。
+	// Test: Error on invalid field definition
+	// NOTE: This test is for schema construction validation errors,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// AutoMigrationGenerator receives DatabaseSchema,
+	// schema validation is the responsibility of upper layers.
 }
 
 #[tokio::test]
 async fn ec_05_file_write_permission_error() {
-	// Test: ファイル書き込み権限エラー
-	// NOTE: このテストはFilesystemRepositoryの責務なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: File write permission error
+	// NOTE: This test is for FilesystemRepository responsibility,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 // ============================================================================
@@ -1664,8 +1664,8 @@ async fn ec_05_file_write_permission_error() {
 
 #[tokio::test]
 async fn edg_01_empty_migration_generation() {
-	// Test: 空のマイグレーション（--empty）生成
-	// --empty フラグの動作を模倣：手動で空のマイグレーションを作成
+	// Test: Generate empty migration (--empty)
+	// Simulate --empty flag behavior: manually create empty migration
 
 	let app_label = "todos";
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
@@ -1698,7 +1698,7 @@ async fn edg_01_empty_migration_generation() {
 
 #[tokio::test]
 async fn edg_02_no_changes_detected() {
-	// Test: 変更がない場合（No changes detected）
+	// Test: No changes detected case
 	let app_label = "todos";
 	let schema = create_todos_schema();
 
@@ -1716,53 +1716,53 @@ async fn edg_02_no_changes_detected() {
 
 #[tokio::test]
 async fn edg_03_dry_run_mode() {
-	// Test: --dry-run モード
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: --dry-run mode
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn edg_04_custom_name_specification() {
-	// Test: --name カスタム名指定
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: --name custom name specification
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn edg_05_verbose_mode() {
-	// Test: --verbose モード
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: --verbose mode
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn edg_06_custom_migrations_directory() {
-	// Test: --migrations-dir カスタムディレクトリ指定
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: --migrations-dir custom directory specification
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn edg_07_from_db_mode() {
-	// Test: --from-db モード
-	// NOTE: このテストはコマンドラインオプションの検証なので、
-	// makemigrations_e2e_integration.rs（E2Eテスト）で実装すべき内容です。
-	// AutoMigrationGeneratorの内部ロジックテストでは対象外です。
+	// Test: --from-db mode
+	// NOTE: This test is for command-line option validation,
+	// should be implemented in makemigrations_e2e_integration.rs (E2E tests).
+	// Out of scope for AutoMigrationGenerator internal logic tests.
 }
 
 #[tokio::test]
 async fn edg_08_long_model_field_names() {
-	// Test: 長いモデル名/フィールド名（255文字）
-	// 長い名前でもマイグレーションが正常に生成されることを検証
+	// Test: Long model/field names (255 characters)
+	// Verify that migrations are generated normally even with long names
 
 	let app_label = "testapp";
 	let empty_schema = DatabaseSchema::default();
 
-	// 255文字のテーブル名とフィールド名を生成
+	// Generate 255-character table and field names
 	let long_table_name = "a".repeat(255);
 	let long_field_name = "b".repeat(255);
 
@@ -1826,8 +1826,8 @@ async fn edg_08_long_model_field_names() {
 
 #[tokio::test]
 async fn edg_09_large_number_of_fields() {
-	// Test: 大量のフィールド（100+）
-	// 100個以上のフィールドを持つテーブルでも正常に処理されることを検証
+	// Test: Large number of fields (100+)
+	// Verify that tables with 100+ fields are processed normally
 
 	let app_label = "testapp";
 	let empty_schema = DatabaseSchema::default();
@@ -1840,7 +1840,7 @@ async fn edg_09_large_number_of_fields() {
 		constraints: Vec::new(),
 	};
 
-	// id フィールド
+	// id field
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
@@ -1853,7 +1853,7 @@ async fn edg_09_large_number_of_fields() {
 		},
 	);
 
-	// 150個のフィールドを追加
+	// Add 150 fields
 	for i in 1..=150 {
 		let field_name = format!("field_{:03}", i);
 		table.columns.insert(
@@ -1898,17 +1898,17 @@ async fn edg_09_large_number_of_fields() {
 
 #[tokio::test]
 async fn edg_10_deep_dependency_chain() {
-	// Test: 深い依存チェーン（10段階）
-	// 10段階のマイグレーションを順番に生成し、依存関係が正しく構築されることを検証
+	// Test: Deep dependency chain (10 levels)
+	// Generate 10 levels of migrations sequentially and verify correct dependency construction
 
 	let app_label = "testapp";
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
 
 	let mut current_schema = DatabaseSchema::default();
 
-	// 10段階のマイグレーションを生成
+	// Generate 10-level migrations
 	for stage in 1..=10 {
-		// 新しいテーブルを追加
+		// Add new table
 		let table_name = format!("table_{:02}", stage);
 		let mut table = TableSchema {
 			name: &table_name,
@@ -1953,7 +1953,7 @@ async fn edg_10_deep_dependency_chain() {
 
 		assert_eq!(result.operation_count, 1);
 
-		// マイグレーションを保存
+		// Save migration
 		let migration_name = format!("{:04}_stage_{}", stage, stage);
 		let migration = Migration {
 			app_label,
@@ -1977,7 +1977,7 @@ async fn edg_10_deep_dependency_chain() {
 		current_schema = next_schema;
 	}
 
-	// 10個のマイグレーションが保存されていることを確認
+	// Verify that 10 migrations are saved
 	let repo = repository.lock().await;
 	let migrations = repo.list(app_label).await.expect("Should list migrations");
 	assert_eq!(migrations.len(), 10);
@@ -1985,15 +1985,15 @@ async fn edg_10_deep_dependency_chain() {
 
 #[tokio::test]
 async fn edg_11_unicode_in_names() {
-	// Test: 特殊文字を含む名前（Unicode）
-	// 日本語、エモジなどのUnicode文字を含むテーブル名・フィールド名の処理を検証
+	// Test: Names with special characters (Unicode)
+	// Verify processing of table/field names containing Unicode characters like Japanese, emoji
 
 	let app_label = "testapp";
 	let empty_schema = DatabaseSchema::default();
 
 	let mut schema = DatabaseSchema::default();
 
-	// 日本語のテーブル名
+	// Japanese table name
 	let table_name = "ユーザー情報";
 	let mut table = TableSchema {
 		name: table_name,
@@ -2014,7 +2014,7 @@ async fn edg_11_unicode_in_names() {
 		},
 	);
 
-	// 日本語のフィールド名
+	// Japanese field name
 	table.columns.insert(
 		"名前".to_string(),
 		ColumnSchema {
@@ -2027,7 +2027,7 @@ async fn edg_11_unicode_in_names() {
 		},
 	);
 
-	// エモジのフィールド名
+	// Emoji field name
 	table.columns.insert(
 		"emoji_field_🚀".to_string(),
 		ColumnSchema {
@@ -2055,13 +2055,13 @@ async fn edg_11_unicode_in_names() {
 	if let Operation::CreateTable { name, columns, .. } = &result.operations[0] {
 		assert_eq!(name, table_name, "Table name should contain Unicode characters");
 
-		// 日本語フィールドの存在確認
+		// Verify Japanese field exists
 		assert!(
 			columns.iter().any(|c| c.name == "名前"),
 			"Should have Japanese field name"
 		);
 
-		// エモジフィールドの存在確認
+		// Verify emoji field exists
 		assert!(
 			columns.iter().any(|c| c.name == "emoji_field_🚀"),
 			"Should have emoji field name"
@@ -2073,15 +2073,15 @@ async fn edg_11_unicode_in_names() {
 
 #[tokio::test]
 async fn edg_12_sql_reserved_words() {
-	// Test: SQL予約語を含むテーブル名/カラム名
-	// SELECT, FROM, WHEREなどのSQL予約語がテーブル名・カラム名として使用される場合の処理を検証
+	// Test: Table/column names with SQL reserved words
+	// Verify processing when SQL reserved words like SELECT, FROM, WHERE are used as table/column names
 
 	let app_label = "testapp";
 	let empty_schema = DatabaseSchema::default();
 
 	let mut schema = DatabaseSchema::default();
 
-	// SQL予約語のテーブル名
+	// SQL reserved word as table name
 	let table_name = "select";
 	let mut table = TableSchema {
 		name: table_name,
@@ -2102,7 +2102,7 @@ async fn edg_12_sql_reserved_words() {
 		},
 	);
 
-	// SQL予約語のフィールド名
+	// SQL reserved word as field name
 	table.columns.insert(
 		"from".to_string(),
 		ColumnSchema {
@@ -2154,7 +2154,7 @@ async fn edg_12_sql_reserved_words() {
 	if let Operation::CreateTable { name, columns, .. } = &result.operations[0] {
 		assert_eq!(name, table_name, "Table name should be SQL reserved word");
 
-		// SQL予約語のフィールド名の存在確認
+		// Verify SQL reserved word field names exist
 		assert!(
 			columns.iter().any(|c| c.name == "from"),
 			"Should have 'from' field (SQL reserved word)"
@@ -2174,12 +2174,12 @@ async fn edg_12_sql_reserved_words() {
 
 #[tokio::test]
 async fn edg_13_same_name_different_apps() {
-	// Test: 同一名の異なるアプリのモデル
-	// 異なるapp_labelで同じテーブル名を使用した場合、独立して処理されることを検証
+	// Test: Models with same name in different apps
+	// Verify independent processing when same table name is used with different app_labels
 
 	let empty_schema = DatabaseSchema::default();
 
-	// 同じテーブル名（users）のスキーマを作成
+	// Create schema with same table name (users)
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
 		name: "users",
@@ -2216,7 +2216,7 @@ async fn edg_13_same_name_different_apps() {
 
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
 
-	// app1でusersテーブルを作成
+	// Create users table in app1
 	let generator_app1 = AutoMigrationGenerator::new(schema.clone(), repository.clone());
 	let result_app1 = generator_app1
 		.generate("app1", empty_schema.clone())
@@ -2225,7 +2225,7 @@ async fn edg_13_same_name_different_apps() {
 
 	assert_eq!(result_app1.operation_count, 1);
 
-	// app1のマイグレーションを保存
+	// Save app1 migration
 	let migration_app1 = Migration {
 		app_label: "app1",
 		name: "0001_initial",
@@ -2240,7 +2240,7 @@ async fn edg_13_same_name_different_apps() {
 		repo.save(&migration_app1).await.expect("Should save app1 migration");
 	}
 
-	// app2でも同じusersテーブルを作成（異なるアプリなので独立）
+	// Create same users table in app2 (independent as different app)
 	let generator_app2 = AutoMigrationGenerator::new(schema.clone(), repository.clone());
 	let result_app2 = generator_app2
 		.generate("app2", empty_schema.clone())
@@ -2249,7 +2249,7 @@ async fn edg_13_same_name_different_apps() {
 
 	assert_eq!(result_app2.operation_count, 1);
 
-	// app2のマイグレーションを保存
+	// Save app2 migration
 	let migration_app2 = Migration {
 		app_label: "app2",
 		name: "0001_initial",
@@ -2264,7 +2264,7 @@ async fn edg_13_same_name_different_apps() {
 		repo.save(&migration_app2).await.expect("Should save app2 migration");
 	}
 
-	// 2つのアプリで独立してマイグレーションが作成されたことを確認
+	// Verify migrations were created independently for both apps
 	let repo = repository.lock().await;
 	let app1_migrations = repo.list("app1").await.expect("Should list app1 migrations");
 	let app2_migrations = repo.list("app2").await.expect("Should list app2 migrations");
@@ -2278,13 +2278,13 @@ async fn edg_13_same_name_different_apps() {
 
 #[tokio::test]
 async fn edg_14_cross_app_dependencies() {
-	// Test: クロスアプリ依存関係
-	// 異なるアプリ間での外部キー依存関係が正しく処理されることを検証
-	// app1.users → app2.posts (postsがusersへのFKを持つ)
+	// Test: Cross-app dependencies
+	// Verify that foreign key dependencies between different apps are handled correctly
+	// app1.users → app2.posts (posts has FK to users)
 
 	let empty_schema = DatabaseSchema::default();
 
-	// app1: usersテーブル
+	// app1: users table
 	let mut users_schema = DatabaseSchema::default();
 	let mut users_table = TableSchema {
 		name: "users",
@@ -2321,7 +2321,7 @@ async fn edg_14_cross_app_dependencies() {
 
 	let repository = Arc::new(Mutex::new(TestRepository::new()));
 
-	// app1のusersテーブルを作成
+	// Create users table in app1
 	let generator_app1 = AutoMigrationGenerator::new(users_schema.clone(), repository.clone());
 	let result_app1 = generator_app1
 		.generate("app1", empty_schema.clone())
@@ -2330,7 +2330,7 @@ async fn edg_14_cross_app_dependencies() {
 
 	assert_eq!(result_app1.operation_count, 1);
 
-	// app1のマイグレーションを保存
+	// Save app1 migration
 	let migration_app1 = Migration {
 		app_label: "app1",
 		name: "0001_initial",
@@ -2345,7 +2345,7 @@ async fn edg_14_cross_app_dependencies() {
 		repo.save(&migration_app1).await.expect("Should save app1 migration");
 	}
 
-	// app2: postsテーブル（usersへのFKを持つ）
+	// app2: posts table (with FK to users)
 	let mut posts_schema = DatabaseSchema::default();
 	let mut posts_table = TableSchema {
 		name: "posts",
@@ -2405,26 +2405,26 @@ async fn edg_14_cross_app_dependencies() {
 
 	posts_schema.tables.insert("posts".to_string(), posts_table);
 
-	// app2のpostsテーブルを作成
+	// Create posts table in app2
 	let generator_app2 = AutoMigrationGenerator::new(posts_schema.clone(), repository.clone());
 	let result_app2 = generator_app2
 		.generate("app2", empty_schema.clone())
 		.await
 		.expect("app2 posts table creation should succeed");
 
-	// postsテーブルの作成とFK制約の追加
+	// Creating posts table and adding FK constraint
 	assert!(
 		result_app2.operation_count >= 1,
 		"Should generate at least one operation for posts table"
 	);
 
-	// CreateTable operation の存在確認
+	// Verify CreateTable operation exists
 	let has_create_table = result_app2.operations.iter().any(|op| {
 		matches!(op, Operation::CreateTable { name, .. } if name == "posts")
 	});
 	assert!(has_create_table, "Should have CreateTable operation for posts");
 
-	// FK制約の存在確認（AddConstraintまたはCreateTableのconstraints内）
+	// Verify FK constraint exists (in AddConstraint or CreateTable constraints)
 	let has_fk_constraint = result_app2.operations.iter().any(|op| {
 		match op {
 			Operation::CreateTable { constraints, .. } => {

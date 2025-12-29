@@ -1,6 +1,8 @@
 use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{ColumnDefinition, FieldType, Migration, MigrationExecutor, Operation};
-use sqlx::{Row, SqlitePool};
+use reinhardt_migrations::{
+	ColumnDefinition, DatabaseMigrationExecutor, FieldType, Migration, Operation,
+};
+use sqlx::Row;
 
 /// Helper function to leak a string to get a 'static lifetime
 fn leak_str(s: impl Into<String>) -> &'static str {
@@ -29,11 +31,11 @@ fn create_test_migration(
 #[tokio::test]
 async fn test_executor_basic_run() {
 	// Test running a simple set of migrations
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool.clone());
+	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
 	// Create test migrations
 	let migration1 = create_test_migration(
@@ -115,8 +117,9 @@ async fn test_executor_basic_run() {
 	assert!(execution_result.failed.is_none());
 
 	// Verify tables were created
+	let pool = executor.connection().as_sqlite_pool().unwrap();
 	let tables_query = sqlx::query("SELECT name FROM sqlite_master WHERE type='table'")
-		.fetch_all(&pool)
+		.fetch_all(pool)
 		.await
 		.unwrap();
 
@@ -132,11 +135,11 @@ async fn test_executor_basic_run() {
 #[tokio::test]
 async fn test_executor_rollback() {
 	// Test rolling back migrations
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool.clone());
+	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
 	// Create and apply migrations
 	let migration1 = create_test_migration(
@@ -173,9 +176,10 @@ async fn test_executor_rollback() {
 	assert!(result.is_ok());
 
 	// Verify table was dropped
+	let pool = executor.connection().as_sqlite_pool().unwrap();
 	let tables_query =
 		sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='rollback_test'")
-			.fetch_all(&pool)
+			.fetch_all(pool)
 			.await
 			.unwrap();
 
@@ -185,11 +189,11 @@ async fn test_executor_rollback() {
 #[tokio::test]
 async fn test_executor_already_applied() {
 	// Test that already applied migrations are skipped
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool.clone());
+	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
 	let migration = create_test_migration(
 		"testapp",
@@ -232,11 +236,11 @@ async fn test_executor_already_applied() {
 #[tokio::test]
 async fn test_executor_empty_plan() {
 	// Test that empty migration plan doesn't cause issues
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool);
+	let mut executor = DatabaseMigrationExecutor::new(db);
 
 	let result = executor.apply_migrations(&[]).await;
 	let execution_result = result.unwrap();
@@ -247,11 +251,11 @@ async fn test_executor_empty_plan() {
 #[tokio::test]
 async fn test_executor_with_dependencies() {
 	// Test migrations with dependencies
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool.clone());
+	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
 	let migration1 = Migration {
 		app_label: "app1",
@@ -312,11 +316,9 @@ async fn test_executor_migration_recording() {
 	use reinhardt_migrations::recorder::DatabaseMigrationRecorder;
 
 	// Test that DatabaseMigrationRecorder properly records migrations to the database
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let connection = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
-
-	let connection = DatabaseConnection::from_sqlite_pool(pool.clone());
+		.expect("Failed to connect to database");
 	let recorder = DatabaseMigrationRecorder::new(connection);
 	recorder.ensure_schema_table().await.unwrap();
 
@@ -344,11 +346,11 @@ async fn test_executor_migration_recording() {
 #[tokio::test]
 async fn test_executor_add_column_migration() {
 	// Test adding a column to existing table
-	let pool = SqlitePool::connect("sqlite::memory:")
+	let db = DatabaseConnection::connect_sqlite(":memory:")
 		.await
-		.expect("Failed to create pool");
+		.expect("Failed to connect to database");
 
-	let mut executor = MigrationExecutor::new(pool.clone());
+	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
 	// First create a table
 	let migration1 = create_test_migration(
@@ -404,8 +406,9 @@ async fn test_executor_add_column_migration() {
 	assert!(result.is_ok(), "Adding column should succeed");
 
 	// Verify column was added
+	let pool = executor.connection().as_sqlite_pool().unwrap();
 	let columns_query = sqlx::query("PRAGMA table_info(evolving_table)")
-		.fetch_all(&pool)
+		.fetch_all(pool)
 		.await
 		.unwrap();
 

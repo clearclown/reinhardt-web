@@ -115,11 +115,11 @@ fn test_detect_add_foreign_key() {
 	);
 	to_state.add_model(post_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert!(
 		detected.added_fields.len() > 0 || detected.added_constraints.len() > 0,
 		"Should detect FK field or constraint addition"
@@ -170,11 +170,11 @@ fn test_detect_change_on_delete_action() {
 	);
 	to_state.add_model(post_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 制約が削除→再作成として検出される可能性がある
+	// Verify: Constraint may be detected as remove→re-create
 	assert!(
 		detected.removed_constraints.len() > 0 || detected.added_constraints.len() > 0,
 		"Should detect constraint change (remove old + add new)"
@@ -213,7 +213,7 @@ fn test_detect_add_one_to_one_field() {
 		ForeignKeyAction::Cascade,
 		ForeignKeyAction::NoAction,
 	);
-	// UNIQUE制約（1:1を保証）
+	// UNIQUE constraint (to ensure 1:1)
 	profile_model.constraints.push(ConstraintDefinition {
 		name: "unique_user_id".to_string(),
 		constraint_type: "Unique".to_string(),
@@ -223,11 +223,11 @@ fn test_detect_add_one_to_one_field() {
 	});
 	to_state.add_model(profile_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: フィールドとUNIQUE制約が検出される
+	// Verify: Field and UNIQUE constraint are detected
 	assert!(detected.added_fields.len() > 0, "Should detect user_id field");
 	assert!(
 		detected.added_constraints.len() > 0,
@@ -261,17 +261,17 @@ fn test_detect_many_to_many_auto_through() {
 	book_model.many_to_many_fields.push(ManyToManyMetadata {
 		field_name: "authors".to_string(),
 		target_model: "Author".to_string(),
-		through_model: None, // 自動生成
+		through_model: None, // Auto-generated
 		source_field_name: None,
 		target_field_name: None,
 	});
 	to_state.add_model(book_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: M2M中間テーブルの作成が検出される
+	// Verify: M2M intermediate table creation detected
 	assert!(
 		detected.created_many_to_many.len() > 0 || detected.created_models.len() > 0,
 		"Should detect M2M intermediate table creation"
@@ -301,7 +301,7 @@ fn test_detect_many_to_many_custom_through() {
 	let mut to_state = ProjectState::new();
 	to_state.add_model(create_basic_model("testapp", "Author", "testapp_author"));
 
-	// カスタム中間モデル
+	// Custom intermediate model
 	let mut book_author_model = create_basic_model("testapp", "BookAuthor", "testapp_bookauthor");
 	add_field(&mut book_author_model, "book_id", FieldType::Integer, false);
 	add_field(
@@ -315,7 +315,7 @@ fn test_detect_many_to_many_custom_through() {
 		"role",
 		FieldType::VarChar(50),
 		true,
-	); // 追加フィールド
+	); // Additional field
 	to_state.add_model(book_author_model);
 
 	let mut book_model = create_basic_model("testapp", "Book", "testapp_book");
@@ -328,11 +328,11 @@ fn test_detect_many_to_many_custom_through() {
 	});
 	to_state.add_model(book_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: カスタム中間モデルの作成が検出される
+	// Verify: Custom intermediate model creation detected
 	assert!(
 		detected.created_models.len() > 0,
 		"Should detect custom through model creation"
@@ -368,18 +368,18 @@ fn test_detect_self_referencing_fk() {
 	add_fk_constraint(
 		&mut category_model,
 		"parent_id",
-		"testapp_category", // 自己参照
+		"testapp_category", // Self-reference
 		"id",
 		ForeignKeyAction::SetNull,
 		ForeignKeyAction::NoAction,
 	);
 	to_state.add_model(category_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証
+	// Verify
 	assert!(
 		detected.added_fields.len() > 0,
 		"Should detect self-referencing FK field"
@@ -421,11 +421,11 @@ fn test_detect_single_table_inheritance() {
 	);
 	to_state.add_model(employee_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: discriminator列の追加が検出される
+	// Verify: Discriminator column addition detected
 	assert!(
 		detected.added_fields.len() > 0,
 		"Should detect discriminator column addition"
@@ -460,7 +460,7 @@ fn test_detect_joined_table_inheritance() {
 	employee_model.inheritance_type = Some("JoinedTable".to_string());
 	to_state.add_model(employee_model);
 
-	// Manager継承テーブル
+	// Manager inheritance table
 	let mut manager_model = create_basic_model("testapp", "Manager", "testapp_manager");
 	manager_model.base_model = Some("Employee".to_string());
 	manager_model.inheritance_type = Some("JoinedTable".to_string());
@@ -481,11 +481,11 @@ fn test_detect_joined_table_inheritance() {
 	add_field(&mut manager_model, "department", FieldType::VarChar(100), true);
 	to_state.add_model(manager_model);
 
-	// Autodetector実行
+	// Execute Autodetector
 	let autodetector = MigrationAutodetector::new(from_state, to_state);
 	let detected = autodetector.detect_changes();
 
-	// 検証: 新しいManagerモデルの作成が検出される
+	// Verify: New Manager model creation detected
 	assert!(
 		detected.created_models.len() > 0,
 		"Should detect child table creation in JTI"
