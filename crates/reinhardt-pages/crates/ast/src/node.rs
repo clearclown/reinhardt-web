@@ -86,7 +86,7 @@ impl PageParam {
 }
 
 /// The body of a page! macro, containing one or more nodes.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageBody {
 	/// Root nodes of the view tree
 	pub nodes: Vec<PageNode>,
@@ -102,7 +102,7 @@ pub struct PageBody {
 /// - Expressions (e.g., `{ some_variable }` or `format!(...)`)
 /// - Control flow (e.g., `if condition { ... }` or `for item in items { ... }`)
 /// - Components (e.g., `MyButton(label: "Click")`)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PageNode {
 	/// An HTML element (e.g., `div { class: "x", ... }`)
 	Element(PageElement),
@@ -131,7 +131,7 @@ pub enum PageNode {
 ///     p { "Content" }
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageElement {
 	/// Tag name (e.g., "div", "span", "button")
 	pub tag: Ident,
@@ -182,7 +182,7 @@ impl PageElement {
 /// data_testid: "my-element"  // becomes data-testid
 /// disabled: is_disabled      // dynamic value
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageAttr {
 	/// Attribute name (underscores converted to hyphens in output)
 	pub name: Ident,
@@ -208,7 +208,7 @@ impl PageAttr {
 /// @input: |e| { handle_input(e) }
 /// @submit: |e| { e.prevent_default(); submit() }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageEvent {
 	/// Event type name (e.g., "click", "input", "submit")
 	pub event_type: Ident,
@@ -232,7 +232,7 @@ impl PageEvent {
 /// ```text
 /// "Hello, World!"
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageText {
 	/// The text content
 	pub content: String,
@@ -249,7 +249,7 @@ pub struct PageText {
 /// format!("Hello, {}!", name)
 /// some_variable.clone()
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageExpression {
 	/// The expression
 	pub expr: Expr,
@@ -274,7 +274,7 @@ pub struct PageExpression {
 ///     span { "User" }
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageIf {
 	/// Condition expression
 	pub condition: Expr,
@@ -287,7 +287,7 @@ pub struct PageIf {
 }
 
 /// The else branch of a conditional.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PageElse {
 	/// `else { ... }`
 	Block(Vec<PageNode>),
@@ -304,7 +304,7 @@ pub enum PageElse {
 ///     li { item.name }
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageFor {
 	/// Loop variable pattern
 	pub pat: Pat,
@@ -325,7 +325,7 @@ pub struct PageFor {
 /// disabled: is_disabled
 /// count: items.len()
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageComponentArg {
 	/// Argument name
 	pub name: Ident,
@@ -351,7 +351,7 @@ pub struct PageComponentArg {
 ///     p { "Child content" }
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PageComponent {
 	/// Component name (must be a valid Rust function name)
 	pub name: Ident,

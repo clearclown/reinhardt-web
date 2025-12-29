@@ -126,7 +126,7 @@ fn parse_node(input: ParseStream) -> Result<PageNode> {
 		return parse_braced_expression(input);
 	}
 
-	// Check for identifier - could be element, component, or expression
+	// Check for identifier - could be element, component, macro call, or expression
 	if input.peek(Ident) {
 		// Look ahead to see if it's an element, component, or expression
 		let fork = input.fork();
@@ -207,6 +207,9 @@ fn parse_attr(input: ParseStream) -> Result<PageAttr> {
 	let name: Ident = input.parse()?;
 	let span = name.span();
 	input.parse::<Token![:]>()?;
+
+	// Parse attribute value as expression
+	// Macro calls like `asset!("path")` are valid Expr::Macro
 	let value: Expr = input.parse()?;
 
 	// Consume optional trailing comma
