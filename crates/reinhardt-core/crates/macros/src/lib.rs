@@ -4,6 +4,7 @@
 //!
 //! ## Macros
 //!
+//! - `#[routes]` - Register URL pattern function for automatic discovery
 //! - `#[api_view]` - Convert function to API view
 //! - `#[action]` - Define custom ViewSet action
 //! - `#[get]`, `#[post]`, etc. - HTTP method decorators
@@ -33,8 +34,8 @@ mod query_fields;
 mod receiver;
 mod rel;
 mod routes;
+mod routes_registration;
 mod schema;
-mod url_patterns_registration;
 mod use_inject;
 
 use action::action_impl;
@@ -51,8 +52,8 @@ use permissions::permission_required_impl;
 use query_fields::derive_query_fields_impl;
 use receiver::receiver_impl;
 use routes::{delete_impl, get_impl, patch_impl, post_impl, put_impl};
+use routes_registration::routes_impl;
 use schema::derive_schema_impl;
-use url_patterns_registration::register_url_patterns_impl;
 use use_inject::use_inject_impl;
 
 /// Decorator for function-based API views
@@ -155,9 +156,9 @@ pub fn installed_apps(input: TokenStream) -> TokenStream {
 
 /// Register URL patterns for automatic discovery by the framework
 ///
-/// This macro automatically registers your project's URL pattern functions
-/// with the framework using compile-time registration. The framework will
-/// discover and use these functions when running management commands.
+/// This attribute macro automatically registers a function as the URL pattern
+/// provider for the framework. The function will be discovered and used when
+/// running management commands like `runserver`.
 ///
 /// # Usage
 ///
@@ -165,33 +166,29 @@ pub fn installed_apps(input: TokenStream) -> TokenStream {
 ///
 /// ```rust,ignore
 /// use reinhardt::prelude::*;
-/// use reinhardt::register_url_patterns;
+/// use reinhardt::routes;
 ///
-/// pub fn url_patterns() -> Arc<UnifiedRouter> {
-///     // Your router implementation
+/// #[routes]
+/// pub fn routes() -> UnifiedRouter {
+///     UnifiedRouter::new()
+///         .endpoint(views::index)
+///         .mount("/api/", api::routes())
 /// }
-///
-/// // For standard projects (no admin)
-/// register_url_patterns!();
 /// ```
 ///
-/// For projects with admin panel:
+/// # Notes
 ///
-/// ```rust,ignore
-/// pub fn url_patterns() -> Arc<UnifiedRouter> {
-///     // Your router implementation
-/// }
-///
-/// pub fn url_patterns_with_admin(db: DatabaseConnection) -> Arc<UnifiedRouter> {
-///     // Your admin router implementation
-/// }
-///
-/// // For admin-enabled projects
-/// register_url_patterns!(admin);
-/// ```
-#[proc_macro]
-pub fn register_url_patterns(input: TokenStream) -> TokenStream {
-	register_url_patterns_impl(input)
+/// - The function can have any name (e.g., `routes`, `app_routes`, `url_patterns`)
+/// - The return type must be `UnifiedRouter` (not `Arc<UnifiedRouter>`)
+/// - The framework automatically wraps the router in `Arc`
+/// - Only one function per project should be annotated with `#[routes]`
+#[proc_macro_attribute]
+pub fn routes(args: TokenStream, input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as ItemFn);
+
+	routes_impl(args.into(), input)
+		.unwrap_or_else(|e| e.to_compile_error())
+		.into()
 }
 
 /// Validate URL patterns at compile time
