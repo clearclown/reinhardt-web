@@ -8,20 +8,85 @@
 default_to_workspace = false
 skip_core_tasks = true
 
+[env]
+WASM_TARGET = "wasm32-unknown-unknown"
+WASM_BINDGEN_VERSION = "0.2.100"
+
 # ============================================================================
 # Development Server
 # ============================================================================
 
 [tasks.runserver]
-description = "Start the development server"
+description = "Start the development server with static files"
 command = "cargo"
-args = ["run", "--bin", "manage", "runserver"]
+args = ["run", "--bin", "manage", "runserver", "--with-pages"]
+dependencies = ["wasm-build-dev"]
 
 [tasks.runserver-watch]
 description = "Start the development server with auto-reload (requires bacon)"
 command = "bacon"
 args = ["runserver"]
 dependencies = ["install-bacon"]
+
+# ============================================================================
+# WASM Build
+# ============================================================================
+
+[tasks.wasm-build-dev]
+description = "Build WASM in debug mode"
+script = '''
+#!/bin/bash
+set -e
+echo "Building WASM (debug mode)..."
+cargo build --target ${WASM_TARGET} --lib
+WASM_FILE=$(ls target/${WASM_TARGET}/debug/*.wasm 2>/dev/null | head -1)
+if [ -n "$WASM_FILE" ]; then
+	mkdir -p dist
+	wasm-bindgen --target web "$WASM_FILE" --out-dir dist --debug
+	echo "WASM build complete: dist/"
+else
+	echo "No WASM file found to process"
+fi
+'''
+dependencies = ["install-wasm-tools"]
+
+[tasks.wasm-build-release]
+description = "Build WASM in release mode with optimization"
+script = '''
+#!/bin/bash
+set -e
+echo "Building WASM (release mode)..."
+cargo build --target ${WASM_TARGET} --lib --release
+WASM_FILE=$(ls target/${WASM_TARGET}/release/*.wasm 2>/dev/null | head -1)
+if [ -n "$WASM_FILE" ]; then
+	mkdir -p dist
+	wasm-bindgen --target web "$WASM_FILE" --out-dir dist
+	if command -v wasm-opt &> /dev/null; then
+		WASM_BG=$(ls dist/*_bg.wasm 2>/dev/null | head -1)
+		if [ -n "$WASM_BG" ]; then
+			wasm-opt -O3 "$WASM_BG" -o "$WASM_BG"
+			echo "WASM optimized with wasm-opt"
+		fi
+	fi
+	echo "WASM build complete: dist/"
+else
+	echo "No WASM file found to process"
+fi
+'''
+dependencies = ["install-wasm-tools"]
+
+[tasks.wasm-watch]
+description = "Watch and rebuild WASM on changes"
+command = "cargo"
+args = ["watch", "-w", "src/client", "-s", "cargo make wasm-build-dev"]
+dependencies = ["install-cargo-watch"]
+
+[tasks.wasm-clean]
+description = "Clean WASM build artifacts"
+script = '''
+rm -rf dist/
+echo "WASM build artifacts cleaned"
+'''
 
 # ============================================================================
 # Database Migrations
@@ -177,21 +242,60 @@ else
 fi
 '''
 
+[tasks.install-wasm-tools]
+description = "Install WASM build tools"
+script = '''
+#!/bin/bash
+set -e
+echo "Installing WASM build tools..."
+
+# Add wasm32 target
+rustup target add wasm32-unknown-unknown
+
+# Install wasm-bindgen-cli
+if ! wasm-bindgen --version 2>/dev/null | grep -q "${WASM_BINDGEN_VERSION}"; then
+	echo "Installing wasm-bindgen-cli..."
+	cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}"
+else
+	echo "wasm-bindgen-cli is already installed"
+fi
+
+# Install wasm-opt (binaryen) - optional but recommended
+if ! command -v wasm-opt &> /dev/null; then
+	echo "wasm-opt not found. Install binaryen for WASM optimization:"
+	echo "  macOS: brew install binaryen"
+	echo "  Linux: apt install binaryen or download from GitHub"
+else
+	echo "wasm-opt is already installed"
+fi
+'''
+
+[tasks.install-cargo-watch]
+description = "Install cargo-watch for file watching"
+script = '''
+if ! command -v cargo-watch &> /dev/null; then
+	echo "Installing cargo-watch..."
+	cargo install cargo-watch
+else
+	echo "cargo-watch is already installed"
+fi
+'''
+
 [tasks.install-tools]
 description = "Install all required development tools"
-dependencies = ["install-nextest", "install-bacon"]
+dependencies = ["install-nextest", "install-bacon", "install-wasm-tools", "install-cargo-watch"]
 
 # ============================================================================
 # Development Workflow
 # ============================================================================
 
 [tasks.dev]
-description = "Start development environment (checks, builds, runs server)"
-dependencies = ["quality", "build", "runserver"]
+description = "Start development environment (checks, builds WASM, runs server)"
+dependencies = ["quality", "wasm-build-dev", "runserver"]
 
 [tasks.dev-watch]
 description = "Start development with auto-reload"
-dependencies = ["quality", "build", "runserver-watch"]
+dependencies = ["quality", "wasm-build-dev", "runserver-watch"]
 
 # ============================================================================
 # CI/CD Workflow
@@ -229,10 +333,16 @@ description = "Show available tasks"
 script = '''
 echo "Available tasks:"
 echo "  Development:"
-echo "    runserver          - Start the development server"
+echo "    runserver          - Start the development server (with WASM)"
 echo "    runserver-watch    - Start server with auto-reload"
-echo "    dev                - Run checks + build + start server"
+echo "    dev                - Run checks + build WASM + start server"
 echo "    dev-watch          - Development with auto-reload"
+echo ""
+echo "  WASM Build:"
+echo "    wasm-build-dev     - Build WASM (debug mode)"
+echo "    wasm-build-release - Build WASM (release + optimize)"
+echo "    wasm-watch         - Watch and rebuild WASM on changes"
+echo "    wasm-clean         - Clean WASM build artifacts"
 echo ""
 echo "  Database:"
 echo "    makemigrations     - Create new migrations"
@@ -270,7 +380,7 @@ echo "  CI/CD:"
 echo "    ci                 - Run CI pipeline"
 echo ""
 echo "  Tools:"
-echo "    install-tools      - Install dev tools"
+echo "    install-tools      - Install dev tools (incl. WASM tools)"
 echo ""
 echo "Usage: cargo make <task>"
 '''
