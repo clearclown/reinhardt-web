@@ -21,11 +21,11 @@ mod server {
 			);
 		}
 
-		// Ensure config module is loaded (triggers register_url_patterns! macro)
-		let _ = &config::urls::url_patterns;
+		// Ensure config module is loaded (triggers #[routes] macro)
+		let _ = &config::urls::routes;
 
-		// Router registration and database connection are now automatic
-		// via register_url_patterns!() macro in src/config/urls.rs
+		// Router registration is now automatic via #[routes] attribute macro
+		// in src/config/urls.rs
 
 		// Execute command from command line
 		if let Err(e) = execute_from_command_line().await {

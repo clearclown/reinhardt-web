@@ -67,7 +67,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 				button {
 					r#type: "button",
 					class: btn_class,
-					@click: move | _event | { let is_following = is_following.clone() ; let loading = loading.clone() ; let error = error.clone() ; let currently_following = is_following.get() ; spawn_local (async move { loading.set (true) ; error.set (None) ; let result = if currently_following { unfollow_user (target_user_id).await } else { follow_user (target_user_id).await } ; match result { Ok (()) => { is_following.set (! currently_following) ; loading.set (false) ; } Err (e) => { error.set (Some (e.to_string())) ; loading.set (false) ; } } }) ; },
+					@click: move |_event| { let is_following = is_following.clone(); let loading = loading.clone(); let error = error.clone(); let currently_following = is_following.get(); spawn_local(async move { loading.set(true); error.set(None); let result = if currently_following { unfollow_user(target_user_id).await } else { follow_user(target_user_id).await }; match result { Ok(()) => { is_following.set(! currently_following); loading.set(false); } Err(e) => { error.set(Some(e.to_string())); loading.set(false); } } }); },
 					{ btn_text }
 				}
 				if has_error {

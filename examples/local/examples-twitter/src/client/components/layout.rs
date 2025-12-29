@@ -324,7 +324,7 @@ pub fn footer(version: &str) -> View {
 				class: "container",
 				span {
 					class: "text-muted",
-					{ format ! ("Twitter Clone v{} - Built with Reinhardt" , version) }
+					{ format!("Twitter Clone v{} - Built with Reinhardt", version) }
 				}
 			}
 		}

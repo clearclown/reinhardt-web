@@ -129,15 +129,3 @@ pub fn clear_auth_state() {
 		});
 	});
 }
-
-// Legacy compatibility: Keep auth_state() for backward compatibility
-// but mark it as deprecated in favor of use_auth()
-/// Get the authentication state signal
-///
-/// # Deprecated
-///
-/// Use `use_auth()` instead for hooks-styled code.
-#[deprecated(since = "0.2.0", note = "Use use_auth() instead")]
-pub fn auth_state() -> Signal<Option<UserInfo>> {
-	use_auth()
-}

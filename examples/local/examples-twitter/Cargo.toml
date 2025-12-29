@@ -107,3 +107,6 @@ argon2 = { version = "0.5", features = ["std"] }
 path = "../../.."
 package = "reinhardt-web"
 features = ["full", "auth-jwt", "test", "testcontainers"]
+
+[build-dependencies]
+cfg_aliases = "0.2"
