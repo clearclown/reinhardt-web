@@ -119,6 +119,25 @@ need_stdout = false
 watch = ["src/**", "crates/**/src/**", "Cargo.toml", "crates/**/Cargo.toml"]
 
 # ============================================================================
+# WASM Build Jobs
+# ============================================================================
+
+[jobs.wasm-dev]
+command = ["cargo", "make", "wasm-build-dev"]
+need_stdout = true
+watch = ["src/**", "Cargo.toml", "index.html"]
+
+[jobs.wasm-release]
+command = ["cargo", "make", "wasm-build-release"]
+need_stdout = true
+watch = ["src/**", "Cargo.toml", "index.html"]
+
+[jobs.dev]
+command = ["cargo", "make", "dev"]
+need_stdout = true
+watch = ["src/**", "Cargo.toml", "index.html"]
+
+# ============================================================================
 # LSP Integration Jobs (bacon-ls)
 # ============================================================================
 
