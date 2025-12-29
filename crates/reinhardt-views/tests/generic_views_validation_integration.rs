@@ -9,7 +9,7 @@
 //! - Empty request bodies (400 Bad Request)
 //! - Constraint violations (409 Conflict)
 //!
-//! **Test Category**: Error Path (異常系)
+//! **Test Category**: Error Path
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container

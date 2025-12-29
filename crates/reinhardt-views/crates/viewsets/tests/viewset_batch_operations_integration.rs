@@ -10,7 +10,7 @@
 //! - Non-atomic mode (continue on errors)
 //! - Edge cases (empty batch, single operation, duplicates)
 //!
-//! **Test Category**: Happy Path + Error Path (正常系+異常系)
+//! **Test Category**: Happy Path + Error Path
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
@@ -19,9 +19,6 @@
 //! - books(id SERIAL PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL,
 //!   price INT NOT NULL, stock INT NOT NULL)
 
-use bytes::Bytes;
-use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
 use reinhardt_db::orm::init_database;
 use reinhardt_test::fixtures::postgres_container;
@@ -322,7 +319,7 @@ async fn test_batch_delete_multiple(#[future] books_with_data: (Arc<PgPool>, Vec
 #[tokio::test]
 #[serial(viewset_batch)]
 async fn test_batch_mixed_operations(#[future] books_with_data: (Arc<PgPool>, Vec<i64>)) {
-	let (pool, book_ids) = books_with_data.await;
+	let (_pool, book_ids) = books_with_data.await;
 
 	// Create batch with mixed operations
 	let batch_request = BatchRequest::new(vec![
@@ -547,7 +544,7 @@ async fn test_batch_response_structure(#[future] books_table: Arc<PgPool>) {
 				10,
 			)),
 		),
-		BatchOperationResult::failure::<Book>(1, "Not found"),
+		BatchOperationResult::failure(1, "Not found"),
 		BatchOperationResult::success(
 			2,
 			Some(Book::new(

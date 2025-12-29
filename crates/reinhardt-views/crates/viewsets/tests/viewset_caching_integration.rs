@@ -11,16 +11,16 @@
 //! - Selective caching (list only / retrieve only)
 //! - Cache key collision handling
 //!
-//! **Test Category**: Happy Path + Edge Cases (正常系+エッジケース)
+//! **Test Category**: Happy Path + Edge Cases
 //!
 //! **Note**: These tests focus on CacheConfig structure and CachedViewSet API.
 //! Full caching behavior requires reinhardt-cache infrastructure which is
 //! tested separately.
 
 use bytes::Bytes;
-use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_core::http::{Request, Response};
-use reinhardt_viewsets::{CacheConfig, CachedViewSet};
+use hyper::{HeaderMap, Method, Version};
+use reinhardt_core::http::Request;
+use reinhardt_viewsets::CacheConfig;
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use serial_test::serial;
@@ -72,7 +72,7 @@ async fn test_cache_config_builder() {
 		.cache_all();
 
 	assert_eq!(config.key_prefix, "items");
-	assert_eq!(config.ttl, Duration::from_secs(300));
+	assert_eq!(config.ttl, Some(Duration::from_secs(300)));
 	assert!(config.cache_list);
 	assert!(config.cache_retrieve);
 }
@@ -107,7 +107,7 @@ async fn test_cache_config_default() {
 	let config = CacheConfig::default();
 
 	assert_eq!(config.key_prefix, "viewset");
-	assert_eq!(config.ttl, Duration::from_secs(300)); // 5 minutes default
+	assert_eq!(config.ttl, Some(Duration::from_secs(300))); // 5 minutes default
 	assert!(config.cache_list);
 	assert!(config.cache_retrieve);
 }
@@ -119,15 +119,15 @@ async fn test_cache_config_default() {
 async fn test_cache_ttl_boundary_values() {
 	// Very short TTL (1 second)
 	let short_ttl_config = CacheConfig::new("items").with_ttl(Duration::from_secs(1));
-	assert_eq!(short_ttl_config.ttl, Duration::from_secs(1));
+	assert_eq!(short_ttl_config.ttl, Some(Duration::from_secs(1)));
 
 	// Long TTL (1 hour)
 	let long_ttl_config = CacheConfig::new("items").with_ttl(Duration::from_secs(3600));
-	assert_eq!(long_ttl_config.ttl, Duration::from_secs(3600));
+	assert_eq!(long_ttl_config.ttl, Some(Duration::from_secs(3600)));
 
 	// Very long TTL (24 hours)
 	let very_long_ttl_config = CacheConfig::new("items").with_ttl(Duration::from_secs(86400));
-	assert_eq!(very_long_ttl_config.ttl, Duration::from_secs(86400));
+	assert_eq!(very_long_ttl_config.ttl, Some(Duration::from_secs(86400)));
 }
 
 /// Test: Cache key generation for list operations
@@ -208,7 +208,7 @@ async fn test_cache_key_uniqueness_different_resources() {
 async fn test_cache_config_zero_ttl() {
 	let config = CacheConfig::new("items").with_ttl(Duration::from_secs(0));
 
-	assert_eq!(config.ttl, Duration::from_secs(0));
+	assert_eq!(config.ttl, Some(Duration::from_secs(0)));
 	// Zero TTL means immediate expiration - implementation should handle this
 }
 
@@ -222,9 +222,9 @@ async fn test_multiple_cache_configs() {
 	let posts_config = CacheConfig::new("posts").with_ttl(Duration::from_secs(300));
 	let temp_config = CacheConfig::new("temp").with_ttl(Duration::from_secs(60));
 
-	assert_eq!(users_config.ttl, Duration::from_secs(600));
-	assert_eq!(posts_config.ttl, Duration::from_secs(300));
-	assert_eq!(temp_config.ttl, Duration::from_secs(60));
+	assert_eq!(users_config.ttl, Some(Duration::from_secs(600)));
+	assert_eq!(posts_config.ttl, Some(Duration::from_secs(300)));
+	assert_eq!(temp_config.ttl, Some(Duration::from_secs(60)));
 
 	// Verify key prefixes are different
 	assert_ne!(users_config.key_prefix, posts_config.key_prefix);
@@ -321,7 +321,7 @@ async fn test_cache_config_properties() {
 
 	// Verify all properties are accessible
 	assert_eq!(config.key_prefix, "test_prefix");
-	assert_eq!(config.ttl, Duration::from_secs(120));
+	assert_eq!(config.ttl, Some(Duration::from_secs(120)));
 	assert_eq!(config.cache_list, true);
 	assert_eq!(config.cache_retrieve, true);
 
@@ -330,7 +330,7 @@ async fn test_cache_config_properties() {
 		.with_ttl(Duration::from_secs(240))
 		.cache_list_only();
 
-	assert_eq!(modified_config.ttl, Duration::from_secs(240));
+	assert_eq!(modified_config.ttl, Some(Duration::from_secs(240)));
 	assert_eq!(modified_config.cache_list, true);
 	assert_eq!(modified_config.cache_retrieve, false);
 }

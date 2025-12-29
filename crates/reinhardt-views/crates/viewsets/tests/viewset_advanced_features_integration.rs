@@ -12,18 +12,24 @@
 //! - Permission-based filtering
 //! - Advanced configuration combinations
 //!
-//! **Test Category**: Combination Testing (組み合わせテスト)
+//! **Test Category**: Combination Testing
 //!
 //! **Note**: These tests verify that multiple advanced features work correctly
 //! when used together, not just in isolation.
 
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
-use hyper::{HeaderMap, Method, StatusCode, Version};
+use hyper::{HeaderMap, Method, Version};
 use reinhardt_core::http::Request;
-use reinhardt_viewsets::{FilterConfig, ModelViewSet, OrderingConfig, PaginationConfig};
+use reinhardt_core::macros::model;
+use reinhardt_serializers::JsonSerializer;
+use reinhardt_test::postgres_container;
+use reinhardt_viewsets::{
+	FilterConfig, FilterableViewSet, ModelViewSet, OrderingConfig, PaginatedViewSet,
+	PaginationConfig,
+};
 use rstest::*;
-use sea_query::{Iden, PostgresQueryBuilder, Query, Table};
+use sea_query::{Expr, ExprTrait, Iden, PostgresQueryBuilder, Query, Table};
 use serde::{Deserialize, Serialize};
 use serial_test::serial;
 use sqlx::{PgPool, Row};
@@ -79,8 +85,7 @@ enum AdvancedItems {
 /// Setup: PostgreSQL container and schema
 #[fixture]
 async fn setup_advanced() -> PgPool {
-	let container = postgres_container().await;
-	let pool = container.pool.clone();
+	let (_container, pool, _port, _url) = postgres_container().await;
 
 	// Create advanced_items table
 	let create_table_sql = Table::create()
@@ -126,9 +131,12 @@ async fn setup_advanced() -> PgPool {
 		.col(sea_query::ColumnDef::new(AdvancedItems::AuthorId).big_integer())
 		.col(sea_query::ColumnDef::new(AdvancedItems::CreatedAt).timestamp())
 		.col(sea_query::ColumnDef::new(AdvancedItems::UpdatedAt).timestamp())
-		.build(PostgresQueryBuilder);
+		.to_string(PostgresQueryBuilder);
 
-	sqlx::query(&create_table_sql).execute(&pool).await.unwrap();
+	sqlx::query(&create_table_sql)
+		.execute(&*pool)
+		.await
+		.unwrap();
 
 	// Insert test data with varied attributes
 	for i in 1..=20 {
@@ -181,12 +189,12 @@ async fn setup_advanced() -> PgPool {
 				item.created_at.into(),
 				item.updated_at.into(),
 			])
-			.build(PostgresQueryBuilder);
+			.to_string(PostgresQueryBuilder);
 
-		sqlx::query(&insert_sql).execute(&pool).await.unwrap();
+		sqlx::query(&insert_sql).execute(&*pool).await.unwrap();
 	}
 
-	pool
+	(*pool).clone()
 }
 
 // ============================================================================
@@ -217,14 +225,12 @@ async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: P
 	let pool = setup_advanced.await;
 
 	// Create ViewSet with all three features
-	let pagination_config = PaginationConfig::PageNumber {
-		page_size: 5,
-		page_query_param: "page".to_string(),
-	};
+	let pagination_config = PaginationConfig::page_number(5, Some(20));
 
 	let filter_config = FilterConfig {
 		filterable_fields: vec!["category".to_string(), "status".to_string()],
 		search_fields: vec!["title".to_string()],
+		case_insensitive_search: true,
 	};
 
 	let ordering_config = OrderingConfig {
@@ -232,15 +238,15 @@ async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: P
 		default_ordering: vec!["-priority".to_string()], // Descending priority
 	};
 
-	let viewset = ModelViewSet::<AdvancedItem>::new("advanced-items")
-		.with_pagination(Some(pagination_config))
-		.with_filter(Some(filter_config))
-		.with_ordering(Some(ordering_config));
+	let viewset = ModelViewSet::<AdvancedItem, JsonSerializer<AdvancedItem>>::new("advanced-items")
+		.with_pagination(pagination_config)
+		.with_filters(filter_config)
+		.with_ordering(ordering_config);
 
 	// Verify configuration
-	assert!(viewset.pagination_config().is_some());
-	assert!(viewset.filter_config().is_some());
-	assert!(viewset.ordering_config().is_some());
+	assert!(viewset.get_pagination_config().is_some());
+	assert!(viewset.get_filter_config().is_some());
+	assert!(viewset.get_ordering_config().is_some());
 
 	// Test: Filter by category="Electronics", order by -score, page 1
 	let request =
@@ -249,11 +255,11 @@ async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: P
 	// In real implementation, this would filter, order, and paginate
 	// For this test, we verify the configuration is correctly set
 	assert_eq!(
-		viewset.filter_config().unwrap().filterable_fields,
+		viewset.get_filter_config().unwrap().filterable_fields,
 		vec!["category", "status"]
 	);
 	assert_eq!(
-		viewset.ordering_config().unwrap().default_ordering,
+		viewset.get_ordering_config().unwrap().default_ordering,
 		vec!["-priority"]
 	);
 }
@@ -274,13 +280,14 @@ async fn test_multiple_filter_backends(#[future] setup_advanced: PgPool) {
 			"author_id".to_string(),
 		],
 		search_fields: vec!["title".to_string()],
+		case_insensitive_search: true,
 	};
 
-	let viewset =
-		ModelViewSet::<AdvancedItem>::new("advanced-items").with_filter(Some(filter_config));
+	let viewset = ModelViewSet::<AdvancedItem, JsonSerializer<AdvancedItem>>::new("advanced-items")
+		.with_filters(filter_config);
 
 	// Verify all filterable fields are registered
-	let config = viewset.filter_config().unwrap();
+	let config = viewset.get_filter_config().unwrap();
 	assert_eq!(config.filterable_fields.len(), 4);
 	assert!(config.filterable_fields.contains(&"category".to_string()));
 	assert!(config.filterable_fields.contains(&"status".to_string()));
@@ -297,20 +304,20 @@ async fn test_custom_queryset_with_pagination(#[future] setup_advanced: PgPool) 
 
 	let pagination_config = PaginationConfig::LimitOffset {
 		default_limit: 10,
-		max_limit: 50,
+		max_limit: Some(50),
 	};
 
-	let viewset = ModelViewSet::<AdvancedItem>::new("advanced-items")
-		.with_pagination(Some(pagination_config));
+	let viewset = ModelViewSet::<AdvancedItem, JsonSerializer<AdvancedItem>>::new("advanced-items")
+		.with_pagination(pagination_config);
 
 	// Verify pagination configuration
 	if let Some(PaginationConfig::LimitOffset {
 		default_limit,
 		max_limit,
-	}) = viewset.pagination_config()
+	}) = viewset.get_pagination_config()
 	{
-		assert_eq!(*default_limit, 10);
-		assert_eq!(*max_limit, 50);
+		assert_eq!(default_limit, 10);
+		assert_eq!(max_limit, Some(50));
 	} else {
 		panic!("Expected LimitOffset pagination config");
 	}
@@ -333,10 +340,10 @@ async fn test_complex_multi_field_filtering(#[future] setup_advanced: PgPool) {
 			AdvancedItems::Status,
 			AdvancedItems::Published,
 		])
-		.and_where(sea_query::Expr::col(AdvancedItems::Category).eq("Books"))
-		.and_where(sea_query::Expr::col(AdvancedItems::Status).eq("published"))
-		.and_where(sea_query::Expr::col(AdvancedItems::Published).eq(true))
-		.build(PostgresQueryBuilder);
+		.and_where(Expr::col(AdvancedItems::Category).eq("Books"))
+		.and_where(Expr::col(AdvancedItems::Status).eq("published"))
+		.and_where(Expr::col(AdvancedItems::Published).eq(true))
+		.to_string(PostgresQueryBuilder);
 
 	let rows = sqlx::query(&filter_sql).fetch_all(&pool).await.unwrap();
 
@@ -368,11 +375,11 @@ async fn test_custom_multi_field_ordering(#[future] setup_advanced: PgPool) {
 		default_ordering: vec!["-priority".to_string(), "score".to_string()],
 	};
 
-	let viewset =
-		ModelViewSet::<AdvancedItem>::new("advanced-items").with_ordering(Some(ordering_config));
+	let viewset = ModelViewSet::<AdvancedItem, JsonSerializer<AdvancedItem>>::new("advanced-items")
+		.with_ordering(ordering_config);
 
 	// Verify ordering configuration
-	let config = viewset.ordering_config().unwrap();
+	let config = viewset.get_ordering_config().unwrap();
 	assert_eq!(config.ordering_fields.len(), 3);
 	assert_eq!(config.default_ordering.len(), 2);
 	assert_eq!(config.default_ordering[0], "-priority");
@@ -392,19 +399,20 @@ async fn test_pagination_custom_page_size(#[future] setup_advanced: PgPool) {
 	for page_size in page_sizes {
 		let pagination_config = PaginationConfig::PageNumber {
 			page_size,
-			page_query_param: "page".to_string(),
+			max_page_size: Some(100),
 		};
 
-		let viewset = ModelViewSet::<AdvancedItem>::new("advanced-items")
-			.with_pagination(Some(pagination_config));
+		let viewset =
+			ModelViewSet::<AdvancedItem, JsonSerializer<AdvancedItem>>::new("advanced-items")
+				.with_pagination(pagination_config);
 
 		// Verify page size is correctly set
 		if let Some(PaginationConfig::PageNumber {
 			page_size: actual_size,
 			..
-		}) = viewset.pagination_config()
+		}) = viewset.get_pagination_config()
 		{
-			assert_eq!(*actual_size, page_size);
+			assert_eq!(actual_size, page_size);
 		} else {
 			panic!("Expected PageNumber pagination config");
 		}
@@ -426,10 +434,8 @@ async fn test_filter_multiple_values_same_field(#[future] setup_advanced: PgPool
 			AdvancedItems::Title,
 			AdvancedItems::Category,
 		])
-		.and_where(
-			sea_query::Expr::col(AdvancedItems::Category).is_in(vec!["Books", "Electronics"]),
-		)
-		.build(PostgresQueryBuilder);
+		.and_where(Expr::col(AdvancedItems::Category).is_in(vec!["Books", "Electronics"]))
+		.to_string(PostgresQueryBuilder);
 
 	let rows = sqlx::query(&filter_sql).fetch_all(&pool).await.unwrap();
 
@@ -457,9 +463,9 @@ async fn test_range_filtering(#[future] setup_advanced: PgPool) {
 	let filter_sql = Query::select()
 		.from(AdvancedItems::Table)
 		.columns([AdvancedItems::Id, AdvancedItems::Priority])
-		.and_where(sea_query::Expr::col(AdvancedItems::Priority).gte(2))
-		.and_where(sea_query::Expr::col(AdvancedItems::Priority).lte(4))
-		.build(PostgresQueryBuilder);
+		.and_where(Expr::col(AdvancedItems::Priority).gte(2))
+		.and_where(Expr::col(AdvancedItems::Priority).lte(4))
+		.to_string(PostgresQueryBuilder);
 
 	let rows = sqlx::query(&filter_sql).fetch_all(&pool).await.unwrap();
 
@@ -518,7 +524,7 @@ async fn test_ordering_null_values(#[future] setup_advanced: PgPool) {
 			null_item.created_at.into(),
 			null_item.updated_at.into(),
 		])
-		.build(PostgresQueryBuilder);
+		.to_string(PostgresQueryBuilder);
 
 	sqlx::query(&insert_sql).execute(&pool).await.unwrap();
 
@@ -531,7 +537,7 @@ async fn test_ordering_null_values(#[future] setup_advanced: PgPool) {
 			AdvancedItems::AuthorId,
 		])
 		.order_by(AdvancedItems::AuthorId, sea_query::Order::Asc)
-		.build(PostgresQueryBuilder);
+		.to_string(PostgresQueryBuilder);
 
 	let rows = sqlx::query(&order_sql).fetch_all(&pool).await.unwrap();
 
@@ -554,9 +560,9 @@ async fn test_combined_search_and_filter(#[future] setup_advanced: PgPool) {
 			AdvancedItems::Title,
 			AdvancedItems::Category,
 		])
-		.and_where(sea_query::Expr::col(AdvancedItems::Title).like("%Item%"))
-		.and_where(sea_query::Expr::col(AdvancedItems::Category).eq("Books"))
-		.build(PostgresQueryBuilder);
+		.and_where(Expr::col(AdvancedItems::Title).like("%Item%"))
+		.and_where(Expr::col(AdvancedItems::Category).eq("Books"))
+		.to_string(PostgresQueryBuilder);
 
 	let rows = sqlx::query(&search_filter_sql)
 		.fetch_all(&pool)

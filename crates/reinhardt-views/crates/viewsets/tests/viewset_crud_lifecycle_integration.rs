@@ -10,7 +10,7 @@
 //! - Resource deletion state verification
 //! - Create-retrieve data consistency
 //!
-//! **Test Category**: State Transition (状態遷移系)
+//! **Test Category**: State Transition
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
@@ -28,7 +28,7 @@ use reinhardt_db::orm::init_database;
 use reinhardt_serializers::JsonSerializer;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::testcontainers::{ContainerAsync, GenericImage};
-use reinhardt_viewsets::{ModelViewSet, ModelViewSetHandler, ReadOnlyModelViewSet};
+use reinhardt_viewsets::{ModelViewSetHandler, ReadOnlyModelViewSet};
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
@@ -80,7 +80,7 @@ enum Articles {
 #[fixture]
 async fn db_pool(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
-) -> Arc<PgPool> {
+) -> (Arc<PgPool>, Arc<sqlx::AnyPool>) {
 	let (_container, pool, _port, connection_url) = postgres_container.await;
 
 	// Initialize database connection for reinhardt-orm
@@ -88,13 +88,22 @@ async fn db_pool(
 		.await
 		.expect("Failed to initialize database");
 
-	pool
+	// Create AnyPool for ModelViewSetHandler
+	let any_pool = Arc::new(
+		sqlx::AnyPool::connect(&connection_url)
+			.await
+			.expect("Failed to connect AnyPool"),
+	);
+
+	(pool, any_pool)
 }
 
 /// Fixture: Setup articles table
 #[fixture]
-async fn articles_table(#[future] db_pool: Arc<PgPool>) -> Arc<PgPool> {
-	let pool = db_pool.await;
+async fn articles_table(
+	#[future] db_pool: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) -> (Arc<PgPool>, Arc<sqlx::AnyPool>) {
+	let (pool, any_pool) = db_pool.await;
 
 	// Create articles table
 	let create_table_stmt = Table::create()
@@ -130,7 +139,7 @@ async fn articles_table(#[future] db_pool: Arc<PgPool>) -> Arc<PgPool> {
 		.await
 		.expect("Failed to create articles table");
 
-	pool
+	(pool, any_pool)
 }
 
 // ============================================================================
@@ -205,9 +214,9 @@ fn create_delete_request(uri: &str) -> Request {
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_full_crud_lifecycle(#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>)) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Step 1: Create an article
 	let create_body = r#"{"title":"Lifecycle Test","content":"Testing full lifecycle","published":true,"view_count":0}"#;
@@ -229,7 +238,7 @@ async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
 	// Step 3: Retrieve the specific article
 	let retrieve_req = create_get_request(&format!("/articles/{}/", article_id));
 	let retrieve_resp = handler
-		.retrieve(&retrieve_req, &article_id.to_string())
+		.retrieve(&retrieve_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(retrieve_resp.status, StatusCode::OK);
@@ -241,7 +250,7 @@ async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
 	let update_body = r#"{"title":"Updated Title","content":"Updated content","published":false,"view_count":100}"#;
 	let update_req = create_put_request(&format!("/articles/{}/", article_id), update_body);
 	let update_resp = handler
-		.update(&update_req, &article_id.to_string(), false)
+		.update(&update_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(update_resp.status, StatusCode::OK);
@@ -254,7 +263,7 @@ async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
 	let patch_body = r#"{"view_count":200}"#;
 	let patch_req = create_patch_request(&format!("/articles/{}/", article_id), patch_body);
 	let patch_resp = handler
-		.update(&patch_req, &article_id.to_string(), true)
+		.update(&patch_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(patch_resp.status, StatusCode::OK);
@@ -266,14 +275,16 @@ async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
 	// Step 6: Destroy the article
 	let delete_req = create_delete_request(&format!("/articles/{}/", article_id));
 	let delete_resp = handler
-		.destroy(&delete_req, &article_id.to_string())
+		.destroy(&delete_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(delete_resp.status, StatusCode::NO_CONTENT);
 
 	// Step 7: Verify deletion - retrieve should fail with 404
 	let verify_req = create_get_request(&format!("/articles/{}/", article_id));
-	let verify_result = handler.retrieve(&verify_req, &article_id.to_string()).await;
+	let verify_result = handler
+		.retrieve(&verify_req, serde_json::json!(article_id))
+		.await;
 	assert!(
 		verify_result.is_err() || verify_result.unwrap().status == StatusCode::NOT_FOUND,
 		"Expected NOT_FOUND after deletion"
@@ -284,9 +295,11 @@ async fn test_full_crud_lifecycle(#[future] articles_table: Arc<PgPool>) {
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_multiple_resources_parallel_management(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_multiple_resources_parallel_management(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create 3 articles
 	let articles_data = vec![
@@ -320,7 +333,7 @@ async fn test_multiple_resources_parallel_management(#[future] articles_table: A
 	let update_body = r#"{"title":"Article 2 Updated","content":"Content 2 Updated","published":true,"view_count":25}"#;
 	let update_req = create_put_request(&format!("/articles/{}/", article_ids[1]), update_body);
 	let update_resp = handler
-		.update(&update_req, &article_ids[1].to_string(), false)
+		.update(&update_req, serde_json::json!(article_ids[1]))
 		.await
 		.unwrap();
 	assert_eq!(update_resp.status, StatusCode::OK);
@@ -328,7 +341,7 @@ async fn test_multiple_resources_parallel_management(#[future] articles_table: A
 	// Delete article 1
 	let delete_req = create_delete_request(&format!("/articles/{}/", article_ids[0]));
 	let delete_resp = handler
-		.destroy(&delete_req, &article_ids[0].to_string())
+		.destroy(&delete_req, serde_json::json!(article_ids[0]))
 		.await
 		.unwrap();
 	assert_eq!(delete_resp.status, StatusCode::NO_CONTENT);
@@ -346,8 +359,10 @@ async fn test_multiple_resources_parallel_management(#[future] articles_table: A
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_readonly_viewset_write_restrictions(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
+async fn test_readonly_viewset_write_restrictions(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (pool, _any_pool) = articles_table.await;
 
 	// ReadOnlyModelViewSet should not have create, update, destroy methods
 	// This is a compile-time check - if this compiles, it means ReadOnlyModelViewSet
@@ -385,9 +400,11 @@ async fn test_readonly_viewset_write_restrictions(#[future] articles_table: Arc<
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_state_consistency_across_operations(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_state_consistency_across_operations(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create an article
 	let create_body = r#"{"title":"Consistency Test","content":"Initial content","published":false,"view_count":0}"#;
@@ -400,7 +417,7 @@ async fn test_state_consistency_across_operations(#[future] articles_table: Arc<
 	// Retrieve and verify state
 	let retrieve_req = create_get_request(&format!("/articles/{}/", article_id));
 	let retrieve_resp = handler
-		.retrieve(&retrieve_req, &article_id.to_string())
+		.retrieve(&retrieve_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	let retrieved_body = String::from_utf8(retrieve_resp.body.to_vec()).unwrap();
@@ -418,9 +435,11 @@ async fn test_state_consistency_across_operations(#[future] articles_table: Arc<
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_put_operation_idempotency(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_put_operation_idempotency(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create an article
 	let create_body = r#"{"title":"Idempotency Test","content":"Initial content","published":true,"view_count":100}"#;
@@ -436,7 +455,7 @@ async fn test_put_operation_idempotency(#[future] articles_table: Arc<PgPool>) {
 	// First PUT
 	let put_req_1 = create_put_request(&format!("/articles/{}/", article_id), update_body);
 	let put_resp_1 = handler
-		.update(&put_req_1, &article_id.to_string(), false)
+		.update(&put_req_1, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(put_resp_1.status, StatusCode::OK);
@@ -446,7 +465,7 @@ async fn test_put_operation_idempotency(#[future] articles_table: Arc<PgPool>) {
 	// Second PUT (same data)
 	let put_req_2 = create_put_request(&format!("/articles/{}/", article_id), update_body);
 	let put_resp_2 = handler
-		.update(&put_req_2, &article_id.to_string(), false)
+		.update(&put_req_2, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(put_resp_2.status, StatusCode::OK);
@@ -464,9 +483,11 @@ async fn test_put_operation_idempotency(#[future] articles_table: Arc<PgPool>) {
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_incremental_patch_updates(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_incremental_patch_updates(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create an article
 	let create_body =
@@ -481,7 +502,7 @@ async fn test_incremental_patch_updates(#[future] articles_table: Arc<PgPool>) {
 	let patch_1_body = r#"{"view_count":50}"#;
 	let patch_1_req = create_patch_request(&format!("/articles/{}/", article_id), patch_1_body);
 	let patch_1_resp = handler
-		.update(&patch_1_req, &article_id.to_string(), true)
+		.update(&patch_1_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(patch_1_resp.status, StatusCode::OK);
@@ -494,7 +515,7 @@ async fn test_incremental_patch_updates(#[future] articles_table: Arc<PgPool>) {
 	let patch_2_body = r#"{"published":true}"#;
 	let patch_2_req = create_patch_request(&format!("/articles/{}/", article_id), patch_2_body);
 	let patch_2_resp = handler
-		.update(&patch_2_req, &article_id.to_string(), true)
+		.update(&patch_2_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(patch_2_resp.status, StatusCode::OK);
@@ -508,7 +529,7 @@ async fn test_incremental_patch_updates(#[future] articles_table: Arc<PgPool>) {
 	let patch_3_body = r#"{"title":"Patch Test - Updated"}"#;
 	let patch_3_req = create_patch_request(&format!("/articles/{}/", article_id), patch_3_body);
 	let patch_3_resp = handler
-		.update(&patch_3_req, &article_id.to_string(), true)
+		.update(&patch_3_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(patch_3_resp.status, StatusCode::OK);
@@ -523,9 +544,11 @@ async fn test_incremental_patch_updates(#[future] articles_table: Arc<PgPool>) {
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_resource_deletion_state_verification(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_resource_deletion_state_verification(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create 2 articles
 	let article_1_body = r#"{"title":"Article to Delete","content":"Will be deleted","published":true,"view_count":10}"#;
@@ -554,7 +577,7 @@ async fn test_resource_deletion_state_verification(#[future] articles_table: Arc
 	// Delete article 1
 	let delete_req = create_delete_request(&format!("/articles/{}/", article_1_id));
 	let delete_resp = handler
-		.destroy(&delete_req, &article_1_id.to_string())
+		.destroy(&delete_req, serde_json::json!(article_1_id))
 		.await
 		.unwrap();
 	assert_eq!(delete_resp.status, StatusCode::NO_CONTENT);
@@ -562,7 +585,7 @@ async fn test_resource_deletion_state_verification(#[future] articles_table: Arc
 	// Verify article 1 is deleted
 	let retrieve_deleted_req = create_get_request(&format!("/articles/{}/", article_1_id));
 	let retrieve_deleted_result = handler
-		.retrieve(&retrieve_deleted_req, &article_1_id.to_string())
+		.retrieve(&retrieve_deleted_req, serde_json::json!(article_1_id))
 		.await;
 	assert!(
 		retrieve_deleted_result.is_err()
@@ -573,7 +596,7 @@ async fn test_resource_deletion_state_verification(#[future] articles_table: Arc
 	// Verify article 2 still exists
 	let retrieve_kept_req = create_get_request(&format!("/articles/{}/", article_2_id));
 	let retrieve_kept_resp = handler
-		.retrieve(&retrieve_kept_req, &article_2_id.to_string())
+		.retrieve(&retrieve_kept_req, serde_json::json!(article_2_id))
 		.await
 		.unwrap();
 	assert_eq!(retrieve_kept_resp.status, StatusCode::OK);
@@ -593,9 +616,11 @@ async fn test_resource_deletion_state_verification(#[future] articles_table: Arc
 #[rstest]
 #[tokio::test]
 #[serial(viewset_lifecycle)]
-async fn test_create_retrieve_data_consistency(#[future] articles_table: Arc<PgPool>) {
-	let pool = articles_table.await;
-	let handler = ModelViewSetHandler::<Article>::new().with_pool(pool.clone());
+async fn test_create_retrieve_data_consistency(
+	#[future] articles_table: (Arc<PgPool>, Arc<sqlx::AnyPool>),
+) {
+	let (_pool, any_pool) = articles_table.await;
+	let handler = ModelViewSetHandler::<Article>::new().with_pool(any_pool);
 
 	// Create an article with specific field values
 	let create_body = r#"{"title":"Consistency Check","content":"Detailed content for verification","published":true,"view_count":999}"#;
@@ -610,7 +635,7 @@ async fn test_create_retrieve_data_consistency(#[future] articles_table: Arc<PgP
 	// Immediately retrieve the created article
 	let retrieve_req = create_get_request(&format!("/articles/{}/", article_id));
 	let retrieve_resp = handler
-		.retrieve(&retrieve_req, &article_id.to_string())
+		.retrieve(&retrieve_req, serde_json::json!(article_id))
 		.await
 		.unwrap();
 	assert_eq!(retrieve_resp.status, StatusCode::OK);

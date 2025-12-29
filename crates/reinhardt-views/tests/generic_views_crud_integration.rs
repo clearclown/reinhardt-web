@@ -9,7 +9,7 @@
 //! - Composite views: ListCreateAPIView, RetrieveUpdateDestroyAPIView
 //! - Default ordering behavior
 //!
-//! **Test Category**: Happy Path (正常系)
+//! **Test Category**: Happy Path
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container

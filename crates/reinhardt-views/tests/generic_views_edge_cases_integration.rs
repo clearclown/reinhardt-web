@@ -13,7 +13,7 @@
 //! - Boolean edge cases
 //! - Timestamp edge cases (timezones, far future/past)
 //!
-//! **Test Category**: Edge Cases (エッジケース)
+//! **Test Category**: Edge Cases
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
@@ -24,6 +24,7 @@
 
 use bytes::Bytes;
 use chrono::{DateTime, TimeZone, Utc};
+use futures::future::join_all;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
@@ -222,7 +223,7 @@ async fn test_concurrent_requests(#[future] edge_items_table: Arc<PgPool>) {
 	}
 
 	// Wait for all requests to complete
-	let results: Vec<_> = futures::future::join_all(handles).await;
+	let results: Vec<_> = join_all(handles).await;
 
 	// Verify all requests completed (success or error)
 	assert_eq!(results.len(), 10, "All concurrent requests should complete");

@@ -4,7 +4,6 @@
 mod list_api_tests {
 	use crate::View;
 	use crate::generic::ListAPIView;
-	use reinhardt_db::orm::Model;
 	use reinhardt_serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
@@ -14,18 +13,7 @@ mod list_api_tests {
 		title: String,
 	}
 
-	impl Model for TestArticle {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"articles"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestArticle, i64, "articles");
 
 	#[test]
 	fn test_list_api_view_new() {
@@ -55,7 +43,6 @@ mod list_api_tests {
 mod create_api_tests {
 	use crate::View;
 	use crate::generic::CreateAPIView;
-	use reinhardt_db::orm::Model;
 	use reinhardt_serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
@@ -65,18 +52,7 @@ mod create_api_tests {
 		title: String,
 	}
 
-	impl Model for TestArticle {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"articles"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestArticle, i64, "articles");
 
 	#[test]
 	fn test_create_api_view_new() {
@@ -97,7 +73,6 @@ mod create_api_tests {
 mod update_api_tests {
 	use crate::View;
 	use crate::generic::UpdateAPIView;
-	use reinhardt_db::orm::Model;
 	use reinhardt_serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
@@ -107,18 +82,7 @@ mod update_api_tests {
 		title: String,
 	}
 
-	impl Model for TestArticle {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"articles"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestArticle, i64, "articles");
 
 	#[test]
 	fn test_update_api_view_new() {
@@ -148,7 +112,6 @@ mod update_api_tests {
 mod destroy_api_tests {
 	use crate::View;
 	use crate::generic::DestroyAPIView;
-	use reinhardt_db::orm::Model;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,18 +120,7 @@ mod destroy_api_tests {
 		title: String,
 	}
 
-	impl Model for TestArticle {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"articles"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestArticle, i64, "articles");
 
 	#[test]
 	fn test_destroy_api_view_new() {
@@ -192,7 +144,6 @@ mod composite_api_tests {
 		ListCreateAPIView, RetrieveDestroyAPIView, RetrieveUpdateAPIView,
 		RetrieveUpdateDestroyAPIView,
 	};
-	use reinhardt_db::orm::Model;
 	use reinhardt_serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
@@ -202,18 +153,7 @@ mod composite_api_tests {
 		title: String,
 	}
 
-	impl Model for TestArticle {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"articles"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestArticle, i64, "articles");
 
 	#[test]
 	fn test_list_create_api_view_new() {

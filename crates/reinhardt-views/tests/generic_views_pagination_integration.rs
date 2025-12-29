@@ -6,7 +6,7 @@
 //! - Cursor pagination (forward navigation)
 //! - Edge cases (empty dataset, single item)
 //!
-//! **Test Category**: Boundary Value Analysis + Equivalence Partitioning (境界値分析+同値分割)
+//! **Test Category**: Boundary Value Analysis + Equivalence Partitioning
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
@@ -183,8 +183,7 @@ fn create_get_request(uri: &str) -> Request {
 async fn test_page_number_first_page(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	let request = create_get_request("/posts/?page=1");
 	let result = view.dispatch(request).await;
@@ -209,8 +208,7 @@ async fn test_page_number_first_page(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_page_number_middle_page(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	let request = create_get_request("/posts/?page=3");
 	let result = view.dispatch(request).await;
@@ -234,8 +232,7 @@ async fn test_page_number_middle_page(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_page_number_last_page(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	// With 25 posts and page_size=5, last page is page 5
 	let request = create_get_request("/posts/?page=5");
@@ -260,8 +257,7 @@ async fn test_page_number_last_page(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_page_number_beyond_limit(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	// Request page 100 (beyond available data)
 	let request = create_get_request("/posts/?page=100");
@@ -287,8 +283,7 @@ async fn test_page_number_beyond_limit(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_page_number_invalid_zero(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	let request = create_get_request("/posts/?page=0");
 	let result = view.dispatch(request).await;
@@ -315,8 +310,7 @@ async fn test_page_number_invalid_zero(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_page_number_negative(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(5, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(5);
 
 	let request = create_get_request("/posts/?page=-1");
 	let result = view.dispatch(request).await;
@@ -343,8 +337,7 @@ async fn test_page_number_negative(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_limit_offset_basic(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::limit_offset(10, Some(50)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	// Request limit=5, offset=10 (skip first 10, return next 5)
 	let request = create_get_request("/posts/?limit=5&offset=10");
@@ -365,8 +358,7 @@ async fn test_limit_offset_basic(#[future] posts_with_data: Arc<PgPool>) {
 async fn test_limit_offset_beyond_total(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::limit_offset(10, Some(50)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	// Request offset=100 (beyond 25 available posts)
 	let request = create_get_request("/posts/?limit=10&offset=100");
@@ -391,8 +383,7 @@ async fn test_limit_offset_beyond_total(#[future] posts_with_data: Arc<PgPool>) 
 async fn test_limit_offset_max_limit_enforcement(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::limit_offset(10, Some(20)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	// Request limit=100, but max_limit=20 should be enforced
 	let request = create_get_request("/posts/?limit=100&offset=0");
@@ -417,8 +408,7 @@ async fn test_limit_offset_max_limit_enforcement(#[future] posts_with_data: Arc<
 async fn test_cursor_pagination_forward(#[future] posts_with_data: Arc<PgPool>) {
 	let _pool = posts_with_data.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::cursor(10, "id".to_string()));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	let request = create_get_request("/posts/");
 	let result = view.dispatch(request).await;
@@ -442,8 +432,7 @@ async fn test_cursor_pagination_forward(#[future] posts_with_data: Arc<PgPool>) 
 async fn test_pagination_empty_dataset(#[future] posts_table: Arc<PgPool>) {
 	let _pool = posts_table.await;
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(10, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	let request = create_get_request("/posts/?page=1");
 	let result = view.dispatch(request).await;
@@ -487,8 +476,7 @@ async fn test_pagination_single_item(#[future] posts_table: Arc<PgPool>) {
 		.await
 		.expect("Failed to insert post");
 
-	let view = ListAPIView::<Post, JsonSerializer<Post>>::new()
-		.with_pagination(PaginationConfig::page_number(10, Some(100)));
+	let view = ListAPIView::<Post, JsonSerializer<Post>>::new().with_paginate_by(10);
 
 	let request = create_get_request("/posts/?page=1");
 	let result = view.dispatch(request).await;

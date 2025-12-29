@@ -1005,21 +1005,7 @@ mod tests {
 		email: String,
 	}
 
-	impl Model for TestUser {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			"users"
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestUser, i64, "users");
 
 	fn create_test_users() -> Vec<TestUser> {
 		vec![

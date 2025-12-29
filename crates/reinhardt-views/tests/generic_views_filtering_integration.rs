@@ -10,7 +10,7 @@
 //! - Combined filtering + ordering
 //! - Edge cases (no results, invalid fields)
 //!
-//! **Test Category**: Combination Testing (組み合わせテスト)
+//! **Test Category**: Combination Testing
 //!
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
@@ -29,7 +29,7 @@ use reinhardt_serializers::JsonSerializer;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::testcontainers::{ContainerAsync, GenericImage};
 use reinhardt_views::{ListAPIView, View};
-use reinhardt_viewsets::{FilterConfig, OrderingConfig};
+use reinhardt_viewsets::FilterConfig;
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
@@ -261,7 +261,7 @@ async fn test_case_insensitive_search(#[future] products_with_data: Arc<PgPool>)
 	let view = ListAPIView::<Product, JsonSerializer<Product>>::new().with_filter_config(
 		FilterConfig::new()
 			.with_search_fields(vec!["name".to_string()])
-			.case_insensitive(),
+			.case_insensitive(true),
 	);
 
 	// Search for "laptop" in lowercase

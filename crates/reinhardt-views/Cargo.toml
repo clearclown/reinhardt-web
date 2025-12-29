@@ -52,3 +52,4 @@ sqlx = { workspace = true }
 reinhardt-orm = { workspace = true }
 reinhardt-migrations = { workspace = true }
 ctor = { workspace = true }
+futures = { workspace = true }
