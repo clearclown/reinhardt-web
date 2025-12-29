@@ -374,28 +374,14 @@ mod tests {
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestPost {
-		id: i64,
+		id: Option<i64>,
 		title: String,
 		content: String,
 		age: i32,
 		created_at: String,
 	}
 
-	impl Model for TestPost {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			"test_posts"
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			Some(&self.id)
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = value;
-		}
-	}
+	reinhardt_test::impl_test_model!(TestPost, i64, "test_posts");
 
 	#[tokio::test]
 	async fn test_single_lookup() {

@@ -637,18 +637,7 @@ mod tests {
 		name: String,
 	}
 
-	impl Model for TestUser {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"users"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestUser, i64, "users");
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestGroup {
@@ -656,18 +645,7 @@ mod tests {
 		name: String,
 	}
 
-	impl Model for TestGroup {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"groups"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestGroup, i64, "groups");
 
 	#[test]
 	fn test_many_to_many_manager_creation() {

@@ -253,6 +253,7 @@ impl<M: Model> Default for ValidatorConfig<M> {
 mod tests {
 	use super::*;
 	use crate::validators::{UniqueTogetherValidator, UniqueValidator};
+	use reinhardt_db::orm::FieldSelector;
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestUser {
@@ -261,14 +262,31 @@ mod tests {
 		email: String,
 	}
 
+	#[derive(Debug, Clone)]
+	struct TestUserFields;
+
+	impl FieldSelector for TestUserFields {
+		fn with_alias(self, _alias: &str) -> Self {
+			self
+		}
+	}
+
 	impl Model for TestUser {
 		type PrimaryKey = i64;
+		type Fields = TestUserFields;
+
 		fn table_name() -> &'static str {
 			"test_users"
 		}
+
+		fn new_fields() -> Self::Fields {
+			TestUserFields
+		}
+
 		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
 			self.id.as_ref()
 		}
+
 		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
 			self.id = Some(value);
 		}

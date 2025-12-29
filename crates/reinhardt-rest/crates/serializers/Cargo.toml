@@ -51,6 +51,7 @@ uuid = { workspace = true }
 testcontainers = { workspace = true }
 sea-orm = { workspace = true }
 reinhardt-db = { workspace = true, features = ["orm"] }
+reinhardt-orm = { workspace = true }
 reinhardt-pages = { workspace = true }
 rstest = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }

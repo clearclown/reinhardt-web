@@ -267,21 +267,7 @@ mod tests {
 		name: String,
 	}
 
-	impl Model for TestModel {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			"test_models"
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(TestModel, i64, "test_models");
 
 	#[test]
 	fn test_hyperlinked_serializer_creation() {

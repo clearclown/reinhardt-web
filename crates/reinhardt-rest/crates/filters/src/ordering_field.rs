@@ -50,14 +50,14 @@ pub enum OrderDirection {
 /// assert_eq!(desc_order.direction(), OrderDirection::Desc);
 /// ```
 pub struct OrderingField<M: Model> {
-	pub(crate) field_path: Vec<&'static str>,
+	pub(crate) field_path: Vec<String>,
 	pub(crate) direction: OrderDirection,
 	pub(crate) _phantom: PhantomData<M>,
 }
 
 impl<M: Model> OrderingField<M> {
 	/// Create a new ordering field from path and direction
-	pub(crate) fn new(field_path: Vec<&'static str>, direction: OrderDirection) -> Self {
+	pub(crate) fn new(field_path: Vec<String>, direction: OrderDirection) -> Self {
 		Self {
 			field_path,
 			direction,
@@ -84,11 +84,11 @@ impl<M: Model> OrderingField<M> {
 	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
-	/// let field = Field::<Post, String>::new(vec!["title"]);
+	/// let field = Field::<Post, String>::new(vec!["title".to_string()]);
 	/// let order = field.asc();
-	/// assert_eq!(order.field_path(), &["title"]);
+	/// assert_eq!(order.field_path(), &["title".to_string()]);
 	/// ```
-	pub fn field_path(&self) -> &[&'static str] {
+	pub fn field_path(&self) -> &[String] {
 		&self.field_path
 	}
 	/// Get the ordering direction
@@ -174,26 +174,12 @@ mod tests {
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestPost {
-		id: i64,
+		id: Option<i64>,
 		title: String,
 		created_at: String,
 	}
 
-	impl Model for TestPost {
-		type PrimaryKey = i64;
-
-		fn table_name() -> &'static str {
-			"test_posts"
-		}
-
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			Some(&self.id)
-		}
-
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = value;
-		}
-	}
+	reinhardt_test::impl_test_model!(TestPost, i64, "test_posts");
 
 	#[test]
 	fn test_asc_ordering() {

@@ -688,31 +688,8 @@ mod tests {
 		name: String,
 	}
 
-	impl Model for Post {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"posts"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
-
-	impl Model for Author {
-		type PrimaryKey = i64;
-		fn table_name() -> &'static str {
-			"authors"
-		}
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
-		}
-		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-			self.id = Some(value);
-		}
-	}
+	reinhardt_test::impl_test_model!(Post, i64, "posts");
+	reinhardt_test::impl_test_model!(Author, i64, "authors");
 
 	#[test]
 	fn test_nested_serializer_creation() {

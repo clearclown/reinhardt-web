@@ -44,21 +44,7 @@ struct User {
 	pub is_active: bool,
 }
 
-impl Model for User {
-	type PrimaryKey = i64;
-
-	fn table_name() -> &'static str {
-		"users"
-	}
-
-	fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-		self.id.as_ref()
-	}
-
-	fn set_primary_key(&mut self, pk: Self::PrimaryKey) {
-		self.id = Some(pk);
-	}
-}
+reinhardt_test::impl_test_model!(User, i64, "users");
 
 /// User serializer implementing SerializerSaveMixin
 struct UserSerializer;
