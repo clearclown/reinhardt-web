@@ -121,6 +121,14 @@ impl MFAAuthentication {
 			Err(AuthenticationError::UserNotFound)
 		}
 	}
+
+	/// Get the secret for a user (for testing purposes)
+	///
+	/// Returns the stored TOTP secret for the given user, or None if not registered.
+	pub fn get_secret(&self, username: &str) -> Option<String> {
+		let secrets = self.secrets.lock().unwrap();
+		secrets.get(username).cloned()
+	}
 }
 
 impl Default for MFAAuthentication {

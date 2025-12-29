@@ -499,10 +499,9 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 			.map_err(|e| AuthenticationError::DatabaseError(e.to_string()))?;
 
 		// Build SQL query using sea-query for type-safe query construction
-		use reinhardt_db::orm::{DatabaseBackend, Model};
-		use sea_query::{
-			Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
-			SqliteQueryBuilder,
+		use reinhardt_db::orm::{
+			Alias, DatabaseBackend, Expr, ExprTrait, Model, MysqlQueryBuilder,
+			PostgresQueryBuilder, SeaQuery as Query, SqliteQueryBuilder,
 		};
 
 		let table_name = DefaultUser::table_name();

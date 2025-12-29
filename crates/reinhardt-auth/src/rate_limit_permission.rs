@@ -308,6 +308,13 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 			}
 		})
 	}
+
+	/// Get the rate limit configuration
+	///
+	/// Returns a reference to the current rate limit configuration.
+	pub fn config(&self) -> &RateLimitConfig {
+		&self.config
+	}
 }
 
 /// Builder for RateLimitPermission

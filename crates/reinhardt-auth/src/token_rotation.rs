@@ -360,6 +360,18 @@ impl AutoTokenRotationManager {
 	pub fn rotation_count(&self) -> usize {
 		self.rotation_history.read().unwrap().len()
 	}
+
+	/// Get all rotation records (for testing purposes)
+	///
+	/// Returns a copy of all rotation records currently stored.
+	pub fn rotation_records(&self) -> Vec<TokenRotationRecord> {
+		self.rotation_history
+			.read()
+			.unwrap()
+			.values()
+			.cloned()
+			.collect()
+	}
 }
 
 #[cfg(test)]
