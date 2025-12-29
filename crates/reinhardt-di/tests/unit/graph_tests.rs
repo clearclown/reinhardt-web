@@ -61,7 +61,7 @@ fn topological_sort_returns_correct_order() {
 	// Arrange
 	let registry = Arc::new(DependencyRegistry::new());
 
-	// A -> B -> C の依存チェーンを作成
+	// Create dependency chain A -> B -> C
 	let type_id_a = TypeId::of::<ServiceA>();
 	let type_id_b = TypeId::of::<ServiceB>();
 	let type_id_c = TypeId::of::<ServiceC>();
@@ -90,7 +90,7 @@ fn detect_cycle_finds_circular_dependency() {
 	// Arrange
 	let registry = Arc::new(DependencyRegistry::new());
 
-	// A -> B -> C -> A の循環を作成
+	// Create circular dependency A -> B -> C -> A
 	let type_id_a = TypeId::of::<ServiceA>();
 	let type_id_b = TypeId::of::<ServiceB>();
 	let type_id_c = TypeId::of::<ServiceC>();
@@ -101,7 +101,7 @@ fn detect_cycle_finds_circular_dependency() {
 
 	registry.register_dependencies(type_id_a, vec![type_id_b]);
 	registry.register_dependencies(type_id_b, vec![type_id_c]);
-	registry.register_dependencies(type_id_c, vec![type_id_a]); // 循環
+	registry.register_dependencies(type_id_c, vec![type_id_a]); // Circular
 
 	let graph = DependencyGraph::new(registry);
 
@@ -118,7 +118,7 @@ fn transitive_dependencies_computed() {
 	// Arrange
 	let registry = Arc::new(DependencyRegistry::new());
 
-	// A -> B -> C の依存チェーンを作成
+	// Create dependency chain A -> B -> C
 	let type_id_a = TypeId::of::<ServiceA>();
 	let type_id_b = TypeId::of::<ServiceB>();
 	let type_id_c = TypeId::of::<ServiceC>();

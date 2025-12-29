@@ -91,14 +91,14 @@ async fn provider_cached(injection_context: InjectionContext) {
 		})
 	};
 
-	// Act - 初回呼び出し
+	// Act - First call
 	let future1 = provider.provide();
 	let result1 = future1.await.unwrap();
 	let value1 = result1.downcast::<TestValue>().unwrap();
 
 	injection_context.set_request((*value1).clone());
 
-	// キャッシュから取得
+	// Get from cache
 	let cached: Option<Arc<TestValue>> = injection_context.get_request();
 
 	// Assert

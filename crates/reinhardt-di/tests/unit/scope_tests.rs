@@ -121,7 +121,7 @@ fn singleton_scope_shared_across_requests() {
 	// Act
 	singleton_scope.set(data.clone());
 
-	// 複数のリクエストで同じsingleton scopeを共有
+	// Share the same singleton scope across multiple requests
 	let retrieved1: Option<Arc<TestData>> = singleton_scope.get();
 	let retrieved2: Option<Arc<TestData>> = singleton_scope.get();
 
@@ -131,7 +131,7 @@ fn singleton_scope_shared_across_requests() {
 	assert_eq!(retrieved1.as_ref().unwrap().value, "shared");
 	assert_eq!(retrieved2.as_ref().unwrap().value, "shared");
 
-	// 同じArcを指していることを確認
+	// Verify pointing to the same Arc
 	assert!(Arc::ptr_eq(
 		retrieved1.as_ref().unwrap(),
 		retrieved2.as_ref().unwrap()
@@ -162,7 +162,7 @@ fn request_scope_isolated_between_requests() {
 	assert_eq!(retrieved1.unwrap().value, "request1");
 	assert_eq!(retrieved2.unwrap().value, "request2");
 
-	// 別々のArcを指していることを確認
+	// Verify pointing to different Arcs
 	let retrieved1_again: Option<Arc<TestData>> = scope1.get();
 	let retrieved2_again: Option<Arc<TestData>> = scope2.get();
 	assert!(!Arc::ptr_eq(

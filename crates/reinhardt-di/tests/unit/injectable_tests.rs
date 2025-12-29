@@ -140,11 +140,11 @@ async fn injectable_cached_in_request_scope(injection_context: InjectionContext)
 		CACHED_SERVICE_COUNTER = 0;
 	}
 
-	// Act - 初回注入
+	// Act - First injection
 	let service1 = CachedService::inject(&injection_context).await.unwrap();
 	injection_context.set_request(service1.clone());
 
-	// リクエストスコープから取得
+	// Get from request scope
 	let cached: Option<Arc<CachedService>> = injection_context.get_request();
 
 	// Assert
@@ -164,12 +164,12 @@ async fn injectable_singleton_cached(injection_context: InjectionContext) {
 		SINGLETON_COUNTER = 0;
 	}
 
-	// Act - 初回注入
+	// Act - First injection
 	let service1 = SingletonCachedService::inject(&injection_context)
 		.await
 		.unwrap();
 
-	// 2回目の注入 - シングルトンスコープからキャッシュを取得
+	// Second injection - get cache from singleton scope
 	let service2 = SingletonCachedService::inject(&injection_context)
 		.await
 		.unwrap();
@@ -177,7 +177,7 @@ async fn injectable_singleton_cached(injection_context: InjectionContext) {
 	// Assert
 	assert_eq!(service1.id, service2.id);
 	unsafe {
-		// カウンターは1回だけインクリメントされる
+		// Counter is incremented only once
 		assert_eq!(SINGLETON_COUNTER, 1);
 	}
 }
