@@ -55,14 +55,12 @@ pub fn polls_index() -> View {
 				class: "mb-4",
 				"Polls"
 			}
-
 			if let Some(err) = error_state {
 				div {
 					class: "alert alert-danger",
 					{ err }
 				}
 			}
-
 			if loading_state {
 				div {
 					class: "text-center",

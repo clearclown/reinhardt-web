@@ -1,12 +1,11 @@
+//! URL configuration for examples-tutorial-basis project
+//!
+//! The `routes` function defines all URL patterns for this project.
+
 use reinhardt::prelude::*;
-use reinhardt::register_url_patterns;
-use std::sync::Arc;
+use reinhardt::routes;
 
-pub fn url_patterns() -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::new().mount("/polls/", crate::apps::polls::urls::url_patterns());
-
-	Arc::new(router)
+#[routes]
+pub fn routes() -> UnifiedRouter {
+	UnifiedRouter::new().mount("/polls/", crate::apps::polls::urls::routes())
 }
-
-// Register URL patterns for automatic discovery by the framework
-register_url_patterns!();
