@@ -8,6 +8,29 @@ Comprehensive authentication and authorization system inspired by Django and
 Django REST Framework. Provides JWT tokens, permission classes, user models, and
 password hashing with Argon2.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["auth"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import authentication features:
+
+```rust
+use reinhardt::auth::{User, SimpleUser, AnonymousUser};
+use reinhardt::auth::{JwtAuth, HttpBasicAuth, AuthenticationBackend};
+use reinhardt::auth::{AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly};
+```
+
+**Note:** Authentication features are included in the `standard` and `full` feature presets.
+
 ## Implemented ✓
 
 ### Core Authentication
@@ -21,7 +44,7 @@ password hashing with Argon2.
 - **Encode/Decode**: Full JWT token encoding and decoding support
 
 ```rust
-use reinhardt_auth::jwt::{JwtAuth, Claims};
+use reinhardt::auth::jwt::{JwtAuth, Claims};
 use chrono::Duration;
 
 let jwt_auth = JwtAuth::new(b"my-secret-key");
@@ -38,7 +61,7 @@ let claims = jwt_auth.verify_token(&token).unwrap();
   headers
 
 ```rust
-use reinhardt_auth::{HttpBasicAuth, AuthenticationBackend};
+use reinhardt::auth::{HttpBasicAuth, AuthenticationBackend};
 
 let mut auth = HttpBasicAuth::new();
 auth.add_user("alice", "secret123");
@@ -65,7 +88,7 @@ let result = auth.authenticate(&request).unwrap();
 - **Serialization Support**: Serde integration for SimpleUser
 
 ```rust
-use reinhardt_auth::{User, SimpleUser, AnonymousUser};
+use reinhardt::auth::{User, SimpleUser, AnonymousUser};
 use uuid::Uuid;
 
 let user = SimpleUser {
@@ -104,7 +127,7 @@ assert!(!user.is_admin());
   AbstractBaseUser
 
 ```rust
-use reinhardt_auth::BaseUser;
+use reinhardt::auth::BaseUser;
 use uuid::Uuid;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
@@ -160,7 +183,7 @@ assert!(user.check_password("securepass123").unwrap());
 - **Django Compatibility**: Matches Django's AbstractUser interface
 
 ```rust
-use reinhardt_auth::{BaseUser, FullUser, DefaultUser};
+use reinhardt::auth::{BaseUser, FullUser, DefaultUser};
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -196,7 +219,7 @@ assert_eq!(user.get_short_name(), "Alice");
 - **Django Compatibility**: Permission format `"app_label.permission_name"`
 
 ```rust
-use reinhardt_auth::{DefaultUser, PermissionsMixin};
+use reinhardt::auth::{DefaultUser, PermissionsMixin};
 use uuid::Uuid;
 use chrono::Utc;
 
@@ -234,7 +257,7 @@ assert!(user.has_module_perms("blog"));
 - **Zero Configuration**: Works out of the box with automatic Argon2id hashing
 
 ```rust
-use reinhardt_auth::{BaseUser, DefaultUser, DefaultUserManager};
+use reinhardt::auth::{BaseUser, DefaultUser, DefaultUserManager};
 use std::collections::HashMap;
 
 # tokio_test::block_on(async {
@@ -289,7 +312,7 @@ assert!(admin.is_superuser);
 - **Password Verification**: Constant-time comparison for security
 
 ```rust
-use reinhardt_auth::{Argon2Hasher, PasswordHasher};
+use reinhardt::auth::{Argon2Hasher, PasswordHasher};
 
 let hasher = Argon2Hasher::new();
 let hash = hasher.hash("my_password").unwrap();
@@ -312,7 +335,7 @@ assert!(hasher.verify("my_password", &hash).unwrap());
 - **Flexible Configuration**: Add backends dynamically at runtime
 
 ```rust
-use reinhardt_auth::CompositeAuthBackend;
+use reinhardt::auth::CompositeAuthBackend;
 
 let mut composite = CompositeAuthBackend::new();
 composite.add_backend(Box::new(database_backend));
@@ -340,7 +363,7 @@ let user = composite.authenticate("alice", "password").await;
   anonymous users
 
 ```rust
-use reinhardt_auth::{Permission, IsAuthenticated, PermissionContext};
+use reinhardt::auth::{Permission, IsAuthenticated, PermissionContext};
 
 let permission = IsAuthenticated;
 let context = PermissionContext {
@@ -383,8 +406,8 @@ assert!(permission.has_permission(&context).await);
 - **Cookie Integration**: Secure session cookie handling
 
 ```rust
-use reinhardt_auth::{SessionAuthentication, Authentication};
-use reinhardt_sessions::backends::InMemorySessionBackend;
+use reinhardt::auth::{SessionAuthentication, Authentication};
+use reinhardt::auth::sessions::backends::InMemorySessionBackend;
 
 let session_backend = InMemorySessionBackend::new();
 let auth = SessionAuthentication::new(session_backend);
@@ -411,7 +434,7 @@ if let Some(user) = auth.get_user("user_id").await? {
 - **Time Window**: Configurable tolerance for time skew (default: 1 time step)
 
 ```rust
-use reinhardt_auth::MFAAuthentication;
+use reinhardt::auth::MFAAuthentication;
 
 let mfa = MFAAuthentication::new("MyApp");
 
@@ -441,7 +464,7 @@ assert!(mfa.verify_code("alice", code).await?);
 - **InMemoryTokenStore**: Built-in in-memory token storage
 
 ```rust
-use reinhardt_auth::{OAuth2Authentication, GrantType, InMemoryOAuth2Store};
+use reinhardt::auth::{OAuth2Authentication, GrantType, InMemoryOAuth2Store};
 
 let store = InMemoryOAuth2Store::new();
 let oauth2 = OAuth2Authentication::new(store);
@@ -485,7 +508,7 @@ let claims = oauth2.verify_token(&token.access_token).await?;
 - **InMemoryRefreshStore**: Built-in in-memory refresh token storage
 
 ```rust
-use reinhardt_auth::{
+use reinhardt::auth::{
     TokenBlacklist, InMemoryBlacklist, BlacklistReason,
     TokenRotationManager, InMemoryRefreshStore
 };
@@ -517,7 +540,7 @@ let new_token = rotation_manager.rotate_token("old_refresh_token", "user123").aw
 - **SSO Support**: Single sign-on integration
 
 ```rust
-use reinhardt_auth::RemoteUserAuthentication;
+use reinhardt::auth::RemoteUserAuthentication;
 
 // Standard configuration
 let auth = RemoteUserAuthentication::new("REMOTE_USER");
@@ -534,7 +557,7 @@ let user = auth.authenticate(&request).await?;
 ### Complete Authentication Flow
 
 ```rust
-use reinhardt_auth::{
+use reinhardt::auth::{
     JwtAuth, HttpBasicAuth, AuthBackend,
     SimpleUser, User, Argon2Hasher, PasswordHasher,
     Permission, IsAuthenticated, PermissionContext
@@ -574,7 +597,7 @@ if permission.has_permission(&context).await {
 ### Custom Authentication Backend
 
 ```rust
-use reinhardt_auth::{AuthBackend, SimpleUser, Argon2Hasher, PasswordHasher};
+use reinhardt::auth::{AuthBackend, SimpleUser, Argon2Hasher, PasswordHasher};
 use async_trait::async_trait;
 use std::collections::HashMap;
 

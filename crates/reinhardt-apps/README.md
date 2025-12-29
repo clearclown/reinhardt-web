@@ -10,12 +10,33 @@ Application configuration and registry for Reinhardt framework.
 - App-specific configuration
 - Integration with migrations, admin panel, and other framework features
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["apps"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import app features:
+
+```rust
+use reinhardt::apps::{AppConfig, installed_apps};
+```
+
+**Note:** App features are included in the `standard` and `full` feature presets.
+
 ## Usage
 
 Define installed apps using the `installed_apps!` macro:
 
 ```rust
-use reinhardt_macros::installed_apps;
+use reinhardt::apps::installed_apps;
 
 installed_apps! {
 	auth: "reinhardt.contrib.auth",
@@ -99,7 +120,7 @@ The `installed_apps!` macro integrates with:
 
 ```rust
 // src/config/apps.rs
-use reinhardt_macros::installed_apps;
+use reinhardt::apps::installed_apps;
 
 installed_apps! {
 	// Framework apps
@@ -187,7 +208,7 @@ my-project/
 
 ```rust
 // src/config/apps.rs
-use reinhardt_macros::installed_apps;
+use reinhardt::apps::installed_apps;
 
 installed_apps! {
 	auth: "reinhardt.contrib.auth",
@@ -207,7 +228,7 @@ pub fn get_installed_apps() -> Vec<String> {
 
 ```rust
 // Migrations automatically discover apps
-use reinhardt_db::migrations::MigrationRunner;
+use reinhardt::db::migrations::MigrationRunner;
 
 let runner = MigrationRunner::new(db);
 let installed = InstalledApp::all_apps();
@@ -218,7 +239,7 @@ runner.migrate(&installed).await?;
 
 ```rust
 // Admin panel auto-discovers models from apps
-use reinhardt_admin::AdminSite;
+use reinhardt::admin::AdminSite;
 
 let admin = AdminSite::new();
 admin.autodiscover(&InstalledApp::all_apps()).await?;
@@ -228,7 +249,7 @@ admin.autodiscover(&InstalledApp::all_apps()).await?;
 
 ```rust
 // src/config/settings.rs
-use reinhardt_conf::Settings;
+use reinhardt::conf::Settings;
 
 pub fn get_settings() -> Settings {
 	Settings::builder()

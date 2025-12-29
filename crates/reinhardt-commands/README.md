@@ -10,14 +10,24 @@ migrations, static file collection, development server, and more.
 
 ## Installation
 
-### As a library (for use in `manage.rs`)
-
-Add to your project's `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-commands = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["commands"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import command features:
+
+```rust
+use reinhardt::commands::{Command, CommandRegistry, execute_from_command_line};
+```
+
+**Note:** Command features are included in the `standard` and `full` feature presets.
 
 ### As a global CLI tool
 
@@ -109,7 +119,7 @@ When rendering templates, the following variables are available:
 You can pass custom variables to templates programmatically:
 
 ```rust
-use reinhardt_commands::TemplateContext;
+use reinhardt::commands::TemplateContext;
 
 let mut context = TemplateContext::new();
 context.insert("project_name", "my_project");
@@ -125,7 +135,7 @@ Create a `manage.rs` in your project's `src/bin/` directory:
 
 ```rust
 use clap::{Parser, Subcommand};
-use reinhardt_commands::{
+use reinhardt::commands::{
     CheckCommand, CommandContext, MakeMigrationsCommand,
     MigrateCommand, RunServerCommand,
 };
@@ -186,7 +196,7 @@ cargo run --bin manage runserver
 Create custom commands by implementing the `BaseCommand` trait:
 
 ```rust
-use reinhardt_commands::{BaseCommand, CommandContext, CommandResult};
+use reinhardt::commands::{BaseCommand, CommandContext, CommandResult};
 use async_trait::async_trait;
 
 struct MyCommand;
@@ -211,7 +221,7 @@ impl BaseCommand for MyCommand {
 Register your command in `manage.rs`:
 
 ```rust
-use reinhardt_commands::CommandRegistry;
+use reinhardt::commands::CommandRegistry;
 
 let mut registry = CommandRegistry::new();
 registry.register(Box::new(MyCommand));
@@ -272,8 +282,8 @@ auth-plugin = { version = "2.1.0", enabled = false }
 Plugin commands are implemented in `src/plugin_commands.rs` and use the `reinhardt-dentdelion` crate for plugin management:
 
 ```rust
-use reinhardt_commands::BaseCommand;
-use reinhardt_dentdelion::{PluginInstaller, CratesIoClient};
+use reinhardt::commands::BaseCommand;
+use reinhardt::dentdelion::{PluginInstaller, CratesIoClient};
 
 #[async_trait]
 impl BaseCommand for PluginInstallCommand {

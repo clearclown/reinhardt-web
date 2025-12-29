@@ -47,19 +47,32 @@ Error types and result type alias:
 - `AdminError`: Admin panel error enumeration
 - `AdminResult<T>`: Convenient result type alias
 
-## Usage
+## Installation
 
-Add to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-panel-types = { workspace = true }
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
 
-Example usage:
+Then import admin panel types:
 
 ```rust
-use reinhardt_panel_types::{
+use reinhardt::admin::types::{ListQueryParams, MutationRequest};
+use reinhardt::admin::types::{DashboardResponse, ListResponse};
+```
+
+**Note:** Admin features are included in the `standard` and `full` feature presets.
+
+## Usage Example
+
+```rust
+use reinhardt::admin::types::{
     ListQueryParams, ListResponse, AdminError, AdminResult,
 };
 

@@ -72,6 +72,62 @@ reinhardt-admin fmt --check .
 reinhardt-admin fmt -v .
 ```
 
+#### Ignore Markers
+
+You can control which `page!` macros should be skipped during formatting by using special comment markers:
+
+##### File-Wide Ignore
+
+Skip formatting for the entire file by adding `// reinhardt-fmt: ignore-all` at the beginning (within the first 50 lines, before any code):
+
+```rust
+// reinhardt-fmt: ignore-all
+
+use reinhardt_pages::prelude::*;
+
+page!(|| { div{bad_format} })  // Will not be formatted
+```
+
+##### Range Ignore
+
+Skip formatting for multiple macros within a range using `// reinhardt-fmt: off` and `// reinhardt-fmt: on`:
+
+```rust
+// reinhardt-fmt: off
+page!(|| { div{bad1} })
+page!(|| { span{bad2} })
+// reinhardt-fmt: on
+
+page!(|| { p { good } })  // This will be formatted
+```
+
+##### Individual Macro Ignore
+
+Skip formatting for a specific macro by adding `// reinhardt-fmt: ignore` on the line immediately before it:
+
+```rust
+// reinhardt-fmt: ignore
+page!(|| { div{bad} })
+
+page!(|| { span { good } })  // This will be formatted
+```
+
+##### Priority Order
+
+When multiple markers are present, they are applied in this priority order:
+
+1. **Individual marker** (highest) - `// reinhardt-fmt: ignore`
+2. **Range marker** (medium) - `// reinhardt-fmt: off/on`
+3. **File-wide marker** (lowest) - `// reinhardt-fmt: ignore-all`
+
+##### Notes
+
+- Markers are case-sensitive and spaces are optional (e.g., `//reinhardt-fmt:ignore` also works)
+- Individual markers must be on the line **immediately before** the macro (no blank lines)
+- Range markers can span multiple macros
+- Nested `off` markers will generate a warning but use the first `off` position
+- Unclosed ranges (missing `on`) will extend to the end of the file
+
 #### Verbosity Levels
 
 - **Default**: Show formatted files, errors, and summary (with color output)

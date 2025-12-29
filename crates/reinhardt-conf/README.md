@@ -25,38 +25,58 @@ This crate is organized as a parent crate containing the following sub-crates:
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-conf = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import configuration features:
+
+```rust
+use reinhardt::conf::settings::{SettingsBuilder, Settings};
+use reinhardt::conf::settings::sources::ConfigSource;
+```
+
+**Note:** Configuration features are included in the `standard` and `full` feature presets.
 
 ### Optional Features
 
 Enable specific features based on your needs:
 
 ```toml
-[dependencies]
-reinhardt-conf = { version = "0.1.0-alpha.1", features = ["async", "encryption"] }
+# With async support
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf", "conf-settings-async"] }
+
+# With encryption
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf", "conf-settings-encryption"] }
+
+# With Vault integration
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf", "conf-settings-vault"] }
 ```
 
 Available features:
 
-- `settings` (default): Core settings functionality
-- `async`: Asynchronous settings operations
-- `dynamic-redis`: Redis-backed dynamic settings
-- `dynamic-database`: Database-backed dynamic settings
-- `vault`: HashiCorp Vault integration
-- `aws-secrets`: AWS Secrets Manager integration
-- `azure-keyvault`: Azure Key Vault integration
-- `secret-rotation`: Automatic secret rotation
-- `encryption`: Built-in encryption for sensitive settings
+- `conf-settings` (default): Core settings functionality
+- `conf-settings-async`: Asynchronous settings operations
+- `conf-settings-dynamic-redis`: Redis-backed dynamic settings
+- `conf-settings-dynamic-database`: Database-backed dynamic settings
+- `conf-settings-vault`: HashiCorp Vault integration
+- `conf-settings-aws-secrets`: AWS Secrets Manager integration
+- `conf-settings-azure-keyvault`: Azure Key Vault integration
+- `conf-settings-secret-rotation`: Automatic secret rotation
+- `conf-settings-encryption`: Built-in encryption for sensitive settings
 
 ## Usage
 
 ```rust
-use reinhardt_conf::SettingsBuilder;
+use reinhardt::conf::settings::SettingsBuilder;
+use reinhardt::conf::settings::sources::ConfigSource;
 
 // Basic usage
 let settings = SettingsBuilder::new()

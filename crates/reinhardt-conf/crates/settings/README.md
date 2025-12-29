@@ -95,17 +95,37 @@ Django-inspired settings management for Rust with advanced features like secrets
 
 ## Installation
 
-Add to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-settings = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf-settings"] }
 
-# With all features
-reinhardt-settings = { version = "0.1.0-alpha.1", features = ["full"] }
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
 
-# With specific features
-reinhardt-settings = { version = "0.1.0-alpha.1", features = ["async", "encryption", "vault"] }
+Then import settings features:
+
+```rust
+use reinhardt::conf::settings::{Settings, SettingsBuilder};
+use reinhardt::conf::settings::sources::{TomlFileSource, EnvSource};
+```
+
+**Note:** Settings features are included in the `standard` and `full` feature presets.
+
+### Optional Features
+
+```toml
+# With async support
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf-settings", "conf-settings-async"] }
+
+# With encryption
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf-settings", "conf-settings-encryption"] }
+
+# With Vault integration
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf-settings", "conf-settings-vault"] }
 ```
 
 ## Feature Flags
@@ -148,7 +168,7 @@ reinhardt-settings = { version = "0.1.0-alpha.1", features = ["encryption"] }
 ### Basic Configuration
 
 ```rust
-use reinhardt_conf::settings::Settings;
+use reinhardt::conf::settings::Settings;
 use std::path::PathBuf;
 
 fn main() {
@@ -167,8 +187,8 @@ fn main() {
 ### Using Configuration Sources
 
 ```rust
-use reinhardt_conf::settings::sources::{TomlFileSource, EnvSource, ConfigSource};
-use reinhardt_conf::settings::profile::Profile;
+use reinhardt::conf::settings::sources::{TomlFileSource, EnvSource, ConfigSource};
+use reinhardt::conf::settings::profile::Profile;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load from TOML file
@@ -189,8 +209,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Environment Profiles
 
 ```rust
-use reinhardt_conf::settings::profile::Profile;
-use reinhardt_conf::settings::sources::DotEnvSource;
+use reinhardt::conf::settings::profile::Profile;
+use reinhardt::conf::settings::sources::DotEnvSource;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Detect profile from environment
@@ -213,8 +233,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Validation
 
 ```rust
-use reinhardt_conf::settings::validation::{SecurityValidator, SettingsValidator};
-use reinhardt_conf::settings::profile::Profile;
+use reinhardt::conf::settings::validation::{SecurityValidator, SettingsValidator};
+use reinhardt::conf::settings::profile::Profile;
 use std::collections::HashMap;
 use serde_json::Value;
 
@@ -243,8 +263,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 With the `async` feature enabled, you can use secret providers:
 
 ```rust
-use reinhardt_conf::settings::secrets::{SecretString, SecretProvider};
-use reinhardt_conf::settings::secrets::providers::memory::MemorySecretProvider;
+use reinhardt::conf::settings::secrets::{SecretString, SecretProvider};
+use reinhardt::conf::settings::secrets::providers::memory::MemorySecretProvider;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -272,7 +292,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 With the `encryption` feature:
 
 ```rust
-use reinhardt_conf::settings::encryption::ConfigEncryptor;
+use reinhardt::conf::settings::encryption::ConfigEncryptor;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let key = vec![0u8; 32]; // Use a secure key in production
@@ -296,8 +316,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 Track configuration changes for compliance:
 
 ```rust
-use reinhardt_conf::settings::audit::backends::memory::MemoryAuditBackend;
-use reinhardt_conf::settings::audit::{AuditEvent, AuditBackend};
+use reinhardt::conf::settings::audit::backends::memory::MemoryAuditBackend;
+use reinhardt::conf::settings::audit::{AuditEvent, AuditBackend};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -325,8 +345,8 @@ Runtime configuration changes without application restarts:
 #### Using Memory Backend
 
 ```rust
-use reinhardt_settings::dynamic::DynamicSettings;
-use reinhardt_settings::backends::MemoryBackend;
+use reinhardt::conf::settings::dynamic::DynamicSettings;
+use reinhardt::conf::settings::backends::MemoryBackend;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -373,8 +393,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 With the `dynamic-database` feature enabled:
 
 ```rust
-use reinhardt_settings::backends::DatabaseBackend;
-use reinhardt_settings::dynamic::DynamicSettings;
+use reinhardt::conf::settings::backends::DatabaseBackend;
+use reinhardt::conf::settings::dynamic::DynamicSettings;
 use serde_json::json;
 use std::sync::Arc;
 
@@ -408,9 +428,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 With the `hot-reload` feature enabled:
 
 ```rust
-use reinhardt_settings::hot_reload::HotReloadManager;
-use reinhardt_settings::dynamic::DynamicSettings;
-use reinhardt_settings::backends::MemoryBackend;
+use reinhardt::conf::settings::hot_reload::HotReloadManager;
+use reinhardt::conf::settings::dynamic::DynamicSettings;
+use reinhardt::conf::settings::backends::MemoryBackend;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -446,8 +466,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Observer Pattern for Change Notifications
 
 ```rust
-use reinhardt_settings::dynamic::DynamicSettings;
-use reinhardt_settings::backends::MemoryBackend;
+use reinhardt::conf::settings::dynamic::DynamicSettings;
+use reinhardt::conf::settings::backends::MemoryBackend;
 use std::sync::Arc;
 
 #[tokio::main]

@@ -34,12 +34,34 @@ This crate provides two main components:
 For project management commands (`startproject`, `startapp`), please use
 [`reinhardt-admin-cli`](../reinhardt-admin-cli).
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["admin"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import admin features:
+
+```rust
+use reinhardt::admin::{AdminSite, ModelAdmin};
+use reinhardt::admin::types::{ListQueryParams, AdminError};
+```
+
+**Note:** Admin features are included in the `standard` and `full` feature presets.
+
 ## Quick Start
 
 ### Using the Admin Panel
 
 ```rust
-use reinhardt_panel::{AdminSite, ModelAdmin};
+use reinhardt::admin::{AdminSite, ModelAdmin};
 
 #[tokio::main]
 async fn main() {
@@ -56,7 +78,7 @@ async fn main() {
 ### Customizing the Admin
 
 ```rust
-use reinhardt_panel::ModelAdmin;
+use reinhardt::admin::ModelAdmin;
 
 struct UserAdmin {
     list_display: Vec<String>,
@@ -108,7 +130,7 @@ HTTP request handlers for all CRUD operations:
 Automatic route registration for models:
 
 ```rust
-use reinhardt_panel::router::AdminRouter;
+use reinhardt::admin::router::AdminRouter;
 
 let router = AdminRouter::new(site, db)
     .with_favicon("static/favicon.ico")
@@ -136,7 +158,7 @@ Enable drag-and-drop reordering for your models with transaction-safe
 operations:
 
 ```rust
-use reinhardt_panel::{DragDropConfig, ReorderableModel, ReorderHandler};
+use reinhardt::admin::{DragDropConfig, ReorderableModel, ReorderHandler};
 use async_trait::async_trait;
 
 // 1. Configure drag-and-drop

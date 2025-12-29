@@ -6,6 +6,27 @@ CLI tool for settings management
 
 Command-line interface for managing Reinhardt configuration files. Provides commands for encryption, validation, environment management, and secret handling with colorized output.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["conf-settings-cli"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import settings CLI features:
+
+```rust
+use reinhardt::conf::settings_cli::{SettingsCli, Command};
+```
+
+**Note:** Settings CLI features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

@@ -135,23 +135,36 @@ Session framework for maintaining state across HTTP requests. This crate provide
 
 ## Installation
 
-Add to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-sessions = "0.1.0-alpha.1"
+reinhardt = { version = "0.1.0-alpha.1", features = ["auth-sessions"] }
 
-# With optional features
-reinhardt-sessions = { version = "0.1.0-alpha.1", features = ["database", "file", "cookie", "middleware"] }
+# With optional features:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["auth-sessions", "auth-sessions-database", "auth-sessions-file", "auth-sessions-cookie", "auth-sessions-middleware"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
 ```
+
+Then import session features:
+
+```rust
+use reinhardt::auth::sessions::{Session, SessionBackend};
+use reinhardt::auth::sessions::backends::{InMemorySessionBackend, CacheSessionBackend};
+```
+
+**Note:** Session features are included in the `standard` and `full` feature presets.
 
 ## Quick Start
 
 ### Using Session with InMemorySessionBackend
 
 ```rust
-use reinhardt_sessions::Session;
-use reinhardt_sessions::backends::InMemorySessionBackend;
+use reinhardt::auth::sessions::Session;
+use reinhardt::auth::sessions::backends::InMemorySessionBackend;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -182,7 +195,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Using SessionBackend directly
 
 ```rust
-use reinhardt_sessions::backends::{InMemorySessionBackend, SessionBackend};
+use reinhardt::auth::sessions::backends::{InMemorySessionBackend, SessionBackend};
 use serde_json::json;
 
 #[tokio::main]
@@ -216,8 +229,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Using CacheSessionBackend with Custom Cache
 
 ```rust
-use reinhardt_sessions::backends::{CacheSessionBackend, SessionBackend};
-use reinhardt_utils::cache::InMemoryCache;
+use reinhardt::auth::sessions::backends::{CacheSessionBackend, SessionBackend};
+use reinhardt::utils::cache::InMemoryCache;
 use serde_json::json;
 use std::sync::Arc;
 
