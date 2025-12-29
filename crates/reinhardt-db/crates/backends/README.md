@@ -6,26 +6,37 @@ Database backend implementations for Reinhardt ORM
 
 `backends` provides database backend implementations for the Reinhardt ORM layer. It includes support for PostgreSQL, MySQL, and SQLite databases with unified abstractions for query building and execution.
 
-## Features
+## Implemented Features ✓
 
-- PostgreSQL backend implementation
-- MySQL backend implementation
-- SQLite backend implementation
-- Unified database abstraction layer
-- Query builder integration with sea-query
-- Type-safe parameter binding with sqlx
+- **PostgreSQL Backend**: Full PostgreSQL database support
+- **MySQL Backend**: Full MySQL database support
+- **SQLite Backend**: Full SQLite database support
+- **Unified Abstraction Layer**: Common interface across all database backends
+- **SeaQuery Integration**: Query builder integration for type-safe SQL construction
+- **SQLx Type Safety**: Type-safe parameter binding and result mapping
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-backends = { workspace = true }
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-backends"] }
 
-# Or specify version explicitly if outside workspace
-backends = "0.1.0-alpha.1"
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }  # All features
 ```
 
-### Features
+Then import backend features:
+
+```rust
+use reinhardt::db::backends::{DatabaseBackend, DatabaseConnection};
+use reinhardt::db::backends::schema::SchemaEditor;
+```
+
+**Note:** Backend features are included in the `full` feature preset.
+
+### Available Backend Features
 
 - `postgres` (default): PostgreSQL support
 - `mysql`: MySQL support
@@ -37,7 +48,7 @@ backends = "0.1.0-alpha.1"
 ### Basic Connection
 
 ```rust
-use reinhardt_backends::{DatabaseBackend, DatabaseConnection};
+use reinhardt::db::backends::{DatabaseBackend, DatabaseConnection};
 
 // PostgreSQL
 let conn = DatabaseConnection::new("postgres://user:password@localhost/database")
@@ -55,7 +66,7 @@ let conn = DatabaseConnection::new("sqlite::memory:")
 ### Query Building with SeaQuery v1.0.0-rc
 
 ```rust
-use reinhardt_backends::DatabaseConnection;
+use reinhardt::db::backends::DatabaseConnection;
 use sea_query::{PostgresQueryBuilder, Query, Expr};
 use sea_query::Iden;
 
@@ -86,7 +97,7 @@ let result = conn.execute(&sql, &values).await?;
 ### Schema Operations
 
 ```rust
-use reinhardt_backends::schema::{SchemaEditor, CreateTable};
+use reinhardt::db::backends::schema::{SchemaEditor, CreateTable};
 
 let mut editor = SchemaEditor::new(&conn);
 

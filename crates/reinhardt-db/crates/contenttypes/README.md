@@ -8,6 +8,28 @@ Framework for working with generic relationships between models. Allows models t
 
 Useful for building flexible systems like comments, tags, or activity streams that can relate to multiple model types.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-contenttypes"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import contenttypes features:
+
+```rust
+use reinhardt::db::contenttypes::{ContentType, ContentTypeRegistry, GenericForeignKey};
+use reinhardt::db::contenttypes::CONTENT_TYPE_REGISTRY;
+```
+
+**Note:** Contenttypes features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

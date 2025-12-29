@@ -6,6 +6,28 @@ Model associations and relationships
 
 Provides SQLAlchemy-style association proxies for simplifying access to related objects through associations. This crate enables elegant and type-safe access to attributes of related objects without manual traversal.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-associations"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import association features:
+
+```rust
+use reinhardt::db::associations::{AssociationProxy, AssociationCollection};
+use reinhardt::db::associations::{ForeignKeyField, ManyToManyField, OneToOneField};
+```
+
+**Note:** Association features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

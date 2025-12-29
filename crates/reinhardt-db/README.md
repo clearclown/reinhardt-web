@@ -14,13 +14,6 @@ This crate serves as a parent crate that integrates multiple database-related su
 
 This parent crate re-exports functionality from the following sub-crates:
 
-- **Database** (`reinhardt-database`): Low-level database abstraction layer
-  - Unified DatabaseBackend trait for SQL databases
-  - Async database operations (execute, fetch_one, fetch_all)
-  - Query builders (SelectBuilder, InsertBuilder, UpdateBuilder, DeleteBuilder)
-  - Type-safe parameter binding
-  - Connection pooling support
-
 - **ORM** (`reinhardt-orm`): Object-Relational Mapping system
   - Django-inspired Model trait
   - QuerySet API for chainable queries
@@ -149,6 +142,12 @@ Advanced features for specific use cases:
   - Generic foreign keys
   - **When to use**: Polymorphic relationships (comments, tags, etc.)
 
+- **reinhardt-nosql**: NoSQL database support
+  - MongoDB integration (implemented)
+  - Unified NoSQL backend traits
+  - Document, Key-Value, Column-Family, Graph paradigms
+  - **When to use**: Working with NoSQL databases like MongoDB
+
 ### When to Use Which Crate?
 
 | Use Case | Recommended Crate |
@@ -161,6 +160,7 @@ Advanced features for specific use cases:
 | Complex relationships | `reinhardt-associations` |
 | Computed properties in queries | `reinhardt-hybrid` |
 | Generic relations (polymorphic) | `reinhardt-contenttypes` |
+| NoSQL databases (MongoDB) | `reinhardt-nosql` |
 
 ## Installation
 
@@ -252,7 +252,7 @@ For a complete list of field attributes, see the [Field Attributes Guide](../../
 ### Query with QuerySet
 
 ```rust
-use reinhardt_db::{QuerySet, Model};
+use reinhardt::db::{QuerySet, Model};
 
 // Get all users
 let users = User::objects().all().await?;
@@ -274,7 +274,7 @@ let user = User::objects()
 ### Create Migrations
 
 ```rust
-use reinhardt_db::{Migration, CreateModel, AddField};
+use reinhardt::db::{Migration, CreateModel, AddField};
 
 // Create a new migration
 let migration = Migration::new("0001_initial")
@@ -294,7 +294,7 @@ migration.apply(db).await?;
 ### Connection Pooling
 
 ```rust
-use reinhardt_db::Pool;
+use reinhardt::db::Pool;
 
 // Create a connection pool
 let pool = Pool::new("postgres://user:pass@localhost/db")

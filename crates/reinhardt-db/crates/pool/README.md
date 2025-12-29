@@ -8,6 +8,27 @@ Connection pool management for database connections and other resources.
 
 Provides efficient connection reuse, automatic cleanup, and configurable pool sizing.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-pool"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }  # All features
+```
+
+Then import pool features:
+
+```rust
+use reinhardt::db::pool::{ConnectionPool, PoolConfig, PoolOptions};
+use reinhardt::db::pool::events::{PoolEventListener, EventLogger};
+```
+
+**Note:** Pool features are included in the `full` feature preset.
+
 ## Features
 
 ### Implemented ✓
@@ -101,7 +122,7 @@ Provides efficient connection reuse, automatic cleanup, and configurable pool si
 ### PostgreSQL
 
 ```rust
-use reinhardt_pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
 
 let config = PoolConfig::default()
     .with_max_connections(10);
@@ -118,7 +139,7 @@ let conn = pool.acquire().await?;
 ### MySQL
 
 ```rust
-use reinhardt_pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
 
 let config = PoolConfig::default()
     .with_max_connections(10);
@@ -135,7 +156,7 @@ let conn = pool.acquire().await?;
 ### SQLite
 
 ```rust
-use reinhardt_pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
 
 let config = PoolConfig::new()
     .with_min_connections(2)
@@ -154,7 +175,7 @@ let conn = pool.acquire().await?;
 ### Custom Configuration
 
 ```rust
-use reinhardt_pool::PoolConfig;
+use reinhardt::db::pool::PoolConfig;
 use std::time::Duration;
 
 let config = PoolConfig::new()

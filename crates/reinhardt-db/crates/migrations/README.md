@@ -6,6 +6,29 @@ Database schema migration tools inspired by Django's migration system
 
 Database migration system for managing schema changes across PostgreSQL, MySQL, and SQLite. Automatically generates migrations from model changes, supports forward and backward migrations, and handles schema versioning with dependency management.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-migrations"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import migration features:
+
+```rust
+use reinhardt::db::migrations::{Migration, MigrationExecutor, MigrationAutodetector};
+use reinhardt::db::migrations::operations::{CreateModel, AddField, RunSQL};
+use reinhardt::db::migrations::state::{ProjectState, ModelState};
+```
+
+**Note:** Migration features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓
@@ -103,7 +126,7 @@ Database migration system for managing schema changes across PostgreSQL, MySQL, 
 ### Basic Example
 
 ```rust
-use reinhardt_migrations::{
+use reinhardt::db::migrations::{
     MigrationAutodetector, ProjectState, ModelState, FieldState,
     MakeMigrationsCommand, MakeMigrationsOptions,
 };
@@ -135,7 +158,7 @@ let created_files = command.execute();
 Migrations support composite primary keys through the `CreateModel` operation:
 
 ```rust
-use reinhardt_migrations::{
+use reinhardt::db::migrations::{
     operations::{CreateModel, FieldDefinition},
     Migration,
 };
@@ -190,7 +213,7 @@ struct PostTag {
 ### Applying Migrations
 
 ```rust
-use reinhardt_migrations::{
+use reinhardt::db::migrations::{
     MigrationExecutor, Migration, Operation, ColumnDefinition,
 };
 use sqlx::SqlitePool;
@@ -232,7 +255,7 @@ This crate is part of the Reinhardt framework and integrates with:
 The `SchemaEditor` provides low-level control over database schema changes with transaction support:
 
 ```rust
-use reinhardt_migrations::schema_editor::{SchemaEditor, EditorMode};
+use reinhardt::db::migrations::schema_editor::{SchemaEditor, EditorMode};
 
 // Atomic mode: all operations in a single transaction
 let mut editor = SchemaEditor::new(pool.clone(), EditorMode::Atomic).await?;
@@ -269,7 +292,7 @@ editor.finish().await?;
 Define how foreign key constraints behave on parent row changes:
 
 ```rust
-use reinhardt_migrations::ForeignKeyAction;
+use reinhardt::db::migrations::ForeignKeyAction;
 
 Operation::CreateTable {
     name: "posts".to_string(),

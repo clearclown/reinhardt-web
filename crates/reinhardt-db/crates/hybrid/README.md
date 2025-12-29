@@ -6,6 +6,28 @@ Hybrid property and validation support
 
 Hybrid properties that work both as instance attributes and class-level query expressions. Allows defining computed properties that can be used in database queries, similar to SQLAlchemy's hybrid properties.
 
+## Installation
+
+Add `reinhardt` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-hybrid"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["standard"] }  # Recommended
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }      # All features
+```
+
+Then import hybrid features:
+
+```rust
+use reinhardt::db::hybrid::{HybridProperty, HybridMethod, SqlExpression};
+use reinhardt::db::hybrid::{Comparator, Expression};
+```
+
+**Note:** Hybrid features are included in the `standard` and `full` feature presets.
+
 ## Features
 
 ### Implemented ✓

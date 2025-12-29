@@ -6,26 +6,37 @@ Database connection pool backend abstractions
 
 `backends-pool` provides backend abstractions for database connection pooling in the Reinhardt framework. It defines traits and utilities for managing database connection pools with dependency injection support.
 
-## Features
+## Implemented Features ✓
 
-- Connection pool backend abstractions
-- Async connection management
-- Integration with sqlx connection pools
-- Dependency injection support (optional)
-- Thread-safe connection handling
-- Connection lifecycle management
+- **Connection Pool Abstractions**: Backend traits for database connection pooling
+- **Async Connection Management**: Asynchronous connection acquisition and release
+- **SQLx Integration**: Seamless integration with sqlx connection pools
+- **Dependency Injection Support**: Optional DI integration for automatic pool injection
+- **Thread-Safe Handling**: Concurrent connection access with Arc-based sharing
+- **Lifecycle Management**: Automatic connection cleanup and pool maintenance
 
 ## Installation
 
+Add `reinhardt` to your `Cargo.toml`:
+
 ```toml
 [dependencies]
-backends-pool = { workspace = true }
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-pool"] }
 
-# Or specify version explicitly if outside workspace
-backends-pool = "0.1.0-alpha.1"
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }  # All features
 ```
 
-### Features
+Then import pool features:
+
+```rust
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::PoolEventListener;
+```
+
+**Note:** Pool features are included in the `full` feature preset.
+
+### Available Features
 
 - `reinhardt-di`: Dependency injection integration
 
@@ -34,7 +45,7 @@ backends-pool = "0.1.0-alpha.1"
 ### Basic Pool Creation
 
 ```rust
-use reinhardt_backends_pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
 use std::time::Duration;
 
 let pool_config = PoolConfig::default()
@@ -53,7 +64,7 @@ let mut conn = pool.inner().acquire().await?;
 ### DI Integration (with `reinhardt-di` feature)
 
 ```rust
-use reinhardt_backends_pool::{ConnectionPool, PoolConfig};
+use reinhardt::db::pool::{ConnectionPool, PoolConfig};
 use reinhardt_di::{Injectable, Container};
 
 // Pool is automatically injectable
@@ -70,7 +81,7 @@ container.register(pool);
 ### Custom Configuration
 
 ```rust
-use reinhardt_backends_pool::PoolConfig;
+use reinhardt::db::pool::PoolConfig;
 use std::time::Duration;
 
 let config = PoolConfig::new()

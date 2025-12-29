@@ -35,28 +35,33 @@ NoSQLBackend (base trait)
 
 ## Installation
 
-Add this to your `Cargo.toml`:
+Add `reinhardt` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-reinhardt-nosql = { version = "0.1.0-alpha.1", features = ["mongodb"] }
+reinhardt = { version = "0.1.0-alpha.1", features = ["db-nosql-mongodb"] }
+
+# Or use a preset:
+# reinhardt = { version = "0.1.0-alpha.1", features = ["full"] }  # All features
 ```
 
-Or through the parent `reinhardt-db` crate:
+Then import NoSQL features:
 
-```toml
-[dependencies]
-reinhardt-db = { version = "0.1.0-alpha.1", features = ["nosql-mongodb"] }
+```rust
+use reinhardt::db::nosql::{NoSQLBackend, DocumentBackend};
+use reinhardt::db::nosql::mongodb::{MongoDBBackend, MongoDBConfig};
 ```
+
+**Note:** NoSQL features are included in the `full` feature preset.
 
 ## Quick Start
 
 ### MongoDB Example
 
 ```rust
-use reinhardt_nosql::{
-    backends::mongodb::MongoDBBackend,
-    traits::DocumentBackend,
+use reinhardt::db::nosql::{
+    mongodb::MongoDBBackend,
+    DocumentBackend,
 };
 use bson::doc;
 
@@ -115,8 +120,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Using with reinhardt-db
 
 ```rust
-use reinhardt_db::nosql::backends::mongodb::MongoDBBackend;
-use reinhardt_db::nosql::traits::DocumentBackend;
+use reinhardt::db::nosql::mongodb::MongoDBBackend;
+use reinhardt::db::nosql::DocumentBackend;
 use bson::doc;
 
 #[tokio::main]
@@ -242,8 +247,8 @@ use reinhardt_backends::backend::DatabaseBackend;
 
 **After (recommended)**:
 ```rust
-use reinhardt_nosql::backends::mongodb::MongoDBBackend;
-use reinhardt_nosql::traits::{NoSQLBackend, DocumentBackend};
+use reinhardt::db::nosql::mongodb::MongoDBBackend;
+use reinhardt::db::nosql::{NoSQLBackend, DocumentBackend};
 ```
 
 The old path is deprecated and will be removed in v0.3.0. Use the `nosql-mongodb` feature instead:
