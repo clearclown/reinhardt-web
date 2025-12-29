@@ -5,25 +5,36 @@ A Reinhardt Pages project with WASM frontend and server-side rendering.
 ## Prerequisites
 
 - Rust 1.91.1 or later (2024 Edition)
-- Trunk (WASM build tool): `cargo install trunk`
+- wasm-bindgen-cli: `cargo install wasm-bindgen-cli`
 - PostgreSQL (optional, for database features)
 
 ## Getting Started
 
+### Install Tools
+
+```bash
+# Install all development tools (includes WASM build tools)
+cargo make install-tools
+```
+
 ### Development Server
 
 ```bash
-# Build and serve WASM client with hot reload
-trunk serve
+# Build WASM and start development server
+cargo make dev
+
+# Or step by step:
+cargo make wasm-build-dev    # Build WASM
+cargo make runserver         # Start server
 ```
 
-Visit `http://127.0.0.1:8080/` in your browser.
+Visit `http://127.0.0.1:8000/` in your browser.
 
 ### Build for Production
 
 ```bash
-# Build WASM client
-trunk build --release
+# Build WASM (release + optimized)
+cargo make wasm-build-release
 
 # Build server
 cargo build --release
@@ -44,8 +55,8 @@ cargo build --release
 │   │   ├── types.rs
 │   │   └── errors.rs
 │   └── config/       # Server configuration
+├── dist/             # WASM build output
 ├── index.html        # WASM entry HTML
-├── Trunk.toml        # WASM build configuration
 └── Cargo.toml
 ```
 
@@ -63,8 +74,17 @@ cargo run --bin {{ project_name }} migrate
 cargo run --bin {{ project_name }} check
 ```
 
+## WASM Build Commands
+
+```bash
+cargo make wasm-build-dev      # Build WASM (debug)
+cargo make wasm-build-release  # Build WASM (release + optimize)
+cargo make wasm-watch          # Watch and rebuild on changes
+cargo make wasm-clean          # Clean WASM build artifacts
+```
+
 ## Learn More
 
 - [Reinhardt Documentation](https://github.com/kent8192/reinhardt-rs)
 - [Reinhardt Pages Guide](https://github.com/kent8192/reinhardt-rs/tree/main/docs)
-- [Trunk Documentation](https://trunkrs.dev/)
+- [wasm-bindgen Documentation](https://rustwasm.github.io/wasm-bindgen/)

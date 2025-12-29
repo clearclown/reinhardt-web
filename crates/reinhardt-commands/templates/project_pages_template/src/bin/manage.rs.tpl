@@ -6,7 +6,7 @@
 //!
 //! URL patterns are automatically registered by the framework.
 //! No manual registration is required - see `src/config/urls.rs` for the
-//! `register_url_patterns!()` macro that enables this.
+//! `#[routes]` attribute macro that enables this.
 
 use reinhardt::commands::execute_from_command_line;
 use std::process;
@@ -20,7 +20,7 @@ async fn main() {
 	}
 
 	// Router registration happens automatically inside execute_from_command_line()
-	// via the register_url_patterns!() macro in src/config/urls.rs
+	// via the #[routes] attribute macro in src/config/urls.rs
 	if let Err(e) = execute_from_command_line().await {
 		eprintln!("Error: {}", e);
 		process::exit(1);

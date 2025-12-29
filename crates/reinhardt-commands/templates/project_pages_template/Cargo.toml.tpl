@@ -48,6 +48,9 @@ clap = { version = "4", features = ["derive"] }
 console = "0.16.1"
 tokio = { version = "1", features = ["full"] }
 
+[build-dependencies]
+cfg_aliases = "0.2"
+
 [dev-dependencies]
 rstest = "0.26.1"
 reqwest = { version = "0.12", features = ["json"] }

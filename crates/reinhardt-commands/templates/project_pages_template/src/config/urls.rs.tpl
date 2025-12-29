@@ -1,12 +1,12 @@
-//! URL configuration for {{ project_name }} project (RESTful)
+//! URL configuration for {{ project_name }} project (Pages)
 //!
-//! The `url_patterns` routes URLs to handlers.
+//! The `routes` function defines all URL patterns for this project.
 
 use reinhardt::prelude::*;
-use reinhardt::register_url_patterns;
-use std::sync::Arc;
+use reinhardt::routes;
 
-pub fn url_patterns() -> Arc<UnifiedRouter> {
+#[routes]
+pub fn routes() -> UnifiedRouter {
     let router = UnifiedRouter::new();
 
     // Add your API endpoint patterns here
@@ -17,8 +17,5 @@ pub fn url_patterns() -> Arc<UnifiedRouter> {
     // Or register ViewSets:
     // router.register_viewset("users", user_viewset);
 
-    Arc::new(router)
+    router
 }
-
-// Register URL patterns for automatic discovery by the framework
-register_url_patterns!();

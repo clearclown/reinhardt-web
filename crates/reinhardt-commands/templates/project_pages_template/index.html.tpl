@@ -25,5 +25,10 @@
 			</div>
 		</div>
 	</div>
+	<script type="module">
+		// wasm-bindgen generated module
+		import init from './{{ project_name | replace(from="-", to="_") }}.js';
+		init();
+	</script>
 </body>
 </html>
