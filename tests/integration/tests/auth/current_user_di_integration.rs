@@ -5,8 +5,8 @@
 use reinhardt_auth::{BaseUser, CurrentUser, DefaultUser, SimpleUser};
 use reinhardt_db::DatabaseConnection;
 use reinhardt_di::{Injectable, SingletonScope};
-use reinhardt_test::fixtures::testcontainers::{postgres_container, ContainerAsync, GenericImage};
 use reinhardt_test::fixtures::singleton_scope;
+use reinhardt_test::fixtures::testcontainers::{postgres_container, ContainerAsync, GenericImage};
 use rstest::*;
 use sea_query::{Expr, ExprTrait, PostgresQueryBuilder, Query};
 use std::sync::Arc;

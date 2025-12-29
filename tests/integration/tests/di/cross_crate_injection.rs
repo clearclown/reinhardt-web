@@ -25,9 +25,9 @@ struct RequestService {
 impl Injectable for RequestService {
 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
 		// Get HTTP request from context
-		let req = ctx
-			.get_http_request()
-			.ok_or_else(|| reinhardt_di::DiError::NotFound("Request not found in context".to_string()))?;
+		let req = ctx.get_http_request().ok_or_else(|| {
+			reinhardt_di::DiError::NotFound("Request not found in context".to_string())
+		})?;
 
 		Ok(RequestService {
 			method: req.method.to_string(),
