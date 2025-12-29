@@ -234,11 +234,82 @@ impl PermissionsMixin for DefaultUser {
 }
 
 #[cfg(feature = "argon2-hasher")]
+#[derive(Debug, Clone)]
+pub struct DefaultUserFields {
+	pub id: reinhardt_db::orm::query_fields::Field<DefaultUser, Uuid>,
+	pub username: reinhardt_db::orm::query_fields::Field<DefaultUser, String>,
+	pub email: reinhardt_db::orm::query_fields::Field<DefaultUser, String>,
+	pub first_name: reinhardt_db::orm::query_fields::Field<DefaultUser, String>,
+	pub last_name: reinhardt_db::orm::query_fields::Field<DefaultUser, String>,
+	pub password_hash: reinhardt_db::orm::query_fields::Field<DefaultUser, Option<String>>,
+	pub last_login: reinhardt_db::orm::query_fields::Field<DefaultUser, Option<DateTime<Utc>>>,
+	pub is_active: reinhardt_db::orm::query_fields::Field<DefaultUser, bool>,
+	pub is_staff: reinhardt_db::orm::query_fields::Field<DefaultUser, bool>,
+	pub is_superuser: reinhardt_db::orm::query_fields::Field<DefaultUser, bool>,
+	pub date_joined: reinhardt_db::orm::query_fields::Field<DefaultUser, DateTime<Utc>>,
+	pub user_permissions: reinhardt_db::orm::query_fields::Field<DefaultUser, Vec<String>>,
+	pub groups: reinhardt_db::orm::query_fields::Field<DefaultUser, Vec<String>>,
+}
+
+#[cfg(feature = "argon2-hasher")]
+impl Default for DefaultUserFields {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
+#[cfg(feature = "argon2-hasher")]
+impl DefaultUserFields {
+	pub fn new() -> Self {
+		Self {
+			id: reinhardt_db::orm::query_fields::Field::new(vec!["id"]),
+			username: reinhardt_db::orm::query_fields::Field::new(vec!["username"]),
+			email: reinhardt_db::orm::query_fields::Field::new(vec!["email"]),
+			first_name: reinhardt_db::orm::query_fields::Field::new(vec!["first_name"]),
+			last_name: reinhardt_db::orm::query_fields::Field::new(vec!["last_name"]),
+			password_hash: reinhardt_db::orm::query_fields::Field::new(vec!["password_hash"]),
+			last_login: reinhardt_db::orm::query_fields::Field::new(vec!["last_login"]),
+			is_active: reinhardt_db::orm::query_fields::Field::new(vec!["is_active"]),
+			is_staff: reinhardt_db::orm::query_fields::Field::new(vec!["is_staff"]),
+			is_superuser: reinhardt_db::orm::query_fields::Field::new(vec!["is_superuser"]),
+			date_joined: reinhardt_db::orm::query_fields::Field::new(vec!["date_joined"]),
+			user_permissions: reinhardt_db::orm::query_fields::Field::new(vec!["user_permissions"]),
+			groups: reinhardt_db::orm::query_fields::Field::new(vec!["groups"]),
+		}
+	}
+}
+
+#[cfg(feature = "argon2-hasher")]
+impl reinhardt_db::orm::FieldSelector for DefaultUserFields {
+	fn with_alias(mut self, alias: &str) -> Self {
+		self.id = self.id.with_alias(alias);
+		self.username = self.username.with_alias(alias);
+		self.email = self.email.with_alias(alias);
+		self.first_name = self.first_name.with_alias(alias);
+		self.last_name = self.last_name.with_alias(alias);
+		self.password_hash = self.password_hash.with_alias(alias);
+		self.last_login = self.last_login.with_alias(alias);
+		self.is_active = self.is_active.with_alias(alias);
+		self.is_staff = self.is_staff.with_alias(alias);
+		self.is_superuser = self.is_superuser.with_alias(alias);
+		self.date_joined = self.date_joined.with_alias(alias);
+		self.user_permissions = self.user_permissions.with_alias(alias);
+		self.groups = self.groups.with_alias(alias);
+		self
+	}
+}
+
+#[cfg(feature = "argon2-hasher")]
 impl Model for DefaultUser {
 	type PrimaryKey = Uuid;
+	type Fields = DefaultUserFields;
 
 	fn table_name() -> &'static str {
 		"auth_user"
+	}
+
+	fn new_fields() -> Self::Fields {
+		DefaultUserFields::new()
 	}
 
 	fn primary_key(&self) -> Option<&Self::PrimaryKey> {

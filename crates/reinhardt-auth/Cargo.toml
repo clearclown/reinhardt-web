@@ -81,7 +81,12 @@ ctor = { workspace = true, optional = true }
 redis = { workspace = true, optional = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
 tokio-test = { workspace = true }
 hyper = { workspace = true }
 bytes = { workspace = true }
+rstest = "0.26.1"
+proptest = { workspace = true }
+reinhardt-test = { workspace = true, features = ["testcontainers", "property-based"] }
+trybuild = { workspace = true }
+serial_test = "3.2"

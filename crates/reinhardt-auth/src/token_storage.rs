@@ -314,6 +314,238 @@ impl TokenStorage for InMemoryTokenStorage {
 	}
 }
 
+// Database-backed token storage implementation
+#[cfg(feature = "database")]
+mod database_storage {
+	use super::*;
+	use sea_query::{Expr, ExprTrait, Iden, PostgresQueryBuilder, Query};
+	use sqlx::PgPool;
+
+	/// Table identifier for auth_tokens
+	#[derive(Iden)]
+	// Some variants are used only for DDL but still needed for schema completeness
+	#[allow(dead_code)]
+	enum AuthTokens {
+		Table,
+		Token,
+		UserId,
+		ExpiresAt,
+		Metadata,
+		CreatedAt,
+	}
+
+	/// Database-backed token storage
+	///
+	/// Stores tokens in PostgreSQL for persistent storage across restarts.
+	///
+	/// # Examples
+	///
+	/// ```rust,ignore
+	/// use reinhardt_auth::DatabaseTokenStorage;
+	/// use sqlx::PgPool;
+	///
+	/// let pool = PgPool::connect("postgres://...").await?;
+	/// let storage = DatabaseTokenStorage::new(pool);
+	/// ```
+	#[derive(Debug, Clone)]
+	pub struct DatabaseTokenStorage {
+		pool: PgPool,
+	}
+
+	impl DatabaseTokenStorage {
+		/// Create a new database token storage
+		pub fn new(pool: PgPool) -> Self {
+			Self { pool }
+		}
+
+		/// Get the database connection pool
+		pub fn pool(&self) -> &PgPool {
+			&self.pool
+		}
+
+		/// Initialize the tokens table
+		///
+		/// Creates the auth_tokens table if it doesn't exist.
+		pub async fn initialize(&self) -> TokenStorageResult<()> {
+			let sql = r#"
+				CREATE TABLE IF NOT EXISTS auth_tokens (
+					token VARCHAR(255) PRIMARY KEY,
+					user_id BIGINT NOT NULL,
+					expires_at BIGINT,
+					metadata JSONB NOT NULL DEFAULT '{}',
+					created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
+				);
+				CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
+				CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);
+			"#;
+
+			sqlx::query(sql)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			Ok(())
+		}
+	}
+
+	#[async_trait]
+	impl TokenStorage for DatabaseTokenStorage {
+		async fn store(&self, token: StoredToken) -> TokenStorageResult<()> {
+			let metadata_json = serde_json::to_value(&token.metadata)
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			let (sql, _values) = Query::insert()
+				.into_table(AuthTokens::Table)
+				.columns([
+					AuthTokens::Token,
+					AuthTokens::UserId,
+					AuthTokens::ExpiresAt,
+					AuthTokens::Metadata,
+				])
+				.values_panic([
+					token.token.clone().into(),
+					token.user_id.into(),
+					token.expires_at.into(),
+					metadata_json.to_string().into(),
+				])
+				.on_conflict(
+					sea_query::OnConflict::column(AuthTokens::Token)
+						.update_columns([AuthTokens::ExpiresAt, AuthTokens::Metadata])
+						.to_owned(),
+				)
+				.build(PostgresQueryBuilder);
+
+			sqlx::query(&sql)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			Ok(())
+		}
+
+		async fn get(&self, token: &str) -> TokenStorageResult<StoredToken> {
+			let (sql, _) = Query::select()
+				.columns([
+					AuthTokens::Token,
+					AuthTokens::UserId,
+					AuthTokens::ExpiresAt,
+					AuthTokens::Metadata,
+				])
+				.from(AuthTokens::Table)
+				.and_where(Expr::col(AuthTokens::Token).eq(token))
+				.build(PostgresQueryBuilder);
+
+			let row: Option<(String, i64, Option<i64>, serde_json::Value)> = sqlx::query_as(&sql)
+				.bind(token)
+				.fetch_optional(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			match row {
+				Some((token_val, user_id, expires_at, metadata_json)) => {
+					let metadata: HashMap<String, String> =
+						serde_json::from_value(metadata_json).unwrap_or_default();
+					Ok(StoredToken {
+						token: token_val,
+						user_id,
+						expires_at,
+						metadata,
+					})
+				}
+				None => Err(TokenStorageError::NotFound),
+			}
+		}
+
+		async fn get_user_tokens(&self, user_id: i64) -> TokenStorageResult<Vec<StoredToken>> {
+			let (sql, _) = Query::select()
+				.columns([
+					AuthTokens::Token,
+					AuthTokens::UserId,
+					AuthTokens::ExpiresAt,
+					AuthTokens::Metadata,
+				])
+				.from(AuthTokens::Table)
+				.and_where(Expr::col(AuthTokens::UserId).eq(user_id))
+				.build(PostgresQueryBuilder);
+
+			let rows: Vec<(String, i64, Option<i64>, serde_json::Value)> = sqlx::query_as(&sql)
+				.bind(user_id)
+				.fetch_all(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			let tokens = rows
+				.into_iter()
+				.map(|(token_val, uid, expires_at, metadata_json)| {
+					let metadata: HashMap<String, String> =
+						serde_json::from_value(metadata_json).unwrap_or_default();
+					StoredToken {
+						token: token_val,
+						user_id: uid,
+						expires_at,
+						metadata,
+					}
+				})
+				.collect();
+
+			Ok(tokens)
+		}
+
+		async fn delete(&self, token: &str) -> TokenStorageResult<()> {
+			let (sql, _) = Query::delete()
+				.from_table(AuthTokens::Table)
+				.and_where(Expr::col(AuthTokens::Token).eq(token))
+				.build(PostgresQueryBuilder);
+
+			let result = sqlx::query(&sql)
+				.bind(token)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			if result.rows_affected() == 0 {
+				return Err(TokenStorageError::NotFound);
+			}
+
+			Ok(())
+		}
+
+		async fn delete_user_tokens(&self, user_id: i64) -> TokenStorageResult<()> {
+			let (sql, _) = Query::delete()
+				.from_table(AuthTokens::Table)
+				.and_where(Expr::col(AuthTokens::UserId).eq(user_id))
+				.build(PostgresQueryBuilder);
+
+			sqlx::query(&sql)
+				.bind(user_id)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			Ok(())
+		}
+
+		async fn cleanup_expired(&self, current_time: i64) -> TokenStorageResult<usize> {
+			let (sql, _) = Query::delete()
+				.from_table(AuthTokens::Table)
+				.and_where(Expr::col(AuthTokens::ExpiresAt).is_not_null())
+				.and_where(Expr::col(AuthTokens::ExpiresAt).lt(current_time))
+				.build(PostgresQueryBuilder);
+
+			let result = sqlx::query(&sql)
+				.bind(current_time)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			Ok(result.rows_affected() as usize)
+		}
+	}
+}
+
+#[cfg(feature = "database")]
+pub use database_storage::DatabaseTokenStorage;
+
 #[cfg(test)]
 mod tests {
 	use super::*;
