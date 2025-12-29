@@ -12,15 +12,13 @@ categories = ["wasm", "web-programming"]
 [features]
 default = []
 msgpack = ["dep:rmp-serde"]
-static = ["dep:reinhardt-static"]
-pages-full = ["msgpack", "static"]
+pages-full = ["msgpack"]
+static = []
+urls = []
 
 [dependencies]
 # Procedural macros
 reinhardt-pages-macros = { workspace = true }
-
-# Static files integration (optional)
-reinhardt-static = { workspace = true, optional = true }
 
 # Core WASM bindings (low-level APIs only)
 wasm-bindgen = "0.2"
@@ -88,6 +86,9 @@ hyper = { workspace = true }
 async-trait = "0.1"
 # For automatic server function registration
 inventory = "0.3"
+
+[build-dependencies]
+cfg_aliases = "0.2"
 
 [dev-dependencies]
 reinhardt-static = { workspace = true }

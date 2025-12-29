@@ -56,6 +56,12 @@ pub mod callback;
 pub mod dom;
 pub mod reactive;
 
+// Platform abstraction (unified types for WASM and native)
+pub mod platform;
+
+// Unified prelude for simplified imports
+pub mod prelude;
+
 // Component system
 pub mod component;
 
@@ -77,6 +83,9 @@ pub mod hydration;
 
 // Client-side routing
 pub mod router;
+
+// Integration modules (runtime support for special macros)
+pub mod integ;
 
 // Re-export commonly used types
 pub use api::{ApiModel, ApiQuerySet, Filter, FilterOp};
