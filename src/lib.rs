@@ -225,8 +225,8 @@ pub mod macros {
 // Re-export HTTP method macros
 pub use reinhardt_macros::{api_view, delete, get, patch, post, put};
 
-// Re-export URL patterns registration macro (always available for framework setup)
-pub use reinhardt_macros::register_url_patterns;
+// Re-export routes attribute macro for URL pattern registration
+pub use reinhardt_macros::routes;
 
 // Re-export admin attribute macro (requires admin feature)
 #[cfg(feature = "admin")]
@@ -763,10 +763,9 @@ pub use reinhardt_db::contenttypes::{
 	GenericRelationQuery, ModelType,
 };
 #[cfg(feature = "database")]
-#[allow(deprecated)]
 pub use reinhardt_db::migrations::{
-	FieldState, Migration, MigrationAutodetector, MigrationError, MigrationExecutor, MigrationPlan,
-	MigrationRecorder, ModelState, ProjectState,
+	FieldState, Migration, MigrationAutodetector, MigrationError, MigrationPlan, MigrationRecorder,
+	ModelState, ProjectState,
 };
 
 // Re-export cache (cache feature)
