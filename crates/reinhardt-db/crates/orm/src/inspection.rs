@@ -1298,11 +1298,24 @@ mod tests {
 			id: i32,
 		}
 
+		#[derive(Clone)]
+		struct TestModelFields;
+		impl crate::model::FieldSelector for TestModelFields {
+			fn with_alias(self, _alias: &str) -> Self {
+				self
+			}
+		}
+
 		impl Model for TestModel {
 			type PrimaryKey = i32;
+			type Fields = TestModelFields;
 
 			fn table_name() -> &'static str {
 				"test_table"
+			}
+
+			fn new_fields() -> Self::Fields {
+				TestModelFields
 			}
 
 			fn primary_key(&self) -> Option<&Self::PrimaryKey> {
@@ -1327,8 +1340,17 @@ mod tests {
 			article_id: u32,
 		}
 
+		#[derive(Clone)]
+		struct ArticleFields;
+		impl crate::model::FieldSelector for ArticleFields {
+			fn with_alias(self, _alias: &str) -> Self {
+				self
+			}
+		}
+
 		impl Model for Article {
 			type PrimaryKey = u32;
+			type Fields = ArticleFields;
 
 			fn table_name() -> &'static str {
 				"articles"
@@ -1336,6 +1358,10 @@ mod tests {
 
 			fn primary_key_field() -> &'static str {
 				"article_id"
+			}
+
+			fn new_fields() -> Self::Fields {
+				ArticleFields
 			}
 
 			fn primary_key(&self) -> Option<&Self::PrimaryKey> {
@@ -1360,11 +1386,24 @@ mod tests {
 			id: i32,
 		}
 
+		#[derive(Clone)]
+		struct UserFields;
+		impl crate::model::FieldSelector for UserFields {
+			fn with_alias(self, _alias: &str) -> Self {
+				self
+			}
+		}
+
 		impl Model for User {
 			type PrimaryKey = i32;
+			type Fields = UserFields;
 
 			fn table_name() -> &'static str {
 				"users"
+			}
+
+			fn new_fields() -> Self::Fields {
+				UserFields
 			}
 
 			fn primary_key(&self) -> Option<&Self::PrimaryKey> {
@@ -1389,11 +1428,24 @@ mod tests {
 			id: i32,
 		}
 
+		#[derive(Clone)]
+		struct EmptyFields;
+		impl crate::model::FieldSelector for EmptyFields {
+			fn with_alias(self, _alias: &str) -> Self {
+				self
+			}
+		}
+
 		impl Model for Empty {
 			type PrimaryKey = i32;
+			type Fields = EmptyFields;
 
 			fn table_name() -> &'static str {
 				"empty"
+			}
+
+			fn new_fields() -> Self::Fields {
+				EmptyFields
 			}
 
 			fn primary_key(&self) -> Option<&Self::PrimaryKey> {
@@ -1418,11 +1470,24 @@ mod tests {
 			id: i32,
 		}
 
+		#[derive(Clone)]
+		struct SimpleFields;
+		impl crate::model::FieldSelector for SimpleFields {
+			fn with_alias(self, _alias: &str) -> Self {
+				self
+			}
+		}
+
 		impl Model for Simple {
 			type PrimaryKey = i32;
+			type Fields = SimpleFields;
 
 			fn table_name() -> &'static str {
 				"simple"
+			}
+
+			fn new_fields() -> Self::Fields {
+				SimpleFields
 			}
 
 			fn primary_key(&self) -> Option<&Self::PrimaryKey> {
