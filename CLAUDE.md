@@ -329,6 +329,10 @@ Before submitting code:
 - Commit version bump before creating tags
 - Update crate's CHANGELOG.md with version changes
 - Use GitHub CLI (`gh`) for all GitHub operations (PR, issues, releases)
+- Use `rstest` for ALL test cases (no plain `#[test]`)
+- Use `reinhardt-test` fixtures for test setup/teardown
+- Create specialized fixtures wrapping generic `reinhardt-test` fixtures for test data injection
+- Use SeaQuery (not raw SQL) for SQL construction in tests
 
 ### ❌ NEVER DO
 - Use `mod.rs` files (deprecated pattern)
@@ -350,6 +354,9 @@ Before submitting code:
 - Create Git tags before committing version changes
 - Skip `--dry-run` verification before publishing
 - Make breaking changes without MAJOR version bump
+- Use plain `#[test]` instead of `#[rstest]`
+- Write raw SQL strings in tests (use SeaQuery instead)
+- Duplicate infrastructure setup code (use `reinhardt-test` fixtures)
 
 ### 📚 Detailed Standards
 
