@@ -3848,7 +3848,7 @@ fn generate_field_selector_struct(
 			let field_name = &field.name;
 			let field_type = &field.ty;
 			quote! {
-				pub #field_name: #orm_crate::query_fields::Field<#struct_name, #field_type>
+				#field_name: #orm_crate::query_fields::Field<#struct_name, #field_type>
 			}
 		})
 		.collect();

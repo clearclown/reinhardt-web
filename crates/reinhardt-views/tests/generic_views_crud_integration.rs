@@ -23,7 +23,7 @@ use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::macros::model;
-use reinhardt_db::orm::{Model, init_database};
+use reinhardt_db::orm::init_database;
 use reinhardt_serializers::JsonSerializer;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::testcontainers::{ContainerAsync, GenericImage};

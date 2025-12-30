@@ -12,6 +12,7 @@
 //! - postgres_container: PostgreSQL database container
 
 use ::testcontainers::{ContainerAsync, GenericImage};
+use reinhardt_orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use sqlx::{PgPool, Row};
@@ -34,7 +35,8 @@ use std::sync::Arc;
 async fn test_contenttype_table_creation(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create ContentType table
 	sqlx::query(
@@ -79,7 +81,8 @@ async fn test_contenttype_table_creation(
 async fn test_contenttype_creation(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table
 	sqlx::query(
@@ -138,7 +141,8 @@ async fn test_contenttype_creation(
 async fn test_contenttype_retrieval_by_id(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -193,7 +197,8 @@ async fn test_contenttype_retrieval_by_id(
 async fn test_contenttype_update(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -250,7 +255,8 @@ async fn test_contenttype_update(
 async fn test_contenttype_deletion(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -310,7 +316,8 @@ async fn test_contenttype_deletion(
 async fn test_contenttype_uniqueness_constraint(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table with UNIQUE constraint
 	sqlx::query(
@@ -370,7 +377,8 @@ async fn test_contenttype_uniqueness_constraint(
 async fn test_contenttype_multiple_models_same_app(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table
 	sqlx::query(
@@ -432,7 +440,8 @@ async fn test_contenttype_multiple_models_same_app(
 async fn test_contenttype_same_model_different_apps(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table
 	sqlx::query(
@@ -498,7 +507,8 @@ async fn test_contenttype_same_model_different_apps(
 async fn test_contenttype_query_by_app_label(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -555,7 +565,8 @@ async fn test_contenttype_query_by_app_label(
 async fn test_contenttype_query_by_model(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -612,7 +623,8 @@ async fn test_contenttype_query_by_model(
 async fn test_contenttype_query_by_exact_match(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(
@@ -676,7 +688,8 @@ async fn test_contenttype_query_by_exact_match(
 async fn test_contenttype_list_all(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create table and insert test data
 	sqlx::query(

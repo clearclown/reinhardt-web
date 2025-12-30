@@ -33,22 +33,11 @@ use reinhardt_server::GraphQLHandler;
 /// ```no_run
 /// use reinhardt_test::fixtures::*;
 /// use reinhardt_routers::UnifiedRouter as Router;
-/// use hyper::Method;
-/// use std::sync::Arc;
-/// use rstest::*;
 ///
-/// #[fixture]
-/// fn test_router() -> Arc<Router> {
-///     Arc::new(Router::new())
-/// }
-///
-/// #[rstest]
 /// #[tokio::test]
-/// async fn test_example(
-///     #[from(test_router)] router: Arc<Router>,
-///     #[future] test_server_guard: TestServerGuard
-/// ) {
-///     let server = test_server_guard.await;
+/// async fn test_example() {
+///     let router = Router::new();
+///     let server = test_server_guard(router).await;
 ///     let response = reqwest::get(&format!("{}/test", server.url))
 ///         .await
 ///         .unwrap();
@@ -77,7 +66,7 @@ impl TestServerGuard {
 	/// # Arguments
 	///
 	/// * `router` - Router to use for handling requests
-	async fn new(router: Arc<Router>) -> Self {
+	async fn new(router: Router) -> Self {
 		let shutdown_timeout = Duration::from_secs(5);
 		// Bind to random port
 		let addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
@@ -91,6 +80,7 @@ impl TestServerGuard {
 
 		// Spawn server
 		let server_coordinator = (*coordinator).clone();
+		let router = Arc::new(router);
 		let server_task = tokio::spawn(async move {
 			let server = HttpServer::new(router);
 			let _ = server
@@ -133,11 +123,10 @@ impl Drop for TestServerGuard {
 /// ```no_run
 /// use reinhardt_test::fixtures::*;
 /// use reinhardt_routers::UnifiedRouter as Router;
-/// use std::sync::Arc;
 ///
 /// #[tokio::test]
 /// async fn test_server() {
-///     let router = Arc::new(Router::new());
+///     let router = Router::new();
 ///     let server = test_server_guard(router).await;
 ///     let response = reqwest::get(&format!("{}/hello", server.url))
 ///         .await
@@ -146,7 +135,7 @@ impl Drop for TestServerGuard {
 ///     // Automatic cleanup on drop
 /// }
 /// ```
-pub async fn test_server_guard(router: Arc<Router>) -> TestServerGuard {
+pub async fn test_server_guard(router: Router) -> TestServerGuard {
 	TestServerGuard::new(router).await
 }
 

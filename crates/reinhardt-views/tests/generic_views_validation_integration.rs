@@ -21,7 +21,7 @@
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_core::http::{Request, Response};
+use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
 use reinhardt_db::orm::init_database;
 use reinhardt_serializers::JsonSerializer;

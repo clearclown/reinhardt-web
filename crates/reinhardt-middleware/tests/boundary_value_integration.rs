@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use fixtures::{
 	ConfigurableTestHandler, assert_has_header, assert_no_header, assert_status,
-	create_request_with_headers, create_test_request, wait_for_circuit_state,
+	create_request_with_headers, create_test_request,
 };
 use reinhardt_core::exception::Result;
 use reinhardt_core::types::{Handler, Middleware, Request, Response};

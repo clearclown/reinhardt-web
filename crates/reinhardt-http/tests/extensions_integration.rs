@@ -11,7 +11,6 @@ use hyper::{Method, StatusCode};
 use reinhardt_http::{Error, Extensions, Request, Response};
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_test::fixtures::test_server_guard;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 struct UserId(u64);
@@ -51,7 +50,7 @@ async fn test_extensions_request_response_sharing() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -103,7 +102,7 @@ async fn test_extensions_type_safety() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -173,7 +172,7 @@ async fn test_extensions_lifecycle() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -228,7 +227,7 @@ async fn test_extensions_complex_types() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -283,7 +282,7 @@ async fn test_extensions_cloning() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -354,7 +353,7 @@ async fn test_extensions_middleware_chain() {
 		},
 	);
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -398,7 +397,7 @@ async fn test_extensions_request_isolation() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	// Send multiple concurrent requests
@@ -449,7 +448,7 @@ async fn test_extensions_missing_type_handling() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client

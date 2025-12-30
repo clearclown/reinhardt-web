@@ -40,7 +40,7 @@
 //! ❌ Validation of nested data (covered by validator tests)
 
 use ::testcontainers::{ContainerAsync, GenericImage};
-use reinhardt_serializers;
+use reinhardt_orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::*;
 use rstest::*;
 use serde::{Deserialize, Serialize};
@@ -404,7 +404,8 @@ fn test_many_to_one_deserialization() {
 async fn test_nested_categories_from_database(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create categories table
 	sqlx::query(
@@ -507,7 +508,8 @@ async fn test_nested_categories_from_database(
 async fn test_author_books_from_database(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	let (_container, pool, _port, _url) = postgres_container.await;
+	let (_container, pool, _port, url) = postgres_container.await;
+	reinitialize_database(&url).await.unwrap();
 
 	// Create tables
 	sqlx::query(

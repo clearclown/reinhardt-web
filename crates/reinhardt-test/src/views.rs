@@ -5,23 +5,12 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
 use reinhardt_core::http::{Error, Request, Response, Result};
-use reinhardt_db::orm::Model;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ============================================================================
 // Test Models
 // ============================================================================
-
-/// Dummy field selector for test models
-#[derive(Debug, Clone)]
-pub struct DummyFields;
-
-impl reinhardt_db::orm::FieldSelector for DummyFields {
-	fn with_alias(self, _alias: &str) -> Self {
-		self
-	}
-}
 
 /// Test model for view tests
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -32,26 +21,7 @@ pub struct TestModel {
 	pub created_at: String,
 }
 
-impl Model for TestModel {
-	type PrimaryKey = i64;
-	type Fields = DummyFields;
-
-	fn table_name() -> &'static str {
-		"test_models"
-	}
-
-	fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-		self.id.as_ref()
-	}
-
-	fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-		self.id = Some(value);
-	}
-
-	fn new_fields() -> Self::Fields {
-		DummyFields
-	}
-}
+crate::impl_test_model!(TestModel, i64, "test_models");
 
 /// Test model for API view tests
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -61,26 +31,7 @@ pub struct ApiTestModel {
 	pub content: String,
 }
 
-impl Model for ApiTestModel {
-	type PrimaryKey = i64;
-	type Fields = DummyFields;
-
-	fn table_name() -> &'static str {
-		"api_test_models"
-	}
-
-	fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-		self.id.as_ref()
-	}
-
-	fn set_primary_key(&mut self, value: Self::PrimaryKey) {
-		self.id = Some(value);
-	}
-
-	fn new_fields() -> Self::Fields {
-		DummyFields
-	}
-}
+crate::impl_test_model!(ApiTestModel, i64, "api_test_models");
 
 // ============================================================================
 // Request Creation Functions

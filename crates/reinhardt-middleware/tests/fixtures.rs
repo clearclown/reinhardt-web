@@ -8,6 +8,14 @@
 //!
 //! Run with all features: `cargo test --features full`
 
+// Allow dead code in test fixtures module: these utility functions and handlers
+// are intentionally provided for test scenarios across multiple test files.
+// Not all utilities are used in every test file.
+#![allow(dead_code)]
+// Allow unreachable_pub: this is a test module where pub items are accessed
+// by other test files through mod fixtures; the items are reachable within tests.
+#![allow(unreachable_pub)]
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use reinhardt_core::exception::Result;

@@ -179,19 +179,170 @@ fi
 
 [tasks.install-tools]
 description = "Install all required development tools"
-dependencies = ["install-nextest", "install-bacon"]
+dependencies = ["install-nextest", "install-bacon", "install-wasm-tools"]
+
+# ============================================================================
+# WASM Build Tasks
+# ============================================================================
+
+[tasks.install-wasm-tools]
+description = "Install WASM build tools (wasm-bindgen-cli + wasm32 target)"
+script = '''
+#!/bin/bash
+set -e
+
+echo "Installing WASM build tools..."
+
+# Add wasm32 target
+if ! rustup target list --installed | grep -q "wasm32-unknown-unknown"; then
+	echo "Adding wasm32-unknown-unknown target..."
+	rustup target add wasm32-unknown-unknown
+else
+	echo "✓ wasm32-unknown-unknown target already installed"
+fi
+
+# Install wasm-bindgen-cli
+if ! command -v wasm-bindgen &> /dev/null; then
+	echo "Installing wasm-bindgen-cli..."
+	cargo install wasm-bindgen-cli
+else
+	echo "✓ wasm-bindgen-cli already installed"
+fi
+
+# Check for wasm-opt (optional, for release optimization)
+if ! command -v wasm-opt &> /dev/null; then
+	echo ""
+	echo "⚠️  wasm-opt not found (optional, for release optimization)"
+	echo "   Install with: brew install binaryen"
+else
+	echo "✓ wasm-opt available"
+fi
+
+echo ""
+echo "WASM build tools installed successfully!"
+'''
+
+[tasks.wasm-build-dev]
+description = "Build WASM in debug mode"
+script = '''
+#!/bin/bash
+set -e
+
+CRATE_NAME="examples_twitter"
+OUTPUT_DIR="dist"
+
+echo "Building WASM (debug) for: $CRATE_NAME"
+
+# Build WASM
+cargo build --target wasm32-unknown-unknown
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Run wasm-bindgen
+wasm-bindgen \
+	--target web \
+	--out-dir "$OUTPUT_DIR" \
+	"target/wasm32-unknown-unknown/debug/$CRATE_NAME.wasm"
+
+# Copy index.html if exists
+if [ -f "index.html" ]; then
+	cp "index.html" "$OUTPUT_DIR/"
+fi
+
+echo "✓ WASM built successfully: $OUTPUT_DIR"
+'''
+
+[tasks.wasm-build-release]
+description = "Build WASM in release mode with optimization"
+script = '''
+#!/bin/bash
+set -e
+
+CRATE_NAME="examples_twitter"
+OUTPUT_DIR="dist"
+
+echo "Building WASM (release) for: $CRATE_NAME"
+
+# Build WASM in release mode
+cargo build --target wasm32-unknown-unknown --release
+
+# Create output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Run wasm-bindgen
+wasm-bindgen \
+	--target web \
+	--out-dir "$OUTPUT_DIR" \
+	"target/wasm32-unknown-unknown/release/$CRATE_NAME.wasm"
+
+# Optimize with wasm-opt if available
+if command -v wasm-opt &> /dev/null; then
+	echo "Running wasm-opt..."
+	WASM_FILE="$OUTPUT_DIR/${CRATE_NAME}_bg.wasm"
+	wasm-opt -O3 -o "$WASM_FILE.opt" "$WASM_FILE"
+	mv "$WASM_FILE.opt" "$WASM_FILE"
+else
+	echo "⚠️  wasm-opt not found, skipping optimization"
+fi
+
+# Copy index.html if exists
+if [ -f "index.html" ]; then
+	cp "index.html" "$OUTPUT_DIR/"
+fi
+
+echo "✓ WASM built successfully: $OUTPUT_DIR"
+'''
+
+[tasks.wasm-clean]
+description = "Clean WASM build artifacts"
+script = '''
+#!/bin/bash
+echo "Cleaning WASM artifacts..."
+rm -rf dist
+rm -rf target/wasm32-unknown-unknown
+echo "✓ Cleaned"
+'''
 
 # ============================================================================
 # Development Workflow
 # ============================================================================
 
 [tasks.dev]
-description = "Start development environment (checks, builds, runs server)"
-dependencies = ["build", "runserver"]
+description = "Build WASM and start development server with frontend"
+script = '''
+#!/bin/bash
+set -e
+
+echo "📦 Building WASM frontend..."
+cargo make wasm-build-dev
+
+echo ""
+echo "🚀 Starting development server with WASM frontend..."
+echo ""
+
+cargo run --bin examples-twitter -- runserver --with-pages --noreload
+'''
 
 [tasks.dev-watch]
 description = "Start development with auto-reload"
 dependencies = ["build", "runserver-watch"]
+
+[tasks.dev-release]
+description = "Build optimized WASM and start server"
+script = '''
+#!/bin/bash
+set -e
+
+echo "📦 Building optimized WASM for production..."
+cargo make wasm-build-release
+
+echo ""
+echo "🚀 Starting server with optimized WASM frontend..."
+echo ""
+
+cargo run --release --bin examples-twitter -- runserver --with-pages --noreload
+'''
 
 # ============================================================================
 # CI/CD Workflow
@@ -229,10 +380,17 @@ description = "Show available tasks"
 script = '''
 echo "Available tasks:"
 echo "  Development:"
-echo "    runserver          - Start the development server"
-echo "    runserver-watch    - Start server with auto-reload"
-echo "    dev                - Run checks + build + start server"
+echo "    dev                - Build WASM + start server with frontend"
+echo "    dev-release        - Build optimized WASM + start server"
 echo "    dev-watch          - Development with auto-reload"
+echo "    runserver          - Start the development server (API only)"
+echo "    runserver-watch    - Start server with auto-reload"
+echo ""
+echo "  WASM:"
+echo "    wasm-build-dev     - Build WASM (debug)"
+echo "    wasm-build-release - Build WASM (release, optimized)"
+echo "    wasm-clean         - Clean WASM artifacts"
+echo "    install-wasm-tools - Install WASM build tools"
 echo ""
 echo "  Database:"
 echo "    makemigrations     - Create new migrations"
@@ -270,7 +428,7 @@ echo "  CI/CD:"
 echo "    ci                 - Run CI pipeline"
 echo ""
 echo "  Tools:"
-echo "    install-tools      - Install dev tools"
+echo "    install-tools      - Install all dev tools"
 echo ""
 echo "Usage: cargo make <task>"
 '''

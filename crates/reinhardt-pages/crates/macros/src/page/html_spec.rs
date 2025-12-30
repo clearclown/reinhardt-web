@@ -1691,7 +1691,7 @@ mod tests {
 		assert!(get_element_spec("img").is_some());
 		assert!(get_element_spec("a").is_some());
 		assert!(get_element_spec("button").is_some());
-		assert!(get_element_spec("div").is_none()); // Not yet implemented
+		assert!(get_element_spec("div").is_some());
 	}
 
 	#[test]

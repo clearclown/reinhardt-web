@@ -2,7 +2,6 @@ use reinhardt_backends::DatabaseConnection;
 use reinhardt_migrations::{
 	ColumnDefinition, DatabaseMigrationExecutor, FieldType, Migration, Operation,
 };
-use sqlx::Row;
 
 /// Helper function to leak a string to get a 'static lifetime
 fn leak_str(s: impl Into<String>) -> &'static str {
@@ -116,16 +115,16 @@ async fn test_executor_basic_run() {
 	assert_eq!(execution_result.applied.len(), 2);
 	assert!(execution_result.failed.is_none());
 
-	// Verify tables were created
-	let pool = executor.connection().as_sqlite_pool().unwrap();
-	let tables_query = sqlx::query("SELECT name FROM sqlite_master WHERE type='table'")
-		.fetch_all(pool)
+	// Verify tables were created using the high-level API
+	let connection = executor.connection();
+	let tables_query = connection
+		.fetch_all("SELECT name FROM sqlite_master WHERE type='table'", vec![])
 		.await
 		.unwrap();
 
 	let table_names: Vec<String> = tables_query
 		.iter()
-		.map(|row| row.get::<String, _>("name"))
+		.filter_map(|row| row.get::<String>("name").ok())
 		.collect();
 
 	assert!(table_names.contains(&"test_author".to_string()));
@@ -175,13 +174,15 @@ async fn test_executor_rollback() {
 	let result = executor.apply_migrations(&[rollback_migration]).await;
 	assert!(result.is_ok());
 
-	// Verify table was dropped
-	let pool = executor.connection().as_sqlite_pool().unwrap();
-	let tables_query =
-		sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='rollback_test'")
-			.fetch_all(pool)
-			.await
-			.unwrap();
+	// Verify table was dropped using high-level API
+	let connection = executor.connection();
+	let tables_query = connection
+		.fetch_all(
+			"SELECT name FROM sqlite_master WHERE type='table' AND name='rollback_test'",
+			vec![],
+		)
+		.await
+		.unwrap();
 
 	assert_eq!(tables_query.len(), 0, "Table should be dropped");
 }
@@ -405,16 +406,16 @@ async fn test_executor_add_column_migration() {
 	let result = executor.apply_migrations(&[migration2]).await;
 	assert!(result.is_ok(), "Adding column should succeed");
 
-	// Verify column was added
-	let pool = executor.connection().as_sqlite_pool().unwrap();
-	let columns_query = sqlx::query("PRAGMA table_info(evolving_table)")
-		.fetch_all(pool)
+	// Verify column was added using high-level API
+	let connection = executor.connection();
+	let columns_query = connection
+		.fetch_all("PRAGMA table_info(evolving_table)", vec![])
 		.await
 		.unwrap();
 
 	let column_names: Vec<String> = columns_query
 		.iter()
-		.map(|row| row.get::<String, _>("name"))
+		.filter_map(|row| row.get::<String>("name").ok())
 		.collect();
 
 	assert!(

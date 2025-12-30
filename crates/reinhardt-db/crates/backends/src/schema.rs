@@ -130,11 +130,16 @@ pub enum AlterTableChange {
 ///
 /// ```rust,no_run
 /// # use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+/// # use reinhardt_backends::DatabaseType;
 /// # use async_trait::async_trait;
 /// struct MySchemaEditor;
 ///
 /// #[async_trait]
 /// impl BaseDatabaseSchemaEditor for MySchemaEditor {
+///     fn database_type(&self) -> DatabaseType {
+///         DatabaseType::Postgres
+///     }
+///
 ///     async fn execute(&mut self, sql: &str) -> SchemaEditorResult<()> {
 ///         println!("Executing: {}", sql);
 ///         Ok(())
@@ -162,12 +167,17 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	///
 	/// ```rust
 	/// # use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+	/// # use reinhardt_backends::DatabaseType;
 	/// # use async_trait::async_trait;
 	/// # use sea_query::PostgresQueryBuilder;
 	/// struct TestEditor;
 	///
 	/// #[async_trait]
 	/// impl BaseDatabaseSchemaEditor for TestEditor {
+	///     fn database_type(&self) -> DatabaseType {
+	///         DatabaseType::Postgres
+	///     }
+	///
 	///     async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
 	///         Ok(())
 	///     }
@@ -332,12 +342,17 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	///
 	/// ```rust
 	/// # use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
+	/// # use reinhardt_backends::DatabaseType;
 	/// # use async_trait::async_trait;
 	/// # use reinhardt_backends::schema::SchemaEditorResult;
 	/// struct TestEditor;
 	///
 	/// #[async_trait]
 	/// impl BaseDatabaseSchemaEditor for TestEditor {
+	///     fn database_type(&self) -> DatabaseType {
+	///         DatabaseType::Postgres
+	///     }
+	///
 	///     async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
 	///         Ok(())
 	///     }
@@ -369,12 +384,17 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 	///
 	/// ```rust
 	/// # use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
+	/// # use reinhardt_backends::DatabaseType;
 	/// # use async_trait::async_trait;
 	/// # use reinhardt_backends::schema::SchemaEditorResult;
 	/// struct TestEditor;
 	///
 	/// #[async_trait]
 	/// impl BaseDatabaseSchemaEditor for TestEditor {
+	///     fn database_type(&self) -> DatabaseType {
+	///         DatabaseType::Postgres
+	///     }
+	///
 	///     async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
 	///         Ok(())
 	///     }

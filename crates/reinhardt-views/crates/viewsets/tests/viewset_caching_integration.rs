@@ -31,6 +31,7 @@ use std::time::Duration;
 // ============================================================================
 
 /// Mock model for caching tests
+#[allow(dead_code)] // Test utility struct for future tests
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct CacheTestItem {
 	id: Option<i64>,
@@ -39,6 +40,7 @@ struct CacheTestItem {
 }
 
 /// Mock ViewSet for testing
+#[allow(dead_code)] // Test utility struct for future tests
 #[derive(Debug, Clone)]
 struct MockViewSet;
 
@@ -47,6 +49,7 @@ struct MockViewSet;
 // ============================================================================
 
 /// Helper: Create HTTP GET request
+#[allow(dead_code)] // Test utility function for future tests
 fn create_get_request(uri: &str) -> Request {
 	Request::builder()
 		.method(Method::GET)

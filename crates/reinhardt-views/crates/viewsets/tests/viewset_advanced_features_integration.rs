@@ -222,7 +222,7 @@ fn create_get_request(uri: &str) -> Request {
 #[tokio::test]
 #[serial(viewset_advanced)]
 async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: PgPool) {
-	let pool = setup_advanced.await;
+	let _pool = setup_advanced.await;
 
 	// Create ViewSet with all three features
 	let pagination_config = PaginationConfig::page_number(5, Some(20));
@@ -249,7 +249,7 @@ async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: P
 	assert!(viewset.get_ordering_config().is_some());
 
 	// Test: Filter by category="Electronics", order by -score, page 1
-	let request =
+	let _request =
 		create_get_request("/advanced-items/?category=Electronics&ordering=-score&page=1");
 
 	// In real implementation, this would filter, order, and paginate
@@ -269,7 +269,7 @@ async fn test_pagination_filtering_ordering_combined(#[future] setup_advanced: P
 #[tokio::test]
 #[serial(viewset_advanced)]
 async fn test_multiple_filter_backends(#[future] setup_advanced: PgPool) {
-	let pool = setup_advanced.await;
+	let _pool = setup_advanced.await;
 
 	// Create filter config with multiple filterable fields
 	let filter_config = FilterConfig {
@@ -300,7 +300,7 @@ async fn test_multiple_filter_backends(#[future] setup_advanced: PgPool) {
 #[tokio::test]
 #[serial(viewset_advanced)]
 async fn test_custom_queryset_with_pagination(#[future] setup_advanced: PgPool) {
-	let pool = setup_advanced.await;
+	let _pool = setup_advanced.await;
 
 	let pagination_config = PaginationConfig::LimitOffset {
 		default_limit: 10,
@@ -364,7 +364,7 @@ async fn test_complex_multi_field_filtering(#[future] setup_advanced: PgPool) {
 #[tokio::test]
 #[serial(viewset_advanced)]
 async fn test_custom_multi_field_ordering(#[future] setup_advanced: PgPool) {
-	let pool = setup_advanced.await;
+	let _pool = setup_advanced.await;
 
 	let ordering_config = OrderingConfig {
 		ordering_fields: vec![
@@ -391,7 +391,7 @@ async fn test_custom_multi_field_ordering(#[future] setup_advanced: PgPool) {
 #[tokio::test]
 #[serial(viewset_advanced)]
 async fn test_pagination_custom_page_size(#[future] setup_advanced: PgPool) {
-	let pool = setup_advanced.await;
+	let _pool = setup_advanced.await;
 
 	// Test various page sizes
 	let page_sizes = vec![2, 5, 10, 20];

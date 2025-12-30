@@ -27,7 +27,6 @@ use reinhardt_middleware::gzip::{GZipConfig, GZipMiddleware};
 use reinhardt_middleware::rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStrategy};
 use reinhardt_middleware::session::{SessionConfig, SessionMiddleware};
 use reinhardt_middleware::timeout::{TimeoutConfig, TimeoutMiddleware};
-use rstest::rstest;
 use serial_test::serial;
 use std::sync::Arc;
 use std::time::Duration;
@@ -73,6 +72,8 @@ impl Handler for ContentHandler {
 }
 
 /// Handler that echoes request headers.
+/// Note: This handler is available for future edge case tests involving header manipulation.
+#[allow(dead_code)]
 struct HeaderEchoHandler;
 
 #[async_trait]

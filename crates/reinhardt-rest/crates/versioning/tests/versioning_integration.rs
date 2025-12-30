@@ -13,7 +13,6 @@ use reinhardt_versioning::{
 	QueryParameterVersioning, URLPathVersioning,
 };
 use rstest::*;
-use std::sync::Arc;
 
 /// V1 async handler function
 async fn v1_handler(_req: Request) -> Result<Response> {
@@ -29,18 +28,16 @@ async fn v2_handler(_req: Request) -> Result<Response> {
 
 /// Fixture for creating a versioned router with v1 and v2 handlers
 #[fixture]
-async fn versioned_router() -> Arc<UnifiedRouter> {
-	let router = UnifiedRouter::new()
+async fn versioned_router() -> UnifiedRouter {
+	UnifiedRouter::new()
 		.function("/v1/resource", Method::GET, v1_handler)
 		.function("/v2/resource", Method::GET, v2_handler)
-		.function("/resource", Method::GET, v1_handler);
-
-	Arc::new(router)
+		.function("/resource", Method::GET, v1_handler)
 }
 
 #[rstest]
 #[tokio::test]
-async fn test_accept_header_versioning_integration(#[future] versioned_router: Arc<UnifiedRouter>) {
+async fn test_accept_header_versioning_integration(#[future] versioned_router: UnifiedRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -62,7 +59,7 @@ async fn test_accept_header_versioning_integration(#[future] versioned_router: A
 
 #[rstest]
 #[tokio::test]
-async fn test_url_path_versioning_integration(#[future] versioned_router: Arc<UnifiedRouter>) {
+async fn test_url_path_versioning_integration(#[future] versioned_router: UnifiedRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -83,7 +80,7 @@ async fn test_url_path_versioning_integration(#[future] versioned_router: Arc<Un
 
 #[rstest]
 #[tokio::test]
-async fn test_hostname_versioning_integration(#[future] versioned_router: Arc<UnifiedRouter>) {
+async fn test_hostname_versioning_integration(#[future] versioned_router: UnifiedRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -105,9 +102,7 @@ async fn test_hostname_versioning_integration(#[future] versioned_router: Arc<Un
 
 #[rstest]
 #[tokio::test]
-async fn test_query_parameter_versioning_integration(
-	#[future] versioned_router: Arc<UnifiedRouter>,
-) {
+async fn test_query_parameter_versioning_integration(#[future] versioned_router: UnifiedRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -134,7 +129,6 @@ async fn test_namespace_versioning_integration() {
 		.function("/v1/resource", Method::GET, v1_handler)
 		.function("/v2/resource", Method::GET, v2_handler);
 
-	let router = Arc::new(router);
 	let server = test_server_guard(router).await;
 
 	// Send request with custom header X-API-Version: v1
@@ -160,7 +154,6 @@ async fn test_versioning_middleware_integration() {
 	// In a full implementation, the middleware would be applied at the router level
 	let router = UnifiedRouter::new().function("/v1/extract", Method::GET, v1_handler);
 
-	let router = Arc::new(router);
 	let server = test_server_guard(router).await;
 
 	// Send request to /v1/extract
@@ -183,7 +176,6 @@ async fn test_versioned_handler_with_fallback() {
 	// Create router with default version fallback
 	let router = UnifiedRouter::new().function("/resource", Method::GET, v1_handler);
 
-	let router = Arc::new(router);
 	let server = test_server_guard(router).await;
 
 	// Send request without version - should use default (v1)

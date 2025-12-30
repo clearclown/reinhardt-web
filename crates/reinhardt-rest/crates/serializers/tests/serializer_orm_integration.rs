@@ -21,7 +21,6 @@
 //!
 //! - `postgres_container`: PostgreSQL container for ORM integration tests
 
-use reinhardt_db::orm::Model;
 use reinhardt_db::orm::manager::init_database;
 use reinhardt_db::orm::query::QuerySet;
 use reinhardt_serializers::queryset_integration::SerializerSaveMixin;

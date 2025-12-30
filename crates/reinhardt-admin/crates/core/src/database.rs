@@ -201,18 +201,13 @@ fn build_composite_filter_condition(filter_condition: &FilterCondition) -> Optio
 /// # }
 ///
 /// // Placeholder User type for example
-/// #[derive(Clone, Serialize, Deserialize)]
+/// #[derive(Clone, Debug, Serialize, Deserialize)]
 /// struct User {
 ///     id: Option<i64>,
 ///     name: String,
 /// }
 ///
-/// impl Model for User {
-///     type PrimaryKey = i64;
-///     fn table_name() -> &'static str { "users" }
-///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-/// }
+/// reinhardt_test::impl_test_model!(User, i64, "users");
 /// ```
 #[derive(Clone)]
 pub struct AdminDatabase {
@@ -272,18 +267,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn list<M: Model>(
 		&self,
@@ -495,18 +485,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn get<M: Model>(
 		&self,
@@ -563,18 +548,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn create<M: Model>(
 		&self,
@@ -647,18 +627,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn update<M: Model>(
 		&self,
@@ -719,18 +694,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn delete<M: Model>(
 		&self,
@@ -772,18 +742,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn bulk_delete<M: Model>(
 		&self,
@@ -862,18 +827,13 @@ impl AdminDatabase {
 	/// # Ok(())
 	/// # }
 	///
-	/// #[derive(Clone, Serialize, Deserialize)]
+	/// #[derive(Clone, Debug, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i64>,
 	///     name: String,
 	/// }
 	///
-	/// impl Model for User {
-	///     type PrimaryKey = i64;
-	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
-	///     fn set_primary_key(&mut self, pk: Self::PrimaryKey) { self.id = Some(pk); }
-	/// }
+	/// reinhardt_test::impl_test_model!(User, i64, "users");
 	/// ```
 	pub async fn count<M: Model>(
 		&self,
@@ -932,7 +892,7 @@ mod tests {
 	use rstest::*;
 
 	// Mock User model for testing
-	#[derive(Clone, serde::Serialize, serde::Deserialize)]
+	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct User {
 		id: i64,
 		name: String,
@@ -945,7 +905,7 @@ mod tests {
 	}
 
 	impl UserFields {
-		pub fn new() -> Self {
+		pub(crate) fn new() -> Self {
 			Self {
 				id: reinhardt_db::orm::query_fields::Field::new(vec!["id".to_string()]),
 				name: reinhardt_db::orm::query_fields::Field::new(vec!["name".to_string()]),

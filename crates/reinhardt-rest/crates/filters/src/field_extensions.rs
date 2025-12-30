@@ -76,7 +76,7 @@ impl<M: Model, T> FieldOrderingExt<M, T> for Field<M, T> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_db::orm::Model;
+	use reinhardt_db::orm::{FieldSelector, Model};
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestPost {
@@ -85,11 +85,24 @@ mod tests {
 		created_at: String,
 	}
 
+	#[derive(Clone)]
+	struct TestPostFields;
+	impl FieldSelector for TestPostFields {
+		fn with_alias(self, _alias: &str) -> Self {
+			self
+		}
+	}
+
 	impl Model for TestPost {
 		type PrimaryKey = i64;
+		type Fields = TestPostFields;
 
 		fn table_name() -> &'static str {
 			"test_posts"
+		}
+
+		fn new_fields() -> Self::Fields {
+			TestPostFields
 		}
 
 		fn primary_key(&self) -> Option<&Self::PrimaryKey> {

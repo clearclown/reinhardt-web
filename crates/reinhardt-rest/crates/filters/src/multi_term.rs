@@ -378,7 +378,7 @@ impl MultiTermSearch {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_db::orm::{Field, Model};
+	use reinhardt_db::orm::Field;
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestPost {

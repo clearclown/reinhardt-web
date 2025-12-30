@@ -31,12 +31,12 @@ use serial_test::serial;
 /// Mock ViewSet for nested resource testing
 #[derive(Debug, Clone)]
 struct MockViewSet {
-	name: String,
+	_name: String,
 }
 
 impl MockViewSet {
 	fn new(name: impl Into<String>) -> Self {
-		Self { name: name.into() }
+		Self { _name: name.into() }
 	}
 }
 
@@ -84,7 +84,7 @@ async fn test_nested_resource_list_config() {
 #[tokio::test]
 #[serial(viewset_nested)]
 async fn test_nested_resource_retrieve_config() {
-	let nested = NestedResource::new("articles", "article_id", "article_id");
+	let _nested = NestedResource::new("articles", "article_id", "article_id");
 
 	// URL pattern for retrieve: GET /articles/1/comments/5/
 	let retrieve_url = nested_detail_url("articles", "1", "comments", "5");

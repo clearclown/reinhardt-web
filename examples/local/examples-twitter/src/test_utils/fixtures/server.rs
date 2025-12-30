@@ -51,11 +51,15 @@ pub struct TestContext {
 pub async fn test_context(#[future] test_database: TestDatabase) -> TestContext {
 	let (_container, db) = test_database.await;
 
-	// Build empty router (examples-twitter uses reinhardt-pages, not traditional routing)
-	let router = Arc::new(UnifiedRouter::new());
+	// Build empty routers (examples-twitter uses reinhardt-pages, not traditional routing)
+	// Create separate instances since UnifiedRouter does not implement Clone
+	let router_for_server = UnifiedRouter::new();
+	let router_for_context = UnifiedRouter::new();
 
 	// Start test server with database connection
-	let guard = test_server_guard(Arc::clone(&router)).await;
+	let guard = test_server_guard(router_for_server).await;
+
+	let router = Arc::new(router_for_context);
 
 	// Create API client pointing to test server
 	let client = APIClient::with_base_url(&guard.url);

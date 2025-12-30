@@ -472,7 +472,9 @@ mod database_tests {
 #[cfg(all(with_reinhardt, not(target_arch = "wasm32")))]
 mod server_fn_tests {
 	use reinhardt::DatabaseConnection;
+	use reinhardt::db::orm::reinitialize_database;
 	use rstest::*;
+	use serial_test::serial;
 	use sqlx::SqlitePool;
 	use std::sync::Arc;
 	use tempfile::NamedTempFile;
@@ -484,23 +486,30 @@ mod server_fn_tests {
 	use examples_tutorial_basis::shared::types::VoteRequest;
 
 	/// Fixture: SQLite database with tables, test data, and DatabaseConnection
+	/// Also initializes the global ORM database connection for server functions.
 	#[fixture]
 	async fn sqlite_with_test_data() -> (NamedTempFile, Arc<SqlitePool>, DatabaseConnection) {
 		// Create temp file
 		let temp_file = NamedTempFile::new().expect("Failed to create temp file");
 		let db_path = temp_file.path().to_str().unwrap().to_string();
-		let database_url = format!("sqlite://{}?mode=rwc", db_path);
 
-		// Connect to SQLite
-		let pool = SqlitePool::connect(&database_url)
+		// URL for sqlx direct connection (with mode parameter for create-if-missing)
+		let sqlx_url = format!("sqlite://{}?mode=rwc", db_path);
+
+		// URL for reinhardt ORM (use sqlite:/// for absolute path, no query parameters)
+		// reinhardt's connect_sqlite automatically sets create_if_missing(true)
+		let orm_url = format!("sqlite:///{}", db_path);
+
+		// Connect to SQLite using sqlx directly
+		let pool = SqlitePool::connect(&sqlx_url)
 			.await
 			.expect("Failed to connect to SQLite");
 		let pool = Arc::new(pool);
 
-		// Create tables
+		// Create tables (using model table names: questions, choices)
 		sqlx::query(
 			r#"
-			CREATE TABLE IF NOT EXISTS polls_question (
+			CREATE TABLE IF NOT EXISTS questions (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				question_text VARCHAR(200) NOT NULL,
 				pub_date DATETIME NOT NULL
@@ -509,11 +518,11 @@ mod server_fn_tests {
 		)
 		.execute(pool.as_ref())
 		.await
-		.expect("Failed to create polls_question table");
+		.expect("Failed to create questions table");
 
 		sqlx::query(
 			r#"
-			CREATE TABLE IF NOT EXISTS polls_choice (
+			CREATE TABLE IF NOT EXISTS choices (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				question_id INTEGER NOT NULL,
 				choice_text VARCHAR(200) NOT NULL,
@@ -523,39 +532,41 @@ mod server_fn_tests {
 		)
 		.execute(pool.as_ref())
 		.await
-		.expect("Failed to create polls_choice table");
+		.expect("Failed to create choices table");
 
-		// Insert test data
+		// Insert test data (use ISO 8601 format for chrono DateTime<Utc> compatibility)
 		let question_id: i64 = sqlx::query_scalar(
-			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+			"INSERT INTO questions (question_text, pub_date) VALUES ($1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) RETURNING id",
 		)
 		.bind("What's your favorite color?")
 		.fetch_one(pool.as_ref())
 		.await
 		.expect("Failed to insert test question");
 
-		sqlx::query(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-		)
-		.bind(question_id)
-		.bind("Red")
-		.bind(0i32)
-		.execute(pool.as_ref())
-		.await
-		.expect("Failed to insert choice 1");
+		sqlx::query("INSERT INTO choices (question_id, choice_text, votes) VALUES ($1, $2, $3)")
+			.bind(question_id)
+			.bind("Red")
+			.bind(0i32)
+			.execute(pool.as_ref())
+			.await
+			.expect("Failed to insert choice 1");
 
-		sqlx::query(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-		)
-		.bind(question_id)
-		.bind("Blue")
-		.bind(0i32)
-		.execute(pool.as_ref())
-		.await
-		.expect("Failed to insert choice 2");
+		sqlx::query("INSERT INTO choices (question_id, choice_text, votes) VALUES ($1, $2, $3)")
+			.bind(question_id)
+			.bind("Blue")
+			.bind(0i32)
+			.execute(pool.as_ref())
+			.await
+			.expect("Failed to insert choice 2");
+
+		// Initialize the global ORM database for server functions
+		// Server functions use Question::objects() which relies on global database
+		reinitialize_database(&orm_url)
+			.await
+			.expect("Failed to initialize global database");
 
 		// Create DatabaseConnection for server functions
-		let db_conn = DatabaseConnection::connect_sqlite(&database_url)
+		let db_conn = DatabaseConnection::connect_sqlite(&orm_url)
 			.await
 			.expect("Failed to create DatabaseConnection");
 
@@ -564,6 +575,7 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_get_questions_server_fn(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -571,15 +583,14 @@ mod server_fn_tests {
 
 		// Test: Get questions via server function (pass DatabaseConnection as argument)
 		let result = get_questions(db_conn).await;
-		assert!(result.is_ok(), "get_questions should succeed");
-
-		let questions = result.unwrap();
+		let questions = result.expect("get_questions should succeed");
 		assert_eq!(questions.len(), 1, "Should have 1 question");
 		assert_eq!(questions[0].question_text, "What's your favorite color?");
 	}
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_get_question_detail_server_fn(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -598,6 +609,7 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_get_question_detail_not_found(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -613,6 +625,7 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_get_question_results_server_fn(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -630,6 +643,7 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_vote_server_fn(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -642,9 +656,7 @@ mod server_fn_tests {
 		};
 
 		let result = vote(vote_request, db_conn).await;
-		assert!(result.is_ok(), "vote should succeed");
-
-		let choice_info = result.unwrap();
+		let choice_info = result.expect("vote should succeed");
 		assert_eq!(choice_info.votes, 1, "Choice should have 1 vote");
 
 		// Note: Cannot verify total votes here since db_conn was consumed
@@ -653,6 +665,7 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
+	#[serial(server_fn_tests)]
 	async fn test_vote_wrong_question(
 		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
 	) {
@@ -673,23 +686,27 @@ mod server_fn_tests {
 
 	#[rstest]
 	#[tokio::test]
-	async fn test_vote_multiple_times(
-		#[future] sqlite_with_test_data: (NamedTempFile, Arc<SqlitePool>, DatabaseConnection),
-	) {
+	#[serial(server_fn_tests)]
+	async fn test_vote_multiple_times() {
 		// Create temp file
 		let temp_file = NamedTempFile::new().expect("Failed to create temp file");
 		let db_path = temp_file.path().to_str().unwrap().to_string();
-		let database_url = format!("sqlite://{}?mode=rwc", db_path);
 
-		// Connect to SQLite
-		let pool = SqlitePool::connect(&database_url)
+		// URL for sqlx direct connection (with mode parameter for create-if-missing)
+		let sqlx_url = format!("sqlite://{}?mode=rwc", db_path);
+
+		// URL for reinhardt ORM (use sqlite:/// for absolute path, no query parameters)
+		let orm_url = format!("sqlite:///{}", db_path);
+
+		// Connect to SQLite using sqlx directly
+		let pool = SqlitePool::connect(&sqlx_url)
 			.await
 			.expect("Failed to connect to SQLite");
 
-		// Create tables
+		// Create tables (using model table names: questions, choices)
 		sqlx::query(
 			r#"
-			CREATE TABLE IF NOT EXISTS polls_question (
+			CREATE TABLE IF NOT EXISTS questions (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				question_text VARCHAR(200) NOT NULL,
 				pub_date DATETIME NOT NULL
@@ -698,11 +715,11 @@ mod server_fn_tests {
 		)
 		.execute(&pool)
 		.await
-		.expect("Failed to create polls_question table");
+		.expect("Failed to create questions table");
 
 		sqlx::query(
 			r#"
-			CREATE TABLE IF NOT EXISTS polls_choice (
+			CREATE TABLE IF NOT EXISTS choices (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				question_id INTEGER NOT NULL,
 				choice_text VARCHAR(200) NOT NULL,
@@ -712,36 +729,37 @@ mod server_fn_tests {
 		)
 		.execute(&pool)
 		.await
-		.expect("Failed to create polls_choice table");
+		.expect("Failed to create choices table");
 
-		// Insert test data
+		// Insert test data (use ISO 8601 format for chrono DateTime<Utc> compatibility)
 		let question_id: i64 = sqlx::query_scalar(
-			"INSERT INTO polls_question (question_text, pub_date) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id",
+			"INSERT INTO questions (question_text, pub_date) VALUES ($1, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) RETURNING id",
 		)
 		.bind("What's your favorite color?")
 		.fetch_one(&pool)
 		.await
 		.expect("Failed to insert test question");
 
-		sqlx::query(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-		)
-		.bind(question_id)
-		.bind("Red")
-		.bind(0i32)
-		.execute(&pool)
-		.await
-		.expect("Failed to insert choice 1");
+		sqlx::query("INSERT INTO choices (question_id, choice_text, votes) VALUES ($1, $2, $3)")
+			.bind(question_id)
+			.bind("Red")
+			.bind(0i32)
+			.execute(&pool)
+			.await
+			.expect("Failed to insert choice 1");
 
-		sqlx::query(
-			"INSERT INTO polls_choice (question_id, choice_text, votes) VALUES ($1, $2, $3)",
-		)
-		.bind(question_id)
-		.bind("Blue")
-		.bind(0i32)
-		.execute(&pool)
-		.await
-		.expect("Failed to insert choice 2");
+		sqlx::query("INSERT INTO choices (question_id, choice_text, votes) VALUES ($1, $2, $3)")
+			.bind(question_id)
+			.bind("Blue")
+			.bind(0i32)
+			.execute(&pool)
+			.await
+			.expect("Failed to insert choice 2");
+
+		// Initialize the global ORM database for server functions
+		reinitialize_database(&orm_url)
+			.await
+			.expect("Failed to initialize global database");
 
 		// Test: Vote multiple times for the same choice (each vote needs fresh connection)
 		let vote_request = VoteRequest {
@@ -750,25 +768,25 @@ mod server_fn_tests {
 		};
 
 		// First vote
-		let db_conn1 = DatabaseConnection::connect_sqlite(&database_url)
+		let db_conn1 = DatabaseConnection::connect_sqlite(&orm_url)
 			.await
 			.expect("Failed to create DatabaseConnection");
 		vote(vote_request.clone(), db_conn1).await.unwrap();
 
 		// Second vote
-		let db_conn2 = DatabaseConnection::connect_sqlite(&database_url)
+		let db_conn2 = DatabaseConnection::connect_sqlite(&orm_url)
 			.await
 			.expect("Failed to create DatabaseConnection");
 		vote(vote_request.clone(), db_conn2).await.unwrap();
 
 		// Third vote
-		let db_conn3 = DatabaseConnection::connect_sqlite(&database_url)
+		let db_conn3 = DatabaseConnection::connect_sqlite(&orm_url)
 			.await
 			.expect("Failed to create DatabaseConnection");
 		vote(vote_request.clone(), db_conn3).await.unwrap();
 
 		// Verify votes counted correctly
-		let db_conn_check = DatabaseConnection::connect_sqlite(&database_url)
+		let db_conn_check = DatabaseConnection::connect_sqlite(&orm_url)
 			.await
 			.expect("Failed to create DatabaseConnection");
 		let results = get_question_results(1, db_conn_check).await.unwrap();

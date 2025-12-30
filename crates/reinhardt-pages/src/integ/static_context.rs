@@ -92,8 +92,10 @@ pub fn resolve_static_url(path: &str) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use serial_test::serial;
 
 	#[test]
+	#[serial(static_context)]
 	fn test_resolve_with_manifest() {
 		let mut manifest = HashMap::new();
 		manifest.insert(
@@ -118,9 +120,11 @@ mod tests {
 	}
 
 	#[test]
+	#[serial(static_context)]
 	fn test_resolve_fallback() {
-		// This test reuses the manifest from the previous test
-		// (OnceLock can only be set once)
+		// Initialize context if not already initialized (OnceLock can only be set once)
+		let _ = STATIC_MANIFEST.set(HashMap::new());
+
 		assert_eq!(resolve_static_url("unknown.png"), "/static/unknown.png");
 	}
 

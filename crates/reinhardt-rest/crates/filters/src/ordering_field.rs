@@ -170,7 +170,7 @@ impl<M: Model> Clone for OrderingField<M> {
 mod tests {
 	use super::*;
 	use crate::field_extensions::FieldOrderingExt;
-	use reinhardt_db::orm::{Field, Model};
+	use reinhardt_db::orm::Field;
 
 	#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	struct TestPost {

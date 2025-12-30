@@ -1282,8 +1282,6 @@ impl RunServerCommand {
 		// Register DatabaseConnection as singleton when database feature is enabled
 		#[cfg(feature = "reinhardt-db")]
 		{
-			use reinhardt_db::DatabaseConnection;
-
 			// Try to connect to database and register connection
 			match get_database_url() {
 				Ok(url) => {
@@ -1291,16 +1289,29 @@ impl RunServerCommand {
 						"Connecting to database: {}...",
 						&url[..url.len().min(50)]
 					));
-					match DatabaseConnection::connect(&url).await {
-						Ok(db_conn) => {
-							// Register DatabaseConnection directly (not wrapped in Arc)
-							// The DI system wraps it in Arc internally via SingletonScope::set
-							singleton_scope.set(db_conn);
-							ctx.info("✅ Database connection registered in DI context");
+					// Initialize ORM global database first, which also creates the connection pool
+					match reinhardt_db::orm::init_database(&url).await {
+						Ok(()) => {
+							ctx.info("✅ ORM global database initialized");
+							// Get the connection from ORM and register in DI context for dependency injection
+							match reinhardt_db::orm::get_connection().await {
+								Ok(db_conn) => {
+									// Register DatabaseConnection directly (not wrapped in Arc)
+									// The DI system wraps it in Arc internally via SingletonScope::set
+									singleton_scope.set(db_conn);
+									ctx.info("✅ Database connection registered in DI context");
+								}
+								Err(e) => {
+									ctx.warning(&format!(
+										"⚠️ Failed to get database connection for DI: {}",
+										e
+									));
+								}
+							}
 						}
 						Err(e) => {
 							ctx.warning(&format!(
-								"⚠️ Failed to connect to database: {}. DI injection for DatabaseConnection will fail.",
+								"⚠️ Failed to initialize ORM database: {}. DI injection for DatabaseConnection will fail.",
 								e
 							));
 						}

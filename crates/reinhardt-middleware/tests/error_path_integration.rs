@@ -196,7 +196,7 @@ async fn test_rate_limit_per_user_isolation() {
 	// not from headers. We need to set the user ID in extensions.
 
 	// Execute: Request from user 1 (using extensions)
-	let mut request1 = Request::builder()
+	let request1 = Request::builder()
 		.method(Method::GET)
 		.uri("/api/data")
 		.body(Bytes::new())
@@ -206,7 +206,7 @@ async fn test_rate_limit_per_user_isolation() {
 	let _ = middleware.process(request1, handler.clone()).await.unwrap();
 
 	// User 1 is now rate limited
-	let mut request2 = Request::builder()
+	let request2 = Request::builder()
 		.method(Method::GET)
 		.uri("/api/data")
 		.body(Bytes::new())
@@ -217,7 +217,7 @@ async fn test_rate_limit_per_user_isolation() {
 	assert_status(&response2, 429);
 
 	// But user 2 should still be allowed
-	let mut request3 = Request::builder()
+	let request3 = Request::builder()
 		.method(Method::GET)
 		.uri("/api/data")
 		.body(Bytes::new())

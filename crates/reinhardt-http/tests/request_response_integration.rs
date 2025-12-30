@@ -11,7 +11,6 @@ use hyper::{Method, StatusCode};
 use reinhardt_http::{Error, Request, Response};
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_test::fixtures::test_server_guard;
-use std::sync::Arc;
 
 /// Test content negotiation: Accept header processing
 #[tokio::test]
@@ -39,7 +38,7 @@ async fn test_content_negotiation_json() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	// Test JSON content negotiation
@@ -100,7 +99,7 @@ async fn test_content_negotiation_wildcard() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	// Test wildcard accept
@@ -144,7 +143,7 @@ async fn test_streaming_response() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -182,7 +181,7 @@ async fn test_large_streaming_response() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -228,7 +227,7 @@ async fn test_request_response_post_roundtrip() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	// Send POST request with JSON body
@@ -273,7 +272,7 @@ async fn test_request_response_error_handling() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client
@@ -318,7 +317,7 @@ async fn test_multiple_accept_headers() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	// Test each format
@@ -372,7 +371,7 @@ async fn test_request_response_query_params() {
 		Ok::<Response, Error>(response)
 	});
 
-	let server = test_server_guard(Arc::new(router)).await;
+	let server = test_server_guard(router).await;
 	let client = reqwest::Client::new();
 
 	let response = client

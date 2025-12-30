@@ -101,8 +101,10 @@ pub fn resolve_url(route_name: &str) -> String {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use serial_test::serial;
 
 	#[test]
+	#[serial(url_resolver)]
 	fn test_resolve_basic_routes() {
 		let mut routes = HashMap::new();
 		routes.insert("home".to_string(), "/".to_string());
@@ -117,10 +119,12 @@ mod tests {
 	}
 
 	#[test]
+	#[serial(url_resolver)]
 	#[should_panic(expected = "Route 'nonexistent' not found")]
 	fn test_resolve_nonexistent_route() {
-		// This test reuses the mapping from the previous test
-		// (OnceLock can only be set once)
+		// Initialize with empty routes if not already initialized (OnceLock can only be set once)
+		let _ = URL_ROUTES.set(HashMap::new());
+
 		resolve_url("nonexistent");
 	}
 

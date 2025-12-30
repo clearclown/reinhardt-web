@@ -25,7 +25,6 @@ use reinhardt_serializers::JsonSerializer;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::testcontainers::{ContainerAsync, GenericImage};
 use reinhardt_views::{ListAPIView, View};
-use reinhardt_viewsets::PaginationConfig;
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
