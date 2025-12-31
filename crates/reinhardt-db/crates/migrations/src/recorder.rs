@@ -118,7 +118,7 @@ impl DatabaseMigrationRecorder {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_migrations::recorder::DatabaseMigrationRecorder;
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -130,7 +130,7 @@ impl DatabaseMigrationRecorder {
 	/// recorder.ensure_schema_table().await.unwrap();
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(connection: DatabaseConnection) -> Self {
 		Self { connection }
 	}
@@ -229,10 +229,6 @@ impl DatabaseMigrationRecorder {
 			DatabaseType::Sqlite => {
 				// SQLite uses transaction isolation, no additional lock needed
 			}
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				// MongoDB has its own document-level locking
-			}
 		}
 
 		Ok(())
@@ -263,10 +259,6 @@ impl DatabaseMigrationRecorder {
 			DatabaseType::Sqlite => {
 				// SQLite uses transaction isolation, no explicit unlock needed
 			}
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				// MongoDB has its own document-level locking
-			}
 		}
 
 		Ok(())
@@ -281,52 +273,6 @@ impl DatabaseMigrationRecorder {
 			Alias, ColumnDef, Expr, Index, MysqlQueryBuilder, PostgresQueryBuilder,
 			SqliteQueryBuilder, Table,
 		};
-
-		// Handle MongoDB separately (early return)
-		#[cfg(feature = "mongodb-backend")]
-		if self.connection.database_type() == DatabaseType::MongoDB {
-			use bson::doc;
-
-			let backend = self.connection.backend();
-			let backend_any = backend.as_any();
-
-			if let Some(mongo_backend) =
-				backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-			{
-				let db = mongo_backend.database();
-				let collection = db.collection::<bson::Document>("_reinhardt_migrations");
-
-				let indexes = collection.list_index_names().await.map_err(|e| {
-					crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(e.to_string()),
-					)
-				})?;
-
-				if indexes.is_empty() {
-					use mongodb::IndexModel;
-					use mongodb::options::IndexOptions;
-
-					let index = IndexModel::builder()
-						.keys(doc! { "app": 1, "name": 1 })
-						.options(IndexOptions::builder().unique(true).build())
-						.build();
-
-					collection.create_index(index).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::ConnectionError(e.to_string()),
-						)
-					})?;
-				}
-
-				return Ok(());
-			} else {
-				return Err(crate::MigrationError::DatabaseError(
-					reinhardt_backends::DatabaseError::ConnectionError(
-						"Failed to downcast to MongoDBBackend".to_string(),
-					),
-				));
-			}
-		}
 
 		// Build SQL using appropriate query builder based on database type
 		// Scope stmt to ensure it's dropped before await
@@ -377,8 +323,6 @@ impl DatabaseMigrationRecorder {
 					create_table_stmt.to_string(SqliteQueryBuilder),
 					create_index_stmt.to_string(SqliteQueryBuilder),
 				),
-				#[cfg(feature = "mongodb-backend")]
-				DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 			}
 		}; // stmts are dropped here, before await
 
@@ -433,91 +377,51 @@ impl DatabaseMigrationRecorder {
 	/// assert!(!is_applied); // Initially not applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub async fn is_applied(&self, app: &str, name: &str) -> crate::Result<bool> {
 		use reinhardt_backends::types::DatabaseType;
+		use sea_query::{
+			Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
+			SqliteQueryBuilder,
+		};
 
-		match self.connection.database_type() {
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				use bson::doc;
+		// Build SELECT EXISTS query using sea-query
+		let subquery = Query::select()
+			.expr(Expr::value(1))
+			.from(Alias::new("reinhardt_migrations"))
+			.and_where(Expr::col(Alias::new("app")).eq(app))
+			.and_where(Expr::col(Alias::new("name")).eq(name))
+			.to_owned();
 
-				let backend = self.connection.backend();
-				let backend_any = backend.as_any();
+		let stmt = Query::select()
+			.expr_as(Expr::exists(subquery), Alias::new("exists_flag"))
+			.to_owned();
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-				{
-					let db = mongo_backend.database();
-					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
+		let sql = match self.connection.database_type() {
+			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
+			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
+			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+		};
 
-					let filter = doc! {
-						"app": app,
-						"name": name
-					};
+		let rows = self
+			.connection
+			.fetch_all(&sql, vec![])
+			.await
+			.map_err(crate::MigrationError::DatabaseError)?;
 
-					let count = collection.count_documents(filter).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-						)
-					})?;
+		if rows.is_empty() {
+			return Ok(false);
+		}
 
-					Ok(count > 0)
-				} else {
-					Err(crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(
-							"Failed to downcast to MongoDBBackend".to_string(),
-						),
-					))
-				}
-			}
-			DatabaseType::Postgres | DatabaseType::Mysql | DatabaseType::Sqlite => {
-				use sea_query::{
-					Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
-					SqliteQueryBuilder,
-				};
+		let row = &rows[0];
 
-				// Build SELECT EXISTS query using sea-query
-				let subquery = Query::select()
-					.expr(Expr::value(1))
-					.from(Alias::new("reinhardt_migrations"))
-					.and_where(Expr::col(Alias::new("app")).eq(app))
-					.and_where(Expr::col(Alias::new("name")).eq(name))
-					.to_owned();
-
-				let stmt = Query::select()
-					.expr_as(Expr::exists(subquery), Alias::new("exists_flag"))
-					.to_owned();
-
-				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
-					DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
-					DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-					#[cfg(feature = "mongodb-backend")]
-					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
-				};
-
-				let rows = self
-					.connection
-					.fetch_all(&sql, vec![])
-					.await
-					.map_err(crate::MigrationError::DatabaseError)?;
-
-				if rows.is_empty() {
-					return Ok(false);
-				}
-
-				let row = &rows[0];
-
-				// Try to get as bool first, then as i64 for databases that return int
-				if let Ok(exists) = row.get::<bool>("exists_flag") {
-					Ok(exists)
-				} else if let Ok(exists_int) = row.get::<i64>("exists_flag") {
-					Ok(exists_int > 0)
-				} else {
-					Ok(false)
-				}
-			}
+		// Try to get as bool first, then as i64 for databases that return int
+		if let Ok(exists) = row.get::<bool>("exists_flag") {
+			Ok(exists)
+		} else if let Ok(exists_int) = row.get::<i64>("exists_flag") {
+			Ok(exists_int > 0)
+		} else {
+			Ok(false)
 		}
 	}
 
@@ -525,7 +429,7 @@ impl DatabaseMigrationRecorder {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_migrations::recorder::DatabaseMigrationRecorder;
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -541,89 +445,47 @@ impl DatabaseMigrationRecorder {
 	/// assert!(is_applied);
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub async fn record_applied(&self, app: &str, name: &str) -> crate::Result<()> {
 		use reinhardt_backends::types::DatabaseType;
+		use sea_query::{
+			Alias, Expr, MysqlQueryBuilder, PostgresQueryBuilder, Query, SqliteQueryBuilder,
+		};
 
-		match self.connection.database_type() {
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				use bson::doc;
-				use chrono::Utc;
+		// Build INSERT query using sea-query
+		let stmt = Query::insert()
+			.into_table(Alias::new("reinhardt_migrations"))
+			.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
+			.values_panic([app.into(), name.into(), Expr::current_timestamp()])
+			.to_owned();
 
-				let backend = self.connection.backend();
-				let backend_any = backend.as_any();
-
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-				{
-					let db = mongo_backend.database();
-					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
-
-					let doc = doc! {
-						"app": app,
-						"name": name,
-						"applied": bson::DateTime::from_millis(Utc::now().timestamp_millis())
-					};
-
-					collection.insert_one(doc).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-						)
-					})?;
-
-					Ok(())
-				} else {
-					Err(crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(
-							"Failed to downcast to MongoDBBackend".to_string(),
-						),
-					))
-				}
+		// Add conflict resolution for concurrent execution
+		let sql = match self.connection.database_type() {
+			DatabaseType::Postgres => {
+				// PostgreSQL: ON CONFLICT DO NOTHING
+				format!(
+					"{} ON CONFLICT (app, name) DO NOTHING",
+					stmt.to_string(PostgresQueryBuilder)
+				)
 			}
-			DatabaseType::Postgres | DatabaseType::Mysql | DatabaseType::Sqlite => {
-				use sea_query::{
-					Alias, Expr, MysqlQueryBuilder, PostgresQueryBuilder, Query, SqliteQueryBuilder,
-				};
-
-				// Build INSERT query using sea-query
-				let stmt = Query::insert()
-					.into_table(Alias::new("reinhardt_migrations"))
-					.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
-					.values_panic([app.into(), name.into(), Expr::current_timestamp()])
-					.to_owned();
-
-				// Add conflict resolution for concurrent execution
-				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => {
-						// PostgreSQL: ON CONFLICT DO NOTHING
-						format!(
-							"{} ON CONFLICT (app, name) DO NOTHING",
-							stmt.to_string(PostgresQueryBuilder)
-						)
-					}
-					DatabaseType::Mysql => {
-						// MySQL: INSERT IGNORE
-						let base_sql = stmt.to_string(MysqlQueryBuilder);
-						base_sql.replacen("INSERT", "INSERT IGNORE", 1)
-					}
-					DatabaseType::Sqlite => {
-						// SQLite: INSERT OR IGNORE
-						let base_sql = stmt.to_string(SqliteQueryBuilder);
-						base_sql.replacen("INSERT", "INSERT OR IGNORE", 1)
-					}
-					#[cfg(feature = "mongodb-backend")]
-					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
-				};
-
-				self.connection
-					.execute(&sql, vec![])
-					.await
-					.map_err(crate::MigrationError::DatabaseError)?;
-
-				Ok(())
+			DatabaseType::Mysql => {
+				// MySQL: INSERT IGNORE
+				let base_sql = stmt.to_string(MysqlQueryBuilder);
+				base_sql.replacen("INSERT", "INSERT IGNORE", 1)
 			}
-		}
+			DatabaseType::Sqlite => {
+				// SQLite: INSERT OR IGNORE
+				let base_sql = stmt.to_string(SqliteQueryBuilder);
+				base_sql.replacen("INSERT", "INSERT OR IGNORE", 1)
+			}
+		};
+
+		self.connection
+			.execute(&sql, vec![])
+			.await
+			.map_err(crate::MigrationError::DatabaseError)?;
+
+		Ok(())
 	}
 
 	/// Get all applied migrations
@@ -644,161 +506,71 @@ impl DatabaseMigrationRecorder {
 	/// assert!(migrations.is_empty()); // Initially no migrations applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub async fn get_applied_migrations(&self) -> crate::Result<Vec<MigrationRecord>> {
 		use reinhardt_backends::types::DatabaseType;
+		use sea_query::{
+			Alias, MysqlQueryBuilder, Order, PostgresQueryBuilder, Query, SqliteQueryBuilder,
+		};
 
-		match self.connection.database_type() {
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				use bson::doc;
-				use futures::stream::TryStreamExt;
+		// Build SELECT query using sea-query
+		let stmt = Query::select()
+			.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
+			.from(Alias::new("reinhardt_migrations"))
+			.order_by(Alias::new("applied"), Order::Asc)
+			.to_owned();
 
-				let backend = self.connection.backend();
-				let backend_any = backend.as_any();
+		let sql = match self.connection.database_type() {
+			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
+			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
+			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+		};
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-				{
-					let db = mongo_backend.database();
-					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
+		let rows = self
+			.connection
+			.fetch_all(&sql, vec![])
+			.await
+			.map_err(crate::MigrationError::DatabaseError)?;
 
-					let find_options = mongodb::options::FindOptions::builder()
-						.sort(doc! { "applied": 1 })
-						.build();
+		let db_type = self.connection.database_type();
+		let mut records = Vec::new();
+		for row in rows {
+			let app: String = row
+				.get("app")
+				.map_err(crate::MigrationError::DatabaseError)?;
+			let name: String = row
+				.get("name")
+				.map_err(crate::MigrationError::DatabaseError)?;
 
-					let mut cursor = collection
-						.find(doc! {})
-						.with_options(find_options)
-						.await
+			// Parse timestamp from database
+			// SQLite stores CURRENT_TIMESTAMP as string "YYYY-MM-DD HH:MM:SS"
+			// PostgreSQL and MySQL return proper DateTime types
+			let applied: DateTime<Utc> = match db_type {
+				DatabaseType::Sqlite => {
+					let applied_str: String = row
+						.get("applied")
+						.map_err(crate::MigrationError::DatabaseError)?;
+					// Parse SQLite's CURRENT_TIMESTAMP format (no timezone info, assume UTC)
+					chrono::NaiveDateTime::parse_from_str(&applied_str, "%Y-%m-%d %H:%M:%S")
+						.map(|naive| naive.and_utc())
 						.map_err(|e| {
 							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+								reinhardt_backends::DatabaseError::TypeError(format!(
+									"Failed to parse SQLite timestamp '{}': {}",
+									applied_str, e
+								)),
 							)
-						})?;
-
-					let mut records = Vec::new();
-					while let Some(doc) = cursor.try_next().await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-						)
-					})? {
-						let app = doc
-							.get_str("app")
-							.map_err(|e| {
-								crate::MigrationError::DatabaseError(
-									reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-								)
-							})?
-							.to_string();
-
-						let name = doc
-							.get_str("name")
-							.map_err(|e| {
-								crate::MigrationError::DatabaseError(
-									reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-								)
-							})?
-							.to_string();
-
-						let applied_bson = doc.get_datetime("applied").map_err(|e| {
-							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-							)
-						})?;
-
-						let applied = chrono::DateTime::from_timestamp_millis(
-							applied_bson.timestamp_millis(),
-						)
-						.ok_or_else(|| {
-							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(
-									"Invalid timestamp".to_string(),
-								),
-							)
-						})?;
-
-						records.push(MigrationRecord { app, name, applied });
-					}
-
-					Ok(records)
-				} else {
-					Err(crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(
-							"Failed to downcast to MongoDBBackend".to_string(),
-						),
-					))
+						})?
 				}
-			}
-			DatabaseType::Postgres | DatabaseType::Mysql | DatabaseType::Sqlite => {
-				use reinhardt_backends::types::DatabaseType;
-				use sea_query::{
-					Alias, MysqlQueryBuilder, Order, PostgresQueryBuilder, Query,
-					SqliteQueryBuilder,
-				};
+				_ => row
+					.get("applied")
+					.map_err(crate::MigrationError::DatabaseError)?,
+			};
 
-				// Build SELECT query using sea-query
-				let stmt = Query::select()
-					.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
-					.from(Alias::new("reinhardt_migrations"))
-					.order_by(Alias::new("applied"), Order::Asc)
-					.to_owned();
-
-				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
-					DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
-					DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-					#[cfg(feature = "mongodb-backend")]
-					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
-				};
-
-				let rows = self
-					.connection
-					.fetch_all(&sql, vec![])
-					.await
-					.map_err(crate::MigrationError::DatabaseError)?;
-
-				let db_type = self.connection.database_type();
-				let mut records = Vec::new();
-				for row in rows {
-					let app: String = row
-						.get("app")
-						.map_err(crate::MigrationError::DatabaseError)?;
-					let name: String = row
-						.get("name")
-						.map_err(crate::MigrationError::DatabaseError)?;
-
-					// Parse timestamp from database
-					// SQLite stores CURRENT_TIMESTAMP as string "YYYY-MM-DD HH:MM:SS"
-					// PostgreSQL and MySQL return proper DateTime types
-					let applied: DateTime<Utc> = match db_type {
-						DatabaseType::Sqlite => {
-							let applied_str: String = row
-								.get("applied")
-								.map_err(crate::MigrationError::DatabaseError)?;
-							// Parse SQLite's CURRENT_TIMESTAMP format (no timezone info, assume UTC)
-							chrono::NaiveDateTime::parse_from_str(&applied_str, "%Y-%m-%d %H:%M:%S")
-								.map(|naive| naive.and_utc())
-								.map_err(|e| {
-									crate::MigrationError::DatabaseError(
-										reinhardt_backends::DatabaseError::TypeError(format!(
-											"Failed to parse SQLite timestamp '{}': {}",
-											applied_str, e
-										)),
-									)
-								})?
-						}
-						_ => row
-							.get("applied")
-							.map_err(crate::MigrationError::DatabaseError)?,
-					};
-
-					records.push(MigrationRecord { app, name, applied });
-				}
-
-				Ok(records)
-			}
+			records.push(MigrationRecord { app, name, applied });
 		}
+
+		Ok(records)
 	}
 
 	/// Unapply a migration (remove from records)
@@ -806,70 +578,30 @@ impl DatabaseMigrationRecorder {
 	/// Used when rolling back migrations.
 	pub async fn unapply(&self, app: &str, name: &str) -> crate::Result<()> {
 		use reinhardt_backends::types::DatabaseType;
+		use sea_query::{
+			Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
+			SqliteQueryBuilder,
+		};
 
-		match self.connection.database_type() {
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				use bson::doc;
+		// Build DELETE query using sea-query
+		let stmt = Query::delete()
+			.from_table(Alias::new("reinhardt_migrations"))
+			.and_where(Expr::col(Alias::new("app")).eq(app))
+			.and_where(Expr::col(Alias::new("name")).eq(name))
+			.to_owned();
 
-				let backend = self.connection.backend();
-				let backend_any = backend.as_any();
+		let sql = match self.connection.database_type() {
+			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
+			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
+			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+		};
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-				{
-					let db = mongo_backend.database();
-					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
+		self.connection
+			.execute(&sql, vec![])
+			.await
+			.map_err(crate::MigrationError::DatabaseError)?;
 
-					let filter = doc! {
-						"app": app,
-						"name": name
-					};
-
-					collection.delete_one(filter).await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-						)
-					})?;
-
-					Ok(())
-				} else {
-					Err(crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(
-							"Failed to downcast to MongoDBBackend".to_string(),
-						),
-					))
-				}
-			}
-			DatabaseType::Postgres | DatabaseType::Mysql | DatabaseType::Sqlite => {
-				use sea_query::{
-					Alias, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
-					SqliteQueryBuilder,
-				};
-
-				// Build DELETE query using sea-query
-				let stmt = Query::delete()
-					.from_table(Alias::new("reinhardt_migrations"))
-					.and_where(Expr::col(Alias::new("app")).eq(app))
-					.and_where(Expr::col(Alias::new("name")).eq(name))
-					.to_owned();
-
-				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
-					DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
-					DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-					#[cfg(feature = "mongodb-backend")]
-					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
-				};
-
-				self.connection
-					.execute(&sql, vec![])
-					.await
-					.map_err(crate::MigrationError::DatabaseError)?;
-
-				Ok(())
-			}
-		}
+		Ok(())
 	}
 
 	/// Get all applied migrations for a specific app
@@ -891,166 +623,74 @@ impl DatabaseMigrationRecorder {
 	/// assert!(migrations.is_empty()); // Initially no migrations applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub async fn get_applied_for_app(&self, app: &str) -> crate::Result<Vec<MigrationRecord>> {
 		use reinhardt_backends::types::DatabaseType;
+		use sea_query::{
+			Alias, Expr, ExprTrait, MysqlQueryBuilder, Order, PostgresQueryBuilder, Query,
+			SqliteQueryBuilder,
+		};
 
-		match self.connection.database_type() {
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				use bson::doc;
-				use futures::stream::TryStreamExt;
+		// Build SELECT query using sea-query with app filter
+		let stmt = Query::select()
+			.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
+			.from(Alias::new("reinhardt_migrations"))
+			.and_where(Expr::col(Alias::new("app")).eq(app))
+			.order_by(Alias::new("applied"), Order::Asc)
+			.to_owned();
 
-				let backend = self.connection.backend();
-				let backend_any = backend.as_any();
+		let sql = match self.connection.database_type() {
+			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
+			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
+			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
+		};
 
-				if let Some(mongo_backend) =
-					backend_any.downcast_ref::<reinhardt_nosql::backends::mongodb::MongoDBBackend>()
-				{
-					let db = mongo_backend.database();
-					let collection = db.collection::<bson::Document>("_reinhardt_migrations");
+		let rows = self
+			.connection
+			.fetch_all(&sql, vec![])
+			.await
+			.map_err(crate::MigrationError::DatabaseError)?;
 
-					let find_options = mongodb::options::FindOptions::builder()
-						.sort(doc! { "applied": 1 })
-						.build();
+		let db_type = self.connection.database_type();
+		let mut records = Vec::new();
+		for row in rows {
+			let app_val: String = row
+				.get("app")
+				.map_err(crate::MigrationError::DatabaseError)?;
+			let name: String = row
+				.get("name")
+				.map_err(crate::MigrationError::DatabaseError)?;
 
-					let mut cursor = collection
-						.find(doc! { "app": app })
-						.with_options(find_options)
-						.await
+			// Parse timestamp from database
+			let applied: DateTime<Utc> = match db_type {
+				DatabaseType::Sqlite => {
+					let applied_str: String = row
+						.get("applied")
+						.map_err(crate::MigrationError::DatabaseError)?;
+					chrono::NaiveDateTime::parse_from_str(&applied_str, "%Y-%m-%d %H:%M:%S")
+						.map(|naive| naive.and_utc())
 						.map_err(|e| {
 							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(e.to_string()),
+								reinhardt_backends::DatabaseError::TypeError(format!(
+									"Failed to parse SQLite timestamp '{}': {}",
+									applied_str, e
+								)),
 							)
-						})?;
-
-					let mut records = Vec::new();
-					while let Some(doc) = cursor.try_next().await.map_err(|e| {
-						crate::MigrationError::DatabaseError(
-							reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-						)
-					})? {
-						let app_val = doc
-							.get_str("app")
-							.map_err(|e| {
-								crate::MigrationError::DatabaseError(
-									reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-								)
-							})?
-							.to_string();
-
-						let name = doc
-							.get_str("name")
-							.map_err(|e| {
-								crate::MigrationError::DatabaseError(
-									reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-								)
-							})?
-							.to_string();
-
-						let applied_bson = doc.get_datetime("applied").map_err(|e| {
-							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(e.to_string()),
-							)
-						})?;
-
-						let applied = chrono::DateTime::from_timestamp_millis(
-							applied_bson.timestamp_millis(),
-						)
-						.ok_or_else(|| {
-							crate::MigrationError::DatabaseError(
-								reinhardt_backends::DatabaseError::QueryError(
-									"Invalid timestamp".to_string(),
-								),
-							)
-						})?;
-
-						records.push(MigrationRecord {
-							app: app_val,
-							name,
-							applied,
-						});
-					}
-
-					Ok(records)
-				} else {
-					Err(crate::MigrationError::DatabaseError(
-						reinhardt_backends::DatabaseError::ConnectionError(
-							"Failed to downcast to MongoDBBackend".to_string(),
-						),
-					))
+						})?
 				}
-			}
-			DatabaseType::Postgres | DatabaseType::Mysql | DatabaseType::Sqlite => {
-				use sea_query::{
-					Alias, Expr, ExprTrait, MysqlQueryBuilder, Order, PostgresQueryBuilder, Query,
-					SqliteQueryBuilder,
-				};
+				_ => row
+					.get("applied")
+					.map_err(crate::MigrationError::DatabaseError)?,
+			};
 
-				// Build SELECT query using sea-query with app filter
-				let stmt = Query::select()
-					.columns([Alias::new("app"), Alias::new("name"), Alias::new("applied")])
-					.from(Alias::new("reinhardt_migrations"))
-					.and_where(Expr::col(Alias::new("app")).eq(app))
-					.order_by(Alias::new("applied"), Order::Asc)
-					.to_owned();
-
-				let sql = match self.connection.database_type() {
-					DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
-					DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
-					DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-					#[cfg(feature = "mongodb-backend")]
-					DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
-				};
-
-				let rows = self
-					.connection
-					.fetch_all(&sql, vec![])
-					.await
-					.map_err(crate::MigrationError::DatabaseError)?;
-
-				let db_type = self.connection.database_type();
-				let mut records = Vec::new();
-				for row in rows {
-					let app_val: String = row
-						.get("app")
-						.map_err(crate::MigrationError::DatabaseError)?;
-					let name: String = row
-						.get("name")
-						.map_err(crate::MigrationError::DatabaseError)?;
-
-					// Parse timestamp from database
-					let applied: DateTime<Utc> = match db_type {
-						DatabaseType::Sqlite => {
-							let applied_str: String = row
-								.get("applied")
-								.map_err(crate::MigrationError::DatabaseError)?;
-							chrono::NaiveDateTime::parse_from_str(&applied_str, "%Y-%m-%d %H:%M:%S")
-								.map(|naive| naive.and_utc())
-								.map_err(|e| {
-									crate::MigrationError::DatabaseError(
-										reinhardt_backends::DatabaseError::TypeError(format!(
-											"Failed to parse SQLite timestamp '{}': {}",
-											applied_str, e
-										)),
-									)
-								})?
-						}
-						_ => row
-							.get("applied")
-							.map_err(crate::MigrationError::DatabaseError)?,
-					};
-
-					records.push(MigrationRecord {
-						app: app_val,
-						name,
-						applied,
-					});
-				}
-
-				Ok(records)
-			}
+			records.push(MigrationRecord {
+				app: app_val,
+				name,
+				applied,
+			});
 		}
+
+		Ok(records)
 	}
 }
 

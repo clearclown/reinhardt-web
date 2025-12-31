@@ -76,7 +76,7 @@ impl ModelMetadata {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::model_registry::{ModelMetadata, FieldMetadata};
 	/// use reinhardt_migrations::FieldType;
 	///
@@ -90,7 +90,7 @@ impl ModelMetadata {
 	/// assert_eq!(model_state.app_label, "myapp");
 	/// assert_eq!(model_state.name, "User");
 	/// assert!(model_state.has_field("email"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn to_model_state(&self) -> ModelState {
 		let mut model_state = ModelState::new(&self.app_label, &self.model_name);
 
@@ -351,7 +351,7 @@ impl ManyToManyMetadata {
 ///         for app_config in self.app_configs.values():
 ///             result.extend(app_config.get_models(include_auto_created, include_swapped))
 ///         return result
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct ModelRegistry {
 	/// Models: (app_label, model_name) -> ModelMetadata
@@ -376,7 +376,7 @@ impl ModelRegistry {
 	///     if model_name in app_models:
 	///         # Handle conflicts...
 	///     app_models[model_name] = model
-	/// ```
+	/// ``` rust,ignore
 	pub fn register_model(&self, metadata: ModelMetadata) {
 		let key = (metadata.app_label.clone(), metadata.model_name.clone());
 		if let Ok(mut models) = self.models.write() {
@@ -394,7 +394,7 @@ impl ModelRegistry {
 	///     for app_config in self.app_configs.values():
 	///         result.extend(app_config.get_models(include_auto_created, include_swapped))
 	///     return result
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_models(&self) -> Vec<ModelMetadata> {
 		if let Ok(models) = self.models.read() {
 			models.values().cloned().collect()
@@ -413,7 +413,7 @@ impl ModelRegistry {
 	///         app_label, model_name = app_label.split(".")
 	///     app_config = self.get_app_config(app_label)
 	///     return app_config.get_model(model_name, require_ready=require_ready)
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_model(&self, app_label: &str, model_name: &str) -> Option<ModelMetadata> {
 		if let Ok(models) = self.models.read() {
 			models

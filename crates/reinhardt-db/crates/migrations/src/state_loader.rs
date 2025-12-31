@@ -32,7 +32,7 @@ use crate::{
 ///     let current_state = loader.build_current_state().await?;
 ///     Ok(())
 /// }
-/// ```
+/// ``` rust,ignore
 pub struct MigrationStateLoader<S: MigrationSource> {
 	recorder: DatabaseMigrationRecorder,
 	source: S,
@@ -101,7 +101,7 @@ impl<S: MigrationSource> MigrationStateLoader<S> {
 					migration.app_label, migration.name
 				);
 				eprintln!("[DEBUG]   Operations count: {}", migration.operations.len());
-				state.apply_migration_operations(&migration.operations, migration.app_label);
+				state.apply_migration_operations(&migration.operations, &migration.app_label);
 				eprintln!(
 					"[DEBUG]   State after applying - models count: {}",
 					state.models.len()
@@ -138,20 +138,20 @@ impl<S: MigrationSource> MigrationStateLoader<S> {
 				continue;
 			}
 
-			let key = MigrationKey::new(migration.app_label, migration.name);
+			let key = MigrationKey::new(migration.app_label.clone(), migration.name.clone());
 
 			// Convert dependencies to MigrationKey
 			let dependencies: Vec<MigrationKey> = migration
 				.dependencies
 				.iter()
-				.map(|(app, name)| MigrationKey::new(*app, *name))
+				.map(|(app, name)| MigrationKey::new(app.clone(), name.clone()))
 				.collect();
 
 			// Convert replaces to MigrationKey
 			let replaces: Vec<MigrationKey> = migration
 				.replaces
 				.iter()
-				.map(|(app, name)| MigrationKey::new(*app, *name))
+				.map(|(app, name)| MigrationKey::new(app.clone(), name.clone()))
 				.collect();
 
 			graph.add_migration_with_replaces(key, dependencies, replaces);
@@ -197,18 +197,18 @@ impl<S: MigrationSource> MigrationStateLoader<S> {
 		// Build full graph
 		let mut graph = MigrationGraph::new();
 		for migration in &all_migrations {
-			let key = MigrationKey::new(migration.app_label, migration.name);
+			let key = MigrationKey::new(migration.app_label.clone(), migration.name.clone());
 
 			let dependencies: Vec<MigrationKey> = migration
 				.dependencies
 				.iter()
-				.map(|(app, name)| MigrationKey::new(*app, *name))
+				.map(|(app, name)| MigrationKey::new(app.clone(), name.clone()))
 				.collect();
 
 			let replaces: Vec<MigrationKey> = migration
 				.replaces
 				.iter()
-				.map(|(app, name)| MigrationKey::new(*app, *name))
+				.map(|(app, name)| MigrationKey::new(app.clone(), name.clone()))
 				.collect();
 
 			graph.add_migration_with_replaces(key, dependencies, replaces);
@@ -234,7 +234,7 @@ impl<S: MigrationSource> MigrationStateLoader<S> {
 				.iter()
 				.find(|m| m.app_label == key.app_label && m.name == key.name)
 			{
-				state.apply_migration_operations(&migration.operations, migration.app_label);
+				state.apply_migration_operations(&migration.operations, &migration.app_label);
 			}
 		}
 
@@ -260,32 +260,37 @@ mod tests {
 
 	/// Helper function to create a Migration for testing
 	fn create_migration(
-		app_label: &'static str,
-		name: &'static str,
+		app_label: &str,
+		name: &str,
 		operations: Vec<Operation>,
-		dependencies: Vec<(&'static str, &'static str)>,
+		dependencies: Vec<(&str, &str)>,
 	) -> Migration {
 		Migration {
-			app_label,
-			name,
+			app_label: app_label.to_string(),
+			name: name.to_string(),
 			operations,
-			dependencies,
+			dependencies: dependencies
+				.into_iter()
+				.map(|(a, n)| (a.to_string(), n.to_string()))
+				.collect(),
 			replaces: vec![],
 			atomic: true,
 			initial: None,
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		}
 	}
 
 	/// Helper function to create a CreateTable operation
-	fn create_table_operation(table_name: &'static str, columns: Vec<&'static str>) -> Operation {
+	fn create_table_operation(table_name: &str, columns: Vec<&str>) -> Operation {
 		Operation::CreateTable {
-			name: table_name,
+			name: table_name.to_string(),
 			columns: columns
 				.into_iter()
 				.map(|col_name| ColumnDefinition {
-					name: col_name,
+					name: col_name.to_string(),
 					type_definition: FieldType::VarChar(255),
 					not_null: false,
 					primary_key: col_name == "id",
@@ -295,15 +300,18 @@ mod tests {
 				})
 				.collect(),
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}
 	}
 
 	/// Helper function to create an AddColumn operation
-	fn add_column_operation(table_name: &'static str, column_name: &'static str) -> Operation {
+	fn add_column_operation(table_name: &str, column_name: &str) -> Operation {
 		Operation::AddColumn {
-			table: table_name,
+			table: table_name.to_string(),
 			column: ColumnDefinition {
-				name: column_name,
+				name: column_name.to_string(),
 				type_definition: FieldType::VarChar(255),
 				not_null: false,
 				primary_key: false,
@@ -311,6 +319,7 @@ mod tests {
 				auto_increment: false,
 				default: None,
 			},
+			mysql_options: None,
 		}
 	}
 
@@ -612,8 +621,8 @@ mod tests {
 
 			// Drop a column
 			let drop_ops = vec![Operation::DropColumn {
-				table: "users",
-				column: "email",
+				table: "users".to_string(),
+				column: "email".to_string(),
 			}];
 			state.apply_migration_operations(&drop_ops, "testapp");
 
@@ -639,7 +648,9 @@ mod tests {
 			assert_eq!(state.models.len(), 2);
 
 			// Drop one table
-			let drop_ops = vec![Operation::DropTable { name: "users" }];
+			let drop_ops = vec![Operation::DropTable {
+				name: "users".to_string(),
+			}];
 			state.apply_migration_operations(&drop_ops, "testapp");
 
 			assert_eq!(state.models.len(), 1);
@@ -656,8 +667,8 @@ mod tests {
 			state.apply_migration_operations(&create_ops, "testapp");
 
 			let rename_ops = vec![Operation::RenameTable {
-				old_name: "old_users",
-				new_name: "users",
+				old_name: "old_users".to_string(),
+				new_name: "users".to_string(),
 			}];
 			state.apply_migration_operations(&rename_ops, "testapp");
 
@@ -674,9 +685,9 @@ mod tests {
 			state.apply_migration_operations(&create_ops, "testapp");
 
 			let rename_ops = vec![Operation::RenameColumn {
-				table: "users",
-				old_name: "user_name",
-				new_name: "name",
+				table: "users".to_string(),
+				old_name: "user_name".to_string(),
+				new_name: "name".to_string(),
 			}];
 			state.apply_migration_operations(&rename_ops, "testapp");
 

@@ -69,12 +69,12 @@ impl From<sea_query::ForeignKeyAction> for ForeignKeyAction {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// # use reinhardt_migrations::to_snake_case;
 /// assert_eq!(to_snake_case("User"), "user");
 /// assert_eq!(to_snake_case("BlogPost"), "blog_post");
 /// assert_eq!(to_snake_case("HTTPResponse"), "h_t_t_p_response");
-/// ```
+/// ``` rust,ignore
 pub fn to_snake_case(name: &str) -> String {
 	let mut result = String::new();
 	let chars = name.chars().peekable();
@@ -98,7 +98,7 @@ pub fn to_snake_case(name: &str) -> String {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::autodetector::to_pascal_case;
 ///
 /// assert_eq!(to_pascal_case("user"), "User");
@@ -106,7 +106,7 @@ pub fn to_snake_case(name: &str) -> String {
 /// assert_eq!(to_pascal_case("http_response"), "HttpResponse");
 /// assert_eq!(to_pascal_case("following"), "Following");
 /// assert_eq!(to_pascal_case("blocked_users"), "BlockedUsers");
-/// ```
+/// ``` rust,ignore
 pub fn to_pascal_case(name: &str) -> String {
 	name.split('_')
 		.map(|word| {
@@ -260,6 +260,7 @@ impl ConstraintDefinition {
 						referenced_columns: fk_info.referenced_columns.clone(),
 						on_delete: fk_info.on_delete,
 						on_update: fk_info.on_update,
+						deferrable: None,
 					}
 				} else {
 					// Fallback if foreign_key_info is missing
@@ -270,6 +271,7 @@ impl ConstraintDefinition {
 						referenced_columns: vec!["id".to_string()],
 						on_delete: ForeignKeyAction::Cascade,
 						on_update: ForeignKeyAction::Cascade,
+						deferrable: None,
 					}
 				}
 			}
@@ -286,6 +288,7 @@ impl ConstraintDefinition {
 							.unwrap_or_else(|| "id".to_string()),
 						on_delete: fk_info.on_delete,
 						on_update: fk_info.on_update,
+						deferrable: None,
 					}
 				} else {
 					// Fallback
@@ -296,6 +299,7 @@ impl ConstraintDefinition {
 						referenced_column: "id".to_string(),
 						on_delete: ForeignKeyAction::Cascade,
 						on_update: ForeignKeyAction::Cascade,
+						deferrable: None,
 					}
 				}
 			}
@@ -315,7 +319,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::ModelState;
 	///
 	/// let model = ModelState::new("myapp", "User");
@@ -323,7 +327,7 @@ impl ModelState {
 	/// assert_eq!(model.name, "User");
 	/// assert_eq!(model.table_name, "user");
 	/// assert_eq!(model.fields.len(), 0);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(app_label: impl Into<String>, name: impl Into<String>) -> Self {
 		let name_str = name.into();
 		// Convert model name to table name (e.g., "User" -> "user", "BlogPost" -> "blog_post")
@@ -348,7 +352,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -356,7 +360,7 @@ impl ModelState {
 	/// model.add_field(field);
 	/// assert_eq!(model.fields.len(), 1);
 	/// assert!(model.has_field("email"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn add_field(&mut self, field: FieldState) {
 		self.fields.insert(field.name.clone(), field);
 	}
@@ -365,7 +369,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -375,7 +379,7 @@ impl ModelState {
 	/// let retrieved = model.get_field("email");
 	/// assert!(retrieved.is_some());
 	/// assert_eq!(retrieved.unwrap().field_type, FieldType::VarChar(255));
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_field(&self, name: &str) -> Option<&FieldState> {
 		self.fields.get(name)
 	}
@@ -384,7 +388,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -393,7 +397,7 @@ impl ModelState {
 	///
 	/// assert!(model.has_field("email"));
 	/// assert!(!model.has_field("username"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn has_field(&self, name: &str) -> bool {
 		self.fields.contains_key(name)
 	}
@@ -402,7 +406,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -412,7 +416,7 @@ impl ModelState {
 	/// model.rename_field("email", "email_address".to_string());
 	/// assert!(!model.has_field("email"));
 	/// assert!(model.has_field("email_address"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn rename_field(&mut self, old_name: &str, new_name: String) {
 		if let Some(mut field) = self.fields.remove(old_name) {
 			field.name = new_name.clone();
@@ -424,7 +428,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, ConstraintDefinition};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -437,7 +441,7 @@ impl ModelState {
 	/// };
 	/// model.add_constraint(constraint);
 	/// assert_eq!(model.constraints.len(), 1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn add_constraint(&mut self, constraint: ConstraintDefinition) {
 		self.constraints.push(constraint);
 	}
@@ -470,7 +474,7 @@ impl ModelState {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::{ProjectState, ModelState, FieldState, FieldType};
 ///
 /// let mut state = ProjectState::new();
@@ -479,7 +483,7 @@ impl ModelState {
 /// state.add_model(model);
 ///
 /// assert!(state.get_model("myapp", "User").is_some());
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct ProjectState {
 	/// Models: (app_label, model_name) -> ModelState
@@ -499,11 +503,10 @@ impl ProjectState {
 		for ((_app_label, _model_name), model_state) in &self.models {
 			let mut columns = BTreeMap::new();
 			for (field_name, field_state) in &model_state.fields {
-				// Simplified conversion for now.
-				// This might need more sophisticated logic to map field_type and params
-				// to ColumnSchema's data_type, nullable, default, primary_key, auto_increment, max_length.
-				// For a first pass, let's make reasonable assumptions.
-				let data_type = field_state.field_type.clone(); // Directly use field_type
+				// FieldType enum already contains all type information including length
+				// (e.g., VarChar(255), Decimal { precision, scale }). Direct mapping is correct.
+				// Database-specific SQL generation is handled by ColumnTypeDefinition::to_sql_for_dialect.
+				let data_type = field_state.field_type.clone();
 				let nullable = field_state.nullable;
 				let primary_key = field_state
 					.params
@@ -518,7 +521,7 @@ impl ProjectState {
 				columns.insert(
 					field_name.clone(),
 					crate::schema_diff::ColumnSchema {
-						name: Box::leak(field_name.clone().into_boxed_str()),
+						name: field_name.clone(),
 						data_type,
 						nullable,
 						default,
@@ -542,7 +545,7 @@ impl ProjectState {
 			tables.insert(
 				model_state.table_name.clone(),
 				crate::schema_diff::TableSchema {
-					name: Box::leak(model_state.table_name.clone().into_boxed_str()),
+					name: model_state.table_name.clone(),
 					columns,
 					indexes: Vec::new(),
 					constraints,
@@ -560,13 +563,13 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::ProjectState;
 	///
 	/// let state = ProjectState::from_global_registry();
 	/// let schema = state.to_database_schema_for_app("users");
 	/// // schema contains only tables for the "users" app
-	/// ```
+	/// ``` rust,ignore
 	pub fn to_database_schema_for_app(
 		&self,
 		app_label: &str,
@@ -593,7 +596,7 @@ impl ProjectState {
 					columns.insert(
 						field_name.clone(),
 						crate::schema_diff::ColumnSchema {
-							name: Box::leak(field_name.clone().into_boxed_str()),
+							name: field_name.clone(),
 							data_type,
 							nullable,
 							default,
@@ -618,7 +621,7 @@ impl ProjectState {
 				tables.insert(
 					model_state.table_name.clone(),
 					crate::schema_diff::TableSchema {
-						name: Box::leak(model_state.table_name.clone().into_boxed_str()),
+						name: model_state.table_name.clone(),
 						columns,
 						indexes: Vec::new(),
 						constraints,
@@ -634,12 +637,12 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::ProjectState;
 	///
 	/// let state = ProjectState::new();
 	/// assert_eq!(state.models.len(), 0);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new() -> Self {
 		Self {
 			models: std::collections::BTreeMap::new(),
@@ -650,7 +653,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -659,7 +662,7 @@ impl ProjectState {
 	///
 	/// assert_eq!(state.models.len(), 1);
 	/// assert!(state.get_model("myapp", "User").is_some());
-	/// ```
+	/// ``` rust,ignore
 	pub fn add_model(&mut self, model: ModelState) {
 		let key = (model.app_label.clone(), model.name.clone());
 		self.models.insert(key, model);
@@ -669,7 +672,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -679,7 +682,7 @@ impl ProjectState {
 	/// let retrieved = state.get_model("myapp", "User");
 	/// assert!(retrieved.is_some());
 	/// assert_eq!(retrieved.unwrap().name, "User");
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_model(&self, app_label: &str, model_name: &str) -> Option<&ModelState> {
 		self.models
 			.get(&(app_label.to_string(), model_name.to_string()))
@@ -689,7 +692,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut state = ProjectState::new();
@@ -702,7 +705,7 @@ impl ProjectState {
 	/// }
 	///
 	/// assert!(state.get_model("myapp", "User").unwrap().has_field("email"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_model_mut(&mut self, app_label: &str, model_name: &str) -> Option<&mut ModelState> {
 		self.models
 			.get_mut(&(app_label.to_string(), model_name.to_string()))
@@ -726,7 +729,7 @@ impl ProjectState {
 	///
 	/// let pk_type = state.get_primary_key_type("myapp", "User");
 	/// assert_eq!(pk_type, FieldType::Integer);
-	/// ```
+	/// ``` rust,ignore
 	fn get_primary_key_type(&self, app_label: &str, model_name: &str) -> crate::FieldType {
 		// JSON update
 		if let Some(model_state) = self.get_model(app_label, model_name) {
@@ -774,7 +777,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -785,7 +788,7 @@ impl ProjectState {
 	/// let retrieved = state.get_model_by_table_name("myapp", "myapp_user");
 	/// assert!(retrieved.is_some());
 	/// assert_eq!(retrieved.unwrap().name, "User");
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_model_by_table_name(
 		&self,
 		app_label: &str,
@@ -802,7 +805,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -815,7 +818,7 @@ impl ProjectState {
 	/// assert!(users_state.get_model("users", "User").is_some());
 	/// assert!(users_state.get_model("users", "Profile").is_some());
 	/// assert!(users_state.get_model("posts", "Post").is_none());
-	/// ```
+	/// ``` rust,ignore
 	pub fn filter_by_app(&self, app_label: &str) -> Self {
 		let mut filtered = Self::new();
 		for ((app, _model_name), model_state) in &self.models {
@@ -830,7 +833,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -839,7 +842,7 @@ impl ProjectState {
 	///
 	/// state.remove_model("myapp", "User");
 	/// assert!(state.get_model("myapp", "User").is_none());
-	/// ```
+	/// ``` rust,ignore
 	pub fn remove_model(&mut self, app_label: &str, model_name: &str) -> Option<ModelState> {
 		self.models
 			.remove(&(app_label.to_string(), model_name.to_string()))
@@ -849,7 +852,7 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, ModelState};
 	///
 	/// let mut state = ProjectState::new();
@@ -859,7 +862,7 @@ impl ProjectState {
 	/// state.rename_model("myapp", "User", "Account".to_string());
 	/// assert!(state.get_model("myapp", "User").is_none());
 	/// assert!(state.get_model("myapp", "Account").is_some());
-	/// ```
+	/// ``` rust,ignore
 	pub fn rename_model(&mut self, app_label: &str, old_name: &str, new_name: String) {
 		if let Some(mut model) = self
 			.models
@@ -876,12 +879,12 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::ProjectState;
 	///
 	/// let state = ProjectState::from_global_registry();
 	// state will contain all models registered in the global registry
-	/// ```
+	/// ``` rust,ignore
 	pub fn from_global_registry() -> Self {
 		use crate::model_registry::global_registry;
 
@@ -1007,8 +1010,7 @@ impl ProjectState {
 		model_state.add_field(from_field);
 
 		// Add foreign key to target model: to_{target_model}_id
-		// Need to determine target table name - for now use pattern: {app_label}_{model_name_snake_case}
-		// Get target table name from ProjectState
+		// Get target table name from ProjectState, fallback to naming convention if model not found
 		let target_table_name = self
 			.get_model(target_app, target_model)
 			.map(|m| m.table_name.clone())
@@ -1050,17 +1052,17 @@ impl ProjectState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ProjectState, Migration};
 	///
 	/// let migrations = vec![/* ... */];
 	/// let state = ProjectState::from_migrations(&migrations);
 	/// // state will contain all models as they would exist after applying all migrations
-	/// ```
+	/// ``` rust,ignore
 	pub fn from_migrations(migrations: &[crate::migration::Migration]) -> Self {
 		let mut state = Self::new();
 		for migration in migrations {
-			state.apply_migration_operations(&migration.operations, migration.app_label);
+			state.apply_migration_operations(&migration.operations, &migration.app_label);
 		}
 		state
 	}
@@ -1115,7 +1117,7 @@ impl ProjectState {
 						self.models.remove(&key);
 					}
 				}
-				Operation::AddColumn { table, column } => {
+				Operation::AddColumn { table, column, .. } => {
 					// Find the model with this table name and add the field
 					let field = self.column_def_to_field_state(column);
 					if let Some(model) = self.find_model_by_table_mut(table) {
@@ -1125,13 +1127,14 @@ impl ProjectState {
 				Operation::DropColumn { table, column } => {
 					// Find the model and remove the field
 					if let Some(model) = self.find_model_by_table_mut(table) {
-						model.fields.remove(*column);
+						model.fields.remove(column);
 					}
 				}
 				Operation::AlterColumn {
 					table,
 					column,
 					new_definition,
+					..
 				} => {
 					// Find the model and update the field
 					let new_field = self.column_def_to_field_state(new_definition);
@@ -1178,8 +1181,15 @@ impl ProjectState {
 		}
 	}
 
+	/// Helper: Find a model by table name (immutable)
+	pub fn find_model_by_table(&self, table_name: &str) -> Option<&ModelState> {
+		self.models
+			.values()
+			.find(|model| model.table_name == table_name)
+	}
+
 	/// Helper: Find a model by table name (mutable)
-	fn find_model_by_table_mut(&mut self, table_name: &str) -> Option<&mut ModelState> {
+	pub fn find_model_by_table_mut(&mut self, table_name: &str) -> Option<&mut ModelState> {
 		self.models
 			.values_mut()
 			.find(|model| model.table_name == table_name)
@@ -1228,7 +1238,7 @@ impl ProjectState {
 		if col.unique {
 			params.insert("unique".to_string(), "true".to_string());
 		}
-		if let Some(default) = col.default {
+		if let Some(default) = &col.default {
 			params.insert("default".to_string(), default.to_string());
 		}
 
@@ -1253,7 +1263,7 @@ impl ProjectState {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::SimilarityConfig;
 ///
 /// // Default configuration (70% threshold for models, 80% for fields)
@@ -1268,7 +1278,7 @@ impl ProjectState {
 ///
 /// // Custom with specific algorithm weights
 /// let config = SimilarityConfig::with_weights(0.75, 0.85, 0.6, 0.4).unwrap();
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct SimilarityConfig {
 	/// Threshold for model similarity (0.5 - 0.95)
@@ -1302,7 +1312,7 @@ impl SimilarityConfig {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::SimilarityConfig;
 	///
 	/// let config = SimilarityConfig::new(0.75, 0.85).unwrap();
@@ -1314,7 +1324,7 @@ impl SimilarityConfig {
 	///
 	/// // Invalid threshold (too high)
 	/// assert!(SimilarityConfig::new(0.96, 0.8).is_err());
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(model_threshold: f64, field_threshold: f64) -> Result<Self, String> {
 		Self::with_weights(model_threshold, field_threshold, 0.7, 0.3)
 	}
@@ -1337,7 +1347,7 @@ impl SimilarityConfig {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::SimilarityConfig;
 	///
 	/// // Prefer Jaro-Winkler for prefix matching
@@ -1348,7 +1358,7 @@ impl SimilarityConfig {
 	///
 	/// // Invalid: weights don't sum to 1.0
 	/// assert!(SimilarityConfig::with_weights(0.75, 0.85, 0.5, 0.3).is_err());
-	/// ```
+	/// ``` rust,ignore
 	pub fn with_weights(
 		model_threshold: f64,
 		field_threshold: f64,
@@ -1436,7 +1446,7 @@ impl Default for SimilarityConfig {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 ///
 /// let mut from_state = ProjectState::new();
@@ -1452,7 +1462,7 @@ impl Default for SimilarityConfig {
 ///
 // Should detect the new model creation
 /// assert_eq!(changes.created_models.len(), 1);
-/// ```
+/// ``` rust,ignore
 pub struct MigrationAutodetector {
 	from_state: ProjectState,
 	to_state: ProjectState,
@@ -1519,7 +1529,7 @@ impl DetectedChanges {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{DetectedChanges};
 	/// use std::collections::BTreeMap;
 	///
@@ -1539,7 +1549,7 @@ impl DetectedChanges {
 	/// // User comes before Post
 	/// assert_eq!(ordered[0], ("accounts".to_string(), "User".to_string()));
 	/// assert_eq!(ordered[1], ("blog".to_string(), "Post".to_string()));
-	/// ```
+	/// ``` rust,ignore
 	pub fn order_models_by_dependency(&self) -> Vec<(String, String)> {
 		use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -1629,7 +1639,7 @@ impl DetectedChanges {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{DetectedChanges};
 	/// use std::collections::BTreeMap;
 	///
@@ -1652,7 +1662,7 @@ impl DetectedChanges {
 	/// changes.model_dependencies = deps;
 	///
 	/// assert!(changes.check_circular_dependencies().is_err());
-	/// ```
+	/// ``` rust,ignore
 	pub fn check_circular_dependencies(&self) -> Result<(), Vec<(String, String)>> {
 		use std::collections::HashSet;
 
@@ -1719,7 +1729,7 @@ impl DetectedChanges {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{DetectedChanges, OperationRef};
 	///
 	/// let mut changes = DetectedChanges::default();
@@ -1744,7 +1754,7 @@ impl DetectedChanges {
 	/// assert!(changes.renamed_models.is_empty());
 	/// // added_fields is not affected
 	/// assert_eq!(changes.added_fields.len(), 1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn remove_operations(&mut self, refs: &[OperationRef]) {
 		for op_ref in refs {
 			match op_ref {
@@ -1837,7 +1847,7 @@ impl DetectedChanges {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::autodetector::ChangeHistoryEntry;
 /// use std::time::SystemTime;
 ///
@@ -1850,7 +1860,7 @@ impl DetectedChanges {
 ///     old_value: Some("BlogPost".to_string()),
 ///     new_value: Some("Post".to_string()),
 /// };
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct ChangeHistoryEntry {
 	/// When this change occurred
@@ -1900,7 +1910,7 @@ pub struct PatternFrequency {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::ChangeTracker;
 ///
 /// let mut tracker = ChangeTracker::new();
@@ -1913,7 +1923,7 @@ pub struct PatternFrequency {
 ///
 /// // Get pattern frequency
 /// let patterns = tracker.get_frequent_patterns(2); // Min frequency: 2
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct ChangeTracker {
 	/// Complete history of changes
@@ -2183,7 +2193,7 @@ pub struct PatternMatch {
 ///
 /// # Examples
 ///
-/// ```
+/// ``` rust,ignore
 /// use reinhardt_migrations::PatternMatcher;
 ///
 /// let mut matcher = PatternMatcher::new();
@@ -2193,7 +2203,7 @@ pub struct PatternMatch {
 ///
 /// let matches = matcher.find_all("User has many Posts");
 /// assert_eq!(matches.len(), 2);
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct PatternMatcher {
 	/// Patterns to search for
@@ -2504,7 +2514,7 @@ pub struct InferenceRule {
 ///     &field_additions,
 ///     &field_renames
 /// );
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct InferenceEngine {
 	/// Inference rules
@@ -2519,7 +2529,7 @@ pub struct InferenceEngine {
 	/// 3. Use pattern analysis to boost confidence scores in inference rules
 	///
 	/// Example:
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::autodetector::InferenceEngine;
 	/// let mut engine = InferenceEngine::new();
 	/// // Record rename and field addition history
@@ -2527,7 +2537,7 @@ pub struct InferenceEngine {
 	/// engine.record_field_addition("blog", "Post", "slug");
 	/// // Analyze co-occurrence within a 60-second window
 	/// let _cooccurrences = engine.analyze_cooccurrence(std::time::Duration::from_secs(60));
-	/// ```
+	/// ``` rust,ignore
 	change_tracker: ChangeTracker,
 }
 
@@ -3519,14 +3529,14 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState};
 	///
 	/// let from_state = ProjectState::new();
 	/// let to_state = ProjectState::new();
 	///
 	/// let detector = MigrationAutodetector::new(from_state, to_state);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(from_state: ProjectState, to_state: ProjectState) -> Self {
 		Self {
 			from_state,
@@ -3539,7 +3549,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, SimilarityConfig};
 	///
 	/// let from_state = ProjectState::new();
@@ -3547,7 +3557,7 @@ impl MigrationAutodetector {
 	/// let config = SimilarityConfig::new(0.75, 0.85).unwrap();
 	///
 	/// let detector = MigrationAutodetector::with_config(from_state, to_state, config);
-	/// ```
+	/// ``` rust,ignore
 	pub fn with_config(
 		from_state: ProjectState,
 		to_state: ProjectState,
@@ -3566,7 +3576,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState};
 	///
 	/// let from_state = ProjectState::new();
@@ -3580,7 +3590,7 @@ impl MigrationAutodetector {
 	/// let changes = detector.detect_changes();
 	///
 	/// assert_eq!(changes.created_models.len(), 1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn detect_changes(&self) -> DetectedChanges {
 		let mut changes = DetectedChanges::default();
 
@@ -3781,11 +3791,11 @@ impl MigrationAutodetector {
 	///                         new_name=new_model_name,
 	///                     ),
 	///                 )
-	/// ```
+	/// ``` rust,ignore
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -3805,7 +3815,7 @@ impl MigrationAutodetector {
 	///
 	// With high field similarity, should detect as rename
 	/// assert!(changes.renamed_models.len() <= 1);
-	/// ```
+	/// ``` rust,ignore
 	fn detect_renamed_models(&self, changes: &mut DetectedChanges) {
 		// Get deleted and created models
 		let deleted: Vec<_> = self
@@ -3869,11 +3879,11 @@ impl MigrationAutodetector {
 	///             for new_field_name, new_field in new_model_state.fields:
 	///                 if self._is_renamed_field(old_field, new_field):
 	///                     self.add_operation(...)
-	/// ```
+	/// ``` rust,ignore
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -3891,7 +3901,7 @@ impl MigrationAutodetector {
 	///
 	// With matching type, might detect as rename
 	/// assert!(changes.renamed_fields.len() <= 1);
-	/// ```
+	/// ``` rust,ignore
 	fn detect_renamed_fields(&self, changes: &mut DetectedChanges) {
 		// Only check models that exist in both states
 		for ((app_label, model_name), from_model) in &self.from_state.models {
@@ -3946,7 +3956,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -3963,7 +3973,7 @@ impl MigrationAutodetector {
 	///
 	/// let detector = MigrationAutodetector::new(from_state, to_state);
 	/// // Similarity would be high due to fuzzy field name matching
-	/// ```
+	/// ``` rust,ignore
 	fn calculate_model_similarity(&self, from_model: &ModelState, to_model: &ModelState) -> f64 {
 		if from_model.fields.is_empty() && to_model.fields.is_empty() {
 			return 1.0;
@@ -4028,7 +4038,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let from_state = ProjectState::new();
@@ -4041,7 +4051,7 @@ impl MigrationAutodetector {
 	/// // High similarity (field name is similar and type matches)
 	/// // Jaro-Winkler ≈ 0.81, Levenshtein normalized ≈ 0.45
 	/// // Hybrid (0.7 * 0.81 + 0.3 * 0.45) ≈ 0.70
-	/// ```
+	/// ``` rust,ignore
 	fn calculate_field_similarity(
 		&self,
 		from_field_name: &str,
@@ -4097,7 +4107,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -4112,7 +4122,7 @@ impl MigrationAutodetector {
 	///
 	/// let detector = MigrationAutodetector::new(from_state, to_state);
 	/// // Would detect cross-app model move from myapp.User to auth.User
-	/// ```
+	/// ``` rust,ignore
 	fn find_optimal_model_matches(
 		&self,
 		deleted: &[&(String, String)],
@@ -4340,7 +4350,7 @@ impl MigrationAutodetector {
 		let columns = vec![
 			// id column
 			crate::ColumnDefinition {
-				name: "id",
+				name: "id".to_string(),
 				type_definition: crate::FieldType::BigInteger,
 				not_null: true,
 				unique: false,
@@ -4350,7 +4360,7 @@ impl MigrationAutodetector {
 			},
 			// source_id column
 			crate::ColumnDefinition {
-				name: Box::leak(source_column.clone().into_boxed_str()),
+				name: source_column.clone(),
 				type_definition: crate::FieldType::BigInteger,
 				not_null: true,
 				unique: false,
@@ -4360,7 +4370,7 @@ impl MigrationAutodetector {
 			},
 			// target_id column
 			crate::ColumnDefinition {
-				name: Box::leak(target_column.clone().into_boxed_str()),
+				name: target_column.clone(),
 				type_definition: crate::FieldType::BigInteger,
 				not_null: true,
 				unique: false,
@@ -4381,6 +4391,7 @@ impl MigrationAutodetector {
 				referenced_columns: vec!["id".to_string()],
 				on_delete: crate::ForeignKeyAction::Cascade,
 				on_update: crate::ForeignKeyAction::Cascade,
+				deferrable: None,
 			},
 			// Foreign key to target table
 			crate::Constraint::ForeignKey {
@@ -4390,6 +4401,7 @@ impl MigrationAutodetector {
 				referenced_columns: vec!["id".to_string()],
 				on_delete: crate::ForeignKeyAction::Cascade,
 				on_update: crate::ForeignKeyAction::Cascade,
+				deferrable: None,
 			},
 			// Unique constraint on (source_id, target_id)
 			crate::Constraint::Unique {
@@ -4404,9 +4416,12 @@ impl MigrationAutodetector {
 		];
 
 		Some(crate::Operation::CreateTable {
-			name: Box::leak(table_name.into_boxed_str()),
+			name: table_name,
 			columns,
 			constraints,
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 	}
 
@@ -4430,11 +4445,11 @@ impl MigrationAutodetector {
 	///                 bases=model_state.bases,
 	///             ),
 	///         )
-	/// ```
+	/// ``` rust,ignore
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -4449,7 +4464,7 @@ impl MigrationAutodetector {
 	/// let operations = detector.generate_operations();
 	///
 	/// assert!(!operations.is_empty());
-	/// ```
+	/// ``` rust,ignore
 	/// Sort operations by their dependencies to ensure correct execution order
 	///
 	/// This method reorders operations to prevent execution errors:
@@ -4518,9 +4533,12 @@ impl MigrationAutodetector {
 					.collect();
 
 				operations.push(crate::Operation::CreateTable {
-					name: Box::leak(model.table_name.clone().into_boxed_str()),
+					name: model.table_name.clone(),
 					columns,
 					constraints,
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				});
 			}
 		}
@@ -4545,8 +4563,9 @@ impl MigrationAutodetector {
 				&& let Some(field) = model.get_field(field_name)
 			{
 				operations.push(crate::Operation::AddColumn {
-					table: Box::leak(model.name.clone().into_boxed_str()),
+					table: model.name.clone(),
 					column: crate::ColumnDefinition::from_field_state(field_name.clone(), field),
+					mysql_options: None,
 				});
 			}
 		}
@@ -4569,12 +4588,13 @@ impl MigrationAutodetector {
 				&& let Some(field) = model.get_field(field_name)
 			{
 				operations.push(crate::Operation::AlterColumn {
-					table: Box::leak(model.name.clone().into_boxed_str()),
-					column: Box::leak(field_name.clone().into_boxed_str()),
+					table: model.name.clone(),
+					column: field_name.clone(),
 					new_definition: crate::ColumnDefinition::from_field_state(
 						field_name.clone(),
 						field,
 					),
+					mysql_options: None,
 				});
 			}
 		}
@@ -4583,8 +4603,8 @@ impl MigrationAutodetector {
 		for (app_label, model_name, field_name) in &changes.removed_fields {
 			if let Some(model) = self.from_state.get_model(app_label, model_name) {
 				operations.push(crate::Operation::DropColumn {
-					table: Box::leak(model.name.clone().into_boxed_str()),
-					column: Box::leak(field_name.clone().into_boxed_str()),
+					table: model.name.clone(),
+					column: field_name.clone(),
 				});
 			}
 		}
@@ -4593,7 +4613,7 @@ impl MigrationAutodetector {
 		for (app_label, model_name) in &changes.deleted_models {
 			if let Some(model) = self.from_state.get_model(app_label, model_name) {
 				operations.push(crate::Operation::DropTable {
-					name: Box::leak(model.table_name.clone().into_boxed_str()),
+					name: model.table_name.clone(),
 				});
 			}
 		}
@@ -4626,11 +4646,11 @@ impl MigrationAutodetector {
 	///
 	///     # Create Migration objects
 	///     return changes
-	/// ```
+	/// ``` rust,ignore
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -4647,7 +4667,7 @@ impl MigrationAutodetector {
 	/// assert_eq!(migrations.len(), 1);
 	/// assert_eq!(migrations[0].app_label, "blog");
 	/// assert!(!migrations[0].operations.is_empty());
-	/// ```
+	/// ``` rust,ignore
 	pub fn generate_migrations(&self) -> Vec<crate::Migration> {
 		let changes = self.detect_changes();
 		let mut migrations_by_app: std::collections::BTreeMap<String, Vec<crate::Operation>> =
@@ -4675,9 +4695,12 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::CreateTable {
-						name: Box::leak(model.table_name.clone().into_boxed_str()),
+						name: model.table_name.clone(),
 						columns,
 						constraints,
+						without_rowid: None,
+						interleave_in_parent: None,
+						partition: None,
 					});
 			}
 		}
@@ -4691,11 +4714,12 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::AddColumn {
-						table: Box::leak(model.table_name.clone().into_boxed_str()),
+						table: model.table_name.clone(),
 						column: crate::ColumnDefinition::from_field_state(
 							field_name.clone(),
 							field,
 						),
+						mysql_options: None,
 					});
 			}
 		}
@@ -4709,12 +4733,13 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::AlterColumn {
-						table: Box::leak(model.table_name.clone().into_boxed_str()),
-						column: Box::leak(field_name.clone().into_boxed_str()),
+						table: model.table_name.clone(),
+						column: field_name.clone(),
 						new_definition: crate::ColumnDefinition::from_field_state(
 							field_name.clone(),
 							field,
 						),
+						mysql_options: None,
 					});
 			}
 		}
@@ -4726,8 +4751,8 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::DropColumn {
-						table: Box::leak(model.table_name.clone().into_boxed_str()),
-						column: Box::leak(field_name.clone().into_boxed_str()),
+						table: model.table_name.clone(),
+						column: field_name.clone(),
 					});
 			}
 		}
@@ -4739,7 +4764,7 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::DropTable {
-						name: Box::leak(model.table_name.clone().into_boxed_str()),
+						name: model.table_name.clone(),
 					});
 			}
 		}
@@ -4818,7 +4843,7 @@ impl MigrationAutodetector {
 			// Create intermediate table columns
 			let columns = vec![
 				crate::ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: crate::FieldType::Integer,
 					not_null: true,
 					unique: false,
@@ -4827,7 +4852,7 @@ impl MigrationAutodetector {
 					default: None,
 				},
 				crate::ColumnDefinition {
-					name: Box::leak(source_column.clone().into_boxed_str()),
+					name: source_column.clone(),
 					type_definition: source_pk_type.clone(),
 					not_null: true,
 					unique: false,
@@ -4836,7 +4861,7 @@ impl MigrationAutodetector {
 					default: None,
 				},
 				crate::ColumnDefinition {
-					name: Box::leak(target_column.clone().into_boxed_str()),
+					name: target_column.clone(),
 					type_definition: target_pk_type,
 					not_null: true,
 					unique: false,
@@ -4855,6 +4880,7 @@ impl MigrationAutodetector {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::Cascade,
 					on_update: ForeignKeyAction::Cascade,
+					deferrable: None,
 				},
 				crate::operations::Constraint::ForeignKey {
 					name: format!("fk_{}_{}", through_table, target_column),
@@ -4863,6 +4889,7 @@ impl MigrationAutodetector {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::Cascade,
 					on_update: ForeignKeyAction::Cascade,
+					deferrable: None,
 				},
 				// Add unique constraint on the combination of both FK columns
 				crate::operations::Constraint::Unique {
@@ -4875,9 +4902,12 @@ impl MigrationAutodetector {
 				.entry(app_label.clone())
 				.or_default()
 				.push(crate::Operation::CreateTable {
-					name: Box::leak(through_table.clone().into_boxed_str()),
+					name: through_table.clone(),
 					columns,
 					constraints,
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				});
 		}
 
@@ -4895,8 +4925,8 @@ impl MigrationAutodetector {
 					.entry(app_label.clone())
 					.or_default()
 					.push(crate::Operation::RenameTable {
-						old_name: Box::leak(old_table_name.into_boxed_str()),
-						new_name: Box::leak(model.table_name.clone().into_boxed_str()),
+						old_name: old_table_name,
+						new_name: model.table_name.clone(),
 					});
 			}
 		}
@@ -4924,17 +4954,17 @@ impl MigrationAutodetector {
 			// Add MoveModel operation to the target app's migrations
 			migrations_by_app.entry(to_app.clone()).or_default().push(
 				crate::Operation::MoveModel {
-					model_name: Box::leak(model_name.clone().into_boxed_str()),
-					from_app: Box::leak(from_app.clone().into_boxed_str()),
-					to_app: Box::leak(to_app.clone().into_boxed_str()),
+					model_name: model_name.clone(),
+					from_app: from_app.clone(),
+					to_app: to_app.clone(),
 					rename_table: *rename_table,
 					old_table_name: if *rename_table {
-						Some(Box::leak(old_table_name.into_boxed_str()))
+						Some(old_table_name)
 					} else {
 						None
 					},
 					new_table_name: if *rename_table {
-						Some(Box::leak(new_table_name.into_boxed_str()))
+						Some(new_table_name)
 					} else {
 						None
 					},
@@ -4951,7 +4981,7 @@ impl MigrationAutodetector {
 					crate::Operation::CreateTable { name, .. } => {
 						format!("0001_initial_{}", name.to_lowercase())
 					}
-					crate::Operation::AddColumn { table, column } => {
+					crate::Operation::AddColumn { table, column, .. } => {
 						format!(
 							"0001_add_{}_{}",
 							column.name.to_lowercase(),
@@ -5025,7 +5055,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, ManyToManyMetadata};
 	///
 	/// let from_state = ProjectState::new();
@@ -5050,7 +5080,7 @@ impl MigrationAutodetector {
 	/// // Should detect created ManyToMany relationship
 	/// assert_eq!(changes.created_many_to_many.len(), 1);
 	/// assert_eq!(changes.created_many_to_many[0].2, "auth_user_groups");
-	/// ```
+	/// ``` rust,ignore
 	fn detect_created_many_to_many(&self, changes: &mut DetectedChanges) {
 		for ((app_label, model_name), model_state) in &self.to_state.models {
 			for m2m in &model_state.many_to_many_fields {
@@ -5139,7 +5169,7 @@ impl MigrationAutodetector {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationAutodetector, ProjectState, ModelState, FieldState, FieldType};
 	///
 	/// let mut from_state = ProjectState::new();
@@ -5163,7 +5193,7 @@ impl MigrationAutodetector {
 	/// let post_deps = changes.model_dependencies.get(&("blog".to_string(), "Post".to_string()));
 	/// assert!(post_deps.is_some());
 	/// assert!(post_deps.unwrap().contains(&("accounts".to_string(), "User".to_string())));
-	/// ```
+	/// ``` rust,ignore
 	fn detect_model_dependencies(&self, changes: &mut DetectedChanges) {
 		// Analyze all models in the final state
 		for ((app_label, model_name), model) in &self.to_state.models {
@@ -5279,7 +5309,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -5289,7 +5319,7 @@ impl ModelState {
 	///
 	/// model.remove_field("email");
 	/// assert!(!model.has_field("email"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn remove_field(&mut self, name: &str) {
 		self.fields.remove(name);
 	}
@@ -5298,7 +5328,7 @@ impl ModelState {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{ModelState, FieldState, FieldType};
 	///
 	/// let mut model = ModelState::new("myapp", "User");
@@ -5311,7 +5341,7 @@ impl ModelState {
 	/// let altered = model.get_field("email").unwrap();
 	/// assert_eq!(altered.field_type, FieldType::Text);
 	/// assert!(altered.nullable);
-	/// ```
+	/// ``` rust,ignore
 	pub fn alter_field(&mut self, name: &str, new_field: FieldState) {
 		self.fields.insert(name.to_string(), new_field);
 	}

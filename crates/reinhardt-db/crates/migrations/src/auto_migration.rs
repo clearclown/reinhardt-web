@@ -145,7 +145,7 @@ impl AutoMigrationGenerator {
 	///
 	/// // Caller persists the migration
 	/// write_migration_file(&migration_file, &result.operations).await?;
-	/// ```
+	/// ``` rust,ignore
 	pub async fn generate(
 		&self,
 		app_label: &str,
@@ -216,17 +216,19 @@ impl AutoMigrationGenerator {
 			.rev()
 			.filter_map(|op| match op {
 				// Table operations
-				Operation::CreateTable { name, .. } => Some(Operation::DropTable { name }),
+				Operation::CreateTable { name, .. } => {
+					Some(Operation::DropTable { name: name.clone() })
+				}
 				Operation::DropTable { .. } => None, // Cannot rollback - data is lost
 				Operation::RenameTable { old_name, new_name } => Some(Operation::RenameTable {
-					old_name: new_name,
-					new_name: old_name,
+					old_name: new_name.clone(),
+					new_name: old_name.clone(),
 				}),
 
 				// Column operations
-				Operation::AddColumn { table, column } => Some(Operation::DropColumn {
-					table,
-					column: column.name,
+				Operation::AddColumn { table, column, .. } => Some(Operation::DropColumn {
+					table: table.clone(),
+					column: column.name.clone(),
 				}),
 				Operation::DropColumn { .. } => None, // Cannot rollback - data is lost
 				Operation::RenameColumn {
@@ -234,9 +236,9 @@ impl AutoMigrationGenerator {
 					old_name,
 					new_name,
 				} => Some(Operation::RenameColumn {
-					table,
-					old_name: new_name,
-					new_name: old_name,
+					table: table.clone(),
+					old_name: new_name.clone(),
+					new_name: old_name.clone(),
 				}),
 				Operation::AlterColumn { .. } => None, // Cannot safely rollback without old definition
 
@@ -246,7 +248,7 @@ impl AutoMigrationGenerator {
 
 				// Index operations
 				Operation::CreateIndex { table, columns, .. } => Some(Operation::DropIndex {
-					table,
+					table: table.clone(),
 					columns: columns.clone(),
 				}),
 				Operation::DropIndex { .. } => None, // Cannot rollback without index definition
@@ -254,13 +256,13 @@ impl AutoMigrationGenerator {
 				// Special operations
 				Operation::RunSQL { reverse_sql, .. } => {
 					reverse_sql.as_ref().map(|sql| Operation::RunSQL {
-						sql,
+						sql: sql.clone(),
 						reverse_sql: None,
 					})
 				}
 				Operation::RunRust { reverse_code, .. } => {
 					reverse_code.as_ref().map(|code| Operation::RunRust {
-						code,
+						code: code.clone(),
 						reverse_code: None,
 					})
 				}
@@ -274,7 +276,8 @@ impl AutoMigrationGenerator {
 				| Operation::MoveModel { .. }
 				| Operation::CreateSchema { .. }
 				| Operation::DropSchema { .. }
-				| Operation::CreateExtension { .. } => None,
+				| Operation::CreateExtension { .. }
+				| Operation::BulkLoad { .. } => None, // Cannot rollback - data loading is not reversible
 			})
 			.collect()
 	}
@@ -424,9 +427,12 @@ mod tests {
 		let generator = AutoMigrationGenerator::new(target_schema, repo);
 
 		let operations = vec![Operation::CreateTable {
-			name: "users",
+			name: "users".to_string(),
 			columns: Vec::new(),
 			constraints: Vec::new(),
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}];
 
 		let rollback = generator.generate_rollback(&operations);
@@ -440,7 +446,7 @@ mod tests {
 
 		let mut current = DatabaseSchema::default();
 		let mut current_table = TableSchema {
-			name: "users",
+			name: "users".to_string(),
 			columns: BTreeMap::new(),
 			indexes: Vec::new(),
 			constraints: Vec::new(),
@@ -448,7 +454,7 @@ mod tests {
 		current_table.columns.insert(
 			"email".to_string(),
 			ColumnSchema {
-				name: "email",
+				name: "email".to_string(),
 				data_type: FieldType::VarChar(255),
 				nullable: true,
 				default: None,
@@ -460,7 +466,7 @@ mod tests {
 
 		let mut target = DatabaseSchema::default();
 		let mut target_table = TableSchema {
-			name: "users",
+			name: "users".to_string(),
 			columns: BTreeMap::new(),
 			indexes: Vec::new(),
 			constraints: Vec::new(),
@@ -468,7 +474,7 @@ mod tests {
 		target_table.columns.insert(
 			"email".to_string(),
 			ColumnSchema {
-				name: "email",
+				name: "email".to_string(),
 				data_type: FieldType::VarChar(255),
 				nullable: false, // Changed to non-nullable
 				default: None,

@@ -153,8 +153,8 @@ mod tests {
 		registry.clear();
 
 		let migration = Migration {
-			app_label: "test_app",
-			name: "0001_initial",
+			app_label: "test_app".to_string(),
+			name: "0001_initial".to_string(),
 			operations: vec![],
 			dependencies: vec![],
 			replaces: vec![],
@@ -162,6 +162,8 @@ mod tests {
 			initial: None,
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		};
 
 		// Register migration
@@ -189,8 +191,8 @@ mod tests {
 		registry.clear();
 
 		let migration = Migration {
-			app_label: "test_app",
-			name: "0001_initial",
+			app_label: "test_app".to_string(),
+			name: "0001_initial".to_string(),
 			operations: vec![],
 			dependencies: vec![],
 			replaces: vec![],
@@ -198,6 +200,8 @@ mod tests {
 			initial: None,
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		};
 
 		registry.register(migration).unwrap();
@@ -224,8 +228,8 @@ mod tests {
 		// Register migrations for different apps
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -233,13 +237,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -247,13 +253,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0002_add_field",
+				app_label: "polls".to_string(),
+				name: "0002_add_field".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -261,6 +269,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -288,8 +298,8 @@ mod tests {
 		// Register some migrations
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -297,6 +307,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -320,8 +332,8 @@ mod tests {
 		// Register multiple migrations for same apps
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -329,13 +341,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0002_add_field",
+				app_label: "polls".to_string(),
+				name: "0002_add_field".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -343,13 +357,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -357,6 +373,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 

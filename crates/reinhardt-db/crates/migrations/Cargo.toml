@@ -11,9 +11,6 @@ repository.workspace = true
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 reinhardt-backends = { workspace = true }
-reinhardt-nosql = { workspace = true, optional = true }
-mongodb = { version = "3.0", optional = true }
-bson = { version = "3.0.0", optional = true }
 clap = { version = "4.5", features = ["derive"] }
 console = "0.16.1"
 dialoguer = "0.12.0"
@@ -53,6 +50,7 @@ reinhardt-settings = { workspace = true }
 tokio = { version = "1", features = ["full"] }
 futures = { workspace = true }
 tracing = { workspace = true }
+toml = "0.8"
 
 # AST dependencies for robust migration file generation
 syn = { version = "2.0", features = ["full", "parsing"] }
@@ -68,6 +66,8 @@ tempfile = { workspace = true }
 rstest = { workspace = true }
 testcontainers = { workspace = true }
 serial_test = { workspace = true }
+proptest = "1.5"
+trybuild = "1.0"
 
 [features]
 default = ["sqlite", "postgres", "mysql", "db-sqlite", "db-postgres", "db-mysql"]
@@ -77,5 +77,4 @@ mysql = ["reinhardt-backends/mysql"]
 db-sqlite = []
 db-postgres = []
 db-mysql = []
-mongodb-backend = ["dep:mongodb", "dep:bson", "dep:reinhardt-nosql", "reinhardt-nosql/mongodb", "reinhardt-backends/mongodb-backend"]
-full = ["sqlite", "postgres", "mysql", "mongodb-backend", "db-sqlite", "db-postgres", "db-mysql"]
+full = ["sqlite", "postgres", "mysql", "db-sqlite", "db-postgres", "db-mysql"]

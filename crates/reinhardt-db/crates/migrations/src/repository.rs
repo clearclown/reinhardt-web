@@ -42,10 +42,10 @@ mod tests {
 	use std::collections::HashMap;
 
 	/// Test helper to create a migration
-	fn create_test_migration(app_label: &'static str, name: &'static str) -> Migration {
+	fn create_test_migration(app_label: &str, name: &str) -> Migration {
 		Migration {
-			app_label,
-			name,
+			app_label: app_label.to_string(),
+			name: name.to_string(),
 			operations: vec![],
 			dependencies: vec![],
 			atomic: true,
@@ -53,6 +53,8 @@ mod tests {
 			replaces: vec![],
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		}
 	}
 

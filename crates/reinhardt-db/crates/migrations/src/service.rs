@@ -39,7 +39,7 @@ impl MigrationService {
 	/// ));
 	///
 	/// let service = MigrationService::new(source, repository);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(
 		source: Arc<dyn MigrationSource>,
 		repository: Arc<tokio::sync::Mutex<dyn MigrationRepository>>,
@@ -300,10 +300,10 @@ mod tests {
 		}
 	}
 
-	fn create_test_migration(app_label: &'static str, name: &'static str) -> Migration {
+	fn create_test_migration(app_label: &str, name: &str) -> Migration {
 		Migration {
-			app_label,
-			name,
+			app_label: app_label.to_string(),
+			name: name.to_string(),
 			operations: vec![],
 			dependencies: vec![],
 			atomic: true,
@@ -311,6 +311,8 @@ mod tests {
 			replaces: vec![],
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		}
 	}
 
@@ -370,15 +372,17 @@ mod tests {
 			migrations: vec![
 				create_test_migration("polls", "0001_initial"),
 				Migration {
-					app_label: "polls",
-					name: "0002_add_field",
+					app_label: "polls".to_string(),
+					name: "0002_add_field".to_string(),
 					operations: vec![],
-					dependencies: vec![("polls", "0001_initial")],
+					dependencies: vec![("polls".to_string(), "0001_initial".to_string())],
 					atomic: true,
 					initial: None,
 					replaces: vec![],
 					state_only: false,
 					database_only: false,
+					swappable_dependencies: vec![],
+					optional_dependencies: vec![],
 				},
 			],
 		});

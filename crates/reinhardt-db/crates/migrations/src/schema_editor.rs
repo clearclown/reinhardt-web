@@ -194,6 +194,101 @@ impl SchemaEditor {
 	pub fn connection(&self) -> &DatabaseConnection {
 		&self.connection
 	}
+
+	/// Disable foreign key checks (SQLite only)
+	///
+	/// This must be called BEFORE any table recreation operations that might
+	/// temporarily break foreign key relationships. Remember to re-enable
+	/// foreign keys after the operation completes.
+	///
+	/// # SQLite Foreign Key Handling
+	///
+	/// SQLite table recreation temporarily drops the original table, which
+	/// can cause foreign key violations. This method disables foreign key
+	/// enforcement during the recreation process.
+	///
+	/// # Returns
+	///
+	/// Ok(()) if successful, or an error if the operation fails.
+	/// Returns Ok(()) immediately for non-SQLite databases.
+	#[cfg(feature = "sqlite")]
+	pub async fn disable_foreign_keys(&mut self) -> Result<()> {
+		if !matches!(self.db_type, DatabaseType::Sqlite) {
+			return Ok(());
+		}
+
+		tracing::debug!("Disabling SQLite foreign key checks");
+		self.execute("PRAGMA foreign_keys = OFF").await?;
+		Ok(())
+	}
+
+	/// Enable foreign key checks (SQLite only)
+	///
+	/// This should be called AFTER table recreation operations complete
+	/// to restore foreign key enforcement.
+	///
+	/// # Returns
+	///
+	/// Ok(()) if successful, or an error if the operation fails.
+	/// Returns Ok(()) immediately for non-SQLite databases.
+	#[cfg(feature = "sqlite")]
+	pub async fn enable_foreign_keys(&mut self) -> Result<()> {
+		if !matches!(self.db_type, DatabaseType::Sqlite) {
+			return Ok(());
+		}
+
+		tracing::debug!("Enabling SQLite foreign key checks");
+		self.execute("PRAGMA foreign_keys = ON").await?;
+		Ok(())
+	}
+
+	/// Check foreign key integrity (SQLite only)
+	///
+	/// This should be called after table recreation to verify that all
+	/// foreign key relationships are valid. If violations are found,
+	/// they will be returned as a vector of violation descriptions.
+	///
+	/// # Returns
+	///
+	/// A vector of foreign key violation descriptions (empty if no violations).
+	/// Returns an empty vector immediately for non-SQLite databases.
+	#[cfg(feature = "sqlite")]
+	pub async fn check_foreign_key_integrity(&mut self) -> Result<Vec<String>> {
+		if !matches!(self.db_type, DatabaseType::Sqlite) {
+			return Ok(Vec::new());
+		}
+
+		tracing::debug!("Checking SQLite foreign key integrity");
+
+		// PRAGMA foreign_key_check returns rows with:
+		// table, rowid, parent_table, fkid
+		let sql = "PRAGMA foreign_key_check";
+		let rows = if let Some(ref mut tx) = self.executor {
+			tx.fetch_all(sql, vec![]).await?
+		} else {
+			self.connection.fetch_all(sql, vec![]).await?
+		};
+
+		let violations: Vec<String> = rows
+			.into_iter()
+			.map(|row| {
+				// PRAGMA foreign_key_check returns: table, rowid, parent, fkid
+				let table: String = row.get("table").unwrap_or_default();
+				let rowid: i64 = row.get("rowid").unwrap_or_default();
+				let parent_table: String = row.get("parent").unwrap_or_default();
+				format!(
+					"FK violation in '{}' row {} referencing '{}'",
+					table, rowid, parent_table
+				)
+			})
+			.collect();
+
+		if !violations.is_empty() {
+			tracing::warn!("Foreign key violations found: {:?}", violations);
+		}
+
+		Ok(violations)
+	}
 }
 
 #[cfg(test)]

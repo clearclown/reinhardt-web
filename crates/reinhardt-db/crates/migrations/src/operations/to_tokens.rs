@@ -1,4 +1,11 @@
-use crate::{ColumnDefinition, Constraint, FieldType, ForeignKeyAction, IndexType, Operation};
+use super::{
+	AlterTableOptions, InterleaveSpec, MySqlAlgorithm, MySqlLock, PartitionDef, PartitionOptions,
+	PartitionType, PartitionValues,
+};
+use crate::{
+	ColumnDefinition, Constraint, DeferrableOption, FieldType, ForeignKeyAction, IndexType,
+	Operation,
+};
 use proc_macro2::TokenStream;
 use quote::{ToTokens, quote};
 
@@ -137,6 +144,129 @@ impl ToTokens for ForeignKeyAction {
 	}
 }
 
+impl ToTokens for MySqlAlgorithm {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			MySqlAlgorithm::Instant => quote! { MySqlAlgorithm::Instant },
+			MySqlAlgorithm::Inplace => quote! { MySqlAlgorithm::Inplace },
+			MySqlAlgorithm::Copy => quote! { MySqlAlgorithm::Copy },
+			MySqlAlgorithm::Default => quote! { MySqlAlgorithm::Default },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for MySqlLock {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			MySqlLock::None => quote! { MySqlLock::None },
+			MySqlLock::Shared => quote! { MySqlLock::Shared },
+			MySqlLock::Exclusive => quote! { MySqlLock::Exclusive },
+			MySqlLock::Default => quote! { MySqlLock::Default },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for AlterTableOptions {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let algorithm_token = match &self.algorithm {
+			Some(algo) => quote! { Some(#algo) },
+			None => quote! { None },
+		};
+		let lock_token = match &self.lock {
+			Some(lock) => quote! { Some(#lock) },
+			None => quote! { None },
+		};
+		tokens.extend(quote! {
+			AlterTableOptions {
+				algorithm: #algorithm_token,
+				lock: #lock_token,
+			}
+		});
+	}
+}
+
+impl ToTokens for DeferrableOption {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			DeferrableOption::Immediate => quote! { DeferrableOption::Immediate },
+			DeferrableOption::Deferred => quote! { DeferrableOption::Deferred },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for PartitionType {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			PartitionType::Range => quote! { PartitionType::Range },
+			PartitionType::List => quote! { PartitionType::List },
+			PartitionType::Hash => quote! { PartitionType::Hash },
+			PartitionType::Key => quote! { PartitionType::Key },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for PartitionValues {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			PartitionValues::LessThan(value) => {
+				quote! { PartitionValues::LessThan(#value.to_string()) }
+			}
+			PartitionValues::In(values) => {
+				quote! { PartitionValues::In(vec![#(#values.to_string()),*]) }
+			}
+			PartitionValues::ModuloCount(count) => {
+				quote! { PartitionValues::ModuloCount(#count) }
+			}
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for PartitionDef {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let name = &self.name;
+		let values = &self.values;
+		tokens.extend(quote! {
+			PartitionDef {
+				name: #name.to_string(),
+				values: #values,
+			}
+		});
+	}
+}
+
+impl ToTokens for PartitionOptions {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let partition_type = &self.partition_type;
+		let column = &self.column;
+		let partitions = &self.partitions;
+		tokens.extend(quote! {
+			PartitionOptions {
+				partition_type: #partition_type,
+				column: #column.to_string(),
+				partitions: vec![#(#partitions),*],
+			}
+		});
+	}
+}
+
+impl ToTokens for InterleaveSpec {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let parent_table = &self.parent_table;
+		let parent_columns = &self.parent_columns;
+		tokens.extend(quote! {
+			InterleaveSpec {
+				parent_table: #parent_table,
+				parent_columns: vec![#(#parent_columns),*],
+			}
+		});
+	}
+}
+
 impl ToTokens for Constraint {
 	fn to_tokens(&self, tokens: &mut TokenStream) {
 		match self {
@@ -147,9 +277,14 @@ impl ToTokens for Constraint {
 				referenced_columns,
 				on_delete,
 				on_update,
+				deferrable,
 			} => {
 				let columns_iter = columns.iter();
 				let ref_columns_iter = referenced_columns.iter();
+				let deferrable_tokens = match deferrable {
+					Some(d) => quote! { Some(#d) },
+					None => quote! { None },
+				};
 				tokens.extend(quote! {
 					Constraint::ForeignKey {
 						name: #name.to_string(),
@@ -158,6 +293,7 @@ impl ToTokens for Constraint {
 						referenced_columns: vec![#(#ref_columns_iter.to_string()),*],
 						on_delete: #on_delete,
 						on_update: #on_update,
+						deferrable: #deferrable_tokens,
 					}
 				});
 			}
@@ -185,7 +321,12 @@ impl ToTokens for Constraint {
 				referenced_column,
 				on_delete,
 				on_update,
+				deferrable,
 			} => {
+				let deferrable_tokens = match deferrable {
+					Some(d) => quote! { Some(#d) },
+					None => quote! { None },
+				};
 				tokens.extend(quote! {
 					Constraint::OneToOne {
 						name: #name.to_string(),
@@ -194,6 +335,7 @@ impl ToTokens for Constraint {
 						referenced_column: #referenced_column.to_string(),
 						on_delete: #on_delete,
 						on_update: #on_update,
+						deferrable: #deferrable_tokens,
 					}
 				});
 			}
@@ -214,6 +356,13 @@ impl ToTokens for Constraint {
 					}
 				});
 			}
+			Constraint::Exclude { .. } => {
+				// Exclude constraints are PostgreSQL-specific
+				// For code generation, we output a placeholder comment
+				tokens.extend(quote! {
+					// Exclude constraints require raw SQL generation
+				});
+			}
 		}
 	}
 }
@@ -225,14 +374,33 @@ impl ToTokens for Operation {
 				name,
 				columns,
 				constraints,
+				without_rowid,
+				interleave_in_parent,
+				partition,
 			} => {
 				let columns_tokens = columns.iter();
 				let constraints_tokens = constraints.iter();
+				let without_rowid_tokens = match without_rowid {
+					Some(true) => quote! { Some(true) },
+					Some(false) => quote! { Some(false) },
+					None => quote! { None },
+				};
+				let interleave_tokens = match interleave_in_parent {
+					Some(spec) => quote! { Some(#spec) },
+					None => quote! { None },
+				};
+				let partition_tokens = match partition {
+					Some(opts) => quote! { Some(#opts) },
+					None => quote! { None },
+				};
 				tokens.extend(quote! {
 					Operation::CreateTable {
 						name: #name,
 						columns: vec![#(#columns_tokens),*],
 						constraints: vec![#(#constraints_tokens),*],
+						without_rowid: #without_rowid_tokens,
+						interleave_in_parent: #interleave_tokens,
+						partition: #partition_tokens,
 					}
 				});
 			}
@@ -243,11 +411,12 @@ impl ToTokens for Operation {
 					}
 				});
 			}
-			Operation::AddColumn { table, column } => {
+			Operation::AddColumn { table, column, .. } => {
 				tokens.extend(quote! {
 					Operation::AddColumn {
 						table: #table,
 						column: #column,
+						mysql_options: None,
 					}
 				});
 			}
@@ -263,12 +432,14 @@ impl ToTokens for Operation {
 				table,
 				column,
 				new_definition,
+				..
 			} => {
 				tokens.extend(quote! {
 					Operation::AlterColumn {
 						table: #table,
 						column: #column,
 						new_definition: #new_definition,
+						mysql_options: None,
 					}
 				});
 			}
@@ -322,6 +493,9 @@ impl ToTokens for Operation {
 				index_type,
 				where_clause,
 				concurrently,
+				expressions,
+				mysql_options,
+				operator_class,
 			} => {
 				let columns_iter = columns.iter();
 				let index_type_token = match index_type {
@@ -343,6 +517,21 @@ impl ToTokens for Operation {
 					Some(s) => quote! { Some(#s) },
 					None => quote! { None },
 				};
+				let expressions_token = match expressions {
+					Some(exprs) => {
+						let exprs_iter = exprs.iter();
+						quote! { Some(vec![#(#exprs_iter),*]) }
+					}
+					None => quote! { None },
+				};
+				let mysql_options_token = match mysql_options {
+					Some(opts) => quote! { Some(#opts) },
+					None => quote! { None },
+				};
+				let operator_class_token = match operator_class {
+					Some(oc) => quote! { Some(#oc) },
+					None => quote! { None },
+				};
 				tokens.extend(quote! {
 					Operation::CreateIndex {
 						table: #table,
@@ -351,6 +540,9 @@ impl ToTokens for Operation {
 						index_type: #index_type_token,
 						where_clause: #where_clause_token,
 						concurrently: #concurrently,
+						expressions: #expressions_token,
+						mysql_options: #mysql_options_token,
+						operator_class: #operator_class_token,
 					}
 				});
 			}
@@ -525,6 +717,86 @@ impl ToTokens for Operation {
 					}
 				});
 			}
+			Operation::BulkLoad {
+				table,
+				source,
+				format,
+				options,
+			} => {
+				// Manually construct tokens for BulkLoadSource
+				let source_tokens = match source {
+					crate::BulkLoadSource::File(path) => {
+						quote! { BulkLoadSource::File(#path) }
+					}
+					crate::BulkLoadSource::Stdin => {
+						quote! { BulkLoadSource::Stdin }
+					}
+					crate::BulkLoadSource::Program(cmd) => {
+						quote! { BulkLoadSource::Program(#cmd) }
+					}
+				};
+
+				// Manually construct tokens for BulkLoadFormat
+				let format_tokens = match format {
+					crate::BulkLoadFormat::Text => quote! { BulkLoadFormat::Text },
+					crate::BulkLoadFormat::Csv => quote! { BulkLoadFormat::Csv },
+					crate::BulkLoadFormat::Binary => quote! { BulkLoadFormat::Binary },
+				};
+
+				// Manually construct tokens for BulkLoadOptions
+				let delimiter_token = match &options.delimiter {
+					Some(d) => quote! { Some(#d) },
+					None => quote! { None },
+				};
+				let null_string_token = match &options.null_string {
+					Some(s) => quote! { Some(#s) },
+					None => quote! { None },
+				};
+				let header = options.header;
+				let columns_token = match &options.columns {
+					Some(cols) => {
+						let cols_iter = cols.iter();
+						quote! { Some(vec![#(#cols_iter),*]) }
+					}
+					None => quote! { None },
+				};
+				let local = options.local;
+				let quote_token = match &options.quote {
+					Some(q) => quote! { Some(#q) },
+					None => quote! { None },
+				};
+				let escape_token = match &options.escape {
+					Some(e) => quote! { Some(#e) },
+					None => quote! { None },
+				};
+				let line_terminator_token = match &options.line_terminator {
+					Some(lt) => quote! { Some(#lt) },
+					None => quote! { None },
+				};
+				let encoding_token = match &options.encoding {
+					Some(e) => quote! { Some(#e) },
+					None => quote! { None },
+				};
+
+				tokens.extend(quote! {
+					Operation::BulkLoad {
+						table: #table,
+						source: #source_tokens,
+						format: #format_tokens,
+						options: BulkLoadOptions {
+							delimiter: #delimiter_token,
+							null_string: #null_string_token,
+							header: #header,
+							columns: #columns_token,
+							local: #local,
+							quote: #quote_token,
+							escape: #escape_token,
+							line_terminator: #line_terminator_token,
+							encoding: #encoding_token,
+						},
+					}
+				});
+			}
 		}
 	}
 }
@@ -672,6 +944,91 @@ impl ToTokens for ColumnDefinition {
 				primary_key: #primary_key,
 				auto_increment: #auto_increment,
 				default: #default_token,
+			}
+		});
+	}
+}
+
+impl ToTokens for super::BulkLoadSource {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			super::BulkLoadSource::File(path) => {
+				quote! { BulkLoadSource::File(#path) }
+			}
+			super::BulkLoadSource::Stdin => {
+				quote! { BulkLoadSource::Stdin }
+			}
+			super::BulkLoadSource::Program(cmd) => {
+				quote! { BulkLoadSource::Program(#cmd) }
+			}
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for super::BulkLoadFormat {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let variant = match self {
+			super::BulkLoadFormat::Text => quote! { BulkLoadFormat::Text },
+			super::BulkLoadFormat::Csv => quote! { BulkLoadFormat::Csv },
+			super::BulkLoadFormat::Binary => quote! { BulkLoadFormat::Binary },
+		};
+		tokens.extend(variant);
+	}
+}
+
+impl ToTokens for super::BulkLoadOptions {
+	fn to_tokens(&self, tokens: &mut TokenStream) {
+		let delimiter = match self.delimiter {
+			Some(c) => quote! { Some(#c) },
+			None => quote! { None },
+		};
+
+		let null_string = match &self.null_string {
+			Some(s) => quote! { Some(#s) },
+			None => quote! { None },
+		};
+
+		let header = self.header;
+
+		let columns = match &self.columns {
+			Some(cols) => quote! { Some(vec![#(#cols),*]) },
+			None => quote! { None },
+		};
+
+		let local = self.local;
+
+		let quote_char = match self.quote {
+			Some(c) => quote! { Some(#c) },
+			None => quote! { None },
+		};
+
+		let escape = match self.escape {
+			Some(c) => quote! { Some(#c) },
+			None => quote! { None },
+		};
+
+		let line_terminator = match &self.line_terminator {
+			Some(s) => quote! { Some(#s) },
+			None => quote! { None },
+		};
+
+		let encoding = match &self.encoding {
+			Some(s) => quote! { Some(#s) },
+			None => quote! { None },
+		};
+
+		tokens.extend(quote! {
+			BulkLoadOptions {
+				delimiter: #delimiter,
+				null_string: #null_string,
+				header: #header,
+				columns: #columns,
+				local: #local,
+				quote: #quote_char,
+				escape: #escape,
+				line_terminator: #line_terminator,
+				encoding: #encoding,
 			}
 		});
 	}

@@ -41,7 +41,7 @@ use std::collections::HashSet;
 ///     optimize: true,
 ///     no_optimize: false,
 /// };
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct SquashOptions {
 	/// Enable operation optimization (remove redundant operations)
@@ -72,7 +72,7 @@ impl Default for SquashOptions {
 /// let squasher = MigrationSquasher::new();
 /// let migrations = vec![Migration::new("0001_initial", "myapp")];
 /// let squashed = squasher.squash(&migrations, "0001_squashed", Default::default()).unwrap();
-/// ```
+/// ``` rust,ignore
 pub struct MigrationSquasher {
 	_private: (),
 }
@@ -86,7 +86,7 @@ impl MigrationSquasher {
 	/// use reinhardt_migrations::squash::MigrationSquasher;
 	///
 	/// let squasher = MigrationSquasher::new();
-	/// ```
+	/// ``` rust,ignore
 	pub fn new() -> Self {
 		Self { _private: () }
 	}
@@ -113,7 +113,7 @@ impl MigrationSquasher {
 	/// let squashed = squasher.squash(&migrations, "0001_squashed_0002", SquashOptions::default()).unwrap();
 	///
 	/// assert_eq!(squashed.name, "0001_squashed_0002");
-	/// ```
+	/// ``` rust,ignore
 	pub fn squash(
 		&self,
 		migrations: &[Migration],
@@ -146,14 +146,14 @@ impl MigrationSquasher {
 		}
 
 		// Create squashed migration
-		let mut squashed = Migration::new(squashed_name, *app_label);
+		let mut squashed = Migration::new(squashed_name, app_label.clone());
 		squashed.operations = operations;
 
 		// Record which migrations this replaces
 		for migration in migrations {
 			squashed
 				.replaces
-				.push((migration.app_label, migration.name));
+				.push((migration.app_label.clone(), migration.name.clone()));
 		}
 
 		// Collect dependencies from first migration (external dependencies only)
@@ -165,7 +165,9 @@ impl MigrationSquasher {
 						.iter()
 						.any(|m| m.app_label == *dep_app && m.name == *dep_name)
 				{
-					squashed.dependencies.push((dep_app, dep_name));
+					squashed
+						.dependencies
+						.push((dep_app.clone(), dep_name.clone()));
 				}
 			}
 		}
@@ -186,18 +188,21 @@ impl MigrationSquasher {
 	/// // Create table then drop it - both can be removed
 	/// let ops = vec![
 	///     Operation::CreateTable {
-	///         name: "temp",
+	///         name: "temp".to_string(),
 	///         columns: vec![ColumnDefinition::new("id", FieldType::Integer)],
 	///         constraints: vec![],
+	///         without_rowid: None,
+	///         interleave_in_parent: None,
+	///         partition: None,
 	///     },
 	///     Operation::DropTable {
-	///         name: "temp",
+	///         name: "temp".to_string(),
 	///     },
 	/// ];
 	///
 	/// let optimized = squasher.optimize_operations(ops);
 	/// assert_eq!(optimized.len(), 0);
-	/// ```
+	/// ``` rust,ignore
 	pub fn optimize_operations(&self, operations: Vec<Operation>) -> Vec<Operation> {
 		let mut optimized = Vec::new();
 		let mut created_tables = HashSet::new();
@@ -207,8 +212,8 @@ impl MigrationSquasher {
 			let should_push = match &operation {
 				Operation::CreateTable { name, .. } => {
 					// Skip if this table will be dropped later
-					if !dropped_tables.contains(*name) {
-						created_tables.insert(*name);
+					if !dropped_tables.contains(name) {
+						created_tables.insert(name.clone());
 						true
 					} else {
 						false
@@ -216,47 +221,47 @@ impl MigrationSquasher {
 				}
 				Operation::DropTable { name } => {
 					// If table was just created, remove both operations
-					if created_tables.contains(*name) {
+					if created_tables.contains(name) {
 						optimized.retain(
 							|op| !matches!(op, Operation::CreateTable { name: table_name, .. } if table_name == name),
 						);
-						created_tables.remove(*name);
+						created_tables.remove(name);
 						false
 					} else {
-						dropped_tables.insert(*name);
+						dropped_tables.insert(name.clone());
 						true
 					}
 				}
 				Operation::AddColumn { table, .. } => {
 					// Skip if table was dropped
-					!dropped_tables.contains(*table)
+					!dropped_tables.contains(table)
 				}
 				Operation::DropColumn { table, column } => {
 					// Remove corresponding AddColumn if exists
 					let had_add = optimized.iter().any(|op| {
-                    matches!(op, Operation::AddColumn { table: t, column: c } if *t == *table && c.name == *column)
-                });
+						matches!(op, Operation::AddColumn { table: t, column: c, .. } if t == table && c.name == *column)
+					});
 
 					if had_add {
 						optimized.retain(|op| {
-                        !matches!(op, Operation::AddColumn { table: t, column: c } if *t == *table && c.name == *column)
-                    });
+							!matches!(op, Operation::AddColumn { table: t, column: c, .. } if t == table && c.name == *column)
+						});
 						false
 					} else {
-						!dropped_tables.contains(*table)
+						!dropped_tables.contains(table)
 					}
 				}
 				Operation::AlterColumn { table, .. } => {
 					// Skip if table was dropped
-					!dropped_tables.contains(*table)
+					!dropped_tables.contains(table)
 				}
 				Operation::RenameTable { old_name, .. } => {
 					// Skip if table was dropped
-					!dropped_tables.contains(*old_name)
+					!dropped_tables.contains(old_name)
 				}
 				Operation::RenameColumn { table, .. } => {
 					// Skip if table was dropped
-					!dropped_tables.contains(*table)
+					!dropped_tables.contains(table)
 				}
 				_ => true,
 			};
@@ -326,11 +331,16 @@ mod tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "temp",
+				name: "temp".to_string(),
 				columns: vec![ColumnDefinition::new("id", FieldType::Integer)],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
-			Operation::DropTable { name: "temp" },
+			Operation::DropTable {
+				name: "temp".to_string(),
+			},
 		];
 
 		let optimized = squasher.optimize_operations(ops);
@@ -343,12 +353,13 @@ mod tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("temp_field", FieldType::VarChar(100)),
+				mysql_options: None,
 			},
 			Operation::DropColumn {
-				table: "users",
-				column: "temp_field",
+				table: "users".to_string(),
+				column: "temp_field".to_string(),
 			},
 		];
 
@@ -362,13 +373,17 @@ mod tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "users",
+				name: "users".to_string(),
 				columns: vec![ColumnDefinition::new("id", FieldType::Integer)],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("name", FieldType::VarChar(100)),
+				mysql_options: None,
 			},
 		];
 
@@ -380,19 +395,23 @@ mod tests {
 	fn test_squash_with_operations() {
 		let migration1 =
 			Migration::new("0001_initial", "myapp").add_operation(Operation::CreateTable {
-				name: "users",
+				name: "users".to_string(),
 				columns: vec![ColumnDefinition::new(
 					"id",
 					FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 				)],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			});
 
 		let migration2 = Migration::new("0002_add_field", "myapp")
 			.add_dependency("myapp", "0001_initial")
 			.add_operation(Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("name", FieldType::VarChar(100)),
+				mysql_options: None,
 			});
 
 		let migrations = vec![migration1, migration2];

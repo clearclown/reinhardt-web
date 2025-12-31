@@ -14,31 +14,17 @@ pub fn extract_migration_metadata(ast: &File, app_label: &str, name: &str) -> Re
 	let operations = extract_operations(ast).unwrap_or_default();
 
 	Ok(Migration {
-		app_label: Box::leak(app_label.to_string().into_boxed_str()) as &'static str,
-		name: Box::leak(name.to_string().into_boxed_str()) as &'static str,
+		app_label: app_label.to_string(),
+		name: name.to_string(),
 		operations,
-		dependencies: dependencies
-			.into_iter()
-			.map(|(a, n)| {
-				(
-					Box::leak(a.into_boxed_str()) as &'static str,
-					Box::leak(n.into_boxed_str()) as &'static str,
-				)
-			})
-			.collect(),
+		dependencies,
 		atomic,
-		replaces: replaces
-			.into_iter()
-			.map(|(a, n)| {
-				(
-					Box::leak(a.into_boxed_str()) as &'static str,
-					Box::leak(n.into_boxed_str()) as &'static str,
-				)
-			})
-			.collect(),
+		replaces,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	})
 }
 
@@ -158,32 +144,31 @@ fn parse_single_operation(expr: &Expr) -> Option<crate::Operation> {
 				let constraints = extract_constraints_field(&expr_struct.fields);
 
 				return Some(crate::Operation::CreateTable {
-					name: Box::leak(name.into_boxed_str()),
+					name,
 					columns,
 					constraints,
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				});
 			}
 			"DropTable" => {
 				let name = extract_static_str_field(&expr_struct.fields, "name")?;
-				return Some(crate::Operation::DropTable {
-					name: Box::leak(name.into_boxed_str()),
-				});
+				return Some(crate::Operation::DropTable { name });
 			}
 			"AddColumn" => {
 				let table = extract_static_str_field(&expr_struct.fields, "table")?;
 				let column = extract_column_definition_field(&expr_struct.fields, "column")?;
 				return Some(crate::Operation::AddColumn {
-					table: Box::leak(table.into_boxed_str()),
+					table,
 					column,
+					mysql_options: None,
 				});
 			}
 			"DropColumn" => {
 				let table = extract_static_str_field(&expr_struct.fields, "table")?;
 				let column = extract_static_str_field(&expr_struct.fields, "column")?;
-				return Some(crate::Operation::DropColumn {
-					table: Box::leak(table.into_boxed_str()),
-					column: Box::leak(column.into_boxed_str()),
-				});
+				return Some(crate::Operation::DropColumn { table, column });
 			}
 			"AlterColumn" => {
 				let table = extract_static_str_field(&expr_struct.fields, "table")?;
@@ -191,27 +176,25 @@ fn parse_single_operation(expr: &Expr) -> Option<crate::Operation> {
 				let new_definition =
 					extract_column_definition_field(&expr_struct.fields, "new_definition")?;
 				return Some(crate::Operation::AlterColumn {
-					table: Box::leak(table.into_boxed_str()),
-					column: Box::leak(column.into_boxed_str()),
+					table,
+					column,
 					new_definition,
+					mysql_options: None,
 				});
 			}
 			"RenameTable" => {
 				let old_name = extract_static_str_field(&expr_struct.fields, "old_name")?;
 				let new_name = extract_static_str_field(&expr_struct.fields, "new_name")?;
-				return Some(crate::Operation::RenameTable {
-					old_name: Box::leak(old_name.into_boxed_str()),
-					new_name: Box::leak(new_name.into_boxed_str()),
-				});
+				return Some(crate::Operation::RenameTable { old_name, new_name });
 			}
 			"RenameColumn" => {
 				let table = extract_static_str_field(&expr_struct.fields, "table")?;
 				let old_name = extract_static_str_field(&expr_struct.fields, "old_name")?;
 				let new_name = extract_static_str_field(&expr_struct.fields, "new_name")?;
 				return Some(crate::Operation::RenameColumn {
-					table: Box::leak(table.into_boxed_str()),
-					old_name: Box::leak(old_name.into_boxed_str()),
-					new_name: Box::leak(new_name.into_boxed_str()),
+					table,
+					old_name,
+					new_name,
 				});
 			}
 			"CreateIndex" => {
@@ -224,36 +207,26 @@ fn parse_single_operation(expr: &Expr) -> Option<crate::Operation> {
 					extract_bool_field(&expr_struct.fields, "concurrently").unwrap_or(false);
 
 				return Some(crate::Operation::CreateIndex {
-					table: Box::leak(table.into_boxed_str()),
-					columns: columns
-						.into_iter()
-						.map(|s| Box::leak(s.into_boxed_str()) as &'static str)
-						.collect(),
+					table,
+					columns,
 					unique,
 					index_type,
-					where_clause: where_clause
-						.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
+					where_clause,
 					concurrently,
+					expressions: None,
+					mysql_options: None,
+					operator_class: None,
 				});
 			}
 			"DropIndex" => {
 				let table = extract_static_str_field(&expr_struct.fields, "table")?;
 				let columns = extract_string_vec_field(&expr_struct.fields, "columns");
-				return Some(crate::Operation::DropIndex {
-					table: Box::leak(table.into_boxed_str()),
-					columns: columns
-						.into_iter()
-						.map(|s| Box::leak(s.into_boxed_str()) as &'static str)
-						.collect(),
-				});
+				return Some(crate::Operation::DropIndex { table, columns });
 			}
 			"RunSQL" => {
 				let sql = extract_static_str_field(&expr_struct.fields, "sql")?;
 				let reverse_sql = extract_optional_str_field(&expr_struct.fields, "reverse_sql");
-				return Some(crate::Operation::RunSQL {
-					sql: Box::leak(sql.into_boxed_str()),
-					reverse_sql: reverse_sql.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
-				});
+				return Some(crate::Operation::RunSQL { sql, reverse_sql });
 			}
 			_ => {
 				// Log unhandled operation types
@@ -560,6 +533,7 @@ fn parse_single_constraint(expr: &Expr) -> Option<crate::Constraint> {
 					referenced_columns,
 					on_delete,
 					on_update,
+					deferrable: None,
 				});
 			}
 			"Unique" => {
@@ -593,6 +567,7 @@ fn parse_single_constraint(expr: &Expr) -> Option<crate::Constraint> {
 					referenced_column,
 					on_delete,
 					on_update,
+					deferrable: None,
 				});
 			}
 			"ManyToMany" => {
@@ -729,47 +704,16 @@ fn parse_column_definition(expr: &Expr) -> Option<crate::ColumnDefinition> {
 		let default = extract_optional_str_field(&expr_struct.fields, "default");
 
 		return Some(crate::ColumnDefinition {
-			name: Box::leak(name.into_boxed_str()),
+			name,
 			type_definition,
 			not_null,
 			unique,
 			primary_key,
 			auto_increment,
-			default: default.map(|s| Box::leak(s.into_boxed_str()) as &'static str),
+			default,
 		});
 	}
 
-	None
-}
-
-/// Extract an Option<u32> field
-#[allow(dead_code)]
-fn extract_u32_field(
-	fields: &syn::punctuated::Punctuated<syn::FieldValue, syn::token::Comma>,
-	field_name: &str,
-) -> Option<u32> {
-	for field in fields {
-		if let syn::Member::Named(ident) = &field.member
-			&& ident == field_name
-		{
-			// Check for None
-			if let Expr::Path(expr_path) = &field.expr
-				&& expr_path.path.is_ident("None")
-			{
-				return None;
-			}
-			// Check for Some(n)
-			if let Expr::Call(expr_call) = &field.expr
-				&& let Expr::Path(func_path) = &*expr_call.func
-				&& func_path.path.is_ident("Some")
-				&& !expr_call.args.is_empty()
-				&& let Expr::Lit(expr_lit) = &expr_call.args[0]
-				&& let syn::Lit::Int(lit_int) = &expr_lit.lit
-			{
-				return lit_int.base10_parse().ok();
-			}
-		}
-	}
 	None
 }
 

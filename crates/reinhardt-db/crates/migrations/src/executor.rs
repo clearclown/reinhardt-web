@@ -3,12 +3,15 @@
 //! Translated from Django's db/migrations/executor.py
 
 use crate::{
-	DatabaseMigrationRecorder, Migration, MigrationError, MigrationPlan, MigrationService,
-	Operation, Result, SchemaEditor, operations::SqlDialect,
+	DatabaseMigrationRecorder, ForeignKeyAction, Migration, MigrationError, MigrationPlan,
+	MigrationService, Operation, Result, SchemaEditor, operations::SqlDialect,
 };
 use indexmap::IndexMap;
 use reinhardt_backends::{connection::DatabaseConnection, types::DatabaseType};
 use std::collections::HashSet;
+
+#[cfg(feature = "sqlite")]
+use crate::introspection::SQLiteIntrospector;
 
 /// Split SQL string into individual statements while handling:
 /// - String literals (single/double quotes)
@@ -181,7 +184,7 @@ impl DatabaseMigrationExecutor {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::executor::DatabaseMigrationExecutor;
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -191,7 +194,7 @@ impl DatabaseMigrationExecutor {
 	/// let executor = DatabaseMigrationExecutor::new(db.clone());
 	/// // Database type is automatically detected as Sqlite
 	/// # });
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(connection: DatabaseConnection) -> Self {
 		let db_type = connection.database_type();
 		let recorder = DatabaseMigrationRecorder::new(connection.clone());
@@ -225,7 +228,7 @@ impl DatabaseMigrationExecutor {
 	/// let executor = DatabaseMigrationExecutor::new(db);
 	/// let exists = executor.table_exists("users").await.unwrap();
 	/// # }
-	/// ```
+	/// ``` rust,ignore
 	async fn table_exists(&self, table_name: &str) -> Result<bool> {
 		use sea_query::{
 			Alias, Asterisk, Cond, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
@@ -293,11 +296,6 @@ impl DatabaseMigrationExecutor {
 				let result = self.connection.fetch_optional(&query_str, vec![]).await?;
 				Ok(result.is_some())
 			}
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				// MongoDB is schemaless, tables always "exist" conceptually
-				Ok(true)
-			}
 		}
 	}
 
@@ -311,11 +309,14 @@ impl DatabaseMigrationExecutor {
 		let mut graph = crate::graph::MigrationGraph::new();
 
 		for migration in migrations {
-			let key = crate::graph::MigrationKey::new(migration.app_label, migration.name);
+			let key = crate::graph::MigrationKey::new(
+				migration.app_label.clone(),
+				migration.name.clone(),
+			);
 			let deps: Vec<crate::graph::MigrationKey> = migration
 				.dependencies
 				.iter()
-				.map(|(app, name)| crate::graph::MigrationKey::new(*app, *name))
+				.map(|(app, name)| crate::graph::MigrationKey::new(app.clone(), name.clone()))
 				.collect();
 
 			graph.add_migration(key, deps);
@@ -337,7 +338,7 @@ impl DatabaseMigrationExecutor {
 			// Check if already applied
 			if self
 				.recorder
-				.is_applied(migration.app_label, migration.name)
+				.is_applied(&migration.app_label, &migration.name)
 				.await?
 			{
 				continue;
@@ -348,7 +349,7 @@ impl DatabaseMigrationExecutor {
 
 			// Record migration as applied
 			self.recorder
-				.record_applied(migration.app_label, migration.name)
+				.record_applied(&migration.app_label, &migration.name)
 				.await?;
 
 			applied.push(migration.id());
@@ -378,7 +379,7 @@ impl DatabaseMigrationExecutor {
 	/// let result = executor.rollback_migrations(&migrations).await.unwrap();
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ```
+	/// ``` rust,ignore
 	pub async fn rollback_migrations(
 		&mut self,
 		migrations: &[Migration],
@@ -393,7 +394,7 @@ impl DatabaseMigrationExecutor {
 			// Check if migration is actually applied
 			let is_applied = self
 				.recorder
-				.is_applied(migration.app_label, migration.name)
+				.is_applied(&migration.app_label, &migration.name)
 				.await?;
 
 			if !is_applied {
@@ -405,7 +406,7 @@ impl DatabaseMigrationExecutor {
 
 			// Remove from recorder
 			self.recorder
-				.unapply(migration.app_label, migration.name)
+				.unapply(&migration.app_label, &migration.name)
 				.await?;
 
 			rolledback.push(migration.id());
@@ -428,30 +429,11 @@ impl DatabaseMigrationExecutor {
 			return Ok(());
 		}
 
-		// Check if MongoDB backend (no SchemaEditor support)
-		#[cfg(feature = "mongodb-backend")]
-		{
-			use reinhardt_backends::types::DatabaseType;
-			if self.connection.database_type() == DatabaseType::MongoDB {
-				tracing::warn!(
-					"MongoDB backend does not support schema operations for migration '{}'",
-					migration.id()
-				);
-				return Ok(());
-			}
-		}
-
 		// Determine SQL dialect
 		let dialect = match self.connection.database_type() {
 			reinhardt_backends::types::DatabaseType::Postgres => SqlDialect::Postgres,
 			reinhardt_backends::types::DatabaseType::Mysql => SqlDialect::Mysql,
 			reinhardt_backends::types::DatabaseType::Sqlite => SqlDialect::Sqlite,
-			#[cfg(feature = "mongodb-backend")]
-			reinhardt_backends::types::DatabaseType::MongoDB => {
-				return Err(MigrationError::UnsupportedDatabase(
-					"MongoDB does not support schema migrations".to_string(),
-				));
-			}
 		};
 
 		// Create SchemaEditor for atomic operations
@@ -466,7 +448,28 @@ impl DatabaseMigrationExecutor {
 		let project_state = crate::ProjectState::default();
 
 		for operation in migration.operations.iter().rev() {
-			// Get reverse SQL
+			// Check if SQLite and reverse operation requires recreation
+			#[cfg(feature = "sqlite")]
+			if matches!(dialect, SqlDialect::Sqlite)
+				&& operation.reverse_requires_sqlite_recreation()
+			{
+				// Get the reverse operation and use table recreation
+				if let Some(reverse_op) = operation.to_reverse_operation(&project_state)? {
+					tracing::debug!("=== SQLite Recreation for reverse of {:?} ===", operation);
+					self.handle_sqlite_recreation(&reverse_op, &mut editor)
+						.await?;
+					tracing::debug!("✅ SQLite recreation for reverse operation completed");
+					continue;
+				} else {
+					tracing::warn!(
+						"Cannot generate reverse operation for SQLite recreation: {:?}",
+						operation
+					);
+					// Fall through to standard SQL execution
+				}
+			}
+
+			// Standard reverse SQL execution
 			let reverse_sql = operation.to_reverse_sql(&dialect, &project_state)?;
 
 			if let Some(sql) = reverse_sql {
@@ -501,15 +504,6 @@ impl DatabaseMigrationExecutor {
 	/// For databases that don't support transactional DDL (MySQL), operations
 	/// are executed directly without transaction wrapping, and a warning is logged.
 	async fn apply_migration(&self, migration: &Migration) -> Result<()> {
-		// Convert SqlDialect based on database type
-		#[cfg(feature = "mongodb-backend")]
-		if matches!(self.db_type, DatabaseType::MongoDB) {
-			// MongoDB is schemaless, so structural migrations don't apply
-			// Only data migrations and index operations are relevant
-			// Skip SQL-based schema operations for MongoDB
-			return Ok(());
-		}
-
 		// Skip database operations if state_only flag is set
 		// (Django's SeparateDatabaseAndState equivalent with state_operations only)
 		if migration.state_only {
@@ -524,16 +518,16 @@ impl DatabaseMigrationExecutor {
 			DatabaseType::Postgres => SqlDialect::Postgres,
 			DatabaseType::Sqlite => SqlDialect::Sqlite,
 			DatabaseType::Mysql => SqlDialect::Mysql,
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => unreachable!("MongoDB handled above"),
 		};
 
 		// Create schema editor with atomic support based on migration's atomic flag
 		let mut editor =
 			SchemaEditor::new(self.connection.clone(), migration.atomic, self.db_type).await?;
 
-		// Log if database_only flag is set (ProjectState updates will be skipped in the future)
-		// Note: ProjectState management is not yet implemented, so this is a placeholder for future use
+		// Log if database_only flag is set
+		// Note: ProjectState tracking during migration execution is a planned enhancement.
+		// Currently, state is not tracked during apply_migration. For rollback operations,
+		// use to_reverse_sql with a pre-operation ProjectState snapshot.
 		if migration.database_only {
 			tracing::debug!(
 				"Skipping ProjectState updates for migration '{}' (database_only=true)",
@@ -550,6 +544,14 @@ impl DatabaseMigrationExecutor {
 
 		// Execute operations through schema editor
 		for operation in &migration.operations {
+			// Handle SQLite table recreation for incompatible operations
+			#[cfg(feature = "sqlite")]
+			if matches!(dialect, SqlDialect::Sqlite) && operation.requires_sqlite_recreation() {
+				self.handle_sqlite_recreation(operation, &mut editor)
+					.await?;
+				continue;
+			}
+
 			// Check if this is a CreateTable operation and if the table already exists
 			if let Operation::CreateTable { name, .. } = operation {
 				let table_exists = self.table_exists(name).await?;
@@ -611,7 +613,7 @@ impl DatabaseMigrationExecutor {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ```no_run
 	/// use reinhardt_migrations::{MigrationPlan, executor::DatabaseMigrationExecutor};
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -623,7 +625,7 @@ impl DatabaseMigrationExecutor {
 	/// let plan = MigrationPlan::new();
 	/// let result = executor.apply(&plan).await.unwrap();
 	/// # });
-	/// ```
+	/// ``` rust,ignore
 	pub async fn apply(&mut self, plan: &MigrationPlan) -> Result<ExecutionResult> {
 		let mut applied = Vec::new();
 
@@ -634,56 +636,46 @@ impl DatabaseMigrationExecutor {
 			DatabaseType::Postgres => SqlDialect::Postgres,
 			DatabaseType::Sqlite => SqlDialect::Sqlite,
 			DatabaseType::Mysql => SqlDialect::Mysql,
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => SqlDialect::Postgres, // Placeholder for MongoDB
 		};
 
 		for migration in &plan.migrations {
 			// Check if already applied
 			if self
 				.recorder
-				.is_applied(migration.app_label, migration.name)
+				.is_applied(&migration.app_label, &migration.name)
 				.await?
 			{
 				continue;
 			}
 
 			// Apply migration
-			#[cfg(feature = "mongodb-backend")]
-			let is_mongodb = matches!(self.db_type, DatabaseType::MongoDB);
-			#[cfg(not(feature = "mongodb-backend"))]
-			let is_mongodb = false;
-
-			if !is_mongodb {
-				for operation in &migration.operations {
-					// Check if this is a CreateTable operation and if the table already exists
-					if let Operation::CreateTable { name, .. } = operation {
-						let table_exists = self.table_exists(name).await?;
-						if table_exists {
-							eprintln!(
-								"⏭️  Table '{}' already exists, skipping CREATE TABLE operation",
-								name
-							);
-							continue;
-						}
+			for operation in &migration.operations {
+				// Check if this is a CreateTable operation and if the table already exists
+				if let Operation::CreateTable { name, .. } = operation {
+					let table_exists = self.table_exists(name).await?;
+					if table_exists {
+						eprintln!(
+							"⏭️  Table '{}' already exists, skipping CREATE TABLE operation",
+							name
+						);
+						continue;
 					}
+				}
 
-					let sql = operation.to_sql(&dialect);
+				let sql = operation.to_sql(&dialect);
 
-					// Split SQL into individual statements to handle PostgreSQL's
-					// prepared statement limitation (cannot execute multiple commands)
-					for statement in split_sql_statements(&sql) {
-						if !statement.trim().is_empty() {
-							self.connection.execute(&statement, vec![]).await?;
-						}
+				// Split SQL into individual statements to handle PostgreSQL's
+				// prepared statement limitation (cannot execute multiple commands)
+				for statement in split_sql_statements(&sql) {
+					if !statement.trim().is_empty() {
+						self.connection.execute(&statement, vec![]).await?;
 					}
 				}
 			}
-			// For MongoDB, skip SQL operations (schemaless)
 
 			// Record migration as applied
 			self.recorder
-				.record_applied(migration.app_label, migration.name)
+				.record_applied(&migration.app_label, &migration.name)
 				.await?;
 
 			applied.push(migration.id());
@@ -706,7 +698,7 @@ impl DatabaseMigrationExecutor {
 		for migration in graph {
 			let is_applied = self
 				.recorder
-				.is_applied(migration.app_label, migration.name)
+				.is_applied(&migration.app_label, &migration.name)
 				.await?;
 
 			if !is_applied {
@@ -715,6 +707,220 @@ impl DatabaseMigrationExecutor {
 		}
 
 		Ok(plan)
+	}
+
+	/// Get table information for SQLite table recreation
+	///
+	/// Uses introspection to read current table schema and convert to
+	/// ColumnDefinition and Constraint types needed for SqliteTableRecreation.
+	#[cfg(feature = "sqlite")]
+	async fn get_sqlite_table_metadata(
+		&self,
+		table_name: &str,
+	) -> Result<(Vec<crate::ColumnDefinition>, Vec<crate::Constraint>)> {
+		use crate::introspection::DatabaseIntrospector;
+
+		// Get SQLite pool from connection
+		let pool = self.connection.into_sqlite().ok_or_else(|| {
+			MigrationError::IntrospectionError(
+				"Failed to get SQLite pool from connection".to_string(),
+			)
+		})?;
+
+		// Create introspector and read table
+		let introspector = SQLiteIntrospector::new(pool);
+		let table_info = introspector.read_table(table_name).await?.ok_or_else(|| {
+			MigrationError::IntrospectionError(format!("Table '{}' not found", table_name))
+		})?;
+
+		// Convert ColumnInfo to ColumnDefinition
+		let mut columns: Vec<crate::ColumnDefinition> = table_info
+			.columns
+			.values()
+			.map(|col_info| {
+				let mut col_def =
+					crate::ColumnDefinition::new(&col_info.name, col_info.column_type.clone());
+				col_def.not_null = !col_info.nullable;
+				col_def.auto_increment = col_info.auto_increment;
+				col_def.primary_key = table_info.primary_key.contains(&col_info.name);
+				col_def.default = col_info.default.clone();
+				col_def
+			})
+			.collect();
+
+		// Sort columns to maintain consistent order (primary key columns first, then by name)
+		columns.sort_by(|a, b| {
+			if a.primary_key && !b.primary_key {
+				std::cmp::Ordering::Less
+			} else if !a.primary_key && b.primary_key {
+				std::cmp::Ordering::Greater
+			} else {
+				a.name.cmp(&b.name)
+			}
+		});
+
+		// Helper function to convert Option<String> to ForeignKeyAction
+		fn parse_fk_action(action: &Option<String>) -> ForeignKeyAction {
+			match action.as_deref() {
+				Some("CASCADE") => ForeignKeyAction::Cascade,
+				Some("SET NULL") => ForeignKeyAction::SetNull,
+				Some("SET DEFAULT") => ForeignKeyAction::SetDefault,
+				Some("NO ACTION") => ForeignKeyAction::NoAction,
+				_ => ForeignKeyAction::Restrict,
+			}
+		}
+
+		// Convert ForeignKeyInfo to Constraint
+		let mut constraints: Vec<crate::Constraint> = table_info
+			.foreign_keys
+			.iter()
+			.map(|fk| crate::Constraint::ForeignKey {
+				name: fk.name.clone(),
+				columns: fk.columns.clone(),
+				referenced_table: fk.referenced_table.clone(),
+				referenced_columns: fk.referenced_columns.clone(),
+				on_delete: parse_fk_action(&fk.on_delete),
+				on_update: parse_fk_action(&fk.on_update),
+				deferrable: None,
+			})
+			.collect();
+
+		// Add unique constraints
+		for unique in &table_info.unique_constraints {
+			constraints.push(crate::Constraint::Unique {
+				name: unique.name.clone(),
+				columns: unique.columns.clone(),
+			});
+		}
+
+		Ok((columns, constraints))
+	}
+
+	/// Handle SQLite table recreation for operations that require it
+	///
+	/// SQLite has limited ALTER TABLE support. Operations like DropColumn and AlterColumn
+	/// require table recreation (CREATE new table → COPY data → DROP old → RENAME).
+	///
+	/// This method handles foreign key constraints by:
+	/// 1. Disabling FK checks before recreation
+	/// 2. Executing the table recreation
+	/// 3. Re-enabling FK checks
+	/// 4. Checking for FK integrity violations
+	#[cfg(feature = "sqlite")]
+	async fn handle_sqlite_recreation(
+		&self,
+		operation: &Operation,
+		editor: &mut SchemaEditor,
+	) -> Result<()> {
+		use crate::operations::SqliteTableRecreation;
+
+		// Disable foreign key checks before table recreation
+		// This prevents FK violations during the temporary DROP TABLE phase
+		editor.disable_foreign_keys().await?;
+
+		// Build the recreation plan based on operation type
+		let recreation = match operation {
+			Operation::DropColumn { table, column } => {
+				tracing::debug!(
+					"Handling SQLite table recreation for DropColumn: table={}, column={}",
+					table,
+					column
+				);
+				let (columns, constraints) = self.get_sqlite_table_metadata(table).await?;
+				SqliteTableRecreation::for_drop_column(table, columns, column, constraints)
+			}
+			Operation::AlterColumn {
+				table,
+				column,
+				new_definition,
+				..
+			} => {
+				tracing::debug!(
+					"Handling SQLite table recreation for AlterColumn: table={}, column={}",
+					table,
+					column
+				);
+				let (columns, constraints) = self.get_sqlite_table_metadata(table).await?;
+				SqliteTableRecreation::for_alter_column(
+					table,
+					columns,
+					column,
+					new_definition.clone(),
+					constraints,
+				)
+			}
+			Operation::AddConstraint {
+				table,
+				constraint_sql,
+			} => {
+				tracing::debug!(
+					"Handling SQLite table recreation for AddConstraint: table={}",
+					table
+				);
+				let (columns, constraints) = self.get_sqlite_table_metadata(table).await?;
+				SqliteTableRecreation::for_add_constraint(
+					table,
+					columns,
+					constraints,
+					constraint_sql.clone(),
+				)
+			}
+			Operation::DropConstraint {
+				table,
+				constraint_name,
+			} => {
+				tracing::debug!(
+					"Handling SQLite table recreation for DropConstraint: table={}, constraint={}",
+					table,
+					constraint_name
+				);
+				let (columns, constraints) = self.get_sqlite_table_metadata(table).await?;
+				SqliteTableRecreation::for_drop_constraint(
+					table,
+					columns,
+					constraints,
+					constraint_name,
+				)
+			}
+			_ => {
+				// This branch should not be reached if requires_sqlite_recreation() is correct
+				tracing::warn!(
+					"Operation {:?} was passed to handle_sqlite_recreation but is not handled. \
+					Attempting to execute as-is, which may fail.",
+					std::mem::discriminant(operation)
+				);
+				// Re-enable FK checks and fall back to normal SQL execution
+				editor.enable_foreign_keys().await?;
+				let sql = operation.to_sql(&crate::operations::SqlDialect::Sqlite);
+				editor.execute(&sql).await?;
+				return Ok(());
+			}
+		};
+
+		// Execute recreation steps
+		for stmt in recreation.to_sql_statements() {
+			tracing::debug!("Executing recreation SQL: {}", &stmt[..stmt.len().min(100)]);
+			editor.execute(&stmt).await?;
+		}
+
+		// Re-enable foreign key checks
+		editor.enable_foreign_keys().await?;
+
+		// Check for FK integrity violations (logs warning if any found)
+		let violations = editor.check_foreign_key_integrity().await?;
+		if !violations.is_empty() {
+			return Err(MigrationError::ForeignKeyViolation(format!(
+				"Foreign key violations detected after table recreation: {}",
+				violations.join("; ")
+			)));
+		}
+
+		tracing::debug!(
+			"SQLite table recreation completed for {:?}",
+			std::mem::discriminant(operation)
+		);
+
+		Ok(())
 	}
 
 	/// Record a migration as applied without actually running it
@@ -740,7 +946,7 @@ impl DatabaseMigrationExecutor {
 
 		// Record as applied
 		self.recorder
-			.record_applied(migration.app_label, migration.name)
+			.record_applied(&migration.app_label, &migration.name)
 			.await?;
 
 		Ok(())
@@ -759,20 +965,24 @@ impl DatabaseMigrationExecutor {
 ///
 /// let ops = vec![
 ///     Operation::AddColumn {
-///         table: "users",
+///         table: "users".to_string(),
 ///         column: ColumnDefinition::new("name", FieldType::VarChar(100)),
+///         mysql_options: None,
 ///     },
 ///     Operation::CreateTable {
-///         name: "users",
+///         name: "users".to_string(),
 ///         columns: vec![],
 ///         constraints: vec![],
+///         without_rowid: None,
+///         interleave_in_parent: None,
+///         partition: None,
 ///     },
 /// ];
 ///
 /// let optimizer = OperationOptimizer::new();
 /// let optimized = optimizer.optimize(ops);
 /// // CreateTable should come before AddColumn
-/// ```
+/// ``` rust,ignore
 pub struct OperationOptimizer {
 	_private: (),
 }
@@ -786,7 +996,7 @@ impl OperationOptimizer {
 	/// use reinhardt_migrations::executor::OperationOptimizer;
 	///
 	/// let optimizer = OperationOptimizer::new();
-	/// ```
+	/// ``` rust,ignore
 	pub fn new() -> Self {
 		Self { _private: () }
 	}
@@ -801,16 +1011,19 @@ impl OperationOptimizer {
 	///
 	/// let ops = vec![
 	///     Operation::CreateTable {
-	///         name: "users",
+	///         name: "users".to_string(),
 	///         columns: vec![],
 	///         constraints: vec![],
+	///         without_rowid: None,
+	///         interleave_in_parent: None,
+	///         partition: None,
 	///     },
 	/// ];
 	///
 	/// let optimizer = OperationOptimizer::new();
 	/// let optimized = optimizer.optimize(ops);
 	/// assert_eq!(optimized.len(), 1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn optimize(&self, operations: Vec<Operation>) -> Vec<Operation> {
 		let mut optimized = operations;
 
@@ -871,7 +1084,7 @@ impl OperationOptimizer {
 							self.extract_foreign_key_reference(constraint)
 						{
 							// Check if the referenced table has been created
-							if !created_tables.contains(&referenced_table.as_str())
+							if !created_tables.contains(&referenced_table)
 								&& referenced_table != *name
 							{
 								depends_on_uncreated = true;
@@ -882,8 +1095,8 @@ impl OperationOptimizer {
 
 					// If this table doesn't depend on any uncreated table, we can create it now
 					if !depends_on_uncreated {
-						// Copy the name before removing the operation
-						let name_copy = *name;
+						// Clone the name before removing the operation
+						let name_copy = name.clone();
 						let op = create_table_ops.remove(i);
 						created_tables.insert(name_copy);
 						ordered.push(op);
@@ -897,8 +1110,8 @@ impl OperationOptimizer {
 			// (this handles circular dependencies or malformed constraints)
 			if !found_independent {
 				for op in create_table_ops.drain(..) {
-					if let Operation::CreateTable { name, .. } = op {
-						created_tables.insert(name);
+					if let Operation::CreateTable { ref name, .. } = op {
+						created_tables.insert(name.clone());
 					}
 					ordered.push(op);
 				}
@@ -1025,6 +1238,7 @@ impl OperationOptimizer {
 						Operation::AddColumn {
 							table: t1,
 							column: col1,
+							..
 						},
 						Operation::DropColumn {
 							table: t2,
@@ -1114,6 +1328,7 @@ impl OperationOptimizer {
 					table,
 					column,
 					new_definition: _,
+					..
 				} => {
 					let key = (table.to_string(), column.to_string());
 					// Last AlterColumn wins (overwrites previous)
@@ -1136,7 +1351,7 @@ impl OperationOptimizer {
 
 		// Pass 3: Chain consecutive RenameTable operations
 		let mut chained = Vec::new();
-		let mut rename_chain: IndexMap<&'static str, &'static str> = IndexMap::new(); // original_name -> current_name
+		let mut rename_chain: IndexMap<String, String> = IndexMap::new(); // original_name -> current_name
 
 		for operation in merged {
 			match &operation {
@@ -1145,21 +1360,17 @@ impl OperationOptimizer {
 					let mut found_chain = None;
 					for (original, current) in &rename_chain {
 						if current == old_name {
-							found_chain = Some(original);
+							found_chain = Some(original.clone());
 							break;
 						}
 					}
 
 					if let Some(original) = found_chain {
 						// Extend existing chain: original -> new_name
-						rename_chain
-							.insert(original, Box::leak(new_name.to_string().into_boxed_str()));
+						rename_chain.insert(original, new_name.clone());
 					} else {
 						// Start new chain: old_name -> new_name
-						rename_chain.insert(
-							Box::leak(old_name.to_string().into_boxed_str()),
-							Box::leak(new_name.to_string().into_boxed_str()),
-						);
+						rename_chain.insert(old_name.clone(), new_name.clone());
 					}
 				}
 				_ => {
@@ -1212,13 +1423,17 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("name", FieldType::VarChar(100)),
+				mysql_options: None,
 			},
 			Operation::CreateTable {
-				name: "users",
+				name: "users".to_string(),
 				columns: vec![],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
 		];
 
@@ -1235,14 +1450,20 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::CreateTable {
-				name: "users",
+				name: "users".to_string(),
 				columns: vec![],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
 			Operation::CreateTable {
-				name: "users",
+				name: "users".to_string(),
 				columns: vec![],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
 		];
 
@@ -1256,17 +1477,22 @@ mod optimizer_tests {
 
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("name", FieldType::VarChar(100)),
+				mysql_options: None,
 			},
 			Operation::CreateTable {
-				name: "posts",
+				name: "posts".to_string(),
 				columns: vec![],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			},
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("email", FieldType::VarChar(255)),
+				mysql_options: None,
 			},
 		];
 

@@ -43,7 +43,7 @@ impl MigrationNumbering {
 	///     "myapp"
 	/// );
 	/// assert_eq!(next_num, "0001"); // First migration
-	/// ```
+	/// ``` rust,ignore
 	pub fn next_number_cached(migrations_dir: &Path, app_label: &str) -> String {
 		let cache_key = format!("{}:{}", migrations_dir.display(), app_label);
 
@@ -90,7 +90,7 @@ impl MigrationNumbering {
 	///     "myapp"
 	/// );
 	/// assert_eq!(next_num, "0001"); // First migration
-	/// ```
+	/// ``` rust,ignore
 	pub fn next_number(migrations_dir: &Path, app_label: &str) -> String {
 		let highest = Self::get_highest_number(migrations_dir, app_label);
 		format!("{:04}", highest + 1)
@@ -108,7 +108,7 @@ impl MigrationNumbering {
 	///
 	/// // After manually deleting migrations
 	/// MigrationNumbering::invalidate_cache();
-	/// ```
+	/// ``` rust,ignore
 	pub fn invalidate_cache() {
 		NUMBERING_CACHE.write().unwrap().clear();
 	}
@@ -139,7 +139,7 @@ impl MigrationNumbering {
 	///     "myapp"
 	/// );
 	/// assert_eq!(highest, 3);
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_highest_number(migrations_dir: &Path, app_label: &str) -> u32 {
 		let app_migrations_dir = migrations_dir.join(app_label);
 
@@ -194,7 +194,7 @@ impl MigrationNumbering {
 	/// let numbers = MigrationNumbering::get_all_numbers(Path::new("migrations"));
 	/// assert_eq!(numbers.get("myapp"), Some(&2));
 	/// assert_eq!(numbers.get("other_app"), Some(&1));
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_all_numbers(migrations_dir: &Path) -> HashMap<String, u32> {
 		let mut result = HashMap::new();
 

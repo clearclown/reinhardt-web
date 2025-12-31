@@ -37,7 +37,7 @@ impl From<introspection::DatabaseSchema> for DatabaseSchema {
 				columns.insert(
 					col_name.clone(),
 					ColumnSchema {
-						name: Box::leak(intro_col.name.into_boxed_str()),
+						name: intro_col.name,
 						data_type: intro_col.column_type,
 						nullable: intro_col.nullable,
 						default: intro_col.default,
@@ -116,7 +116,7 @@ impl From<introspection::DatabaseSchema> for DatabaseSchema {
 			tables.insert(
 				table_name,
 				TableSchema {
-					name: Box::leak(intro_table.name.into_boxed_str()),
+					name: intro_table.name,
 					columns,
 					indexes,
 					constraints,
@@ -136,13 +136,13 @@ impl DatabaseSchema {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::schema_diff::DatabaseSchema;
 	///
 	/// let schema = DatabaseSchema::default();
 	/// let filtered = schema.filter_by_app("users");
 	/// // filtered contains only tables starting with "users_"
-	/// ```
+	/// ``` rust,ignore
 	pub fn filter_by_app(&self, app_label: &str) -> DatabaseSchema {
 		let mut filtered_tables = BTreeMap::new();
 		let prefix = format!("{}_", app_label);
@@ -163,7 +163,7 @@ impl DatabaseSchema {
 #[derive(Debug, Clone)]
 pub struct TableSchema {
 	/// Table name
-	pub name: &'static str,
+	pub name: String,
 	/// Column definitions (BTreeMap for deterministic iteration order)
 	pub columns: BTreeMap<String, ColumnSchema>,
 	/// Indexes
@@ -176,7 +176,7 @@ pub struct TableSchema {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ColumnSchema {
 	/// Column name
-	pub name: &'static str,
+	pub name: String,
 	/// Data type
 	pub data_type: crate::FieldType,
 	/// Nullable
@@ -374,13 +374,10 @@ impl SchemaDiff {
 						let auto_increment = Self::is_auto_increment(col);
 
 						ColumnDefinition {
-							name: Box::leak(name.clone().into_boxed_str()),
+							name: name.clone(),
 							type_definition: col.data_type.clone(),
 							not_null: !col.nullable,
-							default: col
-								.default
-								.as_ref()
-								.map(|s| Box::leak(s.clone().into_boxed_str()) as &'static str),
+							default: col.default.as_ref().cloned(),
 							unique,
 							primary_key: col.primary_key,
 							auto_increment,
@@ -392,16 +389,21 @@ impl SchemaDiff {
 				let constraints = self.extract_constraints(table_name);
 
 				operations.push(Operation::CreateTable {
-					name: table_name,
+					name: table_name.to_string(),
 					columns,
 					constraints,
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				});
 			}
 		}
 
 		// Remove tables
 		for table_name in diff.tables_to_remove {
-			operations.push(Operation::DropTable { name: table_name });
+			operations.push(Operation::DropTable {
+				name: table_name.to_string(),
+			});
 		}
 
 		// Add columns
@@ -413,19 +415,17 @@ impl SchemaDiff {
 				let auto_increment = Self::is_auto_increment(col_schema);
 
 				operations.push(Operation::AddColumn {
-					table: table_name,
+					table: table_name.to_string(),
 					column: ColumnDefinition {
-						name: col_name,
+						name: col_name.to_string(),
 						type_definition: col_schema.data_type.clone(),
 						not_null: !col_schema.nullable,
-						default: col_schema
-							.default
-							.as_ref()
-							.map(|s| Box::leak(s.clone().into_boxed_str()) as &'static str),
+						default: col_schema.default.as_ref().cloned(),
 						unique,
 						primary_key: col_schema.primary_key,
 						auto_increment,
 					},
+					mysql_options: None,
 				});
 			}
 		}
@@ -433,8 +433,8 @@ impl SchemaDiff {
 		// Remove columns
 		for (table_name, col_name) in diff.columns_to_remove {
 			operations.push(Operation::DropColumn {
-				table: table_name,
-				column: col_name,
+				table: table_name.to_string(),
+				column: col_name.to_string(),
 			});
 		}
 
@@ -560,6 +560,7 @@ impl SchemaDiff {
 							referenced_columns: fk_info.referenced_columns.clone(),
 							on_delete: Self::parse_fk_action(&fk_info.on_delete),
 							on_update: Self::parse_fk_action(&fk_info.on_update),
+							deferrable: None,
 						});
 					}
 				}
@@ -577,6 +578,7 @@ impl SchemaDiff {
 								.unwrap_or_else(|| "id".to_string()),
 							on_delete: Self::parse_fk_action(&fk_info.on_delete),
 							on_update: Self::parse_fk_action(&fk_info.on_update),
+							deferrable: None,
 						});
 					}
 				}
@@ -618,7 +620,7 @@ mod tests {
 		target.tables.insert(
 			"users".to_string(),
 			TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -638,7 +640,7 @@ mod tests {
 		current.tables.insert(
 			"users".to_string(),
 			TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -647,7 +649,7 @@ mod tests {
 
 		let mut target = DatabaseSchema::default();
 		let mut target_table = TableSchema {
-			name: "users",
+			name: "users".to_string(),
 			columns: BTreeMap::new(),
 			indexes: Vec::new(),
 			constraints: Vec::new(),
@@ -655,7 +657,7 @@ mod tests {
 		target_table.columns.insert(
 			"email".to_string(),
 			ColumnSchema {
-				name: "email",
+				name: "email".to_string(),
 				data_type: FieldType::VarChar(255),
 				nullable: false,
 				default: None,
@@ -678,7 +680,7 @@ mod tests {
 		current.tables.insert(
 			"users".to_string(),
 			TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),

@@ -38,10 +38,12 @@
 pub mod ast_parser;
 pub mod auto_migration;
 pub mod autodetector;
+pub mod dependency;
 pub mod di_support;
 pub mod executor;
 pub mod fields;
 pub mod graph;
+pub mod introspect;
 pub mod introspection;
 pub mod migration;
 pub mod migration_namer;
@@ -86,6 +88,10 @@ pub use autodetector::{
 	SimilarityConfig,
 	to_snake_case,
 };
+pub use dependency::{
+	DependencyCondition, DependencyResolutionContext, DependencyResolver, MigrationDependency,
+	OptionalDependency, SwappableDependency,
+};
 pub use di_support::{MigrationConfig, MigrationService as DIMigrationService};
 pub use executor::{DatabaseMigrationExecutor, ExecutionResult, OperationOptimizer};
 pub use fields::FieldType;
@@ -99,8 +105,10 @@ pub use model_registry::{
 };
 pub use operation_trait::MigrationOperation;
 pub use operations::{
-	AddColumn, AlterColumn, ColumnDefinition, Constraint, CreateTable, DropColumn, IndexType,
-	Operation, SqlDialect, field_type_string_to_field_type,
+	AddColumn, AlterColumn, AlterTableOptions, BulkLoadFormat, BulkLoadOptions, BulkLoadSource,
+	ColumnDefinition, Constraint, CreateTable, DeferrableOption, DropColumn, IndexType,
+	InterleaveSpec, MySqlAlgorithm, MySqlLock, Operation, PartitionDef, PartitionOptions,
+	PartitionType, PartitionValues, SqlDialect, field_type_string_to_field_type,
 };
 pub use plan::{MigrationPlan, TransactionMode};
 
@@ -130,6 +138,12 @@ pub use state_loader::MigrationStateLoader;
 pub use visualization::{HistoryEntry, MigrationStats, MigrationVisualizer, OutputFormat};
 pub use zero_downtime::{MigrationPhase, Strategy, ZeroDowntimeMigration};
 
+pub use introspect::{
+	GeneratedFile, GeneratedOutput, GenerationConfig, IntrospectConfig, NamingConvention,
+	OutputConfig, SchemaCodeGenerator, TableFilterConfig, TypeMapper, TypeMappingError,
+	escape_rust_keyword, generate_models, preview_output, sanitize_identifier, to_pascal_case,
+	write_output,
+};
 pub use introspection::{
 	ColumnInfo, DatabaseIntrospector, ForeignKeyInfo as IntrospectionForeignKeyInfo, IndexInfo,
 	TableInfo, UniqueConstraintInfo,
@@ -170,7 +184,7 @@ use thiserror::Error;
 ///
 /// // Usage in tests:
 /// // let (container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
-/// ```
+/// ``` rust,ignore
 pub trait MigrationProvider {
 	/// Returns all migrations provided by this type.
 	///
@@ -223,6 +237,14 @@ pub enum MigrationError {
 	/// from_state construction during makemigrations.
 	#[error("Duplicate operations: {0}")]
 	DuplicateOperations(String),
+
+	/// Foreign key integrity violation during table recreation
+	///
+	/// This error occurs when SQLite table recreation results in orphaned
+	/// foreign key references, indicating data integrity issues that must
+	/// be resolved before the migration can proceed.
+	#[error("Foreign key violation: {0}")]
+	ForeignKeyViolation(String),
 }
 
 pub type Result<T> = std::result::Result<T, MigrationError>;

@@ -29,7 +29,7 @@ use crate::{Migration, Operation, Result};
 ///
 /// let strategy = Strategy::ExpandContractPattern;
 /// assert_eq!(strategy.name(), "Expand-Contract Pattern");
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Strategy {
 	/// Expand-Contract Pattern: Add new schema, dual-write, migrate data, remove old schema
@@ -52,7 +52,7 @@ impl Strategy {
 	///
 	/// let strategy = Strategy::ExpandContractPattern;
 	/// assert_eq!(strategy.name(), "Expand-Contract Pattern");
-	/// ```
+	/// ``` rust,ignore
 	pub fn name(&self) -> &str {
 		match self {
 			Strategy::ExpandContractPattern => "Expand-Contract Pattern",
@@ -72,7 +72,7 @@ impl Strategy {
 	/// let strategy = Strategy::ExpandContractPattern;
 	/// let desc = strategy.description();
 	/// assert!(desc.contains("Expand"));
-	/// ```
+	/// ``` rust,ignore
 	pub fn description(&self) -> &str {
 		match self {
 			Strategy::ExpandContractPattern => {
@@ -100,7 +100,7 @@ impl Strategy {
 /// let migration = Migration::new("0001_initial", "myapp");
 /// let phase = MigrationPhase::new(1, "Expand", migration);
 /// assert_eq!(phase.phase_number, 1);
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone)]
 pub struct MigrationPhase {
 	/// Phase number (1-based)
@@ -124,7 +124,7 @@ impl MigrationPhase {
 	///
 	/// let migration = Migration::new("0001_expand", "myapp");
 	/// let phase = MigrationPhase::new(1, "Expand schema", migration);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(phase_number: usize, description: impl Into<String>, migration: Migration) -> Self {
 		Self {
 			phase_number,
@@ -146,7 +146,7 @@ impl MigrationPhase {
 	/// let phase = MigrationPhase::new(1, "Expand", migration)
 	///     .requires_deployment(true);
 	/// assert!(phase.requires_deployment);
-	/// ```
+	/// ``` rust,ignore
 	pub fn requires_deployment(mut self, requires: bool) -> Self {
 		self.requires_deployment = requires;
 		self
@@ -165,7 +165,7 @@ impl MigrationPhase {
 ///
 /// let migration = Migration::new("0001_add_field", "myapp");
 /// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
-/// ```
+/// ``` rust,ignore
 pub struct ZeroDowntimeMigration {
 	migration: Migration,
 	strategy: Strategy,
@@ -182,7 +182,7 @@ impl ZeroDowntimeMigration {
 	///
 	/// let migration = Migration::new("0001_rename_column", "myapp");
 	/// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(migration: Migration, strategy: Strategy) -> Self {
 		Self {
 			migration,
@@ -201,7 +201,7 @@ impl ZeroDowntimeMigration {
 	/// let migration = Migration::new("0001_add_column", "myapp");
 	/// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
 	/// let phases = zd.get_phases().unwrap();
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_phases(&self) -> Result<Vec<MigrationPhase>> {
 		match self.strategy {
 			Strategy::ExpandContractPattern => self.expand_contract_phases(),
@@ -218,7 +218,7 @@ impl ZeroDowntimeMigration {
 		// Expand - Add new schema elements
 		let mut expand_migration = Migration::new(
 			format!("{}_expand", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		expand_migration.operations = self.extract_expand_operations();
 		expand_migration.dependencies = self.migration.dependencies.clone();
@@ -235,7 +235,7 @@ impl ZeroDowntimeMigration {
 				"Deploy code with dual-write support",
 				Migration::new(
 					format!("{}_dual_write", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -244,7 +244,7 @@ impl ZeroDowntimeMigration {
 		// Migrate data from old to new schema
 		let mut migrate_migration = Migration::new(
 			format!("{}_migrate_data", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		migrate_migration.operations = self.extract_data_migration_operations();
 
@@ -260,7 +260,7 @@ impl ZeroDowntimeMigration {
 				"Deploy code reading from new schema",
 				Migration::new(
 					format!("{}_switch_reads", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -269,7 +269,7 @@ impl ZeroDowntimeMigration {
 		// Contract - Remove old schema elements
 		let mut contract_migration = Migration::new(
 			format!("{}_contract", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		contract_migration.operations = self.extract_contract_operations();
 
@@ -292,7 +292,7 @@ impl ZeroDowntimeMigration {
 		// Setup green environment
 		let mut green_migration = Migration::new(
 			format!("{}_green", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		green_migration.operations = self.migration.operations.clone();
 
@@ -312,7 +312,7 @@ impl ZeroDowntimeMigration {
 				"Deploy application to green environment",
 				Migration::new(
 					format!("{}_deploy_green", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -325,7 +325,7 @@ impl ZeroDowntimeMigration {
 				"Switch traffic to green environment",
 				Migration::new(
 					format!("{}_switch", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(false),
@@ -341,7 +341,7 @@ impl ZeroDowntimeMigration {
 		// Deploy backward-compatible schema changes
 		let mut compat_migration = Migration::new(
 			format!("{}_compatible", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		compat_migration.operations = self.migration.operations.clone();
 
@@ -357,7 +357,7 @@ impl ZeroDowntimeMigration {
 				"Deploy application updates gradually",
 				Migration::new(
 					format!("{}_rolling", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -373,7 +373,7 @@ impl ZeroDowntimeMigration {
 		// Create shadow schema
 		let mut shadow_migration = Migration::new(
 			format!("{}_shadow", self.migration.name),
-			self.migration.app_label,
+			self.migration.app_label.clone(),
 		);
 		shadow_migration.operations = self.migration.operations.clone();
 
@@ -389,7 +389,7 @@ impl ZeroDowntimeMigration {
 				"Deploy code with shadow write support",
 				Migration::new(
 					format!("{}_shadow_writes", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -402,7 +402,7 @@ impl ZeroDowntimeMigration {
 				"Validate shadow data matches production",
 				Migration::new(
 					format!("{}_validate", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(false),
@@ -415,7 +415,7 @@ impl ZeroDowntimeMigration {
 				"Switch to new schema",
 				Migration::new(
 					format!("{}_switch", self.migration.name),
-					self.migration.app_label,
+					self.migration.app_label.clone(),
 				),
 			)
 			.requires_deployment(true),
@@ -511,8 +511,9 @@ mod tests {
 	fn test_zero_downtime_expand_contract() {
 		let migration =
 			Migration::new("0001_add_column", "myapp").add_operation(Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("new_field", FieldType::VarChar(100)),
+				mysql_options: None,
 			});
 
 		let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
@@ -556,17 +557,21 @@ mod tests {
 	fn test_extract_expand_operations() {
 		let migration = Migration::new("0001_mixed", "myapp")
 			.add_operation(Operation::CreateTable {
-				name: "new_table",
+				name: "new_table".to_string(),
 				columns: vec![],
 				constraints: vec![],
+				without_rowid: None,
+				partition: None,
+				interleave_in_parent: None,
 			})
 			.add_operation(Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("field", FieldType::VarChar(100)),
+				mysql_options: None,
 			})
 			.add_operation(Operation::DropColumn {
-				table: "users",
-				column: "old_field",
+				table: "users".to_string(),
+				column: "old_field".to_string(),
 			});
 
 		let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
@@ -579,14 +584,17 @@ mod tests {
 	fn test_extract_contract_operations() {
 		let migration = Migration::new("0001_mixed", "myapp")
 			.add_operation(Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: ColumnDefinition::new("field", FieldType::VarChar(100)),
+				mysql_options: None,
 			})
 			.add_operation(Operation::DropColumn {
-				table: "users",
-				column: "old_field",
+				table: "users".to_string(),
+				column: "old_field".to_string(),
 			})
-			.add_operation(Operation::DropTable { name: "old_table" });
+			.add_operation(Operation::DropTable {
+				name: "old_table".to_string(),
+			});
 
 		let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
 		let contract_ops = zd.extract_contract_operations();

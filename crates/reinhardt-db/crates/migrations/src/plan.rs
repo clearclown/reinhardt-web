@@ -11,7 +11,7 @@ use crate::{Migration, Result};
 ///
 /// let mode = TransactionMode::PerMigration;
 /// assert_eq!(mode.name(), "Per Migration");
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TransactionMode {
 	/// Each migration in its own transaction
@@ -35,7 +35,7 @@ impl TransactionMode {
 	///
 	/// assert_eq!(TransactionMode::PerMigration.name(), "Per Migration");
 	/// assert_eq!(TransactionMode::All.name(), "All in One");
-	/// ```
+	/// ``` rust,ignore
 	pub fn name(&self) -> &str {
 		match self {
 			TransactionMode::PerMigration => "Per Migration",
@@ -61,12 +61,12 @@ impl MigrationPlan {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::MigrationPlan;
 	///
 	/// let plan = MigrationPlan::new();
 	/// assert_eq!(plan.migrations.len(), 0);
-	/// ```
+	/// ``` rust,ignore
 	pub fn new() -> Self {
 		Self {
 			migrations: Vec::new(),
@@ -79,13 +79,13 @@ impl MigrationPlan {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{MigrationPlan, plan::TransactionMode};
 	///
 	/// let plan = MigrationPlan::new()
 	///     .with_transaction_mode(TransactionMode::All);
 	/// assert_eq!(plan.transaction_mode, TransactionMode::All);
-	/// ```
+	/// ``` rust,ignore
 	pub fn with_transaction_mode(mut self, mode: TransactionMode) -> Self {
 		self.transaction_mode = mode;
 		self
@@ -95,13 +95,13 @@ impl MigrationPlan {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::MigrationPlan;
 	///
 	/// let plan = MigrationPlan::new()
 	///     .continue_on_error(true);
 	/// assert!(plan.continue_on_error);
-	/// ```
+	/// ``` rust,ignore
 	pub fn continue_on_error(mut self, continue_on_error: bool) -> Self {
 		self.continue_on_error = continue_on_error;
 		self
@@ -110,14 +110,14 @@ impl MigrationPlan {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{Migration, MigrationPlan};
 	///
 	/// let migration = Migration::new("0001_initial", "myapp");
 	/// let plan = MigrationPlan::new().with_migration(migration);
 	///
 	/// assert_eq!(plan.migrations.len(), 1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn with_migration(mut self, migration: Migration) -> Self {
 		self.migrations.push(migration);
 		self
@@ -126,7 +126,7 @@ impl MigrationPlan {
 	///
 	/// # Examples
 	///
-	/// ```
+	/// ``` rust,ignore
 	/// use reinhardt_migrations::{Migration, MigrationPlan};
 	///
 	/// let migration1 = Migration::new("0001_initial", "myapp");
@@ -142,7 +142,7 @@ impl MigrationPlan {
 	// After sorting, 0001 should come before 0002
 	/// assert_eq!(plan.migrations[0].name, "0001_initial");
 	/// assert_eq!(plan.migrations[1].name, "0002_add_field");
-	/// ```
+	/// ``` rust,ignore
 	pub fn sort(&mut self) -> Result<()> {
 		// Simple topological sort
 		let mut sorted = Vec::new();

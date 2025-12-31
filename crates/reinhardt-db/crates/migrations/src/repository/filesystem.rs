@@ -19,15 +19,7 @@ use syn::parse_quote;
 /// // use reinhardt::db::migrations::FieldType;
 ///
 /// pub fn migration() -> Migration {
-///     Migration {
-///         app_label: "app",
-///         name: "0001_initial",
-///         operations: vec![],
-///         dependencies: vec![],
-///         atomic: true,
-///         replaces: vec![],
-///         initial: None,
-///     }
+///     Migration::new("0001_initial", "app")
 /// }
 /// ```
 pub struct FilesystemRepository {
@@ -179,7 +171,7 @@ impl FilesystemRepository {
 #[async_trait]
 impl MigrationRepository for FilesystemRepository {
 	async fn save(&mut self, migration: &Migration) -> Result<()> {
-		let path = self.migration_path(migration.app_label, migration.name);
+		let path = self.migration_path(&migration.app_label, &migration.name);
 
 		// Check if migration file already exists to prevent overwriting
 		if tokio::fs::try_exists(&path).await.unwrap_or(false) {
@@ -191,7 +183,7 @@ impl MigrationRepository for FilesystemRepository {
 		}
 
 		// Check for duplicate operations with existing migrations
-		let existing_migrations = self.list(migration.app_label).await?;
+		let existing_migrations = self.list(&migration.app_label).await?;
 		for existing in &existing_migrations {
 			if self.has_identical_operations(existing, migration) {
 				return Err(MigrationError::DuplicateOperations(format!(

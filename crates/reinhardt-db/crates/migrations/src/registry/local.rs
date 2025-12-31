@@ -19,15 +19,8 @@ use std::sync::RwLock;
 /// ```rust,no_run
 /// use reinhardt_migrations::registry::{LocalRegistry, MigrationRegistry};
 /// use reinhardt_migrations::Migration;
-/// let migration = Migration {
-///     app_label: "test",
-///     name: "0001_initial",
-///     operations: vec![],
-///     dependencies: vec![],
-///     replaces: vec![],
-///     atomic: true,
-///     initial: None,
-/// };
+///
+/// let migration = Migration::new("0001_initial", "test");
 /// let registry = LocalRegistry::new();
 /// registry.register(migration).unwrap();
 /// let migrations = registry.all_migrations();
@@ -119,8 +112,8 @@ mod tests {
 		let registry = LocalRegistry::new();
 
 		let migration = Migration {
-			app_label: "polls",
-			name: "0001_initial",
+			app_label: "polls".to_string(),
+			name: "0001_initial".to_string(),
 			operations: vec![],
 			dependencies: vec![],
 			replaces: vec![],
@@ -128,6 +121,8 @@ mod tests {
 			initial: None,
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		};
 
 		registry.register(migration.clone()).unwrap();
@@ -144,8 +139,8 @@ mod tests {
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -153,13 +148,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -167,13 +164,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0002_add_field",
+				app_label: "polls".to_string(),
+				name: "0002_add_field".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -181,6 +180,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -199,8 +200,8 @@ mod tests {
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -208,13 +209,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -222,13 +225,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0002_add_field",
+				app_label: "polls".to_string(),
+				name: "0002_add_field".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -236,6 +241,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -250,8 +257,8 @@ mod tests {
 
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -259,6 +266,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -276,8 +285,8 @@ mod tests {
 
 		registry1
 			.register(Migration {
-				app_label: "app1",
-				name: "0001_initial",
+				app_label: "app1".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -285,13 +294,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry2
 			.register(Migration {
-				app_label: "app2",
-				name: "0001_initial",
+				app_label: "app2".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -299,6 +310,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
@@ -317,8 +330,8 @@ mod tests {
 		// Register migrations for different apps
 		registry
 			.register(Migration {
-				app_label: "polls",
-				name: "0001_initial",
+				app_label: "polls".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -326,13 +339,15 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 
 		registry
 			.register(Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![],
 				dependencies: vec![],
 				replaces: vec![],
@@ -340,6 +355,8 @@ mod tests {
 				initial: None,
 				state_only: false,
 				database_only: false,
+				swappable_dependencies: vec![],
+				optional_dependencies: vec![],
 			})
 			.unwrap();
 

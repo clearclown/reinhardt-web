@@ -39,9 +39,12 @@ impl MigrationNamer {
 	///
 	/// // Single operation
 	/// let ops = vec![Operation::CreateTable {
-	///     name: "users",
+	///     name: "users".to_string(),
 	///     columns: vec![],
 	///     constraints: vec![],
+	///     without_rowid: None,
+	///     interleave_in_parent: None,
+	///     partition: None,
 	/// }];
 	/// assert_eq!(
 	///     MigrationNamer::generate_name(&ops, false),
@@ -51,9 +54,9 @@ impl MigrationNamer {
 	/// // Multiple operations
 	/// let ops = vec![
 	///     Operation::AddColumn {
-	///         table: "users",
+	///         table: "users".to_string(),
 	///         column: reinhardt_migrations::ColumnDefinition {
-	///             name: "email",
+	///             name: "email".to_string(),
 	///             type_definition: reinhardt_migrations::FieldType::Custom("VARCHAR(255)".to_string()),
 	///             not_null: false,
 	///             unique: false,
@@ -61,11 +64,12 @@ impl MigrationNamer {
 	///             auto_increment: false,
 	///             default: None,
 	///         },
+	///         mysql_options: None,
 	///     },
 	///     Operation::AddColumn {
-	///         table: "users",
+	///         table: "users".to_string(),
 	///         column: reinhardt_migrations::ColumnDefinition {
-	///             name: "phone",
+	///             name: "phone".to_string(),
 	///             type_definition: reinhardt_migrations::FieldType::Custom("VARCHAR(20)".to_string()),
 	///             not_null: false,
 	///             unique: false,
@@ -73,6 +77,7 @@ impl MigrationNamer {
 	///             auto_increment: false,
 	///             default: None,
 	///         },
+	///         mysql_options: None,
 	///     },
 	/// ];
 	/// assert_eq!(
@@ -82,13 +87,13 @@ impl MigrationNamer {
 	///
 	/// // No fragments (RunSQL)
 	/// let ops = vec![Operation::RunSQL {
-	///     sql: "SELECT 1",
+	///     sql: "SELECT 1".to_string(),
 	///     reverse_sql: None,
 	/// }];
 	/// assert!(
 	///     MigrationNamer::generate_name(&ops, false).starts_with("auto_")
 	/// );
-	/// ```
+	/// ``` rust,ignore
 	pub fn generate_name(operations: &[Operation], is_initial: bool) -> String {
 		// Rule 1: Initial migrations
 		if is_initial {
@@ -161,9 +166,12 @@ mod tests {
 	#[test]
 	fn test_single_operation_create_table() {
 		let ops = vec![Operation::CreateTable {
-			name: "users",
+			name: "users".to_string(),
 			columns: vec![],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}];
 
 		let name = MigrationNamer::generate_name(&ops, false);
@@ -174,9 +182,9 @@ mod tests {
 	fn test_multiple_operations() {
 		let ops = vec![
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: crate::ColumnDefinition {
-					name: "email",
+					name: "email".to_string(),
 					type_definition: crate::FieldType::Custom("VARCHAR(255)".to_string()),
 					not_null: false,
 					unique: false,
@@ -184,11 +192,12 @@ mod tests {
 					auto_increment: false,
 					default: None,
 				},
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: "users",
+				table: "users".to_string(),
 				column: crate::ColumnDefinition {
-					name: "phone",
+					name: "phone".to_string(),
 					type_definition: crate::FieldType::Custom("VARCHAR(20)".to_string()),
 					not_null: false,
 					unique: false,
@@ -196,6 +205,7 @@ mod tests {
 					auto_increment: false,
 					default: None,
 				},
+				mysql_options: None,
 			},
 		];
 
@@ -206,7 +216,7 @@ mod tests {
 	#[test]
 	fn test_no_fragments_auto_naming() {
 		let ops = vec![Operation::RunSQL {
-			sql: "SELECT 1",
+			sql: "SELECT 1".to_string(),
 			reverse_sql: None,
 		}];
 

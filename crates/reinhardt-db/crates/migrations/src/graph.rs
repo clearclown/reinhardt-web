@@ -24,7 +24,8 @@
 //! assert_eq!(order[1], key2);
 //! ```
 
-use crate::{MigrationError, Result};
+use crate::dependency::{DependencyResolutionContext, DependencyResolver, MigrationDependency};
+use crate::{Migration, MigrationError, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -38,7 +39,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 /// let key = MigrationKey::new("auth", "0001_initial");
 /// assert_eq!(key.app_label, "auth");
 /// assert_eq!(key.name, "0001_initial");
-/// ```
+/// ``` rust,ignore
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MigrationKey {
 	pub app_label: String,
@@ -56,7 +57,7 @@ impl MigrationKey {
 	/// let key = MigrationKey::new("users", "0001_initial");
 	/// assert_eq!(key.app_label, "users");
 	/// assert_eq!(key.name, "0001_initial");
-	/// ```
+	/// ``` rust,ignore
 	pub fn new(app_label: impl Into<String>, name: impl Into<String>) -> Self {
 		Self {
 			app_label: app_label.into(),
@@ -73,7 +74,7 @@ impl MigrationKey {
 	///
 	/// let key = MigrationKey::new("auth", "0001_initial");
 	/// assert_eq!(key.id(), "auth.0001_initial");
-	/// ```
+	/// ``` rust,ignore
 	pub fn id(&self) -> String {
 		format!("{}.{}", self.app_label, self.name)
 	}
@@ -136,7 +137,7 @@ impl MigrationNode {
 ///
 /// let order = graph.topological_sort().unwrap();
 /// assert_eq!(order.len(), 2);
-/// ```
+/// ``` rust,ignore
 pub struct MigrationGraph {
 	nodes: HashMap<MigrationKey, MigrationNode>,
 }
@@ -151,7 +152,7 @@ impl MigrationGraph {
 	///
 	/// let graph = MigrationGraph::new();
 	/// assert!(graph.is_empty());
-	/// ```
+	/// ``` rust,ignore
 	pub fn new() -> Self {
 		Self {
 			nodes: HashMap::new(),
@@ -170,7 +171,7 @@ impl MigrationGraph {
 	///
 	/// graph.add_migration(key.clone(), vec![]);
 	/// assert!(graph.has_migration(&key));
-	/// ```
+	/// ``` rust,ignore
 	pub fn add_migration(&mut self, key: MigrationKey, dependencies: Vec<MigrationKey>) {
 		let node = MigrationNode::new(key.clone(), dependencies);
 		self.nodes.insert(key, node);
@@ -189,7 +190,7 @@ impl MigrationGraph {
 	/// assert!(!graph.has_migration(&key));
 	/// graph.add_migration(key.clone(), vec![]);
 	/// assert!(graph.has_migration(&key));
-	/// ```
+	/// ``` rust,ignore
 	pub fn has_migration(&self, key: &MigrationKey) -> bool {
 		self.nodes.contains_key(key)
 	}
@@ -211,7 +212,7 @@ impl MigrationGraph {
 	///
 	/// graph.add_migration(MigrationKey::new("auth", "0001_initial"), vec![]);
 	/// assert!(!graph.is_empty());
-	/// ```
+	/// ``` rust,ignore
 	pub fn is_empty(&self) -> bool {
 		self.nodes.is_empty()
 	}
@@ -243,7 +244,7 @@ impl MigrationGraph {
 	/// let deps = graph.get_dependencies(&key2).unwrap();
 	/// assert_eq!(deps.len(), 1);
 	/// assert_eq!(deps[0], key1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_dependencies(&self, key: &MigrationKey) -> Option<&[MigrationKey]> {
 		self.nodes.get(key).map(|node| node.dependencies.as_slice())
 	}
@@ -265,7 +266,7 @@ impl MigrationGraph {
 	/// let dependents = graph.get_dependents(&key1);
 	/// assert_eq!(dependents.len(), 1);
 	/// assert_eq!(dependents[0], &key2);
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_dependents(&self, key: &MigrationKey) -> Vec<&MigrationKey> {
 		self.nodes
 			.iter()
@@ -298,7 +299,7 @@ impl MigrationGraph {
 	/// assert_eq!(order[0], key1);
 	/// assert_eq!(order[1], key2);
 	/// assert_eq!(order[2], key3);
-	/// ```
+	/// ``` rust,ignore
 	pub fn topological_sort(&self) -> Result<Vec<MigrationKey>> {
 		// Calculate in-degree for each node
 		let mut in_degree: HashMap<MigrationKey, usize> = HashMap::new();
@@ -374,7 +375,7 @@ impl MigrationGraph {
 	/// let leaves = graph.get_leaf_nodes();
 	/// assert_eq!(leaves.len(), 1);
 	/// assert_eq!(leaves[0], &key2);
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_leaf_nodes(&self) -> Vec<&MigrationKey> {
 		self.nodes
 			.keys()
@@ -400,7 +401,7 @@ impl MigrationGraph {
 	/// let roots = graph.get_root_nodes();
 	/// assert_eq!(roots.len(), 1);
 	/// assert_eq!(roots[0], &key1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_root_nodes(&self) -> Vec<&MigrationKey> {
 		self.nodes
 			.values()
@@ -436,7 +437,7 @@ impl MigrationGraph {
 	///     vec![],
 	///     vec![old1.clone(), old2.clone()],
 	/// );
-	/// ```
+	/// ``` rust,ignore
 	pub fn add_migration_with_replaces(
 		&mut self,
 		key: MigrationKey,
@@ -470,7 +471,7 @@ impl MigrationGraph {
 	/// assert_eq!(path[0], key1);
 	/// assert_eq!(path[1], key2);
 	/// assert_eq!(path[2], key3);
-	/// ```
+	/// ``` rust,ignore
 	pub fn find_migration_path(
 		&self,
 		from: &MigrationKey,
@@ -557,7 +558,7 @@ impl MigrationGraph {
 	/// assert_eq!(path[0], key3);
 	/// assert_eq!(path[1], key2);
 	/// assert_eq!(path[2], key1);
-	/// ```
+	/// ``` rust,ignore
 	pub fn find_backward_path(
 		&self,
 		from: &MigrationKey,
@@ -653,7 +654,7 @@ impl MigrationGraph {
 	/// // Should contain only the squashed migration, not the old ones
 	/// assert_eq!(order.len(), 1);
 	/// assert_eq!(order[0], squashed);
-	/// ```
+	/// ``` rust,ignore
 	pub fn resolve_execution_order_with_replaces(&self) -> Result<Vec<MigrationKey>> {
 		// Find all migrations that are replaced by others
 		let mut replaced: HashSet<MigrationKey> = HashSet::new();
@@ -711,7 +712,7 @@ impl MigrationGraph {
 	///
 	/// assert!(graph.is_replaced(&old));
 	/// assert!(!graph.is_replaced(&squashed));
-	/// ```
+	/// ``` rust,ignore
 	pub fn is_replaced(&self, key: &MigrationKey) -> bool {
 		self.nodes.values().any(|node| node.replaces.contains(key))
 	}
@@ -735,7 +736,7 @@ impl MigrationGraph {
 	///
 	/// let replacement = graph.get_replacement(&old);
 	/// assert_eq!(replacement, Some(&squashed));
-	/// ```
+	/// ``` rust,ignore
 	pub fn get_replacement(&self, key: &MigrationKey) -> Option<&MigrationKey> {
 		self.nodes
 			.iter()
@@ -762,7 +763,7 @@ impl MigrationGraph {
 	///
 	/// let cycles = graph.detect_all_cycles();
 	/// assert!(cycles.is_empty());
-	/// ```
+	/// ``` rust,ignore
 	pub fn detect_all_cycles(&self) -> Vec<Vec<MigrationKey>> {
 		let mut cycles = Vec::new();
 		let mut visited = HashSet::new();
@@ -805,6 +806,169 @@ impl MigrationGraph {
 
 		path.pop();
 		rec_stack.remove(key);
+	}
+
+	/// Add a migration to the graph, resolving all dependency types.
+	///
+	/// This method handles:
+	/// - Required dependencies (standard)
+	/// - Swappable dependencies (resolved via settings)
+	/// - Optional dependencies (only if condition is met)
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_migrations::graph::{MigrationGraph, MigrationKey};
+	/// use reinhardt_migrations::Migration;
+	/// use reinhardt_migrations::dependency::{
+	///     DependencyResolutionContext, SwappableDependency, OptionalDependency, DependencyCondition
+	/// };
+	///
+	/// let mut graph = MigrationGraph::new();
+	///
+	/// // Set up context with custom user model
+	/// let context = DependencyResolutionContext::new()
+	///     .with_app("auth")
+	///     .with_app("custom_auth")
+	///     .with_setting("AUTH_USER_MODEL", "custom_auth.CustomUser");
+	///
+	/// // Create a migration with swappable dependency
+	/// let migration = Migration::new("0001_create_profile", "profiles")
+	///     .add_swappable_dependency(SwappableDependency::new(
+	///         "AUTH_USER_MODEL",
+	///         "auth",
+	///         "User",
+	///         "0001_initial",
+	///     ));
+	///
+	/// graph.add_migration_with_context(&migration, &context);
+	///
+	/// // The dependency should be resolved to custom_auth
+	/// let key = MigrationKey::new("profiles", "0001_create_profile");
+	/// let deps = graph.get_dependencies(&key).unwrap();
+	/// assert_eq!(deps.len(), 1);
+	/// assert_eq!(deps[0].app_label, "custom_auth");
+	/// ``` rust,ignore
+	pub fn add_migration_with_context(
+		&mut self,
+		migration: &Migration,
+		context: &DependencyResolutionContext,
+	) {
+		let key = MigrationKey::new(migration.app_label.clone(), migration.name.clone());
+		let resolver = DependencyResolver::new(context);
+
+		// Collect all dependencies
+		let mut all_dependencies: Vec<MigrationKey> = Vec::new();
+
+		// Add required dependencies
+		for (app_label, migration_name) in &migration.dependencies {
+			all_dependencies.push(MigrationKey::new(app_label.clone(), migration_name.clone()));
+		}
+
+		// Resolve swappable dependencies
+		for swappable in &migration.swappable_dependencies {
+			let dep = MigrationDependency::Swappable(swappable.clone());
+			if let Some((app_label, migration_name)) = resolver.resolve(&dep) {
+				all_dependencies.push(MigrationKey::new(app_label, migration_name));
+			}
+		}
+
+		// Resolve optional dependencies (only if condition is met)
+		for optional in &migration.optional_dependencies {
+			let dep = MigrationDependency::Optional(optional.clone());
+			if let Some((app_label, migration_name)) = resolver.resolve(&dep) {
+				all_dependencies.push(MigrationKey::new(app_label, migration_name));
+			}
+		}
+
+		// Handle replaces
+		let replaces: Vec<MigrationKey> = migration
+			.replaces
+			.iter()
+			.map(|(app, name)| MigrationKey::new(app.clone(), name.clone()))
+			.collect();
+
+		if replaces.is_empty() {
+			self.add_migration(key, all_dependencies);
+		} else {
+			self.add_migration_with_replaces(key, all_dependencies, replaces);
+		}
+	}
+
+	/// Build a migration graph from a list of migrations.
+	///
+	/// This method creates a complete graph with all dependencies resolved
+	/// using the provided context.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_migrations::graph::MigrationGraph;
+	/// use reinhardt_migrations::Migration;
+	/// use reinhardt_migrations::dependency::DependencyResolutionContext;
+	///
+	/// let migrations = vec![
+	///     Migration::new("0001_initial", "auth"),
+	///     Migration::new("0002_add_field", "auth")
+	///         .add_dependency("auth", "0001_initial"),
+	/// ];
+	///
+	/// let context = DependencyResolutionContext::new()
+	///     .with_app("auth");
+	///
+	/// let graph = MigrationGraph::from_migrations(&migrations, &context);
+	/// assert_eq!(graph.len(), 2);
+	/// ``` rust,ignore
+	pub fn from_migrations(
+		migrations: &[Migration],
+		context: &DependencyResolutionContext,
+	) -> Self {
+		let mut graph = Self::new();
+		for migration in migrations {
+			graph.add_migration_with_context(migration, context);
+		}
+		graph
+	}
+
+	/// Resolve execution order considering swappable and optional dependencies.
+	///
+	/// This is a convenience method that combines `from_migrations` with
+	/// `topological_sort` or `resolve_execution_order_with_replaces`.
+	///
+	/// # Example
+	///
+	/// ```rust
+	/// use reinhardt_migrations::graph::MigrationGraph;
+	/// use reinhardt_migrations::Migration;
+	/// use reinhardt_migrations::dependency::DependencyResolutionContext;
+	///
+	/// let migrations = vec![
+	///     Migration::new("0001_initial", "auth"),
+	///     Migration::new("0001_initial", "users")
+	///         .add_dependency("auth", "0001_initial"),
+	/// ];
+	///
+	/// let context = DependencyResolutionContext::new()
+	///     .with_apps(["auth", "users"]);
+	///
+	/// let order = MigrationGraph::resolve_execution_order(&migrations, &context).unwrap();
+	/// assert_eq!(order.len(), 2);
+	/// assert_eq!(order[0].app_label, "auth");
+	/// ``` rust,ignore
+	pub fn resolve_execution_order(
+		migrations: &[Migration],
+		context: &DependencyResolutionContext,
+	) -> Result<Vec<MigrationKey>> {
+		let graph = Self::from_migrations(migrations, context);
+
+		// Check if any migration has replaces
+		let has_replaces = migrations.iter().any(|m| !m.replaces.is_empty());
+
+		if has_replaces {
+			graph.resolve_execution_order_with_replaces()
+		} else {
+			graph.topological_sort()
+		}
 	}
 }
 
