@@ -45,8 +45,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -58,9 +58,9 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -110,10 +110,10 @@ async fn test_custom_operation_integration(
 		"events",
 		"0001_create_events",
 		vec![Operation::CreateTable {
-			name: leak_str("events"),
+			name: leak_str("events").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -314,10 +314,10 @@ async fn test_data_migration_patterns(
 		"auth",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -367,12 +367,14 @@ async fn test_data_migration_patterns(
 		"0002_add_name_fields",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_basic_column("first_name", FieldType::VarChar(Some(100))),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_basic_column("last_name", FieldType::VarChar(Some(100))),
+				mysql_options: None,
 			},
 		],
 	);
@@ -529,10 +531,10 @@ async fn test_complex_data_transformation(
 		"shop",
 		"0001_create_orders",
 		vec![Operation::CreateTable {
-			name: leak_str("orders"),
+			name: leak_str("orders").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -585,12 +587,14 @@ async fn test_complex_data_transformation(
 		"0002_add_tax_columns",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("orders"),
+				table: leak_str("orders").to_string(),
 				column: create_basic_column("tax_rate", FieldType::Custom("DECIMAL(5, 4)".to_string())),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("orders"),
+				table: leak_str("orders").to_string(),
 				column: create_basic_column("total_price", FieldType::Custom("DECIMAL(10, 2)".to_string())),
+				mysql_options: None,
 			},
 		],
 	);
@@ -741,10 +745,10 @@ async fn test_external_configuration_integration(
 		"multi_tenant",
 		"0001_create_tenants",
 		vec![Operation::CreateTable {
-			name: leak_str("tenants"),
+			name: leak_str("tenants").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -798,8 +802,9 @@ async fn test_external_configuration_integration(
 		"multi_tenant",
 		"0002_add_retention_policy",
 		vec![Operation::AddColumn {
-			table: leak_str("tenants"),
+			table: leak_str("tenants").to_string(),
 			column: create_basic_column("data_retention_days", FieldType::Integer),
+			mysql_options: None,
 		}],
 	);
 
@@ -941,10 +946,10 @@ async fn test_future_extensibility_patterns(
 		"system",
 		"0001_create_migration_metadata",
 		vec![Operation::CreateTable {
-			name: leak_str("migration_metadata"),
+			name: leak_str("migration_metadata").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,

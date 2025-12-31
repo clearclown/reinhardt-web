@@ -33,14 +33,10 @@ fn leak_str(s: impl Into<String>) -> &'static str {
 }
 
 /// Create a simple migration for testing
-fn create_test_migration(
-	app: &'static str,
-	name: &'static str,
-	operations: Vec<Operation>,
-) -> Migration {
+fn create_test_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -48,20 +44,18 @@ fn create_test_migration(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a non-atomic migration (for testing partial failure scenarios)
 // Temporarily unused but may be needed for future non-atomic test scenarios
 #[allow(dead_code)]
-fn create_non_atomic_migration(
-	app: &'static str,
-	name: &'static str,
-	operations: Vec<Operation>,
-) -> Migration {
+fn create_non_atomic_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -69,13 +63,15 @@ fn create_non_atomic_migration(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -132,8 +128,8 @@ async fn test_unique_constraint_violation(
 		"testapp",
 		"0001_add_unique",
 		vec![Operation::AddConstraint {
-			table: "error_test_users",
-			constraint_sql: leak_str("CONSTRAINT unique_email UNIQUE (email)"),
+			table: "error_test_users".to_string(),
+			constraint_sql: leak_str("CONSTRAINT unique_email UNIQUE (email)").to_string(),
 		}],
 	);
 
@@ -206,10 +202,12 @@ async fn test_not_null_constraint_violation(
 		"testapp",
 		"0001_set_notnull",
 		vec![Operation::RunSQL {
-			sql: leak_str("ALTER TABLE notnull_test ALTER COLUMN optional_field SET NOT NULL"),
-			reverse_sql: Some(leak_str(
-				"ALTER TABLE notnull_test ALTER COLUMN optional_field DROP NOT NULL",
-			)),
+			sql: leak_str("ALTER TABLE notnull_test ALTER COLUMN optional_field SET NOT NULL")
+				.to_string(),
+			reverse_sql: Some(
+				leak_str("ALTER TABLE notnull_test ALTER COLUMN optional_field DROP NOT NULL")
+					.to_string(),
+			),
 		}],
 	);
 
@@ -292,10 +290,11 @@ async fn test_foreign_key_violation(
 		"testapp",
 		"0001_add_fk",
 		vec![Operation::AddConstraint {
-			table: "fk_child",
+			table: "fk_child".to_string(),
 			constraint_sql: leak_str(
 				"CONSTRAINT fk_parent_id FOREIGN KEY (parent_id) REFERENCES fk_parent(id)",
-			),
+			)
+			.to_string(),
 		}],
 	);
 
@@ -345,25 +344,31 @@ async fn test_transaction_atomicity(
 		vec![
 			// First operation: Create table (should succeed)
 			Operation::CreateTable {
-				name: leak_str("atomic_table1"),
+				name: leak_str("atomic_table1").to_string(),
 				columns: vec![create_basic_column(
 					"id",
 					FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 				)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 			// Second operation: Create another table (should succeed)
 			Operation::CreateTable {
-				name: leak_str("atomic_table2"),
+				name: leak_str("atomic_table2").to_string(),
 				columns: vec![create_basic_column(
 					"id",
 					FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 				)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 			// Third operation: Invalid SQL (should fail)
 			Operation::RunSQL {
-				sql: leak_str("THIS IS INVALID SQL SYNTAX"),
+				sql: leak_str("THIS IS INVALID SQL SYNTAX").to_string(),
 				reverse_sql: None,
 			},
 		],
@@ -428,7 +433,7 @@ async fn test_rollback_failure(
 		"testapp",
 		"0001_drop_nonexistent",
 		vec![Operation::DropTable {
-			name: leak_str("nonexistent_table_xyz"),
+			name: leak_str("nonexistent_table_xyz").to_string(),
 		}],
 	);
 
@@ -472,7 +477,7 @@ async fn test_corrupted_migration_file(
 		"testapp",
 		"0001_invalid_sql",
 		vec![Operation::RunSQL {
-			sql: leak_str("CRETE TABEL broken_syntax (id INT)"), // Typos in CREATE TABLE
+			sql: leak_str("CRETE TABEL broken_syntax (id INT)").to_string(), // Typos in CREATE TABLE
 			reverse_sql: None,
 		}],
 	);
@@ -523,12 +528,15 @@ async fn test_table_already_exists(
 		"testapp",
 		"0001_create_existing",
 		vec![Operation::CreateTable {
-			name: leak_str("already_exists_table"),
+			name: leak_str("already_exists_table").to_string(),
 			columns: vec![create_basic_column(
 				"id",
 				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -580,8 +588,9 @@ async fn test_column_already_exists(
 		"testapp",
 		"0001_add_existing_col",
 		vec![Operation::AddColumn {
-			table: "col_exists_table",
+			table: "col_exists_table".to_string(),
 			column: create_basic_column("existing_column", FieldType::Text),
+			mysql_options: None,
 		}],
 	);
 
@@ -639,8 +648,8 @@ async fn test_schema_drift_detection(
 		"testapp",
 		"0001_alter_drifted",
 		vec![Operation::DropColumn {
-			table: "drift_table",
-			column: leak_str("expected_column"), // Column doesn't exist
+			table: "drift_table".to_string(),
+			column: leak_str("expected_column").to_string(), // Column doesn't exist
 		}],
 	);
 
@@ -684,12 +693,15 @@ async fn test_migration_history_corruption(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("history_test_table"),
+			name: leak_str("history_test_table").to_string(),
 			columns: vec![create_basic_column(
 				"id",
 				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -719,8 +731,9 @@ async fn test_migration_history_corruption(
 		"testapp",
 		"0002_followup",
 		vec![Operation::AddColumn {
-			table: "history_test_table",
+			table: "history_test_table".to_string(),
 			column: create_basic_column("new_col", FieldType::Text),
+			mysql_options: None,
 		}],
 	);
 

@@ -48,8 +48,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -61,9 +61,9 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -104,10 +104,10 @@ async fn test_partial_migration_failure_recovery(
 		"0001_initial",
 		vec![
 			Operation::CreateTable {
-				name: leak_str("users"),
+				name: leak_str("users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -119,10 +119,10 @@ async fn test_partial_migration_failure_recovery(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("posts"),
+				name: leak_str("posts").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -179,27 +179,30 @@ async fn test_partial_migration_failure_recovery(
 		"0002_failing",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_basic_column("email", FieldType::VarChar(Some(255))),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("posts"),
+				table: leak_str("posts").to_string(),
 				column: create_basic_column("content", FieldType::Text),
+				mysql_options: None,
 			},
 			// This will fail - attempting to add duplicate column
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_basic_column("email", FieldType::VarChar(Some(255))),
+				mysql_options: None,
 			},
 			Operation::CreateIndex {
-				table: leak_str("users"),
-				name: leak_str("idx_users_email"),
+				table: leak_str("users").to_string(),
+				name: leak_str("idx_users_email").to_string(),
 				columns: vec!["email"],
 				unique: true,
 			},
 			Operation::CreateIndex {
-				table: leak_str("posts"),
-				name: leak_str("idx_posts_title"),
+				table: leak_str("posts").to_string(),
+				name: leak_str("idx_posts_title").to_string(),
 				columns: vec!["title"],
 				unique: false,
 			},
@@ -343,10 +346,10 @@ async fn test_concurrent_migration_conflict_detection(
 		"testapp",
 		"0001_concurrent",
 		vec![Operation::CreateTable {
-			name: leak_str("concurrent_table"),
+			name: leak_str("concurrent_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -475,10 +478,10 @@ async fn test_schema_drift_detection(
 		"0001_initial",
 		vec![
 			Operation::CreateTable {
-				name: leak_str("users"),
+				name: leak_str("users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -491,10 +494,10 @@ async fn test_schema_drift_detection(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("posts"),
+				name: leak_str("posts").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -682,10 +685,10 @@ async fn test_database_connection_loss_recovery(
 		"recovery",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("test_table"),
+			name: leak_str("test_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -726,9 +729,9 @@ async fn test_database_connection_loss_recovery(
 		"recovery",
 		"0002_add_table",
 		vec![Operation::CreateTable {
-			name: leak_str("new_table"),
+			name: leak_str("new_table").to_string(),
 			columns: vec![ColumnDefinition {
-				name: "id",
+				name: "id".to_string(),
 				type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 				not_null: true,
 				unique: false,
@@ -881,10 +884,10 @@ async fn test_irreversible_operation_error_handling(
 		"irreversible",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,

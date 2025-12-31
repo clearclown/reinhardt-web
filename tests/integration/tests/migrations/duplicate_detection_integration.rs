@@ -65,7 +65,7 @@ impl MigrationRepository for TestRepository {
 fn create_users_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -73,7 +73,7 @@ fn create_users_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -84,7 +84,7 @@ fn create_users_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -100,7 +100,7 @@ fn create_users_schema() -> DatabaseSchema {
 fn create_users_and_posts_schema() -> DatabaseSchema {
 	let mut schema = create_users_schema();
 	let mut posts_table = TableSchema {
-		name: "posts",
+		name: "posts".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -108,7 +108,7 @@ fn create_users_and_posts_schema() -> DatabaseSchema {
 	posts_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -119,7 +119,7 @@ fn create_users_and_posts_schema() -> DatabaseSchema {
 	posts_table.columns.insert(
 		"title".to_string(),
 		ColumnSchema {
-			name: "title",
+			name: "title".to_string(),
 			data_type: FieldType::Text,
 			nullable: false,
 			default: None,
@@ -203,7 +203,7 @@ async fn test_scenario_2_rapid_successive_makemigrations() {
 	// Save the first migration to repository (caller's responsibility)
 	let migration1 = Migration {
 		app_label,
-		name: "0001_initial",
+		name: "0001_initial".to_string(),
 		operations: result1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -332,7 +332,7 @@ async fn test_duplicate_operations_detected() {
 	// Save the first migration to repository (caller's responsibility)
 	let migration1 = Migration {
 		app_label,
-		name: "0001_initial",
+		name: "0001_initial".to_string(),
 		operations: result1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -367,7 +367,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	// Create first schema with columns in one order
 	let mut schema1 = DatabaseSchema::default();
 	let mut table1 = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -376,7 +376,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table1.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -387,7 +387,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table1.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -398,7 +398,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table1.columns.insert(
 		"email".to_string(),
 		ColumnSchema {
-			name: "email",
+			name: "email".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -421,7 +421,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	// Save the first migration to repository (caller's responsibility)
 	let migration1 = Migration {
 		app_label,
-		name: "0001_initial",
+		name: "0001_initial".to_string(),
 		operations: result1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -439,7 +439,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	// Note: BTreeMap already sorts by key, but the Operation's column list order matters
 	let mut schema2 = DatabaseSchema::default();
 	let mut table2 = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -448,7 +448,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table2.columns.insert(
 		"email".to_string(),
 		ColumnSchema {
-			name: "email",
+			name: "email".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -459,7 +459,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table2.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -470,7 +470,7 @@ async fn test_semantic_duplicate_with_different_column_order() {
 	table2.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,

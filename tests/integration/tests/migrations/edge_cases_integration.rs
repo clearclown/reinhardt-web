@@ -35,14 +35,10 @@ fn leak_str(s: impl Into<String>) -> &'static str {
 }
 
 /// Create a simple migration for testing
-fn create_test_migration(
-	app: &'static str,
-	name: &'static str,
-	operations: Vec<Operation>,
-) -> Migration {
+fn create_test_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -50,33 +46,40 @@ fn create_test_migration(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a migration with dependencies
 fn create_migration_with_deps(
-	app: &'static str,
-	name: &'static str,
+	app: &str,
+	name: &str,
 	operations: Vec<Operation>,
-	dependencies: Vec<(&'static str, &'static str)>,
+	dependencies: Vec<(&str, &str)>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
-		dependencies,
+		dependencies: dependencies
+			.into_iter()
+			.map(|(a, n)| (a.to_string(), n.to_string()))
+			.collect(),
 		replaces: vec![],
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -94,7 +97,7 @@ fn create_column_with_constraints(
 	primary_key: bool,
 ) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null,
 		unique: false,
@@ -132,7 +135,7 @@ async fn test_self_referencing_fk(
 		"testapp",
 		"0001_self_ref",
 		vec![Operation::CreateTable {
-			name: leak_str("categories"),
+			name: leak_str("categories").to_string(),
 			columns: vec![
 				create_column_with_constraints(
 					"id",
@@ -150,7 +153,11 @@ async fn test_self_referencing_fk(
 				referenced_columns: vec!["id".to_string()],
 				on_delete: reinhardt_migrations::ForeignKeyAction::SetNull,
 				on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+				deferrable: None,
 			}],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -237,20 +244,20 @@ async fn test_deep_dependency_chain(
 		let table_name = leak_str(format!("chain_table_{}", i));
 		let migration_name = leak_str(format!("{:04}_chain_{}", i + 1, i));
 
-		let deps = if i == 0 {
+		let deps: Vec<(String, String)> = if i == 0 {
 			vec![]
 		} else {
 			vec![(
-				"testapp",
-				leak_str(format!("{:04}_chain_{}", i, i - 1)) as &'static str,
+				"testapp".to_string(),
+				leak_str(format!("{:04}_chain_{}", i, i - 1)).to_string(),
 			)]
 		};
 
 		let migration = Migration {
-			app_label: "testapp",
-			name: migration_name,
+			app_label: "testapp".to_string(),
+			name: migration_name.to_string(),
 			operations: vec![Operation::CreateTable {
-				name: table_name,
+				name: table_name.to_string(),
 				columns: vec![create_column_with_constraints(
 					"id",
 					FieldType::Custom("SERIAL".to_string()),
@@ -258,6 +265,9 @@ async fn test_deep_dependency_chain(
 					true,
 				)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			}],
 			dependencies: deps,
 			replaces: vec![],
@@ -265,6 +275,8 @@ async fn test_deep_dependency_chain(
 			initial: None,
 			state_only: false,
 			database_only: false,
+			swappable_dependencies: vec![],
+			optional_dependencies: vec![],
 		};
 
 		migrations.push(migration);
@@ -323,7 +335,7 @@ async fn test_cross_app_circular_dependency(
 		"app1",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("app1_users"),
+			name: leak_str("app1_users").to_string(),
 			columns: vec![create_column_with_constraints(
 				"id",
 				FieldType::Custom("SERIAL".to_string()),
@@ -331,6 +343,9 @@ async fn test_cross_app_circular_dependency(
 				true,
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
@@ -340,7 +355,7 @@ async fn test_cross_app_circular_dependency(
 		"app2",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("app2_profiles"),
+			name: leak_str("app2_profiles").to_string(),
 			columns: vec![
 				create_column_with_constraints(
 					"id",
@@ -351,6 +366,9 @@ async fn test_cross_app_circular_dependency(
 				create_basic_column("user_id", FieldType::Integer),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app1", "0001_initial")],
 	);
@@ -360,8 +378,9 @@ async fn test_cross_app_circular_dependency(
 		"app1",
 		"0002_add_profile_link",
 		vec![Operation::AddColumn {
-			table: "app1_users",
+			table: "app1_users".to_string(),
 			column: create_basic_column("profile_id", FieldType::Integer),
+			mysql_options: None,
 		}],
 		vec![("app2", "0001_initial")],
 	);
@@ -430,7 +449,7 @@ async fn test_long_identifier_names(
 		"testapp",
 		"0001_long_names",
 		vec![Operation::CreateTable {
-			name: leak_str(long_table_name.clone()),
+			name: leak_str(long_table_name.clone()).to_string(),
 			columns: vec![
 				create_column_with_constraints(
 					"id",
@@ -441,6 +460,9 @@ async fn test_long_identifier_names(
 				create_basic_column(leak_str(long_column_name.clone()), FieldType::Text),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -493,7 +515,7 @@ async fn test_identifier_too_long(
 		"testapp",
 		"0001_too_long",
 		vec![Operation::CreateTable {
-			name: leak_str(too_long_name.clone()),
+			name: leak_str(too_long_name.clone()).to_string(),
 			columns: vec![create_column_with_constraints(
 				"id",
 				FieldType::Custom("SERIAL".to_string()),
@@ -501,6 +523,9 @@ async fn test_identifier_too_long(
 				true,
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -549,8 +574,9 @@ async fn test_special_characters_in_names(
 					"column-with-dashes" TEXT,
 					"column.with.dots" INTEGER
 				)"#,
-			),
-			reverse_sql: Some(leak_str(r#"DROP TABLE "special-table_with.dots""#)),
+			)
+			.to_string(),
+			reverse_sql: Some(leak_str(r#"DROP TABLE "special-table_with.dots""#).to_string()),
 		}],
 	);
 
@@ -605,7 +631,7 @@ async fn test_same_name_different_apps(
 		"app1",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("app1_shared_name"),
+			name: leak_str("app1_shared_name").to_string(),
 			columns: vec![create_column_with_constraints(
 				"id",
 				FieldType::Custom("SERIAL".to_string()),
@@ -613,6 +639,9 @@ async fn test_same_name_different_apps(
 				true,
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -621,7 +650,7 @@ async fn test_same_name_different_apps(
 		"app2",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("app2_shared_name"),
+			name: leak_str("app2_shared_name").to_string(),
 			columns: vec![create_column_with_constraints(
 				"id",
 				FieldType::Custom("SERIAL".to_string()),
@@ -629,6 +658,9 @@ async fn test_same_name_different_apps(
 				true,
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -690,7 +722,7 @@ async fn test_extreme_varchar_length(
 		"testapp",
 		"0001_large_varchar",
 		vec![Operation::CreateTable {
-			name: leak_str("large_varchar_table"),
+			name: leak_str("large_varchar_table").to_string(),
 			columns: vec![
 				create_column_with_constraints(
 					"id",
@@ -701,6 +733,9 @@ async fn test_extreme_varchar_length(
 				create_basic_column("large_field", FieldType::VarChar(10000)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -753,7 +788,7 @@ async fn test_zero_length_field(
 		"testapp",
 		"0001_zero_varchar",
 		vec![Operation::CreateTable {
-			name: leak_str("zero_varchar_table"),
+			name: leak_str("zero_varchar_table").to_string(),
 			columns: vec![
 				create_column_with_constraints(
 					"id",
@@ -764,6 +799,9 @@ async fn test_zero_length_field(
 				create_basic_column("zero_field", FieldType::VarChar(0)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -804,7 +842,7 @@ async fn test_empty_model_definition(
 		"testapp",
 		"0001_minimal",
 		vec![Operation::CreateTable {
-			name: leak_str("minimal_table"),
+			name: leak_str("minimal_table").to_string(),
 			columns: vec![create_column_with_constraints(
 				"id",
 				FieldType::Custom("SERIAL".to_string()),
@@ -812,6 +850,9 @@ async fn test_empty_model_definition(
 				true,
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 

@@ -25,7 +25,12 @@
 
 use reinhardt_backends::DatabaseConnection;
 use reinhardt_migrations::{
-	executor::DatabaseMigrationExecutor, ColumnDefinition, FieldType, Migration, Operation,
+	dependency::{
+		DependencyCondition, DependencyResolutionContext, OptionalDependency, SwappableDependency,
+	},
+	executor::DatabaseMigrationExecutor,
+	graph::{MigrationGraph, MigrationKey},
+	ColumnDefinition, FieldType, Migration, Operation,
 };
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
@@ -43,28 +48,33 @@ fn leak_str(s: impl Into<String>) -> &'static str {
 
 /// Create a migration with dependencies
 fn create_migration_with_deps(
-	app: &'static str,
-	name: &'static str,
+	app: &str,
+	name: &str,
 	operations: Vec<Operation>,
-	dependencies: Vec<(&'static str, &'static str)>,
+	dependencies: Vec<(&str, &str)>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
-		dependencies,
+		dependencies: dependencies
+			.into_iter()
+			.map(|(a, n)| (a.to_string(), n.to_string()))
+			.collect(),
 		replaces: vec![],
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -75,9 +85,9 @@ fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinit
 }
 
 /// Create an auto-increment primary key column
-fn create_auto_pk_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_auto_pk_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: true,
 		unique: false,
@@ -123,9 +133,12 @@ async fn test_linear_dependency_resolution(
 		"app",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![], // No dependencies
 	);
@@ -135,8 +148,9 @@ async fn test_linear_dependency_resolution(
 		"app",
 		"0002_add_name",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("name", FieldType::VarChar(100)),
+			mysql_options: None,
 		}],
 		vec![("app", "0001_create_users")],
 	);
@@ -146,8 +160,9 @@ async fn test_linear_dependency_resolution(
 		"app",
 		"0003_add_email",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("email", FieldType::VarChar(255)),
+			mysql_options: None,
 		}],
 		vec![("app", "0002_add_name")],
 	);
@@ -199,9 +214,12 @@ async fn test_multi_app_dependency_resolution(
 		"app1",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
@@ -211,12 +229,15 @@ async fn test_multi_app_dependency_resolution(
 		"app2",
 		"0001_create_posts",
 		vec![Operation::CreateTable {
-			name: leak_str("posts"),
+			name: leak_str("posts").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_basic_column("user_id", FieldType::Integer),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app1", "0001_create_users")],
 	);
@@ -226,8 +247,9 @@ async fn test_multi_app_dependency_resolution(
 		"app1",
 		"0002_add_username",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("username", FieldType::VarChar(50)),
+			mysql_options: None,
 		}],
 		vec![("app2", "0001_create_posts")],
 	);
@@ -270,9 +292,12 @@ async fn test_diamond_dependency_resolution(
 		"app",
 		"0001_create_base",
 		vec![Operation::CreateTable {
-			name: leak_str("base"),
+			name: leak_str("base").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
@@ -282,8 +307,9 @@ async fn test_diamond_dependency_resolution(
 		"app",
 		"0002_add_column_b",
 		vec![Operation::AddColumn {
-			table: leak_str("base"),
+			table: leak_str("base").to_string(),
 			column: create_basic_column("column_b", FieldType::VarChar(50)),
+			mysql_options: None,
 		}],
 		vec![("app", "0001_create_base")],
 	);
@@ -293,8 +319,9 @@ async fn test_diamond_dependency_resolution(
 		"app",
 		"0003_add_column_c",
 		vec![Operation::AddColumn {
-			table: leak_str("base"),
+			table: leak_str("base").to_string(),
 			column: create_basic_column("column_c", FieldType::VarChar(50)),
+			mysql_options: None,
 		}],
 		vec![("app", "0001_create_base")],
 	);
@@ -304,8 +331,9 @@ async fn test_diamond_dependency_resolution(
 		"app",
 		"0004_add_column_d",
 		vec![Operation::AddColumn {
-			table: leak_str("base"),
+			table: leak_str("base").to_string(),
 			column: create_basic_column("column_d", FieldType::VarChar(50)),
+			mysql_options: None,
 		}],
 		vec![("app", "0002_add_column_b"), ("app", "0003_add_column_c")],
 	);
@@ -329,66 +357,271 @@ async fn test_diamond_dependency_resolution(
 
 /// Test swappable model dependency (custom User model)
 ///
-/// **Test Intent**: Verify that swappable dependencies are handled correctly
+/// **Test Intent**: Verify that swappable dependencies are resolved correctly
+/// based on configuration context
 ///
 /// **Use Case**: Django's AUTH_USER_MODEL allows custom User models. Other apps
 /// depend on whatever User model is configured.
 #[rstest]
-#[ignore = "Swappable model support not yet implemented in reinhardt-db migrations"]
 #[tokio::test]
 async fn test_swappable_model_dependency(
-	#[future] _postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	// TODO: Add swappable_dependency field to Migration
-	// Example:
-	// Migration {
-	// 	app_label: "app2",
-	// 	name: "0001_create_profile",
-	// 	operations: vec![
-	// 		Operation::CreateTable {
-	// 			name: leak_str("profile"),
-	// 			columns: vec![
-	// 				create_auto_pk_column("id", FieldType::Integer),
-	// 				create_basic_column("user_id", FieldType::Integer),
-	// 			],
-	// 			constraints: vec![],
-	// 		// 		},
-	// 	],
-	// 	dependencies: vec![],
-	// 	swappable_dependencies: vec![("AUTH_USER_MODEL", "0001")], // Depends on configured User model
-	// 	...
-	// }
-	//
-	// The executor resolves AUTH_USER_MODEL to the actual app (e.g., "custom_auth")
-	// and creates a dependency on ("custom_auth", "0001_initial")
+	let (_container, pool, _port, url) = postgres_container.await;
+
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL");
+
+	let mut executor = DatabaseMigrationExecutor::new(connection.clone());
+
+	// Migration 1: Create users table in default auth app
+	let migration_auth = Migration {
+		app_label: "auth".to_string(),
+		name: "0001_initial".to_string(),
+		operations: vec![Operation::CreateTable {
+			name: leak_str("auth_users").to_string(),
+			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
+			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
+		}],
+		dependencies: vec![],
+		replaces: vec![],
+		atomic: true,
+		initial: None,
+		state_only: false,
+		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
+	};
+
+	// Migration 2: Create users table in custom auth app
+	let migration_custom_auth = Migration {
+		app_label: "custom_auth".to_string(),
+		name: "0001_initial".to_string(),
+		operations: vec![Operation::CreateTable {
+			name: leak_str("custom_auth_users").to_string(),
+			columns: vec![
+				create_auto_pk_column("id", FieldType::Integer),
+				create_basic_column("username", FieldType::VarChar(100)),
+			],
+			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
+		}],
+		dependencies: vec![],
+		replaces: vec![],
+		atomic: true,
+		initial: None,
+		state_only: false,
+		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
+	};
+
+	// Migration 3: Profile that depends on swappable User model
+	let migration_profile = Migration {
+		app_label: "profiles".to_string(),
+		name: "0001_create_profile".to_string(),
+		operations: vec![Operation::CreateTable {
+			name: leak_str("profiles").to_string(),
+			columns: vec![
+				create_auto_pk_column("id", FieldType::Integer),
+				create_basic_column("user_id", FieldType::Integer),
+			],
+			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
+		}],
+		dependencies: vec![],
+		replaces: vec![],
+		atomic: true,
+		initial: None,
+		state_only: false,
+		database_only: false,
+		swappable_dependencies: vec![SwappableDependency {
+			setting_key: "AUTH_USER_MODEL".to_string(),
+			default_app: "auth".to_string(),
+			default_model: "User".to_string(),
+			migration_name: "0001_initial".to_string(),
+		}],
+		optional_dependencies: vec![],
+	};
+
+	// Test 1: Using MigrationGraph with context to resolve swappable dependency
+	let mut graph = MigrationGraph::new();
+
+	// Create context with custom user model configured
+	let context = DependencyResolutionContext::new()
+		.with_app("auth")
+		.with_app("custom_auth")
+		.with_app("profiles")
+		.with_setting("AUTH_USER_MODEL", "custom_auth.CustomUser");
+
+	// Add migrations to graph with context
+	graph.add_migration_with_context(&migration_auth, &context);
+	graph.add_migration_with_context(&migration_custom_auth, &context);
+	graph.add_migration_with_context(&migration_profile, &context);
+
+	// Verify that profiles migration depends on custom_auth (resolved from swappable)
+	let profile_key = MigrationKey::new("profiles", "0001_create_profile");
+	let deps = graph.get_dependencies(&profile_key).unwrap();
+
+	assert_eq!(deps.len(), 1, "Profile should have 1 resolved dependency");
+	assert_eq!(
+		deps[0].app_label, "custom_auth",
+		"Swappable dependency should resolve to custom_auth"
+	);
+
+	// Test 2: Apply migrations in correct order (custom_auth first, then profiles)
+	executor
+		.apply_migrations(&[migration_custom_auth.clone(), migration_profile.clone()])
+		.await
+		.expect("Failed to apply migrations");
+
+	// Verify tables were created
+	let profiles_exists: bool = sqlx::query_scalar(
+		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = $1)",
+	)
+	.bind("profiles")
+	.fetch_one(pool.as_ref())
+	.await
+	.expect("Failed to check table");
+
+	assert!(profiles_exists, "profiles table should exist");
 }
 
 /// Test conditional dependencies (optional dependencies)
 ///
-/// **Test Intent**: Verify that optional dependencies are handled
+/// **Test Intent**: Verify that optional dependencies are only enforced when
+/// their condition is met
 ///
 /// **Use Case**: Some migrations depend on optional features (e.g., GIS extension)
 #[rstest]
-#[ignore = "Optional dependency support not yet implemented in reinhardt-db migrations"]
 #[tokio::test]
 async fn test_conditional_dependencies(
-	#[future] _postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
+	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	// TODO: Add optional_dependencies field to Migration
-	// Example:
-	// Migration {
-	// 	app_label: "geo_app",
-	// 	name: "0002_add_location",
-	// 	operations: vec![...],
-	// 	dependencies: vec![("geo_app", "0001_initial")],
-	// 	optional_dependencies: vec![
-	// 		("gis_extension", "0001_enable_postgis"), // Only required if GIS feature is enabled
-	// 	],
-	// 	...
-	// }
-	//
-	// If "gis_extension" app exists, dependency is enforced.
-	// If not, dependency is ignored.
+	let (_container, pool, _port, url) = postgres_container.await;
+
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to PostgreSQL");
+
+	let mut executor = DatabaseMigrationExecutor::new(connection.clone());
+
+	// Migration 1: GIS extension setup (optional app)
+	let migration_gis = Migration {
+		app_label: "gis_extension".to_string(),
+		name: "0001_enable_postgis".to_string(),
+		operations: vec![Operation::RunSQL {
+			sql: leak_str("SELECT 1").to_string(), // Placeholder for CREATE EXTENSION postgis
+			reverse_sql: None,
+		}],
+		dependencies: vec![],
+		replaces: vec![],
+		atomic: true,
+		initial: None,
+		state_only: false,
+		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
+	};
+
+	// Migration 2: Geo app with optional dependency on GIS extension
+	let migration_geo = Migration {
+		app_label: "geo_app".to_string(),
+		name: "0001_create_locations".to_string(),
+		operations: vec![Operation::CreateTable {
+			name: leak_str("locations").to_string(),
+			columns: vec![
+				create_auto_pk_column("id", FieldType::Integer),
+				create_basic_column("name", FieldType::VarChar(100)),
+			],
+			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
+		}],
+		dependencies: vec![],
+		replaces: vec![],
+		atomic: true,
+		initial: None,
+		state_only: false,
+		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![OptionalDependency {
+			app_label: "gis_extension".to_string(),
+			migration_name: "0001_enable_postgis".to_string(),
+			condition: DependencyCondition::AppInstalled("gis_extension".to_string()),
+		}],
+	};
+
+	// Test 1: Without gis_extension installed - dependency should be ignored
+	{
+		let mut graph = MigrationGraph::new();
+
+		// Context without gis_extension installed
+		let context_without_gis = DependencyResolutionContext::new().with_app("geo_app");
+
+		graph.add_migration_with_context(&migration_geo, &context_without_gis);
+
+		let geo_key = MigrationKey::new("geo_app", "0001_create_locations");
+		let deps = graph.get_dependencies(&geo_key).unwrap();
+
+		assert_eq!(
+			deps.len(),
+			0,
+			"Without gis_extension installed, optional dependency should be ignored"
+		);
+	}
+
+	// Test 2: With gis_extension installed - dependency should be enforced
+	{
+		let mut graph = MigrationGraph::new();
+
+		// Context with gis_extension installed
+		let context_with_gis = DependencyResolutionContext::new()
+			.with_app("geo_app")
+			.with_app("gis_extension");
+
+		graph.add_migration_with_context(&migration_gis, &context_with_gis);
+		graph.add_migration_with_context(&migration_geo, &context_with_gis);
+
+		let geo_key = MigrationKey::new("geo_app", "0001_create_locations");
+		let deps = graph.get_dependencies(&geo_key).unwrap();
+
+		assert_eq!(
+			deps.len(),
+			1,
+			"With gis_extension installed, optional dependency should be enforced"
+		);
+		assert_eq!(
+			deps[0].app_label, "gis_extension",
+			"Optional dependency should resolve to gis_extension"
+		);
+	}
+
+	// Test 3: Apply migrations (without gis_extension - should work)
+	executor
+		.apply_migrations(&[migration_geo.clone()])
+		.await
+		.expect("Failed to apply geo migration without gis_extension");
+
+	// Verify table was created
+	let locations_exists: bool = sqlx::query_scalar(
+		"SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name = $1)",
+	)
+	.bind("locations")
+	.fetch_one(pool.as_ref())
+	.await
+	.expect("Failed to check table");
+
+	assert!(locations_exists, "locations table should exist");
 }
 
 // ============================================================================
@@ -416,9 +649,12 @@ async fn test_circular_dependency_detection(
 		"app",
 		"0001_migration_a",
 		vec![Operation::CreateTable {
-			name: leak_str("table_a"),
+			name: leak_str("table_a").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app", "0002_migration_b")], // Depends on B
 	);
@@ -428,9 +664,12 @@ async fn test_circular_dependency_detection(
 		"app",
 		"0002_migration_b",
 		vec![Operation::CreateTable {
-			name: leak_str("table_b"),
+			name: leak_str("table_b").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app", "0001_migration_a")], // Depends on A
 	);
@@ -465,8 +704,9 @@ async fn test_missing_dependency_detection(
 		"app",
 		"0002_add_column",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("name", FieldType::VarChar(100)),
+			mysql_options: None,
 		}],
 		vec![("app", "0001_nonexistent")], // Depends on migration that doesn't exist
 	);
@@ -504,9 +744,12 @@ async fn test_conflicting_dependency_order(
 		"app",
 		"0001_migration_a",
 		vec![Operation::CreateTable {
-			name: leak_str("table_a"),
+			name: leak_str("table_a").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app", "0002_migration_b")],
 	);
@@ -515,9 +758,12 @@ async fn test_conflicting_dependency_order(
 		"app",
 		"0002_migration_b",
 		vec![Operation::CreateTable {
-			name: leak_str("table_b"),
+			name: leak_str("table_b").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![("app", "0001_migration_a")],
 	);
@@ -565,7 +811,7 @@ async fn test_deep_dependency_chain(
 			"app",
 			name,
 			vec![Operation::RunSQL {
-				sql: leak_str(format!("SELECT {}", i + 1)),
+				sql: leak_str(format!("SELECT {}", i + 1)).to_string(),
 				reverse_sql: None,
 			}],
 			dependencies,
@@ -616,9 +862,12 @@ async fn test_independent_migrations(
 		"app",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
@@ -627,9 +876,12 @@ async fn test_independent_migrations(
 		"app",
 		"0002_create_posts",
 		vec![Operation::CreateTable {
-			name: leak_str("posts"),
+			name: leak_str("posts").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
@@ -638,9 +890,12 @@ async fn test_independent_migrations(
 		"app",
 		"0003_create_comments",
 		vec![Operation::CreateTable {
-			name: leak_str("comments"),
+			name: leak_str("comments").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 	);
