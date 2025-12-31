@@ -1,7 +1,5 @@
 use crate::bound_field::BoundField;
-use crate::csrf::CsrfToken;
 use crate::field::{FieldError, FormField};
-use crate::media::Media;
 use crate::wasm_compat::ValidationRule;
 use std::collections::HashMap;
 use std::ops::Index;
@@ -37,8 +35,6 @@ pub struct Form {
 	clean_functions: Vec<CleanFunction>,
 	field_clean_functions: HashMap<String, FieldCleanFunction>,
 	prefix: String,
-	use_csrf: bool,
-	csrf_token: Option<CsrfToken>,
 	/// Client-side validation rules (Phase 2-A)
 	/// These rules are transmitted to the client for UX enhancement.
 	/// Server-side validation is still mandatory for security.
@@ -67,9 +63,7 @@ impl Form {
 			clean_functions: vec![],
 			field_clean_functions: HashMap::new(),
 			prefix: String::new(),
-			use_csrf: false,
-			csrf_token: None,
-			validation_rules: vec![], // Phase 2-A: Initialize client-side validation rules
+			validation_rules: vec![],
 		}
 	}
 	/// Create a new form with initial data
