@@ -67,9 +67,12 @@ fn test_migration_numbering_for_new_app() {
 #[test]
 fn test_migration_naming_with_single_operation() {
 	let operations = vec![Operation::CreateTable {
-		name: leak_str("users"),
+		name: leak_str("users").to_string(),
 		columns: vec![ColumnDefinition::new("id", FieldType::Integer)],
 		constraints: vec![],
+		without_rowid: None,
+		interleave_in_parent: None,
+		partition: None,
 	}];
 
 	let name = MigrationNamer::generate_name(&operations, false);
@@ -81,12 +84,14 @@ fn test_migration_naming_with_single_operation() {
 fn test_migration_naming_with_multiple_operations() {
 	let operations = vec![
 		Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: ColumnDefinition::new("email", FieldType::VarChar(255)),
+			mysql_options: None,
 		},
 		Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: ColumnDefinition::new("phone", FieldType::VarChar(20)),
+			mysql_options: None,
 		},
 	];
 
@@ -112,7 +117,7 @@ fn test_migration_naming_initial() {
 #[test]
 fn test_migration_naming_with_run_sql() {
 	let operations = vec![Operation::RunSQL {
-		sql: leak_str("CREATE TRIGGER update_timestamp ..."),
+		sql: leak_str("CREATE TRIGGER update_timestamp ...").to_string(),
 		reverse_sql: None,
 	}];
 
@@ -140,8 +145,9 @@ fn test_full_migration_name_generation() {
 
 	// Generate migration name
 	let operations = vec![Operation::AddColumn {
-		table: leak_str("users"),
+		table: leak_str("users").to_string(),
 		column: ColumnDefinition::new("status", FieldType::VarChar(20)),
+		mysql_options: None,
 	}];
 	let name = MigrationNamer::generate_name(&operations, false);
 
@@ -158,15 +164,18 @@ fn test_full_migration_name_generation() {
 fn test_migration_struct_with_generated_name() {
 	let operations = vec![
 		Operation::CreateTable {
-			name: leak_str("posts"),
+			name: leak_str("posts").to_string(),
 			columns: vec![
 				ColumnDefinition::new("id", FieldType::Integer),
 				ColumnDefinition::new("title", FieldType::Text),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		},
 		Operation::CreateIndex {
-			table: leak_str("posts"),
+			table: leak_str("posts").to_string(),
 			columns: vec!["title"],
 			unique: false,
 		},
@@ -176,8 +185,8 @@ fn test_migration_struct_with_generated_name() {
 
 	// Create migration with generated name
 	let migration = Migration {
-		name: leak_str(format!("0001_{}", migration_name)),
-		app_label: leak_str("blog"),
+		name: leak_str(format!("0001_{}", migration_name)).to_string(),
+		app_label: leak_str("blog").to_string(),
 		operations: operations.clone(),
 		dependencies: vec![],
 		replaces: vec![],
@@ -255,16 +264,20 @@ fn test_migration_naming_truncation() {
 fn test_migration_operation_describe_for_logging() {
 	let operations = [
 		Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		},
 		Operation::AddColumn {
-			table: leak_str("posts"),
+			table: leak_str("posts").to_string(),
 			column: ColumnDefinition::new("author_id", FieldType::Integer),
+			mysql_options: None,
 		},
 		Operation::CreateIndex {
-			table: leak_str("posts"),
+			table: leak_str("posts").to_string(),
 			columns: vec!["author_id"],
 			unique: false,
 		},
@@ -322,7 +335,7 @@ fn test_combined_workflow_new_migration() {
 	// Step 1: Define operations
 	let operations = vec![
 		Operation::CreateTable {
-			name: leak_str("products"),
+			name: leak_str("products").to_string(),
 			columns: vec![
 				ColumnDefinition::new("id", FieldType::Integer),
 				ColumnDefinition::new("name", FieldType::Text),
@@ -340,7 +353,7 @@ fn test_combined_workflow_new_migration() {
 			}],
 		},
 		Operation::CreateIndex {
-			table: leak_str("products"),
+			table: leak_str("products").to_string(),
 			columns: vec!["name"],
 			unique: false,
 		},
@@ -357,8 +370,8 @@ fn test_combined_workflow_new_migration() {
 
 	// Step 5: Create Migration struct
 	let migration = Migration {
-		name: leak_str(format!("{}_{}", migration_number, migration_name)),
-		app_label: leak_str(app_label),
+		name: leak_str(format!("{}_{}", migration_number, migration_name)).to_string(),
+		app_label: leak_str(app_label).to_string(),
 		operations: operations.clone(),
 		dependencies: vec![("myapp", "0003_remove_user_age")],
 		replaces: vec![],
@@ -395,15 +408,21 @@ fn test_combined_workflow_new_migration() {
 fn test_migration_naming_consistency_with_case() {
 	// Test that case doesn't affect consistency
 	let ops1 = vec![Operation::CreateTable {
-		name: leak_str("Users"),
+		name: leak_str("Users").to_string(),
 		columns: vec![],
 		constraints: vec![],
+		without_rowid: None,
+		interleave_in_parent: None,
+		partition: None,
 	}];
 
 	let ops2 = vec![Operation::CreateTable {
-		name: leak_str("users"),
+		name: leak_str("users").to_string(),
 		columns: vec![],
 		constraints: vec![],
+		without_rowid: None,
+		interleave_in_parent: None,
+		partition: None,
 	}];
 
 	let name1 = MigrationNamer::generate_name(&ops1, false);

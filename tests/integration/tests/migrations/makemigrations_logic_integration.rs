@@ -85,7 +85,7 @@ impl MigrationRepository for TestRepository {
 fn create_todos_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "todos",
+		name: "todos".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -95,7 +95,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -108,7 +108,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"title".to_string(),
 		ColumnSchema {
-			name: "title",
+			name: "title".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -121,7 +121,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"completed".to_string(),
 		ColumnSchema {
-			name: "completed",
+			name: "completed".to_string(),
 			data_type: FieldType::Boolean,
 			nullable: false,
 			default: Some("false".to_string()),
@@ -142,7 +142,7 @@ fn create_todos_with_description_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"description".to_string(),
 		ColumnSchema {
-			name: "description",
+			name: "description".to_string(),
 			data_type: FieldType::Text,
 			nullable: true,
 			default: None,
@@ -158,7 +158,7 @@ fn create_todos_with_description_schema() -> DatabaseSchema {
 fn create_composite_pk_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "user_posts",
+		name: "user_posts".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -168,7 +168,7 @@ fn create_composite_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"user_id".to_string(),
 		ColumnSchema {
-			name: "user_id",
+			name: "user_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -181,7 +181,7 @@ fn create_composite_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"post_id".to_string(),
 		ColumnSchema {
-			name: "post_id",
+			name: "post_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -194,7 +194,7 @@ fn create_composite_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"created_at".to_string(),
 		ColumnSchema {
-			name: "created_at",
+			name: "created_at".to_string(),
 			data_type: FieldType::DateTime,
 			nullable: false,
 			default: Some("CURRENT_TIMESTAMP".to_string()),
@@ -211,7 +211,7 @@ fn create_composite_pk_schema() -> DatabaseSchema {
 fn create_user_posts_no_pk_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "user_posts",
+		name: "user_posts".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -221,7 +221,7 @@ fn create_user_posts_no_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"user_id".to_string(),
 		ColumnSchema {
-			name: "user_id",
+			name: "user_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -234,7 +234,7 @@ fn create_user_posts_no_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"post_id".to_string(),
 		ColumnSchema {
-			name: "post_id",
+			name: "post_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -247,7 +247,7 @@ fn create_user_posts_no_pk_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"created_at".to_string(),
 		ColumnSchema {
-			name: "created_at",
+			name: "created_at".to_string(),
 			data_type: FieldType::DateTime,
 			nullable: false,
 			default: Some("CURRENT_TIMESTAMP".to_string()),
@@ -264,7 +264,7 @@ fn create_user_posts_no_pk_schema() -> DatabaseSchema {
 fn create_users_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -273,7 +273,7 @@ fn create_users_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -285,7 +285,7 @@ fn create_users_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -491,7 +491,7 @@ async fn nc_05_field_rename_creates_rename_column_migration() {
 		.insert(
 			"is_done".to_string(),
 			ColumnSchema {
-				name: "is_done",
+				name: "is_done".to_string(),
 				data_type: FieldType::Boolean,
 				nullable: false,
 				default: Some("false".to_string()),
@@ -544,7 +544,7 @@ async fn nc_06_index_addition_creates_create_index_migration() {
 		.unwrap()
 		.indexes
 		.push(IndexSchema {
-			name: "idx_title",
+			name: "idx_title".to_string(),
 			columns: vec!["title".to_string()],
 			unique: false,
 		});
@@ -589,7 +589,7 @@ async fn nc_07_foreign_key_addition_creates_add_column_and_constraint() {
 		.insert(
 			"user_id".to_string(),
 			ColumnSchema {
-				name: "user_id",
+				name: "user_id".to_string(),
 				data_type: FieldType::Integer,
 				nullable: true,
 				default: None,
@@ -605,7 +605,7 @@ async fn nc_07_foreign_key_addition_creates_add_column_and_constraint() {
 		.unwrap()
 		.constraints
 		.push(ConstraintSchema {
-			name: "fk_user_id",
+			name: "fk_user_id".to_string(),
 			constraint_type: "FOREIGN KEY".to_string(),
 			columns: vec!["user_id".to_string()],
 			referenced_table: Some("users".to_string()),
@@ -649,7 +649,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	// Add tags table
 	let mut tags_schema = DatabaseSchema::default();
 	let mut tags_table = TableSchema {
-		name: "tags",
+		name: "tags".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -657,7 +657,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	tags_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -668,7 +668,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	tags_table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(50),
 			nullable: false,
 			default: None,
@@ -684,7 +684,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 
 	// Add junction table: todos_tags
 	let mut junction_table = TableSchema {
-		name: "todos_tags",
+		name: "todos_tags".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -692,7 +692,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	junction_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -703,7 +703,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	junction_table.columns.insert(
 		"todo_id".to_string(),
 		ColumnSchema {
-			name: "todo_id",
+			name: "todo_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -714,7 +714,7 @@ async fn nc_08_many_to_many_creates_junction_table() {
 	junction_table.columns.insert(
 		"tag_id".to_string(),
 		ColumnSchema {
-			name: "tag_id",
+			name: "tag_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -763,7 +763,7 @@ async fn nc_09_initial_migration_correctness() {
 
 	// Add users table
 	let mut users_table = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -771,7 +771,7 @@ async fn nc_09_initial_migration_correctness() {
 	users_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -782,7 +782,7 @@ async fn nc_09_initial_migration_correctness() {
 	users_table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -846,7 +846,7 @@ async fn nc_10_sequential_migrations_dependency_chain() {
 	// Save first migration
 	let migration1 = Migration {
 		app_label,
-		name: "0001_initial",
+		name: "0001_initial".to_string(),
 		operations: result1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -873,7 +873,7 @@ async fn nc_10_sequential_migrations_dependency_chain() {
 	// Save second migration
 	let migration2 = Migration {
 		app_label,
-		name: "0002_add_description",
+		name: "0002_add_description".to_string(),
 		operations: result2.operations.clone(),
 		dependencies: vec![(app_label, "0001_initial")],
 		replaces: Vec::new(),
@@ -914,7 +914,7 @@ async fn nc_11_generated_migration_executability() {
 	// Build Migration struct
 	let migration = Migration {
 		app_label,
-		name: "0001_initial",
+		name: "0001_initial".to_string(),
 		operations: result.operations.clone(),
 		dependencies: Vec::new(),
 		atomic: true,
@@ -953,7 +953,7 @@ async fn nc_12_one_to_one_creates_unique_foreign_key() {
 		.insert(
 			"profile_id".to_string(),
 			ColumnSchema {
-				name: "profile_id",
+				name: "profile_id".to_string(),
 				data_type: FieldType::Integer,
 				nullable: true,
 				default: None,
@@ -970,7 +970,7 @@ async fn nc_12_one_to_one_creates_unique_foreign_key() {
 		.unwrap()
 		.indexes
 		.push(IndexSchema {
-			name: "idx_unique_profile_id",
+			name: "idx_unique_profile_id".to_string(),
 			columns: vec!["profile_id".to_string()],
 			unique: true,
 		});
@@ -1021,7 +1021,7 @@ async fn nc_13_default_value_addition_creates_alter_column() {
 		.insert(
 			"priority".to_string(),
 			ColumnSchema {
-				name: "priority",
+				name: "priority".to_string(),
 				data_type: FieldType::Integer,
 				nullable: false,
 				default: Some("0".to_string()),
@@ -1070,7 +1070,7 @@ async fn nc_14_null_constraint_change_creates_alter_column() {
 		.insert(
 			"description".to_string(),
 			ColumnSchema {
-				name: "description",
+				name: "description".to_string(),
 				data_type: FieldType::Text,
 				nullable: true,
 				default: None,
@@ -1088,7 +1088,7 @@ async fn nc_14_null_constraint_change_creates_alter_column() {
 		.insert(
 			"description".to_string(),
 			ColumnSchema {
-				name: "description",
+				name: "description".to_string(),
 				data_type: FieldType::Text,
 				nullable: false, // Changed to NOT NULL
 				default: None,
@@ -1135,7 +1135,7 @@ async fn nc_15_unique_constraint_addition_creates_add_constraint() {
 		.unwrap()
 		.indexes
 		.push(IndexSchema {
-			name: "idx_unique_title",
+			name: "idx_unique_title".to_string(),
 			columns: vec!["title".to_string()],
 			unique: true,
 		});
@@ -1182,7 +1182,7 @@ async fn nc_16_index_deletion_creates_drop_index() {
 		.unwrap()
 		.indexes
 		.push(IndexSchema {
-			name: "idx_title",
+			name: "idx_title".to_string(),
 			columns: vec!["title".to_string()],
 			unique: false,
 		});
@@ -1227,7 +1227,7 @@ async fn nc_17_constraint_deletion_creates_drop_constraint() {
 		.unwrap()
 		.constraints
 		.push(ConstraintSchema {
-			name: "chk_title_length",
+			name: "chk_title_length".to_string(),
 			constraint_type: "CHECK".to_string(),
 			columns: vec!["title".to_string()],
 			referenced_table: None,
@@ -1276,7 +1276,7 @@ async fn nc_18_multiple_changes_in_single_migration() {
 		.insert(
 			"description".to_string(),
 			ColumnSchema {
-				name: "description",
+				name: "description".to_string(),
 				data_type: FieldType::Text,
 				nullable: true,
 				default: None,
@@ -1361,8 +1361,8 @@ async fn nc_19_multi_app_migrations_generation() {
 		.expect("Todos migration should succeed");
 
 	let migration1 = Migration {
-		app_label: "todos",
-		name: "0001_initial",
+		app_label: "todos".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result1.operations,
 		dependencies: Vec::new(),
 		atomic: true,
@@ -1385,8 +1385,8 @@ async fn nc_19_multi_app_migrations_generation() {
 		.expect("Users migration should succeed");
 
 	let migration2 = Migration {
-		app_label: "users",
-		name: "0001_initial",
+		app_label: "users".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result2.operations,
 		dependencies: Vec::new(),
 		atomic: true,
@@ -1431,7 +1431,7 @@ async fn nc_20_data_preservation_verification() {
 		.insert(
 			"description".to_string(),
 			ColumnSchema {
-				name: "description",
+				name: "description".to_string(),
 				data_type: FieldType::Text,
 				nullable: true, // Nullable to preserve existing rows
 				default: None,
@@ -1673,7 +1673,7 @@ async fn edg_01_empty_migration_generation() {
 	// Create empty migration manually (simulating --empty flag)
 	let empty_migration = Migration {
 		app_label,
-		name: "0001_custom",
+		name: "0001_custom".to_string(),
 		operations: Vec::new(), // Empty operations
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -1777,7 +1777,7 @@ async fn edg_08_long_model_field_names() {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -1834,7 +1834,7 @@ async fn edg_09_large_number_of_fields() {
 
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "large_table",
+		name: "large_table".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -1844,7 +1844,7 @@ async fn edg_09_large_number_of_fields() {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -1920,7 +1920,7 @@ async fn edg_10_deep_dependency_chain() {
 		table.columns.insert(
 			"id".to_string(),
 			ColumnSchema {
-				name: "id",
+				name: "id".to_string(),
 				data_type: FieldType::Integer,
 				nullable: false,
 				default: None,
@@ -1932,7 +1932,7 @@ async fn edg_10_deep_dependency_chain() {
 		table.columns.insert(
 			"name".to_string(),
 			ColumnSchema {
-				name: "name",
+				name: "name".to_string(),
 				data_type: FieldType::VarChar(100),
 				nullable: false,
 				default: None,
@@ -2005,7 +2005,7 @@ async fn edg_11_unicode_in_names() {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2018,7 +2018,7 @@ async fn edg_11_unicode_in_names() {
 	table.columns.insert(
 		"名前".to_string(),
 		ColumnSchema {
-			name: "名前",
+			name: "名前".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -2031,7 +2031,7 @@ async fn edg_11_unicode_in_names() {
 	table.columns.insert(
 		"emoji_field_🚀".to_string(),
 		ColumnSchema {
-			name: "emoji_field_🚀",
+			name: "emoji_field_🚀".to_string(),
 			data_type: FieldType::Text,
 			nullable: true,
 			default: None,
@@ -2093,7 +2093,7 @@ async fn edg_12_sql_reserved_words() {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2106,7 +2106,7 @@ async fn edg_12_sql_reserved_words() {
 	table.columns.insert(
 		"from".to_string(),
 		ColumnSchema {
-			name: "from",
+			name: "from".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -2118,7 +2118,7 @@ async fn edg_12_sql_reserved_words() {
 	table.columns.insert(
 		"where".to_string(),
 		ColumnSchema {
-			name: "where",
+			name: "where".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: true,
 			default: None,
@@ -2130,7 +2130,7 @@ async fn edg_12_sql_reserved_words() {
 	table.columns.insert(
 		"order".to_string(),
 		ColumnSchema {
-			name: "order",
+			name: "order".to_string(),
 			data_type: FieldType::Integer,
 			nullable: true,
 			default: None,
@@ -2182,7 +2182,7 @@ async fn edg_13_same_name_different_apps() {
 	// Create schema with same table name (users)
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -2191,7 +2191,7 @@ async fn edg_13_same_name_different_apps() {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2203,7 +2203,7 @@ async fn edg_13_same_name_different_apps() {
 	table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -2227,8 +2227,8 @@ async fn edg_13_same_name_different_apps() {
 
 	// Save app1 migration
 	let migration_app1 = Migration {
-		app_label: "app1",
-		name: "0001_initial",
+		app_label: "app1".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result_app1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -2251,8 +2251,8 @@ async fn edg_13_same_name_different_apps() {
 
 	// Save app2 migration
 	let migration_app2 = Migration {
-		app_label: "app2",
-		name: "0001_initial",
+		app_label: "app2".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result_app2.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -2287,7 +2287,7 @@ async fn edg_14_cross_app_dependencies() {
 	// app1: users table
 	let mut users_schema = DatabaseSchema::default();
 	let mut users_table = TableSchema {
-		name: "users",
+		name: "users".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -2296,7 +2296,7 @@ async fn edg_14_cross_app_dependencies() {
 	users_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2308,7 +2308,7 @@ async fn edg_14_cross_app_dependencies() {
 	users_table.columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -2332,8 +2332,8 @@ async fn edg_14_cross_app_dependencies() {
 
 	// Save app1 migration
 	let migration_app1 = Migration {
-		app_label: "app1",
-		name: "0001_initial",
+		app_label: "app1".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result_app1.operations.clone(),
 		dependencies: Vec::new(),
 		replaces: Vec::new(),
@@ -2348,7 +2348,7 @@ async fn edg_14_cross_app_dependencies() {
 	// app2: posts table (with FK to users)
 	let mut posts_schema = DatabaseSchema::default();
 	let mut posts_table = TableSchema {
-		name: "posts",
+		name: "posts".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -2357,7 +2357,7 @@ async fn edg_14_cross_app_dependencies() {
 	posts_table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2369,7 +2369,7 @@ async fn edg_14_cross_app_dependencies() {
 	posts_table.columns.insert(
 		"title".to_string(),
 		ColumnSchema {
-			name: "title",
+			name: "title".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -2382,7 +2382,7 @@ async fn edg_14_cross_app_dependencies() {
 	posts_table.columns.insert(
 		"user_id".to_string(),
 		ColumnSchema {
-			name: "user_id",
+			name: "user_id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -2393,7 +2393,7 @@ async fn edg_14_cross_app_dependencies() {
 
 	// ForeignKey constraint
 	posts_table.constraints.push(ConstraintSchema {
-		name: "fk_posts_user_id",
+		name: "fk_posts_user_id".to_string(),
 		constraint_type: ConstraintType::ForeignKey {
 			columns: vec!["user_id".to_string()],
 			referenced_table: "users".to_string(),

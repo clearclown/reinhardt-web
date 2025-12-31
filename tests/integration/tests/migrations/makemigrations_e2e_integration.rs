@@ -41,7 +41,7 @@ use tokio::sync::Mutex;
 fn create_todos_schema() -> DatabaseSchema {
 	let mut schema = DatabaseSchema::default();
 	let mut table = TableSchema {
-		name: "todos",
+		name: "todos".to_string(),
 		columns: BTreeMap::new(),
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -50,7 +50,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -62,7 +62,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"title".to_string(),
 		ColumnSchema {
-			name: "title",
+			name: "title".to_string(),
 			data_type: FieldType::VarChar(255),
 			nullable: false,
 			default: None,
@@ -74,7 +74,7 @@ fn create_todos_schema() -> DatabaseSchema {
 	table.columns.insert(
 		"completed".to_string(),
 		ColumnSchema {
-			name: "completed",
+			name: "completed".to_string(),
 			data_type: FieldType::Boolean,
 			nullable: false,
 			default: Some("false".to_string()),
@@ -397,8 +397,8 @@ async fn ec_05_file_write_permission_error() {
 	let result = generator.generate("todos", empty_schema).await.unwrap();
 
 	let migration = Migration {
-		app_label: "todos",
-		name: "0001_initial",
+		app_label: "todos".to_string(),
+		name: "0001_initial".to_string(),
 		operations: result.operations,
 		dependencies: Vec::new(),
 		atomic: true,

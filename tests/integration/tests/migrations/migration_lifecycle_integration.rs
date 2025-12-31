@@ -46,8 +46,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -66,8 +66,8 @@ fn create_migration_with_deps(
 	dependencies: Vec<(&'static str, &'static str)>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies,
 		replaces: vec![],
@@ -79,9 +79,9 @@ fn create_migration_with_deps(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -99,7 +99,7 @@ fn create_column_with_constraints(
 	unique: bool,
 ) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null,
 		unique,
@@ -139,10 +139,10 @@ async fn test_migration_reversible_full_cycle(
 		"0001_initial",
 		vec![
 			Operation::CreateTable {
-				name: leak_str("users"),
+				name: leak_str("users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -154,10 +154,10 @@ async fn test_migration_reversible_full_cycle(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("posts"),
+				name: leak_str("posts").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -207,16 +207,18 @@ async fn test_migration_reversible_full_cycle(
 		"0002_add_features",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_column_with_constraints("email", FieldType::VarChar(Some(255)), false, true),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("posts"),
+				table: leak_str("posts").to_string(),
 				column: create_basic_column("user_id", FieldType::Integer),
+				mysql_options: None,
 			},
 			Operation::CreateIndex {
-				table: leak_str("users"),
-				name: leak_str("idx_users_email"),
+				table: leak_str("users").to_string(),
+				name: leak_str("idx_users_email").to_string(),
 				columns: vec!["email"],
 				unique: true,
 			},
@@ -364,10 +366,10 @@ async fn test_migration_dependency_ordering_complex(
 		"auth",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -384,10 +386,10 @@ async fn test_migration_dependency_ordering_complex(
 		"profile",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("user_profiles"),
+			name: leak_str("user_profiles").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -406,10 +408,10 @@ async fn test_migration_dependency_ordering_complex(
 		"blog",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("posts"),
+			name: leak_str("posts").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -428,10 +430,10 @@ async fn test_migration_dependency_ordering_complex(
 		"comment",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("comments"),
+			name: leak_str("comments").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -571,10 +573,10 @@ async fn test_migration_state_consistency_after_rollback(
 		"0001_initial",
 		vec![
 			Operation::CreateTable {
-				name: leak_str("users"),
+				name: leak_str("users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -587,10 +589,10 @@ async fn test_migration_state_consistency_after_rollback(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("posts"),
+				name: leak_str("posts").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -604,10 +606,10 @@ async fn test_migration_state_consistency_after_rollback(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("comments"),
+				name: leak_str("comments").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -642,22 +644,24 @@ async fn test_migration_state_consistency_after_rollback(
 		"0002_add_features",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_basic_column("created_at", FieldType::Custom("TIMESTAMP DEFAULT CURRENT_TIMESTAMP".to_string())),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("posts"),
+				table: leak_str("posts").to_string(),
 				column: create_basic_column("published", FieldType::Boolean),
+				mysql_options: None,
 			},
 			Operation::CreateIndex {
-				table: leak_str("users"),
-				name: leak_str("idx_users_email"),
+				table: leak_str("users").to_string(),
+				name: leak_str("idx_users_email").to_string(),
 				columns: vec!["email"],
 				unique: true,
 			},
 			Operation::CreateIndex {
-				table: leak_str("posts"),
-				name: leak_str("idx_posts_user_id"),
+				table: leak_str("posts").to_string(),
+				name: leak_str("idx_posts_user_id").to_string(),
 				columns: vec!["user_id"],
 				unique: false,
 			},
@@ -795,10 +799,10 @@ async fn test_migration_with_data_preservation(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -960,7 +964,7 @@ async fn test_migration_history_integrity(
 			vec![Operation::CreateTable {
 				name: leak_str(format!("table_{}", i)),
 				columns: vec![ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -997,9 +1001,9 @@ async fn test_migration_history_integrity(
 		"testapp",
 		"0005_migration",
 		vec![Operation::CreateTable {
-			name: leak_str("table_5"),
+			name: leak_str("table_5").to_string(),
 			columns: vec![ColumnDefinition {
-				name: "id",
+				name: "id".to_string(),
 				type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 				not_null: true,
 				unique: false,

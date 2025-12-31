@@ -46,8 +46,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -55,13 +55,15 @@ fn create_test_migration(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -72,9 +74,9 @@ fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinit
 }
 
 /// Create a NOT NULL column definition
-fn create_not_null_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_not_null_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: true,
 		unique: false,
@@ -85,9 +87,9 @@ fn create_not_null_column(name: &'static str, type_def: FieldType) -> ColumnDefi
 }
 
 /// Create an auto-increment primary key column
-fn create_auto_pk_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_auto_pk_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: true,
 		unique: false,
@@ -161,12 +163,15 @@ async fn test_create_table_rollback(
 		"testapp",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_not_null_column("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -199,7 +204,6 @@ async fn test_create_table_rollback(
 ///
 /// **Test Intent**: Verify that ADD COLUMN can be rolled back with DROP COLUMN
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_add_column_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -217,12 +221,15 @@ async fn test_add_column_rollback(
 		"testapp",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_not_null_column("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -236,8 +243,9 @@ async fn test_add_column_rollback(
 		"testapp",
 		"0002_add_email",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("email", FieldType::VarChar(255)),
+			mysql_options: None,
 		}],
 	);
 
@@ -270,7 +278,6 @@ async fn test_add_column_rollback(
 ///
 /// **Test Intent**: Verify that ALTER COLUMN TYPE can be rolled back
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_alter_column_type_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -288,12 +295,15 @@ async fn test_alter_column_type_rollback(
 		"testapp",
 		"0001_create_products",
 		vec![Operation::CreateTable {
-			name: leak_str("products"),
+			name: leak_str("products").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_basic_column("name", FieldType::VarChar(50)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -320,10 +330,10 @@ async fn test_alter_column_type_rollback(
 		"testapp",
 		"0002_alter_name_type",
 		vec![Operation::AlterColumn {
-			table: leak_str("products"),
-			column: leak_str("name"),
+			table: leak_str("products").to_string(),
+			column: leak_str("name").to_string(),
 			new_definition: ColumnDefinition {
-				name: "name",
+				name: "name".to_string(),
 				type_definition: FieldType::Text,
 				not_null: false,
 				unique: false,
@@ -331,6 +341,7 @@ async fn test_alter_column_type_rollback(
 				auto_increment: false,
 				default: None,
 			},
+			mysql_options: None,
 		}],
 	);
 
@@ -374,7 +385,6 @@ async fn test_alter_column_type_rollback(
 ///
 /// **Test Intent**: Verify that RunSQL operations can be rolled back with reverse_sql
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_run_sql_with_reverse_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -392,8 +402,9 @@ async fn test_run_sql_with_reverse_rollback(
 		"testapp",
 		"0001_create_custom_table",
 		vec![Operation::RunSQL {
-			sql: leak_str("CREATE TABLE custom_table (id SERIAL PRIMARY KEY, data TEXT)"),
-			reverse_sql: Some(leak_str("DROP TABLE custom_table")),
+			sql: leak_str("CREATE TABLE custom_table (id SERIAL PRIMARY KEY, data TEXT)")
+				.to_string(),
+			reverse_sql: Some(leak_str("DROP TABLE custom_table").to_string()),
 		}],
 	);
 
@@ -426,7 +437,6 @@ async fn test_run_sql_with_reverse_rollback(
 ///
 /// **Test Intent**: Verify that atomic=true causes all operations to rollback on failure
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_atomic_multi_operation_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -441,23 +451,32 @@ async fn test_atomic_multi_operation_rollback(
 
 	// Migration with multiple operations
 	let migration = Migration {
-		app_label: "testapp",
-		name: "0001_multi_ops",
+		app_label: "testapp".to_string(),
+		name: "0001_multi_ops".to_string(),
 		operations: vec![
 			Operation::CreateTable {
-				name: leak_str("table1"),
+				name: leak_str("table1").to_string(),
 				columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 			Operation::CreateTable {
-				name: leak_str("table2"),
+				name: leak_str("table2").to_string(),
 				columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 			Operation::CreateTable {
-				name: leak_str("table3"),
+				name: leak_str("table3").to_string(),
 				columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 		],
 		dependencies: vec![],
@@ -466,6 +485,8 @@ async fn test_atomic_multi_operation_rollback(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	// Apply migration
@@ -513,7 +534,6 @@ async fn test_atomic_multi_operation_rollback(
 ///
 /// **Test Intent**: Verify that rollback works even with data in tables
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_rollback_with_data(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -531,12 +551,15 @@ async fn test_rollback_with_data(
 		"testapp",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_not_null_column("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -576,7 +599,6 @@ async fn test_rollback_with_data(
 ///
 /// **Test Intent**: Verify that CREATE INDEX can be rolled back
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_index_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -594,12 +616,15 @@ async fn test_index_rollback(
 		"testapp",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_basic_column("email", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -613,12 +638,15 @@ async fn test_index_rollback(
 		"testapp",
 		"0002_create_email_index",
 		vec![Operation::CreateIndex {
-			table: leak_str("users"),
-			columns: vec![leak_str("email")],
+			table: leak_str("users").to_string(),
+			columns: vec![leak_str("email").to_string()],
 			unique: false,
 			index_type: None,
 			where_clause: None,
 			concurrently: false,
+			expressions: None,
+			mysql_options: None,
+			operator_class: None,
 		}],
 	);
 
@@ -654,7 +682,6 @@ async fn test_index_rollback(
 ///
 /// **Test Intent**: Verify that RunSQL without reverse_sql cannot be rolled back
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_rollback_fail_without_reverse_sql(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -672,7 +699,7 @@ async fn test_rollback_fail_without_reverse_sql(
 		"testapp",
 		"0001_irreversible",
 		vec![Operation::RunSQL {
-			sql: leak_str("CREATE TABLE irreversible (id SERIAL PRIMARY KEY)"),
+			sql: leak_str("CREATE TABLE irreversible (id SERIAL PRIMARY KEY)").to_string(),
 			reverse_sql: None, // No reverse SQL
 		}],
 	);
@@ -696,7 +723,6 @@ async fn test_rollback_fail_without_reverse_sql(
 ///
 /// **Test Intent**: Verify that atomic=false allows partial rollback
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_partial_rollback_non_atomic(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -711,12 +737,15 @@ async fn test_partial_rollback_non_atomic(
 
 	// Migration with atomic=false
 	let migration = Migration {
-		app_label: "testapp",
-		name: "0001_non_atomic",
+		app_label: "testapp".to_string(),
+		name: "0001_non_atomic".to_string(),
 		operations: vec![Operation::CreateTable {
-			name: leak_str("table1"),
+			name: leak_str("table1").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		dependencies: vec![],
 		replaces: vec![],
@@ -724,6 +753,8 @@ async fn test_partial_rollback_non_atomic(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	executor
@@ -750,7 +781,6 @@ async fn test_partial_rollback_non_atomic(
 ///
 /// **Test Intent**: Verify that FK constraints prevent table deletion
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_rollback_fail_with_foreign_key_reference(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -768,9 +798,12 @@ async fn test_rollback_fail_with_foreign_key_reference(
 		"testapp",
 		"0001_create_users",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -808,7 +841,6 @@ async fn test_rollback_fail_with_foreign_key_reference(
 ///
 /// **Test Intent**: Verify that migrations with no operations can be rolled back
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_rollback_empty_migration(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -849,7 +881,6 @@ async fn test_rollback_empty_migration(
 /// 3. Rollback B first: DROP TABLE orders
 /// 4. Rollback A second: DROP TABLE users
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_rollback_with_dependencies(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -864,12 +895,15 @@ async fn test_rollback_with_dependencies(
 
 	// Migration A: Create users table
 	let migration_a = Migration {
-		app_label: "testapp",
-		name: "0001_create_users",
+		app_label: "testapp".to_string(),
+		name: "0001_create_users".to_string(),
 		operations: vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		dependencies: vec![],
 		replaces: vec![],
@@ -877,34 +911,41 @@ async fn test_rollback_with_dependencies(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	// Migration B: Create orders table with FK to users (depends on A)
 	let migration_b = Migration {
-		app_label: "testapp",
-		name: "0002_create_orders",
+		app_label: "testapp".to_string(),
+		name: "0002_create_orders".to_string(),
 		operations: vec![
 			Operation::CreateTable {
-				name: leak_str("orders"),
+				name: leak_str("orders").to_string(),
 				columns: vec![
 					create_auto_pk_column("id", FieldType::Integer),
 					create_not_null_column("user_id", FieldType::Integer),
 				],
 				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
 			},
 			Operation::AddConstraint {
-				table: leak_str("orders"),
+				table: leak_str("orders").to_string(),
 				constraint_sql: leak_str(
 					"CONSTRAINT fk_orders_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE NO ACTION"
-				),
+				).to_string(),
 			},
 		],
-		dependencies: vec![("testapp", "0001_create_users")],
+		dependencies: vec![("testapp".to_string(), "0001_create_users".to_string())],
 		replaces: vec![],
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	// Apply migrations in order
@@ -963,7 +1004,6 @@ async fn test_rollback_with_dependencies(
 /// **Note**: This test verifies theoretical behavior. In practice, circular dependencies
 /// should be prevented at migration creation time, not at rollback time.
 #[rstest]
-#[ignore] // TODO: Implement rollback_migrations method
 #[tokio::test]
 async fn test_circular_dependency_rollback(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -978,36 +1018,46 @@ async fn test_circular_dependency_rollback(
 
 	// Migration A (depends on B - circular)
 	let migration_a = Migration {
-		app_label: "testapp",
-		name: "0001_migration_a",
+		app_label: "testapp".to_string(),
+		name: "0001_migration_a".to_string(),
 		operations: vec![Operation::CreateTable {
-			name: leak_str("table_a"),
+			name: leak_str("table_a").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
-		dependencies: vec![("testapp", "0002_migration_b")], // Circular dependency
+		dependencies: vec![("testapp".to_string(), "0002_migration_b".to_string())], // Circular dependency
 		replaces: vec![],
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	// Migration B (depends on A - circular)
 	let _migration_b = Migration {
-		app_label: "testapp",
-		name: "0002_migration_b",
+		app_label: "testapp".to_string(),
+		name: "0002_migration_b".to_string(),
 		operations: vec![Operation::CreateTable {
-			name: leak_str("table_b"),
+			name: leak_str("table_b").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
-		dependencies: vec![("testapp", "0001_migration_a")], // Circular dependency
+		dependencies: vec![("testapp".to_string(), "0001_migration_a".to_string())], // Circular dependency
 		replaces: vec![],
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	};
 
 	// Note: In a real migration system, applying migrations with circular dependencies
