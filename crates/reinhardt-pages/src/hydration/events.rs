@@ -231,10 +231,6 @@ pub fn attach_events_recursive(
 	options: &AttachOptions,
 	registry: &mut EventRegistry,
 ) -> Result<(), EventAttachError> {
-	use crate::hydration::islands::IslandDetector;
-	use wasm_bindgen::JsCast;
-	use web_sys::Document;
-
 	// Check if this element should be skipped
 	let should_skip = if options.skip_static {
 		element.get_attribute("data-rh-static").as_deref() == Some("true")
@@ -286,10 +282,8 @@ pub fn attach_events_recursive(
 
 	if should_recurse {
 		let children = element.children();
-		for i in 0..children.length() {
-			if let Some(child) = children.item(i) {
-				attach_events_recursive(&child, bindings, handlers, options, registry)?;
-			}
+		for child in &children {
+			attach_events_recursive(child, bindings, handlers, options, registry)?;
 		}
 	}
 

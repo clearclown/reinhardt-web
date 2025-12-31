@@ -382,7 +382,7 @@ impl FormComponent {
 
 			// Validate
 			if !form_component.validate() {
-				web_sys::console::log_1(&"Validation failed".into());
+				crate::warn_log!("Validation failed");
 				return;
 			}
 
@@ -390,10 +390,10 @@ impl FormComponent {
 			wasm_bindgen_futures::spawn_local(async move {
 				match form_component.submit().await {
 					Ok(_) => {
-						web_sys::console::log_1(&"Form submitted successfully".into());
+						crate::info_log!("Form submitted successfully");
 					}
 					Err(err) => {
-						web_sys::console::error_1(&format!("Submit error: {:?}", err).into());
+						crate::error_log!("Submit error: {:?}", err);
 					}
 				}
 			});
@@ -567,13 +567,10 @@ impl FormComponent {
 							}
 							Err(eval_error) => {
 								// Log evaluation error for debugging, but don't fail validation
-								#[cfg(target_arch = "wasm32")]
-								web_sys::console::error_1(
-									&format!(
-										"Validation eval error for field '{}': {}",
-										field_name, eval_error
-									)
-									.into(),
+								crate::error_log!(
+									"Validation eval error for field '{}': {}",
+									field_name,
+									eval_error
 								);
 							}
 						}
@@ -602,13 +599,10 @@ impl FormComponent {
 							}
 							Err(eval_error) => {
 								// Log evaluation error for debugging
-								#[cfg(target_arch = "wasm32")]
-								web_sys::console::error_1(
-									&format!(
-										"Cross-field validation eval error for fields {:?}: {}",
-										field_names, eval_error
-									)
-									.into(),
+								crate::error_log!(
+									"Cross-field validation eval error for fields {:?}: {}",
+									field_names,
+									eval_error
 								);
 							}
 						}

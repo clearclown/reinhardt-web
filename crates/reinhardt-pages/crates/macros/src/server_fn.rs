@@ -9,13 +9,6 @@
 //! - **WASM target**: Generates HTTP client stub
 //! - **Non-WASM target**: Generates route handler
 //!
-//! ## Implementation Phases
-//!
-//! - Week 2 (Day 1-2): Basic infrastructure, option parsing
-//! - Week 3 (Day 1-2): Client stub generation
-//! - Week 3 (Day 3-4): Server handler generation
-//! - Week 4 (Day 1-2): DI support (`use_inject = true`)
-
 use convert_case::{Case, Casing};
 use darling::FromMeta;
 use darling::ast::NestedMeta;
@@ -26,8 +19,8 @@ use syn::{FnArg, ItemFn, Meta, Token, parse_macro_input};
 
 // Import crate path helpers for dynamic resolution
 use crate::crate_paths::{
-	get_inventory_crate, get_reinhardt_di_crate, get_reinhardt_http_crate,
-	get_reinhardt_pages_crate,
+	CratePathInfo, get_inventory_crate, get_reinhardt_di_crate, get_reinhardt_http_crate,
+	get_reinhardt_pages_crate, get_reinhardt_pages_crate_info,
 };
 
 /// Convert snake_case identifier to UpperCamelCase for struct naming
@@ -104,6 +97,23 @@ pub(crate) struct ServerFnOptions {
 	/// ```
 	#[darling(default = "default_codec")]
 	pub codec: String,
+
+	/// Disable automatic CSRF token injection
+	///
+	/// By default, server function client stubs automatically include the
+	/// X-CSRFToken header in requests. Set this to `true` to disable this
+	/// behavior for endpoints that don't require CSRF protection.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// // Public API endpoint without CSRF protection
+	/// #[server_fn(no_csrf = true)]
+	/// async fn public_health_check() -> Result<String, ServerFnError> {
+	///     Ok("OK".to_string())
+	/// }
+	/// ```
+	pub no_csrf: bool,
 }
 
 fn default_codec() -> String {
@@ -116,11 +126,12 @@ impl Default for ServerFnOptions {
 			use_inject: false,
 			endpoint: None,
 			codec: default_codec(),
+			no_csrf: false,
 		}
 	}
 }
 
-/// Information about #[inject] parameters (Week 4 Day 1-2)
+/// Information about #[inject] parameters
 ///
 /// This struct holds metadata about parameters that should be resolved
 /// via dependency injection on the server side.
@@ -157,7 +168,7 @@ fn is_inject_attr(attr: &syn::Attribute) -> bool {
 	false
 }
 
-/// Detect parameters for dependency injection (Week 4 Day 1-2)
+/// Detect parameters for dependency injection
 ///
 /// This function scans function parameters and identifies those that should be
 /// injected by the DI system. Detection is based on:
@@ -192,7 +203,7 @@ fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo
 	inject_params
 }
 
-/// Remove #[inject] attributes from function parameters (Week 4 Day 1-2)
+/// Remove #[inject] attributes from function parameters
 ///
 /// This creates a clean version of the function for server-side compilation.
 /// Pattern copied from reinhardt-core/crates/macros/src/routes.rs.
@@ -301,31 +312,23 @@ pub(crate) fn server_fn_impl(args: TokenStream, input: TokenStream) -> TokenStre
 		Err(e) => return e.write_errors().into(),
 	};
 
-	// Generate code (stub for now, full implementation in Week 3)
 	generate_server_fn(&info).into()
 }
 
 /// Generate server function code
 ///
 /// This generates both client and server code with conditional compilation.
-///
-/// # Implementation Status
-///
-/// - Week 2: Basic structure (stubs)
-/// - Week 3 Day 1-2: Client stub generation
-/// - Week 3 Day 3-4: Server handler generation
-/// - Week 4 Day 1-2: DI parameter detection ← CURRENT
 fn generate_server_fn(info: &ServerFnInfo) -> proc_macro2::TokenStream {
 	let func = &info.func;
 
-	// Week 4 Day 1-2: Detect #[inject] parameters if use_inject is enabled
+	// Detect #[inject] parameters if use_inject is enabled
 	let inject_params = if info.use_inject() {
 		detect_inject_params(&func.sig.inputs)
 	} else {
 		Vec::new()
 	};
 
-	// Week 4 Day 1-2: Remove #[inject] attributes from original function
+	// Remove #[inject] attributes from original function
 	// This ensures the server-side code compiles without unknown attributes
 	let clean_func = if info.use_inject() && !inject_params.is_empty() {
 		remove_inject_attrs(func)
@@ -333,10 +336,13 @@ fn generate_server_fn(info: &ServerFnInfo) -> proc_macro2::TokenStream {
 		func.clone()
 	};
 
-	// Week 3 Day 1-2: Generate client stub (with DI parameter filtering)
-	let client_stub = generate_client_stub(info, &inject_params);
+	// Dynamically resolve reinhardt_pages crate path for client stub
+	let pages_crate_info = get_reinhardt_pages_crate_info();
 
-	// Week 3 Day 3-4: Generate server handler (with DI resolution)
+	// Generate client stub (with DI parameter filtering)
+	let client_stub = generate_client_stub(info, &inject_params, &pages_crate_info);
+
+	// Generate server handler (with DI resolution)
 	let server_handler = generate_server_handler(info, &inject_params);
 
 	quote! {
@@ -352,7 +358,7 @@ fn generate_server_fn(info: &ServerFnInfo) -> proc_macro2::TokenStream {
 	}
 }
 
-/// Generate client-side HTTP request stub (Week 3 Day 1-2)
+/// Generate client-side HTTP request stub
 ///
 /// This generates an async function that:
 /// 1. Serializes function arguments to JSON
@@ -382,7 +388,11 @@ fn generate_server_fn(info: &ServerFnInfo) -> proc_macro2::TokenStream {
 fn generate_client_stub(
 	info: &ServerFnInfo,
 	_inject_params: &[InjectInfo],
+	pages_crate_info: &CratePathInfo,
 ) -> proc_macro2::TokenStream {
+	// Extract crate path info components
+	let pages_use_statement = &pages_crate_info.use_statement;
+	let pages_crate = &pages_crate_info.ident;
 	let name = info.name();
 	let vis = info.vis();
 	let endpoint = info.endpoint();
@@ -417,49 +427,64 @@ fn generate_client_stub(
 		quote::format_ident!("{}Args", pascal_name)
 	};
 
+	// Generate CSRF injection code conditionally based on no_csrf option
+	let csrf_injection_code = if info.options.no_csrf {
+		// no_csrf = true: Skip CSRF header injection
+		quote! {}
+	} else {
+		// no_csrf = false (default): Inject CSRF header
+		quote! {
+			// Inject CSRF header if available (automatic CSRF protection)
+			use #pages_crate::csrf::csrf_headers;
+			if let Some((__csrf_header_name, __csrf_header_value)) = csrf_headers() {
+				__request_builder = __request_builder.header(__csrf_header_name, &__csrf_header_value);
+			}
+		}
+	};
+
 	// Generate codec-specific serialization and deserialization code
 	let (content_type, serialize_code, deserialize_code) = match codec {
 		"json" => (
 			"application/json",
 			quote! {
 				let __body = ::serde_json::to_string(&__args)
-					.map_err(|e| crate::server_fn::ServerFnError::serialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::serialization(e.to_string()))?;
 			},
 			quote! {
 				__response
 					.json()
 					.await
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))
 			},
 		),
 		"url" => (
 			"application/x-www-form-urlencoded",
 			quote! {
 				let __body = ::serde_urlencoded::to_string(&__args)
-					.map_err(|e| crate::server_fn::ServerFnError::serialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::serialization(e.to_string()))?;
 			},
 			quote! {
 				let __text = __response.text().await
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
 				::serde_json::from_str(&__text)
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))
 			},
 		),
 		"msgpack" => (
 			"application/msgpack",
 			quote! {
 				let __body_bytes = ::rmp_serde::to_vec(&__args)
-					.map_err(|e| crate::server_fn::ServerFnError::serialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::serialization(e.to_string()))?;
 				// Convert to base64 for transport over HTTP text body
 				let __body = ::base64::Engine::encode(&::base64::engine::general_purpose::STANDARD, &__body_bytes);
 			},
 			quote! {
 				let __text = __response.text().await
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
 				let __bytes = ::base64::Engine::decode(&::base64::engine::general_purpose::STANDARD, &__text)
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))?;
 				::rmp_serde::from_slice(&__bytes)
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))
 			},
 		),
 		// Default to json for unknown codecs
@@ -467,13 +492,13 @@ fn generate_client_stub(
 			"application/json",
 			quote! {
 				let __body = ::serde_json::to_string(&__args)
-					.map_err(|e| crate::server_fn::ServerFnError::serialization(e.to_string()))?;
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::serialization(e.to_string()))?;
 			},
 			quote! {
 				__response
 					.json()
 					.await
-					.map_err(|e| crate::server_fn::ServerFnError::deserialization(e.to_string()))
+					.map_err(|e| #pages_crate::server_fn::ServerFnError::deserialization(e.to_string()))
 			},
 		),
 	};
@@ -482,6 +507,9 @@ fn generate_client_stub(
 		#[cfg(target_arch = "wasm32")]
 		#vis #sig {
 			use ::serde::{Serialize, Deserialize};
+
+			// Conditional crate path resolution for WASM/server compatibility
+			#pages_use_statement
 
 			// Argument struct for serialization
 			#[derive(Serialize)]
@@ -497,21 +525,25 @@ fn generate_client_stub(
 			// Serialize arguments based on codec
 			#serialize_code
 
-			// Send HTTP POST request using gloo-net
-			// Note: gloo-net 0.6+ body() returns Result, so we need to handle the error
-			let __response = ::gloo_net::http::Request::post(__endpoint)
-				.header("Content-Type", #content_type)
+			// Build HTTP POST request with headers
+			let mut __request_builder = ::gloo_net::http::Request::post(__endpoint)
+				.header("Content-Type", #content_type);
+
+			#csrf_injection_code
+
+			// Send request
+			let __response = __request_builder
 				.body(__body)
-				.map_err(|e| crate::server_fn::ServerFnError::network(e.to_string()))?
+				.map_err(|e| #pages_crate::server_fn::ServerFnError::network(e.to_string()))?
 				.send()
 				.await
-				.map_err(|e| crate::server_fn::ServerFnError::network(e.to_string()))?;
+				.map_err(|e| #pages_crate::server_fn::ServerFnError::network(e.to_string()))?;
 
 			// Check HTTP status
 			if !__response.ok() {
 				let __status = __response.status();
 				let __message = __response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-				return Err(crate::server_fn::ServerFnError::server(__status, __message));
+				return Err(#pages_crate::server_fn::ServerFnError::server(__status, __message));
 			}
 
 			// Deserialize response based on codec
@@ -520,7 +552,7 @@ fn generate_client_stub(
 	}
 }
 
-/// Generate server handler and registration function (Week 3 Day 3-4)
+/// Generate server handler and registration function
 ///
 /// This generates a route handler that:
 /// 1. Deserializes JSON request body to function arguments
@@ -603,7 +635,7 @@ fn generate_server_handler(
 		}
 	};
 
-	// Generate DI resolution code (Week 4 Day 4)
+	// Generate DI resolution code
 	// Pattern copied from reinhardt-core/crates/macros/src/use_inject.rs
 	let di_resolution = if !inject_params.is_empty() {
 		// Dynamically resolve crate paths
@@ -771,7 +803,7 @@ fn generate_server_handler(
 			// Deserialize request body based on codec
 			#deserialize_code
 
-			// Resolve #[inject] parameters via DI (Week 4 Day 4)
+			// Resolve #[inject] parameters via DI
 			#di_resolution
 
 			// Call the original server function with both regular and injected parameters

@@ -15,6 +15,7 @@ msgpack = ["dep:rmp-serde"]
 pages-full = ["msgpack"]
 static = []
 urls = []
+debug-hooks = []
 
 [dependencies]
 # Procedural macros
@@ -82,8 +83,12 @@ reinhardt-di = { workspace = true }
 reinhardt-http = { workspace = true }
 reinhardt-middleware = { workspace = true }
 reinhardt-urls = { workspace = true }
+reinhardt-routers = { workspace = true }
+reinhardt-server = { workspace = true }
 hyper = { workspace = true }
 async-trait = "0.1"
+uuid = { version = "1.0", features = ["v4"] }
+tokio = { workspace = true }
 # For automatic server function registration
 inventory = "0.3"
 
@@ -106,3 +111,13 @@ crate-type = ["rlib"]
 [[bench]]
 name = "wasm_framework_benchmarks"
 harness = false
+
+[[test]]
+name = "csrf_wasm_test"
+path = "tests/wasm/csrf_wasm_test.rs"
+required-features = []
+
+[[test]]
+name = "server_fn_wasm_test"
+path = "tests/wasm/server_fn_wasm_test.rs"
+required-features = []

@@ -20,7 +20,7 @@
 //! ```
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen::JsValue;
+use wasm_bindgen::JsCast;
 #[cfg(target_arch = "wasm32")]
 use web_sys::{Document, Element};
 
@@ -63,7 +63,7 @@ impl IslandNode {
 
 	/// Checks if this island contains the given element.
 	pub fn contains(&self, element: &Element) -> bool {
-		self.element.contains(Some(element)).unwrap_or(false)
+		self.element.contains(Some(element))
 	}
 }
 
@@ -169,40 +169,40 @@ impl IslandDetector {
 	}
 }
 
-// Non-WASM stub implementations for compilation
+// Compilation-only implementations for non-WASM targets
 #[cfg(not(target_arch = "wasm32"))]
 impl IslandNode {
-	/// Stub implementation for non-WASM targets.
+	/// Compilation-only implementation for non-WASM targets.
 	pub fn from_element(_element: ()) -> Option<Self> {
 		None
 	}
 }
 
-/// Stub implementation of IslandDetector for non-WASM targets.
+/// Compilation-only implementation of IslandDetector for non-WASM targets.
 ///
-/// This is a compilation stub that provides no functionality.
-/// Actual island detection only works in WASM environments.
+/// This provides type compatibility for cross-compilation scenarios.
+/// Actual island detection requires WASM environment with DOM access.
 #[cfg(not(target_arch = "wasm32"))]
 pub struct IslandDetector;
 
 #[cfg(not(target_arch = "wasm32"))]
 impl IslandDetector {
-	/// Stub implementation for non-WASM targets.
+	/// Compilation-only implementation for non-WASM targets.
 	pub fn new(_document: ()) -> Self {
 		Self
 	}
 
-	/// Stub implementation for non-WASM targets.
+	/// Compilation-only implementation for non-WASM targets.
 	pub fn find_islands(&self) -> Vec<IslandNode> {
 		Vec::new()
 	}
 
-	/// Stub implementation for non-WASM targets.
+	/// Compilation-only implementation for non-WASM targets.
 	pub fn find_static_nodes(&self) -> Vec<()> {
 		Vec::new()
 	}
 
-	/// Stub implementation for non-WASM targets.
+	/// Compilation-only implementation for non-WASM targets.
 	pub fn is_element_within_island(&self, _element: &()) -> bool {
 		false
 	}

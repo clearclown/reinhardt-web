@@ -43,14 +43,13 @@ type EventArg = crate::component::DummyEvent;
 /// This is a no-op in production builds. It's only used for debugging purposes.
 /// The actual DevTools integration would require browser-specific implementation.
 pub fn use_debug_value<T: std::fmt::Debug>(_value: T) {
-	// In a real implementation with DevTools integration, this would:
-	// 1. Register the value with the DevTools
-	// 2. Update the display when the value changes
+	// Note: Full DevTools integration (like React DevTools) would require a
+	// dedicated browser extension. The current implementation logs values to
+	// the console via debug_log! macro when debug-hooks feature is enabled.
 
 	#[cfg(debug_assertions)]
 	{
-		// Could log to console in debug builds
-		// web_sys::console::log_1(&format!("Debug value: {:?}", _value).into());
+		crate::debug_log!("Debug value: {:?}", _value);
 	}
 }
 
@@ -83,8 +82,8 @@ where
 {
 	#[cfg(debug_assertions)]
 	{
-		// let formatted = _format(_value);
-		// web_sys::console::log_1(&format!("Debug value: {:?}", formatted).into());
+		let _formatted = _format(_value);
+		crate::debug_log!("Debug value: {:?}", _formatted);
 	}
 }
 
@@ -141,9 +140,10 @@ where
 ///
 /// # Note
 ///
-/// In the current implementation, this is similar to `use_callback`.
-/// True "effect event" semantics would require deeper integration with
-/// the Effect system to ensure the callback isn't tracked as a dependency.
+/// Implementation note: Unlike React's experimental useEffectEvent, this
+/// implementation does not prevent dependency tracking within the callback.
+/// The callback provides stable identity but Signals accessed inside will
+/// still be tracked if called within an Effect context.
 #[cfg(target_arch = "wasm32")]
 pub fn use_effect_event<F>(f: F) -> Callback<EventArg, ()>
 where

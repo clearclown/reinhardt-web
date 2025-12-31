@@ -54,6 +54,7 @@
 pub mod builder;
 pub mod callback;
 pub mod dom;
+pub mod logging;
 pub mod reactive;
 
 // Platform abstraction (unified types for WASM and native)
@@ -68,6 +69,8 @@ pub mod component;
 // Form and security
 pub mod auth;
 pub mod csrf;
+// FormComponent requires reinhardt-forms which is not WASM-compatible yet
+// For now, client-side forms should use ElementView
 #[cfg(not(target_arch = "wasm32"))]
 pub mod form;
 
@@ -86,6 +89,12 @@ pub mod router;
 
 // Integration modules (runtime support for special macros)
 pub mod integ;
+
+// Testing utilities (available on both WASM and server)
+// Layer 1: server_fn unit tests (server-side only)
+// Layer 2: Component + server_fn mock tests (WASM)
+// Layer 3: E2E tests (both platforms)
+pub mod testing;
 
 // Re-export commonly used types
 pub use api::{ApiModel, ApiQuerySet, Filter, FilterOp};
@@ -129,3 +138,6 @@ pub use ssr::{SsrOptions, SsrRenderer, SsrState};
 
 // Re-export procedural macros
 pub use reinhardt_pages_macros::page;
+
+// Logging macros are automatically exported via #[macro_export]
+// Users can access them as: reinhardt_pages::debug_log!, reinhardt_pages::info_log!, etc.
