@@ -422,7 +422,6 @@ where
 				// Get the primary key from existing object to preserve identity
 				let pk = object
 					.primary_key()
-					.cloned()
 					.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 				// Replace object with update data but keep the same PK
@@ -617,7 +616,6 @@ where
 				// Get the primary key for deletion
 				let pk = object
 					.primary_key()
-					.cloned()
 					.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 				// Delete using Manager
@@ -755,7 +753,6 @@ where
 				// Get the primary key from existing object to preserve identity
 				let pk = object
 					.primary_key()
-					.cloned()
 					.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 				// Replace object with update data but keep the same PK
@@ -836,7 +833,6 @@ where
 				// Get the primary key for deletion
 				let pk = object
 					.primary_key()
-					.cloned()
 					.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 				// Delete using Manager

@@ -200,7 +200,6 @@ where
 
 			let pk = object
 				.primary_key()
-				.cloned()
 				.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 			object = update_data;

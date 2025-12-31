@@ -155,7 +155,6 @@ where
 		// Get the primary key for deletion
 		let pk = object
 			.primary_key()
-			.cloned()
 			.ok_or_else(|| Error::Http("Object has no primary key".to_string()))?;
 
 		// Delete using Manager
