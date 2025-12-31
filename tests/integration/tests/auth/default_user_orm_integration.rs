@@ -192,8 +192,12 @@ fn test_password_verification_without_hash(basic_user: DefaultUser) {
 
 	let result = basic_user.check_password("anypassword");
 	assert!(
-		result.is_err(),
-		"check_password should error when no hash is set"
+		result.is_ok(),
+		"check_password should not error even when no hash is set"
+	);
+	assert!(
+		!result.unwrap(),
+		"check_password should return false when no hash is set"
 	);
 }
 
@@ -291,13 +295,13 @@ fn test_model_trait(basic_user: DefaultUser) {
 		"id",
 		"primary key field should be id"
 	);
-	assert_eq!(basic_user.primary_key(), Some(&basic_user.id));
+	assert_eq!(basic_user.primary_key(), Some(basic_user.id));
 
 	// Test set_primary_key
 	let mut user = basic_user.clone();
 	let new_id = Uuid::new_v4();
 	user.set_primary_key(new_id);
-	assert_eq!(user.primary_key(), Some(&new_id));
+	assert_eq!(user.primary_key(), Some(new_id));
 }
 
 #[rstest]

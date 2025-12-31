@@ -22,9 +22,11 @@ struct DatabaseService {
 #[async_trait::async_trait]
 impl Injectable for DatabaseService {
 	async fn inject(ctx: &InjectionContext) -> DiResult<Self> {
-		let pool = ctx.get_singleton::<PgPool>().ok_or_else(|| {
+		let pool_wrapper = ctx.get_singleton::<Arc<PgPool>>().ok_or_else(|| {
 			reinhardt_di::DiError::NotFound("Database pool not found".to_string())
 		})?;
+		// Unwrap the outer Arc to get Arc<PgPool>
+		let pool = Arc::clone(&*pool_wrapper);
 
 		Ok(DatabaseService { pool })
 	}

@@ -697,6 +697,7 @@ fn test_hash_format_is_argon2(hasher: Argon2Hasher) {
 	let hash = hasher.hash(password).expect("Hashing should succeed");
 
 	// Assert - Verify hash format
+	// PHC format: $argon2id$v=19$m=65536,t=3,p=4$salt$hash
 	assert!(
 		hash.starts_with("$argon2"),
 		"Hash should start with $argon2, got: {}",
@@ -706,10 +707,11 @@ fn test_hash_format_is_argon2(hasher: Argon2Hasher) {
 		hash.contains("$v="),
 		"Hash should contain version parameter"
 	);
-	assert!(hash.contains("$m="), "Hash should contain memory parameter");
-	assert!(hash.contains("$t="), "Hash should contain time parameter");
+	// Parameters are comma-separated in PHC format, e.g., m=65536,t=3,p=4
+	assert!(hash.contains("m="), "Hash should contain memory parameter");
+	assert!(hash.contains("t="), "Hash should contain time parameter");
 	assert!(
-		hash.contains("$p="),
+		hash.contains("p="),
 		"Hash should contain parallelism parameter"
 	);
 }
