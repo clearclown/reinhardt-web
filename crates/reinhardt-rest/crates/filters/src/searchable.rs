@@ -14,7 +14,7 @@ use reinhardt_db::orm::{Field, Model};
 ///
 /// ```rust
 /// # use reinhardt_filters::{SearchableModel, field_extensions::FieldOrderingExt, OrderingField};
-/// # use reinhardt_db::orm::{Model, Field};
+/// # use reinhardt_db::orm::{Model, Field, FieldSelector};
 /// #
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct Post {
@@ -24,10 +24,18 @@ use reinhardt_db::orm::{Field, Model};
 /// #     created_at: String,
 /// # }
 /// #
+/// # #[derive(Clone)]
+/// # struct PostFields;
+/// # impl FieldSelector for PostFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
+/// #
 /// # impl Model for Post {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = PostFields;
 /// #     fn table_name() -> &'static str { "posts" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+/// #     fn new_fields() -> Self::Fields { PostFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 /// # }
 /// #

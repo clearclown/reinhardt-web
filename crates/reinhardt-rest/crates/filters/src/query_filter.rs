@@ -20,7 +20,7 @@ use std::marker::PhantomData;
 ///
 /// ```rust
 /// # use reinhardt_filters::QueryFilter;
-/// # use reinhardt_db::orm::{Field, Model};
+/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 /// # use reinhardt_filters::field_extensions::FieldOrderingExt;
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct Post {
@@ -28,10 +28,17 @@ use std::marker::PhantomData;
 /// #     title: String,
 /// #     created_at: String,
 /// # }
+/// # #[derive(Clone)]
+/// # struct PostFields;
+/// # impl FieldSelector for PostFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for Post {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = PostFields;
 /// #     fn table_name() -> &'static str { "posts" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+/// #     fn new_fields() -> Self::Fields { PostFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 /// # }
 /// let filter = QueryFilter::<Post>::new()
@@ -68,17 +75,24 @@ impl<M: Model> QueryFilter<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::QueryFilter;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
 	/// #     id: i64,
 	/// #     title: String,
 	/// #     age: i32,
 	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// let filter = QueryFilter::<Post>::new()
@@ -105,7 +119,7 @@ impl<M: Model> QueryFilter<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::QueryFilter;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// # use reinhardt_filters::field_extensions::FieldOrderingExt;
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
@@ -113,10 +127,17 @@ impl<M: Model> QueryFilter<M> {
 	/// #     title: String,
 	/// #     created_at: String,
 	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// let filter = QueryFilter::<Post>::new()
@@ -141,17 +162,24 @@ impl<M: Model> QueryFilter<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::QueryFilter;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
 	/// #     id: i64,
 	/// #     title: String,
 	/// #     content: String,
 	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// // (title ICONTAINS 'rust' OR content ICONTAINS 'rust')
@@ -178,16 +206,23 @@ impl<M: Model> QueryFilter<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::QueryFilter;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
 	/// #     id: i64,
 	/// #     title: String,
 	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// // Simulate multi-term search

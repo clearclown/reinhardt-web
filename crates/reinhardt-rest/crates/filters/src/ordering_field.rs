@@ -24,7 +24,7 @@ pub enum OrderDirection {
 ///
 /// ```rust
 /// # use reinhardt_filters::{OrderingField, OrderDirection, field_extensions::FieldOrderingExt};
-/// # use reinhardt_db::orm::{Field, Model};
+/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 /// #
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct Post {
@@ -33,10 +33,18 @@ pub enum OrderDirection {
 /// #     created_at: String,
 /// # }
 /// #
+/// # #[derive(Clone)]
+/// # struct PostFields;
+/// # impl FieldSelector for PostFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
+/// #
 /// # impl Model for Post {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = PostFields;
 /// #     fn table_name() -> &'static str { "posts" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+/// #     fn new_fields() -> Self::Fields { PostFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 /// # }
 /// // Create ascending ordering - call .asc() on Field
@@ -70,7 +78,7 @@ impl<M: Model> OrderingField<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::field_extensions::FieldOrderingExt;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// #
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
@@ -78,10 +86,18 @@ impl<M: Model> OrderingField<M> {
 	/// #     title: String,
 	/// # }
 	/// #
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// let field = Field::<Post, String>::new(vec!["title".to_string()]);
@@ -97,7 +113,7 @@ impl<M: Model> OrderingField<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::{OrderDirection, field_extensions::FieldOrderingExt};
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// #
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
@@ -105,10 +121,18 @@ impl<M: Model> OrderingField<M> {
 	/// #     created_at: String,
 	/// # }
 	/// #
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// let field = Field::<Post, String>::new(vec!["created_at"]);
@@ -125,7 +149,7 @@ impl<M: Model> OrderingField<M> {
 	///
 	/// ```rust
 	/// # use reinhardt_filters::field_extensions::FieldOrderingExt;
-	/// # use reinhardt_db::orm::{Field, Model};
+	/// # use reinhardt_db::orm::{Field, FieldSelector, Model};
 	/// #
 	/// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 	/// # struct Post {
@@ -134,10 +158,18 @@ impl<M: Model> OrderingField<M> {
 	/// #     created_at: String,
 	/// # }
 	/// #
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(&self.id) }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// # }
 	/// let order = Field::<Post, String>::new(vec!["title"]).asc();
