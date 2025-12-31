@@ -48,7 +48,7 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 	// Define flatpages migration with all required tables
 	let flatpages_migration = Migration::new("test_flatpages_schema", "test")
 		.add_operation(Operation::CreateTable {
-			name: "flatpages",
+			name: "flatpages".to_string(),
 			columns: vec![
 				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
 				ColumnDefinition::new(
@@ -79,9 +79,12 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 				),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 		.add_operation(Operation::CreateTable {
-			name: "sites",
+			name: "sites".to_string(),
 			columns: vec![
 				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
 				ColumnDefinition::new(
@@ -94,9 +97,12 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 				),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 		.add_operation(Operation::CreateTable {
-			name: "flatpage_sites",
+			name: "flatpage_sites".to_string(),
 			columns: vec![
 				ColumnDefinition::new("id", FieldType::Custom("BIGSERIAL PRIMARY KEY".to_string())),
 				ColumnDefinition::new(
@@ -113,6 +119,7 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::Cascade,
 					on_update: ForeignKeyAction::Cascade,
+					deferrable: None,
 				},
 				Constraint::ForeignKey {
 					name: "fk_flatpages_sites_site_id".to_string(),
@@ -121,12 +128,16 @@ pub async fn create_flatpages_tables(pool: &Pool<Postgres>) {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::Cascade,
 					on_update: ForeignKeyAction::Cascade,
+					deferrable: None,
 				},
 				Constraint::Unique {
 					name: "uq_flatpage_site".to_string(),
 					columns: vec!["flatpage_id".to_string(), "site_id".to_string()],
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		});
 
 	// Generate and execute SQL for each operation
@@ -148,10 +159,14 @@ pub async fn cleanup_test_tables(pool: &Pool<Postgres>) {
 	// Define cleanup migration - drop tables in reverse order
 	let cleanup_migration = Migration::new("cleanup_test_schema", "test")
 		.add_operation(Operation::DropTable {
-			name: "flatpage_sites",
+			name: "flatpage_sites".to_string(),
 		})
-		.add_operation(Operation::DropTable { name: "flatpages" })
-		.add_operation(Operation::DropTable { name: "sites" });
+		.add_operation(Operation::DropTable {
+			name: "flatpages".to_string(),
+		})
+		.add_operation(Operation::DropTable {
+			name: "sites".to_string(),
+		});
 
 	// Generate and execute SQL for each operation
 	for operation in &cleanup_migration.operations {

@@ -18,7 +18,7 @@ pub(super) fn migration() -> Migration {
 		.add_dependency("tests", "0001_create_test_tables")
 		// test_posts table
 		.add_operation(Operation::CreateTable {
-			name: "test_posts",
+			name: "test_posts".to_string(),
 			columns: vec![
 				ColumnDefinition::new(
 					"id",
@@ -40,16 +40,20 @@ pub(super) fn migration() -> Migration {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::NoAction,
 					on_update: ForeignKeyAction::NoAction,
+					deferrable: None,
 				},
 				Constraint::Unique {
 					name: "test_posts_user_title_unique".to_string(),
 					columns: vec!["user_id".to_string(), "title".to_string()],
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 		// test_comments table
 		.add_operation(Operation::CreateTable {
-			name: "test_comments",
+			name: "test_comments".to_string(),
 			columns: vec![
 				ColumnDefinition::new(
 					"id",
@@ -71,6 +75,7 @@ pub(super) fn migration() -> Migration {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::Cascade,
 					on_update: ForeignKeyAction::NoAction,
+					deferrable: None,
 				},
 				Constraint::ForeignKey {
 					name: "test_comments_user_id_fkey".to_string(),
@@ -79,7 +84,11 @@ pub(super) fn migration() -> Migration {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::NoAction,
 					on_update: ForeignKeyAction::NoAction,
+					deferrable: None,
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 }

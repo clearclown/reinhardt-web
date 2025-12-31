@@ -83,7 +83,7 @@ mod tests {
 		current_schema.tables.insert(
 			"reinhardt_migrations".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
-				name: "reinhardt_migrations",
+				name: "reinhardt_migrations".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -94,7 +94,7 @@ mod tests {
 		current_schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -108,7 +108,7 @@ mod tests {
 		target_schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -152,7 +152,7 @@ mod tests {
 		schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns: BTreeMap::new(),
 				indexes: Vec::new(),
 				constraints: Vec::new(),
@@ -234,7 +234,7 @@ mod tests {
 		columns.insert(
 			"id".to_string(),
 			reinhardt_db::migrations::schema_diff::ColumnSchema {
-				name: "id",
+				name: "id".to_string(),
 				data_type: FieldType::Integer,
 				nullable: false,
 				default: None,
@@ -246,7 +246,7 @@ mod tests {
 		target_schema.tables.insert(
 			"users".to_string(),
 			reinhardt_db::migrations::schema_diff::TableSchema {
-				name: "users",
+				name: "users".to_string(),
 				columns,
 				indexes: Vec::new(),
 				constraints: Vec::new(),

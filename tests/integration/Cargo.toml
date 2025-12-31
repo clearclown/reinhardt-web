@@ -81,7 +81,7 @@ reinhardt-rest = { workspace = true }
 reinhardt-shortcuts = { workspace = true, features = ["database"] }
 reinhardt-pagination = { workspace = true }
 reinhardt-filters = { workspace = true }
-reinhardt-forms = { workspace = true }
+reinhardt-forms = { workspace = true, features = ["macros"] }
 reinhardt-throttling = { workspace = true }
 reinhardt-utils = { workspace = true, features = ["cache", "logging"] }
 reinhardt-static = { workspace = true }
@@ -89,6 +89,7 @@ reinhardt-storage = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
 reinhardt-sessions = { workspace = true, features = ["database"] }
 reinhardt-pages = { workspace = true }
+reinhardt-commands = { workspace = true }
 
 # Web framework (using reinhardt-apps)
 tokio = { version = "1.0", features = ["full"] }
@@ -176,6 +177,7 @@ websocket = ["reinhardt-server/websocket"]
 graphql = ["reinhardt-server/graphql"]
 msgpack = ["reinhardt-pages/msgpack"]
 proptest = []
+form-macros = ["reinhardt-forms/macros"]
 
 [dev-dependencies]
 # Test utilities

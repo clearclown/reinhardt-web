@@ -16,7 +16,7 @@ pub(super) fn migration() -> Migration {
 	Migration::new("0001_create_test_tables", "tests")
 		// test_users table
 		.add_operation(Operation::CreateTable {
-			name: "test_users",
+			name: "test_users".to_string(),
 			columns: vec![
 				ColumnDefinition::new(
 					"id",
@@ -39,10 +39,13 @@ pub(super) fn migration() -> Migration {
 					columns: vec!["email".to_string()],
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 		// test_products table
 		.add_operation(Operation::CreateTable {
-			name: "test_products",
+			name: "test_products".to_string(),
 			columns: vec![
 				ColumnDefinition::new(
 					"id",
@@ -71,10 +74,13 @@ pub(super) fn migration() -> Migration {
 					expression: "stock >= 0".to_string(),
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 		// test_orders table
 		.add_operation(Operation::CreateTable {
-			name: "test_orders",
+			name: "test_orders".to_string(),
 			columns: vec![
 				ColumnDefinition::new(
 					"id",
@@ -96,6 +102,7 @@ pub(super) fn migration() -> Migration {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::NoAction,
 					on_update: ForeignKeyAction::NoAction,
+					deferrable: None,
 				},
 				Constraint::ForeignKey {
 					name: "test_orders_product_id_fkey".to_string(),
@@ -104,6 +111,7 @@ pub(super) fn migration() -> Migration {
 					referenced_columns: vec!["id".to_string()],
 					on_delete: ForeignKeyAction::NoAction,
 					on_update: ForeignKeyAction::NoAction,
+					deferrable: None,
 				},
 				Constraint::Unique {
 					name: "test_orders_user_product_unique".to_string(),
@@ -114,5 +122,8 @@ pub(super) fn migration() -> Migration {
 					expression: "quantity > 0".to_string(),
 				},
 			],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		})
 }
