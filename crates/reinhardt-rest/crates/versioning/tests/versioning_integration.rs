@@ -7,7 +7,7 @@ use bytes::Bytes;
 use hyper::Method;
 use reinhardt_core::http::{Request, Response, Result};
 use reinhardt_routers::UnifiedRouter;
-use reinhardt_test::fixtures::server::test_server_guard;
+use reinhardt_test::fixtures::{api_client_from_url, test_server_guard};
 use reinhardt_versioning::{
 	AcceptHeaderVersioning, BaseVersioning, HostNameVersioning, NamespaceVersioning,
 	QueryParameterVersioning, URLPathVersioning,
@@ -42,17 +42,15 @@ async fn test_accept_header_versioning_integration(#[future] versioned_router: U
 	let server = test_server_guard(router).await;
 
 	// Send request with Accept header version=v1
-	let client = reqwest::Client::new();
+	let client = api_client_from_url(&server.url);
 	let response = client
-		.get(format!("{}/resource", server.url))
-		.header("accept", "application/json; version=v1")
-		.send()
+		.get_with_headers("/resource", &[("accept", "application/json; version=v1")])
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }
@@ -64,16 +62,12 @@ async fn test_url_path_versioning_integration(#[future] versioned_router: Unifie
 	let server = test_server_guard(router).await;
 
 	// Send request to /v1/resource
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/v1/resource", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = api_client_from_url(&server.url);
+	let response = client.get("/v1/resource").await.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }
@@ -85,17 +79,15 @@ async fn test_hostname_versioning_integration(#[future] versioned_router: Unifie
 	let server = test_server_guard(router).await;
 
 	// Send request with Host header v1.api.example.com
-	let client = reqwest::Client::new();
+	let client = api_client_from_url(&server.url);
 	let response = client
-		.get(format!("{}/resource", server.url))
-		.header("host", "v1.api.example.com")
-		.send()
+		.get_with_headers("/resource", &[("host", "v1.api.example.com")])
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }
@@ -107,16 +99,12 @@ async fn test_query_parameter_versioning_integration(#[future] versioned_router:
 	let server = test_server_guard(router).await;
 
 	// Send request with query parameter ?version=v1
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/resource?version=v1", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = api_client_from_url(&server.url);
+	let response = client.get("/resource?version=v1").await.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }
@@ -132,16 +120,12 @@ async fn test_namespace_versioning_integration() {
 	let server = test_server_guard(router).await;
 
 	// Send request with custom header X-API-Version: v1
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/v1/resource", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = api_client_from_url(&server.url);
+	let response = client.get("/v1/resource").await.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }
@@ -157,16 +141,12 @@ async fn test_versioning_middleware_integration() {
 	let server = test_server_guard(router).await;
 
 	// Send request to /v1/extract
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/v1/extract", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = api_client_from_url(&server.url);
+	let response = client.get("/v1/extract").await.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 }
 
@@ -179,16 +159,12 @@ async fn test_versioned_handler_with_fallback() {
 	let server = test_server_guard(router).await;
 
 	// Send request without version - should use default (v1)
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/resource", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = api_client_from_url(&server.url);
+	let response = client.get("/resource").await.unwrap();
 
-	assert_eq!(response.status(), 200);
+	assert_eq!(response.status_code(), 200);
 
-	let body = response.text().await.unwrap();
+	let body = response.text();
 	assert!(body.contains("\"version\":\"v1\""));
 	assert!(body.contains("This is version 1"));
 }

@@ -513,3 +513,276 @@ fn test_complex_struct_with_all_features() {
 		_ => panic!("Expected Object schema"),
 	}
 }
+
+// ============================================================================
+// Enum Schema Tests
+// ============================================================================
+
+#[test]
+fn test_simple_unit_enum_generates_string_schema() {
+	#[allow(dead_code)]
+	#[derive(Schema)]
+	enum Status {
+		Active,
+		Inactive,
+		Pending,
+	}
+
+	let schema = Status::schema();
+
+	match schema {
+		Schema::Object(obj) => {
+			assert!(matches!(obj.schema_type, SchemaType::Type(Type::String)));
+			assert!(obj.enum_values.is_some());
+			let values = obj.enum_values.as_ref().unwrap();
+			assert_eq!(values.len(), 3);
+		}
+		_ => panic!("Expected Object schema with string type for simple enum"),
+	}
+
+	assert_eq!(Status::schema_name(), Some("Status".to_string()));
+}
+
+#[test]
+fn test_internally_tagged_enum() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	#[serde(tag = "type")]
+	enum Event {
+		Created { id: i64 },
+		Updated { id: i64, changes: Vec<String> },
+	}
+
+	let schema = Event::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 2);
+			assert!(one_of.discriminator.is_some());
+			assert_eq!(one_of.title, Some("Event".to_string()));
+		}
+		_ => panic!("Expected OneOf schema for internally tagged enum"),
+	}
+}
+
+#[test]
+fn test_adjacently_tagged_enum() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	#[serde(tag = "t", content = "c")]
+	enum Message {
+		Text { content: String },
+		Image { url: String },
+	}
+
+	let schema = Message::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 2);
+			assert!(one_of.discriminator.is_some());
+		}
+		_ => panic!("Expected OneOf schema for adjacently tagged enum"),
+	}
+}
+
+#[test]
+fn test_untagged_enum() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	#[serde(untagged)]
+	enum Value {
+		Str { text: String },
+		Num { value: i64 },
+	}
+
+	let schema = Value::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 2);
+			// Untagged enums should not have a discriminator
+			assert!(one_of.discriminator.is_none());
+		}
+		_ => panic!("Expected OneOf schema for untagged enum"),
+	}
+}
+
+#[test]
+fn test_externally_tagged_enum_with_struct_variants() {
+	#[allow(dead_code)]
+	#[derive(Schema)]
+	enum Shape {
+		Circle { radius: f64 },
+		Rectangle { width: f64, height: f64 },
+	}
+
+	let schema = Shape::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 2);
+			assert_eq!(one_of.title, Some("Shape".to_string()));
+			// External tagging should not have discriminator
+			assert!(one_of.discriminator.is_none());
+		}
+		_ => panic!("Expected OneOf schema for externally tagged enum with struct variants"),
+	}
+}
+
+#[test]
+fn test_enum_with_newtype_variant() {
+	#[allow(dead_code)]
+	#[derive(Schema)]
+	enum Wrapper {
+		Int(i32),
+		Str(String),
+	}
+
+	let schema = Wrapper::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 2);
+		}
+		_ => panic!("Expected OneOf schema for enum with newtype variants"),
+	}
+}
+
+#[test]
+fn test_enum_with_serde_rename() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	enum Status {
+		#[serde(rename = "ACTIVE")]
+		Active,
+		#[serde(rename = "INACTIVE")]
+		Inactive,
+	}
+
+	let schema = Status::schema();
+
+	match schema {
+		Schema::Object(obj) => {
+			assert!(obj.enum_values.is_some());
+			let values = obj.enum_values.as_ref().unwrap();
+			assert_eq!(values.len(), 2);
+			// Values should be renamed
+			assert!(values.contains(&serde_json::Value::String("ACTIVE".to_string())));
+			assert!(values.contains(&serde_json::Value::String("INACTIVE".to_string())));
+		}
+		_ => panic!("Expected Object schema with renamed enum values"),
+	}
+}
+
+#[test]
+fn test_enum_with_serde_rename_all() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	#[serde(rename_all = "snake_case")]
+	enum UserRole {
+		SuperAdmin,
+		RegularUser,
+		GuestUser,
+	}
+
+	let schema = UserRole::schema();
+
+	match schema {
+		Schema::Object(obj) => {
+			assert!(obj.enum_values.is_some());
+			let values = obj.enum_values.as_ref().unwrap();
+			assert_eq!(values.len(), 3);
+			assert!(values.contains(&serde_json::Value::String("super_admin".to_string())));
+			assert!(values.contains(&serde_json::Value::String("regular_user".to_string())));
+			assert!(values.contains(&serde_json::Value::String("guest_user".to_string())));
+		}
+		_ => panic!("Expected Object schema with snake_case enum values"),
+	}
+}
+
+#[test]
+fn test_enum_with_skip_variant() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	enum Mode {
+		Normal,
+		#[serde(skip)]
+		Internal,
+		Debug,
+	}
+
+	let schema = Mode::schema();
+
+	match schema {
+		Schema::Object(obj) => {
+			assert!(obj.enum_values.is_some());
+			let values = obj.enum_values.as_ref().unwrap();
+			// Internal should be skipped
+			assert_eq!(values.len(), 2);
+			assert!(values.contains(&serde_json::Value::String("Normal".to_string())));
+			assert!(values.contains(&serde_json::Value::String("Debug".to_string())));
+			assert!(!values.contains(&serde_json::Value::String("Internal".to_string())));
+		}
+		_ => panic!("Expected Object schema with skipped variant excluded"),
+	}
+}
+
+#[test]
+fn test_mixed_variant_types() {
+	#[allow(dead_code)]
+	#[derive(Schema)]
+	enum Data {
+		Empty,
+		Single(i32),
+		Pair(i32, i32),
+		Named { x: i32, y: i32 },
+	}
+
+	let schema = Data::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			// All 4 variants should be present
+			assert_eq!(one_of.items.len(), 4);
+			assert_eq!(one_of.title, Some("Data".to_string()));
+		}
+		_ => panic!("Expected OneOf schema for mixed variant enum"),
+	}
+}
+
+#[test]
+fn test_internally_tagged_with_unit_variant() {
+	use serde::{Deserialize, Serialize};
+
+	#[allow(dead_code)]
+	#[derive(Schema, Serialize, Deserialize)]
+	#[serde(tag = "kind")]
+	enum Action {
+		Start,
+		Stop,
+		Pause { duration: i32 },
+	}
+
+	let schema = Action::schema();
+
+	match schema {
+		Schema::OneOf(one_of) => {
+			assert_eq!(one_of.items.len(), 3);
+			assert!(one_of.discriminator.is_some());
+		}
+		_ => panic!("Expected OneOf schema for internally tagged enum with unit variants"),
+	}
+}
