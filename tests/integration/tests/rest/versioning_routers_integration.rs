@@ -24,6 +24,7 @@ use reinhardt_params::Path;
 use reinhardt_rest::versioning::{AcceptHeaderVersioning, BaseVersioning, URLPathVersioning};
 use reinhardt_routers::UnifiedRouter;
 use reinhardt_test::fixtures::server::test_server_guard;
+use reinhardt_test::APIClient;
 
 // ============================================================================
 // Helper Functions - Test Handlers
@@ -123,38 +124,35 @@ async fn test_versioned_router_registration() {
 		.endpoint(users_v2_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test v1 endpoint
-	let v1_response = reqwest::get(&format!("{}/v1/users", server.url))
+	let v1_response = client
+		.get("/v1/users")
 		.await
 		.expect("Failed to send v1 request");
 	assert_eq!(
-		v1_response.status(),
+		v1_response.status_code(),
 		StatusCode::OK,
 		"v1 endpoint should return OK"
 	);
-	let v1_body = v1_response
-		.text()
-		.await
-		.expect("Failed to read v1 response body");
+	let v1_body = v1_response.text();
 	assert_eq!(
 		v1_body, r#"{"version":"v1","users":["alice","bob"]}"#,
 		"v1 endpoint should return v1 format"
 	);
 
 	// Test v2 endpoint
-	let v2_response = reqwest::get(&format!("{}/v2/users", server.url))
+	let v2_response = client
+		.get("/v2/users")
 		.await
 		.expect("Failed to send v2 request");
 	assert_eq!(
-		v2_response.status(),
+		v2_response.status_code(),
 		StatusCode::OK,
 		"v2 endpoint should return OK"
 	);
-	let v2_body = v2_response
-		.text()
-		.await
-		.expect("Failed to read v2 response body");
+	let v2_body = v2_response.text();
 	assert_eq!(
 		v2_body, r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 		"v2 endpoint should return v2 format with structured data"
@@ -177,38 +175,35 @@ async fn test_url_path_versioning_with_nested_routes() {
 		.endpoint(user_posts_v2_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test v1 nested route with path parameter
-	let v1_response = reqwest::get(&format!("{}/v1/users/123/posts", server.url))
+	let v1_response = client
+		.get("/v1/users/123/posts")
 		.await
 		.expect("Failed to send v1 nested request");
 	assert_eq!(
-		v1_response.status(),
+		v1_response.status_code(),
 		StatusCode::OK,
 		"v1 nested route should return OK"
 	);
-	let v1_body = v1_response
-		.text()
-		.await
-		.expect("Failed to read v1 nested response");
+	let v1_body = v1_response.text();
 	assert_eq!(
 		v1_body, r#"{"version":"v1","user_id":"123","posts":["post1","post2"]}"#,
 		"v1 nested route should extract user_id and return v1 format"
 	);
 
 	// Test v2 nested route with path parameter
-	let v2_response = reqwest::get(&format!("{}/v2/users/456/posts", server.url))
+	let v2_response = client
+		.get("/v2/users/456/posts")
 		.await
 		.expect("Failed to send v2 nested request");
 	assert_eq!(
-		v2_response.status(),
+		v2_response.status_code(),
 		StatusCode::OK,
 		"v2 nested route should return OK"
 	);
-	let v2_body = v2_response
-		.text()
-		.await
-		.expect("Failed to read v2 nested response");
+	let v2_body = v2_response.text();
 	assert_eq!(
 		v2_body,
 		r#"{"version":"v2","user_id":"456","posts":[{"id":1,"title":"First"},{"id":2,"title":"Second"}]}"#,
@@ -250,24 +245,22 @@ async fn test_accept_header_versioning_with_routers() {
 		.endpoint(api_users_default_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test v1 via explicit path (simulates Accept header routing)
-	let client = reqwest::Client::new();
 	let v1_response = client
-		.get(format!("{}/api/v1/users", server.url))
-		.header("Accept", "application/json; version=v1")
-		.send()
+		.get_with_headers(
+			"/api/v1/users",
+			&[("Accept", "application/json; version=v1")],
+		)
 		.await
 		.expect("Failed to send v1 request");
 	assert_eq!(
-		v1_response.status(),
+		v1_response.status_code(),
 		StatusCode::OK,
 		"Accept header v1 should route to v1 handler"
 	);
-	let v1_body = v1_response
-		.text()
-		.await
-		.expect("Failed to read v1 response");
+	let v1_body = v1_response.text();
 	assert_eq!(
 		v1_body, r#"{"version":"v1","users":["alice","bob"]}"#,
 		"v1 Accept header should return v1 format"
@@ -275,38 +268,34 @@ async fn test_accept_header_versioning_with_routers() {
 
 	// Test v2 via explicit path (simulates Accept header routing)
 	let v2_response = client
-		.get(format!("{}/api/v2/users", server.url))
-		.header("Accept", "application/json; version=v2")
-		.send()
+		.get_with_headers(
+			"/api/v2/users",
+			&[("Accept", "application/json; version=v2")],
+		)
 		.await
 		.expect("Failed to send v2 request");
 	assert_eq!(
-		v2_response.status(),
+		v2_response.status_code(),
 		StatusCode::OK,
 		"Accept header v2 should route to v2 handler"
 	);
-	let v2_body = v2_response
-		.text()
-		.await
-		.expect("Failed to read v2 response");
+	let v2_body = v2_response.text();
 	assert_eq!(
 		v2_body, r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 		"v2 Accept header should return v2 structured format"
 	);
 
 	// Test default path (no version in URL, simulates missing Accept header)
-	let default_response = reqwest::get(&format!("{}/api/users", server.url))
+	let default_response = client
+		.get("/api/users")
 		.await
 		.expect("Failed to send default request");
 	assert_eq!(
-		default_response.status(),
+		default_response.status_code(),
 		StatusCode::OK,
 		"Default path should return OK"
 	);
-	let default_body = default_response
-		.text()
-		.await
-		.expect("Failed to read default response");
+	let default_body = default_response.text();
 	assert_eq!(
 		default_body, r#"{"version":"default","users":["default_user"]}"#,
 		"No Accept header version should use default handler"
@@ -369,73 +358,66 @@ async fn test_middleware_versioning_with_route_groups() {
 		.endpoint(user_posts_v2_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test v1 route group
-	let v1_users_response = reqwest::get(&format!("{}/v1/users", server.url))
+	let v1_users_response = client
+		.get("/v1/users")
 		.await
 		.expect("Failed to send v1 users request");
 	assert_eq!(
-		v1_users_response.status(),
+		v1_users_response.status_code(),
 		StatusCode::OK,
 		"v1 route group users endpoint should return OK"
 	);
-	let v1_users_body = v1_users_response
-		.text()
-		.await
-		.expect("Failed to read v1 users response");
+	let v1_users_body = v1_users_response.text();
 	assert_eq!(
 		v1_users_body, r#"{"version":"v1","users":["alice","bob"]}"#,
 		"v1 route group should return v1 format"
 	);
 
-	let v1_posts_response = reqwest::get(&format!("{}/v1/users/123/posts", server.url))
+	let v1_posts_response = client
+		.get("/v1/users/123/posts")
 		.await
 		.expect("Failed to send v1 posts request");
 	assert_eq!(
-		v1_posts_response.status(),
+		v1_posts_response.status_code(),
 		StatusCode::OK,
 		"v1 route group posts endpoint should return OK"
 	);
-	let v1_posts_body = v1_posts_response
-		.text()
-		.await
-		.expect("Failed to read v1 posts response");
+	let v1_posts_body = v1_posts_response.text();
 	assert_eq!(
 		v1_posts_body, r#"{"version":"v1","user_id":"123","posts":["post1","post2"]}"#,
 		"v1 route group should handle nested routes"
 	);
 
 	// Test v2 route group
-	let v2_users_response = reqwest::get(&format!("{}/v2/users", server.url))
+	let v2_users_response = client
+		.get("/v2/users")
 		.await
 		.expect("Failed to send v2 users request");
 	assert_eq!(
-		v2_users_response.status(),
+		v2_users_response.status_code(),
 		StatusCode::OK,
 		"v2 route group users endpoint should return OK"
 	);
-	let v2_users_body = v2_users_response
-		.text()
-		.await
-		.expect("Failed to read v2 users response");
+	let v2_users_body = v2_users_response.text();
 	assert_eq!(
 		v2_users_body,
 		r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 		"v2 route group should return v2 structured format"
 	);
 
-	let v2_posts_response = reqwest::get(&format!("{}/v2/users/456/posts", server.url))
+	let v2_posts_response = client
+		.get("/v2/users/456/posts")
 		.await
 		.expect("Failed to send v2 posts request");
 	assert_eq!(
-		v2_posts_response.status(),
+		v2_posts_response.status_code(),
 		StatusCode::OK,
 		"v2 route group posts endpoint should return OK"
 	);
-	let v2_posts_body = v2_posts_response
-		.text()
-		.await
-		.expect("Failed to read v2 posts response");
+	let v2_posts_body = v2_posts_response.text();
 	assert_eq!(
 		v2_posts_body,
 		r#"{"version":"v2","user_id":"456","posts":[{"id":1,"title":"First"},{"id":2,"title":"Second"}]}"#,
@@ -490,48 +472,51 @@ async fn test_versioned_fallback_routing() {
 		.endpoint(users_default_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test default fallback (no version in path)
-	let fallback_response = reqwest::get(&format!("{}/users", server.url))
+	let fallback_response = client
+		.get("/users")
 		.await
 		.expect("Failed to send fallback request");
 	assert_eq!(
-		fallback_response.status(),
+		fallback_response.status_code(),
 		StatusCode::OK,
 		"Fallback route should return OK, not 404"
 	);
-	let fallback_body = fallback_response
-		.text()
-		.await
-		.expect("Failed to read fallback response");
+	let fallback_body = fallback_response.text();
 	assert_eq!(
 		fallback_body, r#"{"version":"default","users":["default_user"]}"#,
 		"Fallback should return default handler response"
 	);
 
 	// Verify v1 still works
-	let v1_response = reqwest::get(&format!("{}/v1/users", server.url))
+	let v1_response = client
+		.get("/v1/users")
 		.await
 		.expect("Failed to send v1 request");
-	assert_eq!(v1_response.status(), StatusCode::OK, "v1 should still work");
-	let v1_body = v1_response
-		.text()
-		.await
-		.expect("Failed to read v1 response");
+	assert_eq!(
+		v1_response.status_code(),
+		StatusCode::OK,
+		"v1 should still work"
+	);
+	let v1_body = v1_response.text();
 	assert_eq!(
 		v1_body, r#"{"version":"v1","users":["alice","bob"]}"#,
 		"v1 should return correct format"
 	);
 
 	// Verify v2 still works
-	let v2_response = reqwest::get(&format!("{}/v2/users", server.url))
+	let v2_response = client
+		.get("/v2/users")
 		.await
 		.expect("Failed to send v2 request");
-	assert_eq!(v2_response.status(), StatusCode::OK, "v2 should still work");
-	let v2_body = v2_response
-		.text()
-		.await
-		.expect("Failed to read v2 response");
+	assert_eq!(
+		v2_response.status_code(),
+		StatusCode::OK,
+		"v2 should still work"
+	);
+	let v2_body = v2_response.text();
 	assert_eq!(
 		v2_body, r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 		"v2 should return correct structured format"
@@ -631,24 +616,22 @@ async fn test_version_negotiation_with_multiple_strategies() {
 		.endpoint(api_users_default_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test with explicit v2 path (simulates version negotiation result)
-	let client = reqwest::Client::new();
 	let v2_response = client
-		.get(format!("{}/api/v2/users", server.url))
-		.header("Accept", "application/json; version=v2")
-		.send()
+		.get_with_headers(
+			"/api/v2/users",
+			&[("Accept", "application/json; version=v2")],
+		)
 		.await
 		.expect("Failed to send negotiated request");
 	assert_eq!(
-		v2_response.status(),
+		v2_response.status_code(),
 		StatusCode::OK,
 		"Negotiated version should route correctly"
 	);
-	let v2_body = v2_response
-		.text()
-		.await
-		.expect("Failed to read negotiated response");
+	let v2_body = v2_response.text();
 	assert_eq!(
 		v2_body, r#"{"version":"v2","users":[{"id":1,"name":"alice"},{"id":2,"name":"bob"}]}"#,
 		"Negotiated version should return v2 structured format"
@@ -679,38 +662,35 @@ async fn test_versioned_api_documentation_routes() {
 		.endpoint(docs_v2_handler);
 
 	let server = test_server_guard(router).await;
+	let client = APIClient::with_base_url(&server.url);
 
 	// Test v1 documentation endpoint
-	let v1_docs_response = reqwest::get(&format!("{}/docs/v1", server.url))
+	let v1_docs_response = client
+		.get("/docs/v1")
 		.await
 		.expect("Failed to send v1 docs request");
 	assert_eq!(
-		v1_docs_response.status(),
+		v1_docs_response.status_code(),
 		StatusCode::OK,
 		"v1 documentation endpoint should return OK"
 	);
-	let v1_docs_body = v1_docs_response
-		.text()
-		.await
-		.expect("Failed to read v1 docs response");
+	let v1_docs_body = v1_docs_response.text();
 	assert_eq!(
 		v1_docs_body, r#"{"docs":"API Documentation v1"}"#,
 		"v1 documentation should return v1-specific content"
 	);
 
 	// Test v2 documentation endpoint
-	let v2_docs_response = reqwest::get(&format!("{}/docs/v2", server.url))
+	let v2_docs_response = client
+		.get("/docs/v2")
 		.await
 		.expect("Failed to send v2 docs request");
 	assert_eq!(
-		v2_docs_response.status(),
+		v2_docs_response.status_code(),
 		StatusCode::OK,
 		"v2 documentation endpoint should return OK"
 	);
-	let v2_docs_body = v2_docs_response
-		.text()
-		.await
-		.expect("Failed to read v2 docs response");
+	let v2_docs_body = v2_docs_response.text();
 	assert_eq!(
 		v2_docs_body, r#"{"docs":"API Documentation v2"}"#,
 		"v2 documentation should return v2-specific content"
