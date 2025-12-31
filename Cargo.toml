@@ -194,7 +194,6 @@ auth-token = ["auth", "reinhardt-auth/token"]
 db-postgres = ["database", "reinhardt-db/postgres"]
 db-mysql = ["database", "reinhardt-db/mysql"]
 db-sqlite = ["database", "reinhardt-db/sqlite", "reinhardt-commands/sqlite"]
-db-mongodb = ["database", "reinhardt-db/mongodb-backend"]
 db-cockroachdb = ["database", "reinhardt-db/cockroachdb-backend"]
 
 # Fine-grained middleware
@@ -339,6 +338,8 @@ members = [
   "crates/reinhardt-dispatch",
   "crates/reinhardt-shortcuts",
   "crates/reinhardt-forms",
+  "crates/reinhardt-forms/crates/macros-ast",        # Form macro AST definitions
+  "crates/reinhardt-forms/crates/macros",            # Form macros
   "crates/reinhardt-i18n",
   "crates/reinhardt-mail",
   "crates/reinhardt-graphql",
@@ -410,6 +411,8 @@ reinhardt-pages = { path = "crates/reinhardt-pages", version = "0.1.0-alpha.1" }
 reinhardt-pages-ast = { path = "crates/reinhardt-pages/crates/ast", version = "0.1.0" }
 reinhardt-pages-macros = { path = "crates/reinhardt-pages/crates/macros", version = "0.1.0-alpha.1" }
 reinhardt-forms = { path = "crates/reinhardt-forms", version = "0.1.0-alpha.1" }
+reinhardt-forms-macros-ast = { path = "crates/reinhardt-forms/crates/macros-ast", version = "0.1.0-alpha.1" }
+reinhardt-forms-macros = { path = "crates/reinhardt-forms/crates/macros", version = "0.1.0-alpha.1" }
 reinhardt-test = { path = "crates/reinhardt-test", version = "0.1.0-alpha.1" }
 reinhardt-tasks = { path = "crates/reinhardt-tasks", version = "0.1.0-alpha.1" }
 reinhardt-utils = { path = "crates/reinhardt-utils", version = "0.1.0-alpha.1" }

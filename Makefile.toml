@@ -36,7 +36,7 @@ args = [
 [tasks.build]
 description = "Build workspace"
 command = "cargo"
-args = ["build", "--workspace", "--all", "--all-features", "--all-targets", "--quiet"]
+args = ["build", "--workspace", "--all", "--all-features", "--all-targets", "--quiet", "--bins", "--examples", "--tests", "--benches"]
 
 [tasks.build-release]
 description = "Build workspace in release mode"
