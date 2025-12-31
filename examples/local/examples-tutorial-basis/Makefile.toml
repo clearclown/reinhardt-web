@@ -186,7 +186,7 @@ dependencies = ["install-nextest", "install-bacon", "install-wasm-tools"]
 # ============================================================================
 
 [tasks.install-wasm-tools]
-description = "Install WASM build tools (wasm-bindgen-cli + wasm32 target)"
+description = "Install WASM build tools (wasm-bindgen-cli + wasm-pack + wasm32 target)"
 script = '''
 #!/bin/bash
 set -e
@@ -209,6 +209,14 @@ else
 	echo "✓ wasm-bindgen-cli already installed"
 fi
 
+# Install wasm-pack (for WASM testing)
+if ! command -v wasm-pack &> /dev/null; then
+	echo "Installing wasm-pack..."
+	cargo install wasm-pack
+else
+	echo "✓ wasm-pack already installed"
+fi
+
 # Check for wasm-opt (optional, for release optimization)
 if ! command -v wasm-opt &> /dev/null; then
 	echo ""
@@ -221,6 +229,28 @@ fi
 echo ""
 echo "WASM build tools installed successfully!"
 '''
+
+# ============================================================================
+# WASM Testing Tasks
+# ============================================================================
+
+[tasks.wasm-test]
+description = "Run WASM tests in headless Chrome"
+command = "wasm-pack"
+args = ["test", "--headless", "--chrome"]
+dependencies = ["install-wasm-tools"]
+
+[tasks.wasm-test-firefox]
+description = "Run WASM tests in headless Firefox"
+command = "wasm-pack"
+args = ["test", "--headless", "--firefox"]
+dependencies = ["install-wasm-tools"]
+
+[tasks.wasm-test-debug]
+description = "Run WASM tests with browser (for debugging)"
+command = "wasm-pack"
+args = ["test", "--chrome"]
+dependencies = ["install-wasm-tools"]
 
 [tasks.wasm-build-dev]
 description = "Build WASM in debug mode"

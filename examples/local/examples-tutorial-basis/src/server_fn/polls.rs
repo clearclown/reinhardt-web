@@ -5,11 +5,20 @@
 
 use crate::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
 
-// Re-export server_fn types
+// Server-only imports
 #[cfg(not(target_arch = "wasm32"))]
-use reinhardt::pages::server_fn::{ServerFnError, server_fn};
+use {
+	crate::shared::forms::create_vote_form,
+	reinhardt::forms::wasm_compat::{FormExt, FormMetadata},
+	reinhardt::pages::server_fn::{ServerFnError, server_fn},
+};
+
+// WASM-only imports
 #[cfg(target_arch = "wasm32")]
-use reinhardt_pages::server_fn::{ServerFnError, server_fn};
+use {
+	reinhardt_forms::wasm_compat::FormMetadata,
+	reinhardt_pages::server_fn::{ServerFnError, server_fn},
+};
 
 /// Get all questions (latest 5)
 ///
@@ -189,4 +198,21 @@ pub async fn vote(
 #[server_fn]
 pub async fn vote(_request: VoteRequest) -> std::result::Result<ChoiceInfo, ServerFnError> {
 	unreachable!()
+}
+
+/// Get vote form metadata for WASM client rendering
+///
+/// Returns form metadata with CSRF token for the voting form.
+#[cfg(not(target_arch = "wasm32"))]
+#[server_fn]
+pub async fn get_vote_form_metadata() -> std::result::Result<FormMetadata, ServerFnError> {
+	let form = create_vote_form();
+	Ok(form.to_metadata())
+}
+
+/// Get vote form metadata - WASM client stub
+#[cfg(target_arch = "wasm32")]
+#[server_fn]
+pub async fn get_vote_form_metadata() -> std::result::Result<FormMetadata, ServerFnError> {
+	unreachable!("This function body should be replaced by the server_fn macro")
 }

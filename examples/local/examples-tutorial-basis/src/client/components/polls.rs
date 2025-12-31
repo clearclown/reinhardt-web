@@ -10,7 +10,9 @@ use reinhardt_pages::reactive::hooks::use_state;
 
 #[cfg(target_arch = "wasm32")]
 use {
-	crate::server_fn::polls::{get_question_detail, get_question_results, get_questions, vote},
+	crate::server_fn::polls::{
+		get_question_detail, get_question_results, get_questions, get_vote_form_metadata, vote,
+	},
 	wasm_bindgen::JsCast,
 	wasm_bindgen_futures::spawn_local,
 	web_sys::HtmlInputElement,
@@ -106,6 +108,7 @@ pub fn polls_index() -> View {
 /// Poll detail page - Show question and voting form
 ///
 /// Displays a question with its choices and allows the user to vote.
+/// Includes CSRF protection for the voting form.
 pub fn polls_detail(question_id: i64) -> View {
 	let (question, set_question) = use_state(None::<QuestionInfo>);
 	let (choices, set_choices) = use_state(Vec::<ChoiceInfo>::new());
@@ -113,6 +116,8 @@ pub fn polls_detail(question_id: i64) -> View {
 	let (error, set_error) = use_state(None::<String>);
 	let (selected_choice, set_selected_choice) = use_state(None::<i64>);
 	let (submitting, set_submitting) = use_state(false);
+	#[cfg(target_arch = "wasm32")]
+	let (csrf_token, set_csrf_token) = use_state(None::<String>);
 
 	#[cfg(target_arch = "wasm32")]
 	{
@@ -120,9 +125,16 @@ pub fn polls_detail(question_id: i64) -> View {
 		let set_choices = set_choices.clone();
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
+		let set_csrf_token = set_csrf_token.clone();
 
 		spawn_local(async move {
-			match get_question_detail(question_id).await {
+			// Fetch question detail and CSRF token concurrently
+			let (detail_result, csrf_result) = (
+				get_question_detail(question_id).await,
+				get_vote_form_metadata().await,
+			);
+
+			match detail_result {
 				Ok((q, cs)) => {
 					set_question(Some(q));
 					set_choices(cs);
@@ -132,6 +144,11 @@ pub fn polls_detail(question_id: i64) -> View {
 					set_error(Some(e.to_string()));
 					set_loading(false);
 				}
+			}
+
+			// Set CSRF token if available
+			if let Ok(metadata) = csrf_result {
+				set_csrf_token(metadata.csrf_token.clone());
 			}
 		});
 	}
@@ -226,6 +243,21 @@ pub fn polls_detail(question_id: i64) -> View {
 		})(err, question_id);
 	}
 
+	// Build CSRF hidden input if available
+	#[cfg(target_arch = "wasm32")]
+	let csrf_input = if let Some(token) = csrf_token.get() {
+		ElementView::new("input")
+			.attr("type", "hidden")
+			.attr("name", "csrfmiddlewaretoken")
+			.attr("value", &token)
+			.into_view()
+	} else {
+		ElementView::new("div").into_view()
+	};
+
+	#[cfg(not(target_arch = "wasm32"))]
+	let csrf_input = ElementView::new("div").into_view();
+
 	if let Some(q) = question_opt {
 		// Build choice radio buttons
 		let choice_radios: Vec<View> = choices_list
@@ -275,6 +307,7 @@ pub fn polls_detail(question_id: i64) -> View {
 			.child(
 				ElementView::new("form")
 					.listener("submit", on_submit)
+					.child(csrf_input)
 					.child({
 						let mut form_content = ElementView::new("div");
 
