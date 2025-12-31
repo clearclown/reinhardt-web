@@ -190,9 +190,7 @@ pub mod views;
 
 // Re-export app types from reinhardt-apps
 #[cfg(feature = "core")]
-pub use reinhardt_apps::{
-	AppConfig, AppError, AppResult, Apps, get_apps, init_apps, init_apps_checked,
-};
+pub use reinhardt_apps::{AppConfig, AppError, AppResult, Apps};
 
 // Re-export macros
 #[cfg(feature = "core")]
