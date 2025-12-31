@@ -1,6 +1,7 @@
 //! Authentication components using React-like hooks
 //!
 //! Provides login and registration form components with hooks-styled state management.
+//! Validation is handled server-side via server functions with automatic CSRF protection.
 
 use crate::shared::types::{LoginRequest, RegisterRequest};
 use reinhardt_pages::component::{ElementView, IntoView, View};
@@ -17,8 +18,10 @@ use {
 
 /// Login form component using hooks
 ///
-/// Provides email/password login with validation and error display.
-/// Uses React-like hooks for state management.
+/// Provides email/password login with:
+/// - HTML5 validation for required fields and email format
+/// - Server-side validation via server functions
+/// - Automatic CSRF protection via server function headers
 pub fn login_form() -> View {
 	// Hook-styled state management
 	let (error, set_error) = use_state(None::<String>);
@@ -188,8 +191,10 @@ pub fn login_form() -> View {
 
 /// Registration form component using hooks
 ///
-/// Provides username/email/password registration with validation.
-/// Uses React-like hooks for state management.
+/// Provides username/email/password registration with:
+/// - HTML5 validation for required fields and email format
+/// - Server-side validation including password matching
+/// - Automatic CSRF protection via server function headers
 pub fn register_form() -> View {
 	// Hook-styled state management
 	let (error, set_error) = use_state(None::<String>);
@@ -238,6 +243,12 @@ pub fn register_form() -> View {
 					.and_then(|e| e.dyn_into::<HtmlInputElement>().ok())
 					.map(|i| i.value())
 					.unwrap_or_default();
+
+				// Simple client-side password match validation
+				if password != password_confirmation {
+					set_error(Some("Passwords do not match".to_string()));
+					return;
+				}
 
 				spawn_local(async move {
 					set_loading(true);

@@ -110,6 +110,7 @@ pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 ///
 /// Provides form for creating a new tweet with 280 character limit.
 /// Uses React-like hooks for state management.
+/// CSRF protection is handled automatically by #[server_fn] macro via headers.
 pub fn tweet_form() -> View {
 	// Hook-styled state for form fields
 	let (content, set_content) = use_state(String::new());

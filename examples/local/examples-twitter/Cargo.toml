@@ -69,6 +69,7 @@ reinhardt = { workspace = true, features = [
 	"reinhardt-browsable-api", # Required for browsable API
 	"admin",                   # Admin panel functionality
 	"pages",                   # WASM-based reactive frontend with SSR (reinhardt::pages)
+	"forms",                   # Form validation and processing
 ] }
 clap = { version = "4", features = ["derive"] }
 console = "0.16.1"
@@ -91,6 +92,12 @@ optional = true
 [dependencies.testcontainers]
 workspace = true
 optional = true
+
+# ═══════════════════════════════════════════════════════════════════════════
+# WASM-specific dev dependencies
+# ═══════════════════════════════════════════════════════════════════════════
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-test = "0.3"
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Server-specific dev dependencies

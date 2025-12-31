@@ -16,7 +16,7 @@
 //! Interactive components with event handlers are hydrated on the client side.
 
 use reinhardt_pages::Signal;
-use reinhardt_pages::component::View;
+use reinhardt_pages::component::{ElementView, IntoView, View};
 use reinhardt_pages::page;
 
 #[cfg(target_arch = "wasm32")]
@@ -417,19 +417,18 @@ pub fn avatar(url: Option<&str>, alt: &str, size: u32) -> View {
 	let src = url
 		.map(|s| s.to_string())
 		.unwrap_or_else(|| "https://via.placeholder.com/150?text=User".to_string());
-	let alt_text = alt.to_string();
+	let alt_owned = alt.to_string();
 	let size_str = format!("{}px", size);
 
-	page!(|src: String, alt_text: String, size_str: String| {
-		img {
-			src: src.clone(),
-			alt: alt_text,
-			class: "rounded-circle",
-			width: size_str.clone(),
-			height: size_str,
-			style: "object-fit: cover;",
-		}
-	})(src, alt_text, size_str)
+	// Use ElementView instead of page! macro for dynamic src attribute
+	ElementView::new("img")
+		.attr("src", src)
+		.attr("alt", alt_owned)
+		.attr("class", "rounded-circle")
+		.attr("width", size_str.clone())
+		.attr("height", size_str)
+		.attr("style", "object-fit: cover;")
+		.into_view()
 }
 
 /// Empty placeholder component

@@ -1,6 +1,7 @@
 //! Profile components using React-like hooks
 //!
 //! Provides profile view and edit form components with hooks-styled state management.
+//! Validation is handled server-side via server functions with automatic CSRF protection.
 
 use crate::shared::types::{ProfileResponse, UpdateProfileRequest};
 use reinhardt_pages::component::{ElementView, IntoView, View};
@@ -13,6 +14,9 @@ use {
 	crate::server_fn::profile::{fetch_profile, update_profile},
 	wasm_bindgen_futures::spawn_local,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::server_fn::profile::fetch_profile;
 
 /// Profile view component using hooks
 ///
@@ -153,8 +157,11 @@ pub fn profile_view(user_id: Uuid) -> View {
 
 /// Profile edit component using hooks
 ///
-/// Provides form for editing user profile with validation.
-/// Uses React-like hooks for state management.
+/// Provides form for editing user profile with:
+/// - Initial values loaded from server
+/// - HTML5 validation for URL fields
+/// - Server-side validation via server functions
+/// - Automatic CSRF protection via server function headers
 pub fn profile_edit(user_id: Uuid) -> View {
 	// Hook-styled state for form fields
 	let (bio, set_bio) = use_state(String::new());
@@ -174,6 +181,7 @@ pub fn profile_edit(user_id: Uuid) -> View {
 		let set_website = set_website.clone();
 
 		spawn_local(async move {
+			// Fetch profile data for initial values
 			if let Ok(profile_data) = fetch_profile(user_id).await {
 				set_bio(profile_data.bio.unwrap_or_default());
 				set_avatar_url(profile_data.avatar_url.unwrap_or_default());
