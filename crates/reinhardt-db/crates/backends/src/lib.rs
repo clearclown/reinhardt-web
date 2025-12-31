@@ -136,7 +136,6 @@
 //! - **`postgres`**: PostgreSQL support with advanced features
 //! - **`mysql`**: MySQL/MariaDB support with XA transactions
 //! - **`sqlite`**: SQLite support for embedded databases
-//! - **`mongodb-backend`**: MongoDB document database support
 //! - **`cockroachdb-backend`**: CockroachDB distributed SQL support
 
 pub mod backend;

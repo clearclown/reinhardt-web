@@ -118,18 +118,13 @@ mysql = [
   "reinhardt-backends/mysql",
 ]
 # NoSQL database features
-nosql-mongodb = ["nosql", "reinhardt-nosql/mongodb"]
 nosql-all = ["nosql", "reinhardt-nosql/nosql-all"]
-
-# Deprecated: Use nosql-mongodb instead
-mongodb-backend = ["nosql-mongodb"]
 
 cockroachdb-backend = ["postgres"] # CockroachDB uses PostgreSQL protocol
 all-databases = [
   "postgres",
   "sqlite",
   "mysql",
-  "nosql-mongodb",
   "cockroachdb-backend",
 ]
 

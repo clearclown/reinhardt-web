@@ -10,8 +10,6 @@ pub enum DatabaseType {
 	Postgres,
 	Sqlite,
 	Mysql,
-	#[cfg(feature = "mongodb-backend")]
-	MongoDB,
 }
 
 impl DatabaseType {
@@ -330,11 +328,6 @@ impl IsolationLevel {
 					IsolationLevel::Serializable => "BEGIN EXCLUSIVE".to_string(),
 					_ => "BEGIN".to_string(),
 				}
-			}
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => {
-				// MongoDB does not use SQL transactions
-				unimplemented!("MongoDB does not support SQL-based transactions")
 			}
 		}
 	}

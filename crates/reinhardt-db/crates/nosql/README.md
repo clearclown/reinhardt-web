@@ -235,32 +235,6 @@ pub trait DocumentBackend: NoSQLBackend {
 - High-level API for document databases
 - Separate crate: `reinhardt-nosql-odm`
 
-## Migration from Old MongoDB Backend
-
-If you're migrating from the old `mongodb-backend` feature in `reinhardt-backends`:
-
-**Before (deprecated)**:
-```rust
-use reinhardt_backends::drivers::mongodb::MongoDBBackend;
-use reinhardt_backends::backend::DatabaseBackend;
-```
-
-**After (recommended)**:
-```rust
-use reinhardt::db::nosql::mongodb::MongoDBBackend;
-use reinhardt::db::nosql::{NoSQLBackend, DocumentBackend};
-```
-
-The old path is deprecated and will be removed in v0.3.0. Use the `nosql-mongodb` feature instead:
-
-```toml
-# Old (deprecated)
-reinhardt-db = { version = "0.1.0-alpha.1", features = ["mongodb-backend"] }
-
-# New (recommended)
-reinhardt-db = { version = "0.1.0-alpha.1", features = ["nosql-mongodb"] }
-```
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

@@ -11,9 +11,6 @@ pub mod mysql;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
 
-#[cfg(feature = "mongodb-backend")]
-pub mod mongodb;
-
 #[cfg(feature = "cockroachdb-backend")]
 pub mod cockroachdb;
 

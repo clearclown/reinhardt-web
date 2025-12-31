@@ -423,8 +423,6 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => String::new(),
 		}
 	}
 
@@ -437,8 +435,6 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => String::new(),
 		}
 	}
 
@@ -451,8 +447,6 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => String::new(),
 		}
 	}
 
@@ -465,8 +459,6 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => String::new(),
 		}
 	}
 
@@ -479,8 +471,6 @@ pub trait BaseDatabaseSchemaEditor: Send + Sync {
 			DatabaseType::Postgres => stmt.to_string(PostgresQueryBuilder),
 			DatabaseType::Mysql => stmt.to_string(MysqlQueryBuilder),
 			DatabaseType::Sqlite => stmt.to_string(SqliteQueryBuilder),
-			#[cfg(feature = "mongodb-backend")]
-			DatabaseType::MongoDB => String::new(),
 		}
 	}
 }
