@@ -23,7 +23,7 @@
 //! - Routes are compiled lazily on first access (thread-safe with RwLock)
 //! - Parameters are extracted directly from matchit's Params
 
-use crate::{PathMatcher, Route, UrlReverser};
+use crate::{Route, UrlReverser};
 use async_trait::async_trait;
 use hyper::Method;
 use matchit::Router as MatchitRouter;
@@ -71,10 +71,6 @@ pub(crate) struct RouteMatch {
 
 	/// Extracted path parameters
 	pub params: HashMap<String, String>,
-
-	/// Full matched path
-	#[allow(dead_code)]
-	pub full_path: String,
 
 	/// Middleware stack to apply (parent → child order)
 	pub middleware_stack: Vec<Arc<dyn Middleware>>,
@@ -154,10 +150,6 @@ pub struct UnifiedRouter {
 
 	/// URL reverser
 	reverser: UrlReverser,
-
-	/// Path matcher for efficient routing (deprecated, kept for compatibility)
-	#[allow(dead_code)]
-	matcher: PathMatcher,
 
 	/// Matchit router for GET requests (uses RwLock for thread-safe lazy compilation)
 	get_router: RwLock<MatchitRouter<RouteHandler>>,
@@ -270,7 +262,6 @@ impl UnifiedRouter {
 			di_context: None,
 			middleware: Vec::new(),
 			reverser: UrlReverser::new(),
-			matcher: PathMatcher::new(),
 			get_router: RwLock::new(MatchitRouter::new()),
 			post_router: RwLock::new(MatchitRouter::new()),
 			put_router: RwLock::new(MatchitRouter::new()),
@@ -518,6 +509,50 @@ impl UnifiedRouter {
 		self
 	}
 
+	/// Register a route with a Handler trait implementation and HTTP method
+	///
+	/// This method accepts a type that implements the `Handler` trait,
+	/// allowing for stateful handlers and a more object-oriented approach.
+	/// Unlike `handler()`, this method requires specifying an HTTP method.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_routers::UnifiedRouter;
+	/// use hyper::Method;
+	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_core::Handler;
+	/// use async_trait::async_trait;
+	///
+	/// #[derive(Clone)]
+	/// struct ArticleHandler;
+	///
+	/// #[async_trait]
+	/// impl Handler for ArticleHandler {
+	///     async fn handle(&self, _request: Request) -> Result<Response> {
+	///         Ok(Response::ok())
+	///     }
+	/// }
+	///
+	/// let router = UnifiedRouter::new()
+	///     .handler_with_method("/articles", Method::GET, ArticleHandler);
+	/// ```
+	pub fn handler_with_method<H: Handler + 'static>(
+		mut self,
+		path: &str,
+		method: Method,
+		handler: H,
+	) -> Self {
+		self.functions.push(FunctionRoute {
+			path: path.to_string(),
+			method,
+			handler: Arc::new(handler),
+			name: None,
+			middleware: Vec::new(),
+		});
+		self
+	}
+
 	/// Register a route (alias for `function`)
 	///
 	/// This method is an alias for `function` and provides the same functionality.
@@ -576,6 +611,55 @@ impl UnifiedRouter {
 			path: path.to_string(),
 			method,
 			handler,
+			name: Some(name.to_string()),
+			middleware: Vec::new(),
+		});
+		self
+	}
+
+	/// Register a named route with a Handler trait implementation and HTTP method
+	///
+	/// This method accepts a type that implements the `Handler` trait,
+	/// allowing for stateful handlers with URL reversal support.
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_routers::UnifiedRouter;
+	/// use hyper::Method;
+	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_core::Handler;
+	/// use async_trait::async_trait;
+	///
+	/// #[derive(Clone)]
+	/// struct ArticleHandler;
+	///
+	/// #[async_trait]
+	/// impl Handler for ArticleHandler {
+	///     async fn handle(&self, _request: Request) -> Result<Response> {
+	///         Ok(Response::ok())
+	///     }
+	/// }
+	///
+	/// let mut router = UnifiedRouter::new()
+	///     .with_namespace("api")
+	///     .handler_with_method_named("/articles", Method::GET, "list_articles", ArticleHandler);
+	///
+	/// router.register_all_routes();
+	/// let url = router.reverse("api:list_articles", &[]).unwrap();
+	/// assert_eq!(url, "/articles");
+	/// ```
+	pub fn handler_with_method_named<H: Handler + 'static>(
+		mut self,
+		path: &str,
+		method: Method,
+		name: &str,
+		handler: H,
+	) -> Self {
+		self.functions.push(FunctionRoute {
+			path: path.to_string(),
+			method,
+			handler: Arc::new(handler),
 			name: Some(name.to_string()),
 			middleware: Vec::new(),
 		});
@@ -1072,7 +1156,7 @@ impl UnifiedRouter {
 				full_path,
 				route.name.clone(),
 				route.namespace.clone().or_else(|| self.namespace.clone()),
-				vec![], // Routes don't store HTTP methods, empty for now
+				vec![], // Method-agnostic handlers accept all HTTP methods (shown as "ALL" in showurls)
 			));
 		}
 
@@ -1104,7 +1188,7 @@ impl UnifiedRouter {
 				full_path,
 				None,                   // View routes don't have names
 				self.namespace.clone(), // Use router's namespace
-				vec![],                 // Views handle their own methods
+				vec![], // Class-based views handle method dispatch internally (accepts all methods)
 			));
 		}
 
@@ -1419,8 +1503,6 @@ impl UnifiedRouter {
 		// Compile routes on first use (lazy compilation with interior mutability)
 		self.compile_routes();
 
-		let full_path = format!("{}{}", self.prefix, path);
-
 		// Normalize path for matchit lookup - routes are registered with leading slash
 		// When prefix is "/" and path is "/health", strip_prefix yields "health" but
 		// the route was registered as "/health". We need to ensure we search with "/health".
@@ -1478,7 +1560,6 @@ impl UnifiedRouter {
 				return Some(RouteMatch {
 					handler: route_handler.handler.clone(),
 					params,
-					full_path,
 					middleware_stack: combined_middleware,
 					di_context,
 				});

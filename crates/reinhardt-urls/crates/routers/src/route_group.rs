@@ -141,6 +141,40 @@ impl RouteGroup {
 		self
 	}
 
+	/// Add a route with a Handler trait implementation and HTTP method
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// use reinhardt_routers::RouteGroup;
+	/// use hyper::Method;
+	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_core::Handler;
+	/// use async_trait::async_trait;
+	///
+	/// #[derive(Clone)]
+	/// struct ArticleHandler;
+	///
+	/// #[async_trait]
+	/// impl Handler for ArticleHandler {
+	///     async fn handle(&self, _request: Request) -> Result<Response> {
+	///         Ok(Response::ok())
+	///     }
+	/// }
+	///
+	/// let group = RouteGroup::new()
+	///     .handler_with_method("/articles", Method::GET, ArticleHandler);
+	/// ```
+	pub fn handler_with_method<H: reinhardt_core::Handler + 'static>(
+		mut self,
+		path: &str,
+		method: hyper::Method,
+		handler: H,
+	) -> Self {
+		self.router = self.router.handler_with_method(path, method, handler);
+		self
+	}
+
 	/// Add a named function-based route
 	///
 	/// # Examples
@@ -177,6 +211,43 @@ impl RouteGroup {
 			+ 'static,
 	{
 		self.router = self.router.function_named(path, method, name, func);
+		self
+	}
+
+	/// Add a named route with a Handler trait implementation and HTTP method
+	///
+	/// # Examples
+	///
+	/// ```rust
+	/// use reinhardt_routers::RouteGroup;
+	/// use hyper::Method;
+	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_core::Handler;
+	/// use async_trait::async_trait;
+	///
+	/// #[derive(Clone)]
+	/// struct ArticleHandler;
+	///
+	/// #[async_trait]
+	/// impl Handler for ArticleHandler {
+	///     async fn handle(&self, _request: Request) -> Result<Response> {
+	///         Ok(Response::ok())
+	///     }
+	/// }
+	///
+	/// let group = RouteGroup::new()
+	///     .handler_with_method_named("/articles", Method::GET, "list_articles", ArticleHandler);
+	/// ```
+	pub fn handler_with_method_named<H: reinhardt_core::Handler + 'static>(
+		mut self,
+		path: &str,
+		method: hyper::Method,
+		name: &str,
+		handler: H,
+	) -> Self {
+		self.router = self
+			.router
+			.handler_with_method_named(path, method, name, handler);
 		self
 	}
 
