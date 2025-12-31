@@ -1,0 +1,10 @@
+error: form! macro is not yet implemented
+ --> tests/ui/fail/empty_fields.rs:8:15
+  |
+8 |       let _form = form! {
+  |  _______________^
+9 | |         fields: {},
+10| |     };
+  |  |_____^
+  |
+  = note: this error originates in the macro `form` (in Nightly builds, run with -Z macro-backtrace for more info)

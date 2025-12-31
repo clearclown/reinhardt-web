@@ -142,6 +142,21 @@ impl CharField {
 		self.strip = false;
 		self
 	}
+
+	/// Set the widget for the field
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_forms::fields::CharField;
+	/// use reinhardt_forms::field::Widget;
+	///
+	/// let field = CharField::new("bio".to_string()).with_widget(Widget::TextArea);
+	/// ```
+	pub fn with_widget(mut self, widget: Widget) -> Self {
+		self.widget = widget;
+		self
+	}
 }
 
 // Note: Default trait is not implemented because CharField requires a name

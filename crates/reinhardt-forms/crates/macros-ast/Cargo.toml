@@ -1,0 +1,17 @@
+[package]
+name = "reinhardt-forms-macros-ast"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "AST definitions for reinhardt-forms macros"
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+syn = { workspace = true, features = ["full", "parsing", "extra-traits"] }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+
+[dev-dependencies]
+rstest = { workspace = true }
+proptest = { workspace = true }

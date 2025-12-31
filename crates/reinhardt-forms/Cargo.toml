@@ -36,8 +36,12 @@ sha2 = { workspace = true }
 hmac = { workspace = true }
 base64 = "0.22"
 
+# Macros (optional)
+reinhardt-forms-macros = { workspace = true, optional = true }
+
 [features]
-full = []
+full = ["macros"]
+macros = ["dep:reinhardt-forms-macros"]
 
 [dev-dependencies]
 tokio-test = "0.4"

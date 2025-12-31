@@ -1,0 +1,13 @@
+error: form! macro is not yet implemented
+ --> tests/ui/fail/duplicate_field_name.rs:8:15
+  |
+8 |       let _form = form! {
+  |  _______________^
+9 | |         fields: {
+10| |             username: CharField {},
+11| |             username: EmailField {},
+12| |         },
+13| |     };
+  |  |_____^
+  |
+  = note: this error originates in the macro `form` (in Nightly builds, run with -Z macro-backtrace for more info)

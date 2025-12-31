@@ -211,11 +211,11 @@ pub use field::{
 	Widget,
 };
 pub use fields::{
-	BooleanField, CharField, ChoiceField, ComboField, DateField, DateTimeField, DecimalField,
-	DurationField, EmailField, FileField, FloatField, GenericIPAddressField, IPProtocol,
-	ImageField, IntegerField, JSONField, ModelChoiceField, ModelMultipleChoiceField,
-	MultiValueField, MultipleChoiceField, RegexField, SlugField, SplitDateTimeField, TimeField,
-	URLField, UUIDField,
+	BooleanField, CharField, ChoiceField, ColorField, ComboField, DateField, DateTimeField,
+	DecimalField, DurationField, EmailField, FileField, FloatField, GenericIPAddressField,
+	IPProtocol, ImageField, IntegerField, JSONField, ModelChoiceField, ModelMultipleChoiceField,
+	MultiValueField, MultipleChoiceField, PasswordField, RegexField, SlugField, SplitDateTimeField,
+	TimeField, URLField, UUIDField,
 };
 pub use file_handling::{
 	FileUploadError, FileUploadHandler, MemoryFileUpload, TemporaryFileUpload,
@@ -233,3 +233,7 @@ pub use model_formset::{ModelFormSet, ModelFormSetBuilder, ModelFormSetConfig};
 pub use security::{FormSecurityMiddleware, HoneypotField, RateLimiter, SecurityError};
 pub use wizard::{FormWizard, WizardStep};
 pub use xss_protection::{XssConfig, XssError, XssProtector};
+
+// Re-export form! macro when macros feature is enabled
+#[cfg(feature = "macros")]
+pub use reinhardt_forms_macros::form;
