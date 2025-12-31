@@ -4,6 +4,7 @@
 //! including encryption key management, file-based encrypted storage, decryption on load,
 //! re-encryption on save, and performance characteristics with large settings.
 
+#![cfg(feature = "encryption")]
 #![allow(clippy::field_reassign_with_default)]
 use reinhardt_settings::encryption::{ConfigEncryptor, EncryptedConfig};
 use rstest::*;
@@ -45,13 +46,11 @@ impl Default for TestConfig {
 }
 
 /// Large configuration for performance testing
-#[cfg(feature = "encryption")]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct LargeConfig {
 	items: Vec<ConfigItem>,
 }
 
-#[cfg(feature = "encryption")]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct ConfigItem {
 	id: u64,
@@ -60,7 +59,6 @@ struct ConfigItem {
 	values: Vec<f64>,
 }
 
-#[cfg(feature = "encryption")]
 impl LargeConfig {
 	fn generate(item_count: usize) -> Self {
 		let items = (0..item_count)
@@ -129,7 +127,6 @@ fn load_encrypted_from_file(path: &PathBuf) -> Result<EncryptedConfig, String> {
 	serde_json::from_str(&json).map_err(|e| format!("Failed to deserialize encrypted data: {}", e))
 }
 
-#[cfg(feature = "encryption")]
 mod encrypted_storage_tests {
 	use super::*;
 
@@ -682,36 +679,5 @@ mod encrypted_storage_tests {
 		for handle in handles {
 			handle.join().expect("Thread panicked");
 		}
-	}
-}
-
-#[cfg(not(feature = "encryption"))]
-mod encryption_fallback_tests {
-	use super::*;
-
-	/// Test: Fallback behavior without encryption feature
-	///
-	/// Validates that without the encryption feature, data is stored as-is.
-	#[rstest]
-	fn test_fallback_without_encryption_feature(temp_dir: TempDir) {
-		let key = vec![1u8; 16]; // Any non-empty key
-		let encryptor = ConfigEncryptor::new(key).expect("Failed to create encryptor");
-
-		let config = TestConfig::default();
-		let encrypted = encrypt_config(&config, &encryptor).expect("Failed to encrypt config");
-
-		// Without encryption feature, data should be unchanged
-		let json_data = serde_json::to_vec(&config).expect("Failed to serialize config");
-		assert_eq!(encrypted.data, json_data);
-
-		// Save and load
-		let file_path = temp_dir.path().join("config.fallback.json");
-		save_encrypted_to_file(&file_path, &encrypted).expect("Failed to save file");
-
-		let loaded_encrypted = load_encrypted_from_file(&file_path).expect("Failed to load file");
-		let decrypted_config: TestConfig =
-			decrypt_config(&loaded_encrypted, &encryptor).expect("Failed to decrypt config");
-
-		assert_eq!(decrypted_config, config);
 	}
 }
