@@ -1,11 +1,13 @@
 //! Integration tests for Server implementation
 
 use bytes::Bytes;
+use http::StatusCode;
 use reinhardt_http::{Request, Response, ViewResult};
 use reinhardt_macros::{get, post};
 use reinhardt_params::Path;
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_test::fixtures::*;
+use reinhardt_test::APIClient;
 
 // Handler for basic request test
 #[get("/test", name = "test")]
@@ -74,16 +76,12 @@ async fn test_server_basic_request() {
 
 	let server = test_server_guard(router).await;
 
-	// Make HTTP request
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/test", server.url))
-		.send()
-		.await
-		.unwrap();
+	// Make HTTP request using APIClient
+	let client = APIClient::with_base_url(&server.url);
+	let response = client.get("/test").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	assert_eq!(response.text().await.unwrap(), "Server works!");
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(response.text(), "Server works!");
 }
 
 #[tokio::test]
@@ -94,21 +92,13 @@ async fn test_server_multiple_requests() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
-	let response = client
-		.get(format!("{}/hello", server.url))
-		.send()
-		.await
-		.unwrap();
-	assert_eq!(response.text().await.unwrap(), "Hello!");
+	let response = client.get("/hello").await.unwrap();
+	assert_eq!(response.text(), "Hello!");
 
-	let response = client
-		.get(format!("{}/goodbye", server.url))
-		.send()
-		.await
-		.unwrap();
-	assert_eq!(response.text().await.unwrap(), "Goodbye!");
+	let response = client.get("/goodbye").await.unwrap();
+	assert_eq!(response.text(), "Goodbye!");
 }
 
 #[tokio::test]
@@ -117,16 +107,14 @@ async fn test_server_post_request() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 	let response = client
-		.post(format!("{}/submit", server.url))
-		.body("test data")
-		.send()
+		.post_raw("/submit", b"test data", "text/plain")
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	assert_eq!(response.text().await.unwrap(), "Received: test data");
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(response.text(), "Received: test data");
 }
 
 #[tokio::test]
@@ -135,21 +123,16 @@ async fn test_server_json_request_response() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 	let test_data = serde_json::json!({
 		"name": "Alice",
 		"age": 30
 	});
 
-	let response = client
-		.post(format!("{}/echo", server.url))
-		.json(&test_data)
-		.send()
-		.await
-		.unwrap();
+	let response = client.post("/echo", &test_data, "json").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let response_json: serde_json::Value = response.json().await.unwrap();
+	assert_eq!(response.status(), StatusCode::OK);
+	let response_json = response.json_value().unwrap();
 	assert_eq!(response_json["name"], "Alice");
 	assert_eq!(response_json["age"], 30);
 }
@@ -160,14 +143,10 @@ async fn test_server_404_response() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/notfound", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = APIClient::with_base_url(&server.url);
+	let response = client.get("/notfound").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
+	assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
@@ -187,15 +166,8 @@ async fn test_server_concurrent_requests() {
 	for _ in 0..10 {
 		let url = server.url.clone();
 		let handle = tokio::spawn(async move {
-			let client = reqwest::Client::new();
-			client
-				.get(format!("{}/test", url))
-				.send()
-				.await
-				.unwrap()
-				.text()
-				.await
-				.unwrap()
+			let client = APIClient::with_base_url(&url);
+			client.get("/test").await.unwrap().text()
 		});
 		handles.push(handle);
 	}
@@ -213,16 +185,14 @@ async fn test_server_custom_headers() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 	let response = client
-		.get(format!("{}/headers", server.url))
-		.header("User-Agent", "TestAgent/1.0")
-		.send()
+		.get_with_headers("/headers", &[("User-Agent", "TestAgent/1.0")])
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	assert_eq!(response.text().await.unwrap(), "User-Agent: TestAgent/1.0");
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(response.text(), "User-Agent: TestAgent/1.0");
 }
 
 #[tokio::test]
@@ -231,13 +201,9 @@ async fn test_server_path_parameters() {
 
 	let server = test_server_guard(router).await;
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(format!("{}/users/123", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client = APIClient::with_base_url(&server.url);
+	let response = client.get("/users/123").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	assert_eq!(response.text().await.unwrap(), "ID: 123");
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(response.text(), "ID: 123");
 }

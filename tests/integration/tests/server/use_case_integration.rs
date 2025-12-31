@@ -17,6 +17,7 @@ use http::Method;
 use reinhardt_http::{Request, Response};
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_test::fixtures::*;
+use reinhardt_test::APIClient;
 use reinhardt_types::Handler;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -232,26 +233,16 @@ async fn test_restful_api_full_workflow() {
 	let store = ArticleStore::new();
 	let _ = ARTICLE_STORE.set(store);
 
-	// Register routes with current router API
+	// Register routes with Handler trait implementation
 	let router = Router::new()
-		.function("/articles", Method::POST, |req| async move {
-			CreateArticleHandler.handle(req).await
-		})
-		.function("/articles", Method::GET, |req| async move {
-			ListArticlesHandler.handle(req).await
-		})
-		.function("/articles/{id}", Method::GET, |req| async move {
-			GetArticleHandler.handle(req).await
-		})
-		.function("/articles/{id}", Method::PUT, |req| async move {
-			UpdateArticleHandler.handle(req).await
-		})
-		.function("/articles/{id}", Method::DELETE, |req| async move {
-			DeleteArticleHandler.handle(req).await
-		});
+		.handler_with_method("/articles", Method::POST, CreateArticleHandler)
+		.handler_with_method("/articles", Method::GET, ListArticlesHandler)
+		.handler_with_method("/articles/{id}", Method::GET, GetArticleHandler)
+		.handler_with_method("/articles/{id}", Method::PUT, UpdateArticleHandler)
+		.handler_with_method("/articles/{id}", Method::DELETE, DeleteArticleHandler);
 
 	let server = test_server_guard(router).await;
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
 	// Step 1: Create a new article
 	let create_payload = serde_json::json!({
@@ -261,39 +252,32 @@ async fn test_restful_api_full_workflow() {
 	});
 
 	let response = client
-		.post(format!("{}/articles", server.url))
-		.json(&create_payload)
-		.send()
+		.post("/articles", &create_payload, "json")
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::CREATED);
-	let created_article: Article = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 201);
+	let created_article: Article = response.json().unwrap();
 	assert_eq!(created_article.title, "Introduction to Rust");
 	assert_eq!(created_article.author, "Alice");
 	let article_id = created_article.id;
 
 	// Step 2: List all articles
-	let response = client
-		.get(format!("{}/articles", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/articles").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let articles: Vec<Article> = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let articles: Vec<Article> = response.json().unwrap();
 	assert_eq!(articles.len(), 1);
 	assert_eq!(articles[0].id, article_id);
 
 	// Step 3: Get specific article
 	let response = client
-		.get(format!("{}/articles/{}", server.url, article_id))
-		.send()
+		.get(&format!("/articles/{}", article_id))
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let article: Article = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let article: Article = response.json().unwrap();
 	assert_eq!(article.id, article_id);
 	assert_eq!(article.title, "Introduction to Rust");
 
@@ -305,43 +289,39 @@ async fn test_restful_api_full_workflow() {
 	});
 
 	let response = client
-		.put(format!("{}/articles/{}", server.url, article_id))
-		.json(&update_payload)
-		.send()
+		.put(
+			&format!("/articles/{}", article_id),
+			&update_payload,
+			"json",
+		)
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let updated_article: Article = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let updated_article: Article = response.json().unwrap();
 	assert_eq!(updated_article.title, "Advanced Rust Programming");
 	assert_eq!(updated_article.id, article_id);
 
 	// Step 5: Delete the article
 	let response = client
-		.delete(format!("{}/articles/{}", server.url, article_id))
-		.send()
+		.delete(&format!("/articles/{}", article_id))
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status_code(), 200);
 
 	// Step 6: Verify deletion
 	let response = client
-		.get(format!("{}/articles/{}", server.url, article_id))
-		.send()
+		.get(&format!("/articles/{}", article_id))
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
+	assert_eq!(response.status_code(), 404);
 
 	// Verify list is empty
-	let response = client
-		.get(format!("{}/articles", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/articles").await.unwrap();
 
-	let articles: Vec<Article> = response.json().await.unwrap();
+	let articles: Vec<Article> = response.json().unwrap();
 	assert_eq!(articles.len(), 0);
 }
 
@@ -447,74 +427,62 @@ async fn test_file_upload_download() {
 	let store = FileStore::new();
 	let _ = FILE_STORE.set(store);
 
-	// Register routes with current router API
+	// Register routes with Handler trait implementation
 	let router = Router::new()
-		.function("/upload", Method::POST, |req| async move {
-			UploadFileHandler.handle(req).await
-		})
-		.function("/download/{filename}", Method::GET, |req| async move {
-			DownloadFileHandler.handle(req).await
-		});
+		.handler_with_method("/upload", Method::POST, UploadFileHandler)
+		.handler_with_method("/download/{filename}", Method::GET, DownloadFileHandler);
 
 	let server = test_server_guard(router).await;
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
 	// Step 1: Upload a large file (1MB of data)
 	let file_data = vec![b'A'; 1024 * 1024]; // 1MB
 	let response = client
-		.post(format!("{}/upload?filename=large_file.bin", server.url))
-		.body(file_data.clone())
-		.send()
+		.post_raw(
+			"/upload?filename=large_file.bin",
+			&file_data,
+			"application/octet-stream",
+		)
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let upload_result: serde_json::Value = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let upload_result: serde_json::Value = response.json().unwrap();
 	assert_eq!(upload_result["filename"], "large_file.bin");
 	assert_eq!(upload_result["size"], 1024 * 1024);
 
 	// Step 2: Download the file and verify content
-	let response = client
-		.get(format!("{}/download/large_file.bin", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/download/large_file.bin").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let downloaded_data = response.bytes().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let downloaded_data = response.body();
 	assert_eq!(downloaded_data.len(), 1024 * 1024);
 	assert_eq!(downloaded_data.to_vec(), file_data);
 
 	// Step 3: Upload another file (text file)
 	let text_content = "Hello, this is a test file!";
 	let response = client
-		.post(format!("{}/upload?filename=test.txt", server.url))
-		.body(text_content)
-		.send()
+		.post_raw(
+			"/upload?filename=test.txt",
+			text_content.as_bytes(),
+			"text/plain",
+		)
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status_code(), 200);
 
 	// Step 4: Download and verify the text file
-	let response = client
-		.get(format!("{}/download/test.txt", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/download/test.txt").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let content = response.text().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let content = response.text();
 	assert_eq!(content, text_content);
 
 	// Verify non-existent file returns 404
-	let response = client
-		.get(format!("{}/download/nonexistent.txt", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/download/nonexistent.txt").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
+	assert_eq!(response.status_code(), 404);
 }
 
 // ============================================================================
@@ -679,6 +647,7 @@ mod graphql_tests {
 	use async_graphql::*;
 	use reinhardt_server::graphql_handler;
 	use reinhardt_test::server::{shutdown_test_server, spawn_test_server};
+	use reinhardt_test::APIClient;
 
 	/// User for pagination testing
 	#[derive(Debug, Clone, SimpleObject)]
@@ -817,7 +786,7 @@ mod graphql_tests {
 		let handler = graphql_handler(query_root, EmptyMutation);
 		let (url, server_handle) = spawn_test_server(handler).await;
 
-		let client = reqwest::Client::new();
+		let client = APIClient::with_base_url(&url);
 
 		// Step 1: Fetch first page (5 users)
 		let query = r#"
@@ -837,15 +806,11 @@ mod graphql_tests {
 			}
 		"#;
 
-		let response = client
-			.post(format!("{}/graphql", url))
-			.json(&serde_json::json!({ "query": query }))
-			.send()
-			.await
-			.unwrap();
+		let payload = serde_json::json!({ "query": query });
+		let response = client.post("/graphql", &payload, "json").await.unwrap();
 
-		assert_eq!(response.status(), reqwest::StatusCode::OK);
-		let result: serde_json::Value = response.json().await.unwrap();
+		assert_eq!(response.status_code(), 200);
+		let result: serde_json::Value = response.json().unwrap();
 		let page1 = &result["data"]["users"];
 
 		assert_eq!(page1["edges"].as_array().unwrap().len(), 5);
@@ -873,14 +838,10 @@ mod graphql_tests {
 			end_cursor
 		);
 
-		let response = client
-			.post(format!("{}/graphql", url))
-			.json(&serde_json::json!({ "query": query }))
-			.send()
-			.await
-			.unwrap();
+		let payload = serde_json::json!({ "query": query });
+		let response = client.post("/graphql", &payload, "json").await.unwrap();
 
-		let result: serde_json::Value = response.json().await.unwrap();
+		let result: serde_json::Value = response.json().unwrap();
 		let page2 = &result["data"]["users"];
 
 		assert_eq!(page2["edges"].as_array().unwrap().len(), 5);
@@ -901,14 +862,10 @@ mod graphql_tests {
 			}
 		"#;
 
-		let response = client
-			.post(format!("{}/graphql", url))
-			.json(&serde_json::json!({ "query": query }))
-			.send()
-			.await
-			.unwrap();
+		let payload = serde_json::json!({ "query": query });
+		let response = client.post("/graphql", &payload, "json").await.unwrap();
 
-		let result: serde_json::Value = response.json().await.unwrap();
+		let result: serde_json::Value = response.json().unwrap();
 		let filtered_page = &result["data"]["users"];
 
 		// Users with age >= 35 (User 14-20, since age = 20 + i)
@@ -1098,25 +1055,19 @@ async fn test_session_management() {
 	let store = SessionStore::new();
 	let _ = SESSION_STORE.set(store);
 
-	// Register routes with current router API
+	// Register routes with Handler trait implementation
 	let router = Router::new()
-		.function("/login", Method::POST, |req| async move {
-			LoginHandler.handle(req).await
-		})
-		.function("/protected", Method::GET, |req| async move {
-			ProtectedHandler.handle(req).await
-		})
-		.function("/logout", Method::POST, |req| async move {
-			LogoutHandler.handle(req).await
-		});
+		.handler_with_method("/login", Method::POST, LoginHandler)
+		.handler_with_method("/protected", Method::GET, ProtectedHandler)
+		.handler_with_method("/logout", Method::POST, LogoutHandler);
 
 	let server = test_server_guard(router).await;
 
 	// Create client with cookie jar
-	let client = reqwest::Client::builder()
+	let client = APIClient::builder()
+		.base_url(&server.url)
 		.cookie_store(true)
-		.build()
-		.unwrap();
+		.build();
 
 	// Step 1: Login
 	let login_payload = serde_json::json!({
@@ -1124,57 +1075,39 @@ async fn test_session_management() {
 		"password": "alice"
 	});
 
-	let response = client
-		.post(format!("{}/login", server.url))
-		.json(&login_payload)
-		.send()
-		.await
-		.unwrap();
+	let response = client.post("/login", &login_payload, "json").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let result: serde_json::Value = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let result: serde_json::Value = response.json().unwrap();
 	assert_eq!(result["message"], "Login successful");
 	assert_eq!(result["username"], "alice");
 
 	// Step 2: Access protected resource with session cookie
-	let response = client
-		.get(format!("{}/protected", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/protected").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let result: serde_json::Value = response.json().await.unwrap();
+	assert_eq!(response.status_code(), 200);
+	let result: serde_json::Value = response.json().unwrap();
 	assert_eq!(result["message"], "Access granted");
 	assert_eq!(result["user"], "alice");
 
 	// Step 3: Verify unauthorized access without cookie (new client)
-	let client_no_cookie = reqwest::Client::new();
-	let response = client_no_cookie
-		.get(format!("{}/protected", server.url))
-		.send()
-		.await
-		.unwrap();
+	let client_no_cookie = APIClient::with_base_url(&server.url);
+	let response = client_no_cookie.get("/protected").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+	assert_eq!(response.status_code(), 401);
 
 	// Step 4: Logout
 	let response = client
-		.post(format!("{}/logout", server.url))
-		.send()
+		.post_raw("/logout", &[], "application/json")
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status_code(), 200);
 
 	// Step 5: Verify protected resource is inaccessible after logout
-	let response = client
-		.get(format!("{}/protected", server.url))
-		.send()
-		.await
-		.unwrap();
+	let response = client.get("/protected").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+	assert_eq!(response.status_code(), 401);
 
 	// Verify invalid credentials
 	let invalid_payload = serde_json::json!({
@@ -1183,11 +1116,9 @@ async fn test_session_management() {
 	});
 
 	let response = client
-		.post(format!("{}/login", server.url))
-		.json(&invalid_payload)
-		.send()
+		.post("/login", &invalid_payload, "json")
 		.await
 		.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+	assert_eq!(response.status_code(), 401);
 }

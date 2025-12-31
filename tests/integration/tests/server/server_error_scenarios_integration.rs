@@ -9,11 +9,13 @@
 //! - Port conflict errors (server bind failures)
 
 use async_trait::async_trait;
+use http::StatusCode;
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::types::Handler;
 use reinhardt_exception::{Error, Result};
 use reinhardt_server::ShutdownCoordinator;
 use reinhardt_test::fixtures::*;
+use reinhardt_test::APIClient;
 use rstest::*;
 use std::sync::Arc;
 use std::time::Duration;
@@ -146,28 +148,23 @@ async fn test_invalid_http_headers(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 
 	// Test 1: Missing required header
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
-	let body = response.text().await.expect("Failed to read body");
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+	let body = response.text();
 	assert!(body.contains("Missing Content-Type header"));
 
 	// Test 2: Valid headers
+	let headers = &[("Content-Type", "application/json")];
 	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.header("Content-Type", "application/json")
-		.send()
+		.get_with_headers("/test", headers)
 		.await
 		.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(test_server);
@@ -189,16 +186,15 @@ async fn test_oversized_headers(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 
 	// Create a very large header value (10KB)
 	let large_header_value = "x".repeat(10 * 1024);
 
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.header("X-Large-Header", large_header_value)
-		.send()
-		.await;
+	// Leak the string to get a static lifetime for the header value
+	let large_header_value: &'static str = Box::leak(large_header_value.into_boxed_str());
+	let headers = &[("X-Large-Header", large_header_value)];
+	let response = client.get_with_headers("/test", headers).await;
 
 	// Server should either reject the request or handle it gracefully
 	// hyper may reject oversized headers before reaching our handler
@@ -239,56 +235,46 @@ async fn test_json_parse_errors(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 
 	// Test 1: Invalid JSON syntax
 	let response = client
-		.post(&format!("{}/parse", test_server.url))
-		.header("Content-Type", "application/json")
-		.body("{invalid json")
-		.send()
+		.post_raw_with_headers("/parse", b"{invalid json", "application/json", &[])
 		.await
 		.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
-	let body = response.text().await.expect("Failed to read body");
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+	let body = response.text();
 	assert!(body.contains("Invalid JSON"));
 
 	// Test 2: Empty body
 	let response = client
-		.post(&format!("{}/parse", test_server.url))
-		.header("Content-Type", "application/json")
-		.body("")
-		.send()
+		.post_raw_with_headers("/parse", b"", "application/json", &[])
 		.await
 		.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
 	// Test 3: Valid JSON
 	let response = client
-		.post(&format!("{}/parse", test_server.url))
-		.header("Content-Type", "application/json")
-		.body(r#"{"key": "value"}"#)
-		.send()
+		.post_raw_with_headers("/parse", br#"{"key": "value"}"#, "application/json", &[])
 		.await
 		.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let body = response.text().await.expect("Failed to read body");
+	assert_eq!(response.status(), StatusCode::OK);
+	let body = response.text();
 	assert_eq!(body, "JSON parsed successfully");
 
 	// Test 4: Invalid UTF-8 in body
+	// APIClient's post_raw accepts &[u8], allowing binary data including invalid UTF-8
+	let invalid_utf8: &[u8] = &[0xFF, 0xFE, 0xFD]; // Invalid UTF-8 bytes
 	let response = client
-		.post(&format!("{}/parse", test_server.url))
-		.header("Content-Type", "application/json")
-		.body(vec![0xFF, 0xFE, 0xFD]) // Invalid UTF-8 bytes
-		.send()
+		.post_raw("/parse", invalid_utf8, "application/json")
 		.await
 		.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
-	let body = response.text().await.expect("Failed to read body");
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+	let body = response.text();
 	assert!(body.contains("Invalid UTF-8"));
 
 	// Cleanup
@@ -337,14 +323,13 @@ async fn test_network_disconnection(#[future] http1_server: TestServer) {
 	tokio::time::sleep(Duration::from_millis(100)).await;
 
 	// Verify server is still responsive by making a normal request
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
+		.get("/test")
 		.await
 		.expect("Failed to send request after disconnection");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(test_server);
@@ -390,14 +375,13 @@ async fn test_client_disconnect_during_response(#[future] http1_server: TestServ
 	tokio::time::sleep(Duration::from_millis(100)).await;
 
 	// Verify server is still responsive
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
+		.get("/test")
 		.await
 		.expect("Failed to send request after disconnect");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(test_server);
@@ -424,24 +408,21 @@ async fn test_handler_panic_recovery(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::builder()
+	let client = APIClient::builder()
+		.base_url(&test_server.url)
 		.timeout(Duration::from_secs(5))
-		.build()
-		.expect("Failed to create client");
+		.build();
 
 	// Send request that will cause panic in handler
 	// The panic should be caught by the tokio task spawn
-	let result = client
-		.get(&format!("{}/panic", test_server.url))
-		.send()
-		.await;
+	let result = client.get("/panic").await;
 
 	// The request may fail due to panic or connection reset
 	// The important thing is that the server doesn't crash
 	match result {
 		Ok(response) => {
 			// If we get a response, it should be an error status
-			assert!(response.status().is_server_error() || response.status().is_client_error());
+			assert!(response.is_server_error() || response.is_client_error());
 		}
 		Err(e) => {
 			// Connection error is acceptable when handler panics
@@ -466,13 +447,17 @@ async fn test_handler_panic_recovery(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create verification server");
 
-	let response = client
-		.get(&format!("{}/test", verification_server.url))
-		.send()
+	let verification_client = APIClient::builder()
+		.base_url(&verification_server.url)
+		.timeout(Duration::from_secs(5))
+		.build();
+
+	let response = verification_client
+		.get("/test")
 		.await
 		.expect("Server should still be responsive after handler panic");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(verification_server);
@@ -501,43 +486,46 @@ async fn test_large_request_payload(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::builder()
+	let client = APIClient::builder()
+		.base_url(&test_server.url)
 		.timeout(Duration::from_secs(10))
-		.build()
-		.expect("Failed to create client");
+		.build();
 
 	// Test 1: Request within size limit
 	let small_payload = "x".repeat(512 * 1024); // 512KB
 	let response = client
-		.post(&format!("{}/upload", test_server.url))
-		.body(small_payload)
-		.send()
+		.post_raw(
+			"/upload",
+			small_payload.as_bytes(),
+			"application/octet-stream",
+		)
 		.await
 		.expect("Failed to send small request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Test 2: Request exceeding size limit
 	let large_payload = "x".repeat(2 * 1024 * 1024); // 2MB
 	let response = client
-		.post(&format!("{}/upload", test_server.url))
-		.body(large_payload)
-		.send()
+		.post_raw(
+			"/upload",
+			large_payload.as_bytes(),
+			"application/octet-stream",
+		)
 		.await
 		.expect("Failed to send large request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
-	let body = response.text().await.expect("Failed to read body");
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+	let body = response.text();
 	assert!(body.contains("Request body too large"));
 
 	// Verify server is still responsive after large payload
 	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
+		.get("/test")
 		.await
 		.expect("Failed to send request after large payload");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(test_server);
@@ -560,24 +548,22 @@ async fn test_many_concurrent_requests(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::builder()
-		.timeout(Duration::from_secs(10))
-		.build()
-		.expect("Failed to create client");
+	// APIClient uses connection pooling internally via reqwest::Client
+	let client = Arc::new(
+		APIClient::builder()
+			.base_url(&test_server.url)
+			.timeout(Duration::from_secs(10))
+			.build(),
+	);
 
 	// Spawn 100 concurrent requests
 	let mut tasks = vec![];
 	for i in 0..100 {
 		let client = client.clone();
-		let url = format!("{}/test/{}", test_server.url, i);
+		let path = format!("/test/{}", i);
 
-		let task = tokio::spawn(async move {
-			client
-				.get(&url)
-				.send()
-				.await
-				.expect("Failed to send request")
-		});
+		let task =
+			tokio::spawn(async move { client.get(&path).await.expect("Failed to send request") });
 
 		tasks.push(task);
 	}
@@ -588,17 +574,16 @@ async fn test_many_concurrent_requests(#[future] http1_server: TestServer) {
 	// Verify all requests completed successfully
 	for result in results {
 		let response = result.expect("Task panicked");
-		assert_eq!(response.status(), reqwest::StatusCode::OK);
+		assert_eq!(response.status(), StatusCode::OK);
 	}
 
 	// Verify server is still responsive after concurrent load
 	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
+		.get("/test")
 		.await
 		.expect("Failed to send request after concurrent load");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(test_server);
@@ -668,14 +653,13 @@ async fn test_port_conflict_error(#[future] http1_server: TestServer) {
 	}
 
 	// Verify first server is still running
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&first_server.url);
 	let response = client
-		.get(&format!("{}/test", first_server.url))
-		.send()
+		.get("/test")
 		.await
 		.expect("First server should still be responsive");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Cleanup
 	drop(first_server);
@@ -698,50 +682,42 @@ async fn test_error_status_codes(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 
 	// Test 400 Bad Request
 	let response = client
-		.get(&format!("{}/bad-request", test_server.url))
-		.send()
+		.get("/bad-request")
 		.await
 		.expect("Failed to send request");
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
 	// Test 401 Unauthorized
 	let response = client
-		.get(&format!("{}/unauthorized", test_server.url))
-		.send()
+		.get("/unauthorized")
 		.await
 		.expect("Failed to send request");
-	assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+	assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
 	// Test 403 Forbidden
 	let response = client
-		.get(&format!("{}/forbidden", test_server.url))
-		.send()
+		.get("/forbidden")
 		.await
 		.expect("Failed to send request");
-	assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+	assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
 	// Test 404 Not Found
 	let response = client
-		.get(&format!("{}/not-found", test_server.url))
-		.send()
+		.get("/not-found")
 		.await
 		.expect("Failed to send request");
-	assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
+	assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
 	// Test 500 Internal Server Error
 	let response = client
-		.get(&format!("{}/internal-error", test_server.url))
-		.send()
+		.get("/internal-error")
 		.await
 		.expect("Failed to send request");
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	// Cleanup
 	drop(test_server);

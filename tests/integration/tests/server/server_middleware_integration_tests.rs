@@ -4,8 +4,10 @@
 //! These tests verify that the server properly integrates with middleware
 //! chain functionality, including real HTTP server tests.
 
+use http::StatusCode;
 use reinhardt_middleware::{LoggingMiddleware, MiddlewareChain};
 use reinhardt_test::server::{shutdown_test_server, spawn_test_server};
+use reinhardt_test::APIClient;
 use reinhardt_types::{Handler, Middleware};
 use std::sync::{Arc, Mutex};
 
@@ -145,13 +147,12 @@ async fn test_middleware_with_real_http_server() {
 	// Give the server a moment to start
 	tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-	// Send real HTTP request using reqwest
-	let client = reqwest::Client::new();
-	let response = client.get(&format!("{}/test", url)).send().await.unwrap();
+	// Send real HTTP request using APIClient
+	let client = APIClient::with_base_url(&url);
+	let response = client.get("/test").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
-	let body = response.text().await.unwrap();
-	assert_eq!(body, "Real server response");
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(response.text(), "Real server response");
 
 	// Shutdown server
 	shutdown_test_server(handle).await;
@@ -178,10 +179,10 @@ async fn test_middleware_order_with_real_server() {
 	tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 	// Send request
-	let client = reqwest::Client::new();
-	let response = client.get(&format!("{}/", url)).send().await.unwrap();
+	let client = APIClient::with_base_url(&url);
+	let response = client.get("/").await.unwrap();
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Verify execution order
 	// Middlewares are executed in FIFO order (first added runs first):
@@ -215,21 +216,15 @@ async fn test_concurrent_requests_through_middleware() {
 	tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
 	// Send multiple concurrent requests
-	let client = reqwest::Client::new();
 	let mut handles = Vec::new();
 
 	for i in 0..5 {
-		let client = client.clone();
 		let url = url.clone();
 		handles.push(tokio::spawn(async move {
-			let response = client
-				.get(&format!("{}/request-{}", url, i))
-				.send()
-				.await
-				.unwrap();
-			assert_eq!(response.status(), reqwest::StatusCode::OK);
-			let body = response.text().await.unwrap();
-			assert_eq!(body, "Concurrent response");
+			let client = APIClient::with_base_url(&url);
+			let response = client.get(&format!("/request-{}", i)).await.unwrap();
+			assert_eq!(response.status(), StatusCode::OK);
+			assert_eq!(response.text(), "Concurrent response");
 		}));
 	}
 
@@ -270,22 +265,15 @@ async fn test_middleware_error_handling() {
 	let (url, handle) = spawn_test_server(Arc::new(chain)).await;
 	tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&url);
 
 	// Normal request should succeed
-	let response = client
-		.get(&format!("{}/success", url))
-		.send()
-		.await
-		.unwrap();
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	let response = client.get("/success").await.unwrap();
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Request with "fail" in path should return error (500)
-	let response = client.get(&format!("{}/fail", url)).send().await.unwrap();
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	let response = client.get("/fail").await.unwrap();
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	shutdown_test_server(handle).await;
 }

@@ -4,10 +4,12 @@
 //! transformation errors, and custom error responses.
 
 use async_trait::async_trait;
+use http::StatusCode;
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::types::{Handler, Middleware};
 use reinhardt_exception::{Error, Result};
 use reinhardt_test::fixtures::*;
+use reinhardt_test::APIClient;
 use rstest::*;
 use std::sync::Arc;
 
@@ -140,18 +142,11 @@ async fn test_middleware_exception_handling(#[future] http1_server: TestServer) 
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let client = APIClient::with_base_url(&test_server.url);
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	// Should return 500 Internal Server Error
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	// Cleanup
 	drop(test_server);
@@ -184,18 +179,11 @@ async fn test_error_propagation_through_chain(#[future] http1_server: TestServer
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let client = APIClient::with_base_url(&test_server.url);
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	// Error should propagate and return 500
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	// Cleanup
 	drop(test_server);
@@ -222,17 +210,16 @@ async fn test_request_transformation_error(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&test_server.url);
 
 	// Request with "invalid" in path should trigger BadRequest error
 	let response = client
-		.get(&format!("{}/invalid-request", test_server.url))
-		.send()
+		.get("/invalid-request")
 		.await
 		.expect("Failed to send request");
 
 	// Should return 400 Bad Request
-	assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+	assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
 	// Cleanup
 	drop(test_server);
@@ -259,18 +246,11 @@ async fn test_response_transformation_error(#[future] http1_server: TestServer) 
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let client = APIClient::with_base_url(&test_server.url);
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	// Response transformation error should return 500
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	// Cleanup
 	drop(test_server);
@@ -300,18 +280,11 @@ async fn test_custom_error_response(#[future] http1_server: TestServer) {
 		.await
 		.expect("Failed to create test server");
 
-	let client = reqwest::Client::new();
-	let response = client
-		.get(&format!("{}/test", test_server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let client = APIClient::with_base_url(&test_server.url);
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	// Should return 500 with custom error response
-	assert_eq!(
-		response.status(),
-		reqwest::StatusCode::INTERNAL_SERVER_ERROR
-	);
+	assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
 
 	// Verify Content-Type is JSON
 	let content_type = response
@@ -321,7 +294,7 @@ async fn test_custom_error_response(#[future] http1_server: TestServer) {
 	assert_eq!(content_type, "application/json");
 
 	// Verify custom error format
-	let body = response.text().await.expect("Failed to read response body");
+	let body = response.text();
 	assert!(body.contains(r#""type":"custom_error""#));
 	assert!(body.contains(r#""error":"#));
 

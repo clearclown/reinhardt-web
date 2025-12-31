@@ -7,6 +7,7 @@
 //! - Window reset behavior
 //! - Rate limit with timeout combination
 
+use http::StatusCode;
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::types::Handler;
 use reinhardt_http::ViewResult;
@@ -14,6 +15,7 @@ use reinhardt_macros::get;
 use reinhardt_routers::UnifiedRouter as Router;
 use reinhardt_server::{RateLimitConfig, RateLimitHandler, RateLimitStrategy};
 use reinhardt_test::fixtures::*;
+use reinhardt_test::APIClient;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -62,24 +64,20 @@ async fn test_fixed_window_rate_limit() {
 		.await
 		.expect("Failed to create server with rate limit");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
 	// First 3 requests should succeed
 	for i in 1..=3 {
-		let response = client
-			.get(&format!("{}/test", server.url))
-			.send()
-			.await
-			.expect("Failed to send request");
+		let response = client.get("/test").await.expect("Failed to send request");
 
 		assert_eq!(
 			response.status(),
-			reqwest::StatusCode::OK,
+			StatusCode::OK,
 			"Request {} should succeed",
 			i
 		);
 		assert_eq!(
-			response.text().await.unwrap(),
+			response.text(),
 			"Success",
 			"Request {} should return success body",
 			i
@@ -87,19 +85,15 @@ async fn test_fixed_window_rate_limit() {
 	}
 
 	// 4th request should be rate limited
-	let response = client
-		.get(&format!("{}/test", server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::TOO_MANY_REQUESTS,
+		StatusCode::TOO_MANY_REQUESTS,
 		"4th request should be rate limited"
 	);
 	assert_eq!(
-		response.text().await.unwrap(),
+		response.text(),
 		"Rate limit exceeded",
 		"Rate limited response should have correct body"
 	);
@@ -122,21 +116,19 @@ async fn test_independent_client_rate_limits() {
 		.await
 		.expect("Failed to create server with rate limit");
 
-	let client1 = reqwest::Client::new();
-	let client2 = reqwest::Client::new();
+	let client1 = APIClient::with_base_url(&server.url);
+	let client2 = APIClient::with_base_url(&server.url);
 
 	// Client 1: Use up its limit (2 requests)
 	for i in 1..=2 {
 		let response = client1
-			.get(&format!("{}/test", server.url))
-			.header("X-Forwarded-For", "192.168.1.100")
-			.send()
+			.get_with_headers("/test", &[("X-Forwarded-For", "192.168.1.100")])
 			.await
 			.expect("Failed to send request");
 
 		assert_eq!(
 			response.status(),
-			reqwest::StatusCode::OK,
+			StatusCode::OK,
 			"Client 1 request {} should succeed",
 			i
 		);
@@ -144,29 +136,25 @@ async fn test_independent_client_rate_limits() {
 
 	// Client 1: 3rd request should be rate limited
 	let response = client1
-		.get(&format!("{}/test", server.url))
-		.header("X-Forwarded-For", "192.168.1.100")
-		.send()
+		.get_with_headers("/test", &[("X-Forwarded-For", "192.168.1.100")])
 		.await
 		.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::TOO_MANY_REQUESTS,
+		StatusCode::TOO_MANY_REQUESTS,
 		"Client 1 should be rate limited"
 	);
 
 	// Client 2: Should still be able to make requests (independent limit)
 	let response = client2
-		.get(&format!("{}/test", server.url))
-		.header("X-Forwarded-For", "192.168.1.200")
-		.send()
+		.get_with_headers("/test", &[("X-Forwarded-For", "192.168.1.200")])
 		.await
 		.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::OK,
+		StatusCode::OK,
 		"Client 2 should not be rate limited (independent counter)"
 	);
 }
@@ -189,25 +177,17 @@ async fn test_retry_after_header() {
 		.await
 		.expect("Failed to create server with rate limit");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
 	// First request succeeds
-	let response = client
-		.get(&format!("{}/test", server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	assert_eq!(response.status(), StatusCode::OK);
 
 	// Second request should be rate limited
-	let response = client
-		.get(&format!("{}/test", server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
-	assert_eq!(response.status(), reqwest::StatusCode::TOO_MANY_REQUESTS);
+	assert_eq!(response.status(), StatusCode::TOO_MANY_REQUESTS);
 
 	// Currently, RateLimitHandler does not include Retry-After header
 	// This test documents the current behavior
@@ -238,34 +218,26 @@ async fn test_window_reset() {
 		.await
 		.expect("Failed to create server with rate limit");
 
-	let client = reqwest::Client::new();
+	let client = APIClient::with_base_url(&server.url);
 
 	// Use up the limit (2 requests)
 	for i in 1..=2 {
-		let response = client
-			.get(&format!("{}/test", server.url))
-			.send()
-			.await
-			.expect("Failed to send request");
+		let response = client.get("/test").await.expect("Failed to send request");
 
 		assert_eq!(
 			response.status(),
-			reqwest::StatusCode::OK,
+			StatusCode::OK,
 			"Request {} should succeed",
 			i
 		);
 	}
 
 	// 3rd request should be rate limited
-	let response = client
-		.get(&format!("{}/test", server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::TOO_MANY_REQUESTS,
+		StatusCode::TOO_MANY_REQUESTS,
 		"3rd request should be rate limited"
 	);
 
@@ -273,19 +245,15 @@ async fn test_window_reset() {
 	tokio::time::sleep(Duration::from_millis(600)).await;
 
 	// After window reset, requests should succeed again
-	let response = client
-		.get(&format!("{}/test", server.url))
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/test").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::OK,
+		StatusCode::OK,
 		"Request after window reset should succeed"
 	);
 	assert_eq!(
-		response.text().await.unwrap(),
+		response.text(),
 		"Success",
 		"Request after reset should return success body"
 	);
@@ -318,67 +286,50 @@ async fn test_rate_limit_with_timeout() {
 		.await
 		.expect("Failed to create server with middleware chain");
 
-	let client = reqwest::Client::builder()
-		.timeout(Duration::from_secs(5)) // Client timeout > server timeout
-		.build()
-		.expect("Failed to create client");
+	// APIClient uses reqwest internally which has no default timeout
+	// Server timeout (1s) is shorter than handler delay (2s), so server will timeout
+	let client = APIClient::with_base_url(&server.url);
 
 	// First request should timeout (slow handler takes 2s, timeout is 1s)
-	let response = client
-		.get(&server.url)
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::REQUEST_TIMEOUT,
+		StatusCode::REQUEST_TIMEOUT,
 		"Request should timeout"
 	);
 
 	// Second request should also timeout (not rate limited yet, only 1 request made)
-	let response = client
-		.get(&server.url)
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::REQUEST_TIMEOUT,
+		StatusCode::REQUEST_TIMEOUT,
 		"Second request should also timeout"
 	);
 
 	// Make 3 more requests to approach rate limit (total 5 requests)
 	for i in 3..=5 {
-		let response = client
-			.get(&server.url)
-			.send()
-			.await
-			.expect("Failed to send request");
+		let response = client.get("/").await.expect("Failed to send request");
 
 		assert_eq!(
 			response.status(),
-			reqwest::StatusCode::REQUEST_TIMEOUT,
+			StatusCode::REQUEST_TIMEOUT,
 			"Request {} should timeout",
 			i
 		);
 	}
 
 	// 6th request should be rate limited (not timeout)
-	let response = client
-		.get(&server.url)
-		.send()
-		.await
-		.expect("Failed to send request");
+	let response = client.get("/").await.expect("Failed to send request");
 
 	assert_eq!(
 		response.status(),
-		reqwest::StatusCode::TOO_MANY_REQUESTS,
+		StatusCode::TOO_MANY_REQUESTS,
 		"6th request should be rate limited, not timeout"
 	);
 	assert_eq!(
-		response.text().await.unwrap(),
+		response.text(),
 		"Rate limit exceeded",
 		"Rate limited response should have correct body"
 	);
