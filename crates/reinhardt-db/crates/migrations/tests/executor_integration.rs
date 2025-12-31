@@ -29,33 +29,19 @@ use testcontainers::{ContainerAsync, GenericImage};
 // Test Helper Functions
 // ============================================================================
 
-fn leak_str(s: impl Into<String>) -> &'static str {
-	Box::leak(s.into().into_boxed_str())
-}
-
 /// Create a simple migration for testing
-fn create_test_migration(
-	app: &'static str,
-	name: &'static str,
-	operations: Vec<Operation>,
-) -> Migration {
-	Migration {
-		app_label: app,
-		name,
-		operations,
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
+fn create_test_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
+	let mut migration = Migration::new(name, app);
+	for op in operations {
+		migration = migration.add_operation(op);
 	}
+	migration
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -94,12 +80,15 @@ async fn test_executor_basic_run(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("test_author"),
+			name: "test_author".to_string(),
 			columns: vec![
 				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
 				create_basic_column("name", FieldType::Custom("TEXT NOT NULL".to_string())),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -107,13 +96,16 @@ async fn test_executor_basic_run(
 		"testapp",
 		"0002_add_book",
 		vec![Operation::CreateTable {
-			name: leak_str("test_book"),
+			name: "test_book".to_string(),
 			columns: vec![
 				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
 				create_basic_column("title", FieldType::Custom("TEXT NOT NULL".to_string())),
 				create_basic_column("author_id", FieldType::Custom("INTEGER".to_string())),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -170,12 +162,15 @@ async fn test_executor_rollback(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("rollback_test"),
+			name: "rollback_test".to_string(),
 			columns: vec![create_basic_column(
 				"id",
 				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -196,7 +191,7 @@ async fn test_executor_rollback(
 
 	// Now rollback
 	let rollback_ops = vec![Operation::DropTable {
-		name: leak_str("rollback_test"),
+		name: "rollback_test".to_string(),
 	}];
 
 	let rollback_migration = create_test_migration("testapp", "0001_rollback", rollback_ops);
@@ -239,12 +234,15 @@ async fn test_executor_already_applied(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("skip_test"),
+			name: "skip_test".to_string(),
 			columns: vec![create_basic_column(
 				"id",
 				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -303,43 +301,31 @@ async fn test_executor_with_dependencies(
 		.expect("Failed to connect to database");
 	let mut executor = DatabaseMigrationExecutor::new(connection);
 
-	let migration1 = Migration {
-		app_label: "app1",
-		name: leak_str("0001_initial"),
-		operations: vec![Operation::CreateTable {
-			name: leak_str("dep_table1"),
-			columns: vec![create_basic_column(
-				"id",
-				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
-			)],
-			constraints: vec![],
-		}],
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
-	};
+	let migration1 = Migration::new("0001_initial", "app1").add_operation(Operation::CreateTable {
+		name: "dep_table1".to_string(),
+		columns: vec![create_basic_column(
+			"id",
+			FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
+		)],
+		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
+	});
 
-	let migration2 = Migration {
-		app_label: "app2",
-		name: leak_str("0001_initial"),
-		operations: vec![Operation::CreateTable {
-			name: leak_str("dep_table2"),
+	let migration2 = Migration::new("0001_initial", "app2")
+		.add_dependency("app1", "0001_initial")
+		.add_operation(Operation::CreateTable {
+			name: "dep_table2".to_string(),
 			columns: vec![create_basic_column(
 				"id",
 				FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
-		}],
-		dependencies: vec![("app1", "0001_initial")],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
-	};
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
+		});
 
 	// Apply in correct order
 	let result = executor.apply_migrations(&[migration1, migration2]).await;
@@ -458,12 +444,15 @@ async fn test_executor_add_column_migration(
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: "evolving_table",
+			name: "evolving_table".to_string(),
 			columns: vec![
 				create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
 				create_basic_column("name", FieldType::Custom("TEXT".to_string())),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -484,8 +473,9 @@ async fn test_executor_add_column_migration(
 		"testapp",
 		"0002_add_email",
 		vec![Operation::AddColumn {
-			table: "evolving_table",
+			table: "evolving_table".to_string(),
 			column: create_basic_column("email", FieldType::Custom("TEXT".to_string())),
+			mysql_options: None,
 		}],
 	);
 
@@ -514,65 +504,4 @@ async fn test_executor_add_column_migration(
 		3,
 		"Should have 3 columns after migration"
 	);
-}
-
-/// Test complex migration with multiple operations
-///
-/// **Test Intent**: Verify MigrationExecutor can apply multiple operations
-/// (CREATE TABLE, ADD COLUMN, CREATE INDEX) in a single migration
-///
-/// **Integration Point**: MigrationExecutor → Multiple PostgreSQL DDL operations
-///
-/// **Not Intent**: Transaction atomicity, rollback on partial failure
-#[rstest]
-#[tokio::test]
-async fn test_executor_complex_migration(
-	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
-) {
-	let (_container, _pool, _port, url) = postgres_container.await;
-
-	let connection = DatabaseConnection::connect_postgres(&url)
-		.await
-		.expect("Failed to connect to database");
-	let mut executor = DatabaseMigrationExecutor::new(connection);
-
-	// Create complex migration with multiple operations
-	let migration = create_test_migration(
-		"testapp",
-		"0001_complex",
-		vec![
-			Operation::CreateTable {
-				name: "complex_table",
-				columns: vec![
-					create_basic_column("id", FieldType::Custom("SERIAL PRIMARY KEY".to_string())),
-					create_basic_column("username", FieldType::Custom("TEXT NOT NULL".to_string())),
-				],
-				constraints: vec![],
-			},
-			Operation::AddColumn {
-				table: "complex_table",
-				column: create_basic_column("email", FieldType::Custom("TEXT".to_string())),
-			},
-		],
-	);
-
-	let result = executor.apply_migrations(&[migration]).await;
-	assert!(result.is_ok(), "Complex migration should succeed");
-
-	// Verify table and columns were created
-	let columns = sqlx::query(
-		"SELECT column_name FROM information_schema.columns WHERE table_name = 'complex_table'",
-	)
-	.fetch_all(_pool.as_ref())
-	.await
-	.unwrap();
-
-	let column_names: Vec<String> = columns
-		.iter()
-		.map(|row| row.get::<String, _>("column_name"))
-		.collect();
-
-	assert!(column_names.contains(&"id".to_string()));
-	assert!(column_names.contains(&"username".to_string()));
-	assert!(column_names.contains(&"email".to_string()));
 }

@@ -3,28 +3,13 @@ use reinhardt_migrations::{
 	ColumnDefinition, DatabaseMigrationExecutor, FieldType, Migration, Operation,
 };
 
-/// Helper function to leak a string to get a 'static lifetime
-fn leak_str(s: impl Into<String>) -> &'static str {
-	Box::leak(s.into().into_boxed_str())
-}
-
 /// Test helper to create a simple migration
-fn create_test_migration(
-	app: &'static str,
-	name: &'static str,
-	operations: Vec<Operation>,
-) -> Migration {
-	Migration {
-		app_label: app,
-		name,
-		operations,
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
+fn create_test_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
+	let mut migration = Migration::new(name, app);
+	for op in operations {
+		migration = migration.add_operation(op);
 	}
+	migration
 }
 
 #[tokio::test]
@@ -41,10 +26,10 @@ async fn test_executor_basic_run() {
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("test_author"),
+			name: "test_author".to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: leak_str("id"),
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 					not_null: false,
 					unique: false,
@@ -53,7 +38,7 @@ async fn test_executor_basic_run() {
 					default: None,
 				},
 				ColumnDefinition {
-					name: leak_str("name"),
+					name: "name".to_string(),
 					type_definition: FieldType::Custom("TEXT NOT NULL".to_string()),
 					not_null: false,
 					unique: false,
@@ -63,6 +48,9 @@ async fn test_executor_basic_run() {
 				},
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -70,10 +58,10 @@ async fn test_executor_basic_run() {
 		"testapp",
 		"0002_add_book",
 		vec![Operation::CreateTable {
-			name: leak_str("test_book"),
+			name: "test_book".to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: leak_str("id"),
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 					not_null: false,
 					unique: false,
@@ -82,7 +70,7 @@ async fn test_executor_basic_run() {
 					default: None,
 				},
 				ColumnDefinition {
-					name: leak_str("title"),
+					name: "title".to_string(),
 					type_definition: FieldType::Custom("TEXT NOT NULL".to_string()),
 					not_null: false,
 					unique: false,
@@ -91,7 +79,7 @@ async fn test_executor_basic_run() {
 					default: None,
 				},
 				ColumnDefinition {
-					name: leak_str("author_id"),
+					name: "author_id".to_string(),
 					type_definition: FieldType::Custom("INTEGER".to_string()),
 					not_null: false,
 					unique: false,
@@ -101,6 +89,9 @@ async fn test_executor_basic_run() {
 				},
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -145,9 +136,9 @@ async fn test_executor_rollback() {
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("rollback_test"),
+			name: "rollback_test".to_string(),
 			columns: vec![ColumnDefinition {
-				name: leak_str("id"),
+				name: "id".to_string(),
 				type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 				not_null: false,
 				unique: false,
@@ -156,6 +147,9 @@ async fn test_executor_rollback() {
 				default: None,
 			}],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -166,7 +160,7 @@ async fn test_executor_rollback() {
 
 	// Now rollback
 	let rollback_ops = vec![Operation::DropTable {
-		name: leak_str("rollback_test"),
+		name: "rollback_test".to_string(),
 	}];
 
 	let rollback_migration = create_test_migration("testapp", "0001_rollback", rollback_ops);
@@ -200,9 +194,9 @@ async fn test_executor_already_applied() {
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("skip_test"),
+			name: "skip_test".to_string(),
 			columns: vec![ColumnDefinition {
-				name: leak_str("id"),
+				name: "id".to_string(),
 				type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 				not_null: false,
 				unique: false,
@@ -211,6 +205,9 @@ async fn test_executor_already_applied() {
 				default: None,
 			}],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -258,37 +255,29 @@ async fn test_executor_with_dependencies() {
 
 	let mut executor = DatabaseMigrationExecutor::new(db.clone());
 
-	let migration1 = Migration {
-		app_label: "app1",
-		name: leak_str("0001_initial"),
-		operations: vec![Operation::CreateTable {
-			name: leak_str("dep_table1"),
-			columns: vec![ColumnDefinition {
-				name: leak_str("id"),
-				type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
-				not_null: false,
-				unique: false,
-				primary_key: false,
-				auto_increment: false,
-				default: None,
-			}],
-			constraints: vec![],
+	let migration1 = Migration::new("0001_initial", "app1").add_operation(Operation::CreateTable {
+		name: "dep_table1".to_string(),
+		columns: vec![ColumnDefinition {
+			name: "id".to_string(),
+			type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
+			not_null: false,
+			unique: false,
+			primary_key: false,
+			auto_increment: false,
+			default: None,
 		}],
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
-	};
+		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
+	});
 
-	let migration2 = Migration {
-		app_label: "app2",
-		name: leak_str("0001_initial"),
-		operations: vec![Operation::CreateTable {
-			name: leak_str("dep_table2"),
+	let migration2 = Migration::new("0001_initial", "app2")
+		.add_dependency("app1", "0001_initial")
+		.add_operation(Operation::CreateTable {
+			name: "dep_table2".to_string(),
 			columns: vec![ColumnDefinition {
-				name: leak_str("id"),
+				name: "id".to_string(),
 				type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 				not_null: false,
 				unique: false,
@@ -297,14 +286,10 @@ async fn test_executor_with_dependencies() {
 				default: None,
 			}],
 			constraints: vec![],
-		}],
-		dependencies: vec![("app1", "0001_initial")],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
-	};
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
+		});
 
 	// Apply in correct order
 	let result = executor.apply_migrations(&[migration1, migration2]).await;
@@ -358,10 +343,10 @@ async fn test_executor_add_column_migration() {
 		"testapp",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("evolving_table"),
+			name: "evolving_table".to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: leak_str("id"),
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 					not_null: false,
 					unique: false,
@@ -370,7 +355,7 @@ async fn test_executor_add_column_migration() {
 					default: None,
 				},
 				ColumnDefinition {
-					name: leak_str("name"),
+					name: "name".to_string(),
 					type_definition: FieldType::Custom("TEXT".to_string()),
 					not_null: false,
 					unique: false,
@@ -380,6 +365,9 @@ async fn test_executor_add_column_migration() {
 				},
 			],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		}],
 	);
 
@@ -390,9 +378,9 @@ async fn test_executor_add_column_migration() {
 		"testapp",
 		"0002_add_email",
 		vec![Operation::AddColumn {
-			table: leak_str("evolving_table"),
+			table: "evolving_table".to_string(),
 			column: ColumnDefinition {
-				name: leak_str("email"),
+				name: "email".to_string(),
 				type_definition: FieldType::Custom("TEXT".to_string()),
 				not_null: false,
 				unique: false,
@@ -400,6 +388,7 @@ async fn test_executor_add_column_migration() {
 				auto_increment: false,
 				default: None,
 			},
+			mysql_options: None,
 		}],
 	);
 

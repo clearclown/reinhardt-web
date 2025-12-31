@@ -5,17 +5,15 @@
 
 use reinhardt_migrations::{ColumnDefinition, FieldType, MigrationOperation, Operation};
 
-/// Helper function to leak a string to get a 'static lifetime
-fn leak_str(s: impl Into<String>) -> &'static str {
-	Box::leak(s.into().into_boxed_str())
-}
-
 #[test]
 fn test_create_table_fragment() {
 	let op = Operation::CreateTable {
-		name: leak_str("users"),
+		name: "users".to_string(),
 		columns: vec![],
 		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
 	};
 
 	assert_eq!(
@@ -33,7 +31,7 @@ fn test_create_table_fragment() {
 #[test]
 fn test_drop_table_fragment() {
 	let op = Operation::DropTable {
-		name: leak_str("Users"),
+		name: "Users".to_string(),
 	};
 
 	assert_eq!(
@@ -51,8 +49,9 @@ fn test_drop_table_fragment() {
 #[test]
 fn test_add_column_fragment() {
 	let op = Operation::AddColumn {
-		table: leak_str("Users"),
+		table: "Users".to_string(),
 		column: ColumnDefinition::new("email", FieldType::Custom("VARCHAR(255)".to_string())),
+		mysql_options: None,
 	};
 
 	assert_eq!(
@@ -70,8 +69,8 @@ fn test_add_column_fragment() {
 #[test]
 fn test_drop_column_fragment() {
 	let op = Operation::DropColumn {
-		table: leak_str("Users"),
-		column: leak_str("Age"),
+		table: "Users".to_string(),
+		column: "Age".to_string(),
 	};
 
 	assert_eq!(
@@ -89,9 +88,10 @@ fn test_drop_column_fragment() {
 #[test]
 fn test_alter_column_fragment() {
 	let op = Operation::AlterColumn {
-		table: leak_str("Users"),
-		column: leak_str("Email"),
+		table: "Users".to_string(),
+		column: "Email".to_string(),
 		new_definition: ColumnDefinition::new("email", FieldType::Custom("TEXT".to_string())),
+		mysql_options: None,
 	};
 
 	assert_eq!(
@@ -109,8 +109,8 @@ fn test_alter_column_fragment() {
 #[test]
 fn test_rename_table_fragment() {
 	let op = Operation::RenameTable {
-		old_name: leak_str("OldTable"),
-		new_name: leak_str("NewTable"),
+		old_name: "OldTable".to_string(),
+		new_name: "NewTable".to_string(),
 	};
 
 	assert_eq!(
@@ -128,9 +128,9 @@ fn test_rename_table_fragment() {
 #[test]
 fn test_rename_column_fragment() {
 	let op = Operation::RenameColumn {
-		table: leak_str("Users"),
-		old_name: leak_str("old_field"),
-		new_name: leak_str("new_field"),
+		table: "Users".to_string(),
+		old_name: "old_field".to_string(),
+		new_name: "new_field".to_string(),
 	};
 
 	assert_eq!(
@@ -148,8 +148,8 @@ fn test_rename_column_fragment() {
 #[test]
 fn test_add_constraint_fragment() {
 	let op = Operation::AddConstraint {
-		table: leak_str("Users"),
-		constraint_sql: leak_str("UNIQUE(email)"),
+		table: "Users".to_string(),
+		constraint_sql: "UNIQUE(email)".to_string(),
 	};
 
 	assert_eq!(
@@ -167,8 +167,8 @@ fn test_add_constraint_fragment() {
 #[test]
 fn test_drop_constraint_fragment() {
 	let op = Operation::DropConstraint {
-		table: leak_str("Users"),
-		constraint_name: leak_str("UniqueEmail"),
+		table: "Users".to_string(),
+		constraint_name: "UniqueEmail".to_string(),
 	};
 
 	assert_eq!(
@@ -186,12 +186,15 @@ fn test_drop_constraint_fragment() {
 #[test]
 fn test_create_index_fragment() {
 	let op = Operation::CreateIndex {
-		table: leak_str("Users"),
-		columns: vec!["email"],
+		table: "Users".to_string(),
+		columns: vec!["email".to_string()],
 		unique: false,
 		index_type: None,
 		where_clause: None,
 		concurrently: false,
+		expressions: None,
+		mysql_options: None,
+		operator_class: None,
 	};
 
 	assert_eq!(
@@ -209,12 +212,15 @@ fn test_create_index_fragment() {
 #[test]
 fn test_create_unique_index_fragment() {
 	let op = Operation::CreateIndex {
-		table: leak_str("Users"),
-		columns: vec!["email"],
+		table: "Users".to_string(),
+		columns: vec!["email".to_string()],
 		unique: true,
 		index_type: None,
 		where_clause: None,
 		concurrently: false,
+		expressions: None,
+		mysql_options: None,
+		operator_class: None,
 	};
 
 	assert_eq!(
@@ -232,8 +238,8 @@ fn test_create_unique_index_fragment() {
 #[test]
 fn test_drop_index_fragment() {
 	let op = Operation::DropIndex {
-		table: leak_str("Users"),
-		columns: vec!["email"],
+		table: "Users".to_string(),
+		columns: vec!["email".to_string()],
 	};
 
 	assert_eq!(
@@ -251,7 +257,7 @@ fn test_drop_index_fragment() {
 #[test]
 fn test_run_sql_no_fragment() {
 	let op = Operation::RunSQL {
-		sql: leak_str("CREATE TRIGGER ..."),
+		sql: "CREATE TRIGGER ...".to_string(),
 		reverse_sql: None,
 	};
 
@@ -269,7 +275,7 @@ fn test_run_sql_no_fragment() {
 #[test]
 fn test_run_rust_no_fragment() {
 	let op = Operation::RunRust {
-		code: leak_str("fn migrate() { ... }"),
+		code: "fn migrate() { ... }".to_string(),
 		reverse_code: None,
 	};
 
@@ -287,8 +293,8 @@ fn test_run_rust_no_fragment() {
 #[test]
 fn test_alter_table_comment_fragment() {
 	let op = Operation::AlterTableComment {
-		table: leak_str("Users"),
-		comment: Some("User account table"),
+		table: "Users".to_string(),
+		comment: Some("User account table".to_string()),
 	};
 
 	assert_eq!(
@@ -306,8 +312,8 @@ fn test_alter_table_comment_fragment() {
 #[test]
 fn test_alter_unique_together_fragment() {
 	let op = Operation::AlterUniqueTogether {
-		table: leak_str("OrderItem"),
-		unique_together: vec![vec!["order_id", "product_id"]],
+		table: "OrderItem".to_string(),
+		unique_together: vec![vec!["order_id".to_string(), "product_id".to_string()]],
 	};
 
 	assert_eq!(
@@ -327,10 +333,10 @@ fn test_alter_model_options_fragment() {
 	use std::collections::HashMap;
 
 	let mut options = HashMap::new();
-	options.insert("ordering", "username");
+	options.insert("ordering".to_string(), "username".to_string());
 
 	let op = Operation::AlterModelOptions {
-		table: leak_str("User"),
+		table: "User".to_string(),
 		options,
 	};
 
@@ -349,10 +355,10 @@ fn test_alter_model_options_fragment() {
 #[test]
 fn test_create_inherited_table_fragment() {
 	let op = Operation::CreateInheritedTable {
-		name: leak_str("AdminUser"),
+		name: "AdminUser".to_string(),
 		columns: vec![],
-		base_table: leak_str("User"),
-		join_column: leak_str("user_id"),
+		base_table: "User".to_string(),
+		join_column: "user_id".to_string(),
 	};
 
 	assert_eq!(
@@ -370,9 +376,9 @@ fn test_create_inherited_table_fragment() {
 #[test]
 fn test_add_discriminator_column_fragment() {
 	let op = Operation::AddDiscriminatorColumn {
-		table: leak_str("Animal"),
-		column_name: leak_str("animal_type"),
-		default_value: leak_str("animal"),
+		table: "Animal".to_string(),
+		column_name: "animal_type".to_string(),
+		default_value: "animal".to_string(),
 	};
 
 	assert_eq!(
@@ -392,17 +398,21 @@ fn test_case_insensitive_naming() {
 	// Test that all fragments are lowercase
 	let ops = vec![
 		Operation::CreateTable {
-			name: leak_str("MyTable"),
+			name: "MyTable".to_string(),
 			columns: vec![],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 		Operation::AddColumn {
-			table: leak_str("MyTable"),
+			table: "MyTable".to_string(),
 			column: ColumnDefinition::new("MyField", FieldType::Custom("TEXT".to_string())),
+			mysql_options: None,
 		},
 		Operation::DropColumn {
-			table: leak_str("MyTable"),
-			column: leak_str("MyField"),
+			table: "MyTable".to_string(),
+			column: "MyField".to_string(),
 		},
 	];
 

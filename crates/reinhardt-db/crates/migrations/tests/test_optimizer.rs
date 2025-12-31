@@ -6,9 +6,9 @@ use reinhardt_migrations::{
 	OperationOptimizer,
 };
 
-fn create_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -23,14 +23,19 @@ fn test_create_delete_table_optimization() {
 	// CreateTable followed by DropTable should be optimized away
 	let operations = vec![
 		Operation::CreateTable {
-			name: "test_table",
+			name: "test_table".to_string(),
 			columns: vec![create_column(
 				"id",
-				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
-		Operation::DropTable { name: "test_table" },
+		Operation::DropTable {
+			name: "test_table".to_string(),
+		},
 	];
 
 	let optimizer = OperationOptimizer::new();
@@ -45,12 +50,13 @@ fn test_add_remove_field_optimization() {
 	// AddColumn followed by DropColumn should be optimized away
 	let operations = vec![
 		Operation::AddColumn {
-			table: "test_table",
+			table: "test_table".to_string(),
 			column: create_column("temp", FieldType::Text),
+			mysql_options: None,
 		},
 		Operation::DropColumn {
-			table: "test_table",
-			column: "temp",
+			table: "test_table".to_string(),
+			column: "temp".to_string(),
 		},
 	];
 
@@ -66,17 +72,19 @@ fn test_consecutive_alter_optimization() {
 	// Multiple AlterColumn on same field should be merged
 	let operations = vec![
 		Operation::AlterColumn {
-			table: "test_table",
-			column: "field",
+			table: "test_table".to_string(),
+			column: "field".to_string(),
 			new_definition: create_column("field", FieldType::Integer),
+			mysql_options: None,
 		},
 		Operation::AlterColumn {
-			table: "test_table",
-			column: "field",
+			table: "test_table".to_string(),
+			column: "field".to_string(),
 			new_definition: create_column(
 				"field",
 				FieldType::Custom("INTEGER NOT NULL".to_string()),
 			),
+			mysql_options: None,
 		},
 	];
 
@@ -90,9 +98,10 @@ fn test_consecutive_alter_optimization() {
 			table,
 			column,
 			new_definition,
+			..
 		} => {
-			assert_eq!(*table, "test_table");
-			assert_eq!(*column, "field");
+			assert_eq!(table, "test_table");
+			assert_eq!(column, "field");
 			assert_eq!(
 				new_definition.type_definition.to_sql_string(),
 				FieldType::Custom("INTEGER NOT NULL".to_string()).to_sql_string()
@@ -107,12 +116,12 @@ fn test_rename_table_optimization() {
 	// Multiple RenameTable operations should be chained
 	let operations = vec![
 		Operation::RenameTable {
-			old_name: "old",
-			new_name: "temp",
+			old_name: "old".to_string(),
+			new_name: "temp".to_string(),
 		},
 		Operation::RenameTable {
-			old_name: "temp",
-			new_name: "new",
+			old_name: "temp".to_string(),
+			new_name: "new".to_string(),
 		},
 	];
 
@@ -126,8 +135,8 @@ fn test_rename_table_optimization() {
 	assert_eq!(optimized.len(), 1);
 	match &optimized[0] {
 		Operation::RenameTable { old_name, new_name } => {
-			assert_eq!(*old_name, "old");
-			assert_eq!(*new_name, "new");
+			assert_eq!(old_name, "old");
+			assert_eq!(new_name, "new");
 		}
 		_ => panic!("Expected RenameTable operation"),
 	}
@@ -138,16 +147,20 @@ fn test_create_table_with_add_column() {
 	// CreateTable followed by AddColumn (not currently optimized)
 	let operations = vec![
 		Operation::CreateTable {
-			name: "test_table",
+			name: "test_table".to_string(),
 			columns: vec![create_column(
 				"id",
-				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 		Operation::AddColumn {
-			table: "test_table",
+			table: "test_table".to_string(),
 			column: create_column("name", FieldType::Text),
+			mysql_options: None,
 		},
 	];
 
@@ -165,20 +178,26 @@ fn test_no_optimization_needed() {
 	// Different tables - no optimization needed
 	let operations = vec![
 		Operation::CreateTable {
-			name: "table1",
+			name: "table1".to_string(),
 			columns: vec![create_column(
 				"id",
-				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 		Operation::CreateTable {
-			name: "table2",
+			name: "table2".to_string(),
 			columns: vec![create_column(
 				"id",
-				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 	];
 
@@ -194,16 +213,19 @@ fn test_index_optimization() {
 	// CreateIndex followed by DropIndex should be optimized away
 	let operations = vec![
 		Operation::CreateIndex {
-			table: "test_table",
-			columns: vec!["field"],
+			table: "test_table".to_string(),
+			columns: vec!["field".to_string()],
 			unique: false,
 			index_type: None,
 			where_clause: None,
 			concurrently: false,
+			expressions: None,
+			mysql_options: None,
+			operator_class: None,
 		},
 		Operation::DropIndex {
-			table: "test_table",
-			columns: vec!["field"],
+			table: "test_table".to_string(),
+			columns: vec!["field".to_string()],
 		},
 	];
 
@@ -219,12 +241,12 @@ fn test_constraint_optimization() {
 	// AddConstraint followed by DropConstraint should be optimized away
 	let operations = vec![
 		Operation::AddConstraint {
-			table: "test_table",
-			constraint_sql: "CONSTRAINT check_temp CHECK (value > 0)",
+			table: "test_table".to_string(),
+			constraint_sql: "CONSTRAINT check_temp CHECK (value > 0)".to_string(),
 		},
 		Operation::DropConstraint {
-			table: "test_table",
-			constraint_name: "check_temp",
+			table: "test_table".to_string(),
+			constraint_name: "check_temp".to_string(),
 		},
 	];
 
@@ -240,17 +262,7 @@ fn test_constraint_optimization() {
 #[test]
 fn test_migration_with_no_operations() {
 	// Migration with no operations
-	let migration = Migration {
-		app_label: "testapp",
-		name: "0001_empty",
-		operations: vec![],
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: None,
-		state_only: false,
-		database_only: false,
-	};
+	let migration = Migration::new("0001_empty", "testapp");
 
 	assert_eq!(migration.operations.len(), 0);
 }
@@ -260,22 +272,20 @@ fn test_migration_optimization_preserves_order() {
 	// Optimization should preserve operation order when necessary
 	let operations = vec![
 		Operation::CreateTable {
-			name: "table1",
+			name: "table1".to_string(),
 			columns: vec![create_column(
 				"id",
-				FieldType::Custom(FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string()),
+				FieldType::Custom("INTEGER PRIMARY KEY".to_string()),
 			)],
 			constraints: vec![],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 		Operation::CreateTable {
-			name: "table2",
+			name: "table2".to_string(),
 			columns: vec![
-				create_column(
-					"id",
-					FieldType::Custom(
-						FieldType::Custom("INTEGER PRIMARY KEY".to_string()).to_string(),
-					),
-				),
+				create_column("id", FieldType::Custom("INTEGER PRIMARY KEY".to_string())),
 				create_column("table1_id", FieldType::Integer),
 			],
 			constraints: vec![Constraint::ForeignKey {
@@ -285,7 +295,11 @@ fn test_migration_optimization_preserves_order() {
 				referenced_columns: vec!["id".to_string()],
 				on_delete: ForeignKeyAction::Cascade,
 				on_update: ForeignKeyAction::NoAction,
+				deferrable: None,
 			}],
+			without_rowid: None,
+			partition: None,
+			interleave_in_parent: None,
 		},
 	];
 
@@ -295,11 +309,11 @@ fn test_migration_optimization_preserves_order() {
 	// Order must be preserved (table2 depends on table1)
 	assert_eq!(optimized.len(), 2);
 	match &optimized[0] {
-		Operation::CreateTable { name, .. } => assert_eq!(*name, "table1"),
+		Operation::CreateTable { name, .. } => assert_eq!(name, "table1"),
 		_ => panic!("Expected CreateTable for table1"),
 	}
 	match &optimized[1] {
-		Operation::CreateTable { name, .. } => assert_eq!(*name, "table2"),
+		Operation::CreateTable { name, .. } => assert_eq!(name, "table2"),
 		_ => panic!("Expected CreateTable for table2"),
 	}
 }

@@ -672,7 +672,7 @@ fn test_generate_migrations() {
 	assert_eq!(migrations.len(), 2);
 
 	// Use HashSet for collection comparison with detailed error message
-	let actual_apps: HashSet<_> = migrations.iter().map(|m| m.app_label).collect();
+	let actual_apps: HashSet<_> = migrations.iter().map(|m| m.app_label.as_str()).collect();
 	let expected_apps: HashSet<_> = ["books", "authors"].iter().cloned().collect();
 	assert_eq!(
 		actual_apps, expected_apps,
@@ -1420,7 +1420,7 @@ fn test_fields_sorted_by_name() {
 
 	// Extract field names from the CreateTable operation
 	if let Operation::CreateTable { columns, .. } = &migrations[0].operations[0] {
-		let field_names: Vec<_> = columns.iter().map(|col| col.name).collect();
+		let field_names: Vec<_> = columns.iter().map(|col| col.name.clone()).collect();
 
 		// Create a sorted version
 		let mut sorted_names = field_names.clone();
@@ -1434,7 +1434,15 @@ fn test_fields_sorted_by_name() {
 		);
 
 		// Verify the expected order
-		assert_eq!(field_names, vec!["bio", "created_at", "email", "username"]);
+		assert_eq!(
+			field_names,
+			vec![
+				"bio".to_string(),
+				"created_at".to_string(),
+				"email".to_string(),
+				"username".to_string()
+			]
+		);
 	} else {
 		panic!("Expected CreateTable operation");
 	}

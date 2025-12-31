@@ -11,12 +11,12 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Helper to create a simple table schema
-fn create_table_schema(table_name: &'static str) -> TableSchema {
+fn create_table_schema(table_name: &str) -> TableSchema {
 	let mut columns = BTreeMap::new();
 	columns.insert(
 		"id".to_string(),
 		ColumnSchema {
-			name: "id",
+			name: "id".to_string(),
 			data_type: FieldType::Integer,
 			nullable: false,
 			default: None,
@@ -27,7 +27,7 @@ fn create_table_schema(table_name: &'static str) -> TableSchema {
 	columns.insert(
 		"name".to_string(),
 		ColumnSchema {
-			name: "name",
+			name: "name".to_string(),
 			data_type: FieldType::VarChar(100),
 			nullable: false,
 			default: None,
@@ -37,7 +37,7 @@ fn create_table_schema(table_name: &'static str) -> TableSchema {
 	);
 
 	TableSchema {
-		name: table_name,
+		name: table_name.to_string(),
 		columns,
 		indexes: Vec::new(),
 		constraints: Vec::new(),
@@ -74,17 +74,11 @@ async fn test_duplicate_migration_detection() {
 	);
 
 	// Save the first migration to repository (this is what the caller would do)
-	let first_migration = Migration {
-		app_label: "test_app",
-		name: "0001_initial",
-		operations: migration_result.operations.clone(),
-		dependencies: vec![],
-		replaces: vec![],
-		atomic: true,
-		initial: Some(true),
-		state_only: false,
-		database_only: false,
-	};
+	let mut first_migration = Migration::new("0001_initial", "test_app");
+	first_migration.initial = Some(true);
+	for op in migration_result.operations.clone() {
+		first_migration = first_migration.add_operation(op);
+	}
 	{
 		let mut repo = repository.lock().await;
 		repo.save(&first_migration)
@@ -193,7 +187,7 @@ async fn test_no_changes_error() {
 fn test_operation_equality() {
 	// Test that identical operations are considered equal
 	let col1 = ColumnDefinition {
-		name: "id",
+		name: "id".to_string(),
 		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
@@ -203,7 +197,7 @@ fn test_operation_equality() {
 	};
 
 	let col2 = ColumnDefinition {
-		name: "id",
+		name: "id".to_string(),
 		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
@@ -215,22 +209,28 @@ fn test_operation_equality() {
 	assert_eq!(col1, col2, "Identical column definitions should be equal");
 
 	let op1 = Operation::CreateTable {
-		name: "users",
+		name: "users".to_string(),
 		columns: vec![col1],
 		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
 	};
 
 	let op2 = Operation::CreateTable {
-		name: "users",
+		name: "users".to_string(),
 		columns: vec![col2],
 		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
 	};
 
 	assert_eq!(op1, op2, "Identical operations should be equal");
 
 	// Test different operations are not equal
 	let col3 = ColumnDefinition {
-		name: "id",
+		name: "id".to_string(),
 		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
@@ -240,9 +240,12 @@ fn test_operation_equality() {
 	};
 
 	let op3 = Operation::CreateTable {
-		name: "posts",
+		name: "posts".to_string(),
 		columns: vec![col3],
 		constraints: vec![],
+		without_rowid: None,
+		partition: None,
+		interleave_in_parent: None,
 	};
 
 	assert_ne!(op1, op3, "Different operations should not be equal");
