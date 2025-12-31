@@ -17,13 +17,13 @@ impl MigrationProvider for ExampleMigrations {
 	fn migrations() -> Vec<Migration> {
 		vec![
 			Migration {
-				app_label: "users",
-				name: "0001_initial",
+				app_label: "users".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![Operation::CreateTable {
-					name: "users",
+					name: "users".to_string(),
 					columns: vec![
 						ColumnDefinition {
-							name: "id",
+							name: "id".to_string(),
 							type_definition: FieldType::BigInteger,
 							not_null: true,
 							unique: false,
@@ -32,7 +32,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "name",
+							name: "name".to_string(),
 							type_definition: FieldType::VarChar(255),
 							not_null: true,
 							unique: false,
@@ -41,7 +41,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "email",
+							name: "email".to_string(),
 							type_definition: FieldType::VarChar(255),
 							not_null: true,
 							unique: true,
@@ -50,7 +50,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "created_at",
+							name: "created_at".to_string(),
 							type_definition: FieldType::TimestampTz,
 							not_null: true,
 							unique: false,
@@ -60,6 +60,9 @@ impl MigrationProvider for ExampleMigrations {
 						},
 					],
 					constraints: vec![],
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				}],
 				dependencies: vec![],
 				replaces: vec![],
@@ -67,15 +70,17 @@ impl MigrationProvider for ExampleMigrations {
 				initial: Some(true),
 				state_only: false,
 				database_only: false,
+				optional_dependencies: vec![],
+				swappable_dependencies: vec![],
 			},
 			Migration {
-				app_label: "todos",
-				name: "0001_initial",
+				app_label: "todos".to_string(),
+				name: "0001_initial".to_string(),
 				operations: vec![Operation::CreateTable {
-					name: "todos",
+					name: "todos".to_string(),
 					columns: vec![
 						ColumnDefinition {
-							name: "id",
+							name: "id".to_string(),
 							type_definition: FieldType::BigInteger,
 							not_null: true,
 							unique: false,
@@ -84,7 +89,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "title",
+							name: "title".to_string(),
 							type_definition: FieldType::VarChar(255),
 							not_null: true,
 							unique: false,
@@ -93,7 +98,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "description",
+							name: "description".to_string(),
 							type_definition: FieldType::Text,
 							not_null: false,
 							unique: false,
@@ -102,16 +107,16 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "completed",
+							name: "completed".to_string(),
 							type_definition: FieldType::Boolean,
 							not_null: true,
 							unique: false,
 							primary_key: false,
 							auto_increment: false,
-							default: Some("false"),
+							default: Some("false".to_string()),
 						},
 						ColumnDefinition {
-							name: "created_at",
+							name: "created_at".to_string(),
 							type_definition: FieldType::TimestampTz,
 							not_null: true,
 							unique: false,
@@ -120,7 +125,7 @@ impl MigrationProvider for ExampleMigrations {
 							default: None,
 						},
 						ColumnDefinition {
-							name: "updated_at",
+							name: "updated_at".to_string(),
 							type_definition: FieldType::TimestampTz,
 							not_null: true,
 							unique: false,
@@ -130,6 +135,9 @@ impl MigrationProvider for ExampleMigrations {
 						},
 					],
 					constraints: vec![],
+					without_rowid: None,
+					interleave_in_parent: None,
+					partition: None,
 				}],
 				dependencies: vec![],
 				replaces: vec![],
@@ -137,6 +145,8 @@ impl MigrationProvider for ExampleMigrations {
 				initial: Some(true),
 				state_only: false,
 				database_only: false,
+				optional_dependencies: vec![],
+				swappable_dependencies: vec![],
 			},
 		]
 	}
