@@ -188,7 +188,7 @@ impl<M: Model> HyperlinkedModelSerializer<M> {
 		M::PrimaryKey: serde::Serialize,
 	{
 		if let Some(pk) = instance.primary_key() {
-			let pk_str = serde_json::to_string(pk)
+			let pk_str = serde_json::to_string(&pk)
 				.map_err(|e| SerializerError::Other {
 					message: format!("Primary key serialization error: {}", e),
 				})?

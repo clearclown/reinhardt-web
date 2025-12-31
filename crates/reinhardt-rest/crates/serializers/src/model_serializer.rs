@@ -499,7 +499,7 @@ where
 				};
 
 				validator
-					.validate(connection, &value_str, instance.primary_key())
+					.validate(connection, &value_str, instance.primary_key().as_ref())
 					.await
 					.map_err(|e| {
 						SerializerError::Validation(ValidatorError::UniqueViolation {
@@ -527,7 +527,7 @@ where
 			}
 
 			validator
-				.validate(connection, &values, instance.primary_key())
+				.validate(connection, &values, instance.primary_key().as_ref())
 				.await
 				.map_err(|e| {
 					SerializerError::Validation(ValidatorError::UniqueTogetherViolation {

@@ -21,7 +21,7 @@
 //! impl Model for User {
 //!     type PrimaryKey = i64;
 //!     fn table_name() -> &'static str { "users" }
-//!     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+//!     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 //!     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 //! }
 //!
@@ -173,7 +173,7 @@ impl From<DatabaseValidatorError> for reinhardt_exception::Error {
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 /// # }
 /// #
@@ -213,7 +213,7 @@ impl<M: Model> UniqueValidator<M> {
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// # }
 	/// let validator = UniqueValidator::<User>::new("username");
@@ -243,7 +243,7 @@ impl<M: Model> UniqueValidator<M> {
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// # }
 	/// let validator = UniqueValidator::<User>::new("username")
@@ -336,7 +336,7 @@ impl<M: Model> UniqueValidator<M> {
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 /// # }
 /// #
@@ -375,7 +375,7 @@ impl<M: Model> UniqueTogetherValidator<M> {
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// # }
 	/// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"]);
@@ -405,7 +405,7 @@ impl<M: Model> UniqueTogetherValidator<M> {
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// # }
 	/// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"])
@@ -518,8 +518,8 @@ mod tests {
 			TestUserFields
 		}
 
-		fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-			self.id.as_ref()
+		fn primary_key(&self) -> Option<Self::PrimaryKey> {
+			self.id
 		}
 
 		fn set_primary_key(&mut self, value: Self::PrimaryKey) {
