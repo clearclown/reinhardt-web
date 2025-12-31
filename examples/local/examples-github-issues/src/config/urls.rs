@@ -9,14 +9,11 @@ use async_graphql::{
 use reinhardt::routes;
 use reinhardt::{JwtAuth, Request, Response, StatusCode, UnifiedRouter, ViewResult};
 
-use crate::apps::auth::views::{AuthMutation, AuthQuery, UserStorage};
-use crate::apps::issues::views::{
-	IssueEventBroadcaster, IssueMutation, IssueQuery, IssueStorage, IssueSubscription,
-};
-use crate::apps::projects::views::{
-	ProjectMemberStorage, ProjectMutation, ProjectQuery, ProjectStorage,
-};
+use crate::apps::auth::views::{AuthMutation, AuthQuery};
+use crate::apps::issues::views::{IssueMutation, IssueQuery, IssueSubscription};
+use crate::apps::projects::views::{ProjectMutation, ProjectQuery};
 
+use super::schema::get_schema;
 use super::views;
 
 /// Merged Query type combining all app queries
@@ -34,36 +31,9 @@ pub struct Subscription(IssueSubscription);
 /// GraphQL schema type alias
 pub type AppSchema = Schema<Query, Mutation, Subscription>;
 
-/// Create the unified GraphQL schema with all context data
-pub fn create_schema() -> AppSchema {
-	let user_storage = UserStorage::new();
-	let issue_storage = IssueStorage::new();
-	let project_storage = ProjectStorage::new();
-	let member_storage = ProjectMemberStorage::new();
-	let broadcaster = IssueEventBroadcaster::new();
-
-	// JWT secret should be loaded from settings in production
-	let jwt_auth = JwtAuth::new(b"your-secret-key-change-in-production");
-
-	Schema::build(
-		Query::default(),
-		Mutation::default(),
-		Subscription::default(),
-	)
-	.data(user_storage)
-	.data(issue_storage)
-	.data(project_storage)
-	.data(member_storage)
-	.data(broadcaster)
-	.data(jwt_auth)
-	.finish()
-}
-
-/// GraphQL query/mutation handler
+/// GraphQL query/mutation handler with singleton schema
 pub async fn graphql_handler(req: Request) -> ViewResult<Response> {
-	// Get schema from app state (in real app, this would be injected)
-	// For now, create a new schema per request (not ideal for production)
-	let schema = create_schema();
+	let schema = get_schema();
 
 	// Parse request body as GraphQL request
 	let graphql_request: async_graphql::Request = req

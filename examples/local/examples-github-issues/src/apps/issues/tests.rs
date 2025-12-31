@@ -4,21 +4,15 @@
 
 #[cfg(test)]
 mod tests {
-	use crate::config::urls::create_schema;
+	use crate::config::schema::get_schema;
+	use crate::config::urls::AppSchema;
 	use async_graphql::Request;
 	use reinhardt::Claims;
+	use std::sync::Arc;
 
 	/// Helper to create a schema with an authenticated user
-	async fn create_test_context() -> (
-		async_graphql::Schema<
-			crate::config::urls::Query,
-			crate::config::urls::Mutation,
-			crate::config::urls::Subscription,
-		>,
-		String,
-		String,
-	) {
-		let schema = create_schema();
+	async fn create_test_context() -> (Arc<AppSchema>, String, String) {
+		let schema = get_schema();
 
 		// Register a user
 		let register_query = r#"

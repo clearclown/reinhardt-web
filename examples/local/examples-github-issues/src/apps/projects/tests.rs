@@ -4,12 +4,14 @@
 
 #[cfg(test)]
 mod tests {
-	use crate::config::urls::create_schema;
+	use crate::config::schema::get_schema;
+	use crate::config::urls::AppSchema;
 	use async_graphql::Request;
 	use reinhardt::Claims;
+	use std::sync::Arc;
 
 	/// Helper to get authenticated claims
-	async fn get_auth_claims(schema: &crate::config::urls::AppSchema) -> (Claims, String) {
+	async fn get_auth_claims(schema: &Arc<AppSchema>) -> (Claims, String) {
 		let register_query = r#"
 			mutation {
 				register(input: {
@@ -40,7 +42,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_create_project() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (claims, _) = get_auth_claims(&schema).await;
 
 		let query = r#"
@@ -69,7 +71,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_create_private_project() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (claims, _) = get_auth_claims(&schema).await;
 
 		let query = r#"
@@ -95,7 +97,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_projects_query() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (claims, _) = get_auth_claims(&schema).await;
 
 		// Create multiple projects
@@ -138,7 +140,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_projects_query_with_visibility_filter() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (claims, _) = get_auth_claims(&schema).await;
 
 		// Create public and private projects
@@ -188,7 +190,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_project_query_by_id() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (claims, _) = get_auth_claims(&schema).await;
 
 		// Create a project
@@ -232,7 +234,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_add_member_to_project() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (owner_claims, _) = get_auth_claims(&schema).await;
 
 		// Register another user to add as member
@@ -298,7 +300,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_remove_member_from_project() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (owner_claims, _) = get_auth_claims(&schema).await;
 
 		// Register a member
@@ -368,7 +370,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_project_with_members_relation() {
-		let schema = create_schema();
+		let schema = get_schema();
 		let (owner_claims, owner_id) = get_auth_claims(&schema).await;
 
 		// Create a project (owner is automatically added as member)

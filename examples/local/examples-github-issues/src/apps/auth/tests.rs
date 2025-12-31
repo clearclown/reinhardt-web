@@ -4,12 +4,12 @@
 
 #[cfg(test)]
 mod tests {
-	use crate::config::urls::create_schema;
+	use crate::config::schema::get_schema;
 	use async_graphql::Request;
 
 	#[tokio::test]
 	async fn test_register_user() {
-		let schema = create_schema();
+		let schema = get_schema();
 
 		// Register a new user
 		let query = r#"
@@ -49,7 +49,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_login_user() {
-		let schema = create_schema();
+		let schema = get_schema();
 
 		// First register a user
 		let register_query = r#"
@@ -91,7 +91,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_login_invalid_credentials() {
-		let schema = create_schema();
+		let schema = get_schema();
 
 		// Try to login with non-existent user
 		let login_query = r#"
@@ -113,7 +113,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_users_query() {
-		let schema = create_schema();
+		let schema = get_schema();
 
 		// Register multiple users
 		let register1 = r#"
@@ -157,7 +157,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_user_query_by_id() {
-		let schema = create_schema();
+		let schema = get_schema();
 
 		// Register a user and get their ID
 		let register_query = r#"
