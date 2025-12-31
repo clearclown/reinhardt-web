@@ -52,8 +52,7 @@
 //! - **PostgreSQL**: Full support with connection pooling
 //! - **MySQL**: Full support with connection pooling
 //! - **SQLite**: Full support with connection pooling
-//! - **MongoDB**: Full support with connection pooling (✅)
-//! - **CockroachDB**: Distributed transaction support (✅)
+//! - **CockroachDB**: Distributed transaction support
 //!
 //! ## Optimization Features ✅
 //!
