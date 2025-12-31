@@ -330,8 +330,8 @@ impl Model for SessionModel {
 		"session_key"
 	}
 
-	fn primary_key(&self) -> Option<&Self::PrimaryKey> {
-		Some(&self.session_key)
+	fn primary_key(&self) -> Option<Self::PrimaryKey> {
+		Some(self.session_key.clone())
 	}
 
 	fn set_primary_key(&mut self, value: Self::PrimaryKey) {
@@ -451,7 +451,7 @@ mod tests {
 
 		assert_eq!(SessionModel::table_name(), "sessions");
 		assert_eq!(SessionModel::primary_key_field(), "session_key");
-		assert_eq!(session.primary_key(), Some(&"model_key".to_string()));
+		assert_eq!(session.primary_key(), Some("model_key".to_string()));
 	}
 
 	#[test]
@@ -461,7 +461,7 @@ mod tests {
 
 		session.set_primary_key("new_key".to_string());
 		assert_eq!(session.session_key(), "new_key");
-		assert_eq!(session.primary_key(), Some(&"new_key".to_string()));
+		assert_eq!(session.primary_key(), Some("new_key".to_string()));
 	}
 
 	#[test]

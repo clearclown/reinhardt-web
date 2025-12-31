@@ -293,10 +293,8 @@ impl TokenStorage for InMemoryTokenStorage {
 
 	async fn delete(&self, token: &str) -> TokenStorageResult<()> {
 		let mut tokens = self.tokens.write().unwrap();
-		tokens
-			.remove(token)
-			.ok_or(TokenStorageError::NotFound)
-			.map(|_| ())
+		tokens.remove(token);
+		Ok(())
 	}
 
 	async fn delete_user_tokens(&self, user_id: i64) -> TokenStorageResult<()> {
