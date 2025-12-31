@@ -108,11 +108,8 @@ async fn test_csrf_header_format() {
 	// Verify header name constant
 	assert_eq!(CSRF_HEADER_NAME, "X-CSRFToken");
 
-	// Note: csrf_headers() is WASM-only
-	// TODO: When WASM test environment is set up, verify:
-	// - csrf_headers() returns correct (header_name, token) tuple
-	// - Header name is "X-CSRFToken"
-	// - Token value matches the current CSRF token
+	// Note: csrf_headers() is WASM-only and tested in:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 /// Tests token source priority (simulated via parse_cookie_value)
@@ -127,11 +124,8 @@ async fn test_csrf_source_priority_simulation() {
 
 	assert_eq!(token, Some("from_cookie".to_string()));
 
-	// TODO: When WASM test environment is available, verify:
-	// 1. If cookie has token, it's used (highest priority)
-	// 2. If no cookie, meta tag is checked
-	// 3. If no meta tag, hidden input is checked (lowest priority)
-	// 4. If all sources are empty, None is returned
+	// Full priority testing is in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 // ============================================================================
@@ -151,9 +145,8 @@ async fn test_csrf_token_missing() {
 	let manager = CsrfManager::new();
 	assert!(manager.cached_token().is_none());
 
-	// TODO: When WASM environment is available, verify:
-	// - get_csrf_token() returns None when no sources have the token
-	// - get_or_fetch_token() returns None and doesn't crash
+	// WASM-specific behavior tested in:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 /// Tests handling of invalid cookie format
@@ -190,11 +183,8 @@ async fn test_csrf_multiple_sources_priority() {
 
 	assert_eq!(token, Some("cookie_token".to_string()));
 
-	// TODO: When WASM test is available, verify:
-	// - Set both cookie and meta tag with different tokens
-	// - Verify cookie token is used (higher priority)
-	// - Remove cookie, verify meta tag token is used
-	// - Remove meta, verify hidden input token is used
+	// Multi-source priority tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 /// Tests token refresh mechanism
@@ -215,10 +205,8 @@ async fn test_csrf_token_refresh() {
 	manager.set_token("new_token");
 	assert_eq!(manager.cached_token(), Some("new_token".to_string()));
 
-	// TODO: When WASM environment is available, verify:
-	// - refresh() fetches new token from browser
-	// - Old cached token is replaced
-	// - Token signal is updated
+	// Refresh behavior tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 /// Tests empty cookie handling
@@ -268,11 +256,8 @@ async fn test_csrf_state_transition() {
 	let signal = manager.token_signal();
 	assert_eq!(signal.get(), Some("token2".to_string()));
 
-	// TODO: When WASM environment is available, verify:
-	// - Initial state: Loading (no token)
-	// - After first fetch: Cached
-	// - After refresh: Re-cached with potentially new value
-	// - Signal updates notify subscribers
+	// State transitions with browser integration tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 // ============================================================================
@@ -294,10 +279,8 @@ async fn test_csrf_form_submission_use_case() {
 	assert!(!token_value.is_empty());
 	assert_eq!(token_value, "form_submit_token");
 
-	// TODO: When WASM environment is available, verify:
-	// - Token is retrieved for form submission
-	// - Token is added to form data or headers
-	// - Form submission includes correct CSRF token
+	// Form submission with CSRF tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/server_fn_wasm_test.rs
 }
 
 /// Tests CSRF token usage in AJAX call scenario
@@ -318,10 +301,8 @@ async fn test_csrf_ajax_call_use_case() {
 	assert_eq!(header_name, "X-CSRFToken");
 	assert_eq!(header_value, "ajax_call_token");
 
-	// TODO: When WASM environment is available, verify:
-	// - csrf_headers() returns (header_name, token) tuple
-	// - Header is added to AJAX request
-	// - Server receives correct CSRF token
+	// AJAX header generation tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/server_fn_wasm_test.rs
 }
 
 /// Tests CSRF token automatic injection into Server Function
@@ -335,11 +316,9 @@ async fn test_csrf_server_function_injection() {
 	let token = manager.cached_token();
 	assert_eq!(token, Some("server_fn_token".to_string()));
 
-	// TODO: When Server Function RPC client is implemented, verify:
-	// - Server Function automatically includes CSRF token in headers
-	// - Token is retrieved from CsrfManager
-	// - Header name is "X-CSRFToken"
-	// - Server validates the CSRF token
+	// Automatic CSRF injection in server_fn is now implemented:
+	// crates/reinhardt-pages/crates/macros/src/server_fn.rs
+	// WASM tests: crates/reinhardt-pages/tests/wasm/server_fn_wasm_test.rs
 }
 
 // ============================================================================
@@ -378,11 +357,8 @@ async fn test_csrf_with_server_fn_json_codec() {
 	let token = manager.cached_token();
 	assert_eq!(token, Some("csrf_json_token".to_string()));
 
-	// TODO: When Server Function RPC client is implemented, verify:
-	// - Server Function with JsonCodec includes CSRF token
-	// - Token is sent in X-CSRFToken header
-	// - JSON payload is separate from CSRF token
-	// - Server validates both JSON payload and CSRF token
+	// Server Function CSRF injection is implemented and tested in:
+	// crates/reinhardt-pages/tests/wasm/server_fn_wasm_test.rs
 }
 
 /// Tests CSRF integration with Server Function (URL codec)
@@ -396,11 +372,8 @@ async fn test_csrf_with_server_fn_url_codec() {
 	let token = manager.cached_token();
 	assert_eq!(token, Some("csrf_url_token".to_string()));
 
-	// TODO: When Server Function RPC client is implemented, verify:
-	// - Server Function with UrlCodec includes CSRF token
-	// - Token is sent in X-CSRFToken header (not in URL params)
-	// - URL-encoded payload is separate from CSRF token
-	// - Server validates both URL payload and CSRF token
+	// Server Function CSRF injection is implemented and tested in:
+	// crates/reinhardt-pages/tests/wasm/server_fn_wasm_test.rs
 }
 
 // ============================================================================
@@ -436,11 +409,8 @@ async fn test_csrf_source_partitioning(#[case] cookie_str: &str, #[case] expecte
 	let token = parse_cookie_value(cookie_str, CSRF_COOKIE_NAME);
 	assert_eq!(token, expected);
 
-	// TODO: When WASM environment is available, test all source partitions:
-	// - Cookie present, Meta absent, Input absent → Cookie token
-	// - Cookie absent, Meta present, Input absent → Meta token
-	// - Cookie absent, Meta absent, Input present → Input token
-	// - All absent → None
+	// Full source partitioning tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
 
 // ============================================================================
@@ -513,10 +483,6 @@ async fn test_csrf_decision_table(
 	let result = manager.cached_token();
 	assert_eq!(result, expected);
 
-	// TODO: When WASM environment is available, verify full decision table:
-	// - Token exists in source + cached → cached value used
-	// - Token exists in source + not cached → fetch from source
-	// - Token not exists in source + cached → cached value used
-	// - Token not exists in source + not cached → None
-	// - Test all source combinations (Cookie, Meta, Input)
+	// Full decision table tested in WASM tests:
+	// crates/reinhardt-pages/tests/wasm/csrf_wasm_test.rs
 }
