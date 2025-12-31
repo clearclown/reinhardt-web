@@ -479,6 +479,43 @@ impl ApplicationBuilder {
 			apps_registry: Arc::new(apps_registry),
 		})
 	}
+
+	/// Build the application and register it with the DI system
+	///
+	/// This method builds the application and registers both the `Application`
+	/// and `Apps` instances in the provided `SingletonScope`.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_apps::builder::ApplicationBuilder;
+	/// use reinhardt_apps::AppConfig;
+	/// use reinhardt_di::SingletonScope;
+	/// use std::sync::Arc;
+	///
+	/// let singleton = Arc::new(SingletonScope::new());
+	/// let app_config = AppConfig::new("myapp", "myapp");
+	/// let app = ApplicationBuilder::new()
+	///     .add_app(app_config)
+	///     .build_with_di(singleton.clone())
+	///     .unwrap();
+	/// ```
+	#[cfg(feature = "di")]
+	pub fn build_with_di(
+		self,
+		singleton_scope: Arc<reinhardt_di::SingletonScope>,
+	) -> BuildResult<Arc<Application>> {
+		let app = self.build()?;
+		let app = Arc::new(app);
+
+		// Register Application in SingletonScope
+		singleton_scope.set(app.clone());
+
+		// Register Apps in SingletonScope
+		singleton_scope.set(app.apps_registry.clone());
+
+		Ok(app)
+	}
 }
 
 impl Default for ApplicationBuilder {

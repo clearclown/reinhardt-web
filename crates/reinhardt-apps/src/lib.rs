@@ -103,7 +103,7 @@ pub use reinhardt_server::{HttpServer, serve};
 pub use reinhardt_types::{Handler, Middleware, MiddlewareChain};
 
 // Re-export from apps module
-pub use apps::{AppConfig, AppError, AppResult, Apps, get_apps, init_apps, init_apps_checked};
+pub use apps::{AppConfig, AppError, AppResult, Apps};
 
 // Re-export from builder module
 pub use builder::{
@@ -114,10 +114,10 @@ pub use builder::{
 // Re-export from registry module
 pub use registry::{
 	MODELS, ModelMetadata, RELATIONSHIPS, RelationshipMetadata, RelationshipType,
-	ReverseRelationMetadata, ReverseRelationType, clear_model_cache, clear_relationship_cache,
-	clear_reverse_relations, find_model, get_models_for_app, get_registered_models,
-	get_registered_relationships, get_relationships_for_model, get_relationships_to_model,
-	get_reverse_relations_for_model, register_reverse_relation,
+	ReverseRelationMetadata, ReverseRelationType, finalize_reverse_relations, find_model,
+	get_models_for_app, get_registered_models, get_registered_relationships,
+	get_relationships_for_model, get_relationships_to_model, get_reverse_relations_for_model,
+	register_reverse_relation,
 };
 
 // Re-export from discovery module

@@ -12,6 +12,9 @@ reinhardt-server = { workspace = true }
 reinhardt-settings = { workspace = true }
 reinhardt-exception = { workspace = true }
 reinhardt-types = { workspace = true }
+
+# DI integration (optional)
+reinhardt-di = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
@@ -32,7 +35,9 @@ pin-project = "1.1"
 linkme = "0.3"
 
 [features]
-full = []
+default = []
+full = ["di"]
+di = ["dep:reinhardt-di"]
 
 [dev-dependencies]
 serial_test = { workspace = true }

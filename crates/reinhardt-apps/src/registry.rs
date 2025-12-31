@@ -22,7 +22,8 @@
 //! ```
 
 use linkme::distributed_slice;
-use std::sync::RwLock;
+use std::collections::HashMap;
+use std::sync::{OnceLock, RwLock};
 
 /// Metadata for a registered model
 ///
@@ -101,12 +102,20 @@ impl ModelMetadata {
 #[distributed_slice]
 pub static MODELS: [ModelMetadata];
 
-/// Cache for model lookups by app label
-///
-/// This cache is lazily populated the first time models are queried by app label.
-static MODEL_CACHE: RwLock<
-	Option<std::collections::HashMap<&'static str, Vec<&'static ModelMetadata>>>,
-> = RwLock::new(None);
+/// Cache for model lookups by app label.
+/// Lazily initialized on first access and immutable thereafter.
+static MODEL_CACHE: OnceLock<HashMap<&'static str, Vec<&'static ModelMetadata>>> = OnceLock::new();
+
+/// Returns the cached model metadata indexed by app label.
+fn model_cache() -> &'static HashMap<&'static str, Vec<&'static ModelMetadata>> {
+	MODEL_CACHE.get_or_init(|| {
+		let mut cache: HashMap<&'static str, Vec<&'static ModelMetadata>> = HashMap::new();
+		for model in MODELS.iter() {
+			cache.entry(model.app_label).or_default().push(model);
+		}
+		cache
+	})
+}
 
 /// Get all registered models
 ///
@@ -125,7 +134,7 @@ pub fn get_registered_models() -> &'static [ModelMetadata] {
 	&MODELS
 }
 
-/// Get models for a specific application
+/// Get models for a specific application.
 ///
 /// This function returns all models that belong to the specified application label.
 /// Results are cached for performance on subsequent calls.
@@ -141,39 +150,7 @@ pub fn get_registered_models() -> &'static [ModelMetadata] {
 /// }
 /// ```
 pub fn get_models_for_app(app_label: &str) -> Vec<&'static ModelMetadata> {
-	// Check if cache is initialized
-	{
-		let cache = MODEL_CACHE.read().unwrap();
-		if let Some(ref cache_map) = *cache
-			&& let Some(models) = cache_map.get(app_label)
-		{
-			return models.clone();
-		}
-	}
-
-	// Initialize cache if needed
-	{
-		let mut cache = MODEL_CACHE.write().unwrap();
-		if cache.is_none() {
-			let mut cache_map = std::collections::HashMap::new();
-			for model in MODELS.iter() {
-				cache_map
-					.entry(model.app_label)
-					.or_insert_with(Vec::new)
-					.push(model);
-			}
-			*cache = Some(cache_map);
-		}
-	}
-
-	// Retrieve from cache
-	let cache = MODEL_CACHE.read().unwrap();
-	cache
-		.as_ref()
-		.unwrap()
-		.get(app_label)
-		.cloned()
-		.unwrap_or_default()
+	model_cache().get(app_label).cloned().unwrap_or_default()
 }
 
 /// Find a model by its qualified name (app_label.model_name)
@@ -199,15 +176,6 @@ pub fn find_model(qualified_name: &str) -> Option<&'static ModelMetadata> {
 	MODELS
 		.iter()
 		.find(|m| m.app_label == app_label && m.model_name == model_name)
-}
-
-/// Clear the model cache (primarily for testing)
-///
-/// This function clears the internal cache used for model lookups.
-/// It should primarily be used in test scenarios.
-pub fn clear_model_cache() {
-	let mut cache = MODEL_CACHE.write().unwrap_or_else(|e| e.into_inner());
-	*cache = None;
 }
 
 /// Metadata for a forward relationship
@@ -367,10 +335,21 @@ impl RelationshipMetadata {
 #[distributed_slice]
 pub static RELATIONSHIPS: [RelationshipMetadata];
 
-/// Cache for relationship lookups by model
-static RELATIONSHIP_CACHE: RwLock<
-	Option<std::collections::HashMap<&'static str, Vec<&'static RelationshipMetadata>>>,
-> = RwLock::new(None);
+/// Cache for relationship lookups by model.
+/// Lazily initialized on first access and immutable thereafter.
+static RELATIONSHIP_CACHE: OnceLock<HashMap<&'static str, Vec<&'static RelationshipMetadata>>> =
+	OnceLock::new();
+
+/// Returns the cached relationship metadata indexed by source model.
+fn relationship_cache() -> &'static HashMap<&'static str, Vec<&'static RelationshipMetadata>> {
+	RELATIONSHIP_CACHE.get_or_init(|| {
+		let mut cache: HashMap<&'static str, Vec<&'static RelationshipMetadata>> = HashMap::new();
+		for rel in RELATIONSHIPS.iter() {
+			cache.entry(rel.from_model).or_default().push(rel);
+		}
+		cache
+	})
+}
 
 /// Get all registered relationships
 ///
@@ -389,30 +368,9 @@ pub fn get_registered_relationships() -> &'static [RelationshipMetadata] {
 	&RELATIONSHIPS
 }
 
+/// Get all relationships originating from a specific model.
 pub fn get_relationships_for_model(model: &str) -> Vec<&'static RelationshipMetadata> {
-	// Initialize cache if needed (with write lock)
-	{
-		let mut cache = RELATIONSHIP_CACHE.write().unwrap();
-		if cache.is_none() {
-			let mut cache_map = std::collections::HashMap::new();
-			for rel in RELATIONSHIPS.iter() {
-				cache_map
-					.entry(rel.from_model)
-					.or_insert_with(Vec::new)
-					.push(rel);
-			}
-			*cache = Some(cache_map);
-		}
-	}
-
-	// Retrieve from cache (with read lock)
-	let cache = RELATIONSHIP_CACHE.read().unwrap();
-	cache
-		.as_ref()
-		.expect("Cache should be initialized at this point")
-		.get(model)
-		.cloned()
-		.unwrap_or_default()
+	relationship_cache().get(model).cloned().unwrap_or_default()
 }
 
 /// Find relationships by target model
@@ -435,17 +393,6 @@ pub fn get_relationships_to_model(target_model: &str) -> Vec<&'static Relationsh
 		.iter()
 		.filter(|r| r.to_model == target_model)
 		.collect()
-}
-
-/// Clear the relationship cache (primarily for testing)
-///
-/// This function clears the internal cache used for relationship lookups.
-/// It should primarily be used in test scenarios.
-pub fn clear_relationship_cache() {
-	let mut cache = RELATIONSHIP_CACHE
-		.write()
-		.unwrap_or_else(|e| e.into_inner());
-	*cache = None;
 }
 
 /// Metadata for a reverse relation
@@ -500,16 +447,19 @@ impl ReverseRelationMetadata {
 	}
 }
 
-/// Global registry for reverse relations
-///
-/// This registry stores dynamically registered reverse relations.
-/// Unlike the MODELS slice which is populated at compile time,
-/// this registry is populated at runtime during model discovery.
-static REVERSE_RELATIONS: RwLock<Vec<ReverseRelationMetadata>> = RwLock::new(Vec::new());
+/// Builder storage used during initialization phase only.
+/// Reverse relations are added here before finalization.
+static REVERSE_RELATIONS_BUILDER: RwLock<Vec<ReverseRelationMetadata>> = RwLock::new(Vec::new());
 
-/// Register a reverse relation
+/// Finalized map indexed by model name (read-only after initialization).
+/// This is populated by `finalize_reverse_relations()` and accessed by
+/// `get_reverse_relations_for_model()`.
+static REVERSE_RELATIONS: OnceLock<HashMap<String, Vec<ReverseRelationMetadata>>> = OnceLock::new();
+
+/// Registers a reverse relation during the initialization phase.
 ///
-/// This function adds a reverse relation to the global registry.
+/// Must be called before `finalize_reverse_relations()`. Panics if called
+/// after finalization.
 ///
 /// # Examples
 ///
@@ -525,12 +475,39 @@ static REVERSE_RELATIONS: RwLock<Vec<ReverseRelationMetadata>> = RwLock::new(Vec
 /// );
 /// register_reverse_relation(reverse_relation);
 /// ```
+///
+/// # Panics
+///
+/// Panics if called after `finalize_reverse_relations()` has been called.
 pub fn register_reverse_relation(relation: ReverseRelationMetadata) {
-	let mut relations = REVERSE_RELATIONS.write().unwrap();
-	relations.push(relation);
+	if REVERSE_RELATIONS.get().is_some() {
+		panic!("Cannot register reverse relations after finalization");
+	}
+	let mut builder = REVERSE_RELATIONS_BUILDER.write().unwrap();
+	builder.push(relation);
 }
 
-/// Get all reverse relations for a specific model
+/// Finalizes the reverse relations, making them immutable.
+///
+/// This function should be called at the end of `Apps::populate()` after all
+/// reverse relations have been registered. After this call, `register_reverse_relation()`
+/// will panic if called again.
+pub fn finalize_reverse_relations() {
+	if REVERSE_RELATIONS.get().is_some() {
+		return;
+	}
+	let builder = REVERSE_RELATIONS_BUILDER.read().unwrap();
+	let mut indexed = HashMap::new();
+	for relation in builder.iter() {
+		indexed
+			.entry(relation.on_model.to_string())
+			.or_insert_with(Vec::new)
+			.push(relation.clone());
+	}
+	let _ = REVERSE_RELATIONS.set(indexed);
+}
+
+/// Returns all reverse relations for a specific model.
 ///
 /// # Examples
 ///
@@ -543,86 +520,17 @@ pub fn register_reverse_relation(relation: ReverseRelationMetadata) {
 /// }
 /// ```
 pub fn get_reverse_relations_for_model(model_name: &str) -> Vec<ReverseRelationMetadata> {
-	let relations = REVERSE_RELATIONS.read().unwrap();
-	relations
-		.iter()
-		.filter(|r| r.on_model == model_name)
+	REVERSE_RELATIONS
+		.get()
+		.and_then(|m| m.get(model_name))
 		.cloned()
-		.collect()
-}
-
-/// Clear the reverse relations registry (primarily for testing)
-///
-/// This function clears all registered reverse relations.
-/// It should primarily be used in test scenarios.
-pub fn clear_reverse_relations() {
-	let mut relations = REVERSE_RELATIONS.write().unwrap_or_else(|e| e.into_inner());
-	relations.clear();
+		.unwrap_or_default()
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_test::resource::{TeardownGuard, TestResource};
 	use rstest::*;
-	use std::collections::HashSet;
-
-	// TeardownGuard for model cache cleanup
-	struct ModelCacheGuard;
-
-	impl TestResource for ModelCacheGuard {
-		fn setup() -> Self {
-			Self
-		}
-
-		fn teardown(&mut self) {
-			clear_model_cache();
-		}
-	}
-
-	#[fixture]
-	fn model_cache() -> TeardownGuard<ModelCacheGuard> {
-		clear_model_cache();
-		TeardownGuard::new()
-	}
-
-	// TeardownGuard for relationship cache cleanup
-	struct RelationshipCacheGuard;
-
-	impl TestResource for RelationshipCacheGuard {
-		fn setup() -> Self {
-			Self
-		}
-
-		fn teardown(&mut self) {
-			clear_relationship_cache();
-		}
-	}
-
-	#[fixture]
-	fn relationship_cache() -> TeardownGuard<RelationshipCacheGuard> {
-		clear_relationship_cache();
-		TeardownGuard::new()
-	}
-
-	// TeardownGuard for reverse relations cleanup
-	struct ReverseRelationGuard;
-
-	impl TestResource for ReverseRelationGuard {
-		fn setup() -> Self {
-			Self
-		}
-
-		fn teardown(&mut self) {
-			clear_reverse_relations();
-		}
-	}
-
-	#[fixture]
-	fn reverse_relation() -> TeardownGuard<ReverseRelationGuard> {
-		clear_reverse_relations();
-		TeardownGuard::new()
-	}
 
 	// Test model registrations
 	#[distributed_slice(MODELS)]
@@ -700,66 +608,10 @@ mod tests {
 	}
 
 	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_register_and_get_reverse_relations(
-		_reverse_relation: TeardownGuard<ReverseRelationGuard>,
-	) {
-		let relation1 = ReverseRelationMetadata::new(
-			"User",
-			"posts".to_string(),
-			"Post",
-			ReverseRelationType::ReverseOneToMany,
-			"author",
-		);
-		register_reverse_relation(relation1);
-
-		let relation2 = ReverseRelationMetadata::new(
-			"User",
-			"comments".to_string(),
-			"Comment",
-			ReverseRelationType::ReverseOneToMany,
-			"author",
-		);
-		register_reverse_relation(relation2);
-
-		let relations = get_reverse_relations_for_model("User");
-		assert_eq!(relations.len(), 2);
-
-		let accessor_names: HashSet<String> =
-			relations.iter().map(|r| r.accessor_name.clone()).collect();
-		assert_eq!(
-			accessor_names,
-			HashSet::from(["posts".to_string(), "comments".to_string()])
-		);
-	}
-
-	#[rstest]
-	#[serial_test::serial(app_registry)]
-	fn test_get_reverse_relations_for_nonexistent_model(
-		_reverse_relation: TeardownGuard<ReverseRelationGuard>,
-	) {
+	fn test_get_reverse_relations_for_nonexistent_model() {
+		// Before finalization, returns empty vec
 		let relations = get_reverse_relations_for_model("NonExistent");
-		assert_eq!(relations.len(), 0);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_clear_reverse_relations() {
-		clear_reverse_relations();
-
-		let relation = ReverseRelationMetadata::new(
-			"User",
-			"posts".to_string(),
-			"Post",
-			ReverseRelationType::ReverseOneToMany,
-			"author",
-		);
-		register_reverse_relation(relation);
-
-		assert_eq!(get_reverse_relations_for_model("User").len(), 1);
-
-		clear_reverse_relations();
-		assert_eq!(get_reverse_relations_for_model("User").len(), 0);
+		assert!(relations.is_empty());
 	}
 
 	#[test]

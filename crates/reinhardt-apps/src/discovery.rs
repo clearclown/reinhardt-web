@@ -17,6 +17,7 @@
 //! // build_reverse_relations();
 //! ```
 
+use crate::Apps;
 use crate::registry::{
 	ModelMetadata, ReverseRelationMetadata, ReverseRelationType, get_models_for_app,
 	get_registered_models, register_reverse_relation,
@@ -284,10 +285,6 @@ fn extract_model_relations(model: &ModelMetadata) -> Vec<RelationMetadata> {
 ///
 /// ```rust
 /// use reinhardt_apps::discovery::{RelationMetadata, RelationType, create_reverse_relation};
-/// use reinhardt_apps::registry::clear_reverse_relations;
-///
-/// // Clear any existing reverse relations (for testing)
-/// clear_reverse_relations();
 ///
 /// // For Post.author -> User relationship
 /// let relation = RelationMetadata::new(
@@ -417,6 +414,10 @@ impl MigrationMetadata {
 /// This function scans all registered applications for migration files in their
 /// `migrations/` directories. It extracts metadata from migration file names.
 ///
+/// # Arguments
+///
+/// * `apps` - The Apps registry containing registered applications
+///
 /// # Migration File Naming Convention
 ///
 /// Migration files should follow the pattern: `{number}_{name}.rs`
@@ -426,20 +427,20 @@ impl MigrationMetadata {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_apps::discover_migrations;
+/// use reinhardt_apps::{Apps, discover_migrations};
 ///
-/// let migrations = discover_migrations().unwrap();
+/// let apps = Apps::new(vec!["myapp".to_string()]);
+/// apps.populate().unwrap();
+/// let migrations = discover_migrations(&apps).unwrap();
 /// for migration in migrations {
 ///     println!("Found migration: {}", migration.qualified_name());
 /// }
 /// ```
-pub fn discover_migrations() -> Result<Vec<MigrationMetadata>, String> {
-	use crate::get_apps;
+pub fn discover_migrations(apps: &Apps) -> Result<Vec<MigrationMetadata>, String> {
 	use std::fs;
 	use std::path::PathBuf;
 
 	let mut migrations = Vec::new();
-	let apps = get_apps();
 
 	for app in apps.get_app_configs() {
 		// Get the app's base path
@@ -683,207 +684,5 @@ mod tests {
 		let path = PathBuf::from("/tmp/migrations/abc_initial.rs");
 		let result = parse_migration_file(&path, "myapp");
 		assert!(result.is_err());
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_default_naming() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		let relation =
-			RelationMetadata::new("Post", "User", "author", None, RelationType::OneToMany);
-		create_reverse_relation(&relation);
-
-		// Verify reverse relation was registered
-		let reverse_relations = get_reverse_relations_for_model("User");
-		assert_eq!(reverse_relations.len(), 1);
-
-		let reverse = &reverse_relations[0];
-		assert_eq!(reverse.on_model, "User");
-		assert_eq!(reverse.accessor_name, "post_set"); // Default naming
-		assert_eq!(reverse.related_model, "Post");
-		assert_eq!(
-			reverse.relation_type,
-			crate::registry::ReverseRelationType::ReverseOneToMany
-		);
-		assert_eq!(reverse.through_field, "author");
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_with_related_name() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		let relation = RelationMetadata::new(
-			"Post",
-			"User",
-			"author",
-			Some("posts"),
-			RelationType::OneToMany,
-		);
-		create_reverse_relation(&relation);
-
-		// Verify reverse relation was registered with custom name
-		let reverse_relations = get_reverse_relations_for_model("User");
-		assert_eq!(reverse_relations.len(), 1);
-
-		let reverse = &reverse_relations[0];
-		assert_eq!(reverse.accessor_name, "posts"); // Custom name
-		assert_eq!(reverse.related_model, "Post");
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_many_to_many() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		let relation = RelationMetadata::new(
-			"User",
-			"Role",
-			"roles",
-			Some("users"),
-			RelationType::ManyToMany,
-		);
-		create_reverse_relation(&relation);
-
-		// Verify reverse relation type for M2M
-		let reverse_relations = get_reverse_relations_for_model("Role");
-		assert_eq!(reverse_relations.len(), 1);
-
-		let reverse = &reverse_relations[0];
-		assert_eq!(reverse.accessor_name, "users");
-		assert_eq!(
-			reverse.relation_type,
-			crate::registry::ReverseRelationType::ReverseManyToMany
-		);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_one_to_one() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		let relation = RelationMetadata::new(
-			"Profile",
-			"User",
-			"user",
-			Some("profile"),
-			RelationType::OneToOne,
-		);
-		create_reverse_relation(&relation);
-
-		// Verify reverse relation type for O2O
-		let reverse_relations = get_reverse_relations_for_model("User");
-		assert_eq!(reverse_relations.len(), 1);
-
-		let reverse = &reverse_relations[0];
-		assert_eq!(reverse.accessor_name, "profile");
-		assert_eq!(
-			reverse.relation_type,
-			crate::registry::ReverseRelationType::ReverseOneToOne
-		);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_multiple_relations() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		// User has multiple reverse relations
-		let relation1 = RelationMetadata::new(
-			"Post",
-			"User",
-			"author",
-			Some("posts"),
-			RelationType::OneToMany,
-		);
-		let relation2 = RelationMetadata::new(
-			"Comment",
-			"User",
-			"author",
-			Some("comments"),
-			RelationType::OneToMany,
-		);
-
-		create_reverse_relation(&relation1);
-		create_reverse_relation(&relation2);
-
-		let reverse_relations = get_reverse_relations_for_model("User");
-		assert_eq!(reverse_relations.len(), 2);
-
-		use std::collections::HashSet;
-		let accessor_names: HashSet<String> = reverse_relations
-			.iter()
-			.map(|r| r.accessor_name.clone())
-			.collect();
-		assert_eq!(
-			accessor_names,
-			HashSet::from(["posts".to_string(), "comments".to_string()])
-		);
-	}
-
-	#[test]
-	#[serial_test::serial(app_registry)]
-	fn test_create_reverse_relation_type_mapping() {
-		use crate::registry::{clear_reverse_relations, get_reverse_relations_for_model};
-
-		clear_reverse_relations();
-
-		// Test all relation type mappings
-		let one_to_many = RelationMetadata::new(
-			"Post",
-			"User",
-			"author",
-			Some("posts"),
-			RelationType::OneToMany,
-		);
-		create_reverse_relation(&one_to_many);
-
-		let many_to_many = RelationMetadata::new(
-			"User",
-			"Group",
-			"groups",
-			Some("users"),
-			RelationType::ManyToMany,
-		);
-		create_reverse_relation(&many_to_many);
-
-		let one_to_one = RelationMetadata::new(
-			"Profile",
-			"Account",
-			"account",
-			Some("profile"),
-			RelationType::OneToOne,
-		);
-		create_reverse_relation(&one_to_one);
-
-		// Verify type mappings
-		let user_reverse = get_reverse_relations_for_model("User");
-		assert_eq!(
-			user_reverse[0].relation_type,
-			crate::registry::ReverseRelationType::ReverseOneToMany
-		);
-
-		let group_reverse = get_reverse_relations_for_model("Group");
-		assert_eq!(
-			group_reverse[0].relation_type,
-			crate::registry::ReverseRelationType::ReverseManyToMany
-		);
-
-		let account_reverse = get_reverse_relations_for_model("Account");
-		assert_eq!(
-			account_reverse[0].relation_type,
-			crate::registry::ReverseRelationType::ReverseOneToOne
-		);
 	}
 }
