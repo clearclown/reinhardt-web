@@ -45,8 +45,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -58,9 +58,9 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -71,9 +71,9 @@ fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinit
 }
 
 /// Create a column with NULL constraint
-fn create_nullable_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_nullable_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -123,10 +123,10 @@ async fn test_zero_downtime_deployment_scenario(
 		"auth",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -181,12 +181,14 @@ async fn test_zero_downtime_deployment_scenario(
 		"0002_add_name_fields",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_nullable_column("first_name", FieldType::VarChar(Some(100))),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("users"),
+				table: leak_str("users").to_string(),
 				column: create_nullable_column("last_name", FieldType::VarChar(Some(100))),
+				mysql_options: None,
 			},
 		],
 	);
@@ -343,8 +345,8 @@ async fn test_zero_downtime_deployment_scenario(
 		"auth",
 		"0003_remove_name_field",
 		vec![Operation::RemoveColumn {
-			table: leak_str("users"),
-			name: "name",
+			table: leak_str("users").to_string(),
+			name: "name".to_string(),
 		}],
 	);
 
@@ -462,10 +464,10 @@ async fn test_backward_compatibility_preservation(
 		"products",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("products"),
+			name: leak_str("products").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -519,13 +521,14 @@ async fn test_backward_compatibility_preservation(
 		"0002_add_metadata",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("products"),
+				table: leak_str("products").to_string(),
 				column: create_nullable_column("description", FieldType::Text),
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("products"),
+				table: leak_str("products").to_string(),
 				column: ColumnDefinition {
-					name: "stock",
+					name: "stock".to_string(),
 					type_definition: FieldType::Integer,
 					not_null: false,
 					unique: false,
@@ -533,6 +536,7 @@ async fn test_backward_compatibility_preservation(
 					auto_increment: false,
 					default: Some("0".to_string()),
 				},
+				mysql_options: None,
 			},
 		],
 	);
@@ -679,10 +683,10 @@ async fn test_migration_rollforward_on_failure(
 		"0001_initial",
 		vec![
 			Operation::CreateTable {
-				name: leak_str("old_users"),
+				name: leak_str("old_users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -694,10 +698,10 @@ async fn test_migration_rollforward_on_failure(
 				],
 			},
 			Operation::CreateTable {
-				name: leak_str("new_users"),
+				name: leak_str("new_users").to_string(),
 				columns: vec![
 					ColumnDefinition {
-						name: "id",
+						name: "id".to_string(),
 						type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 						not_null: true,
 						unique: false,
@@ -745,7 +749,7 @@ async fn test_migration_rollforward_on_failure(
 		"legacy",
 		"0002_drop_old_table",
 		vec![Operation::RunSQL {
-			sql: leak_str("DROP TABLE old_users"),
+			sql: leak_str("DROP TABLE old_users").to_string(),
 			reverse_sql: None, // No reverse SQL = irreversible!
 		}],
 	);
@@ -823,10 +827,10 @@ async fn test_migration_rollforward_on_failure(
 		"legacy",
 		"0003_restore_old_users",
 		vec![Operation::CreateTable {
-			name: leak_str("old_users"),
+			name: leak_str("old_users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -898,10 +902,10 @@ async fn test_hot_schema_changes(
 		"analytics",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("events"),
+			name: leak_str("events").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -912,7 +916,7 @@ async fn test_hot_schema_changes(
 				create_basic_column("user_id", FieldType::Integer),
 				create_basic_column("event_type", FieldType::VarChar(Some(50))),
 				ColumnDefinition {
-					name: "created_at",
+					name: "created_at".to_string(),
 					type_definition: FieldType::Custom("TIMESTAMP".to_string()),
 					not_null: false,
 					unique: false,
@@ -1086,10 +1090,10 @@ async fn test_disaster_recovery_migration(
 		"orders",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("orders"),
+			name: leak_str("orders").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -1142,9 +1146,9 @@ async fn test_disaster_recovery_migration(
 		"orders",
 		"0002_add_status",
 		vec![Operation::AddColumn {
-			table: leak_str("orders"),
+			table: leak_str("orders").to_string(),
 			column: ColumnDefinition {
-				name: "status",
+				name: "status".to_string(),
 				type_definition: FieldType::VarChar(Some(50)),
 				not_null: false,
 				unique: false,
@@ -1160,9 +1164,9 @@ async fn test_disaster_recovery_migration(
 		"0003_add_timestamps",
 		vec![
 			Operation::AddColumn {
-				table: leak_str("orders"),
+				table: leak_str("orders").to_string(),
 				column: ColumnDefinition {
-					name: "created_at",
+					name: "created_at".to_string(),
 					type_definition: FieldType::Custom("TIMESTAMP".to_string()),
 					not_null: false,
 					unique: false,
@@ -1170,11 +1174,12 @@ async fn test_disaster_recovery_migration(
 					auto_increment: false,
 					default: Some("CURRENT_TIMESTAMP".to_string()),
 				},
+				mysql_options: None,
 			},
 			Operation::AddColumn {
-				table: leak_str("orders"),
+				table: leak_str("orders").to_string(),
 				column: ColumnDefinition {
-					name: "updated_at",
+					name: "updated_at".to_string(),
 					type_definition: FieldType::Custom("TIMESTAMP".to_string()),
 					not_null: false,
 					unique: false,
@@ -1182,6 +1187,7 @@ async fn test_disaster_recovery_migration(
 					auto_increment: false,
 					default: Some("CURRENT_TIMESTAMP".to_string()),
 				},
+				mysql_options: None,
 			},
 		],
 	);

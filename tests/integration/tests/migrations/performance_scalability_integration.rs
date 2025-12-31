@@ -44,8 +44,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -57,9 +57,9 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -76,7 +76,7 @@ fn create_column_with_default(
 	default: String,
 ) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -120,10 +120,10 @@ async fn test_incremental_migration_performance(
 		"users",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -205,7 +205,7 @@ async fn test_incremental_migration_performance(
 		"users",
 		"0002_add_status",
 		vec![Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_column_with_default(
 				"status",
 				FieldType::VarChar(Some(20)),
@@ -353,7 +353,7 @@ async fn test_memory_usage_with_large_state(
 		let table_name = leak_str(format!("model_{}", model_idx));
 
 		let mut columns = vec![ColumnDefinition {
-			name: "id",
+			name: "id".to_string(),
 			type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 			not_null: true,
 			unique: false,
@@ -438,7 +438,7 @@ async fn test_memory_usage_with_large_state(
 		"testapp",
 		leak_str(format!("{:04}_add_common_field", num_models + 1)),
 		vec![Operation::AddColumn {
-			table: leak_str("model_0"),
+			table: leak_str("model_0").to_string(),
 			column: create_basic_column("created_at", FieldType::Timestamp),
 		}],
 	);
@@ -563,7 +563,7 @@ async fn test_concurrent_migration_throughput(
 					name: table_name,
 					columns: vec![
 						ColumnDefinition {
-							name: "id",
+							name: "id".to_string(),
 							type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 							not_null: true,
 							unique: false,
@@ -631,7 +631,7 @@ async fn test_concurrent_migration_throughput(
 						name: table_name,
 						columns: vec![
 							ColumnDefinition {
-								name: "id",
+								name: "id".to_string(),
 								type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 								not_null: true,
 								unique: false,

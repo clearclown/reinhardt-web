@@ -34,39 +34,48 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage};
 
-// ============================================================================
-// Test Helper Functions
-// ============================================================================
-
+// Utility function for creating static string references from owned strings
 fn leak_str(s: impl Into<String>) -> &'static str {
 	Box::leak(s.into().into_boxed_str())
 }
 
+// ============================================================================
+// Test Helper Functions
+// ============================================================================
+
 /// Create a migration with dependencies
 fn create_migration_with_deps(
-	app: &'static str,
-	name: &'static str,
+	app: &str,
+	name: &str,
 	operations: Vec<Operation>,
-	dependencies: Vec<(&'static str, &'static str)>,
-	replaces: Vec<(&'static str, &'static str)>,
+	dependencies: Vec<(&str, &str)>,
+	replaces: Vec<(&str, &str)>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
-		dependencies,
-		replaces,
+		dependencies: dependencies
+			.into_iter()
+			.map(|(a, n)| (a.to_string(), n.to_string()))
+			.collect(),
+		replaces: replaces
+			.into_iter()
+			.map(|(a, n)| (a.to_string(), n.to_string()))
+			.collect(),
 		atomic: true,
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -77,9 +86,9 @@ fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinit
 }
 
 /// Create an auto-increment primary key column
-fn create_auto_pk_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_auto_pk_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: true,
 		unique: false,
@@ -116,23 +125,28 @@ async fn test_squash_three_migrations(
 	// Create original migrations
 	let migration_1 =
 		Migration::new("0001_create_users", "app").add_operation(Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		});
 
 	let migration_2 = Migration::new("0002_add_name", "app")
 		.add_dependency("app", "0001_create_users")
 		.add_operation(Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("name", FieldType::VarChar(100)),
+			mysql_options: None,
 		});
 
 	let migration_3 = Migration::new("0003_add_email", "app")
 		.add_dependency("app", "0002_add_name")
 		.add_operation(Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("email", FieldType::VarChar(255)),
+			mysql_options: None,
 		});
 
 	let migrations = vec![migration_1, migration_2, migration_3];
@@ -188,25 +202,30 @@ async fn test_squashing_preserves_external_dependencies(
 	let migration_1 = Migration::new("0001_initial", "app")
 		.add_dependency("other_app", "0001_initial")
 		.add_operation(Operation::CreateTable {
-			name: leak_str("posts"),
+			name: leak_str("posts").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		});
 
 	// Migration 2: depends on migration 1 (internal dependency)
 	let migration_2 = Migration::new("0002_add_title", "app")
 		.add_dependency("app", "0001_initial")
 		.add_operation(Operation::AddColumn {
-			table: leak_str("posts"),
+			table: leak_str("posts").to_string(),
 			column: create_basic_column("title", FieldType::VarChar(200)),
+			mysql_options: None,
 		});
 
 	// Migration 3: depends on migration 2 (internal dependency)
 	let migration_3 = Migration::new("0003_add_content", "app")
 		.add_dependency("app", "0002_add_title")
 		.add_operation(Operation::AddColumn {
-			table: leak_str("posts"),
+			table: leak_str("posts").to_string(),
 			column: create_basic_column("content", FieldType::Text),
+			mysql_options: None,
 		});
 
 	let migrations = vec![migration_1, migration_2, migration_3];
@@ -246,7 +265,7 @@ async fn test_replaces_attribute_verification(
 				migration = migration.add_dependency("app", prev_name);
 			}
 			migration.add_operation(Operation::RunSQL {
-				sql: leak_str(format!("SELECT {}", i)),
+				sql: leak_str(format!("SELECT {}", i)).to_string(),
 				reverse_sql: None,
 			})
 		})
@@ -282,9 +301,9 @@ async fn test_replaces_attribute_verification(
 ///
 /// **Use Case**: Migrating legacy database to reinhardt-db migrations
 ///
-/// **Note**: Currently marked as ignore - not yet implemented
+/// **Note**: The executor automatically skips CreateTable operations if the table already exists.
+/// This behavior serves as a partial implementation of Django's --fake-initial concept.
 #[rstest]
-#[ignore = "--fake-initial equivalent not yet implemented in reinhardt-db"]
 #[tokio::test]
 async fn test_fake_initial_skip_existing_tables(
 	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
@@ -308,32 +327,30 @@ async fn test_fake_initial_skip_existing_tables(
 		"app",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![
 				create_auto_pk_column("id", FieldType::Integer),
 				create_basic_column("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 		vec![],
 		vec![],
 	);
 
-	// TODO: Add fake_initial flag to executor
-	// executor.set_fake_initial(true);
-	//
-	// With fake_initial enabled:
-	// - Check if table exists
-	// - If yes, mark migration as applied WITHOUT executing SQL
-	// - If no, execute SQL normally
-	//
-	// This allows smooth integration of legacy databases
-
-	// For now, applying this migration would fail with "relation already exists"
+	// The executor automatically skips CreateTable operations if the table already exists
+	// (see executor.rs lines 554-562: table existence check with continue).
+	// This allows smooth integration of legacy databases.
 	let result = executor.apply_migrations(&[migration]).await;
 
-	// Without fake_initial support, this should fail
-	assert!(result.is_err(), "Should fail without fake_initial support");
+	// Migration should succeed because the executor skips CreateTable for existing tables
+	assert!(
+		result.is_ok(),
+		"Migration should succeed, skipping existing table creation"
+	);
 }
 
 /// Test detection of non-squashable operations
@@ -356,16 +373,19 @@ async fn test_detect_non_squashable_operations(
 	// Migration 1: CreateTable (optimizable)
 	let migration_1 =
 		Migration::new("0001_create_users", "app").add_operation(Operation::CreateTable {
-			name: leak_str("users"),
+			name: leak_str("users").to_string(),
 			columns: vec![create_auto_pk_column("id", FieldType::Integer)],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		});
 
 	// Migration 2: RunSQL with data insertion (non-optimizable, should be preserved)
 	let migration_2 = Migration::new("0002_populate_data", "app")
 		.add_dependency("app", "0001_create_users")
 		.add_operation(Operation::RunSQL {
-			sql: leak_str("INSERT INTO users (id) VALUES (1)"),
+			sql: leak_str("INSERT INTO users (id) VALUES (1)").to_string(),
 			reverse_sql: None,
 		});
 
@@ -373,8 +393,9 @@ async fn test_detect_non_squashable_operations(
 	let migration_3 = Migration::new("0003_add_email", "app")
 		.add_dependency("app", "0002_populate_data")
 		.add_operation(Operation::AddColumn {
-			table: leak_str("users"),
+			table: leak_str("users").to_string(),
 			column: create_basic_column("email", FieldType::VarChar(255)),
+			mysql_options: None,
 		});
 
 	let migrations = vec![migration_1, migration_2, migration_3];

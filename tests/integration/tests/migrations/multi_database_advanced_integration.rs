@@ -45,8 +45,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -58,9 +58,9 @@ fn create_test_migration(
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -121,10 +121,10 @@ async fn test_cross_database_foreign_key_handling(
 		"users_app",
 		"0001_initial",
 		vec![Operation::CreateTable {
-			name: leak_str("db_users.users"),
+			name: leak_str("db_users.users").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL PRIMARY KEY".to_string()),
 					not_null: true,
 					unique: false,
@@ -714,7 +714,7 @@ async fn test_migration_routing_with_custom_strategies(
 		"app",
 		"0002_add_acme_feature",
 		vec![Operation::RunSQL {
-			sql: leak_str("ALTER TABLE tenant_acme.users ADD COLUMN premium BOOLEAN DEFAULT FALSE"),
+			sql: leak_str("ALTER TABLE tenant_acme.users ADD COLUMN premium BOOLEAN DEFAULT FALSE").to_string(),
 			reverse_sql: Some("ALTER TABLE tenant_acme.users DROP COLUMN premium"),
 		}],
 	);
@@ -992,7 +992,7 @@ async fn test_heterogeneous_database_synchronization(
 		"sync",
 		"0002_add_stock",
 		vec![Operation::RunSQL {
-			sql: leak_str("ALTER TABLE primary_db.products ADD COLUMN stock INTEGER DEFAULT 0"),
+			sql: leak_str("ALTER TABLE primary_db.products ADD COLUMN stock INTEGER DEFAULT 0").to_string(),
 			reverse_sql: Some("ALTER TABLE primary_db.products DROP COLUMN stock"),
 		}],
 	);
@@ -1027,7 +1027,7 @@ async fn test_heterogeneous_database_synchronization(
 		"sync",
 		"0002_add_stock",
 		vec![Operation::RunSQL {
-			sql: leak_str("ALTER TABLE replica_db.products ADD COLUMN stock INTEGER DEFAULT 0"),
+			sql: leak_str("ALTER TABLE replica_db.products ADD COLUMN stock INTEGER DEFAULT 0").to_string(),
 			reverse_sql: Some("ALTER TABLE replica_db.products DROP COLUMN stock"),
 		}],
 	);

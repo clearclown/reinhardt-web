@@ -42,8 +42,8 @@ fn create_test_migration(
 	operations: Vec<Operation>,
 ) -> Migration {
 	Migration {
-		app_label: app,
-		name,
+		app_label: app.to_string(),
+		name: name.to_string(),
 		operations,
 		dependencies: vec![],
 		replaces: vec![],
@@ -51,13 +51,15 @@ fn create_test_migration(
 		initial: None,
 		state_only: false,
 		database_only: false,
+		swappable_dependencies: vec![],
+		optional_dependencies: vec![],
 	}
 }
 
 /// Create a basic column definition
-fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinition {
+fn create_basic_column(name: &str, type_def: FieldType) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: type_def,
 		not_null: false,
 		unique: false,
@@ -68,9 +70,9 @@ fn create_basic_column(name: &'static str, type_def: FieldType) -> ColumnDefinit
 }
 
 /// Create an auto-increment primary key column
-fn create_auto_pk_column(name: &'static str) -> ColumnDefinition {
+fn create_auto_pk_column(name: &str) -> ColumnDefinition {
 	ColumnDefinition {
-		name,
+		name: name.to_string(),
 		type_definition: FieldType::Integer,
 		not_null: true,
 		unique: false,
@@ -107,12 +109,15 @@ async fn test_auto_increment_serial(
 		"testapp",
 		"0001_auto_inc",
 		vec![Operation::CreateTable {
-			name: leak_str("auto_inc_table"),
+			name: leak_str("auto_inc_table").to_string(),
 			columns: vec![
 				create_auto_pk_column("id"),
 				create_basic_column("name", FieldType::VarChar(255)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -172,10 +177,10 @@ async fn test_json_jsonb_types(
 		"testapp",
 		"0001_json_types",
 		vec![Operation::CreateTable {
-			name: leak_str("json_table"),
+			name: leak_str("json_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -187,6 +192,9 @@ async fn test_json_jsonb_types(
 				create_basic_column("jsonb_data", FieldType::Custom("JSONB".to_string())),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -244,10 +252,10 @@ async fn test_postgres_array_type(
 		"testapp",
 		"0001_array_type",
 		vec![Operation::CreateTable {
-			name: leak_str("array_table"),
+			name: leak_str("array_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -259,6 +267,9 @@ async fn test_postgres_array_type(
 				create_basic_column("scores", FieldType::Custom("INTEGER[]".to_string())),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -313,10 +324,10 @@ async fn test_transaction_isolation_levels(
 		"testapp",
 		"0001_isolation_test",
 		vec![Operation::CreateTable {
-			name: leak_str("isolation_table"),
+			name: leak_str("isolation_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -327,6 +338,9 @@ async fn test_transaction_isolation_levels(
 				create_basic_column("value", FieldType::Integer),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -399,10 +413,10 @@ async fn test_cascade_delete(
 		"testapp",
 		"0001_parent",
 		vec![Operation::CreateTable {
-			name: leak_str("cascade_parent"),
+			name: leak_str("cascade_parent").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -413,6 +427,9 @@ async fn test_cascade_delete(
 				create_basic_column("name", FieldType::VarChar(100)),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -421,10 +438,10 @@ async fn test_cascade_delete(
 		"testapp",
 		"0002_child",
 		vec![Operation::CreateTable {
-			name: leak_str("cascade_child"),
+			name: leak_str("cascade_child").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -433,7 +450,7 @@ async fn test_cascade_delete(
 					default: None,
 				},
 				ColumnDefinition {
-					name: "parent_id",
+					name: "parent_id".to_string(),
 					type_definition: FieldType::Integer,
 					not_null: true,
 					unique: false,
@@ -450,7 +467,11 @@ async fn test_cascade_delete(
 				referenced_columns: vec!["id".to_string()],
 				on_delete: reinhardt_migrations::ForeignKeyAction::Cascade,
 				on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+				deferrable: None,
 			}],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -516,9 +537,12 @@ async fn test_sql_dialect_generation(
 
 	// Test that operations generate different SQL for different dialects
 	let operation = Operation::CreateTable {
-		name: "dialect_test",
+		name: "dialect_test".to_string(),
 		columns: vec![create_auto_pk_column("id")],
 		constraints: vec![],
+		without_rowid: None,
+		interleave_in_parent: None,
+		partition: None,
 	};
 
 	// Generate SQL for PostgreSQL
@@ -579,10 +603,10 @@ async fn test_lock_contention(
 		"testapp",
 		"0001_lock_test",
 		vec![Operation::CreateTable {
-			name: leak_str("lock_table"),
+			name: leak_str("lock_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -593,6 +617,9 @@ async fn test_lock_contention(
 				create_basic_column("value", FieldType::Integer),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
@@ -659,10 +686,10 @@ async fn test_common_type_compatibility(
 		"testapp",
 		"0001_common_types",
 		vec![Operation::CreateTable {
-			name: leak_str("common_types_table"),
+			name: leak_str("common_types_table").to_string(),
 			columns: vec![
 				ColumnDefinition {
-					name: "id",
+					name: "id".to_string(),
 					type_definition: FieldType::Custom("SERIAL".to_string()),
 					not_null: true,
 					unique: false,
@@ -680,6 +707,9 @@ async fn test_common_type_compatibility(
 				create_basic_column("timestamp_col", FieldType::DateTime),
 			],
 			constraints: vec![],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
 		}],
 	);
 
