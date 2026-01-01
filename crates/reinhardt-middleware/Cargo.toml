@@ -47,6 +47,7 @@ bytes = { workspace = true }
 sqlx = { workspace = true, optional = true }
 regex = "1.10"
 log = "0.4"
+thiserror = { workspace = true }
 url = "2.5"
 uuid = { workspace = true }
 tokio = { workspace = true }

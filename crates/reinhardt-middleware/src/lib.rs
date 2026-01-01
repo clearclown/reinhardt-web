@@ -116,6 +116,7 @@ pub mod etag;
 pub mod flatpages;
 #[cfg(feature = "compression")]
 pub mod gzip;
+pub mod honeypot;
 pub mod https_redirect;
 pub mod locale;
 pub mod logging;
@@ -132,6 +133,7 @@ pub mod site;
 pub mod timeout;
 pub mod tracing;
 pub mod xframe;
+pub mod xss;
 
 // Re-export core middleware traits from reinhardt-types
 pub use reinhardt_core::types::{Handler, Middleware, MiddlewareChain};
@@ -161,6 +163,7 @@ pub use etag::{ETagConfig, ETagMiddleware};
 pub use flatpages::{Flatpage, FlatpageStore, FlatpagesConfig, FlatpagesMiddleware};
 #[cfg(feature = "compression")]
 pub use gzip::{GZipConfig, GZipMiddleware};
+pub use honeypot::{HoneypotError, HoneypotField};
 pub use https_redirect::{HttpsRedirectConfig, HttpsRedirectMiddleware};
 pub use locale::{LocaleConfig, LocaleMiddleware};
 pub use logging::{LoggingConfig, LoggingMiddleware};
@@ -180,6 +183,7 @@ pub use tracing::{
 	TracingConfig, TracingMiddleware,
 };
 pub use xframe::{XFrameOptions, XFrameOptionsMiddleware};
+pub use xss::{XssConfig, XssError, XssProtector};
 
 #[cfg(all(test, feature = "cors"))]
 mod tests {
