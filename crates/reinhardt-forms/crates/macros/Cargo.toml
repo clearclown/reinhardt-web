@@ -20,3 +20,4 @@ quote = { workspace = true }
 trybuild = { workspace = true }
 rstest = { workspace = true }
 proptest = { workspace = true }
+reinhardt-forms = { workspace = true }
