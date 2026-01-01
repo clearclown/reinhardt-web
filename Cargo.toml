@@ -609,7 +609,7 @@ redis = { version = "0.32", features = ["tokio-comp", "connection-manager"] }
 
 # Connection pooling & migrations
 refinery = { version = "0.9.0", features = ["tokio-postgres"] }
-sea-query = { version = "1.0.0-rc.22", features = [
+sea-query = { version = "1.0.0-rc.29", features = [
   "with-json",
   "with-chrono",
   "with-rust_decimal",

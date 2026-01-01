@@ -45,3 +45,39 @@ timeout = "300s"
 # JUnit output for CI/CD integration
 [profile.default.junit]
 path = "target/nextest/junit.xml"
+
+# Database-intensive test profile
+# Use this profile for tests that heavily use database connections
+# to avoid connection pool exhaustion and PoolTimedOut errors
+#
+# Usage:
+#   cargo nextest run --profile db-tests
+#   TEST_MAX_CONNECTIONS=30 cargo nextest run --profile db-tests
+[profile.db-tests]
+# Limit parallelism for database tests to reduce connection pool contention
+test-threads = 4
+
+# Increase timeouts for database operations
+slow-timeout = "60s"
+timeout = "180s"
+
+# Database migration/introspect/views tests need sequential execution
+# to avoid connection pool exhaustion
+[[profile.db-tests.overrides]]
+filter = 'test(/(migrations|introspect|views|db_)/)'
+threads-required = 1
+
+# Long-running test profile (DI macro compilation, etc.)
+# Separates slow tests from regular test flow to improve developer experience
+#
+# Usage:
+#   cargo nextest run --profile slow-tests
+[profile.slow-tests]
+# Very long timeout for compilation tests
+slow-timeout = { period = "60s", terminate-after = 2 }
+timeout = "600s"
+
+# DI macro compilation tests can run in parallel but need extended timeout
+[[profile.slow-tests.overrides]]
+filter = 'test(compile) | test(trybuild) | binary_id(~macro_compile)'
+timeout = "600s"

@@ -113,6 +113,15 @@ description = "Run only documentation tests"
 command = "cargo"
 args = ["test", "--workspace", "--doc", "--quiet", "--all-features", "--no-fail-fast"]
 
+[tasks.doc-test-crate]
+description = "Run documentation tests for specific package(s). Usage: cargo make doc-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo test $args --doc --quiet --all-features --no-fail-fast
+'''
+
 [tasks.bench]
 description = "Run benchmark tests in tests/bench"
 command = "cargo"
@@ -135,6 +144,15 @@ args = [
   "--final-status-level=none",
 ]
 
+[tasks.unit-test-crate]
+description = "Run unit tests for specific package(s). Usage: cargo make unit-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --lib --all-features --no-fail-fast --show-progress=none --status-level=none --final-status-level=none
+'''
+
 [tasks.intra-crate-integration-test]
 description = "Run intra-crate integration tests (tests/)"
 command = "cargo"
@@ -152,6 +170,15 @@ args = [
   "--status-level=none",
   "--final-status-level=none"
 ]
+
+[tasks.intra-crate-integration-test-crate]
+description = "Run intra-crate integration tests for specific package(s). Usage: cargo make intra-crate-integration-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --test "*" --all-features --no-fail-fast --show-progress=none --status-level=none --final-status-level=none
+'''
 
 [tasks.cross-crate-integration-test]
 description = "Run cross-crate integration tests (reinhardt-integration-tests)"
@@ -187,6 +214,15 @@ args = [
   "-p", "examples-github-issues",
   "--verbose"
 ]
+
+[tasks.local-examples-test-crate]
+description = "Test specific local example(s). Usage: cargo make local-examples-test-crate -- -p examples-hello-world -p examples-rest-api"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --verbose
+'''
 
 [tasks.remote-examples-test]
 description = "Test remote examples (uses crates.io published versions)"
