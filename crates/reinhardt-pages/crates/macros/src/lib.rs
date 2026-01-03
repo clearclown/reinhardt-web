@@ -5,6 +5,7 @@
 //! ## Available Macros
 //!
 //! - `page!` - Anonymous component DSL macro
+//! - `head!` - HTML head section DSL macro
 //! - `#[server_fn]` - Server Functions (RPC) macro
 //!
 //! ## page! Macro Example
@@ -48,6 +49,7 @@
 use proc_macro::TokenStream;
 
 mod crate_paths;
+mod head;
 mod page;
 mod server_fn;
 
@@ -174,6 +176,93 @@ pub fn server_fn(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn page(input: TokenStream) -> TokenStream {
 	page::page_impl(input)
+}
+
+/// Head section macro
+///
+/// Creates an HTML head section with a concise DSL.
+/// The macro returns a `Head` struct that can be used with SSR rendering.
+///
+/// ## Syntax
+///
+/// ```text
+/// head!(|| {
+///     title { "Page Title" }
+///     meta { name: "description", content: "..." }
+///     link { rel: "stylesheet", href: "..." }
+///     script { src: "...", defer }
+/// })
+/// ```
+///
+/// ## Elements
+///
+/// ### Title
+///
+/// ```ignore
+/// head!(|| {
+///     title { "My Page Title" }
+/// })
+/// ```
+///
+/// ### Meta Tags
+///
+/// ```ignore
+/// head!(|| {
+///     meta { name: "description", content: "Page description" }
+///     meta { property: "og:title", content: "Open Graph Title" }
+///     meta { charset: "UTF-8" }
+/// })
+/// ```
+///
+/// ### Link Tags
+///
+/// ```ignore
+/// head!(|| {
+///     link { rel: "stylesheet", href: "/static/style.css" }
+///     link { rel: "icon", href: "/favicon.png", type: "image/png" }
+///     link { rel: "preload", href: "/static/app.js", as_: "script" }
+/// })
+/// ```
+///
+/// ### Script Tags
+///
+/// ```ignore
+/// head!(|| {
+///     script { src: "/static/app.js", defer }
+///     script { src: "/static/analytics.js", async_ }
+///     script { type: "module", src: "/static/main.js" }
+///     script { "console.log('inline script');" }
+/// })
+/// ```
+///
+/// ### Style Tags
+///
+/// ```ignore
+/// head!(|| {
+///     style { "body { margin: 0; }" }
+/// })
+/// ```
+///
+/// ## Example
+///
+/// ```ignore
+/// use reinhardt_pages::head;
+///
+/// let my_head = head!(|| {
+///     title { "My Application" }
+///     meta { name: "description", content: "A great application" }
+///     meta { name: "viewport", content: "width=device-width, initial-scale=1.0" }
+///     link { rel: "icon", href: "/favicon.png", type: "image/png" }
+///     link { rel: "stylesheet", href: "/static/css/style.css" }
+///     script { src: "/static/js/app.js", defer }
+/// });
+///
+/// // Use with SSR
+/// let html = my_head.to_html();
+/// ```
+#[proc_macro]
+pub fn head(input: TokenStream) -> TokenStream {
+	head::head_impl(input)
 }
 
 // Note: For dependency injection parameters, use the tool attribute #[reinhardt::inject]
