@@ -11,7 +11,7 @@ allowed_hosts = ["127.0.0.1", "localhost"]
 
 # Static files configuration
 static_url = "/static/"
-static_root = "staticfiles"
+static_root = "dist"
 
 # Pages/Component rendering configuration (reinhardt-pages)
 template_debug = true
