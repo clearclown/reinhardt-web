@@ -45,6 +45,8 @@ impl PathPattern {
 	/// # Examples
 	///
 	/// ```no_run
+	/// use reinhardt_pages::router::PathPattern;
+	///
 	/// let pattern = PathPattern::new("/users/{id}/");
 	/// assert!(pattern.matches("/users/42/").is_some());
 	/// assert!(pattern.matches("/users/abc/").is_some());
@@ -147,8 +149,11 @@ impl PathPattern {
 	/// # Examples
 	///
 	/// ```no_run
+	/// use reinhardt_pages::router::PathPattern;
+	/// use std::collections::HashMap;
+	///
 	/// let pattern = PathPattern::new("/users/{id}/posts/{post_id}/");
-	/// let params = [("id", "42"), ("post_id", "123")].into();
+	/// let params: HashMap<String, String> = [("id".to_string(), "42".to_string()), ("post_id".to_string(), "123".to_string())].into();
 	/// assert_eq!(pattern.reverse(&params), Some("/users/42/posts/123/".to_string()));
 	/// ```
 	pub fn reverse(&self, params: &HashMap<String, String>) -> Option<String> {

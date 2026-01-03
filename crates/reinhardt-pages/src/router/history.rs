@@ -109,7 +109,7 @@ struct HistoryStateJson {
 
 /// Pushes a new state to the browser history.
 #[cfg(target_arch = "wasm32")]
-pub fn push_state(state: &HistoryState) -> Result<(), String> {
+pub(super) fn push_state(state: &HistoryState) -> Result<(), String> {
 	use wasm_bindgen::JsValue;
 
 	let window = web_sys::window().ok_or("Window not available")?;
@@ -131,7 +131,7 @@ pub(super) fn push_state(_state: &HistoryState) -> Result<(), String> {
 
 /// Replaces the current state in the browser history.
 #[cfg(target_arch = "wasm32")]
-pub fn replace_state(state: &HistoryState) -> Result<(), String> {
+pub(super) fn replace_state(state: &HistoryState) -> Result<(), String> {
 	use wasm_bindgen::JsValue;
 
 	let window = web_sys::window().ok_or("Window not available")?;
@@ -154,7 +154,7 @@ pub(super) fn replace_state(_state: &HistoryState) -> Result<(), String> {
 /// Navigates back in the browser history.
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn go_back() -> Result<(), String> {
+pub(super) fn go_back() -> Result<(), String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let history = window.history().map_err(|_| "History not available")?;
 
@@ -171,7 +171,7 @@ pub(super) fn go_back() -> Result<(), String> {
 /// Navigates forward in the browser history.
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn go_forward() -> Result<(), String> {
+pub(super) fn go_forward() -> Result<(), String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let history = window.history().map_err(|_| "History not available")?;
 
@@ -190,7 +190,7 @@ pub(super) fn go_forward() -> Result<(), String> {
 /// Navigates to a specific position in the history.
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn go(delta: i32) -> Result<(), String> {
+pub(super) fn go(delta: i32) -> Result<(), String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let history = window.history().map_err(|_| "History not available")?;
 
@@ -208,7 +208,7 @@ pub(super) fn go(_delta: i32) -> Result<(), String> {
 
 /// Gets the current pathname from the browser.
 #[cfg(target_arch = "wasm32")]
-pub fn current_path() -> Result<String, String> {
+pub(super) fn current_path() -> Result<String, String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let location = window.location();
 	location
@@ -225,7 +225,7 @@ pub(super) fn current_path() -> Result<String, String> {
 /// Gets the current search query from the browser.
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn current_search() -> Result<String, String> {
+pub(super) fn current_search() -> Result<String, String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let location = window.location();
 	location
@@ -243,7 +243,7 @@ pub(super) fn current_search() -> Result<String, String> {
 /// Gets the current hash from the browser.
 #[cfg(target_arch = "wasm32")]
 #[allow(dead_code)]
-pub fn current_hash() -> Result<String, String> {
+pub(super) fn current_hash() -> Result<String, String> {
 	let window = web_sys::window().ok_or("Window not available")?;
 	let location = window.location();
 	location

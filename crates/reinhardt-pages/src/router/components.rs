@@ -130,8 +130,10 @@ impl Component for Link {
 ///
 /// ```no_run
 /// use reinhardt_pages::router::{Router, RouterOutlet};
+/// use reinhardt_pages::component::View;
 /// use std::sync::Arc;
 ///
+/// # fn home_view() -> View { View::text("Home") }
 /// let router = Arc::new(Router::new().route("/", home_view));
 /// let outlet = RouterOutlet::new(router);
 /// ```
