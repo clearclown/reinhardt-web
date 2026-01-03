@@ -32,17 +32,25 @@ impl<M: Model, T> Field<M, T> {
 	/// use reinhardt_orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
-	/// #[derive(Debug, Serialize, Deserialize)]
+	/// #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// struct User {
 	///     id: Option<i32>,
 	///     name: String,
 	/// }
 	///
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for User {
 	///     type PrimaryKey = i32;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str {
 	///         "users"
 	///     }
+	///     fn new_fields() -> Self::Fields { UserFields }
 	///     fn primary_key(&self) -> Option<Self::PrimaryKey> {
 	///         self.id
 	///     }
@@ -178,10 +186,18 @@ impl<M: Model> Field<M, String> {
 	///
 	/// const USER_TABLE: TableName = TableName::new_const("users");
 	///
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { USER_TABLE.as_str() }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// }
 	///
@@ -210,10 +226,18 @@ impl<M: Model> Field<M, String> {
 	///
 	/// const PRODUCT_TABLE: TableName = TableName::new_const("products");
 	///
+	/// #[derive(Clone)]
+	/// struct ProductFields;
+	/// impl reinhardt_orm::FieldSelector for ProductFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for Product {
 	///     type PrimaryKey = i64;
+	///     type Fields = ProductFields;
 	///     fn table_name() -> &'static str { PRODUCT_TABLE.as_str() }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+	///     fn new_fields() -> Self::Fields { ProductFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// }
 	///
@@ -242,10 +266,18 @@ impl<M: Model> Field<M, String> {
 	///
 	/// const COMMENT_TABLE: TableName = TableName::new_const("comments");
 	///
+	/// #[derive(Clone)]
+	/// struct CommentFields;
+	/// impl reinhardt_orm::FieldSelector for CommentFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for Comment {
 	///     type PrimaryKey = i64;
+	///     type Fields = CommentFields;
 	///     fn table_name() -> &'static str { COMMENT_TABLE.as_str() }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+	///     fn new_fields() -> Self::Fields { CommentFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// }
 	///
@@ -275,10 +307,18 @@ impl<M: Model> Field<M, String> {
 	///
 	/// const POST_TABLE: TableName = TableName::new_const("posts");
 	///
+	/// #[derive(Clone)]
+	/// struct PostFields;
+	/// impl reinhardt_orm::FieldSelector for PostFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for Post {
 	///     type PrimaryKey = i64;
+	///     type Fields = PostFields;
 	///     fn table_name() -> &'static str { POST_TABLE.as_str() }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+	///     fn new_fields() -> Self::Fields { PostFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
 	/// }
 	///

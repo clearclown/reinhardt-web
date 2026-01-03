@@ -173,24 +173,31 @@ impl<M: Model> Lookup<M> {
 	/// use reinhardt_orm::query_fields::{Lookup, LookupType, LookupValue};
 	/// # use reinhardt_orm::Model;
 	/// # use serde::{Serialize, Deserialize};
-	/// # #[derive(Serialize, Deserialize)]
+	/// # #[derive(Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
 	///
 	/// let lookup = Lookup::<User>::new(
-	///     vec!["name"],
+	///     vec!["name".to_string()],
 	///     LookupType::Exact,
 	///     LookupValue::String("Alice".to_string())
 	/// );
 	/// // Represents: WHERE name = 'Alice'
-	/// assert_eq!(lookup.field_path(), &["name"]);
+	/// assert_eq!(lookup.field_path(), &["name".to_string()]);
 	/// assert_eq!(*lookup.lookup_type(), LookupType::Exact);
 	/// ```
 	pub fn new(field_path: Vec<String>, lookup_type: LookupType, value: LookupValue) -> Self {

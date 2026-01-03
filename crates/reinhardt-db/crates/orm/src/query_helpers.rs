@@ -17,12 +17,19 @@ use crate::model::Model;
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Asterisk, Expr, ExprTrait, Func, SelectStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_count_query<M: Model>() -> SelectStatement {
 /// #     Query::select()
@@ -50,12 +57,19 @@ pub fn build_count_query<M: Model>() -> SelectStatement {
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Asterisk, Expr, ExprTrait, SelectStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_get_query<M: Model, V>(pk: V) -> SelectStatement
 /// # where
@@ -94,12 +108,19 @@ where
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Expr, ExprTrait, DeleteStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_delete_query<M: Model, V>(pk: V) -> DeleteStatement
 /// # where
@@ -134,12 +155,19 @@ where
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Expr, ExprTrait, InsertStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_insert_query<M: Model>(
 /// #     columns: Vec<&str>,
@@ -195,12 +223,19 @@ pub fn build_insert_query<M: Model>(
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Expr, ExprTrait, UpdateStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_update_query<M: Model, V>(
 /// #     updates: Vec<(&str, sea_query::Value)>,
@@ -275,12 +310,19 @@ pub fn build_exists_query(inner: SelectStatement) -> SelectStatement {
 /// # use sea_query::{PostgresQueryBuilder, Query, Alias, Asterisk, Expr, ExprTrait, SelectStatement};
 /// # #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// # struct User { id: i64 }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
+/// # }
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key_field() -> &'static str { "id" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { Some(self.id) }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { Some(self.id) }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = value; }
+/// #     fn primary_key_field() -> &'static str { "id" }
 /// # }
 /// # fn build_in_query<M: Model>(column: &str, values: Vec<sea_query::Value>) -> SelectStatement {
 /// #     Query::select()

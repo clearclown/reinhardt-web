@@ -82,10 +82,18 @@ impl<T: Model> SelectQuery<T> {
 	///     name: String,
 	/// }
 	///
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
+	/// }
+	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { "users" }
-	///     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// }
 	///
@@ -158,27 +166,48 @@ impl<T: Model> SelectQuery<T> {
 	/// # struct Post { id: Option<i64> }
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct Comment { id: Option<i64> }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl reinhardt_orm::FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct CommentFields;
+	/// # impl reinhardt_orm::FieldSelector for CommentFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
 	/// # impl Model for Comment {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = CommentFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "comments" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { CommentFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
@@ -225,11 +254,18 @@ impl<T: Model> SelectQuery<T> {
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
@@ -351,11 +387,18 @@ impl<T: Model> SelectQuery<T> {
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct User { id: Option<i64> }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn app_label() -> &'static str { "app" }
 	/// #     fn table_name() -> &'static str { "users" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
 	/// #     fn primary_key_field() -> &'static str { "id" }
 	/// # }
