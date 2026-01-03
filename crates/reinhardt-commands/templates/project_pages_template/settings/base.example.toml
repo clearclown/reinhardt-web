@@ -54,7 +54,7 @@ password = "CHANGE_THIS"
 # Static files
 [static]
 url = "/static/"
-root = "staticfiles"
+root = "dist"
 
 # Media files
 [media]

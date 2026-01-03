@@ -8,7 +8,13 @@
 default_to_workspace = false
 skip_core_tasks = true
 
+# ============================================================================
+# Environment Variables
+# ============================================================================
+
 [env]
+# Use local target directory for each example (independent from workspace)
+CARGO_TARGET_DIR = { value = "target", condition = { env_not_set = ["CARGO_TARGET_DIR"] } }
 WASM_TARGET = "wasm32-unknown-unknown"
 WASM_BINDGEN_VERSION = "0.2.100"
 
@@ -26,60 +32,96 @@ dependencies = ["wasm-build-dev"]
 description = "Start the development server with auto-reload (requires bacon)"
 command = "bacon"
 args = ["runserver"]
-dependencies = ["install-bacon"]
 
 # ============================================================================
 # WASM Build
 # ============================================================================
 
-[tasks.wasm-build-dev]
-description = "Build WASM in debug mode"
+[tasks.wasm-compile-dev]
+description = "Compile WASM binary (debug mode)"
+command = "cargo"
+args = ["build", "--target", "wasm32-unknown-unknown"]
+
+[tasks.collectstatic-wasm]
+description = "Collect static files to dist/ for WASM frontend"
+command = "cargo"
+args = ["run", "--bin", "manage", "collectstatic", "--noinput"]
+dependencies = ["wasm-compile-dev"]
+
+[tasks.wasm-bindgen-dev]
+description = "Generate WASM bindings (debug mode)"
 script = '''
-#!/bin/bash
-set -e
-echo "Building WASM (debug mode)..."
-cargo build --target ${WASM_TARGET} --lib
-WASM_FILE=$(ls target/${WASM_TARGET}/debug/*.wasm 2>/dev/null | head -1)
+WASM_FILE=$(ls target/wasm32-unknown-unknown/debug/*.wasm 2>/dev/null | head -1)
 if [ -n "$WASM_FILE" ]; then
-	mkdir -p dist
 	wasm-bindgen --target web "$WASM_FILE" --out-dir dist --debug
-	echo "WASM build complete: dist/"
+	echo "✓ WASM bindings generated"
 else
-	echo "No WASM file found to process"
+	echo "❌ No WASM file found"
+	exit 1
 fi
 '''
-dependencies = ["install-wasm-tools"]
+dependencies = ["collectstatic-wasm"]
+
+[tasks.wasm-finalize-dev]
+description = "Finalize WASM build (copy index.html)"
+script = '''
+[ -f index.html ] && cp index.html dist/
+echo "✓ WASM build completed: dist/"
+'''
+dependencies = ["wasm-bindgen-dev"]
+
+[tasks.wasm-build-dev]
+description = "Build WASM in debug mode"
+dependencies = ["wasm-finalize-dev"]
+
+[tasks.wasm-compile-release]
+description = "Compile WASM binary (release mode)"
+command = "cargo"
+args = ["build", "--target", "wasm32-unknown-unknown", "--release"]
+
+[tasks.wasm-bindgen-release]
+description = "Generate WASM bindings (release mode)"
+script = '''
+WASM_FILE=$(ls target/wasm32-unknown-unknown/release/*.wasm 2>/dev/null | head -1)
+if [ -n "$WASM_FILE" ]; then
+	wasm-bindgen --target web "$WASM_FILE" --out-dir dist
+	echo "✓ WASM bindings generated"
+else
+	echo "❌ No WASM file found"
+	exit 1
+fi
+'''
+dependencies = ["collectstatic-wasm"]
+
+[tasks.wasm-finalize-release]
+description = "Finalize WASM build (copy index.html, optimize with wasm-opt)"
+script = '''
+[ -f index.html ] && cp index.html dist/
+
+# Optimize with wasm-opt if available
+if command -v wasm-opt &> /dev/null; then
+	echo "Running wasm-opt..."
+	WASM_BG=$(ls dist/*_bg.wasm 2>/dev/null | head -1)
+	if [ -n "$WASM_BG" ]; then
+		wasm-opt -O3 "$WASM_BG" -o "$WASM_BG"
+		echo "✓ WASM optimized"
+	fi
+else
+	echo "⚠️  wasm-opt not found, skipping optimization"
+fi
+
+echo "✓ WASM build completed: dist/"
+'''
+dependencies = ["wasm-bindgen-release"]
 
 [tasks.wasm-build-release]
 description = "Build WASM in release mode with optimization"
-script = '''
-#!/bin/bash
-set -e
-echo "Building WASM (release mode)..."
-cargo build --target ${WASM_TARGET} --lib --release
-WASM_FILE=$(ls target/${WASM_TARGET}/release/*.wasm 2>/dev/null | head -1)
-if [ -n "$WASM_FILE" ]; then
-	mkdir -p dist
-	wasm-bindgen --target web "$WASM_FILE" --out-dir dist
-	if command -v wasm-opt &> /dev/null; then
-		WASM_BG=$(ls dist/*_bg.wasm 2>/dev/null | head -1)
-		if [ -n "$WASM_BG" ]; then
-			wasm-opt -O3 "$WASM_BG" -o "$WASM_BG"
-			echo "WASM optimized with wasm-opt"
-		fi
-	fi
-	echo "WASM build complete: dist/"
-else
-	echo "No WASM file found to process"
-fi
-'''
-dependencies = ["install-wasm-tools"]
+dependencies = ["wasm-finalize-release"]
 
 [tasks.wasm-watch]
 description = "Watch and rebuild WASM on changes"
 command = "cargo"
 args = ["watch", "-w", "src/client", "-s", "cargo make wasm-build-dev"]
-dependencies = ["install-cargo-watch"]
 
 [tasks.wasm-clean]
 description = "Clean WASM build artifacts"
@@ -143,25 +185,21 @@ args = ["run", "--bin", "manage", "shell"]
 description = "Run all tests"
 command = "cargo"
 args = ["nextest", "run", "--all-features"]
-dependencies = ["install-nextest"]
 
 [tasks.test-unit]
 description = "Run unit tests only"
 command = "cargo"
 args = ["nextest", "run", "--lib", "--all-features"]
-dependencies = ["install-nextest"]
 
 [tasks.test-integration]
 description = "Run integration tests only"
 command = "cargo"
 args = ["nextest", "run", "--test", "*", "--all-features"]
-dependencies = ["install-nextest"]
 
 [tasks.test-watch]
 description = "Run tests with auto-reload (requires bacon)"
 command = "bacon"
 args = ["test"]
-dependencies = ["install-bacon", "install-nextest"]
 
 # ============================================================================
 # Code Quality
@@ -213,77 +251,6 @@ args = ["build", "--release", "--all-features"]
 description = "Clean build artifacts"
 command = "cargo"
 args = ["clean"]
-
-# ============================================================================
-# Dependencies Installation
-# ============================================================================
-
-[tasks.install-nextest]
-description = "Install cargo-nextest if not already installed"
-script = '''
-if ! command -v cargo-nextest &> /dev/null
-then
-	echo "Installing cargo-nextest..."
-	cargo install cargo-nextest --locked
-else
-	echo "cargo-nextest is already installed"
-fi
-'''
-
-[tasks.install-bacon]
-description = "Install bacon if not already installed"
-script = '''
-if ! command -v bacon &> /dev/null
-then
-	echo "Installing bacon..."
-	cargo install --locked bacon
-else
-	echo "bacon is already installed"
-fi
-'''
-
-[tasks.install-wasm-tools]
-description = "Install WASM build tools"
-script = '''
-#!/bin/bash
-set -e
-echo "Installing WASM build tools..."
-
-# Add wasm32 target
-rustup target add wasm32-unknown-unknown
-
-# Install wasm-bindgen-cli
-if ! wasm-bindgen --version 2>/dev/null | grep -q "${WASM_BINDGEN_VERSION}"; then
-	echo "Installing wasm-bindgen-cli..."
-	cargo install wasm-bindgen-cli --version "${WASM_BINDGEN_VERSION}"
-else
-	echo "wasm-bindgen-cli is already installed"
-fi
-
-# Install wasm-opt (binaryen) - optional but recommended
-if ! command -v wasm-opt &> /dev/null; then
-	echo "wasm-opt not found. Install binaryen for WASM optimization:"
-	echo "  macOS: brew install binaryen"
-	echo "  Linux: apt install binaryen or download from GitHub"
-else
-	echo "wasm-opt is already installed"
-fi
-'''
-
-[tasks.install-cargo-watch]
-description = "Install cargo-watch for file watching"
-script = '''
-if ! command -v cargo-watch &> /dev/null; then
-	echo "Installing cargo-watch..."
-	cargo install cargo-watch
-else
-	echo "cargo-watch is already installed"
-fi
-'''
-
-[tasks.install-tools]
-description = "Install all required development tools"
-dependencies = ["install-nextest", "install-bacon", "install-wasm-tools", "install-cargo-watch"]
 
 # ============================================================================
 # Development Workflow
@@ -378,9 +345,6 @@ echo "    clean              - Clean artifacts"
 echo ""
 echo "  CI/CD:"
 echo "    ci                 - Run CI pipeline"
-echo ""
-echo "  Tools:"
-echo "    install-tools      - Install dev tools (incl. WASM tools)"
 echo ""
 echo "Usage: cargo make <task>"
 '''

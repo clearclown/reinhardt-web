@@ -89,7 +89,30 @@ impl CollectStaticCommand {
 		}
 
 		// Collect files from all source directories
-		let finder = StaticFilesFinder::new(self.config.staticfiles_dirs.clone());
+		// Start with manually configured directories
+		let mut all_dirs = self.config.staticfiles_dirs.clone();
+
+		// Auto-discover static files from installed apps via inventory
+		let app_static_configs = ::reinhardt_apps::get_app_static_files();
+
+		for config in app_static_configs {
+			// Convert &'static str to PathBuf
+			let static_dir = std::path::PathBuf::from(config.static_dir);
+
+			// Skip if already in staticfiles_dirs (manual config takes precedence)
+			if !all_dirs.contains(&static_dir) {
+				if self.options.verbosity > 1 {
+					println!(
+						"Auto-discovered static files from app '{}': {}",
+						config.app_label,
+						static_dir.display()
+					);
+				}
+				all_dirs.push(static_dir);
+			}
+		}
+
+		let finder = StaticFilesFinder::new(all_dirs);
 		let all_files = finder.find_all();
 
 		if self.options.verbosity > 0 {

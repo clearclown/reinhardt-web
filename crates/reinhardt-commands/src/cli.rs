@@ -115,6 +115,18 @@ pub enum Commands {
 		/// Disable automatic OpenAPI documentation endpoints
 		#[arg(long)]
 		no_docs: bool,
+
+		/// Enable WASM frontend serving (serves static files from dist/)
+		#[arg(long)]
+		with_pages: bool,
+
+		/// Static files directory for WASM frontend
+		#[arg(long, default_value = "dist")]
+		static_dir: String,
+
+		/// Disable SPA mode (no index.html fallback)
+		#[arg(long)]
+		no_spa: bool,
 	},
 
 	/// Run an interactive Rust shell (REPL)
@@ -274,7 +286,22 @@ pub async fn run_command(
 			noreload,
 			insecure,
 			no_docs,
-		} => execute_runserver(address, noreload, insecure, no_docs, verbosity).await,
+			with_pages,
+			static_dir,
+			no_spa,
+		} => {
+			execute_runserver(RunServerOptions {
+				address,
+				noreload,
+				insecure,
+				no_docs,
+				with_pages,
+				static_dir,
+				no_spa,
+				verbosity,
+			})
+			.await
+		}
 		Commands::Shell { command } => execute_shell(command, verbosity).await,
 		Commands::Check { app_label, deploy } => execute_check(app_label, deploy, verbosity).await,
 		Commands::Collectstatic {
@@ -371,26 +398,39 @@ async fn execute_migrate(params: MigrateParams) -> Result<(), Box<dyn std::error
 	cmd.execute(&ctx).await.map_err(|e| e.into())
 }
 
-/// Execute the runserver command
-async fn execute_runserver(
+/// Options for the runserver command
+struct RunServerOptions {
 	address: String,
 	noreload: bool,
 	insecure: bool,
 	no_docs: bool,
+	with_pages: bool,
+	static_dir: String,
+	no_spa: bool,
 	verbosity: u8,
-) -> Result<(), Box<dyn std::error::Error>> {
-	let mut ctx = CommandContext::default();
-	ctx.set_verbosity(verbosity);
-	ctx.add_arg(address);
+}
 
-	if noreload {
+/// Execute the runserver command
+async fn execute_runserver(options: RunServerOptions) -> Result<(), Box<dyn std::error::Error>> {
+	let mut ctx = CommandContext::default();
+	ctx.set_verbosity(options.verbosity);
+	ctx.add_arg(options.address);
+
+	if options.noreload {
 		ctx.set_option("noreload".to_string(), "true".to_string());
 	}
-	if insecure {
+	if options.insecure {
 		ctx.set_option("insecure".to_string(), "true".to_string());
 	}
-	if no_docs {
+	if options.no_docs {
 		ctx.set_option("no_docs".to_string(), "true".to_string());
+	}
+	if options.with_pages {
+		ctx.set_option("with-pages".to_string(), "true".to_string());
+	}
+	ctx.set_option("static-dir".to_string(), options.static_dir);
+	if options.no_spa {
+		ctx.set_option("no-spa".to_string(), "true".to_string());
 	}
 
 	let cmd = RunServerCommand;

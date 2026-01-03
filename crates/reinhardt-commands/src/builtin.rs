@@ -105,6 +105,49 @@ impl BaseCommand for MigrateCommand {
 				))
 			})?;
 
+			// 3. Validate database URL early (before filtering migrations)
+			// Use database URL from context option if provided, otherwise fall back to environment
+			let database_url = ctx
+				.option("database")
+				.map(|s| s.to_string())
+				.or_else(|| get_database_url().ok())
+				.ok_or_else(|| {
+					crate::CommandError::ExecutionError(
+						"No database URL provided. Use --database option or set DATABASE_URL environment variable".to_string()
+					)
+				})?;
+
+			// Validate database URL scheme
+			if !database_url.starts_with("postgres://")
+				&& !database_url.starts_with("postgresql://")
+				&& !database_url.starts_with("sqlite://")
+				&& !database_url.starts_with("sqlite:")
+			{
+				return Err(crate::CommandError::ExecutionError(format!(
+					"Unsupported database URL scheme: {}",
+					database_url
+				)));
+			}
+
+			// 4. Connect to database (auto-create if it doesn't exist for PostgreSQL)
+			// This is done before filtering migrations to ensure connection errors are detected
+			// even when no migrations need to be applied
+			let connection = if database_url.starts_with("postgres://")
+				|| database_url.starts_with("postgresql://")
+			{
+				DatabaseConnection::connect_postgres_or_create(&database_url).await
+			} else {
+				// Must be SQLite (validated above)
+				DatabaseConnection::connect_sqlite(&database_url).await
+			}
+			.map_err(|e| {
+				crate::CommandError::ExecutionError(format!(
+					"Failed to connect to database: {:?}",
+					e
+				))
+			})?;
+
+			// 5. Filter and check migrations
 			let migrations_to_apply: Vec<_> = if let Some(ref app) = app_label {
 				all_migrations
 					.into_iter()
@@ -123,40 +166,7 @@ impl BaseCommand for MigrateCommand {
 				migrations_to_apply.len()
 			));
 
-			// 3. Check database connection
-			// Use database URL from context option if provided, otherwise fall back to environment
-			let database_url = ctx
-				.option("database")
-				.map(|s| s.to_string())
-				.or_else(|| get_database_url().ok())
-				.ok_or_else(|| {
-					crate::CommandError::ExecutionError(
-						"No database URL provided. Use --database option or set DATABASE_URL environment variable".to_string()
-					)
-				})?;
-
-			// 4. Connect to database (auto-create if it doesn't exist for PostgreSQL)
-			// Determine connection method based on URL scheme
-			let connection = if database_url.starts_with("postgres://")
-				|| database_url.starts_with("postgresql://")
-			{
-				DatabaseConnection::connect_postgres_or_create(&database_url).await
-			} else if database_url.starts_with("sqlite://") || database_url.starts_with("sqlite:") {
-				DatabaseConnection::connect_sqlite(&database_url).await
-			} else {
-				return Err(crate::CommandError::ExecutionError(format!(
-					"Unsupported database URL scheme: {}",
-					database_url
-				)));
-			}
-			.map_err(|e| {
-				crate::CommandError::ExecutionError(format!(
-					"Failed to connect to database: {:?}",
-					e
-				))
-			})?;
-
-			// 5. Apply migrations (or fake them)
+			// 6. Apply migrations (or fake them)
 			if is_fake {
 				ctx.info("Faking migrations (marking as applied without execution):");
 
@@ -1124,31 +1134,89 @@ impl BaseCommand for RunServerCommand {
 		let insecure = ctx.has_option("insecure");
 		let no_docs = ctx.has_option("no_docs");
 		let with_pages = ctx.has_option("with-pages");
-		let static_dir = ctx
+		let static_dir_raw = ctx
 			.option("static-dir")
 			.map(|s| s.to_string())
 			.unwrap_or_else(|| "dist".to_string());
 		let no_spa = ctx.has_option("no-spa");
 
-		ctx.info(&format!(
-			"Starting development server at http://{}",
-			address
-		));
+		// Find available port early (before displaying banner)
+		#[cfg(feature = "server")]
+		let actual_address = {
+			let default_address = "127.0.0.1:8000";
+			let is_default_address = address == default_address;
+
+			let mut addr: std::net::SocketAddr = address.parse().map_err(|e| {
+				crate::CommandError::ExecutionError(format!("Invalid address '{}': {}", address, e))
+			})?;
+
+			// Find available port if using default address
+			if is_default_address {
+				use tokio::net::TcpListener;
+
+				loop {
+					match TcpListener::bind(addr).await {
+						Ok(_) => {
+							// Port is available
+							break;
+						}
+						Err(e) if e.kind() == std::io::ErrorKind::AddrInUse => {
+							// Port in use, try next port
+							let current_port = addr.port();
+							let new_port = current_port + 1;
+
+							if new_port > 9000 {
+								return Err(crate::CommandError::ExecutionError(
+									"Could not find available port in range 8000-9000".to_string(),
+								));
+							}
+
+							ctx.info(&format!(
+								"⚠️  Port {} already in use, trying {}...",
+								current_port, new_port
+							));
+
+							addr.set_port(new_port);
+						}
+						Err(e) => {
+							// Other error, fail
+							return Err(crate::CommandError::ExecutionError(format!(
+								"Failed to bind to {}: {}",
+								addr, e
+							)));
+						}
+					}
+				}
+			}
+
+			addr.to_string()
+		};
+
+		#[cfg(not(feature = "server"))]
+		let actual_address = address.to_string();
+
+		// Display startup banner with actual address
+		ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+		ctx.info(&format!("🚀 Server:  http://{}", actual_address));
 
 		if with_pages {
+			let spa_status = if no_spa { "disabled" } else { "enabled" };
 			ctx.info(&format!(
-				"📦 WASM frontend enabled (static dir: {})",
-				static_dir
+				"📦 WASM:    {} (SPA mode: {})",
+				static_dir_raw, spa_status
 			));
-			if !no_spa {
-				ctx.info("   SPA mode: enabled (index.html fallback for 404s)");
-			}
 		}
+
+		if !no_docs {
+			ctx.info(&format!("📖 Docs:    http://{}/api/docs", actual_address));
+		}
+
+		ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
 		if !noreload {
 			#[cfg(all(feature = "server", feature = "autoreload"))]
 			{
-				ctx.verbose("Auto-reload enabled (notify-based)");
+				ctx.verbose("Auto-reload enabled");
 			}
 			#[cfg(all(feature = "server", not(feature = "autoreload")))]
 			{
@@ -1163,7 +1231,7 @@ impl BaseCommand for RunServerCommand {
 		}
 
 		ctx.info("");
-		ctx.info("Quit the server with CTRL-C");
+		ctx.info("Press CTRL-C to quit");
 		ctx.info("");
 
 		// Server implementation with conditional features
@@ -1171,12 +1239,12 @@ impl BaseCommand for RunServerCommand {
 		{
 			Self::run_server(
 				ctx,
-				address,
+				&actual_address,
 				noreload,
 				insecure,
 				no_docs,
 				with_pages,
-				&static_dir,
+				&static_dir_raw,
 				no_spa,
 			)
 			.await
@@ -1197,7 +1265,7 @@ impl BaseCommand for RunServerCommand {
 			ctx.info("  let server = HttpServer::new(Arc::new(router));");
 			ctx.info(&format!(
 				"  server.listen(\"{}\".parse()?).await?;",
-				address
+				actual_address
 			));
 
 			Ok(())
@@ -1266,19 +1334,7 @@ impl RunServerCommand {
 			shutdown_tx.shutdown();
 		});
 
-		// OpenAPI documentation notice
-		#[cfg(feature = "openapi")]
-		if !no_docs {
-			ctx.info("");
-			ctx.info("📖 OpenAPI documentation available at:");
-			ctx.info(&format!("   Swagger UI:     http://{}/docs", address));
-			ctx.info(&format!("   Redoc UI:       http://{}/docs-redoc", address));
-			ctx.info(&format!(
-				"   OpenAPI JSON:   http://{}/api-docs/openapi.json",
-				address
-			));
-			ctx.info("");
-		}
+		// OpenAPI documentation is shown in startup banner above
 
 		// Create DI context for dependency injection
 		let singleton_scope = std::sync::Arc::new(reinhardt_di::SingletonScope::new());
@@ -1289,21 +1345,20 @@ impl RunServerCommand {
 			// Try to connect to database and register connection
 			match get_database_url() {
 				Ok(url) => {
-					ctx.info(&format!(
-						"Connecting to database: {}...",
-						&url[..url.len().min(50)]
-					));
 					// Initialize ORM global database first, which also creates the connection pool
 					match reinhardt_db::orm::init_database(&url).await {
 						Ok(()) => {
-							ctx.info("✅ ORM global database initialized");
+							ctx.verbose("ORM database initialized");
 							// Get the connection from ORM and register in DI context for dependency injection
 							match reinhardt_db::orm::get_connection().await {
 								Ok(db_conn) => {
 									// Register DatabaseConnection directly (not wrapped in Arc)
 									// The DI system wraps it in Arc internally via SingletonScope::set
 									singleton_scope.set(db_conn);
-									ctx.info("✅ Database connection registered in DI context");
+									ctx.info(&format!(
+										"💾 Database: {} (connected)",
+										&url[..url.len().min(30)]
+									));
 								}
 								Err(e) => {
 									ctx.warning(&format!(
@@ -1341,15 +1396,21 @@ impl RunServerCommand {
 		// Add static files middleware for WASM frontend if enabled
 		if with_pages {
 			use reinhardt_static::middleware::{StaticFilesConfig, StaticFilesMiddleware};
-			use std::path::PathBuf;
+			use reinhardt_static::PathResolver;
 
-			let static_config = StaticFilesConfig::new(PathBuf::from(static_dir))
+			// Automatically resolve static directory path
+			let resolved_static_dir = PathResolver::resolve_static_dir(static_dir);
+
+			let static_config = StaticFilesConfig::new(resolved_static_dir.clone())
 				.url_prefix("/")
-				.spa_mode(!no_spa);
+				.spa_mode(!no_spa)
+				// All API and documentation endpoints are under /api/ prefix
+				.excluded_prefixes(vec!["/api/".to_string()]);
 
 			server = server.with_middleware(StaticFilesMiddleware::new(static_config));
 			ctx.verbose(&format!(
-				"Static files middleware enabled for: {}",
+				"Static files middleware enabled: {} (resolved from: {})",
+				resolved_static_dir.display(),
 				static_dir
 			));
 		}
