@@ -7,7 +7,7 @@ default_to_workspace = false
 [env]
 CARGO_TERM_COLOR = "always"
 RUST_BACKTRACE = "1"
-TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432/test_db"
+TEST_DATABASE_URL = "postgres://postgres:postgres@localhost:5432"
 MYSQL_DATABASE_URL = "mysql://root:mysql@localhost:3306/test_db"
 REDIS_URL = "redis://localhost:6379"
 # Force TestContainers to use Docker instead of Podman
