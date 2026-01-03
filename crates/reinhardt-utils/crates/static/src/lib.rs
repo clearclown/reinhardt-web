@@ -22,7 +22,6 @@ pub use cdn::{CdnConfig, CdnInvalidationRequest, CdnProvider, CdnPurgeHelper, Cd
 pub use checks::{CheckLevel, CheckMessage, check_static_files_config};
 pub use dependency_resolver::DependencyGraph;
 pub use handler::{StaticError, StaticFile, StaticFileHandler, StaticResult};
-pub use path_resolver::PathResolver;
 pub use health::{
 	CacheHealthCheck, DatabaseHealthCheck, HealthCheck, HealthCheckManager, HealthCheckResult,
 	HealthReport, HealthStatus,
@@ -30,6 +29,7 @@ pub use health::{
 pub use media::{HasMedia, Media};
 pub use metrics::{Metric, MetricsCollector, RequestMetrics, RequestTimer};
 pub use middleware::{StaticFilesConfig as StaticMiddlewareConfig, StaticFilesMiddleware};
+pub use path_resolver::PathResolver;
 pub use storage::{
 	FileSystemStorage, HashedFileStorage, Manifest, ManifestStaticFilesStorage, ManifestVersion,
 	MemoryStorage, StaticFilesConfig, StaticFilesFinder, Storage, StorageRegistry,
