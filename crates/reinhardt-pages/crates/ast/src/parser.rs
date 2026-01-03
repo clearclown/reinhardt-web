@@ -26,6 +26,27 @@ impl Parse for PageMacro {
 	fn parse(input: ParseStream) -> Result<Self> {
 		let span = input.span();
 
+		// Parse optional @head directive: @head: expr,
+		let head = if input.peek(Token![@]) {
+			input.parse::<Token![@]>()?;
+			let directive_name: Ident = input.parse()?;
+			if directive_name != "head" {
+				return Err(syn::Error::new(
+					directive_name.span(),
+					format!("Unknown directive '@{}'. Expected '@head'.", directive_name),
+				));
+			}
+			input.parse::<Token![:]>()?;
+			let head_expr: Expr = input.parse()?;
+			// Optional trailing comma
+			if input.peek(Token![,]) {
+				input.parse::<Token![,]>()?;
+			}
+			Some(head_expr)
+		} else {
+			None
+		};
+
 		// Parse closure-style parameters: |param1: Type1, param2: Type2|
 		let params = if input.peek(Token![|]) {
 			parse_closure_params(input)?
@@ -36,7 +57,12 @@ impl Parse for PageMacro {
 		// Parse the body: { ... }
 		let body = input.parse::<PageBody>()?;
 
-		Ok(Self { params, body, span })
+		Ok(Self {
+			head,
+			params,
+			body,
+			span,
+		})
 	}
 }
 

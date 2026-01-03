@@ -30,6 +30,7 @@ use syn::LitStr;
 
 // Import AST types from reinhardt-pages-ast (re-exported via super)
 use crate::crate_paths::get_reinhardt_pages_crate_info;
+use reinhardt_pages_ast::types::AttrValue;
 use reinhardt_pages_ast::{
 	PageEvent, PageExpression, PageParam, PageText, TypedPageAttr, TypedPageBody,
 	TypedPageComponent, TypedPageElement, TypedPageElse, TypedPageFor, TypedPageIf, TypedPageMacro,
@@ -55,12 +56,25 @@ pub(super) fn generate(macro_ast: &TypedPageMacro) -> TokenStream {
 	// Generate body
 	let body = generate_body(&macro_ast.body, pages_crate);
 
+	// If head is provided, wrap the view with .with_head()
+	let body_with_head = if let Some(head_expr) = &macro_ast.head {
+		quote! {
+			{
+				let __view = #body;
+				let __head = #head_expr;
+				__view.with_head(__head)
+			}
+		}
+	} else {
+		body
+	};
+
 	// Wrap in a closure with conditional use statement if needed
 	quote! {
 		{
 			#use_statement
 			#params -> #pages_crate::component::View {
-				#body
+				#body_with_head
 			}
 		}
 	}

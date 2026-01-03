@@ -36,6 +36,7 @@ pub(super) fn validate(ast: &PageMacro) -> Result<TypedPageMacro> {
 	let typed_body = transform_body(&ast.body, &[])?;
 
 	Ok(TypedPageMacro {
+		head: ast.head.clone(),
 		params: ast.params.clone(),
 		body: typed_body,
 		span: ast.span,

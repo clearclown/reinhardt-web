@@ -33,8 +33,23 @@ use syn::{Expr, FnArg, Ident, Pat, Type};
 ///     }
 /// })
 /// ```
+///
+/// With head directive:
+///
+/// ```text
+/// page! {
+///     @head: my_head,
+///     |initial: i32| {
+///         div { "content" }
+///     }
+/// }
+/// ```
 #[derive(Debug)]
 pub struct PageMacro {
+	/// Optional head section expression.
+	///
+	/// When present, the generated view will be wrapped with `.with_head(head_expr)`.
+	pub head: Option<Expr>,
 	/// Closure-style parameters (props)
 	pub params: Vec<PageParam>,
 	/// The body containing the view tree

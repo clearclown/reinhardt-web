@@ -17,6 +17,10 @@ use crate::{PageComponentArg, PageEvent, PageExpression, PageParam, PageText, ty
 /// `PageMacro`. All validation rules have been enforced at this point.
 #[derive(Debug)]
 pub struct TypedPageMacro {
+	/// Optional head expression.
+	///
+	/// When present, the generated view will be wrapped with `.with_head(head_expr)`.
+	pub head: Option<syn::Expr>,
 	/// Closure-style parameters (props)
 	pub params: Vec<PageParam>,
 	/// The validated and typed body
@@ -122,8 +126,13 @@ pub struct TypedPageAttr {
 
 impl TypedPageAttr {
 	/// Returns the HTML attribute name (converts underscores to hyphens).
+	///
+	/// Also strips the `r#` prefix if present (for raw identifiers like `r#for`, `r#type`).
 	pub fn html_name(&self) -> String {
-		self.name.to_string().replace('_', "-")
+		let name = self.name.to_string();
+		// Remove r# prefix if present (raw identifiers in Rust)
+		let name = name.strip_prefix("r#").unwrap_or(&name);
+		name.replace('_', "-")
 	}
 }
 
