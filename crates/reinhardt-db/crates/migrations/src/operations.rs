@@ -2889,7 +2889,7 @@ impl Operation {
 					return Ok(Some(Operation::AlterColumn {
 						table: table.clone(),
 						column: column.clone(),
-				old_definition: None,
+						old_definition: None,
 						new_definition: col_def,
 						mysql_options: None,
 					}));
