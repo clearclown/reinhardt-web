@@ -20,9 +20,16 @@
 //!
 //! impl Model for User {
 //!     type PrimaryKey = i64;
+//!     type Fields = UserFields;
 //!     fn table_name() -> &'static str { "users" }
 //!     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 //!     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+//!     fn new_fields() -> Self::Fields { UserFields }
+//! }
+//! #[derive(Clone)]
+//! struct UserFields;
+//! impl reinhardt_db::orm::FieldSelector for UserFields {
+//!     fn with_alias(self, _alias: &str) -> Self { self }
 //! }
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -172,9 +179,16 @@ impl From<DatabaseValidatorError> for reinhardt_exception::Error {
 /// #
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
 /// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -212,9 +226,16 @@ impl<M: Model> UniqueValidator<M> {
 	/// #
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn table_name() -> &'static str { "users" }
 	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let validator = UniqueValidator::<User>::new("username");
 	/// // Verify the validator is created successfully
@@ -242,9 +263,16 @@ impl<M: Model> UniqueValidator<M> {
 	/// #
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn table_name() -> &'static str { "users" }
 	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let validator = UniqueValidator::<User>::new("username")
 	///     .with_message("Username must be unique");
@@ -335,9 +363,16 @@ impl<M: Model> UniqueValidator<M> {
 /// #
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
 /// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -374,9 +409,16 @@ impl<M: Model> UniqueTogetherValidator<M> {
 	/// #
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn table_name() -> &'static str { "users" }
 	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"]);
 	/// // Verify the validator is created successfully
@@ -404,9 +446,16 @@ impl<M: Model> UniqueTogetherValidator<M> {
 	/// #
 	/// # impl Model for User {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
 	/// #     fn table_name() -> &'static str { "users" }
 	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let validator = UniqueTogetherValidator::<User>::new(vec!["username", "email"])
 	///     .with_message("Username and email combination must be unique");

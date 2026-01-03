@@ -35,9 +35,16 @@ impl<M: Model> ValidatorConfig<M> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	/// }
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_db::orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
 	/// }
 	///
 	/// let config = ValidatorConfig::<User>::new();
@@ -68,9 +75,16 @@ impl<M: Model> ValidatorConfig<M> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	/// }
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_db::orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
 	/// }
 	///
 	/// let mut config = ValidatorConfig::<User>::new();
@@ -99,9 +113,16 @@ impl<M: Model> ValidatorConfig<M> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	/// }
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_db::orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
 	/// }
 	///
 	/// let mut config = ValidatorConfig::<User>::new();
@@ -141,9 +162,16 @@ impl<M: Model> ValidatorConfig<M> {
 	///
 	/// impl Model for User {
 	///     type PrimaryKey = i64;
+	///     type Fields = UserFields;
 	///     fn table_name() -> &'static str { "users" }
 	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	///     fn new_fields() -> Self::Fields { UserFields }
+	/// }
+	/// #[derive(Clone)]
+	/// struct UserFields;
+	/// impl reinhardt_db::orm::FieldSelector for UserFields {
+	///     fn with_alias(self, _alias: &str) -> Self { self }
 	/// }
 	///
 	/// let mut config = ValidatorConfig::<User>::new();

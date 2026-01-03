@@ -64,16 +64,30 @@ use std::marker::PhantomData;
 /// #
 /// # impl Model for Post {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = PostFields;
 /// #     fn table_name() -> &'static str { "posts" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { PostFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct PostFields;
+/// # impl reinhardt_db::orm::FieldSelector for PostFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # impl Model for Author {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = AuthorFields;
 /// #     fn table_name() -> &'static str { "authors" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { AuthorFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct AuthorFields;
+/// # impl reinhardt_db::orm::FieldSelector for AuthorFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # fn example() {
@@ -111,16 +125,30 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl reinhardt_db::orm::FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// #
 	/// # impl Model for Author {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = AuthorFields;
 	/// #     fn table_name() -> &'static str { "authors" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { AuthorFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct AuthorFields;
+	/// # impl reinhardt_db::orm::FieldSelector for AuthorFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let serializer = NestedSerializer::<Post, Author>::new("author");
 	/// // Verify the serializer is created successfully
@@ -156,16 +184,30 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl reinhardt_db::orm::FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// #
 	/// # impl Model for Author {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = AuthorFields;
 	/// #     fn table_name() -> &'static str { "authors" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { AuthorFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct AuthorFields;
+	/// # impl reinhardt_db::orm::FieldSelector for AuthorFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let serializer = NestedSerializer::<Post, Author>::new("author")
 	///     .depth(2); // Serialize author and author's relationships
@@ -196,16 +238,30 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 	/// #
 	/// # impl Model for Post {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = PostFields;
 	/// #     fn table_name() -> &'static str { "posts" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { PostFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct PostFields;
+	/// # impl reinhardt_db::orm::FieldSelector for PostFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// #
 	/// # impl Model for Author {
 	/// #     type PrimaryKey = i64;
+	/// #     type Fields = AuthorFields;
 	/// #     fn table_name() -> &'static str { "authors" }
-	/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+	/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 	/// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// #     fn new_fields() -> Self::Fields { AuthorFields }
+	/// # }
+	/// # #[derive(Clone)]
+	/// # struct AuthorFields;
+	/// # impl reinhardt_db::orm::FieldSelector for AuthorFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
 	/// # }
 	/// let serializer = NestedSerializer::<Post, Author>::new("author")
 	///     .without_arena(); // Disable arena allocation
@@ -298,9 +354,16 @@ impl<M: Model, R: Model> NestedSerializer<M, R> {
 /// #
 /// # impl Model for User {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = UserFields;
 /// #     fn table_name() -> &'static str { "users" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { UserFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct UserFields;
+/// # impl reinhardt_db::orm::FieldSelector for UserFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// let serializer = ListSerializer::<User>::new();
 /// // Verify the serializer is created successfully
@@ -480,16 +543,30 @@ impl<M: Model> Serializer for ListSerializer<M> {
 /// #
 /// # impl Model for Post {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = PostFields;
 /// #     fn table_name() -> &'static str { "posts" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { PostFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct PostFields;
+/// # impl reinhardt_db::orm::FieldSelector for PostFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # impl Model for Comment {
 /// #     type PrimaryKey = i64;
+/// #     type Fields = CommentFields;
 /// #     fn table_name() -> &'static str { "comments" }
-/// #     fn primary_key(&self) -> Option<&Self::PrimaryKey> { self.id.as_ref() }
+/// #     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
 /// #     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+/// #     fn new_fields() -> Self::Fields { CommentFields }
+/// # }
+/// # #[derive(Clone)]
+/// # struct CommentFields;
+/// # impl reinhardt_db::orm::FieldSelector for CommentFields {
+/// #     fn with_alias(self, _alias: &str) -> Self { self }
 /// # }
 /// #
 /// # fn example() {
