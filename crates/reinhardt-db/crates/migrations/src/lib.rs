@@ -23,7 +23,7 @@
 //!
 //! The migration system automatically generates entry point files:
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! // migrations/myapp.rs (auto-generated - example only)
 //! pub mod _0001_initial;
 //! pub mod _0002_add_field;
@@ -163,7 +163,7 @@ use thiserror::Error;
 ///
 /// Application-side implementation (migration modules would be generated):
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt_migrations::{Migration, MigrationProvider};
 ///
 /// // In your application's migrations module
@@ -184,7 +184,7 @@ use thiserror::Error;
 ///
 /// // Usage in tests:
 /// // let (container, db) = postgres_with_migrations_from::<PollsMigrations>().await;
-/// ``` rust,ignore
+/// ```
 pub trait MigrationProvider {
 	/// Returns all migrations provided by this type.
 	///

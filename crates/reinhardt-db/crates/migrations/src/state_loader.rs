@@ -32,7 +32,7 @@ use crate::{
 ///     let current_state = loader.build_current_state().await?;
 ///     Ok(())
 /// }
-/// ``` rust,ignore
+/// ```
 pub struct MigrationStateLoader<S: MigrationSource> {
 	recorder: DatabaseMigrationRecorder,
 	source: S,

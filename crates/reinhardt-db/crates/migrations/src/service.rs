@@ -39,7 +39,7 @@ impl MigrationService {
 	/// ));
 	///
 	/// let service = MigrationService::new(source, repository);
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(
 		source: Arc<dyn MigrationSource>,
 		repository: Arc<tokio::sync::Mutex<dyn MigrationRepository>>,

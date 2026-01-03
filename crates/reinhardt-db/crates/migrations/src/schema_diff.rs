@@ -136,13 +136,13 @@ impl DatabaseSchema {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::schema_diff::DatabaseSchema;
 	///
 	/// let schema = DatabaseSchema::default();
 	/// let filtered = schema.filter_by_app("users");
 	/// // filtered contains only tables starting with "users_"
-	/// ``` rust,ignore
+	/// ```
 	pub fn filter_by_app(&self, app_label: &str) -> DatabaseSchema {
 		let mut filtered_tables = BTreeMap::new();
 		let prefix = format!("{}_", app_label);

@@ -209,6 +209,80 @@ impl PostgresIntrospector {
 			check_constraints,
 		})
 	}
+
+	/// Fetch index information for a specific table from PostgreSQL system catalogs
+	async fn fetch_table_indexes(&self, table_name: &str) -> Result<HashMap<String, IndexInfo>> {
+		use sqlx::Row;
+
+		// Query PostgreSQL system catalogs to get index information
+		// Excludes primary key indexes as they are handled separately
+		let query = r#"
+			SELECT
+				i.relname AS index_name,
+				array_agg(a.attname ORDER BY array_position(ix.indkey, a.attnum)) AS column_names,
+				ix.indisunique AS is_unique,
+				am.amname AS index_type
+			FROM
+				pg_class t,
+				pg_class i,
+				pg_index ix,
+				pg_attribute a,
+				pg_am am,
+				pg_namespace n
+			WHERE
+				t.oid = ix.indrelid
+				AND i.oid = ix.indexrelid
+				AND a.attrelid = t.oid
+				AND a.attnum = ANY(ix.indkey)
+				AND t.relkind = 'r'
+				AND t.relname = $1
+				AND i.relam = am.oid
+				AND NOT ix.indisprimary
+				AND n.oid = t.relnamespace
+				AND n.nspname = 'public'
+			GROUP BY i.relname, ix.indisunique, am.amname
+			ORDER BY i.relname
+		"#;
+
+		let rows = sqlx::query(query)
+			.bind(table_name)
+			.fetch_all(&self.pool)
+			.await
+			.map_err(|e| {
+				MigrationError::IntrospectionError(format!(
+					"Failed to fetch indexes for table {}: {}",
+					table_name, e
+				))
+			})?;
+
+		let mut indexes = HashMap::new();
+		for row in rows {
+			let index_name: String = row.try_get("index_name").map_err(|e| {
+				MigrationError::IntrospectionError(format!("Failed to get index_name: {}", e))
+			})?;
+			let column_names: Vec<String> = row.try_get("column_names").map_err(|e| {
+				MigrationError::IntrospectionError(format!("Failed to get column_names: {}", e))
+			})?;
+			let is_unique: bool = row.try_get("is_unique").map_err(|e| {
+				MigrationError::IntrospectionError(format!("Failed to get is_unique: {}", e))
+			})?;
+			let index_type: String = row.try_get("index_type").map_err(|e| {
+				MigrationError::IntrospectionError(format!("Failed to get index_type: {}", e))
+			})?;
+
+			indexes.insert(
+				index_name.clone(),
+				IndexInfo {
+					name: index_name,
+					columns: column_names,
+					unique: is_unique,
+					index_type: Some(index_type),
+				},
+			);
+		}
+
+		Ok(indexes)
+	}
 }
 
 #[cfg(feature = "postgres")]
@@ -225,7 +299,11 @@ impl DatabaseIntrospector for PostgresIntrospector {
 
 		let mut tables = HashMap::new();
 		for table_def in schema.tables {
-			let table_info = Self::convert_table_def(&table_def)?;
+			let mut table_info = Self::convert_table_def(&table_def)?;
+
+			// Fetch index information separately for each table
+			table_info.indexes = self.fetch_table_indexes(&table_info.name).await?;
+
 			tables.insert(table_info.name.clone(), table_info);
 		}
 

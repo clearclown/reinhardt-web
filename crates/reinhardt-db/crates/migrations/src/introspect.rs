@@ -78,7 +78,7 @@ use crate::{MigrationError, Result};
 /// let introspector = PostgresIntrospector::new(pool);
 /// let schema = introspector.read_schema().await?;
 /// let output = generate_models(&config, &schema)?;
-/// ``` rust,ignore
+/// ```
 pub fn generate_models(
 	config: &IntrospectConfig,
 	schema: &DatabaseSchema,

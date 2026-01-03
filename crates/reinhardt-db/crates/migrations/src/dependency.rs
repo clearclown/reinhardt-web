@@ -58,7 +58,7 @@ use std::collections::HashSet;
 ///
 /// // In Django, AUTH_USER_MODEL might be set to "myapp.CustomUser"
 /// // The migration system would resolve this to ("myapp", "0001_initial")
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SwappableDependency {
 	/// Setting key to look up (e.g., "AUTH_USER_MODEL")
@@ -89,7 +89,7 @@ impl SwappableDependency {
 	///     "0001_initial",
 	/// );
 	/// assert_eq!(dep.setting_key, "AUTH_USER_MODEL");
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(
 		setting_key: impl Into<String>,
 		default_app: impl Into<String>,
@@ -129,7 +129,7 @@ impl SwappableDependency {
 	///
 	/// // Without setting (uses default)
 	/// assert_eq!(dep.resolve_app_label(None), "auth");
-	/// ``` rust,ignore
+	/// ```
 	pub fn resolve_app_label(&self, setting_value: Option<&str>) -> String {
 		match setting_value {
 			Some(value) => {
@@ -157,7 +157,7 @@ impl SwappableDependency {
 	///
 	/// assert_eq!(app, "custom_auth");
 	/// assert_eq!(migration, "0001_initial");
-	/// ``` rust,ignore
+	/// ```
 	pub fn resolve(&self, setting_value: Option<&str>) -> (String, String) {
 		(
 			self.resolve_app_label(setting_value),
@@ -180,7 +180,7 @@ pub enum DependencyCondition {
 	///
 	/// // Depend on GIS extension only if it's installed
 	/// let condition = DependencyCondition::AppInstalled("gis_extension".to_string());
-	/// ``` rust,ignore
+	/// ```
 	AppInstalled(String),
 
 	/// Dependency is required only if the specified setting is enabled (truthy).
@@ -192,7 +192,7 @@ pub enum DependencyCondition {
 	///
 	/// // Depend on audit tables only if ENABLE_AUDIT_LOGGING is true
 	/// let condition = DependencyCondition::SettingEnabled("ENABLE_AUDIT_LOGGING".to_string());
-	/// ``` rust,ignore
+	/// ```
 	SettingEnabled(String),
 
 	/// Dependency is required only if the specified feature flag is enabled.
@@ -204,7 +204,7 @@ pub enum DependencyCondition {
 	///
 	/// // Depend on feature-specific migrations
 	/// let condition = DependencyCondition::FeatureEnabled("advanced_search".to_string());
-	/// ``` rust,ignore
+	/// ```
 	FeatureEnabled(String),
 }
 
@@ -233,7 +233,7 @@ impl DependencyCondition {
 	///     &|_| None,
 	///     &HashSet::new(),
 	/// ));
-	/// ``` rust,ignore
+	/// ```
 	pub fn is_satisfied<F>(
 		&self,
 		installed_apps: &HashSet<String>,
@@ -273,7 +273,7 @@ impl DependencyCondition {
 ///     migration_name: "0001_enable_postgis".to_string(),
 ///     condition: DependencyCondition::AppInstalled("gis_extension".to_string()),
 /// };
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OptionalDependency {
 	/// Target app label
@@ -299,7 +299,7 @@ impl OptionalDependency {
 	///     "0001_enable_postgis",
 	///     DependencyCondition::AppInstalled("gis_extension".to_string()),
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(
 		app_label: impl Into<String>,
 		migration_name: impl Into<String>,
@@ -339,7 +339,7 @@ impl OptionalDependency {
 	/// // GIS installed
 	/// apps.insert("gis".to_string());
 	/// assert!(dep.should_enforce(&apps, &|_| None, &HashSet::new()));
-	/// ``` rust,ignore
+	/// ```
 	pub fn should_enforce<F>(
 		&self,
 		installed_apps: &HashSet<String>,
@@ -405,7 +405,7 @@ impl OptionalDependency {
 ///         DependencyCondition::AppInstalled("gis".to_string()),
 ///     )),
 /// ];
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MigrationDependency {
 	/// A standard required dependency.
@@ -432,7 +432,7 @@ impl MigrationDependency {
 	/// use reinhardt_migrations::dependency::MigrationDependency;
 	///
 	/// let dep = MigrationDependency::required("auth", "0001_initial");
-	/// ``` rust,ignore
+	/// ```
 	pub fn required(app_label: impl Into<String>, migration_name: impl Into<String>) -> Self {
 		Self::Required {
 			app_label: app_label.into(),
@@ -453,7 +453,7 @@ impl MigrationDependency {
 	///     "User",
 	///     "0001_initial",
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn swappable(
 		setting_key: impl Into<String>,
 		default_app: impl Into<String>,
@@ -480,7 +480,7 @@ impl MigrationDependency {
 	///     "0001_initial",
 	///     "gis",
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn optional_app(
 		app_label: impl Into<String>,
 		migration_name: impl Into<String>,
@@ -505,7 +505,7 @@ impl MigrationDependency {
 	///     "0001_initial",
 	///     "ENABLE_AUDIT",
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn optional_setting(
 		app_label: impl Into<String>,
 		migration_name: impl Into<String>,
@@ -530,7 +530,7 @@ impl MigrationDependency {
 	///     "0001_initial",
 	///     "advanced_search",
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn optional_feature(
 		app_label: impl Into<String>,
 		migration_name: impl Into<String>,
@@ -648,7 +648,7 @@ impl<'a> DependencyResolver<'a> {
 	///
 	/// let resolved = resolver.resolve(&dep);
 	/// assert_eq!(resolved, Some(("custom_auth".to_string(), "0001_initial".to_string())));
-	/// ``` rust,ignore
+	/// ```
 	pub fn resolve(&self, dependency: &MigrationDependency) -> Option<(String, String)> {
 		match dependency {
 			MigrationDependency::Required {
@@ -699,7 +699,7 @@ impl<'a> DependencyResolver<'a> {
 	/// // Only the required dependency is resolved (gis not installed)
 	/// assert_eq!(resolved.len(), 1);
 	/// assert_eq!(resolved[0], ("auth".to_string(), "0001_initial".to_string()));
-	/// ``` rust,ignore
+	/// ```
 	pub fn resolve_all(&self, dependencies: &[MigrationDependency]) -> Vec<(String, String)> {
 		dependencies
 			.iter()

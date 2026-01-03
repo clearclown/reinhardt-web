@@ -41,7 +41,7 @@ use std::collections::HashSet;
 ///     optimize: true,
 ///     no_optimize: false,
 /// };
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone)]
 pub struct SquashOptions {
 	/// Enable operation optimization (remove redundant operations)
@@ -72,7 +72,7 @@ impl Default for SquashOptions {
 /// let squasher = MigrationSquasher::new();
 /// let migrations = vec![Migration::new("0001_initial", "myapp")];
 /// let squashed = squasher.squash(&migrations, "0001_squashed", Default::default()).unwrap();
-/// ``` rust,ignore
+/// ```
 pub struct MigrationSquasher {
 	_private: (),
 }
@@ -86,7 +86,7 @@ impl MigrationSquasher {
 	/// use reinhardt_migrations::squash::MigrationSquasher;
 	///
 	/// let squasher = MigrationSquasher::new();
-	/// ``` rust,ignore
+	/// ```
 	pub fn new() -> Self {
 		Self { _private: () }
 	}
@@ -113,7 +113,7 @@ impl MigrationSquasher {
 	/// let squashed = squasher.squash(&migrations, "0001_squashed_0002", SquashOptions::default()).unwrap();
 	///
 	/// assert_eq!(squashed.name, "0001_squashed_0002");
-	/// ``` rust,ignore
+	/// ```
 	pub fn squash(
 		&self,
 		migrations: &[Migration],
@@ -202,7 +202,7 @@ impl MigrationSquasher {
 	///
 	/// let optimized = squasher.optimize_operations(ops);
 	/// assert_eq!(optimized.len(), 0);
-	/// ``` rust,ignore
+	/// ```
 	pub fn optimize_operations(&self, operations: Vec<Operation>) -> Vec<Operation> {
 		let mut optimized = Vec::new();
 		let mut created_tables = HashSet::new();

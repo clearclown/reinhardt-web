@@ -49,7 +49,7 @@ pub struct Migration {
 	/// swappable_dependencies: vec![
 	///     SwappableDependency::new("AUTH_USER_MODEL", "auth", "User", "0001_initial")
 	/// ]
-	/// ``` rust,ignore
+	/// ```
 	#[serde(default)]
 	pub swappable_dependencies: Vec<SwappableDependency>,
 
@@ -65,7 +65,7 @@ pub struct Migration {
 	///         DependencyCondition::AppInstalled("gis_extension".to_string())
 	///     )
 	/// ]
-	/// ``` rust,ignore
+	/// ```
 	#[serde(default)]
 	pub optional_dependencies: Vec<OptionalDependency>,
 }
@@ -75,14 +75,14 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_initial", "myapp");
 	/// assert_eq!(migration.name, "0001_initial");
 	/// assert_eq!(migration.app_label, "myapp");
 	/// assert!(migration.atomic);
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(name: impl Into<String>, app_label: impl Into<String>) -> Self {
 		Self {
 			name: name.into(),
@@ -102,7 +102,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::{Migration, Operation, ColumnDefinition, FieldType};
 	///
 	/// let migration = Migration::new("0001_initial", "myapp")
@@ -116,7 +116,7 @@ impl Migration {
 	///     });
 	///
 	/// assert_eq!(migration.operations.len(), 1);
-	/// ``` rust,ignore
+	/// ```
 	pub fn add_operation(mut self, operation: Operation) -> Self {
 		self.operations.push(operation);
 		self
@@ -125,7 +125,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0002_add_field", "myapp")
@@ -134,7 +134,7 @@ impl Migration {
 	/// assert_eq!(migration.dependencies.len(), 1);
 	/// assert_eq!(migration.dependencies[0].0, "myapp");
 	/// assert_eq!(migration.dependencies[0].1, "0001_initial");
-	/// ``` rust,ignore
+	/// ```
 	pub fn add_dependency(mut self, app_label: impl Into<String>, name: impl Into<String>) -> Self {
 		self.dependencies.push((app_label.into(), name.into()));
 		self
@@ -147,7 +147,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	/// use reinhardt_migrations::dependency::SwappableDependency;
 	///
@@ -160,7 +160,7 @@ impl Migration {
 	///     ));
 	///
 	/// assert_eq!(migration.swappable_dependencies.len(), 1);
-	/// ``` rust,ignore
+	/// ```
 	pub fn add_swappable_dependency(mut self, dependency: SwappableDependency) -> Self {
 		self.swappable_dependencies.push(dependency);
 		self
@@ -173,7 +173,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	/// use reinhardt_migrations::dependency::{OptionalDependency, DependencyCondition};
 	///
@@ -185,7 +185,7 @@ impl Migration {
 	///     ));
 	///
 	/// assert_eq!(migration.optional_dependencies.len(), 1);
-	/// ``` rust,ignore
+	/// ```
 	pub fn add_optional_dependency(mut self, dependency: OptionalDependency) -> Self {
 		self.optional_dependencies.push(dependency);
 		self
@@ -195,14 +195,14 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_initial", "myapp")
 	///     .atomic(false);
 	///
 	/// assert!(!migration.atomic);
-	/// ``` rust,ignore
+	/// ```
 	pub fn atomic(mut self, atomic: bool) -> Self {
 		self.atomic = atomic;
 		self
@@ -211,12 +211,12 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_initial", "myapp");
 	/// assert_eq!(migration.id(), "myapp.0001_initial");
-	/// ``` rust,ignore
+	/// ```
 	pub fn id(&self) -> String {
 		format!("{}.{}", self.app_label, self.name)
 	}
@@ -225,14 +225,14 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_initial", "myapp")
 	///     .initial(true);
 	///
 	/// assert!(migration.is_initial());
-	/// ``` rust,ignore
+	/// ```
 	pub fn initial(mut self, initial: bool) -> Self {
 		self.initial = Some(initial);
 		self
@@ -242,7 +242,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_state_sync", "myapp")
@@ -250,7 +250,7 @@ impl Migration {
 	///
 	/// assert!(migration.state_only);
 	/// assert!(!migration.database_only);
-	/// ``` rust,ignore
+	/// ```
 	pub fn state_only(mut self, value: bool) -> Self {
 		self.state_only = value;
 		self
@@ -260,7 +260,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// let migration = Migration::new("0001_db_only", "myapp")
@@ -268,7 +268,7 @@ impl Migration {
 	///
 	/// assert!(migration.database_only);
 	/// assert!(!migration.state_only);
-	/// ``` rust,ignore
+	/// ```
 	pub fn database_only(mut self, value: bool) -> Self {
 		self.database_only = value;
 		self
@@ -282,7 +282,7 @@ impl Migration {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::Migration;
 	///
 	/// // Explicitly marked as initial
@@ -303,7 +303,7 @@ impl Migration {
 	/// let migration4 = Migration::new("0001_custom", "myapp")
 	///     .initial(false);
 	/// assert!(!migration4.is_initial());
-	/// ``` rust,ignore
+	/// ```
 	pub fn is_initial(&self) -> bool {
 		match self.initial {
 			Some(true) => true,

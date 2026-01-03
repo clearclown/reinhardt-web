@@ -130,7 +130,7 @@ impl DatabaseMigrationRecorder {
 	/// recorder.ensure_schema_table().await.unwrap();
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(connection: DatabaseConnection) -> Self {
 		Self { connection }
 	}
@@ -377,7 +377,7 @@ impl DatabaseMigrationRecorder {
 	/// assert!(!is_applied); // Initially not applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub async fn is_applied(&self, app: &str, name: &str) -> crate::Result<bool> {
 		use reinhardt_backends::types::DatabaseType;
 		use sea_query::{
@@ -445,7 +445,7 @@ impl DatabaseMigrationRecorder {
 	/// assert!(is_applied);
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub async fn record_applied(&self, app: &str, name: &str) -> crate::Result<()> {
 		use reinhardt_backends::types::DatabaseType;
 		use sea_query::{
@@ -506,7 +506,7 @@ impl DatabaseMigrationRecorder {
 	/// assert!(migrations.is_empty()); // Initially no migrations applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub async fn get_applied_migrations(&self) -> crate::Result<Vec<MigrationRecord>> {
 		use reinhardt_backends::types::DatabaseType;
 		use sea_query::{
@@ -623,7 +623,7 @@ impl DatabaseMigrationRecorder {
 	/// assert!(migrations.is_empty()); // Initially no migrations applied
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub async fn get_applied_for_app(&self, app: &str) -> crate::Result<Vec<MigrationRecord>> {
 		use reinhardt_backends::types::DatabaseType;
 		use sea_query::{

@@ -35,7 +35,7 @@
 ///         format!("Add field {} to {}", self.field_name, self.model_name)
 ///     }
 /// }
-/// ``` rust,ignore
+/// ```
 pub trait MigrationOperation {
 	/// Generate a fragment for the migration name
 	///
@@ -74,7 +74,7 @@ pub trait MigrationOperation {
 	/// - Add field email to User
 	/// - Remove field age from Profile
 	/// - Create model Post
-	/// ``` rust,ignore
+	/// ```
 	fn describe(&self) -> String;
 
 	/// Normalize operation for comparison
@@ -117,7 +117,7 @@ pub trait MigrationOperation {
 	/// };
 	///
 	/// assert!(op1.semantically_equal(&op2));
-	/// ``` rust,ignore
+	/// ```
 	fn semantically_equal(&self, other: &Self) -> bool
 	where
 		Self: Sized + Clone + PartialEq,

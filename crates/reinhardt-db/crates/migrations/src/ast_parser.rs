@@ -179,6 +179,7 @@ fn parse_single_operation(expr: &Expr) -> Option<crate::Operation> {
 					table,
 					column,
 					new_definition,
+				old_definition: None,
 					mysql_options: None,
 				});
 			}

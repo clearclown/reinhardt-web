@@ -184,7 +184,7 @@ impl DatabaseMigrationExecutor {
 	///
 	/// # Examples
 	///
-	/// ``` rust,ignore
+	/// ```rust,ignore
 	/// use reinhardt_migrations::executor::DatabaseMigrationExecutor;
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -194,7 +194,7 @@ impl DatabaseMigrationExecutor {
 	/// let executor = DatabaseMigrationExecutor::new(db.clone());
 	/// // Database type is automatically detected as Sqlite
 	/// # });
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(connection: DatabaseConnection) -> Self {
 		let db_type = connection.database_type();
 		let recorder = DatabaseMigrationRecorder::new(connection.clone());
@@ -219,7 +219,7 @@ impl DatabaseMigrationExecutor {
 	///
 	/// # Examples
 	///
-	/// ```no_run
+	/// ```ignore
 	/// use reinhardt_migrations::executor::DatabaseMigrationExecutor;
 	/// use reinhardt_backends::DatabaseConnection;
 	///
@@ -228,7 +228,7 @@ impl DatabaseMigrationExecutor {
 	/// let executor = DatabaseMigrationExecutor::new(db);
 	/// let exists = executor.table_exists("users").await.unwrap();
 	/// # }
-	/// ``` rust,ignore
+	/// ```
 	async fn table_exists(&self, table_name: &str) -> Result<bool> {
 		use sea_query::{
 			Alias, Asterisk, Cond, Expr, ExprTrait, MysqlQueryBuilder, PostgresQueryBuilder, Query,
@@ -379,7 +379,7 @@ impl DatabaseMigrationExecutor {
 	/// let result = executor.rollback_migrations(&migrations).await.unwrap();
 	/// # }
 	/// # tokio::runtime::Runtime::new().unwrap().block_on(example());
-	/// ``` rust,ignore
+	/// ```
 	pub async fn rollback_migrations(
 		&mut self,
 		migrations: &[Migration],
@@ -625,7 +625,7 @@ impl DatabaseMigrationExecutor {
 	/// let plan = MigrationPlan::new();
 	/// let result = executor.apply(&plan).await.unwrap();
 	/// # });
-	/// ``` rust,ignore
+	/// ```
 	pub async fn apply(&mut self, plan: &MigrationPlan) -> Result<ExecutionResult> {
 		let mut applied = Vec::new();
 
@@ -993,7 +993,7 @@ impl DatabaseMigrationExecutor {
 /// let optimizer = OperationOptimizer::new();
 /// let optimized = optimizer.optimize(ops);
 /// // CreateTable should come before AddColumn
-/// ``` rust,ignore
+/// ```
 pub struct OperationOptimizer {
 	_private: (),
 }
@@ -1007,7 +1007,7 @@ impl OperationOptimizer {
 	/// use reinhardt_migrations::executor::OperationOptimizer;
 	///
 	/// let optimizer = OperationOptimizer::new();
-	/// ``` rust,ignore
+	/// ```
 	pub fn new() -> Self {
 		Self { _private: () }
 	}
@@ -1034,7 +1034,7 @@ impl OperationOptimizer {
 	/// let optimizer = OperationOptimizer::new();
 	/// let optimized = optimizer.optimize(ops);
 	/// assert_eq!(optimized.len(), 1);
-	/// ``` rust,ignore
+	/// ```
 	pub fn optimize(&self, operations: Vec<Operation>) -> Vec<Operation> {
 		let mut optimized = operations;
 

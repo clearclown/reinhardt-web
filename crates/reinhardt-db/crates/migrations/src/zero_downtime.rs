@@ -29,7 +29,7 @@ use crate::{Migration, Operation, Result};
 ///
 /// let strategy = Strategy::ExpandContractPattern;
 /// assert_eq!(strategy.name(), "Expand-Contract Pattern");
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Strategy {
 	/// Expand-Contract Pattern: Add new schema, dual-write, migrate data, remove old schema
@@ -52,7 +52,7 @@ impl Strategy {
 	///
 	/// let strategy = Strategy::ExpandContractPattern;
 	/// assert_eq!(strategy.name(), "Expand-Contract Pattern");
-	/// ``` rust,ignore
+	/// ```
 	pub fn name(&self) -> &str {
 		match self {
 			Strategy::ExpandContractPattern => "Expand-Contract Pattern",
@@ -72,7 +72,7 @@ impl Strategy {
 	/// let strategy = Strategy::ExpandContractPattern;
 	/// let desc = strategy.description();
 	/// assert!(desc.contains("Expand"));
-	/// ``` rust,ignore
+	/// ```
 	pub fn description(&self) -> &str {
 		match self {
 			Strategy::ExpandContractPattern => {
@@ -100,7 +100,7 @@ impl Strategy {
 /// let migration = Migration::new("0001_initial", "myapp");
 /// let phase = MigrationPhase::new(1, "Expand", migration);
 /// assert_eq!(phase.phase_number, 1);
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone)]
 pub struct MigrationPhase {
 	/// Phase number (1-based)
@@ -124,7 +124,7 @@ impl MigrationPhase {
 	///
 	/// let migration = Migration::new("0001_expand", "myapp");
 	/// let phase = MigrationPhase::new(1, "Expand schema", migration);
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(phase_number: usize, description: impl Into<String>, migration: Migration) -> Self {
 		Self {
 			phase_number,
@@ -146,7 +146,7 @@ impl MigrationPhase {
 	/// let phase = MigrationPhase::new(1, "Expand", migration)
 	///     .requires_deployment(true);
 	/// assert!(phase.requires_deployment);
-	/// ``` rust,ignore
+	/// ```
 	pub fn requires_deployment(mut self, requires: bool) -> Self {
 		self.requires_deployment = requires;
 		self
@@ -165,7 +165,7 @@ impl MigrationPhase {
 ///
 /// let migration = Migration::new("0001_add_field", "myapp");
 /// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
-/// ``` rust,ignore
+/// ```
 pub struct ZeroDowntimeMigration {
 	migration: Migration,
 	strategy: Strategy,
@@ -182,7 +182,7 @@ impl ZeroDowntimeMigration {
 	///
 	/// let migration = Migration::new("0001_rename_column", "myapp");
 	/// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
-	/// ``` rust,ignore
+	/// ```
 	pub fn new(migration: Migration, strategy: Strategy) -> Self {
 		Self {
 			migration,
@@ -201,7 +201,7 @@ impl ZeroDowntimeMigration {
 	/// let migration = Migration::new("0001_add_column", "myapp");
 	/// let zd = ZeroDowntimeMigration::new(migration, Strategy::ExpandContractPattern);
 	/// let phases = zd.get_phases().unwrap();
-	/// ``` rust,ignore
+	/// ```
 	pub fn get_phases(&self) -> Result<Vec<MigrationPhase>> {
 		match self.strategy {
 			Strategy::ExpandContractPattern => self.expand_contract_phases(),

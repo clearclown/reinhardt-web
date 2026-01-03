@@ -30,7 +30,7 @@ use std::collections::{HashMap, HashSet};
 ///
 /// let format = OutputFormat::Text;
 /// assert_eq!(format.extension(), "txt");
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
 	/// Plain text output
@@ -55,7 +55,7 @@ impl OutputFormat {
 	/// assert_eq!(OutputFormat::Markdown.extension(), "md");
 	/// assert_eq!(OutputFormat::Dot.extension(), "dot");
 	/// assert_eq!(OutputFormat::Json.extension(), "json");
-	/// ``` rust,ignore
+	/// ```
 	pub fn extension(&self) -> &str {
 		match self {
 			OutputFormat::Text => "txt",
@@ -79,7 +79,7 @@ impl OutputFormat {
 ///     applied_at: "2025-01-01 00:00:00".to_string(),
 ///     operations_count: 5,
 /// };
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone)]
 pub struct HistoryEntry {
 	pub app_label: String,
@@ -110,7 +110,7 @@ impl HistoryEntry {
 /// use reinhardt_migrations::visualization::MigrationVisualizer;
 ///
 /// let visualizer = MigrationVisualizer::new();
-/// ``` rust,ignore
+/// ```
 pub struct MigrationVisualizer {
 	_private: (),
 }
@@ -124,7 +124,7 @@ impl MigrationVisualizer {
 	/// use reinhardt_migrations::visualization::MigrationVisualizer;
 	///
 	/// let visualizer = MigrationVisualizer::new();
-	/// ``` rust,ignore
+	/// ```
 	pub fn new() -> Self {
 		Self { _private: () }
 	}
@@ -146,7 +146,7 @@ impl MigrationVisualizer {
 	/// let graph = visualizer.generate_dependency_graph(&migrations, OutputFormat::Text);
 	/// assert!(graph.contains("0001_initial"));
 	/// assert!(graph.contains("0002_add_field"));
-	/// ``` rust,ignore
+	/// ```
 	pub fn generate_dependency_graph(
 		&self,
 		migrations: &[Migration],
@@ -179,7 +179,7 @@ impl MigrationVisualizer {
 	/// let visualizer = MigrationVisualizer::new();
 	/// let timeline = visualizer.generate_timeline(&entries);
 	/// assert!(timeline.contains("0001_initial"));
-	/// ``` rust,ignore
+	/// ```
 	pub fn generate_timeline(&self, history: &[HistoryEntry]) -> String {
 		let mut output = String::new();
 		output.push_str("Migration Timeline\n");
@@ -207,7 +207,7 @@ impl MigrationVisualizer {
 	/// let visualizer = MigrationVisualizer::new();
 	/// let report = visualizer.generate_evolution_report(&migrations);
 	/// assert!(report.contains("Schema Evolution"));
-	/// ``` rust,ignore
+	/// ```
 	pub fn generate_evolution_report(&self, migrations: &[Migration]) -> String {
 		let mut output = String::new();
 		output.push_str("Schema Evolution Report\n");
@@ -380,7 +380,7 @@ impl Default for MigrationVisualizer {
 /// let stats = MigrationStats::from_migrations(&migrations);
 /// assert_eq!(stats.total_migrations, 3);
 /// assert_eq!(stats.apps_count, 2);
-/// ``` rust,ignore
+/// ```
 #[derive(Debug, Clone)]
 pub struct MigrationStats {
 	pub total_migrations: usize,
@@ -401,7 +401,7 @@ impl MigrationStats {
 	/// let migrations = vec![Migration::new("0001_initial", "myapp")];
 	/// let stats = MigrationStats::from_migrations(&migrations);
 	/// assert_eq!(stats.total_migrations, 1);
-	/// ``` rust,ignore
+	/// ```
 	pub fn from_migrations(migrations: &[Migration]) -> Self {
 		let mut by_app = HashMap::new();
 		let mut total_operations = 0;
@@ -433,7 +433,7 @@ impl MigrationStats {
 	/// let stats = MigrationStats::from_migrations(&migrations);
 	/// let report = stats.generate_report();
 	/// assert!(report.contains("Total Migrations"));
-	/// ``` rust,ignore
+	/// ```
 	pub fn generate_report(&self) -> String {
 		let mut output = String::new();
 		output.push_str("Migration Statistics\n");

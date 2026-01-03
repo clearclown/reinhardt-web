@@ -93,7 +93,7 @@ impl MigrationNamer {
 	/// assert!(
 	///     MigrationNamer::generate_name(&ops, false).starts_with("auto_")
 	/// );
-	/// ``` rust,ignore
+	/// ```
 	pub fn generate_name(operations: &[Operation], is_initial: bool) -> String {
 		// Rule 1: Initial migrations
 		if is_initial {
