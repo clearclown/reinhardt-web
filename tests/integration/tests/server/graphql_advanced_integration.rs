@@ -425,6 +425,10 @@ async fn test_graphql_field_level_errors(data_store: DataStore) {
 	assert!(json["data"]["error_field"].is_null());
 
 	// Verify errors array exists and contains error for error_field
+	assert!(
+		json["errors"].is_array(),
+		"Expected 'errors' to be an array"
+	);
 	let errors = json["errors"].as_array().unwrap();
 	assert_eq!(errors.len(), 1);
 	assert_eq!(
@@ -455,6 +459,10 @@ async fn test_graphql_field_level_errors(data_store: DataStore) {
 	assert!(json["data"]["error"].is_null());
 
 	// Verify error exists for the failed field
+	assert!(
+		json["errors"].is_array(),
+		"Expected 'errors' to be an array"
+	);
 	let errors = json["errors"].as_array().unwrap();
 	assert_eq!(errors.len(), 1);
 

@@ -19,12 +19,11 @@ use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, Version};
 use reinhardt_core::http::Request;
 use reinhardt_macros::model;
-use reinhardt_test::fixtures::testcontainers::postgres_container;
+use reinhardt_test::fixtures::get_test_pool;
 use rstest::*;
-use sea_query::{Expr, ExprTrait, Iden, PostgresQueryBuilder, Query, Table};
+use sea_query::{Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
 use serde_json;
-use serial_test::serial;
 use sqlx::{PgPool, Row};
 
 // ============================================================================
@@ -66,10 +65,12 @@ enum PropertyItems {
 // ============================================================================
 
 /// Setup: PostgreSQL container with property test schema
+///
+/// Uses shared PostgreSQL container with template database pattern.
+/// Each test gets an isolated database cloned from template (~10-40ms).
 #[fixture]
 async fn setup_property() -> PgPool {
-	let (_container, pool, _port, _url) = postgres_container().await;
-	let pool: PgPool = (*pool).clone();
+	let pool = get_test_pool().await;
 
 	// Create property_items table
 	let create_table_sql = Table::create()
@@ -133,7 +134,7 @@ fn _create_get_request(uri: &str) -> Request {
 /// Property 1: Valid input always produces valid output
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_valid_input_valid_output(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
@@ -158,32 +159,18 @@ async fn test_property_valid_input_valid_output(#[future] setup_property: PgPool
 		let expected_score = item.score;
 		let expected_active = item.active;
 
-		let insert_sql = Query::insert()
-			.into_table(PropertyItems::Table)
-			.columns([
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-				PropertyItems::CreatedAt,
-			])
-			.values_panic([
-				item.name.into(),
-				item.value.into(),
-				item.score.into(),
-				item.active.into(),
-				item.created_at.into(),
-			])
-			.returning(Query::returning().columns([
-				PropertyItems::Id,
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-			]))
-			.build(PostgresQueryBuilder);
-
-		let row = sqlx::query(&insert_sql.0).fetch_one(&pool).await.unwrap();
+		let row = sqlx::query(
+			"INSERT INTO property_items (name, value, score, active, created_at)
+			 VALUES ($1, $2, $3, $4, $5) RETURNING id, name, value, score, active",
+		)
+		.bind(&item.name)
+		.bind(item.value)
+		.bind(item.score)
+		.bind(item.active)
+		.bind(item.created_at)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 
 		// Property: Output is always valid (has ID assigned)
 		let id: i64 = row.get("id");
@@ -208,46 +195,41 @@ async fn test_property_valid_input_valid_output(#[future] setup_property: PgPool
 /// Property 2: Idempotent DELETE - deleting twice has same effect as once
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_idempotent_delete(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
-	// Insert item
+	// Insert item using direct sqlx query with proper parameter binding
 	let item = PropertyItem::new("To Delete".to_string(), 42, 3.14, true, Some(Utc::now()));
 
-	let insert_sql = Query::insert()
-		.into_table(PropertyItems::Table)
-		.columns([
-			PropertyItems::Name,
-			PropertyItems::Value,
-			PropertyItems::Score,
-			PropertyItems::Active,
-			PropertyItems::CreatedAt,
-		])
-		.values_panic([
-			item.name.into(),
-			item.value.into(),
-			item.score.into(),
-			item.active.into(),
-			item.created_at.into(),
-		])
-		.returning(Query::returning().column(PropertyItems::Id))
-		.build(PostgresQueryBuilder);
-
-	let row = sqlx::query(&insert_sql.0).fetch_one(&pool).await.unwrap();
+	let row = sqlx::query(
+		"INSERT INTO property_items (name, value, score, active, created_at)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id",
+	)
+	.bind(&item.name)
+	.bind(item.value)
+	.bind(item.score)
+	.bind(item.active)
+	.bind(item.created_at)
+	.fetch_one(&pool)
+	.await
+	.unwrap();
 	let item_id: i64 = row.get("id");
 
 	// First delete
-	let delete_sql = Query::delete()
-		.from_table(PropertyItems::Table)
-		.and_where(Expr::col(PropertyItems::Id).eq(Expr::val(item_id)))
-		.build(PostgresQueryBuilder);
-
-	let first_delete = sqlx::query(&delete_sql.0).execute(&pool).await.unwrap();
+	let first_delete = sqlx::query("DELETE FROM property_items WHERE id = $1")
+		.bind(item_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 	assert_eq!(first_delete.rows_affected(), 1);
 
 	// Second delete (idempotent - should affect 0 rows but not error)
-	let second_delete = sqlx::query(&delete_sql.0).execute(&pool).await.unwrap();
+	let second_delete = sqlx::query("DELETE FROM property_items WHERE id = $1")
+		.bind(item_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 	assert_eq!(
 		second_delete.rows_affected(),
 		0,
@@ -255,24 +237,22 @@ async fn test_property_idempotent_delete(#[future] setup_property: PgPool) {
 	);
 
 	// Verify item doesn't exist
-	let select_sql = Query::select()
-		.from(PropertyItems::Table)
-		.column(PropertyItems::Id)
-		.and_where(Expr::col(PropertyItems::Id).eq(Expr::val(item_id)))
-		.build(PostgresQueryBuilder);
-
-	let rows = sqlx::query(&select_sql.0).fetch_all(&pool).await.unwrap();
+	let rows = sqlx::query("SELECT id FROM property_items WHERE id = $1")
+		.bind(item_id)
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 	assert_eq!(rows.len(), 0, "Item should not exist after deletion");
 }
 
 /// Property 3: Ordering consistency - results ordered by field maintain order
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_ordering_consistency(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
-	// Insert items with different values
+	// Insert items with different values using direct sqlx query
 	for i in 1..=10 {
 		let item = PropertyItem::new(
 			format!("Item {}", i),
@@ -282,35 +262,25 @@ async fn test_property_ordering_consistency(#[future] setup_property: PgPool) {
 			Some(Utc::now()),
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(PropertyItems::Table)
-			.columns([
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-				PropertyItems::CreatedAt,
-			])
-			.values_panic([
-				item.name.into(),
-				item.value.into(),
-				item.score.into(),
-				item.active.into(),
-				item.created_at.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO property_items (name, value, score, active, created_at)
+			 VALUES ($1, $2, $3, $4, $5)",
+		)
+		.bind(&item.name)
+		.bind(item.value)
+		.bind(item.score)
+		.bind(item.active)
+		.bind(item.created_at)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
-	// Query with ascending order
-	let asc_sql = Query::select()
-		.from(PropertyItems::Table)
-		.column(PropertyItems::Value)
-		.order_by(PropertyItems::Value, sea_query::Order::Asc)
-		.build(PostgresQueryBuilder);
-
-	let asc_rows = sqlx::query(&asc_sql.0).fetch_all(&pool).await.unwrap();
+	// Query with ascending order (no parameters needed)
+	let asc_rows = sqlx::query("SELECT value FROM property_items ORDER BY value ASC")
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 
 	// Property: Ascending order maintains value[i] <= value[i+1]
 	for i in 0..(asc_rows.len() - 1) {
@@ -323,14 +293,11 @@ async fn test_property_ordering_consistency(#[future] setup_property: PgPool) {
 		);
 	}
 
-	// Query with descending order
-	let desc_sql = Query::select()
-		.from(PropertyItems::Table)
-		.column(PropertyItems::Value)
-		.order_by(PropertyItems::Value, sea_query::Order::Desc)
-		.build(PostgresQueryBuilder);
-
-	let desc_rows = sqlx::query(&desc_sql.0).fetch_all(&pool).await.unwrap();
+	// Query with descending order (no parameters needed)
+	let desc_rows = sqlx::query("SELECT value FROM property_items ORDER BY value DESC")
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 
 	// Property: Descending order maintains value[i] >= value[i+1]
 	for i in 0..(desc_rows.len() - 1) {
@@ -347,11 +314,11 @@ async fn test_property_ordering_consistency(#[future] setup_property: PgPool) {
 /// Property 4: Filter results are always subset of all results
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_filter_subset(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
-	// Insert mixed data
+	// Insert mixed data using direct sqlx query
 	for i in 1..=20 {
 		let item = PropertyItem::new(
 			format!("Item {}", i),
@@ -361,44 +328,33 @@ async fn test_property_filter_subset(#[future] setup_property: PgPool) {
 			Some(Utc::now()),
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(PropertyItems::Table)
-			.columns([
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-				PropertyItems::CreatedAt,
-			])
-			.values_panic([
-				item.name.into(),
-				item.value.into(),
-				item.score.into(),
-				item.active.into(),
-				item.created_at.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO property_items (name, value, score, active, created_at)
+			 VALUES ($1, $2, $3, $4, $5)",
+		)
+		.bind(&item.name)
+		.bind(item.value)
+		.bind(item.score)
+		.bind(item.active)
+		.bind(item.created_at)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Get all results
-	let all_sql = Query::select()
-		.from(PropertyItems::Table)
-		.column(PropertyItems::Id)
-		.build(PostgresQueryBuilder);
-
-	let all_rows = sqlx::query(&all_sql.0).fetch_all(&pool).await.unwrap();
+	let all_rows = sqlx::query("SELECT id FROM property_items")
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 	let total_count = all_rows.len();
 
 	// Get filtered results (active = true)
-	let filtered_sql = Query::select()
-		.from(PropertyItems::Table)
-		.column(PropertyItems::Id)
-		.and_where(Expr::col(PropertyItems::Active).eq(Expr::val(true)))
-		.build(PostgresQueryBuilder);
-
-	let filtered_rows = sqlx::query(&filtered_sql.0).fetch_all(&pool).await.unwrap();
+	let filtered_rows = sqlx::query("SELECT id FROM property_items WHERE active = $1")
+		.bind(true)
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 	let filtered_count = filtered_rows.len();
 
 	// Property: Filtered count <= Total count
@@ -421,11 +377,11 @@ async fn test_property_filter_subset(#[future] setup_property: PgPool) {
 /// Property 5: Search results are subset with search term in name
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_search_subset(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
-	// Insert items with various names
+	// Insert items with various names using direct sqlx query
 	let names = vec![
 		"Apple Product",
 		"Banana Item",
@@ -443,35 +399,26 @@ async fn test_property_search_subset(#[future] setup_property: PgPool) {
 			Some(Utc::now()),
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(PropertyItems::Table)
-			.columns([
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-				PropertyItems::CreatedAt,
-			])
-			.values_panic([
-				item.name.into(),
-				item.value.into(),
-				item.score.into(),
-				item.active.into(),
-				item.created_at.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO property_items (name, value, score, active, created_at)
+			 VALUES ($1, $2, $3, $4, $5)",
+		)
+		.bind(&item.name)
+		.bind(item.value)
+		.bind(item.score)
+		.bind(item.active)
+		.bind(item.created_at)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Search for "Apple"
-	let search_sql = Query::select()
-		.from(PropertyItems::Table)
-		.columns([PropertyItems::Id, PropertyItems::Name])
-		.and_where(Expr::col(PropertyItems::Name).like("%Apple%"))
-		.build(PostgresQueryBuilder);
-
-	let search_rows = sqlx::query(&search_sql.0).fetch_all(&pool).await.unwrap();
+	let search_rows = sqlx::query("SELECT id, name FROM property_items WHERE name LIKE $1")
+		.bind("%Apple%")
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 
 	// Property: All search results contain search term
 	for row in search_rows {
@@ -486,63 +433,50 @@ async fn test_property_search_subset(#[future] setup_property: PgPool) {
 /// Property 6: Pagination boundary values
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_pagination_boundaries(#[future] setup_property: PgPool) {
 	let pool = setup_property.await;
 
-	// Insert 25 items
+	// Insert 25 items using direct sqlx query
 	for i in 1..=25 {
 		let item = PropertyItem::new(format!("Item {}", i), i, i as f64, true, Some(Utc::now()));
 
-		let insert_sql = Query::insert()
-			.into_table(PropertyItems::Table)
-			.columns([
-				PropertyItems::Name,
-				PropertyItems::Value,
-				PropertyItems::Score,
-				PropertyItems::Active,
-				PropertyItems::CreatedAt,
-			])
-			.values_panic([
-				item.name.into(),
-				item.value.into(),
-				item.score.into(),
-				item.active.into(),
-				item.created_at.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO property_items (name, value, score, active, created_at)
+			 VALUES ($1, $2, $3, $4, $5)",
+		)
+		.bind(&item.name)
+		.bind(item.value)
+		.bind(item.score)
+		.bind(item.active)
+		.bind(item.created_at)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Property: Sum of all page sizes = total count
-	let page_size = 10;
+	let page_size: i64 = 10;
 	let mut total_paginated = 0;
 
-	for page in 0..3 {
+	for page in 0..3i64 {
 		// Pages 0, 1, 2
 		let offset = page * page_size;
 
-		let page_sql = Query::select()
-			.from(PropertyItems::Table)
-			.column(PropertyItems::Id)
-			.limit(page_size)
-			.offset(offset)
-			.build(PostgresQueryBuilder);
-
-		let page_rows = sqlx::query(&page_sql.0).fetch_all(&pool).await.unwrap();
+		let page_rows = sqlx::query("SELECT id FROM property_items LIMIT $1 OFFSET $2")
+			.bind(page_size)
+			.bind(offset)
+			.fetch_all(&pool)
+			.await
+			.unwrap();
 		total_paginated += page_rows.len();
 	}
 
 	// Verify total count matches
-	let count_sql = Query::select()
-		.from(PropertyItems::Table)
-		.expr(sea_query::Func::count(sea_query::Expr::col(
-			PropertyItems::Id,
-		)))
-		.build(PostgresQueryBuilder);
-
-	let count_row = sqlx::query(&count_sql.0).fetch_one(&pool).await.unwrap();
+	let count_row = sqlx::query("SELECT COUNT(id) FROM property_items")
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 	let total_count: i64 = count_row.get(0);
 
 	assert_eq!(
@@ -554,7 +488,7 @@ async fn test_property_pagination_boundaries(#[future] setup_property: PgPool) {
 /// Property 7: Round-trip serialization (serialize → deserialize = identity)
 #[rstest]
 #[tokio::test]
-#[serial(property_based)]
+
 async fn test_property_serialization_roundtrip(#[future] setup_property: PgPool) {
 	let _pool = setup_property.await;
 

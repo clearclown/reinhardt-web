@@ -376,6 +376,7 @@ async fn test_alter_column_type_preserves_data(
 		vec![Operation::AlterColumn {
 			table: "recreation_test".to_string(),
 			column: "age".to_string(),
+			old_definition: None,
 			new_definition: new_age_def,
 			mysql_options: None,
 		}],
@@ -545,6 +546,7 @@ async fn test_multiple_operations_single_migration(
 			},
 			Operation::AlterColumn {
 				table: "recreation_test".to_string(),
+				old_definition: None,
 				column: "email".to_string(),
 				new_definition: email_required,
 				mysql_options: None,
@@ -1541,6 +1543,7 @@ async fn test_usecase_make_column_nullable(
 		"testapp",
 		"0002_make_name_nullable",
 		vec![Operation::AlterColumn {
+			old_definition: None,
 			table: "recreation_test".to_string(),
 			column: "name".to_string(),
 			new_definition: nullable_name,

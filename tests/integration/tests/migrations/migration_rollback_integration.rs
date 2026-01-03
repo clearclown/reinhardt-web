@@ -332,6 +332,15 @@ async fn test_alter_column_type_rollback(
 		vec![Operation::AlterColumn {
 			table: leak_str("products").to_string(),
 			column: leak_str("name").to_string(),
+			old_definition: Some(ColumnDefinition {
+				name: "name".to_string(),
+				type_definition: FieldType::VarChar(50),
+				not_null: false,
+				unique: false,
+				primary_key: false,
+				auto_increment: false,
+				default: None,
+			}),
 			new_definition: ColumnDefinition {
 				name: "name".to_string(),
 				type_definition: FieldType::Text,

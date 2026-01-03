@@ -89,7 +89,7 @@ reinhardt-storage = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
 reinhardt-sessions = { workspace = true, features = ["database"] }
 reinhardt-pages = { workspace = true }
-reinhardt-commands = { workspace = true }
+reinhardt-commands = { workspace = true, features = ["migrations"] }
 
 # Web framework (using reinhardt-apps)
 tokio = { version = "1.0", features = ["full"] }

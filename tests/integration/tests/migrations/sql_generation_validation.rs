@@ -329,6 +329,7 @@ async fn test_alter_table_alter_column_type_syntax() {
 	let operation = Operation::AlterColumn {
 		table: leak_str("products").to_string(),
 		column: leak_str("price").to_string(),
+		old_definition: None,
 		new_definition: ColumnDefinition {
 			name: "price".to_string(),
 			type_definition: FieldType::Decimal {

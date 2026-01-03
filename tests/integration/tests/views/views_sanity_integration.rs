@@ -25,18 +25,16 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
-use reinhardt_db::orm::init_database;
 use reinhardt_serializers::JsonSerializer;
-use reinhardt_test::fixtures::postgres_container;
-use reinhardt_test::testcontainers::{ContainerAsync, GenericImage};
+use reinhardt_test::fixtures::get_test_pool_with_orm;
 use reinhardt_views::{
 	CreateAPIView, DestroyAPIView, ListAPIView, RetrieveAPIView, UpdateAPIView, View,
 };
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
-use serial_test::serial;
-use sqlx::{PgPool, Row};
+use sqlx::{Executor, PgPool, Row};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 // ============================================================================
@@ -71,28 +69,9 @@ enum Items {
 // Fixtures
 // ============================================================================
 
-/// Fixture: Initialize database connection
-#[fixture]
-async fn db_pool(
-	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
-) -> Arc<PgPool> {
-	let (_container, pool, _port, connection_url) = postgres_container.await;
-
-	// Initialize database connection for reinhardt-orm
-	init_database(&connection_url)
-		.await
-		.expect("Failed to initialize database");
-
-	pool
-}
-
-/// Fixture: Setup items table
-#[fixture]
-async fn items_table(#[future] db_pool: Arc<PgPool>) -> Arc<PgPool> {
-	let pool = db_pool.await;
-
-	// Create items table
-	let create_table_stmt = Table::create()
+/// Create items table SQL
+fn create_items_table_sql() -> String {
+	Table::create()
 		.table(Items::Table)
 		.if_not_exists()
 		.col(
@@ -104,15 +83,28 @@ async fn items_table(#[future] db_pool: Arc<PgPool>) -> Arc<PgPool> {
 		)
 		.col(ColumnDef::new(Items::Name).string_len(100).not_null())
 		.col(ColumnDef::new(Items::Value).integer().not_null())
-		.to_owned();
+		.to_string(PostgresQueryBuilder)
+}
 
-	let sql = create_table_stmt.to_string(PostgresQueryBuilder);
-	sqlx::query(&sql)
-		.execute(pool.as_ref())
+/// Fixture: Initialize database connection with items table
+///
+/// Uses shared PostgreSQL container with template database pattern.
+/// Each test gets an isolated database cloned from template (~10-40ms).
+///
+/// This fixture also initializes the global ORM manager, which is required
+/// for View::dispatch() and QuerySet operations.
+#[fixture]
+async fn items_table() -> Arc<PgPool> {
+	// Use get_test_pool_with_orm() to initialize both the pool and global ORM
+	let (pool, _url) = get_test_pool_with_orm().await;
+
+	// Create items table
+	let sql = create_items_table_sql();
+	pool.execute(sql.as_str())
 		.await
 		.expect("Failed to create items table");
 
-	pool
+	Arc::new(pool)
 }
 
 /// Fixture: Setup items table with sample data
@@ -164,26 +156,40 @@ fn create_post_request(uri: &str, json_body: &str) -> Request {
 		.expect("Failed to build request")
 }
 
-/// Helper: Create HTTP PUT request with JSON body
-fn create_put_request(uri: &str, json_body: &str) -> Request {
+/// Helper: Create HTTP PUT request with JSON body and path parameters
+///
+/// This helper is used for testing UpdateAPIView which expects `id` parameter
+/// in path_params to identify the resource to update.
+fn create_put_request_with_params(uri: &str, json_body: &str, id: &str) -> Request {
+	let mut params = HashMap::new();
+	params.insert("id".to_string(), id.to_string());
+
 	Request::builder()
 		.method(Method::PUT)
 		.uri(uri)
 		.version(Version::HTTP_11)
 		.headers(HeaderMap::new())
 		.body(Bytes::from(json_body.to_string()))
+		.path_params(params)
 		.build()
 		.expect("Failed to build request")
 }
 
-/// Helper: Create HTTP DELETE request
-fn create_delete_request(uri: &str) -> Request {
+/// Helper: Create HTTP DELETE request with path parameters
+///
+/// This helper is used for testing DestroyAPIView which expects `id` parameter
+/// in path_params to identify the resource to delete.
+fn create_delete_request_with_params(uri: &str, id: &str) -> Request {
+	let mut params = HashMap::new();
+	params.insert("id".to_string(), id.to_string());
+
 	Request::builder()
 		.method(Method::DELETE)
 		.uri(uri)
 		.version(Version::HTTP_11)
 		.headers(HeaderMap::new())
 		.body(Bytes::new())
+		.path_params(params)
 		.build()
 		.expect("Failed to build request")
 }
@@ -195,7 +201,7 @@ fn create_delete_request(uri: &str) -> Request {
 /// Test: Basic GET request returns 200 OK
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_basic_get_returns_ok(#[future] items_with_data: Arc<PgPool>) {
 	let _pool = items_with_data.await;
 
@@ -213,7 +219,7 @@ async fn test_basic_get_returns_ok(#[future] items_with_data: Arc<PgPool>) {
 /// Test: Basic POST request creates resource
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_basic_post_creates_resource(#[future] items_table: Arc<PgPool>) {
 	let _pool = items_table.await;
 
@@ -241,7 +247,7 @@ async fn test_basic_post_creates_resource(#[future] items_table: Arc<PgPool>) {
 /// Test: Basic PUT request updates resource
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_basic_put_updates_resource(#[future] items_with_data: Arc<PgPool>) {
 	let pool = items_with_data.await;
 
@@ -252,9 +258,14 @@ async fn test_basic_put_updates_resource(#[future] items_with_data: Arc<PgPool>)
 		.expect("Failed to fetch item");
 	let item_id: i64 = row.get(0);
 
-	let view = UpdateAPIView::<Item, JsonSerializer<Item>>::new();
+	let view =
+		UpdateAPIView::<Item, JsonSerializer<Item>>::new().with_lookup_field("id".to_string());
 	let json_body = r#"{"name":"Updated Item","value":999}"#;
-	let request = create_put_request(&format!("/items/{}/", item_id), json_body);
+	let request = create_put_request_with_params(
+		&format!("/items/{}/", item_id),
+		json_body,
+		&item_id.to_string(),
+	);
 
 	let result = view.dispatch(request).await;
 
@@ -272,7 +283,7 @@ async fn test_basic_put_updates_resource(#[future] items_with_data: Arc<PgPool>)
 /// Test: Basic DELETE request removes resource
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_basic_delete_removes_resource(#[future] items_with_data: Arc<PgPool>) {
 	let pool = items_with_data.await;
 
@@ -283,8 +294,9 @@ async fn test_basic_delete_removes_resource(#[future] items_with_data: Arc<PgPoo
 		.expect("Failed to fetch item");
 	let item_id: i64 = row.get(0);
 
-	let view = DestroyAPIView::<Item>::new();
-	let request = create_delete_request(&format!("/items/{}/", item_id));
+	let view = DestroyAPIView::<Item>::new().with_lookup_field("id".to_string());
+	let request =
+		create_delete_request_with_params(&format!("/items/{}/", item_id), &item_id.to_string());
 
 	let result = view.dispatch(request).await;
 
@@ -306,7 +318,7 @@ async fn test_basic_delete_removes_resource(#[future] items_with_data: Arc<PgPoo
 /// Test: Invalid URL returns 404
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_invalid_url_returns_404(#[future] items_table: Arc<PgPool>) {
 	let _pool = items_table.await;
 
@@ -334,7 +346,7 @@ async fn test_invalid_url_returns_404(#[future] items_table: Arc<PgPool>) {
 /// Test: Missing Content-Type header handling
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_missing_content_type_handling(#[future] items_table: Arc<PgPool>) {
 	let _pool = items_table.await;
 
@@ -365,7 +377,7 @@ async fn test_missing_content_type_handling(#[future] items_table: Arc<PgPool>) 
 /// Test: Empty database list operation
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_empty_database_list(#[future] items_table: Arc<PgPool>) {
 	let _pool = items_table.await;
 
@@ -393,7 +405,7 @@ async fn test_empty_database_list(#[future] items_table: Arc<PgPool>) {
 /// Test: Simple filtering operation
 #[rstest]
 #[tokio::test]
-#[serial(views_sanity)]
+
 async fn test_simple_filtering(#[future] items_with_data: Arc<PgPool>) {
 	let _pool = items_with_data.await;
 
@@ -401,7 +413,7 @@ async fn test_simple_filtering(#[future] items_with_data: Arc<PgPool>) {
 	// This test verifies basic list operation; actual filtering would need
 	// FilterConfig configuration
 	let view = ListAPIView::<Item, JsonSerializer<Item>>::new();
-	let request = create_get_request("/items/?name=Item 1");
+	let request = create_get_request("/items/?name=Item%201");
 
 	let result = view.dispatch(request).await;
 

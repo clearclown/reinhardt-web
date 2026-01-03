@@ -19,11 +19,10 @@ use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, Version};
 use reinhardt_core::http::Request;
 use reinhardt_macros::model;
-use reinhardt_test::fixtures::testcontainers::postgres_container;
+use reinhardt_test::fixtures::get_test_pool;
 use rstest::*;
-use sea_query::{Expr, ExprTrait, Iden, PostgresQueryBuilder, Query, Table};
+use sea_query::{Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
-use serial_test::serial;
 use sqlx::{PgPool, Row};
 
 // ============================================================================
@@ -134,10 +133,12 @@ enum Tasks {
 // ============================================================================
 
 /// Setup: PostgreSQL container with blog posts schema
+///
+/// Uses shared PostgreSQL container with template database pattern.
+/// Each test gets an isolated database cloned from template (~10-40ms).
 #[fixture]
 async fn setup_blog() -> PgPool {
-	let (_container, pool, _port, _url) = postgres_container().await;
-	let pool: PgPool = (*pool).clone();
+	let pool = get_test_pool().await;
 
 	// Create blog_posts table
 	let create_table_sql = Table::create()
@@ -166,8 +167,8 @@ async fn setup_blog() -> PgPool {
 				.not_null(),
 		)
 		.col(sea_query::ColumnDef::new(BlogPosts::AuthorId).big_integer())
-		.col(sea_query::ColumnDef::new(BlogPosts::PublishedAt).timestamp())
-		.col(sea_query::ColumnDef::new(BlogPosts::CreatedAt).timestamp())
+		.col(sea_query::ColumnDef::new(BlogPosts::PublishedAt).timestamp_with_time_zone())
+		.col(sea_query::ColumnDef::new(BlogPosts::CreatedAt).timestamp_with_time_zone())
 		.to_string(PostgresQueryBuilder);
 
 	sqlx::query(&create_table_sql).execute(&pool).await.unwrap();
@@ -176,10 +177,11 @@ async fn setup_blog() -> PgPool {
 }
 
 /// Setup: PostgreSQL container with products schema
+///
+/// Uses shared PostgreSQL container with template database pattern.
 #[fixture]
 async fn setup_products() -> PgPool {
-	let (_container, pool, _port, _url) = postgres_container().await;
-	let pool: PgPool = (*pool).clone();
+	let pool = get_test_pool().await;
 
 	// Create products table
 	let create_table_sql = Table::create()
@@ -230,10 +232,11 @@ async fn setup_products() -> PgPool {
 }
 
 /// Setup: PostgreSQL container with tasks schema
+///
+/// Uses shared PostgreSQL container with template database pattern.
 #[fixture]
 async fn setup_tasks() -> PgPool {
-	let (_container, pool, _port, _url) = postgres_container().await;
-	let pool: PgPool = (*pool).clone();
+	let pool = get_test_pool().await;
 
 	// Create tasks table
 	let create_table_sql = Table::create()
@@ -267,7 +270,7 @@ async fn setup_tasks() -> PgPool {
 				.not_null(),
 		)
 		.col(sea_query::ColumnDef::new(Tasks::AssigneeId).big_integer())
-		.col(sea_query::ColumnDef::new(Tasks::DueDate).timestamp())
+		.col(sea_query::ColumnDef::new(Tasks::DueDate).timestamp_with_time_zone())
 		.to_string(PostgresQueryBuilder);
 
 	sqlx::query(&create_table_sql).execute(&pool).await.unwrap();
@@ -334,7 +337,7 @@ fn _create_get_request(uri: &str) -> Request {
 /// Use Case 1: Blog posting workflow (draft → published → archived)
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_blog_posting_workflow(#[future] setup_blog: PgPool) {
 	let pool = setup_blog.await;
 
@@ -348,70 +351,63 @@ async fn test_blog_posting_workflow(#[future] setup_blog: PgPool) {
 		Some(Utc::now()),
 	);
 
-	let insert_sql = Query::insert()
-		.into_table(BlogPosts::Table)
-		.columns([
-			BlogPosts::Title,
-			BlogPosts::Content,
-			BlogPosts::Status,
-			BlogPosts::AuthorId,
-			BlogPosts::PublishedAt,
-			BlogPosts::CreatedAt,
-		])
-		.values_panic([
-			draft_post.title.into(),
-			draft_post.content.into(),
-			draft_post.status.into(),
-			draft_post.author_id.into(),
-			draft_post.published_at.into(),
-			draft_post.created_at.into(),
-		])
-		.returning_all()
-		.build(PostgresQueryBuilder);
+	let row = sqlx::query(
+		"INSERT INTO blog_posts (title, content, status, author_id, published_at, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, status",
+	)
+	.bind(&draft_post.title)
+	.bind(&draft_post.content)
+	.bind(&draft_post.status)
+	.bind(draft_post.author_id)
+	.bind(draft_post.published_at)
+	.bind(draft_post.created_at)
+	.fetch_one(&pool)
+	.await
+	.unwrap();
 
-	let row = sqlx::query(&insert_sql.0).fetch_one(&pool).await.unwrap();
 	let post_id: i64 = row.get("id");
 	let status: String = row.get("status");
 
 	assert_eq!(status, "draft");
 
 	// Step 2: Publish post (update status and published_at)
-	let publish_sql = Query::update()
-		.table(BlogPosts::Table)
-		.values([
-			(BlogPosts::Status, "published".into()),
-			(BlogPosts::PublishedAt, Utc::now().into()),
-		])
-		.and_where(Expr::col(BlogPosts::Id).eq(Expr::val(post_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&publish_sql.0).execute(&pool).await.unwrap();
+	let published_at = Utc::now();
+	sqlx::query("UPDATE blog_posts SET status = $1, published_at = $2 WHERE id = $3")
+		.bind("published")
+		.bind(published_at)
+		.bind(post_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 
 	// Verify published status
-	let select_sql = Query::select()
-		.from(BlogPosts::Table)
-		.columns([BlogPosts::Status, BlogPosts::PublishedAt])
-		.and_where(Expr::col(BlogPosts::Id).eq(Expr::val(post_id)))
-		.build(PostgresQueryBuilder);
+	let published_row = sqlx::query("SELECT status, published_at FROM blog_posts WHERE id = $1")
+		.bind(post_id)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 
-	let published_row = sqlx::query(&select_sql.0).fetch_one(&pool).await.unwrap();
 	let published_status: String = published_row.get("status");
-	let published_at: Option<DateTime<Utc>> = published_row.get("published_at");
+	let published_at_result: Option<DateTime<Utc>> = published_row.get("published_at");
 
 	assert_eq!(published_status, "published");
-	assert!(published_at.is_some(), "published_at should be set");
+	assert!(published_at_result.is_some(), "published_at should be set");
 
 	// Step 3: Archive post
-	let archive_sql = Query::update()
-		.table(BlogPosts::Table)
-		.values([(BlogPosts::Status, "archived".into())])
-		.and_where(Expr::col(BlogPosts::Id).eq(Expr::val(post_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&archive_sql.0).execute(&pool).await.unwrap();
+	sqlx::query("UPDATE blog_posts SET status = $1 WHERE id = $2")
+		.bind("archived")
+		.bind(post_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 
 	// Verify archived status
-	let archived_row = sqlx::query(&select_sql.0).fetch_one(&pool).await.unwrap();
+	let archived_row = sqlx::query("SELECT status FROM blog_posts WHERE id = $1")
+		.bind(post_id)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
+
 	let archived_status: String = archived_row.get("status");
 
 	assert_eq!(archived_status, "archived");
@@ -420,7 +416,7 @@ async fn test_blog_posting_workflow(#[future] setup_blog: PgPool) {
 /// Use Case 2: E-commerce inventory management
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_ecommerce_inventory_management(#[future] setup_products: PgPool) {
 	let pool = setup_products.await;
 
@@ -434,28 +430,20 @@ async fn test_ecommerce_inventory_management(#[future] setup_products: PgPool) {
 		true,
 	);
 
-	let insert_sql = Query::insert()
-		.into_table(Products::Table)
-		.columns([
-			Products::Name,
-			Products::Sku,
-			Products::Price,
-			Products::StockQuantity,
-			Products::Category,
-			Products::Active,
-		])
-		.values_panic([
-			product.name.into(),
-			product.sku.into(),
-			product.price.into(),
-			product.stock_quantity.into(),
-			product.category.into(),
-			product.active.into(),
-		])
-		.returning_all()
-		.build(PostgresQueryBuilder);
+	let row = sqlx::query(
+		"INSERT INTO products (name, sku, price, stock_quantity, category, active)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, stock_quantity",
+	)
+	.bind(&product.name)
+	.bind(&product.sku)
+	.bind(product.price)
+	.bind(product.stock_quantity)
+	.bind(&product.category)
+	.bind(product.active)
+	.fetch_one(&pool)
+	.await
+	.unwrap();
 
-	let row = sqlx::query(&insert_sql.0).fetch_one(&pool).await.unwrap();
 	let product_id: i64 = row.get("id");
 	let initial_stock: i32 = row.get("stock_quantity");
 
@@ -463,43 +451,40 @@ async fn test_ecommerce_inventory_management(#[future] setup_products: PgPool) {
 
 	// Step 2: Simulate sale (decrease stock by 5)
 	let new_stock = initial_stock - 5;
-	let update_stock_sql = Query::update()
-		.table(Products::Table)
-		.values([(Products::StockQuantity, new_stock.into())])
-		.and_where(Expr::col(Products::Id).eq(Expr::val(product_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&update_stock_sql.0)
+	sqlx::query("UPDATE products SET stock_quantity = $1 WHERE id = $2")
+		.bind(new_stock)
+		.bind(product_id)
 		.execute(&pool)
 		.await
 		.unwrap();
 
 	// Verify stock updated
-	let select_sql = Query::select()
-		.from(Products::Table)
-		.column(Products::StockQuantity)
-		.and_where(Expr::col(Products::Id).eq(Expr::val(product_id)))
-		.build(PostgresQueryBuilder);
+	let updated_row = sqlx::query("SELECT stock_quantity FROM products WHERE id = $1")
+		.bind(product_id)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 
-	let updated_row = sqlx::query(&select_sql.0).fetch_one(&pool).await.unwrap();
 	let updated_stock: i32 = updated_row.get("stock_quantity");
 
 	assert_eq!(updated_stock, 95);
 
 	// Step 3: Deactivate product when out of stock
-	let deactivate_sql = Query::update()
-		.table(Products::Table)
-		.values([
-			(Products::StockQuantity, 0.into()),
-			(Products::Active, false.into()),
-		])
-		.and_where(Expr::col(Products::Id).eq(Expr::val(product_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&deactivate_sql.0).execute(&pool).await.unwrap();
+	sqlx::query("UPDATE products SET stock_quantity = $1, active = $2 WHERE id = $3")
+		.bind(0)
+		.bind(false)
+		.bind(product_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 
 	// Verify deactivated
-	let final_row = sqlx::query(&select_sql.0).fetch_one(&pool).await.unwrap();
+	let final_row = sqlx::query("SELECT stock_quantity FROM products WHERE id = $1")
+		.bind(product_id)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
+
 	let final_stock: i32 = final_row.get("stock_quantity");
 
 	assert_eq!(final_stock, 0);
@@ -508,7 +493,7 @@ async fn test_ecommerce_inventory_management(#[future] setup_products: PgPool) {
 /// Use Case 3: Task management system workflow
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_task_management_workflow(#[future] setup_tasks: PgPool) {
 	let pool = setup_tasks.await;
 
@@ -522,59 +507,48 @@ async fn test_task_management_workflow(#[future] setup_tasks: PgPool) {
 		Some(Utc::now() + chrono::Duration::try_days(7).unwrap()), // Due in 7 days
 	);
 
-	let insert_sql = Query::insert()
-		.into_table(Tasks::Table)
-		.columns([
-			Tasks::Title,
-			Tasks::Description,
-			Tasks::Status,
-			Tasks::Priority,
-			Tasks::AssigneeId,
-			Tasks::DueDate,
-		])
-		.values_panic([
-			task.title.into(),
-			task.description.into(),
-			task.status.into(),
-			task.priority.into(),
-			task.assignee_id.into(),
-			task.due_date.into(),
-		])
-		.returning_all()
-		.build(PostgresQueryBuilder);
+	let row = sqlx::query(
+		"INSERT INTO tasks (title, description, status, priority, assignee_id, due_date)
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, status",
+	)
+	.bind(&task.title)
+	.bind(&task.description)
+	.bind(&task.status)
+	.bind(task.priority)
+	.bind(task.assignee_id)
+	.bind(task.due_date)
+	.fetch_one(&pool)
+	.await
+	.unwrap();
 
-	let row = sqlx::query(&insert_sql.0).fetch_one(&pool).await.unwrap();
 	let task_id: i64 = row.get("id");
 	let initial_status: String = row.get("status");
 
 	assert_eq!(initial_status, "todo");
 
 	// Step 2: Start working on task
-	let start_sql = Query::update()
-		.table(Tasks::Table)
-		.values([(Tasks::Status, "in_progress".into())])
-		.and_where(Expr::col(Tasks::Id).eq(Expr::val(task_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&start_sql.0).execute(&pool).await.unwrap();
+	sqlx::query("UPDATE tasks SET status = $1 WHERE id = $2")
+		.bind("in_progress")
+		.bind(task_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 
 	// Step 3: Complete task
-	let complete_sql = Query::update()
-		.table(Tasks::Table)
-		.values([(Tasks::Status, "done".into())])
-		.and_where(Expr::col(Tasks::Id).eq(Expr::val(task_id)))
-		.build(PostgresQueryBuilder);
-
-	sqlx::query(&complete_sql.0).execute(&pool).await.unwrap();
+	sqlx::query("UPDATE tasks SET status = $1 WHERE id = $2")
+		.bind("done")
+		.bind(task_id)
+		.execute(&pool)
+		.await
+		.unwrap();
 
 	// Verify task completed
-	let select_sql = Query::select()
-		.from(Tasks::Table)
-		.column(Tasks::Status)
-		.and_where(Expr::col(Tasks::Id).eq(Expr::val(task_id)))
-		.build(PostgresQueryBuilder);
+	let completed_row = sqlx::query("SELECT status FROM tasks WHERE id = $1")
+		.bind(task_id)
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 
-	let completed_row = sqlx::query(&select_sql.0).fetch_one(&pool).await.unwrap();
 	let final_status: String = completed_row.get("status");
 
 	assert_eq!(final_status, "done");
@@ -583,7 +557,7 @@ async fn test_task_management_workflow(#[future] setup_tasks: PgPool) {
 /// Use Case 4: Product search and filtering
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_product_search_filtering(#[future] setup_products: PgPool) {
 	let pool = setup_products.await;
 
@@ -598,45 +572,33 @@ async fn test_product_search_filtering(#[future] setup_products: PgPool) {
 			i % 3 != 0, // Some inactive products
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(Products::Table)
-			.columns([
-				Products::Name,
-				Products::Sku,
-				Products::Price,
-				Products::StockQuantity,
-				Products::Category,
-				Products::Active,
-			])
-			.values_panic([
-				product.name.into(),
-				product.sku.into(),
-				product.price.into(),
-				product.stock_quantity.into(),
-				product.category.into(),
-				product.active.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO products (name, sku, price, stock_quantity, category, active)
+			 VALUES ($1, $2, $3, $4, $5, $6)",
+		)
+		.bind(&product.name)
+		.bind(&product.sku)
+		.bind(product.price)
+		.bind(product.stock_quantity)
+		.bind(&product.category)
+		.bind(product.active)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Search: Active Electronics products with price < 50
-	let search_sql = Query::select()
-		.from(Products::Table)
-		.columns([
-			Products::Id,
-			Products::Name,
-			Products::Category,
-			Products::Price,
-		])
-		.and_where(Expr::col(Products::Category).eq(Expr::val("Electronics")))
-		.and_where(Expr::col(Products::Active).eq(Expr::val(true)))
-		.and_where(Expr::col(Products::Price).lt(Expr::val(50.0)))
-		.order_by(Products::Price, sea_query::Order::Asc)
-		.build(PostgresQueryBuilder);
-
-	let rows = sqlx::query(&search_sql.0).fetch_all(&pool).await.unwrap();
+	let rows = sqlx::query(
+		"SELECT id, name, category, price FROM products
+		 WHERE category = $1 AND active = $2 AND price < $3
+		 ORDER BY price ASC",
+	)
+	.bind("Electronics")
+	.bind(true)
+	.bind(50.0)
+	.fetch_all(&pool)
+	.await
+	.unwrap();
 
 	// Verify all results match criteria
 	for row in rows {
@@ -651,7 +613,7 @@ async fn test_product_search_filtering(#[future] setup_products: PgPool) {
 /// Use Case 5: Bulk task creation for project
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_bulk_task_creation(#[future] setup_tasks: PgPool) {
 	let pool = setup_tasks.await;
 
@@ -674,36 +636,27 @@ async fn test_bulk_task_creation(#[future] setup_tasks: PgPool) {
 			Some(Utc::now() + chrono::Duration::try_days((index as i64) + 1).unwrap()),
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(Tasks::Table)
-			.columns([
-				Tasks::Title,
-				Tasks::Description,
-				Tasks::Status,
-				Tasks::Priority,
-				Tasks::AssigneeId,
-				Tasks::DueDate,
-			])
-			.values_panic([
-				task.title.into(),
-				task.description.into(),
-				task.status.into(),
-				task.priority.into(),
-				task.assignee_id.into(),
-				task.due_date.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO tasks (title, description, status, priority, assignee_id, due_date)
+			 VALUES ($1, $2, $3, $4, $5, $6)",
+		)
+		.bind(&task.title)
+		.bind(&task.description)
+		.bind(&task.status)
+		.bind(task.priority)
+		.bind(task.assignee_id)
+		.bind(task.due_date)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Verify all tasks created
-	let count_sql = Query::select()
-		.from(Tasks::Table)
-		.expr(sea_query::Func::count(sea_query::Expr::col(Tasks::Id)))
-		.build(PostgresQueryBuilder);
+	let count_row = sqlx::query("SELECT COUNT(id) FROM tasks")
+		.fetch_one(&pool)
+		.await
+		.unwrap();
 
-	let count_row = sqlx::query(&count_sql.0).fetch_one(&pool).await.unwrap();
 	let task_count: i64 = count_row.get(0);
 
 	assert_eq!(task_count, 5, "Should have created 5 tasks");
@@ -712,7 +665,7 @@ async fn test_bulk_task_creation(#[future] setup_tasks: PgPool) {
 /// Use Case 6: Category-based content organization
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_category_based_organization(#[future] setup_blog: PgPool) {
 	let pool = setup_blog.await;
 
@@ -733,37 +686,24 @@ async fn test_category_based_organization(#[future] setup_blog: PgPool) {
 			Some(Utc::now()),
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(BlogPosts::Table)
-			.columns([
-				BlogPosts::Title,
-				BlogPosts::Content,
-				BlogPosts::Status,
-				BlogPosts::AuthorId,
-				BlogPosts::PublishedAt,
-				BlogPosts::CreatedAt,
-			])
-			.values_panic([
-				post.title.into(),
-				post.content.into(),
-				post.status.into(),
-				post.author_id.into(),
-				post.published_at.into(),
-				post.created_at.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO blog_posts (title, content, status, author_id, published_at, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6)",
+		)
+		.bind(&post.title)
+		.bind(&post.content)
+		.bind(&post.status)
+		.bind(post.author_id)
+		.bind(post.published_at)
+		.bind(post.created_at)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Query: Get all Technology posts
-	let tech_posts_sql = Query::select()
-		.from(BlogPosts::Table)
-		.columns([BlogPosts::Id, BlogPosts::Title, BlogPosts::Status])
-		.and_where(Expr::col(BlogPosts::Status).eq(Expr::val("Technology")))
-		.build(PostgresQueryBuilder);
-
-	let tech_rows = sqlx::query(&tech_posts_sql.0)
+	let tech_rows = sqlx::query("SELECT id, title, status FROM blog_posts WHERE status = $1")
+		.bind("Technology")
 		.fetch_all(&pool)
 		.await
 		.unwrap();
@@ -780,7 +720,7 @@ async fn test_category_based_organization(#[future] setup_blog: PgPool) {
 /// Use Case 7: Multi-tenant product isolation
 #[rstest]
 #[tokio::test]
-#[serial(views_usecases)]
+
 async fn test_multi_tenant_isolation(#[future] setup_products: PgPool) {
 	let pool = setup_products.await;
 
@@ -803,37 +743,27 @@ async fn test_multi_tenant_isolation(#[future] setup_products: PgPool) {
 			true,
 		);
 
-		let insert_sql = Query::insert()
-			.into_table(Products::Table)
-			.columns([
-				Products::Name,
-				Products::Sku,
-				Products::Price,
-				Products::StockQuantity,
-				Products::Category,
-				Products::Active,
-			])
-			.values_panic([
-				product.name.into(),
-				product.sku.into(),
-				product.price.into(),
-				product.stock_quantity.into(),
-				product.category.into(),
-				product.active.into(),
-			])
-			.build(PostgresQueryBuilder);
-
-		sqlx::query(&insert_sql.0).execute(&pool).await.unwrap();
+		sqlx::query(
+			"INSERT INTO products (name, sku, price, stock_quantity, category, active)
+			 VALUES ($1, $2, $3, $4, $5, $6)",
+		)
+		.bind(&product.name)
+		.bind(&product.sku)
+		.bind(product.price)
+		.bind(product.stock_quantity)
+		.bind(&product.category)
+		.bind(product.active)
+		.execute(&pool)
+		.await
+		.unwrap();
 	}
 
 	// Query: Get only Tenant A products
-	let tenant_a_sql = Query::select()
-		.from(Products::Table)
-		.columns([Products::Id, Products::Name, Products::Category])
-		.and_where(Expr::col(Products::Category).eq(Expr::val("Tenant A")))
-		.build(PostgresQueryBuilder);
-
-	let tenant_a_rows = sqlx::query(&tenant_a_sql.0).fetch_all(&pool).await.unwrap();
+	let tenant_a_rows = sqlx::query("SELECT id, name, category FROM products WHERE category = $1")
+		.bind("Tenant A")
+		.fetch_all(&pool)
+		.await
+		.unwrap();
 
 	assert_eq!(tenant_a_rows.len(), 2, "Tenant A should have 2 products");
 

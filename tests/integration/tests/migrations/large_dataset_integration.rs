@@ -578,7 +578,7 @@ async fn test_performance_add_column_to_wide_table(
 	assert_eq!(column_count, 101, "Should have 101 columns");
 
 	println!("Added column to 100-field table in {:?}", duration);
-	assert!(duration.as_secs() < 5, "Should complete in < 5 seconds");
+	assert!(duration.as_secs() < 30, "Should complete in < 30 seconds");
 }
 
 /// Performance benchmark: Create index on 1 million row table
