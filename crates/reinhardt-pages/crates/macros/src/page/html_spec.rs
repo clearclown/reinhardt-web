@@ -75,6 +75,30 @@ pub(super) enum ContentModel {
 	Empty,
 }
 
+/// Enumerated attribute specification.
+///
+/// Defines valid values for attributes that accept a limited set of string values.
+#[derive(Debug, Clone, Copy)]
+pub(super) struct EnumAttrSpec {
+	/// Attribute name
+	pub name: &'static str,
+	/// List of valid values for this attribute
+	pub valid_values: &'static [&'static str],
+}
+
+/// Element-specific enumerated attributes list.
+///
+/// Maps an element tag to its enumerated attributes.
+#[derive(Debug, Clone)]
+pub(super) struct ElementEnumAttrs {
+	/// Element tag name
+	/// Allow dead_code: Field reserved for future debugging/validation features
+	#[allow(dead_code)]
+	pub tag: &'static str,
+	/// Enumerated attributes for this element
+	pub attrs: &'static [EnumAttrSpec],
+}
+
 /// Global HTML attributes (allowed on all elements).
 ///
 /// Based on: https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes
@@ -1680,6 +1704,111 @@ fn is_global_attribute(attr: &str) -> bool {
 	}
 
 	false
+}
+
+// ========================================
+// Enumerated Attributes Specifications
+// ========================================
+
+/// Enumerated attributes for input element.
+///
+/// Based on: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#type
+pub(super) static INPUT_ENUM_ATTRS: ElementEnumAttrs = ElementEnumAttrs {
+	tag: "input",
+	attrs: &[EnumAttrSpec {
+		name: "type",
+		valid_values: &[
+			"text",
+			"password",
+			"email",
+			"number",
+			"tel",
+			"url",
+			"search",
+			"checkbox",
+			"radio",
+			"submit",
+			"button",
+			"reset",
+			"file",
+			"hidden",
+			"date",
+			"datetime-local",
+			"time",
+			"week",
+			"month",
+			"color",
+			"range",
+		],
+	}],
+};
+
+/// Enumerated attributes for button element.
+///
+/// Based on: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button#type
+pub(super) static BUTTON_ENUM_ATTRS: ElementEnumAttrs = ElementEnumAttrs {
+	tag: "button",
+	attrs: &[EnumAttrSpec {
+		name: "type",
+		valid_values: &["submit", "button", "reset"],
+	}],
+};
+
+/// Enumerated attributes for form element.
+///
+/// Based on: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form
+pub(super) static FORM_ENUM_ATTRS: ElementEnumAttrs = ElementEnumAttrs {
+	tag: "form",
+	attrs: &[
+		EnumAttrSpec {
+			name: "method",
+			valid_values: &["get", "post"],
+		},
+		EnumAttrSpec {
+			name: "enctype",
+			valid_values: &[
+				"application/x-www-form-urlencoded",
+				"multipart/form-data",
+				"text/plain",
+			],
+		},
+	],
+};
+
+/// Enumerated attributes for script element.
+///
+/// Based on: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#type
+pub(super) static SCRIPT_ENUM_ATTRS: ElementEnumAttrs = ElementEnumAttrs {
+	tag: "script",
+	attrs: &[EnumAttrSpec {
+		name: "type",
+		valid_values: &["module", "text/javascript", "application/javascript"],
+	}],
+};
+
+/// Gets enumerated attribute specification for an element/attribute pair.
+///
+/// Returns `None` if the element does not have enumerated attributes or
+/// the specific attribute is not enumerated.
+///
+/// # Parameters
+///
+/// * `tag` - The element tag name
+/// * `attr` - The attribute name
+///
+/// # Returns
+///
+/// The enumerated attribute specification if found, otherwise `None`.
+pub(super) fn get_enum_attr_spec(tag: &str, attr: &str) -> Option<&'static EnumAttrSpec> {
+	let element_attrs = match tag {
+		"input" => &INPUT_ENUM_ATTRS,
+		"button" => &BUTTON_ENUM_ATTRS,
+		"form" => &FORM_ENUM_ATTRS,
+		"script" => &SCRIPT_ENUM_ATTRS,
+		_ => return None,
+	};
+
+	element_attrs.attrs.iter().find(|spec| spec.name == attr)
 }
 
 #[cfg(test)]

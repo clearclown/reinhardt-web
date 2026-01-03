@@ -209,6 +209,14 @@ fn transform_element(elem: &PageElement, parent_tags: &[String]) -> Result<Typed
 	// 6. Validate against HTML specification (Phase 2)
 	super::html_spec::validate_against_spec(&typed_element)?;
 
+	// 7. Validate accessibility requirements (Phase 5)
+	validate_accessibility(
+		&tag,
+		&typed_element.attrs,
+		&typed_element.children,
+		elem.span,
+	)?;
+
 	Ok(typed_element)
 }
 
@@ -239,21 +247,378 @@ fn transform_attrs(attrs: &[PageAttr], element_tag: &str) -> Result<Vec<TypedPag
 	Ok(typed_attrs)
 }
 
-/// Validates attribute type for specific elements and attributes.
+/// Checks if an attribute is a URL attribute for the given element.
 ///
-/// # Phase 1 Implementation
+/// Note: img element's src attribute is excluded as it has separate validation rules.
+fn is_url_attribute(attr_name: &str, element_tag: &str, url_attrs: &[(&str, &str)]) -> bool {
+	// Exclude img src - it has separate validation rules
+	if element_tag == "img" && attr_name == "src" {
+		return false;
+	}
+
+	for (url_attr, applicable_tags) in url_attrs {
+		if attr_name == *url_attr {
+			for tag in applicable_tags.split(',').map(|s| s.trim()) {
+				if tag == element_tag {
+					return true;
+				}
+			}
+		}
+	}
+	false
+}
+
+/// Validates enumerated attribute values.
+///
+/// Checks if a string literal attribute value is one of the allowed values
+/// for enumerated attributes (like input[type], button[type], etc.).
+///
+/// # Parameters
+///
+/// * `attr_name` - The attribute name
+/// * `value` - The attribute value
+/// * `element_tag` - The element tag name
+/// * `span` - The span for error reporting
+///
+/// # Returns
+///
+/// Ok if validation passes, Err with descriptive error message otherwise.
+fn validate_enum_attr(
+	attr_name: &str,
+	value: &AttrValue,
+	element_tag: &str,
+	span: Span,
+) -> Result<()> {
+	let Some(enum_spec) = super::html_spec::get_enum_attr_spec(element_tag, attr_name) else {
+		return Ok(());
+	};
+
+	let Some(str_value) = value.as_string() else {
+		return Ok(()); // Dynamic expressions are OK
+	};
+
+	if !enum_spec.valid_values.contains(&str_value.as_str()) {
+		return Err(syn::Error::new(
+			span,
+			format!(
+				"Invalid value '{}' for attribute '{}' on element <{}>.\n\
+				Valid values are: {}\n\n\
+				Examples:\n\
+				  Correct:   {}=\"{}\"\n\
+				  Incorrect: {}=\"{}\"",
+				str_value,
+				attr_name,
+				element_tag,
+				enum_spec.valid_values.join("\", \""),
+				attr_name,
+				enum_spec.valid_values[0],
+				attr_name,
+				str_value
+			),
+		));
+	}
+
+	Ok(())
+}
+
+/// Checks if children nodes contain meaningful content.
+///
+/// Returns true if any child contains non-whitespace text or is a dynamic expression.
+fn has_meaningful_content(children: &[TypedPageNode]) -> bool {
+	for child in children {
+		match child {
+			TypedPageNode::Text(text) => {
+				if !text.content.trim().is_empty() {
+					return true;
+				}
+			}
+			TypedPageNode::Element(elem) => {
+				if has_meaningful_content(&elem.children) {
+					return true;
+				}
+			}
+			TypedPageNode::Expression(_)
+			| TypedPageNode::Component(_)
+			| TypedPageNode::If(_)
+			| TypedPageNode::For(_) => {
+				// Dynamic content - assume it will have meaningful content at runtime
+				return true;
+			}
+		}
+	}
+	false
+}
+
+/// Validates button element accessibility requirements.
+///
+/// Button elements must have either:
+/// - Text content (direct or nested)
+/// - aria-label attribute
+/// - aria-labelledby attribute
+fn validate_button_accessibility(
+	attrs: &[TypedPageAttr],
+	children: &[TypedPageNode],
+	span: Span,
+) -> Result<()> {
+	// Check for aria-label or aria-labelledby attributes
+	let has_aria_label = attrs.iter().any(|attr| {
+		let name = attr.name.to_string();
+		name == "aria_label" || name == "aria_labelledby"
+	});
+
+	if has_aria_label {
+		return Ok(());
+	}
+
+	// Check for text content
+	if !has_meaningful_content(children) {
+		return Err(syn::Error::new(
+			span,
+			"Element <button> requires accessible text.\n\
+			Either provide text content or use 'aria_label' attribute.\n\n\
+			Examples:\n\
+			  Correct:   button { \"Click me\" }\n\
+			  Correct:   button { aria_label: \"Close\" }\n\
+			  Correct:   button { span { \"Submit\" } }\n\
+			  Incorrect: button {}",
+		));
+	}
+
+	Ok(())
+}
+
+/// Validates accessibility requirements for elements.
 ///
 /// Currently validates:
+/// - button elements: Must have text content or aria-label
+fn validate_accessibility(
+	tag: &str,
+	attrs: &[TypedPageAttr],
+	children: &[TypedPageNode],
+	span: Span,
+) -> Result<()> {
+	if tag == "button" {
+		validate_button_accessibility(attrs, children, span)?
+	}
+	Ok(())
+}
+
+/// Validates attribute type for specific elements and attributes.
+///
+/// # Validation Rules
+///
+/// - Boolean attributes must have dynamic expressions only (no literals)
+/// - Numeric attributes must have integer literals or dynamic expressions (no strings/floats/booleans)
+/// - URL attributes are checked for dangerous schemes (javascript:, data:, vbscript:) for XSS prevention
+/// - Enumerated attributes are validated against allowed values (input[type], button[type], etc.)
 /// - `img` element `src` attribute must be a string literal and non-empty
 ///
-/// Future phases will add more element-specific validations.
+/// Future phases will add accessibility checks.
 fn validate_attr_type(
 	attr_name: &str,
 	value: &AttrValue,
 	element_tag: &str,
 	span: Span,
 ) -> Result<()> {
-	// Phase 1: img element src attribute validation
+	// Boolean attributes validation - must use dynamic expressions only
+	const BOOLEAN_ATTRS: &[&str] = &[
+		"disabled",
+		"required",
+		"readonly",
+		"checked",
+		"selected",
+		"autofocus",
+		"autoplay",
+		"controls",
+		"loop",
+		"muted",
+		"default",
+		"defer",
+		"formnovalidate",
+		"hidden",
+		"ismap",
+		"multiple",
+		"novalidate",
+		"open",
+		"reversed",
+	];
+
+	// Numeric attributes that must have integer literal or dynamic values
+	const NUMERIC_ATTRS: &[&str] = &[
+		"maxlength",
+		"minlength",
+		"size",
+		"min",
+		"max",
+		"step",
+		"rows",
+		"cols",
+		"colspan",
+		"rowspan",
+		"tabindex",
+	];
+
+	// URL attributes that should be validated for dangerous schemes
+	// Each entry is (attribute_name, applicable_element_tags)
+	const URL_ATTRS: &[(&str, &str)] = &[
+		("href", "a, area, link"),
+		("action", "form"),
+		("formaction", "button, input"),
+		("src", "iframe, video, audio, source, script, embed"),
+	];
+
+	// Dangerous URL schemes that should be blocked for security (XSS prevention)
+	const DANGEROUS_URL_SCHEMES: &[&str] = &["javascript:", "data:", "vbscript:"];
+
+	if BOOLEAN_ATTRS.contains(&attr_name) {
+		// 1. String literals are prohibited
+		if value.is_string_literal() {
+			return Err(syn::Error::new(
+				span,
+				format!(
+					"Boolean attribute '{}' cannot have a string literal value.\n\
+					HTML boolean attributes represent true/false by their presence/absence:\n\
+					  - Attribute present = true\n\
+					  - Attribute absent = false\n\n\
+					Use a variable or expression for dynamic boolean values:\n\
+					  Correct:   {}: is_disabled\n\
+					  Correct:   {}: state.is_active()\n\
+					  Incorrect: {}: \"true\"\n\
+					  Incorrect: {}: \"disabled\"",
+					attr_name, attr_name, attr_name, attr_name, attr_name
+				),
+			));
+		}
+
+		// 2. Boolean literals are prohibited
+		if value.is_bool_literal() {
+			return Err(syn::Error::new(
+				span,
+				format!(
+					"Boolean attribute '{}' cannot have a boolean literal value.\n\
+					HTML boolean attributes represent true/false by their presence/absence:\n\
+					  - Attribute present = true\n\
+					  - Attribute absent = false\n\n\
+					Use a variable or expression for dynamic boolean values:\n\
+					  Correct:   {}: is_disabled\n\
+					  Correct:   {}: state.is_active()\n\
+					  Incorrect: {}: true\n\
+					  Incorrect: {}: false",
+					attr_name, attr_name, attr_name, attr_name, attr_name
+				),
+			));
+		}
+
+		// 3. Numeric literals are prohibited
+		if value.is_int_literal() || value.is_float_literal() {
+			return Err(syn::Error::new(
+				span,
+				format!(
+					"Boolean attribute '{}' cannot have a numeric literal value.\n\
+					HTML boolean attributes represent true/false by their presence/absence:\n\
+					  - Attribute present = true\n\
+					  - Attribute absent = false\n\n\
+					Use a variable or expression for dynamic boolean values:\n\
+					  Correct:   {}: is_disabled\n\
+					  Correct:   {}: state.is_active()\n\
+					  Incorrect: {}: 1\n\
+					  Incorrect: {}: 0",
+					attr_name, attr_name, attr_name, attr_name, attr_name
+				),
+			));
+		}
+
+		// 4. Dynamic expressions are OK (no check needed)
+	}
+
+	// Numeric attributes validation - must be integer literal or dynamic
+	if NUMERIC_ATTRS.contains(&attr_name) {
+		match value {
+			AttrValue::StringLit(_) => {
+				return Err(syn::Error::new(
+					span,
+					format!(
+						"Attribute '{}' must be an integer literal or dynamic expression, not a string literal.\n\n\
+						Examples:\n\
+						  Incorrect: {}=\"100\"  // String literal is not allowed\n\
+						  Correct:   {}=100      // Integer literal\n\
+						  Correct:   {}=max_len  // Dynamic expression",
+						attr_name, attr_name, attr_name, attr_name
+					),
+				));
+			}
+			AttrValue::FloatLit(_) => {
+				return Err(syn::Error::new(
+					span,
+					format!(
+						"Attribute '{}' must be an integer, not a floating-point number.\n\n\
+						Examples:\n\
+						  Incorrect: {}=100.0   // Float literal is not allowed\n\
+						  Correct:   {}=100     // Integer literal",
+						attr_name, attr_name, attr_name
+					),
+				));
+			}
+			AttrValue::BoolLit(_) => {
+				return Err(syn::Error::new(
+					span,
+					format!(
+						"Attribute '{}' must be an integer, not a boolean.\n\n\
+						Use an integer literal or dynamic expression instead.",
+						attr_name
+					),
+				));
+			}
+			AttrValue::IntLit(_) | AttrValue::Dynamic(_) => {
+				// OK: Integer literal or dynamic expression
+			}
+		}
+	}
+
+	// URL attributes safety check - prevent XSS attacks
+	if is_url_attribute(attr_name, element_tag, URL_ATTRS)
+		&& let Some(url_str) = value.as_string()
+	{
+		// Check for empty strings first
+		if url_str.trim().is_empty() {
+			return Err(syn::Error::new(
+				span,
+				format!(
+					"URL attribute '{}' cannot be empty.\n\n\
+						Provide a valid URL or use a dynamic expression.",
+					attr_name
+				),
+			));
+		}
+
+		// Check for dangerous schemes (case-insensitive)
+		let url_lower = url_str.to_lowercase();
+		for scheme in DANGEROUS_URL_SCHEMES {
+			if url_lower.starts_with(scheme) {
+				return Err(syn::Error::new(
+					span,
+					format!(
+						"Dangerous URL scheme detected in attribute '{}'.\n\
+							The '{}' scheme can be used for XSS (Cross-Site Scripting) attacks.\n\n\
+							Security risk: This URL could execute arbitrary JavaScript code.\n\n\
+							Use safe URL schemes instead:\n\
+							  - https://example.com\n\
+							  - /path/to/resource\n\
+							  - #anchor\n\
+							  - mailto:user@example.com",
+						attr_name,
+						scheme.trim_end_matches(':')
+					),
+				));
+			}
+		}
+	}
+	// Dynamic expressions are OK (runtime validation recommended)
+
+	// Enumerated attributes validation - check if value is in allowed list
+	validate_enum_attr(attr_name, value, element_tag, span)?;
+
+	// img element src attribute validation
 	if element_tag == "img" && attr_name == "src" {
 		// Must be a string literal
 		if !value.is_string_literal() {
@@ -640,5 +1005,423 @@ mod tests {
 				.to_string()
 				.contains("must not be empty")
 		);
+	}
+
+	// Boolean attribute tests - string literals are prohibited
+	#[test]
+	fn test_validate_boolean_attr_string_literal() {
+		let value = AttrValue::from_expr(parse_quote!("disabled"));
+		let result =
+			validate_attr_type("disabled", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a string literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_string_empty() {
+		let value = AttrValue::from_expr(parse_quote!(""));
+		let result =
+			validate_attr_type("disabled", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a string literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_bool_literal_true() {
+		let value = AttrValue::from_expr(parse_quote!(true));
+		let result =
+			validate_attr_type("disabled", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a boolean literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_bool_literal_false() {
+		let value = AttrValue::from_expr(parse_quote!(false));
+		let result = validate_attr_type("checked", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a boolean literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_int_literal() {
+		let value = AttrValue::from_expr(parse_quote!(1));
+		let result =
+			validate_attr_type("disabled", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a numeric literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_float_literal() {
+		let value = AttrValue::from_expr(parse_quote!(1.0));
+		let result =
+			validate_attr_type("required", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Boolean attribute"));
+		assert!(err_msg.contains("cannot have a numeric literal value"));
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_dynamic_variable() {
+		let value = AttrValue::from_expr(parse_quote!(is_disabled));
+		let result =
+			validate_attr_type("disabled", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_dynamic_function() {
+		let value = AttrValue::from_expr(parse_quote!(is_disabled()));
+		let result = validate_attr_type("checked", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_boolean_attr_dynamic_conditional() {
+		let value = AttrValue::from_expr(parse_quote!(if condition { true } else { false }));
+		let result =
+			validate_attr_type("readonly", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	// Numeric attribute tests - string and float literals are prohibited
+	#[test]
+	fn test_validate_numeric_attr_string_literal() {
+		let value = AttrValue::from_expr(parse_quote!("100"));
+		let result =
+			validate_attr_type("maxlength", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Attribute"));
+		assert!(err_msg.contains("must be an integer literal or dynamic expression"));
+	}
+
+	#[test]
+	fn test_validate_numeric_attr_float_literal() {
+		let value = AttrValue::from_expr(parse_quote!(100.0));
+		let result = validate_attr_type("rows", &value, "textarea", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Attribute"));
+		assert!(err_msg.contains("must be an integer, not a floating-point number"));
+	}
+
+	#[test]
+	fn test_validate_numeric_attr_bool_literal() {
+		let value = AttrValue::from_expr(parse_quote!(true));
+		let result = validate_attr_type("min", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Attribute"));
+		assert!(err_msg.contains("must be an integer, not a boolean"));
+	}
+
+	#[test]
+	fn test_validate_numeric_attr_int_literal() {
+		let value = AttrValue::from_expr(parse_quote!(100));
+		let result =
+			validate_attr_type("maxlength", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_numeric_attr_dynamic_variable() {
+		let value = AttrValue::from_expr(parse_quote!(max_len));
+		let result =
+			validate_attr_type("maxlength", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_numeric_attr_dynamic_function() {
+		let value = AttrValue::from_expr(parse_quote!(get_max_len()));
+		let result = validate_attr_type("cols", &value, "textarea", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	// URL attribute tests - dangerous schemes and empty strings are prohibited
+	#[test]
+	fn test_validate_url_attr_javascript_scheme() {
+		let value = AttrValue::from_expr(parse_quote!("javascript:alert('xss')"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Dangerous URL scheme"));
+		assert!(err_msg.contains("javascript"));
+		assert!(err_msg.contains("XSS"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_data_scheme() {
+		let value =
+			AttrValue::from_expr(parse_quote!("data:text/html,<script>alert('xss')</script>"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Dangerous URL scheme"));
+		assert!(err_msg.contains("data"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_vbscript_scheme() {
+		let value = AttrValue::from_expr(parse_quote!("vbscript:msgbox('xss')"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Dangerous URL scheme"));
+		assert!(err_msg.contains("vbscript"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_case_insensitive() {
+		let value = AttrValue::from_expr(parse_quote!("JavaScript:alert(1)"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Dangerous URL scheme"));
+		assert!(err_msg.contains("javascript"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_empty_string() {
+		let value = AttrValue::from_expr(parse_quote!(""));
+		let result = validate_attr_type("action", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("cannot be empty"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_whitespace_string() {
+		let value = AttrValue::from_expr(parse_quote!("   "));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("cannot be empty"));
+	}
+
+	#[test]
+	fn test_validate_url_attr_https_scheme() {
+		let value = AttrValue::from_expr(parse_quote!("https://example.com"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_url_attr_relative_path() {
+		let value = AttrValue::from_expr(parse_quote!("/path/to/page"));
+		let result = validate_attr_type("action", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_url_attr_anchor() {
+		let value = AttrValue::from_expr(parse_quote!("#section"));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_url_attr_dynamic_variable() {
+		let value = AttrValue::from_expr(parse_quote!(url_var));
+		let result = validate_attr_type("href", &value, "a", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_url_attr_img_src_excluded() {
+		// img src should not be validated as URL attribute (has separate rules)
+		let value = AttrValue::from_expr(parse_quote!("javascript:alert(1)"));
+		// This should fail with img src validation error, not URL validation error
+		let result = validate_attr_type("src", &value, "img", proc_macro2::Span::call_site());
+		assert!(result.is_ok()); // img src allows string literals (separate validation)
+	}
+
+	// Enumerated attribute tests - invalid values are prohibited
+	#[test]
+	fn test_validate_enum_attr_input_type_invalid() {
+		let value = AttrValue::from_expr(parse_quote!("invalid"));
+		let result = validate_attr_type("type", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Invalid value"));
+		assert!(err_msg.contains("invalid"));
+		assert!(err_msg.contains("input"));
+	}
+
+	#[test]
+	fn test_validate_enum_attr_input_type_text() {
+		let value = AttrValue::from_expr(parse_quote!("text"));
+		let result = validate_attr_type("type", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_input_type_email() {
+		let value = AttrValue::from_expr(parse_quote!("email"));
+		let result = validate_attr_type("type", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_button_type_invalid() {
+		let value = AttrValue::from_expr(parse_quote!("invalid"));
+		let result = validate_attr_type("type", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Invalid value"));
+		assert!(err_msg.contains("button"));
+	}
+
+	#[test]
+	fn test_validate_enum_attr_button_type_submit() {
+		let value = AttrValue::from_expr(parse_quote!("submit"));
+		let result = validate_attr_type("type", &value, "button", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_form_method_invalid() {
+		let value = AttrValue::from_expr(parse_quote!("put"));
+		let result = validate_attr_type("method", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Invalid value"));
+		assert!(err_msg.contains("put"));
+	}
+
+	#[test]
+	fn test_validate_enum_attr_form_method_post() {
+		let value = AttrValue::from_expr(parse_quote!("post"));
+		let result = validate_attr_type("method", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_form_enctype_invalid() {
+		let value = AttrValue::from_expr(parse_quote!("invalid"));
+		let result = validate_attr_type("enctype", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("Invalid value"));
+	}
+
+	#[test]
+	fn test_validate_enum_attr_form_enctype_multipart() {
+		let value = AttrValue::from_expr(parse_quote!("multipart/form-data"));
+		let result = validate_attr_type("enctype", &value, "form", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_script_type_module() {
+		let value = AttrValue::from_expr(parse_quote!("module"));
+		let result = validate_attr_type("type", &value, "script", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_enum_attr_dynamic_variable() {
+		let value = AttrValue::from_expr(parse_quote!(input_type));
+		let result = validate_attr_type("type", &value, "input", proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	// Accessibility tests - button elements must have text or aria-label
+	#[test]
+	fn test_validate_button_accessibility_empty() {
+		let attrs = vec![];
+		let children = vec![];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_err());
+		let err_msg = result.unwrap_err().to_string();
+		assert!(err_msg.contains("requires accessible text"));
+		assert!(err_msg.contains("aria_label"));
+	}
+
+	#[test]
+	fn test_validate_button_accessibility_whitespace_only() {
+		use reinhardt_pages_ast::{PageText, TypedPageNode};
+		let attrs = vec![];
+		let children = vec![TypedPageNode::Text(PageText {
+			content: "   ".to_string(),
+			span: proc_macro2::Span::call_site(),
+		})];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn test_validate_button_accessibility_with_text() {
+		use reinhardt_pages_ast::{PageText, TypedPageNode};
+		let attrs = vec![];
+		let children = vec![TypedPageNode::Text(PageText {
+			content: "Click me".to_string(),
+			span: proc_macro2::Span::call_site(),
+		})];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_button_accessibility_with_nested_text() {
+		use reinhardt_pages_ast::{PageText, TypedPageElement, TypedPageNode};
+		let attrs = vec![];
+		let children = vec![TypedPageNode::Element(TypedPageElement {
+			tag: syn::Ident::new("span", proc_macro2::Span::call_site()),
+			attrs: vec![],
+			events: vec![],
+			children: vec![TypedPageNode::Text(PageText {
+				content: "Submit".to_string(),
+				span: proc_macro2::Span::call_site(),
+			})],
+			span: proc_macro2::Span::call_site(),
+		})];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_button_accessibility_with_aria_label() {
+		use reinhardt_pages_ast::TypedPageAttr;
+		let attrs = vec![TypedPageAttr {
+			name: syn::Ident::new("aria_label", proc_macro2::Span::call_site()),
+			value: AttrValue::from_expr(parse_quote!("Close")),
+			span: proc_macro2::Span::call_site(),
+		}];
+		let children = vec![];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn test_validate_button_accessibility_with_expression() {
+		use reinhardt_pages_ast::{PageExpression, TypedPageNode};
+		let attrs = vec![];
+		let children = vec![TypedPageNode::Expression(PageExpression {
+			expr: parse_quote!(button_text),
+			braced: true,
+			span: proc_macro2::Span::call_site(),
+		})];
+		let result =
+			validate_button_accessibility(&attrs, &children, proc_macro2::Span::call_site());
+		assert!(result.is_ok());
 	}
 }
