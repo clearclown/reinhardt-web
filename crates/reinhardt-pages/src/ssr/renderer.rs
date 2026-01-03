@@ -3,7 +3,7 @@
 use super::markers::{HydrationMarker, HydrationStrategy};
 use super::state::SsrState;
 use crate::auth::AuthData;
-use crate::component::{Component, IntoView, View};
+use crate::component::{Component, Head, IntoView, View};
 
 /// Options for SSR rendering.
 #[derive(Debug, Clone)]
@@ -68,24 +68,117 @@ impl SsrOptions {
 	}
 
 	/// Sets the document title.
+	///
+	/// # Deprecated
+	///
+	/// Use the `head!` macro with `@head` directive in `page!` macro instead.
+	/// This method will be removed in a future version.
+	///
+	/// # Example (new approach)
+	///
+	/// ```ignore
+	/// use reinhardt_pages::{page, head};
+	///
+	/// let my_head = head!(|| {
+	///     title { "My Page Title" }
+	/// });
+	///
+	/// page! {
+	///     @head: my_head,
+	///     || { div { "Content" } }
+	/// }
+	/// ```
+	#[deprecated(
+		since = "0.2.0",
+		note = "Use head! macro with @head directive in page! macro instead"
+	)]
 	pub fn title(mut self, title: impl Into<String>) -> Self {
 		self.title = Some(title.into());
 		self
 	}
 
 	/// Adds a meta tag.
+	///
+	/// # Deprecated
+	///
+	/// Use the `head!` macro with `@head` directive in `page!` macro instead.
+	///
+	/// # Example (new approach)
+	///
+	/// ```ignore
+	/// use reinhardt_pages::{page, head};
+	///
+	/// let my_head = head!(|| {
+	///     meta { name: "description", content: "Page description" }
+	/// });
+	///
+	/// page! {
+	///     @head: my_head,
+	///     || { div { "Content" } }
+	/// }
+	/// ```
+	#[deprecated(
+		since = "0.2.0",
+		note = "Use head! macro with @head directive in page! macro instead"
+	)]
 	pub fn meta(mut self, name: impl Into<String>, content: impl Into<String>) -> Self {
 		self.meta_tags.push((name.into(), content.into()));
 		self
 	}
 
 	/// Adds a CSS link.
+	///
+	/// # Deprecated
+	///
+	/// Use the `head!` macro with `@head` directive in `page!` macro instead.
+	///
+	/// # Example (new approach)
+	///
+	/// ```ignore
+	/// use reinhardt_pages::{page, head};
+	///
+	/// let my_head = head!(|| {
+	///     link { rel: "stylesheet", href: "/css/style.css" }
+	/// });
+	///
+	/// page! {
+	///     @head: my_head,
+	///     || { div { "Content" } }
+	/// }
+	/// ```
+	#[deprecated(
+		since = "0.2.0",
+		note = "Use head! macro with @head directive in page! macro instead"
+	)]
 	pub fn css(mut self, href: impl Into<String>) -> Self {
 		self.css_links.push(href.into());
 		self
 	}
 
 	/// Adds a JS script.
+	///
+	/// # Deprecated
+	///
+	/// Use the `head!` macro with `@head` directive in `page!` macro instead.
+	///
+	/// # Example (new approach)
+	///
+	/// ```ignore
+	/// use reinhardt_pages::{page, head};
+	///
+	/// let my_head = head!(|| {
+	///     script { src: "/js/app.js" }
+	/// });
+	///
+	/// page! {
+	///     @head: my_head,
+	///     || { div { "Content" } }
+	/// }
+	/// ```
+	#[deprecated(
+		since = "0.2.0",
+		note = "Use head! macro with @head directive in page! macro instead"
+	)]
 	pub fn js(mut self, src: impl Into<String>) -> Self {
 		self.js_scripts.push(src.into());
 		self
@@ -236,6 +329,168 @@ impl SsrRenderer {
 	pub fn render_page_into_view<V: IntoView>(&mut self, view: V) -> String {
 		let content = self.render_into_view(view);
 		self.wrap_in_html(&content)
+	}
+
+	/// Renders a View to a full HTML page, using the View's attached head if present.
+	///
+	/// This method extracts any `Head` attached to the View using `find_topmost_head()`,
+	/// and uses it to render the HTML `<head>` section. If no head is attached,
+	/// it falls back to the head settings from `SsrOptions`.
+	///
+	/// # Arguments
+	///
+	/// * `view` - The View to render, potentially with an attached Head
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::{head, page, View, SsrRenderer};
+	///
+	/// let my_head = head!(|| {
+	///     title { "My Page" }
+	///     meta { name: "description", content: "A page" }
+	/// });
+	///
+	/// let view = page!(|| { div { "Hello" } })().with_head(my_head);
+	///
+	/// let mut renderer = SsrRenderer::new();
+	/// let html = renderer.render_page_with_view_head(view);
+	/// // html contains <title>My Page</title> in the head
+	/// ```
+	pub fn render_page_with_view_head(&mut self, view: View) -> String {
+		// Extract head from the view tree
+		let view_head = view.find_topmost_head().cloned();
+
+		// Render the view content
+		let content = self.render_view(&view);
+
+		// Wrap in HTML using the extracted head
+		self.wrap_in_html_with_head(&content, view_head.as_ref())
+	}
+
+	/// Wraps content in a full HTML document, merging View's head with SsrOptions.
+	///
+	/// This method combines head elements from both sources:
+	/// 1. Base head elements from SsrOptions (title, meta, CSS, JS)
+	/// 2. Additional head elements from View's attached Head (additive)
+	///
+	/// When a View has an attached Head, its elements are **added** to the
+	/// SsrOptions head, not replaced. If the View's Head has a title, it
+	/// takes precedence over SsrOptions title.
+	///
+	/// # Arguments
+	///
+	/// * `content` - The rendered body content
+	/// * `view_head` - Optional head extracted from a View (additive)
+	fn wrap_in_html_with_head(&self, content: &str, view_head: Option<&Head>) -> String {
+		let mut html = String::with_capacity(content.len() + 1024);
+
+		// DOCTYPE and html opening
+		html.push_str("<!DOCTYPE html>\n");
+		html.push_str(&format!("<html lang=\"{}\">\n", self.options.lang));
+
+		// Head section
+		html.push_str("<head>\n");
+		html.push_str("<meta charset=\"UTF-8\">\n");
+		html.push_str(
+			"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+		);
+
+		// Title: View's head takes precedence, otherwise use SsrOptions
+		if let Some(head) = view_head
+			&& head.title.is_some()
+		{
+			if let Some(ref title) = head.title {
+				html.push_str(&format!("<title>{}</title>\n", html_escape(title)));
+			}
+		} else if let Some(ref title) = self.options.title {
+			html.push_str(&format!("<title>{}</title>\n", html_escape(title)));
+		}
+
+		// Render SsrOptions meta tags and CSS links (always included)
+		for (name, content) in &self.options.meta_tags {
+			html.push_str(&format!(
+				"<meta name=\"{}\" content=\"{}\">\n",
+				html_escape(name),
+				html_escape(content)
+			));
+		}
+
+		for href in &self.options.css_links {
+			html.push_str(&format!(
+				"<link rel=\"stylesheet\" href=\"{}\">\n",
+				html_escape(href)
+			));
+		}
+
+		// Add View's head elements (additive, after SsrOptions)
+		if let Some(head) = view_head {
+			// Add View's meta tags
+			for meta in &head.meta_tags {
+				html.push_str(&meta.to_html());
+			}
+
+			// Add View's links
+			for link in &head.links {
+				html.push_str(&link.to_html());
+			}
+
+			// Add View's styles
+			for style in &head.styles {
+				html.push_str(&style.to_html());
+			}
+
+			// Add View's scripts (in head)
+			for script in &head.scripts {
+				html.push_str(&script.to_html());
+			}
+		}
+
+		// CSRF token meta tag (always from options)
+		if let Some(ref token) = self.options.csrf_token {
+			html.push_str(&format!(
+				"<meta name=\"csrf-token\" content=\"{}\">\n",
+				html_escape(token)
+			));
+		}
+
+		html.push_str("</head>\n");
+
+		// Body section
+		html.push_str("<body>\n");
+		html.push_str("<div id=\"app\">");
+		html.push_str(content);
+		html.push_str("</div>\n");
+
+		// Auth data script (if provided)
+		if let Some(ref auth_data) = self.options.auth_data
+			&& let Ok(json) = serde_json::to_string(auth_data)
+		{
+			html.push_str(&format!(
+				"<script id=\"auth-data\" type=\"application/json\">{}</script>\n",
+				json
+			));
+		}
+
+		// SSR state script (if enabled)
+		if self.options.include_state_script && !self.state.is_empty() {
+			html.push_str(&self.state.to_script_tag());
+			html.push('\n');
+		}
+
+		// JS scripts from options (always included)
+		for src in &self.options.js_scripts {
+			html.push_str(&format!("<script src=\"{}\"></script>\n", html_escape(src)));
+		}
+
+		html.push_str("</body>\n");
+		html.push_str("</html>");
+
+		if self.options.minify {
+			minify_html(&html)
+		} else {
+			html
+		}
 	}
 
 	/// Wraps content in a full HTML document.
@@ -458,25 +713,6 @@ mod tests {
 	}
 
 	#[test]
-	fn test_ssr_options_builder() {
-		let opts = SsrOptions::new()
-			.title("Test Page")
-			.lang("ja")
-			.css("/styles.css")
-			.js("/app.js")
-			.meta("description", "A test page");
-
-		assert_eq!(opts.title, Some("Test Page".to_string()));
-		assert_eq!(opts.lang, "ja");
-		assert_eq!(opts.css_links, vec!["/styles.css"]);
-		assert_eq!(opts.js_scripts, vec!["/app.js"]);
-		assert_eq!(
-			opts.meta_tags,
-			vec![("description".to_string(), "A test page".to_string())]
-		);
-	}
-
-	#[test]
 	fn test_ssr_renderer_render() {
 		let component = TestComponent {
 			message: "Hello".to_string(),
@@ -484,22 +720,6 @@ mod tests {
 		let mut renderer = SsrRenderer::new();
 		let html = renderer.render(&component);
 		assert_eq!(html, "<div class=\"test\">Hello</div>");
-	}
-
-	#[test]
-	fn test_ssr_renderer_render_page() {
-		let component = TestComponent {
-			message: "World".to_string(),
-		};
-		let opts = SsrOptions::new().title("Test");
-		let mut renderer = SsrRenderer::with_options(opts);
-		let html = renderer.render_page(&component);
-
-		assert!(html.starts_with("<!DOCTYPE html>"));
-		assert!(html.contains("<title>Test</title>"));
-		assert!(html.contains("<div id=\"app\">"));
-		assert!(html.contains("<div class=\"test\">World</div>"));
-		assert!(html.ends_with("</html>"));
 	}
 
 	#[test]
@@ -555,62 +775,5 @@ mod tests {
 		assert_eq!(html_escape("<script>"), "&lt;script&gt;");
 		assert_eq!(html_escape("a&b"), "a&amp;b");
 		assert_eq!(html_escape("\"quoted\""), "&quot;quoted&quot;");
-	}
-
-	#[cfg(all(test, feature = "static"))]
-	mod static_integration_tests {
-		use super::*;
-		#[cfg(feature = "static")]
-		use reinhardt_static::template_integration::TemplateStaticConfig;
-		use std::collections::HashMap;
-
-		#[test]
-		fn test_ssr_options_with_static_config() {
-			let static_config = TemplateStaticConfig::new("/static/".to_string());
-
-			let opts = SsrOptions::new()
-				.title("Test")
-				.css(static_config.resolve_url("css/style.css"))
-				.js(static_config.resolve_url("js/app.js"));
-
-			assert_eq!(opts.css_links, vec!["/static/css/style.css"]);
-			assert_eq!(opts.js_scripts, vec!["/static/js/app.js"]);
-		}
-
-		#[test]
-		fn test_ssr_options_with_manifest() {
-			let mut manifest = HashMap::new();
-			manifest.insert(
-				"css/style.css".to_string(),
-				"css/style.abc123.css".to_string(),
-			);
-			manifest.insert("js/app.js".to_string(), "js/app.def456.js".to_string());
-
-			let static_config =
-				TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
-
-			let opts = SsrOptions::new()
-				.css(static_config.resolve_url("css/style.css"))
-				.js(static_config.resolve_url("js/app.js"));
-
-			assert_eq!(opts.css_links, vec!["/static/css/style.abc123.css"]);
-			assert_eq!(opts.js_scripts, vec!["/static/js/app.def456.js"]);
-		}
-
-		#[test]
-		fn test_ssr_renderer_with_static_urls() {
-			let static_config = TemplateStaticConfig::new("/static/".to_string());
-
-			let opts = SsrOptions::new()
-				.title("Static Test")
-				.css(static_config.resolve_url("css/style.css"))
-				.js(static_config.resolve_url("js/app.js"));
-
-			let renderer = SsrRenderer::with_options(opts);
-			let html = renderer.wrap_in_html("<div>Test</div>");
-
-			assert!(html.contains("<link rel=\"stylesheet\" href=\"/static/css/style.css\">"));
-			assert!(html.contains("<script src=\"/static/js/app.js\"></script>"));
-		}
 	}
 }

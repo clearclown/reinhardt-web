@@ -53,7 +53,13 @@
 //! - [`Link`], [`Router`], [`Route`], [`RouterOutlet`], [`PathPattern`]
 //!
 //! ## Macros
-//! - [`page`]
+//! - [`page`] - Component DSL for defining views
+//! - [`head`] - HTML head section DSL
+//!
+//! ## Static Files
+//! - [`resolve_static`] - Resolve static file URLs
+//! - [`init_static_resolver`] - Initialize the static resolver
+//! - [`is_initialized`] - Check if static resolver is initialized
 
 // ============================================================================
 // Reactive System
@@ -83,7 +89,10 @@ pub use crate::reactive::{create_resource, create_resource_with_deps};
 // Component System
 // ============================================================================
 
-pub use crate::component::{Component, ElementView, IntoView, Props, View, ViewEventHandler};
+pub use crate::component::{
+	Component, ElementView, Head, IntoView, LinkTag, MetaTag, Props, ScriptTag, StyleTag, View,
+	ViewEventHandler,
+};
 
 // ============================================================================
 // Events and Callbacks
@@ -124,8 +133,20 @@ pub use crate::csrf::{CsrfManager, get_csrf_token};
 // SSR and Hydration
 // ============================================================================
 
-pub use crate::hydration::{HydrationContext, HydrationError, hydrate};
+pub use crate::hydration::{
+	HydrationContext, HydrationError, hydrate, init_hydration_state, is_hydration_complete,
+	on_hydration_complete,
+};
+
+#[cfg(target_arch = "wasm32")]
+pub use crate::hydration::mark_hydration_complete;
 pub use crate::ssr::{SsrOptions, SsrRenderer, SsrState};
+
+// ============================================================================
+// Static File URL Resolver
+// ============================================================================
+
+pub use crate::static_resolver::{init_static_resolver, is_initialized, resolve_static};
 
 // ============================================================================
 // Forms (native only)
@@ -144,6 +165,7 @@ pub use reinhardt_forms::{
 // Macros
 // ============================================================================
 
+pub use crate::head;
 pub use crate::page;
 
 // ============================================================================

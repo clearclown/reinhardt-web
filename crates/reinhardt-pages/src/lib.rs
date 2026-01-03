@@ -18,17 +18,25 @@
 //! - [`reactive`]: Fine-grained reactivity system (Signal, Effect, Memo)
 //! - [`dom`]: DOM abstraction layer
 //! - [`builder`]: HTML element builder API
-//! - [`component`]: Component system with IntoView trait
+//! - [`component`]: Component system with IntoView trait, Head management
 //! - [`form`]: Django Form integration
 //! - [`csrf`]: CSRF protection
 //! - [`auth`]: Authentication integration
 //! - [`api`]: API client with Django QuerySet-like interface
 //! - [`server_fn`]: Server Functions (RPC)
-//! - [`ssr`]: Server-side rendering
+//! - [`ssr`]: Server-side rendering with Head support
 //! - [`hydration`]: Client-side hydration
 //! - [`router`]: Client-side routing (reinhardt-urls compatible)
+//! - [`static_resolver`]: Static file URL resolution (collectstatic support)
+//!
+//! ## Macros
+//!
+//! - [`page!`]: JSX-like macro for defining view components
+//! - [`head!`]: JSX-like macro for defining HTML head sections
 //!
 //! ## Example
+//!
+//! ### Basic Component
 //!
 //! ```ignore
 //! use reinhardt_pages::{Signal, View, page};
@@ -44,7 +52,30 @@
 //!                 "Increment"
 //!             }
 //!         }
-//!     })
+//!     })()
+//! }
+//! ```
+//!
+//! ### With Head Section
+//!
+//! ```ignore
+//! use reinhardt_pages::{head, page, View, resolve_static};
+//!
+//! fn home_page() -> View {
+//!     let page_head = head!(|| {
+//!         title { "Home - My App" }
+//!         meta { name: "description", content: "Welcome to my app" }
+//!         link { rel: "stylesheet", href: resolve_static("css/main.css") }
+//!     });
+//!
+//!     page! {
+//!         @head: page_head,
+//!         || {
+//!             div { class: "container",
+//!                 h1 { "Welcome Home" }
+//!             }
+//!         }
+//!     }()
 //! }
 //! ```
 
@@ -96,6 +127,9 @@ pub mod integ;
 // Layer 3: E2E tests (both platforms)
 pub mod testing;
 
+// Static file URL resolver
+pub mod static_resolver;
+
 // Re-export commonly used types
 pub use api::{ApiModel, ApiQuerySet, Filter, FilterOp};
 pub use auth::{AuthData, AuthError, AuthState, auth_state};
@@ -105,8 +139,12 @@ pub use builder::{
 		a, button, div, form, h1, h2, h3, img, input, li, ol, option, p, select, span, textarea, ul,
 	},
 };
-pub use callback::{Callback, IntoEventHandler, into_event_handler};
-pub use component::{Component, ElementView, IntoView, Props, View};
+pub use callback::{Callback, IntoEventHandler, event_handler, into_event_handler};
+#[cfg(not(target_arch = "wasm32"))]
+pub use component::DummyEvent;
+pub use component::{
+	Component, ElementView, Head, IntoView, LinkTag, MetaTag, Props, ScriptTag, StyleTag, View,
+};
 pub use csrf::{CsrfManager, get_csrf_token};
 pub use dom::{Document, Element, EventHandle, EventType, document};
 #[cfg(not(target_arch = "wasm32"))]
@@ -135,8 +173,10 @@ pub use reinhardt_forms::{
 pub use router::{Link, PathPattern, Route, Router, RouterOutlet};
 pub use server_fn::{ServerFn, ServerFnError};
 pub use ssr::{SsrOptions, SsrRenderer, SsrState};
+pub use static_resolver::{init_static_resolver, is_initialized, resolve_static};
 
 // Re-export procedural macros
+pub use reinhardt_pages_macros::head;
 pub use reinhardt_pages_macros::page;
 
 // Logging macros are automatically exported via #[macro_export]
