@@ -182,6 +182,128 @@ impl SchemaGenerator {
 		self
 	}
 
+	/// Add server function endpoints from `#[server_fn]` macros
+	///
+	/// This method collects server function routes from the global inventory
+	/// (populated by `#[server_fn]` macros) and adds them to the OpenAPI schema.
+	///
+	/// All server functions are registered as POST endpoints since they use
+	/// RPC-style communication.
+	///
+	/// # Example
+	///
+	/// ```rust,no_run
+	/// use reinhardt_openapi::generator::SchemaGenerator;
+	///
+	/// let generator = SchemaGenerator::new()
+	///     .title("My API")
+	///     .version("1.0.0")
+	///     .add_server_fn_endpoints();
+	///
+	/// // All server functions decorated with #[server_fn] are now included
+	/// let schema = generator.generate().unwrap();
+	/// ```
+	#[cfg(feature = "pages")]
+	pub fn add_server_fn_endpoints(mut self) -> Self {
+		use reinhardt_pages::server_fn::registry::ServerFnRoute;
+		use utoipa::openapi::{
+			HttpMethod, ResponseBuilder,
+			content::ContentBuilder,
+			path::{OperationBuilder, PathItemBuilder},
+			request_body::RequestBodyBuilder,
+			schema::{ObjectBuilder, Schema},
+		};
+
+		// Collect all server function routes from inventory
+		let routes: Vec<_> = inventory::iter::<ServerFnRoute>().collect();
+
+		for route in routes {
+			let path = route.path;
+			let name = route.name;
+
+			// Create operation for this server function
+			let operation_id = name.to_string();
+			let summary = format!("Server function: {}", name);
+
+			// Try to get request/response schemas from registry
+			// Convention: server_fn name + "Request" / "Response"
+			let request_schema_name = format!("{}Request", name);
+			let response_schema_name = format!("{}Response", name);
+
+			let request_schema = if let Some(schema) =
+				crate::registry::get_all_schemas().get(request_schema_name.as_str())
+			{
+				schema.clone()
+			} else {
+				// Fallback: Create placeholder schema
+				Schema::Object(
+					ObjectBuilder::new()
+						.description(Some(format!("Request data for {}", name)))
+						.build(),
+				)
+			};
+
+			let response_schema = if let Some(schema) =
+				crate::registry::get_all_schemas().get(response_schema_name.as_str())
+			{
+				schema.clone()
+			} else {
+				// Fallback: Create placeholder schema
+				Schema::Object(
+					ObjectBuilder::new()
+						.description(Some(format!("Response data for {}", name)))
+						.build(),
+				)
+			};
+
+			// Create request body
+			let request_body = RequestBodyBuilder::new()
+				.description(Some(format!("Request body for {}", name)))
+				.required(Some(utoipa::openapi::Required::True))
+				.content(
+					"application/json",
+					ContentBuilder::new().schema(Some(request_schema)).build(),
+				)
+				.build();
+
+			// Create operation
+			let operation = OperationBuilder::new()
+				.operation_id(Some(operation_id))
+				.summary(Some(summary))
+				.request_body(Some(request_body))
+				.response(
+					"200",
+					ResponseBuilder::new()
+						.description("Successful response")
+						.content(
+							"application/json",
+							ContentBuilder::new().schema(Some(response_schema)).build(),
+						)
+						.build(),
+				)
+				.build();
+
+			// Create PathItem with POST operation
+			let path_item = PathItemBuilder::new()
+				.operation(HttpMethod::Post, operation)
+				.build();
+
+			// Insert into paths
+			self.paths.insert(path.to_string(), path_item);
+		}
+
+		self
+	}
+
+	/// Add server function endpoints (no-op when pages feature is disabled)
+	///
+	/// This is a fallback implementation when the `pages` feature is not enabled.
+	#[cfg(not(feature = "pages"))]
+	pub fn add_server_fn_endpoints(self) -> Self {
+		eprintln!("Warning: add_server_fn_endpoints() requires 'pages' feature to be enabled");
+		self
+	}
+
 	/// Generate the OpenAPI schema
 	///
 	/// This generates an OpenAPI 3.0 schema with all registered components.
