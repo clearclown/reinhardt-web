@@ -73,9 +73,10 @@ impl PathResolver {
 				// Cargo.toml が [[bin]] セクションまたは [package] セクションを持つか確認
 				// （これがプロジェクトルートであることを示す）
 				if let Ok(content) = std::fs::read_to_string(&cargo_toml)
-					&& (content.contains("[[bin]]") || content.contains("[package]")) {
-						return Some(current);
-					}
+					&& (content.contains("[[bin]]") || content.contains("[package]"))
+				{
+					return Some(current);
+				}
 			}
 
 			// 親ディレクトリに移動
