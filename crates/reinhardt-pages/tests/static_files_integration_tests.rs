@@ -11,8 +11,8 @@
 //! Note: Category 1 (URL Generation) tests are in reinhardt-static crate.
 //! This file focuses on Category 2 (SSR Component Integration).
 
-use reinhardt_pages::component::{Component, IntoView, View};
-use reinhardt_pages::ssr::{SsrOptions, SsrRenderer};
+use reinhardt_pages::component::{Head, IntoView, LinkTag, ScriptTag, View};
+use reinhardt_pages::ssr::SsrRenderer;
 use reinhardt_static::TemplateStaticConfig;
 use std::collections::HashMap;
 
@@ -25,24 +25,17 @@ use std::collections::HashMap;
 fn test_ssr_with_basic_static_url() {
 	let static_config = TemplateStaticConfig::new("/static/".to_string());
 
-	let options = SsrOptions::new()
-		.title("Test Page")
-		.css(static_config.resolve_url("css/style.css"));
+	let page_head = Head::new().title("Test Page").link(LinkTag::stylesheet(
+		static_config.resolve_url("css/style.css"),
+	));
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("div")
+		.child("Hello, World!")
+		.into_view()
+		.with_head(page_head);
 
-	struct SimpleComponent;
-	impl Component for SimpleComponent {
-		fn render(&self) -> View {
-			View::element("div").child("Hello, World!").into_view()
-		}
-
-		fn name() -> &'static str {
-			"SimpleComponent"
-		}
-	}
-
-	let html = renderer.render_page(&SimpleComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Debug: Print generated HTML
 	eprintln!("Generated HTML:\n{}", html);
@@ -65,27 +58,26 @@ fn test_ssr_with_basic_static_url() {
 fn test_ssr_with_multiple_static_urls() {
 	let static_config = TemplateStaticConfig::new("/static/".to_string());
 
-	let options = SsrOptions::new()
+	let page_head = Head::new()
 		.title("Test Page")
-		.css(static_config.resolve_url("css/reset.css"))
-		.css(static_config.resolve_url("css/main.css"))
-		.js(static_config.resolve_url("js/vendor.js"))
-		.js(static_config.resolve_url("js/app.js"));
+		.link(LinkTag::stylesheet(
+			static_config.resolve_url("css/reset.css"),
+		))
+		.link(LinkTag::stylesheet(
+			static_config.resolve_url("css/main.css"),
+		))
+		.script(ScriptTag::external(
+			static_config.resolve_url("js/vendor.js"),
+		))
+		.script(ScriptTag::external(static_config.resolve_url("js/app.js")));
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("h1")
+		.child("Test")
+		.into_view()
+		.with_head(page_head);
 
-	struct TestComponent;
-	impl Component for TestComponent {
-		fn render(&self) -> View {
-			View::element("h1").child("Test").into_view()
-		}
-
-		fn name() -> &'static str {
-			"TestComponent"
-		}
-	}
-
-	let html = renderer.render_page(&TestComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Verify all CSS links
 	assert!(
@@ -131,25 +123,22 @@ fn test_ssr_with_manifest_urls() {
 
 	let static_config = TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
 
-	let options = SsrOptions::new()
+	let page_head = Head::new()
 		.title("Manifest Test")
-		.css(static_config.resolve_url("css/app.css"))
-		.js(static_config.resolve_url("js/bundle.js"));
+		.link(LinkTag::stylesheet(
+			static_config.resolve_url("css/app.css"),
+		))
+		.script(ScriptTag::external(
+			static_config.resolve_url("js/bundle.js"),
+		));
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("p")
+		.child("Manifest test")
+		.into_view()
+		.with_head(page_head);
 
-	struct ManifestComponent;
-	impl Component for ManifestComponent {
-		fn render(&self) -> View {
-			View::element("p").child("Manifest test").into_view()
-		}
-
-		fn name() -> &'static str {
-			"ManifestComponent"
-		}
-	}
-
-	let html = renderer.render_page(&ManifestComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Verify hashed filenames are used
 	assert!(
@@ -177,25 +166,20 @@ fn test_ssr_with_manifest_urls() {
 fn test_ssr_with_cdn_urls() {
 	let static_config = TemplateStaticConfig::new("https://cdn.example.com/static/".to_string());
 
-	let options = SsrOptions::new()
+	let page_head = Head::new()
 		.title("CDN Test")
-		.css(static_config.resolve_url("css/style.css"))
-		.js(static_config.resolve_url("js/app.js"));
+		.link(LinkTag::stylesheet(
+			static_config.resolve_url("css/style.css"),
+		))
+		.script(ScriptTag::external(static_config.resolve_url("js/app.js")));
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("div")
+		.child("CDN test")
+		.into_view()
+		.with_head(page_head);
 
-	struct CdnComponent;
-	impl Component for CdnComponent {
-		fn render(&self) -> View {
-			View::element("div").child("CDN test").into_view()
-		}
-
-		fn name() -> &'static str {
-			"CdnComponent"
-		}
-	}
-
-	let html = renderer.render_page(&CdnComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Verify CDN URLs are used
 	assert!(
@@ -213,25 +197,22 @@ fn test_ssr_with_cdn_urls() {
 fn test_ssr_with_query_and_fragment_urls() {
 	let static_config = TemplateStaticConfig::new("/static/".to_string());
 
-	let options = SsrOptions::new()
+	let page_head = Head::new()
 		.title("Query Test")
-		.css(static_config.resolve_url("css/style.css?v=1.2.3"))
-		.js(static_config.resolve_url("js/app.js#main"));
+		.link(LinkTag::stylesheet(
+			static_config.resolve_url("css/style.css?v=1.2.3"),
+		))
+		.script(ScriptTag::external(
+			static_config.resolve_url("js/app.js#main"),
+		));
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("div")
+		.child("Query test")
+		.into_view()
+		.with_head(page_head);
 
-	struct QueryComponent;
-	impl Component for QueryComponent {
-		fn render(&self) -> View {
-			View::element("div").child("Query test").into_view()
-		}
-
-		fn name() -> &'static str {
-			"QueryComponent"
-		}
-	}
-
-	let html = renderer.render_page(&QueryComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Verify query strings and fragments are preserved
 	assert!(
@@ -247,22 +228,15 @@ fn test_ssr_with_query_and_fragment_urls() {
 /// Test: Empty static config (no CSS/JS)
 #[test]
 fn test_ssr_without_static_files() {
-	let options = SsrOptions::new().title("No Static Files");
+	let page_head = Head::new().title("No Static Files");
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("div")
+		.child("No static files")
+		.into_view()
+		.with_head(page_head);
 
-	struct EmptyStaticComponent;
-	impl Component for EmptyStaticComponent {
-		fn render(&self) -> View {
-			View::element("div").child("No static files").into_view()
-		}
-
-		fn name() -> &'static str {
-			"EmptyStaticComponent"
-		}
-	}
-
-	let html = renderer.render_page(&EmptyStaticComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Verify no CSS or JS tags
 	assert!(
@@ -292,22 +266,17 @@ fn test_ssr_with_relative_paths() {
 
 	for (base_url, expected_url) in configs {
 		let static_config = TemplateStaticConfig::new(base_url.to_string());
-		let options = SsrOptions::new().css(static_config.resolve_url("css/app.css"));
+		let page_head = Head::new().link(LinkTag::stylesheet(
+			static_config.resolve_url("css/app.css"),
+		));
 
-		let mut renderer = SsrRenderer::with_options(options);
+		let view = View::element("div")
+			.child("Path test")
+			.into_view()
+			.with_head(page_head);
 
-		struct PathComponent;
-		impl Component for PathComponent {
-			fn render(&self) -> View {
-				View::element("div").child("Path test").into_view()
-			}
-
-			fn name() -> &'static str {
-				"PathComponent"
-			}
-		}
-
-		let html = renderer.render_page(&PathComponent);
+		let mut renderer = SsrRenderer::new();
+		let html = renderer.render_page_with_view_head(view);
 
 		assert!(
 			html.contains(&format!("href=\"{}\"", expected_url)),
@@ -329,24 +298,17 @@ fn test_ssr_manifest_fallback() {
 
 	let static_config = TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest);
 
-	let options = SsrOptions::new()
-		.css(static_config.resolve_url("css/known.css")) // In manifest
-		.css(static_config.resolve_url("css/unknown.css")); // Not in manifest
+	let page_head = Head::new()
+		.link(LinkTag::stylesheet(static_config.resolve_url("css/known.css"))) // In manifest
+		.link(LinkTag::stylesheet(static_config.resolve_url("css/unknown.css"))); // Not in manifest
 
-	let mut renderer = SsrRenderer::with_options(options);
+	let view = View::element("div")
+		.child("Fallback test")
+		.into_view()
+		.with_head(page_head);
 
-	struct FallbackComponent;
-	impl Component for FallbackComponent {
-		fn render(&self) -> View {
-			View::element("div").child("Fallback test").into_view()
-		}
-
-		fn name() -> &'static str {
-			"FallbackComponent"
-		}
-	}
-
-	let html = renderer.render_page(&FallbackComponent);
+	let mut renderer = SsrRenderer::new();
+	let html = renderer.render_page_with_view_head(view);
 
 	// Known file should use hashed name
 	assert!(
