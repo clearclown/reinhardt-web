@@ -25,6 +25,8 @@ pub struct StaticFilesConfig {
 	pub index_files: Vec<String>,
 	/// File extensions to serve (empty = all)
 	pub allowed_extensions: Vec<String>,
+	/// Path prefixes to exclude from SPA fallback (e.g., ["/api/", "/docs"])
+	pub excluded_prefixes: Vec<String>,
 }
 
 impl Default for StaticFilesConfig {
@@ -35,6 +37,7 @@ impl Default for StaticFilesConfig {
 			spa_mode: true,
 			index_files: vec!["index.html".to_string()],
 			allowed_extensions: vec![],
+			excluded_prefixes: vec!["/api/".to_string()],
 		}
 	}
 }
@@ -69,6 +72,12 @@ impl StaticFilesConfig {
 	/// Set allowed file extensions.
 	pub fn allowed_extensions(mut self, extensions: Vec<String>) -> Self {
 		self.allowed_extensions = extensions;
+		self
+	}
+
+	/// Set path prefixes to exclude from SPA fallback.
+	pub fn excluded_prefixes(mut self, prefixes: Vec<String>) -> Self {
+		self.excluded_prefixes = prefixes;
 		self
 	}
 }
@@ -197,9 +206,13 @@ impl Middleware for StaticFilesMiddleware {
 			return Ok(response);
 		}
 
-		// In SPA mode, try to serve index.html for non-API routes
+		// In SPA mode, try to serve index.html for routes not in excluded_prefixes
 		if self.config.spa_mode
-			&& !path.starts_with("/api/")
+			&& !self
+				.config
+				.excluded_prefixes
+				.iter()
+				.any(|prefix| path.starts_with(prefix))
 			&& let Some(response) = self.serve_spa_fallback().await
 		{
 			return Ok(response);

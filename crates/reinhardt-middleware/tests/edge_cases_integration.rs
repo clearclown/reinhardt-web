@@ -22,6 +22,7 @@ use reinhardt_core::types::{Handler, Middleware, Request, Response};
 use reinhardt_middleware::cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware};
 use reinhardt_middleware::circuit_breaker::{CircuitBreakerConfig, CircuitBreakerMiddleware};
 use reinhardt_middleware::etag::{ETagConfig, ETagMiddleware};
+#[cfg(feature = "compression")]
 use reinhardt_middleware::gzip::{GZipConfig, GZipMiddleware};
 #[cfg(feature = "rate-limit")]
 use reinhardt_middleware::rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStrategy};
@@ -109,6 +110,7 @@ async fn test_etag_empty_body() {
 	assert_has_header(&response, "etag");
 }
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_empty_body() {
 	let config = GZipConfig {
@@ -248,6 +250,7 @@ async fn test_etag_unicode_body() {
 // Multiple Header Values Edge Cases
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_multiple_accept_encoding_headers() {
 	let config = GZipConfig {
@@ -282,6 +285,7 @@ async fn test_gzip_multiple_accept_encoding_headers() {
 	// GZip middleware checks if "gzip" is contained in Accept-Encoding
 }
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_q_value_accept_encoding() {
 	let config = GZipConfig {
@@ -482,6 +486,7 @@ async fn test_concurrent_circuit_breaker_state() {
 // Large Value Edge Cases
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_very_large_response() {
 	let config = GZipConfig {
@@ -657,6 +662,7 @@ async fn test_timeout_just_before_deadline() {
 // Content-Type Edge Cases
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_binary_content() {
 	let config = GZipConfig {
@@ -680,6 +686,7 @@ async fn test_gzip_binary_content() {
 	assert_no_header(&response, "content-encoding");
 }
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_charset_content_type() {
 	let config = GZipConfig {

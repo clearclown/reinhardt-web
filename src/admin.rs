@@ -39,6 +39,10 @@
 //! // use reinhardt::admin::pages::AdminRouter;
 //! ```
 
+// Link reinhardt-admin crate to ensure inventory registration is executed
+#[cfg(not(target_arch = "wasm32"))]
+extern crate reinhardt_admin;
+
 // Re-export submodules for structured access
 pub mod adapters {
 	pub use reinhardt_admin_adapters::*;

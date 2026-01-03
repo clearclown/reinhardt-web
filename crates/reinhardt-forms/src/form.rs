@@ -439,7 +439,7 @@ impl Form {
 	///     vec!["password".to_string(), "password_confirm".to_string()],
 	///     "fields.password === fields.password_confirm",
 	///     "Passwords do not match",
-	///     Some("password_confirm")
+	///     Some("password_confirm".to_string())
 	/// );
 	/// ```
 	pub fn add_cross_field_validator(

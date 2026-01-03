@@ -13,10 +13,12 @@
 mod fixtures;
 
 use bytes::Bytes;
+#[cfg(feature = "rate-limit")]
+use fixtures::create_request_with_ip;
 use fixtures::{
 	ConfigurableTestHandler, assert_has_header, assert_header, assert_status, cache_middleware,
-	circuit_breaker_middleware, create_request_with_headers, create_request_with_ip,
-	create_test_request, session_middleware, success_handler,
+	circuit_breaker_middleware, create_request_with_headers, create_test_request,
+	session_middleware, success_handler,
 };
 use reinhardt_core::types::{Middleware, Request};
 use reinhardt_middleware::cache::CacheMiddleware;

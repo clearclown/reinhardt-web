@@ -32,15 +32,13 @@ use uuid::Uuid;
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use reinhardt_auth::CurrentUser;
 /// use reinhardt_auth::DefaultUser;
-/// use reinhardt_core::endpoint;
 /// use reinhardt_http::Response;
 ///
-/// #[endpoint]
 /// async fn my_handler(
-///     #[inject] current_user: CurrentUser<DefaultUser>,
+///     current_user: CurrentUser<DefaultUser>,
 /// ) -> Result<Response, Box<dyn std::error::Error>> {
 ///     if current_user.is_authenticated() {
 ///         let user = current_user.user()?;

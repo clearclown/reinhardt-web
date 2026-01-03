@@ -65,6 +65,7 @@ pub struct RequestBuilder {
 	body: Bytes,
 	is_secure: bool,
 	remote_addr: Option<SocketAddr>,
+	path_params: HashMap<String, String>,
 	#[cfg(feature = "parsers")]
 	parsers: Vec<Box<dyn Parser>>,
 }
@@ -79,6 +80,7 @@ impl Default for RequestBuilder {
 			body: Bytes::new(),
 			is_secure: false,
 			remote_addr: None,
+			path_params: HashMap::new(),
 			#[cfg(feature = "parsers")]
 			parsers: Vec::new(),
 		}
@@ -315,6 +317,35 @@ impl RequestBuilder {
 		self
 	}
 
+	/// Set path parameters (used for testing views without router).
+	///
+	/// This is primarily useful in test environments where you need to simulate
+	/// path parameters that would normally be extracted by the router.
+	///
+	/// # Examples
+	///
+	/// ```
+	/// use reinhardt_http::Request;
+	/// use hyper::Method;
+	/// use std::collections::HashMap;
+	///
+	/// let mut params = HashMap::new();
+	/// params.insert("id".to_string(), "42".to_string());
+	///
+	/// let request = Request::builder()
+	///     .method(Method::GET)
+	///     .uri("/api/users/42")
+	///     .path_params(params)
+	///     .build()
+	///     .unwrap();
+	///
+	/// assert_eq!(request.path_params.get("id"), Some(&"42".to_string()));
+	/// ```
+	pub fn path_params(mut self, params: HashMap<String, String>) -> Self {
+		self.path_params = params;
+		self
+	}
+
 	/// Build the final `Request` instance.
 	///
 	/// Returns an error if the URI is missing.
@@ -344,7 +375,7 @@ impl RequestBuilder {
 			version: self.version,
 			headers: self.headers,
 			body: self.body,
-			path_params: HashMap::new(),
+			path_params: self.path_params,
 			query_params,
 			is_secure: self.is_secure,
 			remote_addr: self.remote_addr,

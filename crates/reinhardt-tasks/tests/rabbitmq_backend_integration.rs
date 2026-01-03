@@ -2,6 +2,8 @@
 //!
 //! Tests task enqueue/dequeue, durability, message persistence, and RabbitMQ-specific features.
 
+#![cfg(feature = "rabbitmq-backend")]
+
 use reinhardt_tasks::backend::TaskBackend;
 use reinhardt_tasks::backends::rabbitmq::RabbitMQBackend;
 use reinhardt_tasks::{RabbitMQConfig, Task, TaskId, TaskPriority, TaskStatus};

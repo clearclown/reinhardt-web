@@ -2,6 +2,8 @@
 //!
 //! Tests task enqueue/dequeue, status management, and basic Redis operations.
 
+#![cfg(feature = "redis-backend")]
+
 use reinhardt_tasks::backend::TaskBackend;
 use reinhardt_tasks::backends::redis::RedisTaskBackend;
 use reinhardt_tasks::{Task, TaskId, TaskPriority, TaskStatus};

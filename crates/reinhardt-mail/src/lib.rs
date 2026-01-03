@@ -51,11 +51,16 @@
 //! # #[tokio::main]
 //! # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! use reinhardt_mail::send_mail;
+//! use reinhardt_conf::settings::EmailSettings;
+//!
+//! let mut settings = EmailSettings::default();
+//! settings.backend = "console".to_string();
+//! settings.from_email = "noreply@example.com".to_string();
 //!
 //! send_mail(
+//!     &settings,
 //!     "Welcome!",
 //!     "Welcome to our service",
-//!     "noreply@example.com",
 //!     vec!["user@example.com"],
 //!     None,
 //! ).await?;

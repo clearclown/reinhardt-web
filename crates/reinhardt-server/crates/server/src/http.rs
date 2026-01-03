@@ -173,7 +173,6 @@ impl HttpServer {
 	/// ```
 	pub async fn listen(self, addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
 		let listener = TcpListener::bind(addr).await?;
-		println!("Server listening on http://{}", addr);
 
 		// Build the handler with middleware chain
 		let handler = self.build_handler();
@@ -232,7 +231,6 @@ impl HttpServer {
 		coordinator: ShutdownCoordinator,
 	) -> Result<(), Box<dyn std::error::Error>> {
 		let listener = TcpListener::bind(addr).await?;
-		println!("Server listening on http://{}", addr);
 
 		// Build the handler with middleware chain
 		let handler = self.build_handler();

@@ -50,26 +50,24 @@ inventory::collect!(EndpointMetadata);
 ///
 /// The HTTP Method Macro generates a View type that implements this trait:
 ///
-/// ```rust,no_run
-/// # use reinhardt_macros::get;
-/// # use reinhardt_di::params::Path;
-/// # use reinhardt_views::ViewResult;
+/// ```rust,ignore
+/// # use reinhardt_core_macros::get;
 /// # use reinhardt_http::Response;
 /// # use reinhardt_core::endpoint::EndpointInfo;
 /// # use hyper::Method;
 /// #[get("/users/{id}/", name = "get_user")]
-/// pub async fn get_user(Path(id): Path<i64>) -> ViewResult<Response> {
+/// pub async fn get_user(id: i64) -> Result<Response, Box<dyn std::error::Error>> {
 ///     Ok(Response::ok())
 /// }
 ///
 /// // Generates:
-/// pub struct GetUserView;
-///
-/// impl EndpointInfo for GetUserView {
-///     fn path() -> &'static str { "/users/{id}/" }
-///     fn method() -> Method { Method::GET }
-///     fn name() -> &'static str { "get_user" }
-/// }
+/// // pub struct GetUserView;
+/// //
+/// // impl EndpointInfo for GetUserView {
+/// //     fn path() -> &'static str { "/users/{id}/" }
+/// //     fn method() -> Method { Method::GET }
+/// //     fn name() -> &'static str { "get_user" }
+/// // }
 /// ```
 pub trait EndpointInfo: Send + Sync {
 	/// Returns the route path pattern

@@ -26,6 +26,7 @@ use reinhardt_middleware::circuit_breaker::{
 };
 #[cfg(feature = "cors")]
 use reinhardt_middleware::cors::{CorsConfig, CorsMiddleware};
+#[cfg(feature = "compression")]
 use reinhardt_middleware::gzip::{GZipConfig, GZipMiddleware};
 #[cfg(feature = "rate-limit")]
 use reinhardt_middleware::rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStrategy};
@@ -296,6 +297,7 @@ async fn test_cache_decision_table_hit_on_second_request() {
 // | none            | text/html    | > min     | No comp  |
 // | gzip, deflate   | text/html    | > min     | Compress |
 
+#[cfg(feature = "compression")]
 #[rstest]
 #[case::gzip_text_large(Some("gzip"), "text/html", 500, true)]
 #[case::gzip_text_small(Some("gzip"), "text/html", 50, false)]

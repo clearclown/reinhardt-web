@@ -9,6 +9,7 @@ description = "Admin panel functionality for Reinhardt framework"
 publish = true
 
 [dependencies]
+reinhardt-apps = { workspace = true }
 
 [features]
 default = []

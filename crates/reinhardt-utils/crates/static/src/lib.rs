@@ -9,6 +9,7 @@ pub mod health;
 pub mod media;
 pub mod metrics;
 pub mod middleware;
+pub mod path_resolver;
 pub mod processing;
 pub mod storage;
 pub mod template_integration;
@@ -21,6 +22,7 @@ pub use cdn::{CdnConfig, CdnInvalidationRequest, CdnProvider, CdnPurgeHelper, Cd
 pub use checks::{CheckLevel, CheckMessage, check_static_files_config};
 pub use dependency_resolver::DependencyGraph;
 pub use handler::{StaticError, StaticFile, StaticFileHandler, StaticResult};
+pub use path_resolver::PathResolver;
 pub use health::{
 	CacheHealthCheck, DatabaseHealthCheck, HealthCheck, HealthCheckManager, HealthCheckResult,
 	HealthReport, HealthStatus,

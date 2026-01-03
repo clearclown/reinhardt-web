@@ -36,7 +36,7 @@ pub trait FormModel: Send + Sync {
 	/// # Examples
 	///
 	/// ```no_run
-	/// # use reinhardt_forms::field::FieldType;
+	/// # use reinhardt_forms::model_form::FieldType;
 	/// fn field_type(name: &str) -> Option<FieldType> {
 	///     match name {
 	///         "name" => Some(FieldType::Char { max_length: Some(100) }),

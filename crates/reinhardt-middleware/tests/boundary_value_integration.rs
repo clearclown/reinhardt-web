@@ -24,6 +24,7 @@ use reinhardt_middleware::cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware
 use reinhardt_middleware::circuit_breaker::{
 	CircuitBreakerConfig, CircuitBreakerMiddleware, CircuitState,
 };
+#[cfg(feature = "compression")]
 use reinhardt_middleware::gzip::{GZipConfig, GZipMiddleware};
 #[cfg(feature = "rate-limit")]
 use reinhardt_middleware::rate_limit::{RateLimitConfig, RateLimitMiddleware, RateLimitStrategy};
@@ -250,6 +251,7 @@ async fn test_timeout_boundary(
 // GZip min_length Boundary Tests
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[rstest]
 #[case::below_min_length(199, 200, false)]
 #[case::at_min_length(200, 200, true)]
@@ -292,6 +294,7 @@ async fn test_gzip_min_length_boundary(
 // GZip Compression Level Boundary Tests
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[rstest]
 #[case::low_compression_level(1, true)]
 #[case::default_compression_level(6, true)]
@@ -631,6 +634,7 @@ async fn test_cache_max_entries_boundary(#[case] entry_count: usize, #[case] max
 // Empty and Zero Value Boundary Tests
 // ============================================================================
 
+#[cfg(feature = "compression")]
 #[rstest]
 #[case::empty_body(0)]
 #[case::single_byte(1)]
@@ -707,6 +711,7 @@ async fn test_rate_limit_large_capacity_boundary(#[case] capacity: usize) {
 	assert_status(&result.unwrap(), 200);
 }
 
+#[cfg(feature = "compression")]
 #[tokio::test]
 async fn test_gzip_large_body_boundary() {
 	let config = GZipConfig {

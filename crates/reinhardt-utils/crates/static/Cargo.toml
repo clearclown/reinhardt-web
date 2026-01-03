@@ -31,6 +31,9 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
+# Logging
+tracing = { workspace = true }
+
 # Hashing
 sha2 = "0.10"
 hex = "0.4"

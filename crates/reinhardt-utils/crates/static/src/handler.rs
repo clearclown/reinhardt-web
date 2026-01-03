@@ -2,6 +2,7 @@ use mime_guess::from_path;
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use tracing;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StaticError {
@@ -87,10 +88,24 @@ impl StaticFileHandler {
 		let file_path = self.root.join(path);
 
 		// Canonicalize paths to prevent traversal
-		let canonical_file = file_path
-			.canonicalize()
-			.map_err(|_| StaticError::NotFound(path.to_string()))?;
-		let canonical_root = self.root.canonicalize().map_err(StaticError::Io)?;
+		let canonical_file = file_path.canonicalize().map_err(|e| {
+			tracing::warn!(
+				"Failed to canonicalize path: {} (root: {}, error: {})",
+				file_path.display(),
+				self.root.display(),
+				e
+			);
+			StaticError::NotFound(path.to_string())
+		})?;
+
+		let canonical_root = self.root.canonicalize().map_err(|e| {
+			tracing::error!(
+				"Static files root directory does not exist: {} (error: {})",
+				self.root.display(),
+				e
+			);
+			StaticError::Io(e)
+		})?;
 
 		// Ensure file is within root directory
 		if !canonical_file.starts_with(&canonical_root) {
