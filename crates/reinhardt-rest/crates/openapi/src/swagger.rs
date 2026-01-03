@@ -90,7 +90,7 @@ impl SwaggerUI {
 		// Render Swagger UI HTML using Tera template
 		let context = SwaggerUITemplate {
 			title: &self.openapi_spec.info.title,
-			spec_url: "/api-docs/openapi.json",
+			spec_url: "/api/openapi.json",
 		};
 
 		// Encode favicon as base64 for data URL embedding
@@ -129,7 +129,7 @@ impl SwaggerUI {
 				// Serve Swagger UI assets
 				self.serve_swagger_asset(path).await
 			}
-			"/api-docs/openapi.json" => {
+			"/api/openapi.json" => {
 				// Serve OpenAPI spec
 				self.serve_openapi_spec().await
 			}
@@ -212,7 +212,7 @@ impl RedocUI {
 		// Render Redoc UI HTML using Tera template
 		let context = RedocUITemplate {
 			title: &self.openapi_spec.info.title,
-			spec_url: "/api-docs/openapi.json",
+			spec_url: "/api/openapi.json",
 		};
 
 		// Encode favicon as base64 for data URL embedding

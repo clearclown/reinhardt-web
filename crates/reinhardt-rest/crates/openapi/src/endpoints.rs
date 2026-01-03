@@ -33,12 +33,12 @@ static OPENAPI_SCHEMA: LazyLock<OpenApiSchema> = LazyLock::new(generate_openapi_
 
 /// Global Swagger UI instance
 ///
-/// Configured to fetch OpenAPI JSON from `/api-docs/openapi.json` endpoint.
+/// Configured to fetch OpenAPI JSON from `/api/openapi.json` endpoint.
 static SWAGGER_UI: LazyLock<SwaggerUI> = LazyLock::new(|| SwaggerUI::new(OPENAPI_SCHEMA.clone()));
 
 /// Global Redoc UI instance
 ///
-/// Configured to fetch OpenAPI JSON from `/api-docs/openapi.json` endpoint.
+/// Configured to fetch OpenAPI JSON from `/api/openapi.json` endpoint.
 static REDOC_UI: LazyLock<RedocUI> = LazyLock::new(|| RedocUI::new(OPENAPI_SCHEMA.clone()));
 
 /// Generate OpenAPI schema from global registry
@@ -65,6 +65,9 @@ pub fn generate_openapi_schema() -> OpenApiSchema {
 	// Add function-based endpoints from HTTP method decorators (#[get], #[post], etc.)
 	// Collects EndpointMetadata from global inventory via EndpointInspector
 	generator = generator.add_function_based_endpoints();
+
+	// Add server function endpoints from #[server_fn] macros (if pages feature enabled)
+	generator = generator.add_server_fn_endpoints();
 
 	generator
 		.generate()
@@ -138,7 +141,7 @@ pub async fn redoc_docs(_req: Request) -> Result<Response> {
 ///
 /// # Path
 ///
-/// By default: `/api-docs/openapi.json`
+/// By default: `/api/openapi.json`
 ///
 /// # Example
 ///
@@ -148,7 +151,7 @@ pub async fn redoc_docs(_req: Request) -> Result<Response> {
 /// use reinhardt_openapi::endpoints::openapi_json;
 ///
 /// let router = UnifiedRouter::new()
-///     .function("/api-docs/openapi.json", Method::GET, openapi_json);
+///     .function("/api/openapi.json", Method::GET, openapi_json);
 /// ```
 pub async fn openapi_json(_req: Request) -> Result<Response> {
 	let json = serde_json::to_string_pretty(&*OPENAPI_SCHEMA).map_err(|e| {
@@ -194,10 +197,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_openapi_json_handler() {
-		let req = Request::builder()
-			.uri("/api-docs/openapi.json")
-			.build()
-			.unwrap();
+		let req = Request::builder().uri("/api/openapi.json").build().unwrap();
 		let response = openapi_json(req).await.unwrap();
 
 		// Check response is valid JSON

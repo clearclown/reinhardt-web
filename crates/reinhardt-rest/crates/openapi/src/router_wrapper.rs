@@ -18,9 +18,9 @@
 //!     let wrapped = OpenApiRouter::wrap(router);
 //!
 //!     // The wrapped router now serves:
-//!     // - /api-docs/openapi.json (OpenAPI spec)
-//!     // - /docs (Swagger UI)
-//!     // - /docs-redoc (Redoc UI)
+//!     // - /api/openapi.json (OpenAPI spec)
+//!     // - /api/docs (Swagger UI)
+//!     // - /api/redoc (Redoc UI)
 //! }
 //! ```
 
@@ -101,25 +101,25 @@ impl<H> OpenApiRouter<H> {
 impl<H: Handler> Handler for OpenApiRouter<H> {
 	/// Handle requests, intercepting OpenAPI documentation paths
 	///
-	/// Requests to `/api-docs/openapi.json`, `/docs`, or `/docs-redoc`
+	/// Requests to `/api/openapi.json`, `/api/docs`, or `/api/redoc`
 	/// are served from memory. All other requests are delegated to the
 	/// wrapped handler.
 	async fn handle(&self, request: Request) -> Result<Response> {
 		// Match OpenAPI endpoints first
 		match request.uri.path() {
-			"/api-docs/openapi.json" => {
+			"/api/openapi.json" => {
 				let json = (*self.openapi_json).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "application/json; charset=utf-8")
 					.with_body(json))
 			}
-			"/docs" => {
+			"/api/docs" => {
 				let html = (*self.swagger_html).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "text/html; charset=utf-8")
 					.with_body(html))
 			}
-			"/docs-redoc" => {
+			"/api/redoc" => {
 				let html = (*self.redoc_html).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "text/html; charset=utf-8")
@@ -170,25 +170,25 @@ where
 
 	/// Route a request through the OpenAPI wrapper
 	///
-	/// OpenAPI documentation endpoints (`/api-docs/openapi.json`, `/docs`,
-	/// `/docs-redoc`) are handled directly. All other requests are delegated
+	/// OpenAPI documentation endpoints (`/api/openapi.json`, `/api/docs`,
+	/// `/api/redoc`) are handled directly. All other requests are delegated
 	/// to the wrapped router's `route()` method.
 	async fn route(&self, request: Request) -> Result<Response> {
 		// Match OpenAPI endpoints first
 		match request.uri.path() {
-			"/api-docs/openapi.json" => {
+			"/api/openapi.json" => {
 				let json = (*self.openapi_json).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "application/json; charset=utf-8")
 					.with_body(json))
 			}
-			"/docs" => {
+			"/api/docs" => {
 				let html = (*self.swagger_html).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "text/html; charset=utf-8")
 					.with_body(html))
 			}
-			"/docs-redoc" => {
+			"/api/redoc" => {
 				let html = (*self.redoc_html).clone();
 				Ok(Response::ok()
 					.with_header("Content-Type", "text/html; charset=utf-8")
@@ -221,10 +221,7 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::builder()
-			.uri("/api-docs/openapi.json")
-			.build()
-			.unwrap();
+		let request = Request::builder().uri("/api/openapi.json").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -238,7 +235,7 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::builder().uri("/docs").build().unwrap();
+		let request = Request::builder().uri("/api/docs").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);
@@ -251,7 +248,7 @@ mod tests {
 		let handler = DummyHandler;
 		let wrapped = OpenApiRouter::wrap(handler);
 
-		let request = Request::builder().uri("/docs-redoc").build().unwrap();
+		let request = Request::builder().uri("/api/redoc").build().unwrap();
 		let response = wrapped.handle(request).await.unwrap();
 
 		assert_eq!(response.status, StatusCode::OK);

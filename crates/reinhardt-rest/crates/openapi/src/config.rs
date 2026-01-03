@@ -10,15 +10,15 @@
 //!
 //! // Use default configuration
 //! let config = OpenApiConfig::default();
-//! assert_eq!(config.swagger_path, "/docs");
-//! assert_eq!(config.json_path, "/api-docs/openapi.json");
+//! assert_eq!(config.swagger_path, "/api/docs");
+//! assert_eq!(config.json_path, "/api/openapi.json");
 //!
 //! // Custom configuration
 //! let custom = OpenApiConfig {
 //!     title: "My API".to_string(),
 //!     version: "2.0.0".to_string(),
 //!     description: Some("Custom API description".to_string()),
-//!     swagger_path: "/api-docs".to_string(),
+//!     swagger_path: "/api/swagger".to_string(),
 //!     ..Default::default()
 //! };
 //! ```
@@ -32,9 +32,9 @@ use serde::{Deserialize, Serialize};
 ///
 /// # Default Paths
 ///
-/// - Swagger UI: `/docs`
-/// - Redoc UI: `/docs-redoc`
-/// - OpenAPI JSON: `/api-docs/openapi.json`
+/// - Swagger UI: `/api/docs`
+/// - Redoc UI: `/api/redoc`
+/// - OpenAPI JSON: `/api/openapi.json`
 ///
 /// # Example
 ///
@@ -53,19 +53,19 @@ pub struct OpenApiConfig {
 	#[serde(default = "default_true")]
 	pub enabled: bool,
 
-	/// OpenAPI JSON endpoint path (default: "/api-docs/openapi.json")
+	/// OpenAPI JSON endpoint path (default: "/api/openapi.json")
 	///
 	/// The path where the OpenAPI 3.0 JSON schema will be served.
 	#[serde(default = "default_json_path")]
 	pub json_path: String,
 
-	/// Swagger UI endpoint path (default: "/docs")
+	/// Swagger UI endpoint path (default: "/api/docs")
 	///
 	/// The path where the interactive Swagger UI will be served.
 	#[serde(default = "default_swagger_path")]
 	pub swagger_path: String,
 
-	/// Redoc UI endpoint path (default: "/docs-redoc")
+	/// Redoc UI endpoint path (default: "/api/redoc")
 	///
 	/// The path where the alternative Redoc UI will be served.
 	#[serde(default = "default_redoc_path")]
@@ -94,9 +94,9 @@ impl Default for OpenApiConfig {
 	fn default() -> Self {
 		Self {
 			enabled: true,
-			json_path: "/api-docs/openapi.json".to_string(),
-			swagger_path: "/docs".to_string(),
-			redoc_path: "/docs-redoc".to_string(),
+			json_path: "/api/openapi.json".to_string(),
+			swagger_path: "/api/docs".to_string(),
+			redoc_path: "/api/redoc".to_string(),
 			title: "API Documentation".to_string(),
 			version: "1.0.0".to_string(),
 			description: None,
@@ -110,15 +110,15 @@ fn default_true() -> bool {
 }
 
 fn default_json_path() -> String {
-	"/api-docs/openapi.json".to_string()
+	"/api/openapi.json".to_string()
 }
 
 fn default_swagger_path() -> String {
-	"/docs".to_string()
+	"/api/docs".to_string()
 }
 
 fn default_redoc_path() -> String {
-	"/docs-redoc".to_string()
+	"/api/redoc".to_string()
 }
 
 fn default_title() -> String {
@@ -137,9 +137,9 @@ mod tests {
 	fn test_default_config() {
 		let config = OpenApiConfig::default();
 		assert!(config.enabled);
-		assert_eq!(config.json_path, "/api-docs/openapi.json");
-		assert_eq!(config.swagger_path, "/docs");
-		assert_eq!(config.redoc_path, "/docs-redoc");
+		assert_eq!(config.json_path, "/api/openapi.json");
+		assert_eq!(config.swagger_path, "/api/docs");
+		assert_eq!(config.redoc_path, "/api/redoc");
 		assert_eq!(config.title, "API Documentation");
 		assert_eq!(config.version, "1.0.0");
 		assert_eq!(config.description, None);

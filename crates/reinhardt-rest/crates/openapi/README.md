@@ -56,7 +56,7 @@ use reinhardt::core::macros::Schema;
 - **Swagger UI Integration**: Built-in Swagger UI via `utoipa-swagger-ui`
   - HTML rendering with customizable title and spec URL
   - Request handler for serving Swagger UI pages
-  - Automatic OpenAPI spec serving at `/api-docs/openapi.json`
+  - Automatic OpenAPI spec serving at `/api/openapi.json`
   - Schema JSON export functionality
 - **Redoc UI Support**: Alternative documentation interface
   - HTML rendering for Redoc
@@ -203,13 +203,11 @@ use reinhardt::apps::{Request, Response};
 
 ## API Endpoints
 
-When using SwaggerUI, the following endpoints are automatically available:
+When using OpenApiRouter wrapper, the following endpoints are automatically available:
 
-- `/swagger-ui/` - Swagger UI HTML interface
-- `/swagger-ui/swagger-ui-init.js` - Swagger UI initialization script
-- `/swagger-ui/swagger-ui.css` - Swagger UI styles
-- `/swagger-ui/swagger-ui-bundle.js` - Swagger UI JavaScript bundle
-- `/api-docs/openapi.json` - OpenAPI specification in JSON format
+- `/api/docs` - Swagger UI HTML interface
+- `/api/redoc` - Redoc UI HTML interface
+- `/api/openapi.json` - OpenAPI specification in JSON format
 
 ## Migration from Previous Version
 
