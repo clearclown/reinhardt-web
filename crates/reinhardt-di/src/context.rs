@@ -483,11 +483,24 @@ impl InjectionContext {
 	///
 	/// ```no_run
 	/// use reinhardt_di::{InjectionContext, SingletonScope};
+	/// use std::sync::Arc;
+	/// # use async_trait::async_trait;
 	///
+	/// # #[derive(Clone)]
+	/// # struct Config;
+	/// # #[async_trait]
+	/// # impl reinhardt_di::Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> reinhardt_di::DiResult<Self> {
+	/// #         Ok(Config)
+	/// #     }
+	/// # }
+	/// # async fn example() -> reinhardt_di::DiResult<()> {
 	/// let singleton_scope = Arc::new(SingletonScope::new());
 	/// let ctx = InjectionContext::builder(singleton_scope).build();
 	///
 	/// let config = ctx.resolve::<Config>().await?;
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub async fn resolve<T: Any + Send + Sync + 'static>(&self) -> crate::DiResult<Arc<T>> {
 		use crate::cycle_detection::{begin_resolution, register_type_name};

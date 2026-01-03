@@ -62,14 +62,20 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, injectable};
+	/// use reinhardt_di::{Depends, Injectable, InjectionContext, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct Config {
-	///     #[no_inject]
 	///     value: String,
 	/// }
+	///
+	/// # #[async_trait]
+	/// # impl Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(Config::default())
+	/// #     }
+	/// # }
 	///
 	/// let builder = Depends::<Config>::builder();
 	/// ```
@@ -87,14 +93,20 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, injectable};
+	/// use reinhardt_di::{Depends, Injectable, InjectionContext, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct RequestData {
-	///     #[no_inject]
 	///     id: u32,
 	/// }
+	///
+	/// # #[async_trait]
+	/// # impl Injectable for RequestData {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(RequestData::default())
+	/// #     }
+	/// # }
 	///
 	/// let builder = Depends::<RequestData>::builder_no_cache();
 	/// ```
@@ -114,14 +126,20 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, injectable};
+	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, Injectable, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct Config {
-	///     #[no_inject]
 	///     value: String,
 	/// }
+	///
+	/// # #[async_trait]
+	/// # impl Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(Config::default())
+	/// #     }
+	/// # }
 	///
 	/// # async fn example() {
 	/// let singleton_scope = SingletonScope::new();
@@ -155,18 +173,24 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, injectable};
+	/// use reinhardt_di::{Depends, Injectable, InjectionContext, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct Config {
-	///     #[no_inject]
 	///     value: String,
 	/// }
 	///
+	/// # #[async_trait]
+	/// # impl Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(Config::default())
+	/// #     }
+	/// # }
+	///
 	/// let config = Config { value: "test".to_string() };
 	/// let depends = Depends::from_value(config);
-	/// assert_eq!(depends.value, "test");
+	/// # // Note: `depends.value` is not publicly accessible
 	/// ```
 	pub fn from_value(value: T) -> Self {
 		Self {
@@ -183,14 +207,20 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, injectable};
+	/// use reinhardt_di::{Depends, Injectable, InjectionContext, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct Config {
-	///     #[no_inject]
 	///     value: String,
 	/// }
+	///
+	/// # #[async_trait]
+	/// # impl Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(Config::default())
+	/// #     }
+	/// # }
 	///
 	/// let config = Config { value: "test".to_string() };
 	/// let depends = Depends::from_value(config);
@@ -217,14 +247,20 @@ where
 	/// # Examples
 	///
 	/// ```no_run
-	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, injectable};
+	/// use reinhardt_di::{Depends, InjectionContext, SingletonScope, Injectable, DiResult};
+	/// # use async_trait::async_trait;
 	///
 	/// #[derive(Clone, Default)]
-	/// #[injectable]
 	/// struct Config {
-	///     #[no_inject]
 	///     value: String,
 	/// }
+	///
+	/// # #[async_trait]
+	/// # impl Injectable for Config {
+	/// #     async fn inject(_ctx: &InjectionContext) -> DiResult<Self> {
+	/// #         Ok(Config::default())
+	/// #     }
+	/// # }
 	///
 	/// # async fn example() {
 	/// let singleton_scope = SingletonScope::new();
