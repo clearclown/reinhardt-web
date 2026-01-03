@@ -186,14 +186,428 @@ impl<M: Model> Manager<M> {
 	/// Returns a QuerySet filtered by the primary key field
 	pub fn get(&self, pk: M::PrimaryKey) -> QuerySet<M> {
 		let pk_field = M::primary_key_field();
-		let pk_value = pk.to_string();
+		let pk_str = pk.to_string();
+
+		// Try to parse as i64 first (common for primary keys), fallback to string
+		let pk_value = if let Ok(int_value) = pk_str.parse::<i64>() {
+			crate::query::FilterValue::Integer(int_value)
+		} else {
+			crate::query::FilterValue::String(pk_str)
+		};
 
 		let filter = crate::query::Filter::new(
 			pk_field.to_string(),
 			crate::query::FilterOperator::Eq,
-			crate::query::FilterValue::String(pk_value),
+			pk_value,
 		);
 		QuerySet::new().filter(filter)
+	}
+
+	/// Set LIMIT clause
+	///
+	/// Limits the number of records returned by the QuerySet.
+	/// Corresponds to Django's QuerySet[:n].
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().limit(10).all().await?;
+	/// ```
+	pub fn limit(&self, limit: usize) -> QuerySet<M> {
+		QuerySet::new().limit(limit)
+	}
+
+	/// Set ORDER BY clause
+	///
+	/// Sorts the QuerySet results by the specified fields.
+	/// Use "-" prefix for descending order (e.g., "-created_at").
+	/// Corresponds to Django's QuerySet.order_by().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// // Ascending by name
+	/// let users = User::objects().order_by(&["name"]).all().await?;
+	///
+	/// // Descending by created_at
+	/// let users = User::objects().order_by(&["-created_at"]).all().await?;
+	///
+	/// // Multiple fields
+	/// let users = User::objects().order_by(&["department", "-salary"]).all().await?;
+	/// ```
+	pub fn order_by(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().order_by(fields)
+	}
+
+	/// Add annotation to QuerySet
+	///
+	/// Adds a computed field to each record using SQL expressions or aggregations.
+	/// Corresponds to Django's QuerySet.annotate().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// use reinhardt_orm::annotation::{Annotation, AnnotationValue};
+	/// use reinhardt_orm::aggregation::Aggregate;
+	///
+	/// let users = User::objects()
+	///     .annotate(Annotation::new("total_orders",
+	///         AnnotationValue::Aggregate(Aggregate::count(Some("orders")))))
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn annotate(&self, annotation: crate::annotation::Annotation) -> QuerySet<M> {
+		QuerySet::new().annotate(annotation)
+	}
+
+	/// Defer loading of specified fields
+	///
+	/// Excludes the specified fields from the initial query, loading them only when accessed.
+	/// Corresponds to Django's QuerySet.defer().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().defer(&["bio", "profile_picture"]).all().await?;
+	/// ```
+	pub fn defer(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().defer(fields)
+	}
+
+	/// Load only specified fields
+	///
+	/// Loads only the specified fields, excluding all others.
+	/// Corresponds to Django's QuerySet.only().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().only(&["id", "username"]).all().await?;
+	/// ```
+	pub fn only(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().only(fields)
+	}
+
+	/// Select specific fields (values)
+	///
+	/// Returns records with only the specified fields.
+	/// Corresponds to Django's QuerySet.values().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let user_data = User::objects().values(&["id", "username", "email"]).all().await?;
+	/// ```
+	pub fn values(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().values(fields)
+	}
+
+	/// Eager load related objects using JOIN
+	///
+	/// Performs SQL JOINs to load related objects in a single query.
+	/// Corresponds to Django's QuerySet.select_related().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let posts = Post::objects().select_related(&["author", "category"]).all().await?;
+	/// ```
+	pub fn select_related(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().select_related(fields)
+	}
+
+	/// Set OFFSET clause
+	///
+	/// Skips the specified number of records before returning results.
+	/// Corresponds to Django's QuerySet slicing [offset:].
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().offset(20).all().await?;
+	/// ```
+	pub fn offset(&self, offset: usize) -> QuerySet<M> {
+		QuerySet::new().offset(offset)
+	}
+
+	/// Paginate results (LIMIT + OFFSET)
+	///
+	/// Convenience method that combines LIMIT and OFFSET for pagination.
+	/// Corresponds to Django's Paginator.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().paginate(3, 10).all().await?;  // page 3, 10 items per page
+	/// ```
+	pub fn paginate(&self, page: usize, page_size: usize) -> QuerySet<M> {
+		QuerySet::new().paginate(page, page_size)
+	}
+
+	/// Prefetch related objects using separate queries
+	///
+	/// Performs separate queries to load related objects, reducing N+1 queries.
+	/// Corresponds to Django's QuerySet.prefetch_related().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let posts = Post::objects().prefetch_related(&["comments", "tags"]).all().await?;
+	/// ```
+	pub fn prefetch_related(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().prefetch_related(fields)
+	}
+
+	/// Select specific fields (values_list)
+	///
+	/// Alias for `values()`. Returns records with only the specified fields.
+	/// Corresponds to Django's QuerySet.values_list().
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let user_data = User::objects().values_list(&["id", "username"]).all().await?;
+	/// ```
+	pub fn values_list(&self, fields: &[&str]) -> QuerySet<M> {
+		QuerySet::new().values_list(fields)
+	}
+
+	/// Filter by array overlap (PostgreSQL)
+	///
+	/// Filters rows where the array field overlaps with the provided values.
+	/// Uses the `&&` operator in PostgreSQL.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let posts = Post::objects().filter_array_overlap("tags", &["rust", "web"]).all().await?;
+	/// ```
+	pub fn filter_array_overlap(&self, field: &str, values: &[&str]) -> QuerySet<M> {
+		QuerySet::new().filter_array_overlap(field, values)
+	}
+
+	/// Filter by array contains (PostgreSQL)
+	///
+	/// Filters rows where the array field contains all provided values.
+	/// Uses the `@>` operator in PostgreSQL.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let posts = Post::objects().filter_array_contains("tags", &["rust", "web"]).all().await?;
+	/// ```
+	pub fn filter_array_contains(&self, field: &str, values: &[&str]) -> QuerySet<M> {
+		QuerySet::new().filter_array_contains(field, values)
+	}
+
+	/// Filter by JSONB contains (PostgreSQL)
+	///
+	/// Filters rows where the JSONB field contains the provided JSON.
+	/// Uses the `@>` operator in PostgreSQL.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().filter_jsonb_contains("metadata", r#"{"role": "admin"}"#).all().await?;
+	/// ```
+	pub fn filter_jsonb_contains(&self, field: &str, json: &str) -> QuerySet<M> {
+		QuerySet::new().filter_jsonb_contains(field, json)
+	}
+
+	/// Filter by JSONB key exists (PostgreSQL)
+	///
+	/// Filters rows where the JSONB field has the specified key.
+	/// Uses the `?` operator in PostgreSQL.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let users = User::objects().filter_jsonb_key_exists("metadata", "email").all().await?;
+	/// ```
+	pub fn filter_jsonb_key_exists(&self, field: &str, key: &str) -> QuerySet<M> {
+		QuerySet::new().filter_jsonb_key_exists(field, key)
+	}
+
+	/// Filter by range contains (PostgreSQL)
+	///
+	/// Filters rows where the range field contains the provided value.
+	/// Uses the `@>` operator in PostgreSQL.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let events = Event::objects().filter_range_contains("date_range", "2024-01-15").all().await?;
+	/// ```
+	pub fn filter_range_contains(&self, field: &str, value: &str) -> QuerySet<M> {
+		QuerySet::new().filter_range_contains(field, value)
+	}
+
+	/// Filter by IN subquery
+	///
+	/// Filters rows where the field value is in the result of a subquery.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let authors = Author::objects()
+	///     .filter_in_subquery("id", |subq: QuerySet<Book>| {
+	///         subq.filter(Filter::new("price", FilterOperator::Gt, FilterValue::Int(1500)))
+	///             .values(&["author_id"])
+	///     })
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn filter_in_subquery<R: crate::Model, F>(&self, field: &str, subquery_fn: F) -> QuerySet<M>
+	where
+		F: FnOnce(QuerySet<R>) -> QuerySet<R>,
+	{
+		QuerySet::new().filter_in_subquery(field, subquery_fn)
+	}
+
+	/// Filter by NOT IN subquery
+	///
+	/// Filters rows where the field value is not in the result of a subquery.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let authors = Author::objects()
+	///     .filter_not_in_subquery("id", |subq: QuerySet<Book>| {
+	///         subq.filter(Filter::new("status", FilterOperator::Eq, FilterValue::String("archived".into())))
+	///             .values(&["author_id"])
+	///     })
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn filter_not_in_subquery<R: crate::Model, F>(
+		&self,
+		field: &str,
+		subquery_fn: F,
+	) -> QuerySet<M>
+	where
+		F: FnOnce(QuerySet<R>) -> QuerySet<R>,
+	{
+		QuerySet::new().filter_not_in_subquery(field, subquery_fn)
+	}
+
+	/// Filter by EXISTS subquery
+	///
+	/// Filters rows where the subquery returns at least one row.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let authors = Author::objects()
+	///     .filter_exists(|subq: QuerySet<Book>| {
+	///         subq.filter(Filter::new("author_id", FilterOperator::Eq, FilterValue::FieldRef(F::new("authors.id"))))
+	///     })
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn filter_exists<R: crate::Model, F>(&self, subquery_fn: F) -> QuerySet<M>
+	where
+		F: FnOnce(QuerySet<R>) -> QuerySet<R>,
+	{
+		QuerySet::new().filter_exists(subquery_fn)
+	}
+
+	/// Filter by NOT EXISTS subquery
+	///
+	/// Filters rows where the subquery returns no rows.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let authors = Author::objects()
+	///     .filter_not_exists(|subq: QuerySet<Book>| {
+	///         subq.filter(Filter::new("author_id", FilterOperator::Eq, FilterValue::FieldRef(F::new("authors.id"))))
+	///     })
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn filter_not_exists<R: crate::Model, F>(&self, subquery_fn: F) -> QuerySet<M>
+	where
+		F: FnOnce(QuerySet<R>) -> QuerySet<R>,
+	{
+		QuerySet::new().filter_not_exists(subquery_fn)
+	}
+
+	/// Add Common Table Expression (WITH clause)
+	///
+	/// Adds a CTE that can be referenced in the main query.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let high_earners = CTE::new("high_earners", "SELECT * FROM employees WHERE salary > 100000");
+	/// let results = Employee::objects()
+	///     .with_cte(high_earners)
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn with_cte(&self, cte: crate::cte::CTE) -> QuerySet<M> {
+		QuerySet::new().with_cte(cte)
+	}
+
+	/// Full-text search (PostgreSQL)
+	///
+	/// Filters rows using PostgreSQL's full-text search.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let articles = Article::objects()
+	///     .full_text_search("search_vector", "rust programming")
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn full_text_search(&self, field: &str, query: &str) -> QuerySet<M> {
+		QuerySet::new().full_text_search(field, query)
+	}
+
+	/// Annotate with subquery
+	///
+	/// Adds a scalar subquery to the SELECT clause.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let authors = Author::objects()
+	///     .annotate_subquery::<Book, _>("book_count", |subq| {
+	///         subq.filter("author_id", FilterOperator::Eq, FilterValue::OuterRef(OuterRef::new("authors.id")))
+	///             .values(&["COUNT(*)"])
+	///     })
+	///     .all()
+	///     .await?;
+	/// ```
+	pub fn annotate_subquery<R, F>(&self, name: &str, builder: F) -> QuerySet<M>
+	where
+		R: crate::Model + 'static,
+		F: FnOnce(QuerySet<R>) -> QuerySet<R>,
+	{
+		QuerySet::new().annotate_subquery(name, builder)
+	}
+
+	/// Get a record by composite primary key
+	///
+	/// Retrieves a single object using all fields of a composite primary key.
+	///
+	/// # Examples
+	///
+	/// ```ignore
+	/// let mut pk_values = HashMap::new();
+	/// pk_values.insert("post_id".to_string(), PkValue::Int(1));
+	/// pk_values.insert("tag_id".to_string(), PkValue::Int(5));
+	/// let post_tag = PostTag::objects().get_composite(&pk_values).await?;
+	/// ```
+	pub async fn get_composite(
+		&self,
+		pk_values: &std::collections::HashMap<String, crate::composite_pk::PkValue>,
+	) -> reinhardt_core::exception::Result<M>
+	where
+		M: Clone + serde::de::DeserializeOwned,
+	{
+		QuerySet::new().get_composite(pk_values).await
 	}
 
 	/// Create a new record using SeaQuery for SQL injection protection
@@ -470,8 +884,13 @@ impl<M: Model> Manager<M> {
 		}
 
 		// Add WHERE clause for primary key
-		// Convert primary key to sea_query::Value for type safety
-		let pk_value = sea_query::Value::String(Some(pk.to_string()));
+		// Try to parse as i64 first (common for primary keys), fallback to string
+		let pk_str = pk.to_string();
+		let pk_value = if let Ok(int_value) = pk_str.parse::<i64>() {
+			sea_query::Value::BigInt(Some(int_value))
+		} else {
+			sea_query::Value::String(Some(pk_str))
+		};
 		stmt.and_where(Expr::col(Alias::new(M::primary_key_field())).eq(pk_value));
 
 		// Add RETURNING clause with explicit column names from JSON object
@@ -533,8 +952,17 @@ impl<M: Model> Manager<M> {
 	) -> reinhardt_core::exception::Result<()> {
 		// Build SeaQuery DELETE statement
 		let mut stmt = Query::delete();
+
+		// Try to parse as i64 first (common for primary keys), fallback to string
+		let pk_str = pk.to_string();
+		let pk_value = if let Ok(int_value) = pk_str.parse::<i64>() {
+			sea_query::Value::BigInt(Some(int_value))
+		} else {
+			sea_query::Value::String(Some(pk_str))
+		};
+
 		stmt.from_table(Alias::new(M::table_name()))
-			.and_where(Expr::col(Alias::new(M::primary_key_field())).eq(pk.to_string()));
+			.and_where(Expr::col(Alias::new(M::primary_key_field())).eq(pk_value));
 
 		use sea_query::PostgresQueryBuilder;
 		let (sql, values) = stmt.build(PostgresQueryBuilder);
