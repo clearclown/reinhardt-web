@@ -16,8 +16,8 @@ use syn::{Expr, Result};
 
 use reinhardt_pages_ast::{
 	PageAttr, PageBody, PageComponent, PageElement, PageElse, PageEvent, PageMacro, PageNode,
-	TypedPageAttr, TypedPageBody, TypedPageComponent, TypedPageElement, TypedPageElse,
-	TypedPageFor, TypedPageIf, TypedPageMacro, TypedPageNode, types::AttrValue,
+	PageWatch, TypedPageAttr, TypedPageBody, TypedPageComponent, TypedPageElement, TypedPageElse,
+	TypedPageFor, TypedPageIf, TypedPageMacro, TypedPageNode, TypedPageWatch, types::AttrValue,
 };
 
 /// Validates and transforms the entire PageMacro AST into a typed AST.
@@ -90,6 +90,10 @@ fn transform_node(node: &PageNode, parent_tags: &[String]) -> Result<TypedPageNo
 			comp,
 			parent_tags,
 		)?)),
+		PageNode::Watch(watch_node) => Ok(TypedPageNode::Watch(transform_watch(
+			watch_node,
+			parent_tags,
+		)?)),
 	}
 }
 
@@ -145,6 +149,16 @@ fn transform_for(
 		iter: for_node.iter.clone(),
 		body,
 		span: for_node.span,
+	})
+}
+
+/// Transforms a PageWatch node.
+fn transform_watch(watch_node: &PageWatch, parent_tags: &[String]) -> Result<TypedPageWatch> {
+	let inner = transform_node(&watch_node.expr, parent_tags)?;
+
+	Ok(TypedPageWatch {
+		expr: Box::new(inner),
+		span: watch_node.span,
 	})
 }
 
@@ -340,7 +354,8 @@ fn has_meaningful_content(children: &[TypedPageNode]) -> bool {
 			TypedPageNode::Expression(_)
 			| TypedPageNode::Component(_)
 			| TypedPageNode::If(_)
-			| TypedPageNode::For(_) => {
+			| TypedPageNode::For(_)
+			| TypedPageNode::Watch(_) => {
 				// Dynamic content - assume it will have meaningful content at runtime
 				return true;
 			}

@@ -94,6 +94,7 @@ pub fn server_fn(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ## Syntax
 ///
 /// ```text
+/// // Basic syntax
 /// page!(|prop1: Type1, prop2: Type2| {
 ///     element {
 ///         attr: "value",
@@ -102,6 +103,14 @@ pub fn server_fn(args: TokenStream, input: TokenStream) -> TokenStream {
 ///         "text content"
 ///     }
 /// })
+///
+/// // With head directive (for SSR)
+/// page! {
+///     #head: my_head,
+///     |prop1: Type1| {
+///         element { ... }
+///     }
+/// }
 /// ```
 ///
 /// ## Elements

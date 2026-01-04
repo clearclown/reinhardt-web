@@ -34,7 +34,7 @@ use reinhardt_pages_ast::types::AttrValue;
 use reinhardt_pages_ast::{
 	PageEvent, PageExpression, PageParam, PageText, TypedPageAttr, TypedPageBody,
 	TypedPageComponent, TypedPageElement, TypedPageElse, TypedPageFor, TypedPageIf, TypedPageMacro,
-	TypedPageNode,
+	TypedPageNode, TypedPageWatch,
 };
 
 /// Generates code for the entire page! macro.
@@ -136,6 +136,7 @@ fn generate_node(node: &TypedPageNode, pages_crate: &TokenStream) -> TokenStream
 		TypedPageNode::If(if_node) => generate_if(if_node, pages_crate),
 		TypedPageNode::For(for_node) => generate_for(for_node, pages_crate),
 		TypedPageNode::Component(comp) => generate_component(comp, pages_crate),
+		TypedPageNode::Watch(watch_node) => generate_watch(watch_node, pages_crate),
 	}
 }
 
@@ -253,9 +254,45 @@ fn generate_element(elem: &TypedPageElement, pages_crate: &TokenStream) -> Token
 	}
 }
 
+/// Boolean attributes that should use `.bool_attr()` method.
+/// These attributes are either present or absent in HTML, not string-valued.
+const BOOLEAN_ATTRS: &[&str] = &[
+	"disabled",
+	"required",
+	"readonly",
+	"checked",
+	"selected",
+	"autofocus",
+	"autoplay",
+	"controls",
+	"loop",
+	"muted",
+	"default",
+	"defer",
+	"formnovalidate",
+	"hidden",
+	"ismap",
+	"multiple",
+	"novalidate",
+	"open",
+	"reversed",
+];
+
 /// Generates code for an attribute.
 fn generate_attr(attr: &TypedPageAttr) -> TokenStream {
-	let name = attr.html_name();
+	let name_str = attr.html_name();
+
+	// Check if this is a boolean attribute
+	if BOOLEAN_ATTRS.contains(&name_str.as_str()) {
+		// Boolean attributes use .bool_attr() which handles true/false values
+		let value_expr = attr.value.to_expr();
+		return quote! {
+			.bool_attr(#name_str, #value_expr)
+		};
+	}
+
+	// Use name_str for regular attributes as well
+	let name = &name_str;
 
 	// Handle different attribute value types
 	// IntLit and FloatLit need to be converted to strings
@@ -414,28 +451,43 @@ fn generate_expression(expr: &PageExpression, pages_crate: &TokenStream) -> Toke
 }
 
 /// Generates code for an if node.
+///
+/// Currently generates regular Rust if/else expressions for all conditions.
+/// This approach avoids ownership issues with captured variables in closures.
+///
+/// For reactive conditional rendering with Signals, users should either:
+/// 1. Use `View::reactive_if()` directly in their code
+/// 2. Restructure their code to use Signal-based state management
+///
+/// Future enhancements may include automatic Signal detection or explicit
+/// reactive syntax (e.g., `@if condition { ... }`).
 fn generate_if(if_node: &TypedPageIf, pages_crate: &TokenStream) -> TokenStream {
 	let condition = &if_node.condition;
 	let then_branch = generate_if_branch(&if_node.then_branch, pages_crate);
 
 	let else_branch = match &if_node.else_branch {
 		Some(TypedPageElse::Block(nodes)) => {
-			let else_body = generate_if_branch(nodes, pages_crate);
-			quote! { else { #else_body } }
+			// else { ... } block - generate view directly
+			generate_if_branch(nodes, pages_crate)
 		}
 		Some(TypedPageElse::If(nested_if)) => {
-			let nested = generate_if(nested_if, pages_crate);
-			quote! { else #nested }
+			// else if { ... } - recursively generate another if
+			generate_if(nested_if, pages_crate)
 		}
 		None => {
-			quote! { else { #pages_crate::component::View::Empty } }
+			// No else branch - use Empty view
+			quote! { #pages_crate::component::View::Empty }
 		}
 	};
 
+	// Generate regular Rust if/else expression
+	// This avoids ownership issues with captured variables in Fn closures
 	quote! {
 		if #condition {
 			#then_branch
-		} #else_branch
+		} else {
+			#else_branch
+		}
 	}
 }
 
@@ -468,6 +520,45 @@ fn generate_for(for_node: &TypedPageFor, pages_crate: &TokenStream) -> TokenStre
 				#body
 			}).collect::<::std::vec::Vec<_>>()
 		)
+	}
+}
+
+/// Generates code for a watch node.
+///
+/// The watch block wraps its inner expression in a reactive context,
+/// allowing Signal dependencies to be automatically tracked and the view
+/// to be re-rendered when they change.
+///
+/// # Example
+///
+/// ```text
+/// watch {
+///     if signal.get() > 0 {
+///         div { "Positive" }
+///     } else {
+///         div { "Non-positive" }
+///     }
+/// }
+/// ```
+///
+/// Generates:
+///
+/// ```text
+/// View::reactive(move || {
+///     if signal.get() > 0 {
+///         ElementView::new("div").child("Positive").into_view()
+///     } else {
+///         ElementView::new("div").child("Non-positive").into_view()
+///     }
+/// })
+/// ```
+fn generate_watch(watch_node: &TypedPageWatch, pages_crate: &TokenStream) -> TokenStream {
+	let inner_expr = generate_node(&watch_node.expr, pages_crate);
+
+	quote! {
+		#pages_crate::component::View::reactive(move || {
+			#inner_expr
+		})
 	}
 }
 
