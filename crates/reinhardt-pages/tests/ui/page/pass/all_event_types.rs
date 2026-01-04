@@ -90,7 +90,9 @@ fn main() {
 	let _mixed = page!(|| {
 		button {
 			@click: |_| { },
-			@mouseenter: |e| { let _ = e; },
+			@mouseenter: |e| {
+						let _ = e;
+					},
 			"Click me"
 		}
 	});
