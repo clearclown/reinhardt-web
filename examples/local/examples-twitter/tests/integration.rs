@@ -102,7 +102,7 @@ mod server_integration {
 #[cfg(test)]
 #[cfg(target_arch = "wasm32")]
 mod client_integration {
-	use reinhardt_pages::component::{ElementView, IntoView};
+	use reinhardt::pages::component::{ElementView, IntoView};
 	use wasm_bindgen_test::*;
 
 	wasm_bindgen_test_configure!(run_in_browser);

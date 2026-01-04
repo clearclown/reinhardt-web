@@ -11,7 +11,7 @@ pub mod tweet;
 // Re-export ServerFnError for macro-generated code
 // The #[server_fn] macro generates code that references `crate::server_fn::ServerFnError`
 #[cfg(target_arch = "wasm32")]
-pub use reinhardt_pages::server_fn::ServerFnError;
+pub use reinhardt::pages::server_fn::ServerFnError;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use reinhardt::pages::server_fn::ServerFnError;

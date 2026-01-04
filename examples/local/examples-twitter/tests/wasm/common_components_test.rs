@@ -17,8 +17,8 @@ use examples_twitter::client::components::common::{
 	ButtonVariant, avatar, button, empty, error_alert, loading_spinner, success_alert, text_input,
 	textarea,
 };
-use reinhardt_pages::component::View;
-use reinhardt_pages::reactive::Signal;
+use reinhardt::pages::component::View;
+use reinhardt::pages::reactive::Signal;
 
 // ============================================================================
 // Loading Spinner Tests

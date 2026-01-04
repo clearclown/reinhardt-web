@@ -20,7 +20,7 @@ use {
 
 // WASM-only imports
 #[cfg(target_arch = "wasm32")]
-use reinhardt_pages::server_fn::{ServerFnError, server_fn};
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
 
 /// Login user and return user info (stateless, no session management)
 #[cfg(not(target_arch = "wasm32"))]

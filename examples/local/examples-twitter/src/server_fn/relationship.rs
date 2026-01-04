@@ -19,7 +19,7 @@ use {
 // WASM-only imports
 #[cfg(target_arch = "wasm32")]
 use {
-	reinhardt_pages::server_fn::{ServerFnError, server_fn},
+	reinhardt::pages::server_fn::{ServerFnError, server_fn},
 	uuid::Uuid,
 };
 
