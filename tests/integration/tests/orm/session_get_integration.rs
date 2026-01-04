@@ -9,8 +9,8 @@
 //! Run with: cargo test --test session_get_integration_tests
 
 use reinhardt_macros::model;
-use reinhardt_orm::{query_types::DbBackend, session::Session, DatabaseConnection};
-use reinhardt_test::fixtures::testcontainers::postgres_container;
+use reinhardt_orm::{query_types::DbBackend, session::Session};
+use reinhardt_test::fixtures::testcontainers::{create_test_any_pool, postgres_container};
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{AnyPool, Row};
@@ -51,11 +51,12 @@ async fn session_fixture(
 	// Install sqlx drivers for AnyPool
 	sqlx::any::install_default_drivers();
 
-	let (container, _pg_pool, _port, database_url) = postgres_container.await;
+	let (container, pg_pool, _port, database_url) = postgres_container.await;
 
 	// Create connection pool using AnyPool for Session compatibility
+	// Use create_test_any_pool helper for consistent timeout configuration
 	let pool = Arc::new(
-		AnyPool::connect(&database_url)
+		create_test_any_pool(&database_url)
 			.await
 			.expect("Failed to connect to database"),
 	);
@@ -65,12 +66,9 @@ async fn session_fixture(
 		.await
 		.expect("Failed to create session");
 
-	// Create test_users table
-	let conn = DatabaseConnection::connect(&database_url)
-		.await
-		.expect("Failed to create DatabaseConnection");
-
-	conn.execute(
+	// Create test_users table using pg_pool from postgres_container
+	// (it already has proper timeout settings)
+	sqlx::query(
 		"CREATE TABLE IF NOT EXISTS test_users (
             id SERIAL PRIMARY KEY,
             username VARCHAR(100) NOT NULL UNIQUE,
@@ -78,8 +76,8 @@ async fn session_fixture(
             age INTEGER,
             is_active BOOLEAN NOT NULL DEFAULT TRUE
         )",
-		vec![],
 	)
+	.execute(pg_pool.as_ref())
 	.await
 	.expect("Failed to create test_users table");
 

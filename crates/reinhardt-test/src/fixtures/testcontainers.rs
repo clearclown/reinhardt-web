@@ -69,6 +69,39 @@ fn get_pool_config() -> (u32, u64) {
 	(max_connections, acquire_timeout)
 }
 
+/// Create an AnyPool with proper timeout configuration for tests.
+///
+/// This function uses the same timeout settings as `postgres_container` fixture,
+/// ensuring consistent behavior across all test database connections.
+///
+/// # Arguments
+/// * `database_url` - Connection URL (postgres://, mysql://, sqlite://)
+///
+/// # Example
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::testcontainers::create_test_any_pool;
+///
+/// # async fn example() {
+/// let database_url = "postgres://localhost:5432/test";
+/// let pool = create_test_any_pool(database_url).await.expect("Failed to connect");
+/// # }
+/// ```
+#[cfg(feature = "testcontainers")]
+pub async fn create_test_any_pool(database_url: &str) -> Result<sqlx::AnyPool, sqlx::Error> {
+	use sqlx::any::AnyPoolOptions;
+
+	let (max_conns, timeout_secs) = get_pool_config();
+
+	AnyPoolOptions::new()
+		.max_connections(max_conns)
+		.min_connections(1)
+		.acquire_timeout(std::time::Duration::from_secs(timeout_secs))
+		.idle_timeout(std::time::Duration::from_secs(600))
+		.max_lifetime(std::time::Duration::from_secs(1800))
+		.connect(database_url)
+		.await
+}
+
 /// Fixture: Find and return an available port range for Redis Cluster.
 ///
 /// This fixture automatically searches for 6 consecutive available ports,
