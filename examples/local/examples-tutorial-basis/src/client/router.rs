@@ -3,9 +3,9 @@
 //! This module defines the client-side router for the polling application.
 
 use crate::client::pages::{index_page, polls_detail_page, polls_results_page};
-use reinhardt_pages::component::View;
-use reinhardt_pages::page;
-use reinhardt_pages::router::Router;
+use reinhardt::pages::component::View;
+use reinhardt::pages::page;
+use reinhardt::pages::router::Router;
 use std::cell::RefCell;
 
 // Global Router instance

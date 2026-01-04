@@ -2,7 +2,7 @@
 //!
 //! This is the main entry point for the WASM application.
 
-use reinhardt_pages::dom::Element;
+use reinhardt::pages::dom::Element;
 use wasm_bindgen::prelude::*;
 
 // Use modules from parent `client` module via super::

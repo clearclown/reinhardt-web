@@ -3,7 +3,7 @@
 //! This module re-exports page-level components for the polling application.
 //! Each page function returns a View that can be rendered.
 
-use reinhardt_pages::component::View;
+use reinhardt::pages::component::View;
 
 /// Index page - List all polls
 pub fn index_page() -> View {

@@ -4,9 +4,10 @@
 //! the index page, detail page with voting form, and results page.
 
 use crate::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
-use reinhardt_pages::component::{ElementView, IntoView, View};
-use reinhardt_pages::page;
-use reinhardt_pages::reactive::hooks::use_state;
+use reinhardt::pages::Signal;
+use reinhardt::pages::component::{ElementView, IntoView, View};
+use reinhardt::pages::page;
+use reinhardt::pages::reactive::hooks::use_state;
 
 #[cfg(target_arch = "wasm32")]
 use {
@@ -21,6 +22,7 @@ use {
 /// Polls index page - List all polls
 ///
 /// Displays a list of available polls with links to vote.
+/// Uses watch blocks for reactive UI updates when async data loads.
 pub fn polls_index() -> View {
 	let (questions, set_questions) = use_state(Vec::<QuestionInfo>::new());
 	let (loading, set_loading) = use_state(true);
@@ -46,63 +48,53 @@ pub fn polls_index() -> View {
 		});
 	}
 
-	let questions_list = questions.get();
-	let loading_state = loading.get();
-	let error_state = error.get();
+	// Clone signals for passing to page! macro (NOT extracting values)
+	let questions_signal = questions.clone();
+	let loading_signal = loading.clone();
+	let error_signal = error.clone();
 
-	page!(|questions_list: Vec<QuestionInfo>, loading_state: bool, error_state: Option<String>| {
+	page!(|questions_signal: Signal<Vec<QuestionInfo>>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>| {
 		div {
 			class: "container mt-5",
 			h1 {
 				class: "mb-4",
 				"Polls"
 			}
-			if let Some(err) = error_state {
-				div {
-					class: "alert alert-danger",
-					{ err }
-				}
-			}
-			if loading_state {
-				div {
-					class: "text-center",
+			watch {
+				if error_signal.get().is_some() {
 					div {
-						class: "spinner-border text-primary",
-						role: "status",
-						span {
-							class: "visually-hidden",
-							"Loading..."
-						}
+						class: "alert alert-danger",
+						{ error_signal.get().unwrap_or_default() }
 					}
 				}
-			} else if questions_list.is_empty() {
-				p {
-					class: "text-muted",
-					"No polls are available."
-				}
-			} else {
-				div {
-					class: "list-group",
-					for question in questions_list {
-						a {
-							href: format!("/polls/{}/", question.id),
-							class: "list-group-item list-group-item-action",
-							div {
-								class: "d-flex w-100 justify-content-between",
-								h5 {
-									class: "mb-1",
-									{ question.question_text.clone() }
-								}
-								small {
-									{ question.pub_date.format("%Y-%m-%d %H:%M").to_string() }
-								}
+			}
+			watch {
+				if loading_signal.get() {
+					div {
+						class: "text-center",
+						div {
+							class: "spinner-border text-primary",
+							role: "status",
+							span {
+								class: "visually-hidden",
+								"Loading..."
 							}
 						}
+					}
+				} else if questions_signal.get().is_empty() {
+					p {
+						class: "text-muted",
+						"No polls are available."
+					}
+				} else {
+					div {
+						class: "list-group",
+						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "list-group-item list-group-item-action", div { class : "d-flex w-100 justify-content-between", h5 { class : "mb-1", { question_text } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect()) }
 					}
 				}
 			}
 		}
-	})(questions_list, loading_state, error_state)
+	})(questions_signal, loading_signal, error_signal)
 }
 
 /// Poll detail page - Show question and voting form
@@ -370,6 +362,7 @@ pub fn polls_detail(question_id: i64) -> View {
 /// Poll results page - Show voting results
 ///
 /// Displays the question with vote counts for each choice.
+/// Uses watch blocks for reactive UI updates when async data loads.
 pub fn polls_results(question_id: i64) -> View {
 	let (question, set_question) = use_state(None::<QuestionInfo>);
 	let (choices, set_choices) = use_state(Vec::<ChoiceInfo>::new());
@@ -401,137 +394,105 @@ pub fn polls_results(question_id: i64) -> View {
 		});
 	}
 
-	let question_opt = question.get();
-	let choices_list = choices.get();
-	let total = total_votes.get();
-	let loading_state = loading.get();
-	let error_state = error.get();
+	// Clone signals for passing to page! macro (NOT extracting values)
+	let question_signal = question.clone();
+	let choices_signal = choices.clone();
+	let total_signal = total_votes.clone();
+	let loading_signal = loading.clone();
+	let error_signal = error.clone();
 
-	if loading_state {
-		return page!(|| {
-			div {
-				class: "container mt-5 text-center",
-				div {
-					class: "spinner-border text-primary",
-					role: "status",
-					span {
-						class: "visually-hidden",
-						"Loading..."
-					}
-				}
-			}
-		})();
-	}
-
-	if let Some(err) = error_state {
-		return page!(|err: String| {
-			div {
-				class: "container mt-5",
-				div {
-					class: "alert alert-danger",
-					{ err }
-				}
-				a {
-					href: "/",
-					class: "btn btn-primary",
-					"Back to Polls"
-				}
-			}
-		})(err);
-	}
-
-	if let Some(q) = question_opt {
-		page!(|q: QuestionInfo, choices_list: Vec<ChoiceInfo>, total: i32| {
-			div {
-				class: "container mt-5",
-				h1 {
-					class: "mb-4",
-					{ q.question_text.clone() }
-				}
-				div {
-					class: "card",
+	page!(|question_signal: Signal<Option<QuestionInfo>>, choices_signal: Signal<Vec<ChoiceInfo>>, total_signal: Signal<i32>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>, question_id: i64| {
+		div {
+			watch {
+				if loading_signal.get() {
 					div {
-						class: "card-body",
-						h5 {
-							class: "card-title",
-							"Results"
+						class: "container mt-5 text-center",
+						div {
+							class: "spinner-border text-primary",
+							role: "status",
+							span {
+								class: "visually-hidden",
+								"Loading..."
+							}
+						}
+					}
+				} else if error_signal.get().is_some() {
+					div {
+						class: "container mt-5",
+						div {
+							class: "alert alert-danger",
+							{ error_signal.get().unwrap_or_default() }
+						}
+						a {
+							href: "/",
+							class: "btn btn-primary",
+							"Back to Polls"
+						}
+					}
+				} else if question_signal.get().is_some() {
+					div {
+						class: "container mt-5",
+						h1 {
+							class: "mb-4",
+							{ question_signal.get().map(|q| q.question_text.clone()).unwrap_or_default() }
 						}
 						div {
-							class: "list-group list-group-flush",
-							for choice in choices_list {
-								{
-									let percentage = if total > 0 {
-										(choice.votes as f64 / total as f64 * 100.0) as i32
-									} else {
-										0
-									};
-
-									page!(|choice: ChoiceInfo, percentage: i32| {
-										div {
-											class: "list-group-item",
-											div {
-												class: "d-flex justify-content-between align-items-center mb-2",
-												strong { { choice.choice_text.clone() } }
-												span {
-													class: "badge bg-primary rounded-pill",
-													{ format!("{} votes", choice.votes) }
-												}
-											}
-											div {
-												class: "progress",
-												div {
-													class: "progress-bar",
-													role: "progressbar",
-													style: format!("width: {}%", percentage),
-													aria_valuenow: percentage.to_string(),
-													aria_valuemin: "0",
-													aria_valuemax: "100",
-													{ format!("{}%", percentage) }
-												}
-											}
-										}
-									})(choice, percentage)
+							class: "card",
+							div {
+								class: "card-body",
+								h5 {
+									class: "card-title",
+									"Results"
+								}
+								div {
+									class: "list-group list-group-flush",
+									{ View::fragment(choices_signal.get().iter().map(|choice| { let total = total_signal.get(); let percentage = if total>0 { (choice.votes as f64 / total as f64 * 100.0) as i32 } else { 0 }; let choice_text = choice.choice_text.clone(); let votes = choice.votes; page!(|choice_text : String, votes : i32, percentage : i32| { div { class : "list-group-item", div { class : "d-flex justify-content-between align-items-center mb-2", strong { { choice_text } } span { class : "badge bg-primary rounded-pill", { format!("{} votes", votes) } } } div { class : "progress", div { class : "progress-bar", role : "progressbar", style : format!("width: {}%", percentage), aria_valuenow : percentage.to_string(), aria_valuemin : "0", aria_valuemax : "100", { format!("{}%", percentage) } } } } }) (choice_text, votes, percentage) }).collect()) }
+								}
+								div {
+									class: "mt-3",
+									p {
+										class: "text-muted",
+										{ format!("Total votes: {}", total_signal.get()) }
+									}
 								}
 							}
 						}
 						div {
 							class: "mt-3",
-							p {
-								class: "text-muted",
-								{ format!("Total votes: {}", total) }
+							a {
+								href: format!("/polls/{}/", question_id),
+								class: "btn btn-primary",
+								"Vote Again"
+							}
+							a {
+								href: "/",
+								class: "btn btn-secondary ms-2",
+								"Back to Polls"
 							}
 						}
 					}
-				}
-				div {
-					class: "mt-3",
-					a {
-						href: format!("/polls/{}/", q.id),
-						class: "btn btn-primary",
-						"Vote Again"
-					}
-					a {
-						href: "/",
-						class: "btn btn-secondary ms-2",
-						"Back to Polls"
+				} else {
+					div {
+						class: "container mt-5",
+						div {
+							class: "alert alert-warning",
+							"Question not found"
+						}
+						a {
+							href: "/",
+							class: "btn btn-primary",
+							"Back to Polls"
+						}
 					}
 				}
 			}
-		})(q, choices_list, total)
-	} else {
-		page!(|| {
-			div {
-				class: "container mt-5",
-				div {
-					class: "alert alert-warning",
-					"Question not found"
-				}
-				a {
-					href: "/",
-					class: "btn btn-primary",
-					"Back to Polls"
-				}
-			}
-		})()
-	}
+		}
+	})(
+		question_signal,
+		choices_signal,
+		total_signal,
+		loading_signal,
+		error_signal,
+		question_id,
+	)
 }

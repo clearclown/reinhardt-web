@@ -20,8 +20,8 @@ wasm_bindgen_test_configure!(run_in_browser);
 // Import actual components from the application
 use examples_tutorial_basis::client::components::polls::{polls_detail, polls_index, polls_results};
 use examples_tutorial_basis::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
-use reinhardt_pages::component::View;
-use reinhardt_pages::testing::{
+use reinhardt::pages::component::View;
+use reinhardt::pages::testing::{
 	assert_server_fn_call_count, assert_server_fn_not_called, clear_mocks, mock_server_fn,
 	mock_server_fn_error,
 };

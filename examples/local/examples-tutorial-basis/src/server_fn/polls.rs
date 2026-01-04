@@ -16,8 +16,8 @@ use {
 // WASM-only imports
 #[cfg(target_arch = "wasm32")]
 use {
+	reinhardt::pages::server_fn::{ServerFnError, server_fn},
 	reinhardt_forms::wasm_compat::FormMetadata,
-	reinhardt_pages::server_fn::{ServerFnError, server_fn},
 };
 
 /// Get all questions (latest 5)
