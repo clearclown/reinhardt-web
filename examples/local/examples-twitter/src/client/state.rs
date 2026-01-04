@@ -8,7 +8,7 @@ use crate::shared::types::UserInfo;
 #[cfg(not(target_arch = "wasm32"))]
 use reinhardt::pages::{Context, Signal, get_context, provide_context, remove_context, use_state};
 #[cfg(target_arch = "wasm32")]
-use reinhardt_pages::{Context, Signal, get_context, provide_context, remove_context, use_state};
+use reinhardt::pages::{Context, Signal, get_context, provide_context, remove_context, use_state};
 use std::cell::RefCell;
 
 // Authentication context (thread-local for initialization)

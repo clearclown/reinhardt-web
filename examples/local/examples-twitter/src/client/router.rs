@@ -6,9 +6,9 @@ use crate::client::pages::{
 	home_page, login_page, not_found_page, profile_edit_page, profile_page, register_page,
 	timeline_page,
 };
-use reinhardt_pages::component::View;
-use reinhardt_pages::page;
-use reinhardt_pages::router::Router;
+use reinhardt::pages::component::View;
+use reinhardt::pages::page;
+use reinhardt::pages::router::Router;
 use std::cell::RefCell;
 
 /// Application routes

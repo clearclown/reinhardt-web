@@ -6,16 +6,20 @@
 //! - `sidebar` - Side panel with trending topics and suggested users
 //! - `footer` - Footer component
 //! - `main_layout` - Main layout wrapper with header, sidebar, and content
+//! - `bottom_navigation` - Mobile bottom tab navigation
+//! - `floating_action_button` - Mobile compose FAB
 //!
 //! ## Design Note
 //!
-//! These components follow Bootstrap 5 styling conventions and use
-//! the `page!` macro for JSX-like syntax with SPA navigation.
+//! These components use UnoCSS for styling with a modern Threads/Bluesky-inspired
+//! design. The layout is responsive with a 3-column design on desktop and
+//! single-column with bottom tabs on mobile.
 
+use crate::client::components::common::theme_toggle;
 use crate::shared::types::UserInfo;
-use reinhardt_pages::component::{Component, ElementView, IntoView, View};
-use reinhardt_pages::page;
-use reinhardt_pages::router::Link;
+use reinhardt::pages::component::{Component, ElementView, IntoView, View};
+use reinhardt::pages::page;
+use reinhardt::pages::router::Link;
 
 /// Navigation item for the header menu
 #[derive(Debug, Clone)]
@@ -26,6 +30,8 @@ pub struct NavItem {
 	pub href: String,
 	/// Whether this item is currently active
 	pub active: bool,
+	/// Icon SVG path (optional)
+	pub icon: Option<String>,
 }
 
 impl NavItem {
@@ -35,12 +41,19 @@ impl NavItem {
 			label: label.into(),
 			href: href.into(),
 			active: false,
+			icon: None,
 		}
 	}
 
 	/// Set whether this item is active
 	pub fn active(mut self, active: bool) -> Self {
 		self.active = active;
+		self
+	}
+
+	/// Set icon SVG path
+	pub fn icon(mut self, icon: impl Into<String>) -> Self {
+		self.icon = Some(icon.into());
 		self
 	}
 }
@@ -52,6 +65,8 @@ pub struct TrendingTopic {
 	pub name: String,
 	/// Number of tweets
 	pub tweet_count: u64,
+	/// Category (e.g., "Technology", "Entertainment")
+	pub category: Option<String>,
 }
 
 /// Suggested user for sidebar display
@@ -63,150 +78,139 @@ pub struct SuggestedUser {
 	pub username: String,
 	/// User bio (short)
 	pub bio: Option<String>,
+	/// Avatar URL
+	pub avatar_url: Option<String>,
 }
 
 /// Header component
 ///
 /// Displays the top navigation bar with site branding and user menu.
-///
-/// # Arguments
-///
-/// * `site_name` - Site/app name to display
-/// * `current_user` - Currently logged in user (None if not authenticated)
-/// * `nav_items` - Navigation menu items
+/// Modern design with blur background and clean typography.
 pub fn header(site_name: &str, current_user: Option<&UserInfo>, nav_items: &[NavItem]) -> View {
-	// Generate navigation links as Views
+	// Desktop navigation links
 	let nav_links: Vec<View> = nav_items
 		.iter()
 		.map(|item| {
 			let class = if item.active {
-				"nav-link active"
+				"nav-link-active"
 			} else {
 				"nav-link"
 			};
 			let link_view = Link::new(item.href.clone(), item.label.clone())
 				.class(class)
 				.render();
-
-			page!(|link_view: View| {
-				li {
-					class: "nav-item",
-					{ link_view }
-				}
-			})(link_view)
+			link_view
 		})
 		.collect();
 	let nav_links_view = View::fragment(nav_links);
 
-	// Generate brand link
+	// Brand link
 	let brand_link = Link::new("/".to_string(), site_name.to_string())
-		.class("navbar-brand")
+		.class("text-xl font-bold text-content-primary hover:text-brand transition-colors")
 		.render();
 
-	// Generate user menu based on authentication state
+	// Theme toggle
+	let theme_toggle_view = theme_toggle();
+
+	// User menu based on authentication state
 	let user_menu = if let Some(user) = current_user {
 		let username = format!("@{}", user.username);
 		let profile_link = Link::new(format!("/profile/{}", user.id), "Profile".to_string())
-			.class("btn btn-outline-light btn-sm me-2")
+			.class("btn-ghost btn-sm")
 			.render();
 
 		page!(|username: String, profile_link: View| {
 			div {
-				class: "d-flex align-items-center",
+				class: "flex items-center gap-3",
 				span {
-					class: "navbar-text me-3",
+					class: "text-content-secondary text-sm hidden md:block",
 					{ username }
 				}
 				{ profile_link }
 				a {
 					href: "/logout",
-					class: "btn btn-outline-light btn-sm",
+					class: "btn-outline btn-sm",
 					"Logout"
 				}
 			}
 		})(username, profile_link)
 	} else {
 		let login_link = Link::new("/login".to_string(), "Login".to_string())
-			.class("btn btn-outline-light btn-sm me-2")
+			.class("btn-ghost btn-sm")
 			.render();
-		let register_link = Link::new("/register".to_string(), "Register".to_string())
-			.class("btn btn-light btn-sm")
+		let register_link = Link::new("/register".to_string(), "Sign up".to_string())
+			.class("btn-primary btn-sm")
 			.render();
 
 		page!(|login_link: View, register_link: View| {
 			div {
-				class: "d-flex",
+				class: "flex items-center gap-2",
 				{ login_link }
 				{ register_link }
 			}
 		})(login_link, register_link)
 	};
 
-	page!(|brand_link: View, nav_links_view: View, user_menu: View| {
-		nav {
-			class: "navbar navbar-expand-lg navbar-dark bg-primary",
+	page!(|brand_link: View, nav_links_view: View, theme_toggle_view: View, user_menu: View| {
+		header {
+			class: "nav-container",
 			div {
-				class: "container-fluid",
-				{ brand_link }
-				button {
-					class: "navbar-toggler",
-					r#type: "button",
-					data_bs_toggle: "collapse",
-					data_bs_target: "#navbarNav",
-					aria_controls: "navbarNav",
-					aria_expanded: "false",
-					aria_label: "Toggle navigation",
-					span {
-						class: "navbar-toggler-icon",
-					}
-				}
+				class: "layout-container",
 				div {
-					class: "collapse navbar-collapse",
-					id: "navbarNav",
-					ul {
-						class: "navbar-nav me-auto",
-						{ nav_links_view }
+					class: "flex items-center justify-between h-14",
+					div {
+						class: "flex items-center gap-6",
+						{ brand_link }
+						nav {
+							class: "hidden md:flex items-center gap-1",
+							{ nav_links_view }
+						}
 					}
-					{ user_menu }
+					div {
+						class: "flex items-center gap-2",
+						{ theme_toggle_view }
+						{ user_menu }
+					}
 				}
 			}
 		}
-	})(brand_link, nav_links_view, user_menu)
+	})(brand_link, nav_links_view, theme_toggle_view, user_menu)
 }
 
 /// Sidebar component
 ///
-/// Displays trending topics and suggested users in a side panel.
-///
-/// # Arguments
-///
-/// * `trending_topics` - List of trending topics
-/// * `suggested_users` - List of suggested users to follow
+/// Displays trending topics and suggested users in a modern card design.
 pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUser]) -> View {
-	// Generate trending topics list as Views
+	// Trending topics list
 	let topics_list: Vec<View> = trending_topics
 		.iter()
 		.map(|topic| {
 			let href = format!("/search?q={}", topic.name);
 			let name = topic.name.clone();
-			let tweets_text = format!("{} tweets", topic.tweet_count);
+			let category = topic
+				.category
+				.clone()
+				.unwrap_or_else(|| "Trending".to_string());
+			let tweets_text = format_count(topic.tweet_count);
 
-			page!(|href: String, name: String, tweets_text: String| {
+			page!(|href: String, name: String, category: String, tweets_text: String| {
 				a {
 					href: href,
-					class: "list-group-item list-group-item-action",
+					class: "sidebar-item block",
 					div {
-						class: "d-flex justify-content-between",
-						strong {
-							{ name }
-						}
-						small {
-							class: "text-muted",
-							{ tweets_text }
-						}
+						class: "text-content-tertiary text-xs mb-0.5",
+						{ category }
+					}
+					div {
+						class: "font-semibold text-content-primary",
+						{ name }
+					}
+					div {
+						class: "text-content-tertiary text-xs mt-0.5",
+						{ tweets_text }
 					}
 				}
-			})(href, name, tweets_text)
+			})(href, name, category, tweets_text)
 		})
 		.collect();
 
@@ -214,49 +218,60 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 	let topics_view = if topics_empty {
 		page!(|| {
 			div {
-				class: "list-group-item text-muted",
-				"No trending topics"
+				class: "px-4 py-6 text-center text-content-tertiary text-sm",
+				"Nothing trending right now"
 			}
 		})()
 	} else {
 		View::fragment(topics_list)
 	};
 
-	// Generate suggested users list as Views
+	// Suggested users list
 	let users_list: Vec<View> = suggested_users
 		.iter()
 		.map(|user| {
-			let profile_link = Link::new(
-				format!("/profile/{}", user.id),
-				format!("@{}", user.username),
-			)
-			.class("fw-bold text-decoration-none")
-			.render();
-
+			let profile_href = format!("/profile/{}", user.id);
+			let username = format!("@{}", user.username);
 			let has_bio = user.bio.is_some();
 			let bio_text = user.bio.clone().unwrap_or_default();
+			let avatar_initial = user
+			.username
+			.chars()
+			.next()
+			.unwrap_or('U')
+			.to_uppercase()
+			.to_string();
 
-			page!(|profile_link: View, has_bio: bool, bio_text: String| {
+		page!(|profile_href: String, username: String, has_bio: bool, bio_text: String, avatar_initial: String| {
+			div {
+				class: "sidebar-item",
 				div {
-					class: "list-group-item",
+					class: "flex items-center gap-3",
 					div {
-						class: "d-flex justify-content-between align-items-center",
-						div {
-							{ profile_link }
-							if has_bio {
-								small {
-									class: "text-muted d-block",
-									{ bio_text }
-								}
+						class: "w-10 h-10 rounded-full bg-surface-tertiary flex items-center justify-center text-content-secondary font-semibold text-sm",
+						{ avatar_initial }
+					}
+					div {
+						class: "flex-1 min-w-0",
+						a {
+							href: profile_href,
+							class: "font-semibold text-content-primary hover:underline block truncate",
+							{ username }
+						}
+						if has_bio {
+							p {
+								class: "text-content-tertiary text-xs truncate",
+								{ bio_text }
 							}
 						}
-						button {
-							class: "btn btn-outline-primary btn-sm",
-							"Follow"
-						}
+					}
+					button {
+						class: "btn-outline btn-sm flex-shrink-0",
+						"Follow"
 					}
 				}
-			})(profile_link, has_bio, bio_text)
+			}
+		})(profile_href, username, has_bio, bio_text, avatar_initial)
 		})
 		.collect();
 
@@ -264,8 +279,8 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 	let users_view = if users_empty {
 		page!(|| {
 			div {
-				class: "list-group-item text-muted",
-				"No suggestions"
+				class: "px-4 py-6 text-center text-content-tertiary text-sm",
+				"No suggestions yet"
 			}
 		})()
 	} else {
@@ -273,58 +288,233 @@ pub fn sidebar(trending_topics: &[TrendingTopic], suggested_users: &[SuggestedUs
 	};
 
 	page!(|topics_view: View, users_view: View| {
-		div {
-			class: "sidebar",
-			style: "position: sticky; top: 80px;",
+		aside {
+			class: "sidebar hidden lg:block",
 			div {
-				class: "card mb-4",
+				class: "sidebar-card",
 				div {
-					class: "card-header",
-					h6 {
-						class: "mb-0",
-						"Trending"
-					}
+					class: "sidebar-header",
+					"Trending"
 				}
-				div {
-					class: "list-group list-group-flush",
-					{ topics_view }
+				{ topics_view }
+				a {
+					href: "/explore",
+					class: "block px-4 py-3 text-brand text-sm hover:bg-surface-secondary transition-colors",
+					"Show more"
 				}
 			}
 			div {
-				class: "card",
+				class: "sidebar-card",
 				div {
-					class: "card-header",
-					h6 {
-						class: "mb-0",
-						"Who to follow"
+					class: "sidebar-header",
+					"Who to follow"
+				}
+				{ users_view }
+				a {
+					href: "/explore/users",
+					class: "block px-4 py-3 text-brand text-sm hover:bg-surface-secondary transition-colors",
+					"Show more"
+				}
+			}
+			div {
+				class: "px-4 py-4 text-content-tertiary text-xs",
+				div {
+					class: "flex flex-wrap gap-x-3 gap-y-1",
+					a {
+						href: "/about",
+						class: "hover:underline",
+						"About"
+					}
+					a {
+						href: "/privacy",
+						class: "hover:underline",
+						"Privacy"
+					}
+					a {
+						href: "/terms",
+						class: "hover:underline",
+						"Terms"
+					}
+					a {
+						href: "/help",
+						class: "hover:underline",
+						"Help"
 					}
 				}
-				div {
-					class: "list-group list-group-flush",
-					{ users_view }
+				p {
+					class: "mt-2",
+					"Built with Reinhardt"
 				}
 			}
 		}
 	})(topics_view, users_view)
 }
 
+/// Bottom navigation for mobile
+fn bottom_navigation(current_path: &str) -> View {
+	let is_home = current_path == "/" || current_path.starts_with("/home");
+	let is_explore = current_path.starts_with("/explore") || current_path.starts_with("/search");
+	let is_notifications = current_path.starts_with("/notifications");
+	let is_profile = current_path.starts_with("/profile");
+
+	let home_class = if is_home {
+		"bottom-nav-item-active"
+	} else {
+		"bottom-nav-item"
+	};
+	let explore_class = if is_explore {
+		"bottom-nav-item-active"
+	} else {
+		"bottom-nav-item"
+	};
+	let notif_class = if is_notifications {
+		"bottom-nav-item-active"
+	} else {
+		"bottom-nav-item"
+	};
+	let profile_class = if is_profile {
+		"bottom-nav-item-active"
+	} else {
+		"bottom-nav-item"
+	};
+
+	page!(|home_class: String, explore_class: String, notif_class: String, profile_class: String| {
+		nav {
+			class: "bottom-nav",
+			a {
+				href: "/",
+				class: home_class,
+				svg {
+					class: "w-6 h-6",
+					fill: "none",
+					stroke: "currentColor",
+					viewBox: "0 0 24 24",
+					path {
+						stroke_linecap: "round",
+						stroke_linejoin: "round",
+						stroke_width: "2",
+						d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+					}
+				}
+			}
+			a {
+				href: "/explore",
+				class: explore_class,
+				svg {
+					class: "w-6 h-6",
+					fill: "none",
+					stroke: "currentColor",
+					viewBox: "0 0 24 24",
+					path {
+						stroke_linecap: "round",
+						stroke_linejoin: "round",
+						stroke_width: "2",
+						d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z",
+					}
+				}
+			}
+			a {
+				href: "/notifications",
+				class: notif_class,
+				svg {
+					class: "w-6 h-6",
+					fill: "none",
+					stroke: "currentColor",
+					viewBox: "0 0 24 24",
+					path {
+						stroke_linecap: "round",
+						stroke_linejoin: "round",
+						stroke_width: "2",
+						d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+					}
+				}
+			}
+			a {
+				href: "/profile",
+				class: profile_class,
+				svg {
+					class: "w-6 h-6",
+					fill: "none",
+					stroke: "currentColor",
+					viewBox: "0 0 24 24",
+					path {
+						stroke_linecap: "round",
+						stroke_linejoin: "round",
+						stroke_width: "2",
+						d: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z",
+					}
+				}
+			}
+		}
+	})(
+		home_class.to_string(),
+		explore_class.to_string(),
+		notif_class.to_string(),
+		profile_class.to_string(),
+	)
+}
+
+/// Floating action button for mobile compose
+fn floating_action_button() -> View {
+	page!(|| {
+		a {
+			href: "/compose",
+			class: "fab",
+			aria_label: "Compose",
+			svg {
+				class: "w-6 h-6",
+				fill: "none",
+				stroke: "currentColor",
+				viewBox: "0 0 24 24",
+				path {
+					stroke_linecap: "round",
+					stroke_linejoin: "round",
+					stroke_width: "2",
+					d: "M12 4v16m8-8H4",
+				}
+			}
+		}
+	})()
+}
+
 /// Footer component
 ///
-/// Displays the footer with copyright and version information.
-///
-/// # Arguments
-///
-/// * `version` - Application version string
+/// Displays a simple footer for desktop view.
 pub fn footer(version: &str) -> View {
 	let version = version.to_string();
 	page!(|version: String| {
 		footer {
-			class: "bg-light text-center py-3 mt-auto border-top",
+			class: "hidden md:block bg-surface-primary border-t border-border py-6 mt-auto",
 			div {
-				class: "container",
-				span {
-					class: "text-muted",
-					{ format!("Twitter Clone v{} - Built with Reinhardt", version) }
+				class: "layout-container",
+				div {
+					class: "flex flex-col md:flex-row justify-between items-center gap-4 text-content-tertiary text-sm",
+					div {
+						class: "flex flex-wrap justify-center gap-4",
+						a {
+							href: "/about",
+							class: "hover:text-content-primary transition-colors",
+							"About"
+						}
+						a {
+							href: "/privacy",
+							class: "hover:text-content-primary transition-colors",
+							"Privacy Policy"
+						}
+						a {
+							href: "/terms",
+							class: "hover:text-content-primary transition-colors",
+							"Terms of Service"
+						}
+						a {
+							href: "/help",
+							class: "hover:text-content-primary transition-colors",
+							"Help Center"
+						}
+					}
+					span {
+						{ format!("Twitter Clone v{} - Built with Reinhardt", version) }
+					}
 				}
 			}
 		}
@@ -334,16 +524,7 @@ pub fn footer(version: &str) -> View {
 /// Main layout wrapper
 ///
 /// Wraps content with header, optional sidebar, and footer.
-/// This layout is responsive and adjusts for different screen sizes.
-///
-/// # Arguments
-///
-/// * `site_name` - Site/app name
-/// * `current_user` - Currently logged in user
-/// * `nav_items` - Navigation menu items
-/// * `content` - Main content to display
-/// * `show_sidebar` - Whether to show the sidebar
-/// * `version` - Application version
+/// Responsive design: 3-column on desktop, single column with bottom tabs on mobile.
 pub fn main_layout(
 	site_name: &str,
 	current_user: Option<&UserInfo>,
@@ -352,55 +533,84 @@ pub fn main_layout(
 	show_sidebar: bool,
 	version: &str,
 ) -> View {
-	// Build component views
 	let header_view = header(site_name, current_user, nav_items);
 	let footer_view = footer(version);
+	let bottom_nav = bottom_navigation("/");
+	let fab = floating_action_button();
 
 	// Build main content with conditional sidebar
 	let main_content = if show_sidebar {
 		ElementView::new("div")
-			.attr("class", "row")
+			.attr("class", "flex gap-6")
 			.child(
 				ElementView::new("div")
-					.attr("class", "col-lg-8")
+					.attr("class", "flex-1 min-w-0 max-w-2xl")
 					.child(content),
 			)
 			.child(
 				ElementView::new("div")
-					.attr("class", "col-lg-4")
+					.attr("class", "w-80 flex-shrink-0 hidden lg:block")
 					.child(sidebar(&[], &[])),
 			)
 			.into_view()
 	} else {
 		ElementView::new("div")
-			.attr("class", "row justify-content-center")
-			.child(
-				ElementView::new("div")
-					.attr("class", "col-lg-8")
-					.child(content),
-			)
+			.attr("class", "max-w-2xl mx-auto")
+			.child(content)
 			.into_view()
 	};
 
-	page!(|header_view: View, main_content: View, footer_view: View| {
+	page!(|header_view: View, main_content: View, footer_view: View, bottom_nav: View, fab: View| {
 		div {
-			class: "d-flex flex-column min-vh-100",
+			class: "layout-main bg-surface-secondary",
 			{ header_view }
 			main {
-				class: "flex-grow-1",
+				class: "flex-1 pt-4 pb-20 md:pb-4",
 				div {
-					class: "container py-4",
+					class: "layout-container",
 					{ main_content }
 				}
 			}
 			{ footer_view }
+			{ bottom_nav }
+			{ fab }
 		}
-	})(header_view, main_content, footer_view)
+	})(header_view, main_content, footer_view, bottom_nav, fab)
 }
 
 /// Simple page layout without sidebar
 ///
 /// A simplified layout for pages like login/register that don't need sidebar.
 pub fn simple_layout(site_name: &str, nav_items: &[NavItem], content: View, version: &str) -> View {
-	main_layout(site_name, None, nav_items, content, false, version)
+	let header_view = header(site_name, None, nav_items);
+	let footer_view = footer(version);
+
+	page!(|header_view: View, content: View, footer_view: View| {
+		div {
+			class: "layout-main bg-surface-secondary",
+			{ header_view }
+			main {
+				class: "flex-1 py-8",
+				div {
+					class: "layout-container",
+					div {
+						class: "max-w-md mx-auto",
+						{ content }
+					}
+				}
+			}
+			{ footer_view }
+		}
+	})(header_view, content, footer_view)
+}
+
+/// Format large numbers for display (e.g., 1.2K, 3.4M)
+fn format_count(count: u64) -> String {
+	if count >= 1_000_000 {
+		format!("{:.1}M posts", count as f64 / 1_000_000.0)
+	} else if count >= 1_000 {
+		format!("{:.1}K posts", count as f64 / 1_000.0)
+	} else {
+		format!("{} posts", count)
+	}
 }

@@ -30,7 +30,7 @@
 //! route definitions. This module provides a clean public API for
 //! accessing page components.
 
-use reinhardt_pages::component::View;
+use reinhardt::pages::component::View;
 
 // Re-export page functions from router for convenience
 // Note: The actual implementations are in router.rs to keep routes and views together

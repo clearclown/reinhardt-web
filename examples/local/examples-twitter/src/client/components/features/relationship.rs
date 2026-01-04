@@ -3,9 +3,9 @@
 //! Provides follow button and user list components for managing user relationships.
 
 use crate::shared::types::UserInfo;
-use reinhardt_pages::Signal;
-use reinhardt_pages::component::View;
-use reinhardt_pages::page;
+use reinhardt::pages::Signal;
+use reinhardt::pages::component::View;
+use reinhardt::pages::page;
 use uuid::Uuid;
 
 #[cfg(target_arch = "wasm32")]
@@ -28,33 +28,17 @@ pub enum UserListType {
 /// Follow button component
 ///
 /// Provides a button to follow/unfollow a user with state management.
+/// Modern design with visual feedback for following state.
+/// Uses watch blocks for reactive UI updates when state changes.
 pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 	let is_following = Signal::new(is_following_initial);
 	let loading = Signal::new(false);
 	let error = Signal::new(None::<String>);
 
-	// Determine button class and text based on state
-	let btn_class = if loading.get() {
-		"btn btn-secondary disabled"
-	} else if is_following.get() {
-		"btn btn-outline-primary"
-	} else {
-		"btn btn-primary"
-	}
-	.to_string();
-
-	let btn_text = if loading.get() {
-		"Processing..."
-	} else if is_following.get() {
-		"Unfollow"
-	} else {
-		"Follow"
-	}
-	.to_string();
-
-	let error_msg = error.get();
-	let has_error = error_msg.is_some();
-	let error_text = error_msg.unwrap_or_default();
+	// Clone signals for passing to page! macro
+	let is_following_signal = is_following.clone();
+	let loading_signal = loading.clone();
+	let error_signal = error.clone();
 
 	#[cfg(target_arch = "wasm32")]
 	{
@@ -62,83 +46,237 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 		let loading_clone = loading.clone();
 		let error_clone = error.clone();
 
-		page!(|btn_class: String, btn_text: String, has_error: bool, error_text: String| {
+		page!(|is_following_signal: Signal<bool>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>| {
 			div {
-				button {
-					r#type: "button",
-					class: btn_class,
-					@click: { let is_following = is_following_clone.clone(); let loading = loading_clone.clone(); let error = error_clone.clone(); move |_event| { let is_following_inner = is_following.clone(); let loading_inner = loading.clone(); let error_inner = error.clone(); let currently_following = is_following.get(); spawn_local(async move { loading_inner.set(true); error_inner.set(None); let result = if currently_following { unfollow_user(target_user_id).await } else { follow_user(target_user_id).await }; match result { Ok(()) => { is_following_inner.set(! currently_following); loading_inner.set(false); } Err(e) => { error_inner.set(Some(e.to_string())); loading_inner.set(false); } } }); } },
-					{ btn_text }
+				watch {
+					if loading_signal.get() {
+						button {
+							r#type: "button",
+							class: "btn-secondary opacity-50 cursor-not-allowed",
+							disabled: loading_signal.get(),
+							aria_label: "Loading",
+							@click: {
+										let is_following = is_following_clone.clone();
+										let loading = loading_clone.clone();
+										let error = error_clone.clone();
+										move |_event| {
+											let is_following_inner = is_following.clone();
+											let loading_inner = loading.clone();
+											let error_inner = error.clone();
+											let currently_following = is_following.get();
+											spawn_local(async move {
+												loading_inner.set(true);
+												error_inner.set(None);
+												let result = if currently_following {
+													unfollow_user(target_user_id).await
+												} else {
+													follow_user(target_user_id).await
+												};
+												match result {
+													Ok(()) => {
+														is_following_inner.set(!currently_following);
+														loading_inner.set(false);
+													}
+													Err(e) => {
+														error_inner.set(Some(e.to_string()));
+														loading_inner.set(false);
+													}
+												}
+											});
+										}
+									},
+							div {
+								class: "flex items-center gap-2",
+								div {
+									class: "spinner-sm",
+								}
+							}
+						}
+					} else if is_following_signal.get() {
+						button {
+							r#type: "button",
+							class: "btn-outline group",
+							@click: {
+										let is_following = is_following_clone.clone();
+										let loading = loading_clone.clone();
+										let error = error_clone.clone();
+										move |_event| {
+											let is_following_inner = is_following.clone();
+											let loading_inner = loading.clone();
+											let error_inner = error.clone();
+											let currently_following = is_following.get();
+											spawn_local(async move {
+												loading_inner.set(true);
+												error_inner.set(None);
+												let result = if currently_following {
+													unfollow_user(target_user_id).await
+												} else {
+													follow_user(target_user_id).await
+												};
+												match result {
+													Ok(()) => {
+														is_following_inner.set(!currently_following);
+														loading_inner.set(false);
+													}
+													Err(e) => {
+														error_inner.set(Some(e.to_string()));
+														loading_inner.set(false);
+													}
+												}
+											});
+										}
+									},
+							span {
+								class: "group-hover:hidden",
+								"Following"
+							}
+							span {
+								class: "hidden group-hover:inline text-danger",
+								"Unfollow"
+							}
+						}
+					} else {
+						button {
+							r#type: "button",
+							class: "btn-primary",
+							@click: {
+										let is_following = is_following_clone.clone();
+										let loading = loading_clone.clone();
+										let error = error_clone.clone();
+										move |_event| {
+											let is_following_inner = is_following.clone();
+											let loading_inner = loading.clone();
+											let error_inner = error.clone();
+											let currently_following = is_following.get();
+											spawn_local(async move {
+												loading_inner.set(true);
+												error_inner.set(None);
+												let result = if currently_following {
+													unfollow_user(target_user_id).await
+												} else {
+													follow_user(target_user_id).await
+												};
+												match result {
+													Ok(()) => {
+														is_following_inner.set(!currently_following);
+														loading_inner.set(false);
+													}
+													Err(e) => {
+														error_inner.set(Some(e.to_string()));
+														loading_inner.set(false);
+													}
+												}
+											});
+										}
+									},
+							"Follow"
+						}
+					}
 				}
-				if has_error {
-					div {
-						class: "alert alert-danger mt-2",
-						{ error_text }
+				watch {
+					if error_signal.get().is_some() {
+						div {
+							class: "alert-danger mt-2 text-sm",
+							{ error_signal.get().unwrap_or_default() }
+						}
 					}
 				}
 			}
-		})(btn_class, btn_text, has_error, error_text)
+		})(is_following_signal, loading_signal, error_signal)
 	}
 
 	#[cfg(not(target_arch = "wasm32"))]
 	{
-		page!(|btn_class: String, btn_text: String, has_error: bool, error_text: String| {
+		// For SSR, render initial state without event handlers
+		let btn_class = if is_following_initial {
+			"btn-outline group"
+		} else {
+			"btn-primary"
+		};
+		let btn_text = if is_following_initial {
+			"Following"
+		} else {
+			"Follow"
+		};
+
+		page!(|btn_class: &str, btn_text: &str| {
 			div {
 				button {
 					r#type: "button",
-					class: { btn_class },
+					class: btn_class,
 					{ btn_text }
 				}
-				if has_error {
-					div {
-						class: "alert alert-danger mt-2",
-						{ error_text }
-					}
-				}
 			}
-		})(btn_class, btn_text, has_error, error_text)
+		})(btn_class, btn_text)
 	}
 }
 
 /// User card component
 ///
-/// Displays a single user in a list.
+/// Displays a single user in a list with modern SNS design.
+/// Features avatar, username, and profile link.
 fn user_card(user: &UserInfo) -> View {
-	let username = format!("@{}", user.username);
+	let username = user.username.clone();
+	let display_username = format!("@{}", user.username);
 	let email = user.email.clone();
 	let profile_url = format!("/profile/{}", user.id);
+	let avatar_initial = user
+		.username
+		.chars()
+		.next()
+		.unwrap_or('U')
+		.to_uppercase()
+		.to_string();
 
-	page!(|username: String, email: String, profile_url: String| {
-		div {
-			class: "card mb-2",
+	page!(|username: String, display_username: String, _email: String, profile_url: String, avatar_initial: String| {
+		a {
+			href: profile_url.clone(),
+			class: "user-card block",
 			div {
-				class: "card-body",
+				class: "flex items-center gap-3",
 				div {
-					class: "d-flex justify-content-between align-items-center",
+					class: "user-avatar bg-surface-tertiary flex items-center justify-center text-content-secondary font-semibold flex-shrink-0",
+					{ avatar_initial }
+				}
+				div {
+					class: "flex-1 min-w-0",
 					div {
-						h6 {
-							class: "card-subtitle mb-1",
-							{ username }
-						}
-						small {
-							class: "text-muted",
-							{ email }
-						}
+						class: "font-semibold text-content-primary truncate",
+						{ username }
 					}
-					a {
-						href: profile_url,
-						class: "btn btn-sm btn-outline-primary",
-						"View Profile"
+					div {
+						class: "text-content-secondary text-sm truncate",
+						{ display_username }
+					}
+				}
+				svg {
+					class: "w-5 h-5 text-content-tertiary flex-shrink-0",
+					fill: "none",
+					stroke: "currentColor",
+					viewBox: "0 0 24 24",
+					path {
+						stroke_linecap: "round",
+						stroke_linejoin: "round",
+						stroke_width: "2",
+						d: "M9 5l7 7-7 7",
 					}
 				}
 			}
 		}
-	})(username, email, profile_url)
+	})(
+		username,
+		display_username,
+		email,
+		profile_url,
+		avatar_initial,
+	)
 }
 
 /// User list component
 ///
 /// Displays a list of users (followers or following) with loading and error states.
+/// Modern card-based design with smooth animations.
+/// Uses watch blocks for reactive UI updates when async data loads.
 pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 	let users = Signal::new(Vec::<UserInfo>::new());
 	let loading = Signal::new(true);
@@ -146,13 +284,13 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 
 	#[cfg(target_arch = "wasm32")]
 	{
-		let users = users.clone();
-		let loading = loading.clone();
-		let error = error.clone();
+		let users_clone = users.clone();
+		let loading_clone = loading.clone();
+		let error_clone = error.clone();
 
 		spawn_local(async move {
-			loading.set(true);
-			error.set(None);
+			loading_clone.set(true);
+			error_clone.set(None);
 
 			let result = match list_type {
 				UserListType::Followers => fetch_followers(user_id).await,
@@ -161,12 +299,12 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 
 			match result {
 				Ok(user_list) => {
-					users.set(user_list);
-					loading.set(false);
+					users_clone.set(user_list);
+					loading_clone.set(false);
 				}
 				Err(e) => {
-					error.set(Some(e.to_string()));
-					loading.set(false);
+					error_clone.set(Some(e.to_string()));
+					loading_clone.set(false);
 				}
 			}
 		});
@@ -179,64 +317,118 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 	.to_string();
 
 	let empty_message = match list_type {
-		UserListType::Followers => "No followers yet.",
-		UserListType::Following => "Not following anyone yet.",
+		UserListType::Followers => "No followers yet",
+		UserListType::Following => "Not following anyone yet",
 	}
 	.to_string();
 
-	let is_loading = loading.get();
-	let error_msg = error.get();
-	let has_error = error_msg.is_some();
-	let error_text = error_msg.unwrap_or_default();
-	let user_list_data = users.get();
-	let is_empty = user_list_data.is_empty();
+	let empty_icon = match list_type {
+		UserListType::Followers => "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
+		UserListType::Following => "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z",
+	}
+	.to_string();
 
-	// Generate user cards as View objects
-	let user_cards: Vec<View> = user_list_data.iter().map(|u| user_card(u)).collect();
-	let user_cards_view = View::fragment(user_cards);
+	// Clone signals for passing to page! macro
+	let users_signal = users.clone();
+	let loading_signal = loading.clone();
+	let error_signal = error.clone();
 
-	page!(|title: String, is_loading: bool, has_error: bool, error_text: String, is_empty: bool, empty_message: String, user_cards_view: View| {
+	page!(|title: String, empty_message: String, empty_icon: String, users_signal: Signal<Vec<UserInfo>>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>| {
 		div {
-			h3 {
-				class: "mb-4",
-				{ title }
-			}
-			if is_loading {
-				div {
-					class: "text-center py-5",
-					div {
-						class: "spinner-border",
-						role: "status",
-						span {
-							class: "visually-hidden",
-							"Loading..."
+			class: "animate-fade-in",
+			div {
+				class: "flex items-center gap-3 mb-4",
+				a {
+					href: "/",
+					class: "btn-icon",
+					aria_label: "Go back home",
+					svg {
+						class: "w-5 h-5",
+						fill: "none",
+						stroke: "currentColor",
+						viewBox: "0 0 24 24",
+						path {
+							stroke_linecap: "round",
+							stroke_linejoin: "round",
+							stroke_width: "2",
+							d: "M10 19l-7-7m0 0l7-7m-7 7h18",
 						}
 					}
 				}
-			} else if has_error {
-				div {
-					class: "alert alert-danger",
-					{ error_text }
+				h2 {
+					class: "text-xl font-bold text-content-primary",
+					{ title }
 				}
-			} else if is_empty {
-				div {
-					class: "text-center py-5",
-					p {
-						class: "text-muted",
-						{ empty_message }
+			}
+			watch {
+				if loading_signal.get() {
+					div {
+						class: "flex flex-col items-center justify-center py-12",
+						div {
+							class: "spinner-lg mb-4",
+						}
+						p {
+							class: "text-content-secondary text-sm",
+							"Loading..."
+						}
+					}
+				} else if error_signal.get().is_some() {
+					div {
+						class: "alert-danger",
+						div {
+							class: "flex items-center gap-2",
+							svg {
+								class: "w-5 h-5 flex-shrink-0",
+								fill: "currentColor",
+								viewBox: "0 0 20 20",
+								path {
+									fill_rule: "evenodd",
+									d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z",
+									clip_rule: "evenodd",
+								}
+							}
+							span {
+								{ error_signal.get().unwrap_or_default() }
+							}
+						}
+					}
+				} else if users_signal.get().is_empty() {
+					div {
+						class: "flex flex-col items-center justify-center py-16 text-center",
+						div {
+							class: "w-16 h-16 rounded-full bg-surface-tertiary flex items-center justify-center mb-4",
+							svg {
+								class: "w-8 h-8 text-content-tertiary",
+								fill: "none",
+								stroke: "currentColor",
+								viewBox: "0 0 24 24",
+								path {
+									stroke_linecap: "round",
+									stroke_linejoin: "round",
+									stroke_width: "1.5",
+									d: empty_icon.clone(),
+								}
+							}
+						}
+						p {
+							class: "text-content-secondary",
+							{ empty_message.clone() }
+						}
+					}
+				} else {
+					div {
+						class: "card overflow-hidden",
+						{ View::fragment(users_signal.get().iter().map(|u| user_card(u)).collect ::<Vec<_>>()) }
 					}
 				}
-			} else {
-				{ user_cards_view }
 			}
 		}
 	})(
 		title,
-		is_loading,
-		has_error,
-		error_text,
-		is_empty,
 		empty_message,
-		user_cards_view,
+		empty_icon,
+		users_signal,
+		loading_signal,
+		error_signal,
 	)
 }

@@ -2,7 +2,7 @@
 //!
 //! This is the main entry point for the WASM application.
 
-use reinhardt_pages::dom::Element;
+use reinhardt::pages::dom::Element;
 use wasm_bindgen::prelude::*;
 
 // Use modules from parent `client` module via super::
@@ -18,7 +18,7 @@ pub fn main() -> Result<(), JsValue> {
 	console_error_panic_hook::set_once();
 
 	// Initialize hydration state BEFORE any component initialization
-	reinhardt_pages::hydration::init_hydration_state();
+	reinhardt::pages::hydration::init_hydration_state();
 
 	// Initialize global state
 	state::init_auth_state();
@@ -50,7 +50,7 @@ pub fn main() -> Result<(), JsValue> {
 
 	// Mark hydration complete after mounting (since this app doesn't use SSR/hydration)
 	// This ensures that form buttons and other hydration-gated UI elements become enabled
-	reinhardt_pages::hydration::mark_hydration_complete();
+	reinhardt::pages::hydration::mark_hydration_complete();
 
 	Ok(())
 }
