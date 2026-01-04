@@ -383,6 +383,11 @@ impl BaseCommand for MakeMigrationsCommand {
 				"from-db",
 				"Use database history instead of TestContainers for state building",
 			),
+			CommandOption::flag(
+				None,
+				"force-empty-state",
+				"Force using empty state when database/TestContainers is unavailable (dangerous)",
+			),
 			CommandOption::flag(Some('v'), "verbose", "Show detailed operation list"),
 			CommandOption::option(Some('n'), "name", "Name for the migration"),
 			CommandOption::option(None, "migrations-dir", "Directory for migration files")

@@ -155,6 +155,7 @@ fn test_commands_makemigrations_parse_app_labels() {
 		name: None,
 		check: false,
 		empty: false,
+		force_empty_state: false,
 		migration_dir: PathBuf::from("./migrations"),
 	};
 
@@ -539,6 +540,7 @@ fn test_empty_app_labels() {
 		name: None,
 		check: false,
 		empty: false,
+		force_empty_state: false,
 		migration_dir: PathBuf::from("./migrations"),
 	};
 
@@ -566,6 +568,7 @@ fn test_special_characters_in_paths() {
 		name: None,
 		check: false,
 		empty: false,
+		force_empty_state: false,
 		migration_dir: special_path.clone(),
 	};
 

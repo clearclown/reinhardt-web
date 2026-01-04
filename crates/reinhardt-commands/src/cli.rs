@@ -66,6 +66,10 @@ pub enum Commands {
 		#[arg(long)]
 		empty: bool,
 
+		/// Force using empty state when database/TestContainers is unavailable (dangerous)
+		#[arg(long)]
+		force_empty_state: bool,
+
 		/// Migration directory
 		#[arg(long, default_value = "./migrations")]
 		migration_dir: PathBuf,
@@ -260,8 +264,20 @@ pub async fn run_command(
 			name,
 			check,
 			empty,
+			force_empty_state,
 			migration_dir: _,
-		} => execute_makemigrations(app_labels, dry_run, name, check, empty, verbosity).await,
+		} => {
+			execute_makemigrations(
+				app_labels,
+				dry_run,
+				name,
+				check,
+				empty,
+				force_empty_state,
+				verbosity,
+			)
+			.await
+		}
 		Commands::Migrate {
 			app_label,
 			migration_name,
@@ -329,6 +345,7 @@ async fn execute_makemigrations(
 	name: Option<String>,
 	check: bool,
 	empty: bool,
+	force_empty_state: bool,
 	verbosity: u8,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	let mut ctx = CommandContext::default();
@@ -348,6 +365,9 @@ async fn execute_makemigrations(
 	}
 	if empty {
 		ctx.set_option("empty".to_string(), "true".to_string());
+	}
+	if force_empty_state {
+		ctx.set_option("force-empty-state".to_string(), "true".to_string());
 	}
 	if let Some(n) = name {
 		ctx.set_option("name".to_string(), n);
