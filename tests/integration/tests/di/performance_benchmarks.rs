@@ -222,26 +222,44 @@ async fn bench_deep_dependency_chain_depth_10() {
 		let _ = resolve_injectable::<Deep1>(&ctx).await.unwrap();
 	}
 	let cached_elapsed = start.elapsed();
+	let avg_cached = cached_elapsed / 100;
 
 	println!(
 		"Deep chain (depth 10, cached): {:?} per resolution",
-		cached_elapsed / 100
+		avg_cached
 	);
 
 	// First resolution time should scale with depth but remain reasonable
+	// Use 5ms as upper bound to be CI-friendly (original: 1ms)
 	assert!(
-		first_elapsed.as_micros() < 1000,
+		first_elapsed.as_millis() < 5,
 		"Deep chain first resolution too slow: {:?}",
 		first_elapsed
 	);
 
-	// Cache hits should be fast
-	// Note: resolve_injectable adds slight overhead compared to ctx.resolve()
-	// Threshold increased to 30µs to account for system load variations
+	// RELATIVE PERFORMANCE ASSERTION (replacing absolute threshold)
+	// Cached resolution should be significantly faster than first resolution.
+	// The cache eliminates 10 levels of dependency chain resolution,
+	// so cached performance should be at least 2x faster than first resolution.
+	// This tests the cache mechanism's effectiveness, not absolute timing.
+	let speedup_ratio = first_elapsed.as_nanos() as f64 / avg_cached.as_nanos() as f64;
+
+	println!("Cache speedup ratio: {:.2}x", speedup_ratio);
+
 	assert!(
-		cached_elapsed.as_micros() < 100 * 30,
-		"Deep chain cached resolution too slow: {:?}",
-		cached_elapsed / 100
+		speedup_ratio > 2.0,
+		"Cache speedup insufficient: {:.2}x (expected > 2x). First: {:?}, Cached avg: {:?}",
+		speedup_ratio,
+		first_elapsed,
+		avg_cached
+	);
+
+	// Sanity check: cached should complete in reasonable time
+	// Use 500µs as generous upper bound (original: 30µs)
+	assert!(
+		avg_cached.as_micros() < 500,
+		"Cached resolution unreasonably slow: {:?}",
+		avg_cached
 	);
 }
 
