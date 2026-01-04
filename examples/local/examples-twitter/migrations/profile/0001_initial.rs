@@ -4,37 +4,10 @@ pub fn migration() -> Migration {
 	Migration {
 		app_label: "profile",
 		name: "0001_initial",
-		operations: vec![
-			Operation::AddColumn {
-				table: "profile_profile",
-				column: ColumnDefinition {
-					name: "created_at",
-					type_definition: FieldType::DateTime,
-					not_null: false,
-					unique: false,
-					primary_key: false,
-					auto_increment: false,
-					default: None,
-				},
-				mysql_options: None,
-			},
-			Operation::AddColumn {
-				table: "profile_profile",
-				column: ColumnDefinition {
-					name: "updated_at",
-					type_definition: FieldType::DateTime,
-					not_null: false,
-					unique: false,
-					primary_key: false,
-					auto_increment: false,
-					default: None,
-				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "avatar_url",
-				new_definition: ColumnDefinition {
+		operations: vec![Operation::CreateTable {
+			name: "profile_profile",
+			columns: vec![
+				ColumnDefinition {
 					name: "avatar_url",
 					type_definition: FieldType::VarChar(255u32),
 					not_null: false,
@@ -43,12 +16,7 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "bio",
-				new_definition: ColumnDefinition {
+				ColumnDefinition {
 					name: "bio",
 					type_definition: FieldType::VarChar(500u32),
 					not_null: false,
@@ -57,12 +25,16 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "id",
-				new_definition: ColumnDefinition {
+				ColumnDefinition {
+					name: "created_at",
+					type_definition: FieldType::DateTime,
+					not_null: false,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
 					name: "id",
 					type_definition: FieldType::Uuid,
 					not_null: true,
@@ -71,12 +43,7 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "location",
-				new_definition: ColumnDefinition {
+				ColumnDefinition {
 					name: "location",
 					type_definition: FieldType::VarChar(255u32),
 					not_null: false,
@@ -85,12 +52,16 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "user_id",
-				new_definition: ColumnDefinition {
+				ColumnDefinition {
+					name: "updated_at",
+					type_definition: FieldType::DateTime,
+					not_null: false,
+					unique: false,
+					primary_key: false,
+					auto_increment: false,
+					default: None,
+				},
+				ColumnDefinition {
 					name: "user_id",
 					type_definition: FieldType::Uuid,
 					not_null: false,
@@ -99,12 +70,7 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-			Operation::AlterColumn {
-				table: "profile_profile",
-				column: "website",
-				new_definition: ColumnDefinition {
+				ColumnDefinition {
 					name: "website",
 					type_definition: FieldType::VarChar(255u32),
 					not_null: false,
@@ -113,9 +79,15 @@ pub fn migration() -> Migration {
 					auto_increment: false,
 					default: None,
 				},
-				mysql_options: None,
-			},
-		],
+			],
+			constraints: vec![Constraint::Unique {
+				name: "profile_profile_user_id_uniq".to_string(),
+				columns: vec!["user_id".to_string()],
+			}],
+			without_rowid: None,
+			interleave_in_parent: None,
+			partition: None,
+		}],
 		dependencies: vec![],
 		atomic: true,
 		replaces: vec![],
