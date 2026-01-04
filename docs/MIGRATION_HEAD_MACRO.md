@@ -45,7 +45,7 @@ let page_head = head!(|| {
 });
 
 let view = page! {
-    @head: page_head,
+    #head: page_head,
     || {
         div { "Content" }
     }
@@ -153,9 +153,9 @@ let mut renderer = SsrRenderer::new();
 let html = renderer.render_page_with_view_head(view_with_head);
 ```
 
-## Using @head in page! Macro
+## Using #head in page! Macro
 
-The `page!` macro now supports the `@head` directive for declarative head attachment:
+The `page!` macro now supports the `#head` directive for declarative head attachment:
 
 ```rust
 let page_head = head!(|| {
@@ -164,7 +164,7 @@ let page_head = head!(|| {
 });
 
 page! {
-    @head: page_head,
+    #head: page_head,
     || {
         div { class: "container",
             h1 { "Welcome" }
@@ -241,7 +241,7 @@ fn render_home_page() -> String {
     });
 
     let view = page! {
-        @head: page_head,
+        #head: page_head,
         || {
             div { class: "container",
                 h1 { "Welcome Home" }

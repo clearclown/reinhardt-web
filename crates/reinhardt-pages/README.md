@@ -134,6 +134,94 @@ page!(|| {
 })
 ```
 
+### Reactive Conditional Rendering with `watch`
+
+The `watch { expr }` syntax enables reactive re-rendering when Signal dependencies change. Unlike static `if` conditions that are evaluated only at render time, `watch` blocks automatically re-evaluate and update the DOM when their Signal dependencies change.
+
+#### Why `watch` is Needed
+
+When you extract Signal values before the `page!` macro, they become static:
+
+```rust
+// Problem: Static values don't update when Signal changes
+let has_error = error.get().is_some();  // Static bool captured at render time
+page!(|has_error: bool| {
+    if has_error {  // This never re-evaluates!
+        div { "Error occurred" }
+    }
+})(has_error)
+```
+
+The `watch` syntax solves this by creating a reactive context:
+
+```rust
+// Solution: Pass Signal directly and use watch
+page!(|error: Signal<Option<String>>| {
+    watch {
+        if error.get().is_some() {  // Re-evaluates when error changes!
+            div { { error.get().unwrap_or_default() } }
+        }
+    }
+})(error.clone())
+```
+
+#### Signal-first Pattern
+
+For reactive UIs, pass Signals directly to the `page!` macro instead of extracting values:
+
+```rust
+use reinhardt_pages::prelude::*;
+
+fn error_display() -> View {
+    let (error, set_error) = use_state(None::<String>);
+
+    // Pass the Signal directly (not the extracted value)
+    let error_signal = error.clone();
+
+    page!(|error_signal: Signal<Option<String>>| {
+        watch {
+            if error_signal.get().is_some() {
+                div {
+                    class: "alert-danger",
+                    { error_signal.get().unwrap_or_default() }
+                }
+            }
+        }
+    })(error_signal)
+}
+```
+
+#### `watch` vs Static `if`
+
+| Syntax | Use Case | Behavior |
+|--------|----------|----------|
+| `if condition { ... }` | Static conditions, Copy types | Evaluated once at render time |
+| `watch { if signal.get() { ... } }` | Signal-dependent conditions | Re-evaluates when Signal changes |
+| `watch { match signal.get() { ... } }` | Multiple reactive branches | Re-evaluates when Signal changes |
+
+#### Using `watch` with `match`
+
+The `watch` block also supports `match` expressions:
+
+```rust
+page!(|state: Signal<AppState>| {
+    watch {
+        match state.get() {
+            AppState::Loading => div { "Loading..." },
+            AppState::Ready(data) => div { { data } },
+            AppState::Error(msg) => div { class: "error", { msg } },
+        }
+    }
+})(state.clone())
+```
+
+#### Best Practices
+
+1. **Pass Signals directly**: Use `Signal<T>` parameters instead of extracting values
+2. **Clone Signals**: `Signal::clone()` is cheap (Rc-based), so clone freely
+3. **Single expression**: `watch` blocks must contain exactly one expression
+4. **Avoid nesting**: Don't nest `watch` blocks (performance concern)
+
 ## Architecture
 
 This framework consists of several key modules:
