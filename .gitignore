@@ -110,3 +110,6 @@ file::memory:
 
 # Proptest regression files
 *.proptest-regressions
+.playwright-mcp
+.claude-code-harness-version
+Plans.md
