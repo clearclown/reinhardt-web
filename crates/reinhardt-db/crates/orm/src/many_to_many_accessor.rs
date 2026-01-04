@@ -10,11 +10,50 @@
 
 use crate::Manager;
 use crate::Model;
-use crate::connection::DatabaseConnection;
+use crate::connection::{DatabaseBackend, DatabaseConnection};
 use crate::relationship::RelationshipType;
-use sea_query::{Alias, Asterisk, BinOper, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
+use sea_query::{
+	Alias, Asterisk, BinOper, DeleteStatement, Expr, ExprTrait, Func, InsertStatement,
+	MysqlQueryBuilder, PostgresQueryBuilder, Query, SelectStatement, SqliteQueryBuilder,
+};
 use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
+
+/// Build SELECT SQL using the appropriate QueryBuilder for the given backend.
+fn build_select_sql(
+	stmt: &SelectStatement,
+	backend: DatabaseBackend,
+) -> (String, sea_query::Values) {
+	match backend {
+		DatabaseBackend::Postgres => stmt.build(PostgresQueryBuilder),
+		DatabaseBackend::MySql => stmt.build(MysqlQueryBuilder),
+		DatabaseBackend::Sqlite => stmt.build(SqliteQueryBuilder),
+	}
+}
+
+/// Build INSERT SQL using the appropriate QueryBuilder for the given backend.
+fn build_insert_sql(
+	stmt: &InsertStatement,
+	backend: DatabaseBackend,
+) -> (String, sea_query::Values) {
+	match backend {
+		DatabaseBackend::Postgres => stmt.build(PostgresQueryBuilder),
+		DatabaseBackend::MySql => stmt.build(MysqlQueryBuilder),
+		DatabaseBackend::Sqlite => stmt.build(SqliteQueryBuilder),
+	}
+}
+
+/// Build DELETE SQL using the appropriate QueryBuilder for the given backend.
+fn build_delete_sql(
+	stmt: &DeleteStatement,
+	backend: DatabaseBackend,
+) -> (String, sea_query::Values) {
+	match backend {
+		DatabaseBackend::Postgres => stmt.build(PostgresQueryBuilder),
+		DatabaseBackend::MySql => stmt.build(MysqlQueryBuilder),
+		DatabaseBackend::Sqlite => stmt.build(SqliteQueryBuilder),
+	}
+}
 
 /// Django-style accessor for ManyToMany relationships.
 ///
@@ -173,7 +212,7 @@ where
 			])
 			.to_owned();
 
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_insert_sql(&query, self.db.backend());
 
 		self.db
 			.execute(&sql, vec![])
@@ -219,7 +258,7 @@ where
 			)
 			.to_owned();
 
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_delete_sql(&query, self.db.backend());
 
 		self.db
 			.execute(&sql, vec![])
@@ -296,7 +335,8 @@ where
 					.binary(BinOper::Equal, Expr::val(self.source_id.to_string())),
 			);
 
-		let (sql, _) = query.build(PostgresQueryBuilder);
+		let query = query.to_owned();
+		let (sql, _) = build_select_sql(&query, self.db.backend());
 		let rows = self
 			.db
 			.query(&sql, vec![])
@@ -329,9 +369,25 @@ where
 	/// ```
 	pub async fn all(&self) -> Result<Vec<T>, String> {
 		let mut query = Query::select();
+		query.from(Alias::new(T::table_name()));
+
+		// Use explicit column selection instead of SELECT * to avoid conflicts
+		// with intermediate table columns in JOIN queries.
+		// When JOIN is used with SELECT *, all columns from both tables are returned,
+		// which can cause type conflicts (e.g., intermediate table's INTEGER id vs
+		// target table's UUID id).
+		let field_metadata = T::field_metadata();
+		if field_metadata.is_empty() {
+			// Fallback: if no field metadata is available, select all from target table only
+			query.column((Alias::new(T::table_name()), Asterisk));
+		} else {
+			// Explicitly select only target table columns
+			for field in field_metadata {
+				query.column((Alias::new(T::table_name()), Alias::new(&field.name)));
+			}
+		}
+
 		query
-			.from(Alias::new(T::table_name()))
-			.column((Alias::new(T::table_name()), Alias::new("*")))
 			.inner_join(
 				Alias::new(&self.through_table),
 				Expr::col((Alias::new(T::table_name()), Alias::new("id"))).equals((
@@ -356,7 +412,7 @@ where
 		}
 
 		let query = query.to_owned();
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_select_sql(&query, self.db.backend());
 
 		let rows = self
 			.db
@@ -391,7 +447,7 @@ where
 			)
 			.to_owned();
 
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_delete_sql(&query, self.db.backend());
 
 		self.db
 			.execute(&sql, vec![])
@@ -423,6 +479,7 @@ where
 	pub async fn set(&self, targets: &[T]) -> Result<(), String> {
 		// Use transaction for atomicity
 		let mut tx = self.db.begin().await.map_err(|e| e.to_string())?;
+		let backend = self.db.backend();
 
 		// Build and execute clear query within transaction
 		let clear_query = Query::delete()
@@ -432,7 +489,7 @@ where
 					.binary(BinOper::Equal, Expr::val(self.source_id.to_string())),
 			)
 			.to_owned();
-		let (clear_sql, _) = clear_query.build(PostgresQueryBuilder);
+		let (clear_sql, _) = build_delete_sql(&clear_query, backend);
 		tx.execute(&clear_sql, vec![])
 			.await
 			.map_err(|e| e.to_string())?;
@@ -455,7 +512,7 @@ where
 				])
 				.to_owned();
 
-			let (insert_sql, _) = insert_query.build(PostgresQueryBuilder);
+			let (insert_sql, _) = build_insert_sql(&insert_query, backend);
 			tx.execute(&insert_sql, vec![])
 				.await
 				.map_err(|e| e.to_string())?;
@@ -533,9 +590,21 @@ where
 		let target_field = format!("{}_id", Self::table_name_lower(T::table_name()));
 
 		// Build JOIN query using SeaQuery
-		let query = Query::select()
-			.from(Alias::new(S::table_name()))
-			.column((Alias::new(S::table_name()), Alias::new("*")))
+		let mut query = Query::select();
+		query.from(Alias::new(S::table_name()));
+
+		// Use explicit column selection instead of SELECT * to avoid conflicts
+		// with intermediate table columns in JOIN queries.
+		let field_metadata = S::field_metadata();
+		if field_metadata.is_empty() {
+			query.column((Alias::new(S::table_name()), Asterisk));
+		} else {
+			for field in field_metadata {
+				query.column((Alias::new(S::table_name()), Alias::new(&field.name)));
+			}
+		}
+
+		let query = query
 			.inner_join(
 				Alias::new(&through_table),
 				Expr::col((Alias::new(S::table_name()), Alias::new("id")))
@@ -547,7 +616,7 @@ where
 			)
 			.to_owned();
 
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_select_sql(&query, db.backend());
 
 		let rows = db.query(&sql, vec![]).await.map_err(|e| e.to_string())?;
 

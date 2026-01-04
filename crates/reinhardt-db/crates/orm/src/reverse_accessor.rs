@@ -40,10 +40,25 @@
 //! at compile time. No string literals are required.
 
 use crate::Model;
-use crate::connection::DatabaseConnection;
-use sea_query::{Alias, Asterisk, BinOper, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
+use crate::connection::{DatabaseBackend, DatabaseConnection};
+use sea_query::{
+	Alias, Asterisk, BinOper, Expr, ExprTrait, Func, MysqlQueryBuilder, PostgresQueryBuilder,
+	Query, SelectStatement, SqliteQueryBuilder,
+};
 use serde::{Serialize, de::DeserializeOwned};
 use std::marker::PhantomData;
+
+/// Build SELECT SQL using the appropriate QueryBuilder for the given backend.
+fn build_select_sql(
+	stmt: &SelectStatement,
+	backend: DatabaseBackend,
+) -> (String, sea_query::Values) {
+	match backend {
+		DatabaseBackend::Postgres => stmt.build(PostgresQueryBuilder),
+		DatabaseBackend::MySql => stmt.build(MysqlQueryBuilder),
+		DatabaseBackend::Sqlite => stmt.build(SqliteQueryBuilder),
+	}
+}
 
 /// Django-style accessor for ForeignKey reverse relationships.
 ///
@@ -168,7 +183,7 @@ where
 		}
 
 		let query = query.to_owned();
-		let (sql, _values) = query.build(PostgresQueryBuilder);
+		let (sql, _values) = build_select_sql(&query, self.db.backend());
 
 		let rows = self
 			.db
@@ -205,7 +220,7 @@ where
 			)
 			.to_owned();
 
-		let (sql, _) = query.build(PostgresQueryBuilder);
+		let (sql, _) = build_select_sql(&query, self.db.backend());
 		let rows = self
 			.db
 			.query(&sql, vec![])
