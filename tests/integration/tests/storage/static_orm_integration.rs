@@ -367,9 +367,13 @@ impl StaticFileManager {
 	}
 
 	fn generate_cdn_url(&self, path: &str) -> Option<String> {
-		self.cdn_base_url
-			.as_ref()
-			.map(|base| format!("{}/{}", base.trim_end_matches('/'), path.trim_start_matches('/')))
+		self.cdn_base_url.as_ref().map(|base| {
+			format!(
+				"{}/{}",
+				base.trim_end_matches('/'),
+				path.trim_start_matches('/')
+			)
+		})
 	}
 
 	async fn delete_file(&self, path: &str) -> Result<(), String> {
@@ -566,7 +570,10 @@ async fn test_static_file_size_tracking(
 /// Test intent: Verify CDN URL generation from database metadata
 #[rstest]
 #[tokio::test]
-async fn test_cdn_url_generation(temp_dir: TempDir, #[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)) {
+async fn test_cdn_url_generation(
+	temp_dir: TempDir,
+	#[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+) {
 	let (_container, conn) = postgres_fixture.await;
 
 	let storage = LocalStorage::new(temp_dir.path(), "http://localhost/static");
@@ -591,7 +598,10 @@ async fn test_cdn_url_generation(temp_dir: TempDir, #[future] postgres_fixture: 
 /// Test intent: Verify CDN URL is stored in database
 #[rstest]
 #[tokio::test]
-async fn test_cdn_url_persistence(temp_dir: TempDir, #[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>)) {
+async fn test_cdn_url_persistence(
+	temp_dir: TempDir,
+	#[future] postgres_fixture: (ContainerAsync<GenericImage>, Arc<DatabaseConnection>),
+) {
 	let (_container, conn) = postgres_fixture.await;
 
 	let storage = LocalStorage::new(temp_dir.path(), "http://localhost/static");

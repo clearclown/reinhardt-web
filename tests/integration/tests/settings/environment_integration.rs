@@ -125,7 +125,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Environment variable should override file setting
 	assert_eq!(config.port, 9000);
@@ -169,7 +171,9 @@ password = "password"
 		.build()
 		.expect("Failed to build settings");
 
-	let config: AppConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: AppConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Environment variables should override nested settings
 	assert_eq!(config.database.host, "db.example.com");
@@ -219,13 +223,18 @@ database_url = "postgres://localhost/dev"
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Development settings should override base
 	assert!(config.debug);
 	assert_eq!(config.host, "localhost");
 	assert_eq!(config.port, 8000); // From base
-	assert_eq!(config.database_url.as_deref(), Some("postgres://localhost/dev"));
+	assert_eq!(
+		config.database_url.as_deref(),
+		Some("postgres://localhost/dev")
+	);
 }
 
 #[rstest]
@@ -271,7 +280,9 @@ max_connections = 100
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Production settings should override base
 	assert!(!config.debug);
@@ -319,7 +330,9 @@ password = "placeholder"
 		.build()
 		.expect("Failed to build settings");
 
-	let config: AppConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: AppConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Secrets from environment should be used
 	assert_eq!(config.secret_key, "super-secret-key-from-env");
@@ -353,7 +366,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 	assert_eq!(config.port, 8080);
 
 	// Change environment variable
@@ -367,7 +382,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// New environment value should be reflected
 	assert_eq!(config.port, 9090);
@@ -402,7 +419,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Type conversion should work correctly
 	assert_eq!(config.port, 3000);
@@ -437,7 +456,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Boolean conversion should work
 	assert!(config.debug);
@@ -483,7 +504,9 @@ port = 8080
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Environment variables should override everything
 	assert_eq!(config.host, "env-host");
@@ -557,7 +580,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Optional fields should be None
 	assert!(config.max_connections.is_none());
@@ -574,7 +599,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Now max_connections should be set
 	assert_eq!(config.max_connections, Some(100));
@@ -608,7 +635,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Should work with uppercase
 	assert_eq!(config.port, 9000);
@@ -645,7 +674,9 @@ port = 8000
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Should work with TEST_ prefix
 	assert_eq!(config.port, 7000);
@@ -680,7 +711,9 @@ database_url = "postgres://localhost/db"
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Empty string should override to empty, not None
 	assert_eq!(config.database_url.as_deref(), Some(""));
@@ -727,7 +760,9 @@ password = "password"
 		.build()
 		.expect("Failed to build settings");
 
-	let config: AppConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: AppConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// All environment overrides should be applied
 	assert!(config.debug);
@@ -814,7 +849,9 @@ max_connections = 50
 		.build()
 		.expect("Failed to build settings");
 
-	let config: TestConfig = settings.into_typed().expect("Failed to convert to typed config");
+	let config: TestConfig = settings
+		.into_typed()
+		.expect("Failed to convert to typed config");
 
 	// Staging configuration should be applied
 	assert!(config.debug);

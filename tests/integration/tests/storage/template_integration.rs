@@ -442,7 +442,10 @@ async fn test_template_hot_reload(temp_dir: TempDir) {
 	let version2 = "Version 2";
 
 	// Save initial version
-	storage.save_template(template_name, version1).await.unwrap();
+	storage
+		.save_template(template_name, version1)
+		.await
+		.unwrap();
 
 	// Load and verify
 	let loaded1 = storage.load_template(template_name).await.unwrap();
@@ -450,7 +453,10 @@ async fn test_template_hot_reload(temp_dir: TempDir) {
 
 	// Simulate hot-reload: update file
 	sleep(Duration::from_millis(100)).await;
-	storage.save_template(template_name, version2).await.unwrap();
+	storage
+		.save_template(template_name, version2)
+		.await
+		.unwrap();
 
 	// Load again - should get new version (cache invalidated)
 	let loaded2 = storage.load_template(template_name).await.unwrap();
@@ -488,7 +494,10 @@ async fn test_template_loading_performance_with_cache(temp_dir: TempDir) {
 	let content = "A".repeat(10000); // 10KB template
 
 	// Save template
-	storage.save_template(template_name, &content).await.unwrap();
+	storage
+		.save_template(template_name, &content)
+		.await
+		.unwrap();
 
 	// First load (cold - from filesystem)
 	let start = SystemTime::now();
@@ -596,7 +605,10 @@ async fn test_database_template_versioning(
 		"SELECT version FROM {} WHERE name = $1",
 		TemplateMetadata::table_name()
 	);
-	let rows = conn.query(&query, vec![template_name.into()]).await.unwrap();
+	let rows = conn
+		.query(&query, vec![template_name.into()])
+		.await
+		.unwrap();
 	let version_value = rows[0].get("version").unwrap();
 	assert_eq!(version_value, &json!(1));
 
@@ -607,7 +619,10 @@ async fn test_database_template_versioning(
 		.unwrap();
 
 	// Check updated version number
-	let rows = conn.query(&query, vec![template_name.into()]).await.unwrap();
+	let rows = conn
+		.query(&query, vec![template_name.into()])
+		.await
+		.unwrap();
 	let version_value = rows[0].get("version").unwrap();
 	assert_eq!(version_value, &json!(2));
 }
@@ -626,7 +641,10 @@ async fn test_database_template_cache_invalidation(
 	let updated = "Updated database content";
 
 	// Save and load original
-	storage.save_template(template_name, original).await.unwrap();
+	storage
+		.save_template(template_name, original)
+		.await
+		.unwrap();
 	let loaded1 = storage.load_template(template_name).await.unwrap();
 	assert_eq!(loaded1, original);
 
@@ -708,7 +726,10 @@ async fn test_database_template_loading_performance(
 	let content = "B".repeat(10000); // 10KB template
 
 	// Save template
-	storage.save_template(template_name, &content).await.unwrap();
+	storage
+		.save_template(template_name, &content)
+		.await
+		.unwrap();
 
 	// First load (cold - from database)
 	let start = SystemTime::now();

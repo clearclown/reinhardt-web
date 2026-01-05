@@ -1,8 +1,14 @@
-//! Use case tests for the `form!` macro.
+//! Use case tests for form handling.
 //!
 //! Tests real-world form scenarios like login, registration, contact forms.
+//! These tests use the Form struct directly instead of macros for explicit
+//! field configuration.
 
-use reinhardt_forms::form;
+use reinhardt_forms::field::Widget;
+use reinhardt_forms::fields::{
+	BooleanField, CharField, DateField, EmailField, FileField, ImageField, IntegerField, URLField,
+};
+use reinhardt_forms::{Form, FormError};
 use rstest::rstest;
 use serde_json::json;
 use std::collections::HashMap;
@@ -12,19 +18,18 @@ use std::collections::HashMap;
 /// Tests username + password + remember_me form.
 #[rstest]
 fn test_login_form_use_case() {
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-				max_length: 150,
-			},
-			password: CharField {
-				required,
-				widget: PasswordInput,
-			},
-			remember_me: BooleanField {},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("username".to_string())
+			.required()
+			.with_max_length(150),
+	));
+	form.add_field(Box::new(
+		CharField::new("password".to_string())
+			.required()
+			.with_widget(Widget::PasswordInput),
+	));
+	form.add_field(Box::new(BooleanField::new("remember_me".to_string())));
 
 	// Test 1: Valid credentials
 	let mut data = HashMap::new();
@@ -40,12 +45,13 @@ fn test_login_form_use_case() {
 	);
 
 	// Test 2: Empty username
-	let mut form2 = form! {
-		fields: {
-			username: CharField { required },
-			password: CharField { required, widget: PasswordInput },
-		},
-	};
+	let mut form2 = Form::new();
+	form2.add_field(Box::new(CharField::new("username".to_string()).required()));
+	form2.add_field(Box::new(
+		CharField::new("password".to_string())
+			.required()
+			.with_widget(Widget::PasswordInput),
+	));
 	let data2 = HashMap::new();
 	form2.bind(data2);
 
@@ -58,34 +64,34 @@ fn test_login_form_use_case() {
 /// Tests username + email + password + confirm_password with validation.
 #[rstest]
 fn test_user_registration_form_use_case() {
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-				max_length: 150,
-			},
-			email: EmailField {
-				required,
-			},
-			password: CharField {
-				required,
-				widget: PasswordInput,
-			},
-			confirm_password: CharField {
-				required,
-				widget: PasswordInput,
-			},
-		},
-		validators: {
-			@form: [
-				|data: &std::collections::HashMap<String, serde_json::Value>| {
-					let password = data.get("password").and_then(|v| v.as_str());
-					let confirm = data.get("confirm_password").and_then(|v| v.as_str());
-					password == confirm
-				} => "Passwords must match",
-			],
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("username".to_string())
+			.required()
+			.with_max_length(150),
+	));
+	form.add_field(Box::new(EmailField::new("email".to_string()).required()));
+	form.add_field(Box::new(
+		CharField::new("password".to_string())
+			.required()
+			.with_widget(Widget::PasswordInput),
+	));
+	form.add_field(Box::new(
+		CharField::new("confirm_password".to_string())
+			.required()
+			.with_widget(Widget::PasswordInput),
+	));
+
+	// Add form-level validation for password matching
+	form.add_clean_function(|data: &HashMap<String, serde_json::Value>| {
+		let password = data.get("password").and_then(|v| v.as_str());
+		let confirm = data.get("confirm_password").and_then(|v| v.as_str());
+		if password == confirm {
+			Ok(())
+		} else {
+			Err(FormError::Validation("Passwords must match".to_string()))
+		}
+	});
 
 	// Test 1: Valid registration
 	let mut data = HashMap::new();
@@ -98,19 +104,18 @@ fn test_user_registration_form_use_case() {
 	assert!(form.is_valid());
 
 	// Test 2: Password mismatch
-	let mut form2 = form! {
-		fields: {
-			password: CharField { required },
-			confirm_password: CharField { required },
-		},
-		validators: {
-			@form: [
-				|data: &std::collections::HashMap<String, serde_json::Value>| {
-					data.get("password") == data.get("confirm_password")
-				} => "Passwords must match",
-			],
-		},
-	};
+	let mut form2 = Form::new();
+	form2.add_field(Box::new(CharField::new("password".to_string()).required()));
+	form2.add_field(Box::new(
+		CharField::new("confirm_password".to_string()).required(),
+	));
+	form2.add_clean_function(|data: &HashMap<String, serde_json::Value>| {
+		if data.get("password") == data.get("confirm_password") {
+			Ok(())
+		} else {
+			Err(FormError::Validation("Passwords must match".to_string()))
+		}
+	});
 
 	let mut data2 = HashMap::new();
 	data2.insert("password".to_string(), json!("password1"));
@@ -125,25 +130,23 @@ fn test_user_registration_form_use_case() {
 /// Tests name + email + subject + message form.
 #[rstest]
 fn test_contact_form_use_case() {
-	let mut form = form! {
-		fields: {
-			name: CharField {
-				required,
-				max_length: 100,
-			},
-			email: EmailField {
-				required,
-			},
-			subject: CharField {
-				required,
-				max_length: 200,
-			},
-			message: CharField {
-				required,
-				widget: TextArea,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("name".to_string())
+			.required()
+			.with_max_length(100),
+	));
+	form.add_field(Box::new(EmailField::new("email".to_string()).required()));
+	form.add_field(Box::new(
+		CharField::new("subject".to_string())
+			.required()
+			.with_max_length(200),
+	));
+	form.add_field(Box::new(
+		CharField::new("message".to_string())
+			.required()
+			.with_widget(Widget::TextArea),
+	));
 
 	// Valid contact form submission
 	let mut data = HashMap::new();
@@ -162,15 +165,12 @@ fn test_contact_form_use_case() {
 /// Tests query + category + date_range form (all optional).
 #[rstest]
 fn test_search_form_use_case() {
-	let form = form! {
-		fields: {
-			query: CharField {
-				max_length: 255,
-			},
-			date_from: DateField {},
-			date_to: DateField {},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("query".to_string()).with_max_length(255),
+	));
+	form.add_field(Box::new(DateField::new("date_from".to_string())));
+	form.add_field(Box::new(DateField::new("date_to".to_string())));
 
 	// Test field count (DateField validation is complex, so we just verify structure)
 	assert_eq!(form.fields().len(), 3);
@@ -181,21 +181,19 @@ fn test_search_form_use_case() {
 /// Tests multiple optional fields.
 #[rstest]
 fn test_profile_edit_form_use_case() {
-	let mut form = form! {
-		fields: {
-			display_name: CharField {
-				max_length: 100,
-			},
-			bio: CharField {
-				max_length: 500,
-				widget: TextArea,
-			},
-			website: URLField {},
-			location: CharField {
-				max_length: 100,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("display_name".to_string()).with_max_length(100),
+	));
+	form.add_field(Box::new(
+		CharField::new("bio".to_string())
+			.with_max_length(500)
+			.with_widget(Widget::TextArea),
+	));
+	form.add_field(Box::new(URLField::new("website".to_string())));
+	form.add_field(Box::new(
+		CharField::new("location".to_string()).with_max_length(100),
+	));
 
 	// Provide valid data for all fields (URLField requires proper URL format)
 	let mut data = HashMap::new();
@@ -214,28 +212,27 @@ fn test_profile_edit_form_use_case() {
 /// Tests credit card information form.
 #[rstest]
 fn test_payment_form_use_case() {
-	let mut form = form! {
-		fields: {
-			card_number: CharField {
-				required,
-				max_length: 19,
-			},
-			expiry_month: IntegerField {
-				required,
-			},
-			expiry_year: IntegerField {
-				required,
-			},
-			cvv: CharField {
-				required,
-				max_length: 4,
-				widget: PasswordInput,
-			},
-			cardholder_name: CharField {
-				required,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("card_number".to_string())
+			.required()
+			.with_max_length(19),
+	));
+	form.add_field(Box::new(
+		IntegerField::new("expiry_month".to_string()).required(),
+	));
+	form.add_field(Box::new(
+		IntegerField::new("expiry_year".to_string()).required(),
+	));
+	form.add_field(Box::new(
+		CharField::new("cvv".to_string())
+			.required()
+			.with_max_length(4)
+			.with_widget(Widget::PasswordInput),
+	));
+	form.add_field(Box::new(
+		CharField::new("cardholder_name".to_string()).required(),
+	));
 
 	// Valid card details
 	let mut data = HashMap::new();
@@ -254,14 +251,11 @@ fn test_payment_form_use_case() {
 /// Tests FileField + ImageField.
 #[rstest]
 fn test_file_upload_form_use_case() {
-	let form = form! {
-		fields: {
-			document: FileField {
-				required,
-			},
-			thumbnail: ImageField {},
-		},
-	};
+	let mut form = Form::new();
+	let mut document_field = FileField::new("document".to_string());
+	document_field.required = true;
+	form.add_field(Box::new(document_field));
+	form.add_field(Box::new(ImageField::new("thumbnail".to_string())));
 
 	// File fields require special handling, test field count
 	assert_eq!(form.fields().len(), 2);
@@ -272,20 +266,19 @@ fn test_file_upload_form_use_case() {
 /// Tests Japanese labels and help text.
 #[rstest]
 fn test_multilingual_form_use_case() {
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-				label: "ユーザー名",
-				help_text: "3文字以上で入力してください",
-			},
-			email: EmailField {
-				required,
-				label: "メールアドレス",
-				help_text: "有効なメールアドレスを入力してください",
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("username".to_string())
+			.required()
+			.with_label("ユーザー名")
+			.with_help_text("3文字以上で入力してください"),
+	));
+	form.add_field(Box::new(
+		EmailField::new("email".to_string())
+			.required()
+			.with_label("メールアドレス")
+			.with_help_text("有効なメールアドレスを入力してください"),
+	));
 
 	// Valid submission with Unicode
 	let mut data = HashMap::new();

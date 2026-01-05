@@ -1,8 +1,10 @@
-//! State transition tests for the `form!` macro.
+//! State transition tests for form handling.
 //!
 //! Tests form state transitions: New → Bound → Validated → CleanedData/Error.
+//! These tests use the Form struct directly for explicit field configuration.
 
-use reinhardt_forms::form;
+use reinhardt_forms::fields::{CharField, EmailField};
+use reinhardt_forms::{Form, FormError};
 use rstest::rstest;
 use serde_json::json;
 use std::collections::HashMap;
@@ -13,17 +15,13 @@ use std::collections::HashMap;
 #[rstest]
 fn test_form_state_transition_happy_path() {
 	// Create form (state: New)
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-				max_length: 150,
-			},
-			email: EmailField {
-				required,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(
+		CharField::new("username".to_string())
+			.required()
+			.with_max_length(150),
+	));
+	form.add_field(Box::new(EmailField::new("email".to_string()).required()));
 
 	// State: New
 	assert!(!form.is_bound());
@@ -54,13 +52,8 @@ fn test_form_state_transition_happy_path() {
 #[rstest]
 fn test_form_state_transition_validation_error() {
 	// Create form with required field
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(CharField::new("username".to_string()).required()));
 
 	// Bind empty data (missing required field)
 	let data = HashMap::new();
@@ -83,28 +76,31 @@ fn test_form_state_transition_validation_error() {
 #[rstest]
 fn test_validator_execution_order() {
 	// Create form with field and form validators
-	let mut form = form! {
-		fields: {
-			password: CharField {
-				required,
-			},
-			confirm: CharField {
-				required,
-			},
-		},
-		validators: {
-			password: [
-				|v: &serde_json::Value| v.as_str().map_or(false, |s| s.len() >= 8) => "Password must be at least 8 characters",
-			],
-			@form: [
-				|data: &std::collections::HashMap<String, serde_json::Value>| {
-					let password = data.get("password").and_then(|v| v.as_str());
-					let confirm = data.get("confirm").and_then(|v| v.as_str());
-					password == confirm
-				} => "Passwords do not match",
-			],
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(CharField::new("password".to_string()).required()));
+	form.add_field(Box::new(CharField::new("confirm".to_string()).required()));
+
+	// Add field-level validator for password length
+	form.add_field_clean_function("password", |v: &serde_json::Value| {
+		if v.as_str().is_some_and(|s| s.len() >= 8) {
+			Ok(v.clone())
+		} else {
+			Err(FormError::Validation(
+				"Password must be at least 8 characters".to_string(),
+			))
+		}
+	});
+
+	// Add form-level validator for password matching
+	form.add_clean_function(|data: &HashMap<String, serde_json::Value>| {
+		let password = data.get("password").and_then(|v| v.as_str());
+		let confirm = data.get("confirm").and_then(|v| v.as_str());
+		if password == confirm {
+			Ok(())
+		} else {
+			Err(FormError::Validation("Passwords do not match".to_string()))
+		}
+	});
 
 	// Bind valid data
 	let mut data = HashMap::new();
@@ -120,13 +116,8 @@ fn test_validator_execution_order() {
 /// Tests: Bound → Rebound → Validated
 #[rstest]
 fn test_multiple_bindings() {
-	let mut form = form! {
-		fields: {
-			username: CharField {
-				required,
-			},
-		},
-	};
+	let mut form = Form::new();
+	form.add_field(Box::new(CharField::new("username".to_string()).required()));
 
 	// First binding with invalid data
 	let data = HashMap::new();
