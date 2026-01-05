@@ -1,8 +1,10 @@
-//! Compile-time tests for page! macro using trybuild
+//! Compile-time tests for page! and form! macros using trybuild
 //!
 //! This test suite validates that:
 //! - Valid page! macro usage compiles successfully (tests/ui/page/pass/*.rs)
 //! - Invalid page! macro usage fails to compile (tests/ui/page/fail/*.rs)
+//! - Valid form! macro usage compiles successfully (tests/ui/form/pass/*.rs)
+//! - Invalid form! macro usage fails to compile (tests/ui/form/fail/*.rs)
 
 #[test]
 fn test_page_macro_pass() {
@@ -14,4 +16,16 @@ fn test_page_macro_pass() {
 fn test_page_macro_fail() {
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/ui/page/fail/*.rs");
+}
+
+#[test]
+fn test_form_macro_pass() {
+	let t = trybuild::TestCases::new();
+	t.pass("tests/ui/form/pass/*.rs");
+}
+
+#[test]
+fn test_form_macro_fail() {
+	let t = trybuild::TestCases::new();
+	t.compile_fail("tests/ui/form/fail/*.rs");
 }
