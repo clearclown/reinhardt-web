@@ -49,9 +49,9 @@ async fn is_port_range_available(base_port: u16) -> bool {
 /// # Example
 /// ```bash
 /// # Use custom pool configuration
-/// TEST_MAX_CONNECTIONS=30 TEST_ACQUIRE_TIMEOUT_SECS=120 cargo nextest run
+/// TEST_MAX_CONNECTIONS=10 TEST_ACQUIRE_TIMEOUT_SECS=120 cargo nextest run
 ///
-/// # Use default configuration (max_connections=20, timeout=60s)
+/// # Use default configuration (max_connections=5, timeout=60s)
 /// cargo nextest run
 /// ```
 #[cfg(feature = "testcontainers")]
@@ -59,12 +59,12 @@ fn get_pool_config() -> (u32, u64) {
 	let max_connections = std::env::var("TEST_MAX_CONNECTIONS")
 		.ok()
 		.and_then(|v| v.parse().ok())
-		.unwrap_or(1); // Default: 1 to workaround sqlx v0.7+ connection pool bug
+		.unwrap_or(5); // Default: 5 (MUST be > 1 to avoid sqlx v0.7+ prepared statement cache bug #2885)
 
 	let acquire_timeout = std::env::var("TEST_ACQUIRE_TIMEOUT_SECS")
 		.ok()
 		.and_then(|v| v.parse().ok())
-		.unwrap_or(300); // Default: 120秒→300秒 for TestContainers startup time
+		.unwrap_or(60); // Default: 60s - shorter timeout exposes real issues faster
 
 	(max_connections, acquire_timeout)
 }
@@ -310,15 +310,22 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 		.await
 		.expect("Failed to start PostgreSQL container");
 
+	// Wait briefly before first port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
 	// Retry getting port with exponential backoff
 	let mut port_retry = 0;
-	let max_port_retries = 5;
+	let max_port_retries = 7; // Increased from 5 for better reliability under load
 	let port = loop {
 		match postgres.get_host_port_ipv4(5432.tcp()).await {
 			Ok(p) => break p,
-			Err(_) if port_retry < max_port_retries => {
+			Err(e) if port_retry < max_port_retries => {
 				port_retry += 1;
-				let delay = tokio::time::Duration::from_millis(100 * 2_u64.pow(port_retry));
+				let delay = tokio::time::Duration::from_millis(200 * 2_u64.pow(port_retry));
+				eprintln!(
+					"PostgreSQL port query attempt {} of {} failed: {:?}",
+					port_retry, max_port_retries, e
+				);
 				tokio::time::sleep(delay).await;
 			}
 			Err(e) => {
@@ -340,7 +347,11 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 
 	// Retry connection to PostgreSQL with exponential backoff
 	let mut retry_count = 0;
-	let max_retries = 5;
+	let max_retries = 7; // Increased from 5 for better reliability in CI environments
+
+	// Wait briefly before first connection to ensure container is fully ready
+	tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
 	let pool = loop {
 		match sqlx::postgres::PgPoolOptions::new()
 			.max_connections(max_conns)
@@ -348,13 +359,43 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 			.acquire_timeout(std::time::Duration::from_secs(timeout_secs))
 			.idle_timeout(std::time::Duration::from_secs(600)) // Increase from 30s for sqlx v0.7+ compatibility
 			.max_lifetime(std::time::Duration::from_secs(1800)) // Increase from 120s for long-running tests
+			.test_before_acquire(false) // sqlx v0.7+ bug workaround (issue #2885, #3241)
 			.connect(&database_url)
 			.await
 		{
-			Ok(pool) => break pool,
-			Err(_e) if retry_count < max_retries => {
+			Ok(pool) => {
+				// Verify wire protocol is working correctly
+				match sqlx::query("SELECT 1").fetch_one(&pool).await {
+					Ok(_) => break pool,
+					Err(e) if retry_count < max_retries => {
+						eprintln!(
+							"PostgreSQL health check attempt {} of {} failed: {:?}",
+							retry_count + 1,
+							max_retries,
+							e
+						);
+						retry_count += 1;
+						let delay = std::time::Duration::from_millis(200 * 2_u64.pow(retry_count));
+						tokio::time::sleep(delay).await;
+						continue;
+					}
+					Err(e) => {
+						panic!(
+							"PostgreSQL pool created but health check failed after {} retries: {}",
+							max_retries, e
+						);
+					}
+				}
+			}
+			Err(e) if retry_count < max_retries => {
+				eprintln!(
+					"PostgreSQL connection attempt {} of {} failed: {:?}",
+					retry_count + 1,
+					max_retries,
+					e
+				);
 				retry_count += 1;
-				let delay = std::time::Duration::from_millis(100 * 2_u64.pow(retry_count));
+				let delay = std::time::Duration::from_millis(200 * 2_u64.pow(retry_count));
 				tokio::time::sleep(delay).await;
 			}
 			Err(e) => {
@@ -1381,15 +1422,22 @@ pub async fn mysql_container() -> (
 		.await
 		.expect("Failed to start MySQL container");
 
+	// Wait briefly before first port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
 	// Retry getting port with exponential backoff
 	let mut port_retry = 0;
-	let max_port_retries = 5;
+	let max_port_retries = 7; // Increased from 5 for better reliability under load
 	let port = loop {
 		match mysql.get_host_port_ipv4(3306.tcp()).await {
 			Ok(p) => break p,
-			Err(_) if port_retry < max_port_retries => {
+			Err(e) if port_retry < max_port_retries => {
 				port_retry += 1;
-				let delay = tokio::time::Duration::from_millis(100 * 2_u64.pow(port_retry));
+				let delay = tokio::time::Duration::from_millis(200 * 2_u64.pow(port_retry));
+				eprintln!(
+					"MySQL port query attempt {} of {} failed: {:?}",
+					port_retry, max_port_retries, e
+				);
 				tokio::time::sleep(delay).await;
 			}
 			Err(e) => panic!(
@@ -1406,21 +1454,53 @@ pub async fn mysql_container() -> (
 
 	// Retry connection to MySQL with exponential backoff
 	let mut retry_count = 0;
-	let max_retries = 5;
+	let max_retries = 7; // Increased from 5 for better reliability in CI environments
+
+	// Wait briefly before first connection to ensure container is fully ready
+	tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
 	let pool = loop {
 		match sqlx::mysql::MySqlPoolOptions::new()
 			.max_connections(max_conns)
 			.min_connections(1)
 			.acquire_timeout(std::time::Duration::from_secs(timeout_secs))
-			.idle_timeout(std::time::Duration::from_secs(30))
-			.max_lifetime(std::time::Duration::from_secs(120))
+			.idle_timeout(std::time::Duration::from_secs(600)) // Increase from 30s for sqlx v0.7+ compatibility
+			.max_lifetime(std::time::Duration::from_secs(1800)) // Increase from 120s for long-running tests
+			.test_before_acquire(false) // sqlx v0.7+ bug workaround (issue #2885, #3241)
 			.connect(&database_url)
 			.await
 		{
-			Ok(pool) => break pool,
-			Err(_e) if retry_count < max_retries => {
+			Ok(pool) => {
+				// Verify wire protocol is working correctly
+				match sqlx::query("SELECT 1").fetch_one(&pool).await {
+					Ok(_) => break pool,
+					Err(e) if retry_count < max_retries => {
+						eprintln!(
+							"MySQL health check attempt {} of {} failed: {:?}",
+							retry_count + 1,
+							max_retries,
+							e
+						);
+						retry_count += 1;
+						let delay = std::time::Duration::from_millis(200 * 2_u64.pow(retry_count));
+						tokio::time::sleep(delay).await;
+						continue;
+					}
+					Err(e) => panic!(
+						"MySQL health check failed after {} retries: {}",
+						max_retries, e
+					),
+				}
+			}
+			Err(e) if retry_count < max_retries => {
+				eprintln!(
+					"MySQL connection attempt {} of {} failed: {:?}",
+					retry_count + 1,
+					max_retries,
+					e
+				);
 				retry_count += 1;
-				let delay = std::time::Duration::from_millis(100 * 2_u64.pow(retry_count));
+				let delay = std::time::Duration::from_millis(200 * 2_u64.pow(retry_count));
 				tokio::time::sleep(delay).await;
 			}
 			Err(e) => panic!(
