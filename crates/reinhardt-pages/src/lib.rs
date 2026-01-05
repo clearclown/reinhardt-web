@@ -176,6 +176,7 @@ pub use ssr::{SsrOptions, SsrRenderer, SsrState};
 pub use static_resolver::{init_static_resolver, is_initialized, resolve_static};
 
 // Re-export procedural macros
+pub use reinhardt_pages_macros::form;
 pub use reinhardt_pages_macros::head;
 pub use reinhardt_pages_macros::page;
 

@@ -50,6 +50,7 @@
 
 pub mod binding;
 pub mod component;
+pub mod generated;
 pub mod validators;
 
 // Server-side only modules for HTML rendering and asset management
@@ -60,7 +61,12 @@ pub mod rendering;
 
 pub use binding::FormBinding;
 pub use component::FormComponent;
+pub use generated::{StaticFieldMetadata, StaticFormMetadata};
 pub use validators::{ClientValidator, ValidatorRegistry};
+
+// Re-export form metadata types for macro-generated code
+// These are needed in both WASM and server environments
+pub use reinhardt_forms::wasm_compat::{FieldMetadata, FormMetadata};
 
 // Server-side only exports
 #[cfg(not(target_arch = "wasm32"))]
