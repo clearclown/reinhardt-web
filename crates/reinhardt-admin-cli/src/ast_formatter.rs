@@ -75,6 +75,27 @@ struct MacroInfo {
 	should_skip: bool,
 }
 
+/// Backup information for a protected page! macro.
+///
+/// Used during the protect/restore cycle to preserve page! macros
+/// while rustfmt processes the surrounding Rust code.
+#[derive(Debug, Clone)]
+pub(crate) struct PageMacroBackup {
+	/// Unique identifier for this macro (used in placeholder)
+	pub id: usize,
+	/// Original page! macro text (including "page!(...)")
+	pub original: String,
+}
+
+/// Result of protecting page! macros in source code.
+#[derive(Debug)]
+pub(crate) struct ProtectResult {
+	/// Source code with page! macros replaced by placeholders
+	pub protected_content: String,
+	/// Backup information for each replaced macro
+	pub backups: Vec<PageMacroBackup>,
+}
+
 /// Visitor that walks the AST to find page! macro invocations.
 struct PageMacroVisitor<'a> {
 	/// Collected macro information
@@ -1033,7 +1054,7 @@ impl AstPageFormatter {
 	///
 	/// This checks the first 50 lines of the file for a comment containing
 	/// `reinhardt-fmt:ignore-all`. The marker must appear before any code line.
-	fn has_ignore_all_marker(&self, source: &str) -> bool {
+	pub(crate) fn has_ignore_all_marker(&self, source: &str) -> bool {
 		const MARKER: &str = "reinhardt-fmt:ignore-all";
 
 		// Check only the first 50 lines for performance
@@ -1182,6 +1203,108 @@ impl AstPageFormatter {
 
 			// Priority 3: File-wide ignore is already handled in format()
 		}
+	}
+
+	/// Protect page! macros by replacing them with placeholders.
+	///
+	/// This allows rustfmt to process the surrounding Rust code without
+	/// modifying the page! macro contents. The macros can be restored
+	/// using `restore_page_macros`.
+	///
+	/// # Placeholder Format
+	///
+	/// Each page! macro is replaced with:
+	/// ```text
+	/// __reinhardt_placeholder__!(/*n*/)
+	/// ```
+	/// where `n` is a unique identifier.
+	///
+	/// # Example
+	///
+	/// ```text
+	/// // Before:
+	/// let view = page!(|| { div { "hello" } })(props);
+	///
+	/// // After:
+	/// let view = __reinhardt_placeholder__!(/*0*/)(props);
+	/// ```
+	pub(crate) fn protect_page_macros(&self, content: &str) -> ProtectResult {
+		// Quick check: if no page! pattern exists, return unchanged
+		if !content.contains("page!(") {
+			return ProtectResult {
+				protected_content: content.to_string(),
+				backups: Vec::new(),
+			};
+		}
+
+		// Find all page! macros
+		let macros = match self.find_page_macros(content) {
+			Ok(m) => m,
+			Err(_) => {
+				return ProtectResult {
+					protected_content: content.to_string(),
+					backups: Vec::new(),
+				};
+			}
+		};
+
+		if macros.is_empty() {
+			return ProtectResult {
+				protected_content: content.to_string(),
+				backups: Vec::new(),
+			};
+		}
+
+		// Sort macros by position
+		let mut macros = macros;
+		macros.sort_by_key(|m| m.start);
+
+		// Build result by replacing each macro with placeholder
+		let mut result = String::with_capacity(content.len());
+		let mut backups = Vec::with_capacity(macros.len());
+		let mut last_end = 0;
+
+		for (id, macro_info) in macros.iter().enumerate() {
+			// Copy content before this macro
+			result.push_str(&content[last_end..macro_info.start]);
+
+			// Save original macro text
+			let original = content[macro_info.start..macro_info.end].to_string();
+			backups.push(PageMacroBackup { id, original });
+
+			// Insert placeholder (macro format so rustfmt doesn't touch it)
+			result.push_str(&format!("__reinhardt_placeholder__!(/*{}*/)", id));
+
+			last_end = macro_info.end;
+		}
+
+		// Copy remaining content
+		result.push_str(&content[last_end..]);
+
+		ProtectResult {
+			protected_content: result,
+			backups,
+		}
+	}
+
+	/// Restore page! macros from placeholders.
+	///
+	/// This reverses the effect of `protect_page_macros`, replacing
+	/// placeholders with the original page! macro content.
+	pub(crate) fn restore_page_macros(content: &str, backups: &[PageMacroBackup]) -> String {
+		if backups.is_empty() {
+			return content.to_string();
+		}
+
+		let mut result = content.to_string();
+
+		// Replace placeholders in reverse order to maintain correct positions
+		for backup in backups.iter().rev() {
+			let placeholder = format!("__reinhardt_placeholder__!(/*{}*/)", backup.id);
+			result = result.replace(&placeholder, &backup.original);
+		}
+
+		result
 	}
 }
 
@@ -1844,5 +1967,180 @@ fn main() {}"#;
 
 		assert_eq!(result.content, input);
 		assert!(!result.contains_page_macro); // No macro
+	}
+
+	// ==================== Protect/Restore Tests ====================
+
+	#[test]
+	fn test_protect_no_page_macro() {
+		let formatter = AstPageFormatter::new();
+		let input = "fn main() { println!(\"hello\"); }";
+		let result = formatter.protect_page_macros(input);
+
+		assert_eq!(result.protected_content, input);
+		assert!(result.backups.is_empty());
+	}
+
+	#[test]
+	fn test_protect_single_macro() {
+		let formatter = AstPageFormatter::new();
+		let input = r#"let view = page!(|| { div { "hello" } });"#;
+		let result = formatter.protect_page_macros(input);
+
+		assert!(
+			result
+				.protected_content
+				.contains("__reinhardt_placeholder__!(/*0*/)")
+		);
+		assert!(!result.protected_content.contains("page!("));
+		assert_eq!(result.backups.len(), 1);
+		assert_eq!(result.backups[0].id, 0);
+		assert!(result.backups[0].original.starts_with("page!("));
+	}
+
+	#[test]
+	fn test_protect_multiple_macros() {
+		let formatter = AstPageFormatter::new();
+		let input = r#"
+let view1 = page!(|| { div { "first" } });
+let view2 = page!(|| { div { "second" } });
+"#;
+		let result = formatter.protect_page_macros(input);
+
+		assert!(
+			result
+				.protected_content
+				.contains("__reinhardt_placeholder__!(/*0*/)")
+		);
+		assert!(
+			result
+				.protected_content
+				.contains("__reinhardt_placeholder__!(/*1*/)")
+		);
+		assert!(!result.protected_content.contains("page!("));
+		assert_eq!(result.backups.len(), 2);
+	}
+
+	#[test]
+	fn test_protect_preserves_surrounding_code() {
+		let formatter = AstPageFormatter::new();
+		let input = r#"use foo::bar;
+
+fn render() -> View {
+    page!(|| { div { "hello" } })
+}
+
+fn main() {}"#;
+		let result = formatter.protect_page_macros(input);
+
+		assert!(result.protected_content.contains("use foo::bar;"));
+		assert!(result.protected_content.contains("fn render() -> View"));
+		assert!(result.protected_content.contains("fn main() {}"));
+		assert!(
+			result
+				.protected_content
+				.contains("__reinhardt_placeholder__!(/*0*/)")
+		);
+	}
+
+	#[test]
+	fn test_restore_single_macro() {
+		let formatter = AstPageFormatter::new();
+		let original = r#"let view = page!(|| { div { "hello" } });"#;
+
+		// Protect
+		let protected = formatter.protect_page_macros(original);
+
+		// Restore
+		let restored =
+			AstPageFormatter::restore_page_macros(&protected.protected_content, &protected.backups);
+
+		assert_eq!(restored, original);
+	}
+
+	#[test]
+	fn test_restore_multiple_macros() {
+		let formatter = AstPageFormatter::new();
+		let original = r#"
+let view1 = page!(|| { div { "first" } });
+let view2 = page!(|| { div { "second" } });
+"#;
+
+		// Protect
+		let protected = formatter.protect_page_macros(original);
+
+		// Restore
+		let restored =
+			AstPageFormatter::restore_page_macros(&protected.protected_content, &protected.backups);
+
+		assert_eq!(restored, original);
+	}
+
+	#[test]
+	fn test_protect_restore_roundtrip_complex() {
+		let formatter = AstPageFormatter::new();
+		let original = r#"use reinhardt::pages::page;
+
+fn header() -> View {
+    page!(|| {
+        div {
+            class: "header",
+            h1 { "Title" }
+        }
+    })
+}
+
+fn footer() -> View {
+    page!(|year: i32| {
+        div {
+            class: "footer",
+            { format!("Copyright {}", year) }
+        }
+    })
+}
+
+fn main() {
+    let _h = header();
+    let _f = footer();
+}"#;
+
+		// Protect
+		let protected = formatter.protect_page_macros(original);
+		assert_eq!(protected.backups.len(), 2);
+		assert!(!protected.protected_content.contains("page!("));
+
+		// Restore
+		let restored =
+			AstPageFormatter::restore_page_macros(&protected.protected_content, &protected.backups);
+		assert_eq!(restored, original);
+	}
+
+	#[test]
+	fn test_protect_empty_backups_restore() {
+		let content = "fn main() {}";
+		let backups: Vec<PageMacroBackup> = Vec::new();
+
+		let restored = AstPageFormatter::restore_page_macros(content, &backups);
+		assert_eq!(restored, content);
+	}
+
+	#[test]
+	fn test_protect_with_trailing_call() {
+		let formatter = AstPageFormatter::new();
+		let input = r#"let view = page!(|props: Props| { div { } })(props);"#;
+		let result = formatter.protect_page_macros(input);
+
+		// The trailing "(props)" should remain after the placeholder
+		assert!(
+			result
+				.protected_content
+				.contains("__reinhardt_placeholder__!(/*0*/)(props)")
+		);
+		assert_eq!(result.backups.len(), 1);
+
+		// Restore should bring back original
+		let restored =
+			AstPageFormatter::restore_page_macros(&result.protected_content, &result.backups);
+		assert_eq!(restored, input);
 	}
 }
