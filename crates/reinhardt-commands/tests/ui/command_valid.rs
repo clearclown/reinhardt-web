@@ -2,8 +2,10 @@
 //!
 //! This file should compile successfully.
 
-use reinhardt_commands::{BaseCommand, CommandContext, CommandArgument, CommandOption, CommandError};
 use async_trait::async_trait;
+use reinhardt_commands::{
+	BaseCommand, CommandArgument, CommandContext, CommandError, CommandOption,
+};
 
 /// A valid custom command implementation
 pub struct ValidCommand;
@@ -19,15 +21,15 @@ impl BaseCommand for ValidCommand {
 	}
 
 	fn arguments(&self) -> Vec<CommandArgument> {
-		vec![
-			CommandArgument::required("input", "Input file path"),
-		]
+		vec![CommandArgument::required("input", "Input file path")]
 	}
 
 	fn options(&self) -> Vec<CommandOption> {
-		vec![
-			CommandOption::flag(Some('v'), "verbose", "Enable verbose output"),
-		]
+		vec![CommandOption::flag(
+			Some('v'),
+			"verbose",
+			"Enable verbose output",
+		)]
 	}
 
 	async fn execute(&self, ctx: &CommandContext) -> Result<(), CommandError> {

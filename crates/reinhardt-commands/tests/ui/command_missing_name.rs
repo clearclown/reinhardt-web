@@ -2,8 +2,10 @@
 //!
 //! This file should fail to compile with an error about missing `name` method.
 
-use reinhardt_commands::{BaseCommand, CommandContext, CommandArgument, CommandOption, CommandError};
 use async_trait::async_trait;
+use reinhardt_commands::{
+	BaseCommand, CommandArgument, CommandContext, CommandError, CommandOption,
+};
 
 /// Invalid command missing the `name` method
 pub struct InvalidCommand;
