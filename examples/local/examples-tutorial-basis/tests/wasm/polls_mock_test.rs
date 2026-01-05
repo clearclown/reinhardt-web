@@ -18,7 +18,9 @@ use wasm_bindgen_test::*;
 wasm_bindgen_test_configure!(run_in_browser);
 
 // Import actual components from the application
-use examples_tutorial_basis::client::components::polls::{polls_detail, polls_index, polls_results};
+use examples_tutorial_basis::client::components::polls::{
+	polls_detail, polls_index, polls_results,
+};
 use examples_tutorial_basis::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
 use reinhardt::pages::component::View;
 use reinhardt::pages::testing::{
@@ -254,11 +256,7 @@ fn test_mock_polls_error_endpoints() {
 	clear_mocks();
 
 	// Mock various error scenarios
-	mock_server_fn_error(
-		"/api/server_fn/get_questions",
-		500,
-		"Internal server error",
-	);
+	mock_server_fn_error("/api/server_fn/get_questions", 500, "Internal server error");
 	mock_server_fn_error(
 		"/api/server_fn/get_question_detail",
 		404,

@@ -21,5 +21,5 @@ installed_apps! {
 
 /// Get the list of installed applications
 pub fn get_installed_apps() -> Vec<String> {
-    InstalledApp::all_apps()
+	InstalledApp::all_apps()
 }
