@@ -155,7 +155,3 @@ pub use formsets::{
 pub use model_form::{FieldType, FormModel, ModelForm, ModelFormBuilder, ModelFormConfig};
 pub use model_formset::{ModelFormSet, ModelFormSetBuilder, ModelFormSetConfig};
 pub use wizard::{FormWizard, WizardStep};
-
-// Re-export form! macro when macros feature is enabled
-#[cfg(feature = "macros")]
-pub use reinhardt_forms_macros::form;
