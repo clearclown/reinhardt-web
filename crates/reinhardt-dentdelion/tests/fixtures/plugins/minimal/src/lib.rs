@@ -6,7 +6,9 @@
 #[allow(warnings)]
 mod bindings;
 
-use bindings::exports::reinhardt::dentdelion::plugin::{Capability, Guest, PluginError, PluginMetadata};
+use bindings::exports::reinhardt::dentdelion::plugin::{
+	Capability, Guest, PluginError, PluginMetadata,
+};
 
 struct MinimalPlugin;
 

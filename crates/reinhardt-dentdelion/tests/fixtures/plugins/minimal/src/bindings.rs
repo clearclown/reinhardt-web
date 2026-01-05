@@ -2346,9 +2346,7 @@ macro_rules! __export_dentdelion_plugin_impl {
 #[doc(inline)]
 pub(crate) use __export_dentdelion_plugin_impl as export;
 #[cfg(target_arch = "wasm32")]
-#[unsafe(
-    link_section = "component-type:wit-bindgen:0.41.0:reinhardt:dentdelion@0.1.0:dentdelion-plugin:encoded world"
-)]
+#[unsafe(link_section = "component-type:wit-bindgen:0.41.0:reinhardt:dentdelion@0.1.0:dentdelion-plugin:encoded world")]
 #[doc(hidden)]
 #[allow(clippy::octal_escapes)]
 pub static __WIT_BINDGEN_COMPONENT_TYPE: [u8; 1420] = *b"\
@@ -2387,5 +2385,5 @@ bindgen-rust\x060.41.0";
 #[inline(never)]
 #[doc(hidden)]
 pub fn __link_custom_section_describing_imports() {
-    wit_bindgen_rt::maybe_link_cabi_realloc();
+	wit_bindgen_rt::maybe_link_cabi_realloc();
 }

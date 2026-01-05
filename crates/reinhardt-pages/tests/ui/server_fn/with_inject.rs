@@ -60,22 +60,17 @@ async fn get_user(
 // Test: Server function with multiple #[inject] parameters
 #[server_fn(use_inject = true)]
 async fn create_user(
-	name: String,            // Regular parameter
-	_email: String,          // Regular parameter
-	#[inject] _db: Database, // DI parameter 1
+	name: String,             // Regular parameter
+	_email: String,           // Regular parameter
+	#[inject] _db: Database,  // DI parameter 1
 	#[inject] _db2: Database, // DI parameter 2
 ) -> Result<User, ServerFnError> {
-	Ok(User {
-		id: 1,
-		name,
-	})
+	Ok(User { id: 1, name })
 }
 
 // Test: Server function with no #[inject] parameters (use_inject = true but no actual injections)
 #[server_fn(use_inject = true)]
-async fn simple_function(
-	value: u32,
-) -> Result<u32, ServerFnError> {
+async fn simple_function(value: u32) -> Result<u32, ServerFnError> {
 	Ok(value * 2)
 }
 

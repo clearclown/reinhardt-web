@@ -3,8 +3,8 @@
 //! Validates that watch blocks can contain if statements for conditional rendering.
 //! This is the primary use case for watch blocks.
 
-use reinhardt_pages::page;
 use reinhardt_pages::Signal;
+use reinhardt_pages::page;
 
 fn main() {
 	// Watch with if condition using Signal parameter

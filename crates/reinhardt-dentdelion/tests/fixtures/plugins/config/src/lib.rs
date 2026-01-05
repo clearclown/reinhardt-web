@@ -8,9 +8,7 @@ wit_bindgen::generate!({
 	path: "../../../../wit",
 });
 
-use exports::reinhardt::dentdelion::plugin::{
-	Capability, Guest, PluginError, PluginMetadata,
-};
+use exports::reinhardt::dentdelion::plugin::{Capability, Guest, PluginError, PluginMetadata};
 
 struct ConfigPlugin;
 
@@ -63,10 +61,7 @@ impl Guest for ConfigPlugin {
 				log_info("Successfully set plugin_initialized config");
 			}
 			Err(e) => {
-				log_info(&format!(
-					"Failed to set config: {} - {}",
-					e.code, e.message
-				));
+				log_info(&format!("Failed to set config: {} - {}", e.code, e.message));
 				return Err(PluginError {
 					code: e.code,
 					message: format!("Failed to set config: {}", e.message),

@@ -3,8 +3,8 @@
 //! Validates that watch blocks can contain if-else statements.
 //! Both branches should be wrapped in the reactive context.
 
-use reinhardt_pages::page;
 use reinhardt_pages::Signal;
+use reinhardt_pages::page;
 
 fn main() {
 	// Watch with if-else using Signal

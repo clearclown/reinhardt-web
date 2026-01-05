@@ -53,10 +53,7 @@ impl From<serde_urlencoded::de::Error> for ServerFnError {
 
 // Test: URL codec for simple GET request parameters
 #[server_fn(codec = "url")]
-async fn search(
-	query: String,
-	page: u32,
-) -> Result<Vec<SearchResult>, ServerFnError> {
+async fn search(query: String, page: u32) -> Result<Vec<SearchResult>, ServerFnError> {
 	Ok(vec![SearchResult {
 		title: format!("Result for: {}", query),
 		url: format!("https://example.com/search?q={}&page={}", query, page),
@@ -79,10 +76,7 @@ async fn filter_items(
 
 // Test: URL codec with boolean and string parameters
 #[server_fn(codec = "url")]
-async fn get_settings(
-	user_id: u32,
-	include_private: bool,
-) -> Result<String, ServerFnError> {
+async fn get_settings(user_id: u32, include_private: bool) -> Result<String, ServerFnError> {
 	Ok(format!(
 		"Settings for user {} (private: {})",
 		user_id, include_private

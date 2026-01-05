@@ -3,9 +3,9 @@
 use reinhardt_pages::page;
 
 fn main() {
-	let is_disabled = "disabled";
-	let is_checked = "";
-	let is_readonly = "readonly";
+	let is_disabled = true;
+	let is_checked = false;
+	let is_readonly = true;
 
 	let _valid = page!(|| {
 		div {

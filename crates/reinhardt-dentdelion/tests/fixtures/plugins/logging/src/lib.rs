@@ -8,9 +8,7 @@ wit_bindgen::generate!({
 	path: "../../../../../wit",
 });
 
-use exports::reinhardt::dentdelion::plugin::{
-	Capability, Guest, PluginError, PluginMetadata,
-};
+use exports::reinhardt::dentdelion::plugin::{Capability, Guest, PluginError, PluginMetadata};
 
 struct LoggingPlugin;
 

@@ -3,8 +3,8 @@
 //! Validates that watch blocks can be nested within other elements
 //! and multiple watch blocks can exist within the same parent.
 
-use reinhardt_pages::page;
 use reinhardt_pages::Signal;
+use reinhardt_pages::page;
 
 fn main() {
 	// Watch nested inside multiple elements

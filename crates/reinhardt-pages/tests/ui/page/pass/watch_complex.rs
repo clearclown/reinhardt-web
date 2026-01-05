@@ -2,8 +2,8 @@
 //!
 //! Validates advanced usage patterns combining multiple features.
 
-use reinhardt_pages::page;
 use reinhardt_pages::Signal;
+use reinhardt_pages::page;
 
 fn main() {
 	// Complex nested structure with multiple watches

@@ -9,16 +9,16 @@ fn main() {
 	let _valid = page!(|| {
 		div {
 			button {
-				disabled: if condition { "disabled" } else { "" },
+				disabled: condition,
 				"Submit"
 			}
 			input {
 				r#type: "checkbox",
-				checked: if count>3 { "checked" } else { "" },
+				checked: count>3,
 			}
 			input {
 				r#type: "text",
-				required: if count<10 &&condition { "required" } else { "" },
+				required: count<10 &&condition,
 			}
 		}
 	});

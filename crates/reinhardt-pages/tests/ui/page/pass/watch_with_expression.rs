@@ -3,8 +3,8 @@
 //! Validates that watch blocks can contain expression nodes
 //! that evaluate to dynamic content.
 
-use reinhardt_pages::page;
 use reinhardt_pages::Signal;
+use reinhardt_pages::page;
 
 fn main() {
 	// Watch with expression node

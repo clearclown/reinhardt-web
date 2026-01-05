@@ -2,12 +2,12 @@
 
 use reinhardt_pages::page;
 
-fn is_button_disabled() -> &'static str {
-	"disabled"
+fn is_button_disabled() -> bool {
+	true
 }
 
-fn calculate_checked(value: i32) -> &'static str {
-	if value > 0 { "checked" } else { "" }
+fn calculate_checked(value: i32) -> bool {
+	value > 0
 }
 
 fn main() {
