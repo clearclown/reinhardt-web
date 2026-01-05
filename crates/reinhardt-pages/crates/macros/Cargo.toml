@@ -36,3 +36,4 @@ proc-macro-crate = "3.2.0"
 [dev-dependencies]
 # For testing macro expansion (unit tests only, not trybuild)
 # trybuild tests are in the parent reinhardt-pages crate to avoid circular deps
+rstest = { workspace = true }

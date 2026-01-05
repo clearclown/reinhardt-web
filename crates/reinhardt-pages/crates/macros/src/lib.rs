@@ -49,6 +49,7 @@
 use proc_macro::TokenStream;
 
 mod crate_paths;
+mod form;
 mod head;
 mod page;
 mod server_fn;
@@ -272,6 +273,115 @@ pub fn page(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn head(input: TokenStream) -> TokenStream {
 	head::head_impl(input)
+}
+
+/// Form component macro
+///
+/// Creates a type-safe form with reactive bindings and validation support.
+/// The macro generates a form struct with Signal-bound fields and view generation.
+///
+/// ## Syntax
+///
+/// ```text
+/// form! {
+///     name: FormName,
+///     action: "/api/endpoint",    // OR server_fn: function_name
+///     method: Post,               // Optional, defaults to Post
+///     class: "form-class",        // Optional, form CSS class
+///
+///     fields: {
+///         field_name: FieldType {
+///             required,           // Validation
+///             max_length: 150,    // Constraints
+///             label: "Label",     // Display
+///             class: "input",     // Styling
+///         },
+///     },
+///
+///     validators: {               // Optional server-side validators
+///         field_name: [
+///             |v| !v.is_empty() => "Error message",
+///         ],
+///     },
+///
+///     client_validators: {        // Optional client-side validators
+///         field_name: [
+///             "value.length > 0" => "Error message",
+///         ],
+///     },
+/// }
+/// ```
+///
+/// ## Field Types
+///
+/// - `CharField` - Text input (String)
+/// - `EmailField` - Email input (String)
+/// - `PasswordField` - Password input (String)
+/// - `IntegerField` - Number input (i64)
+/// - `FloatField` - Number input (f64)
+/// - `BooleanField` - Checkbox input (bool)
+/// - `DateField` - Date input (Option<NaiveDate>)
+/// - `ChoiceField` - Select dropdown (String)
+/// - `FileField` - File input (Option<File>)
+///
+/// ## Widget Types
+///
+/// - `TextInput`, `PasswordInput`, `EmailInput`, `NumberInput`
+/// - `Textarea`, `Select`, `SelectMultiple`
+/// - `CheckboxInput`, `RadioSelect`
+/// - `DateInput`, `TimeInput`, `DateTimeInput`
+/// - `FileInput`, `HiddenInput`
+///
+/// ## Example
+///
+/// ```ignore
+/// use reinhardt_pages::form;
+///
+/// let login_form = form! {
+///     name: LoginForm,
+///     action: "/api/login",
+///
+///     fields: {
+///         username: CharField {
+///             required,
+///             max_length: 150,
+///             label: "Username",
+///         },
+///         password: CharField {
+///             required,
+///             widget: PasswordInput,
+///             label: "Password",
+///         },
+///     },
+/// };
+///
+/// // Type-safe field access
+/// let username_signal = login_form.username();
+///
+/// // Convert to View
+/// let view = login_form.into_view();
+/// ```
+///
+/// ## With server_fn
+///
+/// ```ignore
+/// #[server_fn]
+/// async fn submit_login(request: LoginRequest) -> Result<(), ServerFnError> {
+///     // Server-side handling
+/// }
+///
+/// let form = form! {
+///     name: LoginForm,
+///     server_fn: submit_login,  // Uses server_fn instead of URL
+///     // ...
+/// };
+///
+/// // On WASM, submit() calls the server_fn directly
+/// form.submit().await?;
+/// ```
+#[proc_macro]
+pub fn form(input: TokenStream) -> TokenStream {
+	form::form_impl(input)
 }
 
 // Note: For dependency injection parameters, use the tool attribute #[reinhardt::inject]
