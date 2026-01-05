@@ -93,6 +93,21 @@ enum Commands {
 		#[arg(long)]
 		check: bool,
 	},
+
+	/// Format all code: Rust (via rustfmt) + page! DSL (via reinhardt-fmt)
+	///
+	/// This command protects page! macros from rustfmt, runs rustfmt on the
+	/// surrounding Rust code, restores the macros, and then formats them with
+	/// the page! DSL formatter.
+	FmtAll {
+		/// Path to file or directory to format
+		#[arg(value_name = "PATH")]
+		path: PathBuf,
+
+		/// Check if files are formatted without modifying them
+		#[arg(long)]
+		check: bool,
+	},
 }
 
 /// Plugin management subcommands
@@ -240,6 +255,7 @@ async fn main() {
 		} => run_startapp(name, directory, template_type, cli.verbosity).await,
 		Commands::Plugin { subcommand } => run_plugin(subcommand, cli.verbosity).await,
 		Commands::Fmt { path, check } => run_fmt(path, check, cli.verbosity),
+		Commands::FmtAll { path, check } => run_fmt_all(path, check, cli.verbosity),
 	};
 
 	if let Err(e) = result {
@@ -568,4 +584,210 @@ fn run_fmt(path: PathBuf, check: bool, verbosity: u8) -> CommandResult<()> {
 	}
 
 	Ok(())
+}
+
+/// Format all code: Rust (via rustfmt) + page! DSL (via reinhardt-fmt)
+///
+/// Pipeline:
+/// 1. Protect: page!(...)  → __reinhardt_placeholder__!(/*n*/)
+/// 2. rustfmt: Format Rust code (placeholders are not touched)
+/// 3. Restore: __reinhardt_placeholder__!(/*n*/) → page!(...)
+/// 4. reinhardt-fmt: Format page! macro contents
+fn run_fmt_all(path: PathBuf, check: bool, verbosity: u8) -> CommandResult<()> {
+	use ast_formatter::AstPageFormatter;
+	use formatter::collect_rust_files;
+
+	let files = collect_rust_files(&path).map_err(|e| {
+		reinhardt_commands::CommandError::ExecutionError(format!("Failed to collect files: {}", e))
+	})?;
+
+	if files.is_empty() {
+		if verbosity > 0 {
+			println!("No Rust files found in {:?}", path);
+		}
+		return Ok(());
+	}
+
+	let formatter = AstPageFormatter::new();
+	let mut formatted_count = 0;
+	let mut unchanged_count = 0;
+	let mut error_count = 0;
+
+	let total_files = files.len();
+
+	for (index, file_path) in files.iter().enumerate() {
+		let progress = format!("[{}/{}]", index + 1, total_files);
+		let original_content = std::fs::read_to_string(file_path).map_err(|e| {
+			reinhardt_commands::CommandError::ExecutionError(format!(
+				"Failed to read {}: {}",
+				file_path.display(),
+				e
+			))
+		})?;
+
+		// Check for file-wide ignore marker BEFORE any processing
+		// This allows files with intentionally broken syntax (UI tests) to be skipped
+		if formatter.has_ignore_all_marker(&original_content) {
+			if verbosity > 0 {
+				eprintln!(
+					"{} {} (reinhardt-fmt: ignore-all)",
+					progress.bright_blue(),
+					file_path.display()
+				);
+			}
+			unchanged_count += 1;
+			continue;
+		}
+
+		// Step 1: Protect page! macros
+		let protect_result = formatter.protect_page_macros(&original_content);
+
+		// Step 2: Run rustfmt on protected content
+		let rustfmt_result = run_rustfmt(&protect_result.protected_content);
+		let rustfmt_output = match rustfmt_result {
+			Ok(output) => output,
+			Err(e) => {
+				eprintln!(
+					"{} {} {}: rustfmt failed: {}",
+					progress.bright_blue(),
+					"Error".red(),
+					file_path.display(),
+					e
+				);
+				error_count += 1;
+				continue;
+			}
+		};
+
+		// Step 3: Restore page! macros
+		let restored =
+			AstPageFormatter::restore_page_macros(&rustfmt_output, &protect_result.backups);
+
+		// Step 4: Format page! macros with reinhardt-fmt
+		let final_result = match formatter.format(&restored) {
+			Ok(result) => result.content,
+			Err(e) => {
+				eprintln!(
+					"{} {} {}: page! format failed: {}",
+					progress.bright_blue(),
+					"Error".red(),
+					file_path.display(),
+					e
+				);
+				error_count += 1;
+				continue;
+			}
+		};
+
+		// Compare with original
+		if final_result != original_content {
+			if check {
+				println!("{} Would format: {}", progress, file_path.display());
+				formatted_count += 1;
+			} else {
+				std::fs::write(file_path, &final_result).map_err(|e| {
+					reinhardt_commands::CommandError::ExecutionError(format!(
+						"Failed to write {}: {}",
+						file_path.display(),
+						e
+					))
+				})?;
+				println!(
+					"{} {} {}",
+					progress.bright_blue(),
+					"Formatted:".green(),
+					file_path.display()
+				);
+				formatted_count += 1;
+			}
+		} else {
+			unchanged_count += 1;
+			if verbosity > 0 {
+				println!(
+					"{} {} {}",
+					progress.bright_blue(),
+					"Unchanged:".dimmed(),
+					file_path.display()
+				);
+			}
+		}
+	}
+
+	// Summary
+	println!();
+	if check {
+		println!(
+			"{}: {} would be formatted, {} unchanged, {} errors",
+			"Summary".bright_cyan(),
+			formatted_count.to_string().yellow(),
+			unchanged_count,
+			if error_count > 0 {
+				error_count.to_string().red()
+			} else {
+				error_count.to_string().green()
+			}
+		);
+	} else {
+		println!(
+			"{}: {} formatted, {} unchanged, {} errors",
+			"Summary".bright_cyan(),
+			if formatted_count > 0 {
+				formatted_count.to_string().green()
+			} else {
+				formatted_count.to_string().dimmed()
+			},
+			unchanged_count,
+			if error_count > 0 {
+				error_count.to_string().red()
+			} else {
+				error_count.to_string().dimmed()
+			}
+		);
+	}
+
+	if check && formatted_count > 0 {
+		return Err(reinhardt_commands::CommandError::ExecutionError(
+			"Some files are not properly formatted".to_string(),
+		));
+	}
+
+	if error_count > 0 {
+		return Err(reinhardt_commands::CommandError::ExecutionError(format!(
+			"{} files had formatting errors",
+			error_count
+		)));
+	}
+
+	Ok(())
+}
+
+/// Run rustfmt on content and return formatted output.
+fn run_rustfmt(content: &str) -> Result<String, String> {
+	use std::io::Write;
+	use std::process::{Command, Stdio};
+
+	let mut child = Command::new("rustfmt")
+		.arg("--edition=2024")
+		.stdin(Stdio::piped())
+		.stdout(Stdio::piped())
+		.stderr(Stdio::piped())
+		.spawn()
+		.map_err(|e| format!("Failed to spawn rustfmt: {}", e))?;
+
+	if let Some(mut stdin) = child.stdin.take() {
+		stdin
+			.write_all(content.as_bytes())
+			.map_err(|e| format!("Failed to write to rustfmt stdin: {}", e))?;
+	}
+
+	let output = child
+		.wait_with_output()
+		.map_err(|e| format!("Failed to wait for rustfmt: {}", e))?;
+
+	if output.status.success() {
+		String::from_utf8(output.stdout).map_err(|e| format!("Invalid UTF-8 from rustfmt: {}", e))
+	} else {
+		let stderr = String::from_utf8_lossy(&output.stderr);
+		Err(format!("rustfmt failed: {}", stderr))
+	}
 }
