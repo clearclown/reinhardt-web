@@ -1,10 +1,10 @@
-//! AST definitions for the page! macro DSL.
+//! AST definitions for the page! and form! macro DSLs.
 //!
 //! This crate provides the Abstract Syntax Tree (AST) structures and parsing logic
-//! for the `page!` macro's Domain Specific Language (DSL). It is designed to be
-//! shared between the proc-macro crate and other tools like formatters.
+//! for the `page!` and `form!` macros' Domain Specific Languages (DSLs). It is designed
+//! to be shared between the proc-macro crate and other tools like formatters.
 //!
-//! ## DSL Structure
+//! ## page! DSL Structure
 //!
 //! ```text
 //! // Basic structure
@@ -27,9 +27,37 @@
 //! }
 //! ```
 //!
+//! ## form! DSL Structure
+//!
+//! ```text
+//! form! {
+//!     name: LoginForm,
+//!     action: "/api/login",    // OR server_fn: submit_login
+//!     method: Post,
+//!     class: "form-container",
+//!
+//!     fields: {
+//!         username: CharField {
+//!             required,
+//!             max_length: 150,
+//!             label: "Username",
+//!             class: "input-field",
+//!         },
+//!         password: CharField {
+//!             required,
+//!             widget: PasswordInput,
+//!         },
+//!     },
+//!
+//!     validators: {
+//!         username: [|v| !v.is_empty() => "Required"],
+//!     },
+//! }
+//! ```
+//!
 //! ## Main Types
 //!
-//! ### Untyped AST (from parser)
+//! ### page! Untyped AST (from parser)
 //!
 //! - [`PageMacro`] - The top-level AST node representing the entire macro invocation
 //! - [`PageNode`] - A node in the view tree (element, text, expression, control flow, component)
@@ -41,7 +69,7 @@
 //! - [`PageWatch`] - Reactive watch block for Signal-dependent expressions
 //! - [`PageComponent`] - A component call
 //!
-//! ### Typed AST (from validator)
+//! ### page! Typed AST (from validator)
 //!
 //! - [`TypedPageMacro`] - Validated and typed AST with type-safe attributes
 //! - [`TypedPageNode`] - Typed nodes with validated attribute values
@@ -49,6 +77,22 @@
 //! - [`TypedPageAttr`] - Attribute with typed value
 //! - [`TypedPageWatch`] - Reactive watch block for Signal-dependent expressions
 //! - [`AttrValue`] - Typed representation of attribute values
+//!
+//! ### form! Untyped AST (from parser)
+//!
+//! - [`FormMacro`] - The top-level form AST node
+//! - [`FormFieldDef`] - A field definition with type and properties
+//! - [`FormFieldProperty`] - A property within a field (named, flag, widget)
+//! - [`FormValidator`] - Server-side validator definition
+//! - [`ClientValidator`] - Client-side validator definition
+//!
+//! ### form! Typed AST (from validator)
+//!
+//! - [`TypedFormMacro`] - Validated form with typed fields
+//! - [`TypedFormFieldDef`] - Validated field with typed properties
+//! - [`TypedFieldType`] - Validated field type with Signal mapping
+//! - [`TypedWidget`] - Validated widget type
+//! - [`TypedFieldStyling`] - Styling properties with defaults
 //!
 //! ## Usage
 //!
@@ -74,6 +118,11 @@ mod parser;
 pub mod typed_node;
 pub mod types;
 
+// Form macro AST
+pub mod form_node;
+mod form_parser;
+pub mod form_typed;
+
 pub use node::{
 	PageAttr, PageBody, PageComponent, PageComponentArg, PageElement, PageElse, PageEvent,
 	PageExpression, PageFor, PageIf, PageMacro, PageNode, PageParam, PageText, PageWatch,
@@ -82,4 +131,15 @@ pub use node::{
 pub use typed_node::{
 	TypedPageAttr, TypedPageBody, TypedPageComponent, TypedPageElement, TypedPageElse,
 	TypedPageFor, TypedPageIf, TypedPageMacro, TypedPageNode, TypedPageWatch,
+};
+
+// Form macro exports
+pub use form_node::{
+	ClientValidator, ClientValidatorRule, FormAction, FormFieldDef, FormFieldProperty, FormMacro,
+	FormValidator, ValidatorRule,
+};
+pub use form_typed::{
+	FormMethod, TypedClientValidator, TypedClientValidatorRule, TypedFieldDisplay,
+	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormFieldDef,
+	TypedFormMacro, TypedFormStyling, TypedFormValidator, TypedValidatorRule, TypedWidget,
 };
