@@ -680,12 +680,29 @@ where
 	pub async fn list(&self, request: &Request) -> std::result::Result<Response, ViewError> {
 		self.check_permissions(request).await?;
 
-		let queryset = self.get_queryset();
 		let serializer = self.get_serializer();
+
+		// Get items from database if pool is available, otherwise use in-memory queryset
+		let items: Vec<T> = if let Some(pool) = &self.pool {
+			// Query database for all objects
+			let session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
+
+			session
+				.list_all()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to list objects: {}", e)))?
+		} else {
+			// Use in-memory queryset
+			self.get_queryset().to_vec()
+		};
 
 		// Serialize all objects
 		let mut serialized_items = Vec::new();
-		for item in queryset {
+		for item in &items {
 			let json = serializer
 				.serialize(item)
 				.map_err(|e| ViewError::Serialization(e.to_string()))?;
@@ -754,27 +771,55 @@ where
 	) -> std::result::Result<Response, ViewError> {
 		self.check_permissions(request).await?;
 
-		let queryset = self.get_queryset();
 		let serializer = self.get_serializer();
 
-		// Find object by primary key
-		let item = queryset
-			.iter()
-			.find(|item| {
-				if let Some(item_pk) = item.primary_key() {
-					// Compare primary keys by converting both to strings using Display
-					let item_pk_str = item_pk.to_string();
-					let pk_str = pk.to_string();
+		// Get item from database if pool is available, otherwise use in-memory queryset
+		let item: T = if let Some(pool) = &self.pool {
+			// Query database for all objects and find by pk
+			let session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
 
-					item_pk_str == pk_str
-				} else {
-					false
-				}
-			})
-			.ok_or_else(|| ViewError::NotFound(format!("Object with pk={} not found", pk)))?;
+			let items: Vec<T> = session
+				.list_all()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to query objects: {}", e)))?;
+
+			// Compare pk as strings (JSON number vs Display)
+			let pk_str = pk.to_string();
+
+			items
+				.into_iter()
+				.find(|item| {
+					if let Some(item_pk) = item.primary_key() {
+						item_pk.to_string() == pk_str
+					} else {
+						false
+					}
+				})
+				.ok_or_else(|| ViewError::NotFound(format!("Object with pk={} not found", pk)))?
+		} else {
+			// Use in-memory queryset
+			let queryset = self.get_queryset();
+			queryset
+				.iter()
+				.find(|item| {
+					if let Some(item_pk) = item.primary_key() {
+						let item_pk_str = item_pk.to_string();
+						let pk_str = pk.to_string();
+						item_pk_str == pk_str
+					} else {
+						false
+					}
+				})
+				.cloned()
+				.ok_or_else(|| ViewError::NotFound(format!("Object with pk={} not found", pk)))?
+		};
 
 		let json = serializer
-			.serialize(item)
+			.serialize(&item)
 			.map_err(|e| ViewError::Serialization(e.to_string()))?;
 
 		Ok(Response::ok().with_body(json))
@@ -867,14 +912,56 @@ where
 				.await
 				.map_err(|e| ViewError::DatabaseError(format!("Failed to flush: {}", e)))?;
 
+			// Get the generated ID from the session
+			let generated_id = session.get_generated_ids().first().map(|(_, id)| *id);
+
 			// Commit transaction
 			session
 				.commit()
 				.await
 				.map_err(|e| ViewError::DatabaseError(format!("Failed to commit: {}", e)))?;
+
+			// Re-fetch the created object from the database to get all auto-populated fields
+			// (e.g., created_at which is set by database DEFAULT)
+			if let Some(id) = generated_id {
+				let fetch_session =
+					reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
+						.await
+						.map_err(|e| {
+							ViewError::DatabaseError(format!("Failed to create session: {}", e))
+						})?;
+
+				// Fetch all objects and find the one with matching ID
+				let items: Vec<T> = fetch_session.list_all().await.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to fetch objects: {}", e))
+				})?;
+
+				let created_item = items
+					.into_iter()
+					.find(|i| {
+						i.primary_key()
+							.map(|pk| pk.to_string() == id.to_string())
+							.unwrap_or(false)
+					})
+					.ok_or_else(|| {
+						ViewError::DatabaseError("Failed to find created object".to_string())
+					})?;
+
+				// Serialize the complete object (including auto-populated fields)
+				let response_body = serializer
+					.serialize(&created_item)
+					.map_err(|e| ViewError::Serialization(e.to_string()))?;
+
+				return Ok(Response::created().with_body(response_body));
+			}
 		}
 
-		Ok(Response::created().with_body(body_str))
+		// Fallback: return the original item if no database pool
+		let response_body = serializer
+			.serialize(&item)
+			.map_err(|e| ViewError::Serialization(e.to_string()))?;
+
+		Ok(Response::created().with_body(response_body))
 	}
 
 	/// Update an existing object
@@ -935,16 +1022,79 @@ where
 
 		let serializer = self.get_serializer();
 
-		// Verify object exists
-		let _ = self.retrieve(request, pk).await?;
+		// Get existing object from database
+		let existing_obj: T = if let Some(pool) = &self.pool {
+			let session = reinhardt_db::prelude::Session::new(pool.clone(), self.db_backend)
+				.await
+				.map_err(|e| {
+					ViewError::DatabaseError(format!("Failed to create session: {}", e))
+				})?;
 
-		// Parse request body
+			let items: Vec<T> = session
+				.list_all()
+				.await
+				.map_err(|e| ViewError::DatabaseError(format!("Failed to list objects: {}", e)))?;
+
+			let pk_str = pk.to_string().replace('"', "");
+			items
+				.into_iter()
+				.find(|item| {
+					if let Some(item_pk) = item.primary_key() {
+						item_pk.to_string() == pk_str
+					} else {
+						false
+					}
+				})
+				.ok_or_else(|| {
+					ViewError::NotFound(format!("Object with pk {} not found", pk_str))
+				})?
+		} else {
+			// Fall back to queryset for non-database mode
+			let pk_str = pk.to_string().replace('"', "");
+			self.get_queryset()
+				.iter()
+				.find(|item| {
+					if let Some(item_pk) = item.primary_key() {
+						item_pk.to_string() == pk_str
+					} else {
+						false
+					}
+				})
+				.cloned()
+				.ok_or_else(|| {
+					ViewError::NotFound(format!("Object with pk {} not found", pk_str))
+				})?
+		};
+
+		// Parse request body as JSON for partial update (PATCH semantics)
 		let body_str = String::from_utf8(request.body().to_vec())
 			.map_err(|e| ViewError::BadRequest(format!("Invalid UTF-8: {}", e)))?;
 
-		// Deserialize into model
-		let item = serializer
-			.deserialize(&body_str)
+		// Parse patch data as JSON
+		let patch_data: serde_json::Value = serde_json::from_str(&body_str)
+			.map_err(|e| ViewError::Serialization(format!("Invalid JSON: {}", e)))?;
+
+		// Serialize existing object to JSON and merge with patch data
+		let existing_json = serializer
+			.serialize(&existing_obj)
+			.map_err(|e| ViewError::Serialization(e.to_string()))?;
+		let mut existing_value: serde_json::Value = serde_json::from_str(&existing_json)
+			.map_err(|e| ViewError::Serialization(format!("Failed to parse existing: {}", e)))?;
+
+		// Merge patch data into existing object (only overwrites provided fields)
+		if let (Some(existing_obj_map), Some(patch_obj)) =
+			(existing_value.as_object_mut(), patch_data.as_object())
+		{
+			for (key, value) in patch_obj {
+				existing_obj_map.insert(key.clone(), value.clone());
+			}
+		}
+
+		// Deserialize merged object back to model type
+		let merged_json = serde_json::to_string(&existing_value)
+			.map_err(|e| ViewError::Serialization(format!("Failed to serialize merged: {}", e)))?;
+		let updated_item: T = serializer
+			.deserialize(&merged_json)
 			.map_err(|e| ViewError::Serialization(e.to_string()))?;
 
 		// Update database if pool is available
@@ -963,7 +1113,7 @@ where
 
 			// Add updated object to session (marks as dirty for UPDATE)
 			session
-				.add(item.clone())
+				.add(updated_item.clone())
 				.await
 				.map_err(|e| ViewError::DatabaseError(format!("Failed to add object: {}", e)))?;
 
@@ -980,7 +1130,8 @@ where
 				.map_err(|e| ViewError::DatabaseError(format!("Failed to commit: {}", e)))?;
 		}
 
-		Ok(Response::ok().with_body(body_str))
+		// Return the complete merged/updated object
+		Ok(Response::ok().with_body(merged_json))
 	}
 
 	/// Delete an object

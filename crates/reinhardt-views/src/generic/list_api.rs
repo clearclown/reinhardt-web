@@ -181,6 +181,29 @@ where
 		self
 	}
 
+	/// Sets the pagination configuration for the view
+	///
+	/// This method allows setting any pagination type (PageNumber, LimitOffset, Cursor, or None).
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// # use reinhardt_views::ListAPIView;
+	/// # use reinhardt_viewsets::PaginationConfig;
+	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_db::orm::Model;
+	/// # use serde::{Serialize, Deserialize};
+	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
+	/// # struct Article { id: Option<i64>, title: String }
+	///
+	/// let view = ListAPIView::<Article, JsonSerializer<Article>>::new()
+	///     .with_pagination(PaginationConfig::limit_offset(10, Some(100)));
+	/// ```
+	pub fn with_pagination(mut self, config: PaginationConfig) -> Self {
+		self.pagination_config = Some(config);
+		self
+	}
+
 	/// Sets the ordering for the queryset
 	///
 	/// Fields can be prefixed with `-` for descending order.

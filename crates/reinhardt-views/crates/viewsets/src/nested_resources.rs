@@ -88,18 +88,25 @@ impl NestedResourcePath {
 		format!("{}/", parts.join("/"))
 	}
 
-	/// Build the list URL pattern (without last ID)
+	/// Build the list URL pattern (resource names only, no ID placeholders)
+	///
+	/// This returns a URL pattern with only the resource names, without any
+	/// ID placeholders. For routing purposes where IDs are extracted separately.
+	///
+	/// # Examples
+	///
+	/// - Single segment: `users` -> `"users/"`
+	/// - Two segments: `users/posts` -> `"users/posts/"`
 	pub fn build_list_url(&self) -> String {
 		if self.segments.is_empty() {
 			return "/".to_string();
 		}
 
-		let mut parts = Vec::new();
-		for (resource, id_param) in &self.segments[..self.segments.len() - 1] {
-			parts.push(resource.clone());
-			parts.push(format!("{{{}}}", id_param));
-		}
-		parts.push(self.segments.last().unwrap().0.clone());
+		let parts: Vec<&str> = self
+			.segments
+			.iter()
+			.map(|(resource, _)| resource.as_str())
+			.collect();
 		format!("{}/", parts.join("/"))
 	}
 
@@ -226,7 +233,7 @@ mod tests {
 			.add_segment("posts", "post_id");
 
 		assert_eq!(path.build_url(), "users/{user_id}/posts/{post_id}/");
-		assert_eq!(path.build_list_url(), "users/{user_id}/posts/");
+		assert_eq!(path.build_list_url(), "users/posts/");
 	}
 
 	#[test]
@@ -240,10 +247,7 @@ mod tests {
 			path.build_url(),
 			"organizations/{org_id}/teams/{team_id}/members/{member_id}/"
 		);
-		assert_eq!(
-			path.build_list_url(),
-			"organizations/{org_id}/teams/{team_id}/members/"
-		);
+		assert_eq!(path.build_list_url(), "organizations/teams/members/");
 	}
 
 	#[test]

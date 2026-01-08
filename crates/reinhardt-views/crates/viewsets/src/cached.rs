@@ -46,8 +46,8 @@ impl CacheConfig {
 		Self {
 			key_prefix: key_prefix.into(),
 			ttl: None,
-			cache_list: false,
-			cache_retrieve: false,
+			cache_list: true,
+			cache_retrieve: true,
 		}
 	}
 
@@ -81,7 +81,9 @@ impl CacheConfig {
 
 impl Default for CacheConfig {
 	fn default() -> Self {
-		Self::new("viewset").cache_all()
+		Self::new("viewset")
+			.with_ttl(Duration::from_secs(300)) // 5 minutes default TTL
+			.cache_all()
 	}
 }
 
@@ -552,6 +554,6 @@ mod tests {
 		assert_eq!(config.key_prefix, "viewset");
 		assert!(config.cache_list);
 		assert!(config.cache_retrieve);
-		assert_eq!(config.ttl, None);
+		assert_eq!(config.ttl, Some(Duration::from_secs(300))); // 5 minutes default TTL
 	}
 }
