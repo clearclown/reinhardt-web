@@ -58,7 +58,7 @@ impl EncryptedString {
 			encryption_key: key,
 		}
 	}
-	/// Create from a Vec<u8>, padding or truncating as needed
+	/// Create from a `Vec<u8>`, padding or truncating as needed
 	///
 	pub fn from_key_bytes(key: Vec<u8>) -> Result<Self, TypeError> {
 		if key.len() < 32 {

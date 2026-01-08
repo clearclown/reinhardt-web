@@ -16,7 +16,7 @@
 //!
 //! ### Database Backends (`backends` module)
 //!
-//! - **Schema Editor Abstraction**: Unified [`BaseDatabaseSchemaEditor`] trait
+//! - **Schema Editor Abstraction**: Unified `BaseDatabaseSchemaEditor` trait
 //! - **Database-Specific Implementations**: PostgreSQL, MySQL, SQLite support
 //! - **DDL Operations**: CREATE TABLE, ALTER TABLE, CREATE INDEX, etc.
 //! - **Query Builder**: Type-safe query construction

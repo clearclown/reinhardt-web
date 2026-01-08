@@ -425,7 +425,7 @@ impl<T: Model> SelectQuery<T> {
 		self
 	}
 
-	/// Slice - corresponds to SQLAlchemy's slicing [start:end]
+	/// Slice - corresponds to SQLAlchemy's slicing `[start:end]`
 	pub fn slice(mut self, start: usize, end: usize) -> Self {
 		self.offset = Some(start);
 		self.limit = Some(end - start);

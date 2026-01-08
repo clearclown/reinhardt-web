@@ -939,7 +939,7 @@ impl PostgresParticipantAdapter {
 		}
 	}
 
-	/// Create a new adapter from Arc<PgPool>
+	/// Create a new adapter from `Arc<PgPool>`
 	pub fn from_pool_arc(id: impl Into<String>, pool: std::sync::Arc<sqlx::PgPool>) -> Self {
 		Self {
 			id: id.into(),
@@ -1082,7 +1082,7 @@ impl MySqlParticipantAdapter {
 		}
 	}
 
-	/// Create a new adapter from Arc<MySqlPool>
+	/// Create a new adapter from `Arc<MySqlPool>`
 	pub fn from_pool_arc(id: impl Into<String>, pool: std::sync::Arc<sqlx::MySqlPool>) -> Self {
 		Self {
 			id: id.into(),

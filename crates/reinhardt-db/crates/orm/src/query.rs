@@ -484,7 +484,7 @@ where
 	///
 	/// # Parameters
 	///
-	/// * `builder` - A closure that receives a fresh QuerySet<M> and returns a configured QuerySet
+	/// * `builder` - A closure that receives a fresh `QuerySet<M>` and returns a configured QuerySet
 	/// * `alias` - The alias for the derived table (required for FROM subqueries)
 	///
 	/// # Examples
@@ -2786,7 +2786,7 @@ where
 		}
 	}
 
-	/// Parse array string into Vec<sea_query::Value>
+	/// Parse array string into `Vec<sea_query::Value>`
 	/// Supports comma-separated values or JSON array format
 	fn parse_array_string(s: &str) -> Vec<sea_query::Value> {
 		let trimmed = s.trim();
@@ -3420,6 +3420,31 @@ where
 				stmt.cond_where(cond);
 			}
 
+			// Apply ORDER BY clause
+			for order_field in &self.order_by_fields {
+				let (field, is_desc) = if let Some(stripped) = order_field.strip_prefix('-') {
+					(stripped, true)
+				} else {
+					(order_field.as_str(), false)
+				};
+
+				let col_ref = parse_column_reference(field);
+				let expr = Expr::col(col_ref);
+				if is_desc {
+					stmt.order_by_expr(expr, Order::Desc);
+				} else {
+					stmt.order_by_expr(expr, Order::Asc);
+				}
+			}
+
+			// Apply LIMIT/OFFSET
+			if let Some(limit) = self.limit {
+				stmt.limit(limit as u64);
+			}
+			if let Some(offset) = self.offset {
+				stmt.offset(offset as u64);
+			}
+
 			stmt.to_owned()
 		} else {
 			// SELECT with JOINs for select_related
@@ -3633,6 +3658,31 @@ where
 
 			if let Some(cond) = self.build_where_condition() {
 				stmt.cond_where(cond);
+			}
+
+			// Apply ORDER BY clause
+			for order_field in &self.order_by_fields {
+				let (field, is_desc) = if let Some(stripped) = order_field.strip_prefix('-') {
+					(stripped, true)
+				} else {
+					(order_field.as_str(), false)
+				};
+
+				let col_ref = parse_column_reference(field);
+				let expr = Expr::col(col_ref);
+				if is_desc {
+					stmt.order_by_expr(expr, Order::Desc);
+				} else {
+					stmt.order_by_expr(expr, Order::Asc);
+				}
+			}
+
+			// Apply LIMIT/OFFSET
+			if let Some(limit) = self.limit {
+				stmt.limit(limit as u64);
+			}
+			if let Some(offset) = self.offset {
+				stmt.offset(offset as u64);
 			}
 
 			stmt.to_owned()
@@ -4289,7 +4339,7 @@ where
 	/// # Parameters
 	///
 	/// * `name` - The alias for the subquery result column
-	/// * `builder` - A closure that receives a fresh QuerySet<M> and returns a configured QuerySet
+	/// * `builder` - A closure that receives a fresh `QuerySet<M>` and returns a configured QuerySet
 	///
 	/// # Examples
 	///
@@ -4809,7 +4859,7 @@ where
 	/// Set LIMIT clause
 	///
 	/// Limits the number of records returned by the query.
-	/// Corresponds to Django's QuerySet slicing [:limit].
+	/// Corresponds to Django's QuerySet slicing `[:limit]`.
 	///
 	/// # Examples
 	///
@@ -4847,7 +4897,7 @@ where
 	/// Set OFFSET clause
 	///
 	/// Skips the specified number of records before returning results.
-	/// Corresponds to Django's QuerySet slicing [offset:].
+	/// Corresponds to Django's QuerySet slicing `[offset:]`.
 	///
 	/// # Examples
 	///

@@ -272,7 +272,7 @@ impl<M: Model> Manager<M> {
 	/// Set LIMIT clause
 	///
 	/// Limits the number of records returned by the QuerySet.
-	/// Corresponds to Django's QuerySet[:n].
+	/// Corresponds to Django's `QuerySet[:n]`.
 	///
 	/// # Examples
 	///
@@ -385,7 +385,7 @@ impl<M: Model> Manager<M> {
 	/// Set OFFSET clause
 	///
 	/// Skips the specified number of records before returning results.
-	/// Corresponds to Django's QuerySet slicing [offset:].
+	/// Corresponds to Django's QuerySet slicing `[offset:]`.
 	///
 	/// # Examples
 	///
@@ -730,30 +730,42 @@ impl<M: Model> Manager<M> {
 		// Get the primary key field name to filter out auto-increment fields
 		let pk_field = M::primary_key_field();
 
-		// Filter out fields that should not be included in INSERT:
-		// - Null values (e.g., Optional fields with None)
-		// - Primary key field with default value 0 (auto-increment integer PKs)
+		// Filter out primary key fields and null datetime fields.
+		// Null datetime fields are skipped to let database DEFAULT apply
+		// (e.g., created_at, updated_at with DEFAULT CURRENT_TIMESTAMP).
 		let (fields, values): (Vec<_>, Vec<_>) = obj
 			.iter()
 			.filter(|(k, v)| {
-				// Always exclude null values
-				if v.is_null() {
-					return false;
+				let key = k.as_str();
+				// Exclude primary key field if it's null or 0 (auto-increment)
+				if key == pk_field {
+					if v.is_null() {
+						return false;
+					}
+					if let Some(n) = v.as_i64() {
+						return n != 0;
+					}
 				}
-				// Exclude primary key field if it's an integer with value 0
-				// This allows the database to auto-generate the value
-				if k.as_str() == pk_field
-					&& let Some(n) = v.as_i64()
+				// Skip null datetime fields to let database DEFAULT apply
+				if v.is_null()
+					&& (key == "created_at"
+						|| key == "updated_at"
+						|| key.ends_with("_date")
+						|| key.ends_with("_time")
+						|| key.ends_with("_at"))
 				{
-					return n != 0;
+					return false;
 				}
 				true
 			})
 			.map(|(k, v)| {
-				(
-					Alias::new(k.as_str()),
-					Expr::value(Self::json_to_sea_value(v)),
-				)
+				// Convert null values to SQL NULL keyword for proper insertion
+				let value = if v.is_null() {
+					sea_query::SimpleExpr::Keyword(sea_query::Keyword::Null)
+				} else {
+					Expr::value(Self::json_to_sea_value(v))
+				};
+				(Alias::new(k.as_str()), value)
 			})
 			.unzip();
 
