@@ -20,7 +20,7 @@
 //! | PostgreSQL | `postgres` | [`PostgresBackend`] |
 //! | MySQL/MariaDB | `mysql` | [`MySqlBackend`] |
 //! | SQLite | `sqlite` | [`SqliteBackend`] |
-//! | CockroachDB | `cockroachdb-backend` | [`CockroachDBBackend`] |
+//! | CockroachDB | `cockroachdb-backend` | `CockroachDBBackend` |
 //!
 //! ## Core Traits
 //!

@@ -155,7 +155,7 @@ impl DatabaseConnection {
 
 	/// Connect to PostgreSQL with automatic database creation and custom pool size.
 	///
-	/// See [`connect_postgres_or_create`] for details on automatic database creation.
+	/// See [`Self::connect_postgres_or_create`] for details on automatic database creation.
 	#[cfg(feature = "postgres")]
 	pub async fn connect_postgres_or_create_with_pool_size(
 		url: &str,

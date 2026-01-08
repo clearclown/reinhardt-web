@@ -75,7 +75,7 @@ impl CockroachDBTransactionManager {
 		}
 	}
 
-	/// Create from an Arc<PgPool>
+	/// Create from an `Arc<PgPool>`
 	pub fn from_pool_arc(pool: Arc<PgPool>) -> Self {
 		Self {
 			pool,

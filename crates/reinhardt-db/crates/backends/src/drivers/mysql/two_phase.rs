@@ -167,7 +167,7 @@ impl MySqlTwoPhaseParticipant {
 		}
 	}
 
-	/// Create from an Arc<MySqlPool>
+	/// Create from an `Arc<MySqlPool>`
 	pub fn from_pool_arc(pool: Arc<MySqlPool>) -> Self {
 		Self { pool }
 	}

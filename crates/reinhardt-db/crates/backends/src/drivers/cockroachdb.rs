@@ -207,7 +207,7 @@ impl CockroachDBBackend {
 	///
 	/// # Examples
 	///
-	/// ```ignore
+	/// ```rust,ignore
 	/// use reinhardt_backends::drivers::cockroachdb::CockroachDBBackend;
 	/// use reinhardt_backends::drivers::postgresql::schema::PostgreSQLSchemaEditor;
 	/// use sqlx::PgPool;
@@ -220,6 +220,8 @@ impl CockroachDBBackend {
 	///
 	/// assert!(features.contains(&"multi_region"));
 	/// assert!(features.contains(&"distributed_transactions"));
+	/// # Ok(())
+	/// # }
 	/// ```
 	pub fn supported_features(&self) -> Vec<&str> {
 		vec![

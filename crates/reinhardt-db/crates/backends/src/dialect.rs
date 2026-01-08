@@ -1,6 +1,6 @@
 //! Database dialect implementations
 //!
-//! This module provides concrete implementations of the [`DatabaseBackend`] trait
+//! This module provides concrete implementations of the `DatabaseBackend` trait
 //! for different database systems.
 
 #[cfg(feature = "postgres")]

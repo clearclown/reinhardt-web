@@ -57,7 +57,7 @@ impl PostgreSQLSchemaEditor {
 		}
 	}
 
-	/// Create from an Arc<PgPool>
+	/// Create from an `Arc<PgPool>`
 	///
 	/// # Example
 	///
