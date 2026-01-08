@@ -1,38 +1,38 @@
-# reinhardt-pages cfg 簡略化マイグレーションガイド
+# reinhardt-pages cfg Simplification Migration Guide
 
-このガイドでは、reinhardt-pages の cfg 簡略化機能を既存プロジェクトに導入する方法を説明します。
+This guide explains how to introduce the reinhardt-pages cfg simplification features to existing projects.
 
-## 概要
+## Overview
 
-### 変更内容
+### What's Changed
 
-1. **prelude モジュール**: よく使う型を統一インポート
-2. **platform モジュール**: WASM/native で共通の型エイリアス
-3. **cfg_aliases**: `#[cfg(wasm)]` と `#[cfg(native)]` ショートカット
-4. **page! マクロ改善**: サーバー側でイベントハンドラを自動的に無視
+1. **prelude module**: Unified imports for commonly used types
+2. **platform module**: Common type aliases for WASM/native
+3. **cfg_aliases**: `#[cfg(wasm)]` and `#[cfg(native)]` shortcuts
+4. **page! macro improvements**: Event handlers are automatically ignored on the server side
 
-### メリット
+### Benefits
 
-- `#[cfg(target_arch = "wasm32")]` の記述が大幅に削減
-- インポートの重複が解消
-- コンポーネントコードの可読性が向上
+- Significantly reduces `#[cfg(target_arch = "wasm32")]` boilerplate
+- Eliminates import duplication
+- Improves component code readability
 
 ---
 
-## マイグレーション手順
+## Migration Steps
 
-### Step 1: Cargo.toml の更新
+### Step 1: Update Cargo.toml
 
-`[build-dependencies]` セクションに `cfg_aliases` を追加:
+Add `cfg_aliases` to the `[build-dependencies]` section:
 
 ```toml
 [build-dependencies]
 cfg_aliases = "0.2"
 ```
 
-### Step 2: build.rs の作成/更新
+### Step 2: Create/Update build.rs
 
-プロジェクトルートに `build.rs` がない場合は作成、ある場合は更新:
+Create `build.rs` in your project root if it doesn't exist, or update it:
 
 ```rust
 use cfg_aliases::cfg_aliases;
@@ -49,7 +49,7 @@ fn main() {
 }
 ```
 
-### Step 3: インポートの更新
+### Step 3: Update Imports
 
 #### Before
 
@@ -66,16 +66,16 @@ use wasm_bindgen_futures::spawn_local;
 
 ```rust
 use reinhardt_pages::prelude::*;
-// spawn_local も prelude に含まれています (WASM のみ)
+// spawn_local is also included in prelude (WASM only)
 ```
 
-または reinhardt クレート経由:
+Or via the reinhardt crate:
 
 ```rust
 use reinhardt::pages::prelude::*;
 ```
 
-### Step 4: cfg 属性の短縮
+### Step 4: Shorten cfg Attributes
 
 #### Before
 
@@ -97,11 +97,11 @@ mod client;
 mod server;
 ```
 
-### Step 5: イベントハンドラの簡略化
+### Step 5: Simplify Event Handlers
 
-`page!` マクロ内のイベントハンドラは自動的に処理されるようになりました。
+Event handlers within the `page!` macro are now automatically handled.
 
-#### Before (手動で条件分岐)
+#### Before (manual conditional branching)
 
 ```rust
 pub fn button(on_click: Signal<bool>) -> View {
@@ -117,7 +117,7 @@ pub fn button(on_click: Signal<bool>) -> View {
 
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let _ = on_click; // 未使用警告を抑制
+        let _ = on_click; // Suppress unused warning
         page!(|| {
             button { "Click me" }
         })
@@ -125,11 +125,11 @@ pub fn button(on_click: Signal<bool>) -> View {
 }
 ```
 
-#### After (自動処理)
+#### After (automatic handling)
 
 ```rust
 pub fn button(on_click: Signal<bool>) -> View {
-    // マクロが自動的にサーバー側でイベントハンドラを無視
+    // The macro automatically ignores event handlers on the server side
     page!(|| {
         button {
             @click: move |_| { on_click.set(true); },
@@ -139,9 +139,9 @@ pub fn button(on_click: Signal<bool>) -> View {
 }
 ```
 
-### Step 6: platform モジュールの活用 (オプション)
+### Step 6: Use the platform Module (Optional)
 
-プラットフォーム固有の型を抽象化したい場合:
+If you want to abstract platform-specific types:
 
 ```rust
 use reinhardt_pages::platform::Event;
@@ -149,47 +149,47 @@ use reinhardt_pages::platform::Event;
 // WASM: web_sys::Event
 // Native: DummyEvent
 fn handle_event(_event: Event) {
-    // 処理
+    // Processing
 }
 ```
 
 ---
 
-## チェックリスト
+## Checklist
 
-- [ ] `Cargo.toml` に `cfg_aliases = "0.2"` を追加
-- [ ] `build.rs` で `cfg_aliases!` を設定
-- [ ] インポートを `prelude::*` に統一
-- [ ] `#[cfg(target_arch = "wasm32")]` を `#[cfg(wasm)]` に変更
-- [ ] `#[cfg(not(target_arch = "wasm32"))]` を `#[cfg(native)]` に変更
-- [ ] コンポーネント内の重複イベントハンドラブロックを削除
-- [ ] `cargo check` で動作確認
+- [ ] Add `cfg_aliases = "0.2"` to `Cargo.toml`
+- [ ] Set up `cfg_aliases!` in `build.rs`
+- [ ] Unify imports to `prelude::*`
+- [ ] Change `#[cfg(target_arch = "wasm32")]` to `#[cfg(wasm)]`
+- [ ] Change `#[cfg(not(target_arch = "wasm32"))]` to `#[cfg(native)]`
+- [ ] Remove duplicate event handler blocks in components
+- [ ] Verify with `cargo check`
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-### `unknown cfg: wasm` 警告が出る
+### Getting `unknown cfg: wasm` Warning
 
-`build.rs` で `cargo::rustc-check-cfg` を設定してください:
+Set `cargo::rustc-check-cfg` in `build.rs`:
 
 ```rust
 println!("cargo::rustc-check-cfg=cfg(wasm)");
 println!("cargo::rustc-check-cfg=cfg(native)");
 ```
 
-### prelude のインポートでコンフリクトが発生
+### Import Conflicts with prelude
 
-特定の型のみをインポートしたい場合は、明示的にインポートしてください:
+If you want to import only specific types, import them explicitly:
 
 ```rust
 use reinhardt_pages::prelude::{Signal, View, use_state};
-// prelude の他の型は使用しない
+// Don't use other types from prelude
 ```
 
-### イベントハンドラのキャプチャ変数で警告が出る
+### Warnings for Captured Variables in Event Handlers
 
-`page!` マクロは自動的にキャプチャ変数の警告を抑制しますが、マクロ外で定義した変数については手動で対処が必要な場合があります:
+The `page!` macro automatically suppresses warnings for captured variables, but you may need to handle variables defined outside the macro manually:
 
 ```rust
 #[cfg(wasm)]
@@ -201,7 +201,7 @@ let handler = |_: reinhardt_pages::platform::Event| {};
 
 ---
 
-## 関連ドキュメント
+## Related Documentation
 
 - [reinhardt-pages README](../crates/reinhardt-pages/README.md)
 - [Feature Flags Guide](FEATURE_FLAGS.md)

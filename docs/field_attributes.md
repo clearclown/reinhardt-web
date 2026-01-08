@@ -281,7 +281,7 @@ name: String,
 
 ### Core Features (10 attributes)
 
-**説明**: すべてのDBMSまたは複数のDBMSで共通に使用される基本機能
+**Description**: Basic features used commonly across all or multiple DBMS
 
 #### `generated: &str`
 
@@ -442,7 +442,7 @@ email: String,
 
 ### DBMS-Specific Features (5 attributes)
 
-**説明**: 特定のDBMSに特化した重要な機能（PostgreSQL、MySQL）
+**Description**: Important features specific to particular DBMS (PostgreSQL, MySQL)
 
 #### `storage: &str`
 
@@ -536,7 +536,7 @@ index.
 
 ### Legacy Compatibility (4 attributes)
 
-**説明**: 後方互換性のための機能（一部は非推奨）
+**Description**: Features for backward compatibility (some deprecated)
 
 #### `unsigned: bool` ⚠️ Deprecated
 

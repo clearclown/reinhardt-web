@@ -387,6 +387,167 @@ Brief description.
 
 ---
 
+## Rustdoc Formatting Standards
+
+### DM-7 (MUST): Rustdoc Formatting Standards
+
+Doc comments (`///` and `//!`) are processed by rustdoc and must follow specific formatting rules to avoid warnings and ensure proper HTML generation.
+
+#### RD-1: Generic Types Must Be Wrapped in Backticks
+
+Generic types like `<T>` are interpreted as HTML tags by rustdoc. Always wrap them in backticks.
+
+```rust
+// ✅ CORRECT
+/// Returns `Option<String>` for the result
+/// Uses `Result<T, Error>` for fallible operations
+/// Stores items in `Vec<T>` or `HashMap<K, V>`
+
+// ❌ INCORRECT (causes "unclosed HTML tag" warnings)
+/// Returns Option<String> for the result
+/// Uses Result<T, Error> for fallible operations
+```
+
+**Common types requiring backticks:**
+- `Option<T>`, `Result<T, E>`, `Vec<T>`, `Box<T>`
+- `Arc<T>`, `Rc<T>`, `RefCell<T>`, `Mutex<T>`
+- `HashMap<K, V>`, `HashSet<T>`, `BTreeMap<K, V>`
+- `Pin<T>`, `Future<Output = T>`, `Stream<Item = T>`
+- Any custom generic: `MyType<T>`, `Builder<S>`
+
+#### RD-2: Macro Attributes Must Be Wrapped in Backticks
+
+Attributes like `#[derive]` are interpreted as markdown links by rustdoc. Always wrap them in backticks.
+
+```rust
+// ✅ CORRECT
+/// Apply `#[inject]` to enable dependency injection
+/// Use `#[async_trait]` for async trait methods
+/// Add `#[derive(Debug, Clone)]` to the struct
+
+// ❌ INCORRECT (causes "unresolved link" warnings)
+/// Apply #[inject] to enable dependency injection
+/// Use #[async_trait] for async trait methods
+```
+
+**Common attributes requiring backticks:**
+- `#[derive(...)]`, `#[cfg(...)]`, `#[allow(...)]`
+- `#[test]`, `#[tokio::test]`, `#[rstest]`
+- `#[inject]`, `#[model(...)]`, `#[api(...)]`
+- Any attribute: `#[serde(...)]`, `#[sqlx(...)]`
+
+#### RD-3: URLs Must Be Wrapped in Angle Brackets or Backticks
+
+Bare URLs in doc comments trigger "bare URL" warnings. Wrap them properly.
+
+```rust
+// ✅ CORRECT
+/// See <https://docs.rs/reinhardt> for API documentation
+/// Documentation at `https://github.com/kent8192/reinhardt-rs`
+/// Visit [our docs](https://docs.rs/reinhardt) for more info
+
+// ❌ INCORRECT (causes "bare URL" warnings)
+/// See https://docs.rs/reinhardt for API documentation
+/// Documentation at https://github.com/kent8192/reinhardt-rs
+```
+
+**URL formatting options:**
+- Angle brackets: `<https://example.com>` → clickable link
+- Backticks: `` `https://example.com` `` → code formatting
+- Markdown link: `[text](https://example.com)` → named link
+
+#### RD-4: Code Blocks Must Specify Language
+
+Code blocks without language specification may cause parsing warnings.
+
+````rust
+// ✅ CORRECT
+/// ```rust
+/// let x = 42;
+/// ```
+///
+/// ```sql
+/// SELECT * FROM users;
+/// ```
+///
+/// ```ignore
+/// // This code won't be tested
+/// ```
+
+// ❌ INCORRECT (may cause warnings)
+/// ```
+/// let x = 42;
+/// ```
+````
+
+**Common language tags:**
+- `rust` - Rust code (default for doc tests)
+- `ignore` - Rust code that won't be tested
+- `no_run` - Rust code that compiles but won't run
+- `compile_fail` - Rust code expected to fail compilation
+- `sql`, `json`, `toml`, `bash`, `text` - Other languages
+
+#### RD-5: Bracket Patterns Must Be Wrapped in Backticks
+
+Array/slice indexing patterns are interpreted as markdown links by rustdoc.
+
+```rust
+// ✅ CORRECT
+/// Access the first element via `array[0]`
+/// Use `slice[1..3]` for a range
+/// Get nested value with `map["key"]`
+
+// ❌ INCORRECT (causes "unresolved link" warnings)
+/// Access the first element via array[0]
+/// Use slice[1..3] for a range
+```
+
+#### RD-6: Feature-Gated Items Must Use Backticks (Not Intra-Doc Links)
+
+Items behind `#[cfg(feature = "...")]` are not in scope when docs are built without that feature. Use backticks instead of intra-doc links.
+
+```rust
+// ✅ CORRECT (works regardless of enabled features)
+/// Enable `compression` feature to use `GZipMiddleware`
+/// See `CockroachDBBackend` for CockroachDB support (requires `cockroachdb-backend`)
+
+// ❌ INCORRECT (causes "unresolved link" warnings when feature disabled)
+/// Enable `compression` feature to use [`GZipMiddleware`]
+/// See [`CockroachDBBackend`] for CockroachDB support
+```
+
+**Why this happens:**
+- Intra-doc links (`` [`TypeName`] ``) are resolved at doc build time
+- Feature-gated items don't exist in scope when their feature is disabled
+- `cargo doc` without `--all-features` will fail to resolve these links
+
+**Pattern:**
+- If an item is behind `#[cfg(feature = "X")]`, use `` `ItemName` `` not `` [`ItemName`] ``
+- Mention the required feature in the description: "(requires `X` feature)"
+
+#### Quick Reference Table
+
+| Pattern | Incorrect | Correct |
+|---------|-----------|---------|
+| Generic types | `Option<T>` | `` `Option<T>` `` |
+| Attributes | `#[derive]` | `` `#[derive]` `` |
+| URLs | `https://...` | `<https://...>` or `` `https://...` `` |
+| Code blocks | ` ``` ` | ` ```rust ` |
+| Array access | `arr[0]` | `` `arr[0]` `` |
+| Feature-gated items | `` [`TypeName`] `` | `` `TypeName` `` |
+
+#### Verification
+
+Run the following command to check for rustdoc warnings:
+
+```bash
+cargo doc --workspace --all-features 2>&1 | grep "warning:"
+```
+
+All doc comments should produce zero warnings.
+
+---
+
 ## Documentation Workflow
 
 ### Standard Documentation Update Process
@@ -420,6 +581,7 @@ Before submitting:
 - [ ] Planned features in lib.rs, not README
 - [ ] Migration guides for breaking changes
 - [ ] Doc tests pass
+- [ ] Rustdoc warnings: zero (see DM-7)
 
 ---
 
