@@ -17,10 +17,14 @@ use std::collections::HashSet;
 use syn::{Error, Result};
 
 use reinhardt_pages_ast::{
-	ClientValidator, ClientValidatorRule, FormAction, FormFieldDef, FormFieldProperty, FormMacro,
-	FormMethod, FormValidator, TypedClientValidator, TypedClientValidatorRule, TypedFieldDisplay,
-	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormFieldDef,
-	TypedFormMacro, TypedFormStyling, TypedFormValidator, TypedValidatorRule, TypedWidget,
+	ClientValidator, ClientValidatorRule, FormAction, FormCallbacks, FormFieldDef, FormFieldEntry,
+	FormFieldGroup, FormFieldProperty, FormMacro, FormMethod, FormSlots, FormState, FormValidator,
+	FormWatch, IconPosition, TypedClientValidator, TypedClientValidatorRule, TypedCustomAttr,
+	TypedFieldDisplay, TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction,
+	TypedFormCallbacks, TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup,
+	TypedFormMacro, TypedFormSlots, TypedFormState, TypedFormStyling, TypedFormValidator,
+	TypedFormWatch, TypedFormWatchItem, TypedIcon, TypedIconAttr, TypedIconChild,
+	TypedIconPosition, TypedValidatorRule, TypedWidget, TypedWrapper, TypedWrapperAttr,
 	ValidatorRule,
 };
 
@@ -44,6 +48,24 @@ pub(super) fn validate(ast: &FormMacro) -> Result<TypedFormMacro> {
 	// Transform form-level styling
 	let styling = transform_form_styling(ast)?;
 
+	// Transform state configuration
+	let state = transform_state(&ast.state)?;
+
+	// Transform callbacks
+	let callbacks = transform_callbacks(&ast.callbacks)?;
+
+	// Transform watch block
+	let watch = transform_watch(&ast.watch)?;
+
+	// Transform redirect configuration
+	let redirect_on_success = transform_redirect(&ast.redirect_on_success)?;
+
+	// Transform initial_loader (pass through the Path)
+	let initial_loader = ast.initial_loader.clone();
+
+	// Transform slots
+	let slots = transform_slots(&ast.slots)?;
+
 	// Transform fields
 	let fields = transform_fields(&ast.fields)?;
 
@@ -58,6 +80,12 @@ pub(super) fn validate(ast: &FormMacro) -> Result<TypedFormMacro> {
 		action,
 		method,
 		styling,
+		state,
+		callbacks,
+		watch,
+		redirect_on_success,
+		initial_loader,
+		slots,
 		fields,
 		validators,
 		client_validators,
@@ -66,16 +94,44 @@ pub(super) fn validate(ast: &FormMacro) -> Result<TypedFormMacro> {
 }
 
 /// Validates that all field names are unique.
-fn validate_unique_field_names(fields: &[FormFieldDef]) -> Result<()> {
+fn validate_unique_field_names(entries: &[FormFieldEntry]) -> Result<()> {
 	let mut seen = HashSet::new();
 
-	for field in fields {
-		let name = field.name.to_string();
-		if !seen.insert(name.clone()) {
-			return Err(Error::new(
-				field.name.span(),
-				format!("duplicate field name: '{}'", name),
-			));
+	for entry in entries {
+		match entry {
+			FormFieldEntry::Field(field) => {
+				let name = field.name.to_string();
+				if !seen.insert(name.clone()) {
+					return Err(Error::new(
+						field.name.span(),
+						format!("duplicate field name: '{}'", name),
+					));
+				}
+			}
+			FormFieldEntry::Group(group) => {
+				// Check group name is unique
+				let group_name = group.name.to_string();
+				if !seen.insert(group_name.clone()) {
+					return Err(Error::new(
+						group.name.span(),
+						format!("duplicate field/group name: '{}'", group_name),
+					));
+				}
+
+				// Check fields within the group
+				for field in &group.fields {
+					let name = field.name.to_string();
+					if !seen.insert(name.clone()) {
+						return Err(Error::new(
+							field.name.span(),
+							format!(
+								"duplicate field name: '{}' (in group '{}')",
+								name, group_name
+							),
+						));
+					}
+				}
+			}
 		}
 	}
 
@@ -122,9 +178,177 @@ fn transform_form_styling(ast: &FormMacro) -> Result<TypedFormStyling> {
 	})
 }
 
-/// Transforms all field definitions.
-fn transform_fields(fields: &[FormFieldDef]) -> Result<Vec<TypedFormFieldDef>> {
-	fields.iter().map(transform_field).collect()
+/// Valid state field names for form UI state management.
+const VALID_STATE_FIELDS: &[&str] = &["loading", "error", "success"];
+
+/// Transforms FormState to TypedFormState with validation.
+///
+/// Validates that all state field names are valid (`loading`, `error`, `success`).
+fn transform_state(state: &Option<FormState>) -> Result<Option<TypedFormState>> {
+	let Some(form_state) = state else {
+		return Ok(None);
+	};
+
+	let mut typed_state = TypedFormState::new(form_state.span);
+
+	for field in &form_state.fields {
+		let name = field.name.to_string();
+		match name.as_str() {
+			"loading" => typed_state.loading = true,
+			"error" => typed_state.error = true,
+			"success" => typed_state.success = true,
+			_ => {
+				return Err(Error::new(
+					field.span,
+					format!(
+						"invalid state field: '{}'. Expected one of: {}",
+						name,
+						VALID_STATE_FIELDS.join(", ")
+					),
+				));
+			}
+		}
+	}
+
+	Ok(Some(typed_state))
+}
+
+/// Transforms FormCallbacks to TypedFormCallbacks.
+///
+/// For callbacks, we simply pass through the closure expressions since
+/// type checking is done by the Rust compiler during code generation.
+fn transform_callbacks(callbacks: &FormCallbacks) -> Result<TypedFormCallbacks> {
+	Ok(TypedFormCallbacks {
+		on_submit: callbacks.on_submit.clone(),
+		on_success: callbacks.on_success.clone(),
+		on_error: callbacks.on_error.clone(),
+		on_loading: callbacks.on_loading.clone(),
+		span: callbacks.span,
+	})
+}
+
+/// Transforms FormWatch to TypedFormWatch.
+///
+/// Watch items are validated for:
+/// - Unique watch item names
+/// - Valid closure structure (type checking is done by Rust compiler)
+fn transform_watch(watch: &Option<FormWatch>) -> Result<Option<TypedFormWatch>> {
+	let Some(watch) = watch else {
+		return Ok(None);
+	};
+
+	// Validate unique watch item names
+	let mut seen_names = HashSet::new();
+	for item in &watch.items {
+		let name = item.name.to_string();
+		if !seen_names.insert(name.clone()) {
+			return Err(Error::new(
+				item.name.span(),
+				format!("duplicate watch item name: '{}'", name),
+			));
+		}
+	}
+
+	// Transform watch items
+	let items = watch
+		.items
+		.iter()
+		.map(|item| TypedFormWatchItem {
+			name: item.name.clone(),
+			closure: item.closure.clone(),
+			span: item.span,
+		})
+		.collect();
+
+	Ok(Some(TypedFormWatch {
+		items,
+		span: watch.span,
+	}))
+}
+
+/// Transforms redirect_on_success configuration.
+///
+/// Validates that the redirect path:
+/// - Starts with `/` (relative paths)
+/// - Or is a valid URL pattern
+/// - Supports `{param}` syntax for dynamic parameters
+fn transform_redirect(redirect: &Option<syn::LitStr>) -> Result<Option<String>> {
+	let Some(redirect) = redirect else {
+		return Ok(None);
+	};
+
+	let path = redirect.value();
+
+	// Validate path format
+	if path.is_empty() {
+		return Err(Error::new(
+			redirect.span(),
+			"redirect_on_success path cannot be empty",
+		));
+	}
+
+	// Path must start with / or be a valid URL (http:// or https://)
+	if !path.starts_with('/') && !path.starts_with("http://") && !path.starts_with("https://") {
+		return Err(Error::new(
+			redirect.span(),
+			"redirect_on_success path must start with '/' or be a full URL (http:// or https://)",
+		));
+	}
+
+	Ok(Some(path))
+}
+
+/// Transforms FormSlots to TypedFormSlots.
+///
+/// Slots allow inserting custom content before and after form fields.
+/// The closures are passed through directly since type checking is done by the Rust compiler.
+fn transform_slots(slots: &Option<FormSlots>) -> Result<Option<TypedFormSlots>> {
+	let Some(slots) = slots else {
+		return Ok(None);
+	};
+
+	Ok(Some(TypedFormSlots {
+		before_fields: slots.before_fields.clone(),
+		after_fields: slots.after_fields.clone(),
+		span: slots.span,
+	}))
+}
+
+/// Transforms all field entries (fields and field groups).
+fn transform_fields(entries: &[FormFieldEntry]) -> Result<Vec<TypedFormFieldEntry>> {
+	entries.iter().map(transform_field_entry).collect()
+}
+
+/// Transforms a single field entry (either a field or a group).
+fn transform_field_entry(entry: &FormFieldEntry) -> Result<TypedFormFieldEntry> {
+	match entry {
+		FormFieldEntry::Field(field) => {
+			let typed_field = transform_field(field)?;
+			Ok(TypedFormFieldEntry::Field(Box::new(typed_field)))
+		}
+		FormFieldEntry::Group(group) => {
+			let typed_group = transform_field_group(group)?;
+			Ok(TypedFormFieldEntry::Group(typed_group))
+		}
+	}
+}
+
+/// Transforms a field group into a typed field group.
+fn transform_field_group(group: &FormFieldGroup) -> Result<TypedFormFieldGroup> {
+	// Transform each field in the group
+	let typed_fields: Vec<TypedFormFieldDef> = group
+		.fields
+		.iter()
+		.map(transform_field)
+		.collect::<Result<_>>()?;
+
+	Ok(TypedFormFieldGroup {
+		name: group.name.clone(),
+		label: group.label.as_ref().map(|l| l.value()),
+		class: group.class.as_ref().map(|c| c.value()),
+		fields: typed_fields,
+		span: group.span,
+	})
 }
 
 /// Transforms a single field definition.
@@ -137,6 +361,11 @@ fn transform_field(field: &FormFieldDef) -> Result<TypedFormFieldDef> {
 	let display = extract_display_properties(&field.properties)?;
 	let styling = extract_styling_properties(&field.properties)?;
 	let widget = extract_widget(&field.properties, &field_type)?;
+	let wrapper = extract_wrapper(&field.properties)?;
+	let icon = extract_icon(&field.properties)?;
+	let custom_attrs = extract_custom_attrs(&field.properties)?;
+	let bind = extract_bind(&field.properties);
+	let initial_from = extract_initial_from(&field.properties);
 
 	Ok(TypedFormFieldDef {
 		name: field.name.clone(),
@@ -145,6 +374,11 @@ fn transform_field(field: &FormFieldDef) -> Result<TypedFormFieldDef> {
 		validation,
 		display,
 		styling,
+		wrapper,
+		icon,
+		custom_attrs,
+		bind,
+		initial_from,
 		span: field.span,
 	})
 }
@@ -240,6 +474,12 @@ fn extract_validation_properties(properties: &[FormFieldProperty]) -> Result<Typ
 				}
 			}
 			FormFieldProperty::Widget { .. } => {} // Ignore widget properties
+			FormFieldProperty::Wrapper { .. } => {} // Ignore wrapper properties
+			FormFieldProperty::Icon { .. } => {}   // Ignore icon properties
+			FormFieldProperty::IconPosition { .. } => {} // Ignore icon position properties
+			FormFieldProperty::Attrs { .. } => {}  // Ignore custom attrs properties
+			FormFieldProperty::Bind { .. } => {}   // Ignore bind properties
+			FormFieldProperty::InitialFrom { .. } => {} // Ignore initial_from properties
 		}
 	}
 
@@ -312,6 +552,12 @@ fn extract_display_properties(properties: &[FormFieldProperty]) -> Result<TypedF
 				}
 			}
 			FormFieldProperty::Widget { .. } => {} // Ignore widget properties
+			FormFieldProperty::Wrapper { .. } => {} // Ignore wrapper properties
+			FormFieldProperty::Icon { .. } => {}   // Ignore icon properties
+			FormFieldProperty::IconPosition { .. } => {} // Ignore icon position properties
+			FormFieldProperty::Attrs { .. } => {}  // Ignore custom attrs properties
+			FormFieldProperty::Bind { .. } => {}   // Ignore bind properties
+			FormFieldProperty::InitialFrom { .. } => {} // Ignore initial_from properties
 		}
 	}
 
@@ -437,10 +683,259 @@ fn parse_widget(ident: &syn::Ident) -> Result<TypedWidget> {
 	}
 }
 
+/// Extracts wrapper property and transforms it into `TypedWrapper`.
+///
+/// Wrapper properties specify custom HTML elements to wrap around form fields:
+///
+/// ```text
+/// wrapper: div { class: "relative", id: "field-wrapper" }
+/// ```
+fn extract_wrapper(properties: &[FormFieldProperty]) -> Result<Option<TypedWrapper>> {
+	for prop in properties {
+		if let FormFieldProperty::Wrapper { element, span } = prop {
+			// Transform wrapper attributes
+			let attrs = element
+				.attrs
+				.iter()
+				.map(|attr| {
+					let value = extract_string_value_from_expr(
+						&attr.value,
+						&attr.name.to_string(),
+						attr.span,
+					)?;
+					Ok(TypedWrapperAttr {
+						name: attr.name.to_string(),
+						value,
+						span: attr.span,
+					})
+				})
+				.collect::<Result<Vec<_>>>()?;
+
+			return Ok(Some(TypedWrapper {
+				tag: element.tag.to_string(),
+				attrs,
+				span: *span,
+			}));
+		}
+	}
+	Ok(None)
+}
+
+/// Extracts icon properties and transforms them into `TypedIcon`.
+///
+/// Icon properties specify an SVG icon to display with the form field:
+///
+/// ```text
+/// icon: svg {
+///     class: "w-5 h-5 text-gray-400",
+///     viewBox: "0 0 24 24",
+///     path { d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" }
+/// }
+/// icon_position: "left"
+/// ```
+fn extract_icon(properties: &[FormFieldProperty]) -> Result<Option<TypedIcon>> {
+	// First, find the icon element if it exists
+	let mut icon_element = None;
+	let mut icon_span = Span::call_site();
+	let mut position = TypedIconPosition::default();
+
+	for prop in properties {
+		match prop {
+			FormFieldProperty::Icon { element, span } => {
+				icon_element = Some(element);
+				icon_span = *span;
+			}
+			FormFieldProperty::IconPosition {
+				position: pos,
+				span: _,
+			} => {
+				position = convert_icon_position(*pos);
+			}
+			_ => {}
+		}
+	}
+
+	// If no icon element, return None
+	let element = match icon_element {
+		Some(e) => e,
+		None => return Ok(None),
+	};
+
+	// Transform icon attributes
+	let attrs = element
+		.attrs
+		.iter()
+		.map(|attr| {
+			let value =
+				extract_string_value_from_expr(&attr.value, &attr.name.to_string(), attr.span)?;
+			Ok(TypedIconAttr {
+				name: attr.name.to_string(),
+				value,
+				span: attr.span,
+			})
+		})
+		.collect::<Result<Vec<_>>>()?;
+
+	// Transform children recursively
+	let children = element
+		.children
+		.iter()
+		.map(transform_icon_child)
+		.collect::<Result<Vec<_>>>()?;
+
+	Ok(Some(TypedIcon {
+		attrs,
+		children,
+		position,
+		span: icon_span,
+	}))
+}
+
+/// Transforms a single icon child element recursively.
+fn transform_icon_child(child: &reinhardt_pages_ast::IconChild) -> Result<TypedIconChild> {
+	let attrs = child
+		.attrs
+		.iter()
+		.map(|attr| {
+			let value =
+				extract_string_value_from_expr(&attr.value, &attr.name.to_string(), attr.span)?;
+			Ok(TypedIconAttr {
+				name: attr.name.to_string(),
+				value,
+				span: attr.span,
+			})
+		})
+		.collect::<Result<Vec<_>>>()?;
+
+	// Recursively transform nested children
+	let children = child
+		.children
+		.iter()
+		.map(transform_icon_child)
+		.collect::<Result<Vec<_>>>()?;
+
+	Ok(TypedIconChild {
+		tag: child.tag.to_string(),
+		attrs,
+		children,
+		span: child.span,
+	})
+}
+
+/// Converts untyped IconPosition to TypedIconPosition.
+fn convert_icon_position(pos: IconPosition) -> TypedIconPosition {
+	match pos {
+		IconPosition::Left => TypedIconPosition::Left,
+		IconPosition::Right => TypedIconPosition::Right,
+		IconPosition::Label => TypedIconPosition::Label,
+	}
+}
+
+/// Extracts custom attributes (aria-*, data-*) from field properties.
+///
+/// Custom attributes allow adding accessibility and data attributes to form fields:
+///
+/// ```text
+/// attrs: {
+///     aria_label: "Email address",
+///     aria_required: "true",
+///     data_testid: "email-input",
+/// }
+/// ```
+///
+/// Note: Only `aria_*` and `data_*` prefixed attribute names are allowed.
+fn extract_custom_attrs(properties: &[FormFieldProperty]) -> Result<Vec<TypedCustomAttr>> {
+	for prop in properties {
+		if let FormFieldProperty::Attrs { attrs, span: _ } = prop {
+			let mut result = Vec::new();
+
+			for attr in attrs {
+				let name = attr.name.to_string();
+
+				// Validate that attribute name starts with aria_ or data_
+				if !name.starts_with("aria_") && !name.starts_with("data_") {
+					return Err(Error::new(
+						attr.span,
+						format!(
+							"invalid custom attribute: '{}'. \
+							Custom attributes must start with 'aria_' or 'data_' prefix",
+							name
+						),
+					));
+				}
+
+				// Extract the string value
+				let value = extract_string_value_from_expr(&attr.value, &name, attr.span)?;
+
+				result.push(TypedCustomAttr {
+					name,
+					value,
+					span: attr.span,
+				});
+			}
+
+			return Ok(result);
+		}
+	}
+
+	Ok(Vec::new())
+}
+
+/// Extracts the bind property from field properties.
+///
+/// Returns `true` (enabled) if not explicitly specified.
+fn extract_bind(properties: &[FormFieldProperty]) -> bool {
+	for prop in properties {
+		if let FormFieldProperty::Bind { enabled, .. } = prop {
+			return *enabled;
+		}
+	}
+	// Default to enabled
+	true
+}
+
+/// Extracts the initial_from property from field properties.
+///
+/// This specifies which field from the initial_loader result should be used
+/// to populate this field's initial value.
+///
+/// ```text
+/// initial_from: "source_field_name"
+/// ```
+fn extract_initial_from(properties: &[FormFieldProperty]) -> Option<String> {
+	for prop in properties {
+		if let FormFieldProperty::InitialFrom { field_name, .. } = prop {
+			return Some(field_name.value());
+		}
+	}
+	None
+}
+
+/// Checks if a field with the given name exists in the field entries.
+///
+/// This checks both top-level fields and fields within groups.
+fn field_exists(entries: &[FormFieldEntry], name: &syn::Ident) -> bool {
+	for entry in entries {
+		match entry {
+			FormFieldEntry::Field(field) => {
+				if field.name == *name {
+					return true;
+				}
+			}
+			FormFieldEntry::Group(group) => {
+				if group.fields.iter().any(|f| f.name == *name) {
+					return true;
+				}
+			}
+		}
+	}
+	false
+}
+
 /// Transforms server-side validators.
 fn transform_validators(
 	validators: &[FormValidator],
-	fields: &[FormFieldDef],
+	fields: &[FormFieldEntry],
 ) -> Result<Vec<TypedFormValidator>> {
 	let mut result = Vec::new();
 
@@ -451,9 +946,8 @@ fn transform_validators(
 				rules,
 				span,
 			} => {
-				// Validate that field exists
-				let field_exists = fields.iter().any(|f| f.name == *field_name);
-				if !field_exists {
+				// Validate that field exists (including in groups)
+				if !field_exists(fields, field_name) {
 					return Err(Error::new(
 						field_name.span(),
 						format!("validator references unknown field: '{}'", field_name),
@@ -498,7 +992,7 @@ fn transform_validator_rule(rule: &ValidatorRule) -> Result<TypedValidatorRule> 
 /// Transforms client-side validators.
 fn transform_client_validators(
 	validators: &[ClientValidator],
-	fields: &[FormFieldDef],
+	fields: &[FormFieldEntry],
 ) -> Result<Vec<TypedClientValidator>> {
 	validators
 		.iter()
@@ -509,11 +1003,10 @@ fn transform_client_validators(
 /// Transforms a single client-side validator.
 fn transform_client_validator(
 	validator: &ClientValidator,
-	fields: &[FormFieldDef],
+	fields: &[FormFieldEntry],
 ) -> Result<TypedClientValidator> {
-	// Validate that field exists
-	let field_exists = fields.iter().any(|f| f.name == validator.field_name);
-	if !field_exists {
+	// Validate that field exists (including in groups)
+	if !field_exists(fields, &validator.field_name) {
 		return Err(Error::new(
 			validator.field_name.span(),
 			format!(
@@ -815,8 +1308,1587 @@ mod tests {
 		let typed = result.unwrap();
 		assert_eq!(typed.styling.class, Some("my-form".to_string()));
 		assert_eq!(
-			typed.fields[0].styling.class,
+			typed.fields[0].as_field().unwrap().styling.class,
 			Some("input-field".to_string())
 		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_state_all_fields() {
+		let input = quote! {
+			name: StateForm,
+			server_fn: submit_form,
+
+			state: { loading, error, success },
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let state = typed.state.expect("state should be Some");
+		assert!(state.has_loading());
+		assert!(state.has_error());
+		assert!(state.has_success());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_state_single_field() {
+		let input = quote! {
+			name: LoadingForm,
+			action: "/test",
+
+			state: { loading },
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let state = typed.state.expect("state should be Some");
+		assert!(state.has_loading());
+		assert!(!state.has_error());
+		assert!(!state.has_success());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_state_invalid_field() {
+		let input = quote! {
+			name: InvalidStateForm,
+			action: "/test",
+
+			state: { loading, invalid_field },
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		assert!(
+			result
+				.unwrap_err()
+				.to_string()
+				.contains("invalid state field")
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_form_without_state() {
+		let input = quote! {
+			name: NoStateForm,
+			action: "/test",
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.state.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_callbacks_all() {
+		let input = quote! {
+			name: CallbackForm,
+			server_fn: submit_form,
+
+			on_submit: |form| { /* submit handler */ },
+			on_success: |result| { /* success handler */ },
+			on_error: |e| { /* error handler */ },
+			on_loading: |is_loading| { /* loading handler */ },
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.callbacks.has_any());
+		assert!(typed.callbacks.has_on_submit());
+		assert!(typed.callbacks.has_on_success());
+		assert!(typed.callbacks.has_on_error());
+		assert!(typed.callbacks.has_on_loading());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_callbacks_single() {
+		let input = quote! {
+			name: SingleCallbackForm,
+			server_fn: submit_form,
+
+			on_success: |result| {
+				log::info!("Success!");
+			},
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.callbacks.has_any());
+		assert!(!typed.callbacks.has_on_submit());
+		assert!(typed.callbacks.has_on_success());
+		assert!(!typed.callbacks.has_on_error());
+		assert!(!typed.callbacks.has_on_loading());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_form_without_callbacks() {
+		let input = quote! {
+			name: NoCallbackForm,
+			action: "/test",
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(!typed.callbacks.has_any());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_callbacks_with_state() {
+		let input = quote! {
+			name: FullForm,
+			server_fn: submit_data,
+
+			state: { loading, error, success },
+
+			on_success: |result| {
+				navigate("/dashboard");
+			},
+			on_error: |e| {
+				show_toast(&e.to_string());
+			},
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+
+		// Check state
+		assert!(typed.state.is_some());
+		let state = typed.state.as_ref().unwrap();
+		assert!(state.has_loading());
+		assert!(state.has_error());
+		assert!(state.has_success());
+
+		// Check callbacks
+		assert!(typed.callbacks.has_on_success());
+		assert!(typed.callbacks.has_on_error());
+		assert!(!typed.callbacks.has_on_submit());
+		assert!(!typed.callbacks.has_on_loading());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_wrapper_basic() {
+		let input = quote! {
+			name: WrapperForm,
+			action: "/test",
+
+			fields: {
+				username: CharField {
+					wrapper: div { class: "relative" },
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().has_wrapper());
+		let wrapper = typed.fields[0]
+			.as_field()
+			.unwrap()
+			.wrapper
+			.as_ref()
+			.unwrap();
+		assert_eq!(wrapper.tag, "div");
+		assert_eq!(wrapper.class(), Some("relative"));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_wrapper_multiple_attrs() {
+		let input = quote! {
+			name: WrapperForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField {
+					wrapper: div {
+						class: "form-field",
+						id: "email-wrapper",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let wrapper = typed.fields[0]
+			.as_field()
+			.unwrap()
+			.wrapper
+			.as_ref()
+			.unwrap();
+		assert_eq!(wrapper.tag, "div");
+		assert_eq!(wrapper.class(), Some("form-field"));
+		assert_eq!(wrapper.id(), Some("email-wrapper"));
+		assert_eq!(wrapper.attrs.len(), 2);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_wrapper_no_attrs() {
+		let input = quote! {
+			name: WrapperForm,
+			action: "/test",
+
+			fields: {
+				username: CharField {
+					wrapper: span,
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let wrapper = typed.fields[0]
+			.as_field()
+			.unwrap()
+			.wrapper
+			.as_ref()
+			.unwrap();
+		assert_eq!(wrapper.tag, "span");
+		assert!(!wrapper.has_attrs());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_without_wrapper() {
+		let input = quote! {
+			name: NoWrapperForm,
+			action: "/test",
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(!typed.fields[0].as_field().unwrap().has_wrapper());
+	}
+
+	// =========================================================================
+	// Icon Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_basic_icon() {
+		let input = quote! {
+			name: IconForm,
+			action: "/test",
+
+			fields: {
+				username: CharField {
+					icon: svg {
+						class: "w-5 h-5",
+						viewBox: "0 0 24 24",
+						path { d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4" }
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().has_icon());
+		let icon = typed.fields[0].as_field().unwrap().icon.as_ref().unwrap();
+		assert_eq!(icon.attrs.len(), 2); // class, viewBox
+		assert_eq!(icon.children.len(), 1); // path
+		assert_eq!(icon.position, TypedIconPosition::Left); // default
+	}
+
+	#[rstest::rstest]
+	fn test_validate_icon_with_position() {
+		let input = quote! {
+			name: IconPositionForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField {
+					icon: svg {
+						viewBox: "0 0 24 24",
+						path { d: "M0 0h24v24H0z" }
+					},
+					icon_position: "right",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().has_icon());
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().icon_position(),
+			Some(TypedIconPosition::Right)
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_icon_position_label() {
+		let input = quote! {
+			name: IconLabelForm,
+			action: "/test",
+
+			fields: {
+				search: CharField {
+					icon: svg {
+						viewBox: "0 0 24 24",
+						circle { cx: "11", cy: "11", r: "8" }
+					},
+					icon_position: "label",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().icon_position(),
+			Some(TypedIconPosition::Label)
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_icon_with_nested_group() {
+		let input = quote! {
+			name: NestedIconForm,
+			action: "/test",
+
+			fields: {
+				password: CharField {
+					icon: svg {
+						viewBox: "0 0 24 24",
+						g {
+							fill: "none",
+							stroke: "currentColor",
+							path { d: "M12 15v2m0 0v2m0-2h2" }
+							circle { cx: "12", cy: "12", r: "10" }
+						}
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().has_icon());
+		let icon = typed.fields[0].as_field().unwrap().icon.as_ref().unwrap();
+		assert_eq!(icon.children.len(), 1); // g element
+
+		// Check nested group
+		let g_child = &icon.children[0];
+		assert_eq!(g_child.tag, "g");
+		assert_eq!(g_child.children.len(), 2); // path, circle
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_without_icon() {
+		let input = quote! {
+			name: NoIconForm,
+			action: "/test",
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(!typed.fields[0].as_field().unwrap().has_icon());
+		assert_eq!(typed.fields[0].as_field().unwrap().icon_position(), None); // No icon, no position
+	}
+
+	#[rstest::rstest]
+	fn test_validate_icon_multiple_children() {
+		let input = quote! {
+			name: MultiChildIconForm,
+			action: "/test",
+
+			fields: {
+				status: CharField {
+					icon: svg {
+						viewBox: "0 0 24 24",
+						fill: "none",
+						stroke: "currentColor",
+						path { d: "M5 13l4 4L19 7" }
+						path { d: "M12 22c5.523 0 10-4.477 10-10" }
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let icon = typed.fields[0].as_field().unwrap().icon.as_ref().unwrap();
+		assert_eq!(icon.attrs.len(), 3); // viewBox, fill, stroke
+		assert_eq!(icon.children.len(), 2); // two paths
+	}
+
+	// =========================================================================
+	// Custom Attrs Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_custom_attrs_aria() {
+		let input = quote! {
+			name: AriaForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField {
+					attrs: {
+						aria_label: "Email address",
+						aria_required: "true",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().has_custom_attrs());
+		assert_eq!(typed.fields[0].as_field().unwrap().custom_attrs.len(), 2);
+
+		let aria_attrs: Vec<_> = typed.fields[0].as_field().unwrap().aria_attrs().collect();
+		assert_eq!(aria_attrs.len(), 2);
+		assert_eq!(aria_attrs[0].name, "aria_label");
+		assert_eq!(aria_attrs[0].value, "Email address");
+		assert_eq!(aria_attrs[0].html_name(), "aria-label");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_custom_attrs_data() {
+		let input = quote! {
+			name: DataForm,
+			action: "/test",
+
+			fields: {
+				username: CharField {
+					attrs: {
+						data_testid: "username-input",
+						data_analytics: "signup-username",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let data_attrs: Vec<_> = typed.fields[0].as_field().unwrap().data_attrs().collect();
+		assert_eq!(data_attrs.len(), 2);
+		assert_eq!(data_attrs[0].html_name(), "data-testid");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_custom_attrs_mixed() {
+		let input = quote! {
+			name: MixedAttrsForm,
+			action: "/test",
+
+			fields: {
+				password: CharField {
+					widget: PasswordInput,
+					attrs: {
+						aria_label: "Password",
+						data_testid: "password-field",
+						aria_describedby: "password-help",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.fields[0].as_field().unwrap().custom_attrs.len(), 3);
+		assert_eq!(typed.fields[0].as_field().unwrap().aria_attrs().count(), 2);
+		assert_eq!(typed.fields[0].as_field().unwrap().data_attrs().count(), 1);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_custom_attrs_invalid_prefix() {
+		let input = quote! {
+			name: InvalidAttrsForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField {
+					attrs: {
+						invalid_attr: "value",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		let err = result.unwrap_err().to_string();
+		assert!(err.contains("invalid custom attribute"));
+		assert!(err.contains("must start with 'aria_' or 'data_'"));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_without_custom_attrs() {
+		let input = quote! {
+			name: NoAttrsForm,
+			action: "/test",
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(!typed.fields[0].as_field().unwrap().has_custom_attrs());
+		assert_eq!(typed.fields[0].as_field().unwrap().custom_attrs.len(), 0);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_custom_attrs_with_other_properties() {
+		let input = quote! {
+			name: CombinedForm,
+			action: "/test",
+
+			fields: {
+				search: CharField {
+					required,
+					label: "Search",
+					placeholder: "Enter search term",
+					class: "search-input",
+					attrs: {
+						aria_label: "Search field",
+						data_cy: "search-input",
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().validation.required);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().display.label,
+			Some("Search".to_string())
+		);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().styling.class,
+			Some("search-input".to_string())
+		);
+		assert_eq!(typed.fields[0].as_field().unwrap().custom_attrs.len(), 2);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_bind_true() {
+		let input = quote! {
+			name: BindTrueForm,
+			action: "/test",
+
+			fields: {
+				username: CharField {
+					bind: true,
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().is_bind_enabled());
+		assert!(typed.fields[0].as_field().unwrap().bind);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_bind_false() {
+		let input = quote! {
+			name: BindFalseForm,
+			action: "/test",
+
+			fields: {
+				password: CharField {
+					widget: PasswordInput,
+					bind: false,
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(!typed.fields[0].as_field().unwrap().is_bind_enabled());
+		assert!(!typed.fields[0].as_field().unwrap().bind);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_bind_default() {
+		let input = quote! {
+			name: BindDefaultForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		// Default should be true (enabled)
+		assert!(typed.fields[0].as_field().unwrap().is_bind_enabled());
+		assert!(typed.fields[0].as_field().unwrap().bind);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_bind_with_other_properties() {
+		let input = quote! {
+			name: BindCombinedForm,
+			action: "/test",
+
+			fields: {
+				search: CharField {
+					required,
+					label: "Search",
+					placeholder: "Enter search term",
+					bind: false,
+					class: "search-input",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		// Check bind
+		assert!(!typed.fields[0].as_field().unwrap().is_bind_enabled());
+		// Check other properties
+		assert!(typed.fields[0].as_field().unwrap().validation.required);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().display.label,
+			Some("Search".to_string())
+		);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().display.placeholder,
+			Some("Enter search term".to_string())
+		);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().styling.class,
+			Some("search-input".to_string())
+		);
+	}
+
+	// =========================================================================
+	// Initial Loader Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_initial_loader_basic() {
+		let input = quote! {
+			name: ProfileEditForm,
+			server_fn: update_profile,
+			initial_loader: get_profile_data,
+
+			fields: {
+				username: CharField { required },
+				email: EmailField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.initial_loader.is_some());
+		let loader = typed.initial_loader.as_ref().unwrap();
+		// Check that the path contains the expected identifier
+		assert!(loader.segments.len() > 0);
+		assert_eq!(
+			loader.segments.last().unwrap().ident.to_string(),
+			"get_profile_data"
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_initial_loader_with_path() {
+		let input = quote! {
+			name: SettingsForm,
+			server_fn: save_settings,
+			initial_loader: api::settings::get_settings,
+
+			fields: {
+				theme: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.initial_loader.is_some());
+		let loader = typed.initial_loader.as_ref().unwrap();
+		assert_eq!(loader.segments.len(), 3);
+		assert_eq!(
+			loader.segments.last().unwrap().ident.to_string(),
+			"get_settings"
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_form_without_initial_loader() {
+		let input = quote! {
+			name: SimpleForm,
+			action: "/test",
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.initial_loader.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_initial_loader_with_callbacks() {
+		let input = quote! {
+			name: LoaderCallbackForm,
+			server_fn: update_data,
+			initial_loader: fetch_data,
+
+			on_success: |result| { /* handle success */ },
+
+			fields: {
+				name: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.initial_loader.is_some());
+		assert!(typed.callbacks.has_on_success());
+	}
+
+	// =========================================================================
+	// Initial From Tests (Field Property)
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_initial_from_basic() {
+		let input = quote! {
+			name: EditForm,
+			server_fn: update_item,
+			initial_loader: get_item,
+
+			fields: {
+				title: CharField {
+					required,
+					initial_from: "title",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().initial_from.is_some());
+		assert_eq!(
+			typed.fields[0]
+				.as_field()
+				.unwrap()
+				.initial_from
+				.as_ref()
+				.unwrap(),
+			"title"
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_initial_from_multiple_fields() {
+		let input = quote! {
+			name: UserEditForm,
+			server_fn: update_user,
+			initial_loader: get_user,
+
+			fields: {
+				username: CharField {
+					required,
+					initial_from: "username",
+				},
+				email: EmailField {
+					required,
+					initial_from: "email_address",
+				},
+				bio: TextField {
+					initial_from: "biography",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().initial_from,
+			Some("username".to_string())
+		);
+		assert_eq!(
+			typed.fields[1].as_field().unwrap().initial_from,
+			Some("email_address".to_string())
+		);
+		assert_eq!(
+			typed.fields[2].as_field().unwrap().initial_from,
+			Some("biography".to_string())
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_initial_from_partial() {
+		let input = quote! {
+			name: PartialInitForm,
+			server_fn: submit_form,
+			initial_loader: get_partial_data,
+
+			fields: {
+				name: CharField {
+					initial_from: "name",
+				},
+				description: TextField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().initial_from.is_some());
+		assert!(typed.fields[1].as_field().unwrap().initial_from.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_without_initial_from() {
+		let input = quote! {
+			name: NoInitialForm,
+			action: "/test",
+
+			fields: {
+				data: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().initial_from.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_initial_from_with_other_properties() {
+		let input = quote! {
+			name: CombinedInitForm,
+			server_fn: save_data,
+			initial_loader: load_data,
+
+			fields: {
+				search: CharField {
+					required,
+					label: "Search Term",
+					placeholder: "Enter value",
+					initial_from: "search_term",
+					class: "search-input",
+					bind: true,
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.fields[0].as_field().unwrap().validation.required);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().display.label,
+			Some("Search Term".to_string())
+		);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().initial_from,
+			Some("search_term".to_string())
+		);
+		assert!(typed.fields[0].as_field().unwrap().bind);
+	}
+
+	// =========================================================================
+	// Slots Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_slots_before_fields() {
+		let input = quote! {
+			name: SlotsBeforeForm,
+			action: "/test",
+
+			slots: {
+				before_fields: || {
+					view! { <div class="form-header">"Welcome"</div> }
+				},
+			},
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.slots.is_some());
+		let slots = typed.slots.as_ref().unwrap();
+		assert!(slots.before_fields.is_some());
+		assert!(slots.after_fields.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_slots_after_fields() {
+		let input = quote! {
+			name: SlotsAfterForm,
+			action: "/test",
+
+			slots: {
+				after_fields: || {
+					view! { <button type="submit">"Submit"</button> }
+				},
+			},
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.slots.is_some());
+		let slots = typed.slots.as_ref().unwrap();
+		assert!(slots.before_fields.is_none());
+		assert!(slots.after_fields.is_some());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_slots_both() {
+		let input = quote! {
+			name: SlotsBothForm,
+			action: "/test",
+
+			slots: {
+				before_fields: || {
+					view! { <div class="header">"Form Header"</div> }
+				},
+				after_fields: || {
+					view! { <div class="footer">"Form Footer"</div> }
+				},
+			},
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.slots.is_some());
+		let slots = typed.slots.as_ref().unwrap();
+		assert!(slots.before_fields.is_some());
+		assert!(slots.after_fields.is_some());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_form_without_slots() {
+		let input = quote! {
+			name: NoSlotsForm,
+			action: "/test",
+
+			fields: {
+				data: CharField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.slots.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_slots_with_state_and_callbacks() {
+		let input = quote! {
+			name: FullFeaturedForm,
+			server_fn: submit_data,
+
+			state: { loading, error },
+
+			on_success: |result| { /* handle */ },
+
+			slots: {
+				before_fields: || {
+					view! { <h2>"Enter Information"</h2> }
+				},
+				after_fields: || {
+					view! { <button type="submit">"Save"</button> }
+				},
+			},
+
+			fields: {
+				name: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		// Check state
+		assert!(typed.state.is_some());
+		let state = typed.state.as_ref().unwrap();
+		assert!(state.has_loading());
+		assert!(state.has_error());
+
+		// Check callbacks
+		assert!(typed.callbacks.has_on_success());
+
+		// Check slots
+		assert!(typed.slots.is_some());
+		let slots = typed.slots.as_ref().unwrap();
+		assert!(slots.before_fields.is_some());
+		assert!(slots.after_fields.is_some());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_full_step9_features() {
+		let input = quote! {
+			name: CompleteStep9Form,
+			server_fn: update_profile,
+			initial_loader: get_profile,
+
+			state: { loading, error, success },
+
+			on_success: |result| {
+				navigate("/profile");
+			},
+
+			slots: {
+				before_fields: || {
+					view! { <div class="form-intro">"Edit your profile"</div> }
+				},
+				after_fields: || {
+					view! {
+						<div class="button-group">
+							<button type="submit">"Save"</button>
+						</div>
+					}
+				},
+			},
+
+			fields: {
+				username: CharField {
+					required,
+					label: "Username",
+					initial_from: "username",
+				},
+				email: EmailField {
+					required,
+					label: "Email",
+					initial_from: "email",
+				},
+				bio: TextField {
+					label: "Biography",
+					initial_from: "bio",
+					placeholder: "Tell us about yourself",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+
+		// Check initial_loader
+		assert!(typed.initial_loader.is_some());
+
+		// Check state
+		assert!(typed.state.is_some());
+
+		// Check callbacks
+		assert!(typed.callbacks.has_on_success());
+
+		// Check slots
+		assert!(typed.slots.is_some());
+
+		// Check fields with initial_from
+		assert_eq!(typed.fields.len(), 3);
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().initial_from,
+			Some("username".to_string())
+		);
+		assert_eq!(
+			typed.fields[1].as_field().unwrap().initial_from,
+			Some("email".to_string())
+		);
+		assert_eq!(
+			typed.fields[2].as_field().unwrap().initial_from,
+			Some("bio".to_string())
+		);
+	}
+
+	// =========================================================================
+	// Field Group Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_field_group_basic() {
+		let input = quote! {
+			name: AddressForm,
+			action: "/test",
+
+			fields: {
+				address_group: FieldGroup {
+					label: "Address",
+					fields: {
+						street: CharField { required },
+						city: CharField { required },
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.fields.len(), 1);
+
+		// Verify it's a group
+		let group = typed.fields[0].as_group().unwrap();
+		assert_eq!(group.name.to_string(), "address_group");
+		assert_eq!(group.label, Some("Address".to_string()));
+		assert_eq!(group.fields.len(), 2);
+
+		// Check fields within the group
+		assert_eq!(group.fields[0].name.to_string(), "street");
+		assert!(group.fields[0].validation.required);
+		assert_eq!(group.fields[1].name.to_string(), "city");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_with_class() {
+		let input = quote! {
+			name: StyledGroupForm,
+			action: "/test",
+
+			fields: {
+				info_group: FieldGroup {
+					label: "Personal Information",
+					class: "form-section",
+					fields: {
+						name: CharField {},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let group = typed.fields[0].as_group().unwrap();
+		assert_eq!(group.class, Some("form-section".to_string()));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_without_label() {
+		let input = quote! {
+			name: NoLabelGroupForm,
+			action: "/test",
+
+			fields: {
+				hidden_group: FieldGroup {
+					class: "hidden-section",
+					fields: {
+						data: CharField {},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let group = typed.fields[0].as_group().unwrap();
+		assert!(group.label.is_none());
+		assert_eq!(group.class, Some("hidden-section".to_string()));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_mixed_with_fields() {
+		let input = quote! {
+			name: MixedForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField { required },
+				address_group: FieldGroup {
+					label: "Address",
+					fields: {
+						street: CharField {},
+						zip: CharField {},
+					},
+				},
+				notes: TextField {},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.fields.len(), 3);
+
+		// First is a field
+		assert!(typed.fields[0].as_field().is_some());
+		assert_eq!(
+			typed.fields[0].as_field().unwrap().name.to_string(),
+			"email"
+		);
+
+		// Second is a group
+		assert!(typed.fields[1].as_group().is_some());
+		let group = typed.fields[1].as_group().unwrap();
+		assert_eq!(group.name.to_string(), "address_group");
+		assert_eq!(group.fields.len(), 2);
+
+		// Third is a field
+		assert!(typed.fields[2].as_field().is_some());
+		assert_eq!(
+			typed.fields[2].as_field().unwrap().name.to_string(),
+			"notes"
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_duplicate_field_names() {
+		let input = quote! {
+			name: DuplicateForm,
+			action: "/test",
+
+			fields: {
+				email: EmailField {},
+				info_group: FieldGroup {
+					label: "Info",
+					fields: {
+						email: CharField {},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		assert!(
+			result
+				.unwrap_err()
+				.to_string()
+				.contains("duplicate field name")
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_duplicate_group_names() {
+		let input = quote! {
+			name: DuplicateGroupForm,
+			action: "/test",
+
+			fields: {
+				my_group: FieldGroup {
+					label: "First",
+					fields: {
+						field1: CharField {},
+					},
+				},
+				my_group: FieldGroup {
+					label: "Second",
+					fields: {
+						field2: CharField {},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		assert!(
+			result
+				.unwrap_err()
+				.to_string()
+				.contains("duplicate field/group name")
+		);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_with_validators() {
+		let input = quote! {
+			name: ValidatedGroupForm,
+			action: "/test",
+
+			fields: {
+				address_group: FieldGroup {
+					label: "Address",
+					fields: {
+						street: CharField { required },
+						zip: CharField { max_length: 10 },
+					},
+				},
+			},
+
+			validators: {
+				street: [|v| !v.is_empty() => "Street is required"],
+				zip: [|v| v.len() <= 10 => "Zip too long"],
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.validators.len(), 2);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_validator_unknown_field() {
+		let input = quote! {
+			name: InvalidValidatorForm,
+			action: "/test",
+
+			fields: {
+				address_group: FieldGroup {
+					label: "Address",
+					fields: {
+						street: CharField {},
+					},
+				},
+			},
+
+			validators: {
+				nonexistent: [|v| !v.is_empty() => "Required"],
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		assert!(result.unwrap_err().to_string().contains("unknown field"));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_with_initial_from() {
+		let input = quote! {
+			name: InitialGroupForm,
+			server_fn: update_data,
+			initial_loader: get_data,
+
+			fields: {
+				profile_group: FieldGroup {
+					label: "Profile",
+					fields: {
+						name: CharField { initial_from: "name" },
+						bio: TextField { initial_from: "biography" },
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let group = typed.fields[0].as_group().unwrap();
+		assert_eq!(group.fields[0].initial_from, Some("name".to_string()));
+		assert_eq!(group.fields[1].initial_from, Some("biography".to_string()));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_multiple_field_groups() {
+		let input = quote! {
+			name: MultiGroupForm,
+			action: "/test",
+
+			fields: {
+				personal_group: FieldGroup {
+					label: "Personal",
+					class: "section-personal",
+					fields: {
+						name: CharField { required },
+						age: IntegerField {},
+					},
+				},
+				address_group: FieldGroup {
+					label: "Address",
+					class: "section-address",
+					fields: {
+						street: CharField {},
+						city: CharField {},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.fields.len(), 2);
+
+		let group1 = typed.fields[0].as_group().unwrap();
+		assert_eq!(group1.name.to_string(), "personal_group");
+		assert_eq!(group1.label, Some("Personal".to_string()));
+		assert_eq!(group1.fields.len(), 2);
+
+		let group2 = typed.fields[1].as_group().unwrap();
+		assert_eq!(group2.name.to_string(), "address_group");
+		assert_eq!(group2.label, Some("Address".to_string()));
+		assert_eq!(group2.fields.len(), 2);
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_group_with_field_properties() {
+		let input = quote! {
+			name: PropertiesGroupForm,
+			action: "/test",
+
+			fields: {
+				styled_group: FieldGroup {
+					label: "Styled Fields",
+					fields: {
+						email: EmailField {
+							required,
+							label: "Email Address",
+							placeholder: "you@example.com",
+							class: "email-input",
+							wrapper: div { class: "email-wrapper" },
+						},
+						password: CharField {
+							required,
+							widget: PasswordInput,
+							bind: false,
+						},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let group = typed.fields[0].as_group().unwrap();
+
+		// Check email field properties
+		let email = &group.fields[0];
+		assert!(email.validation.required);
+		assert_eq!(email.display.label, Some("Email Address".to_string()));
+		assert_eq!(
+			email.display.placeholder,
+			Some("you@example.com".to_string())
+		);
+		assert!(email.has_wrapper());
+
+		// Check password field properties
+		let password = &group.fields[1];
+		assert!(password.validation.required);
+		assert!(matches!(password.widget, TypedWidget::PasswordInput));
+		assert!(!password.bind);
 	}
 }
