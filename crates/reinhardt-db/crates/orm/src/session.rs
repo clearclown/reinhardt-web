@@ -94,6 +94,10 @@ pub struct Session {
 	deleted_objects: HashSet<String>,
 	/// Whether session is closed
 	is_closed: bool,
+	/// Counter for generating temporary keys for new objects
+	new_object_counter: usize,
+	/// Generated IDs from the last flush operation (table_name, generated_id)
+	last_generated_ids: Vec<(String, i64)>,
 }
 
 impl Session {
@@ -122,10 +126,15 @@ impl Session {
 			dirty_objects: HashSet::new(),
 			deleted_objects: HashSet::new(),
 			is_closed: false,
+			new_object_counter: 0,
+			last_generated_ids: Vec::new(),
 		})
 	}
 
 	/// Add an object to the session for tracking
+	///
+	/// Objects with a primary key will be tracked for UPDATE operations.
+	/// Objects without a primary key (None) will be tracked for INSERT operations.
 	///
 	/// # Examples
 	///
@@ -162,19 +171,32 @@ impl Session {
 	/// let pool = AnyPool::connect("sqlite::memory:").await?;
 	/// let mut session = Session::new(Arc::new(pool), DbBackend::Sqlite).await?;
 	///
+	/// // Add existing object with PK (for UPDATE)
 	/// let user = User { id: Some(1), name: "Alice".to_string() };
 	/// session.add(user).await?;
+	///
+	/// // Add new object without PK (for INSERT)
+	/// let new_user = User { id: None, name: "Bob".to_string() };
+	/// session.add(new_user).await?;
 	/// # Ok(())
 	/// # }
 	/// ```
 	pub async fn add<T: Model + 'static>(&mut self, obj: T) -> Result<(), SessionError> {
 		self.check_closed()?;
 
-		let pk = obj
-			.primary_key()
-			.ok_or_else(|| SessionError::InvalidState("Object has no primary key".to_string()))?;
-
-		let key = format!("{}:{}", T::table_name(), pk);
+		// Generate key based on whether object has a primary key
+		let key = match obj.primary_key() {
+			Some(pk) => {
+				// Existing object with PK - use standard key format
+				format!("{}:{}", T::table_name(), pk)
+			}
+			None => {
+				// New object without PK - use temporary key format
+				let counter = self.new_object_counter;
+				self.new_object_counter += 1;
+				format!("{}:__new__{}", T::table_name(), counter)
+			}
+		};
 
 		let data = serde_json::to_value(&obj)
 			.map_err(|e| SessionError::SerializationError(e.to_string()))?;
@@ -403,6 +425,235 @@ impl Session {
 		Ok(Some(obj))
 	}
 
+	/// Get all objects of a given type from the database
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use reinhardt_orm::session::Session;
+	/// use reinhardt_orm::Model;
+	/// use serde::{Serialize, Deserialize};
+	/// use sqlx::AnyPool;
+	/// use std::sync::Arc;
+	/// use reinhardt_orm::query_types::DbBackend;
+	///
+	/// #[derive(Serialize, Deserialize, Clone)]
+	/// struct User {
+	///     id: Option<i64>,
+	///     name: String,
+	/// }
+	///
+	/// # #[derive(Clone)]
+	/// # struct UserFields;
+	/// # impl reinhardt_orm::FieldSelector for UserFields {
+	/// #     fn with_alias(self, _alias: &str) -> Self { self }
+	/// # }
+	/// #
+	/// impl Model for User {
+	///     type PrimaryKey = i64;
+	/// #     type Fields = UserFields;
+	///     fn table_name() -> &'static str { "users" }
+	/// #     fn new_fields() -> Self::Fields { UserFields }
+	///     fn primary_key(&self) -> Option<Self::PrimaryKey> { self.id }
+	///     fn set_primary_key(&mut self, value: Self::PrimaryKey) { self.id = Some(value); }
+	/// }
+	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = AnyPool::connect("postgres://localhost/test").await?;
+	/// let mut session = Session::new(Arc::new(pool), DbBackend::Postgres).await?;
+	///
+	/// let users: Vec<User> = session.list_all().await?;
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub async fn list_all<T: Model + 'static>(&self) -> Result<Vec<T>, SessionError> {
+		self.check_closed()?;
+
+		// Use field_metadata() to build the query and map results
+		let field_metadata = T::field_metadata();
+		if field_metadata.is_empty() {
+			// No field metadata available - return empty list
+			return Ok(Vec::new());
+		}
+
+		// Build column expressions for SELECT
+		// DateTime fields are cast to text format for AnyPool compatibility
+		// (SQLx AnyPool doesn't support PostgreSQL's TIMESTAMP type)
+		let mut column_exprs: Vec<String> = Vec::new();
+		for field in &field_metadata {
+			let column_name = field.db_column.as_deref().unwrap_or(&field.name);
+			let is_datetime = field.field_type.contains("DateTimeField")
+				|| field.field_type.contains("DateField");
+
+			let expr = if is_datetime {
+				// Cast datetime fields to ISO8601 text format
+				match self.db_backend {
+					DbBackend::Postgres => {
+						format!(
+							"TO_CHAR(\"{}\", 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS \"{}\"",
+							column_name, column_name
+						)
+					}
+					DbBackend::Mysql => {
+						format!(
+							"DATE_FORMAT(`{}`, '%Y-%m-%dT%H:%i:%sZ') AS `{}`",
+							column_name, column_name
+						)
+					}
+					DbBackend::Sqlite => {
+						format!(
+							"strftime('%Y-%m-%dT%H:%M:%SZ', \"{}\") AS \"{}\"",
+							column_name, column_name
+						)
+					}
+				}
+			} else {
+				// Regular column
+				match self.db_backend {
+					DbBackend::Postgres | DbBackend::Sqlite => format!("\"{}\"", column_name),
+					DbBackend::Mysql => format!("`{}`", column_name),
+				}
+			};
+			column_exprs.push(expr);
+		}
+
+		// Build complete SQL query manually
+		let table_name = T::table_name();
+		let columns_sql = column_exprs.join(", ");
+		let sql = match self.db_backend {
+			DbBackend::Postgres | DbBackend::Sqlite => {
+				format!("SELECT {} FROM \"{}\"", columns_sql, table_name)
+			}
+			DbBackend::Mysql => {
+				format!("SELECT {} FROM `{}`", columns_sql, table_name)
+			}
+		};
+
+		// Execute query
+		let rows = sqlx::query(&sql)
+			.fetch_all(&*self.pool)
+			.await
+			.map_err(|e| SessionError::DatabaseError(format!("Failed to query database: {}", e)))?;
+
+		let mut results = Vec::with_capacity(rows.len());
+
+		for row in rows {
+			// Build JSON object from row data
+			let mut json_map = serde_json::Map::new();
+			for field in &field_metadata {
+				let column_name = field.db_column.as_deref().unwrap_or(&field.name);
+
+				// Extract value from row based on field type
+				let value: serde_json::Value = match field.field_type.as_str() {
+					typ if typ.contains("IntegerField") => {
+						if field.nullable {
+							row.try_get::<Option<i32>, _>(column_name)
+								.map(|v| {
+									v.map(serde_json::Value::from)
+										.unwrap_or(serde_json::Value::Null)
+								})
+								.unwrap_or(serde_json::Value::Null)
+						} else {
+							row.try_get::<i32, _>(column_name)
+								.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						}
+					}
+					typ if typ.contains("BigIntegerField") => {
+						if field.nullable {
+							row.try_get::<Option<i64>, _>(column_name)
+								.map(|v| {
+									v.map(serde_json::Value::from)
+										.unwrap_or(serde_json::Value::Null)
+								})
+								.unwrap_or(serde_json::Value::Null)
+						} else {
+							row.try_get::<i64, _>(column_name)
+								.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						}
+					}
+					typ if typ.contains("CharField") || typ.contains("TextField") => {
+						if field.nullable {
+							row.try_get::<Option<String>, _>(column_name)
+								.map(|v| {
+									v.map(serde_json::Value::from)
+										.unwrap_or(serde_json::Value::Null)
+								})
+								.unwrap_or(serde_json::Value::Null)
+						} else {
+							row.try_get::<String, _>(column_name)
+								.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						}
+					}
+					typ if typ.contains("BooleanField") => {
+						if field.nullable {
+							row.try_get::<Option<bool>, _>(column_name)
+								.map(|v| {
+									v.map(serde_json::Value::from)
+										.unwrap_or(serde_json::Value::Null)
+								})
+								.unwrap_or(serde_json::Value::Null)
+						} else {
+							row.try_get::<bool, _>(column_name)
+								.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						}
+					}
+					typ if typ.contains("FloatField") => {
+						if field.nullable {
+							row.try_get::<Option<f64>, _>(column_name)
+								.map(|v| {
+									v.map(serde_json::Value::from)
+										.unwrap_or(serde_json::Value::Null)
+								})
+								.unwrap_or(serde_json::Value::Null)
+						} else {
+							row.try_get::<f64, _>(column_name)
+								.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						}
+					}
+					// DateTimeField / DateField: already cast to string in SQL query
+					typ if typ.contains("DateTimeField") || typ.contains("DateField") => {
+						// These fields are cast to ISO8601 strings in the SQL query
+						// The value will be parsed by serde when deserializing to chrono::DateTime
+						row.try_get::<Option<String>, _>(column_name)
+							.map(|v| {
+								v.map(serde_json::Value::from)
+									.unwrap_or(serde_json::Value::Null)
+							})
+							.unwrap_or(serde_json::Value::Null)
+					}
+					// Default: try as string
+					_ => row
+						.try_get::<Option<String>, _>(column_name)
+						.map(|v| {
+							v.map(serde_json::Value::from)
+								.unwrap_or(serde_json::Value::Null)
+						})
+						.unwrap_or(serde_json::Value::Null),
+				};
+
+				json_map.insert(field.name.clone(), value);
+			}
+
+			// Deserialize JSON to model object
+			let obj: T =
+				serde_json::from_value(serde_json::Value::Object(json_map)).map_err(|e| {
+					SessionError::SerializationError(format!(
+						"Failed to deserialize query result: {}",
+						e
+					))
+				})?;
+
+			results.push(obj);
+		}
+
+		Ok(results)
+	}
+
 	/// Create a query for the given model type
 	///
 	/// # Examples
@@ -470,6 +721,9 @@ impl Session {
 	pub async fn flush(&mut self) -> Result<(), SessionError> {
 		self.check_closed()?;
 
+		// Clear any previously generated IDs
+		self.last_generated_ids.clear();
+
 		// Determine database backend from pool
 		let backend = self.get_backend();
 
@@ -486,18 +740,34 @@ impl Session {
 				// Extract data from JSON
 				if let Some(obj) = entry.data.as_object() {
 					// Check if this is an INSERT (no primary key) or UPDATE (has primary key)
-					let has_pk = obj.get("id").is_some()
-						|| obj.iter().any(|(k, v)| k.ends_with("_id") && !v.is_null());
+					// The "id" field must exist AND not be null for UPDATE
+					let has_pk = obj.get("id").map(|v| !v.is_null()).unwrap_or(false);
 
 					if has_pk {
 						// UPDATE existing record
 						let mut update_stmt =
 							SeaQuery::update().table(Alias::new(table_name)).to_owned();
 
-						// Set all columns except primary key
+						// Set all columns except primary key and auto-managed datetime fields
 						for (col_name, col_value) in obj {
 							if col_name == "id" || col_name.ends_with("_id") {
 								continue; // Skip primary key columns
+							}
+							// Skip null values to avoid type inference issues
+							// (e.g., NULL being bound as integer for timestamp columns)
+							if col_value.is_null() {
+								continue;
+							}
+							// Skip datetime fields that are typically auto-managed
+							// These fields are returned as ISO8601 strings from list_all() and
+							// cannot be directly inserted into TIMESTAMP columns
+							if col_name == "created_at"
+								|| col_name == "updated_at"
+								|| col_name.ends_with("_date")
+								|| col_name.ends_with("_time")
+								|| col_name.ends_with("_at")
+							{
+								continue;
 							}
 							update_stmt.value(Alias::new(col_name), json_to_sea_value(col_value));
 						}
@@ -528,15 +798,33 @@ impl Session {
 						let mut values_vec = Vec::new();
 
 						for (col_name, col_value) in obj {
-							if col_name == "id" && col_value.is_null() {
-								continue; // Skip auto-generated IDs
+							// Skip id/primary key column - auto-generated
+							if col_name == "id" || col_name.ends_with("_id") {
+								continue;
+							}
+							// Skip null datetime fields to let database DEFAULT apply
+							// (e.g., created_at, updated_at with DEFAULT CURRENT_TIMESTAMP)
+							if col_value.is_null()
+								&& (col_name == "created_at"
+									|| col_name == "updated_at" || col_name.ends_with("_date")
+									|| col_name.ends_with("_time")
+									|| col_name.ends_with("_at"))
+							{
+								continue;
 							}
 							columns.push(Alias::new(col_name));
-							values_vec.push(Expr::val(json_to_sea_value(col_value)));
+							// For NULL values, use SQL NULL keyword directly to avoid type inference issues
+							if col_value.is_null() {
+								values_vec
+									.push(sea_query::SimpleExpr::Keyword(sea_query::Keyword::Null));
+							} else {
+								values_vec.push(Expr::val(json_to_sea_value(col_value)));
+							}
 						}
 
-						insert_stmt.columns(columns);
-						if !values_vec.is_empty() {
+						// If there are columns to insert, add them
+						if !columns.is_empty() {
+							insert_stmt.columns(columns);
 							insert_stmt.values(values_vec).unwrap();
 						}
 
@@ -560,6 +848,10 @@ impl Session {
 								let generated_id: i64 = row.try_get("id").map_err(|e| {
 									SessionError::FlushError(format!("Failed to extract ID: {}", e))
 								})?;
+
+								// Track the generated ID for retrieval after flush
+								self.last_generated_ids
+									.push((table_name.to_string(), generated_id));
 
 								// Update the identity map
 								self.update_identity_map_with_generated_id(
@@ -586,14 +878,20 @@ impl Session {
 				continue;
 			}
 			let table_name = parts[0];
-			let pk_value = parts[1];
+			let pk_value_str = parts[1];
 
 			// Build DELETE statement
 			let mut delete_stmt = SeaQuery::delete()
 				.from_table(Alias::new(table_name))
 				.to_owned();
 
-			delete_stmt.and_where(Expr::col(Alias::new("id")).eq(Expr::val(pk_value)));
+			// Parse primary key as integer for BIGINT comparison
+			// Fall back to string comparison if parsing fails
+			if let Ok(pk_int) = pk_value_str.parse::<i64>() {
+				delete_stmt.and_where(Expr::col(Alias::new("id")).eq(Expr::val(pk_int)));
+			} else {
+				delete_stmt.and_where(Expr::col(Alias::new("id")).eq(Expr::val(pk_value_str)));
+			}
 
 			// Build and execute SQL
 			let (sql, values) = match backend {
@@ -652,6 +950,36 @@ impl Session {
 	fn get_backend(&self) -> DbBackend {
 		// Return the backend type that was provided during Session creation
 		self.db_backend
+	}
+
+	/// Get the IDs generated during the last flush operation
+	///
+	/// Returns a slice of (table_name, generated_id) tuples for all objects
+	/// that were inserted with auto-generated primary keys during the last flush.
+	///
+	/// # Examples
+	///
+	/// ```no_run
+	/// use reinhardt_orm::session::Session;
+	/// use reinhardt_orm::query_types::DbBackend;
+	/// use sqlx::AnyPool;
+	/// use std::sync::Arc;
+	///
+	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+	/// let pool = AnyPool::connect("postgres://localhost/test").await?;
+	/// let mut session = Session::new(Arc::new(pool), DbBackend::Postgres).await?;
+	///
+	/// // ... add objects and flush ...
+	///
+	/// // Get the generated IDs
+	/// for (table_name, id) in session.get_generated_ids() {
+	///     println!("Generated ID {} for table {}", id, table_name);
+	/// }
+	/// # Ok(())
+	/// # }
+	/// ```
+	pub fn get_generated_ids(&self) -> &[(String, i64)] {
+		&self.last_generated_ids
 	}
 
 	/// Execute SQL with sea_query values

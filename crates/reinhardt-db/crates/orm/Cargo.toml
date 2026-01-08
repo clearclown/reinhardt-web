@@ -81,4 +81,3 @@ tokio-test = "0.4"
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 rstest = { workspace = true }
-proptest = { workspace = true }
