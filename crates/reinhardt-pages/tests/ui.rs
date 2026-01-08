@@ -29,3 +29,12 @@ fn test_form_macro_fail() {
 	let t = trybuild::TestCases::new();
 	t.compile_fail("tests/ui/form/fail/*.rs");
 }
+
+// server_fn macro tests
+#[test]
+fn test_server_fn_macro_ui() {
+	let t = trybuild::TestCases::new();
+	// Codec tests
+	t.pass("tests/ui/server_fn/codec_json.rs");
+	t.pass("tests/ui/server_fn/codec_url.rs");
+}

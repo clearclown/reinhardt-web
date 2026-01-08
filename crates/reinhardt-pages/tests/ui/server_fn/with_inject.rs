@@ -1,8 +1,8 @@
-//! Test: Server function with #[inject] parameters (Week 4 Day 1-2)
+//! Test: Server function with `#[inject]` parameters (Week 4 Day 1-2)
 //!
 //! This test verifies that:
-//! 1. #[inject] parameters are detected correctly
-//! 2. Client stub excludes #[inject] parameters from Args struct
+//! 1. `#[inject]` parameters are detected correctly
+//! 2. Client stub excludes `#[inject]` parameters from Args struct
 //! 3. Server handler includes DI resolution code (placeholder)
 
 use reinhardt_pages_macros::server_fn;
