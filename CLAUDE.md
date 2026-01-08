@@ -334,6 +334,12 @@ Before submitting code:
 - Use `reinhardt-test` fixtures for test setup/teardown
 - Create specialized fixtures wrapping generic `reinhardt-test` fixtures for test data injection
 - Use SeaQuery (not raw SQL) for SQL construction in tests
+- Wrap generic types in backticks in doc comments: `` `Result<T>` ``, NOT `Result<T>`
+- Wrap macro attributes in backticks: `` `#[inject]` ``, NOT `#[inject]`
+- Wrap URLs in angle brackets or backticks: `<https://...>` or `` `https://...` ``
+- Specify language for code blocks: ` ```rust `, NOT ` ``` `
+- Wrap bracket patterns in backticks: `` `array[0]` ``, NOT `array[0]`
+- Use backticks (not intra-doc links) for feature-gated types: `` `FeatureType` ``, NOT `` [`FeatureType`] ``
 
 ### ❌ NEVER DO
 - Use `mod.rs` files (deprecated pattern)
@@ -358,6 +364,10 @@ Before submitting code:
 - Use plain `#[test]` instead of `#[rstest]`
 - Write raw SQL strings in tests (use SeaQuery instead)
 - Duplicate infrastructure setup code (use `reinhardt-test` fixtures)
+- Write generic types without backticks in doc comments (causes HTML tag warnings)
+- Write macro attributes without backticks in doc comments (causes unresolved link warnings)
+- Write bare URLs in doc comments (causes bare URL warnings)
+- Use intra-doc links for feature-gated items (causes unresolved link warnings)
 
 ### 📚 Detailed Standards
 
