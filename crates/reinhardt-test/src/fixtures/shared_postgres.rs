@@ -392,6 +392,62 @@ pub fn cleanup_shared_postgres() {
 	}
 }
 
+// ========================================================================
+// rstest Fixtures for test integration
+// ========================================================================
+
+/// rstest fixture that provides a shared PostgreSQL pool with ORM initialized
+///
+/// This fixture wraps `get_test_pool_with_orm()` for easy use in rstest-based tests.
+/// Each test gets an isolated database cloned from a template, with the global
+/// ORM manager initialized.
+///
+/// # Usage
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::shared_db_pool;
+/// use rstest::*;
+/// use sqlx::PgPool;
+///
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_shared_pool(#[future] shared_db_pool: (PgPool, String)) {
+///     let (pool, _url) = shared_db_pool.await;
+///     // Use pool for database operations
+/// }
+/// ```
+///
+/// # Fixture-in-Fixture Pattern
+///
+/// This fixture can be used as a base for other fixtures:
+///
+/// ```rust,no_run
+/// use reinhardt_test::fixtures::shared_db_pool;
+/// use rstest::*;
+/// use sqlx::PgPool;
+/// use std::sync::Arc;
+///
+/// #[fixture]
+/// async fn db_pool(#[future] shared_db_pool: (PgPool, String)) -> Arc<PgPool> {
+///     let (pool, _url) = shared_db_pool.await;
+///     Arc::new(pool)
+/// }
+///
+/// #[fixture]
+/// async fn articles_table(#[future] db_pool: Arc<PgPool>) -> Arc<PgPool> {
+///     let pool = db_pool.await;
+///     sqlx::query("CREATE TABLE articles (id SERIAL PRIMARY KEY, title TEXT)")
+///         .execute(pool.as_ref())
+///         .await
+///         .unwrap();
+///     pool
+/// }
+/// ```
+#[rstest::fixture]
+pub async fn shared_db_pool() -> (PgPool, String) {
+	get_test_pool_with_orm().await
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
