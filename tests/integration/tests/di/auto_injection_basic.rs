@@ -1,6 +1,6 @@
 //! Basic auto injection tests
 //!
-//! Tests for #[injectable] and #[injectable_factory] macros
+//! Tests for `#[injectable]` and `#[injectable_factory]` macros
 
 use reinhardt_di::{
 	DependencyScope, InjectionContext, SingletonScope, global_registry, injectable,
@@ -8,7 +8,7 @@ use reinhardt_di::{
 };
 use std::sync::Arc;
 
-/// Simple config struct with #[injectable] macro
+/// Simple config struct with `#[injectable]` macro
 #[injectable(scope = "singleton")]
 #[derive(Clone, Debug)]
 struct AppConfig {
@@ -25,7 +25,7 @@ impl Default for AppConfig {
 	}
 }
 
-/// Database connection using #[injectable_factory] macro
+/// Database connection using `#[injectable_factory]` macro
 #[derive(Clone, Debug)]
 struct DatabaseConnection {
 	url: String,

@@ -1,4 +1,4 @@
-//! Integration tests for the Model derive macro (via #[model] attribute)
+//! Integration tests for the Model derive macro (via `#[model]` attribute)
 //!
 //! Tests the interaction between:
 //! - reinhardt-macros (Model derive macro)

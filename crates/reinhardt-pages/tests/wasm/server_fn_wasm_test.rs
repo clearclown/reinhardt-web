@@ -137,7 +137,7 @@ fn test_csrf_headers_fallback_to_meta() {
 /// Test that automatic CSRF injection produces valid header format
 ///
 /// This test verifies the contract that the server_fn macro relies on:
-/// csrf_headers() returns Option<(&'static str, String)> where the first
+/// csrf_headers() returns `Option<(&'static str, String)>` where the first
 /// element is the header name and second is the value.
 #[wasm_bindgen_test]
 fn test_csrf_headers_contract() {

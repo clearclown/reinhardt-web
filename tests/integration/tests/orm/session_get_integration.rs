@@ -17,7 +17,7 @@ use sqlx::{AnyPool, Row};
 use std::sync::Arc;
 use testcontainers::{ContainerAsync, GenericImage};
 
-/// Test model using Model derive macro (via #[model] attribute)
+/// Test model using Model derive macro (via `#[model]` attribute)
 #[derive(Serialize, Deserialize)]
 #[model(app_label = "test_app", table_name = "test_users")]
 struct TestUser {

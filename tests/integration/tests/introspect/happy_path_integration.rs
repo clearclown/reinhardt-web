@@ -344,7 +344,7 @@ async fn test_introspect_column_counts(
 ///
 /// **Expected Behavior**:
 /// - Generated code contains struct definitions
-/// - Generated code contains #[model] attributes
+/// - Generated code contains `#[model]` attributes
 /// - Generated code has correct field types
 #[rstest]
 #[tokio::test]

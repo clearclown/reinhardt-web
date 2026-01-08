@@ -11,7 +11,7 @@
 //! - **Async Database Validation**: Uniqueness checks requiring database queries
 //! - **Custom Error Formatting**: Customized error messages with field context
 //! - **Short-Circuit Behavior**: Early termination vs full error collection
-//! - **List Field Validation**: Applying validators to each item in Vec<T>
+//! - **List Field Validation**: Applying validators to each item in `Vec<T>`
 //!
 //! ## Test Categories
 //!
@@ -31,7 +31,7 @@
 //! ✅ Async database validation executes properly with TestContainers
 //! ✅ Custom error messages can be formatted with field context
 //! ✅ Validation can stop at first error or collect all errors
-//! ✅ Validators apply correctly to collection items (Vec<T>)
+//! ✅ Validators apply correctly to collection items (`Vec<T>`)
 //!
 //! ## What These Tests Don't Cover
 //!
@@ -585,7 +585,7 @@ fn test_validation_short_circuit_on_first_error() {
 /// Test list field item validation
 ///
 /// Verifies:
-/// - Validator applies to each item in Vec<T>
+/// - Validator applies to each item in `Vec<T>`
 /// - Individual item errors are indexed correctly
 /// - Empty items are detected
 /// - Length constraints apply per item

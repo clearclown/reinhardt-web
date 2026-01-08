@@ -3,7 +3,7 @@
 //! Comprehensive test suite for reinhardt-admin command-line tool.
 //! Translation of Django's admin_scripts tests from django/tests/admin_scripts/tests.py
 //!
-//! Reference: https://github.com/django/django/blob/main/tests/admin_scripts/tests.py
+//! Reference: <https://github.com/django/django/blob/main/tests/admin_scripts/tests.py>
 
 use reinhardt_commands::{
 	BaseCommand, CommandContext, CommandError, CommandResult, StartAppCommand, StartProjectCommand,

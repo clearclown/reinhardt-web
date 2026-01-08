@@ -49,7 +49,7 @@ fn test_char_field_min_length_not_met() {
 
 #[test]
 fn test_char_field_required_missing() {
-	let field = CharField::new("name".to_string()).required(); // 明示的にrequired=true
+	let field = CharField::new("name".to_string()).required(); // Explicitly set required=true
 	let result = field.clean(None);
 	assert!(result.is_err());
 }
@@ -450,7 +450,7 @@ fn test_boolean_field_invalid_type() {
 
 #[test]
 fn test_boolean_field_null_value_required() {
-	let field = BooleanField::new("agree".to_string()).required(); // 明示的にrequired=true
+	let field = BooleanField::new("agree".to_string()).required(); // Explicitly set required=true
 	let result = field.clean(None);
 	assert!(result.is_err());
 }

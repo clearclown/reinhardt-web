@@ -274,7 +274,7 @@ fn test_output_wrapper_mixed_writes() {
 /// Test with Cursor writer
 ///
 /// **Category**: Happy Path
-/// **Verifies**: Works with Cursor<Vec<u8>>
+/// **Verifies**: Works with Cursor<`Vec<u8>`>
 #[rstest]
 fn test_output_wrapper_with_cursor() {
 	let cursor = Cursor::new(Vec::new());

@@ -290,7 +290,7 @@ async fn test_extract_query_optional_params() {
 ///
 /// Request: GET /search?tags=rust&tags=web
 /// QueryParams: tags=[rust, web]
-/// Expected: Query<MultiValueQuery> extracts tags as Vec<String>
+/// Expected: Query<MultiValueQuery> extracts tags as `Vec<String>`
 #[tokio::test]
 #[cfg(feature = "multi-value-arrays")]
 async fn test_extract_query_multi_value_array() {
@@ -575,7 +575,7 @@ async fn test_extract_json_body_malformed() {
 ///
 /// Request: POST /batch with JSON array
 /// Body: [{"id": 1}, {"id": 2}]
-/// Expected: Json<Vec<Item>> extracts array correctly
+/// Expected: Json<`Vec<Item>`> extracts array correctly
 #[tokio::test]
 async fn test_extract_json_body_array() {
 	#[derive(Debug, Deserialize, Serialize, PartialEq)]

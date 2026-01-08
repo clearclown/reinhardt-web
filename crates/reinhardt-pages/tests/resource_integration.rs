@@ -446,7 +446,7 @@ fn test_resource_state_nested_data_boundary() {
 	assert_eq!(state3.as_ref(), Some(&data3));
 }
 
-/// Tests boundary for Option<T> data
+/// Tests boundary for `Option<T>` data
 #[rstest]
 #[case::none_value(None)]
 #[case::some_value(Some(42))]

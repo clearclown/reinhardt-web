@@ -23,7 +23,7 @@ fn empty_context() -> CommandContext {
 // Test Helper Functions for Runserver Command
 // ============================================================================
 
-/// Runserverコマンドのデフォルト設定を作成
+/// Creates runserver command with default settings
 fn create_runserver_default() -> Commands {
 	Commands::Runserver {
 		address: "127.0.0.1:8000".to_string(),
@@ -36,7 +36,7 @@ fn create_runserver_default() -> Commands {
 	}
 }
 
-/// カスタム設定のRunserverコマンドを作成
+/// Creates runserver command with custom settings
 #[allow(clippy::too_many_arguments)]
 fn create_runserver_with_options(
 	address: &str,
@@ -1312,7 +1312,7 @@ fn test_runserver_static_dir_custom() {
 		panic!("Expected Runserver command");
 	}
 
-	// デフォルト値のテスト
+	// Test default values
 	let cmd_default = create_runserver_default();
 	if let Commands::Runserver { static_dir, .. } = cmd_default {
 		assert_eq!(static_dir, "dist", "static_dir should default to dist");
@@ -1346,7 +1346,7 @@ fn test_runserver_no_spa_flag() {
 /// Verifies that multiple new fields work together correctly.
 #[rstest]
 fn test_runserver_pages_integration() {
-	// with_pages有効 + カスタムディレクトリ + SPA無効化の組み合わせ
+	// Combination of with_pages enabled + custom directory + SPA disabled
 	let cmd =
 		create_runserver_with_options("0.0.0.0:3000", false, false, false, true, "build", true);
 

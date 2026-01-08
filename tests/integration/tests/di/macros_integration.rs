@@ -1,7 +1,7 @@
 //! Dependency injection macros integration tests
 //!
 //! Integration tests for reinhardt-macros' dependency injection macros
-//! (#[endpoint] and #[use_inject]) working with reinhardt-di's
+//! (`#[endpoint]` and `#[use_inject]`) working with reinhardt-di's
 //! injection context and scope management.
 //!
 //! These tests verify that the procedural macros correctly integrate with

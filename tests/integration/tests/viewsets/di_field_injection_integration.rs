@@ -1,4 +1,4 @@
-//! Tests for struct field-level dependency injection with #[inject]
+//! Tests for struct field-level dependency injection with `#[inject]`
 
 use async_trait::async_trait;
 use bytes::Bytes;

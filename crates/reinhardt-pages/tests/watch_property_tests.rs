@@ -117,15 +117,18 @@ proptest! {
 
 		let html = view.render_to_string();
 
-		// Property: Raw < and > should not appear in text content area
-		// They should be escaped to &lt; and &gt;
+		// Property: Raw < and > should be escaped to &lt; and &gt;
 		if content.contains('<') {
-			prop_assert!(!html.contains(&format!("<div>{}", content.replace('<', ""))),
-				"< should be escaped in content");
+			prop_assert!(
+				html.contains("&lt;"),
+				"< should be escaped to &lt; in content"
+			);
 		}
 		if content.contains('>') {
-			prop_assert!(!html.contains(&format!("{}</div>", content.replace('>', ""))),
-				"> should be escaped in content");
+			prop_assert!(
+				html.contains("&gt;"),
+				"> should be escaped to &gt; in content"
+			);
 		}
 	}
 }

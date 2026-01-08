@@ -267,7 +267,7 @@ fn test_page_calculation_exact_multiple() {
 ///    - Cursors should be opaque (base64-encoded JSON)
 ///    - Support bidirectional pagination
 ///
-/// See: https://jsonapi.org/profiles/ethanresnick/cursor-pagination/
+/// See: <https://jsonapi.org/profiles/ethanresnick/cursor-pagination/>
 #[test]
 fn test_cursor_pagination_documentation() {
 	// This test exists solely for documentation purposes

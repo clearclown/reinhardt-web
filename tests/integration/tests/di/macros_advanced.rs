@@ -83,7 +83,7 @@ impl Injectable for ComplexTypesService {
 	}
 }
 
-/// Test: Complex types (Vec<T>, HashMap<K,V>, Option<T>)
+/// Test: Complex types (`Vec<T>`, `HashMap<K,V>`, `Option<T>`)
 ///
 /// Tests that complex types can be properly injected and serialized/deserialized
 /// through the DI system.

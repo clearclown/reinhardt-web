@@ -414,7 +414,7 @@ fn test_verify_truncated_hash(argon2_hasher: Argon2Hasher) {
 	let truncated_hash = &full_hash[..full_hash.len() / 2];
 
 	let result = argon2_hasher.verify(password, truncated_hash);
-	// エラーを返すか、検証失敗を返すかは実装依存
+	// Return behavior (error vs verification failure) is implementation-dependent
 	assert!(
 		result.is_err() || !result.unwrap(),
 		"Truncated hash should either error or fail verification"

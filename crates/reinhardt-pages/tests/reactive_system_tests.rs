@@ -321,7 +321,7 @@ fn test_get_untracked_no_dependency() {
 /// Previously, when ANY Signal clone was dropped, the value was removed from
 /// thread-local storage, causing other clones to panic with "Signal value not found".
 ///
-/// With the Rc<RefCell<T>> refactoring, values are automatically managed via
+/// With the `Rc<RefCell<T>>` refactoring, values are automatically managed via
 /// reference counting, and dropping some clones doesn't affect others.
 #[test]
 #[serial]
