@@ -26,7 +26,7 @@ pub struct CdnConfig {
 	pub enabled: bool,
 	/// CDN provider
 	pub provider: CdnProvider,
-	/// CDN base URL (e.g., "https://d1234567890.cloudfront.net")
+	/// CDN base URL (e.g., `"https://d1234567890.cloudfront.net"`)
 	pub base_url: String,
 	/// Path prefix on CDN (e.g., "/static")
 	pub path_prefix: Option<String>,

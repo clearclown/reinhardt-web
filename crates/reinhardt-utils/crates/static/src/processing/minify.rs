@@ -134,7 +134,7 @@ impl Processor for CssMinifier {
 ///
 /// For production use with advanced optimizations (variable mangling,
 /// dead code elimination, tree shaking), enable the `advanced-minification`
-/// feature and use [`super::advanced_minify::AdvancedJsMinifier`] instead.
+/// feature and use `AdvancedJsMinifier` (from `advanced_minify` module) instead.
 pub struct JsMinifier {
 	/// Remove comments
 	remove_comments: bool,

@@ -38,7 +38,7 @@ tokio-util = { version = "0.7", features = ["compat"], optional = true }
 chrono = { version = "0.4", features = ["serde"] }
 
 # File-based cache utilities
-md5 = "0.8.0"
+md5 = { version = "0.10", package = "md-5" }
 
 # Layered cache utilities
 rand = "0.9.2"

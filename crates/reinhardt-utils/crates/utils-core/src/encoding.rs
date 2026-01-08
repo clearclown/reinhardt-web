@@ -274,7 +274,7 @@ pub fn linebreaks(text: &str) -> String {
 		.collect::<Vec<_>>()
 		.join("<br>\n")
 }
-/// Line breaks to <br> tags without wrapping in <p>
+/// Line breaks to `<br>` tags without wrapping in `<p>`
 ///
 /// # Examples
 ///

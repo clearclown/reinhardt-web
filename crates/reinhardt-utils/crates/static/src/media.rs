@@ -142,7 +142,7 @@ impl Media {
 
 	/// Render JavaScript as HTML script tags
 	///
-	/// Returns HTML string with <script> tags for all JS files.
+	/// Returns HTML string with `<script>` tags for all JS files.
 	///
 	/// # Example
 	///

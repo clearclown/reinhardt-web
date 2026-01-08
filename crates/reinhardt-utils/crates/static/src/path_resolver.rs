@@ -1,33 +1,33 @@
 use std::env;
 use std::path::PathBuf;
 
-/// プロジェクトルートを検出するための複数の戦略を提供する
+/// Provides multiple strategies for detecting the project root
 pub struct PathResolver;
 
 impl PathResolver {
-	/// マルチレイヤーパス解決
+	/// Multi-layer path resolution
 	///
-	/// 以下の優先順位で解決を試みる:
-	/// 1. CARGO_MANIFEST_DIR 環境変数を使用
-	/// 2. 現在のディレクトリから上に Cargo.toml を検索
-	/// 3. 現在のディレクトリをフォールバック
+	/// Attempts resolution in the following priority order:
+	/// 1. Use CARGO_MANIFEST_DIR environment variable
+	/// 2. Search upward from current directory for Cargo.toml
+	/// 3. Fall back to current directory
 	///
 	/// # Arguments
 	///
-	/// * `relative_path` - 解決する相対パス
+	/// * `relative_path` - The relative path to resolve
 	///
 	/// # Returns
 	///
-	/// 解決されたパス。絶対パスの場合はそのまま返される。
+	/// The resolved path. Returns as-is if the path is absolute.
 	pub fn resolve_static_dir(relative_path: &str) -> PathBuf {
 		let path = PathBuf::from(relative_path);
 
-		// 絶対パスの場合はそのまま返す
+		// Return as-is if absolute path
 		if path.is_absolute() {
 			return path;
 		}
 
-		// レイヤー1: CARGO_MANIFEST_DIR を使用
+		// Layer 1: Use CARGO_MANIFEST_DIR
 		if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
 			let candidate = PathBuf::from(manifest_dir).join(&path);
 			if candidate.exists() {
@@ -35,7 +35,7 @@ impl PathResolver {
 			}
 		}
 
-		// レイヤー2: Cargo.toml を検索してプロジェクトルートを見つける
+		// Layer 2: Find project root by searching for Cargo.toml
 		if let Some(project_root) = Self::find_project_root() {
 			let candidate = project_root.join(&path);
 			if candidate.exists() {
@@ -43,7 +43,7 @@ impl PathResolver {
 			}
 		}
 
-		// レイヤー3: 現在のディレクトリから解決（既存の動作）
+		// Layer 3: Resolve from current directory (existing behavior)
 		env::current_dir()
 			.ok()
 			.and_then(|cwd| {
@@ -57,21 +57,21 @@ impl PathResolver {
 			.unwrap_or(path)
 	}
 
-	/// 現在のディレクトリから上に向かって Cargo.toml を検索
+	/// Searches for Cargo.toml upward from the current directory
 	///
-	/// Cargo.toml が見つかった場合、そのディレクトリがプロジェクトルートとして返される。
+	/// If Cargo.toml is found, that directory is returned as the project root.
 	///
 	/// # Returns
 	///
-	/// プロジェクトルートのパス（見つからない場合は None）
+	/// The project root path (None if not found)
 	fn find_project_root() -> Option<PathBuf> {
 		let mut current = env::current_dir().ok()?;
 
 		loop {
 			let cargo_toml = current.join("Cargo.toml");
 			if cargo_toml.exists() {
-				// Cargo.toml が [[bin]] セクションまたは [package] セクションを持つか確認
-				// （これがプロジェクトルートであることを示す）
+				// Check if Cargo.toml has [[bin]] or [package] section
+				// (indicating this is the project root)
 				if let Ok(content) = std::fs::read_to_string(&cargo_toml)
 					&& (content.contains("[[bin]]") || content.contains("[package]"))
 				{
@@ -79,7 +79,7 @@ impl PathResolver {
 				}
 			}
 
-			// 親ディレクトリに移動
+			// Move to parent directory
 			if !current.pop() {
 				break;
 			}
@@ -102,7 +102,7 @@ mod tests {
 
 	#[test]
 	fn test_relative_path_resolution() {
-		// テスト環境によって結果は異なるが、パニックしないことを確認
+		// Results may vary depending on test environment, but verify it doesn't panic
 		let resolved = PathResolver::resolve_static_dir("dist");
 		assert!(resolved.to_string_lossy().contains("dist"));
 	}

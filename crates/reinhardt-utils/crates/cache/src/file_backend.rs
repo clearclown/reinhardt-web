@@ -142,7 +142,8 @@ impl FileCache {
 	/// Get the file path for a cache key
 	fn get_file_path(&self, key: &str) -> PathBuf {
 		// Hash the key to create a safe filename
-		let hash = format!("{:x}", md5::compute(key.as_bytes()));
+		use md5::{Digest, Md5};
+		let hash = format!("{:x}", Md5::digest(key.as_bytes()));
 		self.cache_dir.join(hash)
 	}
 
