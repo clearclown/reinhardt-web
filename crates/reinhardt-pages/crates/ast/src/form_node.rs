@@ -60,8 +60,26 @@ pub struct FormMacro {
 	pub method: Option<Ident>,
 	/// Form-level CSS class
 	pub class: Option<LitStr>,
-	/// Field definitions
-	pub fields: Vec<FormFieldDef>,
+	/// UI state configuration (loading, error, success signals)
+	pub state: Option<FormState>,
+	/// Form submission callbacks
+	pub callbacks: FormCallbacks,
+	/// Watch block for reactive computed views
+	pub watch: Option<FormWatch>,
+	/// Redirect URL on successful form submission
+	///
+	/// Supports static paths (`"/profile"`) or dynamic paths with parameter expansion (`"/profile/{id}"`).
+	/// The redirect is triggered after `on_success` callback (if any) completes.
+	pub redirect_on_success: Option<LitStr>,
+	/// Initial value loader server_fn
+	///
+	/// When specified, the form will call this server_fn to load initial values
+	/// for fields that have `initial_from` specified.
+	pub initial_loader: Option<Path>,
+	/// Slot definitions for custom UI elements
+	pub slots: Option<FormSlots>,
+	/// Field definitions (can include field groups)
+	pub fields: Vec<FormFieldEntry>,
 	/// Server-side validators
 	pub validators: Vec<FormValidator>,
 	/// Client-side validators (JavaScript expressions)
@@ -83,6 +101,62 @@ pub enum FormAction {
 	ServerFn(Path),
 	/// No action specified (will be set programmatically)
 	None,
+}
+
+/// An entry in the form fields list.
+///
+/// Can be either a regular field definition or a field group
+/// containing multiple related fields.
+#[derive(Debug, Clone)]
+pub enum FormFieldEntry {
+	/// A single field definition
+	Field(FormFieldDef),
+	/// A group of related fields
+	Group(FormFieldGroup),
+}
+
+impl FormFieldEntry {
+	/// Returns true if this is a field group.
+	pub fn is_group(&self) -> bool {
+		matches!(self, FormFieldEntry::Group(_))
+	}
+
+	/// Returns true if this is a regular field.
+	pub fn is_field(&self) -> bool {
+		matches!(self, FormFieldEntry::Field(_))
+	}
+
+	/// Returns the name of the entry (field name or group name).
+	pub fn name(&self) -> &Ident {
+		match self {
+			FormFieldEntry::Field(f) => &f.name,
+			FormFieldEntry::Group(g) => &g.name,
+		}
+	}
+
+	/// Returns the span for error reporting.
+	pub fn span(&self) -> Span {
+		match self {
+			FormFieldEntry::Field(f) => f.span,
+			FormFieldEntry::Group(g) => g.span,
+		}
+	}
+
+	/// Returns a reference to the inner field if this is a Field variant.
+	pub fn as_field(&self) -> Option<&FormFieldDef> {
+		match self {
+			FormFieldEntry::Field(f) => Some(f),
+			FormFieldEntry::Group(_) => None,
+		}
+	}
+
+	/// Returns a reference to the inner group if this is a Group variant.
+	pub fn as_group(&self) -> Option<&FormFieldGroup> {
+		match self {
+			FormFieldEntry::Field(_) => None,
+			FormFieldEntry::Group(g) => Some(g),
+		}
+	}
 }
 
 /// A single field definition in the form macro.
@@ -109,6 +183,56 @@ pub struct FormFieldDef {
 	pub span: Span,
 }
 
+/// A group of related fields in the form macro.
+///
+/// Field groups allow organizing multiple fields under a common container
+/// with shared styling. Groups cannot be nested.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// address_group: FieldGroup {
+///     label: "Address",
+///     class: "address-section",
+///
+///     fields: {
+///         street: CharField { required },
+///         city: CharField { required },
+///         zip: CharField { required, max_length: 10 },
+///     },
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct FormFieldGroup {
+	/// Group name identifier
+	pub name: Ident,
+	/// Group-level label text
+	pub label: Option<LitStr>,
+	/// Group-level CSS class
+	pub class: Option<LitStr>,
+	/// Fields within the group
+	pub fields: Vec<FormFieldDef>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl FormFieldGroup {
+	/// Returns the label text if specified.
+	pub fn label_text(&self) -> Option<String> {
+		self.label.as_ref().map(|l| l.value())
+	}
+
+	/// Returns the class name if specified.
+	pub fn class_name(&self) -> Option<String> {
+		self.class.as_ref().map(|c| c.value())
+	}
+
+	/// Returns the number of fields in this group.
+	pub fn field_count(&self) -> usize {
+		self.fields.len()
+	}
+}
+
 /// A property within a field definition.
 #[derive(Debug, Clone)]
 pub enum FormFieldProperty {
@@ -122,6 +246,215 @@ pub enum FormFieldProperty {
 	Flag { name: Ident, span: Span },
 	/// Widget specification: `widget: PasswordInput`
 	Widget { widget_type: Ident, span: Span },
+	/// Custom wrapper element: `wrapper: div { class: "relative" }`
+	Wrapper { element: WrapperElement, span: Span },
+	/// SVG icon for the field: `icon: svg { ... }`
+	Icon { element: IconElement, span: Span },
+	/// Icon position: `icon_position: "left"`
+	IconPosition { position: IconPosition, span: Span },
+	/// Custom attributes: `attrs: { aria_label: "...", data_testid: "..." }`
+	Attrs { attrs: Vec<CustomAttr>, span: Span },
+	/// Two-way binding option: `bind: true` or `bind: false`
+	///
+	/// When true (default), the form automatically generates an @input handler
+	/// to update the Signal when the user types. Set to false to disable
+	/// automatic binding and use a custom handler instead.
+	Bind { enabled: bool, span: Span },
+	/// Initial value source: `initial_from: "field_name"`
+	///
+	/// Maps this field to a property in the data returned by `initial_loader`.
+	/// The value is the property name in the loaded data structure.
+	InitialFrom { field_name: LitStr, span: Span },
+}
+
+/// A custom attribute for accessibility or data attributes.
+///
+/// Supports aria-* and data-* attributes on form fields.
+/// Underscore in names is converted to hyphen (e.g., `aria_label` → `aria-label`).
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// attrs: {
+///     aria_label: "Email address",
+///     aria_required: "true",
+///     data_testid: "email-input",
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct CustomAttr {
+	/// Attribute name (using underscores, e.g., "aria_label")
+	pub name: Ident,
+	/// Attribute value
+	pub value: Expr,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// A wrapper element definition for custom field containers.
+///
+/// Allows defining a custom HTML element to wrap around the input field.
+/// The input field will be placed as a child of this wrapper element.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// wrapper: div {
+///     class: "relative flex items-center",
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct WrapperElement {
+	/// Element tag name (e.g., "div", "span")
+	pub tag: Ident,
+	/// Element attributes
+	pub attrs: Vec<WrapperAttr>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// An attribute on a wrapper element.
+#[derive(Debug, Clone)]
+pub struct WrapperAttr {
+	/// Attribute name
+	pub name: Ident,
+	/// Attribute value
+	pub value: Expr,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// An SVG icon element for form fields.
+///
+/// Allows defining an SVG icon to display alongside the input field.
+/// The icon can be positioned left, right, or within the label.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// icon: svg {
+///     class: "w-5 h-5 text-gray-400",
+///     viewBox: "0 0 24 24",
+///     path { d: "M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z" }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct IconElement {
+	/// SVG attributes (class, viewBox, fill, stroke, etc.)
+	pub attrs: Vec<IconAttr>,
+	/// Child elements (path, circle, rect, g, etc.)
+	pub children: Vec<IconChild>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// An attribute on an SVG icon element.
+#[derive(Debug, Clone)]
+pub struct IconAttr {
+	/// Attribute name (e.g., "class", "viewBox", "fill")
+	pub name: Ident,
+	/// Attribute value
+	pub value: Expr,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// A child element within an SVG icon.
+///
+/// Supports common SVG child elements like path, circle, rect, line, etc.
+#[derive(Debug, Clone)]
+pub struct IconChild {
+	/// Element tag (e.g., "path", "circle", "rect", "g")
+	pub tag: Ident,
+	/// Element attributes
+	pub attrs: Vec<IconAttr>,
+	/// Nested children (for grouping elements like `g`)
+	pub children: Vec<IconChild>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// Position of the icon relative to the input field.
+///
+/// ## Positions
+///
+/// | Position | Description |
+/// |----------|-------------|
+/// | `left` | Icon appears to the left of the input field |
+/// | `right` | Icon appears to the right of the input field |
+/// | `label` | Icon appears within the label element |
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IconPosition {
+	/// Icon on the left side of the input (default)
+	#[default]
+	Left,
+	/// Icon on the right side of the input
+	Right,
+	/// Icon within the label element
+	Label,
+}
+
+impl std::str::FromStr for IconPosition {
+	type Err = ();
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s {
+			"left" => Ok(IconPosition::Left),
+			"right" => Ok(IconPosition::Right),
+			"label" => Ok(IconPosition::Label),
+			_ => Err(()),
+		}
+	}
+}
+
+impl IconPosition {
+	/// Returns the string representation of the position.
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			IconPosition::Left => "left",
+			IconPosition::Right => "right",
+			IconPosition::Label => "label",
+		}
+	}
+}
+
+impl IconElement {
+	/// Creates a new empty IconElement.
+	pub fn new(span: Span) -> Self {
+		Self {
+			attrs: Vec::new(),
+			children: Vec::new(),
+			span,
+		}
+	}
+
+	/// Gets the class attribute value if present.
+	pub fn get_class(&self) -> Option<&Expr> {
+		self.attrs
+			.iter()
+			.find(|a| a.name == "class")
+			.map(|a| &a.value)
+	}
+
+	/// Gets the viewBox attribute value if present.
+	pub fn get_view_box(&self) -> Option<&Expr> {
+		self.attrs
+			.iter()
+			.find(|a| a.name == "viewBox")
+			.map(|a| &a.value)
+	}
+}
+
+impl IconChild {
+	/// Creates a new IconChild with the given tag.
+	pub fn new(tag: Ident, span: Span) -> Self {
+		Self {
+			tag,
+			attrs: Vec::new(),
+			children: Vec::new(),
+			span,
+		}
+	}
 }
 
 impl FormFieldProperty {
@@ -129,13 +462,31 @@ impl FormFieldProperty {
 	///
 	/// # Panics
 	///
-	/// Panics if called on a Widget property.
+	/// Panics if called on a Widget, Wrapper, Icon, IconPosition, Attrs, or Bind property.
 	pub fn name(&self) -> &Ident {
 		match self {
 			FormFieldProperty::Named { name, .. } => name,
 			FormFieldProperty::Flag { name, .. } => name,
 			FormFieldProperty::Widget { .. } => {
 				panic!("Widget property has no direct name")
+			}
+			FormFieldProperty::Wrapper { .. } => {
+				panic!("Wrapper property has no direct name")
+			}
+			FormFieldProperty::Icon { .. } => {
+				panic!("Icon property has no direct name")
+			}
+			FormFieldProperty::IconPosition { .. } => {
+				panic!("IconPosition property has no direct name")
+			}
+			FormFieldProperty::Attrs { .. } => {
+				panic!("Attrs property has no direct name")
+			}
+			FormFieldProperty::Bind { .. } => {
+				panic!("Bind property has no direct name")
+			}
+			FormFieldProperty::InitialFrom { .. } => {
+				panic!("InitialFrom property has no direct name")
 			}
 		}
 	}
@@ -146,6 +497,12 @@ impl FormFieldProperty {
 			FormFieldProperty::Named { span, .. } => *span,
 			FormFieldProperty::Flag { span, .. } => *span,
 			FormFieldProperty::Widget { span, .. } => *span,
+			FormFieldProperty::Wrapper { span, .. } => *span,
+			FormFieldProperty::Icon { span, .. } => *span,
+			FormFieldProperty::IconPosition { span, .. } => *span,
+			FormFieldProperty::Attrs { span, .. } => *span,
+			FormFieldProperty::Bind { span, .. } => *span,
+			FormFieldProperty::InitialFrom { span, .. } => *span,
 		}
 	}
 
@@ -213,6 +570,244 @@ pub struct ClientValidatorRule {
 	pub span: Span,
 }
 
+/// Form submission callbacks configuration.
+///
+/// Allows defining custom behavior at different stages of form submission:
+/// - Before submission starts
+/// - On successful submission
+/// - On error
+/// - When loading state changes
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// form! {
+///     name: ProfileForm,
+///     server_fn: update_profile,
+///
+///     on_submit: |form| {
+///         // Called before submission starts
+///     },
+///     on_success: |result| {
+///         // Called when server_fn returns successfully
+///     },
+///     on_error: |e| {
+///         // Called when submission fails
+///     },
+///     on_loading: |is_loading| {
+///         // Called when loading state changes
+///     },
+///
+///     fields: { ... }
+/// }
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct FormCallbacks {
+	/// Callback called before form submission starts.
+	/// Signature: `|form: &FormName| { ... }`
+	pub on_submit: Option<ExprClosure>,
+	/// Callback called when submission succeeds.
+	/// Receives the server_fn return value.
+	/// Signature: `|result: T| { ... }`
+	pub on_success: Option<ExprClosure>,
+	/// Callback called when submission fails.
+	/// Signature: `|error: ServerFnError| { ... }`
+	pub on_error: Option<ExprClosure>,
+	/// Callback called when loading state changes.
+	/// Signature: `|is_loading: bool| { ... }`
+	pub on_loading: Option<ExprClosure>,
+	/// Span for error reporting (from first callback parsed)
+	pub span: Option<Span>,
+}
+
+impl FormCallbacks {
+	/// Creates a new empty FormCallbacks.
+	pub fn new() -> Self {
+		Self::default()
+	}
+
+	/// Returns true if any callback is defined.
+	pub fn has_any(&self) -> bool {
+		self.on_submit.is_some()
+			|| self.on_success.is_some()
+			|| self.on_error.is_some()
+			|| self.on_loading.is_some()
+	}
+}
+
+/// UI state configuration for form submission.
+///
+/// Defines which state signals (loading, error, success) are enabled for the form.
+/// These signals are automatically managed during form submission lifecycle.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// state: { loading, error, success },
+/// ```
+///
+/// ## Available State Fields
+///
+/// | Field | Signal Type | Description |
+/// |-------|-------------|-------------|
+/// | `loading` | `Signal<bool>` | True during form submission |
+/// | `error` | `Signal<Option<String>>` | Contains error message if submission failed |
+/// | `success` | `Signal<bool>` | True after successful submission |
+#[derive(Debug, Clone)]
+pub struct FormState {
+	/// List of enabled state fields
+	pub fields: Vec<FormStateField>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// A state field to enable in the form.
+///
+/// Valid field names are: `loading`, `error`, `success`.
+/// Each field name implies a specific Signal type:
+/// - `loading` → `Signal<bool>`
+/// - `error` → `Signal<Option<String>>`
+/// - `success` → `Signal<bool>`
+#[derive(Debug, Clone)]
+pub struct FormStateField {
+	/// Field name (loading, error, or success)
+	pub name: Ident,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl FormState {
+	/// Creates a new empty FormState.
+	pub fn new(span: Span) -> Self {
+		Self {
+			fields: Vec::new(),
+			span,
+		}
+	}
+
+	/// Returns true if loading state is enabled.
+	pub fn has_loading(&self) -> bool {
+		self.fields.iter().any(|f| f.name == "loading")
+	}
+
+	/// Returns true if error state is enabled.
+	pub fn has_error(&self) -> bool {
+		self.fields.iter().any(|f| f.name == "error")
+	}
+
+	/// Returns true if success state is enabled.
+	pub fn has_success(&self) -> bool {
+		self.fields.iter().any(|f| f.name == "success")
+	}
+
+	/// Returns true if any state field is enabled.
+	pub fn is_empty(&self) -> bool {
+		self.fields.is_empty()
+	}
+}
+
+/// Watch block for reactive computed views.
+///
+/// Contains named watch items that define reactive views that re-render
+/// when their dependencies (Signals) change.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// watch: {
+///     error_display: |form| {
+///         if let Some(err) = form.error().get() {
+///             div { class: "error", err }
+///         }
+///     },
+///     loading_spinner: |form| {
+///         if *form.loading().get() {
+///             div { class: "spinner", "Loading..." }
+///         }
+///     },
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct FormWatch {
+	/// List of named watch items
+	pub items: Vec<FormWatchItem>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl FormWatch {
+	/// Creates a new empty FormWatch.
+	pub fn new(span: Span) -> Self {
+		Self {
+			items: Vec::new(),
+			span,
+		}
+	}
+
+	/// Returns true if no watch items are defined.
+	pub fn is_empty(&self) -> bool {
+		self.items.is_empty()
+	}
+}
+
+/// A single watch item within a watch block.
+///
+/// Each watch item has a name and a closure that generates a View.
+/// The closure receives the form instance as a parameter and can
+/// access any Signals to create reactive dependencies.
+#[derive(Debug, Clone)]
+pub struct FormWatchItem {
+	/// Watch item name (used for generated method name)
+	pub name: Ident,
+	/// Closure that generates the View
+	/// Signature: `|form: &FormName| { ... }` or `|form| { ... }`
+	pub closure: ExprClosure,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// Slot definitions for custom UI elements in the form.
+///
+/// Slots allow inserting custom elements before, after, or between form fields.
+///
+/// ## Example
+///
+/// ```text
+/// slots: {
+///     before_fields: || {
+///         div { class: "form-header", "Please fill out this form" }
+///     },
+///     after_fields: || {
+///         button { type: "submit", "Submit" }
+///     },
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct FormSlots {
+	/// Closure rendered before all fields
+	pub before_fields: Option<ExprClosure>,
+	/// Closure rendered after all fields
+	pub after_fields: Option<ExprClosure>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl FormSlots {
+	/// Creates a new empty FormSlots.
+	pub fn new(span: Span) -> Self {
+		Self {
+			before_fields: None,
+			after_fields: None,
+			span,
+		}
+	}
+
+	/// Returns true if no slots are defined.
+	pub fn is_empty(&self) -> bool {
+		self.before_fields.is_none() && self.after_fields.is_none()
+	}
+}
+
 impl FormMacro {
 	/// Creates a new FormMacro with the given name and span.
 	pub fn new(name: Ident, span: Span) -> Self {
@@ -221,6 +816,12 @@ impl FormMacro {
 			action: FormAction::None,
 			method: None,
 			class: None,
+			state: None,
+			callbacks: FormCallbacks::new(),
+			watch: None,
+			redirect_on_success: None,
+			initial_loader: None,
+			slots: None,
 			fields: Vec::new(),
 			validators: Vec::new(),
 			client_validators: Vec::new(),
@@ -330,6 +931,106 @@ impl FormFieldDef {
 	pub fn get_min_length(&self) -> Option<&Expr> {
 		self.get_property("min_length")
 	}
+
+	/// Gets the custom wrapper element if specified.
+	pub fn get_wrapper(&self) -> Option<&WrapperElement> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::Wrapper { element, .. } = p {
+				Some(element)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Gets the SVG icon element if specified.
+	pub fn get_icon(&self) -> Option<&IconElement> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::Icon { element, .. } = p {
+				Some(element)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Gets the icon position if specified.
+	///
+	/// Returns `IconPosition::Left` as the default if not explicitly set.
+	pub fn get_icon_position(&self) -> IconPosition {
+		self.properties
+			.iter()
+			.find_map(|p| {
+				if let FormFieldProperty::IconPosition { position, .. } = p {
+					Some(*position)
+				} else {
+					None
+				}
+			})
+			.unwrap_or_default()
+	}
+
+	/// Returns true if this field has an icon.
+	pub fn has_icon(&self) -> bool {
+		self.get_icon().is_some()
+	}
+
+	/// Gets the custom attributes if specified.
+	pub fn get_attrs(&self) -> Option<&[CustomAttr]> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::Attrs { attrs, .. } = p {
+				Some(attrs.as_slice())
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns true if this field has custom attributes.
+	pub fn has_attrs(&self) -> bool {
+		self.get_attrs().is_some()
+	}
+
+	/// Gets the bind option if explicitly specified.
+	///
+	/// Returns `Some(true)` if `bind: true` is specified,
+	/// `Some(false)` if `bind: false` is specified,
+	/// or `None` if not explicitly set.
+	pub fn get_bind(&self) -> Option<bool> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::Bind { enabled, .. } = p {
+				Some(*enabled)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns whether two-way binding is enabled for this field.
+	///
+	/// Defaults to `true` if not explicitly specified.
+	pub fn is_bind_enabled(&self) -> bool {
+		self.get_bind().unwrap_or(true)
+	}
+
+	/// Gets the initial_from field name if specified.
+	///
+	/// This specifies the source field name from the `initial_loader` result
+	/// that should be used to populate this field's initial value.
+	pub fn get_initial_from(&self) -> Option<&LitStr> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::InitialFrom { field_name, .. } = p {
+				Some(field_name)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns true if this field has an initial_from mapping.
+	pub fn has_initial_from(&self) -> bool {
+		self.get_initial_from().is_some()
+	}
 }
 
 #[cfg(test)]
@@ -393,7 +1094,7 @@ mod tests {
 		form.action = FormAction::ServerFn(syn::parse_quote!(submit_login));
 		assert!(form.uses_server_fn());
 
-		form.action = FormAction::Url(syn::parse_str("/api/login").unwrap());
+		form.action = FormAction::Url(LitStr::new("/api/login", Span::call_site()));
 		assert!(!form.uses_server_fn());
 	}
 }

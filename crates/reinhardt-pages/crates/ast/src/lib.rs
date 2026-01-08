@@ -76,7 +76,7 @@
 //! - [`TypedPageElement`] - Element with typed attributes
 //! - [`TypedPageAttr`] - Attribute with typed value
 //! - [`TypedPageWatch`] - Reactive watch block for Signal-dependent expressions
-//! - [`AttrValue`] - Typed representation of attribute values
+//! - `AttrValue` - Typed representation of attribute values
 //!
 //! ### form! Untyped AST (from parser)
 //!
@@ -135,11 +135,16 @@ pub use typed_node::{
 
 // Form macro exports
 pub use form_node::{
-	ClientValidator, ClientValidatorRule, FormAction, FormFieldDef, FormFieldProperty, FormMacro,
-	FormValidator, ValidatorRule,
+	ClientValidator, ClientValidatorRule, CustomAttr, FormAction, FormCallbacks, FormFieldDef,
+	FormFieldEntry, FormFieldGroup, FormFieldProperty, FormMacro, FormSlots, FormState,
+	FormStateField, FormValidator, FormWatch, FormWatchItem, IconAttr, IconChild, IconElement,
+	IconPosition, ValidatorRule, WrapperAttr, WrapperElement,
 };
 pub use form_typed::{
-	FormMethod, TypedClientValidator, TypedClientValidatorRule, TypedFieldDisplay,
-	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormFieldDef,
-	TypedFormMacro, TypedFormStyling, TypedFormValidator, TypedValidatorRule, TypedWidget,
+	FormMethod, TypedClientValidator, TypedClientValidatorRule, TypedCustomAttr, TypedFieldDisplay,
+	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormCallbacks,
+	TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro, TypedFormSlots,
+	TypedFormState, TypedFormStyling, TypedFormValidator, TypedFormWatch, TypedFormWatchItem,
+	TypedIcon, TypedIconAttr, TypedIconChild, TypedIconPosition, TypedValidatorRule, TypedWidget,
+	TypedWrapper, TypedWrapperAttr,
 };
