@@ -36,14 +36,14 @@ use uuid::Uuid;
 /// - `email` (String)
 /// - `first_name` (String)
 /// - `last_name` (String)
-/// - `password_hash` (Option<String>)
-/// - `last_login` (Option<DateTime<Utc>>)
+/// - `password_hash` (`Option<String>`)
+/// - `last_login` (`Option<DateTime<Utc>>`)
 /// - `is_active` (bool)
 /// - `is_staff` (bool)
 /// - `is_superuser` (bool)
-/// - `date_joined` (DateTime<Utc>)
-/// - `user_permissions` (Vec<String>)
-/// - `groups` (Vec<String>)
+/// - `date_joined` (`DateTime<Utc>`)
+/// - `user_permissions` (`Vec<String>`)
+/// - `groups` (`Vec<String>`)
 ///
 /// # Examples
 ///

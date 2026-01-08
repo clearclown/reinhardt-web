@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub struct UrlPattern {
 	/// Pattern name (e.g., "user-detail")
 	name: String,
-	/// URL template (e.g., "/users/<id>/")
+	/// URL template (e.g., "/users/`<id>`/")
 	template: String,
 	/// Optional namespace (e.g., "admin", "api")
 	namespace: Option<String>,

@@ -10,7 +10,7 @@ pub(crate) struct DecryptArgs {
 	#[arg(value_name = "FILE")]
 	pub file: PathBuf,
 
-	/// Output file (defaults to <file> without .enc extension)
+	/// Output file (defaults to `<file>` without `.enc` extension)
 	#[arg(short, long)]
 	pub output: Option<PathBuf>,
 

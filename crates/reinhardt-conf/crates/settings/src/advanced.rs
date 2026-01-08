@@ -318,7 +318,7 @@ pub struct EmailSettings {
 	#[serde(default = "default_server_email")]
 	pub server_email: String,
 
-	/// Prefix for email subjects (e.g., "[Django]")
+	/// Prefix for email subjects (e.g., `"[Django]"`)
 	#[serde(default)]
 	pub subject_prefix: String,
 

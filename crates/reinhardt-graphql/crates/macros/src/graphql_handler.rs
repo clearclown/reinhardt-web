@@ -15,7 +15,7 @@ struct ParamInfo {
 	ty: Box<Type>,
 }
 
-/// Information about #[inject] parameters
+/// Information about `#[inject]` parameters
 #[derive(Clone)]
 struct InjectInfo {
 	pat: Box<Pat>,
@@ -23,18 +23,18 @@ struct InjectInfo {
 	use_cache: bool,
 }
 
-/// Options for #[inject] attribute
+/// Options for `#[inject]` attribute
 #[derive(Clone, Default)]
 struct InjectOptions {
 	use_cache: bool,
 }
 
-/// Check if an attribute is #[inject]
+/// Check if an attribute is `#[inject]`
 fn is_inject_attr(attr: &syn::Attribute) -> bool {
 	attr.path().is_ident("inject")
 }
 
-/// Parse #[inject] or #[inject(cache = false)] attributes
+/// Parse `#[inject]` or `#[inject(cache = false)]` attributes
 fn parse_inject_options(attrs: &[syn::Attribute]) -> InjectOptions {
 	let mut options = InjectOptions {
 		use_cache: true, // Default to caching enabled
@@ -67,7 +67,7 @@ fn parse_inject_options(attrs: &[syn::Attribute]) -> InjectOptions {
 	options
 }
 
-/// Detect parameters with #[inject] attribute
+/// Detect parameters with `#[inject]` attribute
 fn detect_inject_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<InjectInfo> {
 	let mut inject_params = Vec::new();
 
@@ -116,7 +116,7 @@ fn detect_regular_params(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<ParamInfo
 	params
 }
 
-/// Strip #[inject] attributes from function parameters
+/// Strip `#[inject]` attributes from function parameters
 fn strip_inject_attrs(inputs: &Punctuated<FnArg, Token![,]>) -> Vec<FnArg> {
 	inputs
 		.iter()

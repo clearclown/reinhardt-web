@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 /// Extract Bearer token from Authorization header
 ///
 /// Extracts JWT or other bearer tokens from the Authorization header.
-/// Returns `None` if the header is missing or not in "Bearer <token>" format.
+/// Returns `None` if the header is missing or not in "Bearer `<token>`" format.
 ///
 /// # Examples
 ///

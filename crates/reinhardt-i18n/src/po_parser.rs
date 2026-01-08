@@ -145,7 +145,7 @@ fn parse_keyword(line: &str, keyword: &str) -> Option<String> {
 	Some(rest[1..rest.len() - 1].to_string())
 }
 
-/// Parse indexed msgstr (e.g., msgstr[0], msgstr[1])
+/// Parse indexed msgstr (e.g., `msgstr[0]`, `msgstr[1]`)
 fn parse_indexed_msgstr(line: &str) -> Option<(usize, String)> {
 	if !line.starts_with("msgstr[") {
 		return None;

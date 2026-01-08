@@ -12,23 +12,23 @@
 //!
 //! ### Authentication & Authorization
 //!
-//! - **[`AuthenticationMiddleware`]**: Session-based user authentication
+//! - **`AuthenticationMiddleware`**: Session-based user authentication
 //!   (requires `sessions` feature)
 //!
 //! ### Security
 //!
-//! - **[`CorsMiddleware`]**: Cross-Origin Resource Sharing (requires `cors` feature)
+//! - **`CorsMiddleware`**: Cross-Origin Resource Sharing (requires `cors` feature)
 //! - **[`CsrfMiddleware`]**: CSRF protection with token validation
 //! - **[`CspMiddleware`]**: Content Security Policy headers
 //! - **[`XFrameOptionsMiddleware`]**: Clickjacking protection via X-Frame-Options header
 //! - **[`HttpsRedirectMiddleware`]**: Force HTTPS connections
-//! - **[`SecurityMiddleware`]**: Combined security headers (requires `security` feature)
+//! - **`SecurityMiddleware`**: Combined security headers (requires `security` feature)
 //!
 //! ### Performance & Caching
 //!
 //! - **[`CacheMiddleware`]**: HTTP response caching with configurable strategies
-//! - **[`GZipMiddleware`]**: Gzip compression (requires `compression` feature)
-//! - **[`BrotliMiddleware`]**: Brotli compression (requires `compression` feature)
+//! - **`GZipMiddleware`**: Gzip compression (requires `compression` feature)
+//! - **`BrotliMiddleware`**: Brotli compression (requires `compression` feature)
 //! - **[`ETagMiddleware`]**: ETag generation and validation for conditional requests
 //! - **[`ConditionalGetMiddleware`]**: Conditional GET support with Last-Modified headers
 //!
@@ -41,7 +41,7 @@
 //!
 //! ### Rate Limiting & Resilience
 //!
-//! - **[`RateLimitMiddleware`]**: API rate limiting with multiple strategies
+//! - **`RateLimitMiddleware`**: API rate limiting with multiple strategies
 //!   (requires `rate-limit` feature)
 //! - **[`CircuitBreakerMiddleware`]**: Circuit breaker pattern for fault tolerance
 //! - **[`TimeoutMiddleware`]**: Request timeout handling

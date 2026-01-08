@@ -91,10 +91,10 @@
 //! 3. Adds new module and use declarations if not present
 //! 4. Formats output with `prettyplease::unparse`
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! // Generated apps.rs
-//! // pub mod myapp;
-//! // pub use myapp::MyappConfig;
+//! pub mod myapp;
+//! pub use myapp::MyappConfig;
 //! ```
 //!
 //! This is more reliable than string-based approaches that can be confused by
@@ -134,7 +134,7 @@
 //! ### Configuration
 //!
 //! Bacon can be configured via `bacon.toml` in the project root. See the bacon
-//! documentation for more details: https://dystroy.org/bacon/
+//! documentation for more details: <https://dystroy.org/bacon/>
 
 pub mod base;
 pub mod builtin;

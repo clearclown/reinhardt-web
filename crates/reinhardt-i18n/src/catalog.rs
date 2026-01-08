@@ -52,7 +52,7 @@ impl MessageCatalog {
 		self.messages.insert(message.into(), translation.into());
 	}
 
-	/// Add a plural translation with Vec<String>
+	/// Add a plural translation with `Vec<String>`
 	/// If the singular key contains a colon (e.g., "context:message"), it will be
 	/// treated as a contextual plural and split accordingly.
 	pub fn add_plural(&mut self, singular: impl Into<String>, forms: Vec<String>) {

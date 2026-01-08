@@ -874,7 +874,7 @@ impl Injectable for SessionData {
 	}
 }
 
-/// Wrapper for Arc<SessionStore> to enable dependency injection
+/// Wrapper for `Arc<SessionStore>` to enable dependency injection
 ///
 /// This wrapper type is necessary because we cannot implement Injectable
 /// for `Arc<SessionStore>` directly due to Rust's orphan rules.
@@ -887,7 +887,7 @@ impl SessionStoreRef {
 		&self.0
 	}
 
-	/// Get a clone of the inner Arc<SessionStore>
+	/// Get a clone of the inner `Arc<SessionStore>`
 	pub fn arc(&self) -> Arc<SessionStore> {
 		Arc::clone(&self.0)
 	}

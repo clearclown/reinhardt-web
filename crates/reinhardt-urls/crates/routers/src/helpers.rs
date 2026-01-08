@@ -52,7 +52,7 @@ where
 /// Similar to Django's re_path() function
 ///
 /// Converts Django-style regex patterns to Reinhardt's pattern format.
-/// Named groups (?P<name>...) are converted to {name} format.
+/// Named groups `(?P<name>...)` are converted to `{name}` format.
 ///
 /// This function accepts a handler directly without requiring `Arc` wrapping.
 /// The `Arc` is created internally for you.

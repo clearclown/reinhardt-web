@@ -223,7 +223,7 @@ impl SsrProxy {
 	///
 	/// # Returns
 	///
-	/// Tuple of (css: Option<String>, meta: Option<Vec<(String, String)>>)
+	/// Tuple of (css: `Option<String>`, meta: `Option<Vec<(String, String)>>`)
 	#[cfg(feature = "ts")]
 	fn extract_assets(
 		html: &str,
