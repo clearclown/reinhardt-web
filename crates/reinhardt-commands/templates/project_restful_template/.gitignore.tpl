@@ -97,3 +97,31 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/rust,rust-analyzer,macos,windows,linux
+
+# Settings files (only *.example.toml should be committed)
+settings/*.toml
+!settings/*.example.toml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# collectstatic output
+staticfiles/
+
+# Admin panel build artifacts (WASM, JS, CSS with hashes)
+static/admin/
+dist/
+dist-wasm/
+
+# WASM build artifacts in static/ (should be generated in dist-wasm/, not static/)
+static/*.js
+static/*.wasm
+static/*_bg.wasm
