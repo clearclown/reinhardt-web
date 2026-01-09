@@ -258,6 +258,73 @@ pub(super) fn current_hash() -> Result<String, String> {
 	Ok(String::new())
 }
 
+/// Sets up a popstate event listener that triggers when browser back/forward is used.
+///
+/// The callback receives the current path and an optional `HistoryState` if one was
+/// stored in the history entry.
+///
+/// # Example
+///
+/// ```ignore
+/// setup_popstate_listener(|path, state| {
+///     println!("Navigated to: {}", path);
+///     if let Some(s) = state {
+///         println!("Route: {:?}", s.route_name);
+///     }
+/// })?;
+/// ```
+///
+/// # Returns
+///
+/// On WASM, returns a `Closure` that must be kept alive for the listener to work.
+/// Call `.forget()` on the closure to keep it active for the lifetime of the page.
+///
+/// # Errors
+///
+/// Returns an error if the window object is not available.
+#[cfg(target_arch = "wasm32")]
+pub fn setup_popstate_listener<F>(
+	callback: F,
+) -> Result<wasm_bindgen::closure::Closure<dyn FnMut(web_sys::PopStateEvent)>, wasm_bindgen::JsValue>
+where
+	F: Fn(String, Option<HistoryState>) + 'static,
+{
+	use wasm_bindgen::JsCast;
+	use wasm_bindgen::prelude::*;
+
+	let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window object"))?;
+
+	let closure =
+		wasm_bindgen::closure::Closure::wrap(Box::new(move |event: web_sys::PopStateEvent| {
+			// Get current path from location
+			let path = web_sys::window()
+				.and_then(|w| w.location().pathname().ok())
+				.unwrap_or_else(|| "/".to_string());
+
+			// Try to restore state from history
+			let state = event
+				.state()
+				.as_string()
+				.and_then(|s: String| HistoryState::from_json(&s).ok());
+
+			callback(path, state);
+		}) as Box<dyn FnMut(_)>);
+
+	window.add_event_listener_with_callback("popstate", closure.as_ref().unchecked_ref())?;
+
+	Ok(closure)
+}
+
+/// Non-WASM version for testing.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn setup_popstate_listener<F>(_callback: F) -> Result<(), String>
+where
+	F: Fn(String, Option<HistoryState>) + 'static,
+{
+	// No-op on non-WASM targets
+	Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

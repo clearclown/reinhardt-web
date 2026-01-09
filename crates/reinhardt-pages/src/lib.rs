@@ -78,6 +78,59 @@
 //!     }()
 //! }
 //! ```
+//!
+//! ### WebSocket Integration
+//!
+//! The `use_websocket` hook provides reactive WebSocket connections:
+//!
+//! ```ignore
+//! use reinhardt_pages::reactive::hooks::{use_websocket, use_effect, UseWebSocketOptions};
+//! use reinhardt_pages::reactive::hooks::{ConnectionState, WebSocketMessage};
+//!
+//! fn chat_component() -> View {
+//!     // Establish WebSocket connection
+//!     let ws = use_websocket("ws://localhost:8000/ws/chat", UseWebSocketOptions::default());
+//!
+//!     // Monitor connection state reactively
+//!     use_effect({
+//!         let ws = ws.clone();
+//!         move || {
+//!             match ws.connection_state().get() {
+//!                 ConnectionState::Open => log!("Connected to chat"),
+//!                 ConnectionState::Closed => log!("Disconnected from chat"),
+//!                 ConnectionState::Error(e) => log!("Connection error: {}", e),
+//!                 _ => {}
+//!             }
+//!             None::<fn()>
+//!         }
+//!     });
+//!
+//!     // Handle incoming messages
+//!     use_effect({
+//!         let ws = ws.clone();
+//!         move || {
+//!             if let Some(WebSocketMessage::Text(text)) = ws.latest_message().get() {
+//!                 log!("Received: {}", text);
+//!             }
+//!             None::<fn()>
+//!         }
+//!     });
+//!
+//!     page!(|| {
+//!         div {
+//!             button {
+//!                 @click: move |_| {
+//!                     ws.send_text("Hello, server!".to_string()).ok();
+//!                 },
+//!                 "Send Message"
+//!             }
+//!         }
+//!     })()
+//! }
+//! ```
+//!
+//! **Note**: WebSocket functionality is WASM-only. On the server side (SSR),
+//! `use_websocket` returns a no-op handle with connection state always set to `Closed`.
 
 #![warn(missing_docs)]
 

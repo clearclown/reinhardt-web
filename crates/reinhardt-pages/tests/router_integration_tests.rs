@@ -49,7 +49,7 @@ fn test_path_pattern_with_params() {
 	let result = pattern.matches("/users/42/");
 	assert!(result.is_some());
 
-	let params = result.unwrap();
+	let (params, _param_values) = result.unwrap();
 	assert_eq!(params.get("id"), Some(&"42".to_string()));
 }
 
@@ -61,7 +61,7 @@ fn test_path_pattern_multiple_params() {
 	let result = pattern.matches("/users/1/posts/99/");
 	assert!(result.is_some());
 
-	let params = result.unwrap();
+	let (params, _param_values) = result.unwrap();
 	assert_eq!(params.get("user_id"), Some(&"1".to_string()));
 	assert_eq!(params.get("post_id"), Some(&"99".to_string()));
 }
@@ -320,7 +320,7 @@ fn test_path_pattern_param_names() {
 	let result = pattern.matches("/users/1/posts/2/comments/3/");
 	assert!(result.is_some());
 
-	let params = result.unwrap();
+	let (params, _param_values) = result.unwrap();
 	assert_eq!(params.len(), 3);
 	assert_eq!(params.get("user_id"), Some(&"1".to_string()));
 	assert_eq!(params.get("post_id"), Some(&"2".to_string()));

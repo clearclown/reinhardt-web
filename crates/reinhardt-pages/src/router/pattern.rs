@@ -130,17 +130,27 @@ impl PathPattern {
 
 	/// Attempts to match a path against this pattern.
 	///
-	/// Returns `Some(params)` if the path matches, where `params` is a map
-	/// of parameter names to their extracted values.
-	pub fn matches(&self, path: &str) -> Option<HashMap<String, String>> {
+	/// Returns `Some((params, param_values))` if the path matches, where:
+	/// - `params` is a map of parameter names to their extracted values
+	/// - `param_values` is a vector of values in the order they appear in the pattern
+	pub fn matches(&self, path: &str) -> Option<(HashMap<String, String>, Vec<String>)> {
 		self.regex.captures(path).map(|caps| {
-			self.param_names
+			let params: HashMap<String, String> = self
+				.param_names
 				.iter()
 				.filter_map(|name| {
 					caps.name(name)
 						.map(|m| (name.clone(), m.as_str().to_string()))
 				})
-				.collect()
+				.collect();
+
+			let param_values: Vec<String> = self
+				.param_names
+				.iter()
+				.filter_map(|name| caps.name(name).map(|m| m.as_str().to_string()))
+				.collect();
+
+			(params, param_values)
 		})
 	}
 
@@ -222,25 +232,28 @@ mod tests {
 		assert!(pattern.is_match("/users/abc/"));
 		assert!(!pattern.is_match("/users/"));
 
-		let params = pattern.matches("/users/42/").unwrap();
+		let (params, param_values) = pattern.matches("/users/42/").unwrap();
 		assert_eq!(params.get("id"), Some(&"42".to_string()));
+		assert_eq!(param_values, vec!["42".to_string()]);
 	}
 
 	#[test]
 	fn test_multiple_params() {
 		let pattern = PathPattern::new("/users/{user_id}/posts/{post_id}/");
-		let params = pattern.matches("/users/42/posts/123/").unwrap();
+		let (params, param_values) = pattern.matches("/users/42/posts/123/").unwrap();
 
 		assert_eq!(params.get("user_id"), Some(&"42".to_string()));
 		assert_eq!(params.get("post_id"), Some(&"123".to_string()));
+		assert_eq!(param_values, vec!["42".to_string(), "123".to_string()]);
 	}
 
 	#[test]
 	fn test_wildcard_param() {
 		let pattern = PathPattern::new("/static/{path:*}");
-		let params = pattern.matches("/static/css/styles/main.css").unwrap();
+		let (params, param_values) = pattern.matches("/static/css/styles/main.css").unwrap();
 
 		assert_eq!(params.get("path"), Some(&"css/styles/main.css".to_string()));
+		assert_eq!(param_values, vec!["css/styles/main.css".to_string()]);
 	}
 
 	#[test]

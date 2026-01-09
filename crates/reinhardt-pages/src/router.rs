@@ -36,10 +36,13 @@
 
 mod components;
 mod core;
+mod handler;
 mod history;
+mod params;
 mod pattern;
 
 pub use components::{Link, Redirect, RouterOutlet, guard, guard_or};
-pub use core::{Route, RouteMatch, Router, RouterError};
-pub use history::{HistoryState, NavigationType};
+pub use core::{PathError, Route, RouteMatch, Router, RouterError};
+pub use history::{HistoryState, NavigationType, setup_popstate_listener};
+pub use params::{FromPath, ParamContext, PathParams};
 pub use pattern::{PathParam, PathPattern};
