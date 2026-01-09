@@ -44,7 +44,7 @@ fn init_router() -> Router {
 		// Home/Index route - List all polls
 		.route("/", || index_page())
 		// Poll detail route with dynamic parameter
-		.route("/polls/:question_id/", || {
+		.route("/polls/{question_id}/", || {
 			with_router(|r| {
 				let params = r.current_params().get();
 				let question_id_str = params
@@ -60,7 +60,7 @@ fn init_router() -> Router {
 			})
 		})
 		// Poll results route
-		.route("/polls/:question_id/results/", || {
+		.route("/polls/{question_id}/results/", || {
 			with_router(|r| {
 				let params = r.current_params().get();
 				let question_id_str = params

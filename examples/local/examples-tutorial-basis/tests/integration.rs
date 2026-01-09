@@ -1,7 +1,18 @@
 //! Integration tests for polls application
 //!
-//! These tests use SQLite for database integration tests.
-//! Includes both database layer tests and server function tests.
+//! This file demonstrates two approaches to database testing:
+//!
+//! 1. **Manual SQLite Setup** (database_tests module):
+//!    - Uses raw SQL with sqlx directly
+//!    - Requires manual CREATE TABLE statements
+//!    - More control, more boilerplate
+//!
+//! 2. **reinhardt-test Fixtures** (reinhardt_test_examples module):
+//!    - Uses reinhardt-test shared fixtures
+//!    - Automatic table creation from models
+//!    - Less boilerplate, recommended for new tests
+//!
+//! For new tests, **prefer the reinhardt-test fixtures approach** (see reinhardt_test_examples module).
 
 #[cfg(with_reinhardt)]
 mod database_tests {
