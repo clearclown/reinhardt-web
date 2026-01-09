@@ -271,6 +271,7 @@ The prelude includes:
 ### API and Server Functions
 - `ApiModel`, `ApiQuerySet`, `Filter`, `FilterOp`
 - `ServerFn`, `ServerFnError`
+- See [Server Function Macro Guide](docs/server_fn_macro.md) for detailed usage and migration information
 
 ### Authentication and Security
 - `AuthData`, `AuthError`, `AuthState`, `auth_state`

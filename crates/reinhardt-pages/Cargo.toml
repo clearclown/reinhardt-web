@@ -12,10 +12,51 @@ categories = ["wasm", "web-programming"]
 [features]
 default = []
 msgpack = ["dep:rmp-serde"]
-pages-full = ["msgpack"]
+pages-full = ["msgpack", "web-sys-full"]
 static = []
 urls = []
 debug-hooks = []
+uuid = ["dep:uuid"]
+chrono = ["dep:chrono"]
+# web-sys features for WASM applications
+# Applications should use this feature to get all required web-sys features
+web-sys-full = [
+	"web-sys/Window",
+	"web-sys/Document",
+	"web-sys/Element",
+	"web-sys/HtmlElement",
+	"web-sys/Node",
+	"web-sys/Comment",
+	"web-sys/Text",
+	"web-sys/Event",
+	"web-sys/EventTarget",
+	"web-sys/console",
+	"web-sys/MouseEvent",
+	"web-sys/InputEvent",
+	"web-sys/KeyboardEvent",
+	"web-sys/FocusEvent",
+	"web-sys/PopStateEvent",
+	"web-sys/HtmlInputElement",
+	"web-sys/HtmlButtonElement",
+	"web-sys/HtmlDivElement",
+	"web-sys/HtmlSpanElement",
+	"web-sys/HtmlFormElement",
+	"web-sys/HtmlTextAreaElement",
+	"web-sys/HtmlSelectElement",
+	"web-sys/DomTokenList",
+	"web-sys/NamedNodeMap",
+	"web-sys/Attr",
+	"web-sys/HtmlCollection",
+	"web-sys/NodeList",
+	"web-sys/HtmlDocument",
+	"web-sys/History",
+	"web-sys/Location",
+	"web-sys/WebSocket",
+	"web-sys/MessageEvent",
+	"web-sys/CloseEvent",
+	"web-sys/ErrorEvent",
+	"web-sys/BinaryType",
+]
 
 [dependencies]
 # Documentation
@@ -38,6 +79,10 @@ urlencoding = "2.1"
 # Router pattern matching
 regex = "1.11"
 
+# Optional type support for path parameters
+uuid = { version = "1.0", optional = true, features = ["std"] }
+chrono = { version = "0.4", optional = true, default-features = false, features = ["std"] }
+
 # Web APIs
 web-sys = { version = "0.3.83", features = [
 	"Window",
@@ -55,6 +100,7 @@ web-sys = { version = "0.3.83", features = [
 	"InputEvent",
 	"KeyboardEvent",
 	"FocusEvent",
+	"PopStateEvent",
 	# HTML element types
 	"HtmlInputElement",
 	"HtmlButtonElement",
@@ -73,6 +119,12 @@ web-sys = { version = "0.3.83", features = [
 	# History API (for router)
 	"History",
 	"Location",
+	# WebSocket API
+	"WebSocket",
+	"MessageEvent",
+	"CloseEvent",
+	"ErrorEvent",
+	"BinaryType",
 ] }
 
 # Async support for WASM
