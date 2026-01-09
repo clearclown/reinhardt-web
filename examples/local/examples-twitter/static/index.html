@@ -143,7 +143,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime"></script>
 
 	<!-- Custom styles -->
-	<link rel="stylesheet" href="/static/css/style.css">
+	<link rel="stylesheet" href="{{ static_url("css/style.css") }}">
 
 	<!-- Theme toggle script -->
 	<script>
@@ -157,7 +157,8 @@
 	}
 
 	// Attach click event to theme toggle button (using MutationObserver for dynamic content)
-	document.addEventListener('DOMContentLoaded', function() {
+	// Use load event instead of DOMContentLoaded to ensure body is fully available
+	window.addEventListener('load', function() {
 		const observer = new MutationObserver(function(mutations) {
 			const btn = document.getElementById('theme-toggle-btn');
 			if (btn && !btn.hasAttribute('data-theme-attached')) {
@@ -165,7 +166,10 @@
 				btn.addEventListener('click', toggleTheme);
 			}
 		});
-		observer.observe(document.body, { childList: true, subtree: true });
+		// document.body is guaranteed to exist after load event
+		if (document.body) {
+			observer.observe(document.body, { childList: true, subtree: true });
+		}
 	});
 	</script>
 </head>
@@ -179,11 +183,13 @@
 		</div>
 	</div>
 	<script type="module">
-		// wasm-bindgen generated module
-		// Cache-busting for development
-		import init from './examples_twitter.js';
-		const wasmUrl = './examples_twitter_bg.wasm?v=' + Date.now();
-		init(wasmUrl);
+		// WASM module initialization with cache-busted URLs
+		const jsUrl = '{{ static_url("examples_twitter.js") }}';
+		const wasmUrl = '{{ static_url("examples_twitter_bg.wasm") }}';
+
+		// Dynamic import
+		const { default: init } = await import(jsUrl);
+		await init(wasmUrl);
 	</script>
 </body>
 </html>
