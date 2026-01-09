@@ -41,11 +41,124 @@ Superuser created successfully.
 
 ## Registering Models with the Admin
 
-To make our Poll models editable in the admin, we need to register them. Create `src/admin.rs`:
+Reinhardt provides two approaches for registering models with the admin panel.
+
+### Approach A: Declarative Configuration with #[admin(...)] (Recommended)
+
+The simplest way to configure admin for your models is using the `#[admin(...)]` attribute macro. This approach provides compile-time validation and keeps configuration close to the model definition.
+
+**Example: Question Model with Admin Configuration**
+
+```rust
+// src/models.rs
+use reinhardt::prelude::*;
+use chrono::{DateTime, Utc};
+
+#[admin(
+    list_display = ["question_text", "pub_date", "was_published_recently"],
+    list_filter = ["pub_date"],
+    search_fields = ["question_text"],
+    date_hierarchy = "pub_date",
+    ordering = [("pub_date", desc)],
+    list_per_page = 25
+)]
+#[model(app_label = "polls", table_name = "polls_question")]
+pub struct Question {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    #[field(max_length = 200)]
+    pub question_text: String,
+
+    #[field(auto_now_add = true)]
+    pub pub_date: DateTime<Utc>,
+}
+
+impl Question {
+    /// Check if this question was published recently (within the last day)
+    pub fn was_published_recently(&self) -> bool {
+        let now = Utc::now();
+        let one_day_ago = now - chrono::Duration::days(1);
+        self.pub_date >= one_day_ago && self.pub_date <= now
+    }
+}
+```
+
+**Example: Choice Model with Admin Configuration**
+
+```rust
+use reinhardt::db::associations::ForeignKeyField;
+
+#[admin(
+    list_display = ["choice_text", "votes", "question"],
+    list_filter = ["question"],
+    search_fields = ["choice_text"],
+    ordering = [("votes", desc)]
+)]
+#[model(app_label = "polls", table_name = "polls_choice")]
+pub struct Choice {
+    #[field(primary_key = true)]
+    pub id: i64,
+
+    // ⚠️ IMPORTANT: related_name is REQUIRED for #[rel(foreign_key)]
+    #[rel(foreign_key, related_name = "choices")]
+    question: ForeignKeyField<Question>,
+
+    #[field(max_length = 200)]
+    pub choice_text: String,
+
+    #[field(default = 0)]
+    pub votes: i32,
+}
+```
+
+**Available #[admin(...)] Options:**
+
+**Display Options:**
+- `list_display = ["field1", "field2", ...]` - Columns to show in list view
+- `list_per_page = 25` - Number of items per page (default: 100)
+- `list_editable = ["field1"]` - Fields editable directly in list view
+
+**Filtering Options:**
+- `list_filter = ["field1", "field2"]` - Add sidebar filters
+- `date_hierarchy = "date_field"` - Add date drill-down navigation
+- `search_fields = ["field1", "field2"]` - Enable search on specified fields
+
+**Ordering Options:**
+- `ordering = [("field", asc)]` - Default sort order (ascending)
+- `ordering = [("field", desc)]` - Default sort order (descending)
+
+**Field Options:**
+- `readonly_fields = ["field1"]` - Non-editable fields in forms
+- `exclude = ["field1"]` - Fields hidden in forms
+- `fieldsets = [...]` - Grouped form fields (advanced)
+
+**Benefits of #[admin(...)]:**
+
+1. **Declarative**: Configuration is defined alongside the model
+2. **Type-safe**: Compile-time validation of field names
+3. **Less boilerplate**: No manual trait implementation needed
+4. **Consistent**: Same syntax across all models
+5. **Auto-registration**: Models are automatically registered with admin site
+
+### Approach B: Manual Configuration with ModelAdmin Trait
+
+For cases requiring complex logic, custom permissions, or dynamic configuration, you can manually implement the `ModelAdmin` trait.
+
+**When to use manual implementation:**
+- Complex permission logic that varies by user/context
+- Custom queryset filtering based on request parameters
+- Dynamic field configuration
+- Custom actions beyond CRUD operations
+- Advanced inline formset customization
+
+**Example: Manual Admin Configuration**
+
+Create `src/admin.rs`:
 
 ```rust
 use reinhardt::prelude::*;
-use reinhardt::admin::{AdminSite, ModelAdmin};
+use reinhardt::admin::{AdminSite, ModelAdmin, AdminContext};
 use crate::models::{Question, Choice};
 
 pub struct QuestionAdmin;
@@ -63,6 +176,22 @@ impl ModelAdmin for QuestionAdmin {
 
     fn search_fields(&self) -> Vec<&str> {
         vec!["question_text"]
+    }
+
+    // Advanced: Custom queryset filtering
+    fn get_queryset(&self, ctx: &AdminContext) -> QuerySet<Self::Model> {
+        let mut qs = Self::Model::objects();
+        // Only show published questions to non-superusers
+        if !ctx.user.is_superuser {
+            qs = qs.filter(Self::Model::field_pub_date().lte(Utc::now()));
+        }
+        qs
+    }
+
+    // Advanced: Custom permission logic
+    fn has_add_permission(&self, ctx: &AdminContext) -> bool {
+        // Only staff in "editors" group can add questions
+        ctx.user.is_staff && ctx.user.groups.contains(&"editors")
     }
 }
 
@@ -85,6 +214,8 @@ pub fn register_admin(site: &mut AdminSite) {
     site.register::<Choice, ChoiceAdmin>();
 }
 ```
+
+**Note**: When using `#[admin(...)]` on models, you don't need manual registration in `src/admin.rs`. The macro handles registration automatically.
 
 Update `src/main.rs` to include the admin:
 
