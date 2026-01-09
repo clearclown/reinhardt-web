@@ -2,7 +2,11 @@
 //!
 //! This module provides the main Router struct and routing logic.
 
+use super::handler::{RouteHandler, no_params_handler, result_handler, with_params_handler};
+#[cfg(target_arch = "wasm32")]
+use super::history::setup_popstate_listener;
 use super::history::{HistoryState, NavigationType, current_path, push_state, replace_state};
+use super::params::{FromPath, ParamContext, PathParams};
 use super::pattern::PathPattern;
 use crate::component::View;
 use crate::reactive::Signal;
@@ -11,6 +15,68 @@ use std::sync::Arc;
 
 /// Type alias for route guard functions.
 pub(super) type RouteGuard = Arc<dyn Fn(&RouteMatch) -> bool + Send + Sync>;
+
+/// Error type for path parameter extraction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PathError {
+	/// Failed to parse a parameter value.
+	ParseError {
+		/// Index of the parameter that failed to parse.
+		param_index: Option<usize>,
+		/// Expected type name.
+		param_type: &'static str,
+		/// Raw string value that failed to parse.
+		raw_value: String,
+		/// Error message from parsing.
+		source: String,
+	},
+	/// Parameter count mismatch.
+	CountMismatch {
+		/// Expected number of parameters.
+		expected: usize,
+		/// Actual number of parameters.
+		actual: usize,
+	},
+	/// Custom error message.
+	Custom(String),
+}
+
+impl std::fmt::Display for PathError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::ParseError {
+				param_index,
+				param_type,
+				raw_value,
+				source,
+			} => {
+				if let Some(idx) = param_index {
+					write!(
+						f,
+						"Failed to parse parameter[{}] '{}' as {}: {}",
+						idx, raw_value, param_type, source
+					)
+				} else {
+					write!(
+						f,
+						"Failed to parse parameter '{}' as {}: {}",
+						raw_value, param_type, source
+					)
+				}
+			}
+			Self::CountMismatch { expected, actual } => {
+				write!(
+					f,
+					"Parameter count mismatch: expected {}, got {}",
+					expected, actual
+				)
+			}
+			Self::Custom(msg) => write!(f, "{}", msg),
+		}
+	}
+}
+
+impl std::error::Error for PathError {}
 
 /// Error type for router operations.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -23,6 +89,8 @@ pub enum RouterError {
 	MissingParameter(String),
 	/// Navigation failed.
 	NavigationFailed(String),
+	/// Path parameter extraction failed.
+	PathExtraction(PathError),
 }
 
 impl std::fmt::Display for RouterError {
@@ -32,6 +100,7 @@ impl std::fmt::Display for RouterError {
 			Self::InvalidRouteName(name) => write!(f, "Invalid route name: {}", name),
 			Self::MissingParameter(param) => write!(f, "Missing parameter: {}", param),
 			Self::NavigationFailed(msg) => write!(f, "Navigation failed: {}", msg),
+			Self::PathExtraction(err) => write!(f, "Path extraction error: {}", err),
 		}
 	}
 }
@@ -45,6 +114,11 @@ pub struct RouteMatch {
 	pub route: Route,
 	/// Extracted path parameters.
 	pub params: HashMap<String, String>,
+	/// Parameter values in the order they appear in the pattern.
+	///
+	/// This guarantees that tuple extraction works correctly by index,
+	/// matching the order of parameters in the URL pattern.
+	pub(crate) param_values: Vec<String>,
 }
 
 /// A single route definition.
@@ -54,8 +128,8 @@ pub struct Route {
 	pattern: PathPattern,
 	/// Optional route name for reverse lookups.
 	name: Option<String>,
-	/// The component factory.
-	component: Arc<dyn Fn() -> View + Send + Sync>,
+	/// The route handler.
+	handler: Arc<dyn RouteHandler>,
 	/// Optional guard function.
 	guard: Option<RouteGuard>,
 }
@@ -79,7 +153,7 @@ impl Route {
 		Self {
 			pattern: PathPattern::new(pattern),
 			name: None,
-			component: Arc::new(component),
+			handler: no_params_handler(component),
 			guard: None,
 		}
 	}
@@ -92,7 +166,7 @@ impl Route {
 		Self {
 			pattern: PathPattern::new(pattern),
 			name: Some(name.into()),
-			component: Arc::new(component),
+			handler: no_params_handler(component),
 			guard: None,
 		}
 	}
@@ -114,11 +188,6 @@ impl Route {
 	/// Returns the pattern.
 	pub fn pattern(&self) -> &PathPattern {
 		&self.pattern
-	}
-
-	/// Renders the route's component.
-	pub fn render(&self) -> View {
-		(self.component)()
 	}
 
 	/// Checks if the guard allows access.
@@ -196,6 +265,98 @@ impl Router {
 		self
 	}
 
+	/// Adds a route with typed path parameters.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::router::{Router, PathParams};
+	///
+	/// let router = Router::new()
+	///     .route_params("/users/{id}/", |PathParams(id): PathParams<i64>| {
+	///         View::text(format!("User ID: {}", id))
+	///     });
+	/// ```
+	pub fn route_params<F, T>(mut self, pattern: &str, handler: F) -> Self
+	where
+		F: Fn(PathParams<T>) -> View + Send + Sync + 'static,
+		T: FromPath + Send + Sync + 'static,
+	{
+		self.routes.push(Route {
+			pattern: PathPattern::new(pattern),
+			name: None,
+			handler: with_params_handler(handler),
+			guard: None,
+		});
+		self
+	}
+
+	/// Adds a named route with typed path parameters.
+	pub fn named_route_params<F, T>(mut self, name: &str, pattern: &str, handler: F) -> Self
+	where
+		F: Fn(PathParams<T>) -> View + Send + Sync + 'static,
+		T: FromPath + Send + Sync + 'static,
+	{
+		let index = self.routes.len();
+		self.routes.push(Route {
+			pattern: PathPattern::new(pattern),
+			name: Some(name.to_string()),
+			handler: with_params_handler(handler),
+			guard: None,
+		});
+		self.named_routes.insert(name.to_string(), index);
+		self
+	}
+
+	/// Adds a route with typed path parameters that returns a Result.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// use reinhardt_pages::router::{Router, PathParams, RouterError};
+	///
+	/// let router = Router::new()
+	///     .route_result("/users/{id}/", |PathParams(id): PathParams<i64>| {
+	///         if id > 0 {
+	///             Ok(View::text(format!("User ID: {}", id)))
+	///         } else {
+	///             Err(RouterError::NotFound("Invalid ID".to_string()))
+	///         }
+	///     });
+	/// ```
+	pub fn route_result<F, T, E>(mut self, pattern: &str, handler: F) -> Self
+	where
+		F: Fn(PathParams<T>) -> Result<View, E> + Send + Sync + 'static,
+		T: FromPath + Send + Sync + 'static,
+		E: Into<RouterError> + Send + Sync + 'static,
+	{
+		self.routes.push(Route {
+			pattern: PathPattern::new(pattern),
+			name: None,
+			handler: result_handler(handler),
+			guard: None,
+		});
+		self
+	}
+
+	/// Adds a named route with typed path parameters that returns a Result.
+	pub fn named_route_result<F, T, E>(mut self, name: &str, pattern: &str, handler: F) -> Self
+	where
+		F: Fn(PathParams<T>) -> Result<View, E> + Send + Sync + 'static,
+		T: FromPath + Send + Sync + 'static,
+		E: Into<RouterError> + Send + Sync + 'static,
+	{
+		let index = self.routes.len();
+		self.routes.push(Route {
+			pattern: PathPattern::new(pattern),
+			name: Some(name.to_string()),
+			handler: result_handler(handler),
+			guard: None,
+		});
+		self.named_routes.insert(name.to_string(), index);
+		self
+	}
+
 	/// Adds a route with a guard.
 	pub fn guarded_route<F, G>(mut self, pattern: &str, component: F, guard: G) -> Self
 	where
@@ -234,10 +395,11 @@ impl Router {
 	/// Matches a path against registered routes.
 	pub fn match_path(&self, path: &str) -> Option<RouteMatch> {
 		for route in &self.routes {
-			if let Some(params) = route.pattern.matches(path) {
+			if let Some((params, param_values)) = route.pattern.matches(path) {
 				let route_match = RouteMatch {
 					route: route.clone(),
 					params,
+					param_values,
 				};
 
 				// Check guard if present
@@ -326,7 +488,13 @@ impl Router {
 		let path = self.current_path.get();
 
 		if let Some(route_match) = self.match_path(&path) {
-			route_match.route.render()
+			let ctx =
+				ParamContext::new(route_match.params.clone(), route_match.param_values.clone());
+
+			match route_match.route.handler.handle(&ctx) {
+				Ok(view) => view,
+				Err(err) => View::text(format!("Error: {}", err)),
+			}
 		} else if let Some(not_found) = &self.not_found {
 			not_found()
 		} else {
@@ -342,6 +510,67 @@ impl Router {
 	/// Checks if a route name exists.
 	pub fn has_route(&self, name: &str) -> bool {
 		self.named_routes.contains_key(name)
+	}
+
+	/// Sets up a popstate event listener for browser back/forward navigation.
+	///
+	/// This method registers a listener for the browser's `popstate` event,
+	/// which fires when the user navigates using the back/forward buttons.
+	/// When triggered, it updates the router's reactive signals to reflect
+	/// the new URL state.
+	///
+	/// # WASM Only
+	///
+	/// This method only has effect on WASM targets. On non-WASM targets,
+	/// it's a no-op that always returns `Ok(())`.
+	///
+	/// # Example
+	///
+	/// ```ignore
+	/// let router = Router::new()
+	///     .route("/", home_page)
+	///     .route("/users/{id}/", user_detail);
+	///
+	/// // Call after routes are configured
+	/// router.setup_history_listener();
+	/// ```
+	///
+	/// # Note
+	///
+	/// The listener closure is kept alive using `.forget()`, meaning it will
+	/// persist for the lifetime of the page. This is intentional for SPA
+	/// navigation handling.
+	#[cfg(target_arch = "wasm32")]
+	pub fn setup_history_listener(&self) {
+		let path_signal = self.current_path.clone();
+		let params_signal = self.current_params.clone();
+		let route_name_signal = self.current_route_name.clone();
+
+		let closure = setup_popstate_listener(move |path, state| {
+			// Update path signal
+			path_signal.set(path);
+
+			// Update params and route name from history state if available
+			if let Some(hist_state) = state {
+				params_signal.set(hist_state.params);
+				route_name_signal.set(hist_state.route_name);
+			} else {
+				// Clear params when no state is available
+				params_signal.set(HashMap::new());
+				route_name_signal.set(None);
+			}
+		});
+
+		if let Ok(c) = closure {
+			// Keep the closure alive for the lifetime of the page
+			c.forget();
+		}
+	}
+
+	/// Non-WASM version of `setup_history_listener`.
+	#[cfg(not(target_arch = "wasm32"))]
+	pub fn setup_history_listener(&self) {
+		// No-op on non-WASM targets
 	}
 }
 
