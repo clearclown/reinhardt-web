@@ -135,16 +135,17 @@ pub use typed_node::{
 
 // Form macro exports
 pub use form_node::{
-	ClientValidator, ClientValidatorRule, CustomAttr, FormAction, FormCallbacks, FormFieldDef,
-	FormFieldEntry, FormFieldGroup, FormFieldProperty, FormMacro, FormSlots, FormState,
-	FormStateField, FormValidator, FormWatch, FormWatchItem, IconAttr, IconChild, IconElement,
-	IconPosition, ValidatorRule, WrapperAttr, WrapperElement,
+	ClientValidator, ClientValidatorRule, CustomAttr, FormAction, FormCallbacks, FormDerived,
+	FormDerivedItem, FormFieldDef, FormFieldEntry, FormFieldGroup, FormFieldProperty, FormMacro,
+	FormSlots, FormState, FormStateField, FormValidator, FormWatch, FormWatchItem, IconAttr,
+	IconChild, IconElement, IconPosition, ValidatorRule, WrapperAttr, WrapperElement,
 };
 pub use form_typed::{
-	FormMethod, TypedClientValidator, TypedClientValidatorRule, TypedCustomAttr, TypedFieldDisplay,
-	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormCallbacks,
-	TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro, TypedFormSlots,
-	TypedFormState, TypedFormStyling, TypedFormValidator, TypedFormWatch, TypedFormWatchItem,
-	TypedIcon, TypedIconAttr, TypedIconChild, TypedIconPosition, TypedValidatorRule, TypedWidget,
+	FormMethod, TypedChoicesConfig, TypedClientValidator, TypedClientValidatorRule,
+	TypedCustomAttr, TypedDerivedItem, TypedFieldDisplay, TypedFieldStyling, TypedFieldType,
+	TypedFieldValidation, TypedFormAction, TypedFormCallbacks, TypedFormDerived, TypedFormFieldDef,
+	TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro, TypedFormSlots, TypedFormState,
+	TypedFormStyling, TypedFormValidator, TypedFormWatch, TypedFormWatchItem, TypedIcon,
+	TypedIconAttr, TypedIconChild, TypedIconPosition, TypedValidatorRule, TypedWidget,
 	TypedWrapper, TypedWrapperAttr,
 };

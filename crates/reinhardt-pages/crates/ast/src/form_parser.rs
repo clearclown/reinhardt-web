@@ -11,10 +11,10 @@ use syn::{
 };
 
 use crate::{
-	ClientValidator, ClientValidatorRule, CustomAttr, FormAction, FormFieldDef, FormFieldEntry,
-	FormFieldGroup, FormFieldProperty, FormMacro, FormSlots, FormState, FormStateField,
-	FormValidator, FormWatch, FormWatchItem, IconAttr, IconChild, IconElement, IconPosition,
-	ValidatorRule, WrapperAttr, WrapperElement,
+	ClientValidator, ClientValidatorRule, CustomAttr, FormAction, FormDerived, FormDerivedItem,
+	FormFieldDef, FormFieldEntry, FormFieldGroup, FormFieldProperty, FormMacro, FormSlots,
+	FormState, FormStateField, FormValidator, FormWatch, FormWatchItem, IconAttr, IconChild,
+	IconElement, IconPosition, ValidatorRule, WrapperAttr, WrapperElement,
 };
 
 impl Parse for FormMacro {
@@ -94,12 +94,22 @@ impl Parse for FormMacro {
 					form.watch = Some(parse_watch_block(&content, key.span())?);
 					parse_optional_comma(input)?;
 				}
+				"derived" => {
+					let content;
+					braced!(content in input);
+					form.derived = Some(parse_derived_block(&content, key.span())?);
+					parse_optional_comma(input)?;
+				}
 				"redirect_on_success" => {
 					form.redirect_on_success = Some(input.parse()?);
 					parse_optional_comma(input)?;
 				}
 				"initial_loader" => {
 					form.initial_loader = Some(input.parse()?);
+					parse_optional_comma(input)?;
+				}
+				"choices_loader" => {
+					form.choices_loader = Some(input.parse()?);
 					parse_optional_comma(input)?;
 				}
 				"slots" => {
@@ -131,7 +141,7 @@ impl Parse for FormMacro {
 					return Err(syn::Error::new(
 						key.span(),
 						format!(
-							"Unknown form property: '{}'. Expected: name, action, server_fn, method, class, state, on_submit, on_success, on_error, on_loading, watch, redirect_on_success, initial_loader, slots, fields, validators, client_validators",
+							"Unknown form property: '{}'. Expected: name, action, server_fn, method, class, state, on_submit, on_success, on_error, on_loading, watch, redirect_on_success, initial_loader, choices_loader, slots, fields, validators, client_validators",
 							key
 						),
 					));
@@ -386,6 +396,21 @@ fn parse_field_properties(input: ParseStream) -> Result<Vec<FormFieldProperty>> 
 				input.parse::<Token![:]>()?;
 				let field_name: LitStr = input.parse()?;
 				properties.push(FormFieldProperty::InitialFrom { field_name, span });
+			} else if name == "choices_from" {
+				// choices_from: "choices" - specifies field in choices_loader result containing choice array
+				input.parse::<Token![:]>()?;
+				let field_name: LitStr = input.parse()?;
+				properties.push(FormFieldProperty::ChoicesFrom { field_name, span });
+			} else if name == "choice_value" {
+				// choice_value: "id" - specifies property path for value extraction from each choice
+				input.parse::<Token![:]>()?;
+				let path: LitStr = input.parse()?;
+				properties.push(FormFieldProperty::ChoiceValue { path, span });
+			} else if name == "choice_label" {
+				// choice_label: "choice_text" - specifies property path for label extraction from each choice
+				input.parse::<Token![:]>()?;
+				let path: LitStr = input.parse()?;
+				properties.push(FormFieldProperty::ChoiceLabel { path, span });
 			} else if input.peek(Token![:]) {
 				// name: value
 				input.parse::<Token![:]>()?;
@@ -703,6 +728,42 @@ fn parse_watch_block(input: ParseStream, span: Span) -> Result<FormWatch> {
 	}
 
 	Ok(watch)
+}
+
+/// Parses a derived block containing named closures for computed values.
+///
+/// Expected syntax:
+/// ```text
+/// derived: {
+///     char_count: |form| form.content().get().len(),
+///     is_over_limit: |form| form.char_count().get() > 280,
+///     progress_percent: |form| {
+///         (form.char_count().get() as f32 / 280.0 * 100.0).min(100.0)
+///     },
+/// }
+/// ```
+///
+/// Unlike watch blocks which return View types, derived blocks return
+/// arbitrary values that are wrapped in `Memo<T>`.
+fn parse_derived_block(input: ParseStream, span: Span) -> Result<FormDerived> {
+	let mut derived = FormDerived::new(span);
+
+	while !input.is_empty() {
+		let item_span = input.span();
+		let name: Ident = input.parse()?;
+		input.parse::<Token![:]>()?;
+		let closure: ExprClosure = input.parse()?;
+
+		derived.items.push(FormDerivedItem {
+			name,
+			closure,
+			span: item_span,
+		});
+
+		parse_optional_comma(input)?;
+	}
+
+	Ok(derived)
 }
 
 /// Parses a slots block containing optional before_fields and after_fields closures.
@@ -2526,5 +2587,458 @@ mod tests {
 		let city = &group.fields[1];
 		assert!(city.is_required());
 		assert!(city.get_label().is_some());
+	}
+
+	// ============================================================
+	// Derived Block Tests
+	// ============================================================
+
+	#[test]
+	fn test_parse_derived_block() {
+		let input = quote! {
+			name: TweetForm,
+			server_fn: create_tweet,
+
+			derived: {
+				char_count: |form| form.content().get().len(),
+			},
+
+			fields: {
+				content: CharField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_some());
+		let derived = form.derived.unwrap();
+		assert_eq!(derived.items.len(), 1);
+		assert_eq!(derived.items[0].name.to_string(), "char_count");
+	}
+
+	#[test]
+	fn test_parse_derived_multiple_items() {
+		let input = quote! {
+			name: TweetForm,
+			server_fn: create_tweet,
+
+			derived: {
+				char_count: |form| form.content().get().len(),
+				is_over_limit: |form| form.char_count().get() > 280,
+				progress_percent: |form| (form.char_count().get() as f32 / 280.0 * 100.0).min(100.0),
+			},
+
+			fields: {
+				content: CharField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_some());
+		let derived = form.derived.unwrap();
+		assert_eq!(derived.items.len(), 3);
+		assert_eq!(derived.items[0].name.to_string(), "char_count");
+		assert_eq!(derived.items[1].name.to_string(), "is_over_limit");
+		assert_eq!(derived.items[2].name.to_string(), "progress_percent");
+	}
+
+	#[test]
+	fn test_parse_derived_empty_block() {
+		let input = quote! {
+			name: SimpleForm,
+			server_fn: submit,
+
+			derived: {},
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_some());
+		let derived = form.derived.unwrap();
+		assert!(derived.is_empty());
+	}
+
+	#[test]
+	fn test_parse_derived_complex_closure() {
+		let input = quote! {
+			name: PriceForm,
+			server_fn: calculate,
+
+			derived: {
+				total_price: |form| {
+					let quantity = form.quantity().get();
+					let unit_price = form.unit_price().get();
+					let discount = form.discount().get();
+					(quantity as f64 * unit_price) * (1.0 - discount / 100.0)
+				},
+				formatted_price: |form| {
+					format!("${:.2}", form.total_price().get())
+				},
+			},
+
+			fields: {
+				quantity: IntegerField { required },
+				unit_price: DecimalField { required },
+				discount: DecimalField { initial: "0" },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_some());
+		let derived = form.derived.unwrap();
+		assert_eq!(derived.items.len(), 2);
+		assert_eq!(derived.items[0].name.to_string(), "total_price");
+		assert_eq!(derived.items[1].name.to_string(), "formatted_price");
+	}
+
+	#[test]
+	fn test_parse_no_derived_block() {
+		let input = quote! {
+			name: BasicForm,
+			server_fn: submit,
+
+			fields: {
+				username: CharField { required },
+				password: CharField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_none());
+	}
+
+	#[test]
+	fn test_parse_derived_with_watch() {
+		let input = quote! {
+			name: TweetForm,
+			server_fn: create_tweet,
+
+			derived: {
+				char_count: |form| form.content().get().len(),
+			},
+
+			watch: {
+				counter_display: |form| {
+					format!("{}/280", form.char_count().get())
+				},
+			},
+
+			fields: {
+				content: CharField { required, bind: true },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.derived.is_some());
+		assert!(form.watch.is_some());
+
+		let derived = form.derived.unwrap();
+		assert_eq!(derived.items.len(), 1);
+		assert_eq!(derived.items[0].name.to_string(), "char_count");
+
+		let watch = form.watch.unwrap();
+		assert_eq!(watch.items.len(), 1);
+		assert_eq!(watch.items[0].name.to_string(), "counter_display");
+	}
+
+	// ============================================================
+	// Dynamic ChoiceField tests (choices_loader, choices_from, etc.)
+	// ============================================================
+
+	#[test]
+	fn test_parse_choices_loader() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: vote,
+
+			choices_loader: get_poll_choices,
+
+			fields: {
+				choice: ChoiceField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.choices_loader.is_some());
+		let loader = form.choices_loader.unwrap();
+		assert_eq!(
+			loader.segments.last().unwrap().ident.to_string(),
+			"get_poll_choices"
+		);
+	}
+
+	#[test]
+	fn test_parse_choices_loader_with_path() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: vote,
+
+			choices_loader: api::polls::get_poll_choices,
+
+			fields: {
+				choice: ChoiceField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.choices_loader.is_some());
+	}
+
+	#[test]
+	fn test_parse_without_choices_loader() {
+		let input = quote! {
+			name: SimpleForm,
+			server_fn: submit,
+
+			fields: {
+				username: CharField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert!(form.choices_loader.is_none());
+	}
+
+	#[test]
+	fn test_parse_choices_from_field_property() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: vote,
+
+			choices_loader: get_poll_data,
+
+			fields: {
+				choice: ChoiceField {
+					required,
+					choices_from: "poll_options",
+				},
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		let field = form.fields[0].as_field().unwrap();
+
+		let choices_from = field.get_choices_from();
+		assert!(choices_from.is_some());
+		assert_eq!(choices_from.unwrap().value(), "poll_options");
+	}
+
+	#[test]
+	fn test_parse_choice_value_and_label_properties() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: vote,
+
+			choices_loader: get_poll_data,
+
+			fields: {
+				choice: ChoiceField {
+					required,
+					choices_from: "choices",
+					choice_value: "id",
+					choice_label: "choice_text",
+				},
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		let field = form.fields[0].as_field().unwrap();
+
+		// Check choices_from
+		let choices_from = field.get_choices_from();
+		assert!(choices_from.is_some());
+		assert_eq!(choices_from.unwrap().value(), "choices");
+
+		// Check choice_value
+		let choice_value = field.get_choice_value();
+		assert!(choice_value.is_some());
+		assert_eq!(choice_value.unwrap().value(), "id");
+
+		// Check choice_label
+		let choice_label = field.get_choice_label();
+		assert!(choice_label.is_some());
+		assert_eq!(choice_label.unwrap().value(), "choice_text");
+
+		// Verify it's marked as dynamic choice field
+		assert!(field.is_dynamic_choice_field());
+	}
+
+	#[test]
+	fn test_parse_field_without_choices_from() {
+		let input = quote! {
+			name: SimpleForm,
+			server_fn: submit,
+
+			fields: {
+				category: ChoiceField { required },
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		let field = form.fields[0].as_field().unwrap();
+
+		// Field without choices_from is not a dynamic choice field
+		assert!(!field.has_choices_from());
+		assert!(!field.is_dynamic_choice_field());
+	}
+
+	#[test]
+	fn test_parse_dynamic_choice_field_with_widget() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: vote,
+
+			choices_loader: get_poll_data,
+
+			fields: {
+				choice: ChoiceField {
+					required,
+					widget: RadioSelect,
+					choices_from: "options",
+					choice_value: "id",
+					choice_label: "text",
+				},
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		let field = form.fields[0].as_field().unwrap();
+
+		// Verify widget and choices properties coexist
+		assert!(field.is_dynamic_choice_field());
+		assert!(field.get_widget().is_some());
+	}
+
+	#[test]
+	fn test_parse_choices_loader_with_initial_loader() {
+		let input = quote! {
+			name: EditPollForm,
+			server_fn: update_poll,
+
+			initial_loader: get_poll_edit_data,
+			choices_loader: get_choice_options,
+
+			fields: {
+				title: CharField { initial_from: "poll_title" },
+				selected_choice: ChoiceField {
+					choices_from: "available_choices",
+					choice_value: "id",
+					choice_label: "text",
+				},
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+
+		// Both loaders should be parsed
+		assert!(form.initial_loader.is_some());
+		assert!(form.choices_loader.is_some());
+
+		// Verify initial_loader
+		let initial_loader = form.initial_loader.unwrap();
+		assert_eq!(
+			initial_loader.segments.last().unwrap().ident.to_string(),
+			"get_poll_edit_data"
+		);
+
+		// Verify choices_loader
+		let choices_loader = form.choices_loader.unwrap();
+		assert_eq!(
+			choices_loader.segments.last().unwrap().ident.to_string(),
+			"get_choice_options"
+		);
+	}
+
+	#[test]
+	fn test_parse_multiple_dynamic_choice_fields() {
+		let input = quote! {
+			name: FilterForm,
+			server_fn: apply_filter,
+
+			choices_loader: get_filter_options,
+
+			fields: {
+				category: ChoiceField {
+					choices_from: "categories",
+					choice_value: "id",
+					choice_label: "name",
+				},
+				status: ChoiceField {
+					choices_from: "statuses",
+					choice_value: "code",
+					choice_label: "description",
+				},
+			},
+		};
+
+		let result: Result<FormMacro> = syn::parse2(input);
+		assert!(result.is_ok());
+
+		let form = result.unwrap();
+		assert_eq!(form.fields.len(), 2);
+
+		// Check first field
+		let category_field = form.fields[0].as_field().unwrap();
+		assert!(category_field.is_dynamic_choice_field());
+		assert_eq!(
+			category_field.get_choices_from().unwrap().value(),
+			"categories"
+		);
+		assert_eq!(category_field.get_choice_value().unwrap().value(), "id");
+		assert_eq!(category_field.get_choice_label().unwrap().value(), "name");
+
+		// Check second field
+		let status_field = form.fields[1].as_field().unwrap();
+		assert!(status_field.is_dynamic_choice_field());
+		assert_eq!(status_field.get_choices_from().unwrap().value(), "statuses");
+		assert_eq!(status_field.get_choice_value().unwrap().value(), "code");
+		assert_eq!(
+			status_field.get_choice_label().unwrap().value(),
+			"description"
+		);
 	}
 }

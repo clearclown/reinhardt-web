@@ -82,6 +82,8 @@ pub struct TypedFormMacro {
 	pub callbacks: TypedFormCallbacks,
 	/// Validated watch block for reactive computed views
 	pub watch: Option<TypedFormWatch>,
+	/// Validated derived/computed values block for reactive signals
+	pub derived: Option<TypedFormDerived>,
 	/// Redirect URL on successful form submission
 	///
 	/// Validated to start with `/` or be a valid URL pattern.
@@ -91,6 +93,11 @@ pub struct TypedFormMacro {
 	///
 	/// When specified, generates an async method to load initial values.
 	pub initial_loader: Option<Path>,
+	/// Choices loader server_fn for dynamic `ChoiceField`
+	///
+	/// When specified, generates an async method to load choice options
+	/// for fields that have `choices_from` specified.
+	pub choices_loader: Option<Path>,
 	/// Slot definitions for custom UI elements
 	pub slots: Option<TypedFormSlots>,
 	/// Validated field definitions (can include field groups)
@@ -343,6 +350,52 @@ pub struct TypedFormWatchItem {
 	pub span: Span,
 }
 
+/// Validated derived/computed values block.
+///
+/// Derived items generate `Memo<T>` accessors on the form struct that
+/// automatically recompute when their Signal dependencies change.
+/// Unlike watch blocks which produce Views, derived blocks produce values.
+///
+/// ## Generated Code Example
+///
+/// ```ignore
+/// // Given:
+/// derived: {
+///     char_count: |form| form.content().get().len(),
+/// }
+///
+/// // Generates:
+/// impl TweetForm {
+///     pub fn char_count(&self) -> Memo<usize> {
+///         let form = self.clone();
+///         Memo::new(move || form.content().get().len())
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct TypedFormDerived {
+	/// List of validated derived items
+	pub items: Vec<TypedDerivedItem>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// A validated derived item with name and closure.
+///
+/// Each derived item generates a method on the form struct that returns
+/// a `Memo<T>`. The closure receives `&FormName` as parameter and computes
+/// the derived value, which is automatically memoized.
+#[derive(Debug, Clone)]
+pub struct TypedDerivedItem {
+	/// Derived item name (becomes method name on form struct)
+	pub name: Ident,
+	/// Validated closure that computes the derived value.
+	/// The closure receives `&FormName` as parameter and returns `T`.
+	pub closure: ExprClosure,
+	/// Span for error reporting
+	pub span: Span,
+}
+
 /// Validated slot definitions for custom UI elements in the form.
 ///
 /// Slots allow inserting custom content before and after form fields.
@@ -369,6 +422,57 @@ impl TypedFormSlots {
 	/// Returns true if no slots are defined.
 	pub fn is_empty(&self) -> bool {
 		self.before_fields.is_none() && self.after_fields.is_none()
+	}
+}
+
+/// Configuration for dynamic choice field options.
+///
+/// Used with `ChoiceField` to configure how choices are loaded
+/// and displayed from a `choices_loader` server_fn result.
+#[derive(Debug, Clone)]
+pub struct TypedChoicesConfig {
+	/// Field name in the loader result containing the choice array
+	///
+	/// e.g., "choices" extracts data from `response.choices`
+	pub choices_from: String,
+	/// Property path for extracting the value from each choice item
+	///
+	/// e.g., "id" extracts `choice.id` as the form value.
+	/// Defaults to "value" if not specified.
+	pub choice_value: String,
+	/// Property path for extracting the display label from each choice item
+	///
+	/// e.g., "choice_text" extracts `choice.choice_text` for display.
+	/// Defaults to "label" if not specified.
+	pub choice_label: String,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl TypedChoicesConfig {
+	/// Creates a new choices config with required choices_from.
+	pub fn new(choices_from: String, span: Span) -> Self {
+		Self {
+			choices_from,
+			choice_value: "value".to_string(),
+			choice_label: "label".to_string(),
+			span,
+		}
+	}
+
+	/// Creates a new choices config with all fields specified.
+	pub fn with_paths(
+		choices_from: String,
+		choice_value: String,
+		choice_label: String,
+		span: Span,
+	) -> Self {
+		Self {
+			choices_from,
+			choice_value,
+			choice_label,
+			span,
+		}
 	}
 }
 
@@ -403,6 +507,11 @@ pub struct TypedFormFieldDef {
 	///
 	/// Maps this field to a property in the data returned by `initial_loader`.
 	pub initial_from: Option<String>,
+	/// Dynamic choices configuration for `ChoiceField`
+	///
+	/// When specified, the field will load choices from a `choices_loader`
+	/// server_fn and render them dynamically.
+	pub choices_config: Option<TypedChoicesConfig>,
 	/// Span for error reporting
 	pub span: Span,
 }
@@ -1122,8 +1231,10 @@ impl TypedFormMacro {
 			state: None,
 			callbacks: TypedFormCallbacks::new(),
 			watch: None,
+			derived: None,
 			redirect_on_success: None,
 			initial_loader: None,
+			choices_loader: None,
 			slots: None,
 			fields: Vec::new(),
 			validators: Vec::new(),
@@ -1175,6 +1286,7 @@ impl TypedFormFieldDef {
 			custom_attrs: Vec::new(),
 			bind: true, // Default to enabled
 			initial_from: None,
+			choices_config: None,
 			span,
 		}
 	}
@@ -1225,6 +1337,19 @@ impl TypedFormFieldDef {
 	/// Returns the HTML id attribute for this field.
 	pub fn html_id(&self) -> String {
 		format!("id_{}", self.name)
+	}
+
+	/// Returns true if this field has dynamic choices configuration.
+	pub fn has_choices_config(&self) -> bool {
+		self.choices_config.is_some()
+	}
+
+	/// Returns true if this is a dynamic choice field.
+	///
+	/// A dynamic choice field has `choices_config` and will load its options
+	/// from a `choices_loader` server_fn at runtime.
+	pub fn is_dynamic_choice_field(&self) -> bool {
+		self.has_choices_config()
 	}
 }
 

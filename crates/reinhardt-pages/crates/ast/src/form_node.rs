@@ -66,6 +66,8 @@ pub struct FormMacro {
 	pub callbacks: FormCallbacks,
 	/// Watch block for reactive computed views
 	pub watch: Option<FormWatch>,
+	/// Derived/computed values block for reactive signals
+	pub derived: Option<FormDerived>,
 	/// Redirect URL on successful form submission
 	///
 	/// Supports static paths (`"/profile"`) or dynamic paths with parameter expansion (`"/profile/{id}"`).
@@ -76,6 +78,13 @@ pub struct FormMacro {
 	/// When specified, the form will call this server_fn to load initial values
 	/// for fields that have `initial_from` specified.
 	pub initial_loader: Option<Path>,
+	/// Choices loader server_fn for dynamic `ChoiceField`
+	///
+	/// When specified, the form will call this server_fn to load choice options
+	/// for fields that have `choices_from` specified. The loader returns a struct
+	/// containing the choice data, and individual fields use `choice_value` and
+	/// `choice_label` to extract the value and label from each choice item.
+	pub choices_loader: Option<Path>,
 	/// Slot definitions for custom UI elements
 	pub slots: Option<FormSlots>,
 	/// Field definitions (can include field groups)
@@ -265,6 +274,22 @@ pub enum FormFieldProperty {
 	/// Maps this field to a property in the data returned by `initial_loader`.
 	/// The value is the property name in the loaded data structure.
 	InitialFrom { field_name: LitStr, span: Span },
+	/// Choices source for dynamic ChoiceField: `choices_from: "choices"`
+	///
+	/// Specifies which field in the data returned by `choices_loader` contains
+	/// the array of choice options. Used with `ChoiceField` to populate
+	/// radio buttons, checkboxes, or select dropdowns dynamically.
+	ChoicesFrom { field_name: LitStr, span: Span },
+	/// Choice value path: `choice_value: "id"`
+	///
+	/// Specifies which property of each choice item to use as the form value.
+	/// The default is "value" if not specified.
+	ChoiceValue { path: LitStr, span: Span },
+	/// Choice label path: `choice_label: "choice_text"`
+	///
+	/// Specifies which property of each choice item to use as the display label.
+	/// The default is "label" if not specified.
+	ChoiceLabel { path: LitStr, span: Span },
 }
 
 /// A custom attribute for accessibility or data attributes.
@@ -488,6 +513,15 @@ impl FormFieldProperty {
 			FormFieldProperty::InitialFrom { .. } => {
 				panic!("InitialFrom property has no direct name")
 			}
+			FormFieldProperty::ChoicesFrom { .. } => {
+				panic!("ChoicesFrom property has no direct name")
+			}
+			FormFieldProperty::ChoiceValue { .. } => {
+				panic!("ChoiceValue property has no direct name")
+			}
+			FormFieldProperty::ChoiceLabel { .. } => {
+				panic!("ChoiceLabel property has no direct name")
+			}
 		}
 	}
 
@@ -503,6 +537,9 @@ impl FormFieldProperty {
 			FormFieldProperty::Attrs { span, .. } => *span,
 			FormFieldProperty::Bind { span, .. } => *span,
 			FormFieldProperty::InitialFrom { span, .. } => *span,
+			FormFieldProperty::ChoicesFrom { span, .. } => *span,
+			FormFieldProperty::ChoiceValue { span, .. } => *span,
+			FormFieldProperty::ChoiceLabel { span, .. } => *span,
 		}
 	}
 
@@ -766,6 +803,78 @@ pub struct FormWatchItem {
 	pub span: Span,
 }
 
+/// Derived/computed values block for reactive computed signals.
+///
+/// Contains named derived items that define computed values based on
+/// other form fields or signals. Each item generates a `Memo<T>` that
+/// automatically updates when its dependencies change.
+///
+/// ## Example DSL
+///
+/// ```ignore
+/// derived: {
+///     char_count: |form| form.content().get().len(),
+///     is_over_limit: |form| form.char_count().get() > 280,
+///     progress_percent: |form| (form.char_count().get() as f32 / 280.0 * 100.0).min(100.0),
+/// }
+/// ```
+///
+/// ## Generated Code
+///
+/// Each derived item generates a `Memo<T>` accessor on the form struct:
+///
+/// ```ignore
+/// impl MyForm {
+///     pub fn char_count(&self) -> Memo<usize> {
+///         Memo::new(move || self.content().get().len())
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone)]
+pub struct FormDerived {
+	/// List of named derived items
+	pub items: Vec<FormDerivedItem>,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+/// A single derived item within a derived block.
+///
+/// Each derived item has a name and a closure that computes a value.
+/// The closure receives the form instance as a parameter and can
+/// access any Signals or other derived values to create reactive dependencies.
+///
+/// ## Note
+///
+/// Unlike watch items which return `View`, derived items return a value
+/// that will be wrapped in `Memo<T>`. The type `T` is inferred from
+/// the closure's return type.
+#[derive(Debug, Clone)]
+pub struct FormDerivedItem {
+	/// Derived item name (used for generated accessor method name)
+	pub name: Ident,
+	/// Closure that computes the derived value
+	/// Signature: `|form: &FormName| -> T { ... }` or `|form| { ... }`
+	pub closure: ExprClosure,
+	/// Span for error reporting
+	pub span: Span,
+}
+
+impl FormDerived {
+	/// Creates a new empty FormDerived.
+	pub fn new(span: Span) -> Self {
+		Self {
+			items: Vec::new(),
+			span,
+		}
+	}
+
+	/// Returns true if no derived items are defined.
+	pub fn is_empty(&self) -> bool {
+		self.items.is_empty()
+	}
+}
+
 /// Slot definitions for custom UI elements in the form.
 ///
 /// Slots allow inserting custom elements before, after, or between form fields.
@@ -819,8 +928,10 @@ impl FormMacro {
 			state: None,
 			callbacks: FormCallbacks::new(),
 			watch: None,
+			derived: None,
 			redirect_on_success: None,
 			initial_loader: None,
+			choices_loader: None,
 			slots: None,
 			fields: Vec::new(),
 			validators: Vec::new(),
@@ -1030,6 +1141,56 @@ impl FormFieldDef {
 	/// Returns true if this field has an initial_from mapping.
 	pub fn has_initial_from(&self) -> bool {
 		self.get_initial_from().is_some()
+	}
+
+	/// Gets the choices_from field name if specified.
+	///
+	/// This specifies which field in the `choices_loader` result
+	/// contains the array of choice options.
+	pub fn get_choices_from(&self) -> Option<&LitStr> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::ChoicesFrom { field_name, .. } = p {
+				Some(field_name)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns true if this field has a choices_from mapping.
+	pub fn has_choices_from(&self) -> bool {
+		self.get_choices_from().is_some()
+	}
+
+	/// Gets the choice_value path if specified.
+	///
+	/// This specifies which property of each choice item to use as the form value.
+	pub fn get_choice_value(&self) -> Option<&LitStr> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::ChoiceValue { path, .. } = p {
+				Some(path)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Gets the choice_label path if specified.
+	///
+	/// This specifies which property of each choice item to use as the display label.
+	pub fn get_choice_label(&self) -> Option<&LitStr> {
+		self.properties.iter().find_map(|p| {
+			if let FormFieldProperty::ChoiceLabel { path, .. } = p {
+				Some(path)
+			} else {
+				None
+			}
+		})
+	}
+
+	/// Returns true if this is a dynamic choice field (has choices_from configured).
+	pub fn is_dynamic_choice_field(&self) -> bool {
+		self.has_choices_from()
 	}
 }
 
