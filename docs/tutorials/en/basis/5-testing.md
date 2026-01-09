@@ -296,6 +296,104 @@ async fn test_increment_votes(
 - `.await` - Don't forget to await the fixture!
 - Container cleanup is automatic via RAII
 
+## Using SQLite Fixtures (Alternative)
+
+For projects without migrations (like examples-tutorial-basis), you can use SQLite fixtures with model-based table creation:
+
+```rust
+use rstest::*;
+use reinhardt::test::fixtures::sqlite_with_models;
+use reinhardt::db::backends::DatabaseConnection;
+use std::sync::Arc;
+use chrono::Utc;
+use crate::models::{Question, Choice};
+
+// Create custom fixture for polls app
+#[fixture]
+async fn polls_sqlite(
+    #[future] sqlite_with_models: Arc<DatabaseConnection>
+) -> Arc<DatabaseConnection> {
+    sqlite_with_models.await
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_create_question_sqlite(
+    #[future] polls_sqlite: Arc<DatabaseConnection>
+) {
+    let conn = polls_sqlite.await;
+
+    // Create a question
+    let question = Question::new(
+        "What's your favorite language?".to_string(),
+    );
+    question.save(&conn).await.unwrap();
+
+    assert!(question.id > 0);
+
+    // Retrieve it
+    let retrieved = Question::objects()
+        .filter(Question::field_id().eq(question.id))
+        .get(&conn)
+        .await
+        .unwrap();
+
+    assert_eq!(retrieved.question_text, "What's your favorite language?");
+}
+
+#[rstest]
+#[tokio::test]
+async fn test_question_choices_relationship_sqlite(
+    #[future] polls_sqlite: Arc<DatabaseConnection>
+) {
+    let conn = polls_sqlite.await;
+
+    // Create question
+    let question = Question::new("Test question".to_string());
+    question.save(&conn).await.unwrap();
+
+    // Add choices using ForeignKeyField
+    let choice1 = Choice::new(
+        ForeignKeyField::new(question.id),
+        "Rust".to_string(),
+        0,
+    );
+    choice1.save(&conn).await.unwrap();
+
+    let choice2 = Choice::new(
+        ForeignKeyField::new(question.id),
+        "Python".to_string(),
+        0,
+    );
+    choice2.save(&conn).await.unwrap();
+
+    // Retrieve choices using generated accessor
+    let choices_accessor = Choice::question_accessor().reverse(&question, &conn);
+    let choices = choices_accessor.all().await.unwrap();
+
+    assert_eq!(choices.len(), 2);
+    assert_eq!(choices[0].choice_text, "Rust");
+    assert_eq!(choices[1].choice_text, "Python");
+}
+```
+
+**Key Differences from PostgreSQL:**
+
+- **In-memory database**: SQLite runs entirely in memory (no container)
+- **Faster startup**: No Docker container overhead
+- **Model-based tables**: Tables created from model definitions, not migrations
+- **Simpler teardown**: Database disappears when test ends
+
+**When to use SQLite vs PostgreSQL:**
+
+| Feature | SQLite | PostgreSQL |
+|---------|--------|------------|
+| Speed | Very fast (in-memory) | Slower (container startup) |
+| Isolation | Process-level | Container-level |
+| Production parity | Low | High |
+| Migrations | Not required | Required |
+| Best for | Unit tests, simple integration tests | Full integration tests, pre-production validation |
+
 ## Testing Views with rstest
 
 Create `polls/tests/view_tests.rs`:
