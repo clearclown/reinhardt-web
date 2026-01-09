@@ -5,10 +5,27 @@
 
 use async_graphql::{Context, EmptySubscription, ID, Object, Result as GqlResult, Schema};
 use reinhardt_graphql::{CreateUserInput, User, UserStorage};
+use rstest::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+
+/// Fixtures for resolver execution tests
+#[fixture]
+fn user_storage() -> UserStorage {
+	UserStorage::new()
+}
+
+#[fixture]
+fn post_storage() -> PostStorage {
+	PostStorage::new()
+}
+
+#[fixture]
+fn schema_fixture(user_storage: UserStorage, post_storage: PostStorage) -> TestSchema {
+	create_test_schema(user_storage, post_storage)
+}
 
 /// Extended User type with posts relationship (for nested query tests)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,11 +170,9 @@ fn create_test_schema(user_storage: UserStorage, post_storage: PostStorage) -> T
 }
 
 /// Test: Basic Query resolver execution
+#[rstest]
 #[tokio::test]
-async fn test_query_resolver_basic() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_query_resolver_basic(user_storage: UserStorage, post_storage: PostStorage) {
 	let user = User {
 		id: ID::from("user-1"),
 		name: "Alice".to_string(),
@@ -169,15 +184,15 @@ async fn test_query_resolver_basic() {
 	let schema = create_test_schema(user_storage, post_storage);
 
 	let query = r#"
-		{
-			user(id: "user-1") {
-				id
-				name
-				email
-				active
-			}
-		}
-	"#;
+        {
+            user(id: "user-1") {
+                id
+                name
+                email
+                active
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty(), "Should not have errors");
@@ -189,23 +204,22 @@ async fn test_query_resolver_basic() {
 	assert!(data["user"]["active"].as_bool().unwrap());
 }
 
-/// Test: Mutation resolver execution with data persistence
+/// Test: Mutation resolver execution
+#[rstest]
 #[tokio::test]
-async fn test_mutation_resolver_execution() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
+async fn test_mutation_resolver_execution(user_storage: UserStorage, post_storage: PostStorage) {
 	let schema = create_test_schema(user_storage.clone(), post_storage);
 
 	let mutation = r#"
-		mutation {
-			createUser(input: { name: "Bob", email: "bob@example.com" }) {
-				id
-				name
-				email
-				active
-			}
-		}
-	"#;
+        mutation {
+            createUser(input: { name: "Bob", email: "bob@example.com" }) {
+                id
+                name
+                email
+                active
+            }
+        }
+    "#;
 
 	let result = schema.execute(mutation).await;
 	assert!(result.errors.is_empty(), "Should not have errors");
@@ -222,12 +236,10 @@ async fn test_mutation_resolver_execution() {
 	assert_eq!(stored_user.unwrap().name, "Bob");
 }
 
-/// Test: Complex nested query (User → Posts → Author)
+/// Test: Complex nested query
+#[rstest]
 #[tokio::test]
-async fn test_complex_nested_query() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_complex_nested_query(user_storage: UserStorage, post_storage: PostStorage) {
 	// Add user
 	let user = User {
 		id: ID::from("author-1"),
@@ -257,18 +269,18 @@ async fn test_complex_nested_query() {
 
 	// Nested query: Post → Author
 	let query = r#"
-		{
-			post(id: "post-1") {
-				id
-				title
-				author {
-					id
-					name
-					email
-				}
-			}
-		}
-	"#;
+        {
+            post(id: "post-1") {
+                id
+                title
+                author {
+                    id
+                    name
+                    email
+                }
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty(), "Should not have errors");
@@ -281,11 +293,9 @@ async fn test_complex_nested_query() {
 }
 
 /// Test: Query with multiple relationships
+#[rstest]
 #[tokio::test]
-async fn test_query_multiple_relationships() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_query_multiple_relationships(user_storage: UserStorage, post_storage: PostStorage) {
 	let user = User {
 		id: ID::from("author-2"),
 		name: "David".to_string(),
@@ -309,13 +319,13 @@ async fn test_query_multiple_relationships() {
 	let schema = create_test_schema(user_storage, post_storage);
 
 	let query = r#"
-		{
-			postsByAuthor(authorId: "author-2") {
-				id
-				title
-			}
-		}
-	"#;
+        {
+            postsByAuthor(authorId: "author-2") {
+                id
+                title
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty(), "Should not have errors");
@@ -326,21 +336,20 @@ async fn test_query_multiple_relationships() {
 }
 
 /// Test: Error handling - GraphQL error response
+#[rstest]
 #[tokio::test]
-async fn test_error_handling_graphql_error() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
+async fn test_error_handling_graphql_error(user_storage: UserStorage, post_storage: PostStorage) {
 	let schema = create_test_schema(user_storage, post_storage);
 
 	// Try to create post with non-existent author
 	let mutation = r#"
-		mutation {
-			createPost(title: "Invalid Post", content: "Content", authorId: "nonexistent") {
-				id
-				title
-			}
-		}
-	"#;
+        mutation {
+            createPost(title: "Invalid Post", content: "Content", authorId: "nonexistent") {
+                id
+                title
+            }
+        }
+    "#;
 
 	let result = schema.execute(mutation).await;
 	assert!(!result.errors.is_empty(), "Should have errors");
@@ -351,11 +360,9 @@ async fn test_error_handling_graphql_error() {
 }
 
 /// Test: Field-level error handling
+#[rstest]
 #[tokio::test]
-async fn test_field_level_error() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_field_level_error(user_storage: UserStorage, post_storage: PostStorage) {
 	// Add post with non-existent author (simulating orphaned data)
 	let orphan_post = Post {
 		id: ID::from("orphan-post"),
@@ -369,17 +376,17 @@ async fn test_field_level_error() {
 
 	// Query should succeed, but author field should be null
 	let query = r#"
-		{
-			post(id: "orphan-post") {
-				id
-				title
-				author {
-					id
-					name
-				}
-			}
-		}
-	"#;
+        {
+            post(id: "orphan-post") {
+                id
+                title
+                author {
+                    id
+                    name
+                }
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty(), "Should not have errors");
@@ -390,21 +397,20 @@ async fn test_field_level_error() {
 }
 
 /// Test: Multiple mutations in sequence
+#[rstest]
 #[tokio::test]
-async fn test_multiple_mutations_sequence() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
+async fn test_multiple_mutations_sequence(user_storage: UserStorage, post_storage: PostStorage) {
 	let schema = create_test_schema(user_storage.clone(), post_storage.clone());
 
 	// First mutation: Create user
 	let mutation1 = r#"
-		mutation {
-			createUser(input: { name: "Eve", email: "eve@example.com" }) {
-				id
-				name
-			}
-		}
-	"#;
+        mutation {
+            createUser(input: { name: "Eve", email: "eve@example.com" }) {
+                id
+                name
+            }
+        }
+    "#;
 
 	let result1 = schema.execute(mutation1).await;
 	assert!(result1.errors.is_empty());
@@ -416,13 +422,13 @@ async fn test_multiple_mutations_sequence() {
 	// Second mutation: Create post for that user
 	let mutation2 = format!(
 		r#"
-		mutation {{
-			createPost(title: "Eve's Post", content: "Hello", authorId: "{}") {{
-				id
-				title
-			}}
-		}}
-	"#,
+        mutation {{
+            createPost(title: "Eve's Post", content: "Hello", authorId: "{}") {{
+                id
+                title
+            }}
+        }}
+    "#,
 		user_id
 	);
 
@@ -439,11 +445,9 @@ async fn test_multiple_mutations_sequence() {
 }
 
 /// Test: Query batching (multiple fields in one query)
+#[rstest]
 #[tokio::test]
-async fn test_query_batching() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_query_batching(user_storage: UserStorage, post_storage: PostStorage) {
 	// Add test data
 	user_storage
 		.add_user(User {
@@ -466,20 +470,20 @@ async fn test_query_batching() {
 
 	// Query multiple fields in one request
 	let query = r#"
-		{
-			user1: user(id: "batch-user-1") {
-				id
-				name
-			}
-			user2: user(id: "batch-user-2") {
-				id
-				name
-			}
-			allUsers: users {
-				id
-			}
-		}
-	"#;
+        {
+            user1: user(id: "batch-user-1") {
+                id
+                name
+            }
+            user2: user(id: "batch-user-2") {
+                id
+                name
+            }
+            allUsers: users {
+                id
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty());
@@ -491,11 +495,9 @@ async fn test_query_batching() {
 }
 
 /// Test: Resolver execution with context data access
+#[rstest]
 #[tokio::test]
-async fn test_resolver_context_data_access() {
-	let user_storage = UserStorage::new();
-	let post_storage = PostStorage::new();
-
+async fn test_resolver_context_data_access(user_storage: UserStorage, post_storage: PostStorage) {
 	user_storage
 		.add_user(User {
 			id: ID::from("context-test"),
@@ -509,12 +511,12 @@ async fn test_resolver_context_data_access() {
 
 	// Execute query - resolver should access UserStorage via Context
 	let query = r#"
-		{
-			user(id: "context-test") {
-				name
-			}
-		}
-	"#;
+        {
+            user(id: "context-test") {
+                name
+            }
+        }
+    "#;
 
 	let result = schema.execute(query).await;
 	assert!(result.errors.is_empty());

@@ -420,8 +420,9 @@ impl Injectable for AdminSite {
 mod tests {
 	use super::*;
 	use crate::ModelAdminConfig;
+	use rstest::rstest;
 
-	#[test]
+	#[rstest]
 	fn test_admin_site_creation() {
 		let admin = AdminSite::new("Test Admin");
 		assert_eq!(admin.name(), "Test Admin");
@@ -429,14 +430,14 @@ mod tests {
 		assert_eq!(admin.model_count(), 0);
 	}
 
-	#[test]
+	#[rstest]
 	fn test_url_prefix() {
 		let mut admin = AdminSite::new("Admin");
 		admin.set_url_prefix("/manage");
 		assert_eq!(admin.url_prefix(), "/manage");
 	}
 
-	#[test]
+	#[rstest]
 	fn test_configuration() {
 		let admin = AdminSite::new("Admin");
 		admin.configure(|config| {
@@ -449,7 +450,7 @@ mod tests {
 		assert_eq!(config.list_per_page, 25);
 	}
 
-	#[test]
+	#[rstest]
 	fn test_register_and_unregister() {
 		let admin = AdminSite::new("Admin");
 		let model_admin = ModelAdminConfig::new("User");
@@ -465,14 +466,14 @@ mod tests {
 		assert_eq!(admin.model_count(), 0);
 	}
 
-	#[test]
+	#[rstest]
 	fn test_unregister_nonexistent() {
 		let admin = AdminSite::new("Admin");
 		let result = admin.unregister("NonExistent");
 		assert!(result.is_err());
 	}
 
-	#[test]
+	#[rstest]
 	fn test_get_model_admin() {
 		let admin = AdminSite::new("Admin");
 		let model_admin = ModelAdminConfig::new("User");
@@ -483,14 +484,14 @@ mod tests {
 		assert!(retrieved.is_ok());
 	}
 
-	#[test]
+	#[rstest]
 	fn test_get_nonexistent_model_admin() {
 		let admin = AdminSite::new("Admin");
 		let result = admin.get_model_admin("NonExistent");
 		assert!(result.is_err());
 	}
 
-	#[test]
+	#[rstest]
 	fn test_registered_models() {
 		let admin = AdminSite::new("Admin");
 
@@ -507,7 +508,7 @@ mod tests {
 		assert!(models.contains(&"Post".into()));
 	}
 
-	#[test]
+	#[rstest]
 	fn test_clear() {
 		let admin = AdminSite::new("Admin");
 
@@ -524,7 +525,7 @@ mod tests {
 		assert_eq!(admin.model_count(), 0);
 	}
 
-	#[test]
+	#[rstest]
 	fn test_default_config() {
 		let config = AdminSiteConfig::default();
 		assert_eq!(config.site_title, "Admin Panel");

@@ -340,8 +340,9 @@ impl ModelAdminConfigBuilder {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use rstest::rstest;
 
-	#[test]
+	#[rstest]
 	fn test_model_admin_config_creation() {
 		let admin = ModelAdminConfig::new("User");
 		assert_eq!(admin.model_name(), "User");
@@ -349,7 +350,7 @@ mod tests {
 		assert_eq!(admin.list_filter(), Vec::<&str>::new());
 	}
 
-	#[test]
+	#[rstest]
 	fn test_model_admin_config_builder() {
 		let admin = ModelAdminConfig::builder()
 			.model_name("User")
@@ -366,7 +367,7 @@ mod tests {
 		assert_eq!(admin.list_per_page(), Some(50));
 	}
 
-	#[test]
+	#[rstest]
 	fn test_with_methods() {
 		let admin = ModelAdminConfig::new("Post")
 			.with_list_display(vec!["id", "title", "author"])
@@ -378,7 +379,7 @@ mod tests {
 		assert_eq!(admin.search_fields(), vec!["title", "content"]);
 	}
 
-	#[test]
+	#[rstest]
 	#[should_panic(expected = "model_name is required")]
 	fn test_builder_without_model_name() {
 		ModelAdminConfig::builder().build();

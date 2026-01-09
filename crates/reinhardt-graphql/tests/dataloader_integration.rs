@@ -4,6 +4,7 @@
 
 use async_trait::async_trait;
 use reinhardt_graphql::context::{DataLoader, LoaderError};
+use rstest::*;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -47,6 +48,7 @@ impl DataLoader for TestUserLoader {
 }
 
 /// Test: DataLoader batch loading (load_many)
+#[rstest]
 #[tokio::test]
 async fn test_dataloader_batch_loading() {
 	let loader = TestUserLoader::new();
@@ -66,6 +68,7 @@ async fn test_dataloader_batch_loading() {
 }
 
 /// Test: DataLoader N+1 problem mitigation
+#[rstest]
 #[tokio::test]
 async fn test_dataloader_n_plus_1_mitigation() {
 	let loader = TestUserLoader::new();
@@ -89,6 +92,7 @@ async fn test_dataloader_n_plus_1_mitigation() {
 }
 
 /// Test: DataLoader instance independence
+#[rstest]
 #[tokio::test]
 async fn test_dataloader_instance_independence() {
 	let loader1 = TestUserLoader::new();
@@ -105,6 +109,7 @@ async fn test_dataloader_instance_independence() {
 }
 
 /// Test: DataLoader error handling in batch load
+#[rstest]
 #[tokio::test]
 async fn test_dataloader_batch_error_handling() {
 	struct ErrorLoader;
@@ -149,6 +154,7 @@ async fn test_dataloader_batch_error_handling() {
 }
 
 /// Test: Multiple different DataLoaders
+#[rstest]
 #[tokio::test]
 async fn test_multiple_dataloader_types() {
 	struct UserLoader;
@@ -194,6 +200,7 @@ async fn test_multiple_dataloader_types() {
 }
 
 /// Test: DataLoader performance comparison (single vs batch)
+#[rstest]
 #[tokio::test]
 async fn test_dataloader_performance_comparison() {
 	use std::time::Instant;

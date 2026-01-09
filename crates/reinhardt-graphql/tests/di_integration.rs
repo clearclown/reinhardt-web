@@ -8,6 +8,7 @@
 use async_graphql::{Context, EmptyMutation, EmptySubscription, ID, Object, Result, Schema};
 use reinhardt_di::{DiError, Injectable, InjectionContext, SingletonScope};
 use reinhardt_graphql::{SchemaBuilderExt, graphql_handler};
+use rstest::*;
 use std::sync::{Arc, Mutex};
 
 /// Mock database connection for testing
@@ -106,6 +107,13 @@ impl User {
 	}
 }
 
+/// Fixture: Injection context with database and cache
+#[fixture]
+fn injection_context_with_database() -> Arc<InjectionContext> {
+	let singleton_scope = SingletonScope::new();
+	Arc::new(InjectionContext::builder(singleton_scope).build())
+}
+
 /// GraphQL Query root
 pub struct Query;
 
@@ -172,11 +180,11 @@ async fn user_uncached_handler(
 	Ok(user)
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_graphql_handler_basic_di() {
-	// Setup DI context
-	let singleton_scope = Arc::new(SingletonScope::new());
-	let injection_ctx = Arc::new(InjectionContext::builder(singleton_scope).build());
+async fn test_graphql_handler_basic_di(injection_context_with_database: Arc<InjectionContext>) {
+	// Setup DI context from fixture
+	let injection_ctx = injection_context_with_database;
 
 	// Build schema with DI context
 	let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
@@ -195,11 +203,13 @@ async fn test_graphql_handler_basic_di() {
 	assert_eq!(data["user"]["email"], "user123@example.com");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_graphql_handler_multiple_dependencies() {
-	// Setup DI context
-	let singleton_scope = Arc::new(SingletonScope::new());
-	let injection_ctx = Arc::new(InjectionContext::builder(singleton_scope).build());
+async fn test_graphql_handler_multiple_dependencies(
+	injection_context_with_database: Arc<InjectionContext>,
+) {
+	// Setup DI context from fixture
+	let injection_ctx = injection_context_with_database;
 
 	// Build schema with DI context
 	let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
@@ -217,11 +227,11 @@ async fn test_graphql_handler_multiple_dependencies() {
 	assert_eq!(data["userWithCache"]["name"], "User 456");
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_graphql_handler_list_query() {
-	// Setup DI context
-	let singleton_scope = Arc::new(SingletonScope::new());
-	let injection_ctx = Arc::new(InjectionContext::builder(singleton_scope).build());
+async fn test_graphql_handler_list_query(injection_context_with_database: Arc<InjectionContext>) {
+	// Setup DI context from fixture
+	let injection_ctx = injection_context_with_database;
 
 	// Build schema with DI context
 	let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
@@ -242,6 +252,7 @@ async fn test_graphql_handler_list_query() {
 	assert_eq!(users[2]["id"], "3");
 }
 
+#[rstest]
 #[tokio::test]
 async fn test_graphql_handler_missing_di_context() {
 	// Build schema WITHOUT DI context
@@ -257,11 +268,13 @@ async fn test_graphql_handler_missing_di_context() {
 	assert!(error.message.contains("DI context not set"));
 }
 
+#[rstest]
 #[tokio::test]
-async fn test_graphql_handler_cache_control() {
-	// Setup DI context
-	let singleton_scope = Arc::new(SingletonScope::new());
-	let injection_ctx = Arc::new(InjectionContext::builder(singleton_scope).build());
+async fn test_graphql_handler_cache_control(
+	injection_context_with_database: Arc<InjectionContext>,
+) {
+	// Setup DI context from fixture
+	let injection_ctx = injection_context_with_database;
 
 	// Build schema with DI context
 	let schema = Schema::build(Query, EmptyMutation, EmptySubscription)
