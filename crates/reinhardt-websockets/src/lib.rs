@@ -85,6 +85,63 @@
 //! let snapshot = metrics.snapshot();
 //! println!("{}", snapshot.summary());
 //! ```
+//!
+//! ### Integration with reinhardt-pages
+//!
+//! The `pages-integration` feature enables seamless integration with reinhardt-pages,
+//! allowing WebSocket connections to use the same Cookie/session-based authentication
+//! as the HTTP layer:
+//!
+//! ```toml
+//! [dependencies]
+//! reinhardt-websockets = { version = "0.1", features = ["pages-integration"] }
+//! ```
+//!
+//! **Server-side setup:**
+//!
+//! ```ignore
+//! use reinhardt_websockets::{PagesAuthenticator, WebSocketRouter, WebSocketRoute};
+//! use std::sync::Arc;
+//!
+//! // Create authenticator that integrates with reinhardt-pages sessions
+//! let authenticator = Arc::new(PagesAuthenticator::new());
+//!
+//! // Register WebSocket routes
+//! let mut router = WebSocketRouter::new();
+//! router.register_route(WebSocketRoute::new(
+//!     "/ws/chat".to_string(),
+//!     Some("websocket:chat".to_string()),
+//! )).await.unwrap();
+//! ```
+//!
+//! **Client-side usage (WASM):**
+//!
+//! On the client side, use the `use_websocket` hook from reinhardt-pages:
+//!
+//! ```ignore
+//! use reinhardt_pages::reactive::hooks::{use_websocket, UseWebSocketOptions};
+//!
+//! let ws = use_websocket("ws://localhost:8000/ws/chat", UseWebSocketOptions::default());
+//!
+//! // Send message
+//! ws.send_text("Hello, server!".to_string()).ok();
+//!
+//! // Monitor connection state
+//! use_effect({
+//!     let ws = ws.clone();
+//!     move || {
+//!         match ws.connection_state().get() {
+//!             ConnectionState::Open => log!("Connected"),
+//!             ConnectionState::Closed => log!("Disconnected"),
+//!             _ => {}
+//!         }
+//!         None::<fn()>
+//!     }
+//! });
+//! ```
+//!
+//! The authentication cookies from the user's HTTP session are automatically included
+//! in the WebSocket handshake, allowing the server to authenticate the connection.
 
 pub mod auth;
 pub mod channels;
@@ -93,6 +150,8 @@ pub mod compression;
 pub mod connection;
 pub mod consumers;
 pub mod handler;
+#[cfg(feature = "pages-integration")]
+pub mod integration;
 pub mod metrics;
 pub mod middleware;
 pub mod protocol;
@@ -119,6 +178,8 @@ pub use consumers::{
 	WebSocketConsumer,
 };
 pub use handler::WebSocketHandler;
+#[cfg(feature = "pages-integration")]
+pub use integration::pages::{PagesAuthUser, PagesAuthenticator};
 #[cfg(feature = "metrics")]
 pub use metrics::MetricsExporter;
 pub use metrics::{MetricsCollector, MetricsSnapshot, PeriodicReporter, WebSocketMetrics};
