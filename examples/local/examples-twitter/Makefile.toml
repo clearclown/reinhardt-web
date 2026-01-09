@@ -176,35 +176,26 @@ description = "Compile WASM binary (debug mode)"
 command = "cargo"
 args = ["build", "--target", "wasm32-unknown-unknown"]
 
-[tasks.collectstatic-wasm]
-description = "Collect static files to dist/ for WASM frontend"
-command = "cargo"
-args = ["run", "--bin", "examples-twitter", "collectstatic", "--no-input"]
-dependencies = ["wasm-compile-dev"]
-
 [tasks.wasm-bindgen-dev]
 description = "Generate WASM bindings using wasm-pack (debug mode)"
 command = "wasm-pack"
 args = [
 	"build",
 	"--target", "web",
-	"--out-dir", "dist",
+	"--out-dir", "dist-wasm",
 	"--dev",
 	"--no-typescript"
 ]
-dependencies = ["collectstatic-wasm"]
-
-[tasks.wasm-finalize-dev]
-description = "Finalize WASM build (copy index.html)"
-script = '''
-[ -f index.html ] && cp index.html dist/
-echo "✓ WASM build completed: dist/"
-'''
-dependencies = ["wasm-bindgen-dev"]
+dependencies = ["wasm-compile-dev"]
 
 [tasks.wasm-build-dev]
-description = "Build WASM in debug mode"
-dependencies = ["wasm-finalize-dev"]
+description = "Build WASM in debug mode and collect static files"
+dependencies = ["wasm-bindgen-dev"]
+script = '''
+echo "Running collectstatic..."
+cargo run --bin examples-twitter collectstatic --no-input
+echo "✓ WASM build and collectstatic completed"
+'''
 
 [tasks.wasm-compile-release]
 description = "Compile WASM binary (release mode)"
@@ -217,39 +208,40 @@ command = "wasm-pack"
 args = [
 	"build",
 	"--target", "web",
-	"--out-dir", "dist",
+	"--out-dir", "dist-wasm",
 	"--release"
 ]
-dependencies = ["collectstatic-wasm"]
+dependencies = ["wasm-compile-release"]
 
 [tasks.wasm-finalize-release]
-description = "Finalize WASM build (copy index.html, optimize with wasm-opt)"
+description = "Optimize WASM with wasm-opt and collect static files"
 script = '''
-[ -f index.html ] && cp index.html dist/
-
 # Optimize with wasm-opt if available
 if command -v wasm-opt &> /dev/null; then
 	echo "Running wasm-opt..."
-	WASM_FILE="dist/examples_twitter_bg.wasm"
+	WASM_FILE="dist-wasm/examples_twitter_bg.wasm"
 	wasm-opt -O3 -o "$WASM_FILE.opt" "$WASM_FILE"
 	mv "$WASM_FILE.opt" "$WASM_FILE"
 	echo "✓ WASM optimized"
 else
 	echo "⚠️  wasm-opt not found, skipping optimization"
 fi
-
-echo "✓ WASM build completed: dist/"
 '''
 dependencies = ["wasm-bindgen-release"]
 
 [tasks.wasm-build-release]
-description = "Build WASM in release mode with optimization"
+description = "Build WASM in release mode with optimization and collect static files"
 dependencies = ["wasm-finalize-release"]
+script = '''
+echo "Running collectstatic..."
+cargo run --bin examples-twitter collectstatic --no-input
+echo "✓ WASM release build and collectstatic completed"
+'''
 
 [tasks.wasm-clean]
 description = "Clean WASM build artifacts"
 script = '''
-rm -rf dist
+rm -rf dist dist-wasm
 echo "✓ Cleaned WASM artifacts"
 '''
 
@@ -259,7 +251,7 @@ echo "✓ Cleaned WASM artifacts"
 
 [tasks.dev]
 description = "Build WASM and start development server with frontend"
-dependencies = ["wasm-build-dev", "collectstatic", "run-dev-server"]
+dependencies = ["wasm-build-dev", "run-dev-server"]
 
 [tasks.run-dev-server]
 description = "Start development server with frontend (MUST run from project directory)"
