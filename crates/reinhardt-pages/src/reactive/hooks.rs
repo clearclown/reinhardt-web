@@ -49,6 +49,7 @@
 //! ### Other Hooks
 //! - [`use_id`] - Generate unique IDs
 //! - [`use_sync_external_store`] - Subscribe to external stores
+//! - [`use_websocket`] - WebSocket connections (WASM only)
 //! - [`use_action_state`] - Form action state
 //! - [`use_optimistic`] - Optimistic UI updates
 //! - [`use_debug_value`] - DevTools labels
@@ -98,6 +99,7 @@ pub mod refs;
 pub mod state;
 pub mod sync;
 pub mod transition;
+pub mod websocket;
 
 // Re-export all hooks
 pub use action::{ActionState, OptimisticState, use_action_state, use_optimistic};
@@ -112,3 +114,6 @@ pub use state::{
 };
 pub use sync::{SignalWithSubscription, SubscriptionHandle, use_sync_external_store};
 pub use transition::{TransitionState, use_deferred_value, use_transition};
+pub use websocket::{
+	ConnectionState, UseWebSocketOptions, WebSocketHandle, WebSocketMessage, use_websocket,
+};
