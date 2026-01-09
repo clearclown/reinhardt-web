@@ -1,29 +1,23 @@
 //! Authentication server functions
 //!
 //! Server functions for user authentication and session management.
-//! These are accessible from both WASM (client stubs) and server (handlers).
 
 use crate::shared::types::UserInfo;
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
 
-// Server-only imports - only needed for server build
+// Server-only imports
 #[cfg(not(target_arch = "wasm32"))]
 use {
 	crate::apps::auth::models::User,
 	crate::shared::types::{LoginRequest, RegisterRequest},
 	reinhardt::db::orm::{FilterOperator, FilterValue, Model},
 	reinhardt::middleware::session::{SessionData, SessionStoreRef},
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
 	reinhardt::{BaseUser, DatabaseConnection},
 	uuid::Uuid,
 	validator::Validate,
 };
 
-// WASM-only imports
-#[cfg(target_arch = "wasm32")]
-use reinhardt::pages::server_fn::{ServerFnError, server_fn};
-
 /// Login user and return user info (stateless, no session management)
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn login(
 	email: String,
@@ -69,19 +63,7 @@ pub async fn login(
 	Ok(UserInfo::from(user))
 }
 
-/// Login - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn login(
-	email: String,
-	password: String,
-) -> std::result::Result<UserInfo, ServerFnError> {
-	// This body is replaced by the macro with HTTP request code
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Register new user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn register(
 	username: String,
@@ -148,21 +130,7 @@ pub async fn register(
 	Ok(())
 }
 
-/// Register - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn register(
-	username: String,
-	email: String,
-	password: String,
-	password_confirmation: String,
-) -> std::result::Result<(), ServerFnError> {
-	// This body is replaced by the macro with HTTP request code
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Logout user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn logout(
 	#[inject] session: SessionData,
@@ -173,16 +141,7 @@ pub async fn logout(
 	Ok(())
 }
 
-/// Logout - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn logout() -> std::result::Result<(), ServerFnError> {
-	// This body is replaced by the macro with HTTP request code
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Get current logged-in user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn current_user(
 	#[inject] _db: DatabaseConnection,
@@ -206,12 +165,4 @@ pub async fn current_user(
 		.map_err(|e| ServerFnError::application(format!("Database error: {}", e)))?;
 
 	Ok(user.map(UserInfo::from))
-}
-
-/// Current user - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn current_user() -> std::result::Result<Option<UserInfo>, ServerFnError> {
-	// This body is replaced by the macro with HTTP request code
-	unreachable!("This function body should be replaced by the server_fn macro")
 }

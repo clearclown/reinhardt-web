@@ -1,9 +1,10 @@
 //! Relationship server functions
 //!
 //! Server functions for user follow/unfollow and follower management.
-//! These are accessible from both WASM (client stubs) and server (handlers).
 
 use crate::shared::types::UserInfo;
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
+use uuid::Uuid;
 
 // Server-only imports
 #[cfg(not(target_arch = "wasm32"))]
@@ -12,19 +13,9 @@ use {
 	reinhardt::DatabaseConnection,
 	reinhardt::db::orm::{FilterOperator, FilterValue, ManyToManyAccessor, Model},
 	reinhardt::middleware::session::SessionData,
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
-};
-
-// WASM-only imports
-#[cfg(target_arch = "wasm32")]
-use {
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
 };
 
 /// Follow a user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn follow_user(
 	target_user_id: Uuid,
@@ -69,15 +60,7 @@ pub async fn follow_user(
 	Ok(())
 }
 
-/// Follow user - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn follow_user(target_user_id: Uuid) -> std::result::Result<(), ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Unfollow a user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn unfollow_user(
 	target_user_id: Uuid,
@@ -122,15 +105,7 @@ pub async fn unfollow_user(
 	Ok(())
 }
 
-/// Unfollow user - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn unfollow_user(target_user_id: Uuid) -> std::result::Result<(), ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Fetch followers of a user
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn fetch_followers(
 	user_id: Uuid,
@@ -159,15 +134,7 @@ pub async fn fetch_followers(
 	Ok(followers.into_iter().map(UserInfo::from).collect())
 }
 
-/// Fetch followers - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn fetch_followers(user_id: Uuid) -> std::result::Result<Vec<UserInfo>, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Fetch users that the specified user is following
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn fetch_following(
 	user_id: Uuid,
@@ -193,11 +160,4 @@ pub async fn fetch_following(
 		.map_err(|e| ServerFnError::server(500, format!("Database error: {}", e)))?;
 
 	Ok(following.into_iter().map(UserInfo::from).collect())
-}
-
-/// Fetch following - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn fetch_following(user_id: Uuid) -> std::result::Result<Vec<UserInfo>, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
 }

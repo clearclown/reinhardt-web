@@ -1,38 +1,38 @@
 //! Tweet server functions
 //!
 //! Server functions for tweet management.
-//! These are accessible from both WASM (client stubs) and server (handlers).
 
-use crate::shared::types::{CreateTweetRequest, TweetInfo};
+use crate::shared::types::TweetInfo;
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
+use uuid::Uuid;
 
 // Server-only imports
 #[cfg(not(target_arch = "wasm32"))]
 use {
 	crate::apps::auth::models::User,
 	crate::apps::tweet::models::Tweet,
+	crate::shared::types::CreateTweetRequest,
 	reinhardt::CurrentUser,
 	reinhardt::DatabaseConnection,
 	reinhardt::db::orm::{Filter, FilterOperator, FilterValue, Model},
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
 	validator::Validate,
 };
 
-// WASM-only imports
-#[cfg(target_arch = "wasm32")]
-use {
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
-};
-
 /// Create a new tweet
-#[cfg(not(target_arch = "wasm32"))]
+///
+/// Accepts `content` as a String parameter (form! macro passes individual field values).
+/// Internally constructs CreateTweetRequest for validation.
 #[server_fn(use_inject = true)]
 pub async fn create_tweet(
-	request: CreateTweetRequest,
+	content: String,
 	#[inject] db: DatabaseConnection,
 	#[inject] current_user: CurrentUser<User>,
 ) -> std::result::Result<TweetInfo, ServerFnError> {
+	// Construct request for validation
+	let request = CreateTweetRequest {
+		content: content.clone(),
+	};
+
 	// Validate request
 	request
 		.validate()
@@ -73,17 +73,7 @@ pub async fn create_tweet(
 	))
 }
 
-/// Create tweet - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn create_tweet(
-	request: CreateTweetRequest,
-) -> std::result::Result<TweetInfo, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// List tweets
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn list_tweets(
 	user_id: Option<Uuid>,
@@ -161,18 +151,7 @@ pub async fn list_tweets(
 	Ok(tweet_infos)
 }
 
-/// List tweets - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn list_tweets(
-	user_id: Option<Uuid>,
-	page: u32,
-) -> std::result::Result<Vec<TweetInfo>, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Delete a tweet
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn delete_tweet(
 	tweet_id: Uuid,
@@ -211,11 +190,4 @@ pub async fn delete_tweet(
 		.map_err(|e| ServerFnError::application(format!("Database error: {}", e)))?;
 
 	Ok(())
-}
-
-/// Delete tweet - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn delete_tweet(tweet_id: Uuid) -> std::result::Result<(), ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
 }

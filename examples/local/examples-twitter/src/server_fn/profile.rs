@@ -1,9 +1,10 @@
 //! Profile server functions
 //!
 //! Server functions for user profile management.
-//! These are accessible from both WASM (client stubs) and server (handlers).
 
 use crate::shared::types::{ProfileResponse, UpdateProfileRequest};
+use reinhardt::pages::server_fn::{ServerFnError, server_fn};
+use uuid::Uuid;
 
 // Server-only imports
 #[cfg(not(target_arch = "wasm32"))]
@@ -12,20 +13,10 @@ use {
 	reinhardt::DatabaseConnection,
 	reinhardt::db::orm::{FilterOperator, FilterValue, Model},
 	reinhardt::middleware::session::SessionData,
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
 	validator::Validate,
 };
 
-// WASM-only imports
-#[cfg(target_arch = "wasm32")]
-use {
-	reinhardt::pages::server_fn::{ServerFnError, server_fn},
-	uuid::Uuid,
-};
-
 /// Fetch user profile
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn fetch_profile(
 	user_id: Uuid,
@@ -45,15 +36,7 @@ pub async fn fetch_profile(
 	Ok(ProfileResponse::from(profile))
 }
 
-/// Fetch profile - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn fetch_profile(user_id: Uuid) -> std::result::Result<ProfileResponse, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Update user profile
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn update_profile(
 	request: UpdateProfileRequest,
@@ -104,15 +87,6 @@ pub async fn update_profile(
 	Ok(ProfileResponse::from(profile))
 }
 
-/// Update profile - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn update_profile(
-	request: UpdateProfileRequest,
-) -> std::result::Result<ProfileResponse, ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
-}
-
 /// Form-compatible wrapper for update_profile
 ///
 /// This wrapper accepts individual field arguments from form! macro's server_fn integration
@@ -120,7 +94,6 @@ pub async fn update_profile(
 /// as expected by form! macro's submit() method.
 ///
 /// The argument order matches form! macro's field order: avatar_url, bio, location, website
-#[cfg(not(target_arch = "wasm32"))]
 #[server_fn(use_inject = true)]
 pub async fn update_profile_form(
 	avatar_url: String,
@@ -188,16 +161,4 @@ pub async fn update_profile_form(
 		.map_err(|e| ServerFnError::server(500, format!("Database error: {}", e)))?;
 
 	Ok(())
-}
-
-/// Form-compatible update profile - WASM client stub
-#[cfg(target_arch = "wasm32")]
-#[server_fn]
-pub async fn update_profile_form(
-	avatar_url: String,
-	bio: String,
-	location: String,
-	website: String,
-) -> std::result::Result<(), ServerFnError> {
-	unreachable!("This function body should be replaced by the server_fn macro")
 }

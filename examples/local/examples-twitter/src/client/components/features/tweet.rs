@@ -1,10 +1,13 @@
-//! Tweet components using React-like hooks
+//! Tweet components using React-like hooks and form! macro
 //!
-//! Provides tweet card, tweet form, and tweet list components with hooks-styled state management.
+//! Provides tweet card, tweet form, and tweet list components.
+//! tweet_form uses the form! macro with derived blocks for computed signals,
+//! while tweet_card and tweet_list use page! macro with hooks-styled state management.
 
-use crate::shared::types::{CreateTweetRequest, TweetInfo};
+use crate::shared::types::TweetInfo;
 use reinhardt::pages::Signal;
 use reinhardt::pages::component::View;
+use reinhardt::pages::form;
 use reinhardt::pages::page;
 use reinhardt::pages::reactive::hooks::use_state;
 use uuid::Uuid;
@@ -12,10 +15,11 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use {
 	crate::server_fn::tweet::{create_tweet, delete_tweet, list_tweets},
-	wasm_bindgen::JsCast,
 	wasm_bindgen_futures::spawn_local,
-	web_sys::HtmlTextAreaElement,
 };
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::server_fn::tweet::create_tweet;
 
 /// Like button component (extracted to avoid nested watch blocks)
 ///
@@ -329,27 +333,125 @@ pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 	)
 }
 
-/// Tweet form component using hooks
+/// Tweet form component using form! macro
 ///
 /// Provides form for creating a new tweet with 280 character limit.
-/// Modern design with character counter and animated submit button.
-/// Uses watch blocks for reactive UI updates when state changes.
+/// Demonstrates the use of derived blocks for computed signals (char_count),
+/// watch blocks for reactive UI (character counter with 4-level styling),
+/// and state management (loading, error signals).
+///
+/// # Features demonstrated
+/// - `derived` block: Automatically computes `char_count` from content
+/// - `watch` block with match expressions: 4-level character counter styling
+/// - `state` block: Automatic loading/error signal management
+/// - `on_success` callback: Page reload after successful submission
 pub fn tweet_form() -> View {
-	// Hook-styled state for form fields
-	let (content, set_content) = use_state(String::new());
-	let (error, set_error) = use_state(None::<String>);
-	let (loading, set_loading) = use_state(false);
-	let (char_count, set_char_count) = use_state(0usize);
+	// Define the form using form! macro with derived signals
+	let tweet_form_instance = form! {
+		name: TweetFormInner,
+		server_fn: create_tweet,
+		method: Post,
 
-	// Clone signals for passing to page! macro (NOT extracting values)
-	let content_signal = content.clone();
-	let error_signal = error.clone();
-	let loading_signal = loading.clone();
-	// Separate clones for each watch block to avoid closure ownership conflicts
-	let char_count_for_counter = char_count.clone();
-	let char_count_for_button = char_count.clone();
+		// State management - generates loading and error signals automatically
+		state: { loading, error },
 
-	page!(|content_signal: Signal<String>, error_signal: Signal<Option<String>>, loading_signal: Signal<bool>, char_count_for_counter: Signal<usize>, char_count_for_button: Signal<usize>| {
+		fields: {
+			content: TextField {
+				widget: Textarea,
+				bind: true,
+				max_length: 280,
+				required,
+				placeholder: "What's happening?",
+				class: "form-textarea border-0 bg-transparent focus:ring-0 text-lg resize-none",
+				rows: 3,
+			},
+		},
+
+		// Watch blocks for reactive UI rendering
+		// Following polls.rs pattern: simple inline conditionals without nested watch blocks
+		watch: {
+			// Character counter with styling based on count
+			char_counter: |form| {
+				let char_count = form.content().get().len();
+				let progress_percent = (char_count as f64 / 280.0 * 100.0).min(100.0);
+				let width_style = format!("width: {}%", progress_percent);
+				// Determine color class based on count (use String for 'static lifetime)
+				let (text_class, bar_class) = if char_count > 280 {
+					("text-sm font-medium text-danger".to_string(), "h-full bg-danger transition-all".to_string())
+				} else if char_count > 250 {
+					("text-sm font-medium text-warning".to_string(), "h-full bg-warning transition-all".to_string())
+				} else if char_count > 0 {
+					("text-sm font-medium text-content-tertiary".to_string(), "h-full bg-brand transition-all".to_string())
+				} else {
+					("text-sm font-medium text-content-tertiary".to_string(), "h-full bg-surface-tertiary transition-all".to_string())
+				};
+				let display_text = format!("{}/280", char_count);
+				page!(|text_class: String, bar_class: String, width_style: String, display_text: String| {
+					div {
+						class: "flex items-center gap-2",
+						div {
+							class: text_class,
+							{ display_text }
+						}
+						div {
+							class: "w-20 h-1 bg-surface-tertiary rounded-full overflow-hidden",
+							div {
+								class: bar_class,
+								style: width_style,
+							}
+						}
+					}
+				})(text_class, bar_class, width_style, display_text)
+			},
+			// Submit button with loading/disabled states
+			// Pattern from polls.rs: simple inline conditionals
+			submit_button: |form| {
+				let is_loading = form.loading().get();
+				let char_count = form.content().get().len();
+				let is_valid = char_count > 0 && char_count <= 280;
+				let is_disabled = is_loading || !is_valid;
+				page!(|is_loading: bool, is_disabled: bool| {
+					div {
+						button {
+							r#type: "submit",
+							class: if is_disabled { "btn-primary opacity-50 cursor-not-allowed" } else { "btn-primary" },
+							disabled: is_disabled,
+							{ if is_loading { "Posting..." } else { "Post" } }
+						}
+					}
+				})(is_loading, is_disabled)
+			},
+			// Error display - following polls.rs pattern with simple conditional
+			error_display: |form| {
+				let err = form.error().get();
+				let has_error = err.is_some();
+				let error_msg = err.unwrap_or_default();
+				page!(|has_error: bool, error_msg: String| {
+					div {
+						class: if has_error { "alert-danger mb-3" } else { "hidden" },
+						{ error_msg }
+					}
+				})(has_error, error_msg)
+			},
+		},
+
+		// Callback for successful submission - reload page
+		on_success: |_result| {
+			#[cfg(target_arch = "wasm32")]
+			{
+				if let Some(window) = web_sys::window() {
+					let _ = window.location().reload();
+				}
+			}
+		},
+	};
+
+	// Wrap form in the card layout
+	// Extract the form instance's view components for custom layout
+	let form_view = tweet_form_instance.into_view();
+
+	// Create the full card layout
+	page!(|form_view: View| {
 		div {
 			class: "card mb-4",
 			div {
@@ -365,184 +467,12 @@ pub fn tweet_form() -> View {
 					}
 					div {
 						class: "flex-1",
-						watch {
-							if error_signal.clone().get().is_some() {
-								div {
-									class: "alert-danger mb-3",
-									{ error_signal.clone().get().unwrap_or_default() }
-								}
-							}
-						}
-						form {
-							@submit: {
-										let set_error = set_error.clone();
-										let set_loading = set_loading.clone();
-										let content = content.clone();
-										let set_content = set_content.clone();
-										let set_char_count = set_char_count.clone();
-										move |event: web_sys::Event| {
-											#[cfg(target_arch = "wasm32")]
-											{
-												event.prevent_default();
-												let set_error = set_error.clone();
-												let set_loading = set_loading.clone();
-												let content_value = content.get();
-												let set_content = set_content.clone();
-												let set_char_count = set_char_count.clone();
-												spawn_local(async move {
-													set_loading(true);
-													set_error(None);
-													let request = CreateTweetRequest {
-														content: content_value,
-													};
-													match create_tweet(request).await {
-														Ok(_) => {
-															set_content(String::new());
-															set_char_count(0);
-															set_loading(false);
-															if let Some(window) = web_sys::window() {
-																let _ = window.location().reload();
-															}
-														}
-														Err(e) => {
-															set_error(Some(e.to_string()));
-															set_loading(false);
-														}
-													}
-												});
-											}
-										}
-									},
-							div {
-								textarea {
-									class: "form-textarea border-0 bg-transparent focus:ring-0 text-lg resize-none",
-									id: "content",
-									name: "content",
-									rows: 3,
-									maxlength: 280,
-									placeholder: "What's happening?",
-									@input: {
-												let set_content = set_content.clone();
-												let set_char_count = set_char_count.clone();
-												move |event: web_sys::Event| {
-													#[cfg(target_arch = "wasm32")]
-													{
-														if let Some(target) = event.target() {
-															if let Ok(textarea) = target.dyn_into::<HtmlTextAreaElement>() {
-																let value = textarea.value();
-																set_char_count(value.len());
-																set_content(value);
-															}
-														}
-													}
-												}
-											},
-									{ content_signal.get() }
-								}
-								div {
-									class: "divider",
-								}
-								div {
-									class: "flex justify-between items-center",
-									watch {
-										if char_count_for_counter.get()>280 {
-											div {
-												class: "flex items-center gap-2",
-												div {
-													class: "text-sm font-medium text-danger",
-													{ format!("{}/280", char_count_for_counter.get()) }
-												}
-												div {
-													class: "w-20 h-1 bg-surface-tertiary rounded-full overflow-hidden",
-													div {
-														class: "h-full bg-danger transition-all",
-														style: "width: 100%",
-													}
-												}
-											}
-										} else if char_count_for_counter.get()>250 {
-											div {
-												class: "flex items-center gap-2",
-												div {
-													class: "text-sm font-medium text-warning",
-													{ format!("{}/280", char_count_for_counter.get()) }
-												}
-												div {
-													class: "w-20 h-1 bg-surface-tertiary rounded-full overflow-hidden",
-													div {
-														class: "h-full bg-warning transition-all",
-														style: format!("width: {}%", (char_count_for_counter.get() as f32 / 280.0 * 100.0).min(100.0)),
-													}
-												}
-											}
-										} else if char_count_for_counter.get()>0 {
-											div {
-												class: "flex items-center gap-2",
-												div {
-													class: "text-sm font-medium text-content-tertiary",
-													{ format!("{}/280", char_count_for_counter.get()) }
-												}
-												div {
-													class: "w-20 h-1 bg-surface-tertiary rounded-full overflow-hidden",
-													div {
-														class: "h-full bg-brand transition-all",
-														style: format!("width: {}%", (char_count_for_counter.get() as f32 / 280.0 * 100.0).min(100.0)),
-													}
-												}
-											}
-										} else {
-											div {
-												class: "flex items-center gap-2",
-												div {
-													class: "text-sm font-medium text-content-tertiary",
-													"0/280"
-												}
-											}
-										}
-									}
-									watch {
-										if loading_signal.clone().get() {
-											button {
-												r#type: "submit",
-												class: "btn-primary opacity-50 cursor-not-allowed",
-												disabled: loading_signal.clone().get(),
-												div {
-													class: "flex items-center gap-2",
-													div {
-														class: "spinner-sm",
-													}
-													"Posting..."
-												}
-											}
-										} else if char_count_for_button.get() == 0 || char_count_for_button.get()>280 {
-											button {
-												r#type: "submit",
-												class: "btn-primary opacity-50 cursor-not-allowed",
-												disabled: char_count_for_button.get() == 0 || char_count_for_button.get()>280,
-												"Post"
-											}
-										} else {
-											button {
-												r#type: "submit",
-												class: "btn-primary",
-												"Post"
-											}
-										}
-									}
-								}
-							}
-						}
+						{ form_view }
 					}
 				}
 			}
 		}
-	})(
-		content_signal,
-		error_signal,
-		loading_signal,
-		char_count_for_counter,
-		char_count_for_button,
-	)
+	})(form_view)
 }
 
 /// Tweet list component using hooks
