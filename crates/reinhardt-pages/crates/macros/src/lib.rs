@@ -1431,6 +1431,70 @@ pub fn head(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
+/// ## Computed Values (derived block)
+///
+/// The `derived` block creates computed values from form fields. Each derived item
+/// becomes a method on the form struct that returns a computed value based on
+/// field signals. The values are computed each time they are accessed.
+///
+/// | Syntax | Description |
+/// |--------|-------------|
+/// | `name: \|form\| expr` | Computes value from form fields |
+///
+/// ### Character Counter Example
+///
+/// ```ignore
+/// let form = form! {
+///     name: TweetForm,
+///     server_fn: create_tweet,
+///
+///     derived: {
+///         char_count: |form| form.content().get().len(),
+///         is_over_limit: |form| form.char_count() > 280,
+///         progress_percent: |form| (form.char_count() as f32 / 280.0 * 100.0).min(100.0),
+///     },
+///
+///     fields: {
+///         content: CharField { required, bind: true, max_length: 280 },
+///     },
+/// };
+///
+/// // Access computed values
+/// let count = form.char_count();      // Returns usize
+/// let over = form.is_over_limit();    // Returns bool
+/// let pct = form.progress_percent();  // Returns f32
+/// ```
+///
+/// ### Shopping Cart Example
+///
+/// ```ignore
+/// let form = form! {
+///     name: OrderForm,
+///     server_fn: place_order,
+///
+///     derived: {
+///         subtotal: |form| {
+///             let price = form.price().get().parse::<f64>().unwrap_or(0.0);
+///             let qty = form.quantity().get().parse::<i32>().unwrap_or(0);
+///             price * qty as f64
+///         },
+///         tax: |form| form.subtotal() * 0.1,
+///         total: |form| form.subtotal() + form.tax(),
+///     },
+///
+///     fields: {
+///         price: DecimalField { required, bind: true },
+///         quantity: IntegerField { required, bind: true },
+///     },
+/// };
+/// ```
+///
+/// ### Usage Notes
+///
+/// - Derived values are computed on each access (not cached)
+/// - Derived items can reference other derived items in the same block
+/// - Use with `watch` blocks for reactive UI updates
+///
 /// ## Watch Integration
 ///
 /// The `watch` block creates reactive computed views that re-render when
@@ -1471,6 +1535,59 @@ pub fn head(input: TokenStream) -> TokenStream {
 ///         form.username_preview()
 ///     }
 /// })
+/// ```
+///
+/// ### Watch with Match Expressions
+///
+/// Watch closures support full Rust expressions, including `match` for
+/// multi-condition rendering. This is useful for displaying different UI
+/// states based on computed values.
+///
+/// ```ignore
+/// let form = form! {
+///     name: TweetForm,
+///     server_fn: create_tweet,
+///
+///     derived: {
+///         char_count: |form| form.content().get().len(),
+///     },
+///
+///     watch: {
+///         // Multi-color character counter using match
+///         counter: |form| {
+///             let count = form.char_count();
+///             match count {
+///                 c if c > 280 => div { class: "text-red-500 font-bold", { format!("{}/280", c) } },
+///                 c if c > 250 => div { class: "text-yellow-500", { format!("{}/280", c) } },
+///                 c if c > 0 => div { class: "text-blue-500", { format!("{}/280", c) } },
+///                 _ => div { class: "text-gray-400", "0/280" },
+///             }
+///         },
+///     },
+///
+///     fields: {
+///         content: CharField { required, bind: true },
+///     },
+/// };
+/// ```
+///
+/// ### Watch with If-Else Chains
+///
+/// For simpler conditions, if-else chains work well within watch closures:
+///
+/// ```ignore
+/// watch: {
+///     status_indicator: |form| {
+///         let count = form.char_count();
+///         if count > 280 {
+///             span { class: "badge badge-error", "Over limit!" }
+///         } else if count > 250 {
+///             span { class: "badge badge-warning", "Almost full" }
+///         } else {
+///             span { class: "badge badge-success", "OK" }
+///         }
+///     },
+/// }
 /// ```
 ///
 /// # Customization
@@ -1723,6 +1840,268 @@ pub fn head(input: TokenStream) -> TokenStream {
 /// - Populates each field with the corresponding value from the returned data
 /// - Fields without `initial_from` use their default values
 /// - Loading state (`loading` in state block) is set during data fetch
+///
+/// ## Dynamic Choice Loading
+///
+/// Load choice options dynamically from a server function using `choices_loader`.
+/// Map loaded data to radio buttons or selects using field properties.
+///
+/// | Attribute | Level | Description |
+/// |-----------|-------|-------------|
+/// | `choices_loader` | Form | Server function that returns choice data |
+/// | `choices_from` | Field | Data field containing choice array |
+/// | `choice_value` | Field | Property path for option value (default: "value") |
+/// | `choice_label` | Field | Property path for option label (default: "label") |
+///
+/// ### Voting Form Example
+///
+/// ```ignore
+/// #[server_fn]
+/// async fn get_poll_data(poll_id: i64) -> Result<PollData, ServerFnError> {
+///     Ok(PollData {
+///         question: "What is your favorite color?".to_string(),
+///         choices: vec![
+///             Choice { id: 1, choice_text: "Red".to_string() },
+///             Choice { id: 2, choice_text: "Blue".to_string() },
+///             Choice { id: 3, choice_text: "Green".to_string() },
+///         ],
+///     })
+/// }
+///
+/// let form = form! {
+///     name: VotingForm,
+///     server_fn: submit_vote,
+///     choices_loader: get_poll_data,  // Server function for choice data
+///
+///     fields: {
+///         choice: ChoiceField {
+///             required,
+///             widget: RadioSelect,
+///             choices_from: "choices",      // Maps to PollData.choices
+///             choice_value: "id",           // Each choice's value: Choice.id
+///             choice_label: "choice_text",  // Each choice's label: Choice.choice_text
+///         },
+///     },
+/// };
+/// ```
+///
+/// ### Filter Form Example
+///
+/// ```ignore
+/// let form = form! {
+///     name: FilterForm,
+///     server_fn: apply_filter,
+///     choices_loader: get_filter_options,
+///
+///     fields: {
+///         category: ChoiceField {
+///             label: "Category",
+///             choices_from: "categories",
+///             choice_value: "id",
+///             choice_label: "name",
+///         },
+///         status: ChoiceField {
+///             label: "Status",
+///             widget: Select,
+///             choices_from: "statuses",
+///             choice_value: "code",
+///             choice_label: "description",
+///         },
+///     },
+/// };
+/// ```
+///
+/// ### Generated Behavior
+///
+/// - Creates `{field}_choices` Signal for each dynamic choice field
+/// - Generates `load_choices()` async method to fetch and populate choices
+/// - Choice options are stored as `Vec<(String, String)>` (value, label) tuples
+/// - Radio buttons or select options are rendered dynamically from the signal
+///
+/// ### External Signal Population (Without choices_loader)
+///
+/// When `choices_loader` cannot pass parameters (e.g., `question_id`), you can
+/// populate the `{field}_choices` Signal externally. Define the field with
+/// `choices_from` but omit `choices_loader`, then set the Signal manually.
+///
+/// ```ignore
+/// // Define form without choices_loader
+/// let voting_form = form! {
+///     name: VotingForm,
+///     server_fn: submit_vote,
+///     method: Post,
+///
+///     fields: {
+///         question_id: HiddenField { initial: question_id_str },
+///         choice_id: ChoiceField {
+///             widget: RadioSelect,
+///             required,
+///             choices_from: "choices",      // Generates choice_id_choices Signal
+///             choice_value: "id",
+///             choice_label: "choice_text",
+///         },
+///     },
+/// };
+///
+/// // Fetch data externally and populate the Signal
+/// #[cfg(target_arch = "wasm32")]
+/// {
+///     let form_clone = voting_form.clone();
+///     spawn_local(async move {
+///         match get_question_detail(question_id).await {
+///             Ok((question, choices)) => {
+///                 // Convert to (value, label) tuples
+///                 let choice_options: Vec<(String, String)> = choices
+///                     .iter()
+///                     .map(|c| (c.id.to_string(), c.choice_text.clone()))
+///                     .collect();
+///
+///                 // Set the Signal externally
+///                 form_clone.choice_id_choices().set(choice_options);
+///             }
+///             Err(e) => { /* handle error */ }
+///         }
+///     });
+/// }
+/// ```
+///
+/// This pattern is useful when:
+/// - The data loader requires parameters (e.g., `question_id`, `user_id`)
+/// - You need to load choices from multiple sources
+/// - You want more control over the loading logic
+///
+/// ## Server Function Parameter Expansion
+///
+/// When using `server_fn`, the form submits field values as **individual arguments**,
+/// not as a struct. Design your server function accordingly.
+///
+/// ### Server Function Signature
+///
+/// ```ignore
+/// // Form definition
+/// let form = form! {
+///     name: VotingForm,
+///     server_fn: submit_vote,
+///
+///     fields: {
+///         question_id: HiddenField { initial: "1" },
+///         choice_id: ChoiceField { required },
+///     },
+/// };
+///
+/// // Server function must accept individual String parameters
+/// #[server_fn(use_inject = true)]
+/// pub async fn submit_vote(
+///     question_id: String,   // From HiddenField
+///     choice_id: String,     // From ChoiceField
+///     #[inject] db: DatabaseConnection,
+/// ) -> Result<ChoiceInfo, ServerFnError> {
+///     // Parse String values to required types
+///     let question_id: i64 = question_id.parse()
+///         .map_err(|_| ServerFnError::application("Invalid question_id"))?;
+///     let choice_id: i64 = choice_id.parse()
+///         .map_err(|_| ServerFnError::application("Invalid choice_id"))?;
+///
+///     // Process the vote...
+///     Ok(result)
+/// }
+/// ```
+///
+/// ### Wrapper Function Pattern
+///
+/// If your existing server function accepts a struct, create a wrapper:
+///
+/// ```ignore
+/// // Original function expecting struct
+/// #[server_fn]
+/// pub async fn vote(request: VoteRequest) -> Result<ChoiceInfo, ServerFnError> {
+///     vote_internal(request).await
+/// }
+///
+/// // Wrapper for form! compatibility
+/// #[server_fn(use_inject = true)]
+/// pub async fn submit_vote(
+///     question_id: String,
+///     choice_id: String,
+///     #[inject] db: DatabaseConnection,
+/// ) -> Result<ChoiceInfo, ServerFnError> {
+///     let request = VoteRequest {
+///         question_id: question_id.parse().map_err(|_| ServerFnError::application("Invalid question_id"))?,
+///         choice_id: choice_id.parse().map_err(|_| ServerFnError::application("Invalid choice_id"))?,
+///     };
+///     vote_internal(request, db).await
+/// }
+///
+/// // Shared implementation
+/// async fn vote_internal(request: VoteRequest, db: DatabaseConnection) -> Result<ChoiceInfo, ServerFnError> {
+///     // Common logic
+/// }
+/// ```
+///
+/// ### Real-World Example
+///
+/// See `examples/local/examples-tutorial-basis` for a complete voting form implementation:
+/// - Client: `src/client/components/polls.rs` - `polls_detail` function
+/// - Server: `src/server_fn/polls.rs` - `submit_vote` wrapper function
+///
+/// ## CSRF Protection
+///
+/// Forms with non-GET methods (POST, PUT, PATCH, DELETE) automatically include
+/// CSRF protection. A hidden input field with the CSRF token is injected as the
+/// first child element of the form.
+///
+/// ### Automatic Injection
+///
+/// ```rust
+/// # use reinhardt_pages::form;
+/// # fn main() {
+/// // This POST form automatically includes CSRF token
+/// let contact_form = form! {
+///     name: ContactForm,
+///     action: "/api/contact",
+///     method: Post,
+///
+///     fields: {
+///         message: CharField { required },
+///     },
+/// };
+/// # }
+/// ```
+///
+/// The generated form will include:
+/// ```html
+/// <form action="/api/contact" method="post">
+///     <input type="hidden" name="csrfmiddlewaretoken" value="[token]">
+///     <!-- field elements -->
+/// </form>
+/// ```
+///
+/// ### Token Retrieval
+///
+/// The CSRF token is retrieved at render time from (in order):
+/// 1. Cookie: `csrftoken`
+/// 2. Meta tag: `<meta name="csrf-token">`
+/// 3. Hidden input: `<input name="csrfmiddlewaretoken">`
+///
+/// ### GET Forms (No CSRF)
+///
+/// GET forms do not include CSRF tokens since they are safe methods:
+///
+/// ```rust
+/// # use reinhardt_pages::form;
+/// # fn main() {
+/// // This GET form does NOT include CSRF token
+/// let search_form = form! {
+///     name: SearchForm,
+///     action: "/search",
+///     method: Get,
+///
+///     fields: {
+///         query: CharField { required },
+///     },
+/// };
+/// # }
+/// ```
 #[proc_macro]
 pub fn form(input: TokenStream) -> TokenStream {
 	form::form_impl(input)

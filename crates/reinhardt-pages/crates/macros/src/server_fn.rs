@@ -427,6 +427,18 @@ fn generate_client_stub(
 		quote::format_ident!("{}Args", pascal_name)
 	};
 
+	// Create a new signature without #[inject] parameters for the client stub
+	// This ensures the WASM-side function signature matches what the client code expects
+	let client_sig = {
+		let mut new_sig = sig.clone();
+		// Replace inputs with filtered params (without #[inject])
+		new_sig.inputs = params
+			.iter()
+			.map(|p| syn::FnArg::Typed((*p).clone()))
+			.collect();
+		new_sig
+	};
+
 	// Generate CSRF injection code conditionally based on no_csrf option
 	let csrf_injection_code = if info.options.no_csrf {
 		// no_csrf = true: Skip CSRF header injection
@@ -505,7 +517,7 @@ fn generate_client_stub(
 
 	quote! {
 		#[cfg(target_arch = "wasm32")]
-		#vis #sig {
+		#vis #client_sig {
 			use ::serde::{Serialize, Deserialize};
 
 			// Conditional crate path resolution for WASM/server compatibility

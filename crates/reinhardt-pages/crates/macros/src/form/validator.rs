@@ -17,15 +17,15 @@ use std::collections::HashSet;
 use syn::{Error, Result};
 
 use reinhardt_pages_ast::{
-	ClientValidator, ClientValidatorRule, FormAction, FormCallbacks, FormFieldDef, FormFieldEntry,
-	FormFieldGroup, FormFieldProperty, FormMacro, FormMethod, FormSlots, FormState, FormValidator,
-	FormWatch, IconPosition, TypedClientValidator, TypedClientValidatorRule, TypedCustomAttr,
-	TypedFieldDisplay, TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction,
-	TypedFormCallbacks, TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup,
-	TypedFormMacro, TypedFormSlots, TypedFormState, TypedFormStyling, TypedFormValidator,
-	TypedFormWatch, TypedFormWatchItem, TypedIcon, TypedIconAttr, TypedIconChild,
-	TypedIconPosition, TypedValidatorRule, TypedWidget, TypedWrapper, TypedWrapperAttr,
-	ValidatorRule,
+	ClientValidator, ClientValidatorRule, FormAction, FormCallbacks, FormDerived, FormFieldDef,
+	FormFieldEntry, FormFieldGroup, FormFieldProperty, FormMacro, FormMethod, FormSlots, FormState,
+	FormValidator, FormWatch, IconPosition, TypedChoicesConfig, TypedClientValidator,
+	TypedClientValidatorRule, TypedCustomAttr, TypedDerivedItem, TypedFieldDisplay,
+	TypedFieldStyling, TypedFieldType, TypedFieldValidation, TypedFormAction, TypedFormCallbacks,
+	TypedFormDerived, TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro,
+	TypedFormSlots, TypedFormState, TypedFormStyling, TypedFormValidator, TypedFormWatch,
+	TypedFormWatchItem, TypedIcon, TypedIconAttr, TypedIconChild, TypedIconPosition,
+	TypedValidatorRule, TypedWidget, TypedWrapper, TypedWrapperAttr, ValidatorRule,
 };
 
 /// Validates and transforms the FormMacro AST into a typed AST.
@@ -57,11 +57,17 @@ pub(super) fn validate(ast: &FormMacro) -> Result<TypedFormMacro> {
 	// Transform watch block
 	let watch = transform_watch(&ast.watch)?;
 
+	// Transform derived block
+	let derived = transform_derived(&ast.derived)?;
+
 	// Transform redirect configuration
 	let redirect_on_success = transform_redirect(&ast.redirect_on_success)?;
 
 	// Transform initial_loader (pass through the Path)
 	let initial_loader = ast.initial_loader.clone();
+
+	// Transform choices_loader (pass through the Path)
+	let choices_loader = ast.choices_loader.clone();
 
 	// Transform slots
 	let slots = transform_slots(&ast.slots)?;
@@ -83,8 +89,10 @@ pub(super) fn validate(ast: &FormMacro) -> Result<TypedFormMacro> {
 		state,
 		callbacks,
 		watch,
+		derived,
 		redirect_on_success,
 		initial_loader,
+		choices_loader,
 		slots,
 		fields,
 		validators,
@@ -266,6 +274,46 @@ fn transform_watch(watch: &Option<FormWatch>) -> Result<Option<TypedFormWatch>> 
 	}))
 }
 
+/// Transforms FormDerived to TypedFormDerived.
+///
+/// Derived items are validated for:
+/// - Unique derived item names
+/// - No conflicts with watch item names or field names
+/// - Valid closure structure (type checking is done by Rust compiler)
+fn transform_derived(derived: &Option<FormDerived>) -> Result<Option<TypedFormDerived>> {
+	let Some(derived) = derived else {
+		return Ok(None);
+	};
+
+	// Validate unique derived item names
+	let mut seen_names = HashSet::new();
+	for item in &derived.items {
+		let name = item.name.to_string();
+		if !seen_names.insert(name.clone()) {
+			return Err(Error::new(
+				item.name.span(),
+				format!("duplicate derived item name: '{}'", name),
+			));
+		}
+	}
+
+	// Transform derived items
+	let items = derived
+		.items
+		.iter()
+		.map(|item| TypedDerivedItem {
+			name: item.name.clone(),
+			closure: item.closure.clone(),
+			span: item.span,
+		})
+		.collect();
+
+	Ok(Some(TypedFormDerived {
+		items,
+		span: derived.span,
+	}))
+}
+
 /// Transforms redirect_on_success configuration.
 ///
 /// Validates that the redirect path:
@@ -366,6 +414,7 @@ fn transform_field(field: &FormFieldDef) -> Result<TypedFormFieldDef> {
 	let custom_attrs = extract_custom_attrs(&field.properties)?;
 	let bind = extract_bind(&field.properties);
 	let initial_from = extract_initial_from(&field.properties);
+	let choices_config = extract_choices_config(&field.properties);
 
 	Ok(TypedFormFieldDef {
 		name: field.name.clone(),
@@ -379,6 +428,7 @@ fn transform_field(field: &FormFieldDef) -> Result<TypedFormFieldDef> {
 		custom_attrs,
 		bind,
 		initial_from,
+		choices_config,
 		span: field.span,
 	})
 }
@@ -480,6 +530,9 @@ fn extract_validation_properties(properties: &[FormFieldProperty]) -> Result<Typ
 			FormFieldProperty::Attrs { .. } => {}  // Ignore custom attrs properties
 			FormFieldProperty::Bind { .. } => {}   // Ignore bind properties
 			FormFieldProperty::InitialFrom { .. } => {} // Ignore initial_from properties
+			FormFieldProperty::ChoicesFrom { .. } => {} // Ignore choices_from properties
+			FormFieldProperty::ChoiceValue { .. } => {} // Ignore choice_value properties
+			FormFieldProperty::ChoiceLabel { .. } => {} // Ignore choice_label properties
 		}
 	}
 
@@ -558,6 +611,9 @@ fn extract_display_properties(properties: &[FormFieldProperty]) -> Result<TypedF
 			FormFieldProperty::Attrs { .. } => {}  // Ignore custom attrs properties
 			FormFieldProperty::Bind { .. } => {}   // Ignore bind properties
 			FormFieldProperty::InitialFrom { .. } => {} // Ignore initial_from properties
+			FormFieldProperty::ChoicesFrom { .. } => {} // Ignore choices_from properties
+			FormFieldProperty::ChoiceValue { .. } => {} // Ignore choice_value properties
+			FormFieldProperty::ChoiceLabel { .. } => {} // Ignore choice_label properties
 		}
 	}
 
@@ -909,6 +965,46 @@ fn extract_initial_from(properties: &[FormFieldProperty]) -> Option<String> {
 		}
 	}
 	None
+}
+
+/// Extracts dynamic choices configuration from field properties.
+///
+/// For `ChoiceField` with dynamic options loaded from a `choices_loader` server_fn.
+///
+/// ```text
+/// choices_from: "choices"
+/// choice_value: "id"
+/// choice_label: "choice_text"
+/// ```
+fn extract_choices_config(properties: &[FormFieldProperty]) -> Option<TypedChoicesConfig> {
+	let mut choices_from: Option<(String, Span)> = None;
+	let mut choice_value: Option<String> = None;
+	let mut choice_label: Option<String> = None;
+
+	for prop in properties {
+		match prop {
+			FormFieldProperty::ChoicesFrom { field_name, span } => {
+				choices_from = Some((field_name.value(), *span));
+			}
+			FormFieldProperty::ChoiceValue { path, .. } => {
+				choice_value = Some(path.value());
+			}
+			FormFieldProperty::ChoiceLabel { path, .. } => {
+				choice_label = Some(path.value());
+			}
+			_ => {}
+		}
+	}
+
+	// Only return config if choices_from is specified
+	choices_from.map(|(from, span)| {
+		TypedChoicesConfig::with_paths(
+			from,
+			choice_value.unwrap_or_else(|| "value".to_string()),
+			choice_label.unwrap_or_else(|| "label".to_string()),
+			span,
+		)
+	})
 }
 
 /// Checks if a field with the given name exists in the field entries.
@@ -2890,5 +2986,447 @@ mod tests {
 		assert!(password.validation.required);
 		assert!(matches!(password.widget, TypedWidget::PasswordInput));
 		assert!(!password.bind);
+	}
+
+	// =========================================================================
+	// Derived Block Tests
+	// =========================================================================
+
+	#[rstest::rstest]
+	fn test_validate_derived_basic() {
+		let input = quote! {
+			name: TweetForm,
+			server_fn: create_tweet,
+
+			derived: {
+				char_count: |form| form.content().get().len(),
+			},
+
+			fields: {
+				content: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.derived.is_some());
+		let derived = typed.derived.unwrap();
+		assert_eq!(derived.items.len(), 1);
+		assert_eq!(derived.items[0].name.to_string(), "char_count");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_derived_multiple_items() {
+		let input = quote! {
+			name: PriceForm,
+			server_fn: calculate,
+
+			derived: {
+				subtotal: |form| form.quantity().get() * form.price().get(),
+				tax: |form| form.subtotal().get() * 0.1,
+				total: |form| form.subtotal().get() + form.tax().get(),
+			},
+
+			fields: {
+				quantity: IntegerField { required },
+				price: DecimalField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.derived.is_some());
+		let derived = typed.derived.unwrap();
+		assert_eq!(derived.items.len(), 3);
+		assert_eq!(derived.items[0].name.to_string(), "subtotal");
+		assert_eq!(derived.items[1].name.to_string(), "tax");
+		assert_eq!(derived.items[2].name.to_string(), "total");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_derived_duplicate_name() {
+		let input = quote! {
+			name: DuplicateForm,
+			server_fn: submit,
+
+			derived: {
+				value: |form| form.x().get() + form.y().get(),
+				value: |form| form.x().get() * form.y().get(),
+			},
+
+			fields: {
+				x: IntegerField { required },
+				y: IntegerField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_err());
+		let err = result.unwrap_err().to_string();
+		assert!(err.contains("duplicate derived item name"));
+		assert!(err.contains("value"));
+	}
+
+	#[rstest::rstest]
+	fn test_validate_derived_empty() {
+		let input = quote! {
+			name: EmptyDerivedForm,
+			server_fn: submit,
+
+			derived: {},
+
+			fields: {
+				data: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.derived.is_some());
+		let derived = typed.derived.unwrap();
+		assert!(derived.items.is_empty());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_no_derived_block() {
+		let input = quote! {
+			name: NoDerivedForm,
+			server_fn: submit,
+
+			fields: {
+				data: CharField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.derived.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_derived_with_watch_and_state() {
+		let input = quote! {
+			name: CompleteForm,
+			server_fn: create_tweet,
+
+			state: { loading, error },
+
+			derived: {
+				char_count: |form| form.content().get().len(),
+				is_valid: |form| form.char_count().get() <= 280,
+			},
+
+			watch: {
+				counter: |form| {
+					format!("{}/280", form.char_count().get())
+				},
+			},
+
+			fields: {
+				content: CharField { required, bind: true },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+
+		// Check state
+		assert!(typed.state.is_some());
+		let state = typed.state.as_ref().unwrap();
+		assert!(state.has_loading());
+		assert!(state.has_error());
+
+		// Check derived
+		assert!(typed.derived.is_some());
+		let derived = typed.derived.as_ref().unwrap();
+		assert_eq!(derived.items.len(), 2);
+
+		// Check watch
+		assert!(typed.watch.is_some());
+		let watch = typed.watch.as_ref().unwrap();
+		assert_eq!(watch.items.len(), 1);
+	}
+
+	// =========================================================
+	// Dynamic ChoiceField validation tests
+	// =========================================================
+
+	#[rstest::rstest]
+	fn test_validate_choices_loader_basic() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: submit_vote,
+			choices_loader: get_poll_choices,
+
+			fields: {
+				choice: ChoiceField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert!(typed.choices_loader.is_some());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_choices_config_basic() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: submit_vote,
+			choices_loader: get_poll_data,
+
+			fields: {
+				choice: ChoiceField {
+					required,
+					choices_from: "poll_options",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let field = typed.fields[0].as_field().unwrap();
+
+		assert!(field.choices_config.is_some());
+		let config = field.choices_config.as_ref().unwrap();
+		assert_eq!(config.choices_from, "poll_options");
+		// Default values for choice_value and choice_label
+		assert_eq!(config.choice_value, "value");
+		assert_eq!(config.choice_label, "label");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_choices_config_all_properties() {
+		let input = quote! {
+			name: VotingForm,
+			server_fn: submit_vote,
+			choices_loader: get_poll_data,
+
+			fields: {
+				choice: ChoiceField {
+					required,
+					choices_from: "choices",
+					choice_value: "id",
+					choice_label: "choice_text",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let field = typed.fields[0].as_field().unwrap();
+
+		assert!(field.choices_config.is_some());
+		let config = field.choices_config.as_ref().unwrap();
+		assert_eq!(config.choices_from, "choices");
+		assert_eq!(config.choice_value, "id");
+		assert_eq!(config.choice_label, "choice_text");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_multiple_dynamic_choice_fields() {
+		let input = quote! {
+			name: FilterForm,
+			server_fn: apply_filter,
+			choices_loader: get_filter_options,
+
+			fields: {
+				category: ChoiceField {
+					choices_from: "categories",
+					choice_value: "id",
+					choice_label: "name",
+				},
+				status: ChoiceField {
+					choices_from: "statuses",
+					choice_value: "code",
+					choice_label: "description",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		assert_eq!(typed.fields.len(), 2);
+
+		// Check first field
+		let category_field = typed.fields[0].as_field().unwrap();
+		assert!(category_field.choices_config.is_some());
+		let cat_config = category_field.choices_config.as_ref().unwrap();
+		assert_eq!(cat_config.choices_from, "categories");
+		assert_eq!(cat_config.choice_value, "id");
+		assert_eq!(cat_config.choice_label, "name");
+
+		// Check second field
+		let status_field = typed.fields[1].as_field().unwrap();
+		assert!(status_field.choices_config.is_some());
+		let status_config = status_field.choices_config.as_ref().unwrap();
+		assert_eq!(status_config.choices_from, "statuses");
+		assert_eq!(status_config.choice_value, "code");
+		assert_eq!(status_config.choice_label, "description");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_field_without_choices_config() {
+		let input = quote! {
+			name: SimpleForm,
+			action: "/test",
+
+			fields: {
+				category: ChoiceField { required },
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let field = typed.fields[0].as_field().unwrap();
+		assert!(field.choices_config.is_none());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_choices_config_with_other_properties() {
+		let input = quote! {
+			name: CombinedForm,
+			server_fn: save_data,
+			choices_loader: load_options,
+
+			fields: {
+				priority: ChoiceField {
+					required,
+					label: "Priority Level",
+					widget: RadioSelect,
+					choices_from: "priorities",
+					choice_value: "id",
+					choice_label: "name",
+					class: "priority-select",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+		let field = typed.fields[0].as_field().unwrap();
+
+		assert!(field.validation.required);
+		assert_eq!(field.display.label.as_ref().unwrap(), "Priority Level");
+		assert!(field.choices_config.is_some());
+
+		let config = field.choices_config.as_ref().unwrap();
+		assert_eq!(config.choices_from, "priorities");
+		assert_eq!(config.choice_value, "id");
+		assert_eq!(config.choice_label, "name");
+	}
+
+	#[rstest::rstest]
+	fn test_validate_choices_loader_with_initial_loader() {
+		let input = quote! {
+			name: EditPollForm,
+			server_fn: update_poll,
+			initial_loader: get_poll_edit_data,
+			choices_loader: get_choice_options,
+
+			fields: {
+				title: CharField {
+					initial_from: "poll_title",
+				},
+				selected_choice: ChoiceField {
+					choices_from: "available_choices",
+					choice_value: "id",
+					choice_label: "text",
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(result.is_ok());
+
+		let typed = result.unwrap();
+
+		// Both loaders should be present
+		assert!(typed.initial_loader.is_some());
+		assert!(typed.choices_loader.is_some());
+
+		// Verify initial_from on first field
+		let title_field = typed.fields[0].as_field().unwrap();
+		assert_eq!(title_field.initial_from, Some("poll_title".to_string()));
+
+		// Verify choices_config on second field
+		let choice_field = typed.fields[1].as_field().unwrap();
+		assert!(choice_field.choices_config.is_some());
+	}
+
+	#[rstest::rstest]
+	fn test_validate_choices_config_in_field_group() {
+		let input = quote! {
+			name: GroupedChoiceForm,
+			server_fn: submit_grouped,
+			choices_loader: get_group_options,
+
+			fields: {
+				filter_options: FieldGroup {
+					label: "Filter Options",
+					fields: {
+						category: ChoiceField {
+							choices_from: "categories",
+							choice_value: "id",
+							choice_label: "name",
+						},
+						status: ChoiceField {
+							choices_from: "statuses",
+							choice_value: "code",
+							choice_label: "label",
+						},
+					},
+				},
+			},
+		};
+
+		let result = parse_and_validate(input);
+		assert!(
+			result.is_ok(),
+			"Group validation failed: {:?}",
+			result.unwrap_err()
+		);
+
+		let typed = result.unwrap();
+		let group = typed.fields[0].as_group().unwrap();
+
+		// Check fields within the group
+		assert_eq!(group.fields.len(), 2);
+
+		let category_field = &group.fields[0];
+		assert!(category_field.choices_config.is_some());
+		assert_eq!(
+			category_field.choices_config.as_ref().unwrap().choices_from,
+			"categories"
+		);
+
+		let status_field = &group.fields[1];
+		assert!(status_field.choices_config.is_some());
+		assert_eq!(
+			status_field.choices_config.as_ref().unwrap().choices_from,
+			"statuses"
+		);
 	}
 }

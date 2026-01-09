@@ -49,8 +49,8 @@ use quote::{ToTokens, quote};
 use crate::crate_paths::get_reinhardt_pages_crate_info;
 use reinhardt_pages_ast::{
 	FormMethod, TypedCustomAttr, TypedFieldType, TypedFormAction, TypedFormCallbacks,
-	TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro, TypedFormSlots,
-	TypedFormState, TypedFormWatch, TypedIcon, TypedIconChild, TypedIconPosition,
+	TypedFormDerived, TypedFormFieldDef, TypedFormFieldEntry, TypedFormFieldGroup, TypedFormMacro,
+	TypedFormSlots, TypedFormState, TypedFormWatch, TypedIcon, TypedIconChild, TypedIconPosition,
 	TypedValidatorRule, TypedWidget, TypedWrapper,
 };
 
@@ -100,7 +100,10 @@ pub(super) fn generate(macro_ast: &TypedFormMacro) -> TokenStream {
 	let state_accessors = generate_state_accessors(&macro_ast.state, pages_crate);
 
 	// Generate watch methods
-	let watch_methods = generate_watch_methods(&macro_ast.watch, pages_crate);
+	let watch_methods = generate_watch_methods(&macro_ast.watch, pages_crate, struct_name);
+
+	// Generate derived methods
+	let derived_methods = generate_derived_methods(&macro_ast.derived, pages_crate);
 
 	// Generate metadata for SSR
 	let metadata_fn = generate_metadata_function(macro_ast, pages_crate);
@@ -117,10 +120,14 @@ pub(super) fn generate(macro_ast: &TypedFormMacro) -> TokenStream {
 	// Generate load_initial_values method if initial_loader is specified
 	let load_initial_method = generate_load_initial_values(macro_ast, pages_crate);
 
+	// Generate load_choices method if choices_loader is specified
+	let load_choices_method = generate_load_choices(macro_ast, pages_crate);
+
 	quote! {
 		{
 			#use_statement
 
+			#[derive(Clone)]
 			struct #struct_name {
 				#field_decls
 				#state_decls
@@ -137,10 +144,12 @@ pub(super) fn generate(macro_ast: &TypedFormMacro) -> TokenStream {
 				#field_accessors
 				#state_accessors
 				#watch_methods
+				#derived_methods
 				#metadata_fn
 				#validate_method
 				#submit_method
 				#load_initial_method
+				#load_choices_method
 				#into_view_impl
 			}
 
@@ -155,7 +164,7 @@ fn generate_field_declarations(
 	pages_crate: &TokenStream,
 ) -> TokenStream {
 	let fields = collect_all_fields(entries);
-	let decls: Vec<TokenStream> = fields
+	let mut decls: Vec<TokenStream> = fields
 		.iter()
 		.map(|field| {
 			let name = &field.name;
@@ -166,6 +175,23 @@ fn generate_field_declarations(
 		})
 		.collect();
 
+	// Add choices signal fields for dynamic choice fields
+	let choices_decls: Vec<TokenStream> = fields
+		.iter()
+		.filter_map(|field| {
+			if field.choices_config.is_some() {
+				let choices_name =
+					syn::Ident::new(&format!("{}_choices", field.name), field.name.span());
+				Some(quote! {
+					#choices_name: #pages_crate::reactive::Signal<Vec<(String, String)>>,
+				})
+			} else {
+				None
+			}
+		})
+		.collect();
+
+	decls.extend(choices_decls);
 	quote! { #(#decls)* }
 }
 
@@ -175,7 +201,7 @@ fn generate_field_initializers(
 	pages_crate: &TokenStream,
 ) -> TokenStream {
 	let fields = collect_all_fields(entries);
-	let inits: Vec<TokenStream> = fields
+	let mut inits: Vec<TokenStream> = fields
 		.iter()
 		.map(|field| {
 			let name = &field.name;
@@ -186,6 +212,23 @@ fn generate_field_initializers(
 		})
 		.collect();
 
+	// Add choices signal initializers for dynamic choice fields
+	let choices_inits: Vec<TokenStream> = fields
+		.iter()
+		.filter_map(|field| {
+			if field.choices_config.is_some() {
+				let choices_name =
+					syn::Ident::new(&format!("{}_choices", field.name), field.name.span());
+				Some(quote! {
+					#choices_name: #pages_crate::reactive::Signal::new(Vec::new()),
+				})
+			} else {
+				None
+			}
+		})
+		.collect();
+
+	inits.extend(choices_inits);
 	quote! { #(#inits)* }
 }
 
@@ -195,7 +238,7 @@ fn generate_field_accessors(
 	pages_crate: &TokenStream,
 ) -> TokenStream {
 	let fields = collect_all_fields(entries);
-	let accessors: Vec<TokenStream> = fields
+	let mut accessors: Vec<TokenStream> = fields
 		.iter()
 		.map(|field| {
 			let name = &field.name;
@@ -208,6 +251,26 @@ fn generate_field_accessors(
 		})
 		.collect();
 
+	// Add choices accessors for dynamic choice fields
+	let choices_accessors: Vec<TokenStream> = fields
+		.iter()
+		.filter_map(|field| {
+			if field.choices_config.is_some() {
+				let choices_name =
+					syn::Ident::new(&format!("{}_choices", field.name), field.name.span());
+				Some(quote! {
+					/// Returns the choices signal for dynamic choice options.
+					pub fn #choices_name(&self) -> &#pages_crate::reactive::Signal<Vec<(String, String)>> {
+						&self.#choices_name
+					}
+				})
+			} else {
+				None
+			}
+		})
+		.collect();
+
+	accessors.extend(choices_accessors);
 	quote! { #(#accessors)* }
 }
 
@@ -361,6 +424,7 @@ fn generate_state_accessors(
 fn generate_watch_methods(
 	watch: &Option<TypedFormWatch>,
 	pages_crate: &TokenStream,
+	struct_name: &syn::Ident,
 ) -> TokenStream {
 	let Some(watch) = watch else {
 		return quote! {};
@@ -380,13 +444,92 @@ fn generate_watch_methods(
 			quote! {
 				/// Returns a reactive view that automatically re-renders when its Signal dependencies change.
 				///
-				/// This method wraps the watch closure in an Effect to track Signal reads.
+				/// This method wraps the watch closure in View::reactive for automatic re-rendering.
 				pub fn #method_name(&self) -> impl #pages_crate::component::IntoView {
 					let form = self.clone();
-					#pages_crate::reactive::Effect::new(move || {
-						let __watch_closure = #closure;
-						__watch_closure(&form)
+					#pages_crate::component::View::reactive(move || {
+						// Helper function to provide type inference for the closure parameter
+						// Uses Fn instead of FnOnce to allow multiple calls from reactive system
+						#[inline]
+						fn __call_watch<T, R>(form: &T, f: impl Fn(&T) -> R) -> R {
+							f(form)
+						}
+						__call_watch::<#struct_name, _>(&form, #closure)
 					})
+				}
+			}
+		})
+		.collect();
+
+	quote! { #(#methods)* }
+}
+
+/// Generates derived methods that compute derived values.
+///
+/// Each derived item becomes a method on the form struct that evaluates the closure
+/// and returns the computed value directly. This provides a simple API for accessing
+/// computed values that depend on form field signals.
+///
+/// ## Generated Pattern
+///
+/// For a derived item like:
+/// ```text
+/// char_count: |form| form.content().get().len()
+/// ```
+///
+/// Generates:
+/// ```text
+/// pub fn char_count(&self) -> usize {
+///     let __derived_closure = |form: &Self| form.content().get().len();
+///     __derived_closure(self)
+/// }
+/// ```
+///
+/// The closure is evaluated each time the method is called, reading the current
+/// signal values. For reactive memoization, users can wrap the call in `Memo::new`:
+///
+/// ```text
+/// let form = form.clone();
+/// let count_memo = Memo::new(move || form.char_count());
+/// ```
+#[allow(unused_variables)]
+fn generate_derived_methods(
+	derived: &Option<TypedFormDerived>,
+	pages_crate: &TokenStream,
+) -> TokenStream {
+	let Some(derived) = derived else {
+		return quote! {};
+	};
+
+	if derived.items.is_empty() {
+		return quote! {};
+	}
+
+	let methods: Vec<TokenStream> = derived
+		.items
+		.iter()
+		.map(|item| {
+			let method_name = &item.name;
+			let closure = &item.closure;
+
+			// Extract the closure body for direct use
+			// The closure has form: |param| body
+			// We'll call it with &self to get the result
+			quote! {
+				/// Returns a computed value derived from form fields.
+				///
+				/// This method evaluates the derived expression with the current form state.
+				/// The value is computed fresh on each call, reading current signal values.
+				///
+				/// For memoization, wrap in a `Memo`:
+				/// ```ignore
+				/// let form = form.clone();
+				/// let memo = Memo::new(move || form.char_count());
+				/// ```
+				#[allow(clippy::unused_self)]
+				pub fn #method_name(&self) -> impl ::core::clone::Clone {
+					let __derived_fn: fn(&Self) -> _ = #closure;
+					__derived_fn(self)
 				}
 			}
 		})
@@ -400,6 +543,25 @@ fn generate_metadata_function(
 	macro_ast: &TypedFormMacro,
 	pages_crate: &TokenStream,
 ) -> TokenStream {
+	// Generate form ID from struct name (convert to kebab-case)
+	let form_id_str = format!(
+		"{}-form",
+		macro_ast
+			.name
+			.to_string()
+			.chars()
+			.enumerate()
+			.flat_map(|(i, c)| {
+				if c.is_uppercase() && i > 0 {
+					vec!['-', c.to_ascii_lowercase()]
+				} else {
+					vec![c.to_ascii_lowercase()]
+				}
+			})
+			.collect::<String>()
+			.replace('_', "-")
+	);
+
 	let action_str = match &macro_ast.action {
 		TypedFormAction::Url(url) => url.clone(),
 		TypedFormAction::ServerFn(path) => {
@@ -460,6 +622,7 @@ fn generate_metadata_function(
 	quote! {
 		pub fn metadata(&self) -> #pages_crate::form_generated::StaticFormMetadata {
 			#pages_crate::form_generated::StaticFormMetadata {
+				id: #form_id_str.to_string(),
 				action: #action_str.to_string(),
 				method: #method_str.to_string(),
 				class: #form_class.to_string(),
@@ -471,12 +634,64 @@ fn generate_metadata_function(
 
 /// Generates the into_view implementation.
 fn generate_into_view(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> TokenStream {
+	// Collect all fields for signal bindings
+	let all_fields = collect_all_fields(&macro_ast.fields);
+
+	// Generate signal bindings for fields with bind: true
+	let signal_bindings: Vec<TokenStream> = all_fields
+		.iter()
+		.filter(|field| field.bind)
+		.map(|field| {
+			let field_name = &field.name;
+			let signal_ident = quote::format_ident!("{}_signal", field_name);
+			quote! {
+				let #signal_ident = self.#field_name.clone();
+			}
+		})
+		.collect();
+
+	// Generate onsubmit handler for server_fn forms
+	let onsubmit_handler = generate_onsubmit_handler(macro_ast, pages_crate);
+
+	quote! {
+		pub fn into_view(self) -> #pages_crate::component::View {
+			use #pages_crate::component::{ElementView, IntoView};
+
+			#(#signal_bindings)*
+
+			#onsubmit_handler
+
+			form_element.into_view()
+		}
+	}
+}
+
+/// Generates the onsubmit handler for server_fn forms.
+///
+/// When a form has a server_fn action, this generates an onsubmit event handler
+/// that prevents default form submission and calls the server function instead.
+fn generate_onsubmit_handler(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> TokenStream {
+	let form_id_str = format!(
+		"{}-form",
+		macro_ast
+			.name
+			.to_string()
+			.chars()
+			.enumerate()
+			.flat_map(|(i, c)| {
+				if c.is_uppercase() && i > 0 {
+					vec!['-', c.to_ascii_lowercase()]
+				} else {
+					vec![c.to_ascii_lowercase()]
+				}
+			})
+			.collect::<String>()
+			.replace('_', "-")
+	);
+
 	let action_str = match &macro_ast.action {
 		TypedFormAction::Url(url) => url.clone(),
-		TypedFormAction::ServerFn(path) => {
-			// Convert syn::Path to string for URL generation
-			format!("/api/{}", path.to_token_stream())
-		}
+		TypedFormAction::ServerFn(path) => format!("/api/{}", path.to_token_stream()),
 		TypedFormAction::None => String::new(),
 	};
 
@@ -494,21 +709,48 @@ fn generate_into_view(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> 
 		.as_deref()
 		.unwrap_or("reinhardt-form");
 
-	// Collect all fields for signal bindings
+	// Collect all fields for use in onsubmit handler
 	let all_fields = collect_all_fields(&macro_ast.fields);
 
-	// Generate signal bindings for fields with bind: true
-	let signal_bindings: Vec<TokenStream> = all_fields
-		.iter()
-		.filter(|field| field.bind)
-		.map(|field| {
-			let field_name = &field.name;
-			let signal_ident = quote::format_ident!("{}_signal", field_name);
-			quote! {
-				let #signal_ident = self.#field_name.clone();
-			}
-		})
-		.collect();
+	// Generate before_fields slot if present
+	let before_fields_slot = generate_before_fields_slot(&macro_ast.slots);
+
+	// Generate after_fields slot if present
+	let after_fields_slot = generate_after_fields_slot(&macro_ast.slots);
+
+	// Determine if CSRF protection is needed (non-GET methods)
+	let needs_csrf = !matches!(macro_ast.method, FormMethod::Get);
+
+	// Generate CSRF token injection for non-GET methods
+	let csrf_injection = if needs_csrf {
+		quote! {
+			.child({
+				let csrf_token = #pages_crate::csrf::get_csrf_token()
+					.unwrap_or_default();
+				ElementView::new("input")
+					.attr("type", "hidden")
+					.attr("name", #pages_crate::csrf::CSRF_FORM_FIELD)
+					.attr("value", csrf_token)
+			})
+		}
+	} else {
+		quote! {}
+	};
+
+	// Generate watch component calls if watch block exists
+	let watch_components = if let Some(watch) = &macro_ast.watch {
+		let method_calls: Vec<TokenStream> = watch
+			.items
+			.iter()
+			.map(|item| {
+				let method_name = &item.name;
+				quote! { .child(self.#method_name()) }
+			})
+			.collect();
+		quote! { #(#method_calls)* }
+	} else {
+		quote! {}
+	};
 
 	// Generate field/group views
 	let field_views: Vec<TokenStream> = macro_ast
@@ -517,27 +759,172 @@ fn generate_into_view(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> 
 		.map(|entry| generate_field_entry_view(entry, pages_crate, &all_fields))
 		.collect();
 
-	// Generate before_fields slot if present
-	let before_fields_slot = generate_before_fields_slot(&macro_ast.slots);
+	match &macro_ast.action {
+		TypedFormAction::ServerFn(server_fn_ident) => {
+			// Generate field signal clones for onsubmit handler
+			let field_names: Vec<&syn::Ident> = all_fields.iter().map(|f| &f.name).collect();
+			let field_signal_clones: Vec<TokenStream> = field_names
+				.iter()
+				.map(|name| {
+					let signal_name = quote::format_ident!("submit_{}", name);
+					quote! { let #signal_name = self.#name.clone(); }
+				})
+				.collect();
 
-	// Generate after_fields slot if present
-	let after_fields_slot = generate_after_fields_slot(&macro_ast.slots);
+			// Generate field value getters for server_fn call
+			let field_value_getters: Vec<TokenStream> = field_names
+				.iter()
+				.map(|name| {
+					let signal_name = quote::format_ident!("submit_{}", name);
+					quote! { #signal_name.get() }
+				})
+				.collect();
 
-	quote! {
-		pub fn into_view(self) -> #pages_crate::component::View {
-			use #pages_crate::component::{ElementView, IntoView};
+			// Generate callbacks
+			let callbacks = &macro_ast.callbacks;
+			let state = &macro_ast.state;
+			let redirect = &macro_ast.redirect_on_success;
 
-			#(#signal_bindings)*
+			// Check if loading/error states are enabled
+			let has_loading = state.as_ref().is_some_and(|s| s.loading);
+			let has_error = state.as_ref().is_some_and(|s| s.error);
 
-			let form_element = ElementView::new("form")
-				.attr("action", #action_str)
-				.attr("method", #method_str)
-				.attr("class", #form_class)
-				#before_fields_slot
-				#(.child(#field_views))*
-				#after_fields_slot;
+			// Generate loading state management
+			let loading_start = if has_loading {
+				quote! { submit_loading.set(true); }
+			} else {
+				quote! {}
+			};
 
-			form_element.into_view()
+			// Clone loading/error signals if they exist
+			let state_signal_clones = {
+				let mut clones = Vec::new();
+				if has_loading {
+					clones.push(quote! { let submit_loading = self.loading().clone(); });
+				}
+				if has_error {
+					clones.push(quote! { let submit_error = self.error().clone(); });
+				}
+				quote! { #(#clones)* }
+			};
+
+			// Generate redirect code
+			let redirect_code = if let Some(url) = redirect {
+				quote! {
+					if let Some(window) = web_sys::window() {
+						let _ = window.location().set_href(#url);
+					}
+				}
+			} else {
+				quote! {}
+			};
+
+			// Generate on_success callback if present
+			let on_success_code = if let Some(callback) = &callbacks.on_success {
+				quote! { (#callback)(_value); }
+			} else {
+				quote! {}
+			};
+
+			// Generate on_error callback if present
+			let on_error_code = if let Some(callback) = &callbacks.on_error {
+				quote! { (#callback)(&e); }
+			} else {
+				quote! {}
+			};
+
+			// Generate async block signal clones only for existing state signals
+			let async_signal_clones = {
+				let mut clones = Vec::new();
+				if has_loading {
+					clones.push(quote! { let async_loading = submit_loading.clone(); });
+				}
+				if has_error {
+					clones.push(quote! { let async_error = submit_error.clone(); });
+				}
+				quote! { #(#clones)* }
+			};
+
+			// Generate loading end with async signal
+			let async_loading_end = if has_loading {
+				quote! { async_loading.set(false); }
+			} else {
+				quote! {}
+			};
+
+			// Generate async error handling with async signal
+			let async_error_handling = if has_error {
+				quote! { async_error.set(Some(e.to_string())); }
+			} else {
+				quote! {}
+			};
+
+			quote! {
+				// Clone field signals for onsubmit handler
+				#(#field_signal_clones)*
+
+				// Clone state signals for onsubmit handler
+				#state_signal_clones
+
+				let form_element = ElementView::new("form")
+					.attr("id", #form_id_str)
+					.attr("action", #action_str)
+					.attr("method", #method_str)
+					.attr("class", #form_class)
+					#before_fields_slot
+					#csrf_injection
+					#(.child(#field_views))*
+					#after_fields_slot
+					#watch_components
+					.on(
+						#pages_crate::dom::event::EventType::Submit,
+						::std::sync::Arc::new(move |event: web_sys::Event| {
+							// Prevent default form submission by handling it ourselves
+							event.prevent_default();
+
+							// Get field values from cloned signals
+							#loading_start
+
+							// Clone signals for async block
+							#(let #field_names = #field_value_getters;)*
+
+							#[cfg(target_arch = "wasm32")]
+							{
+								// Clone loading/error signals for async block if they exist
+								#async_signal_clones
+
+								wasm_bindgen_futures::spawn_local(async move {
+									match #server_fn_ident(#(#field_names),*).await {
+										Ok(_value) => {
+											#on_success_code
+											#redirect_code
+										}
+										Err(e) => {
+											#on_error_code
+											#async_error_handling
+										}
+									}
+									#async_loading_end
+								});
+							}
+						})
+					);
+			}
+		}
+		_ => {
+			// For URL action or no action, just generate the form without onsubmit handler
+			quote! {
+				let form_element = ElementView::new("form")
+					.attr("id", #form_id_str)
+					.attr("action", #action_str)
+					.attr("method", #method_str)
+					.attr("class", #form_class)
+					#before_fields_slot
+					#csrf_injection
+					#(.child(#field_views))*
+					#after_fields_slot
+					#watch_components;
+			}
 		}
 	}
 }
@@ -1210,6 +1597,114 @@ fn generate_load_initial_values(
 			#[cfg(not(target_arch = "wasm32"))]
 			pub async fn load_initial_values(&self) -> Result<(), #pages_crate::ServerFnError> {
 				// On server, this is a no-op since initial values are typically
+				// loaded differently in SSR context
+				Ok(())
+			}
+		}
+	}
+}
+
+/// Generates the load_choices method if choices_loader is specified.
+///
+/// This method calls the choices_loader server_fn and populates the choices signals
+/// for fields that have `choices_config` specified.
+///
+/// The generated method:
+/// - Is async and returns `Result<(), ServerFnError>`
+/// - Calls the choices_loader server_fn to fetch choice data
+/// - Uses field access syntax to extract choices based on `choices_from` mapping
+/// - Transforms each choice item to (value, label) tuple based on `choice_value` and `choice_label`
+///
+/// # Example
+///
+/// For a form with:
+/// ```text
+/// choices_loader: get_poll_detail,
+/// fields: {
+///     choice: ChoiceField {
+///         choices_from: "choices",
+///         choice_value: "id",
+///         choice_label: "choice_text",
+///     },
+/// }
+/// ```
+///
+/// Generates:
+/// ```text
+/// pub async fn load_choices(&self) -> Result<(), ServerFnError> {
+///     let data = get_poll_detail().await?;
+///     self.choice_choices.set(
+///         data.choices.iter().map(|item| {
+///             (item.id.to_string(), item.choice_text.clone())
+///         }).collect()
+///     );
+///     Ok(())
+/// }
+/// ```
+fn generate_load_choices(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> TokenStream {
+	// Return empty if no choices_loader is specified
+	let Some(choices_loader) = &macro_ast.choices_loader else {
+		return quote! {};
+	};
+
+	// Collect fields that have choices_config specified (including from groups)
+	let all_fields = collect_all_fields(&macro_ast.fields);
+	let field_setters: Vec<TokenStream> = all_fields
+		.iter()
+		.filter_map(|field| {
+			field.choices_config.as_ref().map(|config| {
+				let choices_signal_name =
+					syn::Ident::new(&format!("{}_choices", field.name), field.name.span());
+				let from_ident = syn::Ident::new(&config.choices_from, field.name.span());
+				let value_ident = syn::Ident::new(&config.choice_value, field.name.span());
+				let label_ident = syn::Ident::new(&config.choice_label, field.name.span());
+				quote! {
+					self.#choices_signal_name.set(
+						data.#from_ident.iter().map(|item| {
+							(item.#value_ident.to_string(), item.#label_ident.clone())
+						}).collect()
+					);
+				}
+			})
+		})
+		.collect();
+
+	// If no fields have choices_config, just call the loader but don't set anything
+	if field_setters.is_empty() {
+		quote! {
+			/// Loads choices from the choices_loader server function.
+			///
+			/// Note: No fields have `choices_from` specified, so this method
+			/// only calls the loader without populating any choices.
+			#[cfg(target_arch = "wasm32")]
+			pub async fn load_choices(&self) -> Result<(), #pages_crate::ServerFnError> {
+				let _data = #choices_loader().await?;
+				Ok(())
+			}
+
+			#[cfg(not(target_arch = "wasm32"))]
+			pub async fn load_choices(&self) -> Result<(), #pages_crate::ServerFnError> {
+				// On server, this is a no-op since choices are typically
+				// loaded differently in SSR context
+				Ok(())
+			}
+		}
+	} else {
+		quote! {
+			/// Loads choices from the choices_loader server function.
+			///
+			/// Calls the configured choices_loader and populates the choices signals
+			/// for fields that have `choices_from` specified.
+			#[cfg(target_arch = "wasm32")]
+			pub async fn load_choices(&self) -> Result<(), #pages_crate::ServerFnError> {
+				let data = #choices_loader().await?;
+				#(#field_setters)*
+				Ok(())
+			}
+
+			#[cfg(not(target_arch = "wasm32"))]
+			pub async fn load_choices(&self) -> Result<(), #pages_crate::ServerFnError> {
+				// On server, this is a no-op since choices are typically
 				// loaded differently in SSR context
 				Ok(())
 			}
