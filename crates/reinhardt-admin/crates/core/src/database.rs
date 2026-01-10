@@ -195,11 +195,33 @@ fn build_filter_condition(filters: &[Filter]) -> Option<Condition> {
 	Some(condition)
 }
 
+/// Maximum recursion depth for filter conditions to prevent stack overflow
+const MAX_FILTER_DEPTH: usize = 100;
+
 /// Build sea-query Condition from FilterCondition (supports AND/OR logic)
 ///
 /// This function recursively processes FilterCondition to build complex
 /// query conditions with nested AND/OR logic.
+///
+/// # Stack Overflow Protection
+///
+/// To prevent stack overflow with deeply nested filter conditions, this function
+/// limits recursion depth to `MAX_FILTER_DEPTH` (100 levels). If the depth limit
+/// is exceeded, the function returns `None`.
 fn build_composite_filter_condition(filter_condition: &FilterCondition) -> Option<Condition> {
+	build_composite_filter_condition_with_depth(filter_condition, 0)
+}
+
+/// Internal helper for building composite filter conditions with depth tracking
+fn build_composite_filter_condition_with_depth(
+	filter_condition: &FilterCondition,
+	depth: usize,
+) -> Option<Condition> {
+	// Prevent stack overflow by limiting recursion depth
+	if depth >= MAX_FILTER_DEPTH {
+		return None;
+	}
+
 	match filter_condition {
 		FilterCondition::Single(filter) => {
 			build_single_filter_expr(filter).map(|expr| Condition::all().add(expr))
@@ -210,7 +232,9 @@ fn build_composite_filter_condition(filter_condition: &FilterCondition) -> Optio
 			}
 			let mut and_condition = Condition::all();
 			for cond in conditions {
-				if let Some(sub_cond) = build_composite_filter_condition(cond) {
+				if let Some(sub_cond) =
+					build_composite_filter_condition_with_depth(cond, depth + 1)
+				{
 					and_condition = and_condition.add(sub_cond);
 				}
 			}
@@ -222,15 +246,16 @@ fn build_composite_filter_condition(filter_condition: &FilterCondition) -> Optio
 			}
 			let mut or_condition = Condition::any();
 			for cond in conditions {
-				if let Some(sub_cond) = build_composite_filter_condition(cond) {
+				if let Some(sub_cond) =
+					build_composite_filter_condition_with_depth(cond, depth + 1)
+				{
 					or_condition = or_condition.add(sub_cond);
 				}
 			}
 			Some(or_condition)
 		}
-		FilterCondition::Not(inner) => {
-			build_composite_filter_condition(inner).map(|inner_cond| inner_cond.not())
-		}
+		FilterCondition::Not(inner) => build_composite_filter_condition_with_depth(inner, depth + 1)
+			.map(|inner_cond| inner_cond.not()),
 	}
 }
 
