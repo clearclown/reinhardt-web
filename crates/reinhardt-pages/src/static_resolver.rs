@@ -53,6 +53,131 @@
 //! });
 //! ```
 //!
+//! ## Using with page! Macro
+//!
+//! The `resolve_static` function works seamlessly within `page!` macros:
+//!
+//! ```ignore
+//! use reinhardt_pages::{page, static_resolver::resolve_static};
+//!
+//! // Simple static image
+//! page!(|| {
+//!     img {
+//!         src: resolve_static("images/logo.png"),
+//!         alt: "Logo"
+//!     }
+//! })()
+//!
+//! // Dynamic path based on state
+//! page!(|user_id: i64| {
+//!     let avatar = format!("images/avatars/user_{}.png", user_id);
+//!     img {
+//!         src: resolve_static(&avatar),
+//!         alt: "Avatar"
+//!     }
+//! })(user_id)
+//! ```
+//!
+//! ## Using with head! Macro for SSR
+//!
+//! For server-side rendering scenarios, use `resolve_static` with `head!`:
+//!
+//! ```ignore
+//! use reinhardt_pages::{head, static_resolver::resolve_static};
+//! use reinhardt_pages::ssr::SsrRenderer;
+//!
+//! let page_head = head!(|| {
+//!     link { rel: "stylesheet", href: resolve_static("css/app.css") }
+//!     script { src: resolve_static("js/app.js"), defer }
+//! });
+//!
+//! let mut renderer = SsrRenderer::new();
+//! let html = renderer.render_page_with_head(view, page_head);
+//! ```
+//!
+//! ## Best Practices
+//!
+//! ### 1. Initialize Early
+//!
+//! Always initialize the static resolver during application startup,
+//! before rendering any components:
+//!
+//! ```ignore
+//! #[tokio::main]
+//! async fn main() {
+//!     // Initialize static resolver FIRST
+//!     init_static_resolver(TemplateStaticConfig::new("/static/".to_string()));
+//!
+//!     // Then start server
+//!     let app = create_application();
+//!     app.run().await;
+//! }
+//! ```
+//!
+//! ### 2. Use Manifest for Production
+//!
+//! In production, always use a manifest for cache-busted URLs:
+//!
+//! ```ignore
+//! // Load manifest from collectstatic output
+//! let manifest = load_manifest("staticfiles/manifest.json").await?;
+//! init_static_resolver(
+//!     TemplateStaticConfig::new("/static/".to_string())
+//!         .with_manifest(manifest)
+//! );
+//! ```
+//!
+//! ### 3. Prefer Static Paths When Possible
+//!
+//! Use static strings for fixed assets to enable potential future
+//! compile-time optimizations:
+//!
+//! ```ignore
+//! // ✅ Good - static path
+//! img { src: resolve_static("images/logo.png") }
+//!
+//! // ⚠️ Use only when necessary - dynamic path
+//! let path = format!("images/{}.png", name);
+//! img { src: resolve_static(&path) }
+//! ```
+//!
+//! ### 4. Avoid Hardcoding URLs
+//!
+//! Never hardcode static URLs; always use `resolve_static`:
+//!
+//! ```ignore
+//! // ❌ Bad - breaks with CDN or STATIC_URL changes
+//! img { src: "/static/images/logo.png" }
+//!
+//! // ✅ Good - respects configuration
+//! img { src: resolve_static("images/logo.png") }
+//! ```
+//!
+//! ## Compile-Time vs Runtime Resolution
+//!
+//! ### Runtime Resolution (resolve_static)
+//!
+//! - **When to use**: All current use cases in reinhardt-pages
+//! - **Pros**: Flexible, works with dynamic paths, integrates with manifest
+//! - **Cons**: Small runtime overhead (negligible in practice)
+//!
+//! ### Future: Compile-Time Resolution
+//!
+//! A future `static_url!` macro may provide compile-time resolution:
+//!
+//! ```ignore
+//! // Future API (not yet implemented)
+//! img { src: static_url!("images/logo.png") }
+//! // Resolved at compile time to "/static/images/logo.png"
+//! ```
+//!
+//! **Benefits**:
+//! - Zero runtime overhead
+//! - Compile-time path validation
+//! - Better CDN integration
+//!
+//! For now, use `resolve_static()` for all static URL resolution needs.
+//!
 //! ## Thread Safety
 //!
 //! The static resolver uses `OnceLock` for thread-safe lazy initialization.
