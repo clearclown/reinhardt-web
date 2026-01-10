@@ -10,13 +10,13 @@
 //! - Admin panel customization
 
 // Server-side modules (non-WASM only)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 pub mod apps;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 pub mod config;
 
 // Client-side modules (WASM only)
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 pub mod client;
 
 // Server function definitions (both WASM and server)

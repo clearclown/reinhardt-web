@@ -5,12 +5,12 @@
 
 use crate::shared::types::{ChoiceInfo, QuestionInfo};
 use reinhardt::pages::Signal;
-use reinhardt::pages::component::{ElementView, IntoView, View};
+use reinhardt::pages::component::View;
 use reinhardt::pages::form;
 use reinhardt::pages::page;
 use reinhardt::pages::reactive::hooks::use_state;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 use {
 	crate::server_fn::polls::{
 		get_question_detail, get_question_results, get_questions, submit_vote,
@@ -18,7 +18,7 @@ use {
 	wasm_bindgen_futures::spawn_local,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 use crate::server_fn::polls::submit_vote;
 
 /// Polls index page - List all polls
@@ -30,7 +30,7 @@ pub fn polls_index() -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(wasm)]
 	{
 		let set_questions = set_questions.clone();
 		let set_loading = set_loading.clone();
@@ -57,7 +57,7 @@ pub fn polls_index() -> View {
 
 	page!(|questions_signal: Signal<Vec<QuestionInfo>>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>| {
 		div {
-			class: "container mt-5",
+			class: "max-w-4xl mx-auto px-4 mt-12",
 			h1 {
 				class: "mb-4",
 				"Polls"
@@ -65,7 +65,7 @@ pub fn polls_index() -> View {
 			watch {
 				if error_signal.get().is_some() {
 					div {
-						class: "alert alert-danger",
+						class: "alert-danger",
 						{ error_signal.get().unwrap_or_default() }
 					}
 				}
@@ -75,23 +75,23 @@ pub fn polls_index() -> View {
 					div {
 						class: "text-center",
 						div {
-							class: "spinner-border text-primary",
+							class: "spinner w-8 h-8",
 							role: "status",
 							span {
-								class: "visually-hidden",
+								class: "sr-only",
 								"Loading..."
 							}
 						}
 					}
 				} else if questions_signal.get().is_empty() {
 					p {
-						class: "text-muted",
+						class: "text-gray-500",
 						"No polls are available."
 					}
 				} else {
 					div {
-						class: "list-group",
-						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "list-group-item list-group-item-action", div { class : "d-flex w-100 justify-content-between", h5 { class : "mb-1", { question_text } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect()) }
+						class: "space-y-2",
+						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "block p-4 border rounded hover:bg-gray-50 transition-colors", div { class : "flex w-full justify-between", h5 { class : "mb-1", { question_text } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect ::<Vec<_>>()) }
 					}
 				}
 			}
@@ -110,8 +110,8 @@ pub fn polls_detail(question_id: i64) -> View {
 	let (data_loading, set_data_loading) = use_state(true);
 	let (data_error, set_data_error) = use_state(None::<String>);
 
-	// Convert question_id to String for form field
-	let question_id_str = question_id.to_string();
+	// Capture question_id for use in on_success closure
+	let qid = question_id;
 
 	// Create the voting form using form! macro
 	// - server_fn: submit_vote accepts (question_id: String, choice_id: String)
@@ -126,13 +126,13 @@ pub fn polls_detail(question_id: i64) -> View {
 
 		fields: {
 			question_id: HiddenField {
-				initial: question_id_str.clone(),
+				initial: qid.to_string(),
 			},
 			choice_id: ChoiceField {
 				widget: RadioSelect,
 				required,
 				label: "Select your choice",
-				class: "form-check poll-choice p-3 mb-2 border rounded",
+				class: "form-check",
 				choices_from: "choices",
 				choice_value: "id",
 				choice_label: "choice_text",
@@ -147,13 +147,13 @@ pub fn polls_detail(question_id: i64) -> View {
 						class: "mt-3",
 						button {
 							r#type: "submit",
-							class: if is_loading { "btn btn-primary disabled" } else { "btn btn-primary" },
+							class: if is_loading { "btn-primary opacity-50 cursor-not-allowed" } else { "btn-primary" },
 							disabled: is_loading,
 							{ if is_loading { "Voting..." } else { "Vote" } }
 						}
 						a {
 							href: "/",
-							class: "btn btn-secondary ms-2",
+							class: "btn-secondary ml-2",
 							"Back to Polls"
 						}
 					}
@@ -165,29 +165,29 @@ pub fn polls_detail(question_id: i64) -> View {
 					watch {
 						if let Some(e) = err.clone() {
 							div {
-								class: "alert alert-danger mt-3",
+								class: "alert-danger mt-3",
 								{ e }
 							}
 						}
 					}
 				})(err)
 			},
-		},
-
-		on_success: |_result| {
-			#[cfg(target_arch = "wasm32")]
-			{
-				// Navigate to results page after successful vote
-				if let Some(window) = web_sys::window() {
-					let results_url = format!("/polls/{}/results/", question_id);
-					let _ = window.location().set_href(&results_url);
-				}
-			}
+			success_navigation: |form| {
+				let is_loading = form.loading().get();
+				let err = form.error().get();
+				page!(|is_loading: bool, err: Option<String>| {
+					watch {
+						if ! is_loading &&err.is_none() {
+							# [cfg(target_arch = "wasm32")] { if let Some(window) = web_sys::window() { let pathname = window.location().pathname().ok(); if let Some(path) = pathname { let parts : Vec<&str>= path.split('/').collect(); if parts.len()>= 3 &&parts [1] == "polls" { if let Ok(question_id) = parts [2].parse ::<i64>() { let results_url = format!("/polls/{}/results/", question_id); let _ = window.location().set_href(&results_url); } } } } }
+						}
+					}
+				})(is_loading, err)
+			},
 		},
 	};
 
 	// Load question data and populate choice options
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(wasm)]
 	{
 		let set_question = set_question.clone();
 		let set_data_loading = set_data_loading.clone();
@@ -195,7 +195,7 @@ pub fn polls_detail(question_id: i64) -> View {
 		let voting_form_clone = voting_form.clone();
 
 		spawn_local(async move {
-			match get_question_detail(question_id).await {
+			match get_question_detail(qid).await {
 				Ok((q, choices)) => {
 					set_question(Some(q));
 
@@ -226,12 +226,12 @@ pub fn polls_detail(question_id: i64) -> View {
 	if loading_signal.get() {
 		return page!(|| {
 			div {
-				class: "container mt-5 text-center",
+				class: "max-w-4xl mx-auto px-4 mt-12 text-center",
 				div {
-					class: "spinner-border text-primary",
+					class: "spinner w-8 h-8",
 					role: "status",
 					span {
-						class: "visually-hidden",
+						class: "sr-only",
 						"Loading..."
 					}
 				}
@@ -243,19 +243,19 @@ pub fn polls_detail(question_id: i64) -> View {
 	if let Some(err) = error_signal.get() {
 		return page!(|err: String, question_id: i64| {
 			div {
-				class: "container mt-5",
+				class: "max-w-4xl mx-auto px-4 mt-12",
 				div {
-					class: "alert alert-danger",
+					class: "alert-danger",
 					{ err }
 				}
 				a {
 					href: format!("/polls/{}/", question_id),
-					class: "btn btn-secondary",
+					class: "btn-secondary",
 					"Try Again"
 				}
 				a {
 					href: "/",
-					class: "btn btn-primary ms-2",
+					class: "btn-primary ml-2",
 					"Back to Polls"
 				}
 			}
@@ -269,7 +269,7 @@ pub fn polls_detail(question_id: i64) -> View {
 
 		page!(|question_text: String, form_view: View| {
 			div {
-				class: "container mt-5",
+				class: "max-w-4xl mx-auto px-4 mt-12",
 				h1 {
 					class: "mb-4",
 					{ question_text }
@@ -281,14 +281,14 @@ pub fn polls_detail(question_id: i64) -> View {
 		// Question not found
 		page!(|| {
 			div {
-				class: "container mt-5",
+				class: "max-w-4xl mx-auto px-4 mt-12",
 				div {
-					class: "alert alert-warning",
+					class: "alert-warning",
 					"Question not found"
 				}
 				a {
 					href: "/",
-					class: "btn btn-primary",
+					class: "btn-primary",
 					"Back to Polls"
 				}
 			}
@@ -307,7 +307,7 @@ pub fn polls_results(question_id: i64) -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(wasm)]
 	{
 		let set_question = set_question.clone();
 		let set_choices = set_choices.clone();
@@ -343,32 +343,32 @@ pub fn polls_results(question_id: i64) -> View {
 			watch {
 				if loading_signal.get() {
 					div {
-						class: "container mt-5 text-center",
+						class: "max-w-4xl mx-auto px-4 mt-12 text-center",
 						div {
-							class: "spinner-border text-primary",
+							class: "spinner w-8 h-8",
 							role: "status",
 							span {
-								class: "visually-hidden",
+								class: "sr-only",
 								"Loading..."
 							}
 						}
 					}
 				} else if error_signal.get().is_some() {
 					div {
-						class: "container mt-5",
+						class: "max-w-4xl mx-auto px-4 mt-12",
 						div {
-							class: "alert alert-danger",
+							class: "alert-danger",
 							{ error_signal.get().unwrap_or_default() }
 						}
 						a {
 							href: "/",
-							class: "btn btn-primary",
+							class: "btn-primary",
 							"Back to Polls"
 						}
 					}
 				} else if question_signal.get().is_some() {
 					div {
-						class: "container mt-5",
+						class: "max-w-4xl mx-auto px-4 mt-12",
 						h1 {
 							class: "mb-4",
 							{ question_signal.get().map(|q| q.question_text.clone()).unwrap_or_default() }
@@ -378,17 +378,17 @@ pub fn polls_results(question_id: i64) -> View {
 							div {
 								class: "card-body",
 								h5 {
-									class: "card-title",
+									class: "text-xl font-bold",
 									"Results"
 								}
 								div {
-									class: "list-group list-group-flush",
-									{ View::fragment(choices_signal.get().iter().map(|choice| { let total = total_signal.get(); let percentage = if total>0 { (choice.votes as f64 / total as f64 * 100.0) as i32 } else { 0 }; let choice_text = choice.choice_text.clone(); let votes = choice.votes; page!(|choice_text : String, votes : i32, percentage : i32| { div { class : "list-group-item", div { class : "d-flex justify-content-between align-items-center mb-2", strong { { choice_text } } span { class : "badge bg-primary rounded-pill", { format!("{} votes", votes) } } } div { class : "progress", div { class : "progress-bar", role : "progressbar", style : format!("width: {}%", percentage), aria_valuenow : percentage.to_string(), aria_valuemin : "0", aria_valuemax : "100", { format!("{}%", percentage) } } } } }) (choice_text, votes, percentage) }).collect()) }
+									class: "divide-y divide-gray-200",
+									{ View::fragment(choices_signal.get().iter().map(|choice| { let total = total_signal.get(); let percentage = if total>0 { (choice.votes as f64 / total as f64 * 100.0) as i32 } else { 0 }; let choice_text = choice.choice_text.clone(); let votes = choice.votes; page!(|choice_text : String, votes : i32, percentage : i32| { div { class : "py-4", div { class : "flex justify-between items-center mb-2", strong { { choice_text } } span { class : "inline-flex items-center bg-brand rounded-full px-2.5 py-0.5 text-xs font-medium text-white", { format!("{} votes", votes) } } } div { class : "w-full bg-gray-200 rounded-full h-2.5", div { class : "bg-brand h-2.5 rounded-full", role : "progressbar", style : format!("width: {}%", percentage), aria_valuenow : percentage.to_string(), aria_valuemin : "0", aria_valuemax : "100", { format!("{}%", percentage) } } } } }) (choice_text, votes, percentage) }).collect ::<Vec<_>>()) }
 								}
 								div {
 									class: "mt-3",
 									p {
-										class: "text-muted",
+										class: "text-gray-500",
 										{ format!("Total votes: {}", total_signal.get()) }
 									}
 								}
@@ -398,26 +398,26 @@ pub fn polls_results(question_id: i64) -> View {
 							class: "mt-3",
 							a {
 								href: format!("/polls/{}/", question_id),
-								class: "btn btn-primary",
+								class: "btn-primary",
 								"Vote Again"
 							}
 							a {
 								href: "/",
-								class: "btn btn-secondary ms-2",
+								class: "btn-secondary ml-2",
 								"Back to Polls"
 							}
 						}
 					}
 				} else {
 					div {
-						class: "container mt-5",
+						class: "max-w-4xl mx-auto px-4 mt-12",
 						div {
-							class: "alert alert-warning",
+							class: "alert-warning",
 							"Question not found"
 						}
 						a {
 							href: "/",
-							class: "btn btn-primary",
+							class: "btn-primary",
 							"Back to Polls"
 						}
 					}
@@ -432,4 +432,93 @@ pub fn polls_results(question_id: i64) -> View {
 		error_signal,
 		question_id,
 	)
+}
+
+/// Example component demonstrating static URL resolution
+///
+/// This shows how to use resolve_static() for images in page! macros.
+/// This function is identical to polls_index() but adds poll icons using
+/// static URL resolution.
+#[cfg(wasm)]
+pub fn polls_index_with_logo() -> View {
+	use reinhardt::pages::static_resolver::resolve_static;
+
+	let (questions, set_questions) = use_state(Vec::<QuestionInfo>::new());
+	let (loading, set_loading) = use_state(true);
+	let (error, set_error) = use_state(None::<String>);
+
+	#[cfg(wasm)]
+	{
+		let set_questions = set_questions.clone();
+		let set_loading = set_loading.clone();
+		let set_error = set_error.clone();
+
+		spawn_local(async move {
+			match get_questions().await {
+				Ok(qs) => {
+					set_questions(qs);
+					set_loading(false);
+				}
+				Err(e) => {
+					set_error(Some(e.to_string()));
+					set_loading(false);
+				}
+			}
+		});
+	}
+
+	let questions_signal = questions.clone();
+	let loading_signal = loading.clone();
+	let error_signal = error.clone();
+
+	page!(|questions_signal: Signal<Vec<QuestionInfo>>, loading_signal: Signal<bool>, error_signal: Signal<Option<String>>| {
+		div {
+			class: "max-w-4xl mx-auto px-4 mt-12",
+			div {
+				class: "text-center mb-6",
+				img {
+					src: resolve_static("images/poll-icon.svg"),
+					alt: "Polls App",
+					class: "mx-auto w-16 h-16",
+				}
+			}
+			h1 {
+				class: "mb-4 text-center",
+				"Polls"
+			}
+			watch {
+				if error_signal.get().is_some() {
+					div {
+						class: "alert-danger",
+						{ error_signal.get().unwrap_or_default() }
+					}
+				}
+			}
+			watch {
+				if loading_signal.get() {
+					div {
+						class: "text-center",
+						div {
+							class: "spinner w-8 h-8",
+							role: "status",
+							span {
+								class: "sr-only",
+								"Loading..."
+							}
+						}
+					}
+				} else if questions_signal.get().is_empty() {
+					p {
+						class: "text-gray-500",
+						"No polls are available."
+					}
+				} else {
+					div {
+						class: "space-y-2",
+						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "block p-4 border rounded hover:bg-gray-50 transition-colors", div { class : "flex w-full justify-between items-center", img { src : resolve_static("images/poll-icon.svg"), alt : "Poll", class : "w-8 h-8 mr-3" } div { class : "flex-1", h5 { class : "mb-1", { question_text } } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect ::<Vec<_>>()) }
+					}
+				}
+			}
+		}
+	})(questions_signal, loading_signal, error_signal)
 }

@@ -3,9 +3,9 @@
 //! These forms are used server-side to generate FormMetadata
 //! that is sent to the WASM client for CSRF token retrieval.
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 use reinhardt::forms::field::Widget;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 use reinhardt::forms::{CharField, Form};
 
 /// Create vote form definition
@@ -15,7 +15,7 @@ use reinhardt::forms::{CharField, Form};
 ///
 /// Fields:
 /// - choice: The selected choice ID (hidden field for form metadata purposes)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 pub fn create_vote_form() -> Form {
 	let mut form = Form::new();
 

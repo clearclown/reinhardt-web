@@ -2,14 +2,14 @@
 //!
 //! This module contains all client-side code that runs in the browser.
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 pub mod lib;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 pub mod router;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 pub mod pages;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(wasm)]
 pub mod components;

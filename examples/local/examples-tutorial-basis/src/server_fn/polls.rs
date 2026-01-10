@@ -6,15 +6,14 @@ use crate::shared::types::{ChoiceInfo, QuestionInfo, VoteRequest};
 use reinhardt::pages::server_fn::{ServerFnError, server_fn};
 
 // Server-only imports
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 use {
 	crate::shared::forms::create_vote_form,
 	reinhardt::forms::wasm_compat::{FormExt, FormMetadata},
 };
 
 // WASM-only imports
-#[cfg(target_arch = "wasm32")]
-use reinhardt::forms::wasm_compat::FormMetadata;
+// (None needed - all forms logic is server-side)
 
 /// Get all questions (latest 5)
 ///
@@ -138,6 +137,7 @@ pub async fn vote(
 /// Get vote form metadata for WASM client rendering
 ///
 /// Returns form metadata with CSRF token for the voting form.
+#[cfg(native)]
 #[server_fn]
 pub async fn get_vote_form_metadata() -> std::result::Result<FormMetadata, ServerFnError> {
 	let form = create_vote_form();
@@ -171,7 +171,7 @@ pub async fn submit_vote(
 }
 
 /// Internal vote implementation (shared between vote and submit_vote)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(native)]
 async fn vote_internal(
 	request: VoteRequest,
 	_db: reinhardt::DatabaseConnection,
