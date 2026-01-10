@@ -1,11 +1,26 @@
 //! Migration Registry Test Fixtures
+//! Migration test fixtures and helpers
 //!
-//! Provides test-friendly migration registry helpers using `LocalRegistry`
-//! for isolated unit testing without global state interference.
+//! This module provides comprehensive fixtures for testing database migrations
+//! and schema operations in Reinhardt applications.
 //!
-//! # Usage
+//! ## Fixture Categories
 //!
-//! In your tests, use the `migration_registry` fixture for an empty isolated registry:
+//! ### Unit Testing Fixtures
+//!
+//! - `` `migration_registry` `` - Isolated `LocalRegistry` for unit testing
+//! - `` `test_migration_source` `` - In-memory migration source
+//! - `` `in_memory_repository` `` - In-memory migration repository
+//!
+//! ### Integration Testing Fixtures (requires `testcontainers` feature)
+//!
+//! - `` `migration_executor` `` - DatabaseMigrationExecutor with PostgreSQL container
+//! - `` `postgres_table_creator` `` - PostgreSQL schema management helper
+//! - `` `admin_table_creator` `` - Admin panel integration helper (requires `admin` feature)
+//!
+//! ## Usage Examples
+//!
+//! ### Unit Testing with LocalRegistry
 //!
 //! ```rust,no_run
 //! # use reinhardt_test::fixtures::*;
@@ -20,14 +35,89 @@
 //! // }
 //! ```
 //!
-//! For production code or examples, use the `collect_migrations!` macro to register
-//! migrations with the global registry.
+//! ### Integration Testing with PostgresTableCreator
+//!
+//! ```rust,no_run
+//! # use reinhardt_test::fixtures::*;
+//! # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+//! # use rstest::*;
+//! // #[rstest]
+//! // #[tokio::test]
+//! // async fn test_with_schema(#[future] postgres_table_creator: PostgresTableCreator) {
+//! //     let mut creator = postgres_table_creator.await;
+//! //
+//! //     // Define schema using Operation enum
+//! //     let schema = vec![
+//! //         Operation::CreateTable {
+//! //             name: "users".to_string(),
+//! //             columns: vec![
+//! //                 ColumnDefinition::new("id", FieldType::Serial).primary_key(),
+//! //                 ColumnDefinition::new("name", FieldType::Text),
+//! //             ],
+//! //             constraints: vec![],
+//! //             without_rowid: None,
+//! //             interleave_in_parent: None,
+//! //             partition: None,
+//! //         },
+//! //     ];
+//! //
+//! //     // Apply schema
+//! //     creator.apply(schema).await.unwrap();
+//! //
+//! //     // Use the database
+//! //     let pool = creator.pool();
+//! //     // ... test code ...
+//! // }
+//! ```
+//!
+//! ### Admin Panel Testing with AdminTableCreator
+//!
+//! ```rust,no_run
+//! # use reinhardt_test::fixtures::*;
+//! # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+//! # use rstest::*;
+//! // #[rstest]
+//! // #[tokio::test]
+//! // async fn test_admin_operations(#[future] admin_table_creator: AdminTableCreator) {
+//! //     let mut creator = admin_table_creator.await;
+//! //
+//! //     // Create schema
+//! //     let schema = vec![/* ... */];
+//! //     creator.apply(schema).await.unwrap();
+//! //
+//! //     // Use AdminDatabase
+//! //     let db = creator.admin_db();
+//! //     let results = db.list::<AdminRecord>("users", vec![], 0, 10).await.unwrap();
+//! // }
+//! ```
+//!
+//! ## Migration Patterns
+//!
+//! The new `PostgresTableCreator` and `AdminTableCreator` fixtures promote type-safe
+//! schema management using `Operation` enum instead of raw SQL strings. This provides:
+//!
+//! - **Type safety**: Schema defined using Rust types
+//! - **Testability**: Easy to create isolated test databases
+//! - **Maintainability**: Schema changes are explicit and reviewable
+//! - **Consistency**: Same patterns across all tests
 
 use async_trait::async_trait;
 use reinhardt_migrations::registry::LocalRegistry;
 use reinhardt_migrations::{Migration, MigrationRepository, MigrationSource, Result};
 use rstest::*;
 use std::collections::HashMap;
+
+// TestContainers-related imports (conditional on feature)
+#[cfg(feature = "testcontainers")]
+use crate::fixtures::testcontainers::postgres_container;
+#[cfg(feature = "testcontainers")]
+use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+#[cfg(feature = "testcontainers")]
+use reinhardt_migrations::{DatabaseConnection, MigrationError, Operation};
+#[cfg(feature = "testcontainers")]
+use std::sync::Arc;
+#[cfg(feature = "testcontainers")]
+use testcontainers::{ContainerAsync, GenericImage};
 
 /// Creates a new isolated migration registry for testing
 ///
@@ -290,6 +380,556 @@ pub fn in_memory_repository() -> InMemoryRepository {
 	InMemoryRepository::new()
 }
 
+// ============================================================================
+// TestContainers-based Migration Executor Fixtures
+// ============================================================================
+
+/// Type alias for migration_executor fixture return value
+///
+/// Contains all elements from postgres_container plus the migration executor:
+/// - `DatabaseMigrationExecutor`: Migration executor instance
+/// - `ContainerAsync<GenericImage>`: PostgreSQL container
+/// - `Arc<PgPool>`: Database connection pool
+/// - `u16`: PostgreSQL port
+/// - `String`: Database URL
+#[cfg(feature = "testcontainers")]
+pub type MigrationExecutorFixture = (
+	DatabaseMigrationExecutor,
+	ContainerAsync<GenericImage>,
+	Arc<sqlx::PgPool>,
+	u16,
+	String,
+);
+
+/// Helper for applying database schema migrations in tests with PostgreSQL
+///
+/// Provides a convenient interface for creating database tables and applying
+/// schema operations during test setup. Holds a DatabaseMigrationExecutor
+/// and connection pool internally.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # use reinhardt_test::fixtures::*;
+/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use rstest::*;
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_schema(#[future] postgres_table_creator: PostgresTableCreator) {
+///     let mut creator = postgres_table_creator.await;
+///
+///     let schema = vec![
+///         Operation::CreateTable {
+///             name: "users".to_string(),
+///             columns: vec![
+///                 ColumnDefinition::new("id", FieldType::Integer),
+///                 ColumnDefinition::new("name", FieldType::Text),
+///             ],
+///             constraints: vec![],
+///             without_rowid: None,
+///             interleave_in_parent: None,
+///             partition: None,
+///         },
+///     ];
+///
+///     creator.apply(schema).await.unwrap();
+///
+///     let pool = creator.pool();
+///     // Run tests using pool...
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+pub struct PostgresTableCreator {
+	executor: DatabaseMigrationExecutor,
+	pool: Arc<sqlx::PgPool>,
+	container: ContainerAsync<GenericImage>,
+	port: u16,
+	url: String,
+}
+
+#[cfg(feature = "testcontainers")]
+impl PostgresTableCreator {
+	/// Create a new TableCreator
+	pub fn new(
+		executor: DatabaseMigrationExecutor,
+		container: ContainerAsync<GenericImage>,
+		pool: Arc<sqlx::PgPool>,
+		port: u16,
+		url: String,
+	) -> Self {
+		Self {
+			executor,
+			pool,
+			container,
+			port,
+			url,
+		}
+	}
+
+	/// Apply schema operations by creating and executing a migration
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// # use reinhardt_test::fixtures::*;
+	/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+	/// # async fn example(mut creator: TableCreator) {
+	/// let schema = vec![
+	///     Operation::CreateTable {
+	///         name: "products".to_string(),
+	///         columns: vec![
+	///             ColumnDefinition::new("id", FieldType::Integer),
+	///             ColumnDefinition::new("name", FieldType::Text),
+	///         ],
+	///         constraints: vec![],
+	///         without_rowid: None,
+	///         interleave_in_parent: None,
+	///         partition: None,
+	///     },
+	/// ];
+	///
+	/// creator.apply(schema).await.unwrap();
+	/// # }
+	/// ```
+	pub async fn apply(&mut self, schema: Vec<Operation>) -> Result<()> {
+		let mut migration = Migration::new("0001_test_schema", "testapp");
+
+		for operation in schema {
+			migration = migration.add_operation(operation);
+		}
+
+		self.executor
+			.apply_migrations(&[migration])
+			.await
+			.expect("Failed to apply test schema migrations");
+
+		Ok(())
+	}
+
+	/// Get a reference to the database connection pool
+	pub fn pool(&self) -> &Arc<sqlx::PgPool> {
+		&self.pool
+	}
+
+	/// Get the database URL
+	pub fn url(&self) -> &str {
+		&self.url
+	}
+
+	/// Get the database port
+	pub fn port(&self) -> u16 {
+		self.port
+	}
+
+	/// Get a reference to the container
+	///
+	/// This is useful for advanced test scenarios that need direct container access.
+	pub fn container(&self) -> &ContainerAsync<GenericImage> {
+		&self.container
+	}
+
+	/// Insert data into a table using SeaQuery
+	///
+	/// This method provides a convenient way to insert test data using type-safe
+	/// SeaQuery builders instead of raw SQL strings.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// # use reinhardt_test::fixtures::*;
+	/// # use sea_query::Value;
+	/// # async fn example(creator: &PostgresTableCreator) {
+	/// creator.insert_data(
+	///     "users",
+	///     vec!["id", "name", "email"],
+	///     vec![
+	///         vec![
+	///             Value::Int(Some(1)),
+	///             Value::String(Some(Box::new("Alice".to_string()))),
+	///             Value::String(Some(Box::new("alice@example.com".to_string()))),
+	///         ],
+	///     ],
+	/// ).await.unwrap();
+	/// # }
+	/// ```
+	pub async fn insert_data(
+		&self,
+		table: &str,
+		columns: Vec<&str>,
+		values: Vec<Vec<sea_query::Value>>,
+	) -> Result<()> {
+		use sea_query::{Alias, PostgresQueryBuilder, Query};
+
+		for row_values in values {
+			let mut query = Query::insert();
+			query
+				.into_table(Alias::new(table))
+				.columns(columns.iter().map(|&c| Alias::new(c)));
+
+			let values_expr: Vec<sea_query::SimpleExpr> =
+				row_values.into_iter().map(|v| v.into()).collect();
+			query.values_panic(values_expr);
+
+			// Build SQL string without sqlx bindings (SeaQuery 1.0.0-rc)
+			let sql = query.to_string(PostgresQueryBuilder);
+
+			sqlx::query(&sql)
+				.execute(self.pool.as_ref())
+				.await
+				.map_err(MigrationError::SqlError)?;
+		}
+		Ok(())
+	}
+
+	/// Execute custom SQL (fallback for complex cases)
+	///
+	/// This method allows executing arbitrary SQL statements when SeaQuery
+	/// is insufficient for complex schema operations or PostgreSQL-specific features.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// # use reinhardt_test::fixtures::*;
+	/// # async fn example(creator: &PostgresTableCreator) {
+	/// // PostgreSQL-specific feature
+	/// creator.execute_sql(
+	///     "CREATE TABLE test (id SERIAL PRIMARY KEY) WITH (autovacuum_enabled = false)"
+	/// ).await.unwrap();
+	/// # }
+	/// ```
+	pub async fn execute_sql(&self, sql: &str) -> Result<sqlx::postgres::PgQueryResult> {
+		sqlx::query(sql)
+			.execute(self.pool.as_ref())
+			.await
+			.map_err(MigrationError::SqlError)
+	}
+
+	/// Begin a transaction for advanced test scenarios
+	///
+	/// This is useful for testing two-phase commit (2PC) or other transaction-based
+	/// operations.
+	///
+	/// # Examples
+	///
+	/// ```rust,no_run
+	/// # use reinhardt_test::fixtures::*;
+	/// # async fn example(creator: &PostgresTableCreator) {
+	/// let mut tx = creator.begin_transaction().await.unwrap();
+	/// // Perform transactional operations...
+	/// tx.commit().await.unwrap();
+	/// # }
+	/// ```
+	pub async fn begin_transaction(&self) -> Result<sqlx::Transaction<'_, sqlx::Postgres>> {
+		self.pool.begin().await.map_err(MigrationError::SqlError)
+	}
+}
+
+// ============================================================================
+// AdminTableCreator - Integration with AdminDatabase
+// ============================================================================
+
+/// Helper for applying database schema migrations in AdminDatabase tests
+///
+/// This structure combines PostgresTableCreator with AdminDatabase, providing
+/// a convenient interface for tests that need both schema management and
+/// admin panel functionality.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # use reinhardt_test::fixtures::*;
+/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use rstest::*;
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_admin(#[future] admin_table_creator: AdminTableCreator) {
+///     let mut creator = admin_table_creator.await;
+///
+///     // Create schema
+///     let schema = vec![
+///         Operation::CreateTable {
+///             name: "test_models".to_string(),
+///             columns: vec![
+///                 ColumnDefinition::new("id", FieldType::Serial).primary_key(),
+///                 ColumnDefinition::new("name", FieldType::Text),
+///             ],
+///             constraints: vec![],
+///             without_rowid: None,
+///             interleave_in_parent: None,
+///             partition: None,
+///         },
+///     ];
+///     creator.apply(schema).await.unwrap();
+///
+///     // Use admin database
+///     let db = creator.admin_db();
+///     // Perform admin operations...
+/// }
+/// ```
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+pub struct AdminTableCreator {
+	postgres_creator: PostgresTableCreator,
+	admin_db: Arc<reinhardt_admin_core::AdminDatabase>,
+}
+
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+impl AdminTableCreator {
+	/// Create a new AdminTableCreator
+	pub fn new(
+		postgres_creator: PostgresTableCreator,
+		admin_db: Arc<reinhardt_admin_core::AdminDatabase>,
+	) -> Self {
+		Self {
+			postgres_creator,
+			admin_db,
+		}
+	}
+
+	/// Apply schema operations
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub async fn apply(&mut self, schema: Vec<Operation>) -> Result<()> {
+		self.postgres_creator.apply(schema).await
+	}
+
+	/// Get a reference to the AdminDatabase
+	///
+	/// This provides access to admin panel operations like list, create, update, delete.
+	pub fn admin_db(&self) -> &Arc<reinhardt_admin_core::AdminDatabase> {
+		&self.admin_db
+	}
+
+	/// Get a reference to the database connection pool
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub fn pool(&self) -> &Arc<sqlx::PgPool> {
+		self.postgres_creator.pool()
+	}
+
+	/// Get the database URL
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub fn url(&self) -> &str {
+		self.postgres_creator.url()
+	}
+
+	/// Get the database port
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub fn port(&self) -> u16 {
+		self.postgres_creator.port()
+	}
+
+	/// Get a reference to the container
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub fn container(&self) -> &ContainerAsync<GenericImage> {
+		self.postgres_creator.container()
+	}
+
+	/// Insert data into a table using SeaQuery
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub async fn insert_data(
+		&self,
+		table: &str,
+		columns: Vec<&str>,
+		values: Vec<Vec<sea_query::Value>>,
+	) -> Result<()> {
+		self.postgres_creator
+			.insert_data(table, columns, values)
+			.await
+	}
+
+	/// Execute custom SQL (fallback for complex cases)
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub async fn execute_sql(&self, sql: &str) -> Result<sqlx::postgres::PgQueryResult> {
+		self.postgres_creator.execute_sql(sql).await
+	}
+
+	/// Begin a transaction for advanced test scenarios
+	///
+	/// Delegates to the underlying PostgresTableCreator.
+	pub async fn begin_transaction(&self) -> Result<sqlx::Transaction<'_, sqlx::Postgres>> {
+		self.postgres_creator.begin_transaction().await
+	}
+}
+
+// ============================================================================
+// Migration Executor and Table Creator Fixtures
+// ============================================================================
+
+/// Creates a DatabaseMigrationExecutor connected to a test PostgreSQL container
+///
+/// This fixture combines postgres_container with migration executor creation,
+/// providing a ready-to-use migration executor for tests.
+///
+/// # Type Signature
+///
+/// Returns `MigrationExecutorFixture`:
+/// - `DatabaseMigrationExecutor`: Migration executor instance
+/// - `ContainerAsync<GenericImage>`: PostgreSQL container
+/// - `Arc<PgPool>`: Database connection pool
+/// - `u16`: PostgreSQL port
+/// - `String`: Database URL
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # use reinhardt_test::fixtures::*;
+/// # use reinhardt_migrations::Migration;
+/// # use rstest::*;
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_executor(
+///     #[future] migration_executor: MigrationExecutorFixture
+/// ) {
+///     let (mut executor, _container, _pool, _port, _url) = migration_executor.await;
+///
+///     let migration = Migration::new("0001_test", "testapp");
+///     executor.apply_migrations(&[migration]).await.unwrap();
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn migration_executor(
+	#[future] postgres_container: (ContainerAsync<GenericImage>, Arc<sqlx::PgPool>, u16, String),
+) -> MigrationExecutorFixture {
+	let (container, pool, port, url) = postgres_container.await;
+
+	let connection = DatabaseConnection::connect_postgres(&url)
+		.await
+		.expect("Failed to connect to test database");
+
+	let executor = DatabaseMigrationExecutor::new(connection);
+
+	(executor, container, pool, port, url)
+}
+
+/// Creates a PostgresTableCreator for applying test schemas
+///
+/// This fixture combines migration_executor with a convenient helper structure
+/// for applying database schema operations in PostgreSQL tests.
+///
+/// # Type Signature
+///
+/// Returns `` `PostgresTableCreator` ``:
+/// - Helper with methods to apply schema operations
+/// - Provides access to connection pool, URL, and port
+/// - Includes methods for data insertion and custom SQL execution
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # use reinhardt_test::fixtures::*;
+/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use rstest::*;
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_with_creator(#[future] postgres_table_creator: PostgresTableCreator) {
+///     let mut creator = postgres_table_creator.await;
+///
+///     let schema = vec![
+///         Operation::CreateTable {
+///             name: "test_table".to_string(),
+///             columns: vec![
+///                 ColumnDefinition::new("id", FieldType::Integer),
+///             ],
+///             constraints: vec![],
+///             without_rowid: None,
+///             interleave_in_parent: None,
+///             partition: None,
+///         },
+///     ];
+///
+///     creator.apply(schema).await.unwrap();
+///     let pool = creator.pool();
+///     // Use pool for testing...
+/// }
+/// ```
+#[cfg(feature = "testcontainers")]
+#[fixture]
+pub async fn postgres_table_creator(
+	#[future] migration_executor: MigrationExecutorFixture,
+) -> PostgresTableCreator {
+	let (executor, container, pool, port, url) = migration_executor.await;
+	PostgresTableCreator::new(executor, container, pool, port, url)
+}
+
+/// Creates an AdminTableCreator for applying test schemas in admin panel tests
+///
+/// This fixture combines PostgresTableCreator with AdminDatabase, providing
+/// a convenient helper for tests that need both schema management and admin
+/// panel functionality.
+///
+/// # Type Signature
+///
+/// Returns `` `AdminTableCreator` ``:
+/// - Helper with methods to apply schema operations
+/// - Provides access to AdminDatabase for admin panel testing
+/// - Includes all PostgresTableCreator methods (insert_data, execute_sql, etc.)
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// # use reinhardt_test::fixtures::*;
+/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use rstest::*;
+/// #[rstest]
+/// #[tokio::test]
+/// async fn test_admin_operations(#[future] admin_table_creator: AdminTableCreator) {
+///     let mut creator = admin_table_creator.await;
+///
+///     // Create schema
+///     let schema = vec![
+///         Operation::CreateTable {
+///             name: "test_models".to_string(),
+///             columns: vec![
+///                 ColumnDefinition::new("id", FieldType::Serial).primary_key(),
+///                 ColumnDefinition::new("name", FieldType::Text),
+///             ],
+///             constraints: vec![],
+///             without_rowid: None,
+///             interleave_in_parent: None,
+///             partition: None,
+///         },
+///     ];
+///     creator.apply(schema).await.unwrap();
+///
+///     // Use admin database
+///     let db = creator.admin_db();
+///     let results = db.list::<AdminRecord>("test_models", vec![], 0, 10).await.unwrap();
+/// }
+/// ```
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+#[fixture]
+pub async fn admin_table_creator(
+	#[future] postgres_table_creator: PostgresTableCreator,
+) -> AdminTableCreator {
+	use reinhardt_db::DatabaseConnection;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::dialect::PostgresBackend;
+	use std::sync::Arc as StdArc;
+
+	let creator = postgres_table_creator.await;
+
+	// Create backends connection from pool
+	let backend = StdArc::new(PostgresBackend::new((**creator.pool()).clone()));
+	let backends_conn = BackendsConnection::new(backend);
+
+	// Create ORM connection
+	let connection = DatabaseConnection::new(
+		reinhardt_db::orm::connection::DatabaseBackend::Postgres,
+		backends_conn,
+	);
+
+	// Create AdminDatabase
+	let admin_db = Arc::new(reinhardt_admin_core::AdminDatabase::new(connection));
+
+	AdminTableCreator::new(creator, admin_db)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -318,5 +958,55 @@ mod tests {
 		// Even though previous test registered a migration,
 		// this new fixture instance should be empty
 		assert_eq!(migration_registry.all_migrations().len(), 0);
+	}
+
+	#[cfg(feature = "testcontainers")]
+	mod testcontainer_fixtures {
+		use super::*;
+		use reinhardt_migrations::{ColumnDefinition, DatabaseType, FieldType, Operation};
+
+		#[rstest]
+		#[tokio::test]
+		async fn test_migration_executor_fixture(
+			#[future] migration_executor: MigrationExecutorFixture,
+		) {
+			let (executor, _container, _pool, _port, _url) = migration_executor.await;
+
+			// Verify executor is connected to PostgreSQL
+			assert_eq!(executor.database_type(), DatabaseType::Postgres);
+		}
+
+		#[rstest]
+		#[tokio::test]
+		async fn test_postgres_table_creator_fixture(
+			#[future] postgres_table_creator: PostgresTableCreator,
+		) {
+			let mut creator = postgres_table_creator.await;
+
+			// Define schema directly in test
+			let schema = vec![Operation::CreateTable {
+				name: "fixture_test_table".to_string(),
+				columns: vec![
+					ColumnDefinition::new("id", FieldType::Integer),
+					ColumnDefinition::new("value", FieldType::Text),
+				],
+				constraints: vec![],
+				without_rowid: None,
+				interleave_in_parent: None,
+				partition: None,
+			}];
+
+			// Apply schema
+			creator.apply(schema).await.unwrap();
+
+			// Verify table was created
+			let pool = creator.pool();
+			let result = sqlx::query("SELECT * FROM fixture_test_table")
+				.fetch_all(pool.as_ref())
+				.await
+				.unwrap();
+
+			assert!(result.is_empty());
+		}
 	}
 }

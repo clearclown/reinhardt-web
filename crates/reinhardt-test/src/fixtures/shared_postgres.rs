@@ -38,7 +38,51 @@ use testcontainers::{
 	runners::AsyncRunner,
 };
 use tokio::sync::OnceCell;
+use tokio::time::sleep;
 use uuid::Uuid;
+
+/// Retry a fallible async operation with exponential backoff
+///
+/// # Arguments
+///
+/// * `max_attempts` - Maximum number of retry attempts
+/// * `initial_delay` - Initial delay between retries (doubled after each attempt)
+/// * `operation` - Async operation to retry
+///
+/// # Returns
+///
+/// Result of the operation if successful within max_attempts
+async fn retry_with_backoff<F, Fut, T, E>(
+	max_attempts: usize,
+	initial_delay: Duration,
+	mut operation: F,
+) -> Result<T, E>
+where
+	F: FnMut() -> Fut,
+	Fut: std::future::Future<Output = Result<T, E>>,
+{
+	let mut delay = initial_delay;
+	let mut last_error = None;
+
+	for attempt in 1..=max_attempts {
+		match operation().await {
+			Ok(result) => return Ok(result),
+			Err(e) => {
+				last_error = Some(e);
+				if attempt < max_attempts {
+					eprintln!(
+						"[retry] Attempt {}/{} failed, retrying after {:?}",
+						attempt, max_attempts, delay
+					);
+					sleep(delay).await;
+					delay *= 2; // Exponential backoff
+				}
+			}
+		}
+	}
+
+	Err(last_error.expect("Should have at least one error"))
+}
 
 /// Shared PostgreSQL container with base URL for connections
 pub struct SharedPostgres {
@@ -125,7 +169,18 @@ async fn start_postgres_container() -> (ContainerAsync<GenericImage>, String) {
 		.expect("Failed to start PostgreSQL container");
 
 	let host = container.get_host().await.unwrap();
-	let port = container.get_host_port_ipv4(5432.tcp()).await.unwrap();
+
+	// Retry port retrieval with exponential backoff to handle timing issues
+	let port = retry_with_backoff(3, Duration::from_millis(100), || async {
+		container
+			.get_host_port_ipv4(5432.tcp())
+			.await
+			.map_err(|e| format!("Port retrieval failed: {}", e))
+	})
+	.await
+	.expect("Failed to get container port after retries");
+
+	// Base URL without database name - sslmode will be added at connection time
 	let base_url = format!("postgres://postgres@{}:{}", host, port);
 
 	eprintln!(
@@ -146,7 +201,7 @@ async fn init_template_database(base_url: &str) {
 		.acquire_timeout(Duration::from_secs(60))
 		.test_before_acquire(false)
 		.idle_timeout(Some(Duration::from_secs(30)))
-		.connect(&format!("{}/postgres", base_url))
+		.connect(&format!("{}/postgres?sslmode=disable", base_url))
 		.await
 		.expect("Failed to connect to PostgreSQL for template setup");
 
@@ -193,7 +248,7 @@ pub async fn get_shared_postgres() -> &'static SharedPostgres {
 
 			// Try to read existing URL and test connection
 			if let Some(url) = read_url_from_file() {
-				let postgres_url = format!("{}/postgres", url);
+				let postgres_url = format!("{}/postgres?sslmode=disable", url);
 				if test_connection(&postgres_url).await {
 					eprintln!("[shared_postgres] Reusing existing container at {}", url);
 					lock_file.unlock().ok();
@@ -255,7 +310,7 @@ pub async fn get_test_pool() -> PgPool {
 	let admin_pool = sqlx::postgres::PgPoolOptions::new()
 		.max_connections(1)
 		.acquire_timeout(Duration::from_secs(10))
-		.connect(&format!("{}/postgres", pg.base_url))
+		.connect(&format!("{}/postgres?sslmode=disable", pg.base_url))
 		.await
 		.expect("Failed to connect to postgres for test database creation");
 
@@ -278,7 +333,7 @@ pub async fn get_test_pool() -> PgPool {
 		.test_before_acquire(false)
 		// Prevent idle connection issues
 		.idle_timeout(Some(Duration::from_secs(30)))
-		.connect(&format!("{}/{}", pg.base_url, db_name))
+		.connect(&format!("{}/{}?sslmode=disable", pg.base_url, db_name))
 		.await
 		.expect("Failed to connect to test database")
 }
@@ -335,13 +390,13 @@ pub async fn get_test_pool_with_table(table_sql: &str) -> PgPool {
 pub async fn get_test_pool_with_orm() -> (PgPool, String) {
 	let pg = get_shared_postgres().await;
 	let db_name = format!("test_{}", Uuid::new_v4().simple());
-	let db_url = format!("{}/{}", pg.base_url, db_name);
+	let db_url = format!("{}/{}?sslmode=disable", pg.base_url, db_name);
 
 	// Connect to postgres database to create test database
 	let admin_pool = sqlx::postgres::PgPoolOptions::new()
 		.max_connections(1)
 		.acquire_timeout(Duration::from_secs(10))
-		.connect(&format!("{}/postgres", pg.base_url))
+		.connect(&format!("{}/postgres?sslmode=disable", pg.base_url))
 		.await
 		.expect("Failed to connect to postgres for test database creation");
 

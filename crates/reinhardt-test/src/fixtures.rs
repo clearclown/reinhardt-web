@@ -104,6 +104,8 @@ pub mod testcontainers;
 
 // New fixture modules for integration tests
 pub mod admin;
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+pub mod admin_panel;
 pub mod auth;
 
 #[cfg(feature = "testcontainers")]
@@ -181,6 +183,21 @@ pub use migrations::{
 	InMemoryRepository, TestMigrationSource, in_memory_repository, migration_registry,
 	test_migration_source,
 };
+
+// Re-export migration types for use in test schemas
+// These are re-exported from reinhardt-migrations to allow functional crates
+// to use them in tests without adding reinhardt-migrations to dev-dependencies
+pub use reinhardt_migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
+
+// Migration fixtures (conditional on testcontainers feature)
+#[cfg(feature = "testcontainers")]
+pub use migrations::{
+	MigrationExecutorFixture, PostgresTableCreator, migration_executor, postgres_table_creator,
+};
+
+// Admin integration fixtures (conditional on admin + testcontainers features)
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+pub use migrations::{AdminTableCreator, admin_table_creator};
 
 // From di module
 pub use di::{

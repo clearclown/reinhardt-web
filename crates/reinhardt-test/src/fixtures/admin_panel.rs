@@ -24,16 +24,15 @@
 // Only compile when admin feature is enabled
 #[cfg(feature = "admin")]
 use {
-	reinhardt_admin_core::{
-		AdminDatabase, AdminSite, ModelAdmin, ModelAdminConfig, ModelAdminConfigBuilder,
-	},
-	reinhardt_admin_types::errors::AdminError,
-	reinhardt_db::{DatabaseConnection, Model},
-	reinhardt_di::SingletonScope,
+	reinhardt_admin_core::{AdminDatabase, AdminSite, ModelAdminConfig},
+	reinhardt_db::DatabaseConnection,
 	rstest::*,
 	std::sync::Arc,
-	tokio::sync::OnceCell,
 };
+
+// Import shared_db_pool fixture for testcontainers-based tests
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+use crate::fixtures::shared_postgres::shared_db_pool;
 
 /// Fixture providing a basic AdminSite instance
 ///
@@ -99,43 +98,29 @@ pub async fn model_admin_config() -> ModelAdminConfig {
 		.list_filter(vec!["status"])
 		.search_fields(vec!["name", "description"])
 		.build()
-		.expect("Failed to build ModelAdminConfig")
 }
 
-/// Fixture providing an AdminDatabase connected to a test PostgreSQL instance
-///
-/// This fixture uses the shared PostgreSQL container pattern from reinhardt-test
-/// to provide an isolated database for each test. The database connection is
-/// obtained from the `shared_postgres` fixture.
-///
-/// # Dependencies
-/// - Requires `testcontainers` feature for PostgreSQL container
-/// - Requires `admin` feature for AdminDatabase
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::admin_panel::admin_database;
-/// use rstest::*;
-///
-/// #[rstest]
-/// #[tokio::test]
-/// async fn test_admin_database_operations(
-///     #[future] admin_database: Arc<AdminDatabase>,
-/// ) {
-///     let db = admin_database.await;
-///     // Test database operations
-/// }
-/// ```
 #[cfg(all(feature = "admin", feature = "testcontainers"))]
 #[fixture]
 pub async fn admin_database(
 	#[future] shared_db_pool: (sqlx::PgPool, String),
 ) -> Arc<AdminDatabase> {
-	use reinhardt_db::postgres::PgConnection;
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::dialect::PostgresBackend;
+	use std::sync::Arc as StdArc;
 
 	let (pool, _database_name) = shared_db_pool.await;
-	let connection = DatabaseConnection::Postgres(PgConnection::new(pool));
+
+	// Create backends connection from pool
+	let backend = StdArc::new(PostgresBackend::new(pool));
+	let backends_conn = BackendsConnection::new(backend);
+
+	// Create ORM connection
+	let connection = DatabaseConnection::new(
+		reinhardt_db::orm::connection::DatabaseBackend::Postgres,
+		backends_conn,
+	);
+
 	Arc::new(AdminDatabase::new(connection))
 }
 
@@ -168,9 +153,9 @@ pub async fn admin_database(
 pub async fn test_model_with_table(
 	#[future] shared_db_pool: (sqlx::PgPool, String),
 ) -> (sqlx::PgPool, String) {
-	use sqlx::{Executor, PgPool};
+	use sqlx::Executor;
 
-	let (pool, database_name) = shared_db_pool.await;
+	let (pool, _database_name) = shared_db_pool.await;
 	let table_name = format!("test_models_{}", uuid::Uuid::new_v4().simple());
 
 	// Create test table
@@ -238,31 +223,264 @@ pub async fn server_fn_test_context(
 	let db = admin_database.await;
 
 	// Register the model in the site
-	site.register(config.model_name(), config)
+	site.register("TestModel", config)
 		.expect("Failed to register model");
 
 	(site, db)
 }
 
-/// Helper function to create DI container for admin tests
-///
-/// This function configures a SingletonScope with AdminSite and
-/// AdminDatabase for dependency injection testing.
-#[cfg(feature = "admin")]
-pub fn configure_admin_di(
-	singleton: &SingletonScope,
-	site: Arc<AdminSite>,
-	db: Arc<AdminDatabase>,
-) {
-	use reinhardt_di::{Injectable, Scope};
+#[cfg(all(feature = "admin", feature = "testcontainers"))]
+#[fixture]
+pub async fn export_import_test_context(
+	#[future] admin_site: Arc<AdminSite>,
+	#[future] shared_db_pool: (sqlx::PgPool, String),
+) -> (Arc<AdminSite>, Arc<AdminDatabase>, String, sqlx::PgPool) {
+	use reinhardt_db::backends::connection::DatabaseConnection as BackendsConnection;
+	use reinhardt_db::backends::dialect::PostgresBackend;
+	use sea_query::{Alias, ColumnDef, Expr, Iden, PostgresQueryBuilder, Query, Table};
+	use sqlx::Row;
+	use std::sync::Arc as StdArc;
+	use uuid::Uuid;
 
-	singleton.register_singleton(site.clone() as Arc<dyn Injectable>);
-	singleton.register_singleton(db.clone() as Arc<dyn Injectable>);
+	let site = admin_site.await;
+	let (pool, _database_name) = shared_db_pool.await;
+
+	// Create backends connection from pool
+	let backend = StdArc::new(PostgresBackend::new(pool.clone()));
+	let backends_conn = BackendsConnection::new(backend);
+
+	// Create ORM connection
+	let connection = DatabaseConnection::new(
+		reinhardt_db::orm::connection::DatabaseBackend::Postgres,
+		backends_conn,
+	);
+
+	// Create AdminDatabase
+	let db = Arc::new(AdminDatabase::new(connection));
+
+	// ユニークなテーブル名生成
+	let table_name = format!("test_exports_{}", Uuid::new_v4().simple());
+
+	// テーブル定義用Iden
+	#[derive(Iden)]
+	enum TestExportsTable {
+		#[iden = "_"]
+		Table,
+		Id,
+		Name,
+		Email,
+		Status,
+		Age,
+		Score,
+		IsVerified,
+		Bio,
+		BirthDate,
+		CreatedAt,
+		Metadata,
+	}
+
+	// SeaQueryでテーブル作成
+	let create_table = Table::create()
+		.table(Alias::new(&table_name))
+		.if_not_exists()
+		.col(
+			ColumnDef::new(TestExportsTable::Id)
+				.big_integer()
+				.not_null()
+				.auto_increment()
+				.primary_key(),
+		)
+		.col(
+			ColumnDef::new(TestExportsTable::Name)
+				.string()
+				.string_len(255)
+				.not_null(),
+		)
+		.col(
+			ColumnDef::new(TestExportsTable::Email)
+				.string()
+				.string_len(255)
+				.not_null(),
+		)
+		.col(
+			ColumnDef::new(TestExportsTable::Status)
+				.string()
+				.string_len(50)
+				.default("active"),
+		)
+		.col(ColumnDef::new(TestExportsTable::Age).integer())
+		.col(ColumnDef::new(TestExportsTable::Score).double())
+		.col(
+			ColumnDef::new(TestExportsTable::IsVerified)
+				.boolean()
+				.default(false),
+		)
+		.col(ColumnDef::new(TestExportsTable::Bio).text())
+		.col(ColumnDef::new(TestExportsTable::BirthDate).date())
+		.col(
+			ColumnDef::new(TestExportsTable::CreatedAt)
+				.timestamp_with_time_zone()
+				.default(Expr::current_timestamp()),
+		)
+		.col(ColumnDef::new(TestExportsTable::Metadata).json_binary())
+		.build(PostgresQueryBuilder);
+
+	sqlx::query(&create_table)
+		.execute(&pool)
+		.await
+		.expect("Failed to create test table");
+
+	// 多様なテストデータ挿入（5パターン）
+	// パターン5用の長い文字列を事前に作成
+	let long_name = format!("Eve Martinez{}", "x".repeat(240));
+	let long_bio = "Lorem ipsum dolor sit amet ".repeat(100);
+
+	let test_records = vec![
+		// パターン1: 標準データ
+		(
+			"Alice Johnson",
+			"alice@example.com",
+			"active",
+			Some(30_i32),
+			Some(85.5_f64),
+			true,
+			Some("Software engineer with 5 years of experience"),
+			Some("1994-03-15"),
+			Some(r#"{"role": "admin", "department": "engineering"}"#),
+		),
+		// パターン2: NULL値
+		(
+			"Bob Smith",
+			"bob@example.com",
+			"inactive",
+			None,
+			None,
+			false,
+			None,
+			None,
+			None,
+		),
+		// パターン3: 特殊文字とUnicode
+		(
+			"Charlie O'Brien",
+			"charlie+test@example.com",
+			"pending",
+			Some(25_i32),
+			Some(92.7_f64),
+			true,
+			Some("Test with \"quotes\" and 日本語"),
+			Some("1999-01-01"),
+			Some(r#"{"tags": ["新規", "VIP"]}"#),
+		),
+		// パターン4: 境界値
+		(
+			"David Lee",
+			"david@example.com",
+			"active",
+			Some(0_i32),
+			Some(0.0_f64),
+			false,
+			Some(""),
+			Some("1900-01-01"),
+			Some("{}"),
+		),
+		// パターン5: 最大長エッジケース
+		(
+			long_name.as_str(),
+			"eve@example.com",
+			"active",
+			Some(150_i32),
+			Some(999.999_f64),
+			true,
+			Some(long_bio.as_str()),
+			Some("2099-12-31"),
+			Some(r#"{"nested": {"deep": {"value": 123}}}"#),
+		),
+	];
+
+	for (name, email, status, age, score, is_verified, bio, birth_date, metadata) in test_records {
+		let mut columns = vec![
+			TestExportsTable::Name,
+			TestExportsTable::Email,
+			TestExportsTable::Status,
+			TestExportsTable::IsVerified,
+		];
+		let mut values: Vec<sea_query::Value> =
+			vec![name.into(), email.into(), status.into(), is_verified.into()];
+
+		if let Some(age_val) = age {
+			columns.push(TestExportsTable::Age);
+			values.push(age_val.into());
+		}
+		if let Some(score_val) = score {
+			columns.push(TestExportsTable::Score);
+			values.push(score_val.into());
+		}
+		if let Some(bio_val) = bio {
+			columns.push(TestExportsTable::Bio);
+			values.push(bio_val.into());
+		}
+		if let Some(date_val) = birth_date {
+			columns.push(TestExportsTable::BirthDate);
+			values.push(date_val.into());
+		}
+		if let Some(meta_val) = metadata {
+			columns.push(TestExportsTable::Metadata);
+			values.push(meta_val.into());
+		}
+
+		let mut insert_stmt = Query::insert();
+		insert_stmt
+			.into_table(Alias::new(&table_name))
+			.columns(columns)
+			.values_panic(values.into_iter().map(|v| v.into()).collect::<Vec<_>>());
+
+		let sql = insert_stmt.to_string(PostgresQueryBuilder);
+
+		sqlx::query(&sql)
+			.execute(&pool)
+			.await
+			.expect("Failed to insert test data");
+	}
+
+	// Verify data was inserted (debug)
+	let count_sql = format!("SELECT COUNT(*) as count FROM {}", table_name);
+	let count_row = sqlx::query(&count_sql)
+		.fetch_one(&pool)
+		.await
+		.expect("Failed to count records");
+	let count: i64 = count_row.try_get("count").expect("Failed to get count");
+	println!(
+		"[DEBUG] Inserted {} records into table {}",
+		count, table_name
+	);
+
+	// モデルを再登録（テーブル名を更新）
+	let config = ModelAdminConfig::builder()
+		.model_name("TestModel")
+		.table_name(&table_name)
+		.list_display(vec![
+			"id",
+			"name",
+			"email",
+			"status",
+			"age",
+			"score",
+			"is_verified",
+		])
+		.search_fields(vec!["name", "email", "bio"])
+		.build();
+
+	site.register("TestModel", config)
+		.expect("Failed to register TestModel in AdminSite");
+
+	(site, db, table_name, pool)
 }
 
 #[cfg(all(feature = "admin", test))]
 mod tests {
 	use super::*;
+	use reinhardt_admin_core::ModelAdmin;
 	use rstest::*;
 
 	#[rstest]
