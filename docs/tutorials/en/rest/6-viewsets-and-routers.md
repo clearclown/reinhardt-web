@@ -157,6 +157,141 @@ async fn main() -> Result<()> {
 }
 ```
 
+## Code Comparison: Function-based vs ViewSet
+
+### Function-based Views (Tutorial 1-5)
+
+```rust
+// ~200 lines of code for full CRUD operations
+use reinhardt::{get, post, put, delete, Json, Path, Response, StatusCode, ViewResult};
+use validator::Validate;
+
+#[get("/snippets/", name = "snippets_list")]
+pub async fn list() -> ViewResult<Response> {
+    // Manual implementation of list logic
+    // - Fetch all snippets
+    // - Format response
+    // Total: ~20 lines
+}
+
+#[post("/snippets/", name = "snippets_create")]
+pub async fn create(Json(serializer): Json<SnippetSerializer>) -> ViewResult<Response> {
+    serializer.validate()?;
+    // Manual implementation of create logic
+    // - Validate input
+    // - Create snippet
+    // - Return response
+    // Total: ~30 lines
+}
+
+#[get("/snippets/{id}/", name = "snippets_retrieve")]
+pub async fn retrieve(Path(snippet_id): Path<i64>) -> ViewResult<Response> {
+    // Manual implementation of retrieve logic
+    // Total: ~20 lines
+}
+
+#[put("/snippets/{id}/", name = "snippets_update")]
+pub async fn update(Path(snippet_id): Path<i64>, Json(serializer): Json<SnippetSerializer>) -> ViewResult<Response> {
+    serializer.validate()?;
+    // Manual implementation of update logic
+    // Total: ~40 lines
+}
+
+#[delete("/snippets/{id}/", name = "snippets_delete")]
+pub async fn delete(Path(snippet_id): Path<i64>) -> ViewResult<Response> {
+    // Manual implementation of delete logic
+    // Total: ~15 lines
+}
+
+// URL registration in urls.rs
+UnifiedRouter::new()
+    .endpoint(views::list)
+    .endpoint(views::create)
+    .endpoint(views::retrieve)
+    .endpoint(views::update)
+    .endpoint(views::delete)
+```
+
+**Total**: ~200 lines for basic CRUD (no pagination, filtering, or ordering)
+
+### ViewSet-based (Tutorial 6)
+
+```rust
+// ~15 lines for the same functionality PLUS pagination, filtering, and ordering!
+use reinhardt::viewsets::{ModelViewSet, PaginationConfig, FilterConfig, OrderingConfig};
+
+pub struct SnippetViewSet;
+
+impl SnippetViewSet {
+    pub fn new() -> ModelViewSet<Snippet, SnippetSerializer> {
+        ModelViewSet::new("snippet")
+            .with_pagination(PaginationConfig::page_number(10, Some(100)))
+            .with_filters(FilterConfig::new()
+                .with_filterable_fields(vec!["language".to_string(), "title".to_string()]))
+            .with_ordering(OrderingConfig::new()
+                .with_ordering_fields(vec!["created_at".to_string(), "title".to_string()]))
+    }
+}
+
+// URL registration in urls.rs
+UnifiedRouter::new().register_viewset("/snippets-viewset", Arc::new(SnippetViewSet::new()))
+```
+
+**Total**: ~15 lines for full CRUD + pagination + filtering + ordering
+
+**Result**: **~13x less code** with ViewSets while providing **more features**!
+
+## Try it Yourself
+
+The complete working example is available in `examples-tutorial-rest`:
+- [examples-tutorial-rest](../../../examples/local/examples-tutorial-rest/)
+
+### Running the Example
+
+```bash
+cd examples/local/examples-tutorial-rest
+
+# Option 1: Function-based views (Tutorial 1-5)
+cargo run --bin manage runserver
+# Visit http://127.0.0.1:8000/api/snippets/
+
+# Option 2: ViewSet-based views (Tutorial 6)
+USE_VIEWSET=1 cargo run --bin manage runserver
+# Visit http://127.0.0.1:8000/api/snippets-viewset/
+```
+
+### Testing the ViewSet Features
+
+```bash
+# List with pagination
+curl "http://127.0.0.1:8000/api/snippets-viewset/?page=1&page_size=10"
+
+# Filter by language
+curl "http://127.0.0.1:8000/api/snippets-viewset/?language=rust"
+
+# Order by created_at (descending)
+curl "http://127.0.0.1:8000/api/snippets-viewset/?ordering=-created_at"
+
+# Combine: Filter + Order + Paginate
+curl "http://127.0.0.1:8000/api/snippets-viewset/?language=rust&ordering=-title&page=1&page_size=5"
+
+# Create a new snippet
+curl -X POST http://127.0.0.1:8000/api/snippets-viewset/ \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test ViewSet","code":"fn main() {}","language":"rust"}'
+
+# Retrieve a specific snippet
+curl http://127.0.0.1:8000/api/snippets-viewset/1/
+
+# Update a snippet
+curl -X PUT http://127.0.0.1:8000/api/snippets-viewset/1/ \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Updated","code":"fn main() { println!(\"Hello!\"); }","language":"rust"}'
+
+# Delete a snippet
+curl -X DELETE http://127.0.0.1:8000/api/snippets-viewset/1/
+```
+
 ## Summary
 
 Throughout this tutorial series, you learned:
@@ -175,4 +310,5 @@ You can now build production-ready RESTful APIs with this knowledge!
 - For more advanced topics, see the [API Reference](../../../api/README.md)
 - Learn about [Dependency Injection](../../07-dependency-injection.md)
 - Check out the [Feature Flags Guide](../../../FEATURE_FLAGS.md) for customization
+- Try the working example in [examples-tutorial-rest](../../../examples/local/examples-tutorial-rest/)
 - Join the community to ask questions

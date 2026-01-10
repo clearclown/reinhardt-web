@@ -58,23 +58,33 @@ Reinhardt provides the following generic views:
 
 ## Moving to ViewSets
 
-> **Note:** ViewSets are currently under development and will be available in a future release.
-> The examples below demonstrate the planned API design.
-
-For more complex APIs, we plan to provide ViewSets. ViewSets will combine multiple actions in one struct:
+ViewSets provide a powerful way to build RESTful APIs with significantly less code. They combine multiple CRUD actions into a single struct:
 
 ```rust
 use reinhardt::prelude::*;
 
-// ViewSet will automatically provide all CRUD operations (Future Implementation)
+// ModelViewSet automatically provides all CRUD operations
 let viewset = ModelViewSet::<Snippet, SnippetSerializer>::new("snippet");
+
+// ReadOnlyModelViewSet for read-only endpoints
+let readonly_viewset = ReadOnlyModelViewSet::<Snippet, SnippetSerializer>::new("snippet");
 ```
 
-**Current Status:**
-- ✅ **Available Now**: Generic Views (ListAPIView, CreateAPIView, etc.)
-- 🔜 **In Development**: ViewSets (ModelViewSet, ReadOnlyModelViewSet, etc.)
+**ViewSets vs Generic Views:**
 
-For more details about the planned ViewSets implementation, see [Tutorial 6: ViewSets and Routers](6-viewsets-and-routers.md).
+| Feature | Generic Views | ViewSets |
+|---------|--------------|----------|
+| **Code Amount** | ~200 lines for full CRUD | ~15 lines for full CRUD |
+| **Automatic URL Generation** | Manual configuration | Automatic via routers |
+| **Built-in Features** | Basic operations | CRUD + pagination + filtering + ordering |
+| **Best For** | Custom logic, simple endpoints | Standard RESTful APIs |
+
+**Available ViewSets:**
+- ✅ `ModelViewSet` - Full CRUD operations (list, create, retrieve, update, delete)
+- ✅ `ReadOnlyModelViewSet` - Read-only operations (list, retrieve)
+- ✅ `GenericViewSet` - Base class for custom ViewSets
+
+For detailed examples and advanced usage, see [Tutorial 6: ViewSets and Routers](6-viewsets-and-routers.md).
 
 ## Summary
 

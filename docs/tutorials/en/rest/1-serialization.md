@@ -153,7 +153,7 @@ pub struct CreateUserRequest {
 }
 
 // Use in view
-let request: CreateUserRequest = request.json().await?;
+let request: CreateUserRequest = request.json()?;
 request.validate()?;  // Validates all fields
 ```
 
@@ -387,10 +387,9 @@ use reinhardt::prelude::*;
 use reinhardt::post;
 
 #[post("/snippets", name = "create_snippet")]
-async fn create_snippet(mut request: Request) -> Result<Response> {
+async fn create_snippet(request: Request) -> Result<Response> {
     // 1. Parse JSON from request body (automatic deserialization)
-    let body_bytes = std::mem::take(&mut request.body);
-    let snippet: Snippet = serde_json::from_slice(&body_bytes)?;
+    let snippet: Snippet = request.json()?;
 
     // 2. Validate the data
     let validator = SnippetSerializer;

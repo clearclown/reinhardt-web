@@ -98,14 +98,15 @@ pub async fn list_users(
         .with_json(&serialized)
 }
 
+**Note**: The `#[inject]` attribute enables automatic dependency injection. For detailed information, see [HTTP Method Decorators Guide - Dependency Injection](0-http-macros.md#dependency-injection-with-inject).
+
 #[post("/users", name = "create_user")]
 pub async fn create_user(
-    mut request: Request,
+    request: Request,
     #[inject] conn: Arc<DatabaseConnection>,
 ) -> Result<Response> {
     // Parse request body
-    let body_bytes = std::mem::take(&mut request.body);
-    let data: UserSerializer = serde_json::from_slice(&body_bytes)?;
+    let data: UserSerializer = request.json()?;
 
     // Create user
     let user = User::create(&conn, data.username, data.email).await?;
@@ -116,7 +117,7 @@ pub async fn create_user(
 }
 ```
 
-**Note**: ViewSets (like Django REST framework's ViewSets) are planned for future release. Currently, use function-based endpoints with HTTP method decorators like `#[get]`, `#[post]`, etc.
+**Note**: ViewSets (like Django REST framework's ViewSets) are now available! For building complex APIs with less code, see [Tutorial 6: ViewSets and Routers](6-viewsets-and-routers.md). This quickstart focuses on function-based endpoints using HTTP method decorators like `#[get]`, `#[post]`, etc.
 
 ## Routing
 
@@ -196,11 +197,10 @@ pub async fn retrieve_user(
 
 #[post("/users", name = "create_user")]
 pub async fn create_user(
-    mut request: Request,
+    request: Request,
     #[inject] conn: Arc<DatabaseConnection>,
 ) -> Result<Response> {
-    let body_bytes = std::mem::take(&mut request.body);
-    let data: UserSerializer = serde_json::from_slice(&body_bytes)?;
+    let data: UserSerializer = request.json()?;
 
     let user = User::create(&conn, data.username, data.email).await?;
     let serialized = UserSerializer::from(user);

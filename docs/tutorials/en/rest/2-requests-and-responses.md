@@ -29,7 +29,7 @@ async fn my_view(request: Request) -> Result<Response> {
     let query = request.query_string();
 
     // Access request body
-    let body_bytes = &request.body;
+    let body_bytes = request.body();
 
     Response::ok()
         .with_body("Success")
@@ -114,9 +114,9 @@ struct CreateSnippet {
 }
 
 #[post("/snippets", name = "create_snippet")]
-async fn create_snippet(mut request: Request) -> Result<Response> {
+async fn create_snippet(request: Request) -> Result<Response> {
     // Recommended: Use request helper method for JSON parsing
-    let data: CreateSnippet = request.json().await?;
+    let data: CreateSnippet = request.json()?;
 
     println!("Title: {}", data.title);
     println!("Code: {}", data.code);
@@ -145,7 +145,7 @@ async fn create_snippet(mut request: Request) -> Result<Response> {
 
 ```rust
 // Explicit error handling
-let data: CreateSnippet = match request.json().await {
+let data: CreateSnippet = match request.json() {
     Ok(d) => d,
     Err(e) => {
         // Handles: missing Content-Type, invalid JSON, validation errors
@@ -157,7 +157,7 @@ let data: CreateSnippet = match request.json().await {
 
 ```rust
 // Using `?` operator (recommended - cleaner)
-let data: CreateSnippet = request.json().await?;
+let data: CreateSnippet = request.json()?;
 // Automatically returns error response (400 Bad Request) on failure
 ```
 
@@ -178,10 +178,10 @@ For special parsing requirements, you can manually parse the request body:
 
 ```rust
 #[post("/snippets", name = "create_snippet_manual")]
-async fn create_snippet_manual(mut request: Request) -> Result<Response> {
+async fn create_snippet_manual(request: Request) -> Result<Response> {
     // Manual parsing for advanced use cases
-    let body_bytes = std::mem::take(&mut request.body);
-    let data: CreateSnippet = serde_json::from_slice(&body_bytes)?;
+    let body_bytes = request.body();
+    let data: CreateSnippet = serde_json::from_slice(body_bytes)?;
 
     Response::new(201)
         .with_json(&data)
@@ -209,11 +209,11 @@ async fn handle_request(mut request: Request) -> Result<Response> {
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    let body_bytes = std::mem::take(&mut request.body);
+    let body_bytes = request.body();
 
     match content_type {
         "application/json" => {
-            let data: Value = serde_json::from_slice(&body_bytes)?;
+            let data: Value = serde_json::from_slice(body_bytes)?;
             Response::ok()
                 .with_json(&data)
         }
@@ -239,10 +239,10 @@ use reinhardt::prelude::*;
 use reinhardt::post;
 
 #[post("/safe", name = "safe_view")]
-async fn safe_view(mut request: Request) -> Result<Response> {
+async fn safe_view(request: Request) -> Result<Response> {
     // Parse and validate data
-    let body_bytes = std::mem::take(&mut request.body);
-    let data: CreateSnippet = match serde_json::from_slice(&body_bytes) {
+    let body_bytes = request.body();
+    let data: CreateSnippet = match serde_json::from_slice(body_bytes) {
         Ok(d) => d,
         Err(e) => {
             return Response::bad_request()
@@ -309,7 +309,7 @@ async fn snippet_list(mut request: Request) -> Result<Response> {
         }
         Method::POST => {
             // Create new snippet using helper method
-            let mut snippet: Snippet = request.json().await?;
+            let mut snippet: Snippet = request.json()?;
 
             // Validate
             if let Err(e) = validate_snippet(&snippet) {
@@ -332,7 +332,7 @@ async fn snippet_list(mut request: Request) -> Result<Response> {
 ```
 
 **Key improvements in this example:**
-- Using `request.json().await?` instead of manual parsing
+- Using `request.json()?` instead of manual parsing
 - Clean, readable code with less boilerplate
 - Automatic error handling for invalid JSON
 
