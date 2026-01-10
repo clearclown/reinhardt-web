@@ -48,7 +48,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres, Row};
 use std::sync::Arc;
 use testcontainers::ImageExt;
-use testcontainers::core::WaitFor;
+use testcontainers::core::{IntoContainerPort, WaitFor};
 use testcontainers::runners::AsyncRunner;
 use testcontainers::{ContainerAsync, GenericImage};
 use tokio::time::{Duration, sleep};
@@ -115,18 +115,28 @@ async fn test_multiple_database_connections(
 
 	// Start second PostgreSQL container
 	let postgres2 = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "testdb2")
 		.start()
 		.await
 		.expect("Failed to start second PostgreSQL container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port2 = postgres2
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get port for second container");
-	let url2 = format!("postgres://postgres:test@localhost:{}/testdb2", port2);
+	let url2 = format!(
+		"postgres://postgres@localhost:{}/testdb2?sslmode=disable",
+		port2
+	);
 
 	// Create second connection pool
 	let pool2 = Arc::new(
@@ -209,19 +219,26 @@ async fn test_data_migration_between_databases(
 
 	// Start target database container
 	let postgres_target = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "target_db")
 		.start()
 		.await
 		.expect("Failed to start target PostgreSQL container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port_target = postgres_target
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get target port");
 	let url_target = format!(
-		"postgres://postgres:test@localhost:{}/target_db",
+		"postgres://postgres@localhost:{}/target_db?sslmode=disable",
 		port_target
 	);
 
@@ -342,19 +359,26 @@ async fn test_read_replica_pattern(
 
 	// Start replica database
 	let postgres_replica = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "replica_db")
 		.start()
 		.await
 		.expect("Failed to start replica PostgreSQL container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port_replica = postgres_replica
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get replica port");
 	let url_replica = format!(
-		"postgres://postgres:test@localhost:{}/replica_db",
+		"postgres://postgres@localhost:{}/replica_db?sslmode=disable",
 		port_replica
 	);
 
@@ -450,21 +474,28 @@ async fn test_read_load_balancing_across_replicas(
 	let mut replicas = Vec::new();
 	for i in 1..=2 {
 		let postgres_replica = GenericImage::new("postgres", "16-alpine")
-			.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-			.with_env_var("POSTGRES_PASSWORD", "test")
+			.with_exposed_port(5432.tcp())
+			.with_wait_for(WaitFor::message_on_stderr(
+				"database system is ready to accept connections",
+			))
+			.with_startup_timeout(std::time::Duration::from_secs(120))
+			.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 			.with_env_var("POSTGRES_DB", format!("replica_{}", i))
 			.start()
 			.await
 			.unwrap_or_else(|_| panic!("Failed to start replica {} container", i));
 
-		// Wait for container to be fully ready
-		tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+		// Wait for container networking to be fully ready
+		tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
 		let port = postgres_replica
-			.get_host_port_ipv4(5432)
+			.get_host_port_ipv4(5432.tcp())
 			.await
 			.unwrap_or_else(|_| panic!("Failed to get replica {} port", i));
-		let url = format!("postgres://postgres:test@localhost:{}/replica_{}", port, i);
+		let url = format!(
+			"postgres://postgres@localhost:{}/replica_{}?sslmode=disable",
+			port, i
+		);
 
 		let pool = Arc::new(
 			sqlx::postgres::PgPoolOptions::new()
@@ -573,19 +604,26 @@ async fn test_primary_database_failover(
 
 	// Start replica database
 	let postgres_replica = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "replica_db")
 		.start()
 		.await
 		.expect("Failed to start replica container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port_replica = postgres_replica
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get replica port");
 	let url_replica = format!(
-		"postgres://postgres:test@localhost:{}/replica_db",
+		"postgres://postgres@localhost:{}/replica_db?sslmode=disable",
 		port_replica
 	);
 
@@ -691,19 +729,26 @@ async fn test_data_sharding_across_databases(
 
 	// Start second shard database
 	let postgres_shard1 = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "shard1_db")
 		.start()
 		.await
 		.expect("Failed to start shard1 container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port_shard1 = postgres_shard1
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get shard1 port");
 	let url_shard1 = format!(
-		"postgres://postgres:test@localhost:{}/shard1_db",
+		"postgres://postgres@localhost:{}/shard1_db?sslmode=disable",
 		port_shard1
 	);
 
@@ -817,19 +862,26 @@ async fn test_cross_shard_aggregation(
 
 	// Start second shard
 	let postgres_shard1 = GenericImage::new("postgres", "16-alpine")
-		.with_wait_for(WaitFor::message_on_stderr("database system is ready"))
-		.with_env_var("POSTGRES_PASSWORD", "test")
+		.with_exposed_port(5432.tcp())
+		.with_wait_for(WaitFor::message_on_stderr(
+			"database system is ready to accept connections",
+		))
+		.with_startup_timeout(std::time::Duration::from_secs(120))
+		.with_env_var("POSTGRES_HOST_AUTH_METHOD", "trust")
 		.with_env_var("POSTGRES_DB", "shard1_db")
 		.start()
 		.await
 		.expect("Failed to start shard1 container");
 
+	// Wait briefly before port query to ensure container networking is ready
+	tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
 	let port_shard1 = postgres_shard1
-		.get_host_port_ipv4(5432)
+		.get_host_port_ipv4(5432.tcp())
 		.await
 		.expect("Failed to get shard1 port");
 	let url_shard1 = format!(
-		"postgres://postgres:test@localhost:{}/shard1_db",
+		"postgres://postgres@localhost:{}/shard1_db?sslmode=disable",
 		port_shard1
 	);
 
