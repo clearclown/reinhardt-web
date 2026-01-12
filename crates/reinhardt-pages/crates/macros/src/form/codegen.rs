@@ -2970,7 +2970,8 @@ mod tests {
 		// Check that the watch method is generated
 		assert!(output_str.contains("fn error_display"));
 		assert!(output_str.contains("IntoView"));
-		assert!(output_str.contains("Effect :: new"));
+		// Watch methods use View::reactive for automatic re-rendering
+		assert!(output_str.contains("View :: reactive"));
 		assert!(output_str.contains("form . error ()"));
 	}
 
@@ -3061,9 +3062,9 @@ mod tests {
 		let output = parse_validate_generate(input);
 		let output_str = output.to_string();
 
-		// Check that the form is cloned before use
+		// Check that the form is cloned before use and __call_watch is used
 		assert!(output_str.contains("let form = self . clone ()"));
-		assert!(output_str.contains("__watch_closure (& form)"));
+		assert!(output_str.contains("__call_watch"));
 	}
 
 	#[rstest::rstest]
