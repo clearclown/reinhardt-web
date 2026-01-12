@@ -316,7 +316,7 @@ impl TokenStorage for InMemoryTokenStorage {
 #[cfg(feature = "database")]
 mod database_storage {
 	use super::*;
-	use sea_query::{Expr, ExprTrait, Iden, PostgresQueryBuilder, Query};
+	use sea_query::{Alias, Expr, ExprTrait, Iden, Index, PostgresQueryBuilder, Query};
 	use sqlx::PgPool;
 
 	/// Table identifier for auth_tokens
@@ -365,6 +365,7 @@ mod database_storage {
 		///
 		/// Creates the auth_tokens table if it doesn't exist.
 		pub async fn initialize(&self) -> TokenStorageResult<()> {
+			// Create table
 			let sql = r#"
 				CREATE TABLE IF NOT EXISTS auth_tokens (
 					token VARCHAR(255) PRIMARY KEY,
@@ -372,12 +373,37 @@ mod database_storage {
 					expires_at BIGINT,
 					metadata JSONB NOT NULL DEFAULT '{}',
 					created_at BIGINT NOT NULL DEFAULT EXTRACT(EPOCH FROM NOW())::BIGINT
-				);
-				CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_id ON auth_tokens(user_id);
-				CREATE INDEX IF NOT EXISTS idx_auth_tokens_expires_at ON auth_tokens(expires_at);
+				)
 			"#;
 
 			sqlx::query(sql)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			// Create indexes using SeaQuery for DB compatibility
+			let index_user_id_stmt = Index::create()
+				.if_not_exists()
+				.name("idx_auth_tokens_user_id")
+				.table(Alias::new("auth_tokens"))
+				.col(Alias::new("user_id"))
+				.to_owned();
+
+			let index_user_id_sql = index_user_id_stmt.to_string(PostgresQueryBuilder);
+			sqlx::query(&index_user_id_sql)
+				.execute(&self.pool)
+				.await
+				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
+
+			let index_expires_at_stmt = Index::create()
+				.if_not_exists()
+				.name("idx_auth_tokens_expires_at")
+				.table(Alias::new("auth_tokens"))
+				.col(Alias::new("expires_at"))
+				.to_owned();
+
+			let index_expires_at_sql = index_expires_at_stmt.to_string(PostgresQueryBuilder);
+			sqlx::query(&index_expires_at_sql)
 				.execute(&self.pool)
 				.await
 				.map_err(|e| TokenStorageError::StorageError(e.to_string()))?;
