@@ -23,18 +23,12 @@ mod decision_table_tests {
 	/// | Yes | No | Yes | Return base + path + query (fallback) |
 
 	#[rstest]
-		#[case(false, false, false, "file.css", "/static/file.css")]
+	#[case(false, false, false, "file.css", "/static/file.css")]
 	#[case(false, false, true, "file.css?v=1", "/static/file.css?v=1")]
 	#[case(true, true, false, "file.css", "/static/file.hash.css")]
 	#[case(true, true, true, "file.css?v=1", "/static/file.hash.css?v=1")]
 	#[case(true, false, false, "unknown.css", "/static/unknown.css")]
-	#[case(
-		true,
-		false,
-		true,
-		"unknown.css?v=1",
-		"/static/unknown.css?v=1"
-	)]
+	#[case(true, false, true, "unknown.css?v=1", "/static/unknown.css?v=1")]
 	fn test_decision_table_url_resolution(
 		#[case] use_manifest: bool,
 		#[case] path_in_manifest: bool,
