@@ -822,21 +822,14 @@ async fn test_age_equivalence_partitioning(
 	// No teardown needed - database is automatically isolated per test
 }
 
-/// Test equivalence partitioning for string operators
+/// Test equivalence partitioning for string operators - Equals
 ///
 /// **Test Category**: Equivalence partitioning
 /// **Test Classification**: Using rstest case macro
 #[rstest]
-#[case::equals(FilterOperator::Eq, "Alice Smith", 1)]
-#[case::contains(FilterOperator::Contains, "Smith", 1)]
-#[case::starts_with(FilterOperator::StartsWith, "Ali", 1)]
-#[case::ends_with(FilterOperator::EndsWith, "mith", 1)]
 #[tokio::test]
-async fn test_string_operator_equivalence(
+async fn test_string_operator_eq(
 	#[future] admin_table_creator: reinhardt_test::fixtures::AdminTableCreator,
-	#[case] operator: FilterOperator,
-	#[case] search_value: &str,
-	#[case] expected_count: usize,
 ) {
 	let mut creator = admin_table_creator.await;
 	let table_name = "test_string_operator_eq";
@@ -860,8 +853,8 @@ async fn test_string_operator_equivalence(
 
 	let filters = vec![Filter::new(
 		"name".to_string(),
-		operator,
-		FilterValue::String(search_value.to_string()),
+		FilterOperator::Eq,
+		FilterValue::String("Alice Smith".to_string()),
 	)];
 
 	let results = db
@@ -869,7 +862,142 @@ async fn test_string_operator_equivalence(
 		.await
 		.expect("List operation should succeed");
 
-	assert_eq!(results.len(), expected_count);
+	assert_eq!(results.len(), 1);
+
+	// No teardown needed - database is automatically isolated per test
+}
+
+/// Test equivalence partitioning for string operators - Contains
+///
+/// **Test Category**: Equivalence partitioning
+/// **Test Classification**: Using rstest case macro
+#[rstest]
+#[tokio::test]
+async fn test_string_operator_contains_equivalence(
+	#[future] admin_table_creator: reinhardt_test::fixtures::AdminTableCreator,
+) {
+	let mut creator = admin_table_creator.await;
+	let table_name = "test_string_operator_contains";
+
+	// Create schema using Operation-based definitions
+	let schema = create_filter_test_schema(table_name);
+	creator
+		.apply(schema)
+		.await
+		.expect("Failed to apply test schema");
+
+	// Insert test data using SeaQuery
+	let (columns, values) = create_filter_test_data();
+	creator
+		.insert_data(table_name, columns, values)
+		.await
+		.expect("Failed to insert test data");
+
+	// Get AdminDatabase reference
+	let db = creator.admin_db();
+
+	let filters = vec![Filter::new(
+		"name".to_string(),
+		FilterOperator::Contains,
+		FilterValue::String("Smith".to_string()),
+	)];
+
+	let results = db
+		.list::<AdminRecord>(table_name, filters, 0, 10)
+		.await
+		.expect("List operation should succeed");
+
+	assert_eq!(results.len(), 1);
+
+	// No teardown needed - database is automatically isolated per test
+}
+
+/// Test equivalence partitioning for string operators - StartsWith
+///
+/// **Test Category**: Equivalence partitioning
+/// **Test Classification**: Using rstest case macro
+#[rstest]
+#[tokio::test]
+async fn test_string_operator_starts_with(
+	#[future] admin_table_creator: reinhardt_test::fixtures::AdminTableCreator,
+) {
+	let mut creator = admin_table_creator.await;
+	let table_name = "test_string_operator_starts";
+
+	// Create schema using Operation-based definitions
+	let schema = create_filter_test_schema(table_name);
+	creator
+		.apply(schema)
+		.await
+		.expect("Failed to apply test schema");
+
+	// Insert test data using SeaQuery
+	let (columns, values) = create_filter_test_data();
+	creator
+		.insert_data(table_name, columns, values)
+		.await
+		.expect("Failed to insert test data");
+
+	// Get AdminDatabase reference
+	let db = creator.admin_db();
+
+	let filters = vec![Filter::new(
+		"name".to_string(),
+		FilterOperator::StartsWith,
+		FilterValue::String("Ali".to_string()),
+	)];
+
+	let results = db
+		.list::<AdminRecord>(table_name, filters, 0, 10)
+		.await
+		.expect("List operation should succeed");
+
+	assert_eq!(results.len(), 1);
+
+	// No teardown needed - database is automatically isolated per test
+}
+
+/// Test equivalence partitioning for string operators - EndsWith
+///
+/// **Test Category**: Equivalence partitioning
+/// **Test Classification**: Using rstest case macro
+#[rstest]
+#[tokio::test]
+async fn test_string_operator_ends_with(
+	#[future] admin_table_creator: reinhardt_test::fixtures::AdminTableCreator,
+) {
+	let mut creator = admin_table_creator.await;
+	let table_name = "test_string_operator_ends";
+
+	// Create schema using Operation-based definitions
+	let schema = create_filter_test_schema(table_name);
+	creator
+		.apply(schema)
+		.await
+		.expect("Failed to apply test schema");
+
+	// Insert test data using SeaQuery
+	let (columns, values) = create_filter_test_data();
+	creator
+		.insert_data(table_name, columns, values)
+		.await
+		.expect("Failed to insert test data");
+
+	// Get AdminDatabase reference
+	let db = creator.admin_db();
+
+	let filters = vec![Filter::new(
+		"name".to_string(),
+		FilterOperator::EndsWith,
+		FilterValue::String("mith".to_string()),
+	)];
+
+	let results = db
+		.list::<AdminRecord>(table_name, filters, 0, 10)
+		.await
+		.expect("List operation should succeed");
+
+	assert_eq!(results.len(), 1);
 
 	// No teardown needed - database is automatically isolated per test
 }

@@ -291,8 +291,14 @@ async fn test_create_many_fields(#[future] admin_table_creator: AdminTableCreato
 		.create::<reinhardt_admin_core::database::AdminRecord>(table_name, many_fields)
 		.await;
 
-	// Should handle many fields without panic
-	assert!(result.is_ok(), "Should handle many fields without panic");
+	// Should reject non-existent columns with an error
+	assert!(result.is_err(), "Should reject non-existent columns");
+	let error = result.unwrap_err().to_string();
+	assert!(
+		error.contains("does not exist") || error.contains("column"),
+		"Error should mention non-existent column: {}",
+		error
+	);
 }
 
 /// Test bulk operations with large ID lists

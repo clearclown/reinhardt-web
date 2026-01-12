@@ -75,6 +75,24 @@ fn create_test_schema() -> Vec<Operation> {
 				auto_increment: false,
 				default: None,
 			},
+			ColumnDefinition {
+				name: "priority".to_string(),
+				type_definition: FieldType::Text,
+				not_null: false,
+				unique: false,
+				primary_key: false,
+				auto_increment: false,
+				default: None,
+			},
+			ColumnDefinition {
+				name: "processed_by".to_string(),
+				type_definition: FieldType::Text,
+				not_null: false,
+				unique: false,
+				primary_key: false,
+				auto_increment: false,
+				default: None,
+			},
 		],
 		constraints: vec![],
 		without_rowid: None,
@@ -410,16 +428,20 @@ async fn test_filter_based_state_transitions(#[future] admin_table_creator: Admi
 
 	for record in active_records {
 		if let Some(id_value) = record.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				db.update::<reinhardt_admin_core::database::AdminRecord>(
-					table_name,
-					"id",
-					id_str,
-					update_data.clone(),
-				)
-				.await
-				.expect("Update should succeed");
-			}
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			db.update::<reinhardt_admin_core::database::AdminRecord>(
+				table_name,
+				"id",
+				&id_str,
+				update_data.clone(),
+			)
+			.await
+			.expect("Update should succeed");
 		}
 	}
 

@@ -106,7 +106,7 @@ fn create_test_schema() -> Vec<Operation> {
 			},
 			ColumnDefinition {
 				name: "price".to_string(),
-				type_definition: FieldType::Double,
+				type_definition: FieldType::Real,
 				not_null: false,
 				unique: false,
 				primary_key: false,
@@ -171,6 +171,15 @@ fn create_test_schema() -> Vec<Operation> {
 			// Audit log fields
 			ColumnDefinition {
 				name: "action".to_string(),
+				type_definition: FieldType::Text,
+				not_null: false,
+				unique: false,
+				primary_key: false,
+				auto_increment: false,
+				default: None,
+			},
+			ColumnDefinition {
+				name: "user".to_string(),
 				type_definition: FieldType::Text,
 				not_null: false,
 				unique: false,
@@ -327,18 +336,22 @@ async fn use_case_user_management_system(#[future] admin_table_creator: AdminTab
 	let mut suspended_count = 0;
 	for user in &all_users {
 		if let Some(id_value) = user.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				let update_data = HashMap::from([("status".to_string(), json!("suspended"))]);
-				db.update::<reinhardt_admin_core::database::AdminRecord>(
-					table_name,
-					"id",
-					id_str,
-					update_data,
-				)
-				.await
-				.expect("Update should succeed");
-				suspended_count += 1;
-			}
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			let update_data = HashMap::from([("status".to_string(), json!("suspended"))]);
+			db.update::<reinhardt_admin_core::database::AdminRecord>(
+				table_name,
+				"id",
+				&id_str,
+				update_data,
+			)
+			.await
+			.expect("Update should succeed");
+			suspended_count += 1;
 		}
 	}
 
@@ -499,38 +512,40 @@ async fn use_case_product_inventory_management(#[future] admin_table_creator: Ad
 
 	if let Some(laptop) = laptops.first() {
 		if let Some(id_value) = laptop.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				if let Some(current_stock) = laptop.get("stock").and_then(|v| v.as_i64()) {
-					let new_stock = current_stock - 2;
-					let update_data = HashMap::from([
-						("stock".to_string(), json!(new_stock)),
-						("in_stock".to_string(), json!(new_stock > 0)),
-					]);
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => panic!("Invalid ID type"),
+			};
+			if let Some(current_stock) = laptop.get("stock").and_then(|v| v.as_i64()) {
+				let new_stock = current_stock - 2;
+				let update_data = HashMap::from([
+					("stock".to_string(), json!(new_stock)),
+					("in_stock".to_string(), json!(new_stock > 0)),
+				]);
 
-					db.update::<reinhardt_admin_core::database::AdminRecord>(
-						table_name,
-						"id",
-						id_str,
-						update_data,
-					)
+				db.update::<reinhardt_admin_core::database::AdminRecord>(
+					table_name,
+					"id",
+					&id_str,
+					update_data,
+				)
+				.await
+				.expect("Update stock should succeed");
+
+				// Verify update
+				let updated = db
+					.get::<reinhardt_admin_core::database::AdminRecord>(table_name, "id", &id_str)
 					.await
-					.expect("Update stock should succeed");
+					.expect("Get updated laptop should succeed")
+					.expect("Laptop should exist");
 
-					// Verify update
-					let updated = db
-						.get::<reinhardt_admin_core::database::AdminRecord>(
-							table_name, "id", id_str,
-						)
-						.await
-						.expect("Get updated laptop should succeed")
-						.expect("Laptop should exist");
-
-					assert_eq!(
-						updated.get("stock"),
-						Some(&json!(new_stock)),
-						"Stock should be updated"
-					);
-				}
+				assert_eq!(
+					updated.get("stock"),
+					Some(&json!(new_stock)),
+					"Stock should be updated"
+				);
 			}
 		}
 	}
@@ -579,23 +594,27 @@ async fn use_case_product_inventory_management(#[future] admin_table_creator: Ad
 	// Restock each low stock product
 	for product in &low_stock_products {
 		if let Some(id_value) = product.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				if let Some(current_stock) = product.get("stock").and_then(|v| v.as_i64()) {
-					let new_stock = current_stock + 10; // Add 10 units
-					let update_data = HashMap::from([
-						("stock".to_string(), json!(new_stock)),
-						("in_stock".to_string(), json!(true)),
-					]);
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			if let Some(current_stock) = product.get("stock").and_then(|v| v.as_i64()) {
+				let new_stock = current_stock + 10; // Add 10 units
+				let update_data = HashMap::from([
+					("stock".to_string(), json!(new_stock)),
+					("in_stock".to_string(), json!(true)),
+				]);
 
-					db.update::<reinhardt_admin_core::database::AdminRecord>(
-						table_name,
-						"id",
-						id_str,
-						update_data,
-					)
-					.await
-					.expect("Restock should succeed");
-				}
+				db.update::<reinhardt_admin_core::database::AdminRecord>(
+					table_name,
+					"id",
+					&id_str,
+					update_data,
+				)
+				.await
+				.expect("Restock should succeed");
 			}
 		}
 	}
@@ -726,34 +745,38 @@ async fn use_case_content_management_system(#[future] admin_table_creator: Admin
 	// Publish the first draft
 	if let Some(draft) = drafts.first() {
 		if let Some(id_value) = draft.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				let update_data = HashMap::from([
-					("status".to_string(), json!("published")),
-					("published_date".to_string(), json!("2024-02-15")),
-				]);
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => panic!("Invalid ID type"),
+			};
+			let update_data = HashMap::from([
+				("status".to_string(), json!("published")),
+				("published_date".to_string(), json!("2024-02-15")),
+			]);
 
-				db.update::<reinhardt_admin_core::database::AdminRecord>(
-					table_name,
-					"id",
-					id_str,
-					update_data,
-				)
+			db.update::<reinhardt_admin_core::database::AdminRecord>(
+				table_name,
+				"id",
+				&id_str,
+				update_data,
+			)
+			.await
+			.expect("Publish should succeed");
+
+			// Verify publish
+			let published = db
+				.get::<reinhardt_admin_core::database::AdminRecord>(table_name, "id", &id_str)
 				.await
-				.expect("Publish should succeed");
+				.expect("Get published should succeed")
+				.expect("Content should exist");
 
-				// Verify publish
-				let published = db
-					.get::<reinhardt_admin_core::database::AdminRecord>(table_name, "id", id_str)
-					.await
-					.expect("Get published should succeed")
-					.expect("Content should exist");
-
-				assert_eq!(
-					published.get("status"),
-					Some(&json!("published")),
-					"Status should be published"
-				);
-			}
+			assert_eq!(
+				published.get("status"),
+				Some(&json!("published")),
+				"Status should be published"
+			);
 		}
 	}
 
@@ -776,19 +799,23 @@ async fn use_case_content_management_system(#[future] admin_table_creator: Admin
 
 	for content in &old_content {
 		if let Some(id_value) = content.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				// Skip if already archived
-				if content.get("status") != Some(&json!("archived")) {
-					let update_data = HashMap::from([("status".to_string(), json!("archived"))]);
-					db.update::<reinhardt_admin_core::database::AdminRecord>(
-						table_name,
-						"id",
-						id_str,
-						update_data,
-					)
-					.await
-					.expect("Archive should succeed");
-				}
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			// Skip if already archived
+			if content.get("status") != Some(&json!("archived")) {
+				let update_data = HashMap::from([("status".to_string(), json!("archived"))]);
+				db.update::<reinhardt_admin_core::database::AdminRecord>(
+					table_name,
+					"id",
+					&id_str,
+					update_data,
+				)
+				.await
+				.expect("Archive should succeed");
 			}
 		}
 	}
@@ -827,19 +854,23 @@ async fn use_case_content_management_system(#[future] admin_table_creator: Admin
 
 	for item in &published_items {
 		if let Some(id_value) = item.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				if let Some(current_views) = item.get("views").and_then(|v| v.as_i64()) {
-					let new_views = current_views + 1;
-					let update_data = HashMap::from([("views".to_string(), json!(new_views))]);
-					db.update::<reinhardt_admin_core::database::AdminRecord>(
-						table_name,
-						"id",
-						id_str,
-						update_data,
-					)
-					.await
-					.expect("Update views should succeed");
-				}
+			// ID can be either a number or a string, convert to string for update
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			if let Some(current_views) = item.get("views").and_then(|v| v.as_i64()) {
+				let new_views = current_views + 1;
+				let update_data = HashMap::from([("views".to_string(), json!(new_views))]);
+				db.update::<reinhardt_admin_core::database::AdminRecord>(
+					table_name,
+					"id",
+					&id_str,
+					update_data,
+				)
+				.await
+				.expect("Update views should succeed");
 			}
 		}
 	}
@@ -895,7 +926,7 @@ async fn use_case_audit_log_system(#[future] admin_table_creator: AdminTableCrea
 			"user_login",
 			"info",
 			"2024-02-15T10:30:00Z",
-			"User 'alice' logged in",
+			"User 'alice' login succeeded",
 		),
 		(
 			"user_logout",
@@ -1034,12 +1065,16 @@ async fn use_case_audit_log_system(#[future] admin_table_creator: AdminTableCrea
 	let mut deleted_count = 0;
 	for entry in &old_entries {
 		if let Some(id_value) = entry.get("id") {
-			if let Some(id_str) = id_value.as_str() {
-				db.delete::<reinhardt_admin_core::database::AdminRecord>(table_name, "id", id_str)
-					.await
-					.expect("Delete old entry should succeed");
-				deleted_count += 1;
-			}
+			// ID can be either a number or a string, convert to string for delete
+			let id_str = match id_value {
+				serde_json::Value::Number(n) => n.to_string(),
+				serde_json::Value::String(s) => s.clone(),
+				_ => continue,
+			};
+			db.delete::<reinhardt_admin_core::database::AdminRecord>(table_name, "id", &id_str)
+				.await
+				.expect("Delete old entry should succeed");
+			deleted_count += 1;
 		}
 	}
 
