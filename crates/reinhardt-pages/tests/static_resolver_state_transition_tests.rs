@@ -10,7 +10,6 @@ mod state_transition_tests {
 	use reinhardt_static::TemplateStaticConfig;
 	use rstest::rstest;
 	use serial_test::serial;
-	use std::sync::OnceLock;
 
 	/// Helper to reset the global state by creating a new resolver instance
 	/// Note: In practice, OnceLock can only be set once, so state transitions
@@ -87,7 +86,7 @@ mod state_transition_tests {
 	fn test_state_is_initialized_reflects_state() {
 		// After previous tests, may already be initialized
 		// So we just verify consistency
-		let before = is_initialized();
+		let _before = is_initialized();
 		let config = TemplateStaticConfig::new("/static/".to_string());
 		init_static_resolver(config);
 		let after = is_initialized();

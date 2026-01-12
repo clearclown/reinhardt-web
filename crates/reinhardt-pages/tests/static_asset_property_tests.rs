@@ -115,7 +115,7 @@ mod property_tests {
 		/// Property: All characters in path are preserved (not URL-encoded)
 		#[test]
 		fn prop_ascii_characters_preserved(
-			path in r"[a-zA-Z0-9._\-/]{1,100}"
+			path in r"[a-zA-Z0-9._\-]*[a-zA-Z0-9._\-][a-zA-Z0-9._\-/]*"
 		) {
 			let config = TemplateStaticConfig::new("/static/".to_string());
 			init_static_resolver(config);

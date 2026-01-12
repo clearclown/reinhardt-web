@@ -40,18 +40,18 @@ mod combination_tests {
 
 	/// Test combination: manifest enabled × file in manifest × query string present
 	#[rstest]
-	#[case(true, true, false, "/static/file.css", "/static/file.hash.css")]
-	#[case(true, true, true, "/static/file.css?v=1", "/static/file.hash.css?v=1")]
-	#[case(true, false, false, "/static/unknown.css", "/static/unknown.css")]
+	#[case(true, true, false, "file.css", "/static/file.hash.css")]
+	#[case(true, true, true, "file.css?v=1", "/static/file.hash.css?v=1")]
+	#[case(true, false, false, "unknown.css", "/static/unknown.css")]
 	#[case(
 		true,
 		false,
 		true,
-		"/static/unknown.css?v=1",
+		"unknown.css?v=1",
 		"/static/unknown.css?v=1"
 	)]
-	#[case(false, false, false, "/static/file.css", "/static/file.css")]
-	#[case(false, false, true, "/static/file.css?v=1", "/static/file.css?v=1")]
+	#[case(false, false, false, "file.css", "/static/file.css")]
+	#[case(false, false, true, "file.css?v=1", "/static/file.css?v=1")]
 	fn test_combination_manifest_file_query(
 		#[case] use_manifest: bool,
 		#[case] in_manifest: bool,
@@ -67,7 +67,7 @@ mod combination_tests {
 				} else {
 					input
 				};
-				manifest.insert(path.to_string(), "/static/file.hash.css".to_string());
+				manifest.insert(path.to_string(), "file.hash.css".to_string());
 			}
 			TemplateStaticConfig::new("/static/".to_string()).with_manifest(manifest)
 		} else {

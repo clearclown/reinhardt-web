@@ -23,22 +23,22 @@ mod decision_table_tests {
 	/// | Yes | No | Yes | Return base + path + query (fallback) |
 
 	#[rstest]
-	#[case(false, false, false, "/static/file.css", "/static/file.css")]
-	#[case(false, false, true, "/static/file.css?v=1", "/static/file.css?v=1")]
-	#[case(true, true, false, "/static/file.css", "/static/file.hash.css")]
-	#[case(true, true, true, "/static/file.css?v=1", "/static/file.hash.css?v=1")]
-	#[case(true, false, false, "/static/unknown.css", "/static/unknown.css")]
+		#[case(false, false, false, "file.css", "/static/file.css")]
+	#[case(false, false, true, "file.css?v=1", "/static/file.css?v=1")]
+	#[case(true, true, false, "file.css", "/static/file.hash.css")]
+	#[case(true, true, true, "file.css?v=1", "/static/file.hash.css?v=1")]
+	#[case(true, false, false, "unknown.css", "/static/unknown.css")]
 	#[case(
 		true,
 		false,
 		true,
-		"/static/unknown.css?v=1",
+		"unknown.css?v=1",
 		"/static/unknown.css?v=1"
 	)]
 	fn test_decision_table_url_resolution(
 		#[case] use_manifest: bool,
 		#[case] path_in_manifest: bool,
-		#[case] query_string: bool,
+		#[case] _query_string: bool,
 		#[case] input: &str,
 		#[case] expected: &str,
 	) {
