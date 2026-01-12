@@ -1,6 +1,6 @@
 //! # Reinhardt REST
 //!
-//! **Unified REST API framework** for Reinhardt, formerly known as reinhardt-drf (Django REST Framework).
+//! **Unified REST API framework** for Reinhardt.
 //!
 //! This crate provides a complete REST API framework by integrating:
 //! - **Serializers**: Data serialization and validation (from reinhardt-serializers)
