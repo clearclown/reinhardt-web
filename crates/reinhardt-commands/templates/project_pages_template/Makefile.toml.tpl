@@ -130,6 +130,32 @@ rm -rf dist/
 echo "WASM build artifacts cleaned"
 '''
 
+[tasks.clean-cache]
+description = "Clean WASM artifacts and Rust incremental build cache"
+script = '''
+echo "🧹 Cleaning build cache..."
+
+# WASM artifacts
+if [ -d "dist" ]; then
+	rm -rf dist
+	echo "  ✓ Removed dist/"
+fi
+
+# Rust incremental build cache
+if [ -d "target/debug/incremental" ]; then
+	rm -rf target/debug/incremental
+	echo "  ✓ Removed target/debug/incremental/"
+fi
+
+# WASM target build cache
+if [ -d "target/wasm32-unknown-unknown" ]; then
+	rm -rf target/wasm32-unknown-unknown
+	echo "  ✓ Removed target/wasm32-unknown-unknown/"
+fi
+
+echo "✨ Build cache cleaned"
+'''
+
 # ============================================================================
 # Database Migrations
 # ============================================================================
@@ -258,11 +284,11 @@ args = ["clean"]
 
 [tasks.dev]
 description = "Start development environment (checks, builds WASM, runs server)"
-dependencies = ["quality", "wasm-build-dev", "runserver"]
+dependencies = ["clean-cache", "quality", "wasm-build-dev", "runserver"]
 
 [tasks.dev-watch]
 description = "Start development with auto-reload"
-dependencies = ["quality", "wasm-build-dev", "runserver-watch"]
+dependencies = ["clean-cache", "quality", "wasm-build-dev", "runserver-watch"]
 
 # ============================================================================
 # CI/CD Workflow
@@ -342,6 +368,7 @@ echo "  Build:"
 echo "    build              - Build (debug)"
 echo "    build-release      - Build (release)"
 echo "    clean              - Clean artifacts"
+echo "    clean-cache        - Clean WASM + Rust incremental cache"
 echo ""
 echo "  CI/CD:"
 echo "    ci                 - Run CI pipeline"

@@ -908,14 +908,11 @@ impl BaseCommand for ShellCommand {
 	}
 
 	fn options(&self) -> Vec<CommandOption> {
-		vec![
-			CommandOption::option(Some('c'), "command", "Execute a command and exit"),
-			CommandOption::option(
-				Some('e'),
-				"engine",
-				"Evaluation engine: rhai (default), python",
-			),
-		]
+		vec![CommandOption::option(
+			Some('c'),
+			"command",
+			"Execute a command and exit",
+		)]
 	}
 
 	async fn execute(&self, ctx: &CommandContext) -> CommandResult<()> {
@@ -950,38 +947,16 @@ impl BaseCommand for ShellCommand {
 						if !trimmed.is_empty() {
 							let _ = rl.add_history_entry(line.as_str());
 
-							// Evaluate code using selected engine
-							let engine = ctx.option("engine").map(|s| s.as_str()).unwrap_or("rhai");
-
-							match engine {
-								"rhai" => {
-									#[cfg(feature = "shell-rhai")]
-									{
-										Self::eval_rhai(ctx, trimmed)?;
-									}
-									#[cfg(not(feature = "shell-rhai"))]
-									{
-										ctx.warning(
-											"Rhai engine not enabled. Enable 'shell-rhai' feature.",
-										);
-									}
-								}
-								"python" | "py" => {
-									#[cfg(feature = "shell-pyo3")]
-									{
-										Self::eval_python(ctx, trimmed)?;
-									}
-									#[cfg(not(feature = "shell-pyo3"))]
-									{
-										ctx.warning(
-											"Python engine not enabled. Enable 'shell-pyo3' feature.",
-										);
-									}
-								}
-								_ => {
-									ctx.warning(&format!("Unknown engine: {}", engine));
-									ctx.info("Available engines: rhai, python");
-								}
+							// Evaluate code using Rhai engine
+							#[cfg(feature = "shell-rhai")]
+							{
+								Self::eval_rhai(ctx, trimmed)?;
+							}
+							#[cfg(not(feature = "shell-rhai"))]
+							{
+								ctx.warning(
+									"Rhai engine not enabled. Enable 'shell-rhai' feature.",
+								);
 							}
 						}
 					}
@@ -1047,43 +1022,6 @@ impl ShellCommand {
 				Ok(())
 			}
 		}
-	}
-
-	/// Evaluate code using Python (PyO3) engine
-	#[cfg(feature = "shell-pyo3")]
-	fn eval_python(ctx: &CommandContext, code: &str) -> CommandResult<()> {
-		use pyo3::prelude::*;
-		use pyo3::types::PyDict;
-		use std::ffi::CString;
-
-		Python::attach(|py| {
-			// Create a locals dictionary to maintain state between evaluations
-			let locals = PyDict::new(py);
-
-			// Convert code to CString for PyO3 0.27+
-			let code_cstr = CString::new(code).map_err(|e| {
-				crate::CommandError::ExecutionError(format!("Invalid Python code: {}", e))
-			})?;
-
-			// Execute the code
-			match py.eval(&code_cstr, None, Some(&locals)) {
-				Ok(result) => {
-					// Convert result to string and display
-					if let Ok(result_str) = result.str() {
-						let s = result_str.to_string();
-						if s != "()" && !s.is_empty() {
-							ctx.info(&format!("=> {}", s));
-						}
-					}
-					Ok(())
-				}
-				Err(e) => {
-					let error_msg = format!("Python error: {}", e);
-					ctx.warning(&error_msg);
-					Ok(())
-				}
-			}
-		})
 	}
 }
 
@@ -1200,44 +1138,54 @@ impl BaseCommand for RunServerCommand {
 		#[cfg(not(feature = "server"))]
 		let actual_address = address.to_string();
 
-		// Display startup banner with actual address
-		ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-		ctx.info(&format!("🚀 Server:  http://{}", actual_address));
+		// Determine if running in autoreload parent process
+		// In autoreload mode, the parent process should not display the startup banner
+		// because the child process will display it
+		#[cfg(all(feature = "server", feature = "autoreload"))]
+		let is_autoreload_parent = !noreload;
+		#[cfg(not(all(feature = "server", feature = "autoreload")))]
+		let is_autoreload_parent = false;
 
-		if with_pages {
-			let spa_status = if no_spa { "disabled" } else { "enabled" };
-			ctx.info(&format!(
-				"📦 WASM:    {} (SPA mode: {})",
-				static_dir_raw, spa_status
-			));
-		}
+		// Display startup banner with actual address (skip in autoreload parent)
+		if !is_autoreload_parent {
+			ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+			ctx.info(&format!("🚀 Server:  http://{}", actual_address));
 
-		if !no_docs {
-			ctx.info(&format!("📖 Docs:    http://{}/api/docs", actual_address));
-		}
+			if with_pages {
+				let spa_status = if no_spa { "disabled" } else { "enabled" };
+				ctx.info(&format!(
+					"📦 WASM:    {} (SPA mode: {})",
+					static_dir_raw, spa_status
+				));
+			}
 
-		ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+			if !no_docs {
+				ctx.info(&format!("📖 Docs:    http://{}/api/docs", actual_address));
+			}
 
-		if !noreload {
+			ctx.info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+			if insecure {
+				ctx.warning("Running with --insecure: Static files will be served");
+			}
+
+			ctx.info("");
+			ctx.info("Press CTRL-C to quit");
+			ctx.info("");
+		} else {
+			// Autoreload parent: show minimal message, child will show full banner
 			#[cfg(all(feature = "server", feature = "autoreload"))]
 			{
 				ctx.verbose("Auto-reload enabled");
 			}
-			#[cfg(all(feature = "server", not(feature = "autoreload")))]
-			{
-				ctx.warning(
-					"Auto-reload disabled: Enable 'autoreload' feature to use this functionality",
-				);
-			}
 		}
 
-		if insecure {
-			ctx.warning("Running with --insecure: Static files will be served");
+		#[cfg(all(feature = "server", not(feature = "autoreload")))]
+		if !noreload {
+			ctx.warning(
+				"Auto-reload disabled: Enable 'autoreload' feature to use this functionality",
+			);
 		}
-
-		ctx.info("");
-		ctx.info("Press CTRL-C to quit");
-		ctx.info("");
 
 		// Server implementation with conditional features
 		#[cfg(feature = "server")]
@@ -1424,7 +1372,10 @@ impl RunServerCommand {
 		if !noreload {
 			#[cfg(feature = "autoreload")]
 			{
-				Self::run_with_autoreload(ctx, address, _insecure, no_docs).await
+				Self::run_with_autoreload(
+					ctx, address, _insecure, no_docs, with_pages, static_dir, no_spa,
+				)
+				.await
 			}
 			#[cfg(not(feature = "autoreload"))]
 			{
@@ -1448,6 +1399,9 @@ impl RunServerCommand {
 		address: &str,
 		insecure: bool,
 		no_docs: bool,
+		with_pages: bool,
+		static_dir: &str,
+		no_spa: bool,
 	) -> CommandResult<()> {
 		use std::time::{Duration, Instant};
 
@@ -1488,7 +1442,9 @@ impl RunServerCommand {
 
 			// Start child process
 			ctx.verbose("Starting server subprocess...");
-			let mut child = Self::spawn_server_process(address, insecure, no_docs)?;
+			let mut child = Self::spawn_server_process(
+				address, insecure, no_docs, with_pages, static_dir, no_spa,
+			)?;
 			restart_count += 1;
 
 			// Wait for file change, child process exit, or Ctrl+C
@@ -1556,6 +1512,9 @@ impl RunServerCommand {
 		address: &str,
 		insecure: bool,
 		no_docs: bool,
+		with_pages: bool,
+		static_dir: &str,
+		no_spa: bool,
 	) -> CommandResult<tokio::process::Child> {
 		let current_exe = std::env::current_exe().map_err(|e| {
 			crate::CommandError::ExecutionError(format!("Failed to get current executable: {}", e))
@@ -1569,6 +1528,15 @@ impl RunServerCommand {
 		}
 		if no_docs {
 			cmd.arg("--no-docs");
+		}
+		if with_pages {
+			cmd.arg("--with-pages");
+		}
+		if !static_dir.is_empty() {
+			cmd.arg("--static-dir").arg(static_dir);
+		}
+		if no_spa {
+			cmd.arg("--no-spa");
 		}
 
 		// Set environment variable to indicate this is a child process (prevent log duplication, etc.)
@@ -2633,13 +2601,10 @@ mod tests {
 		assert_eq!(cmd.description(), "Start an interactive Rust REPL");
 
 		let options = cmd.options();
-		assert_eq!(options.len(), 2);
-		// First option: -c/--command
+		assert_eq!(options.len(), 1);
+		// Only option: -c/--command
 		assert_eq!(options[0].short, Some('c'));
 		assert_eq!(options[0].long, "command");
-		// Second option: -e/--engine
-		assert_eq!(options[1].short, Some('e'));
-		assert_eq!(options[1].long, "engine");
 	}
 
 	#[test]
