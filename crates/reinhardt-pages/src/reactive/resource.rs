@@ -11,7 +11,7 @@ use std::fmt;
 use std::rc::Rc;
 
 #[cfg(target_arch = "wasm32")]
-use wasm_bindgen_futures::spawn_local;
+use crate::spawn::spawn_task;
 
 /// Type alias for the refetch callback function
 ///
@@ -191,7 +191,7 @@ where
 	let fetcher_for_refetch = Rc::clone(&fetcher_for_initial);
 
 	// Initial fetch
-	spawn_local({
+	spawn_task({
 		let state = state_for_fetch.clone();
 		let fetcher = Rc::clone(&fetcher_for_initial);
 		async move {
@@ -207,7 +207,7 @@ where
 	*refetch_fn.borrow_mut() = Some(Box::new(move || {
 		state_for_refetch.set(ResourceState::Loading);
 
-		spawn_local({
+		spawn_task({
 			let state = state_for_refetch.clone();
 			let fetcher = Rc::clone(&fetcher_for_refetch);
 			async move {
@@ -275,7 +275,7 @@ where
 
 		state.set(ResourceState::Loading);
 
-		spawn_local(async move {
+		spawn_task(async move {
 			match fetcher(deps_value).await {
 				Ok(data) => state.set(ResourceState::Success(data)),
 				Err(err) => state.set(ResourceState::Error(err)),
@@ -291,7 +291,7 @@ where
 	*refetch_fn.borrow_mut() = Some(Box::new(move || {
 		state_for_refetch.set(ResourceState::Loading);
 
-		spawn_local({
+		spawn_task({
 			let state = state_for_refetch.clone();
 			let deps_value = deps_for_refetch.get();
 			let fetcher = Rc::clone(&fetcher_for_refetch);

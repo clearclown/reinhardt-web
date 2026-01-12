@@ -14,10 +14,10 @@ use std::cell::RefCell;
 #[cfg(target_arch = "wasm32")]
 use std::rc::Rc;
 
-/// Thread-local storage for reactive nodes to prevent them from being dropped.
-///
-/// When a ReactiveIfNode is created during view mounting, it must be kept alive
-/// for the lifetime of the DOM element. This storage prevents premature cleanup.
+// Thread-local storage for reactive nodes to prevent them from being dropped.
+//
+// When a ReactiveIfNode is created during view mounting, it must be kept alive
+// for the lifetime of the DOM element. This storage prevents premature cleanup.
 #[cfg(target_arch = "wasm32")]
 thread_local! {
 	static REACTIVE_NODES: RefCell<Vec<Box<dyn std::any::Any>>> = RefCell::new(Vec::new());
@@ -50,10 +50,13 @@ pub fn cleanup_reactive_nodes() {
 #[cfg(target_arch = "wasm32")]
 pub struct ReactiveIfNode {
 	/// Marker comment node in DOM (used as insertion point reference)
+	#[allow(dead_code)] // Kept for potential future use
 	marker: web_sys::Comment,
 	/// Currently mounted DOM nodes
+	#[allow(dead_code)] // Kept for potential future use
 	current_nodes: Rc<RefCell<Vec<web_sys::Node>>>,
 	/// Last evaluated condition value (for change detection)
+	#[allow(dead_code)] // Kept for potential future use
 	last_condition: Rc<RefCell<Option<bool>>>,
 	/// Effect handle (kept alive to maintain reactivity)
 	#[allow(dead_code)] // Effect is kept alive for its side effects
@@ -157,8 +160,10 @@ impl ReactiveIfNode {
 #[cfg(target_arch = "wasm32")]
 pub struct ReactiveNode {
 	/// Marker comment node in DOM (used as insertion point reference)
+	#[allow(dead_code)] // Kept for potential future use
 	marker: web_sys::Comment,
 	/// Currently mounted DOM nodes
+	#[allow(dead_code)] // Kept for potential future use
 	current_nodes: Rc<RefCell<Vec<web_sys::Node>>>,
 	/// Effect handle (kept alive to maintain reactivity)
 	#[allow(dead_code)] // Effect is kept alive for its side effects

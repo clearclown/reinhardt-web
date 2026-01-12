@@ -90,9 +90,9 @@ pub fn use_transition() -> TransitionState {
 
 			#[cfg(target_arch = "wasm32")]
 			{
-				use wasm_bindgen_futures::spawn_local;
+				use crate::spawn::spawn_task;
 				let is_pending = is_pending.clone();
-				spawn_local(async move {
+				spawn_task(async move {
 					f();
 					is_pending.set(false);
 				});
@@ -164,9 +164,9 @@ pub fn use_deferred_value<T: Clone + 'static>(value: Signal<T>) -> Signal<T> {
 
 			#[cfg(target_arch = "wasm32")]
 			{
-				use wasm_bindgen_futures::spawn_local;
+				use crate::spawn::spawn_task;
 				let deferred_clone = deferred_clone.clone();
-				spawn_local(async move {
+				spawn_task(async move {
 					deferred_clone.set(new_value);
 				});
 			}

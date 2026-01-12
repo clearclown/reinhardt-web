@@ -248,7 +248,7 @@ impl Runtime {
 			#[cfg(target_arch = "wasm32")]
 			{
 				// In WASM environment, use spawn_local to schedule flush as microtask
-				wasm_bindgen_futures::spawn_local(async {
+				crate::spawn::spawn_task(async {
 					RUNTIME.with(|rt| rt.flush_updates_enhanced());
 				});
 			}
