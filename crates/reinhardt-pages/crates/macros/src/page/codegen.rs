@@ -317,6 +317,14 @@ fn generate_attr(attr: &TypedPageAttr) -> TokenStream {
 	}
 }
 
+/// Checks if an expression is an async closure.
+fn is_async_closure(expr: &syn::Expr) -> bool {
+	match expr {
+		syn::Expr::Closure(closure) => closure.asyncness.is_some(),
+		_ => false,
+	}
+}
+
 /// Generates code for an event handler.
 ///
 /// This function generates platform-aware code that handles event handler type inference.
@@ -379,6 +387,17 @@ fn generate_event(event: &PageEvent, pages_crate: &TokenStream) -> TokenStream {
 			};
 		}
 	};
+
+	// ✅ NEW: Async closure detection
+	if is_async_closure(handler) {
+		// Automatically wrap async closures in async_handler
+		return quote! {
+			.on(
+				#pages_crate::dom::EventType::#event_type_ident,
+				#pages_crate::callback::async_handler(#handler)
+			)
+		};
+	}
 
 	// Generate event handler code.
 	// For closure expressions, we use a typed wrapper to enable type inference.
