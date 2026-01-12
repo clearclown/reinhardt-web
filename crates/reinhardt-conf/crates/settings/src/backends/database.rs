@@ -50,6 +50,8 @@
 #[cfg(feature = "dynamic-database")]
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "dynamic-database")]
+use sea_query::{MysqlQueryBuilder, PostgresQueryBuilder, SqliteQueryBuilder};
+#[cfg(feature = "dynamic-database")]
 use sqlx::{AnyPool, Row};
 #[cfg(feature = "dynamic-database")]
 use std::sync::Arc;
@@ -89,6 +91,8 @@ use async_trait::async_trait;
 pub struct DatabaseBackend {
 	#[cfg(feature = "dynamic-database")]
 	pool: Arc<AnyPool>,
+	#[cfg(feature = "dynamic-database")]
+	database_url: String,
 	#[cfg(not(feature = "dynamic-database"))]
 	_phantom: std::marker::PhantomData<()>,
 }
@@ -128,6 +132,7 @@ impl DatabaseBackend {
 
 		Ok(Self {
 			pool: Arc::new(pool),
+			database_url: connection_url.to_string(),
 		})
 	}
 
@@ -136,7 +141,7 @@ impl DatabaseBackend {
 		Err("Database backend not enabled. Enable the 'dynamic-database' feature.".to_string())
 	}
 
-	/// Create a new backend from an existing pool
+	/// Create a new backend from an existing connection pool
 	///
 	/// ## Example
 	///
@@ -148,13 +153,74 @@ impl DatabaseBackend {
 	/// use std::sync::Arc;
 	///
 	/// let pool = AnyPool::connect("sqlite::memory:").await.map_err(|e| e.to_string())?;
-	/// let backend = DatabaseBackend::from_pool(Arc::new(pool));
+	/// let backend = DatabaseBackend::from_pool(Arc::new(pool), "sqlite::memory:");
 	/// # Ok(())
 	/// # }
 	/// ```
 	#[cfg(feature = "dynamic-database")]
-	pub fn from_pool(pool: Arc<AnyPool>) -> Self {
-		Self { pool }
+	pub fn from_pool(pool: Arc<AnyPool>, database_url: &str) -> Self {
+		Self {
+			pool,
+			database_url: database_url.to_string(),
+		}
+	}
+
+	/// Detect database backend type from URL
+	///
+	/// Returns the database backend type based on the connection URL format.
+	#[cfg(feature = "dynamic-database")]
+	fn detect_backend(&self) -> &'static str {
+		if self.database_url.starts_with("postgres://")
+			|| self.database_url.starts_with("postgresql://")
+		{
+			"postgres"
+		} else if self.database_url.starts_with("mysql://") {
+			"mysql"
+		} else {
+			"sqlite"
+		}
+	}
+
+	/// Build SQL string for the current database backend
+	///
+	/// Uses sea-query to generate database-specific SQL syntax for queries.
+	#[cfg(feature = "dynamic-database")]
+	fn build_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::QueryStatementWriter,
+	{
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build table SQL string for the current database backend
+	///
+	/// Uses sea-query to generate database-specific SQL syntax for DDL operations.
+	#[cfg(feature = "dynamic-database")]
+	fn build_table_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::SchemaStatementBuilder,
+	{
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build index SQL string for the current database backend
+	///
+	/// Uses sea-query to generate database-specific SQL syntax for index creation.
+	#[cfg(feature = "dynamic-database")]
+	fn build_index_sql(&self, statement: &sea_query::IndexCreateStatement) -> String {
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
 	}
 
 	/// Create the settings table if it doesn't exist
@@ -175,10 +241,9 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn create_table(&self) -> Result<(), String> {
-		use sea_query::{Alias, ColumnDef, Index, SqliteQueryBuilder, Table};
+		use sea_query::{Alias, ColumnDef, Index, Table};
 
 		// Build CREATE TABLE statement using sea-query
-		// Note: Using SqliteQueryBuilder as it produces standard SQL compatible with most databases
 		let stmt = Table::create()
 			.table(Alias::new("settings"))
 			.if_not_exists()
@@ -192,10 +257,10 @@ impl DatabaseBackend {
 			.col(ColumnDef::new(Alias::new("expire_date")).text())
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_table_sql(stmt);
 
 		sqlx::query(&sql)
-			.execute(&*self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to create table: {}", e))?;
 
@@ -207,10 +272,10 @@ impl DatabaseBackend {
 			.col(Alias::new("expire_date"))
 			.to_owned();
 
-		let index_sql = index_stmt.to_string(SqliteQueryBuilder);
+		let index_sql = self.build_index_sql(&index_stmt);
 
 		sqlx::query(&index_sql)
-			.execute(&*self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to create index: {}", e))?;
 
@@ -240,7 +305,7 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn get(&self, key: &str) -> Result<Option<serde_json::Value>, String> {
-		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Expr, ExprTrait, Query};
 
 		// Build SELECT query using sea-query
 		let stmt = Query::select()
@@ -249,17 +314,27 @@ impl DatabaseBackend {
 			.and_where(Expr::col(Alias::new("key")).eq(key))
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		let row = sqlx::query(&sql)
-			.fetch_optional(&*self.pool)
+			.fetch_optional(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to get setting: {}", e))?;
 
 		match row {
 			Some(row) => {
 				// Check if setting has expired
-				let expire_date_str: Option<String> = row.try_get("expire_date").ok();
+				// Use index-based access for MySQL compatibility
+				// MySQL TEXT columns may be returned as BLOB, so handle both String and Vec<u8>
+				let expire_date_str: Option<String> = {
+					if let Ok(s) = row.try_get::<String, _>(1) {
+						Some(s)
+					} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(1) {
+						String::from_utf8(bytes).ok()
+					} else {
+						None
+					}
+				};
 
 				if let Some(expire_date_str) = expire_date_str
 					&& let Ok(expire_date) = DateTime::parse_from_rfc3339(&expire_date_str)
@@ -270,9 +345,16 @@ impl DatabaseBackend {
 					return Ok(None);
 				}
 
-				let value: String = row
-					.try_get("value")
-					.map_err(|e| format!("Invalid value: {}", e))?;
+				// Use index-based access for MySQL compatibility (value is first column, index 0)
+				// MySQL TEXT columns may be returned as BLOB, so try Vec<u8> first
+				let value: String = if let Ok(s) = row.try_get::<String, _>(0) {
+					s
+				} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(0) {
+					String::from_utf8(bytes)
+						.map_err(|e| format!("Invalid UTF-8 in value column: {}", e))?
+				} else {
+					return Err("Missing value column".to_string());
+				};
 
 				let data: serde_json::Value = serde_json::from_str(&value)
 					.map_err(|e| format!("Deserialization error: {}", e))?;
@@ -328,7 +410,7 @@ impl DatabaseBackend {
 		// Delete existing key first for simplicity (works across all databases)
 		let _ = self.delete(key).await;
 
-		use sea_query::{Alias, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Query};
 
 		// Build INSERT query using sea-query
 		let mut stmt = Query::insert()
@@ -351,10 +433,10 @@ impl DatabaseBackend {
 			]);
 		}
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		sqlx::query(&sql)
-			.execute(&*self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to set setting: {}", e))?;
 
@@ -382,7 +464,7 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn delete(&self, key: &str) -> Result<(), String> {
-		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Expr, ExprTrait, Query};
 
 		// Build DELETE query using sea-query
 		let stmt = Query::delete()
@@ -390,10 +472,10 @@ impl DatabaseBackend {
 			.and_where(Expr::col(Alias::new("key")).eq(key))
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		sqlx::query(&sql)
-			.execute(&*self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to delete setting: {}", e))?;
 
@@ -422,7 +504,7 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn exists(&self, key: &str) -> Result<bool, String> {
-		use sea_query::{Alias, Cond, Expr, ExprTrait, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Cond, Expr, ExprTrait, Query};
 
 		let now = Utc::now().to_rfc3339();
 
@@ -440,10 +522,10 @@ impl DatabaseBackend {
 			)
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		let row = sqlx::query(&sql)
-			.fetch_optional(&*self.pool)
+			.fetch_optional(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to check setting existence: {}", e))?;
 
@@ -474,7 +556,7 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn cleanup_expired(&self) -> Result<u64, String> {
-		use sea_query::{Alias, Expr, ExprTrait, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Expr, ExprTrait, Query};
 
 		let now = Utc::now().to_rfc3339();
 
@@ -484,14 +566,15 @@ impl DatabaseBackend {
 			.and_where(Expr::col(Alias::new("expire_date")).lt(Expr::value(&now)))
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
-		let result = sqlx::query(&sql)
-			.execute(&*self.pool)
+		let rows_affected = sqlx::query(&sql)
+			.execute(self.pool.as_ref())
 			.await
-			.map_err(|e| format!("Failed to cleanup settings: {}", e))?;
+			.map_err(|e| format!("Failed to cleanup settings: {}", e))?
+			.rows_affected();
 
-		Ok(result.rows_affected())
+		Ok(rows_affected)
 	}
 
 	/// Get all non-expired setting keys
@@ -518,7 +601,7 @@ impl DatabaseBackend {
 	/// ```
 	#[cfg(feature = "dynamic-database")]
 	pub async fn keys(&self) -> Result<Vec<String>, String> {
-		use sea_query::{Alias, Cond, Expr, ExprTrait, Query, SqliteQueryBuilder};
+		use sea_query::{Alias, Cond, Expr, ExprTrait, Query};
 
 		let now = Utc::now().to_rfc3339();
 
@@ -535,18 +618,26 @@ impl DatabaseBackend {
 			)
 			.to_owned();
 
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		let rows = sqlx::query(&sql)
-			.fetch_all(&*self.pool)
+			.fetch_all(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to fetch keys: {}", e))?;
 
+		// Use index-based access for MySQL compatibility (key is first column, index 0)
+		// MySQL TEXT columns may be returned as BLOB, so handle both String and Vec<u8>
 		let keys: Result<Vec<String>, String> = rows
 			.iter()
 			.map(|row| {
-				row.try_get::<String, _>("key")
-					.map_err(|e| format!("Failed to extract key: {}", e))
+				if let Ok(s) = row.try_get::<String, _>(0) {
+					Ok(s)
+				} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(0) {
+					String::from_utf8(bytes)
+						.map_err(|e| format!("Invalid UTF-8 in key column: {}", e))
+				} else {
+					Err("Missing key column".to_string())
+				}
 			})
 			.collect();
 
@@ -633,7 +724,7 @@ mod tests {
 			.await
 			.expect("Failed to connect to test database");
 
-		let backend = DatabaseBackend::from_pool(Arc::new(pool));
+		let backend = DatabaseBackend::from_pool(Arc::new(pool), db_url);
 		backend
 			.create_table()
 			.await

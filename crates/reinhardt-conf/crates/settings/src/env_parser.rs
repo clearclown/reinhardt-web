@@ -68,7 +68,13 @@ pub fn parse_dict(value: &str) -> HashMap<String, String> {
 
 	for pair in value.split(',') {
 		if let Some((key, val)) = pair.split_once('=') {
-			map.insert(key.trim().to_string(), val.trim().to_string());
+			let key = key.trim().to_string();
+			let val = val.trim().to_string();
+
+			// Skip entries where both key and value are empty
+			if !key.is_empty() || !val.is_empty() {
+				map.insert(key, val);
+			}
 		}
 	}
 

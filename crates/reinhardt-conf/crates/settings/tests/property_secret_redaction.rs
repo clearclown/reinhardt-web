@@ -23,31 +23,61 @@ use std::fmt::Write as FmtWrite;
 ///
 /// Why: Validates that Debug trait implementation always redacts the secret value,
 /// preventing accidental exposure through logging.
+///
+/// Note: The Debug output format is "SecretString([REDACTED])", which contains
+/// characters like '(', ')', '[', ']'. We verify that the actual secret value
+/// is not present in the output, except when the secret value is a substring
+/// of the format string itself.
 #[quickcheck]
 fn quickcheck_debug_redaction(secret_value: String) -> bool {
 	let secret = SecretString::new(secret_value.clone());
 	let debug_output = format!("{:?}", secret);
 
-	// Debug output should NOT contain the actual secret (unless empty)
-	// Note: In Rust, any_string.contains("") is always true, so we need special handling
-	(!debug_output.contains(&secret_value) || secret_value.is_empty())
-		// Debug output should contain redaction marker
-		&& debug_output.contains("[REDACTED]")
+	// The expected format is exactly "SecretString([REDACTED])"
+	let format_string = "SecretString([REDACTED])";
+
+	// Special case: empty string is contained in all strings, so we check it separately
+	if secret_value.is_empty() {
+		// For empty secret, just verify the format is correct
+		debug_output == format_string
+	} else if format_string.contains(&secret_value) {
+		// The secret value is part of the format string itself
+		// In this case, we just verify the format is correct
+		debug_output == format_string
+	} else {
+		// Normal case: verify secret is not exposed and redaction marker is present
+		!debug_output.contains(&secret_value) && debug_output.contains("[REDACTED]")
+	}
 }
 
 /// Test: SecretString Display output never reveals secret
 ///
 /// Why: Validates that Display trait implementation always redacts the secret value.
+///
+/// Note: The Display output format is "[REDACTED]", which contains
+/// characters like '[', ']'. We verify that the actual secret value
+/// is not present in the output, except when the secret value is a substring
+/// of the format string itself.
 #[quickcheck]
 fn quickcheck_display_redaction(secret_value: String) -> bool {
 	let secret = SecretString::new(secret_value.clone());
 	let display_output = format!("{}", secret);
 
-	// Display output should NOT contain the actual secret (unless empty)
-	// Note: In Rust, any_string.contains("") is always true, so we need special handling
-	(!display_output.contains(&secret_value) || secret_value.is_empty())
-		// Display output should contain redaction marker
-		&& display_output.contains("[REDACTED]")
+	// The expected format is exactly "[REDACTED]"
+	let format_string = "[REDACTED]";
+
+	// Special case: empty string is contained in all strings, so we check it separately
+	if secret_value.is_empty() {
+		// For empty secret, just verify the format is correct
+		display_output == format_string
+	} else if format_string.contains(&secret_value) {
+		// The secret value is part of the format string itself
+		// In this case, we just verify the format is correct
+		display_output == format_string
+	} else {
+		// Normal case: verify secret is not exposed and redaction marker is present
+		!display_output.contains(&secret_value) && display_output.contains("[REDACTED]")
+	}
 }
 
 /// Test: SecretString redaction with various string lengths

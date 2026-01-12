@@ -21,6 +21,7 @@ mod database_integration_tests {
 	use reinhardt_settings::backends::database::DatabaseBackend;
 	use reinhardt_settings::dynamic::DynamicSettings;
 	use rstest::*;
+	use sea_query::{Alias, Index, MysqlQueryBuilder};
 	use serial_test::serial;
 	use sqlx::AnyPool;
 	use std::sync::{Arc, Once};
@@ -324,19 +325,26 @@ mod database_integration_tests {
 						"CREATE TABLE IF NOT EXISTS settings (
 							`key` VARCHAR(255) NOT NULL PRIMARY KEY,
 							`value` TEXT NOT NULL,
-							`expire_date` TEXT
+							`expire_date` BIGINT
 						) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 					)
 					.execute(&pool)
 					.await
 					.expect("Failed to create settings table");
 
-					sqlx::query(
-						"CREATE INDEX IF NOT EXISTS idx_settings_expire_date ON settings(`expire_date`)",
-					)
-					.execute(&pool)
-					.await
-					.expect("Failed to create expire_date index");
+					// Create index using SeaQuery for DB compatibility
+					let index_stmt = Index::create()
+						.if_not_exists()
+						.name("idx_settings_expire_date")
+						.table(Alias::new("settings"))
+						.col(Alias::new("expire_date"))
+						.to_owned();
+
+					let index_sql = index_stmt.to_string(MysqlQueryBuilder);
+					sqlx::query(&index_sql)
+						.execute(&pool)
+						.await
+						.expect("Failed to create expire_date index");
 
 					return (container, database_url);
 				}

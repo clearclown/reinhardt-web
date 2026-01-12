@@ -5,21 +5,21 @@
 use crate::audit::{AuditBackend, AuditEvent, ChangeRecord, EventFilter, EventType};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
+use sea_query::{
+	Alias, ColumnDef, Expr, ExprTrait, Index, MysqlQueryBuilder, Order, PostgresQueryBuilder,
+	Query, SqliteQueryBuilder, Table,
+};
 use serde_json;
 use sqlx::{AnyPool, Row};
 use std::collections::HashMap;
-
-#[cfg(feature = "dynamic-database")]
-use sea_query::{
-	Alias, ColumnDef, Expr, ExprTrait, Index, Order, Query, SqliteQueryBuilder, Table,
-};
 
 /// Database audit backend
 ///
 /// Stores audit logs in a SQL database.
 /// Supports PostgreSQL, MySQL, and SQLite.
 pub struct DatabaseAuditBackend {
-	pool: AnyPool,
+	pool: std::sync::Arc<AnyPool>,
+	database_url: String,
 }
 
 impl DatabaseAuditBackend {
@@ -44,10 +44,65 @@ impl DatabaseAuditBackend {
 			.await
 			.map_err(|e| format!("Database connection failed: {}", e))?;
 
-		let backend = Self { pool };
+		let backend = Self {
+			pool: std::sync::Arc::new(pool),
+			database_url: database_url.to_string(),
+		};
 		backend.init_tables().await?;
 
 		Ok(backend)
+	}
+
+	/// Detect database backend type from URL
+	fn detect_backend(&self) -> &'static str {
+		if self.database_url.starts_with("postgres://")
+			|| self.database_url.starts_with("postgresql://")
+		{
+			"postgres"
+		} else if self.database_url.starts_with("mysql://") {
+			"mysql"
+		} else {
+			"sqlite"
+		}
+	}
+
+	/// Build SQL string from a query statement
+	///
+	/// Selects the appropriate QueryBuilder based on the database backend type.
+	fn build_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::QueryStatementWriter,
+	{
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build SQL string from a DDL (table) statement
+	///
+	/// Selects the appropriate QueryBuilder based on the database backend type.
+	fn build_table_sql<T>(&self, statement: T) -> String
+	where
+		T: sea_query::SchemaStatementBuilder,
+	{
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
+	}
+
+	/// Build SQL string from an index statement
+	///
+	/// Selects the appropriate QueryBuilder based on the database backend type.
+	fn build_index_sql(&self, statement: &sea_query::IndexCreateStatement) -> String {
+		match self.detect_backend() {
+			"postgres" => statement.to_string(PostgresQueryBuilder),
+			"mysql" => statement.to_string(MysqlQueryBuilder),
+			_ => statement.to_string(SqliteQueryBuilder),
+		}
 	}
 
 	/// Initialize audit tables if they don't exist
@@ -68,9 +123,9 @@ impl DatabaseAuditBackend {
 			.col(ColumnDef::new(Alias::new("user")).text())
 			.col(ColumnDef::new(Alias::new("changes")).text().not_null())
 			.to_owned();
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_table_sql(stmt);
 		sqlx::query(&sql)
-			.execute(&self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to create audit_events table: {}", e))?;
 
@@ -81,8 +136,8 @@ impl DatabaseAuditBackend {
 			.table(Alias::new("audit_events"))
 			.col(Alias::new("timestamp"))
 			.to_owned();
-		let idx_sql = idx.to_string(SqliteQueryBuilder);
-		let _ = sqlx::query(&idx_sql).execute(&self.pool).await;
+		let idx_sql = self.build_index_sql(&idx);
+		let _ = sqlx::query(&idx_sql).execute(self.pool.as_ref()).await;
 
 		let idx = Index::create()
 			.if_not_exists()
@@ -90,8 +145,8 @@ impl DatabaseAuditBackend {
 			.table(Alias::new("audit_events"))
 			.col(Alias::new("event_type"))
 			.to_owned();
-		let idx_sql = idx.to_string(SqliteQueryBuilder);
-		let _ = sqlx::query(&idx_sql).execute(&self.pool).await;
+		let idx_sql = self.build_index_sql(&idx);
+		let _ = sqlx::query(&idx_sql).execute(self.pool.as_ref()).await;
 
 		let idx = Index::create()
 			.if_not_exists()
@@ -99,8 +154,8 @@ impl DatabaseAuditBackend {
 			.table(Alias::new("audit_events"))
 			.col(Alias::new("user"))
 			.to_owned();
-		let idx_sql = idx.to_string(SqliteQueryBuilder);
-		let _ = sqlx::query(&idx_sql).execute(&self.pool).await;
+		let idx_sql = self.build_index_sql(&idx);
+		let _ = sqlx::query(&idx_sql).execute(self.pool.as_ref()).await;
 
 		Ok(())
 	}
@@ -133,10 +188,10 @@ impl AuditBackend for DatabaseAuditBackend {
 			)
 			.unwrap()
 			.to_owned();
-		let sql = stmt.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(stmt);
 
 		sqlx::query(&sql)
-			.execute(&self.pool)
+			.execute(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to log event: {}", e))?;
 
@@ -172,25 +227,39 @@ impl AuditBackend for DatabaseAuditBackend {
 
 		query.order_by(Alias::new("timestamp"), Order::Desc);
 
-		let sql = query.to_string(SqliteQueryBuilder);
+		let sql = self.build_sql(query);
 
 		let rows = sqlx::query(&sql)
-			.fetch_all(&self.pool)
+			.fetch_all(self.pool.as_ref())
 			.await
 			.map_err(|e| format!("Failed to fetch events: {}", e))?;
 
 		let mut events = Vec::new();
 		for row in rows {
-			let timestamp_str: String = row
-				.try_get("timestamp")
-				.map_err(|e| format!("Failed to get timestamp: {}", e))?;
+			// Use index-based access for MySQL compatibility
+			// Column order: timestamp(0), event_type(1), user(2), changes(3)
+			// MySQL TEXT columns may be returned as BLOB, so handle both String and Vec<u8>
+
+			let timestamp_str: String = if let Ok(s) = row.try_get::<String, _>(0) {
+				s
+			} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(0) {
+				String::from_utf8(bytes)
+					.map_err(|e| format!("Invalid UTF-8 in timestamp: {}", e))?
+			} else {
+				return Err("Failed to get timestamp".to_string());
+			};
 			let timestamp = DateTime::parse_from_rfc3339(&timestamp_str)
 				.map(|dt| dt.with_timezone(&Utc))
 				.unwrap_or_else(|_| Utc::now());
 
-			let event_type_str: String = row
-				.try_get("event_type")
-				.map_err(|e| format!("Failed to get event_type: {}", e))?;
+			let event_type_str: String = if let Ok(s) = row.try_get::<String, _>(1) {
+				s
+			} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(1) {
+				String::from_utf8(bytes)
+					.map_err(|e| format!("Invalid UTF-8 in event_type: {}", e))?
+			} else {
+				return Err("Failed to get event_type".to_string());
+			};
 			let event_type = match event_type_str.as_str() {
 				"config_update" => EventType::ConfigUpdate,
 				"config_delete" => EventType::ConfigDelete,
@@ -200,18 +269,26 @@ impl AuditBackend for DatabaseAuditBackend {
 				_ => EventType::ConfigUpdate, // default
 			};
 
-			let user_str: String = row
-				.try_get("user")
-				.map_err(|e| format!("Failed to get user: {}", e))?;
+			let user_str: String = if let Ok(s) = row.try_get::<String, _>(2) {
+				s
+			} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(2) {
+				String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 in user: {}", e))?
+			} else {
+				return Err("Failed to get user".to_string());
+			};
 			let user = if user_str.is_empty() {
 				None
 			} else {
 				Some(user_str)
 			};
 
-			let changes_json: String = row
-				.try_get("changes")
-				.map_err(|e| format!("Failed to get changes: {}", e))?;
+			let changes_json: String = if let Ok(s) = row.try_get::<String, _>(3) {
+				s
+			} else if let Ok(bytes) = row.try_get::<Vec<u8>, _>(3) {
+				String::from_utf8(bytes).map_err(|e| format!("Invalid UTF-8 in changes: {}", e))?
+			} else {
+				return Err("Failed to get changes".to_string());
+			};
 			let changes: HashMap<String, ChangeRecord> = serde_json::from_str(&changes_json)
 				.map_err(|e| format!("Failed to deserialize changes: {}", e))?;
 
@@ -259,7 +336,10 @@ mod tests {
 			.await
 			.expect("Failed to connect to test database");
 
-		let backend = DatabaseAuditBackend { pool };
+		let backend = DatabaseAuditBackend {
+			pool: std::sync::Arc::new(pool),
+			database_url: db_url.to_string(),
+		};
 		backend
 			.init_tables()
 			.await
@@ -278,7 +358,10 @@ mod tests {
 			.to_owned();
 		let sql = stmt.to_string(SqliteQueryBuilder);
 
-		let rows = sqlx::query(&sql).fetch_all(&backend.pool).await.unwrap();
+		let rows = sqlx::query(&sql)
+			.fetch_all(backend.pool.as_ref())
+			.await
+			.unwrap();
 		let count: i64 = rows[0].try_get("count").unwrap();
 
 		assert_eq!(count, 0);
