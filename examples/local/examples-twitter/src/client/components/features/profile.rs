@@ -21,7 +21,7 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use {
 	crate::server_fn::profile::{fetch_profile, update_profile_form},
-	wasm_bindgen_futures::spawn_local,
+	reinhardt::pages::spawn::spawn_task,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -45,7 +45,7 @@ pub fn profile_view(user_id: Uuid) -> View {
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			set_loading(true);
 			set_error(None);
 
@@ -353,7 +353,7 @@ pub fn profile_edit(user_id: Uuid) -> View {
 		let location_signal = profile_form.location().clone();
 		let website_signal = profile_form.website().clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			if let Ok(profile_data) = fetch_profile(user_id).await {
 				avatar_url_signal.set(profile_data.avatar_url.unwrap_or_default());
 				bio_signal.set(profile_data.bio.unwrap_or_default());

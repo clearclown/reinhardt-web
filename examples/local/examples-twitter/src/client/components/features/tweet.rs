@@ -15,7 +15,7 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use {
 	crate::server_fn::tweet::{create_tweet, delete_tweet, list_tweets},
-	wasm_bindgen_futures::spawn_local,
+	reinhardt::pages::spawn::spawn_task,
 };
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -221,7 +221,7 @@ pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 														{
 															let set_deleted = set_deleted.clone();
 															let set_error = set_error.clone();
-															spawn_local(async move {
+															spawn_task(async move {
 																match delete_tweet(tweet_id).await {
 																	Ok(()) => {
 																		set_deleted(true);
@@ -492,7 +492,7 @@ pub fn tweet_list(user_id: Option<Uuid>) -> View {
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			set_loading(true);
 			set_error(None);
 

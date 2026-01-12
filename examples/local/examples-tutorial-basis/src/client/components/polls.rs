@@ -15,7 +15,7 @@ use {
 	crate::server_fn::polls::{
 		get_question_detail, get_question_results, get_questions, submit_vote,
 	},
-	wasm_bindgen_futures::spawn_local,
+	reinhardt::pages::spawn::spawn_task,
 };
 
 #[cfg(native)]
@@ -36,7 +36,7 @@ pub fn polls_index() -> View {
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			match get_questions().await {
 				Ok(qs) => {
 					set_questions(qs);
@@ -194,7 +194,7 @@ pub fn polls_detail(question_id: i64) -> View {
 		let set_data_error = set_data_error.clone();
 		let voting_form_clone = voting_form.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			match get_question_detail(qid).await {
 				Ok((q, choices)) => {
 					set_question(Some(q));
@@ -315,7 +315,7 @@ pub fn polls_results(question_id: i64) -> View {
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			match get_question_results(question_id).await {
 				Ok((q, cs, total)) => {
 					set_question(Some(q));
@@ -441,8 +441,6 @@ pub fn polls_results(question_id: i64) -> View {
 /// static URL resolution.
 #[cfg(wasm)]
 pub fn polls_index_with_logo() -> View {
-	use reinhardt::pages::static_resolver::resolve_static;
-
 	let (questions, set_questions) = use_state(Vec::<QuestionInfo>::new());
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
@@ -453,7 +451,7 @@ pub fn polls_index_with_logo() -> View {
 		let set_loading = set_loading.clone();
 		let set_error = set_error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			match get_questions().await {
 				Ok(qs) => {
 					set_questions(qs);
@@ -477,7 +475,7 @@ pub fn polls_index_with_logo() -> View {
 			div {
 				class: "text-center mb-6",
 				img {
-					src: resolve_static("images/poll-icon.svg"),
+					src: "/static/images/poll-icon.svg",
 					alt: "Polls App",
 					class: "mx-auto w-16 h-16",
 				}
@@ -515,7 +513,7 @@ pub fn polls_index_with_logo() -> View {
 				} else {
 					div {
 						class: "space-y-2",
-						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "block p-4 border rounded hover:bg-gray-50 transition-colors", div { class : "flex w-full justify-between items-center", img { src : resolve_static("images/poll-icon.svg"), alt : "Poll", class : "w-8 h-8 mr-3" } div { class : "flex-1", h5 { class : "mb-1", { question_text } } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect ::<Vec<_>>()) }
+						{ View::fragment(questions_signal.get().iter().map(|question| { let href = format!("/polls/{}/", question.id); let question_text = question.question_text.clone(); let pub_date = question.pub_date.format("%Y-%m-%d %H:%M").to_string(); page!(|href : String, question_text : String, pub_date : String| { a { href : href, class : "block p-4 border rounded hover:bg-gray-50 transition-colors", div { class : "flex w-full justify-between items-center", img { src : "/static/images/poll-icon.svg", alt : "Poll", class : "w-8 h-8 mr-3" } div { class : "flex-1", h5 { class : "mb-1", { question_text } } } small { { pub_date } } } } }) (href, question_text, pub_date) }).collect ::<Vec<_>>()) }
 					}
 				}
 			}

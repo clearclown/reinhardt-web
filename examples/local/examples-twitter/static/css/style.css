@@ -446,6 +446,103 @@ img {
 	text-decoration: underline;
 }
 
+/* ===== Button Fallback Styles ===== */
+/* Fallback for UnoCSS runtime when WASM-generated DOM elements are not detected */
+/* Using !important to override UnoCSS runtime generated styles */
+.btn-primary {
+	display: inline-flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 0.5rem 1rem !important;
+	border-radius: 9999px !important;
+	font-weight: 600 !important;
+	font-size: 0.875rem !important;
+	background-color: var(--brand-primary) !important;
+	color: white !important;
+	border: none !important;
+	cursor: pointer !important;
+	transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-primary:hover {
+	background-color: var(--brand-hover);
+}
+
+.btn-primary:active {
+	transform: scale(0.95);
+}
+
+.btn-primary:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.btn-primary:focus {
+	outline: none;
+	box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--brand-primary);
+}
+
+.btn-secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem 1rem;
+	border-radius: 9999px;
+	font-weight: 600;
+	font-size: 0.875rem;
+	background-color: var(--bg-tertiary);
+	color: var(--text-primary);
+	border: none;
+	cursor: pointer;
+	transition: background-color var(--transition-fast);
+}
+
+.btn-secondary:hover {
+	background-color: var(--border-secondary);
+}
+
+.btn-outline {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem 1rem;
+	border-radius: 9999px;
+	font-weight: 600;
+	font-size: 0.875rem;
+	background-color: transparent;
+	color: var(--text-primary);
+	border: 1px solid var(--border-secondary);
+	cursor: pointer;
+	transition: background-color var(--transition-fast);
+}
+
+.btn-outline:hover {
+	background-color: var(--bg-secondary);
+}
+
+.btn-danger {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem 1rem;
+	border-radius: 9999px;
+	font-weight: 600;
+	font-size: 0.875rem;
+	background-color: var(--danger);
+	color: white;
+	border: none;
+	cursor: pointer;
+	transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-danger:hover {
+	opacity: 0.9;
+}
+
+.btn-danger:active {
+	transform: scale(0.95);
+}
+
 /* Like button animation */
 .like-button.liked {
 	color: var(--danger);

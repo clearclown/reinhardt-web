@@ -218,13 +218,13 @@ pub async fn delete(Path(snippet_id): Path<i64>) -> ViewResult<Response> {
 pub struct SnippetViewSet;
 
 impl SnippetViewSet {
-	/// Create a new SnippetViewSet with full configuration
+	/// Create a configured ModelViewSet for Snippet model
 	///
 	/// Features enabled:
 	/// - Pagination: 10 items per page (max 100)
 	/// - Filtering: by language and title fields
 	/// - Ordering: by created_at and title fields
-	pub fn new() -> reinhardt::ModelViewSet<Snippet, SnippetSerializer> {
+	pub fn viewset() -> reinhardt::ModelViewSet<Snippet, SnippetSerializer> {
 		use reinhardt::ModelViewSet;
 		use reinhardt::views::viewsets::{FilterConfig, OrderingConfig, PaginationConfig};
 

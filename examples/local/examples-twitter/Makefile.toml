@@ -245,13 +245,44 @@ rm -rf dist dist-wasm
 echo "✓ Cleaned WASM artifacts"
 '''
 
+[tasks.clean-cache]
+description = "Clean WASM artifacts and Rust incremental build cache"
+script = '''
+echo "🧹 Cleaning build cache..."
+
+# WASM artifacts
+if [ -d "dist-wasm" ]; then
+	rm -rf dist-wasm
+	echo "  ✓ Removed dist-wasm/"
+fi
+
+if [ -d "dist" ]; then
+	rm -rf dist
+	echo "  ✓ Removed dist/"
+fi
+
+# Rust incremental build cache
+if [ -d "target/debug/incremental" ]; then
+	rm -rf target/debug/incremental
+	echo "  ✓ Removed target/debug/incremental/"
+fi
+
+# WASM target build cache
+if [ -d "target/wasm32-unknown-unknown" ]; then
+	rm -rf target/wasm32-unknown-unknown
+	echo "  ✓ Removed target/wasm32-unknown-unknown/"
+fi
+
+echo "✨ Build cache cleaned"
+'''
+
 # ============================================================================
 # Development Workflow
 # ============================================================================
 
 [tasks.dev]
 description = "Build WASM and start development server with frontend"
-dependencies = ["wasm-build-dev", "run-dev-server"]
+dependencies = ["clean-cache", "wasm-build-dev", "run-dev-server"]
 
 [tasks.run-dev-server]
 description = "Start development server with frontend (MUST run from project directory)"
@@ -276,7 +307,7 @@ dependencies = ["build", "runserver-watch"]
 
 [tasks.dev-release]
 description = "Build optimized WASM and start server"
-dependencies = ["wasm-build-release", "collectstatic", "run-dev-release-server"]
+dependencies = ["clean-cache", "wasm-build-release", "collectstatic", "run-dev-release-server"]
 
 [tasks.run-dev-release-server]
 script = '''
@@ -363,6 +394,7 @@ echo "  Build:"
 echo "    build              - Build (debug)"
 echo "    build-release      - Build (release)"
 echo "    clean              - Clean artifacts"
+echo "    clean-cache        - Clean WASM + Rust incremental cache"
 echo ""
 echo "  CI/CD:"
 echo "    ci                 - Run CI pipeline"

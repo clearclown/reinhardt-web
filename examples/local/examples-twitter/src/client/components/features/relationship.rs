@@ -13,7 +13,7 @@ use {
 	crate::server_fn::relationship::{
 		fetch_followers, fetch_following, follow_user, unfollow_user,
 	},
-	wasm_bindgen_futures::spawn_local,
+	reinhardt::pages::spawn::spawn_task,
 };
 
 /// Type of user list to display
@@ -64,7 +64,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 											let loading_inner = loading.clone();
 											let error_inner = error.clone();
 											let currently_following = is_following.get();
-											spawn_local(async move {
+											spawn_task(async move {
 												loading_inner.set(true);
 												error_inner.set(None);
 												let result = if currently_following {
@@ -105,7 +105,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 											let loading_inner = loading.clone();
 											let error_inner = error.clone();
 											let currently_following = is_following.get();
-											spawn_local(async move {
+											spawn_task(async move {
 												loading_inner.set(true);
 												error_inner.set(None);
 												let result = if currently_following {
@@ -148,7 +148,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 											let loading_inner = loading.clone();
 											let error_inner = error.clone();
 											let currently_following = is_following.get();
-											spawn_local(async move {
+											spawn_task(async move {
 												loading_inner.set(true);
 												error_inner.set(None);
 												let result = if currently_following {
@@ -288,7 +288,7 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 		let loading_clone = loading.clone();
 		let error_clone = error.clone();
 
-		spawn_local(async move {
+		spawn_task(async move {
 			loading_clone.set(true);
 			error_clone.set(None);
 

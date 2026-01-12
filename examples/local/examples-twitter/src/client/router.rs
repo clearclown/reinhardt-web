@@ -119,26 +119,32 @@ fn init_router() -> Router {
 pub fn home_page_view() -> View {
 	page!(|| {
 		div {
-			class: "container mt-5",
-			h1 {
-				class: "mb-4",
-				"Twitter Clone - Home"
-			}
-			p {
-				class: "lead",
-				"Welcome to the Twitter Clone!"
-			}
+			class: "min-h-screen flex items-center justify-center bg-surface-secondary px-4",
 			div {
-				class: "mt-4",
-				a {
-					href: "/login",
-					class: "btn btn-primary me-2",
-					"Login"
+				class: "max-w-md w-full text-center",
+				div {
+					class: "mb-8",
+					h1 {
+						class: "text-4xl font-bold text-content-primary mb-3",
+						"Twitter Clone"
+					}
+					p {
+						class: "text-lg text-content-secondary leading-relaxed",
+						"Welcome to the Twitter Clone! Join the conversation and connect with people."
+					}
 				}
-				a {
-					href: "/register",
-					class: "btn btn-secondary",
-					"Register"
+				div {
+					class: "flex flex-col gap-3",
+					a {
+						href: "/register",
+						class: "btn-primary btn-lg w-full",
+						"Sign up"
+					}
+					a {
+						href: "/login",
+						class: "btn-outline btn-lg w-full",
+						"Log in"
+					}
 				}
 			}
 		}
@@ -181,14 +187,14 @@ pub fn timeline_page_view() -> View {
 
 	page!(|form_view: View, list_view: View| {
 		div {
-			class: "container mt-5",
+			class: "max-w-2xl mx-auto px-4 py-6",
 			h1 {
-				class: "mb-4",
+				class: "text-2xl font-bold text-content-primary mb-6",
 				"Timeline"
 			}
 			{ form_view }
-			hr {
-				class: "my-4",
+			div {
+				class: "divider",
 			}
 			{ list_view }
 		}
@@ -206,18 +212,29 @@ pub fn dm_chat_page_view(room_id: String) -> View {
 pub fn not_found_page_view() -> View {
 	page!(|| {
 		div {
-			class: "container mt-5",
-			h1 {
-				class: "mb-4",
-				"404 - Page Not Found"
-			}
-			p {
-				"The page you are looking for does not exist."
-			}
-			a {
-				href: "/",
-				class: "btn btn-primary",
-				"Go Home"
+			class: "min-h-screen flex items-center justify-center bg-surface-secondary px-4",
+			div {
+				class: "max-w-md w-full text-center",
+				div {
+					class: "mb-8",
+					h1 {
+						class: "text-6xl font-bold text-content-primary mb-3",
+						"404"
+					}
+					p {
+						class: "text-xl text-content-secondary mb-2",
+						"Page Not Found"
+					}
+					p {
+						class: "text-content-tertiary",
+						"The page you are looking for does not exist."
+					}
+				}
+				a {
+					href: "/",
+					class: "btn-primary btn-lg",
+					"Go Home"
+				}
 			}
 		}
 	})()
