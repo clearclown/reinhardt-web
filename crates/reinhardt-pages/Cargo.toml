@@ -160,6 +160,7 @@ trybuild = "1.0"
 criterion = "0.5"
 rstest = { workspace = true }
 proptest = { workspace = true }
+tempfile = { workspace = true }
 
 [lib]
 crate-type = ["rlib"]
