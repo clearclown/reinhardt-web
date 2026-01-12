@@ -1,4 +1,4 @@
-use crate::drf_authentication::Authentication;
+use crate::rest_authentication::RestAuthentication;
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -190,9 +190,9 @@ impl JwtAuth {
 	}
 }
 
-// Implement DRF-style Authentication trait
+// Implement REST API Authentication trait
 #[async_trait::async_trait]
-impl Authentication for JwtAuth {
+impl RestAuthentication for JwtAuth {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -238,8 +238,8 @@ impl AuthenticationBackend for JwtAuth {
 		&self,
 		request: &Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		// Delegate to Authentication trait implementation
-		<Self as Authentication>::authenticate(self, request).await
+		// Delegate to REST API Authentication trait implementation
+		<Self as RestAuthentication>::authenticate(self, request).await
 	}
 
 	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
