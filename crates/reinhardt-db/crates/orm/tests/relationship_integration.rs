@@ -14,37 +14,14 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
 
+use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
 use std::sync::Arc;
-use testcontainers::{ContainerAsync, runners::AsyncRunner};
-use testcontainers_modules::postgres::Postgres;
+use testcontainers::ContainerAsync;
 
-type PostgresContainer = ContainerAsync<Postgres>;
-
-#[fixture]
-async fn postgres_container() -> (PostgresContainer, Arc<PgPool>, u16, String) {
-	let postgres = Postgres::default()
-		.start()
-		.await
-		.expect("Failed to start PostgreSQL container");
-
-	let port = postgres
-		.get_host_port_ipv4(5432)
-		.await
-		.expect("Failed to get PostgreSQL port");
-
-	let database_url = format!("postgres://postgres:postgres@localhost:{}/postgres", port);
-
-	let pool = sqlx::postgres::PgPoolOptions::new()
-		.max_connections(5)
-		.connect(&database_url)
-		.await
-		.expect("Failed to connect to PostgreSQL");
-
-	(postgres, Arc::new(pool), port, database_url)
-}
+type PostgresContainer = ContainerAsync<testcontainers::GenericImage>;
 
 // ============================================================================
 // Test Models (Real Database Schema)

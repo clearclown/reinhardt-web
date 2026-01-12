@@ -43,6 +43,7 @@
 use reinhardt_orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
+use sea_query::{Alias, Index, PostgresQueryBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{PgPool, Row};
@@ -891,8 +892,16 @@ async fn test_database_backend_with_indexes(
 	.await
 	.expect("Failed to create sessions table");
 
-	// Create index on expire_date for cleanup queries
-	sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_expire_date ON sessions (expire_date)")
+	// Create index on expire_date for cleanup queries using SeaQuery
+	let index_stmt = Index::create()
+		.if_not_exists()
+		.name("idx_sessions_expire_date")
+		.table(Alias::new("sessions"))
+		.col(Alias::new("expire_date"))
+		.to_owned();
+
+	let index_sql = index_stmt.to_string(PostgresQueryBuilder);
+	sqlx::query(&index_sql)
 		.execute(pool.as_ref())
 		.await
 		.expect("Failed to create index");

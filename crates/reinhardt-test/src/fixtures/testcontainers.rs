@@ -319,7 +319,7 @@ pub async fn postgres_container() -> (ContainerAsync<GenericImage>, Arc<sqlx::Pg
 	let mut port_retry = 0;
 	let max_port_retries = 7; // Increased from 5 for better reliability under load
 	let port = loop {
-		match postgres.get_host_port_ipv4(5432.tcp()).await {
+		match postgres.get_host_port_ipv4(5432).await {
 			Ok(p) => break p,
 			Err(e) if port_retry < max_port_retries => {
 				port_retry += 1;
@@ -429,7 +429,7 @@ pub async fn cockroachdb_container()
 		.expect("Failed to start CockroachDB container");
 
 	let port = cockroachdb
-		.get_host_port_ipv4(26257.tcp())
+		.get_host_port_ipv4(26257)
 		.await
 		.expect("Failed to get CockroachDB port");
 
@@ -536,7 +536,7 @@ async fn try_start_redis_container()
 		.start()
 		.await?;
 
-	let port = redis.get_host_port_ipv4(6379.tcp()).await?;
+	let port = redis.get_host_port_ipv4(6379).await?;
 
 	let url = format!("redis://localhost:{}", port);
 
@@ -1088,27 +1088,27 @@ pub async fn redis_cluster_fixture() -> (
 
 		let node_ports = vec![
 			cluster
-				.get_host_port_ipv4(7000.tcp())
+				.get_host_port_ipv4(7000)
 				.await
 				.expect("Failed to get port for node 7000"),
 			cluster
-				.get_host_port_ipv4(7001.tcp())
+				.get_host_port_ipv4(7001)
 				.await
 				.expect("Failed to get port for node 7001"),
 			cluster
-				.get_host_port_ipv4(7002.tcp())
+				.get_host_port_ipv4(7002)
 				.await
 				.expect("Failed to get port for node 7002"),
 			cluster
-				.get_host_port_ipv4(7003.tcp())
+				.get_host_port_ipv4(7003)
 				.await
 				.expect("Failed to get port for node 7003"),
 			cluster
-				.get_host_port_ipv4(7004.tcp())
+				.get_host_port_ipv4(7004)
 				.await
 				.expect("Failed to get port for node 7004"),
 			cluster
-				.get_host_port_ipv4(7005.tcp())
+				.get_host_port_ipv4(7005)
 				.await
 				.expect("Failed to get port for node 7005"),
 		];
@@ -1216,7 +1216,7 @@ async fn try_start_mongodb_container()
 		.start()
 		.await?;
 
-	let port = mongo.get_host_port_ipv4(27017.tcp()).await?;
+	let port = mongo.get_host_port_ipv4(27017).await?;
 	let connection_string = format!("mongodb://127.0.0.1:{}", port);
 
 	Ok((mongo, connection_string, port))
@@ -1293,7 +1293,7 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 		.expect("Failed to start LocalStack container");
 
 	let port = localstack
-		.get_host_port_ipv4(4566.tcp())
+		.get_host_port_ipv4(4566)
 		.await
 		.expect("Failed to get LocalStack port");
 
@@ -1433,7 +1433,7 @@ pub async fn mysql_container() -> (
 	let mut port_retry = 0;
 	let max_port_retries = 7; // Increased from 5 for better reliability under load
 	let port = loop {
-		match mysql.get_host_port_ipv4(3306.tcp()).await {
+		match mysql.get_host_port_ipv4(3306).await {
 			Ok(p) => break p,
 			Err(e) if port_retry < max_port_retries => {
 				port_retry += 1;
@@ -2050,7 +2050,7 @@ async fn try_start_rabbitmq_container()
 	let mut port_retry = 0;
 	let max_port_retries = 5;
 	let port = loop {
-		match rabbitmq.get_host_port_ipv4(5672.tcp()).await {
+		match rabbitmq.get_host_port_ipv4(5672).await {
 			Ok(p) => break p,
 			Err(_) if port_retry < max_port_retries => {
 				port_retry += 1;

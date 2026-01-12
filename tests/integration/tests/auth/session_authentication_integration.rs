@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_auth::{Authentication, SessionAuthentication};
+use reinhardt_auth::{RestAuthentication, SessionAuthentication};
 use reinhardt_http::Request;
 use reinhardt_sessions::{Session, backends::InMemorySessionBackend};
 use uuid::Uuid;
@@ -48,7 +48,9 @@ async fn test_session_authentication_with_inmemory_backend() {
 		.unwrap();
 
 	// Test authentication
-	let result = Authentication::authenticate(&auth, &request).await.unwrap();
+	let result = RestAuthentication::authenticate(&auth, &request)
+		.await
+		.unwrap();
 	let user = result.unwrap();
 	assert_eq!(user.id(), user_id.to_string());
 	assert_eq!(user.get_username(), "alice");
@@ -77,7 +79,9 @@ async fn test_session_authentication_no_cookie() {
 		.unwrap();
 
 	// Should return None (no authentication)
-	let result = Authentication::authenticate(&auth, &request).await.unwrap();
+	let result = RestAuthentication::authenticate(&auth, &request)
+		.await
+		.unwrap();
 	assert!(result.is_none());
 }
 
@@ -104,7 +108,9 @@ async fn test_session_authentication_invalid_session_key() {
 		.unwrap();
 
 	// Should return None (invalid session)
-	let result = Authentication::authenticate(&auth, &request).await.unwrap();
+	let result = RestAuthentication::authenticate(&auth, &request)
+		.await
+		.unwrap();
 	assert!(result.is_none());
 }
 
@@ -140,7 +146,9 @@ async fn test_session_authentication_no_user_data() {
 		.unwrap();
 
 	// Should return None (no user data in session)
-	let result = Authentication::authenticate(&auth, &request).await.unwrap();
+	let result = RestAuthentication::authenticate(&auth, &request)
+		.await
+		.unwrap();
 	assert!(result.is_none());
 }
 
@@ -183,7 +191,9 @@ async fn test_session_authentication_custom_cookie_name() {
 		.unwrap();
 
 	// Test authentication
-	let result = Authentication::authenticate(&auth, &request).await.unwrap();
+	let result = RestAuthentication::authenticate(&auth, &request)
+		.await
+		.unwrap();
 	let user = result.unwrap();
 	assert_eq!(user.id(), user_id.to_string());
 }

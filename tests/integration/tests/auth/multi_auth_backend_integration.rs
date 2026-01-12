@@ -14,7 +14,7 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
 use reinhardt_auth::{
-	Authentication, AuthenticationBackend, AuthenticationError, CompositeAuthentication,
+	AuthenticationBackend, AuthenticationError, CompositeAuthentication, RestAuthentication,
 	SessionAuthentication, SimpleUser, TokenAuthentication, User,
 };
 use reinhardt_http::Request;
@@ -549,7 +549,7 @@ async fn test_jwt_backend_user_model() {
 	let request = build_test_request(Method::GET, "/api/profile", headers, Bytes::new());
 
 	// Authenticate via JWT
-	let result = Authentication::authenticate(jwt_auth.as_ref(), &request)
+	let result = RestAuthentication::authenticate(jwt_auth.as_ref(), &request)
 		.await
 		.unwrap();
 	let user = result.unwrap();
@@ -597,7 +597,7 @@ async fn test_session_backend_user_model() {
 	let request = build_test_request(Method::GET, "/admin", headers, Bytes::new());
 
 	// Authenticate via Session
-	let result = Authentication::authenticate(&session_auth, &request)
+	let result = RestAuthentication::authenticate(&session_auth, &request)
 		.await
 		.unwrap();
 	let user = result.unwrap();
@@ -627,7 +627,7 @@ async fn test_token_backend_user_model() {
 	let request = build_test_request(Method::POST, "/api/update", headers, Bytes::new());
 
 	// Authenticate via Token
-	let result = Authentication::authenticate(&token_auth, &request)
+	let result = RestAuthentication::authenticate(&token_auth, &request)
 		.await
 		.unwrap();
 	let user = result.unwrap();
