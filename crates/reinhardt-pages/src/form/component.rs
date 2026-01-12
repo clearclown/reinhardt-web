@@ -56,6 +56,8 @@ use crate::dom::{Document, Element};
 use crate::reactive::Effect;
 use crate::reactive::Signal;
 #[cfg(target_arch = "wasm32")]
+use crate::spawn::spawn_task;
+#[cfg(target_arch = "wasm32")]
 use js_sys::Function;
 #[cfg(target_arch = "wasm32")]
 use reinhardt_forms::wasm_compat::ValidationRule;
@@ -391,7 +393,7 @@ impl FormComponent {
 			}
 
 			// Submit (spawn async task)
-			wasm_bindgen_futures::spawn_local(async move {
+			spawn_task(async move {
 				match form_component.submit().await {
 					Ok(_) => {
 						crate::info_log!("Form submitted successfully");
