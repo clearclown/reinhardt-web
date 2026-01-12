@@ -140,6 +140,7 @@ pub mod callback;
 pub mod dom;
 pub mod logging;
 pub mod reactive;
+pub mod spawn;
 
 // Platform abstraction (unified types for WASM and native)
 pub mod platform;
