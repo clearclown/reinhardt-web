@@ -247,6 +247,7 @@ dependencies = [
   "integration-test",
   "doc-test",
   "examples-test",
+  "ui-test"
 ]
 
 # ============================================================================
