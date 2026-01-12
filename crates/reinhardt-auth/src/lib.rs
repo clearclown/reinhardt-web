@@ -9,8 +9,8 @@
 //! - **Object-Level Permissions**: Fine-grained access control on individual objects
 //! - **User Management**: CRUD operations for users with password hashing
 //! - **Group Management**: User groups and permission assignment
-//! - **DRF-Compatible Authentication**: Multiple authentication backends (JWT, Token, Session, OAuth2)
-//! - **DRF-Compatible Permissions**: Permission classes for common authorization scenarios
+//! - **REST API Authentication**: Multiple authentication backends (JWT, Token, Session, OAuth2)
+//! - **Standard Permissions**: Permission classes for common authorization scenarios
 //! - **createsuperuser Command**: CLI tool for creating admin users
 
 // Core authentication types and traits (migrated from reinhardt-core-auth)
@@ -42,8 +42,6 @@ pub mod base_user_manager;
 pub mod basic;
 pub mod default_user;
 pub mod default_user_manager;
-pub mod drf_authentication;
-pub mod drf_permissions;
 pub mod group_management;
 #[cfg(feature = "sessions")]
 pub mod handlers;
@@ -57,6 +55,7 @@ pub mod oauth2;
 pub mod object_permissions;
 pub mod rate_limit_permission;
 pub mod remote_user;
+pub mod rest_authentication;
 #[cfg(feature = "sessions")]
 pub mod session;
 pub mod time_based_permission;
@@ -75,13 +74,6 @@ pub use basic::BasicAuthentication as HttpBasicAuth;
 pub use default_user::DefaultUser;
 #[cfg(feature = "argon2-hasher")]
 pub use default_user_manager::DefaultUserManager;
-pub use drf_authentication::{
-	Authentication, BasicAuthConfig, CompositeAuthentication, RemoteUserAuthentication,
-	SessionAuthConfig, SessionAuthentication, TokenAuthConfig, TokenAuthentication,
-};
-pub use drf_permissions::{
-	DrfAllowAny, DrfIsAdminUser, DrfIsAuthenticated, DrfIsAuthenticatedOrReadOnly,
-};
 pub use group_management::{
 	CreateGroupData, Group, GroupManagementError, GroupManagementResult, GroupManager,
 };
@@ -106,6 +98,10 @@ pub use rate_limit_permission::{
 	RateLimitPermissionBuilder,
 };
 pub use remote_user::RemoteUserAuthentication as RemoteUserAuth;
+pub use rest_authentication::{
+	BasicAuthConfig, CompositeAuthentication, RemoteUserAuthentication, RestAuthentication,
+	SessionAuthConfig, SessionAuthentication, TokenAuthConfig, TokenAuthentication,
+};
 #[cfg(feature = "sessions")]
 pub use session::{InMemorySessionStore, SESSION_KEY_USER_ID, Session, SessionId, SessionStore};
 pub use time_based_permission::{DateRange, TimeBasedPermission, TimeWindow};

@@ -1,6 +1,6 @@
-//! Django REST Framework-style Authentication
+//! REST API Authentication
 //!
-//! Provides DRF-compatible authentication wrappers and combinators.
+//! Provides REST API-compatible authentication wrappers and combinators.
 
 #[cfg(feature = "argon2-hasher")]
 use crate::DefaultUser;
@@ -9,11 +9,11 @@ use reinhardt_http::Request;
 use reinhardt_sessions::{Session, backends::SessionBackend};
 use std::sync::Arc;
 
-/// DRF-style authentication trait wrapper
+/// REST API authentication trait wrapper
 ///
-/// Provides a Django REST Framework-compatible interface for authentication.
+/// Provides a REST API-compatible interface for authentication.
 #[async_trait::async_trait]
-pub trait Authentication: Send + Sync {
+pub trait RestAuthentication: Send + Sync {
 	/// Authenticate a request and return a user if successful
 	async fn authenticate(
 		&self,
@@ -139,7 +139,7 @@ impl Default for CompositeAuthentication {
 }
 
 #[async_trait::async_trait]
-impl Authentication for CompositeAuthentication {
+impl RestAuthentication for CompositeAuthentication {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -166,7 +166,7 @@ impl AuthenticationBackend for CompositeAuthentication {
 		&self,
 		request: &Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		Authentication::authenticate(self, request).await
+		<Self as RestAuthentication>::authenticate(self, request).await
 	}
 
 	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -233,7 +233,7 @@ impl Default for TokenAuthentication {
 }
 
 #[async_trait::async_trait]
-impl Authentication for TokenAuthentication {
+impl RestAuthentication for TokenAuthentication {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -272,7 +272,7 @@ impl AuthenticationBackend for TokenAuthentication {
 		&self,
 		request: &Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		Authentication::authenticate(self, request).await
+		<Self as RestAuthentication>::authenticate(self, request).await
 	}
 
 	async fn get_user(&self, user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -322,7 +322,7 @@ impl Default for RemoteUserAuthentication {
 }
 
 #[async_trait::async_trait]
-impl Authentication for RemoteUserAuthentication {
+impl RestAuthentication for RemoteUserAuthentication {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -356,7 +356,7 @@ impl AuthenticationBackend for RemoteUserAuthentication {
 		&self,
 		request: &Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		Authentication::authenticate(self, request).await
+		<Self as RestAuthentication>::authenticate(self, request).await
 	}
 
 	async fn get_user(&self, _user_id: &str) -> Result<Option<Box<dyn User>>, AuthenticationError> {
@@ -398,7 +398,7 @@ impl<B: SessionBackend + Default> Default for SessionAuthentication<B> {
 }
 
 #[async_trait::async_trait]
-impl<B: SessionBackend> Authentication for SessionAuthentication<B> {
+impl<B: SessionBackend> RestAuthentication for SessionAuthentication<B> {
 	async fn authenticate(
 		&self,
 		request: &Request,
@@ -484,7 +484,7 @@ impl<B: SessionBackend> AuthenticationBackend for SessionAuthentication<B> {
 		&self,
 		request: &Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
-		Authentication::authenticate(self, request).await
+		<Self as RestAuthentication>::authenticate(self, request).await
 	}
 
 	#[cfg(feature = "argon2-hasher")]
@@ -587,7 +587,7 @@ mod tests {
 			.build()
 			.unwrap();
 
-		let result = Authentication::authenticate(&composite, &request)
+		let result = RestAuthentication::authenticate(&composite, &request)
 			.await
 			.unwrap();
 		assert!(result.is_some());
@@ -610,7 +610,9 @@ mod tests {
 			.build()
 			.unwrap();
 
-		let result = Authentication::authenticate(&auth, &request).await.unwrap();
+		let result = RestAuthentication::authenticate(&auth, &request)
+			.await
+			.unwrap();
 		assert!(result.is_some());
 		assert_eq!(result.unwrap().get_username(), "alice");
 	}
@@ -630,7 +632,9 @@ mod tests {
 			.build()
 			.unwrap();
 
-		let result = Authentication::authenticate(&auth, &request).await.unwrap();
+		let result = RestAuthentication::authenticate(&auth, &request)
+			.await
+			.unwrap();
 		assert!(result.is_some());
 		assert_eq!(result.unwrap().get_username(), "bob");
 	}
@@ -669,7 +673,9 @@ mod tests {
 			.build()
 			.unwrap();
 
-		let result = Authentication::authenticate(&auth, &request).await.unwrap();
+		let result = RestAuthentication::authenticate(&auth, &request)
+			.await
+			.unwrap();
 		assert!(result.is_some());
 
 		// Verify the authenticated user
@@ -698,7 +704,9 @@ mod tests {
 			.build()
 			.unwrap();
 
-		let result = Authentication::authenticate(&auth, &request).await.unwrap();
+		let result = RestAuthentication::authenticate(&auth, &request)
+			.await
+			.unwrap();
 		assert!(result.is_some());
 		assert_eq!(result.unwrap().get_username(), "charlie");
 	}
