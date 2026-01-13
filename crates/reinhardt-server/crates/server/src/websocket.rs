@@ -301,6 +301,7 @@ impl WebSocketServer {
 	///
 	/// ```no_run
 	/// use std::net::SocketAddr;
+	/// use std::time::Duration;
 	/// use reinhardt_server_core::{WebSocketServer, ShutdownCoordinator};
 	/// use reinhardt_server_core::WebSocketHandler;
 	///
@@ -316,7 +317,7 @@ impl WebSocketServer {
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let server = WebSocketServer::new(EchoHandler);
 	/// let addr: SocketAddr = "127.0.0.1:9001".parse()?;
-	/// let coordinator = ShutdownCoordinator::new();
+	/// let coordinator = ShutdownCoordinator::new(Duration::from_secs(30));
 	/// server.listen_with_shutdown(addr, coordinator).await?;
 	/// # Ok(())
 	/// # }

@@ -133,8 +133,9 @@ impl<S: SessionStore, A: AuthenticationBackend> AuthenticationMiddleware<S, A> {
 	/// #
 	/// # // Simple test authentication backend
 	/// # struct TestAuthBackend;
+	/// # #[async_trait::async_trait]
 	/// # impl AuthenticationBackend for TestAuthBackend {
-	/// #     fn authenticate<'a>(&'a self, _request: &'a Request) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
+	/// #     async fn authenticate(&self, _request: &Request) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
 	/// #         Ok(Some(Box::new(SimpleUser {
 	/// #             id: Uuid::new_v4(),
 	/// #             username: "testuser".to_string(),
@@ -145,7 +146,7 @@ impl<S: SessionStore, A: AuthenticationBackend> AuthenticationMiddleware<S, A> {
 	/// #             is_superuser: false,
 	/// #         })))
 	/// #     }
-	/// #     fn get_user<'a>(&'a self, _user_id: &'a str) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
+	/// #     async fn get_user(&self, _user_id: &str) -> std::result::Result<Option<Box<dyn User>>, AuthenticationError> {
 	/// #         Ok(None)
 	/// #     }
 	/// # }

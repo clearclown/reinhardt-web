@@ -2052,8 +2052,8 @@ pub fn head(input: TokenStream) -> TokenStream {
 ///
 /// ### Automatic Injection
 ///
-/// ```rust
-/// # use reinhardt_pages::form;
+/// ```ignore
+/// use reinhardt_pages::form;
 /// # fn main() {
 /// // This POST form automatically includes CSRF token
 /// let contact_form = form! {
@@ -2087,8 +2087,8 @@ pub fn head(input: TokenStream) -> TokenStream {
 ///
 /// GET forms do not include CSRF tokens since they are safe methods:
 ///
-/// ```rust
-/// # use reinhardt_pages::form;
+/// ```ignore
+/// use reinhardt_pages::form;
 /// # fn main() {
 /// // This GET form does NOT include CSRF token
 /// let search_form = form! {

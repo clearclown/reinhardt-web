@@ -473,7 +473,7 @@ impl PostgresTableCreator {
 	/// ```rust,no_run
 	/// # use reinhardt_test::fixtures::*;
 	/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
-	/// # async fn example(mut creator: TableCreator) {
+	/// # async fn example(mut creator: PostgresTableCreator) {
 	/// let schema = vec![
 	///     Operation::CreateTable {
 	///         name: "products".to_string(),
@@ -545,8 +545,8 @@ impl PostgresTableCreator {
 	///     vec![
 	///         vec![
 	///             Value::Int(Some(1)),
-	///             Value::String(Some(Box::new("Alice".to_string()))),
-	///             Value::String(Some(Box::new("alice@example.com".to_string()))),
+	///             Value::String(Some("Alice".to_string())),
+	///             Value::String(Some("alice@example.com".to_string())),
 	///         ],
 	///     ],
 	/// ).await.unwrap();

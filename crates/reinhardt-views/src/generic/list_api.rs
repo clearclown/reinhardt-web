@@ -195,6 +195,7 @@ where
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct Article { id: Option<i64>, title: String }
+	/// # reinhardt_test::impl_test_model!(Article, i64, "articles");
 	///
 	/// let view = ListAPIView::<Article, JsonSerializer<Article>>::new()
 	///     .with_pagination(PaginationConfig::limit_offset(10, Some(100)));

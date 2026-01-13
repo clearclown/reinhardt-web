@@ -425,7 +425,7 @@ pub async fn websocket_server() -> TestServer {
 ///
 /// #[rstest]
 /// #[tokio::test]
-/// async fn test_websocket_client(websocket_client: tokio_tungstenite::WebSocketStream<...>) {
+/// async fn test_websocket_client(websocket_client: tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>) {
 ///     // WebSocket client test
 /// }
 /// ```
