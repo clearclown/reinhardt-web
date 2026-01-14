@@ -14,6 +14,6 @@ categories = ["development-tools::procedural-macro-helpers"]
 syn = { version = "2.0", features = ["full", "extra-traits", "parsing"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+aquamarine = { workspace = true }
 
 [dev-dependencies]
-# For testing AST parsing

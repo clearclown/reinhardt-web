@@ -7,36 +7,7 @@
 //! The typed AST is produced by the validator after transforming and validating
 //! the untyped AST from the parser.
 //!
-//! # Type Hierarchy
-//!
-//! ```text
-//! TypedFormMacro
-//! ├── name: Ident
-//! ├── action: TypedFormAction (Url | ServerFn | None)
-//! ├── method: FormMethod (Get | Post | Put | Delete | Patch)
-//! ├── styling: TypedFormStyling
-//! ├── state: Option<TypedFormState>
-//! ├── callbacks: TypedFormCallbacks
-//! ├── watch: Option<TypedFormWatch>
-//! │   └── items: Vec<TypedFormWatchItem>
-//! ├── redirect_on_success: Option<String>
-//! ├── initial_loader: Option<Path>
-//! ├── slots: Option<TypedFormSlots>
-//! ├── fields: Vec<TypedFormFieldEntry>
-//! │   ├── Field(TypedFormFieldDef)
-//! │   │   ├── field_type: TypedFieldType
-//! │   │   ├── validation: TypedFieldValidation
-//! │   │   ├── display: TypedFieldDisplay
-//! │   │   ├── styling: TypedFieldStyling
-//! │   │   ├── widget: TypedWidget
-//! │   │   ├── wrapper: Option<TypedWrapper>
-//! │   │   ├── icon: Option<TypedIcon>
-//! │   │   └── custom_attrs: Vec<TypedCustomAttr>
-//! │   └── Group(TypedFormFieldGroup)
-//! │       └── fields: Vec<TypedFormFieldDef>
-//! ├── validators: Vec<TypedFormValidator>
-//! └── client_validators: Vec<TypedClientValidator>
-//! ```
+//! See [`TypedFormMacro`] for the type hierarchy diagram.
 //!
 //! # Type Summary
 //!
@@ -62,10 +33,49 @@
 use proc_macro2::Span;
 use syn::{ExprClosure, Ident, Path};
 
+#[cfg_attr(doc, aquamarine::aquamarine)]
 /// The top-level typed AST node representing a validated form! macro invocation.
 ///
 /// This is the result of successful validation and transformation of an untyped
 /// `FormMacro`. All validation rules have been enforced at this point.
+///
+/// # Type Hierarchy
+///
+/// ```mermaid
+/// classDiagram
+///     class TypedFormMacro {
+///         +Ident name
+///         +TypedFormAction action
+///         +FormMethod method
+///         +TypedFormStyling styling
+///         +Option~TypedFormState~ state
+///         +TypedFormCallbacks callbacks
+///         +Option~TypedFormWatch~ watch
+///         +Vec~TypedFormFieldEntry~ fields
+///         +Vec~TypedFormValidator~ validators
+///     }
+///
+///     TypedFormMacro --> TypedFormAction
+///     TypedFormMacro --> TypedFormStyling
+///     TypedFormMacro --> TypedFormCallbacks
+///     TypedFormMacro --> TypedFormFieldEntry
+///
+///     class TypedFormFieldEntry {
+///         <<enumeration>>
+///         Field~TypedFormFieldDef~
+///         Group~TypedFormFieldGroup~
+///     }
+///
+///     TypedFormFieldEntry --> TypedFormFieldDef
+///     TypedFormFieldEntry --> TypedFormFieldGroup
+///
+///     class TypedFormFieldDef {
+///         +TypedFieldType field_type
+///         +TypedFieldValidation validation
+///         +TypedFieldDisplay display
+///         +TypedWidget widget
+///     }
+/// ```
 #[derive(Debug)]
 pub struct TypedFormMacro {
 	/// Form struct name (validated identifier)

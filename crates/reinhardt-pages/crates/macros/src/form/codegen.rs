@@ -8,12 +8,12 @@
 //!
 //! For SSR (native):
 //! - Generates a Form struct with metadata
-//! - Implements `into_view()` for View conversion
+//! - Implements `into_page()` for View conversion
 //! - Field accessors return dummy Signal wrappers for type compatibility
 //!
 //! For CSR (WASM):
 //! - Generates a FormComponent with reactive Signal bindings
-//! - Implements real `into_view()` with event handlers
+//! - Implements real `into_page()` with event handlers
 //! - Field accessors return actual Signal references
 //!
 //! ## Example
@@ -37,7 +37,7 @@
 //!     impl LoginForm {
 //!         fn username(&self) -> &Signal<String> { ... }
 //!         fn password(&self) -> &Signal<String> { ... }
-//!         fn into_view(self) -> View { ... }
+//!         fn into_page(self) -> View { ... }
 //!     }
 //!     LoginForm::new()
 //! }
@@ -109,7 +109,7 @@ pub(super) fn generate(macro_ast: &TypedFormMacro) -> TokenStream {
 	let metadata_fn = generate_metadata_function(macro_ast, pages_crate);
 
 	// Generate into_view implementation
-	let into_view_impl = generate_into_view(macro_ast, pages_crate);
+	let into_view_impl = generate_into_page(macro_ast, pages_crate);
 
 	// Generate submit method if action is specified
 	let submit_method = generate_submit_method(macro_ast, pages_crate);
@@ -398,7 +398,7 @@ fn generate_state_accessors(
 
 /// Generates watch methods that return reactive views.
 ///
-/// Each watch item becomes a method on the form struct that returns an `impl IntoView`.
+/// Each watch item becomes a method on the form struct that returns an `impl IntoPage`.
 /// The method clones the form instance and wraps the user's closure in an `Effect::new`
 /// to create a reactive view that automatically re-renders when Signal dependencies change.
 ///
@@ -413,7 +413,7 @@ fn generate_state_accessors(
 ///
 /// Generates:
 /// ```text
-/// pub fn error_display(&self) -> impl IntoView {
+/// pub fn error_display(&self) -> impl IntoPage {
 ///     let form = self.clone();
 ///     Effect::new(move || {
 ///         let result = (|form| { ... })(&form);
@@ -444,10 +444,10 @@ fn generate_watch_methods(
 			quote! {
 				/// Returns a reactive view that automatically re-renders when its Signal dependencies change.
 				///
-				/// This method wraps the watch closure in View::reactive for automatic re-rendering.
-				pub fn #method_name(&self) -> impl #pages_crate::component::IntoView {
+				/// This method wraps the watch closure in Page::reactive for automatic re-rendering.
+				pub fn #method_name(&self) -> impl #pages_crate::component::IntoPage {
 					let form = self.clone();
-					#pages_crate::component::View::reactive(move || {
+					#pages_crate::component::Page::reactive(move || {
 						// Helper function to provide type inference for the closure parameter
 						// Uses Fn instead of FnOnce to allow multiple calls from reactive system
 						#[inline]
@@ -632,7 +632,7 @@ fn generate_metadata_function(
 }
 
 /// Generates the into_view implementation.
-fn generate_into_view(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> TokenStream {
+fn generate_into_page(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> TokenStream {
 	// Collect all fields for signal bindings
 	let all_fields = collect_all_fields(&macro_ast.fields);
 
@@ -653,14 +653,14 @@ fn generate_into_view(macro_ast: &TypedFormMacro, pages_crate: &TokenStream) -> 
 	let onsubmit_handler = generate_onsubmit_handler(macro_ast, pages_crate);
 
 	quote! {
-		pub fn into_view(self) -> #pages_crate::component::View {
-			use #pages_crate::component::{ElementView, IntoView};
+		pub fn into_page(self) -> #pages_crate::component::Page {
+			use #pages_crate::component::{PageElement, IntoPage};
 
 			#(#signal_bindings)*
 
 			#onsubmit_handler
 
-			form_element.into_view()
+			form_element.into_page()
 		}
 	}
 }
@@ -725,7 +725,7 @@ fn generate_onsubmit_handler(macro_ast: &TypedFormMacro, pages_crate: &TokenStre
 			.child({
 				let csrf_token = #pages_crate::csrf::get_csrf_token()
 					.unwrap_or_default();
-				ElementView::new("input")
+				PageElement::new("input")
 					.attr("type", "hidden")
 					.attr("name", #pages_crate::csrf::CSRF_FORM_FIELD)
 					.attr("value", csrf_token)
@@ -864,7 +864,7 @@ fn generate_onsubmit_handler(macro_ast: &TypedFormMacro, pages_crate: &TokenStre
 				// Clone state signals for onsubmit handler
 				#state_signal_clones
 
-				let form_element = ElementView::new("form")
+				let form_element = PageElement::new("form")
 					.attr("id", #form_id_str)
 					.attr("action", #action_str)
 					.attr("method", #method_str)
@@ -912,7 +912,7 @@ fn generate_onsubmit_handler(macro_ast: &TypedFormMacro, pages_crate: &TokenStre
 		_ => {
 			// For URL action or no action, just generate the form without onsubmit handler
 			quote! {
-				let form_element = ElementView::new("form")
+				let form_element = PageElement::new("form")
 					.attr("id", #form_id_str)
 					.attr("action", #action_str)
 					.attr("method", #method_str)
@@ -1011,7 +1011,7 @@ fn generate_field_group_view(
 	// Generate optional label
 	let label_element = if let Some(label) = &group.label {
 		quote! {
-			.child(ElementView::new("legend")
+			.child(PageElement::new("legend")
 				.attr("class", "reinhardt-field-group-label")
 				.child(#label))
 		}
@@ -1020,7 +1020,7 @@ fn generate_field_group_view(
 	};
 
 	quote! {
-		ElementView::new("fieldset")
+		PageElement::new("fieldset")
 			.attr("class", #group_class)
 			#label_element
 			#(.child(#field_views))*
@@ -1061,7 +1061,7 @@ fn generate_field_view(
 	let input_element = match &field.widget {
 		TypedWidget::Textarea => {
 			quote! {
-				ElementView::new("textarea")
+				PageElement::new("textarea")
 					.attr("name", #field_name_str)
 					.attr("id", #field_name_str)
 					.attr("class", #input_class)
@@ -1074,7 +1074,7 @@ fn generate_field_view(
 		TypedWidget::Select | TypedWidget::SelectMultiple => {
 			let multiple = matches!(field.widget, TypedWidget::SelectMultiple);
 			quote! {
-				ElementView::new("select")
+				PageElement::new("select")
 					.attr("name", #field_name_str)
 					.attr("id", #field_name_str)
 					.attr("class", #input_class)
@@ -1086,7 +1086,7 @@ fn generate_field_view(
 		}
 		TypedWidget::CheckboxInput => {
 			quote! {
-				ElementView::new("input")
+				PageElement::new("input")
 					.attr("type", "checkbox")
 					.attr("name", #field_name_str)
 					.attr("id", #field_name_str)
@@ -1098,7 +1098,7 @@ fn generate_field_view(
 		}
 		TypedWidget::RadioSelect => {
 			quote! {
-				ElementView::new("input")
+				PageElement::new("input")
 					.attr("type", "radio")
 					.attr("name", #field_name_str)
 					.attr("id", #field_name_str)
@@ -1111,7 +1111,7 @@ fn generate_field_view(
 		_ => {
 			// Standard input element
 			quote! {
-				ElementView::new("input")
+				PageElement::new("input")
 					.attr("type", #input_type)
 					.attr("name", #field_name_str)
 					.attr("id", #field_name_str)
@@ -1150,7 +1150,7 @@ fn generate_field_view(
 		let icon_child = icon_in_label.unwrap_or_default();
 		quote! {
 			.child(
-				ElementView::new("label")
+				PageElement::new("label")
 					.attr("for", #field_name_str)
 					.attr("class", #label_class)
 					#icon_child
@@ -1172,7 +1172,7 @@ fn generate_field_view(
 			.unwrap_or("div");
 
 		quote! {
-			ElementView::new(#wrapper_tag)
+			PageElement::new(#wrapper_tag)
 				#wrapper_attrs
 				#label_element
 				#icon_left
@@ -1224,13 +1224,13 @@ fn generate_wrapper_attrs(wrapper: &Option<TypedWrapper>, default_class: &str) -
 
 /// Generates SVG icon element code from a TypedIcon.
 ///
-/// Creates an ElementView for the SVG element with all attributes and child elements.
+/// Creates an PageElement for the SVG element with all attributes and child elements.
 fn generate_icon_element(icon: &TypedIcon) -> TokenStream {
 	let attrs = generate_icon_attrs(&icon.attrs);
 	let children = generate_icon_children(&icon.children);
 
 	quote! {
-		ElementView::new("svg")
+		PageElement::new("svg")
 			#attrs
 			#children
 	}
@@ -1259,7 +1259,7 @@ fn generate_icon_children(children: &[TypedIconChild]) -> TokenStream {
 
 		result.extend(quote! {
 			.child(
-				ElementView::new(#tag)
+				PageElement::new(#tag)
 					#attrs
 					#nested_children
 			)
@@ -2325,7 +2325,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should use custom wrapper tag (div)
-		assert!(output_str.contains("ElementView :: new (\"div\")"));
+		assert!(output_str.contains("PageElement :: new (\"div\")"));
 		// Should have custom class
 		assert!(output_str.contains("\"relative\""));
 	}
@@ -2347,7 +2347,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should use custom wrapper tag (span)
-		assert!(output_str.contains("ElementView :: new (\"span\")"));
+		assert!(output_str.contains("PageElement :: new (\"span\")"));
 		assert!(output_str.contains("\"inline-block\""));
 	}
 
@@ -2393,7 +2393,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should use custom tag but default class
-		assert!(output_str.contains("ElementView :: new (\"section\")"));
+		assert!(output_str.contains("PageElement :: new (\"section\")"));
 		// Should have default reinhardt-field class
 		assert!(output_str.contains("reinhardt-field"));
 	}
@@ -2413,7 +2413,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should use default div wrapper
-		assert!(output_str.contains("ElementView :: new (\"div\")"));
+		assert!(output_str.contains("PageElement :: new (\"div\")"));
 		// Should have default reinhardt-field class
 		assert!(output_str.contains("reinhardt-field"));
 	}
@@ -2443,13 +2443,13 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate SVG element
-		assert!(output_str.contains("ElementView :: new (\"svg\")"));
+		assert!(output_str.contains("PageElement :: new (\"svg\")"));
 		// Should have class attribute
 		assert!(output_str.contains("\"w-5 h-5\""));
 		// Should have viewBox attribute
 		assert!(output_str.contains("\"0 0 24 24\""));
 		// Should generate path child
-		assert!(output_str.contains("ElementView :: new (\"path\")"));
+		assert!(output_str.contains("PageElement :: new (\"path\")"));
 	}
 
 	#[rstest::rstest]
@@ -2473,9 +2473,9 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate SVG element
-		assert!(output_str.contains("ElementView :: new (\"svg\")"));
+		assert!(output_str.contains("PageElement :: new (\"svg\")"));
 		// Should generate path child
-		assert!(output_str.contains("ElementView :: new (\"path\")"));
+		assert!(output_str.contains("PageElement :: new (\"path\")"));
 		// Icon should appear in the wrapper (before input)
 		assert!(output_str.contains("\"0 0 24 24\""));
 	}
@@ -2501,9 +2501,9 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate SVG element
-		assert!(output_str.contains("ElementView :: new (\"svg\")"));
+		assert!(output_str.contains("PageElement :: new (\"svg\")"));
 		// Should generate circle child
-		assert!(output_str.contains("ElementView :: new (\"circle\")"));
+		assert!(output_str.contains("PageElement :: new (\"circle\")"));
 		// Should have circle attributes
 		assert!(output_str.contains("\"cx\""));
 		assert!(output_str.contains("\"11\""));
@@ -2531,9 +2531,9 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate SVG element
-		assert!(output_str.contains("ElementView :: new (\"svg\")"));
+		assert!(output_str.contains("PageElement :: new (\"svg\")"));
 		// Should have label element
-		assert!(output_str.contains("ElementView :: new (\"label\")"));
+		assert!(output_str.contains("PageElement :: new (\"label\")"));
 		// Icon should be child of label (icon appears near label)
 		assert!(output_str.contains("\"0 0 24 24\""));
 	}
@@ -2562,14 +2562,14 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate SVG element
-		assert!(output_str.contains("ElementView :: new (\"svg\")"));
+		assert!(output_str.contains("PageElement :: new (\"svg\")"));
 		// Should generate g element
-		assert!(output_str.contains("ElementView :: new (\"g\")"));
+		assert!(output_str.contains("PageElement :: new (\"g\")"));
 		// Should have fill attribute
 		assert!(output_str.contains("\"fill\""));
 		assert!(output_str.contains("\"none\""));
 		// Should have nested path
-		assert!(output_str.contains("ElementView :: new (\"path\")"));
+		assert!(output_str.contains("PageElement :: new (\"path\")"));
 	}
 
 	#[rstest::rstest]
@@ -2588,9 +2588,9 @@ mod tests {
 
 		// Should NOT contain svg element for this field
 		// Note: This checks the into_view generated code
-		assert!(output_str.contains("ElementView :: new (\"input\")"));
+		assert!(output_str.contains("PageElement :: new (\"input\")"));
 		// The field wrapper should still be present
-		assert!(output_str.contains("ElementView :: new (\"div\")"));
+		assert!(output_str.contains("PageElement :: new (\"div\")"));
 	}
 
 	// =========================================================================
@@ -2726,7 +2726,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate normal input without aria-/data- attributes
-		assert!(output_str.contains("ElementView :: new (\"input\")"));
+		assert!(output_str.contains("PageElement :: new (\"input\")"));
 		// Should not contain aria- or data- prefixed attributes
 		// (These are the custom attrs, not standard HTML attrs)
 		assert!(!output_str.contains("\"aria-label\""));
@@ -2753,7 +2753,7 @@ mod tests {
 		let output_str = output.to_string();
 
 		// Should generate textarea element
-		assert!(output_str.contains("ElementView :: new (\"textarea\")"));
+		assert!(output_str.contains("PageElement :: new (\"textarea\")"));
 		// Should have custom attrs on textarea
 		assert!(output_str.contains("\"aria-multiline\""));
 		assert!(output_str.contains("\"data-autoresize\""));
@@ -2825,7 +2825,7 @@ mod tests {
 		// bind: false should NOT generate signal binding or listener
 		assert!(!output_str.contains("let password_signal"));
 		// The input element should still be generated
-		assert!(output_str.contains("ElementView :: new (\"input\")"));
+		assert!(output_str.contains("PageElement :: new (\"input\")"));
 		// But no listener for password
 		assert!(!output_str.contains("password_signal"));
 	}
@@ -2969,9 +2969,9 @@ mod tests {
 
 		// Check that the watch method is generated
 		assert!(output_str.contains("fn error_display"));
-		assert!(output_str.contains("IntoView"));
-		// Watch methods use View::reactive for automatic re-rendering
-		assert!(output_str.contains("View :: reactive"));
+		assert!(output_str.contains("IntoPage"));
+		// Watch methods use Page::reactive for automatic re-rendering
+		assert!(output_str.contains("Page :: reactive"));
 		assert!(output_str.contains("form . error ()"));
 	}
 
@@ -3273,7 +3273,7 @@ mod tests {
 		assert!(output_str.contains("fn into_view"));
 
 		// Check that the form element is generated
-		assert!(output_str.contains("ElementView :: new (\"form\")"));
+		assert!(output_str.contains("PageElement :: new (\"form\")"));
 
 		// The slot closure should be called with .child()
 		assert!(output_str.contains(". child"));
@@ -3355,7 +3355,7 @@ mod tests {
 
 		// Form should still be generated properly without slots
 		assert!(output_str.contains("fn into_view"));
-		assert!(output_str.contains("ElementView :: new (\"form\")"));
+		assert!(output_str.contains("PageElement :: new (\"form\")"));
 	}
 
 	// =========================================================================

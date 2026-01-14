@@ -73,7 +73,7 @@ pub(super) fn generate(macro_ast: &TypedPageMacro) -> TokenStream {
 	quote! {
 		{
 			#use_statement
-			#params -> #pages_crate::component::View {
+			#params -> #pages_crate::component::Page {
 				#body_with_head
 			}
 		}
@@ -108,7 +108,7 @@ fn generate_body(body: &TypedPageBody, pages_crate: &TokenStream) -> TokenStream
 		nodes
 	} else {
 		quote! {
-			#pages_crate::component::View::fragment([#nodes])
+			#pages_crate::component::Page::fragment([#nodes])
 		}
 	}
 }
@@ -163,7 +163,7 @@ fn generate_element(elem: &TypedPageElement, pages_crate: &TokenStream) -> Token
 
 	// Build the base element (attributes and children, without events)
 	let mut base_builder = quote! {
-		#pages_crate::component::ElementView::new(#tag)
+		#pages_crate::component::PageElement::new(#tag)
 	};
 
 	// Add attributes
@@ -185,7 +185,7 @@ fn generate_element(elem: &TypedPageElement, pages_crate: &TokenStream) -> Token
 	// Fast path: no events - simple generation (preserves current behavior)
 	if elem.events.is_empty() {
 		return quote! {
-			#pages_crate::component::IntoView::into_view(#base_builder)
+			#pages_crate::component::IntoPage::into_page(#base_builder)
 		};
 	}
 
@@ -249,7 +249,7 @@ fn generate_element(elem: &TypedPageElement, pages_crate: &TokenStream) -> Token
 				__elem_base
 			};
 
-			#pages_crate::component::IntoView::into_view(__elem_with_events)
+			#pages_crate::component::IntoPage::into_page(__elem_with_events)
 		}
 	}
 }
@@ -457,7 +457,7 @@ fn generate_text(text: &PageText, pages_crate: &TokenStream) -> TokenStream {
 	// Create a proper string literal token
 	let lit = LitStr::new(&text.content, Span::call_site());
 	quote! {
-		#pages_crate::component::View::text(#lit)
+		#pages_crate::component::Page::text(#lit)
 	}
 }
 
@@ -465,7 +465,7 @@ fn generate_text(text: &PageText, pages_crate: &TokenStream) -> TokenStream {
 fn generate_expression(expr: &PageExpression, pages_crate: &TokenStream) -> TokenStream {
 	let e = &expr.expr;
 	quote! {
-		#pages_crate::component::IntoView::into_view(#e)
+		#pages_crate::component::IntoPage::into_page(#e)
 	}
 }
 
@@ -475,7 +475,7 @@ fn generate_expression(expr: &PageExpression, pages_crate: &TokenStream) -> Toke
 /// This approach avoids ownership issues with captured variables in closures.
 ///
 /// For reactive conditional rendering with Signals, users should either:
-/// 1. Use `View::reactive_if()` directly in their code
+/// 1. Use `Page::reactive_if()` directly in their code
 /// 2. Restructure their code to use Signal-based state management
 ///
 /// Future enhancements may include automatic Signal detection or explicit
@@ -495,7 +495,7 @@ fn generate_if(if_node: &TypedPageIf, pages_crate: &TokenStream) -> TokenStream 
 		}
 		None => {
 			// No else branch - use Empty view
-			quote! { #pages_crate::component::View::Empty }
+			quote! { #pages_crate::component::Page::Empty }
 		}
 	};
 
@@ -513,7 +513,7 @@ fn generate_if(if_node: &TypedPageIf, pages_crate: &TokenStream) -> TokenStream 
 /// Generates code for an if branch (then or else block).
 fn generate_if_branch(nodes: &[TypedPageNode], pages_crate: &TokenStream) -> TokenStream {
 	if nodes.is_empty() {
-		quote! { #pages_crate::component::View::Empty }
+		quote! { #pages_crate::component::Page::Empty }
 	} else if nodes.len() == 1 {
 		generate_node(&nodes[0], pages_crate)
 	} else {
@@ -522,7 +522,7 @@ fn generate_if_branch(nodes: &[TypedPageNode], pages_crate: &TokenStream) -> Tok
 			.map(|n| generate_node(n, pages_crate))
 			.collect();
 		quote! {
-			#pages_crate::component::View::fragment([#(#node_tokens),*])
+			#pages_crate::component::Page::fragment([#(#node_tokens),*])
 		}
 	}
 }
@@ -534,7 +534,7 @@ fn generate_for(for_node: &TypedPageFor, pages_crate: &TokenStream) -> TokenStre
 	let body = generate_if_branch(&for_node.body, pages_crate);
 
 	quote! {
-		#pages_crate::component::View::fragment(
+		#pages_crate::component::Page::fragment(
 			(#iter).into_iter().map(|#pat| {
 				#body
 			}).collect::<::std::vec::Vec<_>>()
@@ -563,7 +563,7 @@ fn generate_for(for_node: &TypedPageFor, pages_crate: &TokenStream) -> TokenStre
 /// Generates:
 ///
 /// ```text
-/// View::reactive(move || {
+/// Page::reactive(move || {
 ///     if signal.get() > 0 {
 ///         ElementView::new("div").child("Positive").into_view()
 ///     } else {
@@ -575,7 +575,7 @@ fn generate_watch(watch_node: &TypedPageWatch, pages_crate: &TokenStream) -> Tok
 	let inner_expr = generate_node(&watch_node.expr, pages_crate);
 
 	quote! {
-		#pages_crate::component::View::reactive(move || {
+		#pages_crate::component::Page::reactive(move || {
 			#inner_expr
 		})
 	}
@@ -646,7 +646,7 @@ mod tests {
 
 		// TokenStream stringification adds spaces between tokens
 		// e.g., "crate :: component :: ElementView :: new"
-		assert!(output_str.contains("ElementView"));
+		assert!(output_str.contains("PageElement"));
 		assert!(output_str.contains("new"));
 		assert!(output_str.contains("\"div\""));
 		assert!(output_str.contains("\"hello\""));
@@ -746,6 +746,6 @@ mod tests {
 		// Should include component name and the children view
 		assert!(output_str.contains("MyWrapper"));
 		assert!(output_str.contains("\"container\""));
-		assert!(output_str.contains("ElementView"));
+		assert!(output_str.contains("PageElement"));
 	}
 }

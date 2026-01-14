@@ -19,8 +19,8 @@ use syn::{FnArg, ItemFn, Meta, Token, parse_macro_input};
 
 // Import crate path helpers for dynamic resolution
 use crate::crate_paths::{
-	CratePathInfo, get_inventory_crate, get_reinhardt_di_crate, get_reinhardt_http_crate,
-	get_reinhardt_pages_crate, get_reinhardt_pages_crate_info,
+	CratePathInfo, get_reinhardt_di_crate, get_reinhardt_http_crate, get_reinhardt_pages_crate,
+	get_reinhardt_pages_crate_info,
 };
 
 /// Convert snake_case identifier to UpperCamelCase for struct naming
@@ -784,10 +784,24 @@ fn generate_server_handler(
 
 	// Dynamically resolve crate paths for all external dependencies
 	let pages_crate = get_reinhardt_pages_crate();
-	let inventory_crate = get_inventory_crate();
 	// Note: http_crate is already resolved above when inject_params is not empty,
 	// but we need it for the static wrapper regardless
 	let http_crate_for_wrapper = get_reinhardt_http_crate();
+
+	// Get visibility for marker struct (same as original function)
+	let vis = info.vis();
+
+	// Generate marker module name for `.server_fn(login::marker)` pattern
+	// Example: login -> pub mod login { pub struct marker; }
+	//
+	// This pattern enables `.server_fn(login::marker)` usage with the snake_case
+	// function name. The marker struct is defined in a public module with the same
+	// name as the function, containing a `marker` struct for registration.
+	//
+	// Note: We cannot use `pub use` to export the marker with the same name as
+	// the function because Rust's value namespace doesn't allow both a function
+	// and a `use` item with the same name in the same module.
+	let marker_module_name = name.clone();
 
 	quote! {
 		#[cfg(not(target_arch = "wasm32"))]
@@ -848,9 +862,8 @@ fn generate_server_handler(
 			#endpoint
 		}
 
-		// Static wrapper function for inventory registration
-		// This is necessary because inventory::submit! requires a function pointer,
-		// not a closure, and async functions require boxing.
+		// Static wrapper function for explicit registration
+		// This is used by ServerFnRegistration::handler() to provide a function pointer.
 		#[cfg(not(target_arch = "wasm32"))]
 		fn #static_wrapper_name(
 			req: #http_crate_for_wrapper::Request
@@ -863,13 +876,40 @@ fn generate_server_handler(
 			})
 		}
 
-		// Automatic registration via inventory crate
+		// Public marker module containing `marker` struct for explicit registration
+		//
+		// This pattern enables `.server_fn(login::marker)` usage with the snake_case
+		// function name. The module has the same name as the function and contains
+		// a `marker` struct that implements `ServerFnRegistration`.
+		//
+		// Example:
+		// ```ignore
+		// use reinhardt::pages::server_fn::ServerFnRouterExt;
+		// use crate::server_fn::auth::{login, logout};  // Import marker modules
+		//
+		// let router = UnifiedRouter::new()
+		//     .server_fn(login::marker)   // Use snake_case name + ::marker
+		//     .server_fn(logout::marker);
+		// ```
+		//
+		// Note: On WASM (client side), import and call the function directly:
+		// ```ignore
+		// use crate::server_fn::auth::login;  // Function (snake_case)
+		// login(email, password).await;
+		// ```
 		#[cfg(not(target_arch = "wasm32"))]
-		#inventory_crate::submit! {
-			#pages_crate::server_fn::registry::ServerFnRoute {
-				path: #endpoint,
-				handler: #static_wrapper_name,
-				name: #name_str,
+		#vis mod #marker_module_name {
+			#[doc = concat!("Marker struct for server function `", #name_str, "` (use with `.server_fn()`)")]
+			pub struct marker;
+
+			// Implement ServerFnRegistration for explicit router registration
+			impl #pages_crate::server_fn::ServerFnRegistration for marker {
+				const PATH: &'static str = #endpoint;
+				const NAME: &'static str = #name_str;
+
+				fn handler() -> #pages_crate::server_fn::ServerFnHandler {
+					super::#static_wrapper_name
+				}
 			}
 		}
 	}

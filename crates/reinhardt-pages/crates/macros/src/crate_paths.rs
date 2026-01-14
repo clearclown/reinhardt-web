@@ -193,23 +193,3 @@ pub(crate) fn get_reinhardt_http_crate() -> TokenStream {
 	quote!(::reinhardt::reinhardt_http)
 }
 
-/// Resolves the path to the inventory crate dynamically.
-///
-/// Inventory is used for automatic server function registration.
-/// This tries to find inventory via various dependency configurations.
-pub(crate) fn get_inventory_crate() -> TokenStream {
-	use proc_macro_crate::{FoundCrate, crate_name};
-
-	// Try direct crate first
-	match crate_name("inventory") {
-		Ok(FoundCrate::Itself) => return quote!(crate),
-		Ok(FoundCrate::Name(name)) => {
-			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident);
-		}
-		Err(_) => {}
-	}
-
-	// Final fallback
-	quote!(::inventory)
-}
