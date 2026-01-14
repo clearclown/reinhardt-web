@@ -9,7 +9,7 @@
 //! Total: 18 benchmarks
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
-use reinhardt_pages::component::{Component, ElementView, IntoView, View};
+use reinhardt_pages::component::{Component, PageElement, IntoPage, Page};
 use reinhardt_pages::reactive::{Effect, Memo, Signal};
 use reinhardt_pages::router::Router;
 use reinhardt_pages::ssr::{SsrOptions, SsrRenderer};
@@ -105,11 +105,11 @@ struct SimpleComponent {
 }
 
 impl Component for SimpleComponent {
-	fn render(&self) -> View {
-		ElementView::new("div")
+	fn render(&self) -> Page {
+		PageElement::new("div")
 			.attr("class", "simple")
 			.child(self.message.clone())
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -153,20 +153,20 @@ struct NestedComponent {
 }
 
 impl Component for NestedComponent {
-	fn render(&self) -> View {
+	fn render(&self) -> Page {
 		if self.depth == 0 {
-			ElementView::new("span")
+			PageElement::new("span")
 				.child(self.content.clone())
-				.into_view()
+				.into_page()
 		} else {
 			let nested = NestedComponent {
 				depth: self.depth - 1,
 				content: self.content.clone(),
 			};
-			ElementView::new("div")
+			PageElement::new("div")
 				.attr("class", "nested")
 				.child(nested.render())
-				.into_view()
+				.into_page()
 		}
 	}
 
@@ -198,12 +198,12 @@ struct ListComponent {
 }
 
 impl Component for ListComponent {
-	fn render(&self) -> View {
-		let mut ul = ElementView::new("ul");
+	fn render(&self) -> Page {
+		let mut ul = PageElement::new("ul");
 		for item in &self.items {
-			ul = ul.child(ElementView::new("li").child(item.clone()).into_view());
+			ul = ul.child(PageElement::new("li").child(item.clone()).into_page());
 		}
-		ul.into_view()
+		ul.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -281,14 +281,14 @@ fn bench_ssr_with_hydration_markers(c: &mut Criterion) {
 /// Benchmark: Path matching with simple routes
 fn bench_router_path_matching(c: &mut Criterion) {
 	let router = Router::new()
-		.route("/users/:id", || {
-			ElementView::new("div").child("User").into_view()
+		.route("/users/{id}", || {
+			PageElement::new("div").child("User").into_page()
 		})
 		.route("/posts/:slug", || {
-			ElementView::new("div").child("Post").into_view()
+			PageElement::new("div").child("Post").into_page()
 		})
-		.route("/admin/users/:id/edit", || {
-			ElementView::new("div").child("Edit").into_view()
+		.route("/admin/users/{id}/edit", || {
+			PageElement::new("div").child("Edit").into_page()
 		});
 
 	c.bench_function("router_path_matching", |b| {
@@ -303,9 +303,9 @@ fn bench_router_complex_path_matching(c: &mut Criterion) {
 	// Add many routes
 	for i in 0..100 {
 		router = router.route(&format!("/api/v1/resource{}/{{id}}", i), move || {
-			ElementView::new("div")
+			PageElement::new("div")
 				.child(format!("Resource {}", i))
-				.into_view()
+				.into_page()
 		});
 	}
 
@@ -318,7 +318,7 @@ fn bench_router_complex_path_matching(c: &mut Criterion) {
 fn bench_router_parameter_extraction(c: &mut Criterion) {
 	let router = Router::new().route(
 		"/users/:user_id/posts/:post_id/comments/:comment_id",
-		|| ElementView::new("div").child("Comment").into_view(),
+		|| PageElement::new("div").child("Comment").into_page(),
 	);
 
 	c.bench_function("router_parameter_extraction", |b| {
@@ -336,14 +336,14 @@ fn bench_router_named_routes(c: &mut Criterion) {
 	c.bench_function("router_named_routes", |b| {
 		b.iter(|| {
 			let _router = Router::new()
-				.named_route("user_profile", "/users/:id/profile", || {
-					ElementView::new("div").child("Profile").into_view()
+				.named_route("user_profile", "/users/{id}/profile", || {
+					PageElement::new("div").child("Profile").into_page()
 				})
-				.named_route("user_posts", "/users/:id/posts", || {
-					ElementView::new("div").child("Posts").into_view()
+				.named_route("user_posts", "/users/{id}/posts", || {
+					PageElement::new("div").child("Posts").into_page()
 				})
-				.named_route("user_settings", "/users/:id/settings", || {
-					ElementView::new("div").child("Settings").into_view()
+				.named_route("user_settings", "/users/{id}/settings", || {
+					PageElement::new("div").child("Settings").into_page()
 				});
 		})
 	});

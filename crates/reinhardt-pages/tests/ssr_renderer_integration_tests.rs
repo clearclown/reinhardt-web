@@ -12,7 +12,7 @@
 //! 6. Edge Cases - SVG, custom attributes, fragments
 
 use reinhardt_pages::component::{
-	Component, ElementView, Head, IntoView, LinkTag, MetaTag, ScriptTag, View,
+	Component, PageElement, Head, IntoPage, LinkTag, MetaTag, ScriptTag, Page,
 };
 use reinhardt_pages::ssr::{SsrOptions, SsrRenderer};
 
@@ -32,22 +32,22 @@ impl Counter {
 }
 
 impl Component for Counter {
-	fn render(&self) -> View {
-		ElementView::new("div")
+	fn render(&self) -> Page {
+		PageElement::new("div")
 			.attr("class", "counter")
 			.child(
-				ElementView::new("span")
+				PageElement::new("span")
 					.attr("data-count", self.count.to_string())
 					.child(format!("Count: {}", self.count))
-					.into_view(),
+					.into_page(),
 			)
 			.child(
-				ElementView::new("button")
+				PageElement::new("button")
 					.attr("type", "button")
 					.child("Increment")
-					.into_view(),
+					.into_page(),
 			)
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -78,27 +78,27 @@ impl UserCard {
 }
 
 impl Component for UserCard {
-	fn render(&self) -> View {
-		let mut article = ElementView::new("article")
+	fn render(&self) -> Page {
+		let mut article = PageElement::new("article")
 			.attr("class", "user-card")
-			.child(ElementView::new("h2").child(self.name.clone()).into_view())
+			.child(PageElement::new("h2").child(self.name.clone()).into_page())
 			.child(
-				ElementView::new("p")
+				PageElement::new("p")
 					.attr("class", "email")
 					.child(self.email.clone())
-					.into_view(),
+					.into_page(),
 			);
 
 		if let Some(ref role) = self.role {
 			article = article.child(
-				ElementView::new("p")
+				PageElement::new("p")
 					.attr("class", "role")
 					.child(role.clone())
-					.into_view(),
+					.into_page(),
 			);
 		}
 
-		article.into_view()
+		article.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -106,7 +106,7 @@ impl Component for UserCard {
 	}
 }
 
-// Container component removed - use ElementView directly for composition
+// Container component removed - use PageElement directly for composition
 
 // ============================================================================
 // Category 1: Basic Rendering Tests (10-15 tests)
@@ -159,13 +159,13 @@ fn test_conditional_rendering() {
 #[test]
 fn test_list_rendering() {
 	let items = vec!["Apple", "Banana", "Cherry"];
-	let list = ElementView::new("ul");
+	let list = PageElement::new("ul");
 
 	let list_with_items = items.iter().fold(list, |acc, item| {
-		acc.child(ElementView::new("li").child(item.to_string()).into_view())
+		acc.child(PageElement::new("li").child(item.to_string()).into_page())
 	});
 
-	let html = list_with_items.into_view().render_to_string();
+	let html = list_with_items.into_page().render_to_string();
 
 	assert!(html.contains("<ul>"));
 	assert!(html.contains("<li>Apple</li>"));
@@ -176,20 +176,20 @@ fn test_list_rendering() {
 
 #[test]
 fn test_empty_component() {
-	let empty = ElementView::new("div");
-	let html = empty.into_view().render_to_string();
+	let empty = PageElement::new("div");
+	let html = empty.into_page().render_to_string();
 
 	assert_eq!(html, "<div></div>");
 }
 
 #[test]
 fn test_component_composition() {
-	let container = ElementView::new("div")
+	let container = PageElement::new("div")
 		.attr("class", "container")
 		.child(Counter::new(1).render())
 		.child(Counter::new(2).render());
 
-	let html = container.into_view().render_to_string();
+	let html = container.into_page().render_to_string();
 
 	assert!(html.contains("class=\"container\""));
 	assert!(html.contains("Count: 1"));
@@ -198,12 +198,12 @@ fn test_component_composition() {
 
 #[test]
 fn test_multiple_attributes() {
-	let div = ElementView::new("div")
+	let div = PageElement::new("div")
 		.attr("id", "main")
 		.attr("class", "content")
 		.attr("data-test", "value");
 
-	let html = div.into_view().render_to_string();
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("id=\"main\""));
 	assert!(html.contains("class=\"content\""));
@@ -212,17 +212,17 @@ fn test_multiple_attributes() {
 
 #[test]
 fn test_deeply_nested_structure() {
-	let deep = ElementView::new("div")
+	let deep = PageElement::new("div")
 		.child(
-			ElementView::new("section")
+			PageElement::new("section")
 				.child(
-					ElementView::new("article")
-						.child(ElementView::new("p").child("Deep content").into_view())
-						.into_view(),
+					PageElement::new("article")
+						.child(PageElement::new("p").child("Deep content").into_page())
+						.into_page(),
 				)
-				.into_view(),
+				.into_page(),
 		)
-		.into_view();
+		.into_page();
 
 	let html = deep.render_to_string();
 
@@ -237,8 +237,8 @@ fn test_deeply_nested_structure() {
 
 #[test]
 fn test_text_only_element() {
-	let text = ElementView::new("p").child("Simple text");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("Simple text");
+	let html = text.into_page().render_to_string();
 
 	assert_eq!(html, "<p>Simple text</p>");
 }
@@ -249,8 +249,8 @@ fn test_text_only_element() {
 
 #[test]
 fn test_html_entity_escape_less_than() {
-	let text = ElementView::new("p").child("<script>");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("<script>");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("&lt;script&gt;"));
 	assert!(!html.contains("<script>"));
@@ -258,48 +258,48 @@ fn test_html_entity_escape_less_than() {
 
 #[test]
 fn test_html_entity_escape_greater_than() {
-	let text = ElementView::new("p").child("a > b");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("a > b");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("a &gt; b"));
 }
 
 #[test]
 fn test_html_entity_escape_ampersand() {
-	let text = ElementView::new("p").child("a & b");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("a & b");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("a &amp; b"));
 }
 
 #[test]
 fn test_html_entity_escape_quotes() {
-	let text = ElementView::new("p").child("\"quoted\"");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("\"quoted\"");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("&quot;quoted&quot;"));
 }
 
 #[test]
 fn test_html_entity_escape_single_quotes() {
-	let text = ElementView::new("p").child("'single'");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("'single'");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("&#x27;single&#x27;"));
 }
 
 #[test]
 fn test_attribute_escape() {
-	let div = ElementView::new("div").attr("data-value", "\"quoted\" & <special>");
-	let html = div.into_view().render_to_string();
+	let div = PageElement::new("div").attr("data-value", "\"quoted\" & <special>");
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("data-value=\"&quot;quoted&quot; &amp; &lt;special&gt;\""));
 }
 
 #[test]
 fn test_xss_prevention_script_tag() {
-	let malicious = ElementView::new("div").child("<script>alert('xss')</script>");
-	let html = malicious.into_view().render_to_string();
+	let malicious = PageElement::new("div").child("<script>alert('xss')</script>");
+	let html = malicious.into_page().render_to_string();
 
 	assert!(!html.contains("<script>"));
 	assert!(html.contains("&lt;script&gt;"));
@@ -308,8 +308,8 @@ fn test_xss_prevention_script_tag() {
 
 #[test]
 fn test_xss_prevention_onclick() {
-	let malicious = ElementView::new("div").attr("title", "\" onclick=\"alert('xss')");
-	let html = malicious.into_view().render_to_string();
+	let malicious = PageElement::new("div").attr("title", "\" onclick=\"alert('xss')");
+	let html = malicious.into_page().render_to_string();
 
 	assert!(html.contains("&quot;"));
 	assert!(!html.contains("onclick=\"alert"));
@@ -317,24 +317,24 @@ fn test_xss_prevention_onclick() {
 
 #[test]
 fn test_unicode_characters() {
-	let text = ElementView::new("p").child("こんにちは 世界 🌍");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("こんにちは 世界 🌍");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("こんにちは 世界 🌍"));
 }
 
 #[test]
 fn test_special_html_entities() {
-	let text = ElementView::new("p").child("© ® ™ € £ ¥");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("© ® ™ € £ ¥");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("© ® ™ € £ ¥"));
 }
 
 #[test]
 fn test_mixed_escape_content() {
-	let text = ElementView::new("p").child("<div>\"a & b\" > 'c'</div>");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("p").child("<div>\"a & b\" > 'c'</div>");
+	let html = text.into_page().render_to_string();
 
 	assert!(html.contains("&lt;div&gt;"));
 	assert!(html.contains("&quot;a &amp; b&quot;"));
@@ -589,13 +589,13 @@ fn test_full_page_combined_options() {
 #[test]
 fn test_large_list_rendering() {
 	let items: Vec<_> = (0..1000).map(|i| format!("Item {}", i)).collect();
-	let mut list = ElementView::new("ul");
+	let mut list = PageElement::new("ul");
 
 	for item in items {
-		list = list.child(ElementView::new("li").child(item).into_view());
+		list = list.child(PageElement::new("li").child(item).into_page());
 	}
 
-	let html = list.into_view().render_to_string();
+	let html = list.into_page().render_to_string();
 
 	assert!(html.contains("<ul>"));
 	assert!(html.contains("<li>Item 0</li>"));
@@ -605,14 +605,14 @@ fn test_large_list_rendering() {
 
 #[test]
 fn test_deeply_nested_components() {
-	fn create_nested(depth: usize) -> View {
+	fn create_nested(depth: usize) -> Page {
 		if depth == 0 {
-			View::text("Leaf")
+			Page::text("Leaf")
 		} else {
-			ElementView::new("div")
+			PageElement::new("div")
 				.attr("data-depth", depth.to_string())
 				.child(create_nested(depth - 1))
-				.into_view()
+				.into_page()
 		}
 	}
 
@@ -626,13 +626,13 @@ fn test_deeply_nested_components() {
 
 #[test]
 fn test_many_attributes() {
-	let mut div = ElementView::new("div");
+	let mut div = PageElement::new("div");
 
 	for i in 0..100 {
 		div = div.attr(format!("data-attr-{}", i), format!("value-{}", i));
 	}
 
-	let html = div.into_view().render_to_string();
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("data-attr-0=\"value-0\""));
 	assert!(html.contains("data-attr-99=\"value-99\""));
@@ -642,11 +642,11 @@ fn test_many_attributes() {
 fn test_large_component_tree() {
 	let counters: Vec<_> = (0..100).map(|i| Counter::new(i).render()).collect();
 
-	let container = ElementView::new("div")
+	let container = PageElement::new("div")
 		.attr("class", "container")
 		.children(counters);
 
-	let html = container.into_view().render_to_string();
+	let html = container.into_page().render_to_string();
 
 	assert!(html.contains("Count: 0"));
 	assert!(html.contains("Count: 99"));
@@ -658,18 +658,18 @@ fn test_large_component_tree() {
 
 #[test]
 fn test_svg_element() {
-	let svg = ElementView::new("svg")
+	let svg = PageElement::new("svg")
 		.attr("width", "100")
 		.attr("height", "100")
 		.child(
-			ElementView::new("circle")
+			PageElement::new("circle")
 				.attr("cx", "50")
 				.attr("cy", "50")
 				.attr("r", "40")
-				.into_view(),
+				.into_page(),
 		);
 
-	let html = svg.into_view().render_to_string();
+	let html = svg.into_page().render_to_string();
 
 	assert!(html.contains("<svg"));
 	assert!(html.contains("width=\"100\""));
@@ -679,12 +679,12 @@ fn test_svg_element() {
 
 #[test]
 fn test_data_attributes() {
-	let div = ElementView::new("div")
+	let div = PageElement::new("div")
 		.attr("data-id", "123")
 		.attr("data-name", "test")
 		.attr("data-active", "true");
 
-	let html = div.into_view().render_to_string();
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("data-id=\"123\""));
 	assert!(html.contains("data-name=\"test\""));
@@ -693,12 +693,12 @@ fn test_data_attributes() {
 
 #[test]
 fn test_aria_attributes() {
-	let button = ElementView::new("button")
+	let button = PageElement::new("button")
 		.attr("aria-label", "Close")
 		.attr("aria-expanded", "false")
 		.child("X");
 
-	let html = button.into_view().render_to_string();
+	let html = button.into_page().render_to_string();
 
 	assert!(html.contains("aria-label=\"Close\""));
 	assert!(html.contains("aria-expanded=\"false\""));
@@ -706,10 +706,10 @@ fn test_aria_attributes() {
 
 #[test]
 fn test_fragment_rendering() {
-	let fragment = View::Fragment(vec![
-		View::text("Hello, "),
-		View::text("World!"),
-		View::text(" Welcome."),
+	let fragment = Page::Fragment(vec![
+		Page::text("Hello, "),
+		Page::text("World!"),
+		Page::text(" Welcome."),
 	]);
 
 	let html = fragment.render_to_string();
@@ -718,18 +718,18 @@ fn test_fragment_rendering() {
 
 #[test]
 fn test_empty_view() {
-	let empty = View::Empty;
+	let empty = Page::Empty;
 	let html = empty.render_to_string();
 	assert_eq!(html, "");
 }
 
 #[test]
 fn test_void_elements() {
-	let img = ElementView::new("img")
+	let img = PageElement::new("img")
 		.attr("src", "/image.png")
 		.attr("alt", "Test");
 
-	let html = img.into_view().render_to_string();
+	let html = img.into_page().render_to_string();
 
 	// Note: reinhardt-pages may render as <img></img> or <img />
 	// depending on implementation
@@ -739,12 +739,12 @@ fn test_void_elements() {
 
 #[test]
 fn test_boolean_attributes() {
-	let input = ElementView::new("input")
+	let input = PageElement::new("input")
 		.attr("type", "checkbox")
 		.attr("checked", "checked")
 		.attr("disabled", "disabled");
 
-	let html = input.into_view().render_to_string();
+	let html = input.into_page().render_to_string();
 
 	assert!(html.contains("checked=\"checked\""));
 	assert!(html.contains("disabled=\"disabled\""));
@@ -752,11 +752,11 @@ fn test_boolean_attributes() {
 
 #[test]
 fn test_empty_attribute_value() {
-	let div = ElementView::new("div")
+	let div = PageElement::new("div")
 		.attr("data-empty", "")
 		.attr("class", "test");
 
-	let html = div.into_view().render_to_string();
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("data-empty=\"\""));
 	assert!(html.contains("class=\"test\""));
@@ -765,13 +765,13 @@ fn test_empty_attribute_value() {
 #[test]
 fn test_numeric_content() {
 	let numbers = vec![42, 100, -5, 0];
-	let mut list = ElementView::new("ul");
+	let mut list = PageElement::new("ul");
 
 	for num in numbers {
-		list = list.child(ElementView::new("li").child(num.to_string()).into_view());
+		list = list.child(PageElement::new("li").child(num.to_string()).into_page());
 	}
 
-	let html = list.into_view().render_to_string();
+	let html = list.into_page().render_to_string();
 
 	assert!(html.contains("<li>42</li>"));
 	assert!(html.contains("<li>100</li>"));
@@ -781,8 +781,8 @@ fn test_numeric_content() {
 
 #[test]
 fn test_whitespace_preservation() {
-	let text = ElementView::new("pre").child("  Line 1\n  Line 2\n  Line 3");
-	let html = text.into_view().render_to_string();
+	let text = PageElement::new("pre").child("  Line 1\n  Line 2\n  Line 3");
+	let html = text.into_page().render_to_string();
 
 	// Whitespace should be preserved in content
 	assert!(html.contains("  Line 1\n  Line 2\n  Line 3"));
@@ -790,12 +790,12 @@ fn test_whitespace_preservation() {
 
 #[test]
 fn test_mixed_content_types() {
-	let div = ElementView::new("div")
-		.child(View::text("Text "))
-		.child(ElementView::new("strong").child("Bold").into_view())
-		.child(View::text(" more text"));
+	let div = PageElement::new("div")
+		.child(Page::text("Text "))
+		.child(PageElement::new("strong").child("Bold").into_page())
+		.child(Page::text(" more text"));
 
-	let html = div.into_view().render_to_string();
+	let html = div.into_page().render_to_string();
 
 	assert!(html.contains("Text <strong>Bold</strong> more text"));
 }

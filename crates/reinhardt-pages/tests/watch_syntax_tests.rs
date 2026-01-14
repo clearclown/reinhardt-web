@@ -6,7 +6,7 @@
 //! 3. DOM updates when Signals change
 //! 4. Edge cases (nesting, expressions, attributes)
 
-use reinhardt_pages::component::View;
+use reinhardt_pages::component::Page;
 use reinhardt_pages::page;
 use reinhardt_pages::reactive::Signal;
 use rstest::{fixture, rstest};
@@ -68,9 +68,9 @@ fn test_watch_with_if_condition(bool_signal: Signal<bool>) {
 		}
 	})(signal.clone());
 
-	// Verify the view is created (View::Element with reactive child)
+	// Verify the view is created (Page::Element with reactive child)
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 			// Watch block generates a reactive child
 			assert!(
@@ -78,7 +78,7 @@ fn test_watch_with_if_condition(bool_signal: Signal<bool>) {
 				"watch block should generate a child"
 			);
 		}
-		_ => panic!("Expected View::Element, got {:?}", view),
+		_ => panic!("Expected Page::Element, got {:?}", view),
 	}
 }
 
@@ -108,11 +108,11 @@ fn test_watch_with_if_else(bool_signal: Signal<bool>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 			assert!(!el.child_views().is_empty());
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -149,10 +149,10 @@ fn test_watch_with_nested_if(bool_signal: Signal<bool>) {
 	})(outer.clone(), inner.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -184,10 +184,10 @@ fn test_watch_with_element_child(bool_signal: Signal<bool>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -209,10 +209,10 @@ fn test_watch_with_text_content(string_signal: Signal<String>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -234,10 +234,10 @@ fn test_watch_with_expression_node(counter_signal: Signal<i32>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -263,10 +263,10 @@ fn test_watch_with_for_loop(list_signal: Signal<Vec<String>>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "ul");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -299,13 +299,13 @@ fn test_watch_nested_in_element(bool_signal: Signal<bool>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 			// Check that class attribute is "outer"
 			let class_attr = el.attrs().iter().find(|(k, _)| k == "class");
 			assert_eq!(class_attr.map(|(_, v)| v.as_ref()), Some("outer"));
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -339,7 +339,7 @@ fn test_multiple_watch_blocks(bool_signal: Signal<bool>, error_signal: Signal<Op
 	})(loading.clone(), error.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 			// Should have at least 2 children (the two watch blocks)
 			assert!(
@@ -347,7 +347,7 @@ fn test_multiple_watch_blocks(bool_signal: Signal<bool>, error_signal: Signal<Op
 				"Should have multiple watch children"
 			);
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -381,10 +381,10 @@ fn test_watch_deeply_nested(bool_signal: Signal<bool>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -406,10 +406,10 @@ fn test_watch_with_unicode() {
 	})(text.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -431,10 +431,10 @@ fn test_watch_with_empty_string() {
 	})(text.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -450,16 +450,16 @@ fn test_watch_with_fragment_result(list_signal: Signal<Vec<String>>) {
 	let view = page!(|items: Signal<Vec<String>>| {
 		div {
 			watch {
-				{ View::fragment(items.get().iter().map(|i| { View::text(i.clone()) }).collect ::<Vec<View>>()) }
+				{ Page::fragment(items.get().iter().map(|i| { Page::text(i.clone()) }).collect ::<Vec<Page>>()) }
 			}
 		}
 	})(items.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -486,10 +486,10 @@ fn test_watch_with_data_attributes(counter_signal: Signal<i32>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -521,10 +521,10 @@ fn test_watch_condition_boolean_partitions(#[case] initial_value: bool) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }
 
@@ -554,10 +554,10 @@ fn test_watch_nesting_depth(#[case] depth: usize, bool_signal: Signal<bool>) {
 	})(signal.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
-		_ => panic!("Expected View::Element for depth {}", depth),
+		_ => panic!("Expected Page::Element for depth {}", depth),
 	}
 }
 
@@ -605,18 +605,18 @@ fn test_watch_condition_content_matrix(#[case] condition: bool, #[case] content_
 	};
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 		}
 		_ => panic!(
-			"Expected View::Element for condition={}, content={}",
+			"Expected Page::Element for condition={}, content={}",
 			condition, content_type
 		),
 	}
 }
 
 // ============================================================================
-// Signal reactivity test: verify View::reactive wraps closure correctly
+// Signal reactivity test: verify Page::reactive wraps closure correctly
 // ============================================================================
 
 #[rstest]
@@ -626,27 +626,27 @@ fn test_watch_signal_reactivity() {
 	let signal_clone = signal.clone();
 
 	// Create a reactive view
-	let view = View::reactive(move || {
+	let view = Page::reactive(move || {
 		if signal_clone.get() {
-			View::text("True")
+			Page::text("True")
 		} else {
-			View::text("False")
+			Page::text("False")
 		}
 	});
 
 	// Verify the view is a Reactive variant
 	match view {
-		View::Reactive(reactive) => {
+		Page::Reactive(reactive) => {
 			// Manually call render to verify the closure works
 			let rendered = reactive.render();
 			match rendered {
-				View::Text(text) => {
+				Page::Text(text) => {
 					assert_eq!(text, "False", "Initial value should be false");
 				}
-				_ => panic!("Expected View::Text, got {:?}", rendered),
+				_ => panic!("Expected Page::Text, got {:?}", rendered),
 			}
 		}
-		_ => panic!("Expected View::Reactive, got {:?}", view),
+		_ => panic!("Expected Page::Reactive, got {:?}", view),
 	}
 }
 
@@ -695,12 +695,12 @@ fn test_watch_complex_state_machine() {
 	})(loading.clone(), error.clone(), data.clone());
 
 	match &view {
-		View::Element(el) => {
+		Page::Element(el) => {
 			assert_eq!(el.tag_name(), "div");
 			// Check that class attribute is "container"
 			let class_attr = el.attrs().iter().find(|(k, _)| k == "class");
 			assert_eq!(class_attr.map(|(_, v)| v.as_ref()), Some("container"));
 		}
-		_ => panic!("Expected View::Element"),
+		_ => panic!("Expected Page::Element"),
 	}
 }

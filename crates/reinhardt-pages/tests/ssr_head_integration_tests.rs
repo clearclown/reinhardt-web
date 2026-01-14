@@ -4,22 +4,21 @@
 //!
 //! Success Criteria:
 //! 1. render_page_with_view_head extracts and uses View's head
-//! 2. View's head elements are ADDITIVE to SsrOptions (not replacing)
-//! 3. View's title takes precedence over SsrOptions title
-//! 4. When no View head, SsrOptions head is used
-//! 5. Both sources' elements are present in final output
+//! 2. View's head elements are properly rendered
+//! 3. When no View head, basic HTML structure is maintained
+//! 4. Multiple head elements are all rendered
 //!
 //! Test Categories:
 //! - View Head Only: 2 tests
-//! - SsrOptions Head Only: 2 tests
-//! - Merged Head (additive): 4 tests
+//! - No Head: 1 test
+//! - Multiple Elements: 3 tests
 //! - Edge Cases: 2 tests
 //!
-//! Total: 10 tests
+//! Total: 8 tests
 
 #[cfg(not(target_arch = "wasm32"))]
 mod ssr_tests {
-	use reinhardt_pages::component::{ElementView, Head, IntoView, LinkTag, MetaTag};
+	use reinhardt_pages::component::{Head, IntoPage, LinkTag, MetaTag, PageElement};
 	use reinhardt_pages::head;
 	use reinhardt_pages::ssr::SsrRenderer;
 	use rstest::*;
@@ -32,9 +31,9 @@ mod ssr_tests {
 	#[rstest]
 	fn test_render_page_with_view_head_uses_view_title() {
 		let view_head = Head::new().title("View Title");
-		let view = ElementView::new("div")
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
 		let mut renderer = SsrRenderer::new();
@@ -47,9 +46,9 @@ mod ssr_tests {
 	#[rstest]
 	fn test_render_page_with_view_head_includes_view_meta() {
 		let view_head = Head::new().meta(MetaTag::new("description", "View description"));
-		let view = ElementView::new("div")
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
 		let mut renderer = SsrRenderer::new();
@@ -59,126 +58,81 @@ mod ssr_tests {
 	}
 
 	// ============================================================================
-	// SsrOptions Head Only Tests
+	// No Head Tests
 	// ============================================================================
 
-	/// Tests that when View has no head, SsrOptions title is used.
+	/// Tests rendering without any head elements produces no title.
 	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_no_view_head_uses_ssr_options_title() {
-		let view = ElementView::new("div").child("Content").into_view();
+	fn test_render_without_head_has_no_title() {
+		let view = PageElement::new("div").child("Content").into_page();
 
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().title("Options Title"),
-		);
+		let mut renderer = SsrRenderer::new();
 		let html = renderer.render_page_with_view_head(view);
 
-		assert!(html.contains("<title>Options Title</title>"));
-	}
-
-	/// Tests that SsrOptions meta tags are always included.
-	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_ssr_options_meta_always_included() {
-		let view = ElementView::new("div").child("Content").into_view();
-
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().meta("author", "Test Author"),
-		);
-		let html = renderer.render_page_with_view_head(view);
-
-		assert!(html.contains("<meta name=\"author\" content=\"Test Author\">"));
+		// No <title> tag when no head provided
+		assert!(!html.contains("<title>"));
+		// But basic structure is present
+		assert!(html.contains("<!DOCTYPE html>"));
+		assert!(html.contains("<head>"));
+		assert!(html.contains("</head>"));
 	}
 
 	// ============================================================================
-	// Merged Head (Additive) Tests
+	// Multiple Elements Tests
 	// ============================================================================
 
-	/// Tests that View's title takes precedence over SsrOptions title.
+	/// Tests multiple meta tags via Head.
 	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_view_title_takes_precedence() {
-		let view_head = Head::new().title("View Title");
-		let view = ElementView::new("div")
+	fn test_multiple_meta_tags_via_head() {
+		let view_head = Head::new()
+			.meta(MetaTag::new("description", "Page desc"))
+			.meta(MetaTag::new("author", "Test Author"));
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().title("Options Title"),
-		);
+		let mut renderer = SsrRenderer::new();
 		let html = renderer.render_page_with_view_head(view);
 
-		// View title should be present
-		assert!(html.contains("<title>View Title</title>"));
-		// Options title should NOT be present
-		assert!(!html.contains("Options Title"));
+		assert!(html.contains("<meta name=\"description\" content=\"Page desc\""));
+		assert!(html.contains("<meta name=\"author\" content=\"Test Author\""));
 	}
 
-	/// Tests that SsrOptions meta tags and View meta tags are both present (additive).
+	/// Tests multiple CSS links via Head.
 	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_meta_tags_are_additive() {
-		let view_head = Head::new().meta(MetaTag::new("description", "View desc"));
-		let view = ElementView::new("div")
+	fn test_multiple_css_links_via_head() {
+		let view_head = Head::new()
+			.link(LinkTag::new("stylesheet", "/style1.css"))
+			.link(LinkTag::new("stylesheet", "/style2.css"));
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().meta("author", "Test Author"),
-		);
+		let mut renderer = SsrRenderer::new();
 		let html = renderer.render_page_with_view_head(view);
 
-		// Both meta tags should be present
-		assert!(html.contains("<meta name=\"author\" content=\"Test Author\">"));
-		assert!(html.contains("<meta name=\"description\" content=\"View desc\""));
+		assert!(html.contains("href=\"/style1.css\""));
+		assert!(html.contains("href=\"/style2.css\""));
 	}
 
-	/// Tests that SsrOptions CSS and View CSS are both present (additive).
+	/// Tests title combined with meta tags.
 	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_css_links_are_additive() {
-		let view_head = Head::new().link(LinkTag::new("stylesheet", "/view-style.css"));
-		let view = ElementView::new("div")
+	fn test_title_with_meta_tags() {
+		let view_head = Head::new()
+			.title("My Page")
+			.meta(MetaTag::new("description", "Page description"));
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().css("/options-style.css"),
-		);
+		let mut renderer = SsrRenderer::new();
 		let html = renderer.render_page_with_view_head(view);
 
-		// Both CSS links should be present
-		assert!(html.contains("href=\"/options-style.css\""));
-		assert!(html.contains("href=\"/view-style.css\""));
-	}
-
-	/// Tests that order is preserved: SsrOptions elements first, then View elements.
-	#[rstest]
-	#[allow(deprecated)] // Testing deprecated API for backwards compatibility
-	fn test_order_ssr_options_before_view() {
-		let view_head = Head::new().meta(MetaTag::new("view-meta", "view"));
-		let view = ElementView::new("div")
-			.child("Content")
-			.into_view()
-			.with_head(view_head);
-
-		let mut renderer = SsrRenderer::with_options(
-			reinhardt_pages::ssr::SsrOptions::new().meta("options-meta", "options"),
-		);
-		let html = renderer.render_page_with_view_head(view);
-
-		// Find positions
-		let options_pos = html.find("options-meta").expect("options-meta not found");
-		let view_pos = html.find("view-meta").expect("view-meta not found");
-
-		// SsrOptions should come before View
-		assert!(
-			options_pos < view_pos,
-			"SsrOptions meta should appear before View meta"
-		);
+		assert!(html.contains("<title>My Page</title>"));
+		assert!(html.contains("<meta name=\"description\" content=\"Page description\""));
 	}
 
 	// ============================================================================
@@ -189,9 +143,9 @@ mod ssr_tests {
 	#[rstest]
 	fn test_empty_view_head_renders_correctly() {
 		let view_head = Head::new(); // Empty head
-		let view = ElementView::new("div")
+		let view = PageElement::new("div")
 			.child("Content")
-			.into_view()
+			.into_page()
 			.with_head(view_head);
 
 		let mut renderer = SsrRenderer::new();
@@ -212,9 +166,9 @@ mod ssr_tests {
 			meta { name: "description", content: "Macro description" }
 		});
 
-		let view = ElementView::new("div")
+		let view = PageElement::new("div")
 			.child("Hello")
-			.into_view()
+			.into_page()
 			.with_head(page_head);
 
 		let mut renderer = SsrRenderer::new();

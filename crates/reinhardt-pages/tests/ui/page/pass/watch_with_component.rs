@@ -3,12 +3,12 @@
 //! Validates that watch blocks can contain component invocations.
 
 use reinhardt_pages::Signal;
-use reinhardt_pages::component::View;
+use reinhardt_pages::component::Page;
 use reinhardt_pages::page;
 
 // Simulated component function for testing
-fn my_component(_props: &str) -> View {
-	View::Empty
+fn my_component(_props: &str) -> Page {
+	Page::Empty
 }
 
 fn main() {

@@ -7,7 +7,7 @@
 //! 4. View structure invariants are maintained
 
 use proptest::prelude::*;
-use reinhardt_pages::component::View;
+use reinhardt_pages::component::Page;
 use reinhardt_pages::page;
 use reinhardt_pages::reactive::Signal;
 use serial_test::serial;
@@ -39,11 +39,11 @@ proptest! {
 
 		// Property: View should always be an Element
 		match &view {
-			View::Element(el) => {
+			Page::Element(el) => {
 				prop_assert_eq!(el.tag_name(), "div");
 				prop_assert!(!el.child_views().is_empty(), "Watch should produce child");
 			}
-			_ => prop_assert!(false, "Expected View::Element"),
+			_ => prop_assert!(false, "Expected Page::Element"),
 		}
 
 		// Property: HTML should always be valid (non-empty)
@@ -207,10 +207,10 @@ proptest! {
 
 		// Property: View should always be valid regardless of depth
 		match &view {
-			View::Element(el) => {
+			Page::Element(el) => {
 				prop_assert_eq!(el.tag_name(), "div");
 			}
-			_ => prop_assert!(false, "Expected View::Element at any depth"),
+			_ => prop_assert!(false, "Expected Page::Element at any depth"),
 		}
 
 		let html = view.render_to_string();
@@ -423,7 +423,7 @@ proptest! {
 proptest! {
 	#![proptest_config(ProptestConfig::with_cases(30))]
 
-	/// Property: page! macro always produces View::Element at top level
+	/// Property: page! macro always produces Page::Element at top level
 	#[test]
 	#[serial(reactive)]
 	fn test_watch_view_variant_consistency(
@@ -444,8 +444,8 @@ proptest! {
 		})(show.clone(), text.clone());
 
 		// Property: Top-level View should always be Element
-		prop_assert!(matches!(view, View::Element(_)),
-			"page! macro should always produce View::Element at top level");
+		prop_assert!(matches!(view, Page::Element(_)),
+			"page! macro should always produce Page::Element at top level");
 
 		// Property: HTML should be well-formed
 		let html = view.render_to_string();

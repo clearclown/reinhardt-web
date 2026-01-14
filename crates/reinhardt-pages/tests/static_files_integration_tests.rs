@@ -11,7 +11,7 @@
 //! Note: Category 1 (URL Generation) tests are in reinhardt-static crate.
 //! This file focuses on Category 2 (SSR Component Integration).
 
-use reinhardt_pages::component::{Head, IntoView, LinkTag, ScriptTag, View};
+use reinhardt_pages::component::{Head, IntoPage, LinkTag, ScriptTag, Page};
 use reinhardt_pages::ssr::SsrRenderer;
 use reinhardt_static::TemplateStaticConfig;
 use std::collections::HashMap;
@@ -29,9 +29,9 @@ fn test_ssr_with_basic_static_url() {
 		static_config.resolve_url("css/style.css"),
 	));
 
-	let view = View::element("div")
+	let view = Page::element("div")
 		.child("Hello, World!")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -71,9 +71,9 @@ fn test_ssr_with_multiple_static_urls() {
 		))
 		.script(ScriptTag::external(static_config.resolve_url("js/app.js")));
 
-	let view = View::element("h1")
+	let view = Page::element("h1")
 		.child("Test")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -132,9 +132,9 @@ fn test_ssr_with_manifest_urls() {
 			static_config.resolve_url("js/bundle.js"),
 		));
 
-	let view = View::element("p")
+	let view = Page::element("p")
 		.child("Manifest test")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -173,9 +173,9 @@ fn test_ssr_with_cdn_urls() {
 		))
 		.script(ScriptTag::external(static_config.resolve_url("js/app.js")));
 
-	let view = View::element("div")
+	let view = Page::element("div")
 		.child("CDN test")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -206,9 +206,9 @@ fn test_ssr_with_query_and_fragment_urls() {
 			static_config.resolve_url("js/app.js#main"),
 		));
 
-	let view = View::element("div")
+	let view = Page::element("div")
 		.child("Query test")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -230,9 +230,9 @@ fn test_ssr_with_query_and_fragment_urls() {
 fn test_ssr_without_static_files() {
 	let page_head = Head::new().title("No Static Files");
 
-	let view = View::element("div")
+	let view = Page::element("div")
 		.child("No static files")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();
@@ -270,9 +270,9 @@ fn test_ssr_with_relative_paths() {
 			static_config.resolve_url("css/app.css"),
 		));
 
-		let view = View::element("div")
+		let view = Page::element("div")
 			.child("Path test")
-			.into_view()
+			.into_page()
 			.with_head(page_head);
 
 		let mut renderer = SsrRenderer::new();
@@ -302,9 +302,9 @@ fn test_ssr_manifest_fallback() {
 		.link(LinkTag::stylesheet(static_config.resolve_url("css/known.css"))) // In manifest
 		.link(LinkTag::stylesheet(static_config.resolve_url("css/unknown.css"))); // Not in manifest
 
-	let view = View::element("div")
+	let view = Page::element("div")
 		.child("Fallback test")
-		.into_view()
+		.into_page()
 		.with_head(page_head);
 
 	let mut renderer = SsrRenderer::new();

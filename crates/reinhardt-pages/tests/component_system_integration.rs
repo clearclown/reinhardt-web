@@ -4,8 +4,8 @@
 //! 1. Components can render to View correctly
 //! 2. Component composition works properly
 //! 3. Props are handled correctly
-//! 4. IntoView trait works with Components
-//! 5. ElementView builder pattern works as expected
+//! 4. IntoPage trait works with Components
+//! 5. PageElement builder pattern works as expected
 //!
 //! Test Categories:
 //! - Happy Path: 3 tests
@@ -25,7 +25,7 @@
 use proptest::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use reinhardt_pages::component::DummyEvent;
-use reinhardt_pages::component::{Component, ElementView, IntoView, View};
+use reinhardt_pages::component::{Component, Page, PageElement, IntoPage};
 use rstest::*;
 
 // ============================================================================
@@ -37,11 +37,11 @@ struct SimpleComponent {
 }
 
 impl Component for SimpleComponent {
-	fn render(&self) -> View {
-		ElementView::new("div")
+	fn render(&self) -> Page {
+		PageElement::new("div")
 			.attr("class", "simple")
 			.child(self.message.clone())
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -55,11 +55,11 @@ struct ComposedComponent {
 }
 
 impl Component for ComposedComponent {
-	fn render(&self) -> View {
-		ElementView::new("article")
-			.child(ElementView::new("h1").child(self.title.clone()))
-			.child(ElementView::new("p").child(self.content.clone()))
-			.into_view()
+	fn render(&self) -> Page {
+		PageElement::new("article")
+			.child(PageElement::new("h1").child(self.title.clone()))
+			.child(PageElement::new("p").child(self.content.clone()))
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -72,10 +72,10 @@ struct PropsComponent<T: Clone + std::fmt::Display + 'static> {
 }
 
 impl<T: Clone + std::fmt::Display + 'static> Component for PropsComponent<T> {
-	fn render(&self) -> View {
-		ElementView::new("span")
+	fn render(&self) -> Page {
+		PageElement::new("span")
 			.child(format!("Value: {}", self.value))
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -184,15 +184,15 @@ fn test_component_empty() {
 /// Tests large component tree
 #[rstest]
 fn test_component_large_tree() {
-	let children: Vec<View> = (0..100)
+	let children: Vec<Page> = (0..100)
 		.map(|i| {
-			ElementView::new("div")
+			PageElement::new("div")
 				.child(format!("Item {}", i))
-				.into_view()
+				.into_page()
 		})
 		.collect();
 
-	let view = ElementView::new("div").children(children).into_view();
+	let view = PageElement::new("div").children(children).into_page();
 	let html = view.render_to_string();
 
 	assert!(html.contains("Item 0"));
@@ -202,13 +202,13 @@ fn test_component_large_tree() {
 /// Tests deeply nested component structure
 #[rstest]
 fn test_component_deep_nesting() {
-	let mut view = ElementView::new("span").child("Core").into_view();
+	let mut view = PageElement::new("span").child("Core").into_page();
 
 	for i in 0..20 {
-		view = ElementView::new("div")
+		view = PageElement::new("div")
 			.attr("level", i.to_string())
 			.child(view)
-			.into_view();
+			.into_page();
 	}
 
 	let html = view.render_to_string();
@@ -247,14 +247,14 @@ fn test_component_state_transitions() {
 #[rstest]
 fn test_component_use_case_list() {
 	let items = vec!["Apple", "Banana", "Cherry"];
-	let view = ElementView::new("ul")
+	let view = PageElement::new("ul")
 		.children(items.iter().map(|item| {
-			ElementView::new("li")
+			PageElement::new("li")
 				.attr("class", "item")
 				.child(*item)
-				.into_view()
+				.into_page()
 		}))
-		.into_view();
+		.into_page();
 
 	let html = view.render_to_string();
 	assert!(html.contains("<ul>"));
@@ -266,26 +266,26 @@ fn test_component_use_case_list() {
 /// Tests form rendering use case
 #[rstest]
 fn test_component_use_case_form() {
-	let view = ElementView::new("form")
+	let view = PageElement::new("form")
 		.attr("method", "post")
 		.child(
-			ElementView::new("input")
+			PageElement::new("input")
 				.attr("type", "text")
 				.attr("name", "username")
 				.attr("placeholder", "Enter username"),
 		)
 		.child(
-			ElementView::new("input")
+			PageElement::new("input")
 				.attr("type", "password")
 				.attr("name", "password")
 				.attr("placeholder", "Enter password"),
 		)
 		.child(
-			ElementView::new("button")
+			PageElement::new("button")
 				.attr("type", "submit")
 				.child("Login"),
 		)
-		.into_view();
+		.into_page();
 
 	let html = view.render_to_string();
 	assert!(html.contains("<form method=\"post\">"));
@@ -299,10 +299,10 @@ fn test_component_use_case_form() {
 fn test_component_use_case_nested() {
 	struct HeaderComponent;
 	impl Component for HeaderComponent {
-		fn render(&self) -> View {
-			ElementView::new("header")
-				.child(ElementView::new("h1").child("Site Title"))
-				.into_view()
+		fn render(&self) -> Page {
+			PageElement::new("header")
+				.child(PageElement::new("h1").child("Site Title"))
+				.into_page()
 		}
 		fn name() -> &'static str {
 			"HeaderComponent"
@@ -311,21 +311,21 @@ fn test_component_use_case_nested() {
 
 	struct MainComponent;
 	impl Component for MainComponent {
-		fn render(&self) -> View {
-			ElementView::new("main")
-				.child(ElementView::new("p").child("Main content"))
-				.into_view()
+		fn render(&self) -> Page {
+			PageElement::new("main")
+				.child(PageElement::new("p").child("Main content"))
+				.into_page()
 		}
 		fn name() -> &'static str {
 			"MainComponent"
 		}
 	}
 
-	let view = ElementView::new("div")
+	let view = PageElement::new("div")
 		.attr("class", "app")
 		.child(HeaderComponent.render())
 		.child(MainComponent.render())
-		.into_view();
+		.into_page();
 
 	let html = view.render_to_string();
 	assert!(html.contains("<header>"));
@@ -360,31 +360,31 @@ fn test_component_property_props_immutability() {
 // Combination Tests (2 tests)
 // ============================================================================
 
-/// Tests Component with IntoView trait
+/// Tests Component render() returns Page
 #[rstest]
-fn test_component_combination_into_view() {
+fn test_component_combination_render_page() {
 	let component = SimpleComponent {
 		message: "Test".to_string(),
 	};
 
-	// Component implements IntoView through blanket implementation
-	let view: View = component.into_view();
+	// Component::render() returns Page directly
+	let view: Page = component.render();
 	let html = view.render_to_string();
 
 	assert!(html.contains("Test"));
 }
 
-/// Tests Component with ElementView
+/// Tests Component with PageElement
 #[rstest]
 fn test_component_combination_element_view() {
 	let inner = SimpleComponent {
 		message: "Inner".to_string(),
 	};
 
-	let outer = ElementView::new("section")
+	let outer = PageElement::new("section")
 		.attr("id", "wrapper")
 		.child(inner.render())
-		.into_view();
+		.into_page();
 
 	let html = outer.render_to_string();
 	assert!(html.contains("<section id=\"wrapper\">"));
@@ -400,8 +400,8 @@ fn test_component_combination_element_view() {
 fn test_component_sanity_minimal() {
 	struct MinimalComponent;
 	impl Component for MinimalComponent {
-		fn render(&self) -> View {
-			View::text("Minimal")
+		fn render(&self) -> Page {
+			Page::text("Minimal")
 		}
 		fn name() -> &'static str {
 			"MinimalComponent"
@@ -452,7 +452,7 @@ fn test_component_equivalence_float_props(#[case] value: f64) {
 #[rstest]
 #[case::zero_children()]
 fn test_component_boundary_zero_children() {
-	let view = ElementView::new("div").into_view();
+	let view = PageElement::new("div").into_page();
 	assert_eq!(view.render_to_string(), "<div></div>");
 }
 
@@ -460,7 +460,7 @@ fn test_component_boundary_zero_children() {
 #[rstest]
 #[case::one_child()]
 fn test_component_boundary_one_child() {
-	let view = ElementView::new("div").child("Single").into_view();
+	let view = PageElement::new("div").child("Single").into_page();
 	assert_eq!(view.render_to_string(), "<div>Single</div>");
 }
 
@@ -469,7 +469,7 @@ fn test_component_boundary_one_child() {
 #[case::multiple_children()]
 fn test_component_boundary_multiple_children() {
 	let children: Vec<_> = (0..10).map(|i| format!("Child{}", i)).collect();
-	let view = ElementView::new("div").children(children).into_view();
+	let view = PageElement::new("div").children(children).into_page();
 	let html = view.render_to_string();
 
 	assert!(html.contains("Child0"));
@@ -481,7 +481,7 @@ fn test_component_boundary_multiple_children() {
 #[case::many_children()]
 fn test_component_boundary_many_children() {
 	let children: Vec<_> = (0..100).map(|i| format!("Item{}", i)).collect();
-	let view = ElementView::new("div").children(children).into_view();
+	let view = PageElement::new("div").children(children).into_page();
 	let html = view.render_to_string();
 
 	assert!(html.contains("Item0"));
@@ -496,7 +496,7 @@ fn test_component_boundary_many_children() {
 #[rstest]
 #[case::no_props_no_children_no_events()]
 fn test_component_decision_case1_minimal() {
-	let view = ElementView::new("div").into_view();
+	let view = PageElement::new("div").into_page();
 	assert_eq!(view.render_to_string(), "<div></div>");
 }
 
@@ -515,10 +515,10 @@ fn test_component_decision_case2_string_props() {
 #[rstest]
 #[case::no_props_with_children()]
 fn test_component_decision_case3_with_children() {
-	let view = ElementView::new("div")
+	let view = PageElement::new("div")
 		.child("Child1")
 		.child("Child2")
-		.into_view();
+		.into_page();
 	let html = view.render_to_string();
 	assert!(html.contains("Child1"));
 	assert!(html.contains("Child2"));
@@ -528,10 +528,10 @@ fn test_component_decision_case3_with_children() {
 #[rstest]
 #[case::props_with_children()]
 fn test_component_decision_case4_props_and_children() {
-	let view = ElementView::new("div")
+	let view = PageElement::new("div")
 		.attr("class", "container")
 		.child("Content")
-		.into_view();
+		.into_page();
 	let html = view.render_to_string();
 	assert!(html.contains("class=\"container\""));
 	assert!(html.contains("Content"));
@@ -542,18 +542,18 @@ fn test_component_decision_case4_props_and_children() {
 #[case::no_props_with_listener()]
 fn test_component_decision_case5_with_listener() {
 	#[cfg(not(target_arch = "wasm32"))]
-	let view = ElementView::new("button")
+	let view = PageElement::new("button")
 		.listener("click", |_event: DummyEvent| {
 			// Handler logic
 		})
-		.into_view();
+		.into_page();
 
 	#[cfg(target_arch = "wasm32")]
-	let view = ElementView::new("button")
+	let view = PageElement::new("button")
 		.listener("click", |_event| {
 			// Handler logic
 		})
-		.into_view();
+		.into_page();
 
 	// Event handlers don't affect HTML output
 	assert_eq!(view.render_to_string(), "<button></button>");
@@ -563,7 +563,7 @@ fn test_component_decision_case5_with_listener() {
 #[rstest]
 #[case::fragment_multiple()]
 fn test_component_decision_case6_fragment() {
-	let view = View::fragment(vec!["First", "Second", "Third"]);
+	let view = Page::fragment(vec!["First", "Second", "Third"]);
 	assert_eq!(view.render_to_string(), "FirstSecondThird");
 }
 
@@ -571,6 +571,6 @@ fn test_component_decision_case6_fragment() {
 #[rstest]
 #[case::void_element()]
 fn test_component_decision_case7_void_element() {
-	let view = ElementView::new("br").attr("class", "break").into_view();
+	let view = PageElement::new("br").attr("class", "break").into_page();
 	assert_eq!(view.render_to_string(), "<br class=\"break\" />");
 }

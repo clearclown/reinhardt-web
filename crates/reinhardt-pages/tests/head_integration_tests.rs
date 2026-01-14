@@ -15,7 +15,7 @@
 //!
 //! Total: 13 tests
 
-use reinhardt_pages::component::{ElementView, Head, IntoView, LinkTag, MetaTag, ScriptTag, View};
+use reinhardt_pages::component::{PageElement, Head, IntoPage, LinkTag, MetaTag, ScriptTag, Page};
 use reinhardt_pages::head;
 use rstest::*;
 
@@ -79,7 +79,7 @@ fn test_head_macro_basic() {
 /// Tests that View::with_head attaches head correctly.
 #[rstest]
 fn test_view_with_head() {
-	let view = View::text("Hello");
+	let view = Page::text("Hello");
 	let head = Head::new().title("Test");
 
 	let view_with_head = view.with_head(head);
@@ -100,9 +100,9 @@ fn test_view_with_head() {
 /// Tests that render_to_string handles WithHead correctly.
 #[rstest]
 fn test_render_to_string_with_head() {
-	let view = ElementView::new("div")
+	let view = PageElement::new("div")
 		.child("Content")
-		.into_view()
+		.into_page()
 		.with_head(Head::new().title("Test"));
 
 	let html = view.render_to_string();
@@ -120,9 +120,9 @@ fn test_render_to_string_with_head() {
 /// Tests that extract_head returns None for non-WithHead views.
 #[rstest]
 fn test_extract_head_returns_none_for_non_withhead() {
-	let element_view = ElementView::new("div").into_view();
-	let text_view = View::text("Hello");
-	let empty_view = View::empty();
+	let element_view = PageElement::new("div").into_page();
+	let text_view = Page::text("Hello");
+	let empty_view = Page::empty();
 
 	assert!(element_view.extract_head().is_none());
 	assert!(text_view.extract_head().is_none());
@@ -132,9 +132,9 @@ fn test_extract_head_returns_none_for_non_withhead() {
 /// Tests that find_topmost_head works with nested fragments.
 #[rstest]
 fn test_find_topmost_head_nested_fragment() {
-	let inner_view = View::text("Inner").with_head(Head::new().title("Inner Head"));
+	let inner_view = Page::text("Inner").with_head(Head::new().title("Inner Head"));
 
-	let outer_view = View::fragment(vec![View::text("Before"), inner_view, View::text("After")]);
+	let outer_view = Page::fragment(vec![Page::text("Before"), inner_view, Page::text("After")]);
 
 	// Should find the inner head
 	let found_head = outer_view.find_topmost_head();
@@ -148,9 +148,9 @@ fn test_find_topmost_head_nested_fragment() {
 /// Tests that find_topmost_head returns outermost head when nested.
 #[rstest]
 fn test_find_topmost_head_prefers_outer() {
-	let inner_view = View::text("Inner").with_head(Head::new().title("Inner Head"));
+	let inner_view = Page::text("Inner").with_head(Head::new().title("Inner Head"));
 
-	let outer_view = View::fragment(vec![inner_view]).with_head(Head::new().title("Outer Head"));
+	let outer_view = Page::fragment(vec![inner_view]).with_head(Head::new().title("Outer Head"));
 
 	// Should find the outer head first
 	let found_head = outer_view.find_topmost_head();
@@ -164,7 +164,7 @@ fn test_find_topmost_head_prefers_outer() {
 /// Tests empty fragment has no head.
 #[rstest]
 fn test_empty_fragment_no_head() {
-	let view = View::fragment(Vec::<View>::new());
+	let view = Page::fragment(Vec::<Page>::new());
 
 	assert!(view.find_topmost_head().is_none());
 }

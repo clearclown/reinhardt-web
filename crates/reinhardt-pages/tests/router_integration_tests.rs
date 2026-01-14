@@ -6,29 +6,29 @@
 //! 3. Navigation and signal updates
 //! 4. Router components (Link, RouterOutlet, Redirect)
 
-use reinhardt_pages::component::{Component, View};
+use reinhardt_pages::component::{Component, Page};
 use reinhardt_pages::router::{Link, PathPattern, Redirect, Router, RouterOutlet, guard, guard_or};
 use serial_test::serial;
 use std::collections::HashMap;
 
-fn home_view() -> View {
-	View::text("Home")
+fn home_view() -> Page {
+	Page::text("Home")
 }
 
-fn users_view() -> View {
-	View::text("Users")
+fn users_view() -> Page {
+	Page::text("Users")
 }
 
-fn user_detail_view() -> View {
-	View::text("User Detail")
+fn user_detail_view() -> Page {
+	Page::text("User Detail")
 }
 
-fn admin_view() -> View {
-	View::text("Admin")
+fn admin_view() -> Page {
+	Page::text("Admin")
 }
 
-fn not_found_view() -> View {
-	View::text("404 Not Found")
+fn not_found_view() -> Page {
+	Page::text("404 Not Found")
 }
 
 /// Success Criterion 1: Path pattern matching

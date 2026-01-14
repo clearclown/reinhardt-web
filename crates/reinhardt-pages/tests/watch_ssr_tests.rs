@@ -7,7 +7,7 @@
 //! 4. Escape handling for XSS prevention
 //! 5. Integration with SsrRenderer
 
-use reinhardt_pages::component::View;
+use reinhardt_pages::component::Page;
 use reinhardt_pages::page;
 use reinhardt_pages::reactive::Signal;
 use reinhardt_pages::ssr::SsrRenderer;
@@ -522,7 +522,7 @@ fn test_watch_ssr_with_renderer(mut ssr_renderer: SsrRenderer, string_signal: Si
 		}
 	})(signal.clone());
 
-	let html = ssr_renderer.render_into_view(view);
+	let html = ssr_renderer.render_view(&view);
 
 	assert!(html.contains("<div>"), "Should have div element");
 	assert!(
@@ -595,7 +595,7 @@ fn test_watch_ssr_fragment_result(list_signal: Signal<Vec<String>>) {
 	let view = page!(|items: Signal<Vec<String>>| {
 		div {
 			watch {
-				{ View::fragment(items.get().iter().map(|i| { View::text(i.clone()) }).collect ::<Vec<View>>()) }
+				{ Page::fragment(items.get().iter().map(|i| { Page::text(i.clone()) }).collect ::<Vec<Page>>()) }
 			}
 		}
 	})(items.clone());

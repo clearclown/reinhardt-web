@@ -6,7 +6,7 @@
 //! 3. Hydration markers are properly embedded
 //! 4. View tree serialization works correctly
 
-use reinhardt_pages::component::{Component, ElementView, IntoView, View};
+use reinhardt_pages::component::{Component, PageElement, IntoPage, Page};
 use reinhardt_pages::ssr::{SsrOptions, SsrRenderer, SsrState};
 use serde::de::DeserializeOwned;
 
@@ -22,22 +22,22 @@ impl Counter {
 }
 
 impl Component for Counter {
-	fn render(&self) -> View {
-		ElementView::new("div")
+	fn render(&self) -> Page {
+		PageElement::new("div")
 			.attr("class", "counter")
 			.child(
-				ElementView::new("span")
+				PageElement::new("span")
 					.attr("data-count", self.initial.to_string())
 					.child(format!("Count: {}", self.initial))
-					.into_view(),
+					.into_page(),
 			)
 			.child(
-				ElementView::new("button")
+				PageElement::new("button")
 					.attr("type", "button")
 					.child("Increment")
-					.into_view(),
+					.into_page(),
 			)
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -61,17 +61,17 @@ impl UserCard {
 }
 
 impl Component for UserCard {
-	fn render(&self) -> View {
-		ElementView::new("article")
+	fn render(&self) -> Page {
+		PageElement::new("article")
 			.attr("class", "user-card")
-			.child(ElementView::new("h2").child(self.name.clone()).into_view())
+			.child(PageElement::new("h2").child(self.name.clone()).into_page())
 			.child(
-				ElementView::new("p")
+				PageElement::new("p")
 					.attr("class", "email")
 					.child(self.email.clone())
-					.into_view(),
+					.into_page(),
 			)
-			.into_view()
+			.into_page()
 	}
 
 	fn name() -> &'static str {
@@ -201,7 +201,7 @@ fn test_ssr_renderer_without_hydration_markers() {
 /// Success Criterion 4: View fragment rendering
 #[test]
 fn test_view_fragment_rendering() {
-	let fragment = View::Fragment(vec![View::text("Hello, "), View::text("World!")]);
+	let fragment = Page::Fragment(vec![Page::text("Hello, "), Page::text("World!")]);
 
 	let html = fragment.render_to_string();
 	assert_eq!(html, "Hello, World!");
@@ -210,7 +210,7 @@ fn test_view_fragment_rendering() {
 /// Success Criterion 4: View empty rendering
 #[test]
 fn test_view_empty_rendering() {
-	let empty = View::Empty;
+	let empty = Page::Empty;
 	let html = empty.render_to_string();
 	assert_eq!(html, "");
 }
