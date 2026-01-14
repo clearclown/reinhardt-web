@@ -2,7 +2,7 @@
 //!
 //! Provides functionality to group multiple routes and apply middleware to the entire group.
 
-use crate::UnifiedRouter;
+use crate::ServerRouter;
 use reinhardt_middleware::Middleware;
 
 /// Route information tuple: (path, name, namespace, methods)
@@ -16,7 +16,7 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 ///
 /// ```
 /// use reinhardt_routers::RouteGroup;
-/// use reinhardt_routers::UnifiedRouter;
+/// use reinhardt_routers::ServerRouter;
 /// use reinhardt_middleware::LoggingMiddleware;
 /// use hyper::Method;
 /// # use reinhardt_core::http::{Request, Response, Result};
@@ -41,7 +41,7 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 /// assert_eq!(router.prefix(), "/api/v1");
 /// ```
 pub struct RouteGroup {
-	router: UnifiedRouter,
+	router: ServerRouter,
 }
 
 impl RouteGroup {
@@ -56,7 +56,7 @@ impl RouteGroup {
 	/// ```
 	pub fn new() -> Self {
 		Self {
-			router: UnifiedRouter::new(),
+			router: ServerRouter::new(),
 		}
 	}
 
@@ -304,7 +304,7 @@ impl RouteGroup {
 	/// ```
 	pub fn view<V>(mut self, path: &str, view: V) -> Self
 	where
-		V: reinhardt_core::types::Handler + 'static,
+		V: reinhardt_core::Handler + 'static,
 	{
 		self.router = self.router.view(path, view);
 		self
@@ -333,7 +333,7 @@ impl RouteGroup {
 	/// ```
 	pub fn view_named<V>(mut self, path: &str, name: &str, view: V) -> Self
 	where
-		V: reinhardt_core::types::Handler + 'static,
+		V: reinhardt_core::Handler + 'static,
 	{
 		self.router = self.router.view_named(path, name, view);
 		self
@@ -438,7 +438,7 @@ impl RouteGroup {
 		self.router.get_all_routes()
 	}
 
-	/// Build UnifiedRouter
+	/// Build ServerRouter
 	///
 	/// # Examples
 	///
@@ -448,7 +448,7 @@ impl RouteGroup {
 	/// let group = RouteGroup::new();
 	/// let router = group.build();
 	/// ```
-	pub fn build(self) -> UnifiedRouter {
+	pub fn build(self) -> ServerRouter {
 		self.router
 	}
 }

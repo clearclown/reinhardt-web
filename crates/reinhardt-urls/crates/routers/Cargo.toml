@@ -13,6 +13,7 @@ reinhardt-viewsets = { workspace = true }
 reinhardt-routers-macros = { workspace = true }
 reinhardt-middleware = { workspace = true, optional = true }
 reinhardt-core = { workspace = true, features = ["exception", "types", "di"] }
+reinhardt-reactive = { workspace = true, optional = true }
 reinhardt-db = { workspace = true, optional = true }
 regex = { workspace = true }
 nom = { workspace = true }
@@ -31,8 +32,24 @@ inventory = "0.3"
 [features]
 default = ["unified-router"]
 unified-router = ["reinhardt-middleware"]
+# client-router uses reinhardt-reactive for WASM client-side routing
+# Uses Page type from reinhardt-types (via reinhardt-core/page feature)
+client-router = ["dep:reinhardt-reactive", "reinhardt-core/page"]
 database = ["dep:reinhardt-db"]
 full = ["unified-router", "database"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = { version = "0.3.83", features = [
+	"Window",
+	"History",
+	"Location",
+	"PopStateEvent",
+	"Event",
+	"EventTarget",
+] }
+wasm-bindgen = "0.2.106"
+wasm-bindgen-futures = "0.4.56"
+js-sys = "0.3.83"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

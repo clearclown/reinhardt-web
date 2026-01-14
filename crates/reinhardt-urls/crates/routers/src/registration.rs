@@ -23,10 +23,10 @@
 //! mod web;
 //!
 //! #[routes]
-//! pub fn routes() -> UnifiedRouter {
-//!     UnifiedRouter::new()
-//!         .mount("/api/", api::routes())  // Returns UnifiedRouter, not annotated with #[routes]
-//!         .mount("/", web::routes())      // Returns UnifiedRouter, not annotated with #[routes]
+//! pub fn routes() -> ServerRouter {
+//!     ServerRouter::new()
+//!         .mount("/api/", api::routes())  // Returns ServerRouter, not annotated with #[routes]
+//!         .mount("/", web::routes())      // Returns ServerRouter, not annotated with #[routes]
 //! }
 //! ```
 //!
@@ -48,8 +48,8 @@
 //! use reinhardt::routes;
 //!
 //! #[routes]
-//! pub fn routes() -> UnifiedRouter {
-//!     UnifiedRouter::new()
+//! pub fn routes() -> ServerRouter {
+//!     ServerRouter::new()
 //!         .endpoint(views::index)
 //!         .endpoint(views::about)
 //! }
@@ -58,7 +58,7 @@
 //! The `#[routes]` macro automatically handles `inventory` registration,
 //! so you don't need any additional boilerplate code.
 
-use crate::UnifiedRouter;
+use crate::server_router::ServerRouter;
 use std::sync::Arc;
 
 /// URL patterns registration for compile-time discovery
@@ -88,10 +88,10 @@ use std::sync::Arc;
 pub struct UrlPatternsRegistration {
 	/// Function to get the router
 	///
-	/// This function returns an `Arc<UnifiedRouter>` with all application routes.
-	/// The `#[routes]` macro wraps the user's function (which returns `UnifiedRouter`)
+	/// This function returns an `Arc<ServerRouter>` with all application routes.
+	/// The `#[routes]` macro wraps the user's function (which returns `ServerRouter`)
 	/// in a closure that performs the `Arc::new()` call automatically.
-	pub get_router: fn() -> Arc<UnifiedRouter>,
+	pub get_router: fn() -> Arc<ServerRouter>,
 }
 
 impl UrlPatternsRegistration {
@@ -109,7 +109,7 @@ impl UrlPatternsRegistration {
 	/// # Note
 	///
 	/// You typically don't call this directly. Use the `#[routes]` macro instead.
-	pub const fn new(get_router: fn() -> Arc<UnifiedRouter>) -> Self {
+	pub const fn new(get_router: fn() -> Arc<ServerRouter>) -> Self {
 		Self { get_router }
 	}
 }

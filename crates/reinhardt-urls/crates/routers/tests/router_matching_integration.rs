@@ -12,7 +12,7 @@
 //! routing logic works correctly in real-world scenarios.
 
 use reinhardt_routers::{
-	PathMatcher, PathPattern, namespace::NamespaceResolver, unified_router::UnifiedRouter,
+	PathMatcher, PathPattern, namespace::NamespaceResolver, server_router::ServerRouter,
 };
 
 // ============================================================
@@ -21,14 +21,14 @@ use reinhardt_routers::{
 
 /// Create a basic router with common routes
 #[allow(dead_code)]
-fn create_basic_router() -> UnifiedRouter {
-	UnifiedRouter::new()
+fn create_basic_router() -> ServerRouter {
+	ServerRouter::new()
 }
 
 /// Create a router with namespace support
 #[allow(dead_code)]
-fn create_namespaced_router() -> UnifiedRouter {
-	UnifiedRouter::new().with_namespace("api:v1")
+fn create_namespaced_router() -> ServerRouter {
+	ServerRouter::new().with_namespace("api:v1")
 }
 
 /// Create a namespace resolver with predefined routes
@@ -595,12 +595,12 @@ fn test_reverse_url_missing_parameters() {
 // ============================================================
 
 /// Test Intent: Verify basic router mounting
-/// Integration Point: UnifiedRouter mounting capability
+/// Integration Point: ServerRouter mounting capability
 
 #[test]
 fn test_basic_router_mounting() {
-	let api_router = UnifiedRouter::new().with_prefix("/api");
-	let v1_router = UnifiedRouter::new().with_prefix("/v1");
+	let api_router = ServerRouter::new().with_prefix("/api");
+	let v1_router = ServerRouter::new().with_prefix("/v1");
 
 	// In a real implementation, you'd mount v1_router under api_router
 	// This tests the concept
@@ -616,15 +616,15 @@ fn test_basic_router_mounting() {
 }
 
 /// Test Intent: Verify nested router namespaces
-/// Integration Point: UnifiedRouter namespace inheritance
+/// Integration Point: ServerRouter namespace inheritance
 
 #[test]
 fn test_nested_router_namespaces() {
-	let api_router = UnifiedRouter::new()
+	let api_router = ServerRouter::new()
 		.with_prefix("/api")
 		.with_namespace("api");
 
-	let v1_router = UnifiedRouter::new().with_prefix("/v1").with_namespace("v1");
+	let v1_router = ServerRouter::new().with_prefix("/v1").with_namespace("v1");
 
 	// Namespace hierarchy should be api:v1
 	let api_ns = api_router.namespace();
@@ -641,14 +641,14 @@ fn test_nested_router_namespaces() {
 }
 
 /// Test Intent: Verify router mounting with different prefixes
-/// Integration Point: UnifiedRouter prefix concatenation
+/// Integration Point: ServerRouter prefix concatenation
 
 #[test]
 fn test_router_mounting_multiple_levels() {
-	let _root_router = UnifiedRouter::new();
-	let api_router = UnifiedRouter::new().with_prefix("/api");
-	let v1_router = UnifiedRouter::new().with_prefix("/v1");
-	let users_router = UnifiedRouter::new().with_prefix("/users");
+	let _root_router = ServerRouter::new();
+	let api_router = ServerRouter::new().with_prefix("/api");
+	let v1_router = ServerRouter::new().with_prefix("/v1");
+	let users_router = ServerRouter::new().with_prefix("/users");
 
 	// Hierarchy: root -> api -> v1 -> users
 	// Result: /api/v1/users

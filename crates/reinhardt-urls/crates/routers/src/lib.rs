@@ -103,7 +103,10 @@
 //! let router = group.build();
 //! ```
 
+
 pub mod cache;
+#[cfg(feature = "client-router")]
+pub mod client_router;
 pub mod converters;
 pub mod helpers;
 pub mod introspection;
@@ -116,6 +119,7 @@ pub mod route;
 pub mod route_group;
 pub mod router;
 pub mod script_prefix;
+pub mod server_router;
 pub mod simple;
 pub mod unified_router;
 pub mod visualization;
@@ -151,7 +155,20 @@ pub use route_group::{RouteGroup, RouteInfo};
 pub use router::{DefaultRouter, Router};
 pub use script_prefix::{clear_script_prefix, get_script_prefix, set_script_prefix};
 pub use simple::SimpleRouter;
-pub use unified_router::{
-	UnifiedRouter, clear_router, get_router, is_router_registered, register_router,
-	register_router_arc,
+// Server router (full HTTP routing implementation)
+pub use server_router::{
+	ServerRouter, clear_router, get_router, is_router_registered, register_router,
+	register_router_arc, FunctionHandler,
 };
+
+// Unified router (closure-based API combining server and client routers)
+pub use unified_router::UnifiedRouter;
+
+// Client router re-exports
+#[cfg(feature = "client-router")]
+pub use client_router::{
+	ClientPathPattern, ClientRoute, ClientRouteMatch, ClientRouter, FromPath, HistoryState,
+	NavigationType, ParamContext, Path, RouteHandler, SingleFromPath,
+};
+
+
