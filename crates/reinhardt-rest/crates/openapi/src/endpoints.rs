@@ -66,8 +66,9 @@ pub fn generate_openapi_schema() -> OpenApiSchema {
 	// Collects EndpointMetadata from global inventory via EndpointInspector
 	generator = generator.add_function_based_endpoints();
 
-	// Add server function endpoints from #[server_fn] macros (if pages feature enabled)
-	generator = generator.add_server_fn_endpoints();
+	// NOTE: Server function endpoints should be registered explicitly in each project's
+	// config/urls.rs and config/openapi.rs using the `.server_fn(fn_name::marker)` pattern.
+	// See examples-twitter/src/config/openapi.rs for reference.
 
 	generator
 		.generate()

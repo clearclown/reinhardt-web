@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use hyper::{Method, Uri};
 use reinhardt_core::exception::Result;
 use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::{Handler, Middleware};
+use reinhardt_core::{Handler, Middleware};
 use std::sync::Arc;
 
 use crate::renderer::{ApiContext, BrowsableApiRenderer};

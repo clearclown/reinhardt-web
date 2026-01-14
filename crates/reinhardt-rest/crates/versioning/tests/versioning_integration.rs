@@ -6,7 +6,7 @@
 use bytes::Bytes;
 use hyper::Method;
 use reinhardt_core::http::{Request, Response, Result};
-use reinhardt_routers::UnifiedRouter;
+use reinhardt_routers::ServerRouter;
 use reinhardt_test::fixtures::{api_client_from_url, test_server_guard};
 use reinhardt_versioning::{
 	AcceptHeaderVersioning, BaseVersioning, HostNameVersioning, NamespaceVersioning,
@@ -28,8 +28,8 @@ async fn v2_handler(_req: Request) -> Result<Response> {
 
 /// Fixture for creating a versioned router with v1 and v2 handlers
 #[fixture]
-async fn versioned_router() -> UnifiedRouter {
-	UnifiedRouter::new()
+async fn versioned_router() -> ServerRouter {
+	ServerRouter::new()
 		.function("/v1/resource", Method::GET, v1_handler)
 		.function("/v2/resource", Method::GET, v2_handler)
 		.function("/resource", Method::GET, v1_handler)
@@ -37,7 +37,7 @@ async fn versioned_router() -> UnifiedRouter {
 
 #[rstest]
 #[tokio::test]
-async fn test_accept_header_versioning_integration(#[future] versioned_router: UnifiedRouter) {
+async fn test_accept_header_versioning_integration(#[future] versioned_router: ServerRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -57,7 +57,7 @@ async fn test_accept_header_versioning_integration(#[future] versioned_router: U
 
 #[rstest]
 #[tokio::test]
-async fn test_url_path_versioning_integration(#[future] versioned_router: UnifiedRouter) {
+async fn test_url_path_versioning_integration(#[future] versioned_router: ServerRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -74,7 +74,7 @@ async fn test_url_path_versioning_integration(#[future] versioned_router: Unifie
 
 #[rstest]
 #[tokio::test]
-async fn test_hostname_versioning_integration(#[future] versioned_router: UnifiedRouter) {
+async fn test_hostname_versioning_integration(#[future] versioned_router: ServerRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -94,7 +94,7 @@ async fn test_hostname_versioning_integration(#[future] versioned_router: Unifie
 
 #[rstest]
 #[tokio::test]
-async fn test_query_parameter_versioning_integration(#[future] versioned_router: UnifiedRouter) {
+async fn test_query_parameter_versioning_integration(#[future] versioned_router: ServerRouter) {
 	let router = versioned_router.await;
 	let server = test_server_guard(router).await;
 
@@ -113,7 +113,7 @@ async fn test_query_parameter_versioning_integration(#[future] versioned_router:
 #[tokio::test]
 async fn test_namespace_versioning_integration() {
 	// Create router with namespace versioning pattern
-	let router = UnifiedRouter::new()
+	let router = ServerRouter::new()
 		.function("/v1/resource", Method::GET, v1_handler)
 		.function("/v2/resource", Method::GET, v2_handler);
 
@@ -136,7 +136,7 @@ async fn test_versioning_middleware_integration() {
 	// Create router with middleware
 	// Note: This test demonstrates that middleware can be used to extract version
 	// In a full implementation, the middleware would be applied at the router level
-	let router = UnifiedRouter::new().function("/v1/extract", Method::GET, v1_handler);
+	let router = ServerRouter::new().function("/v1/extract", Method::GET, v1_handler);
 
 	let server = test_server_guard(router).await;
 
@@ -154,7 +154,7 @@ async fn test_versioning_middleware_integration() {
 #[tokio::test]
 async fn test_versioned_handler_with_fallback() {
 	// Create router with default version fallback
-	let router = UnifiedRouter::new().function("/resource", Method::GET, v1_handler);
+	let router = ServerRouter::new().function("/resource", Method::GET, v1_handler);
 
 	let server = test_server_guard(router).await;
 
