@@ -44,14 +44,15 @@ default = [
   "serializers",
 ]
 types = ["dep:reinhardt-types"]
-types-http = ["types", "reinhardt-types/http"]
+# Page types from reinhardt-types (Page, PageElement, IntoPage, etc.)
+page = ["types", "reinhardt-types/page"]
 exception = ["dep:reinhardt-exception"]
 signals = ["dep:reinhardt-signals"]
 macros = ["dep:reinhardt-macros"]
 security = ["dep:reinhardt-security"]
 validators = ["dep:reinhardt-validators"]
 serializers = ["dep:reinhardt-core-serializers"]
-http = ["types-http", "dep:reinhardt-http", "dep:hyper"]
+http = ["dep:reinhardt-http", "dep:hyper"]
 
 # New facade features
 messages = ["dep:reinhardt-messages"]
@@ -63,7 +64,6 @@ pagination = ["dep:reinhardt-pagination"]
 # Aggregate all core features
 core-full = [
   "types",
-  "types-http",
   "exception",
   "signals",
   "macros",

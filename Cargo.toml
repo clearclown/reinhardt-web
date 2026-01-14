@@ -103,7 +103,11 @@ messages = ["reinhardt-core/messages"]
 di = ["reinhardt-di", "reinhardt-di/params", "reinhardt-core/di", "reinhardt-db?/di"]
 test = ["reinhardt-test"]
 testcontainers = ["test", "reinhardt-test/testcontainers"]
+server-fn-test = ["test", "reinhardt-test/server-fn-test"]
 openapi = ["reinhardt-rest", "reinhardt-rest/openapi"]
+# Client-router feature: Enables UnifiedRouter<V> with both .server() and .client() methods
+# Required for unified client/server routing in WASM applications
+client-router = ["reinhardt-urls/client-router"]
 
 # Meta features
 full = [
@@ -287,6 +291,7 @@ members = [
   "crates/reinhardt-core/crates/security",
   "crates/reinhardt-core/crates/serializers",
   "crates/reinhardt-core/crates/signals",
+  "crates/reinhardt-core/crates/reactive",
   "crates/reinhardt-core/crates/types",
   "crates/reinhardt-core/crates/validators",
   "crates/reinhardt-di",
@@ -450,6 +455,7 @@ reinhardt-messages = { path = "crates/reinhardt-core/crates/messages", version =
 reinhardt-security = { path = "crates/reinhardt-core/crates/security", version = "0.1.0-alpha.1" }
 reinhardt-core-serializers = { path = "crates/reinhardt-core/crates/serializers", version = "0.1.0-alpha.1" }
 reinhardt-signals = { path = "crates/reinhardt-core/crates/signals", version = "0.1.0-alpha.1" }
+reinhardt-reactive = { path = "crates/reinhardt-core/crates/reactive", version = "0.1.0-alpha.1" }
 reinhardt-types = { path = "crates/reinhardt-core/crates/types", version = "0.1.0-alpha.1" }
 reinhardt-validators = { path = "crates/reinhardt-core/crates/validators", version = "0.1.0-alpha.1" }
 
@@ -616,6 +622,7 @@ sea-query = { version = "1.0.0-rc.29", features = [
   "with-json",
   "with-chrono",
   "with-rust_decimal",
+  "with-uuid",
   "postgres-array",
   "sqlx-utils",
   "backend-postgres",
@@ -648,6 +655,9 @@ tempfile = "3.15.0"
 trybuild = "1.0.114"
 url = "2.5.4"
 criterion = { version = "0.5", features = ["html_reports"] }
+
+# Documentation
+aquamarine = "0.5"
 
 # TODO: Monitor and upgrade when upstream fixes num-bigint-dig v0.8.x future incompatibility
 # Issue: https://github.com/rust-lang/rust/issues/120192
