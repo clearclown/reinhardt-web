@@ -40,6 +40,9 @@
 pub mod auth_state;
 pub mod chunked_upload;
 pub mod extensions;
+#[cfg(feature = "messages")]
+pub mod messages_middleware;
+pub mod middleware;
 pub mod request;
 pub mod response;
 pub mod upload;
@@ -49,6 +52,9 @@ pub use chunked_upload::{
 	ChunkedUploadError, ChunkedUploadManager, ChunkedUploadSession, UploadProgress,
 };
 pub use extensions::Extensions;
+#[cfg(feature = "messages")]
+pub use messages_middleware::MessagesMiddleware;
+pub use middleware::{Handler, Middleware, MiddlewareChain};
 pub use request::{Request, RequestBuilder};
 pub use response::{Response, StreamBody, StreamingResponse};
 pub use upload::{FileUploadError, FileUploadHandler, MemoryFileUpload, TemporaryFileUpload};

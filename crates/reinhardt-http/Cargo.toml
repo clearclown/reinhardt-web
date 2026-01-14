@@ -16,6 +16,7 @@ futures = "0.3.31"
 thiserror = { workspace = true }
 sha2 = { workspace = true }
 reinhardt-parsers = { workspace = true, optional = true }
+reinhardt-messages = { workspace = true, optional = true }
 reinhardt-exception = { workspace = true }
 async-trait = "0.1"
 tokio = { version = "1.0", features = ["sync"] }
@@ -32,4 +33,5 @@ reinhardt-test = { workspace = true }
 [features]
 default = ["parsers"]
 parsers = ["dep:reinhardt-parsers"]
-full = ["parsers"]
+messages = ["dep:reinhardt-messages"]
+full = ["parsers", "messages"]
