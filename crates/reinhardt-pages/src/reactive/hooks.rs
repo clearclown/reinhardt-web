@@ -60,7 +60,7 @@
 //! ```ignore
 //! use reinhardt_pages::reactive::hooks::*;
 //!
-//! fn counter() -> View {
+//! fn counter() -> Page {
 //!     let (count, set_count) = use_state(0);
 //!
 //!     let increment = use_callback({

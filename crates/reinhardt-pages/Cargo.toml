@@ -62,6 +62,12 @@ web-sys-full = [
 # Documentation
 aquamarine = "0.5"
 
+# Core types (Page, PageElement, Head, etc.)
+reinhardt-types = { workspace = true, features = ["page"] }
+
+# Reactive system
+reinhardt-reactive = { workspace = true }
+
 # Procedural macros
 reinhardt-pages-macros = { workspace = true }
 
@@ -146,8 +152,6 @@ hyper = { workspace = true }
 async-trait = "0.1"
 uuid = { version = "1.0", features = ["v4"] }
 tokio = { workspace = true }
-# For automatic server function registration
-inventory = "0.3"
 
 [build-dependencies]
 cfg_aliases = "0.2"

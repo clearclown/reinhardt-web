@@ -3,9 +3,9 @@
 //! This module provides a fine-grained reactivity system inspired by Leptos and Solid.js.
 //! The core primitives are:
 //!
-//! - [`Signal<T>`](signal::Signal): A reactive value that can change over time
+//! - [`Signal<T>`]: A reactive value that can change over time
 //! - [`Effect`]: A side effect that automatically reruns when dependencies change
-//! - [`Memo<T>`](memo::Memo): A cached computation that automatically updates when dependencies change
+//! - [`Memo<T>`]: A cached computation that automatically updates when dependencies change
 //!
 //! ## Architecture
 //!
@@ -92,26 +92,21 @@
 //! when dropped, preventing memory leaks. However, Effects that capture references to
 //! Signals will keep those Signals alive - be mindful of circular dependencies.
 
-// Public modules using Rust 2024 Edition module system (no mod.rs files)
-pub mod context;
-pub mod effect;
-pub mod hooks;
-pub mod memo;
-pub mod resource;
-pub mod runtime;
-pub mod signal;
-
-// Re-export commonly used types
-pub use context::{
-	Context, ContextGuard, create_context, get_context, provide_context, remove_context,
+// Re-export core reactive primitives from reinhardt-reactive
+pub use reinhardt_reactive::{
+	context, effect, memo, runtime, signal, Context, ContextGuard, Effect, EffectTiming, Memo,
+	NodeId, NodeType, Observer, Runtime, Signal, create_context, get_context, provide_context,
+	remove_context, with_runtime,
 };
-pub use effect::Effect;
-pub use memo::Memo;
+
+// WASM-specific modules (kept in reinhardt-pages)
+pub mod hooks;
+pub mod resource;
+
+// Re-export resource types
 pub use resource::{Resource, ResourceState};
 #[cfg(target_arch = "wasm32")]
 pub use resource::{create_resource, create_resource_with_deps};
-pub use runtime::{NodeId, NodeType, with_runtime};
-pub use signal::Signal;
 
 // Re-export hooks
 pub use hooks::{
