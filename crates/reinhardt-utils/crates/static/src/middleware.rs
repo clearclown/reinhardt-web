@@ -8,7 +8,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reinhardt_core::exception::Result;
-use reinhardt_core::types::{Handler, Middleware, Request, Response};
+use reinhardt_core::http::{Request, Response};
+use reinhardt_core::{Handler, Middleware};
 
 use crate::handler::{StaticError, StaticFileHandler};
 
