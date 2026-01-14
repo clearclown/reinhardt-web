@@ -5,7 +5,7 @@ use hyper::server::conn::http2;
 use hyper::service::Service;
 use hyper_util::rt::TokioIo;
 use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::Handler;
+use reinhardt_core::Handler;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;
@@ -26,7 +26,7 @@ impl Http2Server {
 	///
 	/// ```
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -56,7 +56,7 @@ impl Http2Server {
 	/// ```no_run
 	/// use std::net::SocketAddr;
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -103,7 +103,7 @@ impl Http2Server {
 	/// use std::net::SocketAddr;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::{Http2Server, ShutdownCoordinator};
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -180,7 +180,7 @@ impl Http2Server {
 	/// use std::net::SocketAddr;
 	/// use tokio::net::TcpStream;
 	/// use reinhardt_server_core::Http2Server;
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -273,7 +273,7 @@ impl Service<hyper::Request<Incoming>> for RequestService {
 /// ```no_run
 /// use std::net::SocketAddr;
 /// use reinhardt_server_core::serve_http2;
-/// use reinhardt_core::types::Handler;
+/// use reinhardt_core::Handler;
 /// use reinhardt_core::http::{Request, Response};
 ///
 /// struct MyHandler;
@@ -309,7 +309,7 @@ pub async fn serve_http2<H: Handler + 'static>(
 /// use std::net::SocketAddr;
 /// use std::time::Duration;
 /// use reinhardt_server_core::{serve_http2_with_shutdown, shutdown_signal, ShutdownCoordinator};
-/// use reinhardt_core::types::Handler;
+/// use reinhardt_core::Handler;
 /// use reinhardt_core::http::{Request, Response};
 ///
 /// struct MyHandler;

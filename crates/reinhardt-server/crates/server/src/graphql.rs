@@ -5,7 +5,7 @@ use http::{Method, StatusCode};
 #[cfg(feature = "graphql")]
 use reinhardt_core::http::{Request, Response};
 #[cfg(feature = "graphql")]
-use reinhardt_core::types::Handler;
+use reinhardt_core::Handler;
 #[cfg(feature = "graphql")]
 use std::sync::Arc;
 

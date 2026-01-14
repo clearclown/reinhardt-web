@@ -1,5 +1,5 @@
 use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::Handler;
+use reinhardt_core::Handler;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -16,7 +16,7 @@ use tokio::time::timeout;
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_server_core::TimeoutHandler;
-/// use reinhardt_core::types::Handler;
+/// use reinhardt_core::Handler;
 /// use reinhardt_core::http::{Request, Response};
 ///
 /// struct MyHandler;
@@ -50,7 +50,7 @@ impl TimeoutHandler {
 	/// use std::sync::Arc;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::TimeoutHandler;
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
@@ -80,7 +80,7 @@ impl TimeoutHandler {
 	/// use std::sync::Arc;
 	/// use std::time::Duration;
 	/// use reinhardt_server_core::TimeoutHandler;
-	/// use reinhardt_core::types::Handler;
+	/// use reinhardt_core::Handler;
 	/// use reinhardt_core::http::{Request, Response};
 	///
 	/// struct MyHandler;
