@@ -121,6 +121,14 @@ pub mod schema;
 // Dependency Injection test fixtures
 pub mod di;
 
+// Server function test fixtures
+#[cfg(feature = "server-fn-test")]
+pub mod server_fn;
+
+// WASM frontend test fixtures
+#[cfg(all(target_arch = "wasm32", feature = "wasm"))]
+pub mod wasm;
+
 // Re-export commonly used items from submodules
 
 // From client module

@@ -4,9 +4,9 @@
 //! cleanup via RAII pattern.
 
 use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::Handler;
+use reinhardt_core::Handler;
 use reinhardt_di::InjectionContext;
-use reinhardt_routers::UnifiedRouter as Router;
+use reinhardt_routers::ServerRouter as Router;
 use reinhardt_server::{
 	HttpServer, RateLimitConfig, RateLimitHandler, ShutdownCoordinator, TimeoutHandler,
 };
@@ -32,7 +32,7 @@ use reinhardt_server::GraphQLHandler;
 ///
 /// ```no_run
 /// use reinhardt_test::fixtures::*;
-/// use reinhardt_routers::UnifiedRouter as Router;
+/// use reinhardt_routers::ServerRouter as Router;
 ///
 /// #[tokio::test]
 /// async fn test_example() {
@@ -122,7 +122,7 @@ impl Drop for TestServerGuard {
 ///
 /// ```no_run
 /// use reinhardt_test::fixtures::*;
-/// use reinhardt_routers::UnifiedRouter as Router;
+/// use reinhardt_routers::ServerRouter as Router;
 ///
 /// #[tokio::test]
 /// async fn test_server() {

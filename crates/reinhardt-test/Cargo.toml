@@ -29,6 +29,18 @@ admin = [
   "dep:reinhardt-admin-types",
   "dep:reinhardt-admin-adapters",
 ]
+# WASM frontend testing utilities
+wasm = [
+  "dep:wasm-bindgen",
+  "dep:wasm-bindgen-test",
+  "dep:wasm-bindgen-futures",
+  "dep:web-sys",
+  "dep:js-sys",
+  "dep:gloo-timers",
+]
+wasm-full = ["wasm", "reinhardt-pages/web-sys-full"]
+# Server function testing utilities
+server-fn-test = []
 full = ["testcontainers", "static", "websockets", "graphql", "property-based", "tasks", "admin"]
 
 [dependencies]
@@ -63,6 +75,7 @@ sea-query = { version = "1.0.0-rc", features = ["derive", "postgres-array"] }
 env_logger = "0.11"
 reqwest = { version = "0.12", features = ["json", "cookies"] }
 urlencoding = "2.1"
+serde_urlencoded = "0.7"
 tracing = { workspace = true }
 
 # Optional dependencies for testcontainers feature
@@ -117,6 +130,41 @@ reinhardt-admin-core = { workspace = true, optional = true }
 reinhardt-admin-server = { workspace = true, optional = true }
 reinhardt-admin-types = { workspace = true, optional = true }
 reinhardt-admin-adapters = { workspace = true, optional = true }
+
+# Optional WASM dependencies (feature-gated)
+wasm-bindgen = { version = "0.2.106", optional = true }
+wasm-bindgen-test = { version = "0.3.56", optional = true }
+wasm-bindgen-futures = { version = "0.4.56", optional = true }
+gloo-timers = { version = "0.3", optional = true }
+js-sys = { version = "0.3.83", optional = true }
+web-sys = { version = "0.3.83", optional = true, features = [
+  "Window",
+  "Document",
+  "Element",
+  "HtmlElement",
+  "HtmlInputElement",
+  "HtmlFormElement",
+  "HtmlSelectElement",
+  "HtmlTextAreaElement",
+  "HtmlButtonElement",
+  "Node",
+  "NodeList",
+  "Event",
+  "EventTarget",
+  "MouseEvent",
+  "KeyboardEvent",
+  "InputEvent",
+  "FocusEvent",
+  "CustomEvent",
+  "DomRect",
+  "CssStyleDeclaration",
+  "HtmlCollection",
+  "NamedNodeMap",
+  "Attr",
+  "HtmlDocument",
+  "Location",
+  "History",
+] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

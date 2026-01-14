@@ -395,7 +395,7 @@ impl<T> Default for Spy<T> {
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
 /// use reinhardt_core::http::{Request, Response};
-/// use reinhardt_core::types::Handler;
+/// use reinhardt_core::Handler;
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     Ok(Response::ok().with_body("Hello, World!"))
@@ -478,7 +478,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<F> reinhardt_core::types::Handler for SimpleHandler<F>
+impl<F> reinhardt_core::Handler for SimpleHandler<F>
 where
 	F: Fn(
 			reinhardt_core::http::Request,

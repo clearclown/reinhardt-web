@@ -125,6 +125,9 @@
 //!
 //! - **`testcontainers`**: Enable TestContainers for database testing
 //! - **`static`**: Enable static file testing utilities
+//! - **`wasm`**: Enable WASM frontend testing utilities
+//! - **`wasm-full`**: Enable WASM testing with full web-sys features
+//! - **`server-fn-test`**: Enable server function testing utilities
 
 pub mod assertions;
 pub mod client;
@@ -156,6 +159,12 @@ pub use testcontainers_modules;
 
 #[cfg(feature = "static")]
 pub mod static_files;
+
+#[cfg(feature = "wasm")]
+pub mod wasm;
+
+#[cfg(feature = "server-fn-test")]
+pub mod server_fn;
 
 // Re-exports for impl_test_model! macro
 #[doc(hidden)]
