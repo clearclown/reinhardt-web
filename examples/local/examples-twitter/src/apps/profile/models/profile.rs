@@ -8,11 +8,16 @@ use reinhardt::model;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+// Test-only dependency for sqlx::FromRow (server-side only)
+#[cfg(all(test, not(target_arch = "wasm32")))]
+use sqlx::FromRow;
+
 /// Profile model representing a user's profile information
 ///
 /// One-to-one relationship with User model via user_id foreign key.
 #[model(app_label = "profile", table_name = "profile_profile")]
 #[derive(Clone, Serialize, Deserialize)]
+#[cfg_attr(all(test, not(target_arch = "wasm32")), derive(FromRow))]
 pub struct Profile {
 	#[field(primary_key = true)]
 	id: Uuid,
