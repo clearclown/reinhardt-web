@@ -1,9 +1,5 @@
-//! Relationship endpoint tests
+//! Relationship app tests module
 //!
-//! Tests for follow/unfollow, block/unblock, and list operations
+//! Contains tests for relationship server functions and client components.
 
-pub mod helpers;
-
-mod block_tests;
-mod follow_tests;
-mod list_tests;
+pub mod server_fn;
