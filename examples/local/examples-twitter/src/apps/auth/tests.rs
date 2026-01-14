@@ -1,10 +1,5 @@
-//! Tests for authentication app
+//! Auth app tests module
+//!
+//! Contains tests for authentication server functions and client components.
 
-mod helpers;
-
-mod change_password_tests;
-mod register_tests;
-mod reset_password_tests;
-mod signin_tests;
-mod signout_tests;
-mod verify_password_tests;
+pub mod server_fn;
