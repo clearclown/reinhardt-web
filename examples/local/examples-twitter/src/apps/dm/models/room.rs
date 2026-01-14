@@ -12,12 +12,17 @@ use uuid::Uuid;
 #[allow(unused_imports)]
 use crate::apps::auth::models::User;
 
+// Test-only dependency for sqlx::FromRow (server-side only)
+#[cfg(all(test, not(target_arch = "wasm32")))]
+use sqlx::FromRow;
+
 /// DMRoom model representing a chat room for direct messaging
 ///
 /// Supports both 1-on-1 and group conversations through ManyToMany relationship.
 /// Room members are managed via the members ManyToManyField.
 #[model(app_label = "dm", table_name = "dm_room")]
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(all(test, not(target_arch = "wasm32")), derive(FromRow))]
 pub struct DMRoom {
 	#[field(primary_key = true)]
 	id: Uuid,
@@ -33,6 +38,7 @@ pub struct DMRoom {
 	/// Room members via ManyToMany relationship
 	/// Intermediate table: dm_room_members
 	#[serde(skip, default)]
+	#[cfg_attr(all(test, not(target_arch = "wasm32")), sqlx(skip))]
 	#[rel(many_to_many, related_name = "rooms")]
 	members: ManyToManyField<DMRoom, User>,
 
