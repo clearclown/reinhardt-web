@@ -19,6 +19,7 @@
 //!     UnifiedRouter::new()
 //!         .mount("/api/", api::routes())   // api::routes() is NOT annotated with #[routes]
 //!         .mount("/admin/", admin::routes())
+//!         .client(|c| c.route("/", home_page))
 //! }
 //! ```
 //!
@@ -28,15 +29,15 @@
 //! #[routes]
 //! pub fn routes() -> UnifiedRouter {
 //!     UnifiedRouter::new()
-//!         .endpoint(views::index)
-//!         .endpoint(views::about)
+//!         .server(|s| s.endpoint(views::index))
+//!         .client(|c| c.route("/", home_page))
 //! }
 //! ```
 //!
 //! # Generated Code
 //!
 //! The macro preserves the original function and adds `inventory::submit!`
-//! registration code:
+//! registration code that extracts both server and client routers:
 //!
 //! ```rust,ignore
 //! // Input:
@@ -50,11 +51,26 @@
 //!     UnifiedRouter::new()
 //! }
 //!
-//! ::reinhardt::inventory::submit! {
-//!     ::reinhardt::UrlPatternsRegistration {
-//!         get_router: || ::std::sync::Arc::new(routes()),
+//! const _: () = {
+//!     fn __get_server_router() -> ::std::sync::Arc<::reinhardt::ServerRouter> {
+//!         let unified = routes();
+//!         ::std::sync::Arc::new(unified.into_server())
 //!     }
-//! }
+//!
+//!     #[cfg(feature = "client-router")]
+//!     fn __get_client_router() -> ::std::sync::Arc<::reinhardt::ClientRouter> {
+//!         let unified = routes();
+//!         ::std::sync::Arc::new(unified.into_client())
+//!     }
+//!
+//!     ::reinhardt::inventory::submit! {
+//!         ::reinhardt::UrlPatternsRegistration::new(
+//!             __get_server_router,
+//!             #[cfg(feature = "client-router")]
+//!             __get_client_router,
+//!         )
+//!     }
+//! };
 //! ```
 
 use crate::crate_paths::get_reinhardt_crate;
@@ -67,6 +83,9 @@ use syn::{ItemFn, Result};
 /// This function generates code that:
 /// 1. Preserves the original function definition
 /// 2. Adds `inventory::submit!` to register the function with the framework
+///
+/// The macro extracts both `ServerRouter` and `ClientRouter` from the
+/// `UnifiedRouter` returned by the annotated function.
 ///
 /// # Parameters
 ///
@@ -93,7 +112,7 @@ pub(crate) fn routes_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 	if matches!(input.sig.output, syn::ReturnType::Default) {
 		return Err(syn::Error::new_spanned(
 			&input.sig,
-			"#[routes] function must have a return type (e.g., -> UnifiedRouter)",
+			"#[routes] function must have a return type (-> UnifiedRouter)",
 		));
 	}
 
@@ -108,10 +127,31 @@ pub(crate) fn routes_impl(_args: TokenStream, input: ItemFn) -> Result<TokenStre
 		// Required for Rust 2024 edition compatibility
 		#[allow(unsafe_attr_outside_unsafe)]
 		const _: () = {
+			// Server router extraction function
+			fn __get_server_router() -> ::std::sync::Arc<#reinhardt::ServerRouter> {
+				let unified = #fn_name();
+				::std::sync::Arc::new(unified.into_server())
+			}
+
+			// Client router extraction function (only when client-router feature is enabled)
+			#[cfg(feature = "client-router")]
+			fn __get_client_router() -> ::std::sync::Arc<#reinhardt::ClientRouter> {
+				let unified = #fn_name();
+				::std::sync::Arc::new(unified.into_client())
+			}
+
+			// Register with inventory using the new UrlPatternsRegistration structure
+			#[cfg(feature = "client-router")]
 			#reinhardt::inventory::submit! {
-				#reinhardt::UrlPatternsRegistration {
-					get_router: || ::std::sync::Arc::new(#fn_name()),
-				}
+				#reinhardt::UrlPatternsRegistration::new(
+					__get_server_router,
+					__get_client_router,
+				)
+			}
+
+			#[cfg(not(feature = "client-router"))]
+			#reinhardt::inventory::submit! {
+				#reinhardt::UrlPatternsRegistration::new(__get_server_router)
 			}
 		};
 

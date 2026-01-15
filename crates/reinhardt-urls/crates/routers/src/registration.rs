@@ -23,10 +23,11 @@
 //! mod web;
 //!
 //! #[routes]
-//! pub fn routes() -> ServerRouter {
-//!     ServerRouter::new()
+//! pub fn routes() -> UnifiedRouter {
+//!     UnifiedRouter::new()
 //!         .mount("/api/", api::routes())  // Returns ServerRouter, not annotated with #[routes]
 //!         .mount("/", web::routes())      // Returns ServerRouter, not annotated with #[routes]
+//!         .client(|c| c.route("/", home_page))
 //! }
 //! ```
 //!
@@ -35,10 +36,10 @@
 //! The URL patterns registration system follows the same pattern as other
 //! compile-time registration systems in Reinhardt (DI, Signals, OpenAPI, ViewSets):
 //!
-//! 1. User code uses the `#[routes]` attribute macro on a function
-//! 2. Macro generates an `inventory::submit!` call with a function pointer
+//! 1. User code uses the `#[routes]` attribute macro on a function returning [`UnifiedRouter`]
+//! 2. Macro generates an `inventory::submit!` call with function pointers for both routers
 //! 3. Framework code retrieves registrations via `inventory::iter::<UrlPatternsRegistration>()`
-//! 4. Framework calls the registered functions and registers routers
+//! 4. Framework calls the registered functions to get [`ServerRouter`] and [`ClientRouter`]
 //!
 //! # Examples
 //!
@@ -48,16 +49,22 @@
 //! use reinhardt::routes;
 //!
 //! #[routes]
-//! pub fn routes() -> ServerRouter {
-//!     ServerRouter::new()
-//!         .endpoint(views::index)
-//!         .endpoint(views::about)
+//! pub fn routes() -> UnifiedRouter {
+//!     UnifiedRouter::new()
+//!         .server(|s| s.endpoint(views::index))
+//!         .client(|c| c.route("/", home_page))
 //! }
 //! ```
 //!
 //! The `#[routes]` macro automatically handles `inventory` registration,
 //! so you don't need any additional boilerplate code.
+//!
+//! [`UnifiedRouter`]: crate::UnifiedRouter
+//! [`ServerRouter`]: crate::ServerRouter
+//! [`ClientRouter`]: crate::ClientRouter
 
+#[cfg(feature = "client-router")]
+use crate::client_router::ClientRouter;
 use crate::server_router::ServerRouter;
 use std::sync::Arc;
 
@@ -70,7 +77,8 @@ use std::sync::Arc;
 ///
 /// # Fields
 ///
-/// * `get_router` - Function pointer to get the router
+/// * `get_server_router` - Function pointer to get the server router
+/// * `get_client_router` - Function pointer to get the client router (when `client-router` feature is enabled)
 ///
 /// # Implementation Details
 ///
@@ -86,16 +94,28 @@ use std::sync::Arc;
 /// attribute macro which generates the registration code automatically.
 #[derive(Clone)]
 pub struct UrlPatternsRegistration {
-	/// Function to get the router
+	/// Function to get the server router
 	///
-	/// This function returns an `Arc<ServerRouter>` with all application routes.
-	/// The `#[routes]` macro wraps the user's function (which returns `ServerRouter`)
-	/// in a closure that performs the `Arc::new()` call automatically.
-	pub get_router: fn() -> Arc<ServerRouter>,
+	/// This function returns an `Arc<ServerRouter>` with all server-side routes.
+	/// The `#[routes]` macro extracts the server router from [`UnifiedRouter`]
+	/// using `into_server()` and wraps it in `Arc::new()` automatically.
+	///
+	/// [`UnifiedRouter`]: crate::UnifiedRouter
+	pub get_server_router: fn() -> Arc<ServerRouter>,
+
+	/// Function to get the client router
+	///
+	/// This function returns an `Arc<ClientRouter>` with all client-side routes.
+	/// The `#[routes]` macro extracts the client router from [`UnifiedRouter`]
+	/// using `into_client()` and wraps it in `Arc::new()` automatically.
+	///
+	/// [`UnifiedRouter`]: crate::UnifiedRouter
+	#[cfg(feature = "client-router")]
+	pub get_client_router: fn() -> Arc<ClientRouter>,
 }
 
 impl UrlPatternsRegistration {
-	/// Create a new registration with the router factory function
+	/// Create a new registration with the router factory functions
 	///
 	/// # Examples
 	///
@@ -103,14 +123,45 @@ impl UrlPatternsRegistration {
 	/// use reinhardt_routers::registration::UrlPatternsRegistration;
 	/// use std::sync::Arc;
 	///
-	/// let registration = UrlPatternsRegistration::new(|| Arc::new(routes()));
+	/// let registration = UrlPatternsRegistration::new(
+	///     || Arc::new(routes().into_server()),
+	///     || Arc::new(routes().into_client()),
+	/// );
 	/// ```
 	///
 	/// # Note
 	///
 	/// You typically don't call this directly. Use the `#[routes]` macro instead.
-	pub const fn new(get_router: fn() -> Arc<ServerRouter>) -> Self {
-		Self { get_router }
+	#[cfg(feature = "client-router")]
+	pub const fn new(
+		get_server_router: fn() -> Arc<ServerRouter>,
+		get_client_router: fn() -> Arc<ClientRouter>,
+	) -> Self {
+		Self {
+			get_server_router,
+			get_client_router,
+		}
+	}
+
+	/// Create a new registration with the server router factory function (server-only mode)
+	///
+	/// # Note
+	///
+	/// You typically don't call this directly. Use the `#[routes]` macro instead.
+	#[cfg(not(feature = "client-router"))]
+	pub const fn new(get_server_router: fn() -> Arc<ServerRouter>) -> Self {
+		Self { get_server_router }
+	}
+
+	/// Get the server router from the registration
+	pub fn server_router(&self) -> Arc<ServerRouter> {
+		(self.get_server_router)()
+	}
+
+	/// Get the client router from the registration
+	#[cfg(feature = "client-router")]
+	pub fn client_router(&self) -> Arc<ClientRouter> {
+		(self.get_client_router)()
 	}
 }
 

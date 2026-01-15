@@ -786,7 +786,7 @@ async fn auto_register_router() -> Result<(), Box<dyn std::error::Error>> {
 
 	// Get and register the router
 	let registration = &registrations[0];
-	let router = (registration.get_router)();
+	let router = (registration.get_server_router)();
 	register_router_arc(router);
 
 	Ok(())
