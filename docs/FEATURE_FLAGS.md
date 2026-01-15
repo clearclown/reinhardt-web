@@ -310,7 +310,7 @@ The `di` feature enables FastAPI-style dependency injection with parameter extra
 use reinhardt::prelude::*;
 use reinhardt::{post, Body, Cookie, Header, Json, Path, Query};
 
-#[post("/handler/:id", name = "handler")]
+#[post("/handler/{id}/", name = "handler")]
 async fn handler(
     Path(id): Path<i64>,
     Query(params): Query<SearchParams>,

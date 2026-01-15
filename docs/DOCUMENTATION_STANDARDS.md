@@ -700,6 +700,69 @@ let conn = connect("postgres://localhost")?;
 
 ---
 
+## Diagram Standards
+
+### DM-8 (SHOULD): Use Mermaid for Architecture Diagrams
+
+When documenting architecture, data flow, or relationships between components,
+**prefer Mermaid diagrams over ASCII art**.
+
+#### Setup
+
+Add `aquamarine` as a dependency in the crate's `Cargo.toml`:
+
+```toml
+[dependencies]
+aquamarine = { workspace = true }
+```
+
+Note: `aquamarine` must be in `[dependencies]` (not `[dev-dependencies]`) because
+it needs to be available during documentation generation (`cargo doc`).
+
+#### Usage
+
+Apply the `#[cfg_attr(doc, aquamarine::aquamarine)]` attribute to items with Mermaid diagrams:
+
+```rust
+#[cfg_attr(doc, aquamarine::aquamarine)]
+/// Component architecture:
+///
+/// ```mermaid
+/// graph TD
+///     A[Request] --> B{Router}
+///     B --> C[Handler]
+/// ```
+pub struct Router { ... }
+```
+
+#### Diagram Types Reference
+
+| Diagram Type | Mermaid Syntax | Example Use Case |
+|--------------|----------------|------------------|
+| Flowchart | `graph TD/LR` | Request flow, decision trees |
+| Sequence | `sequenceDiagram` | API call sequences |
+| Class | `classDiagram` | Trait hierarchies |
+| State | `stateDiagram-v2` | State machines |
+
+#### Limitations
+
+- `#[aquamarine]` cannot be applied to module-level documentation (`//!`)
+- Move diagrams to the primary public type documentation instead
+
+#### When to Keep ASCII Art
+
+- Simple inline diagrams (1-2 lines)
+- Terminal output examples
+- Code structure illustrations where text alignment matters
+
+#### Verification
+
+```bash
+cargo doc --package <crate-name> --open
+```
+
+---
+
 ## Related Documentation
 
 - **Main Quick Reference**: @CLAUDE.md (see Quick Reference section)

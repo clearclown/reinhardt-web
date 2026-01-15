@@ -324,6 +324,9 @@ Before submitting code:
 - Mark placeholders with `todo!()` or `// TODO:`
 - Use `#[serial(group_name)]` for global state tests
 - Split commits by specific intent, not features
+- Follow Conventional Commits v1.0.0 format: `<type>[scope]: <description>`
+- Start commit description with lowercase letter (e.g., `feat: add feature`)
+- Use `!` notation for breaking changes (e.g., `feat!:` or `feat(scope)!:`)
 - Follow Semantic Versioning 2.0.0 strictly for all crates
 - Use `[crate-name]@v[version]` format for Git tags
 - Verify with `--dry-run` before publishing to crates.io
@@ -340,6 +343,7 @@ Before submitting code:
 - Specify language for code blocks: ` ```rust `, NOT ` ``` `
 - Wrap bracket patterns in backticks: `` `array[0]` ``, NOT `array[0]`
 - Use backticks (not intra-doc links) for feature-gated types: `` `FeatureType` ``, NOT `` [`FeatureType`] ``
+- Use Mermaid diagrams (via `aquamarine`) for architecture documentation instead of ASCII art
 
 ### ❌ NEVER DO
 - Use `mod.rs` files (deprecated pattern)
@@ -361,6 +365,9 @@ Before submitting code:
 - Create Git tags before committing version changes
 - Skip `--dry-run` verification before publishing
 - Make breaking changes without MAJOR version bump
+- Start commit description with uppercase letter
+- End commit description with a period
+- Omit `!` or `BREAKING CHANGE:` for API-breaking changes
 - Use plain `#[test]` instead of `#[rstest]`
 - Write raw SQL strings in tests (use SeaQuery instead)
 - Duplicate infrastructure setup code (use `reinhardt-test` fixtures)
@@ -368,6 +375,7 @@ Before submitting code:
 - Write macro attributes without backticks in doc comments (causes unresolved link warnings)
 - Write bare URLs in doc comments (causes bare URL warnings)
 - Use intra-doc links for feature-gated items (causes unresolved link warnings)
+- Create new ASCII art diagrams in doc comments (use Mermaid instead)
 
 ### 📚 Detailed Standards
 

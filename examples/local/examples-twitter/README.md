@@ -48,9 +48,9 @@ Real-time messaging between users:
 **API Endpoints**:
 - `GET /api/dm/rooms` - List user's conversation rooms
 - `POST /api/dm/rooms` - Create new conversation room
-- `GET /api/dm/rooms/:id` - Get room details
-- `GET /api/dm/rooms/:id/messages` - Retrieve message history
-- `POST /api/dm/rooms/:id/messages` - Send message to room
+- `GET /api/dm/rooms/{id}` - Get room details
+- `GET /api/dm/rooms/{id}/messages` - Retrieve message history
+- `POST /api/dm/rooms/{id}/messages` - Send message to room
 
 ### User Profiles (`apps/profile`)
 
@@ -435,7 +435,7 @@ Authorization: Bearer <jwt_token>
 }
 ```
 
-#### POST /api/dm/rooms/:id/messages
+#### POST /api/dm/rooms/{id}/messages
 
 Send message to room.
 

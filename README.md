@@ -264,18 +264,15 @@ Edit your app's `urls.rs`:
 
 ```rust
 // users/urls.rs
-use reinhardt::UnifiedRouter;
+use reinhardt::ServerRouter;
 
-pub fn url_patterns() -> UnifiedRouter {
-	let router = UnifiedRouter::new();
+use super::views;
 
-	// Add your routes using the router
-	// Example: Function-based routes
-	// router.function("/users", Method::GET, views::list_users);
-	// router.function("/users/{id}", Method::GET, views::get_user);
-	// router.function("/users", Method::POST, views::create_user);
-
-	router
+pub fn url_patterns() -> ServerRouter {
+	ServerRouter::new()
+		.endpoint(views::list_users)
+		.endpoint(views::get_user)
+		.endpoint(views::create_user)
 }
 ```
 
@@ -287,13 +284,9 @@ use reinhardt::prelude::*;
 use reinhardt::routes;
 
 #[routes]
-pub fn routes() -> UnifiedRouter {
-	let router = UnifiedRouter::new();
-
-	// Include app routers
-	// router.include("/api/", users::urls::url_patterns())
-
-	router
+pub fn routes() -> ServerRouter {
+	ServerRouter::new()
+		.mount("/api/", users::urls::url_patterns())
 }
 ```
 
@@ -303,7 +296,7 @@ framework for discovery via the `inventory` crate.
 **Note:** The `reinhardt::prelude` includes commonly used types. Key exports include:
 
 **Always Available:**
-- Core routing and views: `Router`, `DefaultRouter`, `UnifiedRouter`, `View`, `ListView`, `DetailView`
+- Core routing and views: `Router`, `DefaultRouter`, `ServerRouter`, `View`, `ListView`, `DetailView`
 - ViewSets: `ViewSet`, `ModelViewSet`, `ReadOnlyModelViewSet`
 - HTTP: `StatusCode`
 
@@ -798,7 +791,7 @@ use reinhardt::{get, Request, Response, StatusCode, ViewResult};
 use reinhardt::db::DatabaseConnection;
 use std::sync::Arc;
 
-#[get("/users/:id", name = "get_user")]
+#[get("/users/{id}/", name = "get_user")]
 pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,  // Automatically injected
@@ -844,7 +837,7 @@ use reinhardt::db::DatabaseConnection;
 use crate::models::User;
 use std::sync::Arc;
 
-#[get("/users/:id", name = "get_user")]
+#[get("/users/{id}/", name = "get_user")]
 pub async fn get_user(
 	req: Request,
 	#[inject] db: Arc<DatabaseConnection>,
@@ -879,15 +872,13 @@ Register route with path parameter in `urls.rs`:
 
 ```rust
 // users/urls.rs
-use reinhardt::UnifiedRouter;
+use reinhardt::ServerRouter;
 
-pub fn url_patterns() -> UnifiedRouter {
-	let router = UnifiedRouter::new();
+use super::views;
 
-	// Add route with path parameter
-	// router.function("/users/:id", Method::GET, views::get_user);
-
-	router
+pub fn url_patterns() -> ServerRouter {
+	ServerRouter::new()
+		.endpoint(views::get_user)  // Path defined in #[get("/users/{id}/")]
 }
 ```
 

@@ -451,7 +451,7 @@ pub fn create_router() -> Router {
     Router::new()
         .route("/", Route::new(index_page))
         .route("/polls/", Route::new(polls_page))
-        .route("/polls/:id/", Route::new(poll_detail_page))
+        .route("/polls/{id}/", Route::new(poll_detail_page))
 }
 ```
 
@@ -510,7 +510,7 @@ pub fn start() {
 **1. URL Match**
 
 ```
-/polls/5/ → Match route "/polls/:id/" → Extract id=5 → Call poll_detail_page()
+/polls/5/ → Match route "/polls/{id}/" → Extract id=5 → Call poll_detail_page()
 ```
 
 **2. Component Rendering**
@@ -1075,8 +1075,8 @@ pub fn create_router() -> Router {
     Router::new()
         .route("/", Route::new(polls_index_page))
         .route("/polls/", Route::new(polls_index_page))
-        .route("/polls/:id/", Route::new(poll_detail_page))
-        .route("/polls/:id/results/", Route::new(poll_results_page))
+        .route("/polls/{id}/", Route::new(poll_detail_page))
+        .route("/polls/{id}/results/", Route::new(poll_results_page))
 }
 ```
 

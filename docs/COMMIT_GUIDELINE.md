@@ -6,6 +6,17 @@ This file defines the git commit policy for the Reinhardt project. These rules e
 
 ---
 
+## Specification Reference
+
+This document follows [Conventional Commits v1.0.0](https://www.conventionalcommits.org/en/v1.0.0/).
+
+Key principles from the specification:
+- Commit messages MUST be structured as: `<type>[optional scope]: <description>`
+- The types `feat` and `fix` correlate with SemVer MINOR and PATCH respectively
+- Breaking changes MUST be indicated with `!` after type/scope or via `BREAKING CHANGE:` footer
+
+---
+
 ## Commit Execution Policy
 
 ### CE-1 (MUST): Explicit User Authorization
@@ -21,9 +32,9 @@ This file defines the git commit policy for the Reinhardt project. These rules e
 - **Each commit should represent a specific intent to achieve a goal, NOT the goal itself**
   - ❌ Bad: Committing an entire "authentication feature" in one commit (goal-level)
   - ✅ Good: Separate commits for each building block:
-    - "Implement password hashing with bcrypt" (specific intent)
-    - "Add JWT token generation logic" (specific intent)
-    - "Create session middleware" (specific intent)
+    - "implement password hashing with bcrypt" (specific intent)
+    - "add JWT token generation logic" (specific intent)
+    - "create session middleware" (specific intent)
 - **Each commit MUST be small enough to be explained in a single line**
   - If you can't describe the commit clearly in one line, it's too large and should be split
   - The description should explain the specific intent, not just the feature name
@@ -32,15 +43,15 @@ This file defines the git commit policy for the Reinhardt project. These rules e
     - What matters is that the commit's _intent_ can be summarized in one line
 - **Avoid monolithic commits at feature-level**
   - ❌ Bad Examples:
-    - "feat(auth): Implement authentication feature" (too broad, feature-level)
-    - "feat(auth): Add JWT, session, and OAuth support" (multiple intents)
+    - "feat(auth): Implement authentication feature" (too broad, feature-level, uppercase start)
+    - "feat(auth): Add JWT, session, and OAuth support" (multiple intents, uppercase start)
     - "feat(api): Add user CRUD endpoints" (multiple endpoints = multiple intents)
   - ✅ Good Examples:
-    - "feat(auth): Implement bcrypt password hashing for user authentication"
-    - "feat(auth): Add JWT token generation with RS256 algorithm"
-    - "feat(auth): Create session storage middleware"
-    - "feat(api): Add user creation endpoint with validation"
-    - "feat(api): Add user retrieval endpoint"
+    - "feat(auth): implement bcrypt password hashing for user authentication"
+    - "feat(auth): add JWT token generation with RS256 algorithm"
+    - "feat(auth): create session storage middleware"
+    - "feat(api): add user creation endpoint with validation"
+    - "feat(api): add user retrieval endpoint"
 - Group files by specific intent at a fine-grained level
 - Ensure commits tell a clear story when reviewing history, with each step being a concrete implementation detail
 
@@ -93,10 +104,10 @@ When preparing for crate publication to crates.io:
 
 **Subject Line Format:**
 ```
-chore(release): Bump [crate-name] to v[version]
+chore(release): bump [crate-name] to v[version]
 
 Example:
-chore(release): Bump reinhardt-core to v0.2.0
+chore(release): bump reinhardt-core to v0.2.0
 ```
 
 **Body Format:**
@@ -133,7 +144,7 @@ Bug Fixes: (if PATCH version bump)
 **Example Complete Commit:**
 
 ```
-chore(release): Bump reinhardt-orm to v0.2.0
+chore(release): bump reinhardt-orm to v0.2.0
 
 Prepare reinhardt-orm for publication to crates.io.
 
@@ -193,21 +204,118 @@ Commit messages consist of three parts:
 ### CM-1 (MUST): Subject Line Format
 
 ```
-type(scope): Brief description in English
+<type>[optional scope][optional !]: <description>
 
-Example:
-feat(shortcuts,dispatch): Implement Django-style shortcuts and event dispatch system
+Examples:
+feat(auth): add password validation with bcrypt
+fix(orm): resolve race condition in connection pool
+feat(api)!: change response format to JSON:API specification
 ```
 
 **Requirements:**
 
-- **Type**: One of: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `style`
-- **Scope**: Module or component name (e.g., `shortcuts`, `orm`, `http`)
+- **Type**: One of the defined commit types (see Commit Types section below)
+- **Scope**: Module or component name (e.g., `auth`, `orm`, `http`)
   - Multiple scopes separated by commas: `(shortcuts,dispatch)`
+  - Scope is OPTIONAL but RECOMMENDED for clarity
+- **Breaking Change Indicator**: Append `!` after type/scope to indicate breaking changes
+  - Example: `feat!:` or `feat(api)!:`
+  - This is the PREFERRED method for indicating breaking changes
 - **Description**: Concise summary in English
+  - **MUST** start with lowercase letter
   - **MUST** be specific, not vague
-  - ❌ Bad: "Improve authentication overall" (Too vague)
-  - ✅ Good: "Add RS256 algorithm support to JWT token validation"
+  - **MUST NOT** end with a period
+  - ❌ Bad: "Improve authentication overall" (Too vague, starts with uppercase)
+  - ❌ Bad: "add feature." (Ends with period)
+  - ✅ Good: "add RS256 algorithm support to JWT token validation"
+
+### Commit Types
+
+**Required Types (correlate with SemVer):**
+
+| Type | Description | SemVer |
+|------|-------------|--------|
+| `feat` | A new feature | MINOR |
+| `fix` | A bug fix | PATCH |
+
+**Recommended Types:**
+
+| Type | Description |
+|------|-------------|
+| `build` | Changes affecting build system or external dependencies |
+| `chore` | Maintenance tasks (no production code change) |
+| `ci` | CI configuration changes |
+| `docs` | Documentation only changes |
+| `perf` | Performance improvements |
+| `refactor` | Code change that neither fixes a bug nor adds a feature |
+| `revert` | Reverts a previous commit |
+| `style` | Code style changes (formatting, whitespace) |
+| `test` | Adding or modifying tests |
+
+### BREAKING CHANGE
+
+Breaking changes introduce API incompatibility and correlate with SemVer MAJOR version bump.
+
+**Indicating Breaking Changes:**
+
+1. **Preferred: Using `!` notation** (concise and visible)
+   ```
+   feat!: remove deprecated authentication endpoints
+   feat(api)!: change response format to JSON:API specification
+   ```
+
+2. **Alternative: Using footer** (allows detailed explanation)
+   ```
+   feat(auth): migrate to OAuth 2.0
+
+   BREAKING CHANGE: legacy session-based authentication is no longer supported.
+   Users must migrate to OAuth 2.0 tokens before upgrading.
+   ```
+
+3. **Combined: Both `!` and footer** (for maximum clarity)
+   ```
+   refactor(db)!: change connection pool implementation
+
+   BREAKING CHANGE: `ConnectionPool::new()` now requires a `Config` parameter.
+   Previous: `ConnectionPool::new(url)`
+   New: `ConnectionPool::new(url, Config::default())`
+   ```
+
+**Requirements:**
+
+- Breaking changes MUST be indicated using `!` or `BREAKING CHANGE:` footer
+- When using `!`, additional `BREAKING CHANGE:` footer is OPTIONAL
+- `BREAKING CHANGE` MUST be uppercase in footer
+- `BREAKING-CHANGE` is synonymous with `BREAKING CHANGE`
+
+### Revert Commits
+
+When reverting a previous commit, use the `revert` type with references to the original commit(s).
+
+**Format:**
+
+```
+revert: <original commit subject>
+
+Refs: <commit SHA(s)>
+```
+
+**Example:**
+
+```
+revert: add experimental caching layer
+
+This reverts the experimental caching implementation that caused
+memory leaks under high load conditions.
+
+Refs: a1b2c3d, e4f5g6h
+```
+
+**Requirements:**
+
+- Subject SHOULD match the original commit's subject
+- Body SHOULD explain why the revert is necessary
+- Footer MUST include `Refs:` with the original commit SHA(s)
 
 ### CM-2 (MUST): Body Format
 
@@ -243,6 +351,33 @@ Additional context or explanation.
 
 ### CM-3 (MUST): Footer Format
 
+Footers follow the [git trailer convention](https://git-scm.com/docs/git-interpret-trailers).
+
+**Footer Syntax:**
+
+```
+<token>: <value>
+```
+
+or
+
+```
+<token> #<value>
+```
+
+**Standard Footers:**
+
+| Token | Description | Example |
+|-------|-------------|---------|
+| `BREAKING CHANGE` | Indicates breaking API change | `BREAKING CHANGE: remove deprecated method` |
+| `Co-Authored-By` | Credit to co-authors | `Co-Authored-By: Name <email>` |
+| `Refs` | Reference to issues/commits | `Refs: #123, #456` |
+| `Closes` | Closes related issues | `Closes #123` |
+| `Fixes` | Fixes related issues | `Fixes #789` |
+| `Reviewed-by` | Reviewer credit | `Reviewed-by: Name <email>` |
+
+**Required Footer for Claude Code:**
+
 ```
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
@@ -252,9 +387,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 **Requirements:**
 
-- **EXACTLY one blank line** between body and footer
-- Footer **MUST** include the Claude Code attribution
-- Footer **MUST** include Co-Authored-By line
+- **EXACTLY one blank line** between body and footer section
+- Footer tokens MUST use `-` in place of whitespace (except `BREAKING CHANGE`)
+- Footer **MUST** include the Claude Code attribution when AI-assisted
+- Footer **MUST** include Co-Authored-By line when AI-assisted
 
 ---
 
@@ -274,8 +410,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 #### SR-1 (MUST): Concrete Descriptions
 
 - Be specific about what changed and why
-- ❌ Bad: "Improve authentication"
-- ✅ Good: "Add RS256 algorithm support to JWT token validation"
+- ❌ Bad: "improve authentication" (too vague)
+- ✅ Good: "add RS256 algorithm support to JWT token validation"
 
 #### SR-2 (SHOULD): Context and Impact
 

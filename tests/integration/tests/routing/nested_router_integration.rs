@@ -34,8 +34,8 @@ async fn test_nested_router_basic_structure() {
 	// Nest posts under users
 	let api_router = ServerRouter::new()
 		.with_prefix("/api")
-		.include("/users/", users_router)
-		.include("/posts/", posts_router);
+		.mount("/users/", users_router)
+		.mount("/posts/", posts_router);
 
 	// Verify structure
 	assert_eq!(api_router.prefix(), "/api");
@@ -78,15 +78,15 @@ async fn test_deeply_nested_router() {
 
 	let teams_router = ServerRouter::new()
 		.with_namespace("teams")
-		.include("/{team_id}/members/", members_router);
+		.mount("/{team_id}/members/", members_router);
 
 	let orgs_router = ServerRouter::new()
 		.with_namespace("orgs")
-		.include("/{org_id}/teams/", teams_router);
+		.mount("/{org_id}/teams/", teams_router);
 
 	let api_router = ServerRouter::new()
 		.with_prefix("/api/v1")
-		.include("/orgs/", orgs_router);
+		.mount("/orgs/", orgs_router);
 
 	// Verify deep nesting structure
 	assert_eq!(api_router.prefix(), "/api/v1");

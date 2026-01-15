@@ -1,16 +1,16 @@
-//! Router include() API integration tests (Django-style alias for mount())
+//! Router mount() API integration tests
 
 use reinhardt_routers::ServerRouter;
 
 #[tokio::test]
-async fn test_router_include_basic() {
+async fn test_router_mount_basic() {
 	// Create child router
 	let users_router = ServerRouter::new().with_namespace("users");
 
-	// Use include() to mount child router
+	// Use mount() to mount child router
 	let router = ServerRouter::new()
 		.with_prefix("/api")
-		.include("/users/", users_router);
+		.mount("/users/", users_router);
 
 	// Verify router structure using public API
 	assert_eq!(router.prefix(), "/api");
@@ -18,7 +18,7 @@ async fn test_router_include_basic() {
 }
 
 #[tokio::test]
-async fn test_router_include_mut() {
+async fn test_router_mount_mut() {
 	// Create parent router
 	let mut router = ServerRouter::new().with_prefix("/api");
 
@@ -26,9 +26,9 @@ async fn test_router_include_mut() {
 	let users_router = ServerRouter::new().with_namespace("users");
 	let posts_router = ServerRouter::new().with_namespace("posts");
 
-	// Use include_mut() to mount child routers
-	router.include_mut("/users/", users_router);
-	router.include_mut("/posts/", posts_router);
+	// Use mount_mut() to mount child routers
+	router.mount_mut("/users/", users_router);
+	router.mount_mut("/posts/", posts_router);
 
 	// Verify router structure using public API
 	assert_eq!(router.prefix(), "/api");
@@ -36,18 +36,18 @@ async fn test_router_include_mut() {
 }
 
 #[tokio::test]
-async fn test_router_include_vs_mount_equivalence() {
-	// Create routers using mount()
+async fn test_router_mount_multiple() {
+	// Create routers and verify mount works correctly
 	let users_router1 = ServerRouter::new().with_namespace("users");
 	let router1 = ServerRouter::new()
 		.with_prefix("/api")
 		.mount("/users/", users_router1);
 
-	// Create equivalent routers using include()
+	// Create another router with same structure
 	let users_router2 = ServerRouter::new().with_namespace("users");
 	let router2 = ServerRouter::new()
 		.with_prefix("/api")
-		.include("/users/", users_router2);
+		.mount("/users/", users_router2);
 
 	// Verify both routers have identical structure using public API
 	assert_eq!(router1.prefix(), router2.prefix());
@@ -55,17 +55,17 @@ async fn test_router_include_vs_mount_equivalence() {
 }
 
 #[tokio::test]
-async fn test_router_include_nested() {
+async fn test_router_mount_nested() {
 	// Create deeply nested router structure
 	let detail_router = ServerRouter::new().with_namespace("user_detail");
 
 	let users_router = ServerRouter::new()
 		.with_namespace("users")
-		.include("/{id}/", detail_router);
+		.mount("/{id}/", detail_router);
 
 	let api_router = ServerRouter::new()
 		.with_prefix("/api")
-		.include("/users/", users_router);
+		.mount("/users/", users_router);
 
 	// Verify nested structure using public API
 	assert_eq!(api_router.prefix(), "/api");

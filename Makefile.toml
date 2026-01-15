@@ -49,12 +49,12 @@ args = ["clean"]
 [tasks.fmt-check]
 description = "Check all code formatting (Rust + page! DSL)"
 command = "cargo"
-args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all", "--check", "."]
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all", "--check"]
 
 [tasks.fmt-fix]
 description = "Auto-fix all code formatting (Rust + page! DSL)"
 command = "cargo"
-args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all", "."]
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all"]
 
 [tasks.fmt-rust-only]
 description = "Format Rust code only (without page! macro protection)"

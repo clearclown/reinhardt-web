@@ -47,6 +47,18 @@ filter = 'test(two_phase_commit)'
 threads-required = 1
 slow-timeout = "120s"
 
+# Database edge cases tests require serial execution
+# These tests use PostgreSQL containers with limited connection pools
+[[profile.default.overrides]]
+filter = 'test(edge_cases)'
+threads-required = 1
+
+# Infrastructure database integration tests require serial execution
+# These tests spawn multiple containers and have deep fixture chains
+[[profile.default.overrides]]
+filter = 'test(database_integration)'
+threads-required = 1
+
 # Note: trybuild UI tests are now separated into a dedicated profile
 # Use `cargo make ui-test` to run UI tests with the ui-test profile
 # UI tests are identified by binary(/ui/) filter pattern
@@ -78,10 +90,10 @@ test-threads = 2  # 4→2 for stricter connection control
 # Increase timeouts for database operations
 slow-timeout = "60s"
 
-# Database migration/introspect/views tests need sequential execution
+# Database migration/introspect/views/edge_cases tests need sequential execution
 # to avoid connection pool exhaustion
 [[profile.db-tests.overrides]]
-filter = 'test(/(migrations|introspect|views|db_)/)'
+filter = 'test(/(migrations|introspect|views|db_|edge_cases)/)'
 threads-required = 1
 
 # Long-running test profile (DI macro compilation, etc.)

@@ -184,7 +184,7 @@ use reinhardt::db::DatabaseConnection;
 use reinhardt::cache::Cache;
 use std::sync::Arc;
 
-#[get("/users/:id", name = "get_user")]
+#[get("/users/{id}/", name = "get_user")]
 pub async fn get_user(
     req: Request,
     #[inject] db: Arc<DatabaseConnection>,
@@ -286,7 +286,7 @@ use reinhardt::routing::Route;
 pub fn url_patterns() -> Vec<Route> {
     vec![
         Route::from_handler("/users", list_users),
-        Route::from_handler("/users/:id", get_user),
+        Route::from_handler("/users/{id}/", get_user),
     ]
 }
 ```
@@ -376,7 +376,7 @@ impl std::fmt::Display for ApiError {
 impl std::error::Error for ApiError {}
 
 // Use in handlers
-#[get("/users/:id", name = "get_user")]
+#[get("/users/{id}/", name = "get_user")]
 pub async fn get_user(
     Path(id): Path<i64>,
     #[inject] db: Arc<DatabaseConnection>,
@@ -424,8 +424,8 @@ let router = UnifiedRouter::new()
 ### 1. Use Named Routes
 
 ```rust
-#[get("/users/:id", name = "get_user")]  // ✅ Good
-#[get("/users/:id")]                     // ❌ Avoid
+#[get("/users/{id}/", name = "get_user")]  // ✅ Good
+#[get("/users/{id}/")]                   // ❌ Avoid (no name)
 ```
 
 Named routes enable URL reversal and better debugging.
