@@ -30,7 +30,7 @@ reinhardt-auth = { workspace = true, features = [
   "redis-sessions",
 ] }
 reinhardt-security = { workspace = true }
-reinhardt-http = { workspace = true }
+reinhardt-http = { workspace = true, features = ["messages"] }
 reinhardt-params = { workspace = true }
 reinhardt-di = { workspace = true, features = ["macros"] }
 reinhardt-middleware = { workspace = true }

@@ -9,7 +9,7 @@
 //! like `#[derive(Model)]` and `#[endpoint]` generate (e.g., `::reinhardt::db::orm::Model`).
 
 use bytes::Bytes;
-use reinhardt_core::types::Handler;
+use reinhardt_http::Handler;
 use reinhardt_http::Request;
 use reinhardt_migrations::{Constraint, ForeignKeyAction};
 use reinhardt_server::{HttpServer, ShutdownCoordinator};

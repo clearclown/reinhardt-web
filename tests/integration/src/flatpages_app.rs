@@ -342,7 +342,7 @@ pub fn build_flatpages_app_with_auth(pool: Pool<Postgres>) -> Arc<dyn Handler> {
 	router.add_route(path("/{path:.*}", fallback_handler));
 
 	let auth_middleware = AuthenticationMiddleware::new(session_store, auth_backend);
-	let chain = reinhardt_types::MiddlewareChain::new(Arc::new(router))
+	let chain = reinhardt_http::MiddlewareChain::new(Arc::new(router))
 		.with_middleware(Arc::new(auth_middleware));
 
 	Arc::new(chain)
@@ -371,7 +371,7 @@ pub fn build_flatpages_app_without_auth(pool: Pool<Postgres>) -> Arc<dyn Handler
 	router.add_route(path("/{path:.*}", fallback_handler));
 
 	let auth_middleware = AuthenticationMiddleware::new(session_store, auth_backend);
-	let chain = reinhardt_types::MiddlewareChain::new(Arc::new(router))
+	let chain = reinhardt_http::MiddlewareChain::new(Arc::new(router))
 		.with_middleware(Arc::new(auth_middleware));
 
 	Arc::new(chain)

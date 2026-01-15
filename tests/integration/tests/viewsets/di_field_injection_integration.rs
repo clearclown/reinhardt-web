@@ -5,7 +5,7 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_di::{Injectable, Injected, InjectionContext, SingletonScope, injectable};
 use reinhardt_exception::Result;
-use reinhardt_types::{Request, Response};
+use reinhardt_http::{Request, Response};
 use reinhardt_viewsets::{Action, ViewSet};
 use std::sync::Arc;
 
