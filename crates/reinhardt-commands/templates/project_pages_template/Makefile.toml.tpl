@@ -232,14 +232,14 @@ args = ["test"]
 # ============================================================================
 
 [tasks.fmt-check]
-description = "Check code formatting"
-command = "cargo"
-args = ["fmt", "--all", "--", "--check"]
+description = "Check code formatting (rustfmt + page! DSL)"
+command = "reinhardt-admin"
+args = ["fmt", ".", "--check"]
 
 [tasks.fmt-fix]
-description = "Fix code formatting"
-command = "cargo"
-args = ["fmt", "--all"]
+description = "Fix code formatting (rustfmt + page! DSL)"
+command = "reinhardt-admin"
+args = ["fmt", "."]
 
 [tasks.clippy-check]
 description = "Check linting rules"
