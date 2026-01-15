@@ -83,7 +83,10 @@ enum Commands {
 		subcommand: PluginCommands,
 	},
 
-	/// Format page! macro DSL in Rust source files
+	/// Format Rust code and page! macro DSL in source files
+	///
+	/// By default, runs both rustfmt (protecting page! macros) and page! DSL formatting.
+	/// Use --with-rustfmt=false to only format page! macro DSL.
 	Fmt {
 		/// Path to file or directory to format
 		#[arg(value_name = "PATH")]
@@ -92,6 +95,10 @@ enum Commands {
 		/// Check if files are formatted without modifying them
 		#[arg(long)]
 		check: bool,
+
+		/// Also run rustfmt (with page! macro protection)
+		#[arg(long, default_value = "true", action = clap::ArgAction::Set)]
+		with_rustfmt: bool,
 
 		/// Path to rustfmt.toml configuration file
 		#[arg(long, value_name = "PATH")]
@@ -306,6 +313,7 @@ async fn main() {
 		Commands::Fmt {
 			path,
 			check,
+			with_rustfmt,
 			config_path,
 			edition,
 			style_edition,
@@ -315,6 +323,7 @@ async fn main() {
 		} => run_fmt(
 			path,
 			check,
+			with_rustfmt,
 			config_path,
 			edition,
 			style_edition,
@@ -519,6 +528,7 @@ async fn run_plugin(subcommand: PluginCommands, verbosity: u8) -> CommandResult<
 fn run_fmt(
 	path: PathBuf,
 	check: bool,
+	with_rustfmt: bool,
 	config_path: Option<PathBuf>,
 	edition: Option<String>,
 	style_edition: Option<String>,
@@ -544,7 +554,7 @@ fn run_fmt(
 	// Resolve config path
 	let resolved_config_path = config_path.or_else(|| find_rustfmt_config(&path));
 
-	let _options = RustfmtOptions {
+	let options = RustfmtOptions {
 		config_path: resolved_config_path.clone(),
 		edition,
 		style_edition,
@@ -572,7 +582,7 @@ fn run_fmt(
 
 	for (index, file_path) in files.iter().enumerate() {
 		let progress = format!("[{}/{}]", index + 1, total_files);
-		let content = std::fs::read_to_string(file_path).map_err(|e| {
+		let original_content = std::fs::read_to_string(file_path).map_err(|e| {
 			reinhardt_commands::CommandError::ExecutionError(format!(
 				"Failed to read {}: {}",
 				file_path.display(),
@@ -580,87 +590,148 @@ fn run_fmt(
 			))
 		})?;
 
-		match formatter.format(&content) {
-			Ok(result) => {
-				// Check if formatting was skipped
-				if let Some(reason) = &result.skipped {
-					use crate::ast_formatter::SkipReason;
-					match reason {
-						SkipReason::NoPageMacro => {
-							// Skip files without page! macros (no logging, no counting)
-							continue;
-						}
-						SkipReason::FileWideMarker | SkipReason::AllMacrosIgnored => {
-							// Log ignored files with reason
-							ignored_count += 1;
-							println!(
-								"{} {} {} ({})",
-								progress.bright_blue(),
-								"Ignored:".yellow(),
-								file_path.display(),
-								reason
-							);
-							continue;
-						}
-					}
-				}
+		// Check for file-wide ignore marker BEFORE any processing
+		if formatter.has_ignore_all_marker(&original_content) {
+			ignored_count += 1;
+			if verbosity > 0 {
+				println!(
+					"{} {} {} (reinhardt-fmt: ignore-all)",
+					progress.bright_blue(),
+					"Ignored:".yellow(),
+					file_path.display()
+				);
+			}
+			continue;
+		}
 
-				if result.content != content {
-					if check {
-						// Check mode: report unformatted files
-						println!("{} Would format: {}", progress, file_path.display());
-						formatted_count += 1;
-					} else {
-						// Backup if requested
-						if backup {
-							let backup_path = file_path.with_extension("rs.bak");
-							std::fs::copy(file_path, &backup_path).map_err(|e| {
-								reinhardt_commands::CommandError::ExecutionError(format!(
-									"Failed to backup {}: {}",
-									file_path.display(),
-									e
-								))
-							})?;
-						}
+		// Process the file based on with_rustfmt option
+		let final_result = if with_rustfmt {
+			// Pipeline: protect -> rustfmt -> restore -> page! format
+			// Step 1: Protect page! macros
+			let protect_result = formatter.protect_page_macros(&original_content);
 
-						// Format mode: write changes
-						std::fs::write(file_path, &result.content).map_err(|e| {
-							reinhardt_commands::CommandError::ExecutionError(format!(
-								"Failed to write {}: {}",
-								file_path.display(),
-								e
-							))
-						})?;
-						// Color output: success in green
-						println!(
-							"{} {} {}",
-							progress.bright_blue(),
-							"Formatted:".green(),
-							file_path.display()
-						);
-						formatted_count += 1;
-					}
-				} else {
-					unchanged_count += 1;
-					// Always show unchanged files (verbosity condition removed)
-					println!(
-						"{} {} {}",
+			// Step 2: Run rustfmt on protected content
+			let rustfmt_output = match run_rustfmt(&protect_result.protected_content, &options) {
+				Ok(output) => output,
+				Err(e) => {
+					eprintln!(
+						"{} {} {}: rustfmt failed: {}",
 						progress.bright_blue(),
-						"Unchanged:".dimmed(),
-						file_path.display()
+						"Error".red(),
+						file_path.display(),
+						e
 					);
+					error_count += 1;
+					continue;
+				}
+			};
+
+			// Step 3: Restore page! macros
+			let restored =
+				AstPageFormatter::restore_page_macros(&rustfmt_output, &protect_result.backups);
+
+			// Step 4: Format page! macros with reinhardt-fmt
+			match formatter.format(&restored) {
+				Ok(result) => result.content,
+				Err(e) => {
+					eprintln!(
+						"{} {} {}: page! format failed: {}",
+						progress.bright_blue(),
+						"Error".red(),
+						file_path.display(),
+						e
+					);
+					error_count += 1;
+					continue;
 				}
 			}
-			Err(e) => {
-				// Color output: errors in red
-				eprintln!(
-					"{} {} {}: {}",
+		} else {
+			// Original behavior: page! DSL only
+			match formatter.format(&original_content) {
+				Ok(result) => {
+					// Check if formatting was skipped
+					if let Some(reason) = &result.skipped {
+						use crate::ast_formatter::SkipReason;
+						match reason {
+							SkipReason::NoPageMacro => {
+								// Skip files without page! macros (no logging, no counting)
+								continue;
+							}
+							SkipReason::FileWideMarker | SkipReason::AllMacrosIgnored => {
+								// Log ignored files with reason
+								ignored_count += 1;
+								println!(
+									"{} {} {} ({})",
+									progress.bright_blue(),
+									"Ignored:".yellow(),
+									file_path.display(),
+									reason
+								);
+								continue;
+							}
+						}
+					}
+					result.content
+				}
+				Err(e) => {
+					eprintln!(
+						"{} {} {}: {}",
+						progress.bright_blue(),
+						"Error".red(),
+						file_path.display(),
+						e
+					);
+					error_count += 1;
+					continue;
+				}
+			}
+		};
+
+		// Compare with original
+		if final_result != original_content {
+			if check {
+				// Check mode: report unformatted files
+				println!("{} Would format: {}", progress, file_path.display());
+				formatted_count += 1;
+			} else {
+				// Backup if requested
+				if backup {
+					let backup_path = file_path.with_extension("rs.bak");
+					std::fs::copy(file_path, &backup_path).map_err(|e| {
+						reinhardt_commands::CommandError::ExecutionError(format!(
+							"Failed to backup {}: {}",
+							file_path.display(),
+							e
+						))
+					})?;
+				}
+
+				// Format mode: write changes
+				std::fs::write(file_path, &final_result).map_err(|e| {
+					reinhardt_commands::CommandError::ExecutionError(format!(
+						"Failed to write {}: {}",
+						file_path.display(),
+						e
+					))
+				})?;
+				// Color output: success in green
+				println!(
+					"{} {} {}",
 					progress.bright_blue(),
-					"Error".red(),
-					file_path.display(),
-					e
+					"Formatted:".green(),
+					file_path.display()
 				);
-				error_count += 1;
+				formatted_count += 1;
+			}
+		} else {
+			unchanged_count += 1;
+			if verbosity > 0 {
+				println!(
+					"{} {} {}",
+					progress.bright_blue(),
+					"Unchanged:".dimmed(),
+					file_path.display()
+				);
 			}
 		}
 	}
