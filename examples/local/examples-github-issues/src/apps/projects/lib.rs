@@ -2,7 +2,7 @@
 //!
 //! A RESTful API application
 
-use reinhardt::AppConfig;
+use reinhardt::app_config;
 
 pub mod admin;
 pub mod models;
@@ -12,7 +12,6 @@ pub mod tests;
 pub mod urls;
 pub mod views;
 
-#[derive(AppConfig)]
 #[app_config(name = "projects", label = "projects")]
 pub struct ProjectsConfig;
 

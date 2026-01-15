@@ -1,11 +1,11 @@
 //! URL configuration for todos app
 
-use reinhardt::UnifiedRouter;
+use reinhardt::ServerRouter;
 
 use super::views;
 
-pub fn url_patterns() -> UnifiedRouter {
-	UnifiedRouter::new()
+pub fn url_patterns() -> ServerRouter {
+	ServerRouter::new()
 		.endpoint(views::list_todos)
 		.endpoint(views::create_todo)
 		.endpoint(views::get_todo)

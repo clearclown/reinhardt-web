@@ -8,11 +8,11 @@
 //! - Default: Function-based views
 //! - USE_VIEWSET=1: ViewSet-based views
 
-use reinhardt::UnifiedRouter;
+use reinhardt::ServerRouter;
 
 use super::views;
 
-pub fn url_patterns() -> UnifiedRouter {
+pub fn url_patterns() -> ServerRouter {
 	// Check which approach to use
 	if std::env::var("USE_VIEWSET").is_ok() {
 		// Option 2: ViewSet-based approach (Tutorial 6)
@@ -28,11 +28,11 @@ pub fn url_patterns() -> UnifiedRouter {
 		// - ?page=1&page_size=10                  - Pagination
 		// - ?language=rust&title=hello            - Filtering
 		// - ?ordering=created_at,-title           - Ordering (- for descending)
-		UnifiedRouter::new().viewset("/snippets-viewset", views::SnippetViewSet::viewset())
+		ServerRouter::new().viewset("/snippets-viewset", views::SnippetViewSet::viewset())
 	} else {
 		// Option 1: Function-based approach (Tutorial 1-5)
 		// Explicitly register each endpoint
-		UnifiedRouter::new()
+		ServerRouter::new()
 			.endpoint(views::list)
 			.endpoint(views::create)
 			.endpoint(views::retrieve)

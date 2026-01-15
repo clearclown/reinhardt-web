@@ -2,14 +2,14 @@
 //!
 //! The `routes` function defines all URL patterns for this project.
 
-use reinhardt::UnifiedRouter;
+use reinhardt::ServerRouter;
 use reinhardt::routes;
 
 use super::views;
 
 #[routes]
-pub fn routes() -> UnifiedRouter {
-	UnifiedRouter::new()
+pub fn routes() -> ServerRouter {
+	ServerRouter::new()
 		.endpoint(views::root)
 		.endpoint(views::health)
 		.endpoint(views::list_users)
