@@ -11,7 +11,7 @@
 use async_trait::async_trait;
 use http::StatusCode;
 use reinhardt_core::http::{Request, Response};
-use reinhardt_core::types::Handler;
+use reinhardt_core::Handler;
 use reinhardt_exception::{Error, Result};
 use reinhardt_server::ShutdownCoordinator;
 use reinhardt_test::APIClient;

@@ -3,7 +3,7 @@
 
 use reinhardt_http::{Request, Response};
 use reinhardt_server::{HttpServer, serve};
-use reinhardt_types::Handler;
+use reinhardt_http::Handler;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
