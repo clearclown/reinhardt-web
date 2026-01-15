@@ -140,15 +140,6 @@ mod tests {
 	use hyper::{HeaderMap, Method, StatusCode, Version};
 	use reinhardt_messages::{Level, MemoryStorage, Message};
 
-	struct MockHandler;
-
-	#[async_trait]
-	impl Handler for MockHandler {
-		async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
-			Ok(Response::new(StatusCode::OK))
-		}
-	}
-
 	struct AddMessageHandler;
 
 	#[async_trait]
