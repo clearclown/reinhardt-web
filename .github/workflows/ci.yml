@@ -161,8 +161,32 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Run all tests
-        run: cargo make test
+      - name: Run unit tests
+        run: cargo make unit-test
+
+      - name: Docker cleanup after unit tests
+        run: docker system prune -af
+
+      - name: Run integration tests
+        run: cargo make integration-test-only
+
+      - name: Docker cleanup after integration tests
+        run: docker system prune -af
+
+      - name: Run doc tests
+        run: cargo make doc-test-only
+
+      - name: Docker cleanup after doc tests
+        run: docker system prune -af
+
+      - name: Run examples tests
+        run: cargo make examples-test-only
+
+      - name: Docker cleanup after examples tests
+        run: docker system prune -af
+
+      - name: Run UI tests
+        run: cargo make ui-test-only
 
   # All jobs must pass
   ci-success:
