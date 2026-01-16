@@ -12,6 +12,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   CARGO_TARGET_DIR: /tmp/cargo_target
+  CARGO_INCREMENTAL: 0
 
 jobs:
   check:
@@ -28,7 +29,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: false
+          swap-storage: true
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,7 +89,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: false
+          swap-storage: true
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -133,7 +134,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: false
+          swap-storage: true
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -159,9 +160,6 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
-
-      - name: Build examples
-        run: cargo make examples-build
 
       - name: Run all tests
         run: cargo make test
