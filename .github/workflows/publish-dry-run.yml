@@ -87,16 +87,58 @@ jobs:
         run: |
           echo "::group::Running dry-run publish for changed crates"
 
-          # cargo-workspaces automatically detects changed crates
-          # and publishes them in dependency order
-          if cargo ws publish --dry-run; then
-            echo "✅ Dry-run passed for all changed crates"
-            echo "::notice::All dry-run checks passed successfully"
-          else
-            echo "❌ Dry-run failed"
-            echo "::error::Dry-run publish failed. Check logs above for details."
+          # Get crates in publishing order (dependency-aware)
+          # Use --skip-published to only check unpublished crates
+          CRATES_JSON=$(cargo ws plan --json --skip-published 2>/dev/null || cargo ws plan --json 2>/dev/null)
+
+          # Parse JSON to get crate names (public crates only)
+          CRATES=$(echo "$CRATES_JSON" | jq -r '.[] | select(.private == false) | .name')
+
+          if [ -z "$CRATES" ]; then
+            echo "No public crates to check"
+            echo "::notice::No public crates found for dry-run"
+            exit 0
+          fi
+
+          TOTAL=$(echo "$CRATES" | wc -l | tr -d ' ')
+          echo "Found $TOTAL public crates to check"
+          echo ""
+
+          FAILED_CRATES=""
+          PASSED=0
+          FAILED=0
+
+          for CRATE in $CRATES; do
+            echo "::group::Checking $CRATE"
+
+            if cargo publish --dry-run -p "$CRATE" 2>&1; then
+              echo "✅ $CRATE passed"
+              PASSED=$((PASSED + 1))
+            else
+              echo "❌ $CRATE failed"
+              FAILED=$((FAILED + 1))
+              FAILED_CRATES="$FAILED_CRATES $CRATE"
+            fi
+
+            echo "::endgroup::"
+          done
+
+          echo ""
+          echo "=========================================="
+          echo "Summary: $PASSED passed, $FAILED failed (total: $TOTAL)"
+          echo "=========================================="
+
+          if [ $FAILED -gt 0 ]; then
+            echo ""
+            echo "❌ Dry-run failed for the following crates:"
+            echo "$FAILED_CRATES" | tr ' ' '\n' | grep -v '^$'
+            echo "::error::$FAILED crates failed dry-run publish. Check logs above for details."
             exit 1
           fi
+
+          echo ""
+          echo "✅ All $PASSED crates passed dry-run publish check"
+          echo "::notice::All dry-run checks passed successfully"
 
           echo "::endgroup::"
 
@@ -106,7 +148,7 @@ jobs:
           {
             echo "## 📋 Dry-Run Publish Check"
             echo ""
-            echo "cargo-workspaces validated all changed crates for publishing."
+            echo "Each crate was validated individually using \`cargo publish --dry-run\`."
             echo ""
             echo "### Next Steps"
             echo ""
