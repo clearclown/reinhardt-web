@@ -15,184 +15,52 @@ env:
   CARGO_INCREMENTAL: 0
 
 jobs:
+  # Call all reusable workflows
   check:
     name: Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust 1.91.1
-        uses: dtolnay/rust-toolchain@1.91.1
-
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          protoc --version
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-make
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-make
-
-      - name: Run cargo check
-        run: cargo make check
+    uses: ./.github/workflows/check.yml
 
   fmt:
     name: Format
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust 1.91.1
-        uses: dtolnay/rust-toolchain@1.91.1
-        with:
-          components: rustfmt
-
-      - name: Install cargo-make
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-make
-
-      - name: Check code formatting
-        run: cargo make fmt-check
+    uses: ./.github/workflows/fmt.yml
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+    uses: ./.github/workflows/clippy.yml
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  unit-test:
+    name: Unit Tests
+    uses: ./.github/workflows/unit-test.yml
 
-      - name: Install Rust 1.91.1
-        uses: dtolnay/rust-toolchain@1.91.1
-        with:
-          components: clippy
+  integration-test:
+    name: Integration Tests
+    uses: ./.github/workflows/integration-test.yml
 
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          protoc --version
+  doc-test:
+    name: Documentation Tests
+    uses: ./.github/workflows/doc-test.yml
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+  examples-test:
+    name: Examples Tests
+    uses: ./.github/workflows/examples-test.yml
 
-      - name: Install cargo-make
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-make
-
-      - name: Run clippy
-        run: cargo make clippy-check
-
-  test:
-    name: All Tests (unit, integration, doc, examples)
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    # Note: TestContainers will manage database services dynamically
-    # No need for static services configuration
-
-    steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust 1.91.1
-        uses: dtolnay/rust-toolchain@1.91.1
-
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-          protoc --version
-
-      - name: Install cargo-make
-        uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-make
-
-      - name: Install cargo-nextest
-        uses: taiki-e/install-action@v2
-        with:
-          tool: nextest
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Run unit tests
-        run: cargo make unit-test
-
-      - name: Docker cleanup after unit tests
-        run: docker system prune -af
-
-      - name: Run integration tests
-        run: cargo make integration-test-only
-
-      - name: Docker cleanup after integration tests
-        run: docker system prune -af
-
-      - name: Run doc tests
-        run: cargo make doc-test-only
-
-      - name: Docker cleanup after doc tests
-        run: docker system prune -af
-
-      - name: Run examples tests
-        run: cargo make examples-test-only
-
-      - name: Docker cleanup after examples tests
-        run: docker system prune -af
-
-      - name: Run UI tests
-        run: cargo make ui-test-only
+  ui-test:
+    name: UI Tests
+    uses: ./.github/workflows/ui-test.yml
 
   # All jobs must pass
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [check, fmt, clippy, test]
+    needs:
+      - check
+      - fmt
+      - clippy
+      - unit-test
+      - integration-test
+      - doc-test
+      - examples-test
+      - ui-test
     steps:
       - name: Mark CI as successful
         run: echo "All CI checks passed!"
