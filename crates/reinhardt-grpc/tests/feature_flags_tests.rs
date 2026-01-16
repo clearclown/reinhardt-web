@@ -72,6 +72,37 @@ mod di_feature_disabled {
 	use reinhardt_grpc::adapter::{GrpcServiceAdapter, GrpcSubscriptionAdapter};
 	use reinhardt_grpc::error::{GrpcError, GrpcResult};
 
+	// ===== Mock implementations for compilation testing =====
+	struct MockAdapter;
+
+	#[async_trait]
+	impl GrpcServiceAdapter for MockAdapter {
+		type Input = String;
+		type Output = String;
+		type Error = GrpcError;
+
+		async fn call(&self, _input: Self::Input) -> Result<Self::Output, Self::Error> {
+			unimplemented!("Mock implementation for compilation test only")
+		}
+	}
+
+	struct MockSubscriptionAdapter;
+
+	impl GrpcSubscriptionAdapter for MockSubscriptionAdapter {
+		type Proto = String;
+		type GraphQL = String;
+		type Error = GrpcError;
+
+		fn map_event(&self, _proto: Self::Proto) -> Option<Self::GraphQL> {
+			unimplemented!("Mock implementation for compilation test only")
+		}
+
+		fn handle_error(&self, _error: Self::Error) -> String {
+			unimplemented!("Mock implementation for compilation test only")
+		}
+	}
+
+	// ===== Tests =====
 	#[test]
 	fn test_di_feature_disabled_compilation() {
 		// This test verifies that basic gRPC functionality works without di feature
@@ -91,8 +122,10 @@ mod di_feature_disabled {
 
 	#[test]
 	fn test_basic_grpc_without_di() {
-		// Test that we can use gRPC adapters without DI
+		// This test verifies that users can define adapters without DI
+		// Local struct definitions are intentionally not instantiated - this is a compile-time test
 
+		#[allow(dead_code)] // Compile-time test only - struct is never constructed
 		struct MockAdapter;
 
 		#[async_trait]
@@ -106,6 +139,7 @@ mod di_feature_disabled {
 			}
 		}
 
+		#[allow(dead_code)] // Compile-time test only - struct is never constructed
 		struct MockSubscriptionAdapter;
 
 		impl GrpcSubscriptionAdapter for MockSubscriptionAdapter {
@@ -152,42 +186,5 @@ mod common_tests {
 			decoded.is_ok(),
 			"Proto types should work with any feature combination"
 		);
-	}
-}
-
-// ============================================================================
-// Mock implementations for testing
-// ============================================================================
-
-#[cfg(not(feature = "di"))]
-struct MockAdapter;
-
-#[cfg(not(feature = "di"))]
-#[async_trait::async_trait]
-impl GrpcServiceAdapter for MockAdapter {
-	type Input = String;
-	type Output = String;
-	type Error = GrpcError;
-
-	async fn call(&self, _input: Self::Input) -> Result<Self::Output, Self::Error> {
-		unimplemented!("Mock implementation for compilation test only")
-	}
-}
-
-#[cfg(not(feature = "di"))]
-struct MockSubscriptionAdapter;
-
-#[cfg(not(feature = "di"))]
-impl GrpcSubscriptionAdapter for MockSubscriptionAdapter {
-	type Proto = String;
-	type GraphQL = String;
-	type Error = GrpcError;
-
-	fn map_event(&self, _proto: Self::Proto) -> Option<Self::GraphQL> {
-		unimplemented!("Mock implementation for compilation test only")
-	}
-
-	fn handle_error(&self, _error: Self::Error) -> String {
-		unimplemented!("Mock implementation for compilation test only")
 	}
 }
