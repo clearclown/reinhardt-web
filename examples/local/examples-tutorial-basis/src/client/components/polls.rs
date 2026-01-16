@@ -17,7 +17,6 @@ use {
 	reinhardt::pages::spawn::spawn_task,
 };
 
-
 /// Polls index page - List all polls
 ///
 /// Displays a list of available polls with links to vote.
