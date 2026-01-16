@@ -108,6 +108,7 @@ command = "cargo"
 args = ["test", "--workspace", "--doc", "--quiet", "--all-features", "--no-fail-fast"]
 
 [tasks.doc-test]
+clear = true
 description = "Run only documentation tests (with Docker cleanup)"
 dependencies = ["docker-cleanup-force", "doc-test-only"]
 
@@ -267,6 +268,7 @@ dependencies = [
 ]
 
 [tasks.test]
+clear = true
 description = "Run all tests (with Docker cleanup)"
 dependencies = ["docker-cleanup-force", "test-only"]
 
@@ -275,6 +277,7 @@ dependencies = ["docker-cleanup-force", "test-only"]
 # ============================================================================
 
 [tasks.ci]
+clear = true
 description = "Run all CI checks (check, fmt, clippy, examples-build, tests)"
 dependencies = ["check", "fmt-check", "clippy-check", "examples-build", "test"]
 
