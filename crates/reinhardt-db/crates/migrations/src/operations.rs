@@ -3574,7 +3574,8 @@ impl Operation {
 			// so that sqlx's type_info().name() returns "BOOLEAN" and our convert_row
 			// can properly detect boolean columns and convert integer 0/1 to bool values.
 			FieldType::Boolean => col_def.custom(Alias::new("BOOLEAN")),
-			FieldType::DateTime | FieldType::TimestampTz => col_def.timestamp(),
+			FieldType::DateTime => col_def.timestamp(),
+			FieldType::TimestampTz => col_def.timestamp_with_time_zone(),
 			FieldType::Date => col_def.date(),
 			FieldType::Time => col_def.time(),
 			FieldType::Decimal { precision, scale } => col_def.decimal_len(*precision, *scale),
