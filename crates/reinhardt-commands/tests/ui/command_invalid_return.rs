@@ -4,7 +4,7 @@
 
 use async_trait::async_trait;
 use reinhardt_commands::{
-	BaseCommand, CommandArgument, CommandContext, CommandError, CommandOption,
+	BaseCommand, CommandArgument, CommandContext, CommandOption,
 };
 
 /// Invalid command with wrong return type
