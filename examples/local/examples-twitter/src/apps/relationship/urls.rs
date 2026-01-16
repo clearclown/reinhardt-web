@@ -4,10 +4,10 @@
 
 use reinhardt::UnifiedRouter;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::pages::server_fn::ServerFnRouterExt;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use crate::apps::relationship::server::server_fn::{
 	fetch_followers, fetch_following, follow_user, unfollow_user,
 };
@@ -20,14 +20,14 @@ pub fn routes() -> UnifiedRouter {
 	UnifiedRouter::new()
 		// Server-side routes (server functions)
 		.server(|s| {
-			#[cfg(not(target_arch = "wasm32"))]
+			#[cfg(server)]
 			{
 				s.server_fn(follow_user::marker)
 					.server_fn(unfollow_user::marker)
 					.server_fn(fetch_followers::marker)
 					.server_fn(fetch_following::marker)
 			}
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			s
 		})
 	// No client-side routes - relationship UI is embedded in profile components

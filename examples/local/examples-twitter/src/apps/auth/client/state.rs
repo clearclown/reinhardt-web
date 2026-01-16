@@ -4,9 +4,9 @@
 //! Context system and hooks API.
 
 use crate::apps::auth::shared::types::UserInfo;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::pages::{Context, Signal, get_context, provide_context, remove_context, use_state};
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 use reinhardt::pages::{Context, Signal, get_context, provide_context, remove_context, use_state};
 use std::cell::RefCell;
 

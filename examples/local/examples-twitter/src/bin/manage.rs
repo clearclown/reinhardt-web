@@ -3,7 +3,7 @@
 //! This is the project-specific management command interface (equivalent to Django's manage.py).
 
 // Server-side implementation
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 mod server {
 	use examples_twitter::config; // Explicitly reference config module
 	use reinhardt::commands::execute_from_command_line;
@@ -36,13 +36,13 @@ mod server {
 }
 
 // Entry point for server builds
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 fn main() {
 	server::main();
 }
 
 // Dummy entry point for WASM builds (this binary is server-only)
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 fn main() {
 	// This binary is not used in WASM builds
 	panic!("manage binary should not be run in WASM context");

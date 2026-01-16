@@ -8,7 +8,7 @@ use reinhardt::pages::component::View;
 use reinhardt::pages::page;
 use uuid::Uuid;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 use {
 	crate::apps::relationship::server::server_fn::{
 		fetch_followers, fetch_following, follow_user, unfollow_user,
@@ -40,7 +40,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 	let loading_signal = loading.clone();
 	let error_signal = error.clone();
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(client)]
 	{
 		let is_following_clone = is_following.clone();
 		let loading_clone = loading.clone();
@@ -185,7 +185,7 @@ pub fn follow_button(target_user_id: Uuid, is_following_initial: bool) -> View {
 		})(is_following_signal, loading_signal, error_signal)
 	}
 
-	#[cfg(not(target_arch = "wasm32"))]
+	#[cfg(server)]
 	{
 		// For SSR, render initial state without event handlers
 		let btn_class = if is_following_initial {
@@ -282,7 +282,7 @@ pub fn user_list(user_id: Uuid, list_type: UserListType) -> View {
 	let loading = Signal::new(true);
 	let error = Signal::new(None::<String>);
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(client)]
 	{
 		let users_clone = users.clone();
 		let loading_clone = loading.clone();

@@ -19,7 +19,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "created_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -64,7 +64,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "updated_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -82,7 +82,7 @@ pub(super) fn migration() -> Migration {
 				columns: vec![
 					ColumnDefinition {
 						name: "created_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -118,7 +118,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "updated_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -132,7 +132,7 @@ pub(super) fn migration() -> Migration {
 				partition: None,
 			},
 			Operation::CreateTable {
-				name: "dm_dmroom_members".to_string(),
+				name: "dm_room_members".to_string(),
 				columns: vec![
 					ColumnDefinition {
 						name: "id".to_string(),
@@ -164,7 +164,7 @@ pub(super) fn migration() -> Migration {
 				],
 				constraints: vec![
 					Constraint::ForeignKey {
-						name: "fk_dm_dmroom_members_dmroom_id".to_string(),
+						name: "fk_dm_room_members_dmroom_id".to_string(),
 						columns: vec!["dmroom_id".to_string()],
 						referenced_table: "dm_room".to_string(),
 						referenced_columns: vec!["id".to_string()],
@@ -173,7 +173,7 @@ pub(super) fn migration() -> Migration {
 						deferrable: None,
 					},
 					Constraint::ForeignKey {
-						name: "fk_dm_dmroom_members_user_id".to_string(),
+						name: "fk_dm_room_members_user_id".to_string(),
 						columns: vec!["user_id".to_string()],
 						referenced_table: "auth_user".to_string(),
 						referenced_columns: vec!["id".to_string()],
@@ -182,7 +182,7 @@ pub(super) fn migration() -> Migration {
 						deferrable: None,
 					},
 					Constraint::Unique {
-						name: "dm_dmroom_members_unique".to_string(),
+						name: "dm_room_members_unique".to_string(),
 						columns: vec!["dmroom_id".to_string(), "user_id".to_string()],
 					},
 				],

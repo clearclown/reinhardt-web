@@ -129,7 +129,7 @@ pub fn use_dm_chat(room_id: Uuid) -> DmChatHandle {
 		use_effect(move || {
 			// Load initial messages using server function
 			// Note: In WASM, we use wasm-bindgen-futures to spawn async tasks
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			{
 				let set_messages = set_messages.clone();
 				let set_loading = set_loading.clone();
@@ -248,7 +248,7 @@ pub fn use_dm_room_list() -> DmRoomListHandle {
 		let set_error = set_error.clone();
 
 		use_effect(move || {
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			{
 				let set_rooms = set_rooms.clone();
 				let set_loading = set_loading.clone();

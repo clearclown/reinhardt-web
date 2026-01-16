@@ -10,7 +10,6 @@ use reinhardt::pages::form;
 use reinhardt::pages::page;
 use reinhardt::pages::reactive::hooks::use_state;
 
-#[cfg(wasm)]
 use {
 	crate::server_fn::polls::{
 		get_question_detail, get_question_results, get_questions, submit_vote,
@@ -18,8 +17,6 @@ use {
 	reinhardt::pages::spawn::spawn_task,
 };
 
-#[cfg(native)]
-use crate::server_fn::polls::submit_vote;
 
 /// Polls index page - List all polls
 ///
@@ -30,7 +27,6 @@ pub fn polls_index() -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(wasm)]
 	{
 		let set_questions = set_questions.clone();
 		let set_loading = set_loading.clone();
@@ -187,7 +183,6 @@ pub fn polls_detail(question_id: i64) -> View {
 	};
 
 	// Load question data and populate choice options
-	#[cfg(wasm)]
 	{
 		let set_question = set_question.clone();
 		let set_data_loading = set_data_loading.clone();
@@ -307,7 +302,6 @@ pub fn polls_results(question_id: i64) -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(wasm)]
 	{
 		let set_question = set_question.clone();
 		let set_choices = set_choices.clone();
@@ -439,13 +433,11 @@ pub fn polls_results(question_id: i64) -> View {
 /// This shows how to use resolve_static() for images in page! macros.
 /// This function is identical to polls_index() but adds poll icons using
 /// static URL resolution.
-#[cfg(wasm)]
 pub fn polls_index_with_logo() -> View {
 	let (questions, set_questions) = use_state(Vec::<QuestionInfo>::new());
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(wasm)]
 	{
 		let set_questions = set_questions.clone();
 		let set_loading = set_loading.clone();

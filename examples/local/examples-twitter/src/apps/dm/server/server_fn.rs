@@ -12,7 +12,7 @@ use reinhardt::pages::server_fn::{ServerFnError, server_fn};
 use uuid::Uuid;
 
 // Server-only imports
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use {
 	crate::apps::auth::models::User,
 	crate::apps::dm::models::{DMMessage, DMRoom},
@@ -22,7 +22,7 @@ use {
 };
 
 /// Helper to get current user from session
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 async fn get_current_user(session: &SessionData) -> Result<User, ServerFnError> {
 	let user_id = session
 		.get::<Uuid>("user_id")
@@ -41,7 +41,7 @@ async fn get_current_user(session: &SessionData) -> Result<User, ServerFnError> 
 }
 
 /// Helper to check if user is a member of a room
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 async fn is_room_member(
 	room: &DMRoom,
 	user: &User,
@@ -468,7 +468,7 @@ pub async fn mark_as_read(
 }
 
 /// Helper to build RoomInfo from DMRoom and members
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 async fn build_room_info(
 	room: &DMRoom,
 	members: &[User],
@@ -535,7 +535,7 @@ async fn build_room_info(
 }
 
 /// Helper to build MessageInfo from DMMessage and sender
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 fn build_message_info(message: &DMMessage, sender: &User) -> MessageInfo {
 	MessageInfo {
 		id: message.id(),
@@ -549,7 +549,7 @@ fn build_message_info(message: &DMMessage, sender: &User) -> MessageInfo {
 }
 
 /// Helper to truncate message for preview
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 fn truncate_message(content: &str, max_len: usize) -> String {
 	if content.len() <= max_len {
 		content.to_string()

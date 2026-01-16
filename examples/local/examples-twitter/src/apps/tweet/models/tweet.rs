@@ -13,17 +13,17 @@ use uuid::Uuid;
 use crate::apps::auth::models::User;
 
 // Test-only dependency for sqlx::FromRow (server-side only)
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, server))]
 use sqlx::FromRow;
 
 #[model(app_label = "tweet", table_name = "tweet_tweet")]
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(all(test, not(target_arch = "wasm32")), derive(FromRow))]
+#[cfg_attr(all(test, server), derive(FromRow))]
 pub struct Tweet {
 	#[field(primary_key = true)]
 	id: Uuid,
 
-	#[cfg_attr(all(test, not(target_arch = "wasm32")), sqlx(skip))]
+	#[cfg_attr(all(test, server), sqlx(skip))]
 	#[rel(foreign_key, related_name = "tweets")]
 	user: ForeignKeyField<User>,
 

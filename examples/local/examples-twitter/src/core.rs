@@ -2,5 +2,5 @@
 //!
 //! This module contains application-level code that is shared across all apps.
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 pub mod client;

@@ -11,13 +11,15 @@
 use http::Version;
 use reinhardt_http::{Handler, Middleware};
 use reinhardt_http::{Request, Response};
-use reinhardt_server::{
-	Http2Server, HttpServer, RateLimitConfig, RateLimitHandler, RateLimitStrategy,
-	ShutdownCoordinator, TimeoutHandler,
-};
+use reinhardt_server::{Http2Server, HttpServer, ShutdownCoordinator, TimeoutHandler};
 use reinhardt_test::APIClient;
+
+#[cfg(feature = "websocket")]
+use reinhardt_server::{RateLimitConfig, RateLimitHandler, RateLimitStrategy};
 use rstest::*;
 use std::net::SocketAddr;
+
+#[cfg(feature = "websocket")]
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,11 +41,15 @@ impl Handler for BasicTestHandler {
 }
 
 /// Handler with configurable delay for timeout testing
+///
+/// This handler is only available when the `graphql` feature is enabled.
+#[cfg(feature = "graphql")]
 #[derive(Clone)]
 struct DelayedHandler {
 	delay: Duration,
 }
 
+#[cfg(feature = "graphql")]
 #[async_trait::async_trait]
 impl Handler for DelayedHandler {
 	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
@@ -53,11 +59,15 @@ impl Handler for DelayedHandler {
 }
 
 /// Handler with counter for tracking requests
+///
+/// This handler is only available when the `websocket` feature is enabled.
+#[cfg(feature = "websocket")]
 #[derive(Clone)]
 struct CountingHandler {
 	counter: Arc<AtomicU32>,
 }
 
+#[cfg(feature = "websocket")]
 impl CountingHandler {
 	fn new() -> Self {
 		Self {
@@ -70,6 +80,7 @@ impl CountingHandler {
 	}
 }
 
+#[cfg(feature = "websocket")]
 #[async_trait::async_trait]
 impl Handler for CountingHandler {
 	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {

@@ -9,14 +9,14 @@
 //! - Static files
 //! - Admin panel customization
 
-// Server-side modules (non-WASM only)
-#[cfg(native)]
+// Server-side modules
+#[cfg(server)]
 pub mod apps;
-#[cfg(native)]
+#[cfg(server)]
 pub mod config;
 
-// Client-side modules (WASM only)
-#[cfg(wasm)]
+// Client-side modules
+#[cfg(client)]
 pub mod client;
 
 // Server function definitions (both WASM and server)

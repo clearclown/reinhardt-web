@@ -12,13 +12,13 @@ use reinhardt::pages::page;
 use reinhardt::pages::reactive::hooks::use_state;
 use uuid::Uuid;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 use {
 	crate::apps::tweet::server::server_fn::{create_tweet, delete_tweet, list_tweets},
 	reinhardt::pages::spawn::spawn_task,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use crate::apps::tweet::server::server_fn::create_tweet;
 
 /// Like button component (extracted to avoid nested watch blocks)
@@ -217,7 +217,7 @@ pub fn tweet_card(tweet: &TweetInfo, show_delete: bool) -> View {
 													let set_deleted = set_deleted.clone();
 													let set_error = set_error.clone();
 													move |_event| {
-														#[cfg(target_arch = "wasm32")]
+														#[cfg(client)]
 														{
 															let set_deleted = set_deleted.clone();
 															let set_error = set_error.clone();
@@ -437,7 +437,7 @@ pub fn tweet_form() -> View {
 
 		// Callback for successful submission - reload page
 		on_success: |_result| {
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			{
 				if let Some(window) = web_sys::window() {
 					let _ = window.location().reload();
@@ -486,7 +486,7 @@ pub fn tweet_list(user_id: Option<Uuid>) -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(client)]
 	{
 		let set_tweets = set_tweets.clone();
 		let set_loading = set_loading.clone();

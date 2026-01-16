@@ -8,13 +8,13 @@ use uuid::Uuid;
 use validator::Validate;
 
 // OpenAPI schema generation (server-side only)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::rest::ToSchema;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::rest::openapi::Schema;
 
 /// Tweet information
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TweetInfo {
 	pub id: Uuid,
@@ -50,7 +50,7 @@ impl TweetInfo {
 }
 
 /// Conversion from server-side Tweet model to shared TweetInfo
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 impl From<crate::apps::tweet::models::Tweet> for TweetInfo {
 	fn from(tweet: crate::apps::tweet::models::Tweet) -> Self {
 		TweetInfo {
@@ -66,7 +66,7 @@ impl From<crate::apps::tweet::models::Tweet> for TweetInfo {
 }
 
 /// Create tweet request
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateTweetRequest {
 	#[validate(length(

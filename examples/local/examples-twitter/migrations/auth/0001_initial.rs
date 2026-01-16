@@ -10,7 +10,7 @@ pub(super) fn migration() -> Migration {
 				columns: vec![
 					ColumnDefinition {
 						name: "created_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -19,7 +19,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "expires_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -85,7 +85,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "created_at".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,
@@ -121,7 +121,7 @@ pub(super) fn migration() -> Migration {
 					},
 					ColumnDefinition {
 						name: "last_login".to_string(),
-						type_definition: FieldType::DateTime,
+						type_definition: FieldType::TimestampTz,
 						not_null: false,
 						unique: false,
 						primary_key: false,

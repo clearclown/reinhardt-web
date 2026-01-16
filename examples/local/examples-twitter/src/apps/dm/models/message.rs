@@ -15,7 +15,7 @@ use super::room::DMRoom;
 use crate::apps::auth::models::User;
 
 // Test-only dependency for sqlx::FromRow (server-side only)
-#[cfg(all(test, not(target_arch = "wasm32")))]
+#[cfg(all(test, server))]
 use sqlx::FromRow;
 
 /// DMMessage model representing a message within a room
@@ -24,18 +24,18 @@ use sqlx::FromRow;
 /// `ForeignKeyField<T>` automatically generates the `_id` column.
 #[model(app_label = "dm", table_name = "dm_message")]
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(all(test, not(target_arch = "wasm32")), derive(FromRow))]
+#[cfg_attr(all(test, server), derive(FromRow))]
 pub struct DMMessage {
 	#[field(primary_key = true)]
 	id: Uuid,
 
 	/// Room this message belongs to (generates room_id column)
-	#[cfg_attr(all(test, not(target_arch = "wasm32")), sqlx(skip))]
+	#[cfg_attr(all(test, server), sqlx(skip))]
 	#[rel(foreign_key, related_name = "messages")]
 	room: ForeignKeyField<DMRoom>,
 
 	/// User who sent the message (generates sender_id column)
-	#[cfg_attr(all(test, not(target_arch = "wasm32")), sqlx(skip))]
+	#[cfg_attr(all(test, server), sqlx(skip))]
 	#[rel(foreign_key, related_name = "sent_messages")]
 	sender: ForeignKeyField<User>,
 

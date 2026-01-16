@@ -112,7 +112,7 @@ impl DMRoomFactory {
 		let sql = Query::insert()
 			.into_table(sea_query::Alias::new("dm_room_members"))
 			.columns([
-				sea_query::Alias::new("dm_room_id"),
+				sea_query::Alias::new("dmroom_id"),
 				sea_query::Alias::new("user_id"),
 			])
 			.values_panic([room_id.into(), user_id.into()])
@@ -147,7 +147,7 @@ impl DMRoomFactory {
 	) -> Result<Vec<DMRoom>, sqlx::Error> {
 		let sql = "SELECT r.id, r.name, r.is_group, r.created_at, r.updated_at \
 		           FROM dm_room r \
-		           INNER JOIN dm_room_members m ON r.id = m.dm_room_id \
+		           INNER JOIN dm_room_members m ON r.id = m.dmroom_id \
 		           WHERE m.user_id = $1 \
 		           ORDER BY r.updated_at DESC";
 
@@ -177,7 +177,7 @@ impl DMRoomFactory {
 		// Delete members
 		let sql = Query::delete()
 			.from_table(sea_query::Alias::new("dm_room_members"))
-			.and_where(Expr::col(sea_query::Alias::new("dm_room_id")).eq(Expr::val(id)))
+			.and_where(Expr::col(sea_query::Alias::new("dmroom_id")).eq(Expr::val(id)))
 			.to_string(PostgresQueryBuilder);
 		sqlx::query(&sql).execute(pool).await?;
 

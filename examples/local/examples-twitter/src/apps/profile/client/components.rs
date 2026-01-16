@@ -18,13 +18,13 @@ use reinhardt::pages::reactive::Signal;
 use reinhardt::pages::reactive::hooks::use_state;
 use uuid::Uuid;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 use {
 	crate::apps::profile::server::server_fn::{fetch_profile, update_profile_form},
 	reinhardt::pages::spawn::spawn_task,
 };
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use crate::apps::profile::server::server_fn::fetch_profile;
 
 /// Profile view component using hooks
@@ -38,7 +38,7 @@ pub fn profile_view(user_id: Uuid) -> View {
 	let (loading, set_loading) = use_state(true);
 	let (error, set_error) = use_state(None::<String>);
 
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(client)]
 	{
 		// Clone setters for async use
 		let set_profile = set_profile.clone();
@@ -346,7 +346,7 @@ pub fn profile_edit(user_id: Uuid) -> View {
 
 	// Load current profile data into form fields
 	// Note: initial_loader doesn't support parameters, so we load manually
-	#[cfg(target_arch = "wasm32")]
+	#[cfg(client)]
 	{
 		let avatar_url_signal = profile_form.avatar_url().clone();
 		let bio_signal = profile_form.bio().clone();

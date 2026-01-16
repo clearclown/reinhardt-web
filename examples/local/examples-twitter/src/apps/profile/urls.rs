@@ -4,13 +4,13 @@
 
 use reinhardt::UnifiedRouter;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::pages::server_fn::ServerFnRouterExt;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use crate::apps::profile::server::server_fn::{fetch_profile, update_profile, update_profile_form};
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 use {
 	crate::core::client::pages::{profile_edit_page, profile_page},
 	reinhardt::ClientPath,
@@ -22,18 +22,18 @@ pub fn routes() -> UnifiedRouter {
 	UnifiedRouter::new()
 		// Server-side routes (server functions)
 		.server(|s| {
-			#[cfg(not(target_arch = "wasm32"))]
+			#[cfg(server)]
 			{
 				s.server_fn(fetch_profile::marker)
 					.server_fn(update_profile::marker)
 					.server_fn(update_profile_form::marker)
 			}
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			s
 		})
 		// Client-side routes (SPA) with typed path parameters
 		.client(|c| {
-			#[cfg(target_arch = "wasm32")]
+			#[cfg(client)]
 			{
 				c.route_path(
 					"/profile/{user_id}/edit",
@@ -44,7 +44,7 @@ pub fn routes() -> UnifiedRouter {
 					|ClientPath(user_id): ClientPath<Uuid>| profile_page(user_id),
 				)
 			}
-			#[cfg(not(target_arch = "wasm32"))]
+			#[cfg(server)]
 			c
 		})
 }

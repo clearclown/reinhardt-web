@@ -9,11 +9,11 @@ use uuid::Uuid;
 use validator::Validate;
 
 // OpenAPI schema generation (server-side only)
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use reinhardt::rest::openapi::{Schema, ToSchema};
 
 /// User information (shared between client and server)
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInfo {
 	pub id: Uuid,
@@ -23,7 +23,7 @@ pub struct UserInfo {
 }
 
 /// Conversion from server-side User model to shared UserInfo
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 impl From<crate::apps::auth::models::User> for UserInfo {
 	fn from(user: crate::apps::auth::models::User) -> Self {
 		UserInfo {
@@ -36,7 +36,7 @@ impl From<crate::apps::auth::models::User> for UserInfo {
 }
 
 /// Login request
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct LoginRequest {
 	#[validate(email(message = "Invalid email address"))]
@@ -47,7 +47,7 @@ pub struct LoginRequest {
 }
 
 /// Register request
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct RegisterRequest {
 	#[validate(length(
@@ -84,7 +84,7 @@ impl RegisterRequest {
 ///
 /// Used for both client-side authentication state and server-side
 /// session validation in tests.
-#[cfg_attr(not(target_arch = "wasm32"), derive(Schema))]
+#[cfg_attr(server, derive(Schema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionData {
 	/// The authenticated user's ID

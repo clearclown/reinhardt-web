@@ -7,10 +7,10 @@ use reinhardt::app_config;
 pub mod shared;
 pub mod urls;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(client)]
 pub mod client;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 pub mod server;
 
 #[cfg(test)]

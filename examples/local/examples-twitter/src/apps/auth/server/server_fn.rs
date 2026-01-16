@@ -6,7 +6,7 @@ use crate::apps::auth::shared::types::UserInfo;
 use reinhardt::pages::server_fn::{ServerFnError, server_fn};
 
 // Server-only imports
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(server)]
 use {
 	crate::apps::auth::models::User,
 	crate::apps::auth::shared::types::{LoginRequest, RegisterRequest},
