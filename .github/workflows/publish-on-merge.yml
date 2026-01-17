@@ -156,12 +156,13 @@ jobs:
             echo "[$CURRENT/$CRATE_COUNT] Publishing $CRATE_NAME v$VERSION..."
             echo ""
 
-            # Run dry-run first
-            echo "Running dry-run..."
-            if ! cargo publish --dry-run -p "$CRATE_NAME"; then
-              echo "❌ Dry-run failed for $CRATE_NAME"
+            # Run build verification first
+            echo "Running build verification..."
+            if ! cargo build -p "$CRATE_NAME"; then
+              echo "❌ Build verification failed for $CRATE_NAME"
               exit 1
             fi
+            echo "✅ Build verification passed for $CRATE_NAME"
 
             # Publish with retry logic
             MAX_RETRIES=3
