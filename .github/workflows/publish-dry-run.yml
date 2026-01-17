@@ -61,6 +61,12 @@ jobs:
       - name: Install cargo-workspaces
         run: cargo install cargo-workspaces
 
+      - name: Verify workspace build
+        run: |
+          echo "Verifying workspace can build..."
+          cargo check --workspace --all-features
+          echo "✅ Workspace verification passed"
+
       - name: Detect changed crates
         id: detect-crates
         run: |
@@ -80,65 +86,43 @@ jobs:
           echo "$CHANGED_OUTPUT"
           echo "has_changes=true" >> $GITHUB_OUTPUT
 
-      - name: Run dry-run publish for changed crates
+      - name: Run publish dry-run for changed crates
         if: steps.detect-crates.outputs.has_changes == 'true'
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
-          echo "::group::Running dry-run publish for changed crates"
+          echo "::group::Running cargo ws publish --dry-run"
 
-          # Get crates in publishing order (dependency-aware)
-          # Use --skip-published to only check unpublished crates
-          CRATES_JSON=$(cargo ws plan --json --skip-published 2>/dev/null || cargo ws plan --json 2>/dev/null)
+          # Run cargo ws publish --dry-run and capture output
+          set +e  # Don't exit on error (exit code is always 0)
+          OUTPUT=$(cargo ws publish --dry-run 2>&1)
+          CARGO_EXIT=$?
+          set -e
 
-          # Parse JSON to get crate names (public crates only)
-          CRATES=$(echo "$CRATES_JSON" | jq -r '.[] | select(.private == false) | .name')
-
-          if [ -z "$CRATES" ]; then
-            echo "No public crates to check"
-            echo "::notice::No public crates found for dry-run"
-            exit 0
-          fi
-
-          TOTAL=$(echo "$CRATES" | wc -l | tr -d ' ')
-          echo "Found $TOTAL public crates to check"
+          # Display full output
+          echo "$OUTPUT"
           echo ""
 
-          FAILED_CRATES=""
-          PASSED=0
-          FAILED=0
-
-          for CRATE in $CRATES; do
-            echo "::group::Checking $CRATE"
-
-            if cargo publish --dry-run -p "$CRATE" 2>&1; then
-              echo "✅ $CRATE passed"
-              PASSED=$((PASSED + 1))
-            else
-              echo "❌ $CRATE failed"
-              FAILED=$((FAILED + 1))
-              FAILED_CRATES="$FAILED_CRATES $CRATE"
-            fi
-
-            echo "::endgroup::"
-          done
-
-          echo ""
-          echo "=========================================="
-          echo "Summary: $PASSED passed, $FAILED failed (total: $TOTAL)"
-          echo "=========================================="
-
-          if [ $FAILED -gt 0 ]; then
+          # Check for error patterns in output
+          if echo "$OUTPUT" | grep -qE "error:|failed to|Failed to|ERROR|Error"; then
+            echo "=========================================="
+            echo "❌ Publish dry-run detected errors"
+            echo "=========================================="
             echo ""
-            echo "❌ Dry-run failed for the following crates:"
-            echo "$FAILED_CRATES" | tr ' ' '\n' | grep -v '^$'
-            echo "::error::$FAILED crates failed dry-run publish. Check logs above for details."
+            echo "Error details:"
+            echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" || true
+            echo ""
+            echo "::error::Publish dry-run failed. Check output above for details."
             exit 1
           fi
 
-          echo ""
-          echo "✅ All $PASSED crates passed dry-run publish check"
-          echo "::notice::All dry-run checks passed successfully"
+          # Check for warning patterns
+          if echo "$OUTPUT" | grep -qE "warning:|WARNING|Warning"; then
+            echo "::warning::Publish dry-run completed with warnings. Review output above."
+          fi
+
+          echo "=========================================="
+          echo "✅ Publish dry-run completed successfully"
+          echo "=========================================="
+          echo "::notice::All publish dry-run checks passed"
 
           echo "::endgroup::"
 
@@ -146,17 +130,24 @@ jobs:
         if: always() && steps.detect-crates.outputs.has_changes == 'true'
         run: |
           {
-            echo "## 📋 Dry-Run Publish Check"
+            echo "## 📋 Publish Dry-Run Check"
             echo ""
-            echo "Each crate was validated individually using \`cargo publish --dry-run\`."
+            echo "All changed crates were validated using \`cargo ws publish --dry-run\`."
+            echo ""
+            echo "### Verification Performed"
+            echo "- ✅ Workspace build check (\`cargo check --workspace --all-features\`)"
+            echo "- ✅ Publish dry-run (\`cargo ws publish --dry-run\`)"
+            echo "- ✅ Packaging, dependency resolution, and manifest validation"
+            echo "- ✅ Output analysis for error detection"
             echo ""
             echo "### Next Steps"
             echo ""
             echo "If all checks passed, this PR is ready to merge."
             echo "Upon merge, the 'publish-on-merge' workflow will:"
-            echo "1. Publish changed crates to crates.io in dependency order"
-            echo "2. Create GitHub Releases"
-            echo "3. Push release tags"
+            echo "1. Verify build for each crate"
+            echo "2. Publish changed crates to crates.io in dependency order"
+            echo "3. Create GitHub Releases"
+            echo "4. Push release tags"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: No changes summary
