@@ -20,7 +20,7 @@ use fixtures::{
 };
 use reinhardt_core::exception::Result;
 use reinhardt_http::{Request, Response};
-use reinhardt_core::{Handler, Middleware};
+use reinhardt_http::{Handler, Middleware};
 use reinhardt_middleware::cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware};
 use reinhardt_middleware::circuit_breaker::{
 	CircuitBreakerConfig, CircuitBreakerMiddleware, CircuitState,

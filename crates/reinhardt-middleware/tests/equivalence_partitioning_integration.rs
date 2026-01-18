@@ -197,6 +197,9 @@ async fn test_rate_limit_strategy_partitions(#[case] strategy: RateLimitStrategy
 		}
 		RateLimitStrategy::PerUser => create_test_request("GET", "/"),
 		RateLimitStrategy::PerRoute => create_test_request("GET", "/api/users"),
+		RateLimitStrategy::PerIpAndUser => {
+			create_request_with_headers("GET", "/", &[("X-Forwarded-For", "192.168.1.1")])
+		}
 	};
 
 	let response = middleware.process(request, handler).await.unwrap();

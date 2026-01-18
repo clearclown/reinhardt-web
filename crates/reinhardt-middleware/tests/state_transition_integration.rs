@@ -30,7 +30,7 @@ use serial_test::serial;
 use std::sync::Arc;
 use std::time::Duration;
 
-use reinhardt_core::Middleware;
+use reinhardt_http::Middleware;
 use reinhardt_http::Request;
 use reinhardt_middleware::cache::{CacheConfig, CacheKeyStrategy, CacheMiddleware};
 use reinhardt_middleware::circuit_breaker::{
