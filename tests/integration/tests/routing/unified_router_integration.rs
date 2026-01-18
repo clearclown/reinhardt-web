@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response, Result, ViewResult};
 use reinhardt_macros::get;
-use reinhardt_routers::ServerRouter;
-use reinhardt_viewsets::{Action, ActionType, ViewSet};
+use reinhardt_urls::routers::ServerRouter;
+use reinhardt_views::viewsets::{Action, ActionType, ViewSet};
 
 // Mock ViewSet for testing
 #[derive(Clone)]

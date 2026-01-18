@@ -9,9 +9,9 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container with connection pool
 
-use reinhardt_orm::manager::{get_connection, reinitialize_database};
-use reinhardt_sessions::backends::cache::SessionBackend;
-use reinhardt_sessions::backends::database::DatabaseSessionBackend;
+use reinhardt_db::orm::manager::{get_connection, reinitialize_database};
+use reinhardt_auth::sessions::backends::cache::SessionBackend;
+use reinhardt_auth::sessions::backends::database::DatabaseSessionBackend;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serde_json::json;

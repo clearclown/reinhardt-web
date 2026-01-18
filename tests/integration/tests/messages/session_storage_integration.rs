@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_messages::{Level, Message, MessageStorage, SafeData, SessionStorage};
+	use reinhardt_core::messages::{Level, Message, MessageStorage, SafeData, SessionStorage};
 
 	#[test]
 	fn test_no_session() {

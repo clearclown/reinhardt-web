@@ -19,7 +19,7 @@ fn temp_migration_dir_with_files(temp_migration_dir: TempMigrationDir) -> TempMi
 		"auth",
 		"0001_initial",
 		r#"
-use reinhardt_migrations::{Migration, MigrationOperation};
+use reinhardt_db::migrations::{Migration, MigrationOperation};
 
 pub fn migration() -> Migration {
     Migration {

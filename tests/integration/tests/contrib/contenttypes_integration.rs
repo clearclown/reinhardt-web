@@ -26,14 +26,14 @@ struct ContentTypeRegistryGuard;
 impl TestResource for ContentTypeRegistryGuard {
 	fn setup() -> Self {
 		// Clear registry before test
-		use reinhardt_contenttypes::CONTENT_TYPE_REGISTRY;
+		use reinhardt_db::contenttypes::CONTENT_TYPE_REGISTRY;
 		CONTENT_TYPE_REGISTRY.clear();
 		Self
 	}
 
 	fn teardown(&mut self) {
 		// Clear registry after test (guaranteed even on panic)
-		use reinhardt_contenttypes::CONTENT_TYPE_REGISTRY;
+		use reinhardt_db::contenttypes::CONTENT_TYPE_REGISTRY;
 		CONTENT_TYPE_REGISTRY.clear();
 	}
 }
@@ -45,7 +45,7 @@ fn registry_guard() -> TeardownGuard<ContentTypeRegistryGuard> {
 
 mod multi_db_tests {
 	use super::*;
-	use reinhardt_contenttypes::{MultiDbContentTypeManager, CONTENT_TYPE_REGISTRY};
+	use reinhardt_db::contenttypes::{MultiDbContentTypeManager, CONTENT_TYPE_REGISTRY};
 
 	#[rstest]
 	#[serial(content_type_registry)]
@@ -185,7 +185,7 @@ mod multi_db_tests {
 
 mod orm_integration_tests {
 	use super::*;
-	use reinhardt_contenttypes::{ContentTypeQuery, ContentTypeTransaction};
+	use reinhardt_db::contenttypes::{ContentTypeQuery, ContentTypeTransaction};
 	use sqlx::AnyPool;
 	use std::sync::Arc;
 
@@ -203,7 +203,7 @@ mod orm_integration_tests {
 			.expect("Failed to connect");
 
 		// Create table
-		use reinhardt_contenttypes::persistence::ContentTypePersistence;
+		use reinhardt_db::contenttypes::persistence::ContentTypePersistence;
 		let persistence = ContentTypePersistence::from_pool(pool.clone().into(), database_url);
 		persistence
 			.create_table()
@@ -368,7 +368,7 @@ mod orm_integration_tests {
 
 mod combined_tests {
 	use super::*;
-	use reinhardt_contenttypes::{
+	use reinhardt_db::contenttypes::{
 		ContentTypeQuery, ContentTypeTransaction, MultiDbContentTypeManager,
 	};
 	use sqlx::AnyPool;
@@ -423,7 +423,7 @@ mod combined_tests {
 			.expect("Failed to connect");
 
 		// Create table
-		use reinhardt_contenttypes::persistence::ContentTypePersistence;
+		use reinhardt_db::contenttypes::persistence::ContentTypePersistence;
 		let persistence = ContentTypePersistence::from_pool(pool.clone().into(), database_url);
 		persistence
 			.create_table()

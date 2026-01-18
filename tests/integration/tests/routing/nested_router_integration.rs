@@ -1,7 +1,7 @@
 //! Nested router implementation tests
 
-use reinhardt_routers::ServerRouter;
-use reinhardt_viewsets::{nested_url, ModelViewSet, NestedResource, NestedViewSet};
+use reinhardt_urls::routers::ServerRouter;
+use reinhardt_views::viewsets::{nested_url, ModelViewSet, NestedResource, NestedViewSet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

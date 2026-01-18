@@ -16,7 +16,7 @@
 //! In test fixtures, call the appropriate apply function with a DatabaseConnection:
 //!
 //! ```rust,ignore
-//! use reinhardt_backends::DatabaseConnection;
+//! use reinhardt_db::backends::DatabaseConnection;
 //! use reinhardt_integration_tests::migrations;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,9 +26,9 @@
 //! # }
 //! ```
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::MigrationError;
-use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::MigrationError;
+use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 
 mod create_async_query_test_tables;
 mod create_constraint_test_tables;
@@ -48,7 +48,7 @@ use create_test_tables::migration as migration_0001;
 /// # Examples
 ///
 /// ```rust,ignore
-/// use reinhardt_backends::DatabaseConnection;
+/// use reinhardt_db::backends::DatabaseConnection;
 /// use reinhardt_integration_tests::migrations;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -78,7 +78,7 @@ pub async fn apply_test_migrations(connection: &DatabaseConnection) -> Result<()
 /// # Examples
 ///
 /// ```rust,ignore
-/// use reinhardt_backends::DatabaseConnection;
+/// use reinhardt_db::backends::DatabaseConnection;
 /// use reinhardt_integration_tests::migrations;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -106,7 +106,7 @@ pub async fn apply_basic_test_migrations(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use reinhardt_backends::DatabaseConnection;
+/// use reinhardt_db::backends::DatabaseConnection;
 /// use reinhardt_integration_tests::migrations;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -136,7 +136,7 @@ pub async fn apply_constraint_test_migrations(
 /// # Examples
 ///
 /// ```rust,ignore
-/// use reinhardt_backends::DatabaseConnection;
+/// use reinhardt_db::backends::DatabaseConnection;
 /// use reinhardt_integration_tests::migrations;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {

@@ -23,8 +23,8 @@
 //! 3. Compare with expected ProjectState
 //! 4. Detect any discrepancies (schema drift)
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, ColumnDefinition, FieldType, Migration, Operation,
 };
 use reinhardt_test::fixtures::postgres_container;

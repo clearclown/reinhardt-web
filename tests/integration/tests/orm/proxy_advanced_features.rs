@@ -3,7 +3,7 @@
 //! These tests verify the AssociationProxy integration with complex scenarios,
 //! focusing on the actual API provided by reinhardt-proxy.
 
-use reinhardt_proxy::{AssociationProxy, CollectionProxy};
+use reinhardt_urls::proxy::{AssociationProxy, CollectionProxy};
 use serde::{Deserialize, Serialize};
 
 /// Test models for proxy testing
@@ -119,11 +119,11 @@ async fn test_association_proxy_with_creator() {
 #[tokio::test]
 async fn test_association_proxy_with_getter() {
 	// Define getter as a standalone function
-	fn get_bio(user: &User) -> Result<String, reinhardt_proxy::ProxyError> {
+	fn get_bio(user: &User) -> Result<String, reinhardt_urls::proxy::ProxyError> {
 		user.profile
 			.as_ref()
 			.map(|p| p.bio.clone())
-			.ok_or_else(|| reinhardt_proxy::ProxyError::RelationshipNotFound("profile".to_string()))
+			.ok_or_else(|| reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string()))
 	}
 
 	// Create proxy and set getter via public field
@@ -140,12 +140,12 @@ async fn test_association_proxy_with_getter() {
 #[tokio::test]
 async fn test_association_proxy_with_setter() {
 	// Define setter as a standalone function
-	fn set_bio(user: &mut User, bio: String) -> Result<(), reinhardt_proxy::ProxyError> {
+	fn set_bio(user: &mut User, bio: String) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 		if let Some(profile) = &mut user.profile {
 			profile.bio = bio;
 			Ok(())
 		} else {
-			Err(reinhardt_proxy::ProxyError::RelationshipNotFound(
+			Err(reinhardt_urls::proxy::ProxyError::RelationshipNotFound(
 				"profile".to_string(),
 			))
 		}
@@ -165,19 +165,19 @@ async fn test_association_proxy_with_setter() {
 #[tokio::test]
 async fn test_association_proxy_complete_builder() {
 	// Define helper functions
-	fn get_bio(user: &User) -> Result<String, reinhardt_proxy::ProxyError> {
+	fn get_bio(user: &User) -> Result<String, reinhardt_urls::proxy::ProxyError> {
 		user.profile
 			.as_ref()
 			.map(|p| p.bio.clone())
-			.ok_or_else(|| reinhardt_proxy::ProxyError::RelationshipNotFound("profile".to_string()))
+			.ok_or_else(|| reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string()))
 	}
 
-	fn set_bio(user: &mut User, bio: String) -> Result<(), reinhardt_proxy::ProxyError> {
+	fn set_bio(user: &mut User, bio: String) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 		if let Some(profile) = &mut user.profile {
 			profile.bio = bio;
 			Ok(())
 		} else {
-			Err(reinhardt_proxy::ProxyError::RelationshipNotFound(
+			Err(reinhardt_urls::proxy::ProxyError::RelationshipNotFound(
 				"profile".to_string(),
 			))
 		}

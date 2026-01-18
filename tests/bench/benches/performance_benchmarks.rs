@@ -7,9 +7,9 @@
 use bytes::Bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 use http::{HeaderMap, StatusCode};
-use reinhardt_orm::{CascadeOption, LoadingStrategy, Relationship, RelationshipType};
-use reinhardt_proxy::{AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue};
-use reinhardt_serializers::{CharField, EmailField, IntegerField, JsonSerializer};
+use reinhardt_db::orm::{CascadeOption, LoadingStrategy, Relationship, RelationshipType};
+use reinhardt_urls::proxy::{AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue};
+use reinhardt_rest::serializers::{CharField, EmailField, IntegerField, JsonSerializer};
 use reinhardt_test::{APIClient, APIRequestFactory, MockFunction, Spy, TestResponse};
 use serde::{Deserialize, Serialize};
 use std::hint::black_box;
@@ -265,7 +265,7 @@ fn benchmark_orm_relationship_operations(c: &mut Criterion) {
 	});
 
 	c.bench_function("relationship_sql_generation", |b| {
-		use reinhardt_orm::types::DatabaseDialect;
+		use reinhardt_db::orm::types::DatabaseDialect;
 		let relationship =
 			Relationship::<BenchmarkUser, BenchmarkPost>::new("posts", RelationshipType::OneToMany)
 				.with_foreign_key("user_id")

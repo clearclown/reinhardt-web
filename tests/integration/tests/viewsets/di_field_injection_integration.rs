@@ -4,9 +4,9 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_di::{injectable, Injectable, Injected, InjectionContext, SingletonScope};
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 use reinhardt_http::{Request, Response};
-use reinhardt_viewsets::{Action, ViewSet};
+use reinhardt_views::viewsets::{Action, ViewSet};
 use std::sync::Arc;
 
 /// Mock database dependency
@@ -61,7 +61,7 @@ impl ViewSet for UserViewSet {
 	}
 
 	async fn dispatch(&self, _request: Request, action: Action) -> Result<Response> {
-		use reinhardt_viewsets::ActionType;
+		use reinhardt_views::viewsets::ActionType;
 
 		match action.action_type {
 			ActionType::List => {
@@ -71,7 +71,7 @@ impl ViewSet for UserViewSet {
 				);
 				Ok(Response::ok().with_body(body))
 			}
-			_ => Err(reinhardt_exception::Error::NotFound(
+			_ => Err(reinhardt_core::exception::Error::NotFound(
 				"Action not found".to_string(),
 			)),
 		}

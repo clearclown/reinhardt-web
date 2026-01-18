@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use http::StatusCode;
 use reinhardt_core::http::{Request, Response};
 use reinhardt_core::{Handler, Middleware};
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use reinhardt_test::fixtures::*;
 use reinhardt_test::APIClient;
 use rstest::*;

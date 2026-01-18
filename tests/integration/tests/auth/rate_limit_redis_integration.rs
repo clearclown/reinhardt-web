@@ -18,7 +18,7 @@ use reinhardt_auth::{
 	SimpleUser,
 };
 use reinhardt_http::Request;
-use reinhardt_throttling::{MemoryBackend, ThrottleBackend};
+use reinhardt_rest::throttling::{MemoryBackend, ThrottleBackend};
 use rstest::*;
 use std::sync::Arc;
 use uuid::Uuid;

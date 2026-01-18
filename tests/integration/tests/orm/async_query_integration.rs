@@ -15,7 +15,7 @@
 use reinhardt_db::{orm::Model, DatabaseConnection};
 use reinhardt_integration_tests::migrations::apply_async_query_test_migrations;
 use reinhardt_macros::model;
-use reinhardt_orm::{
+use reinhardt_db::orm::{
 	expressions::Q, manager::reinitialize_database, query_execution::QueryCompiler,
 	types::DatabaseDialect,
 };

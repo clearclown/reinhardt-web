@@ -10,7 +10,7 @@
 use bytes::Bytes;
 use hyper::{header::CONTENT_TYPE, HeaderMap, Method, Version};
 use reinhardt_http::Request;
-use reinhardt_parsers::{parser::Parser, FormParser, JSONParser, MultiPartParser};
+use reinhardt_core::parsers::{parser::Parser, FormParser, JSONParser, MultiPartParser};
 
 /// Test POST data access after parsing with FormParser and MultiPartParser
 ///
@@ -51,7 +51,7 @@ async fn test_post_accessed_in_post_method() {
 
 	// Access data() - should still work due to caching
 	let data = request.data().await.unwrap();
-	if let reinhardt_parsers::parser::ParsedData::Form(form) = data {
+	if let reinhardt_core::parsers::parser::ParsedData::Form(form) = data {
 		assert_eq!(form.get("foo"), Some(&"bar".to_string()));
 	} else {
 		panic!("Expected Form data");
@@ -91,7 +91,7 @@ async fn test_post_accessed_in_post_method_with_json_parser() {
 
 	// Access data() - should return JSON
 	let data = request.data().await.unwrap();
-	if let reinhardt_parsers::parser::ParsedData::Json(json) = data {
+	if let reinhardt_core::parsers::parser::ParsedData::Json(json) = data {
 		assert_eq!(json.get("key").and_then(|v| v.as_str()), Some("value"));
 	} else {
 		panic!("Expected JSON data");
@@ -136,7 +136,7 @@ async fn test_post_accessed_in_put_method() {
 
 	// Access data() - should still work
 	let data = request.data().await.unwrap();
-	if let reinhardt_parsers::parser::ParsedData::Form(form) = data {
+	if let reinhardt_core::parsers::parser::ParsedData::Form(form) = data {
 		assert_eq!(form.get("foo"), Some(&"bar".to_string()));
 	} else {
 		panic!("Expected Form data");

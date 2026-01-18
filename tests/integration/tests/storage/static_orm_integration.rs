@@ -37,8 +37,8 @@
 //! ❌ Static file serving (covered by HTTP server tests)
 //! ❌ Multi-CDN failover (requires external CDN infrastructure)
 
-use reinhardt_orm::DatabaseConnection;
-use reinhardt_storage::{LocalStorage, Storage};
+use reinhardt_db::orm::DatabaseConnection;
+use reinhardt_utils::storage::{LocalStorage, Storage};
 use reinhardt_test::fixtures::testcontainers::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};

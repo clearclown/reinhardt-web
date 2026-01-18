@@ -14,7 +14,7 @@ struct SimpleHandler;
 
 #[async_trait::async_trait]
 impl Handler for SimpleHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		Ok(Response::ok().with_body("Hello, World!"))
 	}
 }
@@ -24,7 +24,7 @@ struct EchoPathHandler;
 
 #[async_trait::async_trait]
 impl Handler for EchoPathHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let path = request.uri.path().to_string();
 		Ok(Response::ok().with_body(format!("Path: {}", path)))
 	}
@@ -35,7 +35,7 @@ struct MethodHandler;
 
 #[async_trait::async_trait]
 impl Handler for MethodHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let method = request.method.as_str();
 		Ok(Response::ok().with_body(format!("Method: {}", method)))
 	}
@@ -46,7 +46,7 @@ struct DelayHandler;
 
 #[async_trait::async_trait]
 impl Handler for DelayHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		sleep(Duration::from_millis(100)).await;
 		Ok(Response::ok().with_body("Delayed response"))
 	}
@@ -169,7 +169,7 @@ struct CountingHandler {
 
 #[async_trait::async_trait]
 impl Handler for CountingHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		let count = self.count.fetch_add(1, Ordering::SeqCst);
 		Ok(Response::ok().with_body(format!("Request #{}", count + 1)))
 	}

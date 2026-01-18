@@ -6,10 +6,10 @@
 //! - SettingsBuilder operations
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use reinhardt_settings::builder::SettingsBuilder;
-use reinhardt_settings::env_loader::EnvLoader;
-use reinhardt_settings::profile::Profile;
-use reinhardt_settings::sources::EnvSource;
+use reinhardt_conf::settings::builder::SettingsBuilder;
+use reinhardt_conf::settings::env_loader::EnvLoader;
+use reinhardt_conf::settings::profile::Profile;
+use reinhardt_conf::settings::sources::EnvSource;
 use std::hint::black_box;
 use std::path::PathBuf;
 

@@ -7,7 +7,7 @@
 //! 4. Multi-app independence (migrations don't interfere across apps)
 //! 5. Directory structure correctness (migrations/{app}/NNNN_name.rs)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	Migration, MigrationRepository, migration_numbering::MigrationNumbering,
 	repository::filesystem::FilesystemRepository,
 };

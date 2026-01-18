@@ -10,7 +10,7 @@ struct TestHandler;
 
 #[async_trait::async_trait]
 impl Handler for TestHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		Ok(Response::ok().with_body("Hello from HTTP/2!"))
 	}
 }

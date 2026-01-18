@@ -13,7 +13,7 @@ use reinhardt_db::DatabaseConnection;
 use reinhardt_integration_tests::{
 	migrations::apply_basic_test_migrations, validator_test_common::*,
 };
-use reinhardt_orm::manager::reinitialize_database;
+use reinhardt_db::orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::fixtures::validator::{validator_db_guard, ValidatorDbGuard};
 use reinhardt_test::resource::TeardownGuard;

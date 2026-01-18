@@ -4,7 +4,7 @@
 //! verifying that messages are correctly displayed, filtered, and persisted
 //! across template renders.
 
-use reinhardt_messages::{Level, MemoryStorage, Message, MessageStorage};
+use reinhardt_core::messages::{Level, MemoryStorage, Message, MessageStorage};
 use reinhardt_test::fixtures::{postgres_container, temp_dir};
 use rstest::*;
 use serde_json::json;

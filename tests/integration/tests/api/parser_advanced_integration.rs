@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use hyper::HeaderMap;
-use reinhardt_parsers::{JSONParser, MediaType, ParseError, Parser};
+use reinhardt_core::parsers::{JSONParser, MediaType, ParseError, Parser};
 use serde_json::json;
 
 // ============================================================================
@@ -43,7 +43,7 @@ async fn test_json_parser_nested_objects() {
 
 	// Verify nested structure is preserved
 	match result {
-		reinhardt_parsers::parser::ParsedData::Json(value) => {
+		reinhardt_core::parsers::parser::ParsedData::Json(value) => {
 			assert_eq!(value["user"]["name"], "Alice");
 			assert_eq!(value["user"]["address"]["city"], "Springfield");
 			assert_eq!(value["user"]["address"]["location"]["lat"], 42.123);
@@ -184,7 +184,7 @@ async fn test_json_parser_array_data() {
 		.unwrap();
 
 	match result {
-		reinhardt_parsers::parser::ParsedData::Json(value) => {
+		reinhardt_core::parsers::parser::ParsedData::Json(value) => {
 			assert!(value.is_array());
 			let arr = value.as_array().unwrap();
 			assert_eq!(arr.len(), 3);
@@ -212,7 +212,7 @@ async fn test_json_parser_unicode() {
 		.unwrap();
 
 	match result {
-		reinhardt_parsers::parser::ParsedData::Json(value) => {
+		reinhardt_core::parsers::parser::ParsedData::Json(value) => {
 			assert_eq!(value["message"], "こんにちは世界");
 			assert_eq!(value["emoji"], "🎉🎊");
 			assert_eq!(value["mixed"], "Hello 世界 👋");

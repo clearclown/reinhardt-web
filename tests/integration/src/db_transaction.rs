@@ -3,7 +3,7 @@
 //! Provides automatic transaction rollback for tests to ensure clean state
 //! between test runs, even when tests fail midway through execution.
 
-use reinhardt_orm::connection::DatabaseConnection;
+use reinhardt_db::orm::connection::DatabaseConnection;
 use rstest::*;
 use std::sync::Arc;
 use testcontainers::{
@@ -30,7 +30,7 @@ use testcontainers::{
 /// ```rust,no_run,ignore
 /// # use rstest::*;
 /// # use reinhardt_test_support::db_transaction::db_transaction_fixture;
-/// # use reinhardt_orm::connection::DatabaseConnection;
+/// # use reinhardt_db::orm::connection::DatabaseConnection;
 /// # use testcontainers::GenericImage;
 /// # use std::sync::Arc;
 /// #[rstest]

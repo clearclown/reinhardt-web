@@ -19,8 +19,8 @@
 use super::fixtures::{
 	get_column_count, get_foreign_key_count, postgres_introspect_schema, table_exists,
 };
-use reinhardt_migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
-use reinhardt_migrations::{IntrospectConfig, SchemaCodeGenerator};
+use reinhardt_db::migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
+use reinhardt_db::migrations::{IntrospectConfig, SchemaCodeGenerator};
 use reinhardt_test::fixtures::{ContainerAsync, GenericImage};
 use rstest::*;
 use sqlx::PgPool;

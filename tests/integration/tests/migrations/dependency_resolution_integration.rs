@@ -23,8 +23,8 @@
 //! - **Circular Dependency**: Invalid state where A depends on B and B depends on A
 //! - **DAG (Directed Acyclic Graph)**: Valid dependency graph with no cycles
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	dependency::{
 		DependencyCondition, DependencyResolutionContext, OptionalDependency, SwappableDependency,
 	},

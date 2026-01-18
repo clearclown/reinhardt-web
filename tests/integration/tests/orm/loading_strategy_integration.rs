@@ -6,7 +6,7 @@
 //! Run with: cargo test --test loading_strategy_integration_tests --features integration-tests
 
 mod integration_tests {
-	use reinhardt_orm::{
+	use reinhardt_db::orm::{
 		joinedload, lazyload, selectinload, subqueryload, LoadContext, LoadOptionBuilder,
 		LoadingStrategy,
 	};

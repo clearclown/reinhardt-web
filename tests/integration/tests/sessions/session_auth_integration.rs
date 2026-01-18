@@ -15,8 +15,8 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container for session storage
 
-use reinhardt_orm::manager::{get_connection, reinitialize_database};
-use reinhardt_sessions::{
+use reinhardt_db::orm::manager::{get_connection, reinitialize_database};
+use reinhardt_auth::sessions::{
 	backends::{cache::SessionBackend, database::DatabaseSessionBackend},
 	Session,
 };

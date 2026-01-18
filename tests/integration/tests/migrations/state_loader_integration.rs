@@ -3,8 +3,8 @@
 //! These tests verify that MigrationStateLoader correctly builds ProjectState
 //! by replaying migration history, following the Django-style approach.
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	ColumnDefinition, DatabaseMigrationRecorder, FieldType, Migration, MigrationSource,
 	MigrationStateLoader, Operation,
 };
@@ -24,7 +24,7 @@ impl InMemoryMigrationSource {
 
 #[async_trait::async_trait]
 impl MigrationSource for InMemoryMigrationSource {
-	async fn all_migrations(&self) -> reinhardt_migrations::Result<Vec<Migration>> {
+	async fn all_migrations(&self) -> reinhardt_db::migrations::Result<Vec<Migration>> {
 		Ok(self.migrations.clone())
 	}
 }

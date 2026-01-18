@@ -12,7 +12,7 @@
 //! to SQL LIMIT/OFFSET clauses, enabling efficient database-level pagination.
 
 use reinhardt_core::macros::model;
-use reinhardt_orm::manager::reinitialize_database;
+use reinhardt_db::orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::testcontainers::{postgres_container, ContainerAsync, GenericImage};
 use rstest::*;
 use serde::{Deserialize, Serialize};

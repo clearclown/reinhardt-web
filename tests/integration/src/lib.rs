@@ -11,7 +11,7 @@
 use bytes::Bytes;
 use reinhardt_http::Handler;
 use reinhardt_http::Request;
-use reinhardt_migrations::{Constraint, ForeignKeyAction};
+use reinhardt_db::migrations::{Constraint, ForeignKeyAction};
 use reinhardt_server::{HttpServer, ShutdownCoordinator};
 use sqlx::{Pool, Postgres};
 use std::net::SocketAddr;

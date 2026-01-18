@@ -37,7 +37,7 @@
 //! ❌ Template tag parsing (covered by template engine tests)
 //! ❌ Distributed template storage (requires multi-node setup)
 
-use reinhardt_orm::DatabaseConnection;
+use reinhardt_db::orm::DatabaseConnection;
 use reinhardt_test::fixtures::testcontainers::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};

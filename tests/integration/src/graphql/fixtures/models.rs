@@ -4,7 +4,7 @@
 //! using `#[model(...)]` macro from `reinhardt-orm`.
 
 use crate::prelude::*;
-use reinhardt_orm::Model;
+use reinhardt_db::orm::Model;
 use sea_query::{Iden, PostgresQueryBuilder, Query};
 use sqlx::PgPool;
 use std::sync::Arc;

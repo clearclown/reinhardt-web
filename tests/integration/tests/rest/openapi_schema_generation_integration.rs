@@ -18,8 +18,8 @@
 use rstest::*;
 use serde::{Deserialize, Serialize};
 
-use reinhardt_openapi::{InspectorConfig, SchemaGenerator, ViewSetInspector};
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt_rest::openapi::{InspectorConfig, SchemaGenerator, ViewSetInspector};
+use reinhardt_views::viewsets::{ModelViewSet, ReadOnlyModelViewSet};
 
 /// User model for testing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -420,7 +420,7 @@ fn test_multiple_viewsets_path_generation(inspector: ViewSetInspector) {
 #[test]
 fn test_schema_generator_registry_integration(mut generator: SchemaGenerator) {
 	// Register User schema in registry
-	use reinhardt_openapi::{Schema, SchemaExt};
+	use reinhardt_rest::openapi::{Schema, SchemaExt};
 
 	let user_schema = Schema::object_with_properties(
 		vec![

@@ -15,7 +15,7 @@
 //! - DatabaseSchema manual construction for precise control
 //! - Follows existing patterns from duplicate_detection_integration.rs
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	AutoMigrationError, AutoMigrationGenerator, ColumnDefinition, FieldType, Migration,
 	MigrationRepository, Operation,
 };
@@ -24,7 +24,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 // Import DatabaseSchema and SchemaDiff from reinhardt_migrations
-use reinhardt_migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
+use reinhardt_db::migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
 
 // ============================================================================
 // Test Repository Implementation
@@ -46,20 +46,20 @@ impl TestRepository {
 
 #[async_trait::async_trait]
 impl MigrationRepository for TestRepository {
-	async fn save(&mut self, migration: &Migration) -> reinhardt_migrations::Result<()> {
+	async fn save(&mut self, migration: &Migration) -> reinhardt_db::migrations::Result<()> {
 		let key = (migration.app_label.to_string(), migration.name.to_string());
 		self.migrations.insert(key, migration.clone());
 		Ok(())
 	}
 
-	async fn get(&self, app_label: &str, name: &str) -> reinhardt_migrations::Result<Migration> {
+	async fn get(&self, app_label: &str, name: &str) -> reinhardt_db::migrations::Result<Migration> {
 		let key = (app_label.to_string(), name.to_string());
 		self.migrations.get(&key).cloned().ok_or_else(|| {
-			reinhardt_migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
+			reinhardt_db::migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
 		})
 	}
 
-	async fn list(&self, app_label: &str) -> reinhardt_migrations::Result<Vec<Migration>> {
+	async fn list(&self, app_label: &str) -> reinhardt_db::migrations::Result<Vec<Migration>> {
 		Ok(self
 			.migrations
 			.values()
@@ -68,7 +68,7 @@ impl MigrationRepository for TestRepository {
 			.collect())
 	}
 
-	async fn exists(&self, app_label: &str, name: &str) -> reinhardt_migrations::Result<bool> {
+	async fn exists(&self, app_label: &str, name: &str) -> reinhardt_db::migrations::Result<bool> {
 		Ok(self
 			.get(app_label, name)
 			.await
@@ -532,7 +532,7 @@ async fn nc_06_index_addition_creates_create_index_migration() {
 	let mut to_schema = create_todos_schema();
 
 	// Add index on 'title' column
-	use reinhardt_migrations::schema_diff::IndexSchema;
+	use reinhardt_db::migrations::schema_diff::IndexSchema;
 	to_schema
 		.tables
 		.get_mut("todos")
@@ -575,7 +575,7 @@ async fn nc_07_foreign_key_addition_creates_add_column_and_constraint() {
 	let mut to_schema = create_todos_schema();
 
 	// Add user_id foreign key column
-	use reinhardt_migrations::schema_diff::ConstraintSchema;
+	use reinhardt_db::migrations::schema_diff::ConstraintSchema;
 	to_schema.tables.get_mut("todos").unwrap().columns.insert(
 		"user_id".to_string(),
 		ColumnSchema {
@@ -971,7 +971,7 @@ async fn nc_12_one_to_one_creates_unique_foreign_key() {
 	);
 
 	// Add UNIQUE index on profile_id
-	use reinhardt_migrations::schema_diff::IndexSchema;
+	use reinhardt_db::migrations::schema_diff::IndexSchema;
 	to_schema
 		.tables
 		.get_mut("todos")
@@ -1121,7 +1121,7 @@ async fn nc_15_unique_constraint_addition_creates_add_constraint() {
 	let mut to_schema = create_todos_schema();
 
 	// Add UNIQUE index on title column
-	use reinhardt_migrations::schema_diff::IndexSchema;
+	use reinhardt_db::migrations::schema_diff::IndexSchema;
 	to_schema
 		.tables
 		.get_mut("todos")
@@ -1169,7 +1169,7 @@ async fn nc_16_index_deletion_creates_drop_index() {
 	let to_schema = create_todos_schema();
 
 	// Add index in from_schema
-	use reinhardt_migrations::schema_diff::IndexSchema;
+	use reinhardt_db::migrations::schema_diff::IndexSchema;
 	from_schema
 		.tables
 		.get_mut("todos")
@@ -1214,7 +1214,7 @@ async fn nc_17_constraint_deletion_creates_drop_constraint() {
 	let to_schema = create_todos_schema();
 
 	// Add constraint in from_schema
-	use reinhardt_migrations::schema_diff::ConstraintSchema;
+	use reinhardt_db::migrations::schema_diff::ConstraintSchema;
 	from_schema
 		.tables
 		.get_mut("todos")

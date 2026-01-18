@@ -9,8 +9,8 @@
 //! Quick smoke tests to verify core functionality before running full test suite.
 
 use super::fixtures::postgres_introspect_schema;
-use reinhardt_migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
-use reinhardt_migrations::{IntrospectConfig, SchemaCodeGenerator};
+use reinhardt_db::migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
+use reinhardt_db::migrations::{IntrospectConfig, SchemaCodeGenerator};
 use reinhardt_test::fixtures::{ContainerAsync, GenericImage};
 use rstest::*;
 use sqlx::PgPool;
@@ -125,7 +125,7 @@ async fn sanity_table_filtering(
 		.with_app_label("testapp");
 
 	let config = IntrospectConfig {
-		tables: reinhardt_migrations::TableFilterConfig {
+		tables: reinhardt_db::migrations::TableFilterConfig {
 			include: vec!["users".to_string()],
 			exclude: vec![],
 		},

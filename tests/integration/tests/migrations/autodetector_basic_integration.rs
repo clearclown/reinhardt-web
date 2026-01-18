@@ -16,7 +16,7 @@
 //! - postgres_container: PostgreSQL database container
 //! - mysql_container: MySQL database container (for cross-DB validation)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	FieldState, FieldType, IndexDefinition, MigrationAutodetector, ModelState, ProjectState,
 };
 use rstest::*;

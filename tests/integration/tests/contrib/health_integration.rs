@@ -7,7 +7,7 @@
 //! Based on production monitoring patterns from Django and other frameworks.
 
 use async_trait::async_trait;
-use reinhardt_static::{
+use reinhardt_utils::static::{
 	HealthCheck, HealthCheckManager, HealthCheckResult, HealthReport, HealthStatus,
 };
 use std::sync::Arc;

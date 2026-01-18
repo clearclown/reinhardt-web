@@ -16,7 +16,7 @@
 //! **Fixtures Used:**
 //! - None (pure ProjectState manipulation)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	FieldState, FieldType, MigrationAutodetector, ModelState, ProjectState, SimilarityConfig,
 };
 use rstest::*;

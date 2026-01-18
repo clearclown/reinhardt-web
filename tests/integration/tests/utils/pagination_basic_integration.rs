@@ -3,7 +3,7 @@
 //! Tests for reinhardt-pagination core functionality using in-memory data.
 //! These tests verify the basic pagination logic without external dependencies.
 
-use reinhardt_pagination::{
+use reinhardt_core::pagination::{
 	CursorPagination, LimitOffsetPagination, PageNumberPagination, Paginator,
 };
 

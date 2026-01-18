@@ -7,7 +7,7 @@
 //! Tests for logging transaction lifecycle events (begin, commit, rollback, savepoints).
 //! Based on SQLAlchemy's transaction logging tests.
 
-use reinhardt_orm::{IsolationLevel, Savepoint, Transaction};
+use reinhardt_db::orm::{IsolationLevel, Savepoint, Transaction};
 use reinhardt_utils::logging::handlers::MemoryHandler;
 use reinhardt_utils::logging::{LogLevel, Logger};
 use std::sync::Arc;

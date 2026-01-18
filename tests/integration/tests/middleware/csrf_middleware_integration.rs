@@ -6,8 +6,8 @@
 use hyper::header::{HeaderName, HeaderValue, COOKIE, SET_COOKIE};
 use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response, Result};
-use reinhardt_security::csrf::SameSite;
-use reinhardt_security::{generate_token_hmac, verify_token_hmac, CsrfConfig};
+use reinhardt_core::security::csrf::SameSite;
+use reinhardt_core::security::{generate_token_hmac, verify_token_hmac, CsrfConfig};
 use reinhardt_test::http::*;
 
 // Mock handler for testing

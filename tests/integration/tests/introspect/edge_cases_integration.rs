@@ -15,8 +15,8 @@
 //! - EC-005: Many-to-many junction table
 
 use super::fixtures::{empty_postgres_database, postgres_introspect_schema};
-use reinhardt_migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
-use reinhardt_migrations::{IntrospectConfig, SchemaCodeGenerator, TableFilterConfig};
+use reinhardt_db::migrations::introspection::{DatabaseIntrospector, PostgresIntrospector};
+use reinhardt_db::migrations::{IntrospectConfig, SchemaCodeGenerator, TableFilterConfig};
 use reinhardt_test::fixtures::{postgres_container, ContainerAsync, GenericImage};
 use rstest::*;
 use sqlx::PgPool;

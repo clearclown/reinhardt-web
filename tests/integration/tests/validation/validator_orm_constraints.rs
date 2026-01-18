@@ -20,7 +20,7 @@ use reinhardt_integration_tests::{
 	validator_test_common::{TestProduct, TestUser},
 };
 use reinhardt_macros::model;
-use reinhardt_orm::manager::reinitialize_database;
+use reinhardt_db::orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use reinhardt_test::fixtures::validator::{validator_db_guard, ValidatorDbGuard};
 use reinhardt_test::resource::TeardownGuard;

@@ -3,7 +3,7 @@
 //! Tests image optimization, source maps, compression, and their integration
 //! with the processing pipeline.
 
-use reinhardt_static::processing::{
+use reinhardt_utils::static::processing::{
 	bundle::{AssetBundler, BundleConfig},
 	compress::{BrotliCompressor, CompressionConfig, GzipCompressor},
 	minify::{CssMinifier, JsMinifier},
@@ -13,10 +13,10 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 
 #[cfg(feature = "image-optimization")]
-use reinhardt_static::processing::images::ImageOptimizer;
+use reinhardt_utils::static::processing::images::ImageOptimizer;
 
 #[cfg(feature = "source-maps")]
-use reinhardt_static::processing::sourcemap::{SourceMap, SourceMapGenerator, SourceMapMerger};
+use reinhardt_utils::static::processing::sourcemap::{SourceMap, SourceMapGenerator, SourceMapMerger};
 
 // ========== Minification Integration Tests ==========
 

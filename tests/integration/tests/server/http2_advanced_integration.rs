@@ -44,7 +44,7 @@ impl ConcurrentStreamHandler {
 
 #[async_trait::async_trait]
 impl Handler for ConcurrentStreamHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Increment counter
 		let count = self.counter.fetch_add(1, Ordering::SeqCst);
 
@@ -61,7 +61,7 @@ struct HeaderCompressionHandler;
 
 #[async_trait::async_trait]
 impl Handler for HeaderCompressionHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract headers to verify they were properly decompressed
 		let mut headers_count = 0;
 		let mut custom_header_value = String::new();
@@ -88,7 +88,7 @@ struct StreamPriorityHandler;
 
 #[async_trait::async_trait]
 impl Handler for StreamPriorityHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Check for priority header
 		let priority = request
 			.headers
@@ -115,7 +115,7 @@ struct FlowControlHandler;
 
 #[async_trait::async_trait]
 impl Handler for FlowControlHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Get the requested response size
 		let size = request
 			.headers

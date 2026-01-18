@@ -4,7 +4,7 @@
 //! 1. makemigrations → migrate → makemigrations (after execution)
 //! 2. makemigrations → makemigrations (rapid successive calls)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	AutoMigrationError, AutoMigrationGenerator, FieldType, Migration, MigrationRepository,
 	Operation,
 };
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 // Import DatabaseSchema and SchemaDiff from reinhardt_migrations
-use reinhardt_migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
+use reinhardt_db::migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
 
 /// Test repository implementation for integration tests
 struct TestRepository {
@@ -30,20 +30,20 @@ impl TestRepository {
 
 #[async_trait::async_trait]
 impl MigrationRepository for TestRepository {
-	async fn save(&mut self, migration: &Migration) -> reinhardt_migrations::Result<()> {
+	async fn save(&mut self, migration: &Migration) -> reinhardt_db::migrations::Result<()> {
 		let key = (migration.app_label.to_string(), migration.name.to_string());
 		self.migrations.insert(key, migration.clone());
 		Ok(())
 	}
 
-	async fn get(&self, app_label: &str, name: &str) -> reinhardt_migrations::Result<Migration> {
+	async fn get(&self, app_label: &str, name: &str) -> reinhardt_db::migrations::Result<Migration> {
 		let key = (app_label.to_string(), name.to_string());
 		self.migrations.get(&key).cloned().ok_or_else(|| {
-			reinhardt_migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
+			reinhardt_db::migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
 		})
 	}
 
-	async fn list(&self, app_label: &str) -> reinhardt_migrations::Result<Vec<Migration>> {
+	async fn list(&self, app_label: &str) -> reinhardt_db::migrations::Result<Vec<Migration>> {
 		Ok(self
 			.migrations
 			.values()
@@ -52,7 +52,7 @@ impl MigrationRepository for TestRepository {
 			.collect())
 	}
 
-	async fn exists(&self, app_label: &str, name: &str) -> reinhardt_migrations::Result<bool> {
+	async fn exists(&self, app_label: &str, name: &str) -> reinhardt_db::migrations::Result<bool> {
 		Ok(self
 			.get(app_label, name)
 			.await

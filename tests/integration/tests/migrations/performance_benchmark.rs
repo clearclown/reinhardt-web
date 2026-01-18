@@ -11,7 +11,7 @@
 //! 4. **Migration Execution Performance** - Many migrations
 //! 5. **Memory Usage** - Resource consumption under load
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	FieldState, FieldType, ModelState, ProjectState, autodetector::MigrationAutodetector,
 };
 use std::time::{Duration, Instant};
@@ -257,7 +257,7 @@ fn test_deep_dependency_chain_100_levels() {
 				FieldType::ForeignKey {
 					to_table: format!("testapp_model{}", i - 1),
 					to_field: "id".to_string(),
-					on_delete: reinhardt_migrations::ForeignKeyAction::Cascade,
+					on_delete: reinhardt_db::migrations::ForeignKeyAction::Cascade,
 				},
 				true,
 			);
@@ -324,7 +324,7 @@ fn test_wide_dependency_graph() {
 			FieldType::ForeignKey {
 				to_table: "testapp_centralmodel".to_string(),
 				to_field: "id".to_string(),
-				on_delete: reinhardt_migrations::ForeignKeyAction::Cascade,
+				on_delete: reinhardt_db::migrations::ForeignKeyAction::Cascade,
 			},
 			false,
 		);

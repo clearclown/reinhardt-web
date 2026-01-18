@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_messages::{Level, MemoryStorage, Message, MessageStorage};
+	use reinhardt_core::messages::{Level, MemoryStorage, Message, MessageStorage};
 
 	// Basic API tests that can run without full HTTP integration
 

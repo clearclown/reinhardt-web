@@ -19,8 +19,8 @@
 //! implemented in reinhardt-db migrations. These serve as documentation for
 //! future implementation.
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor,
 	operations::{
 		AlterTableOptions, Constraint, DeferrableOption, IndexType, InterleaveSpec, MySqlAlgorithm,
@@ -1168,18 +1168,18 @@ async fn test_mysql_partition_by_range(
 		without_rowid: None,
 		interleave_in_parent: None,
 		partition: Some(PartitionOptions {
-			partition_type: reinhardt_migrations::operations::PartitionType::Range,
+			partition_type: reinhardt_db::migrations::operations::PartitionType::Range,
 			column: "id".to_string(),
 			partitions: vec![
 				PartitionDef {
 					name: "p0".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::LessThan(
+					values: reinhardt_db::migrations::operations::PartitionValues::LessThan(
 						"1000".to_string(),
 					),
 				},
 				PartitionDef {
 					name: "p1".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::LessThan(
+					values: reinhardt_db::migrations::operations::PartitionValues::LessThan(
 						"2000".to_string(),
 					),
 				},
@@ -1193,7 +1193,7 @@ async fn test_mysql_partition_by_range(
 		let p = partition.as_ref().unwrap();
 		assert_eq!(
 			p.partition_type,
-			reinhardt_migrations::operations::PartitionType::Range
+			reinhardt_db::migrations::operations::PartitionType::Range
 		);
 		assert_eq!(p.partitions.len(), 2);
 	} else {
@@ -1228,24 +1228,24 @@ async fn test_mysql_partition_by_hash(
 		without_rowid: None,
 		interleave_in_parent: None,
 		partition: Some(PartitionOptions {
-			partition_type: reinhardt_migrations::operations::PartitionType::Hash,
+			partition_type: reinhardt_db::migrations::operations::PartitionType::Hash,
 			column: "id".to_string(),
 			partitions: vec![
 				PartitionDef {
 					name: "p0".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::ModuloCount(4),
+					values: reinhardt_db::migrations::operations::PartitionValues::ModuloCount(4),
 				},
 				PartitionDef {
 					name: "p1".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::ModuloCount(4),
+					values: reinhardt_db::migrations::operations::PartitionValues::ModuloCount(4),
 				},
 				PartitionDef {
 					name: "p2".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::ModuloCount(4),
+					values: reinhardt_db::migrations::operations::PartitionValues::ModuloCount(4),
 				},
 				PartitionDef {
 					name: "p3".to_string(),
-					values: reinhardt_migrations::operations::PartitionValues::ModuloCount(4),
+					values: reinhardt_db::migrations::operations::PartitionValues::ModuloCount(4),
 				},
 			],
 		}),
@@ -1257,7 +1257,7 @@ async fn test_mysql_partition_by_hash(
 		let p = partition.as_ref().unwrap();
 		assert_eq!(
 			p.partition_type,
-			reinhardt_migrations::operations::PartitionType::Hash
+			reinhardt_db::migrations::operations::PartitionType::Hash
 		);
 		assert_eq!(p.partitions.len(), 4);
 	} else {

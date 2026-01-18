@@ -3,7 +3,7 @@
 //! These tests verify that reinhardt-settings works correctly with loading,
 //! validation, and access patterns.
 
-use reinhardt_settings::{DatabaseConfig, Settings, TemplateConfig};
+use reinhardt_conf::settings::{DatabaseConfig, Settings, TemplateConfig};
 use std::path::PathBuf;
 
 // ============================================================================

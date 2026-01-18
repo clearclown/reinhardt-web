@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::Request;
-use reinhardt_viewsets::{Action, GenericViewSet, ModelViewSet, ReadOnlyModelViewSet, ViewSet};
+use reinhardt_views::viewsets::{Action, GenericViewSet, ModelViewSet, ReadOnlyModelViewSet, ViewSet};
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]

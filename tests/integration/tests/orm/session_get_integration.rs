@@ -9,7 +9,7 @@
 //! Run with: cargo test --test session_get_integration_tests
 
 use reinhardt_macros::model;
-use reinhardt_orm::{query_types::DbBackend, session::Session};
+use reinhardt_db::orm::{query_types::DbBackend, session::Session};
 use reinhardt_test::fixtures::testcontainers::{create_test_any_pool, postgres_container};
 use rstest::*;
 use serde::{Deserialize, Serialize};

@@ -20,13 +20,13 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_filters::{
+use reinhardt_rest::filters::{
 	FilterBackend, FuzzyAlgorithm, FuzzySearchFilter, RangeFilter, SimpleOrderingBackend,
 	SimpleSearchBackend,
 };
 use reinhardt_http::Request;
 use reinhardt_test::fixtures::testcontainers::{postgres_container, ContainerAsync, GenericImage};
-use reinhardt_viewsets::{
+use reinhardt_views::viewsets::{
 	FilterConfig, FilterableViewSet, ModelViewSet, OrderingConfig, ReadOnlyModelViewSet,
 };
 use rstest::*;

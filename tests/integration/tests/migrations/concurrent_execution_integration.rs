@@ -15,8 +15,8 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, recorder::DatabaseMigrationRecorder, ColumnDefinition,
 	FieldType, Migration, Operation,
 };
@@ -358,7 +358,7 @@ async fn test_deadlock_detection(
 
 		conn.execute("COMMIT", vec![]).await?;
 
-		Ok::<_, reinhardt_backends::DatabaseError>(result.is_ok())
+		Ok::<_, reinhardt_db::backends::DatabaseError>(result.is_ok())
 	});
 
 	// Task 2: Lock B then try to lock A
@@ -387,7 +387,7 @@ async fn test_deadlock_detection(
 
 		conn.execute("COMMIT", vec![]).await?;
 
-		Ok::<_, reinhardt_backends::DatabaseError>(result.is_ok())
+		Ok::<_, reinhardt_db::backends::DatabaseError>(result.is_ok())
 	});
 
 	// Wait for both tasks

@@ -21,7 +21,7 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::{Request, Response};
 use reinhardt_test::fixtures::postgres_container;
-use reinhardt_viewsets::{ModelViewSet, ReadOnlyModelViewSet};
+use reinhardt_views::viewsets::{ModelViewSet, ReadOnlyModelViewSet};
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;

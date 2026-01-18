@@ -4,8 +4,8 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::Request;
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt_urls::routers::{DefaultRouter, Router};
+use reinhardt_views::viewsets::ModelViewSet;
 use std::sync::Arc;
 
 #[allow(dead_code)]

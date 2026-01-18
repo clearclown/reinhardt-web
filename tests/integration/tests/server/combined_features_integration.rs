@@ -35,7 +35,7 @@ struct BasicTestHandler;
 
 #[async_trait::async_trait]
 impl Handler for BasicTestHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		Ok(Response::ok().with_body("Hello from handler"))
 	}
 }
@@ -52,7 +52,7 @@ struct DelayedHandler {
 #[cfg(feature = "graphql")]
 #[async_trait::async_trait]
 impl Handler for DelayedHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		sleep(self.delay).await;
 		Ok(Response::ok().with_body("Delayed response"))
 	}
@@ -83,7 +83,7 @@ impl CountingHandler {
 #[cfg(feature = "websocket")]
 #[async_trait::async_trait]
 impl Handler for CountingHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		let count = self.counter.fetch_add(1, Ordering::SeqCst);
 		Ok(Response::ok().with_body(format!("Request #{}", count + 1)))
 	}
@@ -115,7 +115,7 @@ impl Middleware for HeaderMiddleware {
 		&self,
 		request: Request,
 		next: Arc<dyn Handler>,
-	) -> reinhardt_exception::Result<Response> {
+	) -> reinhardt_core::exception::Result<Response> {
 		let mut response = next.handle(request).await?;
 		response = response.with_header(&self.header_name, &self.header_value);
 		Ok(response)
@@ -146,7 +146,7 @@ impl Middleware for LoggingMiddleware {
 		&self,
 		request: Request,
 		next: Arc<dyn Handler>,
-	) -> reinhardt_exception::Result<Response> {
+	) -> reinhardt_core::exception::Result<Response> {
 		{
 			let mut log = self.log.lock().await;
 			log.push(format!("Before: {}", request.uri));
@@ -205,7 +205,7 @@ struct MiddlewareHandler {
 
 #[async_trait::async_trait]
 impl Handler for MiddlewareHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		self.middleware.process(request, self.next.clone()).await
 	}
 }

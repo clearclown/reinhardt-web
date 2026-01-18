@@ -2,10 +2,10 @@
 //!
 //! Tests actual DDL execution on PostgreSQL for composite primary key tables.
 
-use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
-use reinhardt_migrations::operations::models::CreateModel;
-use reinhardt_migrations::operations::FieldDefinition;
-use reinhardt_migrations::FieldType;
+use reinhardt_db::backends::schema::BaseDatabaseSchemaEditor;
+use reinhardt_db::migrations::operations::models::CreateModel;
+use reinhardt_db::migrations::operations::FieldDefinition;
+use reinhardt_db::migrations::FieldType;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serial_test::serial;
@@ -53,12 +53,12 @@ async fn test_composite_pk_create_table_execution_postgresql(
 		async fn execute(
 			&mut self,
 			_sql: &str,
-		) -> Result<(), reinhardt_backends::schema::SchemaEditorError> {
+		) -> Result<(), reinhardt_db::backends::schema::SchemaEditorError> {
 			Ok(())
 		}
 
-		fn database_type(&self) -> reinhardt_backends::DatabaseType {
-			reinhardt_backends::DatabaseType::Postgres
+		fn database_type(&self) -> reinhardt_db::backends::DatabaseType {
+			reinhardt_db::backends::DatabaseType::Postgres
 		}
 	}
 

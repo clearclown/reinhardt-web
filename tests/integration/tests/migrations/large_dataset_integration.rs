@@ -23,8 +23,8 @@
 //! **Note**: Some tests are marked as `#[ignore]` by default due to long execution time.
 //! Run with `cargo test -- --ignored` to execute performance benchmarks.
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, ColumnDefinition, FieldType, Migration, Operation,
 };
 use reinhardt_test::fixtures::{mysql_container, postgres_container};
@@ -269,7 +269,7 @@ async fn test_index_after_data_insertion(
 async fn test_postgres_copy_from(
 	#[future] _postgres_container: (ContainerAsync<GenericImage>, Arc<PgPool>, u16, String),
 ) {
-	use reinhardt_migrations::operations::{BulkLoadFormat, BulkLoadOptions, BulkLoadSource};
+	use reinhardt_db::migrations::operations::{BulkLoadFormat, BulkLoadOptions, BulkLoadSource};
 
 	// Example: PostgreSQL COPY FROM operation
 	let bulk_load_op = Operation::BulkLoad {
@@ -321,7 +321,7 @@ async fn test_postgres_copy_from(
 async fn test_mysql_load_data(
 	#[future] _mysql_container: (ContainerAsync<GenericImage>, Arc<MySqlPool>, u16, String),
 ) {
-	use reinhardt_migrations::operations::{BulkLoadFormat, BulkLoadOptions, BulkLoadSource};
+	use reinhardt_db::migrations::operations::{BulkLoadFormat, BulkLoadOptions, BulkLoadSource};
 
 	// Example: MySQL LOAD DATA LOCAL INFILE operation
 	let bulk_load_op = Operation::BulkLoad {
