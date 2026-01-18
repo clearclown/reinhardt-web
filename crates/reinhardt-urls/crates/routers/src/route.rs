@@ -24,13 +24,13 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	// Create a simple route (using a dummy handler for demonstration)
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -60,11 +60,11 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -94,12 +94,12 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -121,12 +121,12 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -149,13 +149,13 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use reinhardt_middleware::LoggingMiddleware;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -179,12 +179,12 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -223,12 +223,12 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -261,12 +261,12 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -302,11 +302,11 @@ impl Route {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::Route;
+	/// use reinhardt_urls::routers::Route;
 	/// use reinhardt_core::Handler;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -334,7 +334,7 @@ impl Route {
 mod tests {
 	use super::*;
 	use async_trait::async_trait;
-	use reinhardt_core::http::{Request, Response, Result};
+	use reinhardt_http::{Request, Response, Result};
 
 	struct DummyHandler;
 

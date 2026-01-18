@@ -14,7 +14,7 @@ use std::any::Any;
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::{Reflectable, ScalarValue, ProxyResult};
+/// # use reinhardt_urls::proxy::{Reflectable, ScalarValue, ProxyResult};
 /// # use std::any::Any;
 /// # #[derive(Clone)]
 /// # struct Post;
@@ -113,7 +113,7 @@ pub trait Reflectable {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_proxy::{ReflectableFactory, Reflectable, ScalarValue, ProxyResult, ProxyError};
+/// use reinhardt_urls::proxy::{ReflectableFactory, Reflectable, ScalarValue, ProxyResult, ProxyError};
 /// # use std::any::Any;
 /// # struct Tag { id: Option<i64>, name: String }
 /// # impl Reflectable for Tag {

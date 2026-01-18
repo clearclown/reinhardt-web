@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```
-//! use reinhardt_routers::openapi_integration::{OpenApiBuilder, PathItem};
+//! use reinhardt_urls::routers::openapi_integration::{OpenApiBuilder, PathItem};
 //! use hyper::Method;
 //!
 //! let mut builder = OpenApiBuilder::new("My API", "1.0.0");
@@ -232,7 +232,7 @@ impl PathItem {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::PathItem;
+	/// use reinhardt_urls::routers::openapi_integration::PathItem;
 	///
 	/// let path_item = PathItem::new();
 	/// ```
@@ -245,7 +245,7 @@ impl PathItem {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::PathItem;
+	/// use reinhardt_urls::routers::openapi_integration::PathItem;
 	/// use hyper::Method;
 	///
 	/// let path_item = PathItem::new()
@@ -275,7 +275,7 @@ impl PathItem {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::PathItem;
+	/// use reinhardt_urls::routers::openapi_integration::PathItem;
 	///
 	/// let path_item = PathItem::new()
 	///     .with_parameter("id", "User ID", "string");
@@ -332,7 +332,7 @@ impl PathItem {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::openapi_integration::{OpenApiBuilder, PathItem};
+/// use reinhardt_urls::routers::openapi_integration::{OpenApiBuilder, PathItem};
 /// use hyper::Method;
 ///
 /// let mut builder = OpenApiBuilder::new("My API", "1.0.0");
@@ -360,7 +360,7 @@ impl OpenApiBuilder {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::OpenApiBuilder;
+	/// use reinhardt_urls::routers::openapi_integration::OpenApiBuilder;
 	///
 	/// let builder = OpenApiBuilder::new("My API", "1.0.0");
 	/// ```
@@ -428,8 +428,8 @@ impl OpenApiBuilder {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
-	/// use reinhardt_routers::openapi_integration::OpenApiBuilder;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::openapi_integration::OpenApiBuilder;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -497,7 +497,7 @@ impl OpenApiSpec {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::OpenApiBuilder;
+	/// use reinhardt_urls::routers::openapi_integration::OpenApiBuilder;
 	///
 	/// let spec = OpenApiBuilder::new("My API", "1.0.0").build();
 	/// let json = spec.to_json().unwrap();
@@ -512,7 +512,7 @@ impl OpenApiSpec {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::openapi_integration::OpenApiBuilder;
+	/// use reinhardt_urls::routers::openapi_integration::OpenApiBuilder;
 	///
 	/// let spec = OpenApiBuilder::new("My API", "1.0.0").build();
 	/// let yaml = spec.to_yaml().unwrap();

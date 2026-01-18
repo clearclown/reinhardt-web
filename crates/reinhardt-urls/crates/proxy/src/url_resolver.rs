@@ -22,7 +22,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::UrlResolver;
+	/// use reinhardt_urls::proxy::UrlResolver;
 	///
 	/// let resolver = UrlResolver::new();
 	/// ```
@@ -38,7 +38,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{UrlResolver, UrlPattern};
 	///
 	/// let mut resolver = UrlResolver::new();
 	/// resolver.add_pattern(UrlPattern::new("home", "/", None));
@@ -52,7 +52,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{UrlResolver, UrlNamespace};
+	/// use reinhardt_urls::proxy::{UrlResolver, UrlNamespace};
 	///
 	/// let mut resolver = UrlResolver::new();
 	/// let admin_ns = UrlNamespace::new("admin", "/admin/");
@@ -78,7 +78,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{UrlResolver, UrlPattern};
 	/// use std::collections::HashMap;
 	///
 	/// let mut resolver = UrlResolver::new();
@@ -104,7 +104,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{UrlResolver, UrlPattern};
 	///
 	/// let mut resolver = UrlResolver::new();
 	/// assert_eq!(resolver.pattern_count(), 0);
@@ -121,7 +121,7 @@ impl UrlResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{UrlResolver, UrlPattern};
 	///
 	/// let mut resolver = UrlResolver::new();
 	/// resolver.add_pattern(UrlPattern::new("home", "/", None));

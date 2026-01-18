@@ -6,7 +6,7 @@
 //! # Examples
 //!
 //! ```
-//! use reinhardt_routers::introspection::{RouteInspector, RouteInfo};
+//! use reinhardt_urls::routers::introspection::{RouteInspector, RouteInfo};
 //! use hyper::Method;
 //!
 //! let mut inspector = RouteInspector::new();
@@ -64,7 +64,7 @@ impl RouteInfo {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInfo;
+	/// use reinhardt_urls::routers::introspection::RouteInfo;
 	/// use hyper::Method;
 	///
 	/// let info = RouteInfo::new(
@@ -125,7 +125,7 @@ impl RouteInfo {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInfo;
+	/// use reinhardt_urls::routers::introspection::RouteInfo;
 	/// use hyper::Method;
 	///
 	/// let mut info = RouteInfo::new("/users/", vec![Method::GET], None::<String>);
@@ -143,7 +143,7 @@ impl RouteInfo {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInfo;
+	/// use reinhardt_urls::routers::introspection::RouteInfo;
 	/// use hyper::Method;
 	///
 	/// let info = RouteInfo::new("/users/", vec![Method::GET, Method::POST], None::<String>);
@@ -167,7 +167,7 @@ impl RouteInfo {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::introspection::RouteInspector;
+/// use reinhardt_urls::routers::introspection::RouteInspector;
 /// use hyper::Method;
 ///
 /// let mut inspector = RouteInspector::new();
@@ -189,7 +189,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	///
 	/// let inspector = RouteInspector::new();
 	/// assert_eq!(inspector.route_count(), 0);
@@ -207,7 +207,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -252,7 +252,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -270,7 +270,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -288,7 +288,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -306,7 +306,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -331,7 +331,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -363,7 +363,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -390,7 +390,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -431,7 +431,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -461,7 +461,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -508,7 +508,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -526,7 +526,7 @@ impl RouteInspector {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();

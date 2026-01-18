@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::CollectionProxy;
+/// # use reinhardt_urls::proxy::CollectionProxy;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// # struct User;
@@ -107,7 +107,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title");
 	/// assert_eq!(proxy.relationship, "posts");
@@ -146,7 +146,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::unique("tags", "name");
 	/// assert_eq!(proxy.relationship, "tags");
@@ -226,7 +226,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "title");
@@ -271,7 +271,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("tags", "name");
@@ -320,7 +320,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("tags", "name");
@@ -365,7 +365,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("tags", "name");
@@ -405,7 +405,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("tags", "name");
@@ -426,7 +426,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "title");
@@ -457,7 +457,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, query::{FilterCondition, FilterOp}};
+	/// use reinhardt_urls::proxy::{CollectionProxy, query::{FilterCondition, FilterOp}};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "status");
@@ -491,7 +491,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "views");
@@ -523,7 +523,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title");
 	/// assert_eq!(proxy.relationship(), "posts");
@@ -537,7 +537,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title");
 	/// assert_eq!(proxy.attribute(), "title");
@@ -551,7 +551,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::unique("tags", "name");
 	/// assert!(proxy.is_unique());
@@ -568,7 +568,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("tags", "name").with_deduplication(true);
 	/// assert!(proxy.deduplicates());
@@ -584,7 +584,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("tags", "name").with_unique(true);
 	/// assert!(proxy.is_unique());
@@ -599,7 +599,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("tags", "name").with_deduplication(true);
 	/// assert!(proxy.deduplicates());
@@ -614,7 +614,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{CollectionProxy, LoadingStrategy};
+	/// use reinhardt_urls::proxy::{CollectionProxy, LoadingStrategy};
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_loading_strategy(LoadingStrategy::Joined);
@@ -632,7 +632,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// // Example: Filter posts where any tag matches "rust"
 	/// // let proxy = CollectionProxy::new("posts", "tags");
@@ -686,7 +686,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// // Example: Filter posts that have comments from "Alice"
 	/// // let proxy = CollectionProxy::new("posts", "title");
@@ -749,7 +749,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_cascade(true);
@@ -768,7 +768,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// // Merge values from two different relationships
 	/// // let proxy1 = CollectionProxy::new("posts", "title");
@@ -806,7 +806,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_batch_size(100);
@@ -822,7 +822,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_async_loading(true);
@@ -837,7 +837,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("logs", "message")
 	///     .with_streaming(true);
@@ -852,7 +852,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_caching(true);
@@ -867,7 +867,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_database("analytics");
@@ -882,7 +882,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_memory_limit(1024 * 1024);
@@ -898,7 +898,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_stored_procedure("get_posts");
@@ -913,7 +913,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_triggers(true);
@@ -928,7 +928,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_version_tracking(true);
@@ -947,7 +947,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// // Requires factory to be configured
 	/// // let proxy = CollectionProxy::with_factory("tags", "name", factory)
@@ -1001,7 +1001,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// // Requires a mutable source object with Reflectable trait
 	/// // let mut source = ...;
@@ -1036,7 +1036,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("user_view", "name")
 	///     .with_view(true);
@@ -1051,7 +1051,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("user_summary", "name")
 	///     .with_view(true);
@@ -1071,7 +1071,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue};
 	///
 	/// // Requires version tracking to be enabled
 	/// // let proxy = CollectionProxy::new("documents", "content")
@@ -1136,7 +1136,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("products", "price")
 	///     .with_caching(true)
@@ -1152,7 +1152,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("orders", "total")
 	///     .with_batch_size(100)
@@ -1169,7 +1169,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("sessions", "data")
 	///     .with_concurrent_access(true);
@@ -1184,7 +1184,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("users", "name")
 	///     .with_database("primary")
@@ -1200,7 +1200,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("reports", "data")
 	///     .with_stored_procedure("generate_report")
@@ -1219,7 +1219,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("audit_logs", "action")
 	///     .with_triggers(true)
@@ -1237,7 +1237,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_caching(true);
@@ -1252,7 +1252,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_cache_ttl(300);
@@ -1267,7 +1267,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("users", "name")
 	///     .with_triggers(true);
@@ -1282,7 +1282,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("logs", "action")
 	///     .with_trigger_events(&["INSERT", "UPDATE"]);
@@ -1297,7 +1297,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("reports", "data")
 	///     .with_stored_procedure("generate_report");
@@ -1312,7 +1312,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("reports", "data")
 	///     .with_procedure_params(&[("year", "2024")]);
@@ -1327,7 +1327,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("users", "name")
 	///     .with_database("primary");
@@ -1342,7 +1342,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("users", "name")
 	///     .with_fallback_database("replica");
@@ -1357,7 +1357,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_async_loading(true);
@@ -1372,7 +1372,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("sessions", "data")
 	///     .with_concurrent_access(true);
@@ -1387,7 +1387,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("orders", "total")
 	///     .with_batch_size(100);
@@ -1402,7 +1402,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("orders", "total")
 	///     .with_chunk_size(10);
@@ -1417,7 +1417,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("posts", "title")
 	///     .with_cascade(true);
@@ -1432,7 +1432,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("documents", "content")
 	///     .with_version_tracking(true);
@@ -1447,7 +1447,7 @@ impl CollectionProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::CollectionProxy;
+	/// use reinhardt_urls::proxy::CollectionProxy;
 	///
 	/// let proxy = CollectionProxy::new("large_data", "content")
 	///     .with_memory_limit(1024 * 1024);

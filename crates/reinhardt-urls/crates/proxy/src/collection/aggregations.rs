@@ -17,7 +17,7 @@ impl CollectionAggregations {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionAggregations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionAggregations};
 	///
 	/// let proxy = CollectionProxy::new("sales", "amount");
 	/// let agg = CollectionAggregations::new(proxy);
@@ -31,7 +31,7 @@ impl CollectionAggregations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionAggregations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionAggregations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("sales", "amount");
@@ -61,7 +61,7 @@ impl CollectionAggregations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionAggregations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionAggregations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("reviews", "rating");
@@ -102,7 +102,7 @@ impl CollectionAggregations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionAggregations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionAggregations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("prices", "amount");
@@ -139,7 +139,7 @@ impl CollectionAggregations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionAggregations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionAggregations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("bids", "amount");

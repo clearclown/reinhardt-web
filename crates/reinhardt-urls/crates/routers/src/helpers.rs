@@ -20,11 +20,11 @@ use reinhardt_core::Handler;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::path;
+/// use reinhardt_urls::routers::path;
 /// use reinhardt_core::Handler;
 ///
 /// # use async_trait::async_trait;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 /// # struct DummyHandler;
 /// # #[async_trait]
 /// # impl Handler for DummyHandler {
@@ -60,11 +60,11 @@ where
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::re_path;
+/// use reinhardt_urls::routers::re_path;
 /// use reinhardt_core::Handler;
 ///
 /// # use async_trait::async_trait;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 /// # struct DummyHandler;
 /// # #[async_trait]
 /// # impl Handler for DummyHandler {
@@ -217,12 +217,12 @@ fn parse_non_group_char(input: &str) -> IResult<&str, char> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::{DefaultRouter, Router, path};
+/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 /// use reinhardt_core::Handler;
 /// use std::sync::Arc;
 ///
 /// # use async_trait::async_trait;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 /// # struct DummyHandler;
 /// # #[async_trait]
 /// # impl Handler for DummyHandler {
@@ -270,12 +270,12 @@ impl IncludedRouter {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::{include_routes, path};
+/// use reinhardt_urls::routers::{include_routes, path};
 /// use reinhardt_core::Handler;
 /// use std::sync::Arc;
 ///
 /// # use async_trait::async_trait;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 /// # struct DummyHandler;
 /// # #[async_trait]
 /// # impl Handler for DummyHandler {

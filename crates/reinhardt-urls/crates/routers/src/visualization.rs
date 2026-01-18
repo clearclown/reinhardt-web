@@ -6,8 +6,8 @@
 //! # Examples
 //!
 //! ```
-//! use reinhardt_routers::visualization::{RouteVisualizer, VisualizationFormat};
-//! use reinhardt_routers::introspection::RouteInspector;
+//! use reinhardt_urls::routers::visualization::{RouteVisualizer, VisualizationFormat};
+//! use reinhardt_urls::routers::introspection::RouteInspector;
 //! use hyper::Method;
 //!
 //! let mut inspector = RouteInspector::new();
@@ -44,8 +44,8 @@ pub enum VisualizationFormat {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::visualization::{RouteVisualizer, VisualizationFormat};
-/// use reinhardt_routers::introspection::RouteInspector;
+/// use reinhardt_urls::routers::visualization::{RouteVisualizer, VisualizationFormat};
+/// use reinhardt_urls::routers::introspection::RouteInspector;
 /// use hyper::Method;
 ///
 /// let mut inspector = RouteInspector::new();
@@ -67,8 +67,8 @@ impl RouteVisualizer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::visualization::RouteVisualizer;
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::visualization::RouteVisualizer;
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();
@@ -91,8 +91,8 @@ impl RouteVisualizer {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::visualization::{RouteVisualizer, VisualizationFormat};
-	/// use reinhardt_routers::introspection::RouteInspector;
+	/// use reinhardt_urls::routers::visualization::{RouteVisualizer, VisualizationFormat};
+	/// use reinhardt_urls::routers::introspection::RouteInspector;
 	/// use hyper::Method;
 	///
 	/// let mut inspector = RouteInspector::new();

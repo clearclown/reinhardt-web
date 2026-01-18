@@ -59,7 +59,7 @@ where
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::loading::LazyLoaded;
+	/// use reinhardt_urls::proxy::loading::LazyLoaded;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let lazy = LazyLoaded::new(|| {
@@ -83,7 +83,7 @@ where
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::loading::LazyLoaded;
+	/// use reinhardt_urls::proxy::loading::LazyLoaded;
 	///
 	/// let lazy = LazyLoaded::preloaded(vec![1, 2, 3], || {
 	///     Box::pin(async { Ok(vec![4, 5, 6]) })
@@ -140,7 +140,7 @@ where
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::loading::LazyLoaded;
+	/// use reinhardt_urls::proxy::loading::LazyLoaded;
 	///
 	/// let lazy = LazyLoaded::new(|| {
 	///     Box::pin(async { Ok(vec![1, 2, 3]) })
@@ -184,7 +184,7 @@ impl EagerLoadConfig {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::loading::EagerLoadConfig;
+	/// use reinhardt_urls::proxy::loading::EagerLoadConfig;
 	///
 	/// let config = EagerLoadConfig::new()
 	///     .with_relationship("posts")
@@ -241,7 +241,7 @@ impl RelationshipCache {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::loading::RelationshipCache;
+	/// use reinhardt_urls::proxy::loading::RelationshipCache;
 	///
 	/// let cache = RelationshipCache::new();
 	/// assert!(!cache.contains("posts"));

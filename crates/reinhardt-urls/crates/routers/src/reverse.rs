@@ -42,7 +42,7 @@ pub type ReverseResult<T> = Result<T>;
 ///
 /// ```
 /// use std::collections::HashMap;
-/// use reinhardt_routers::reverse::reverse_with_aho_corasick;
+/// use reinhardt_urls::routers::reverse::reverse_with_aho_corasick;
 ///
 /// let mut params = HashMap::new();
 /// params.insert("id".to_string(), "123".to_string());
@@ -100,7 +100,7 @@ pub fn reverse_with_aho_corasick(pattern: &str, params: &HashMap<String, String>
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::reverse::extract_param_names;
+/// use reinhardt_urls::routers::reverse::extract_param_names;
 ///
 /// let names = extract_param_names("/users/{id}/posts/{post_id}/");
 /// assert_eq!(names, vec!["id", "post_id"]);
@@ -148,7 +148,7 @@ pub fn extract_param_names(pattern: &str) -> Vec<String> {
 ///
 /// ```
 /// use std::collections::HashMap;
-/// use reinhardt_routers::reverse::reverse_single_pass;
+/// use reinhardt_urls::routers::reverse::reverse_single_pass;
 ///
 /// let mut params = HashMap::new();
 /// params.insert("id".to_string(), "123".to_string());
@@ -218,7 +218,7 @@ impl UrlReverser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::UrlReverser;
+	/// use reinhardt_urls::routers::UrlReverser;
 	///
 	/// let mut reverser = UrlReverser::new();
 	/// reverser.register_path("v1:users:detail", "/api/v1/users/{id}/");
@@ -275,13 +275,13 @@ impl UrlReverser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{UrlReverser, Route};
+	/// use reinhardt_urls::routers::{UrlReverser, Route};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	/// use std::collections::HashMap;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -329,12 +329,12 @@ impl UrlReverser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{UrlReverser, Route};
+	/// use reinhardt_urls::routers::{UrlReverser, Route};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -406,7 +406,7 @@ pub fn reverse(
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_routers::reverse::UrlPattern;
+/// use reinhardt_urls::routers::reverse::UrlPattern;
 ///
 /// pub struct UserListUrl;
 /// impl UrlPattern for UserListUrl {
@@ -429,7 +429,7 @@ pub trait UrlPattern {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_routers::reverse::{UrlPattern, UrlPatternWithParams};
+/// use reinhardt_urls::routers::reverse::{UrlPattern, UrlPatternWithParams};
 ///
 /// pub struct UserDetailUrl;
 /// impl UrlPattern for UserDetailUrl {
@@ -453,7 +453,7 @@ pub trait UrlPatternWithParams: UrlPattern {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_routers::reverse::{reverse_typed, UrlPattern};
+/// use reinhardt_urls::routers::reverse::{reverse_typed, UrlPattern};
 ///
 /// pub struct HomeUrl;
 /// impl UrlPattern for HomeUrl {
@@ -477,7 +477,7 @@ pub fn reverse_typed<U: UrlPattern>() -> String {
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_routers::reverse::{reverse_typed_with_params, UrlPattern, UrlPatternWithParams};
+/// use reinhardt_urls::routers::reverse::{reverse_typed_with_params, UrlPattern, UrlPatternWithParams};
 /// use std::collections::HashMap;
 ///
 /// pub struct UserDetailUrl;
@@ -521,7 +521,7 @@ pub fn reverse_typed_with_params<U: UrlPatternWithParams>(
 /// # Example
 ///
 /// ```rust
-/// use reinhardt_routers::reverse::{UrlParams, UrlPattern, UrlPatternWithParams};
+/// use reinhardt_urls::routers::reverse::{UrlParams, UrlPattern, UrlPatternWithParams};
 ///
 /// pub struct UserDetailUrl;
 /// impl UrlPattern for UserDetailUrl {

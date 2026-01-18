@@ -7,7 +7,7 @@
 //! # Examples
 //!
 //! ```
-//! use reinhardt_routers::namespace::{Namespace, NamespaceResolver};
+//! use reinhardt_urls::routers::namespace::{Namespace, NamespaceResolver};
 //!
 //! let mut resolver = NamespaceResolver::new();
 //!
@@ -50,7 +50,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// assert_eq!(ns.full_path(), "api:v1:users");
@@ -75,7 +75,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// assert_eq!(ns.full_path(), "api:v1:users");
@@ -89,7 +89,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// assert_eq!(ns.components(), &["api", "v1", "users"]);
@@ -103,7 +103,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// assert_eq!(ns.root(), Some("api"));
@@ -120,7 +120,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// let parent = ns.parent().unwrap();
@@ -143,7 +143,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let ns = Namespace::new("api:v1:users");
 	/// assert_eq!(ns.leaf(), Some("users"));
@@ -157,7 +157,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let parent = Namespace::new("api:v1");
 	/// let child = Namespace::new("api:v1:users");
@@ -183,7 +183,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let parent = Namespace::new("api:v1");
 	/// let child = Namespace::new("api:v1:users");
@@ -200,7 +200,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// let parent = Namespace::new("api:v1");
 	/// let child = parent.append("users");
@@ -221,7 +221,7 @@ impl Namespace {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::Namespace;
+	/// use reinhardt_urls::routers::namespace::Namespace;
 	///
 	/// assert_eq!(Namespace::new("api").depth(), 1);
 	/// assert_eq!(Namespace::new("api:v1").depth(), 2);
@@ -280,7 +280,7 @@ impl NamespacedRoute {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespacedRoute;
+	/// use reinhardt_urls::routers::namespace::NamespacedRoute;
 	///
 	/// let route = NamespacedRoute::new("api:v1:users:detail", "/api/v1/users/{id}/");
 	/// assert_eq!(route.namespace.full_path(), "api:v1:users");
@@ -323,7 +323,7 @@ impl NamespacedRoute {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespacedRoute;
+	/// use reinhardt_urls::routers::namespace::NamespacedRoute;
 	///
 	/// let route = NamespacedRoute::new("api:v1:users:detail", "/api/v1/users/{id}/");
 	/// let url = route.resolve(&[("id", "123")]).unwrap();
@@ -351,7 +351,7 @@ impl NamespacedRoute {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::namespace::extract_param_names;
+/// use reinhardt_urls::routers::namespace::extract_param_names;
 ///
 /// let params = extract_param_names("/users/{id}/posts/{post_id}/");
 /// assert_eq!(params, vec!["id", "post_id"]);
@@ -385,7 +385,7 @@ pub fn extract_param_names(pattern: &str) -> Vec<String> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::namespace::NamespaceResolver;
+/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 ///
 /// let mut resolver = NamespaceResolver::new();
 ///
@@ -412,7 +412,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let resolver = NamespaceResolver::new();
 	/// ```
@@ -433,7 +433,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");
@@ -463,7 +463,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:detail", "/api/v1/users/{id}/");
@@ -485,7 +485,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");
@@ -508,7 +508,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");
@@ -544,7 +544,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");
@@ -565,7 +565,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");
@@ -583,7 +583,7 @@ impl NamespaceResolver {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::namespace::NamespaceResolver;
+	/// use reinhardt_urls::routers::namespace::NamespaceResolver;
 	///
 	/// let mut resolver = NamespaceResolver::new();
 	/// resolver.register("api:v1:users:list", "/api/v1/users/");

@@ -5,7 +5,7 @@ use reinhardt_core::{
 	Handler,
 	http::{Request, Response, Result},
 };
-use reinhardt_viewsets::{Action, ViewSet};
+use reinhardt_views::viewsets::{Action, ViewSet};
 use std::sync::Arc;
 
 /// Handler adapter for ViewSets

@@ -16,10 +16,10 @@
 //! to specific routes or route groups:
 //!
 //! ```rust,ignore
-//! # use reinhardt_routers::UnifiedRouter;
+//! # use reinhardt_urls::routers::UnifiedRouter;
 //! # use hyper::Method;
 //! # use reinhardt_http::{Request, Response};
-//! # use reinhardt_exception::Result;
+//! # use reinhardt_core::exception::Result;
 //!
 //! # async fn handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
 //! # async fn users_handler(_req: Request) -> Result<Response> { Ok(Response::ok()) }
@@ -40,23 +40,18 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(feature = "routers")]
-#[cfg_attr(docsrs, doc(cfg(feature = "routers")))]
-pub use reinhardt_routers as routers;
+pub mod proxy;
+pub mod routers;
 
 #[cfg(feature = "routers-macros")]
 #[cfg_attr(docsrs, doc(cfg(feature = "routers-macros")))]
 pub use reinhardt_routers_macros as routers_macros;
 
-#[cfg(feature = "proxy")]
-#[cfg_attr(docsrs, doc(cfg(feature = "proxy")))]
-pub use reinhardt_proxy as proxy;
-
 // Re-export commonly used types from routers
 #[cfg(feature = "routers")]
 #[cfg_attr(docsrs, doc(cfg(feature = "routers")))]
 pub mod prelude {
-	pub use reinhardt_routers::{
+	pub use crate::routers::{
 		PathPattern, Route, RouteGroup, Router, ServerRouter, UnifiedRouter, clear_script_prefix,
 		get_script_prefix, set_script_prefix,
 	};

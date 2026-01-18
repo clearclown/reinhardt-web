@@ -6,7 +6,7 @@
 //! Note: These tests currently test the API surface because reinhardt-proxy's
 //! actual ORM integration is not yet complete.
 
-use reinhardt_proxy::{AssociationProxy, ProxyBuilder, ScalarValue};
+use reinhardt_urls::proxy::{AssociationProxy, ProxyBuilder, ScalarValue};
 
 #[test]
 fn test_constructor() {
@@ -239,7 +239,7 @@ fn test_proxy_basic_scalar_type_mismatch() {
 fn test_association_proxy_helper() {
 	// Test: Verify that association_proxy helper function works correctly
 
-	use reinhardt_proxy::builder::association_proxy;
+	use reinhardt_urls::proxy::builder::association_proxy;
 
 	let proxy: AssociationProxy<(), ()> = association_proxy("users", "name");
 	assert_eq!(

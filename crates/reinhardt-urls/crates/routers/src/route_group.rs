@@ -15,11 +15,11 @@ pub type RouteInfo = Vec<(String, Option<String>, Option<String>, Vec<hyper::Met
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::RouteGroup;
-/// use reinhardt_routers::ServerRouter;
+/// use reinhardt_urls::routers::RouteGroup;
+/// use reinhardt_urls::routers::ServerRouter;
 /// use reinhardt_middleware::LoggingMiddleware;
 /// use hyper::Method;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 ///
 /// # async fn users_list(_req: Request) -> Result<Response> {
 /// #     Ok(Response::ok())
@@ -50,7 +50,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new();
 	/// ```
@@ -65,7 +65,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new()
 	///     .with_prefix("/api/v1");
@@ -80,7 +80,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new()
 	///     .with_namespace("v1");
@@ -95,7 +95,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use reinhardt_middleware::LoggingMiddleware;
 	///
 	/// let group = RouteGroup::new()
@@ -115,9 +115,9 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -146,9 +146,9 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use hyper::Method;
-	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_http::{Request, Response, Result};
 	/// use reinhardt_core::Handler;
 	/// use async_trait::async_trait;
 	///
@@ -180,9 +180,9 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -219,9 +219,9 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use hyper::Method;
-	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_http::{Request, Response, Result};
 	/// use reinhardt_core::Handler;
 	/// use async_trait::async_trait;
 	///
@@ -256,14 +256,14 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::RouteGroup;
-	/// # use reinhardt_viewsets::ViewSet;
+	/// use reinhardt_urls::routers::RouteGroup;
+	/// # use reinhardt_views::viewsets::ViewSet;
 	/// # use async_trait::async_trait;
 	/// # struct UserViewSet;
 	/// # #[async_trait]
 	/// # impl ViewSet for UserViewSet {
 	/// #     fn get_basename(&self) -> &str { "users" }
-	/// #     async fn dispatch(&self, _req: reinhardt_core::http::Request, _action: reinhardt_viewsets::Action)
+	/// #     async fn dispatch(&self, _req: reinhardt_core::http::Request, _action: reinhardt_views::viewsets::Action)
 	/// #         -> reinhardt_core::exception::Result<reinhardt_core::http::Response> {
 	/// #         Ok(reinhardt_core::http::Response::ok())
 	/// #     }
@@ -272,7 +272,7 @@ impl RouteGroup {
 	/// let group = RouteGroup::new()
 	///     .viewset("/users", UserViewSet);
 	/// ```
-	pub fn viewset<V: reinhardt_viewsets::ViewSet + 'static>(
+	pub fn viewset<V: reinhardt_views::viewsets::ViewSet + 'static>(
 		mut self,
 		prefix: &str,
 		viewset: V,
@@ -286,8 +286,8 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::RouteGroup;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::RouteGroup;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # struct ArticleListView;
 	/// # #[async_trait]
@@ -315,8 +315,8 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::RouteGroup;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::RouteGroup;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # struct ArticleListView;
 	/// # #[async_trait]
@@ -344,7 +344,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let auth_group = RouteGroup::new()
 	///     .with_prefix("/auth/");
@@ -366,7 +366,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new()
 	///     .with_prefix("/api/v1");
@@ -382,7 +382,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new()
 	///     .with_namespace("v1");
@@ -398,7 +398,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let auth_group = RouteGroup::new()
 	///     .with_prefix("/auth/");
@@ -420,9 +420,9 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -443,7 +443,7 @@ impl RouteGroup {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::RouteGroup;
+	/// use reinhardt_urls::routers::RouteGroup;
 	///
 	/// let group = RouteGroup::new();
 	/// let router = group.build();
@@ -463,7 +463,7 @@ impl Default for RouteGroup {
 mod tests {
 	use super::*;
 	use hyper::Method;
-	use reinhardt_core::http::{Request, Response, Result};
+	use reinhardt_http::{Request, Response, Result};
 	use reinhardt_middleware::LoggingMiddleware;
 
 	async fn test_handler(_req: Request) -> Result<Response> {

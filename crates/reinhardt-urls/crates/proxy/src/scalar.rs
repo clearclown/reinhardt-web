@@ -13,7 +13,7 @@ use crate::proxy::ScalarValue;
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::ScalarProxy;
+/// # use reinhardt_urls::proxy::ScalarProxy;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// # #[derive(Clone)]
@@ -40,7 +40,7 @@ impl ScalarProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarProxy;
+	/// use reinhardt_urls::proxy::ScalarProxy;
 	///
 	/// let proxy = ScalarProxy::new("profile", "bio");
 	/// assert_eq!(proxy.relationship, "profile");
@@ -57,7 +57,7 @@ impl ScalarProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarProxy;
+	/// use reinhardt_urls::proxy::ScalarProxy;
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = ScalarProxy::new("profile", "bio");
@@ -91,7 +91,7 @@ impl ScalarProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarProxy, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarProxy, ScalarValue};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = ScalarProxy::new("profile", "bio");
@@ -157,7 +157,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::eq("test");
 	/// assert!(matches!(comparison, ScalarComparison::Eq(_)));
@@ -170,7 +170,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::ne(42);
 	/// assert!(matches!(comparison, ScalarComparison::Ne(_)));
@@ -183,7 +183,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::gt(100);
 	/// assert!(matches!(comparison, ScalarComparison::Gt(ScalarValue::Integer(100))));
@@ -196,7 +196,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::gte(50);
 	/// assert!(matches!(comparison, ScalarComparison::Gte(ScalarValue::Integer(50))));
@@ -209,7 +209,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::lt(25);
 	/// assert!(matches!(comparison, ScalarComparison::Lt(ScalarValue::Integer(25))));
@@ -222,7 +222,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let comparison = ScalarComparison::lte(75);
 	/// assert!(matches!(comparison, ScalarComparison::Lte(ScalarValue::Integer(75))));
@@ -235,7 +235,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let values = vec![ScalarValue::Integer(1), ScalarValue::Integer(2)];
 	/// let comparison = ScalarComparison::in_values(values);
@@ -249,7 +249,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ScalarComparison, ScalarValue};
+	/// use reinhardt_urls::proxy::{ScalarComparison, ScalarValue};
 	///
 	/// let values = vec![ScalarValue::String("banned".to_string())];
 	/// let comparison = ScalarComparison::not_in_values(values);
@@ -263,7 +263,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarComparison;
+	/// use reinhardt_urls::proxy::ScalarComparison;
 	///
 	/// let comparison = ScalarComparison::is_null();
 	/// assert!(matches!(comparison, ScalarComparison::IsNull));
@@ -276,7 +276,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarComparison;
+	/// use reinhardt_urls::proxy::ScalarComparison;
 	///
 	/// let comparison = ScalarComparison::is_not_null();
 	/// assert!(matches!(comparison, ScalarComparison::IsNotNull));
@@ -289,7 +289,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarComparison;
+	/// use reinhardt_urls::proxy::ScalarComparison;
 	///
 	/// let comparison = ScalarComparison::like("%test%");
 	/// assert!(matches!(comparison, ScalarComparison::Like(_)));
@@ -302,7 +302,7 @@ impl ScalarComparison {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarComparison;
+	/// use reinhardt_urls::proxy::ScalarComparison;
 	///
 	/// let comparison = ScalarComparison::not_like("%spam%");
 	/// assert!(matches!(comparison, ScalarComparison::NotLike(_)));

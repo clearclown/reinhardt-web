@@ -16,9 +16,9 @@ static GLOBAL_ROUTER: OnceCell<StdRwLock<Option<Arc<ServerRouter>>>> = OnceCell:
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_routers::{ServerRouter, register_router};
+/// use reinhardt_urls::routers::{ServerRouter, register_router};
 /// use hyper::Method;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 /// # async fn health_handler(_req: Request) -> Result<Response> {
 /// #     Ok(Response::ok())
 /// # }
@@ -51,7 +51,7 @@ pub fn register_router_arc(router: Arc<ServerRouter>) {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_routers::get_router;
+/// use reinhardt_urls::routers::get_router;
 ///
 /// if let Some(router) = get_router() {
 ///     let routes = router.get_all_routes();
@@ -69,7 +69,7 @@ pub fn get_router() -> Option<Arc<ServerRouter>> {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_routers::is_router_registered;
+/// use reinhardt_urls::routers::is_router_registered;
 ///
 /// if !is_router_registered() {
 ///     println!("Warning: No router registered");
@@ -87,7 +87,7 @@ pub fn is_router_registered() -> bool {
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_routers::{clear_router, is_router_registered};
+/// use reinhardt_urls::routers::{clear_router, is_router_registered};
 ///
 /// clear_router();
 /// assert!(!is_router_registered());

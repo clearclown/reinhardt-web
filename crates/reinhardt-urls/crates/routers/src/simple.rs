@@ -14,12 +14,12 @@
 //! # Examples
 //!
 //! ```
-//! use reinhardt_routers::{SimpleRouter, Router, path};
+//! use reinhardt_urls::routers::{SimpleRouter, Router, path};
 //! use reinhardt_core::Handler;
 //! use std::sync::Arc;
 //!
 //! # use async_trait::async_trait;
-//! # use reinhardt_core::http::{Request, Response, Result};
+//! # use reinhardt_http::{Request, Response, Result};
 //! # struct DummyHandler;
 //! # #[async_trait]
 //! # impl Handler for DummyHandler {
@@ -66,7 +66,7 @@ impl SimpleRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::SimpleRouter;
+	/// use reinhardt_urls::routers::SimpleRouter;
 	///
 	/// let router = SimpleRouter::new();
 	/// assert_eq!(router.get_routes().len(), 0);
@@ -83,12 +83,12 @@ impl SimpleRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{SimpleRouter, Router, path};
+	/// use reinhardt_urls::routers::{SimpleRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -133,12 +133,12 @@ impl crate::router::Router for SimpleRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{SimpleRouter, Router, path};
+	/// use reinhardt_urls::routers::{SimpleRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -221,7 +221,7 @@ mod tests {
 	use async_trait::async_trait;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, Uri, Version};
-	use reinhardt_core::http::{Request, Response, Result};
+	use reinhardt_http::{Request, Response, Result};
 
 	struct DummyHandler;
 

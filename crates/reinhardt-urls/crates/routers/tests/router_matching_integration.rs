@@ -11,7 +11,7 @@
 //! Tests use actual HTTP requests with various URL patterns to ensure
 //! routing logic works correctly in real-world scenarios.
 
-use reinhardt_routers::{
+use reinhardt_urls::routers::{
 	PathMatcher, PathPattern, namespace::NamespaceResolver, server_router::ServerRouter,
 };
 

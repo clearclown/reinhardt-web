@@ -18,7 +18,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use reinhardt_routers::UnifiedRouter;
+//! use reinhardt_urls::routers::UnifiedRouter;
 //! use reinhardt_core::page::Page;
 //! use hyper::Method;
 //!
@@ -45,9 +45,9 @@ use crate::server_router::ServerRouter;
 use crate::client_router::ClientRouter;
 
 use hyper::Method;
-use reinhardt_core::di::InjectionContext;
+use reinhardt_di::InjectionContext;
 use reinhardt_core::exception::Result;
-use reinhardt_core::http::{Request, Response};
+use reinhardt_http::{Request, Response};
 use reinhardt_middleware::Middleware;
 use std::future::Future;
 use std::sync::Arc;
@@ -65,7 +65,7 @@ use std::sync::Arc;
 /// # Example
 ///
 /// ```rust,ignore
-/// use reinhardt_routers::UnifiedRouter;
+/// use reinhardt_urls::routers::UnifiedRouter;
 /// use reinhardt_core::page::Page;
 ///
 /// let router = UnifiedRouter::new()
@@ -245,7 +245,7 @@ impl UnifiedRouter {
 	pub fn endpoint<F, E>(mut self, f: F) -> Self
 	where
 		F: FnOnce() -> E,
-		E: reinhardt_core::EndpointInfo + reinhardt_core::Handler + 'static,
+		E: reinhardt_core::endpoint::EndpointInfo + reinhardt_core::Handler + 'static,
 	{
 		self.server = self.server.endpoint(f);
 		self
@@ -299,7 +299,7 @@ impl Default for UnifiedRouter {
 /// # Example
 ///
 /// ```rust,ignore
-/// use reinhardt_routers::UnifiedRouter;
+/// use reinhardt_urls::routers::UnifiedRouter;
 ///
 /// let router = UnifiedRouter::new()
 ///     .server(|s| s.function("/api/health", Method::GET, health_handler));
@@ -390,7 +390,7 @@ impl UnifiedRouter {
 	pub fn endpoint<F, E>(mut self, f: F) -> Self
 	where
 		F: FnOnce() -> E,
-		E: reinhardt_core::EndpointInfo + reinhardt_core::Handler + 'static,
+		E: reinhardt_core::endpoint::EndpointInfo + reinhardt_core::Handler + 'static,
 	{
 		self.server = self.server.endpoint(f);
 		self

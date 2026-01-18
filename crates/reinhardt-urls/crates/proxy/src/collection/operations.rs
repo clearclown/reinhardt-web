@@ -17,7 +17,7 @@ impl CollectionOperations {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionOperations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionOperations};
 	///
 	/// let proxy = CollectionProxy::new("posts", "title");
 	/// let ops = CollectionOperations::new(proxy);
@@ -31,7 +31,7 @@ impl CollectionOperations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue, collection::CollectionOperations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue, collection::CollectionOperations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "title");
@@ -54,7 +54,7 @@ impl CollectionOperations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, ScalarValue, collection::CollectionOperations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, ScalarValue, collection::CollectionOperations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "title");
@@ -80,7 +80,7 @@ impl CollectionOperations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionOperations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionOperations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "created_at");
@@ -103,7 +103,7 @@ impl CollectionOperations {
 	/// # Examples
 	///
 	/// ```ignore
-	/// use reinhardt_proxy::{CollectionProxy, collection::CollectionOperations};
+	/// use reinhardt_urls::proxy::{CollectionProxy, collection::CollectionOperations};
 	///
 	/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 	/// let proxy = CollectionProxy::new("posts", "category");

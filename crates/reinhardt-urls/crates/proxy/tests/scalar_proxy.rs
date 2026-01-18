@@ -3,7 +3,7 @@
 //! These tests verify that scalar proxy operations work correctly for
 //! one-to-one and many-to-one relationships, based on SQLAlchemy's tests.
 
-use reinhardt_proxy::{
+use reinhardt_urls::proxy::{
 	ProxyError, ProxyResult, ScalarComparison, ScalarProxy, ScalarValue, reflection::Reflectable,
 };
 use std::any::Any;

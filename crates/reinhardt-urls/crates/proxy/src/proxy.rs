@@ -12,7 +12,7 @@ use crate::{ProxyError, ProxyResult};
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::AssociationProxy;
+/// # use reinhardt_urls::proxy::AssociationProxy;
 /// # #[derive(Clone)]
 /// # struct UserKeyword;
 /// # #[derive(Clone)]
@@ -66,7 +66,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("user_keywords", "keyword");
 	/// assert_eq!(proxy.relationship, "user_keywords");
@@ -93,7 +93,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// fn create_association(value: String) -> i32 { 42 }
 	///
@@ -111,9 +111,9 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
-	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -131,9 +131,9 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
-	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -151,7 +151,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{AssociationProxy, ProxyError};
+	/// use reinhardt_urls::proxy::{AssociationProxy, ProxyError};
 	///
 	/// fn validate_value(_value: &()) -> Result<(), ProxyError> {
 	///     Ok(())
@@ -171,7 +171,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// fn transform_value(value: ()) -> () {
 	///     value
@@ -191,7 +191,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// let mut proxy: AssociationProxy<(), ()> = AssociationProxy::new("rel", "attr");
 	/// proxy.name = Some("my_proxy".to_string());
@@ -206,7 +206,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("posts", "title");
 	/// assert_eq!(proxy.relationship(), "posts");
@@ -220,7 +220,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// let proxy: AssociationProxy<(), ()> = AssociationProxy::new("posts", "title");
 	/// assert_eq!(proxy.attribute(), "title");
@@ -234,9 +234,9 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
-	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -253,7 +253,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{AssociationProxy, ProxyError};
+	/// use reinhardt_urls::proxy::{AssociationProxy, ProxyError};
 	///
 	/// fn validate(_value: &()) -> Result<(), ProxyError> {
 	///     Ok(())
@@ -272,7 +272,7 @@ impl<T, U> AssociationProxy<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::AssociationProxy;
+	/// use reinhardt_urls::proxy::AssociationProxy;
 	///
 	/// fn transform(value: () ) -> () { value }
 	///
@@ -356,7 +356,7 @@ impl ScalarValue {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarValue;
+	/// use reinhardt_urls::proxy::ScalarValue;
 	///
 	/// let value = ScalarValue::String("hello".to_string());
 	/// assert_eq!(value.as_string().unwrap(), "hello");
@@ -378,7 +378,7 @@ impl ScalarValue {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarValue;
+	/// use reinhardt_urls::proxy::ScalarValue;
 	///
 	/// let value = ScalarValue::Integer(42);
 	/// assert_eq!(value.as_integer().unwrap(), 42);
@@ -400,7 +400,7 @@ impl ScalarValue {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarValue;
+	/// use reinhardt_urls::proxy::ScalarValue;
 	///
 	/// let value = ScalarValue::Float(3.15);
 	/// assert_eq!(value.as_float().unwrap(), 3.15);
@@ -422,7 +422,7 @@ impl ScalarValue {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarValue;
+	/// use reinhardt_urls::proxy::ScalarValue;
 	///
 	/// let value = ScalarValue::Boolean(true);
 	/// assert!(value.as_boolean().unwrap());
@@ -444,7 +444,7 @@ impl ScalarValue {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ScalarValue;
+	/// use reinhardt_urls::proxy::ScalarValue;
 	///
 	/// let null_value = ScalarValue::Null;
 	/// assert!(null_value.is_null());

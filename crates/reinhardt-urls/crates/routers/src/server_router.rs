@@ -27,14 +27,14 @@ use crate::{Route, UrlReverser};
 use async_trait::async_trait;
 use hyper::Method;
 use matchit::Router as MatchitRouter;
-use reinhardt_core::EndpointInfo;
-use reinhardt_core::di::InjectionContext;
+use reinhardt_core::endpoint::EndpointInfo;
+use reinhardt_di::InjectionContext;
 use reinhardt_core::{
 	Handler, MiddlewareChain,
 	http::{Error, Request, Response, Result},
 };
 use reinhardt_middleware::Middleware;
-use reinhardt_viewsets::{Action, ViewSet};
+use reinhardt_views::viewsets::{Action, ViewSet};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
@@ -89,9 +89,9 @@ pub(crate) struct RouteMatch {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_routers::ServerRouter;
+/// use reinhardt_urls::routers::ServerRouter;
 /// use hyper::Method;
-/// # use reinhardt_core::http::{Request, Response, Result};
+/// # use reinhardt_http::{Request, Response, Result};
 ///
 /// # async fn example() -> Result<()> {
 /// // Create a users sub-router
@@ -207,7 +207,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```should_panic
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// // This will panic because "api" doesn't end with "/"
 	/// let router = ServerRouter::new()
@@ -215,7 +215,7 @@ impl ServerRouter {
 	/// ```
 	///
 	/// ```should_panic
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// // This will panic because "" is not allowed, use "/" instead
 	/// let router = ServerRouter::new()
@@ -246,7 +246,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let router = ServerRouter::new();
 	/// ```
@@ -278,7 +278,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let router = ServerRouter::new()
 	///     .with_prefix("/api/v1");
@@ -293,7 +293,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let router = ServerRouter::new()
 	///     .with_namespace("v1");
@@ -308,8 +308,8 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
-	/// use reinhardt_core::di::{InjectionContext, SingletonScope};
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// use reinhardt_di::{InjectionContext, SingletonScope};
 	/// use std::sync::Arc;
 	///
 	/// let singleton_scope = Arc::new(SingletonScope::new());
@@ -327,7 +327,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use reinhardt_middleware::LoggingMiddleware;
 	///
 	/// let router = ServerRouter::new()
@@ -348,7 +348,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let users_router = ServerRouter::new()
 	///     .with_namespace("users");
@@ -364,7 +364,7 @@ impl ServerRouter {
 	/// Using "/" for root mounting is also valid:
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let app_router = ServerRouter::new();
 	/// let router = ServerRouter::new().mount("/", app_router);
@@ -392,7 +392,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let mut router = ServerRouter::new();
 	/// let users_router = ServerRouter::new();
@@ -417,7 +417,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	///
 	/// let users = ServerRouter::new().with_prefix("/users");
 	/// let posts = ServerRouter::new().with_prefix("/posts");
@@ -440,9 +440,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// async fn health_check(_req: Request) -> Result<Response> {
 	///     Ok(Response::ok())
@@ -476,9 +476,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_http::{Request, Response, Result};
 	/// use reinhardt_core::Handler;
 	/// use async_trait::async_trait;
 	///
@@ -519,9 +519,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// async fn health_check(_req: Request) -> Result<Response> {
 	///     Ok(Response::ok())
@@ -544,9 +544,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health_check(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -583,9 +583,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// use reinhardt_core::http::{Request, Response, Result};
+	/// use reinhardt_http::{Request, Response, Result};
 	/// use reinhardt_core::Handler;
 	/// use async_trait::async_trait;
 	///
@@ -632,9 +632,9 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health_check(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -661,14 +661,14 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
-	/// # use reinhardt_viewsets::ViewSet;
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// # use reinhardt_views::viewsets::ViewSet;
 	/// # use async_trait::async_trait;
 	/// # struct UserViewSet;
 	/// # #[async_trait]
 	/// # impl ViewSet for UserViewSet {
 	/// #     fn get_basename(&self) -> &str { "users" }
-	/// #     async fn dispatch(&self, _req: reinhardt_core::http::Request, _action: reinhardt_viewsets::Action)
+	/// #     async fn dispatch(&self, _req: reinhardt_core::http::Request, _action: reinhardt_views::viewsets::Action)
 	/// #         -> reinhardt_core::exception::Result<reinhardt_core::http::Response> {
 	/// #         Ok(reinhardt_core::http::Response::ok())
 	/// #     }
@@ -691,7 +691,7 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// # use reinhardt_core::{EndpointInfo, Handler, http::{Request, Response}};
 	/// # use hyper::Method;
 	/// # struct ListUsers;
@@ -737,8 +737,8 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # struct ArticleListView;
 	/// # #[async_trait]
@@ -770,8 +770,8 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust
-	/// use reinhardt_routers::ServerRouter;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # struct ArticleListView;
 	/// # #[async_trait]
@@ -811,8 +811,8 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # struct CustomHandler;
 	/// # #[async_trait]
@@ -843,8 +843,8 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
-	/// # use reinhardt_core::{Handler, http::{Request, Response, Result}};
+	/// use reinhardt_urls::routers::ServerRouter;
+	/// # use reinhardt_http::{Handler, {Request, Response, Result}};
 	/// # use async_trait::async_trait;
 	/// # use std::sync::Arc;
 	/// # struct CustomHandler;
@@ -870,10 +870,10 @@ impl ServerRouter {
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_routers::ServerRouter;
+	/// use reinhardt_urls::routers::ServerRouter;
 	/// use reinhardt_middleware::LoggingMiddleware;
 	/// use hyper::Method;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	///
 	/// # async fn health(_req: Request) -> Result<Response> {
 	/// #     Ok(Response::ok())
@@ -1662,7 +1662,7 @@ impl Handler for ServerRouter {
 /// Implement RegisterViewSet trait for ServerRouter
 ///
 /// This allows ViewSetBuilder to directly register handlers to the router.
-impl reinhardt_viewsets::RegisterViewSet for ServerRouter {
+impl reinhardt_views::viewsets::RegisterViewSet for ServerRouter {
 	fn register_handler(&mut self, path: &str, handler: Arc<dyn Handler>) {
 		self.views.push(ViewRoute {
 			path: path.to_string(),
@@ -1707,7 +1707,7 @@ mod tests {
 	#[test]
 	fn test_mount_inherits_di_context() {
 		let di_ctx = Arc::new(
-			InjectionContext::builder(Arc::new(reinhardt_core::di::SingletonScope::new())).build(),
+			InjectionContext::builder(Arc::new(reinhardt_di::SingletonScope::new())).build(),
 		);
 
 		let child = ServerRouter::new();

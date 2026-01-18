@@ -120,7 +120,7 @@ impl UrlPatternsRegistration {
 	/// # Examples
 	///
 	/// ```rust,ignore
-	/// use reinhardt_routers::registration::UrlPatternsRegistration;
+	/// use reinhardt_urls::routers::registration::UrlPatternsRegistration;
 	/// use std::sync::Arc;
 	///
 	/// let registration = UrlPatternsRegistration::new(

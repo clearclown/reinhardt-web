@@ -3,7 +3,7 @@
 //! Tests lazy URL reverse resolution, URL pattern compilation, parameterized URLs,
 //! kwargs-based reverse resolution, and namespace resolution without database dependencies.
 
-use reinhardt_proxy::{LazyUrl, UrlNamespace, UrlPattern, UrlResolver};
+use reinhardt_urls::proxy::{LazyUrl, UrlNamespace, UrlPattern, UrlResolver};
 use std::collections::HashMap;
 use std::sync::Arc;
 

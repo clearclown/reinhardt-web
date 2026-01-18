@@ -3,7 +3,7 @@
 //! These tests verify that collection proxy operations work correctly,
 //! based on SQLAlchemy's association_proxy tests.
 
-use reinhardt_proxy::{
+use reinhardt_urls::proxy::{
 	CollectionProxy, ProxyError, ProxyResult, ScalarValue, reflection::Reflectable,
 };
 use std::any::Any;

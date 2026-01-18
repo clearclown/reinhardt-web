@@ -29,7 +29,7 @@ impl JoinConfig {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{JoinConfig, LoadingStrategy};
+	/// use reinhardt_urls::proxy::{JoinConfig, LoadingStrategy};
 	///
 	/// let config = JoinConfig::new()
 	///     .with_loading_strategy(LoadingStrategy::Joined);
@@ -44,7 +44,7 @@ impl JoinConfig {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::JoinConfig;
+	/// use reinhardt_urls::proxy::JoinConfig;
 	///
 	/// let config = JoinConfig::new()
 	///     .with_join_type("LEFT JOIN");
@@ -59,7 +59,7 @@ impl JoinConfig {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::JoinConfig;
+	/// use reinhardt_urls::proxy::JoinConfig;
 	///
 	/// let config = JoinConfig::new()
 	///     .with_condition("users.id = posts.user_id");
@@ -91,7 +91,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new();
 	/// assert_eq!(proxy.depth(), 0);
@@ -118,7 +118,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -135,7 +135,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -152,7 +152,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -169,7 +169,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -186,7 +186,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -202,7 +202,7 @@ impl NestedProxy {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::NestedProxy;
+	/// use reinhardt_urls::proxy::NestedProxy;
 	///
 	/// let proxy = NestedProxy::new()
 	///     .add_level("posts")
@@ -230,7 +230,7 @@ impl Default for NestedProxy {
 /// # Examples
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::RelationshipPath;
+/// # use reinhardt_urls::proxy::RelationshipPath;
 /// // Valid path: user -> posts -> comments
 /// let path = RelationshipPath::new()
 ///     .through("posts")
@@ -264,7 +264,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new();
 	/// assert_eq!(path.path().len(), 0);
@@ -286,7 +286,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new()
 	///     .through("posts")
@@ -309,7 +309,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new()
 	///     .try_through("posts").unwrap()
@@ -339,7 +339,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new()
 	///     .through("posts")
@@ -360,7 +360,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new()
 	///     .through("posts")
@@ -381,7 +381,7 @@ impl RelationshipPath {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::RelationshipPath;
+	/// use reinhardt_urls::proxy::RelationshipPath;
 	///
 	/// let path = RelationshipPath::new()
 	///     .through("posts")

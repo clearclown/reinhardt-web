@@ -31,7 +31,7 @@ impl LazyUrl {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{LazyUrl, UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{LazyUrl, UrlResolver, UrlPattern};
 	/// use std::sync::Arc;
 	///
 	/// let mut resolver = UrlResolver::new();
@@ -61,7 +61,7 @@ impl LazyUrl {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{LazyUrl, UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{LazyUrl, UrlResolver, UrlPattern};
 	/// use std::sync::Arc;
 	/// use std::collections::HashMap;
 	///
@@ -93,7 +93,7 @@ impl LazyUrl {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{LazyUrl, UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{LazyUrl, UrlResolver, UrlPattern};
 	/// use std::sync::Arc;
 	///
 	/// let mut resolver = UrlResolver::new();
@@ -123,7 +123,7 @@ impl LazyUrl {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{LazyUrl, UrlResolver, UrlPattern};
+	/// use reinhardt_urls::proxy::{LazyUrl, UrlResolver, UrlPattern};
 	/// use std::sync::Arc;
 	///
 	/// let mut resolver = UrlResolver::new();

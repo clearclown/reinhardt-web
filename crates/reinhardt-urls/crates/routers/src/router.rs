@@ -4,7 +4,7 @@ use reinhardt_core::{
 	Handler,
 	http::{Request, Response, Result},
 };
-use reinhardt_viewsets::ViewSet;
+use reinhardt_views::viewsets::ViewSet;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -35,7 +35,7 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::DefaultRouter;
+	/// use reinhardt_urls::routers::DefaultRouter;
 	///
 	/// let router = DefaultRouter::new();
 	/// assert_eq!(router.get_routes().len(), 0);
@@ -53,7 +53,7 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::DefaultRouter;
+	/// use reinhardt_urls::routers::DefaultRouter;
 	///
 	/// let router = DefaultRouter::new();
 	/// let reverser = router.reverser();
@@ -69,13 +69,13 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	/// use std::collections::HashMap;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -110,12 +110,12 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -146,13 +146,13 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::DefaultRouter;
-	/// use reinhardt_viewsets::ViewSet;
+	/// use reinhardt_urls::routers::DefaultRouter;
+	/// use reinhardt_views::viewsets::ViewSet;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
-	/// # use reinhardt_viewsets::Action;
+	/// # use reinhardt_http::{Request, Response, Result};
+	/// # use reinhardt_views::viewsets::Action;
 	/// # struct DummyViewSet;
 	/// # #[async_trait]
 	/// # impl ViewSet for DummyViewSet {
@@ -230,13 +230,13 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::DefaultRouter;
-	/// use reinhardt_viewsets::{ViewSet, register_action, ActionMetadata, FunctionActionHandler};
+	/// use reinhardt_urls::routers::DefaultRouter;
+	/// use reinhardt_views::viewsets::{ViewSet, register_action, ActionMetadata, FunctionActionHandler};
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
-	/// # use reinhardt_viewsets::Action;
+	/// # use reinhardt_http::{Request, Response, Result};
+	/// # use reinhardt_views::viewsets::Action;
 	/// # #[derive(Debug, Clone)]
 	/// # struct DummyViewSet;
 	/// # #[async_trait]
@@ -301,12 +301,12 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -331,12 +331,12 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -365,7 +365,7 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::DefaultRouter;
+	/// use reinhardt_urls::routers::DefaultRouter;
 	///
 	/// let router = DefaultRouter::new();
 	/// assert_eq!(router.extract_version_from_path("/v1/users/", "/v{version}/"), Some("1"));
@@ -392,12 +392,12 @@ impl DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -460,12 +460,12 @@ impl Router for DefaultRouter {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_routers::{DefaultRouter, Router, path};
+	/// use reinhardt_urls::routers::{DefaultRouter, Router, path};
 	/// use reinhardt_core::Handler;
 	/// use std::sync::Arc;
 	///
 	/// # use async_trait::async_trait;
-	/// # use reinhardt_core::http::{Request, Response, Result};
+	/// # use reinhardt_http::{Request, Response, Result};
 	/// # struct DummyHandler;
 	/// # #[async_trait]
 	/// # impl Handler for DummyHandler {
@@ -571,7 +571,7 @@ impl<V> ViewSetListHandler<V> {
 #[async_trait]
 impl<V: ViewSet + 'static> Handler for ViewSetListHandler<V> {
 	async fn handle(&self, request: Request) -> Result<Response> {
-		let action = reinhardt_viewsets::Action::list();
+		let action = reinhardt_views::viewsets::Action::list();
 		self.viewset.dispatch(request, action).await
 	}
 }
@@ -592,9 +592,9 @@ impl<V: ViewSet + 'static> Handler for ViewSetDetailHandler<V> {
 	async fn handle(&self, request: Request) -> Result<Response> {
 		// Determine action based on HTTP method
 		let action = match request.method.as_str() {
-			"GET" => reinhardt_viewsets::Action::retrieve(),
-			"PUT" | "PATCH" => reinhardt_viewsets::Action::update(),
-			"DELETE" => reinhardt_viewsets::Action::destroy(),
+			"GET" => reinhardt_views::viewsets::Action::retrieve(),
+			"PUT" | "PATCH" => reinhardt_views::viewsets::Action::update(),
+			"DELETE" => reinhardt_views::viewsets::Action::destroy(),
 			_ => {
 				return Err(reinhardt_core::exception::Error::Http(
 					"Method not allowed".to_string(),
@@ -608,11 +608,11 @@ impl<V: ViewSet + 'static> Handler for ViewSetDetailHandler<V> {
 
 /// Handler wrapper for custom ViewSet actions
 struct ActionHandlerWrapper {
-	handler: Arc<dyn reinhardt_viewsets::ActionHandler>,
+	handler: Arc<dyn reinhardt_views::viewsets::ActionHandler>,
 }
 
 impl ActionHandlerWrapper {
-	fn new(handler: Arc<dyn reinhardt_viewsets::ActionHandler>) -> Self {
+	fn new(handler: Arc<dyn reinhardt_views::viewsets::ActionHandler>) -> Self {
 		Self { handler }
 	}
 }
@@ -629,7 +629,7 @@ mod tests {
 	use super::*;
 	use crate::path;
 	use async_trait::async_trait;
-	use reinhardt_core::http::{Request, Response, Result};
+	use reinhardt_http::{Request, Response, Result};
 
 	struct DummyHandler;
 

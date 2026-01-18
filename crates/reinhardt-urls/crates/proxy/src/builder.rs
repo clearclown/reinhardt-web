@@ -17,7 +17,7 @@ pub type ValidatorFn<U> = fn(&U) -> Result<(), crate::ProxyError>;
 /// ## Example
 ///
 /// ```rust
-/// # use reinhardt_proxy::ProxyBuilder;
+/// # use reinhardt_urls::proxy::ProxyBuilder;
 /// # #[derive(Clone)]
 /// # struct UserKeyword { keyword: String }
 /// # impl UserKeyword {
@@ -55,7 +55,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new();
 	// Builder is ready to configure
@@ -81,7 +81,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::with_name("keyword_strings");
 	/// ```
@@ -103,7 +103,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
 	///     .relationship("posts");
@@ -118,7 +118,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
 	///     .relationship("posts")
@@ -134,7 +134,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// fn create_item(value: i32) -> String { format!("item_{}", value) }
 	///
@@ -154,7 +154,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
 	///     .for_relationship("posts");
@@ -168,9 +168,9 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
-	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -189,9 +189,9 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
-	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_setter(_obj: &mut (), _value: ()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -210,7 +210,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ProxyBuilder, ProxyError};
+	/// use reinhardt_urls::proxy::{ProxyBuilder, ProxyError};
 	///
 	/// fn validate_value(_value: &()) -> Result<(), ProxyError> {
 	///     Ok(())
@@ -231,7 +231,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// fn transform_value(value: ()) -> () {
 	///     value
@@ -252,9 +252,9 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
-	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_proxy::ProxyError> {
+	/// fn custom_getter(_obj: &()) -> Result<(), reinhardt_urls::proxy::ProxyError> {
 	///     Ok(())
 	/// }
 	///
@@ -271,7 +271,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::{ProxyBuilder, ProxyError};
+	/// use reinhardt_urls::proxy::{ProxyBuilder, ProxyError};
 	///
 	/// fn validate(_value: &()) -> Result<(), ProxyError> {
 	///     Ok(())
@@ -290,7 +290,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// fn transform(value: ()) -> () { value }
 	///
@@ -307,7 +307,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::with_name("my_alias");
 	/// assert_eq!(builder.name(), Some("my_alias"));
@@ -321,7 +321,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
 	///     .relationship("posts");
@@ -336,7 +336,7 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	/// let builder: ProxyBuilder<(), ()> = ProxyBuilder::new()
 	///     .attribute("title");
@@ -355,9 +355,9 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
-	/// let proxy: reinhardt_proxy::AssociationProxy<(), ()> = ProxyBuilder::new()
+	/// let proxy: reinhardt_urls::proxy::AssociationProxy<(), ()> = ProxyBuilder::new()
 	///     .relationship("posts")
 	///     .attribute("title")
 	///     .build();
@@ -379,17 +379,17 @@ impl<T, U> ProxyBuilder<T, U> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_proxy::ProxyBuilder;
+	/// use reinhardt_urls::proxy::ProxyBuilder;
 	///
 	// Complete configuration
-	/// let proxy: Option<reinhardt_proxy::AssociationProxy<(), ()>> = ProxyBuilder::new()
+	/// let proxy: Option<reinhardt_urls::proxy::AssociationProxy<(), ()>> = ProxyBuilder::new()
 	///     .relationship("posts")
 	///     .attribute("title")
 	///     .try_build();
 	/// assert!(proxy.is_some());
 	///
 	// Incomplete configuration
-	/// let incomplete: Option<reinhardt_proxy::AssociationProxy<(), ()>> = ProxyBuilder::new()
+	/// let incomplete: Option<reinhardt_urls::proxy::AssociationProxy<(), ()>> = ProxyBuilder::new()
 	///     .relationship("posts")
 	///     .try_build();
 	/// assert!(incomplete.is_none());
@@ -411,7 +411,7 @@ impl<T, U> ProxyBuilder<T, U> {
 /// ## Example
 ///
 /// ```rust,no_run
-/// # use reinhardt_proxy::{AssociationProxy, association_proxy};
+/// # use reinhardt_urls::proxy::{AssociationProxy, association_proxy};
 /// # struct UserKeyword;
 /// let proxy: AssociationProxy<UserKeyword, String> = association_proxy("user_keywords", "keyword");
 /// ```

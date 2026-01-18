@@ -9,11 +9,10 @@ repository.workspace = true
 
 [dependencies]
 reinhardt-views = { workspace = true, features = ["viewsets"] }
-reinhardt-viewsets = { workspace = true }
 reinhardt-routers-macros = { workspace = true }
 reinhardt-middleware = { workspace = true, optional = true }
-reinhardt-core = { workspace = true, features = ["exception", "types", "di"] }
-reinhardt-reactive = { workspace = true, optional = true }
+reinhardt-core = { workspace = true, features = ["exception", "reactive", "types"] }
+reinhardt-di = { workspace = true }
 reinhardt-db = { workspace = true, optional = true }
 regex = { workspace = true }
 nom = { workspace = true }
