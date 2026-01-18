@@ -8,8 +8,8 @@
 //! - Rate limit with timeout combination
 
 use http::StatusCode;
-use reinhardt_core::http::{Request, Response};
-use reinhardt_core::Handler;
+use reinhardt_http::{Request, Response};
+use reinhardt_http::Handler;
 use reinhardt_http::ViewResult;
 use reinhardt_macros::get;
 use reinhardt_urls::routers::ServerRouter as Router;

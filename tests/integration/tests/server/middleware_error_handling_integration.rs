@@ -5,8 +5,7 @@
 
 use async_trait::async_trait;
 use http::StatusCode;
-use reinhardt_core::http::{Request, Response};
-use reinhardt_core::{Handler, Middleware};
+use reinhardt_http::{Request, Response, Handler, Middleware};
 use reinhardt_core::exception::{Error, Result};
 use reinhardt_test::fixtures::*;
 use reinhardt_test::APIClient;
@@ -133,7 +132,7 @@ async fn test_middleware_exception_handling(#[future] http1_server: TestServer) 
 	let handler = Arc::new(BasicHandler);
 	let middleware = Arc::new(ErrorThrowingMiddleware);
 
-	let chain = reinhardt_core::MiddlewareChain::new(handler).with_middleware(middleware);
+	let chain = reinhardt_http::MiddlewareChain::new(handler).with_middleware(middleware);
 
 	// Start server with error middleware
 	let test_server = TestServer::builder()
@@ -169,7 +168,7 @@ async fn test_error_propagation_through_chain(#[future] http1_server: TestServer
 	let middleware1 = Arc::new(ErrorPropagationMiddleware { add_context: true });
 	let middleware2 = Arc::new(ErrorPropagationMiddleware { add_context: true });
 
-	let chain = reinhardt_core::MiddlewareChain::new(handler)
+	let chain = reinhardt_http::MiddlewareChain::new(handler)
 		.with_middleware(middleware1)
 		.with_middleware(middleware2);
 
@@ -202,7 +201,7 @@ async fn test_request_transformation_error(#[future] http1_server: TestServer) {
 	let handler = Arc::new(BasicHandler);
 	let middleware = Arc::new(RequestTransformErrorMiddleware);
 
-	let chain = reinhardt_core::MiddlewareChain::new(handler).with_middleware(middleware);
+	let chain = reinhardt_http::MiddlewareChain::new(handler).with_middleware(middleware);
 
 	let test_server = TestServer::builder()
 		.handler(Arc::new(chain))
@@ -238,7 +237,7 @@ async fn test_response_transformation_error(#[future] http1_server: TestServer) 
 	let handler = Arc::new(BasicHandler);
 	let middleware = Arc::new(ResponseTransformErrorMiddleware);
 
-	let chain = reinhardt_core::MiddlewareChain::new(handler).with_middleware(middleware);
+	let chain = reinhardt_http::MiddlewareChain::new(handler).with_middleware(middleware);
 
 	let test_server = TestServer::builder()
 		.handler(Arc::new(chain))
@@ -272,7 +271,7 @@ async fn test_custom_error_response(#[future] http1_server: TestServer) {
 	// Wrap with custom error response middleware
 	let middleware = Arc::new(CustomErrorResponseMiddleware);
 
-	let chain = reinhardt_core::MiddlewareChain::new(handler).with_middleware(middleware);
+	let chain = reinhardt_http::MiddlewareChain::new(handler).with_middleware(middleware);
 
 	let test_server = TestServer::builder()
 		.handler(Arc::new(chain))

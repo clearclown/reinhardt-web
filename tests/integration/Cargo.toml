@@ -22,6 +22,7 @@ reinhardt-auth = { workspace = true, features = [
   "oauth",
   "database",
   "redis-sessions",
+  "rate-limit",
 ] }
 reinhardt-http = { workspace = true, features = ["messages"] }
 reinhardt-di = { workspace = true, features = ["macros", "params"] }
@@ -40,6 +41,7 @@ reinhardt-tasks = { workspace = true, features = [
   "rabbitmq-backend",
 ] }
 reinhardt-rest = { workspace = true, features = ["browsable-api", "filters", "metadata", "openapi", "serializers", "throttling", "versioning"]}
+reinhardt-throttling = { workspace = true }
 reinhardt-shortcuts = { workspace = true, features = ["database"] }
 reinhardt-forms = { workspace = true }
 reinhardt-utils = { workspace = true, features = ["cache", "logging", "static", "storage"] }

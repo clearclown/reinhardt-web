@@ -14,11 +14,12 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method};
 use reinhardt_auth::{
-	Permission, PermissionContext, RateLimitConfig, RateLimitKeyStrategy, RateLimitPermission,
+	Permission, PermissionContext, RateLimitPermission,
 	SimpleUser,
 };
+use reinhardt_auth::rate_limit_permission::RateLimitStrategy;
 use reinhardt_http::Request;
-use reinhardt_rest::throttling::{MemoryBackend, ThrottleBackend};
+use reinhardt_throttling::{MemoryBackend, ThrottleBackend};
 use rstest::*;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -33,19 +34,13 @@ fn memory_backend() -> Arc<MemoryBackend> {
 	Arc::new(MemoryBackend::new())
 }
 
-/// Creates a basic rate limit config (5 requests per 60 seconds, IP-based)
-#[fixture]
-fn basic_config() -> RateLimitConfig {
-	RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress)
-}
-
-/// Creates a rate limit permission with memory backend and basic config
+/// Creates a rate limit permission with memory backend (5 requests per 60 seconds, IP-based)
 #[fixture]
 fn rate_limit_permission(
 	memory_backend: Arc<MemoryBackend>,
-	basic_config: RateLimitConfig,
 ) -> RateLimitPermission<MemoryBackend> {
-	RateLimitPermission::new(memory_backend, basic_config)
+	// 5 requests per 60 seconds = capacity 5.0, refill_rate = 5.0/60.0
+	RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, 5.0, 5.0 / 60.0)
 }
 
 /// Creates a test request with specified IP in X-Forwarded-For header
@@ -106,8 +101,10 @@ fn create_test_user(username: &str) -> SimpleUser {
 #[rstest]
 #[tokio::test]
 async fn test_requests_allowed_within_limit(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 5;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_request_with_ip("192.168.1.100");
 	let context = PermissionContext {
@@ -131,8 +128,10 @@ async fn test_requests_allowed_within_limit(memory_backend: Arc<MemoryBackend>) 
 #[rstest]
 #[tokio::test]
 async fn test_different_ips_have_separate_limits(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	// IP 1: Use up the limit
 	let request1 = create_request_with_ip("10.0.0.1");
@@ -175,8 +174,10 @@ async fn test_different_ips_have_separate_limits(memory_backend: Arc<MemoryBacke
 #[rstest]
 #[tokio::test]
 async fn test_user_id_strategy(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(3, 60, RateLimitKeyStrategy::UserId);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 3;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerUser, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_basic_request();
 	let user = create_test_user("alice");
@@ -197,19 +198,7 @@ async fn test_user_id_strategy(memory_backend: Arc<MemoryBackend>) {
 	assert!(!permission.has_permission(&context).await);
 }
 
-#[rstest]
-#[tokio::test]
-async fn test_config_getter(rate_limit_permission: RateLimitPermission<MemoryBackend>) {
-	let config = rate_limit_permission.config();
-
-	assert_eq!(config.rate, 5, "Rate should be 5");
-	assert_eq!(config.window, 60, "Window should be 60 seconds");
-	assert_eq!(
-		config.strategy,
-		RateLimitKeyStrategy::IpAddress,
-		"Strategy should be IpAddress"
-	);
-}
+// test_config_getter removed - config() method no longer exists in new API
 
 // =============================================================================
 // Error Path Tests
@@ -218,8 +207,10 @@ async fn test_config_getter(rate_limit_permission: RateLimitPermission<MemoryBac
 #[rstest]
 #[tokio::test]
 async fn test_rate_limit_exceeded(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_request_with_ip("172.16.0.1");
 	let context = PermissionContext {
@@ -248,8 +239,10 @@ async fn test_rate_limit_exceeded(memory_backend: Arc<MemoryBackend>) {
 #[rstest]
 #[tokio::test]
 async fn test_user_strategy_without_authentication(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(10, 60, RateLimitKeyStrategy::UserId);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 10;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerUser, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_basic_request();
 	let context = PermissionContext {
@@ -270,8 +263,10 @@ async fn test_user_strategy_without_authentication(memory_backend: Arc<MemoryBac
 #[rstest]
 #[tokio::test]
 async fn test_ip_strategy_without_ip_headers(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 5;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	// Request without any IP headers or remote_addr
 	let request = create_basic_request();
@@ -293,8 +288,10 @@ async fn test_ip_strategy_without_ip_headers(memory_backend: Arc<MemoryBackend>)
 #[rstest]
 #[tokio::test]
 async fn test_ip_and_user_strategy_partial_info(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAndUser);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 5;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIpAndUser, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	// Request with IP but no user
 	let request = create_request_with_ip("192.168.1.1");
@@ -320,8 +317,10 @@ async fn test_ip_and_user_strategy_partial_info(memory_backend: Arc<MemoryBacken
 #[rstest]
 #[tokio::test]
 async fn test_multiple_users_independent_limits(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::UserId);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerUser, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_basic_request();
 
@@ -364,56 +363,8 @@ async fn test_multiple_users_independent_limits(memory_backend: Arc<MemoryBacken
 	);
 }
 
-#[rstest]
-#[tokio::test]
-async fn test_scoped_rate_limits_are_independent(memory_backend: Arc<MemoryBackend>) {
-	// Create two permissions with different scopes
-	let config_api = RateLimitConfig::builder()
-		.rate(2)
-		.window(60)
-		.strategy(RateLimitKeyStrategy::IpAddress)
-		.scope("api".to_string())
-		.build();
-
-	let config_web = RateLimitConfig::builder()
-		.rate(2)
-		.window(60)
-		.strategy(RateLimitKeyStrategy::IpAddress)
-		.scope("web".to_string())
-		.build();
-
-	// Use same backend for both
-	let permission_api = RateLimitPermission::new(Arc::clone(&memory_backend), config_api);
-	let permission_web = RateLimitPermission::new(memory_backend, config_web);
-
-	let request = create_request_with_ip("10.0.0.1");
-	let context = PermissionContext {
-		request: &request,
-		is_authenticated: false,
-		is_admin: false,
-		is_active: false,
-		user: None,
-	};
-
-	// Use up API limit
-	assert!(permission_api.has_permission(&context).await);
-	assert!(permission_api.has_permission(&context).await);
-	assert!(
-		!permission_api.has_permission(&context).await,
-		"API limit should be exhausted"
-	);
-
-	// Web limit should still be fresh
-	assert!(
-		permission_web.has_permission(&context).await,
-		"Web scope should have fresh limit"
-	);
-	assert!(permission_web.has_permission(&context).await);
-	assert!(
-		!permission_web.has_permission(&context).await,
-		"Web limit should be exhausted"
-	);
-}
+// test_scoped_rate_limits_are_independent removed - scope functionality not available in new API
+// New API doesn't support scope configuration in builder
 
 // =============================================================================
 // Edge Cases Tests
@@ -429,8 +380,12 @@ async fn test_various_rate_limits(
 	#[case] rate: usize,
 	#[case] window: u64,
 ) {
-	let config = RateLimitConfig::new(rate, window, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let permission = RateLimitPermission::new(
+		memory_backend,
+		RateLimitStrategy::PerIp,
+		rate as f64,
+		(rate as f64) / (window as f64)
+	);
 
 	let request = create_request_with_ip("192.168.1.100");
 	let context = PermissionContext {
@@ -463,15 +418,15 @@ async fn test_various_rate_limits(
 #[rstest]
 #[tokio::test]
 async fn test_custom_key_strategy(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::Custom);
-	let permission = RateLimitPermission::new(memory_backend, config).with_custom_key(|ctx| {
-		// Use a custom key based on User-Agent header
-		ctx.request
-			.headers
-			.get("User-Agent")
-			.and_then(|v| v.to_str().ok())
-			.map(|s| s.to_string())
-	});
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerRoute, 2.0, 2.0 / 60.0)
+		.with_custom_key(|ctx| {
+			// Use a custom key based on User-Agent header
+			ctx.request
+				.headers
+				.get("User-Agent")
+				.and_then(|v| v.to_str().ok())
+				.map(|s| s.to_string())
+		});
 
 	let mut headers = HeaderMap::new();
 	headers.insert("User-Agent", "TestBot/1.0".parse().unwrap());
@@ -504,8 +459,10 @@ async fn test_custom_key_strategy(memory_backend: Arc<MemoryBackend>) {
 #[rstest]
 #[tokio::test]
 async fn test_x_forwarded_for_with_multiple_ips(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	// X-Forwarded-For with multiple IPs (should use first one)
 	let mut headers = HeaderMap::new();
@@ -541,8 +498,10 @@ async fn test_x_forwarded_for_with_multiple_ips(memory_backend: Arc<MemoryBacken
 #[rstest]
 #[tokio::test]
 async fn test_x_real_ip_header_extraction(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_request_with_real_ip("198.51.100.42");
 	let context = PermissionContext {
@@ -561,8 +520,10 @@ async fn test_x_real_ip_header_extraction(memory_backend: Arc<MemoryBackend>) {
 #[rstest]
 #[tokio::test]
 async fn test_ip_and_user_combined_strategy(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAndUser);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let config_rate = 2;
+	let config_window = 60;
+	// Create permission with new API: capacity = rate, refill_rate = rate / window
+	let permission = RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIpAndUser, config_rate as f64, (config_rate as f64) / (config_window as f64));
 
 	let request = create_request_with_ip("192.168.1.1");
 	let user = create_test_user("combined_user");
@@ -586,23 +547,22 @@ async fn test_ip_and_user_combined_strategy(memory_backend: Arc<MemoryBackend>) 
 // =============================================================================
 
 #[rstest]
-#[case(RateLimitKeyStrategy::IpAddress, true, false, true)] // IP + no user = key from IP
-#[case(RateLimitKeyStrategy::UserId, false, true, true)] // User + no IP = key from user
-#[case(RateLimitKeyStrategy::IpAndUser, true, true, true)] // Both = combined key
-#[case(RateLimitKeyStrategy::IpAddress, false, false, false)] // No IP = denied
-#[case(RateLimitKeyStrategy::UserId, true, false, false)] // User strategy but no user = denied
-#[case(RateLimitKeyStrategy::IpAndUser, true, false, false)] // IpAndUser missing user = denied
-#[case(RateLimitKeyStrategy::IpAndUser, false, true, false)] // IpAndUser missing IP = denied
+#[case(RateLimitStrategy::PerIp, true, false, true)] // IP + no user = key from IP
+#[case(RateLimitStrategy::PerUser, false, true, true)] // User + no IP = key from user
+#[case(RateLimitStrategy::PerIpAndUser, true, true, true)] // Both = combined key
+#[case(RateLimitStrategy::PerIp, false, false, false)] // No IP = denied
+#[case(RateLimitStrategy::PerUser, true, false, false)] // User strategy but no user = denied
+#[case(RateLimitStrategy::PerIpAndUser, true, false, false)] // IpAndUser missing user = denied
+#[case(RateLimitStrategy::PerIpAndUser, false, true, false)] // IpAndUser missing IP = denied
 #[tokio::test]
 async fn test_key_strategy_decision_table(
 	memory_backend: Arc<MemoryBackend>,
-	#[case] strategy: RateLimitKeyStrategy,
+	#[case] strategy: RateLimitStrategy,
 	#[case] has_ip: bool,
 	#[case] has_user: bool,
 	#[case] expected_first_allowed: bool,
 ) {
-	let config = RateLimitConfig::new(5, 60, strategy);
-	let permission = RateLimitPermission::new(memory_backend, config);
+	let permission = RateLimitPermission::new(memory_backend, strategy, 5.0, 5.0 / 60.0);
 
 	// Create request with or without IP
 	let request = if has_ip {
@@ -646,32 +606,17 @@ async fn test_key_strategy_decision_table(
 // Builder Pattern Tests
 // =============================================================================
 
-#[rstest]
-#[tokio::test]
-async fn test_config_builder() {
-	let config = RateLimitConfig::builder()
-		.rate(100)
-		.window(3600)
-		.strategy(RateLimitKeyStrategy::UserId)
-		.allow_on_error(true)
-		.scope("premium".to_string())
-		.build();
-
-	assert_eq!(config.rate, 100);
-	assert_eq!(config.window, 3600);
-	assert_eq!(config.strategy, RateLimitKeyStrategy::UserId);
-	assert!(config.allow_on_error);
-	assert_eq!(config.scope, Some("premium".to_string()));
-}
+// test_config_builder removed - RateLimitConfig::builder() no longer exists in new API
+// New API uses RateLimitPermission::builder() instead
 
 #[rstest]
 #[tokio::test]
 async fn test_permission_builder(memory_backend: Arc<MemoryBackend>) {
-	let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress);
-
 	let permission = RateLimitPermission::builder()
 		.backend(memory_backend)
-		.config(config)
+		.strategy(RateLimitStrategy::PerIp)
+		.capacity(5.0)
+		.refill_rate(5.0 / 60.0)
 		.build();
 
 	// Should work correctly
@@ -697,8 +642,7 @@ async fn test_concurrent_requests_same_ip(memory_backend: Arc<MemoryBackend>) {
 	use std::sync::atomic::{AtomicUsize, Ordering};
 	use tokio::sync::Barrier;
 
-	let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress);
-	let permission = Arc::new(RateLimitPermission::new(memory_backend, config));
+	let permission = Arc::new(RateLimitPermission::new(memory_backend, RateLimitStrategy::PerIp, 5.0, 5.0 / 60.0));
 
 	let allowed_count = Arc::new(AtomicUsize::new(0));
 	let barrier = Arc::new(Barrier::new(10));
@@ -794,7 +738,7 @@ async fn test_memory_backend_separate_keys() {
 
 #[rstest]
 fn test_rate_limit_key_strategy_clone() {
-	let strategy = RateLimitKeyStrategy::IpAddress;
+	let strategy = RateLimitStrategy::PerIp;
 	let cloned = strategy;
 
 	assert_eq!(strategy, cloned);
@@ -802,28 +746,12 @@ fn test_rate_limit_key_strategy_clone() {
 
 #[rstest]
 fn test_rate_limit_key_strategy_debug() {
-	let strategy = RateLimitKeyStrategy::UserId;
+	let strategy = RateLimitStrategy::PerUser;
 	let debug_str = format!("{:?}", strategy);
 
 	assert!(debug_str.contains("UserId"));
 }
 
-#[rstest]
-fn test_rate_limit_config_clone() {
-	let config = RateLimitConfig::new(100, 3600, RateLimitKeyStrategy::Custom);
-	let cloned = config.clone();
+// test_rate_limit_config_clone removed - RateLimitConfig no longer exists in new API
 
-	assert_eq!(cloned.rate, 100);
-	assert_eq!(cloned.window, 3600);
-	assert_eq!(cloned.strategy, RateLimitKeyStrategy::Custom);
-}
-
-#[rstest]
-fn test_rate_limit_config_debug() {
-	let config = RateLimitConfig::new(50, 60, RateLimitKeyStrategy::IpAndUser);
-	let debug_str = format!("{:?}", config);
-
-	assert!(debug_str.contains("50"));
-	assert!(debug_str.contains("60"));
-	assert!(debug_str.contains("IpAndUser"));
-}
+// test_rate_limit_config_debug removed - RateLimitConfig no longer exists in new API

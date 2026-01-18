@@ -18,7 +18,8 @@
 use rstest::*;
 use serde::{Deserialize, Serialize};
 
-use reinhardt_rest::openapi::{InspectorConfig, SchemaGenerator, ViewSetInspector};
+use reinhardt_rest::openapi::SchemaGenerator;
+use reinhardt_views::openapi_inspector::{InspectorConfig, ViewSetInspector};
 use reinhardt_views::viewsets::{ModelViewSet, ReadOnlyModelViewSet};
 
 /// User model for testing

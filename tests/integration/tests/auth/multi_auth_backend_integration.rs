@@ -864,7 +864,7 @@ impl DatabaseAuthBackend {
 impl AuthenticationBackend for DatabaseAuthBackend {
 	async fn authenticate(
 		&self,
-		request: &reinhardt_core::http::Request,
+		request: &reinhardt_http::Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
 		// Custom header: X-User-ID
 		let user_id_header = request

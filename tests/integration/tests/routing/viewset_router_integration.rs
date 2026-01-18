@@ -541,7 +541,7 @@ async fn test_initialize_view_set_with_empty_actions() {
 /// Test as_view() with both name and suffix raises error
 #[tokio::test]
 async fn test_initialize_view_set_with_both_name_and_suffix() {
-	use reinhardt_views::viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test that providing both name and suffix produces an error
 	let viewset = GenericViewSet::new("test", ());
@@ -567,7 +567,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 /// Test viewset has required attributes after as_view()
 #[tokio::test]
 async fn test_args_kwargs_request_action_map_on_self() {
-	use reinhardt_views::viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test that ViewSetHandler has the expected behavior:
 	// 1. action_map is set during construction
@@ -616,7 +616,7 @@ async fn test_args_kwargs_request_action_map_on_self() {
 async fn test_login_required_middleware_compat() {
 	use hyper::{Method, Version};
 	use reinhardt_test::TestViewSet;
-	use reinhardt_views::viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test ViewSet without login required
 	let viewset = TestViewSet::new("test");

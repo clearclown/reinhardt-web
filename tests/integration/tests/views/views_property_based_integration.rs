@@ -17,7 +17,7 @@
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_core::http::Request;
+use reinhardt_http::Request;
 use reinhardt_macros::model;
 use reinhardt_test::fixtures::get_test_pool;
 use rstest::*;
