@@ -26,7 +26,7 @@ pub enum FieldType {
 
 /// Trait for models that can be used with ModelForm
 ///
-/// This trait is specifically for form models. For ORM models, use `reinhardt_orm::Model`.
+/// This trait is specifically for form models. For ORM models, use `reinhardt_db::orm::Model`.
 pub trait FormModel: Send + Sync {
 	/// Get the model's field names
 	fn field_names() -> Vec<String>;

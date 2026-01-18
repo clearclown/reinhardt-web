@@ -71,13 +71,13 @@
 //! - You're migrating from Django and want familiar patterns
 //! - You need all the batteries included
 
-pub use reinhardt_core::http::{Error, Request, Response, Result};
+pub use reinhardt_http::{Error, Request, Response, Result};
 
 #[cfg(feature = "params")]
-pub use reinhardt_core::di::params::{Cookie, Form, Header, Json, Path, Query};
+pub use reinhardt_di::params::{Cookie, Form, Header, Json, Path, Query};
 
 #[cfg(feature = "di")]
-pub use reinhardt_core::di::{Injected, InjectionMetadata, OptionalInjected};
+pub use reinhardt_di::{Injected, InjectionMetadata, OptionalInjected};
 
 #[cfg(feature = "database")]
 pub use reinhardt_db::orm;
@@ -123,10 +123,10 @@ pub mod prelude {
 	pub use super::{Error, Request, Response, Result};
 
 	#[cfg(feature = "params")]
-	pub use reinhardt_core::di::params::{Cookie, Form, Header, Json, Path, Query};
+	pub use reinhardt_di::params::{Cookie, Form, Header, Json, Path, Query};
 
 	#[cfg(feature = "di")]
-	pub use reinhardt_core::di::{Injected, InjectionMetadata, OptionalInjected};
+	pub use reinhardt_di::{Injected, InjectionMetadata, OptionalInjected};
 
 	// Re-export endpoint macros
 	pub use reinhardt_core::macros::{delete, get, patch, post, put, use_inject};
@@ -141,7 +141,7 @@ pub mod prelude {
 	pub use serde::{Deserialize, Serialize};
 }
 
-use reinhardt_core::Handler;
+use reinhardt_http::Handler;
 use reinhardt_middleware::Middleware;
 use reinhardt_server::serve as http_serve;
 use reinhardt_urls::routers::{DefaultRouter, Route, Router};

@@ -15,7 +15,7 @@
 //!
 //! #[async_trait]
 //! impl Handler for MyHandler {
-//!     async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+//!     async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 //!         Ok(Response::ok().with_body("Hello!"))
 //!     }
 //! }
@@ -34,7 +34,7 @@
 //!
 //! #[async_trait]
 //! impl Middleware for LoggingMiddleware {
-//!     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+//!     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_core::exception::Result<Response> {
 //!         println!("Request: {} {}", request.method, request.uri);
 //!         next.handle(request).await
 //!     }
@@ -42,7 +42,7 @@
 //! ```
 
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 use std::sync::Arc;
 
 use crate::{Request, Response};
@@ -139,7 +139,7 @@ impl MiddlewareChain {
 	///
 	/// #[async_trait::async_trait]
 	/// impl Handler for MyHandler {
-	///     async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	///     async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 	///         Ok(Response::ok())
 	///     }
 	/// }
@@ -166,13 +166,13 @@ impl MiddlewareChain {
 	/// # struct MyMiddleware;
 	/// # #[async_trait::async_trait]
 	/// # impl Handler for MyHandler {
-	/// #     async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	/// #     async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 	/// #         Ok(Response::ok())
 	/// #     }
 	/// # }
 	/// # #[async_trait::async_trait]
 	/// # impl Middleware for MyMiddleware {
-	/// #     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+	/// #     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_core::exception::Result<Response> {
 	/// #         next.handle(request).await
 	/// #     }
 	/// # }
@@ -198,13 +198,13 @@ impl MiddlewareChain {
 	/// # struct MyMiddleware;
 	/// # #[async_trait::async_trait]
 	/// # impl Handler for MyHandler {
-	/// #     async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	/// #     async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 	/// #         Ok(Response::ok())
 	/// #     }
 	/// # }
 	/// # #[async_trait::async_trait]
 	/// # impl Middleware for MyMiddleware {
-	/// #     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_exception::Result<Response> {
+	/// #     async fn process(&self, request: Request, next: Arc<dyn Handler>) -> reinhardt_core::exception::Result<Response> {
 	/// #         next.handle(request).await
 	/// #     }
 	/// # }

@@ -3,7 +3,7 @@
 //! This module provides rstest fixtures for admin panel integration tests,
 //! including pre-populated audit loggers and test data sets.
 
-use reinhardt_settings::audit::{
+use reinhardt_conf::settings::audit::{
 	AuditBackend, AuditEvent, ChangeRecord, EventType, backends::MemoryAuditBackend,
 };
 use rstest::*;
@@ -25,7 +25,7 @@ use std::{collections::HashMap, sync::Arc};
 ///
 /// ```rust,no_run
 /// use reinhardt_test::fixtures::admin::audit_logger_with_test_data;
-/// use reinhardt_settings::audit::{AuditBackend, EventFilter};
+/// use reinhardt_conf::settings::audit::{AuditBackend, EventFilter};
 /// use rstest::*;
 ///
 /// #[rstest]

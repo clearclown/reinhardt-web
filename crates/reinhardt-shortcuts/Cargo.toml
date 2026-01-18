@@ -9,6 +9,7 @@ description = "Django-style shortcut functions for redirects, rendering, and 404
 
 [dependencies]
 reinhardt-core = { workspace = true }
+reinhardt-http = { workspace = true }
 reinhardt-views = { workspace = true }
 reinhardt-db = { workspace = true, optional = true }
 reinhardt-urls = { workspace = true, features = ["routers"] }

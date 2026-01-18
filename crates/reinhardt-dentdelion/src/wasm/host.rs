@@ -26,7 +26,7 @@ use super::types::{ConfigValue, WitHttpResponse, WitPluginError};
 use super::ts_runtime::SharedTsRuntime;
 
 #[cfg(feature = "wasm")]
-use reinhardt_backends::connection::DatabaseConnection;
+use reinhardt_db::backends::connection::DatabaseConnection;
 
 #[cfg(feature = "wasm")]
 use wasmtime::component::ResourceTable;
@@ -331,7 +331,7 @@ impl HostState {
 			.ok_or_else(|| WitPluginError::new(500, "Database connection not available"))?;
 
 		// Deserialize MessagePack parameters
-		use reinhardt_backends::types::QueryValue;
+		use reinhardt_db::backends::types::QueryValue;
 		let params_vec: Vec<QueryValue> = rmp_serde::from_slice(params).map_err(|e| {
 			WitPluginError::with_details(400, "Invalid query parameters", e.to_string())
 		})?;
@@ -375,7 +375,7 @@ impl HostState {
 			.ok_or_else(|| WitPluginError::new(500, "Database connection not available"))?;
 
 		// Deserialize MessagePack parameters
-		use reinhardt_backends::types::QueryValue;
+		use reinhardt_db::backends::types::QueryValue;
 		let params_vec: Vec<QueryValue> = rmp_serde::from_slice(params).map_err(|e| {
 			WitPluginError::with_details(400, "Invalid query parameters", e.to_string())
 		})?;

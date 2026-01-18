@@ -14,7 +14,7 @@
 //! flowchart TB
 //!     A["Rust source file"] --> B["syn::parse_file()<br/>Parse entire file to AST"]
 //!     B --> C["PageMacroVisitor<br/>Walk AST to find page! macros"]
-//!     C --> D["reinhardt_pages_ast::PageMacro<br/>Parse macro tokens to DSL AST"]
+//!     C --> D["reinhardt_pages::ast::PageMacro<br/>Parse macro tokens to DSL AST"]
 //!     D --> E["format_macro()<br/>Generate formatted code from AST"]
 //!     E --> F["replace by span<br/>Replace original text"]
 //!     F --> G["Formatted source file"]
@@ -22,7 +22,7 @@
 
 use quote::ToTokens;
 use regex::Regex;
-use reinhardt_pages_ast::{
+use reinhardt_pages::ast::{
 	PageAttr, PageBody, PageComponent, PageElement, PageElse, PageEvent, PageExpression, PageFor,
 	PageIf, PageMacro, PageNode, PageParam, PageText,
 };
@@ -1067,7 +1067,7 @@ impl AstPageFormatter {
 	fn format_watch(
 		&self,
 		output: &mut String,
-		watch_node: &reinhardt_pages_ast::PageWatch,
+		watch_node: &reinhardt_pages::ast::PageWatch,
 		indent: usize,
 	) {
 		let ind = self.make_indent(indent);

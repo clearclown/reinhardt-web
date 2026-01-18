@@ -24,10 +24,11 @@ property-based = ["dep:proptest"]
 tasks = ["dep:reinhardt-tasks"]
 admin = [
   "dep:reinhardt-admin",
-  "dep:reinhardt-admin-core",
-  "dep:reinhardt-admin-server",
-  "dep:reinhardt-admin-types",
-  "dep:reinhardt-admin-adapters",
+  "reinhardt-admin/core",
+  "reinhardt-admin/server",
+  "reinhardt-admin/types",
+  "reinhardt-admin/adapters",
+  "reinhardt-conf/async",
 ]
 # WASM frontend testing utilities
 wasm = [
@@ -44,15 +45,13 @@ server-fn-test = []
 full = ["testcontainers", "static", "websockets", "graphql", "property-based", "tasks", "admin"]
 
 [dependencies]
-reinhardt-db = { workspace = true, features = ["orm", "backends", "postgres", "mysql", "sqlite"] }
+reinhardt-db = { workspace = true, features = ["backends", "migrations", "mysql", "orm", "postgres", "sqlite"] }
 reinhardt-di = { workspace = true }
-reinhardt-migrations = { workspace = true }
+reinhardt-http = { workspace = true }
 reinhardt-views = { workspace = true, features = ["viewsets"] }
 reinhardt-auth = { workspace = true, features = ["jwt", "argon2-hasher", "sessions", "oauth", "token"] }
 reinhardt-server = { workspace = true }
-reinhardt-routers = { workspace = true }
 reinhardt-websockets = { workspace = true, optional = true }
-reinhardt-settings = { workspace = true, features = ["async"] }
 
 hyper = { workspace = true }
 tokio = { workspace = true }
@@ -125,11 +124,7 @@ rstest = "0.26.1"
 mockall = { workspace = true }
 
 # Optional dependencies for admin feature
-reinhardt-admin = { workspace = true, optional = true }
-reinhardt-admin-core = { workspace = true, optional = true }
-reinhardt-admin-server = { workspace = true, optional = true }
-reinhardt-admin-types = { workspace = true, optional = true }
-reinhardt-admin-adapters = { workspace = true, optional = true }
+reinhardt-admin = { workspace = true, optional = true, features = ["adapters", "core", "server", "types"]}
 
 # Optional WASM dependencies (feature-gated)
 wasm-bindgen = { version = "0.2.106", optional = true }
@@ -165,6 +160,8 @@ web-sys = { version = "0.3.83", optional = true, features = [
   "Location",
   "History",
 ] }
+reinhardt-urls = {workspace = true, features = ["routers"]}
+reinhardt-conf = {workspace = true, features = ["settings"]}
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

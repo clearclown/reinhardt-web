@@ -4,7 +4,7 @@
 //! These tests verify static file collection functionality.
 
 use reinhardt_commands::{CollectStaticCommand, CollectStaticOptions, CollectStaticStats};
-use reinhardt_static::StaticFilesConfig;
+use reinhardt_utils::r#static::StaticFilesConfig;
 use rstest::*;
 use std::fs;
 use std::path::PathBuf;

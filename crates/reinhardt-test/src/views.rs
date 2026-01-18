@@ -4,7 +4,7 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_core::http::{Error, Request, Response, Result};
+use reinhardt_http::{Error, Request, Response, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

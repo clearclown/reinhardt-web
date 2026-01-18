@@ -7,7 +7,7 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_http::{Handler, Request, Response, MessagesMiddleware};
-//! use reinhardt_messages::MemoryStorage;
+//! use reinhardt_core::messages::MemoryStorage;
 //! use async_trait::async_trait;
 //! use std::sync::Arc;
 //!
@@ -15,7 +15,7 @@
 //!
 //! #[async_trait]
 //! impl Handler for MyHandler {
-//!     async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+//!     async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 //!         Ok(Response::ok())
 //!     }
 //! }
@@ -25,7 +25,7 @@
 //! ```
 
 use async_trait::async_trait;
-use reinhardt_messages::{MessageStorage, middleware::MessagesContainer};
+use reinhardt_core::messages::{MessageStorage, middleware::MessagesContainer};
 use std::sync::{Arc, Mutex};
 
 use crate::{Handler, Middleware, Request, Response};
@@ -41,7 +41,7 @@ use crate::{Handler, Middleware, Request, Response};
 ///
 /// ```rust,no_run
 /// use reinhardt_http::MessagesMiddleware;
-/// use reinhardt_messages::MemoryStorage;
+/// use reinhardt_core::messages::MemoryStorage;
 ///
 /// let storage = MemoryStorage::new();
 /// let middleware = MessagesMiddleware::new(storage);
@@ -61,7 +61,7 @@ impl<S: MessageStorage + 'static> MessagesMiddleware<S> {
 	///
 	/// ```rust,no_run
 	/// use reinhardt_http::MessagesMiddleware;
-	/// use reinhardt_messages::MemoryStorage;
+	/// use reinhardt_core::messages::MemoryStorage;
 	///
 	/// let storage = MemoryStorage::new();
 	/// let middleware = MessagesMiddleware::new(storage);
@@ -87,7 +87,7 @@ impl<S: MessageStorage + 'static> Middleware for MessagesMiddleware<S> {
 		&self,
 		request: Request,
 		next: Arc<dyn Handler>,
-	) -> reinhardt_exception::Result<Response> {
+	) -> reinhardt_core::exception::Result<Response> {
 		// Load existing messages from storage into the request extensions
 		let initial_messages = {
 			let storage = self.storage.lock().unwrap();
@@ -138,13 +138,13 @@ mod tests {
 	use crate::middleware::MiddlewareChain;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode, Version};
-	use reinhardt_messages::{Level, MemoryStorage, Message};
+	use reinhardt_core::messages::{Level, MemoryStorage, Message};
 
 	struct AddMessageHandler;
 
 	#[async_trait]
 	impl Handler for AddMessageHandler {
-		async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+		async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 			if let Some(container) = request.extensions.get::<MessagesContainer>() {
 				container.add(Message::new(Level::Success, "Test message"));
 			}
@@ -172,7 +172,7 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckContainerHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 				assert!(
 					request.extensions.get::<MessagesContainer>().is_some(),
 					"MessagesContainer should be present in request extensions"
@@ -218,7 +218,7 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckExistingHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
 					assert_eq!(messages.len(), 1);

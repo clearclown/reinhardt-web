@@ -91,10 +91,10 @@ pub mod validation;
 pub use reinhardt_http::{Request, Response, StreamBody, StreamingResponse};
 
 // Re-export from reinhardt-settings
-pub use reinhardt_settings::{DatabaseConfig, MiddlewareConfig, Settings, TemplateConfig};
+pub use reinhardt_conf::settings::{DatabaseConfig, MiddlewareConfig, Settings, TemplateConfig};
 
 // Re-export from reinhardt-exception
-pub use reinhardt_exception::{Error, Result};
+pub use reinhardt_core::exception::{Error, Result};
 
 // Re-export from reinhardt-server
 pub use reinhardt_server::{HttpServer, serve};

@@ -14,8 +14,8 @@ default = [
   "params",
 ] # "schema" temporarily disabled - utoipa API compatibility
 routing = ["reinhardt-urls"]
-di = ["reinhardt-core/di"]
-params = ["di", "reinhardt-core/di"]
+di = ["reinhardt-di"]
+params = ["di", "reinhardt-di/params"]
 # schema = ["reinhardt-openapi"]  # Temporarily disabled - utoipa API compatibility
 database = ["reinhardt-db"]
 compression = []
@@ -37,10 +37,12 @@ full = [
 # Core framework
 reinhardt-urls = { workspace = true, features = ["routers"], optional = true }
 reinhardt-middleware = { workspace = true }
+reinhardt-http = { workspace = true }
 # reinhardt-openapi = { workspace = true, optional = true }  # Temporarily disabled
 reinhardt-db = { workspace = true, features = ["orm"], optional = true }
+reinhardt-di = { workspace = true, optional = true }
 reinhardt-server = { workspace = true }
-reinhardt-core = { workspace = true, features = ["types", "macros", "http"] }
+reinhardt-core = { workspace = true, features = ["types", "macros"] }
 
 # Web framework essentials
 tokio = { workspace = true }

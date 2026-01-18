@@ -71,12 +71,12 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_test::fixtures::*;
-//! use reinhardt_migrations::Migration;
-//! use reinhardt_migrations::registry::MigrationRegistry;
+//! use reinhardt_db::migrations::Migration;
+//! use reinhardt_db::migrations::registry::MigrationRegistry;
 //! use rstest::*;
 //!
 //! #[rstest]
-//! fn test_migration_registration(migration_registry: reinhardt_migrations::registry::LocalRegistry) {
+//! fn test_migration_registration(migration_registry: reinhardt_db::migrations::registry::LocalRegistry) {
 //!     let migration = Migration {
 //!         app_label: "polls".to_string(),
 //!         name: "0001_initial".to_string(),
@@ -103,6 +103,7 @@ pub mod shared_postgres;
 pub mod testcontainers;
 
 // New fixture modules for integration tests
+#[cfg(feature = "admin")]
 pub mod admin;
 #[cfg(all(feature = "admin", feature = "testcontainers"))]
 pub mod admin_panel;
@@ -195,7 +196,7 @@ pub use migrations::{
 // Re-export migration types for use in test schemas
 // These are re-exported from reinhardt-migrations to allow functional crates
 // to use them in tests without adding reinhardt-migrations to dev-dependencies
-pub use reinhardt_migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
+pub use reinhardt_db::migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
 
 // Migration fixtures (conditional on testcontainers feature)
 #[cfg(feature = "testcontainers")]

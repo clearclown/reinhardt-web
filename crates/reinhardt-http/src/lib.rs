@@ -60,7 +60,7 @@ pub use response::{Response, StreamBody, StreamingResponse};
 pub use upload::{FileUploadError, FileUploadHandler, MemoryFileUpload, TemporaryFileUpload};
 
 // Re-export error types from reinhardt-exception for consistency across the framework
-pub use reinhardt_exception::{Error, Result};
+pub use reinhardt_core::exception::{Error, Result};
 
 /// A convenient type alias for view/endpoint function return types.
 ///
@@ -89,5 +89,5 @@ pub use reinhardt_exception::{Error, Result};
 /// Result type for view handlers using reinhardt's unified Error type.
 ///
 /// This type alias ensures compatibility with `UnifiedRouter::function` which requires
-/// `Future<Output = Result<Response>>` where `Result` is `reinhardt_exception::Result`.
-pub type ViewResult<T> = reinhardt_exception::Result<T>;
+/// `Future<Output = Result<Response>>` where `Result` is `reinhardt_core::exception::Result`.
+pub type ViewResult<T> = reinhardt_core::exception::Result<T>;

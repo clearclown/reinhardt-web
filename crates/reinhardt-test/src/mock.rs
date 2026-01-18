@@ -394,8 +394,8 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
-/// use reinhardt_core::Handler;
+/// use reinhardt_http::{Request, Response};
+/// use reinhardt_http::Handler;
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     Ok(Response::ok().with_body("Hello, World!"))
@@ -408,7 +408,7 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
+/// use reinhardt_http::{Request, Response};
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     match req.path() {
@@ -423,7 +423,7 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
+/// use reinhardt_http::{Request, Response};
 /// use std::sync::{Arc, Mutex};
 ///
 /// let call_count = Arc::new(Mutex::new(0));
@@ -438,8 +438,8 @@ impl<T> Default for Spy<T> {
 pub struct SimpleHandler<F>
 where
 	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+			reinhardt_http::Request,
+		) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -450,8 +450,8 @@ where
 impl<F> SimpleHandler<F>
 where
 	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+			reinhardt_http::Request,
+		) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -466,7 +466,7 @@ where
 	///
 	/// ```no_run
 	/// use reinhardt_test::mock::SimpleHandler;
-	/// use reinhardt_core::http::{Request, Response};
+	/// use reinhardt_http::{Request, Response};
 	///
 	/// let handler = SimpleHandler::new(|req| {
 	///     Ok(Response::ok().with_body("Success"))
@@ -478,19 +478,19 @@ where
 }
 
 #[async_trait::async_trait]
-impl<F> reinhardt_core::Handler for SimpleHandler<F>
+impl<F> reinhardt_http::Handler for SimpleHandler<F>
 where
 	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+			reinhardt_http::Request,
+		) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
 {
 	async fn handle(
 		&self,
-		request: reinhardt_core::http::Request,
-	) -> reinhardt_core::http::Result<reinhardt_core::http::Response> {
+		request: reinhardt_http::Request,
+	) -> reinhardt_http::Result<reinhardt_http::Response> {
 		(self.handler_fn)(request)
 	}
 }
@@ -508,7 +508,7 @@ where
 ///
 /// ```rust,ignore
 /// use reinhardt_test::mock::MockSchemaEditor;
-/// use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
+/// use reinhardt_db::backends::schema::BaseDatabaseSchemaEditor;
 ///
 /// let editor = MockSchemaEditor::new();
 /// let stmt = editor.create_table_statement("users", &[
@@ -536,8 +536,8 @@ impl Default for MockSchemaEditor {
 
 #[async_trait]
 impl BaseDatabaseSchemaEditor for MockSchemaEditor {
-	fn database_type(&self) -> reinhardt_migrations::DatabaseType {
-		reinhardt_migrations::DatabaseType::Sqlite
+	fn database_type(&self) -> reinhardt_db::migrations::DatabaseType {
+		reinhardt_db::migrations::DatabaseType::Sqlite
 	}
 
 	async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {

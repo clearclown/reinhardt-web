@@ -1325,7 +1325,7 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::postgres_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1350,7 +1350,7 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> Result<
+pub async fn postgres_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>() -> Result<
 	(
 		ContainerAsync<GenericImage>,
 		std::sync::Arc<reinhardt_db::DatabaseConnection>,
@@ -1358,7 +1358,7 @@ pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationPro
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1532,7 +1532,7 @@ pub async fn mysql_container() -> (
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::mysql_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1553,12 +1553,12 @@ pub async fn mysql_container() -> (
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> (
+pub async fn mysql_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>() -> (
 	ContainerAsync<GenericImage>,
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1598,7 +1598,7 @@ pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvid
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::sqlite_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1619,10 +1619,10 @@ pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvid
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn sqlite_with_migrations_from<P: reinhardt_migrations::MigrationProvider>()
+pub async fn sqlite_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>()
 -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";
@@ -1700,8 +1700,8 @@ pub async fn postgres_with_all_migrations() -> Result<
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1759,8 +1759,8 @@ pub async fn postgres_with_apps_migrations(
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1818,8 +1818,8 @@ pub async fn mysql_with_all_migrations() -> (
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1857,8 +1857,8 @@ pub async fn mysql_with_apps_migrations(
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1912,8 +1912,8 @@ pub async fn mysql_with_apps_migrations(
 #[rstest::fixture]
 pub async fn sqlite_with_all_migrations() -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";
@@ -1947,8 +1947,8 @@ pub async fn sqlite_with_apps_migrations(
 	app_labels: &[&str],
 ) -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";

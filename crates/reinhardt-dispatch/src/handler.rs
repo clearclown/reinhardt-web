@@ -5,8 +5,8 @@
 
 use bytes::Bytes;
 use hyper::StatusCode;
-use reinhardt_core::Handler;
-use reinhardt_core::http::{Request, Response};
+use reinhardt_http::Handler;
+use reinhardt_http::{Request, Response};
 use reinhardt_core::signals::{
 	RequestFinishedEvent, RequestStartedEvent, request_finished, request_started,
 };
