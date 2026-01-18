@@ -13,13 +13,13 @@ path = "src/bin/manage.rs"
 # Use local workspace version directly via path
 # package="reinhardt-web" maps the crate name to the actual package name
 reinhardt = { workspace = true, features = [
-    "minimal",        # Core HTTP/Routing/DI/Server
-    "database",       # Database support
-    "db-sqlite",      # SQLite database backend
-    "db-postgres",    # PostgreSQL database backend
-    "admin",          # Admin Panel (TodoAdmin usage)
-    "commands",       # Management commands
-    "client-router",  # Client-side routing support (required for #[routes] macro)
+    "minimal",       # Core HTTP/Routing/DI/Server
+    "database",      # Database support
+    "db-sqlite",     # SQLite database backend
+    "db-postgres",   # PostgreSQL database backend
+    "admin",         # Admin Panel (TodoAdmin usage)
+    "commands",      # Management commands
+    "client-router", # Client-side routing support (required for #[routes] macro)
 ] }
 
 # Required for collect_migrations! macro

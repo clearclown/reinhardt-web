@@ -11,11 +11,11 @@
 mod server_only {
 	// Re-export internal crates for macro-generated code
 	pub use reinhardt::core::async_trait;
+	pub use reinhardt::db::migrations;
 	pub use reinhardt::reinhardt_apps;
 	pub use reinhardt::reinhardt_core;
-	pub use reinhardt::reinhardt_http;
-	pub use reinhardt::db::migrations;
 	pub use reinhardt::reinhardt_di::params;
+	pub use reinhardt::reinhardt_http;
 }
 #[cfg(server)]
 pub use server_only::*;

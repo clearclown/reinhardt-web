@@ -25,7 +25,7 @@ use std::sync::Arc;
 use examples_database_integration::{ExampleMigrations, Todo, User};
 
 // Import MigrationProvider trait for .migrations() method
-use reinhardt_db::migrations::MigrationProvider;
+use reinhardt::db::migrations::MigrationProvider;
 
 // ============================================================================
 // Custom Fixtures with Migrations (PostgreSQL)
@@ -34,7 +34,7 @@ use reinhardt_db::migrations::MigrationProvider;
 /// PostgreSQL fixture with migrations applied via MigrationProvider
 #[fixture]
 async fn db_with_migrations() -> (ContainerAsync<GenericImage>, Arc<DatabaseConnection>) {
-	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt::db::migrations::executor::DatabaseMigrationExecutor;
 	use reinhardt_test::fixtures::postgres_container;
 
 	// Start PostgreSQL container and get URL
