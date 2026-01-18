@@ -1,8 +1,8 @@
-use reinhardt_negotiation::cache::{CacheKey, NegotiationCache};
-use reinhardt_negotiation::detector::ContentTypeDetector;
-use reinhardt_negotiation::encoding::{Encoding, EncodingNegotiator};
-use reinhardt_negotiation::language::{Language, LanguageNegotiator};
-use reinhardt_negotiation::{ContentNegotiator, MediaType};
+use reinhardt_core::negotiation::cache::{CacheKey, NegotiationCache};
+use reinhardt_core::negotiation::detector::ContentTypeDetector;
+use reinhardt_core::negotiation::encoding::{Encoding, EncodingNegotiator};
+use reinhardt_core::negotiation::language::{Language, LanguageNegotiator};
+use reinhardt_core::negotiation::{ContentNegotiator, MediaType};
 
 /// Test complete request processing workflow
 #[test]

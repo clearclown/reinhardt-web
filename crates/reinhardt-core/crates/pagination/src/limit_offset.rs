@@ -1,7 +1,7 @@
 //! Limit/offset based pagination implementation
 
 use async_trait::async_trait;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 
 use crate::core::{AsyncPaginator, PaginatedResponse, Paginator, SchemaParameter};
 
@@ -39,7 +39,7 @@ impl LimitOffsetPagination {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_pagination::LimitOffsetPagination;
+	/// use reinhardt_core::pagination::LimitOffsetPagination;
 	///
 	/// let paginator = LimitOffsetPagination::new();
 	/// assert_eq!(paginator.default_limit, 10);
@@ -54,7 +54,7 @@ impl LimitOffsetPagination {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_pagination::LimitOffsetPagination;
+	/// use reinhardt_core::pagination::LimitOffsetPagination;
 	///
 	/// let paginator = LimitOffsetPagination::new().default_limit(25);
 	/// assert_eq!(paginator.default_limit, 25);
@@ -68,7 +68,7 @@ impl LimitOffsetPagination {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_pagination::LimitOffsetPagination;
+	/// use reinhardt_core::pagination::LimitOffsetPagination;
 	///
 	/// let paginator = LimitOffsetPagination::new()
 	///     .default_limit(10)

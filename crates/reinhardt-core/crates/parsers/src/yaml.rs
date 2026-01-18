@@ -6,7 +6,7 @@ use crate::parser::{ParseResult, ParsedData, Parser};
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde_json::Value;
 
 /// YAML parser for application/x-yaml and application/yaml content types
@@ -14,8 +14,8 @@ use serde_json::Value;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::yaml::YamlParser;
-/// use reinhardt_parsers::parser::Parser;
+/// use reinhardt_core::parsers::yaml::YamlParser;
+/// use reinhardt_core::parsers::parser::Parser;
 /// use bytes::Bytes;
 /// use http::HeaderMap;
 ///
@@ -38,7 +38,7 @@ impl YamlParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::yaml::YamlParser;
+	/// use reinhardt_core::parsers::yaml::YamlParser;
 	///
 	/// let parser = YamlParser::new();
 	/// assert!(!parser.allow_empty);
@@ -52,7 +52,7 @@ impl YamlParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::yaml::YamlParser;
+	/// use reinhardt_core::parsers::yaml::YamlParser;
 	///
 	/// let parser = YamlParser::new().allow_empty(true);
 	/// assert!(parser.allow_empty);

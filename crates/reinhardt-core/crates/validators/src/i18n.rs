@@ -12,9 +12,9 @@
 //! ## Example
 //!
 //! ```rust
-//! use reinhardt_validators::i18n::{ValidationMessages, LocalizedValidator};
-//! use reinhardt_validators::string::MinLengthValidator;
-//! use reinhardt_validators::Validator;
+//! use reinhardt_core::validators::i18n::{ValidationMessages, LocalizedValidator};
+//! use reinhardt_core::validators::string::MinLengthValidator;
+//! use reinhardt_core::validators::Validator;
 //!
 //! // Create a message bundle for Japanese
 //! let messages = ValidationMessages::new("ja").unwrap();

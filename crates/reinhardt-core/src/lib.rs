@@ -26,66 +26,34 @@
 //! For detailed implementation and usage information, see the individual
 //! crate documentation in `reinhardt-contrib`, `reinhardt-tasks`, `reinhardt-core/backends`.
 
-#[cfg(feature = "types")]
-pub use reinhardt_types as types;
+pub mod endpoint;
+pub mod exception;
+pub mod messages;
+pub mod negotiation;
+pub mod pagination;
+pub mod parsers;
+pub mod reactive;
+pub mod security;
+pub mod serializers;
+pub mod signals;
+pub mod types;
+pub mod validators;
 
 // Re-export Page types when page feature is enabled
 // This provides Page, PageElement, IntoPage, Head, EventType, etc.
 #[cfg(feature = "page")]
-pub use reinhardt_types::page;
-
-#[cfg(feature = "exception")]
-pub use reinhardt_exception as exception;
-
-#[cfg(feature = "signals")]
-pub use reinhardt_signals as signals;
+pub use crate::types::page;
 
 #[cfg(feature = "macros")]
 pub use reinhardt_macros as macros;
 
-#[cfg(feature = "security")]
-pub use reinhardt_security as security;
-
-#[cfg(feature = "validators")]
-pub use reinhardt_validators as validators;
-
-#[cfg(feature = "serializers")]
-pub use reinhardt_core_serializers as serializers;
-
-// New facade subcrate re-exports
-#[cfg(feature = "http")]
-pub use reinhardt_http as http;
-
-#[cfg(feature = "messages")]
-pub use reinhardt_messages as messages;
-
-#[cfg(feature = "di")]
-pub use reinhardt_di as di;
-
-#[cfg(feature = "negotiation")]
-pub use reinhardt_negotiation as negotiation;
-
-#[cfg(feature = "parsers")]
-pub use reinhardt_parsers as parsers;
-
-#[cfg(feature = "pagination")]
-pub use reinhardt_pagination as pagination;
-
-// Endpoint metadata trait for HTTP Method Macros
-#[cfg(feature = "http")]
-pub mod endpoint;
-#[cfg(feature = "http")]
-pub use endpoint::{EndpointInfo, EndpointMetadata};
-
-// Re-export Handler and Middleware traits from reinhardt-http when http feature is enabled
-#[cfg(feature = "http")]
-pub use reinhardt_http::{Handler, Middleware, MiddlewareChain};
 
 // Re-export common external dependencies
 pub use async_trait::async_trait;
 pub use tokio;
 
 // Re-export serde with json as a submodule
+#[cfg(feature = "serde")]
 pub mod serde {
 	pub use ::serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 	pub use ::serde_json as json;

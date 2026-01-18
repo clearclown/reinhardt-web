@@ -411,7 +411,7 @@ fn generate_view_type(
 		}
 
 		#[#async_trait_crate::async_trait]
-		impl #core_crate::Handler for #view_type_name {
+		impl #http_crate::Handler for #view_type_name {
 			async fn handle(&self, req: #http_crate::Request) -> #http_crate::Result<#http_crate::Response> {
 				#view_type_name::#fn_name(req).await
 			}
@@ -668,7 +668,7 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 		}
 
 		#[#async_trait_crate::async_trait]
-		impl #core_crate::Handler for #view_type_name {
+		impl #http_crate::Handler for #view_type_name {
 			async fn handle(&self, req: #http_crate::Request) -> #http_crate::Result<#http_crate::Response> {
 				#view_type_name::#fn_name(req).await
 			}

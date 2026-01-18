@@ -2,7 +2,7 @@
 //!
 //! Tests based on Django's middleware/test_security.py
 
-use reinhardt_security::{ContentSecurityPolicy, SecurityHeadersConfig};
+use reinhardt_core::security::{ContentSecurityPolicy, SecurityHeadersConfig};
 
 #[test]
 fn test_content_type_nosniff_enabled() {

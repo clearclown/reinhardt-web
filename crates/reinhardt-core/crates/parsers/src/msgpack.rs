@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde_json::Value;
 
 use crate::parser::{ParseResult, ParsedData, Parser};
@@ -24,8 +24,8 @@ use crate::parser::{ParseResult, ParsedData, Parser};
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::msgpack::MessagePackParser;
-/// use reinhardt_parsers::parser::Parser;
+/// use reinhardt_core::parsers::msgpack::MessagePackParser;
+/// use reinhardt_core::parsers::parser::Parser;
 /// use bytes::Bytes;
 /// use http::HeaderMap;
 ///
@@ -50,7 +50,7 @@ impl MessagePackParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::msgpack::MessagePackParser;
+	/// use reinhardt_core::parsers::msgpack::MessagePackParser;
 	///
 	/// let parser = MessagePackParser::new();
 	/// ```

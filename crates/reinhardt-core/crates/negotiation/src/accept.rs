@@ -14,7 +14,7 @@ impl AcceptHeader {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_negotiation::accept::AcceptHeader;
+	/// use reinhardt_core::negotiation::accept::AcceptHeader;
 	///
 	/// let accept = AcceptHeader::parse("application/json, text/html; q=0.9");
 	/// assert_eq!(accept.media_types.len(), 2);
@@ -42,7 +42,7 @@ impl AcceptHeader {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_negotiation::accept::AcceptHeader;
+	/// use reinhardt_core::negotiation::accept::AcceptHeader;
 	///
 	/// let empty = AcceptHeader::empty();
 	/// assert_eq!(empty.media_types.len(), 0);
@@ -57,8 +57,8 @@ impl AcceptHeader {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_negotiation::accept::AcceptHeader;
-	/// use reinhardt_negotiation::MediaType;
+	/// use reinhardt_core::negotiation::accept::AcceptHeader;
+	/// use reinhardt_core::negotiation::MediaType;
 	///
 	/// let accept = AcceptHeader::parse("application/json, text/html");
 	/// let available = vec![

@@ -146,42 +146,43 @@ pub(crate) fn get_reinhardt_openapi_crate() -> TokenStream {
 	quote!(::reinhardt_openapi)
 }
 
-/// Resolves the path to the reinhardt_orm crate dynamically.
+/// Resolves the path to the reinhardt_orm module dynamically.
+/// Note: reinhardt-orm has been merged into reinhardt-db as a submodule.
 pub(crate) fn get_reinhardt_orm_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
-	// Try direct crate first
-	match crate_name("reinhardt-orm") {
-		Ok(FoundCrate::Itself) => return quote!(crate),
+	// Try reinhardt-db first (orm is now a submodule of reinhardt-db)
+	match crate_name("reinhardt-db") {
+		Ok(FoundCrate::Itself) => return quote!(crate::orm),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident);
+			return quote!(::#ident::orm);
 		}
-		Err(_) => {
-			// Try via reinhardt crate
-			match crate_name("reinhardt") {
-				Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_orm),
-				Ok(FoundCrate::Name(name)) => {
-					let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-					return quote!(::#ident::reinhardt_orm);
-				}
-				Err(_) => {}
-			}
+		Err(_) => {}
+	}
 
-			// Try via reinhardt-web (published package name)
-			match crate_name("reinhardt-web") {
-				Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_orm),
-				Ok(FoundCrate::Name(name)) => {
-					let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-					return quote!(::#ident::reinhardt_orm);
-				}
-				Err(_) => {}
-			}
+	// Try via reinhardt crate
+	match crate_name("reinhardt") {
+		Ok(FoundCrate::Itself) => return quote!(crate::db::orm),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::db::orm);
 		}
+		Err(_) => {}
+	}
+
+	// Try via reinhardt-web (published package name)
+	match crate_name("reinhardt-web") {
+		Ok(FoundCrate::Itself) => return quote!(crate::db::orm),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::db::orm);
+		}
+		Err(_) => {}
 	}
 
 	// Final fallback
-	quote!(::reinhardt_orm)
+	quote!(::reinhardt::db::orm)
 }
 
 /// Resolves the path to the reinhardt_signals crate dynamically.
@@ -303,42 +304,43 @@ pub(crate) fn get_reinhardt_apps_crate() -> TokenStream {
 	quote!(::reinhardt::reinhardt_apps)
 }
 
-/// Resolves the path to the reinhardt_migrations crate dynamically.
+/// Resolves the path to the reinhardt_migrations module dynamically.
+/// Note: reinhardt-migrations has been merged into reinhardt-db as a submodule.
 pub(crate) fn get_reinhardt_migrations_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
-	// Try direct crate first
-	match crate_name("reinhardt-migrations") {
-		Ok(FoundCrate::Itself) => return quote!(crate),
+	// Try reinhardt-db first (migrations is now a submodule of reinhardt-db)
+	match crate_name("reinhardt-db") {
+		Ok(FoundCrate::Itself) => return quote!(crate::migrations),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident);
+			return quote!(::#ident::migrations);
 		}
 		Err(_) => {}
 	}
 
 	// Try via reinhardt crate (when used with `package = "reinhardt-web"`)
 	match crate_name("reinhardt") {
-		Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_migrations),
+		Ok(FoundCrate::Itself) => return quote!(crate::db::migrations),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident::reinhardt_migrations);
+			return quote!(::#ident::db::migrations);
 		}
 		Err(_) => {}
 	}
 
 	// Try via reinhardt-web (published package name)
 	match crate_name("reinhardt-web") {
-		Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_migrations),
+		Ok(FoundCrate::Itself) => return quote!(crate::db::migrations),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident::reinhardt_migrations);
+			return quote!(::#ident::db::migrations);
 		}
 		Err(_) => {}
 	}
 
 	// Final fallback
-	quote!(::reinhardt_migrations)
+	quote!(::reinhardt::db::migrations)
 }
 
 /// Resolves the path to the reinhardt_proxy crate dynamically.

@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 
@@ -32,8 +32,8 @@ use crate::parser::{ParseResult, ParsedData, Parser};
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::protobuf::ProtobufParser;
-/// use reinhardt_parsers::parser::Parser;
+/// use reinhardt_core::parsers::protobuf::ProtobufParser;
+/// use reinhardt_core::parsers::parser::Parser;
 /// use bytes::Bytes;
 ///
 /// # tokio_test::block_on(async {
@@ -56,7 +56,7 @@ impl ProtobufParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::protobuf::ProtobufParser;
+	/// use reinhardt_core::parsers::protobuf::ProtobufParser;
 	///
 	/// let parser = ProtobufParser::new();
 	/// ```
@@ -69,7 +69,7 @@ impl ProtobufParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::protobuf::ProtobufParser;
+	/// use reinhardt_core::parsers::protobuf::ProtobufParser;
 	/// use std::collections::HashMap;
 	///
 	/// let mut schemas = HashMap::new();
@@ -267,7 +267,7 @@ impl Parser for ProtobufParser {
 ///
 /// ```rust,no_run
 /// use prost::Message;
-/// use reinhardt_parsers::protobuf::ProtobufMessage;
+/// use reinhardt_core::parsers::protobuf::ProtobufMessage;
 ///
 /// #[derive(Message)]
 /// struct User {

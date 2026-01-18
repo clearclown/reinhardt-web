@@ -15,7 +15,7 @@
 //! ## Example
 //!
 //! ```ignore
-//! use reinhardt_reactive::{Signal, Effect, Runtime};
+//! use reinhardt_core::reactive::{Signal, Effect, Runtime};
 //!
 //! // Create a signal
 //! let count = Signal::new(0);
@@ -133,7 +133,7 @@ static SCHEDULER: std::sync::OnceLock<SchedulerFn> = std::sync::OnceLock::new();
 ///
 /// ```ignore
 /// // In WASM environment
-/// reinhardt_reactive::runtime::set_scheduler(|task| {
+/// reinhardt_core::reactive::runtime::set_scheduler(|task| {
 ///     wasm_bindgen_futures::spawn_local(async move { task() });
 /// });
 /// ```
@@ -380,7 +380,7 @@ thread_local! {
 /// # Example
 ///
 /// ```ignore
-/// use reinhardt_reactive::runtime::with_runtime;
+/// use reinhardt_core::reactive::runtime::with_runtime;
 ///
 /// with_runtime(|rt| {
 ///     rt.track_dependency(signal_id);

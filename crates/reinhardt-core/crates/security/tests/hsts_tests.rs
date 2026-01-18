@@ -2,7 +2,7 @@
 //!
 //! Tests based on Django's middleware/test_security.py
 
-use reinhardt_security::HstsConfig;
+use reinhardt_core::security::HstsConfig;
 
 #[test]
 fn test_hsts_basic_header() {

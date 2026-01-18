@@ -1,4 +1,4 @@
-use reinhardt_negotiation::language::{Language, LanguageNegotiator};
+use reinhardt_core::negotiation::language::{Language, LanguageNegotiator};
 
 #[test]
 fn test_language_parse_simple() {

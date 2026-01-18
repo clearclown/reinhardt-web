@@ -2,7 +2,7 @@
 //!
 //! Tests for cross-site scripting prevention utilities
 
-use reinhardt_security::{escape_html, sanitize_html};
+use reinhardt_core::security::{escape_html, sanitize_html};
 
 #[test]
 fn test_escape_html_script_tags() {

@@ -1,5 +1,5 @@
 use reinhardt_macros::receiver;
-use reinhardt_signals::{SignalError, auto_connect_receivers};
+use reinhardt_core::signals::{SignalError, auto_connect_receivers};
 use serial_test::serial;
 use std::any::Any;
 use std::sync::Arc;
@@ -49,7 +49,7 @@ async fn test_auto_connect_receivers() {
 #[tokio::test]
 #[serial(receiver_registry)]
 async fn test_receiver_invocation_via_signal() {
-	use reinhardt_signals::get_signal_with_string;
+	use reinhardt_core::signals::get_signal_with_string;
 
 	// Reset counters
 	SAVE_HANDLER_CALLS.store(0, Ordering::SeqCst);
@@ -90,7 +90,7 @@ async fn test_receiver_invocation_via_signal() {
 #[tokio::test]
 #[serial(receiver_registry)]
 async fn test_receiver_priority_ordering() {
-	use reinhardt_signals::get_signal_with_string;
+	use reinhardt_core::signals::get_signal_with_string;
 	use std::sync::Mutex;
 
 	// Track call order

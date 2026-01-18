@@ -13,7 +13,7 @@
 //! ## Usage
 //!
 //! ```ignore
-//! use reinhardt_types::page::Head;
+//! use reinhardt_core::types::page::Head;
 //!
 //! let head = Head::new()
 //!     .title("My Page")
@@ -451,7 +451,7 @@ impl StyleTag {
 /// ## Example
 ///
 /// ```ignore
-/// use reinhardt_types::page::Head;
+/// use reinhardt_core::types::page::Head;
 ///
 /// let head = Head::new()
 ///     .title("My Application")

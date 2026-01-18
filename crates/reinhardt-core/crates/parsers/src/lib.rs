@@ -25,7 +25,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use reinhardt_parsers::{JSONParser, Parser};
+//! use reinhardt_core::parsers::{JSONParser, Parser};
 //! use bytes::Bytes;
 //! use http::HeaderMap;
 //!

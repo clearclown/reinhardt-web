@@ -1,6 +1,6 @@
 //! HMAC-SHA256 based CSRF token tests
 
-use reinhardt_security::csrf::{
+use reinhardt_core::security::csrf::{
 	check_token_hmac, generate_token_hmac, get_secret_bytes, get_token_hmac, verify_token_hmac,
 };
 

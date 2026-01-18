@@ -19,9 +19,9 @@ use crate::parser::{ParseResult, ParsedData};
 /// ```
 /// use async_trait::async_trait;
 /// use bytes::Bytes;
-/// use reinhardt_parsers::validator::ParserValidator;
-/// use reinhardt_parsers::parser::{ParseResult, ParsedData};
-/// use reinhardt_exception::Error;
+/// use reinhardt_core::parsers::validator::ParserValidator;
+/// use reinhardt_core::parsers::parser::{ParseResult, ParsedData};
+/// use reinhardt_core::exception::Error;
 ///
 /// struct SizeLimitValidator {
 ///     max_size: usize,
@@ -82,7 +82,7 @@ pub trait ParserValidator: Send + Sync {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::validator::SizeLimitValidator;
+/// use reinhardt_core::parsers::validator::SizeLimitValidator;
 ///
 /// // Limit requests to 1MB
 /// let validator = SizeLimitValidator::new(1024 * 1024);
@@ -98,7 +98,7 @@ impl SizeLimitValidator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::validator::SizeLimitValidator;
+	/// use reinhardt_core::parsers::validator::SizeLimitValidator;
 	///
 	/// // Limit to 10KB
 	/// let validator = SizeLimitValidator::new(10 * 1024);
@@ -111,7 +111,7 @@ impl SizeLimitValidator {
 #[async_trait]
 impl ParserValidator for SizeLimitValidator {
 	async fn before_parse(&self, _content_type: Option<&str>, body: &Bytes) -> ParseResult<()> {
-		use reinhardt_exception::Error;
+		use reinhardt_core::exception::Error;
 
 		if body.len() > self.max_size {
 			return Err(Error::Validation(format!(
@@ -133,7 +133,7 @@ impl ParserValidator for SizeLimitValidator {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::validator::ContentTypeValidator;
+/// use reinhardt_core::parsers::validator::ContentTypeValidator;
 ///
 /// // Require application/json
 /// let validator = ContentTypeValidator::new(vec!["application/json".to_string()]);
@@ -149,7 +149,7 @@ impl ContentTypeValidator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::validator::ContentTypeValidator;
+	/// use reinhardt_core::parsers::validator::ContentTypeValidator;
 	///
 	/// let validator = ContentTypeValidator::new(vec![
 	///     "application/json".to_string(),
@@ -164,7 +164,7 @@ impl ContentTypeValidator {
 #[async_trait]
 impl ParserValidator for ContentTypeValidator {
 	async fn before_parse(&self, content_type: Option<&str>, _body: &Bytes) -> ParseResult<()> {
-		use reinhardt_exception::Error;
+		use reinhardt_core::exception::Error;
 
 		if let Some(ct) = content_type {
 			// Check if content type matches any allowed type
@@ -195,7 +195,7 @@ impl ParserValidator for ContentTypeValidator {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_parsers::validator::{CompositeValidator, SizeLimitValidator, ContentTypeValidator};
+/// use reinhardt_core::parsers::validator::{CompositeValidator, SizeLimitValidator, ContentTypeValidator};
 ///
 /// let validator = CompositeValidator::new()
 ///     .add(SizeLimitValidator::new(1024 * 1024))
@@ -212,7 +212,7 @@ impl CompositeValidator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::validator::CompositeValidator;
+	/// use reinhardt_core::parsers::validator::CompositeValidator;
 	///
 	/// let validator = CompositeValidator::new();
 	/// ```
@@ -225,7 +225,7 @@ impl CompositeValidator {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::validator::{CompositeValidator, SizeLimitValidator};
+	/// use reinhardt_core::parsers::validator::{CompositeValidator, SizeLimitValidator};
 	///
 	/// let validator = CompositeValidator::new()
 	///     .add(SizeLimitValidator::new(1024));

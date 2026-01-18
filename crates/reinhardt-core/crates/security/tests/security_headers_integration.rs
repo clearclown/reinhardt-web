@@ -10,10 +10,10 @@
 //! - Header combination and conflict handling
 
 use reinhardt_http::Response;
-use reinhardt_security::headers::{
+use reinhardt_core::security::headers::{
 	ContentSecurityPolicy, SecurityHeadersConfig, SecurityHeadersMiddleware,
 };
-use reinhardt_security::hsts::{HstsConfig, HstsMiddleware};
+use reinhardt_core::security::hsts::{HstsConfig, HstsMiddleware};
 
 // ============================================================================
 // Test Utilities

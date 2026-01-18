@@ -18,7 +18,6 @@ full = ["json", "xml", "yaml"]
 
 [dependencies]
 # Core internal dependencies (reinhardt-core subcrates)
-reinhardt-types = { workspace = true }
 
 # External dependencies
 serde = { workspace = true }
@@ -34,6 +33,7 @@ typed-arena = "2.0"
 quick-xml = { version = "0.38.3", features = ["serialize"], optional = true }
 serde-xml-rs = { version = "0.8.1", optional = true }
 serde_yaml = { version = "0.9.33", optional = true }
+reinhardt-core = {workspace = true, features = ["types"]}
 
 [dev-dependencies]
 tokio = { workspace = true }

@@ -117,14 +117,14 @@ pub(crate) fn permission_required_impl(args: TokenStream, input: ItemFn) -> Resu
 			// Runtime permission check using Request parameter
 			// Extract user from request extensions (stored as Arc<dyn PermissionsMixin> by auth middleware)
 			let user = #request_ident.extensions.get::<std::sync::Arc<dyn reinhardt_auth::PermissionsMixin>>()
-				.ok_or_else(|| reinhardt_exception::Error::Authorization(
+				.ok_or_else(|| reinhardt_core::exception::Error::Authorization(
 					"Authentication required. User not found in request context.".to_string()
 				))?;
 
 			// Check all required permissions
 			let required_permissions = &[#(#perm_checks),*];
 			if !user.has_perms(required_permissions) {
-				return Err(reinhardt_exception::Error::Authorization(
+				return Err(reinhardt_core::exception::Error::Authorization(
 					format!("Permission denied. Required permissions: {}", required_permissions.join(", "))
 				).into());
 			}

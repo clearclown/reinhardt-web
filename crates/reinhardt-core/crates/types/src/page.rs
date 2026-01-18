@@ -11,7 +11,7 @@
 //! ## Example
 //!
 //! ```ignore
-//! use reinhardt_types::page::{Page, PageElement, IntoPage};
+//! use reinhardt_core::types::page::{Page, PageElement, IntoPage};
 //!
 //! let view = PageElement::new("div")
 //!     .attr("class", "container")
@@ -451,7 +451,7 @@ impl Page {
 	/// # Example
 	///
 	/// ```ignore
-	/// use reinhardt_types::page::{Page, Head};
+	/// use reinhardt_core::types::page::{Page, Head};
 	///
 	/// let view = Page::text("Hello, World!");
 	/// let head = Head::new().title("My Page");
@@ -479,7 +479,7 @@ impl Page {
 	/// # Example
 	///
 	/// ```ignore
-	/// use reinhardt_types::page::Page;
+	/// use reinhardt_core::types::page::Page;
 	/// use reinhardt_pages::reactive::hooks::use_state;
 	///
 	/// let (show_error, set_show_error) = use_state(false);

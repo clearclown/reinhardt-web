@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use reinhardt_exception::{Error, Result};
+use reinhardt_core::exception::{Error, Result};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -22,7 +22,7 @@ impl MediaType {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::MediaType;
+	/// use reinhardt_core::parsers::parser::MediaType;
 	///
 	/// let media_type = MediaType::new("application", "json");
 	/// assert_eq!(media_type.main_type, "application");
@@ -41,7 +41,7 @@ impl MediaType {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::MediaType;
+	/// use reinhardt_core::parsers::parser::MediaType;
 	///
 	/// let media_type = MediaType::new("text", "html")
 	///     .with_param("charset", "utf-8");
@@ -56,7 +56,7 @@ impl MediaType {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::MediaType;
+	/// use reinhardt_core::parsers::parser::MediaType;
 	///
 	/// let media_type = MediaType::parse("application/json; charset=utf-8").unwrap();
 	/// assert_eq!(media_type.main_type, "application");
@@ -94,7 +94,7 @@ impl MediaType {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::MediaType;
+	/// use reinhardt_core::parsers::parser::MediaType;
 	///
 	/// let media_type = MediaType::new("application", "json");
 	/// assert!(media_type.matches("application/json"));
@@ -157,7 +157,7 @@ impl UploadedFile {
 	///
 	/// ```
 	/// use bytes::Bytes;
-	/// use reinhardt_parsers::parser::UploadedFile;
+	/// use reinhardt_core::parsers::parser::UploadedFile;
 	///
 	/// let data = Bytes::from("file content");
 	/// let file = UploadedFile::new("upload".to_string(), data.clone());
@@ -182,7 +182,7 @@ impl UploadedFile {
 	///
 	/// ```
 	/// use bytes::Bytes;
-	/// use reinhardt_parsers::parser::UploadedFile;
+	/// use reinhardt_core::parsers::parser::UploadedFile;
 	///
 	/// let file = UploadedFile::new("upload".to_string(), Bytes::from("content"))
 	///     .with_filename("document.pdf".to_string());
@@ -198,7 +198,7 @@ impl UploadedFile {
 	///
 	/// ```
 	/// use bytes::Bytes;
-	/// use reinhardt_parsers::parser::UploadedFile;
+	/// use reinhardt_core::parsers::parser::UploadedFile;
 	///
 	/// let file = UploadedFile::new("upload".to_string(), Bytes::from("content"))
 	///     .with_content_type("application/pdf".to_string());
@@ -247,7 +247,7 @@ impl ParserRegistry {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::ParserRegistry;
+	/// use reinhardt_core::parsers::parser::ParserRegistry;
 	///
 	/// let registry = ParserRegistry::new();
 	/// ```
@@ -259,9 +259,9 @@ impl ParserRegistry {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::parser::ParserRegistry;
-	/// use reinhardt_parsers::json::JSONParser;
-	/// use reinhardt_parsers::form::FormParser;
+	/// use reinhardt_core::parsers::parser::ParserRegistry;
+	/// use reinhardt_core::parsers::json::JSONParser;
+	/// use reinhardt_core::parsers::form::FormParser;
 	///
 	/// let registry = ParserRegistry::new()
 	///     .register(JSONParser::new())
@@ -278,8 +278,8 @@ impl ParserRegistry {
 	/// ```
 	/// use bytes::Bytes;
 	/// use http::HeaderMap;
-	/// use reinhardt_parsers::parser::{ParserRegistry, ParsedData};
-	/// use reinhardt_parsers::json::JSONParser;
+	/// use reinhardt_core::parsers::parser::{ParserRegistry, ParsedData};
+	/// use reinhardt_core::parsers::json::JSONParser;
 	///
 	/// # tokio_test::block_on(async {
 	/// let registry = ParserRegistry::new().register(JSONParser::new());

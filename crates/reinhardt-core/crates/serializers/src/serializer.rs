@@ -16,7 +16,7 @@ use std::collections::HashMap;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_core_serializers::{Serializer, JsonSerializer};
+/// use reinhardt_core::serializers::{Serializer, JsonSerializer};
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize)]
@@ -301,7 +301,7 @@ impl SerializerError {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_core_serializers::{Serializer, JsonSerializer};
+/// use reinhardt_core::serializers::{Serializer, JsonSerializer};
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Serialize, Deserialize, PartialEq, Debug)]
@@ -358,7 +358,7 @@ where
 /// # Examples
 ///
 /// ```
-/// use reinhardt_core_serializers::Deserializer;
+/// use reinhardt_core::serializers::Deserializer;
 /// use serde::{Deserialize, Serialize};
 ///
 /// struct JsonDeserializer;
@@ -367,8 +367,8 @@ where
 ///     type Input = String;
 ///     type Output = serde_json::Value;
 ///
-///     fn deserialize(&self, input: &Self::Input) -> Result<Self::Output, reinhardt_core_serializers::SerializerError> {
-///         serde_json::from_str(input).map_err(|e| reinhardt_core_serializers::SerializerError::Serde {
+///     fn deserialize(&self, input: &Self::Input) -> Result<Self::Output, reinhardt_core::serializers::SerializerError> {
+///         serde_json::from_str(input).map_err(|e| reinhardt_core::serializers::SerializerError::Serde {
 ///             message: format!("Deserialization error: {}", e),
 ///         })
 ///     }

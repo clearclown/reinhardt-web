@@ -15,7 +15,7 @@ impl FormParser {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_parsers::form::FormParser;
+	/// use reinhardt_core::parsers::form::FormParser;
 	///
 	/// let parser = FormParser::new();
 	/// ```

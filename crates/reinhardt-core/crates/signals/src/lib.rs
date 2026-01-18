@@ -29,10 +29,10 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use reinhardt_signals::post_save;
+//! use reinhardt_core::signals::post_save;
 //!
 //! # #[tokio::main]
-//! # async fn main() -> Result<(), reinhardt_signals::SignalError> {
+//! # async fn main() -> Result<(), reinhardt_core::signals::SignalError> {
 //! # #[derive(Clone)]
 //! # struct User;
 //! # let user = User;
@@ -128,7 +128,7 @@ pub use dispatch::{SyncReceiverFn, SyncSignal};
 /// # Example
 ///
 /// ```rust,no_run
-/// use reinhardt_signals::{connect_receiver, post_save, SignalError};
+/// use reinhardt_core::signals::{connect_receiver, post_save, SignalError};
 /// use std::sync::Arc;
 ///
 /// # #[derive(Clone)]

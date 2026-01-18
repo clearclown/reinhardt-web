@@ -6,7 +6,7 @@
 //! - Renderer selection
 //! - Error handling
 
-use reinhardt_negotiation::{
+use reinhardt_core::negotiation::{
 	BaseContentNegotiation, BaseNegotiator, ContentNegotiator, MediaType, NegotiationError,
 	RendererInfo,
 };

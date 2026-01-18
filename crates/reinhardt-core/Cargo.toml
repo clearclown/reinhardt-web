@@ -9,29 +9,53 @@ description = "Core components for Reinhardt framework"
 
 [dependencies]
 # Re-export all internal crates
-reinhardt-types = { workspace = true, optional = true }
-reinhardt-exception = { workspace = true, optional = true }
-reinhardt-signals = { workspace = true, optional = true }
 reinhardt-macros = { workspace = true, optional = true }
-reinhardt-security = { workspace = true, optional = true }
-reinhardt-validators = { workspace = true, optional = true }
-reinhardt-core-serializers = { workspace = true, optional = true }
-
-# New facade subcrates
-reinhardt-messages = { workspace = true, optional = true }
-reinhardt-http = { workspace = true, optional = true }
-reinhardt-di = { workspace = true, optional = true }
-reinhardt-negotiation = { workspace = true, optional = true }
-reinhardt-parsers = { workspace = true, optional = true }
-reinhardt-pagination = { workspace = true, optional = true }
 
 # External dependencies for re-export
-tokio = { workspace = true }
-serde = { workspace = true }
+tokio = { workspace = true, features = ["rt", "sync", "time"]}
+serde = { workspace = true, features = ["derive"], optional = true}
 serde_json = { workspace = true }
 async-trait = { workspace = true }
-hyper = { workspace = true, optional = true }
 inventory = "0.3"
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+serde_urlencoded = { workspace = true }
+http = { workspace = true }
+hyper = { workspace = true }
+validator = "0.20"
+base64 = "0.22"
+percent-encoding = "2.3"
+url = "2.5"
+bytes = "1.0"
+multer = "3.0"
+mime = "0.3"
+futures-util = "0.3"
+urlencoding = "2.1"
+quick-xml = { version = "0.38.3", optional = true }
+serde_yaml = { workspace = true, optional = true }
+flate2 = { workspace = true }
+brotli = { workspace = true }
+rmp-serde = { workspace = true }
+prost = { workspace = true }
+serial_test = { workspace = true, optional = true }
+aquamarine = { workspace = true }
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+rand = "0.9"
+ipnet = "2.10"
+regex = "1.11"
+chrono = { workspace = true }
+once_cell = "1.20"
+typed-arena = "2.0"
+serde-xml-rs = { version = "0.8.1", optional = true }
+parking_lot = "0.12"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+fluent-bundle = { version = "0.15", optional = true }
+image = "0.25"
+jsonschema = { version = "0.26", optional = true }
+rayon = { version = "1.10", optional = true }
+unic-langid = { version = "0.9", optional = true }
 
 [features]
 default = [
@@ -43,23 +67,25 @@ default = [
   "validators",
   "serializers",
 ]
-types = ["dep:reinhardt-types"]
-# Page types from reinhardt-types (Page, PageElement, IntoPage, etc.)
-page = ["types", "reinhardt-types/page"]
-exception = ["dep:reinhardt-exception"]
-signals = ["dep:reinhardt-signals"]
-macros = ["dep:reinhardt-macros"]
-security = ["dep:reinhardt-security"]
-validators = ["dep:reinhardt-validators"]
-serializers = ["dep:reinhardt-core-serializers"]
-http = ["dep:reinhardt-http", "dep:hyper"]
 
-# New facade features
-messages = ["dep:reinhardt-messages"]
-di = ["dep:reinhardt-di", "reinhardt-di/params"]
-negotiation = ["dep:reinhardt-negotiation"]
-parsers = ["dep:reinhardt-parsers"]
-pagination = ["dep:reinhardt-pagination"]
+# Module features (modules are always compiled, features for backwards compatibility)
+types = []
+exception = []
+signals = ["serde"]
+security = []
+validators = []
+serializers = ["serde"]
+messages = []
+negotiation = []
+parsers = []
+pagination = []
+reactive = []
+
+# Page types feature
+page = ["types"]
+
+# External dependency features
+macros = ["dep:reinhardt-macros"]
 
 # Aggregate all core features
 core-full = [
@@ -70,21 +96,32 @@ core-full = [
   "security",
   "validators",
   "serializers",
-  "http",
   "messages",
-  "di",
   "negotiation",
   "parsers",
   "pagination",
-  "reinhardt-types/full",
-  "reinhardt-exception/full",
-  "reinhardt-signals/full",
-  "reinhardt-macros/full",
-  "reinhardt-security/full",
-  "reinhardt-validators/full",
-  "reinhardt-core-serializers/full",
-  "reinhardt-messages/full",
-  "reinhardt-negotiation/full",
-  "reinhardt-parsers/full",
-  "reinhardt-pagination/full",
+  "reactive",
+  "full",
+  "reinhardt-macros?/full",
 ]
+
+# Full feature with all optional functionality
+full = ["i18n", "json", "jsonschema", "page", "parallel", "serde", "std", "xml", "yaml"]
+std = []
+json = []
+xml = ["dep:quick-xml", "dep:serde-xml-rs"]
+yaml = ["dep:serde_yaml"]
+serde = ["dep:serde"]
+jsonschema = ["dep:jsonschema"]
+parallel = ["dep:rayon"]
+i18n = ["dep:fluent-bundle", "dep:unic-langid"]
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "macros", "rt", "test-util"] }
+bytes = "1.0"
+hyper = "1.0"
+tokio-test = "0.4"
+serial_test = { workspace = true }
+reinhardt-http = { workspace = true }
+reinhardt-test = { workspace = true }
+rstest = { workspace = true }

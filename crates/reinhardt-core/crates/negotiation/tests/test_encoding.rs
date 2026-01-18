@@ -1,4 +1,4 @@
-use reinhardt_negotiation::encoding::{Encoding, EncodingNegotiator, EncodingQuality};
+use reinhardt_core::negotiation::encoding::{Encoding, EncodingNegotiator, EncodingQuality};
 
 #[test]
 fn test_encoding_parse() {

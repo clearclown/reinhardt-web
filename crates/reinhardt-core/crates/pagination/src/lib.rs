@@ -28,7 +28,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use reinhardt_pagination::PageNumberPagination;
+//! use reinhardt_core::pagination::PageNumberPagination;
 //!
 //! let paginator = PageNumberPagination::new()
 //!     .page_size(10)
@@ -38,8 +38,8 @@
 //! ## Cursor Pagination Example
 //!
 //! ```rust,no_run
-//! use reinhardt_pagination::CursorPagination;
-//! use reinhardt_pagination::cursor::RelayPagination;
+//! use reinhardt_core::pagination::CursorPagination;
+//! use reinhardt_core::pagination::cursor::RelayPagination;
 //!
 //! // Standard cursor pagination
 //! let paginator = CursorPagination::new()
@@ -55,7 +55,7 @@
 //! ## Database Cursor Pagination Example
 //!
 //! ```rust,no_run
-//! use reinhardt_pagination::{CursorPaginator, HasTimestamp};
+//! use reinhardt_core::pagination::{CursorPaginator, HasTimestamp};
 //!
 //! // Define your model
 //! #[derive(Clone)]
@@ -112,7 +112,7 @@ pub use crate::cursor::{
 };
 
 use async_trait::async_trait;
-use reinhardt_exception::Result;
+use reinhardt_core::exception::Result;
 
 // ============================================================================
 // Enum Wrapper for dyn Paginator Compatibility
@@ -284,7 +284,7 @@ mod tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidPage(_)
+			reinhardt_core::exception::Error::InvalidPage(_)
 		));
 	}
 
@@ -297,7 +297,7 @@ mod tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidPage(_)
+			reinhardt_core::exception::Error::InvalidPage(_)
 		));
 	}
 
@@ -476,7 +476,7 @@ mod tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidLimit(_)
+			reinhardt_core::exception::Error::InvalidLimit(_)
 		));
 	}
 
@@ -551,7 +551,7 @@ mod tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidPage(_)
+			reinhardt_core::exception::Error::InvalidPage(_)
 		));
 	}
 
@@ -891,7 +891,7 @@ mod tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidPage(_)
+			reinhardt_core::exception::Error::InvalidPage(_)
 		));
 	}
 
@@ -942,7 +942,7 @@ mod tests {
 		// Test invalid page (non-numeric)
 		let result = paginator.paginate(&items, Some("abc"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "Wrong page number");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -951,7 +951,7 @@ mod tests {
 		// Test min page (page 0)
 		let result = paginator.paginate(&items, Some("0"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "Too small");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -960,7 +960,7 @@ mod tests {
 		// Test no results (page beyond range)
 		let result = paginator.paginate(&items, Some("10"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "There is nothing here");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -975,7 +975,7 @@ mod tests {
 		// Test default error message for out of range
 		let result = paginator.paginate(&items, Some("10"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "That page contains no results");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -984,7 +984,7 @@ mod tests {
 		// Test default error message for page 0
 		let result = paginator.paginate(&items, Some("0"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "That page number is less than 1");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -1005,7 +1005,7 @@ mod tests {
 		// Custom message for min_page
 		let result = paginator.paginate(&items, Some("0"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "Too small");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -1014,7 +1014,7 @@ mod tests {
 		// Default message for no_results
 		let result = paginator.paginate(&items, Some("10"), "http://api.example.com/items");
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "That page contains no results");
 		} else {
 			panic!("Expected InvalidPage error");
@@ -1490,7 +1490,7 @@ mod async_tests {
 			.await;
 
 		assert!(result.is_err());
-		if let Err(reinhardt_exception::Error::InvalidPage(msg)) = result {
+		if let Err(reinhardt_core::exception::Error::InvalidPage(msg)) = result {
 			assert_eq!(msg, "Custom no results");
 		}
 	}
@@ -1591,7 +1591,7 @@ mod async_tests {
 		assert!(result.is_err());
 		assert!(matches!(
 			result.unwrap_err(),
-			reinhardt_exception::Error::InvalidLimit(_)
+			reinhardt_core::exception::Error::InvalidLimit(_)
 		));
 	}
 

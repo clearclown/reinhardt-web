@@ -1,5 +1,5 @@
-use reinhardt_negotiation::MediaType;
-use reinhardt_negotiation::cache::{CacheKey, NegotiationCache};
+use reinhardt_core::negotiation::MediaType;
+use reinhardt_core::negotiation::cache::{CacheKey, NegotiationCache};
 use std::thread;
 use std::time::Duration;
 

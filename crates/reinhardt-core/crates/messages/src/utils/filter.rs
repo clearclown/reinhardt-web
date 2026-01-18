@@ -12,8 +12,8 @@ use crate::message::Message;
 /// # Examples
 ///
 /// ```
-/// use reinhardt_messages::utils::filter::filter_by_min_level;
-/// use reinhardt_messages::{Message, Level};
+/// use reinhardt_core::messages::utils::filter::filter_by_min_level;
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::debug("Debug message"),
@@ -41,8 +41,8 @@ pub fn filter_by_min_level(messages: &[Message], min_level: Level) -> Vec<Messag
 /// # Examples
 ///
 /// ```
-/// use reinhardt_messages::utils::filter::filter_by_level;
-/// use reinhardt_messages::{Message, Level};
+/// use reinhardt_core::messages::utils::filter::filter_by_level;
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::debug("Debug message"),
@@ -70,8 +70,8 @@ pub fn filter_by_level(messages: &[Message], level: Level) -> Vec<Message> {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_messages::utils::filter::filter_by_max_level;
-/// use reinhardt_messages::{Message, Level};
+/// use reinhardt_core::messages::utils::filter::filter_by_max_level;
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::debug("Debug message"),
@@ -99,8 +99,8 @@ pub fn filter_by_max_level(messages: &[Message], max_level: Level) -> Vec<Messag
 /// # Examples
 ///
 /// ```
-/// use reinhardt_messages::utils::filter::filter_by_level_range;
-/// use reinhardt_messages::{Message, Level};
+/// use reinhardt_core::messages::utils::filter::filter_by_level_range;
+/// use reinhardt_core::messages::{Message, Level};
 ///
 /// let messages = vec![
 ///     Message::debug("Debug message"),
@@ -132,8 +132,8 @@ pub fn filter_by_level_range(
 /// # Examples
 ///
 /// ```
-/// use reinhardt_messages::utils::filter::filter_by_tag;
-/// use reinhardt_messages::Message;
+/// use reinhardt_core::messages::utils::filter::filter_by_tag;
+/// use reinhardt_core::messages::Message;
 ///
 /// let messages = vec![
 ///     Message::info("Normal message"),
