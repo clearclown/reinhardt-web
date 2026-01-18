@@ -185,32 +185,43 @@ pub(crate) fn get_reinhardt_orm_crate() -> TokenStream {
 	quote!(::reinhardt::db::orm)
 }
 
-/// Resolves the path to the reinhardt_signals crate dynamically.
+/// Resolves the path to the reinhardt_signals module dynamically.
+/// Note: reinhardt-signals functionality has been merged into reinhardt-core as signals submodule.
 pub(crate) fn get_reinhardt_signals_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
-	// Try direct crate first
-	match crate_name("reinhardt-signals") {
-		Ok(FoundCrate::Itself) => return quote!(crate),
+	// Try reinhardt-core first (signals is now a submodule of reinhardt-core)
+	match crate_name("reinhardt-core") {
+		Ok(FoundCrate::Itself) => return quote!(crate::signals),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident);
+			return quote!(::#ident::signals);
 		}
-		Err(_) => {
-			// Try via reinhardt crate
-			match crate_name("reinhardt") {
-				Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_signals),
-				Ok(FoundCrate::Name(name)) => {
-					let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-					return quote!(::#ident::reinhardt_signals);
-				}
-				Err(_) => {}
-			}
+		Err(_) => {}
+	}
+
+	// Try via reinhardt crate
+	match crate_name("reinhardt") {
+		Ok(FoundCrate::Itself) => return quote!(crate::core::signals),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::core::signals);
 		}
+		Err(_) => {}
+	}
+
+	// Try via reinhardt-web (published package name)
+	match crate_name("reinhardt-web") {
+		Ok(FoundCrate::Itself) => return quote!(crate::core::signals),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::core::signals);
+		}
+		Err(_) => {}
 	}
 
 	// Final fallback
-	quote!(::reinhardt_signals)
+	quote!(::reinhardt::core::signals)
 }
 
 /// Resolves the path to the reinhardt_params crate dynamically.
@@ -343,32 +354,43 @@ pub(crate) fn get_reinhardt_migrations_crate() -> TokenStream {
 	quote!(::reinhardt::db::migrations)
 }
 
-/// Resolves the path to the reinhardt_proxy crate dynamically.
+/// Resolves the path to the reinhardt_proxy module dynamically.
+/// Note: proxy functionality is part of reinhardt-urls crate.
 pub(crate) fn get_reinhardt_proxy_crate() -> TokenStream {
 	use proc_macro_crate::{FoundCrate, crate_name};
 
-	// Try direct crate first
-	match crate_name("reinhardt-proxy") {
-		Ok(FoundCrate::Itself) => return quote!(crate),
+	// Try reinhardt-urls first (proxy is a submodule of reinhardt-urls)
+	match crate_name("reinhardt-urls") {
+		Ok(FoundCrate::Itself) => return quote!(crate::proxy),
 		Ok(FoundCrate::Name(name)) => {
 			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-			return quote!(::#ident);
+			return quote!(::#ident::proxy);
 		}
-		Err(_) => {
-			// Try via reinhardt crate
-			match crate_name("reinhardt") {
-				Ok(FoundCrate::Itself) => return quote!(crate::reinhardt_proxy),
-				Ok(FoundCrate::Name(name)) => {
-					let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
-					return quote!(::#ident::reinhardt_proxy);
-				}
-				Err(_) => {}
-			}
+		Err(_) => {}
+	}
+
+	// Try via reinhardt crate
+	match crate_name("reinhardt") {
+		Ok(FoundCrate::Itself) => return quote!(crate::urls::proxy),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::urls::proxy);
 		}
+		Err(_) => {}
+	}
+
+	// Try via reinhardt-web (published package name)
+	match crate_name("reinhardt-web") {
+		Ok(FoundCrate::Itself) => return quote!(crate::urls::proxy),
+		Ok(FoundCrate::Name(name)) => {
+			let ident = syn::Ident::new(&name, proc_macro2::Span::call_site());
+			return quote!(::#ident::urls::proxy);
+		}
+		Err(_) => {}
 	}
 
 	// Final fallback
-	quote!(::reinhardt_proxy)
+	quote!(::reinhardt::urls::proxy)
 }
 
 /// Resolves the path to the reinhardt_http crate dynamically.
