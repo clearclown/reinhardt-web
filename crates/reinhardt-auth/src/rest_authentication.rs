@@ -641,8 +641,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_session_authentication() {
-		use reinhardt_auth::sessions::Session;
-		use reinhardt_auth::sessions::backends::InMemorySessionBackend;
+		use crate::sessions::Session;
+		use crate::sessions::InMemorySessionBackend;
 
 		let session_backend = InMemorySessionBackend::new();
 

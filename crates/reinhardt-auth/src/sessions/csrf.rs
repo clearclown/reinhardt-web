@@ -323,7 +323,7 @@ impl Default for CsrfSessionManager {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::backends::InMemorySessionBackend;
+	use crate::sessions::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_csrf_manager_new() {

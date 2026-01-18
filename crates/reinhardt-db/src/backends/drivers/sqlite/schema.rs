@@ -152,7 +152,7 @@ mod tests {
 
 	#[test]
 	fn test_alter_column_statement() {
-		use super::super::super::schema::BaseDatabaseSchemaEditor;
+		use crate::backends::schema::BaseDatabaseSchemaEditor;
 
 		let editor = SQLiteSchemaEditor::new();
 		// Test trait method override (returns SQL comment for SQLite)

@@ -295,7 +295,7 @@ impl<B: SessionBackend + 'static> Middleware for SessionMiddleware<B> {
 #[cfg(all(test, feature = "middleware"))]
 mod tests {
 	use super::*;
-	use super::backends::InMemorySessionBackend;
+	use crate::sessions::InMemorySessionBackend;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode};
 	use std::sync::Arc;

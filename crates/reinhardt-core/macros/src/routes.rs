@@ -374,7 +374,7 @@ fn generate_view_type(
 	let metadata_submission = quote! {
 		#inventory_crate::submit! {
 			#[allow(non_upper_case_globals)]
-			#core_crate::EndpointMetadata {
+			#core_crate::endpoint::EndpointMetadata {
 				path: #path,
 				method: #method,
 				name: #metadata_name,
@@ -627,7 +627,7 @@ fn route_impl(method: &str, args: TokenStream, input: ItemFn) -> Result<TokenStr
 	let metadata_submission = quote! {
 		#inventory_crate::submit! {
 			#[allow(non_upper_case_globals)]
-			#core_crate::EndpointMetadata {
+			#core_crate::endpoint::EndpointMetadata {
 				path: #path_str,
 				method: #method,
 				name: #metadata_name,

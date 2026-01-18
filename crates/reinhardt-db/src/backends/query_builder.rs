@@ -539,8 +539,8 @@ impl DeleteBuilder {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::backend::DatabaseBackend;
-	use super::types::{DatabaseType, QueryResult, QueryValue, Row, TransactionExecutor};
+	use crate::backends::backend::DatabaseBackend;
+	use crate::backends::types::{DatabaseType, QueryResult, QueryValue, Row, TransactionExecutor};
 
 	// Mock transaction executor for testing
 	struct MockTransactionExecutor;

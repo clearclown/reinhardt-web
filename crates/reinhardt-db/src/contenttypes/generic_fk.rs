@@ -351,7 +351,7 @@ mod tests {
 
 	#[test]
 	fn test_generic_fk_field_get_content_type() {
-		use crate::CONTENT_TYPE_REGISTRY;
+		use crate::contenttypes::CONTENT_TYPE_REGISTRY;
 
 		// Clear registry first
 		CONTENT_TYPE_REGISTRY.clear();
@@ -415,7 +415,9 @@ mod tests {
 #[cfg(all(test, feature = "database"))]
 mod database_tests {
 	use super::*;
-	use crate::persistence::{ContentTypePersistence, ContentTypePersistenceBackend};
+	use crate::contenttypes::persistence::{
+		ContentTypePersistence, ContentTypePersistenceBackend,
+	};
 	use constraints::GenericForeignKeyConstraints;
 	use std::sync::{Arc, Once};
 

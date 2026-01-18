@@ -261,7 +261,7 @@ impl Default for SessionRotator {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::backends::InMemorySessionBackend;
+	use crate::sessions::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_rotation_policy_default() {

@@ -458,7 +458,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::backends::InMemorySessionBackend;
+	use crate::sessions::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_async_replication_save() {

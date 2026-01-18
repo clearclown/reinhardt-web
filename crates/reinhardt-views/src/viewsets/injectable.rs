@@ -182,7 +182,7 @@ impl<V: ViewSet> InjectableViewSet for V {}
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::GenericViewSet;
+	use crate::viewsets::GenericViewSet;
 
 	// Basic compilation test - InjectableViewSet is automatically implemented
 	#[test]

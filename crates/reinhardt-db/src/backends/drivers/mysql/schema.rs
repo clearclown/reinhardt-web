@@ -116,7 +116,7 @@ mod tests {
 
 	#[test]
 	fn test_alter_column_statement() {
-		use super::super::super::schema::BaseDatabaseSchemaEditor;
+		use crate::backends::schema::BaseDatabaseSchemaEditor;
 
 		let editor = MySQLSchemaEditor::new();
 		// Test trait method override

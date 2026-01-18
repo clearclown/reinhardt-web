@@ -755,7 +755,7 @@ impl<B: SessionBackend> Session<B> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use super::backends::InMemorySessionBackend;
+	use crate::sessions::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_session_set_get() {

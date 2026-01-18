@@ -29,7 +29,7 @@
 //! # }
 //! ```
 
-use super::backends::{SessionBackend, SessionError};
+use crate::sessions::backends::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -277,7 +277,7 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_above_threshold() {
-		use super::backends::InMemorySessionBackend;
+		use crate::sessions::InMemorySessionBackend;
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
@@ -300,7 +300,7 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_below_threshold() {
-		use super::backends::InMemorySessionBackend;
+		use crate::sessions::InMemorySessionBackend;
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
@@ -322,7 +322,7 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_delete() {
-		use super::backends::InMemorySessionBackend;
+		use crate::sessions::InMemorySessionBackend;
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
