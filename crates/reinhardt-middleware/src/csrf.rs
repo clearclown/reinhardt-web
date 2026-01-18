@@ -9,10 +9,7 @@
 
 use async_trait::async_trait;
 use hyper::Method;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -132,7 +129,7 @@ impl CsrfMiddleware {
 	///
 	/// ```
 	/// use reinhardt_middleware::csrf::CsrfMiddleware;
-	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+	/// use reinhardt_http::{Handler, Middleware, Request, Response};
 	/// use hyper::{Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	/// use std::sync::Arc;

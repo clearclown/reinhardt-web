@@ -5,10 +5,7 @@
 
 use async_trait::async_trait;
 use hyper::StatusCode;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
@@ -253,7 +250,7 @@ impl Default for CacheConfig {
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_middleware::cache::{CacheMiddleware, CacheConfig, CacheKeyStrategy};
-/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+/// use reinhardt_http::{Handler, Middleware, Request, Response};
 /// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///

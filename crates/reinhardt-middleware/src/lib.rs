@@ -135,8 +135,8 @@ pub mod tracing;
 pub mod xframe;
 pub mod xss;
 
-// Re-export core middleware traits from reinhardt-types
-pub use reinhardt_core::{Handler, Middleware, MiddlewareChain};
+// Re-export core middleware traits from reinhardt-http
+pub use reinhardt_http::{Handler, Middleware, MiddlewareChain};
 
 #[cfg(feature = "sessions")]
 pub use auth::AuthenticationMiddleware;
@@ -190,10 +190,7 @@ mod tests {
 	use super::*;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode, Version};
-	use reinhardt_core::{
-		Handler, Middleware,
-		http::{Request, Response},
-	};
+	use reinhardt_http::{Handler, Middleware, Request, Response};
 	use std::sync::Arc;
 
 	struct TestHandler;

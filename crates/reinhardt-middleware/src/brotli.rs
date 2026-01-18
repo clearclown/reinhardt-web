@@ -8,10 +8,7 @@ use async_trait::async_trait;
 use brotli::enc::BrotliEncoderParams;
 use bytes::Bytes;
 use hyper::header::{ACCEPT_ENCODING, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE};
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use std::sync::Arc;
 
 /// Brotli compression quality level
@@ -128,7 +125,7 @@ impl BrotliMiddleware {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::brotli::BrotliMiddleware;
-	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+	/// use reinhardt_http::{Handler, Middleware, Request, Response};
 	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///

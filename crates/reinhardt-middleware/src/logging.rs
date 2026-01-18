@@ -1,10 +1,7 @@
 use async_trait::async_trait;
 use chrono::Local;
 use colored::Colorize;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -60,7 +57,7 @@ impl LoggingConfig {
 /// ```
 /// use std::sync::Arc;
 /// use reinhardt_middleware::LoggingMiddleware;
-/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+/// use reinhardt_http::{Handler, Middleware, Request, Response};
 /// use hyper::{Method, Version, HeaderMap, StatusCode};
 /// use bytes::Bytes;
 ///

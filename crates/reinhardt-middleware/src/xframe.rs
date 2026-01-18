@@ -4,10 +4,7 @@
 
 use async_trait::async_trait;
 use hyper::header::HeaderName;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use std::sync::Arc;
 
 /// X-Frame-Options values
@@ -56,7 +53,7 @@ impl XFrameOptionsMiddleware {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::XFrameOptionsMiddleware;
-	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+	/// use reinhardt_http::{Handler, Middleware, Request, Response};
 	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
@@ -100,7 +97,7 @@ impl XFrameOptionsMiddleware {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::XFrameOptionsMiddleware;
-	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+	/// use reinhardt_http::{Handler, Middleware, Request, Response};
 	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///
@@ -146,7 +143,7 @@ impl XFrameOptionsMiddleware {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_middleware::{XFrameOptionsMiddleware, XFrameOptions};
-	/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+	/// use reinhardt_http::{Handler, Middleware, Request, Response};
 	/// use hyper::{StatusCode, Method, Version, HeaderMap};
 	/// use bytes::Bytes;
 	///

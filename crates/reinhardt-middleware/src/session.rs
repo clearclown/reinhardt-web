@@ -4,10 +4,7 @@
 //! Supports various backends including Cookie, Redis, and database.
 
 use async_trait::async_trait;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -292,7 +289,7 @@ impl Default for SessionConfig {
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_middleware::session::{SessionMiddleware, SessionConfig};
-/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+/// use reinhardt_http::{Handler, Middleware, Request, Response};
 /// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
