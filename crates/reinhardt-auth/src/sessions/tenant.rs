@@ -34,8 +34,8 @@
 //! # }
 //! ```
 
-use crate::backends::{SessionBackend, SessionError};
-use crate::cleanup::CleanupableBackend;
+use super::backends::{SessionBackend, SessionError};
+use super::cleanup::CleanupableBackend;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -394,7 +394,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_tenant_session_save_load() {

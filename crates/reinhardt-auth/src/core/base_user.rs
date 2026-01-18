@@ -180,7 +180,7 @@ pub trait BaseUser: Send + Sync + Serialize + for<'de> Deserialize<'de> {
 	/// assert!(user.password_hash().is_some());
 	/// # }
 	/// ```
-	fn set_password(&mut self, password: &str) -> Result<(), reinhardt_exception::Error> {
+	fn set_password(&mut self, password: &str) -> Result<(), reinhardt_core::exception::Error> {
 		let hasher = Self::Hasher::default();
 		let hash = hasher.hash(password)?;
 		self.set_password_hash(hash);
@@ -231,7 +231,7 @@ pub trait BaseUser: Send + Sync + Serialize + for<'de> Deserialize<'de> {
 	/// assert!(!user.check_password("wrong_password").unwrap());
 	/// # }
 	/// ```
-	fn check_password(&self, password: &str) -> Result<bool, reinhardt_exception::Error> {
+	fn check_password(&self, password: &str) -> Result<bool, reinhardt_core::exception::Error> {
 		// Return false early if password is not usable (e.g., "!" marker)
 		if !self.has_usable_password() {
 			return Ok(false);

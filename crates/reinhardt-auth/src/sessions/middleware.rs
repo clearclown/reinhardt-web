@@ -29,9 +29,9 @@
 //! ```
 
 #[cfg(feature = "middleware")]
-use crate::backends::SessionBackend;
+use super::backends::SessionBackend;
 #[cfg(feature = "middleware")]
-use crate::session::Session;
+use super::session::Session;
 #[cfg(feature = "middleware")]
 use async_trait::async_trait;
 #[cfg(feature = "middleware")]
@@ -39,7 +39,7 @@ use reinhardt_core::exception::Result;
 #[cfg(feature = "middleware")]
 use reinhardt_http::{Request, Response};
 #[cfg(feature = "middleware")]
-use reinhardt_core::{Handler, Middleware};
+use reinhardt_http::{Handler, Middleware};
 #[cfg(feature = "middleware")]
 use std::sync::Arc;
 #[cfg(feature = "middleware")]
@@ -295,7 +295,7 @@ impl<B: SessionBackend + 'static> Middleware for SessionMiddleware<B> {
 #[cfg(all(test, feature = "middleware"))]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method, StatusCode};
 	use std::sync::Arc;

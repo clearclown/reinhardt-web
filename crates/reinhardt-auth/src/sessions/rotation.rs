@@ -31,8 +31,8 @@
 //! ```
 
 #![allow(clippy::field_reassign_with_default)]
-use crate::backends::{SessionBackend, SessionError};
-use crate::session::Session;
+use super::backends::{SessionBackend, SessionError};
+use super::session::Session;
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use std::time::Duration;
 
@@ -261,7 +261,7 @@ impl Default for SessionRotator {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_rotation_policy_default() {

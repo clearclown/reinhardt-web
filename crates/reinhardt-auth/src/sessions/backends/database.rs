@@ -54,7 +54,7 @@ use sea_query::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-use crate::{CleanupableBackend, SessionMetadata};
+use super::super::cleanup::{CleanupableBackend, SessionMetadata};
 
 use super::cache::{SessionBackend, SessionError};
 

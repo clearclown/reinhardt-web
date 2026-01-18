@@ -201,11 +201,11 @@ mod tests {
 	struct MockHasher;
 
 	impl PasswordHasher for MockHasher {
-		fn hash(&self, password: &str) -> Result<String, reinhardt_exception::Error> {
+		fn hash(&self, password: &str) -> Result<String, reinhardt_core::exception::Error> {
 			Ok(format!("hashed:{}", password))
 		}
 
-		fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_exception::Error> {
+		fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_core::exception::Error> {
 			Ok(hash == format!("hashed:{}", password))
 		}
 	}

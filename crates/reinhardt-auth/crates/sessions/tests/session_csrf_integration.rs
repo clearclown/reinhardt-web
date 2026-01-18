@@ -10,9 +10,9 @@
 //! - State transition: Token lifecycle management
 //! - Edge cases: Special characters, concurrent access
 
-use reinhardt_sessions::Session;
-use reinhardt_sessions::backends::InMemorySessionBackend;
-use reinhardt_sessions::csrf::CsrfSessionManager;
+use reinhardt_auth::sessions::Session;
+use reinhardt_auth::sessions::backends::InMemorySessionBackend;
+use reinhardt_auth::sessions::csrf::CsrfSessionManager;
 use rstest::*;
 
 // =============================================================================

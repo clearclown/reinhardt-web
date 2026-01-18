@@ -12,15 +12,15 @@
 //! - Performance: Compression ratios for different data types
 
 #[cfg(feature = "compression-zstd")]
-use reinhardt_sessions::compression::ZstdCompressor;
+use reinhardt_auth::sessions::compression::ZstdCompressor;
 
 #[cfg(feature = "compression-gzip")]
-use reinhardt_sessions::compression::GzipCompressor;
+use reinhardt_auth::sessions::compression::GzipCompressor;
 
 #[cfg(feature = "compression-brotli")]
-use reinhardt_sessions::compression::BrotliCompressor;
+use reinhardt_auth::sessions::compression::BrotliCompressor;
 
-use reinhardt_sessions::compression::Compressor;
+use reinhardt_auth::sessions::compression::Compressor;
 use rstest::*;
 
 // =============================================================================

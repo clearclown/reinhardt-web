@@ -21,8 +21,6 @@ tracing = { workspace = true }
 
 # Optional dependencies for different backends
 reinhardt-db = { workspace = true, optional = true, features = ["orm", "migrations"] }
-reinhardt-orm = { workspace = true, optional = true }
-reinhardt-migrations = { workspace = true, optional = true }
 reinhardt-apps = { workspace = true, optional = true }
 ctor = { workspace = true, optional = true }
 sqlx = { workspace = true, features = ["any", "sqlite", "runtime-tokio"] }
@@ -92,7 +90,6 @@ serial_test = { workspace = true }
 testcontainers = { workspace = true }
 testcontainers-modules = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
-reinhardt-orm = { workspace = true }
 tempfile = { workspace = true }
 filetime = "0.2"
 sea-query = { version = "1.0.0-rc.29", features = [
@@ -100,3 +97,4 @@ sea-query = { version = "1.0.0-rc.29", features = [
 	"backend-mysql",
 	"backend-sqlite",
 ] }
+reinhardt-db = {workspace = true, features = ["orm"]}

@@ -40,7 +40,7 @@
 //! ❌ Cross-backend migration scenarios
 //! ❌ Performance benchmarking
 
-use reinhardt_orm::manager::reinitialize_database;
+use reinhardt_db::orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use sea_query::{Alias, Index, PostgresQueryBuilder};

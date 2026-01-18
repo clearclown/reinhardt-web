@@ -32,7 +32,7 @@ pub trait PasswordHasher: Send + Sync {
 	/// # Returns
 	///
 	/// The hashed password as a string, or an error if hashing fails.
-	fn hash(&self, password: &str) -> Result<String, reinhardt_exception::Error>;
+	fn hash(&self, password: &str) -> Result<String, reinhardt_core::exception::Error>;
 
 	/// Verifies a password against a hash
 	///
@@ -45,7 +45,7 @@ pub trait PasswordHasher: Send + Sync {
 	///
 	/// `Ok(true)` if the password matches, `Ok(false)` if it doesn't,
 	/// or an error if verification fails.
-	fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_exception::Error>;
+	fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_core::exception::Error>;
 }
 
 /// Argon2id password hasher (recommended for new applications)
@@ -96,7 +96,7 @@ impl Default for Argon2Hasher {
 
 #[cfg(feature = "argon2-hasher")]
 impl PasswordHasher for Argon2Hasher {
-	fn hash(&self, password: &str) -> Result<String, reinhardt_exception::Error> {
+	fn hash(&self, password: &str) -> Result<String, reinhardt_core::exception::Error> {
 		use argon2::Argon2;
 		use password_hash::{PasswordHasher as _, SaltString, rand_core::OsRng};
 
@@ -108,15 +108,15 @@ impl PasswordHasher for Argon2Hasher {
 		argon2
 			.hash_password(password.as_bytes(), &salt)
 			.map(|hash| hash.to_string())
-			.map_err(|e| reinhardt_exception::Error::Authentication(e.to_string()))
+			.map_err(|e| reinhardt_core::exception::Error::Authentication(e.to_string()))
 	}
 
-	fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_exception::Error> {
+	fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_core::exception::Error> {
 		use argon2::Argon2;
 		use password_hash::{PasswordHash, PasswordVerifier};
 
 		let parsed_hash = PasswordHash::new(hash)
-			.map_err(|e| reinhardt_exception::Error::Authentication(e.to_string()))?;
+			.map_err(|e| reinhardt_core::exception::Error::Authentication(e.to_string()))?;
 
 		Ok(Argon2::default()
 			.verify_password(password.as_bytes(), &parsed_hash)

@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use thiserror::Error;
 
-use crate::cleanup::{CleanupableBackend, SessionMetadata};
+use super::super::cleanup::{CleanupableBackend, SessionMetadata};
 
 /// Session backend errors
 #[derive(Debug, Error)]

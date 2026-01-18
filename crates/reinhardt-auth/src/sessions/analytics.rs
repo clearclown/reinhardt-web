@@ -24,7 +24,7 @@
 //! # }
 //! ```
 
-use crate::backends::{SessionBackend, SessionError};
+use super::backends::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -312,7 +312,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_instrumented_backend_save() {

@@ -5,7 +5,7 @@
 
 use crate::{Permission, PermissionContext};
 use async_trait::async_trait;
-use reinhardt_throttling::ThrottleBackend;
+use reinhardt_rest::throttling::ThrottleBackend;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -153,7 +153,7 @@ impl RateLimitConfigBuilder {
 ///
 /// ```
 /// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-/// use reinhardt_throttling::MemoryBackend;
+/// use reinhardt_rest::throttling::MemoryBackend;
 /// use std::sync::Arc;
 ///
 /// let backend = Arc::new(MemoryBackend::new());
@@ -175,7 +175,7 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	///
 	/// ```
 	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_throttling::MemoryBackend;
+	/// use reinhardt_rest::throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
@@ -196,7 +196,7 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	///
 	/// ```
 	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_throttling::MemoryBackend;
+	/// use reinhardt_rest::throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
@@ -221,7 +221,7 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	///
 	/// ```
 	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_throttling::MemoryBackend;
+	/// use reinhardt_rest::throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
@@ -392,7 +392,7 @@ mod tests {
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method};
 	use reinhardt_http::Request;
-	use reinhardt_throttling::MemoryBackend;
+	use reinhardt_rest::throttling::MemoryBackend;
 
 	fn create_test_request(headers: HeaderMap) -> Request {
 		Request::builder()

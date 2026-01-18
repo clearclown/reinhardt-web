@@ -43,7 +43,7 @@
 //! # }
 //! ```
 
-use crate::backends::{SessionBackend, SessionError};
+use super::backends::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -458,7 +458,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_async_replication_save() {

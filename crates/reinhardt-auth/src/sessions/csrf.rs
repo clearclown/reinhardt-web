@@ -28,8 +28,8 @@
 //! # }
 //! ```
 
-use crate::backends::SessionBackend;
-use crate::session::Session;
+use super::backends::SessionBackend;
+use super::session::Session;
 use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 use uuid::Uuid;
@@ -323,7 +323,7 @@ impl Default for CsrfSessionManager {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_csrf_manager_new() {

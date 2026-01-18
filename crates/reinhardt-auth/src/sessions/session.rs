@@ -1,6 +1,6 @@
 //! Django-style session object
 
-use crate::backends::SessionBackend;
+use super::backends::SessionBackend;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -91,7 +91,7 @@ impl<B: SessionBackend> Session<B> {
 	pub async fn from_key(
 		backend: B,
 		session_key: String,
-	) -> Result<Self, crate::backends::SessionError> {
+	) -> Result<Self, super::backends::SessionError> {
 		let data: HashMap<String, Value> = backend
 			.load(&session_key)
 			.await?
@@ -276,7 +276,7 @@ impl<B: SessionBackend> Session<B> {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn flush(&mut self) -> Result<(), crate::backends::SessionError> {
+	pub async fn flush(&mut self) -> Result<(), super::backends::SessionError> {
 		// Delete old session if it exists
 		if let Some(old_key) = &self.session_key {
 			self.backend.delete(old_key).await?;
@@ -316,7 +316,7 @@ impl<B: SessionBackend> Session<B> {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn cycle_key(&mut self) -> Result<(), crate::backends::SessionError> {
+	pub async fn cycle_key(&mut self) -> Result<(), super::backends::SessionError> {
 		// Delete old session if it exists
 		if let Some(old_key) = &self.session_key {
 			self.backend.delete(old_key).await?;
@@ -363,7 +363,7 @@ impl<B: SessionBackend> Session<B> {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn regenerate_id(&mut self) -> Result<(), crate::backends::SessionError> {
+	pub async fn regenerate_id(&mut self) -> Result<(), super::backends::SessionError> {
 		// Delegate to cycle_key which implements the same logic
 		self.cycle_key().await
 	}
@@ -385,7 +385,7 @@ impl<B: SessionBackend> Session<B> {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub async fn save(&mut self) -> Result<(), crate::backends::SessionError> {
+	pub async fn save(&mut self) -> Result<(), super::backends::SessionError> {
 		if !self.is_modified {
 			return Ok(());
 		}
@@ -743,9 +743,9 @@ impl<B: SessionBackend> Session<B> {
 	/// # Ok(())
 	/// # }
 	/// ```
-	pub fn validate_timeout(&self) -> Result<(), crate::backends::SessionError> {
+	pub fn validate_timeout(&self) -> Result<(), super::backends::SessionError> {
 		if self.is_timed_out() {
-			Err(crate::backends::SessionError::SessionExpired)
+			Err(super::backends::SessionError::SessionExpired)
 		} else {
 			Ok(())
 		}
@@ -755,7 +755,7 @@ impl<B: SessionBackend> Session<B> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::backends::InMemorySessionBackend;
+	use super::backends::InMemorySessionBackend;
 
 	#[tokio::test]
 	async fn test_session_set_get() {

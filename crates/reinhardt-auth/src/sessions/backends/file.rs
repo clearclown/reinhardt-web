@@ -53,7 +53,7 @@
 //! # }
 //! ```
 
-use crate::backends::cache::{SessionBackend, SessionError};
+use super::cache::{SessionBackend, SessionError};
 use async_trait::async_trait;
 use fs2::FileExt;
 use serde::{Deserialize, Serialize};

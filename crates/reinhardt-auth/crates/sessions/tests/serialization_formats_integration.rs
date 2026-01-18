@@ -10,7 +10,7 @@
 //! - Roundtrip: Serialize then deserialize verification
 //! - Cross-format: Size and correctness comparisons
 
-use reinhardt_sessions::serialization::{JsonSerializer, SerializationFormat, Serializer};
+use reinhardt_auth::sessions::serialization::{JsonSerializer, SerializationFormat, Serializer};
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

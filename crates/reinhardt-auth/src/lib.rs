@@ -13,6 +13,8 @@
 //! - **Standard Permissions**: Permission classes for common authorization scenarios
 //! - **createsuperuser Command**: CLI tool for creating admin users
 
+pub mod sessions;
+
 // Core authentication types and traits (migrated from reinhardt-core-auth)
 pub mod core;
 
@@ -33,9 +35,6 @@ pub use core::Argon2Hasher;
 // Re-export permission operators from core
 pub use core::permission_operators;
 
-// Re-export sessions subcrate
-pub use reinhardt_sessions as sessions;
-
 // Implementation-specific modules (kept in contrib)
 pub mod advanced_permissions;
 pub mod base_user_manager;
@@ -53,7 +52,8 @@ pub mod model_permissions;
 #[cfg(feature = "oauth")]
 pub mod oauth2;
 pub mod object_permissions;
-pub mod rate_limit_permission;
+// NOTE: rate_limit_permission temporarily removed due to circular dependency with reinhardt-rest
+// pub mod rate_limit_permission;
 pub mod remote_user;
 pub mod rest_authentication;
 #[cfg(feature = "sessions")]
@@ -93,10 +93,11 @@ pub use oauth2::{
 };
 pub use object_permissions::{ObjectPermission, ObjectPermissionChecker, ObjectPermissionManager};
 pub use permission_operators::{AndPermission, NotPermission, OrPermission};
-pub use rate_limit_permission::{
-	RateLimitConfig, RateLimitConfigBuilder, RateLimitKeyStrategy, RateLimitPermission,
-	RateLimitPermissionBuilder,
-};
+// NOTE: rate_limit_permission temporarily removed due to circular dependency with reinhardt-rest
+// pub use rate_limit_permission::{
+// 	RateLimitConfig, RateLimitConfigBuilder, RateLimitKeyStrategy, RateLimitPermission,
+// 	RateLimitPermissionBuilder,
+// };
 pub use remote_user::RemoteUserAuthentication as RemoteUserAuth;
 pub use rest_authentication::{
 	BasicAuthConfig, CompositeAuthentication, RemoteUserAuthentication, RestAuthentication,
