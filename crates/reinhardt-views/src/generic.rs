@@ -22,7 +22,7 @@
 //! ```rust,no_run
 //! use reinhardt_views::ListAPIView;
 //! use reinhardt_db::orm::Model;
-//! use reinhardt_serializers::JsonSerializer;
+//! use reinhardt_rest::serializers::JsonSerializer;
 //! use serde::{Serialize, Deserialize};
 //!
 //! #[derive(Debug, Clone, Serialize, Deserialize)]

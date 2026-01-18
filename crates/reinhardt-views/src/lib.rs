@@ -19,7 +19,7 @@
 //! ```rust,ignore
 //! use reinhardt_views::{ListView, DetailView};
 //! # use reinhardt_http::{Request, Response};
-//! # use reinhardt_exception::Error;
+//! # use reinhardt_core::exception::Error;
 //!
 //! # #[derive(Debug, Clone)]
 //! # struct User {
@@ -47,14 +47,13 @@
 //! # }
 //! ```
 
+pub mod viewsets;
+
 // Module declarations from merged views-core
 pub mod admin;
 pub mod browsable_api;
 pub mod generic;
 pub mod openapi;
-
-// Re-export viewsets
-pub use reinhardt_viewsets as viewsets;
 
 // Module declarations
 mod core;
@@ -67,6 +66,9 @@ pub use core::{Context, View};
 pub use detail::DetailView;
 pub use list::ListView;
 pub use mixins::{MultipleObjectMixin, SingleObjectMixin};
+
+// Re-export viewsets commonly used types at crate root
+pub use viewsets::{Action, ViewSet};
 
 // Re-export Generic API Views
 pub use generic::{

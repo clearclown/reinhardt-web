@@ -17,8 +17,8 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_core::http::Request;
-use reinhardt_viewsets::{
+use reinhardt_http::Request;
+use reinhardt_views::viewsets::{
 	NestedResource, NestedResourcePath, NestedViewSet, nested_detail_url, nested_url,
 };
 use rstest::*;

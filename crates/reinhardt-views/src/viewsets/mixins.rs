@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use reinhardt_http::{Request, Response, Result};
 
-use crate::{BatchRequest, BatchResponse};
+use crate::viewsets::{BatchRequest, BatchResponse};
 
 /// Mixin traits for ViewSet functionality
 /// These use composition instead of multiple inheritance

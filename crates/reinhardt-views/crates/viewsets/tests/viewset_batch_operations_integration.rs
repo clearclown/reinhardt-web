@@ -21,7 +21,7 @@
 
 use reinhardt_core::macros::model;
 use reinhardt_test::fixtures::shared_db_pool;
-use reinhardt_viewsets::{BatchOperation, BatchRequest, BatchResponse};
+use reinhardt_views::viewsets::{BatchOperation, BatchRequest, BatchResponse};
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};
@@ -512,7 +512,7 @@ async fn test_batch_response_structure(#[future] books_table: Arc<PgPool>) {
 	let _pool = books_table.await;
 
 	// Create a mock batch response
-	use reinhardt_viewsets::BatchOperationResult;
+	use reinhardt_views::viewsets::BatchOperationResult;
 
 	let results = vec![
 		BatchOperationResult::success(

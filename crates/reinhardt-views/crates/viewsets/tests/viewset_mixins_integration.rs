@@ -14,8 +14,8 @@
 //! is conducted in tests/integration/tests/viewsets/.
 
 use async_trait::async_trait;
-use reinhardt_core::http::{Request, Response, Result};
-use reinhardt_viewsets::{
+use reinhardt_http::{Request, Response, Result};
+use reinhardt_views::viewsets::{
 	CreateMixin, DestroyMixin, GenericViewSet, ListMixin, ModelViewSet, ReadOnlyModelViewSet,
 	RetrieveMixin, UpdateMixin, ViewSet, mixins::CrudMixin,
 };

@@ -24,8 +24,6 @@ reinhardt-core = { workspace = true, features = [
 reinhardt-auth = { workspace = true }
 reinhardt-di = { workspace = true }
 reinhardt-utils = { workspace = true, features = ["cache"] }
-reinhardt-serializers = { workspace = true }
-reinhardt-filters = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -43,6 +41,7 @@ inventory = "0.3"
 lazy_static = "1.4"
 urlencoding = "2.1"
 sea-query = { workspace = true }
+reinhardt-rest = {workspace = true, features = ["filters"]}
 
 [dev-dependencies]
 tokio = { workspace = true }
@@ -56,6 +55,5 @@ serial_test = { workspace = true }
 chrono = { workspace = true }
 sea-query = { workspace = true }
 sqlx = { workspace = true, features = ["any", "postgres", "runtime-tokio"] }
-reinhardt-orm = { workspace = true }
-reinhardt-migrations = { workspace = true }
 ctor = { workspace = true }
+reinhardt-db = {workspace = true, features = ["migrations"]}

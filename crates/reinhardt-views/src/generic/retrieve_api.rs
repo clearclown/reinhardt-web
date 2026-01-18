@@ -3,9 +3,9 @@
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_core::http::{Request, Response};
+use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QuerySet};
-use reinhardt_serializers::Serializer;
+use reinhardt_rest::serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -24,9 +24,9 @@ use crate::core::View;
 /// # Examples
 ///
 /// ```rust,no_run
-/// use reinhardt_views::RetrieveAPIView;
+/// use crate::RetrieveAPIView;
 /// use reinhardt_db::orm::Model;
-/// use reinhardt_serializers::JsonSerializer;
+/// use reinhardt_rest::serializers::JsonSerializer;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -77,8 +77,8 @@ where
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// use reinhardt_views::RetrieveAPIView;
-	/// use reinhardt_serializers::JsonSerializer;
+	/// use crate::RetrieveAPIView;
+	/// use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,8 +118,8 @@ where
 	/// # Examples
 	///
 	/// ```rust,no_run
-	/// # use reinhardt_views::RetrieveAPIView;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use crate::RetrieveAPIView;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]

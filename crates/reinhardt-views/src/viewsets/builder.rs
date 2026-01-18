@@ -1,7 +1,8 @@
 /// ViewSetBuilder - converts ViewSet to Handler with action mapping
 use crate::ViewSet;
 use hyper::Method;
-use reinhardt_http::{Handler, Result};
+use reinhardt_http::Handler;
+use reinhardt_http::Result;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -71,7 +72,7 @@ impl<V: ViewSet + 'static> ViewSetBuilder<V> {
 			));
 		}
 
-		Ok(Arc::new(crate::handler::ViewSetHandler::new(
+		Ok(Arc::new(crate::viewsets::handler::ViewSetHandler::new(
 			self.viewset,
 			self.actions,
 			self.name,

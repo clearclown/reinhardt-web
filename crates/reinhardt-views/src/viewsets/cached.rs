@@ -277,7 +277,7 @@ pub trait CachedViewSetTrait: Send + Sync {
 #[async_trait]
 impl<V, C> CachedViewSetTrait for CachedViewSet<V, C>
 where
-	V: crate::ListMixin + crate::RetrieveMixin + Send + Sync + 'static,
+	V: crate::viewsets::ListMixin + crate::viewsets::RetrieveMixin + Send + Sync + 'static,
 	C: Cache + Send + Sync + 'static,
 {
 	async fn cached_list(&self, request: Request) -> Result<Response> {

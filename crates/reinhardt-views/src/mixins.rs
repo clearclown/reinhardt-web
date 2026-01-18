@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use reinhardt_core::exception::Result;
-use reinhardt_core::http::Request;
+use reinhardt_http::Request;
 use reinhardt_db::orm::Model;
 use serde::Serialize;
 use serde_json::json;

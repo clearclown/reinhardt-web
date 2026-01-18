@@ -19,8 +19,8 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
-use reinhardt_core::http::Request;
-use reinhardt_viewsets::CacheConfig;
+use reinhardt_http::Request;
+use reinhardt_views::viewsets::CacheConfig;
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use serial_test::serial;

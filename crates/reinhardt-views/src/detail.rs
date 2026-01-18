@@ -4,12 +4,12 @@ use crate::core::View;
 use crate::mixins::SingleObjectMixin;
 use async_trait::async_trait;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_core::http::{Request, Response};
+use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::{
 	Model, QuerySet,
 	query::{Filter, FilterOperator, FilterValue},
 };
-use reinhardt_serializers::{JsonSerializer, Serializer};
+use reinhardt_rest::serializers::{JsonSerializer, Serializer};
 use serde::{Deserialize, Serialize};
 
 /// DetailView for displaying a single object
@@ -96,7 +96,7 @@ where
 	///
 	/// ```
 	/// use reinhardt_views::{DetailView, SingleObjectMixin};
-	/// use reinhardt_serializers::JsonSerializer;
+	/// use reinhardt_rest::serializers::JsonSerializer;
 	/// use reinhardt_db::orm::Model;
 	/// use serde::{Serialize, Deserialize};
 	///
@@ -516,13 +516,13 @@ where
 
 		// Serialize object
 		let serialized = self.serializer.serialize(&object).map_err(|e| match e {
-			reinhardt_serializers::SerializerError::Validation(v) => {
+			reinhardt_rest::serializers::SerializerError::Validation(v) => {
 				Error::Validation(v.to_string())
 			}
-			reinhardt_serializers::SerializerError::Serde { message } => {
+			reinhardt_rest::serializers::SerializerError::Serde { message } => {
 				Error::Serialization(message)
 			}
-			reinhardt_serializers::SerializerError::Other { message } => {
+			reinhardt_rest::serializers::SerializerError::Other { message } => {
 				Error::Serialization(message)
 			}
 		})?;

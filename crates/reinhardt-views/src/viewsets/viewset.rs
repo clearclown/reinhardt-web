@@ -1,8 +1,8 @@
-use crate::actions::Action;
-use crate::filtering_support::{FilterConfig, FilterableViewSet, OrderingConfig};
-use crate::metadata::{ActionMetadata, get_actions_for_viewset};
-use crate::middleware::ViewSetMiddleware;
-use crate::pagination_support::{PaginatedViewSet, PaginationConfig};
+use crate::viewsets::actions::Action;
+use crate::viewsets::filtering_support::{FilterConfig, FilterableViewSet, OrderingConfig};
+use crate::viewsets::metadata::{ActionMetadata, get_actions_for_viewset};
+use crate::viewsets::middleware::ViewSetMiddleware;
+use crate::viewsets::pagination_support::{PaginatedViewSet, PaginationConfig};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_http::{Request, Response, Result};
@@ -36,7 +36,7 @@ pub trait ViewSet: Send + Sync {
 		let mut actions = get_actions_for_viewset(viewset_type);
 
 		// Also check manual registration
-		let manual_actions = crate::registry::get_registered_actions(viewset_type);
+		let manual_actions = crate::viewsets::registry::get_registered_actions(viewset_type);
 		actions.extend(manual_actions);
 
 		actions
@@ -117,11 +117,11 @@ impl<T: 'static> GenericViewSet<T> {
 	/// let actions = viewset_actions!(GET => "list");
 	/// let handler = viewset.as_view().with_actions(actions).build();
 	/// ```
-	pub fn as_view(self) -> crate::builder::ViewSetBuilder<Self>
+	pub fn as_view(self) -> crate::viewsets::builder::ViewSetBuilder<Self>
 	where
 		T: Send + Sync,
 	{
-		crate::builder::ViewSetBuilder::new(self)
+		crate::viewsets::builder::ViewSetBuilder::new(self)
 	}
 }
 
@@ -333,12 +333,12 @@ impl<M: 'static, S: 'static> ModelViewSet<M, S> {
 
 	/// Convert ViewSet to Handler with action mapping
 	/// Returns a ViewSetBuilder for configuration
-	pub fn as_view(self) -> crate::builder::ViewSetBuilder<Self>
+	pub fn as_view(self) -> crate::viewsets::builder::ViewSetBuilder<Self>
 	where
 		M: Send + Sync,
 		S: Send + Sync,
 	{
-		crate::builder::ViewSetBuilder::new(self)
+		crate::viewsets::builder::ViewSetBuilder::new(self)
 	}
 }
 
@@ -553,12 +553,12 @@ impl<M: 'static, S: 'static> ReadOnlyModelViewSet<M, S> {
 
 	/// Convert ViewSet to Handler with action mapping
 	/// Returns a ViewSetBuilder for configuration
-	pub fn as_view(self) -> crate::builder::ViewSetBuilder<Self>
+	pub fn as_view(self) -> crate::viewsets::builder::ViewSetBuilder<Self>
 	where
 		M: Send + Sync,
 		S: Send + Sync,
 	{
-		crate::builder::ViewSetBuilder::new(self)
+		crate::viewsets::builder::ViewSetBuilder::new(self)
 	}
 }
 

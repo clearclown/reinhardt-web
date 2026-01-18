@@ -1,6 +1,6 @@
 /// Manual action registration support
 /// This provides a simpler API for registering actions without macros
-use crate::metadata::{ActionMetadata, FunctionActionHandler};
+use crate::viewsets::metadata::{ActionMetadata, FunctionActionHandler};
 use reinhardt_http::{Request, Response, Result};
 use std::collections::HashMap;
 use std::future::Future;
@@ -86,7 +86,7 @@ macro_rules! register_viewset_actions {
         {
             let viewset_type = std::any::type_name::<$viewset_type>();
             $(
-                let mut action = $crate::metadata::ActionMetadata::new(stringify!($action_name))
+                let mut action = $crate::viewsets::metadata::ActionMetadata::new(stringify!($action_name))
                     .with_detail($detail);
 
                 $(
@@ -94,11 +94,11 @@ macro_rules! register_viewset_actions {
                 )*
 
                 let handler = $handler;
-                action = action.with_handler($crate::metadata::FunctionActionHandler::new(
+                action = action.with_handler($crate::viewsets::metadata::FunctionActionHandler::new(
                     move |req| Box::pin(handler(req))
                 ));
 
-                $crate::registry::register_action(viewset_type, action);
+                $crate::viewsets::registry::register_action(viewset_type, action);
             )*
         }
     };
