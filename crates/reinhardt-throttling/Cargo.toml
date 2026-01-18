@@ -1,0 +1,26 @@
+[package]
+name = "reinhardt-throttling"
+version.workspace = true
+description = "Throttling and rate limiting for Reinhardt framework"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+redis-backend = ["redis"]
+geo-limiting = ["maxminddb"]
+full = ["redis-backend", "geo-limiting"]
+
+[dependencies]
+async-trait = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+thiserror = { workspace = true }
+parking_lot = { workspace = true }
+
+# Optional dependencies
+redis = { workspace = true, optional = true }
+maxminddb = { version = "0.26", optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt", "macros"] }

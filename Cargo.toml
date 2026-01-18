@@ -295,6 +295,7 @@ members = [
   "crates/reinhardt-utils",
   "crates/reinhardt-rest",
   "crates/reinhardt-rest/openapi-macros",
+  "crates/reinhardt-throttling",
   "crates/reinhardt-auth",
   "crates/reinhardt-admin",                            # Admin panel functionality
   "crates/reinhardt-admin-cli",                        # Admin CLI tool
@@ -379,6 +380,7 @@ reinhardt-test = { path = "crates/reinhardt-test", version = "0.1.0-alpha.1" }
 reinhardt-tasks = { path = "crates/reinhardt-tasks", version = "0.1.0-alpha.1" }
 reinhardt-utils = { path = "crates/reinhardt-utils", version = "0.1.0-alpha.1" }
 reinhardt-rest = { path = "crates/reinhardt-rest", version = "0.1.0-alpha.1" }
+reinhardt-throttling = { path = "crates/reinhardt-throttling", version = "0.1.0-alpha.1" }
 reinhardt-auth = { path = "crates/reinhardt-auth", version = "0.1.0-alpha.1" }
 reinhardt-admin = { path = "crates/reinhardt-admin", version = "0.1.0-alpha.1" }
 reinhardt-admin-cli = { path = "crates/reinhardt-admin-cli", version = "0.1.0-alpha.1" }
@@ -400,26 +402,14 @@ reinhardt-dentdelion = { path = "crates/reinhardt-dentdelion", version = "0.1.0-
 # Core subcrates
 reinhardt-macros = { path = "crates/reinhardt-core/macros", version = "0.1.0-alpha.1" }
 
-# Database subcrates
-
 # DI subcrates
 reinhardt-di-macros = { path = "crates/reinhardt-di/macros", version = "0.1.0-alpha.1" }
-
-# Server subcrates
-
-# Views subcrates
-
-# Utils subcrates
-
-# Auth subcrates
 
 # REST subcrates
 reinhardt-openapi-macros = { path = "crates/reinhardt-rest/openapi-macros", version = "0.1.0-alpha.1" }
 
 # REST subcrates (continued)
 reinhardt-routers-macros = { path = "crates/reinhardt-urls/routers-macros", version = "0.1.0-alpha.1" }
-
-# URL subcrates
 
 # Web framework
 tokio = { version = "1.48.0", features = ["full"] }
