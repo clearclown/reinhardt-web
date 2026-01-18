@@ -10,8 +10,8 @@
 #![cfg(feature = "params")]
 
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
-use reinhardt_params::Query;
-use reinhardt_params::extract::FromRequest;
+use reinhardt_di::params::Query;
+use reinhardt_di::params::extract::FromRequest;
 use std::sync::Arc;
 
 // Common query parameters dependency

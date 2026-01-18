@@ -9,7 +9,7 @@ use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
-use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
+use super::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 
 /// Marker trait for cookie names
 pub trait CookieName {
@@ -211,7 +211,7 @@ impl FromRequest for CookieNamed<CsrfToken, Option<String>> {
 
 // Implement WithValidation trait for CookieNamed
 #[cfg(feature = "validation")]
-impl<N: CookieName, T> crate::validation::WithValidation for CookieNamed<N, T> {}
+impl<N: CookieName, T> super::validation::WithValidation for CookieNamed<N, T> {}
 
 #[cfg(test)]
 mod tests {

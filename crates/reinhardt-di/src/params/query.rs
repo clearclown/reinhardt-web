@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
-use crate::{ParamContext, ParamError, ParamResult, ParamType, extract::FromRequest};
+use super::{ParamContext, ParamError, ParamResult, ParamType, extract::FromRequest};
 
 #[cfg(feature = "multi-value-arrays")]
 use std::collections::HashMap;
@@ -178,7 +178,7 @@ where
 				} else {
 					Some(query_string.to_string())
 				};
-				let mut ctx = crate::ParamErrorContext::new(ParamType::Query, e.to_string())
+				let mut ctx = super::ParamErrorContext::new(ParamType::Query, e.to_string())
 					.with_expected_type::<T>()
 					.with_source(Box::new(e));
 				if let Some(raw) = raw_value {
@@ -206,7 +206,7 @@ where
 
 // Implement WithValidation trait for Query
 #[cfg(feature = "validation")]
-impl<T> crate::validation::WithValidation for Query<T> {}
+impl<T> super::validation::WithValidation for Query<T> {}
 
 #[cfg(test)]
 mod tests {

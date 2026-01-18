@@ -2,7 +2,7 @@
 
 #[cfg(feature = "validation")]
 mod tests {
-	use reinhardt_params::{Path, Query, WithValidation};
+	use reinhardt_di::params::{Path, Query, WithValidation};
 
 	#[test]
 	fn test_path_number_validation() {

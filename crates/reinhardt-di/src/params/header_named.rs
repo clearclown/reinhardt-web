@@ -8,7 +8,7 @@ use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::ops::Deref;
 
-use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
+use super::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 
 /// Marker trait for header names
 pub trait HeaderName {
@@ -171,7 +171,7 @@ impl FromRequest for HeaderNamed<Authorization, Option<String>> {
 
 // Implement WithValidation trait for HeaderNamed
 #[cfg(feature = "validation")]
-impl<N: HeaderName, T> crate::validation::WithValidation for HeaderNamed<N, T> {}
+impl<N: HeaderName, T> super::validation::WithValidation for HeaderNamed<N, T> {}
 
 #[cfg(test)]
 mod tests {

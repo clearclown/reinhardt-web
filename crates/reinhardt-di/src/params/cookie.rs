@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
-use crate::{
+use super::{
 	ParamContext, ParamError, ParamErrorContext, ParamResult, ParamType, extract::FromRequest,
 };
 
@@ -206,7 +206,7 @@ impl FromRequest for Cookie<Option<String>> {
 
 // Implement WithValidation trait for Cookie and CookieStruct
 #[cfg(feature = "validation")]
-impl<T> crate::validation::WithValidation for Cookie<T> {}
+impl<T> super::validation::WithValidation for Cookie<T> {}
 
 #[cfg(feature = "validation")]
-impl<T> crate::validation::WithValidation for CookieStruct<T> {}
+impl<T> super::validation::WithValidation for CookieStruct<T> {}

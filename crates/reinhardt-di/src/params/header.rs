@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
-use crate::{
+use super::{
 	ParamContext, ParamError, ParamErrorContext, ParamResult, ParamType, extract::FromRequest,
 };
 
@@ -178,4 +178,4 @@ impl FromRequest for Header<Option<String>> {
 
 // Implement WithValidation trait for Header
 #[cfg(feature = "validation")]
-impl<T> crate::validation::WithValidation for Header<T> {}
+impl<T> super::validation::WithValidation for Header<T> {}

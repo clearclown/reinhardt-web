@@ -136,15 +136,15 @@ impl<T, V> Validated<T, V> {
 	/// # Errors
 	///
 	/// Returns an error if validation fails
-	pub fn new<U>(inner: T, validator: &V) -> Result<Self, crate::ParamError>
+	pub fn new<U>(inner: T, validator: &V) -> Result<Self, super::ParamError>
 	where
 		V: Validator<U>,
 		T: AsRef<U>,
 		U: ?Sized,
 	{
 		validator.validate(inner.as_ref()).map_err(|e| {
-			crate::ParamError::ValidationError(Box::new(
-				crate::ParamErrorContext::new(crate::ParamType::Form, e.to_string())
+			super::ParamError::ValidationError(Box::new(
+				super::ParamErrorContext::new(super::ParamType::Form, e.to_string())
 					.with_field("parameter"),
 			))
 		})?;
@@ -454,19 +454,19 @@ pub trait WithValidation: Sized {
 /// # }
 /// ```
 #[cfg(feature = "validation")]
-pub type ValidatedPath<T> = ValidationConstraints<crate::Path<T>>;
+pub type ValidatedPath<T> = ValidationConstraints<super::Path<T>>;
 
 /// Type alias for validated query parameters
 ///
 /// This is a convenience type that wraps a `Query<T>` with validation constraints.
 #[cfg(feature = "validation")]
-pub type ValidatedQuery<T> = ValidationConstraints<crate::Query<T>>;
+pub type ValidatedQuery<T> = ValidationConstraints<super::Query<T>>;
 
 /// Type alias for validated form parameters
 ///
 /// This is a convenience type that wraps a `Form<T>` with validation constraints.
 #[cfg(feature = "validation")]
-pub type ValidatedForm<T> = ValidationConstraints<crate::Form<T>>;
+pub type ValidatedForm<T> = ValidationConstraints<super::Form<T>>;
 
 // ============================================================================
 // Non-feature-gated versions for testing
@@ -597,20 +597,20 @@ impl<T> Deref for ValidationConstraints<T> {
 }
 
 #[cfg(not(feature = "validation"))]
-pub type ValidatedPath<T> = ValidationConstraints<crate::Path<T>>;
+pub type ValidatedPath<T> = ValidationConstraints<super::Path<T>>;
 
 #[cfg(not(feature = "validation"))]
-pub type ValidatedQuery<T> = ValidationConstraints<crate::Query<T>>;
+pub type ValidatedQuery<T> = ValidationConstraints<super::Query<T>>;
 
 #[cfg(not(feature = "validation"))]
-pub type ValidatedForm<T> = ValidationConstraints<crate::Form<T>>;
+pub type ValidatedForm<T> = ValidationConstraints<super::Form<T>>;
 
 // Implement WithValidation trait for Path and Query
 #[cfg(not(feature = "validation"))]
-impl<T> WithValidation for crate::Path<T> {}
+impl<T> WithValidation for super::Path<T> {}
 
 #[cfg(not(feature = "validation"))]
-impl<T> WithValidation for crate::Query<T> {}
+impl<T> WithValidation for super::Query<T> {}
 
 // Implement non-feature-gated WithValidation trait
 #[cfg(not(feature = "validation"))]
@@ -711,7 +711,7 @@ pub trait WithValidation: Sized {
 #[cfg(feature = "validation")]
 mod tests {
 	use super::*;
-	use crate::Path;
+	use super::Path;
 
 	#[test]
 	fn test_validation_constraints_builder() {

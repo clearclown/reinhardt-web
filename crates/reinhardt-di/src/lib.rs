@@ -188,6 +188,8 @@
 //! # }
 //! ```
 
+pub mod params;
+
 pub mod context;
 pub mod cycle_detection;
 pub mod depends;
@@ -254,16 +256,14 @@ pub enum DiError {
 	Internal { message: String },
 }
 
-impl From<DiError> for reinhardt_exception::Error {
+impl From<DiError> for reinhardt_core::exception::Error {
 	fn from(err: DiError) -> Self {
-		reinhardt_exception::Error::Internal(format!("Dependency injection error: {}", err))
+		reinhardt_core::exception::Error::Internal(format!("Dependency injection error: {}", err))
 	}
 }
 
 pub type DiResult<T> = std::result::Result<T, DiError>;
 
-#[cfg(feature = "params")]
-pub use reinhardt_params as params;
 
 // Generator support
 #[cfg(feature = "generator")]

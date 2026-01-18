@@ -21,7 +21,7 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version, header};
-use reinhardt_params::{
+use reinhardt_di::params::{
 	Body, Form, FromRequest, HeaderStruct, Json, ParamContext, Path, PathStruct, Query, Request,
 	WithValidation,
 };

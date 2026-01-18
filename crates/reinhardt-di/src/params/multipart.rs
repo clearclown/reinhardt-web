@@ -20,7 +20,7 @@
 //! ```
 
 #[cfg(feature = "multipart")]
-use crate::{FromRequest, ParamContext, ParamError, ParamErrorContext, ParamResult, ParamType};
+use super::{FromRequest, ParamContext, ParamError, ParamErrorContext, ParamResult, ParamType};
 #[cfg(feature = "multipart")]
 use async_trait::async_trait;
 #[cfg(feature = "multipart")]

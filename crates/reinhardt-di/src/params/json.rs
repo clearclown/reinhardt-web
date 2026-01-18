@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
-use crate::{ParamContext, ParamError, ParamResult, extract::FromRequest};
+use super::{ParamContext, ParamError, ParamResult, extract::FromRequest};
 
 /// Extract and deserialize JSON from request body
 ///

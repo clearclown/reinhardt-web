@@ -9,9 +9,7 @@ authors.workspace = true
 description = "Parameter extraction system for Reinhardt, inspired by FastAPI"
 
 [dependencies]
-reinhardt-exception = { workspace = true }
 reinhardt-http = { workspace = true }
-reinhardt-validators = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = { workspace = true }
@@ -25,6 +23,7 @@ validator = { version = "0.20.0", features = ["derive"], optional = true }
 multer = { version = "3.1", optional = true }
 futures-util = { version = "0.3", optional = true }
 uuid = { workspace = true, optional = true }
+reinhardt-core = {workspace = true, features = ["validators"], optional = true}
 
 [features]
 default = ["multi-value-arrays", "uuid"]

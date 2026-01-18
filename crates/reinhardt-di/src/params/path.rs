@@ -8,7 +8,7 @@ use serde::de::DeserializeOwned;
 use std::fmt::{self, Debug};
 use std::ops::Deref;
 
-use crate::{
+use super::{
 	ParamContext, ParamError, ParamErrorContext, ParamResult, ParamType, extract::FromRequest,
 };
 
@@ -322,7 +322,7 @@ where
 
 // Implement WithValidation trait for Path
 #[cfg(feature = "validation")]
-impl<T> crate::validation::WithValidation for Path<T> {}
+impl<T> super::validation::WithValidation for Path<T> {}
 
 #[cfg(test)]
 mod tests {
