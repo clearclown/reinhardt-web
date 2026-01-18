@@ -10,8 +10,8 @@
 
 use anyhow::Result;
 use reinhardt_core::Handler;
-use reinhardt_core::http::{Request, Response};
-use reinhardt_server_core::{HttpServer, ShutdownCoordinator};
+use reinhardt_http::{Request, Response};
+use reinhardt_server::server::{HttpServer, ShutdownCoordinator};
 use std::net::SocketAddr;
 use std::sync::{
 	Arc, Mutex,

@@ -1,4 +1,4 @@
-use reinhardt_core::Handler;
+use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response};
 use std::collections::HashMap;
 use std::net::IpAddr;
@@ -105,7 +105,7 @@ struct RateLimitEntry {
 /// use std::sync::Arc;
 /// use std::time::Duration;
 /// use reinhardt_server::server::{RateLimitHandler, RateLimitConfig};
-/// use reinhardt_core::Handler;
+/// use reinhardt_http::Handler;
 /// use reinhardt_http::{Request, Response};
 ///
 /// struct MyHandler;
@@ -140,7 +140,7 @@ impl RateLimitHandler {
 	/// ```
 	/// use std::sync::Arc;
 	/// use reinhardt_server::server::{RateLimitHandler, RateLimitConfig};
-	/// use reinhardt_core::Handler;
+	/// use reinhardt_http::Handler;
 	/// use reinhardt_http::{Request, Response};
 	///
 	/// struct MyHandler;

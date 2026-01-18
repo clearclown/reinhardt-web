@@ -7,7 +7,7 @@ use hyper::service::Service;
 use hyper_util::rt::TokioIo;
 use reinhardt_di::InjectionContext;
 use reinhardt_http::{Request, Response};
-use reinhardt_core::{Handler, Middleware, MiddlewareChain};
+use reinhardt_http::{Handler, Middleware, MiddlewareChain};
 use std::future::Future;
 use std::net::SocketAddr;
 use std::pin::Pin;

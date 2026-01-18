@@ -1,7 +1,7 @@
 #![cfg(feature = "websocket")]
 
 use futures_util::{SinkExt, StreamExt};
-use reinhardt_server_core::{WebSocketHandler, WebSocketServer};
+use reinhardt_server::server::{WebSocketHandler, WebSocketServer};
 use serde::{Deserialize, Serialize};
 use std::sync::{
 	Arc, Mutex,

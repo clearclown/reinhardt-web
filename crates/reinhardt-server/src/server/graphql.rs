@@ -3,7 +3,7 @@ use async_graphql::{EmptySubscription, Schema};
 #[cfg(feature = "graphql")]
 use http::{Method, StatusCode};
 #[cfg(feature = "graphql")]
-use reinhardt_core::Handler;
+use reinhardt_http::Handler;
 #[cfg(feature = "graphql")]
 use reinhardt_http::{Request, Response};
 #[cfg(feature = "graphql")]
