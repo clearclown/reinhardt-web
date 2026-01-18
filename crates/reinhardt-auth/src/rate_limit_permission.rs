@@ -5,7 +5,8 @@
 
 use crate::{Permission, PermissionContext};
 use async_trait::async_trait;
-use reinhardt_rest::throttling::ThrottleBackend;
+pub use reinhardt_core::RateLimitStrategy;
+use reinhardt_throttling::ThrottleBackend;
 use std::net::IpAddr;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -14,135 +15,22 @@ use std::sync::Arc;
 /// Custom key extraction function that takes a PermissionContext and returns an optional key string
 pub type CustomKeyFn = Arc<dyn Fn(&PermissionContext) -> Option<String> + Send + Sync>;
 
-/// Strategy for generating rate limit keys
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RateLimitKeyStrategy {
-	/// Use client IP address as key
-	IpAddress,
-	/// Use authenticated user ID as key (requires authentication)
-	UserId,
-	/// Combine IP and user ID (requires authentication)
-	IpAndUser,
-	/// Custom key extraction (provided via closure)
-	Custom,
-}
-
-/// Configuration for rate limiting
+/// Internal configuration for rate limiting permission
 #[derive(Debug, Clone)]
-pub struct RateLimitConfig {
+struct RateLimitPermissionConfig {
 	/// Maximum number of requests allowed
-	pub rate: usize,
+	rate: usize,
 	/// Time window in seconds
-	pub window: u64,
+	window: u64,
 	/// Key generation strategy
-	pub strategy: RateLimitKeyStrategy,
+	strategy: RateLimitStrategy,
 	/// Allow requests on backend errors (fail-open)
-	pub allow_on_error: bool,
-	/// Scope identifier for namespacing rate limits
-	pub scope: Option<String>,
-}
-
-impl RateLimitConfig {
-	/// Creates a new rate limit configuration
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_auth::{RateLimitConfig, RateLimitKeyStrategy};
-	///
-	/// let config = RateLimitConfig::new(100, 60, RateLimitKeyStrategy::IpAddress);
-	/// assert_eq!(config.rate, 100);
-	/// assert_eq!(config.window, 60);
-	/// ```
-	pub fn new(rate: usize, window: u64, strategy: RateLimitKeyStrategy) -> Self {
-		Self {
-			rate,
-			window,
-			strategy,
-			allow_on_error: false,
-			scope: None,
-		}
-	}
-
-	/// Creates a builder for fluent configuration
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use reinhardt_auth::{RateLimitConfig, RateLimitKeyStrategy};
-	///
-	/// let config = RateLimitConfig::builder()
-	///     .rate(100)
-	///     .window(60)
-	///     .strategy(RateLimitKeyStrategy::IpAddress)
-	///     .allow_on_error(true)
-	///     .scope("api".to_string())
-	///     .build();
-	///
-	/// assert_eq!(config.rate, 100);
-	/// assert!(config.allow_on_error);
-	/// ```
-	pub fn builder() -> RateLimitConfigBuilder {
-		RateLimitConfigBuilder::default()
-	}
-}
-
-/// Builder for RateLimitConfig
-#[derive(Debug, Default)]
-pub struct RateLimitConfigBuilder {
-	rate: Option<usize>,
-	window: Option<u64>,
-	strategy: Option<RateLimitKeyStrategy>,
 	allow_on_error: bool,
+	/// Scope identifier for namespacing rate limits
 	scope: Option<String>,
 }
 
-impl RateLimitConfigBuilder {
-	/// Set the maximum number of requests allowed
-	pub fn rate(mut self, rate: usize) -> Self {
-		self.rate = Some(rate);
-		self
-	}
 
-	/// Set the time window in seconds
-	pub fn window(mut self, window: u64) -> Self {
-		self.window = Some(window);
-		self
-	}
-
-	/// Set the key generation strategy
-	pub fn strategy(mut self, strategy: RateLimitKeyStrategy) -> Self {
-		self.strategy = Some(strategy);
-		self
-	}
-
-	/// Allow requests on backend errors
-	pub fn allow_on_error(mut self, allow: bool) -> Self {
-		self.allow_on_error = allow;
-		self
-	}
-
-	/// Set scope identifier for namespacing
-	pub fn scope(mut self, scope: String) -> Self {
-		self.scope = Some(scope);
-		self
-	}
-
-	/// Build the configuration
-	///
-	/// # Panics
-	///
-	/// Panics if rate, window, or strategy are not set
-	pub fn build(self) -> RateLimitConfig {
-		RateLimitConfig {
-			rate: self.rate.expect("rate must be set"),
-			window: self.window.expect("window must be set"),
-			strategy: self.strategy.expect("strategy must be set"),
-			allow_on_error: self.allow_on_error,
-			scope: self.scope,
-		}
-	}
-}
 
 /// Rate limiting permission
 ///
@@ -152,40 +40,70 @@ impl RateLimitConfigBuilder {
 /// # Examples
 ///
 /// ```
-/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-/// use reinhardt_rest::throttling::MemoryBackend;
+/// use reinhardt_auth::{RateLimitPermission, RateLimitStrategy};
+/// use reinhardt_throttling::MemoryBackend;
 /// use std::sync::Arc;
 ///
 /// let backend = Arc::new(MemoryBackend::new());
-/// let config = RateLimitConfig::new(100, 60, RateLimitKeyStrategy::IpAddress);
-/// let permission = RateLimitPermission::new(backend, config);
+/// let permission = RateLimitPermission::new(
+///     backend,
+///     RateLimitStrategy::PerIp,
+///     100.0,
+///     1.0
+/// );
 ///
-/// // Permission will now enforce 100 requests per 60 seconds per IP
+/// // Permission will now enforce rate limits per IP
 /// ```
 pub struct RateLimitPermission<B: ThrottleBackend> {
 	backend: Arc<B>,
-	config: RateLimitConfig,
+	config: RateLimitPermissionConfig,
 	custom_key_fn: Option<CustomKeyFn>,
 }
 
 impl<B: ThrottleBackend> RateLimitPermission<B> {
 	/// Creates a new rate limit permission
 	///
+	/// # Arguments
+	///
+	/// * `backend` - The throttle backend for distributed rate limiting
+	/// * `strategy` - Rate limiting strategy (PerIp, PerUser, etc.)
+	/// * `capacity` - Maximum number of tokens (requests)
+	/// * `refill_rate` - Rate at which tokens are refilled (per second)
+	///
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_rest::throttling::MemoryBackend;
+	/// use reinhardt_auth::{RateLimitPermission, RateLimitStrategy};
+	/// use reinhardt_throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
-	/// let config = RateLimitConfig::new(1000, 3600, RateLimitKeyStrategy::UserId);
-	/// let permission = RateLimitPermission::new(backend, config);
+	/// let permission = RateLimitPermission::new(
+	///     backend,
+	///     RateLimitStrategy::PerUser,
+	///     1000.0,
+	///     1.0
+	/// );
 	/// ```
-	pub fn new(backend: Arc<B>, config: RateLimitConfig) -> Self {
+	pub fn new(
+		backend: Arc<B>,
+		strategy: RateLimitStrategy,
+		capacity: f64,
+		refill_rate: f64,
+	) -> Self {
+		// Convert capacity/refill_rate to rate/window
+		let rate = capacity as usize;
+		let window = (capacity / refill_rate).max(1.0) as u64;
+
 		Self {
 			backend,
-			config,
+			config: RateLimitPermissionConfig {
+				rate,
+				window,
+				strategy,
+				allow_on_error: false,
+				scope: None,
+			},
 			custom_key_fn: None,
 		}
 	}
@@ -195,22 +113,25 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_rest::throttling::MemoryBackend;
+	/// use reinhardt_auth::{RateLimitPermission, RateLimitStrategy};
+	/// use reinhardt_throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
-	/// let config = RateLimitConfig::new(100, 60, RateLimitKeyStrategy::IpAddress);
 	///
 	/// let permission = RateLimitPermission::builder()
 	///     .backend(backend)
-	///     .config(config)
+	///     .strategy(RateLimitStrategy::PerIp)
+	///     .capacity(100.0)
+	///     .refill_rate(1.0)
 	///     .build();
 	/// ```
 	pub fn builder() -> RateLimitPermissionBuilder<B> {
 		RateLimitPermissionBuilder {
 			backend: None,
-			config: None,
+			strategy: None,
+			capacity: None,
+			refill_rate: None,
 			custom_key_fn: None,
 		}
 	}
@@ -220,14 +141,18 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	/// # Examples
 	///
 	/// ```
-	/// use reinhardt_auth::{RateLimitPermission, RateLimitConfig, RateLimitKeyStrategy};
-	/// use reinhardt_rest::throttling::MemoryBackend;
+	/// use reinhardt_auth::{RateLimitPermission, RateLimitStrategy};
+	/// use reinhardt_throttling::MemoryBackend;
 	/// use std::sync::Arc;
 	///
 	/// let backend = Arc::new(MemoryBackend::new());
-	/// let config = RateLimitConfig::new(100, 60, RateLimitKeyStrategy::Custom);
 	///
-	/// let permission = RateLimitPermission::new(backend, config)
+	/// let permission = RateLimitPermission::new(
+	///     backend,
+	///     RateLimitStrategy::PerRoute,
+	///     100.0,
+	///     1.0
+	/// )
 	///     .with_custom_key(|ctx| {
 	///         // Extract custom key from request
 	///         Some("custom_key".to_string())
@@ -279,9 +204,9 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 	/// Generate rate limit key based on strategy
 	fn generate_key(&self, context: &PermissionContext) -> Option<String> {
 		let base_key = match self.config.strategy {
-			RateLimitKeyStrategy::IpAddress => self.extract_ip(context),
-			RateLimitKeyStrategy::UserId => self.extract_user_id(context),
-			RateLimitKeyStrategy::IpAndUser => {
+			RateLimitStrategy::PerIp => self.extract_ip(context),
+			RateLimitStrategy::PerUser => self.extract_user_id(context),
+			RateLimitStrategy::PerIpAndUser => {
 				if let (Some(ip), Some(user_id)) =
 					(self.extract_ip(context), self.extract_user_id(context))
 				{
@@ -290,12 +215,9 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 					None
 				}
 			}
-			RateLimitKeyStrategy::Custom => {
-				if let Some(ref custom_fn) = self.custom_key_fn {
-					custom_fn(context)
-				} else {
-					None
-				}
+			RateLimitStrategy::PerRoute => {
+				// Use request path as key
+				Some(context.request.uri.path().to_string())
 			}
 		};
 
@@ -309,18 +231,14 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 		})
 	}
 
-	/// Get the rate limit configuration
-	///
-	/// Returns a reference to the current rate limit configuration.
-	pub fn config(&self) -> &RateLimitConfig {
-		&self.config
-	}
 }
 
 /// Builder for RateLimitPermission
 pub struct RateLimitPermissionBuilder<B: ThrottleBackend> {
 	backend: Option<Arc<B>>,
-	config: Option<RateLimitConfig>,
+	strategy: Option<RateLimitStrategy>,
+	capacity: Option<f64>,
+	refill_rate: Option<f64>,
 	custom_key_fn: Option<CustomKeyFn>,
 }
 
@@ -331,9 +249,21 @@ impl<B: ThrottleBackend> RateLimitPermissionBuilder<B> {
 		self
 	}
 
-	/// Set the rate limit configuration
-	pub fn config(mut self, config: RateLimitConfig) -> Self {
-		self.config = Some(config);
+	/// Set the rate limiting strategy
+	pub fn strategy(mut self, strategy: RateLimitStrategy) -> Self {
+		self.strategy = Some(strategy);
+		self
+	}
+
+	/// Set the bucket capacity
+	pub fn capacity(mut self, capacity: f64) -> Self {
+		self.capacity = Some(capacity);
+		self
+	}
+
+	/// Set the token refill rate
+	pub fn refill_rate(mut self, refill_rate: f64) -> Self {
+		self.refill_rate = Some(refill_rate);
 		self
 	}
 
@@ -350,11 +280,24 @@ impl<B: ThrottleBackend> RateLimitPermissionBuilder<B> {
 	///
 	/// # Panics
 	///
-	/// Panics if backend or config are not set
+	/// Panics if backend, strategy, capacity, or refill_rate are not set
 	pub fn build(self) -> RateLimitPermission<B> {
+		let capacity = self.capacity.expect("capacity must be set");
+		let refill_rate = self.refill_rate.expect("refill_rate must be set");
+		let strategy = self.strategy.expect("strategy must be set");
+
+		let rate = capacity as usize;
+		let window = (capacity / refill_rate).max(1.0) as u64;
+
 		RateLimitPermission {
 			backend: self.backend.expect("backend must be set"),
-			config: self.config.expect("config must be set"),
+			config: RateLimitPermissionConfig {
+				rate,
+				window,
+				strategy,
+				allow_on_error: false,
+				scope: None,
+			},
 			custom_key_fn: self.custom_key_fn,
 		}
 	}
@@ -392,7 +335,7 @@ mod tests {
 	use bytes::Bytes;
 	use hyper::{HeaderMap, Method};
 	use reinhardt_http::Request;
-	use reinhardt_rest::throttling::MemoryBackend;
+	use reinhardt_throttling::MemoryBackend;
 
 	fn create_test_request(headers: HeaderMap) -> Request {
 		Request::builder()
@@ -407,8 +350,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_ip_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::IpAddress);
-		let permission = RateLimitPermission::new(backend, config);
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerIp,
+			2.0,
+			1.0,
+		);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Forwarded-For", "192.168.1.100".parse().unwrap());
@@ -436,8 +383,12 @@ mod tests {
 		use uuid::Uuid;
 
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(3, 60, RateLimitKeyStrategy::UserId);
-		let permission = RateLimitPermission::new(backend, config);
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerUser,
+			3.0,
+			1.0,
+		);
 
 		let headers = HeaderMap::new();
 		let request = create_test_request(headers);
@@ -472,8 +423,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_unauthenticated_user_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(10, 60, RateLimitKeyStrategy::UserId);
-		let permission = RateLimitPermission::new(backend, config);
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerUser,
+			10.0,
+			1.0,
+		);
 
 		let headers = HeaderMap::new();
 		let request = create_test_request(headers);
@@ -492,8 +447,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_custom_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(2, 60, RateLimitKeyStrategy::Custom);
-		let permission = RateLimitPermission::new(backend, config)
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerRoute,
+			2.0,
+			1.0,
+		)
 			.with_custom_key(|_ctx| Some("custom_key".to_string()));
 
 		let headers = HeaderMap::new();
@@ -515,30 +474,26 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_rate_limit_config_builder() {
-		let config = RateLimitConfig::builder()
-			.rate(100)
-			.window(3600)
-			.strategy(RateLimitKeyStrategy::IpAddress)
-			.allow_on_error(true)
-			.scope("api".to_string())
-			.build();
-
-		assert_eq!(config.rate, 100);
-		assert_eq!(config.window, 3600);
-		assert_eq!(config.strategy, RateLimitKeyStrategy::IpAddress);
-		assert!(config.allow_on_error);
-		assert_eq!(config.scope, Some("api".to_string()));
+	async fn test_rate_limit_strategy_equality() {
+		assert_eq!(
+			RateLimitStrategy::PerIp,
+			RateLimitStrategy::PerIp
+		);
+		assert_ne!(
+			RateLimitStrategy::PerIp,
+			RateLimitStrategy::PerUser
+		);
 	}
 
 	#[tokio::test]
 	async fn test_rate_limit_permission_builder() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(5, 60, RateLimitKeyStrategy::IpAddress);
 
 		let _permission = RateLimitPermission::builder()
 			.backend(backend)
-			.config(config)
+			.strategy(RateLimitStrategy::PerIp)
+			.capacity(5.0)
+			.refill_rate(1.0)
 			.build();
 
 		// Successfully built
@@ -547,14 +502,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_with_scope() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::builder()
-			.rate(2)
-			.window(60)
-			.strategy(RateLimitKeyStrategy::IpAddress)
-			.scope("api".to_string())
-			.build();
-
-		let permission = RateLimitPermission::new(backend, config);
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerIp,
+			2.0,
+			1.0,
+		);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Real-IP", "10.0.0.1".parse().unwrap());
@@ -577,8 +530,12 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_x_real_ip_header() {
 		let backend = Arc::new(MemoryBackend::new());
-		let config = RateLimitConfig::new(1, 60, RateLimitKeyStrategy::IpAddress);
-		let permission = RateLimitPermission::new(backend, config);
+		let permission = RateLimitPermission::new(
+			backend,
+			RateLimitStrategy::PerIp,
+			1.0,
+			1.0,
+		);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Real-IP", "172.16.0.1".parse().unwrap());
@@ -598,15 +555,4 @@ mod tests {
 		assert!(!permission.has_permission(&context).await);
 	}
 
-	#[test]
-	fn test_rate_limit_key_strategy_equality() {
-		assert_eq!(
-			RateLimitKeyStrategy::IpAddress,
-			RateLimitKeyStrategy::IpAddress
-		);
-		assert_ne!(
-			RateLimitKeyStrategy::IpAddress,
-			RateLimitKeyStrategy::UserId
-		);
-	}
 }

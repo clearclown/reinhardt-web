@@ -52,8 +52,8 @@ pub mod model_permissions;
 #[cfg(feature = "oauth")]
 pub mod oauth2;
 pub mod object_permissions;
-// NOTE: rate_limit_permission temporarily removed due to circular dependency with reinhardt-rest
-// pub mod rate_limit_permission;
+#[cfg(feature = "rate-limit")]
+pub mod rate_limit_permission;
 pub mod remote_user;
 pub mod rest_authentication;
 #[cfg(feature = "sessions")]
@@ -93,11 +93,16 @@ pub use oauth2::{
 };
 pub use object_permissions::{ObjectPermission, ObjectPermissionChecker, ObjectPermissionManager};
 pub use permission_operators::{AndPermission, NotPermission, OrPermission};
-// NOTE: rate_limit_permission temporarily removed due to circular dependency with reinhardt-rest
-// pub use rate_limit_permission::{
-// 	RateLimitConfig, RateLimitConfigBuilder, RateLimitKeyStrategy, RateLimitPermission,
-// 	RateLimitPermissionBuilder,
-// };
+
+
+
+
+
+
+#[cfg(feature = "rate-limit")]
+pub use rate_limit_permission::{
+	RateLimitPermission, RateLimitPermissionBuilder,
+};
 pub use remote_user::RemoteUserAuthentication as RemoteUserAuth;
 pub use rest_authentication::{
 	BasicAuthConfig, CompositeAuthentication, RemoteUserAuthentication, RestAuthentication,

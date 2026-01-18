@@ -24,8 +24,7 @@ database = ["ctor", "reinhardt-apps", "sea-query", "sqlx"]
 redis-sessions = ["redis"]
 
 # Rate limiting permission
-# NOTE: Temporarily disabled due to circular dependency with reinhardt-rest
-# rate-limit = ["reinhardt-rest"]
+rate-limit = ["reinhardt-throttling"]
 
 # Aggregate all auth features
 auth-full = [
@@ -96,6 +95,7 @@ reinhardt-apps = { workspace = true, optional = true }
 ctor = { workspace = true, optional = true }
 redis = { workspace = true, optional = true }
 reinhardt-utils = { workspace = true, features = ["cache"] }
+reinhardt-throttling = { workspace = true, optional = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 fs2 = { version = "0.4", optional = true }
