@@ -45,12 +45,12 @@ extern crate reinhardt_admin;
 
 // Re-export submodules for structured access
 pub mod adapters {
-	pub use reinhardt_admin_adapters::*;
+	pub use reinhardt_admin::adapters::*;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub mod server {
-	pub use reinhardt_admin_server::*;
+	pub use reinhardt_admin::server::*;
 }
 
 #[cfg(target_arch = "wasm32")]

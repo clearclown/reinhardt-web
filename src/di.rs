@@ -10,7 +10,7 @@
 //! ```
 
 #[cfg(feature = "di")]
-pub use reinhardt_core::di::*;
+pub use reinhardt_di::*;
 
 // Re-export reinhardt-di types for macro compatibility
 #[cfg(feature = "di")]

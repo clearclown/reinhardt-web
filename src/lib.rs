@@ -110,7 +110,7 @@ pub mod reinhardt_pages {
 #[doc(hidden)]
 pub mod reinhardt_types {
 	#[allow(unused_imports, unreachable_pub)]
-	pub use reinhardt_types::*;
+	pub use reinhardt_core::types::*;
 }
 
 // Server-side only re-exports (NOT for WASM)
@@ -130,6 +130,8 @@ pub mod reinhardt_di {
 #[doc(hidden)]
 pub mod reinhardt_core {
 	pub use reinhardt_core::*;
+	// For macro compatibility: Re-export EndpointMetadata at module level
+	pub use reinhardt_core::endpoint::EndpointMetadata;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -141,7 +143,7 @@ pub mod reinhardt_http {
 #[cfg(not(target_arch = "wasm32"))]
 #[doc(hidden)]
 pub mod reinhardt_params {
-	pub use reinhardt_params::*;
+	pub use reinhardt_di::params::*;
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -278,12 +280,12 @@ pub use reinhardt_conf::settings::sources::{
 pub use reinhardt_core::{
 	endpoint::EndpointMetadata,
 	exception::{Error, Result},
-	http::{Request, Response},
+	
 };
 
 // Re-export HTTP types
 #[cfg(all(feature = "core", not(target_arch = "wasm32")))]
-pub use reinhardt_http::{Handler, Middleware, MiddlewareChain, ViewResult};
+pub use reinhardt_http::{Handler, Middleware, MiddlewareChain, Request, Response, ViewResult};
 
 // Re-export inventory crate (used by HTTP method macros for endpoint registration)
 #[cfg(not(target_arch = "wasm32"))]
@@ -676,7 +678,7 @@ pub use reinhardt_middleware::CorsMiddleware;
 
 // Re-export HTTP types (additional commonly used types)
 #[cfg(all(feature = "core", not(target_arch = "wasm32")))]
-pub use reinhardt_core::http::Extensions;
+pub use reinhardt_http::Extensions;
 
 // Re-export HTTP types from hyper (already used in reinhardt_http)
 #[cfg(not(target_arch = "wasm32"))]
@@ -756,7 +758,7 @@ pub use reinhardt_rest::{
 
 // Re-export browsable API (from reinhardt-browsable-api via reinhardt-rest)
 #[cfg(all(feature = "rest", not(target_arch = "wasm32")))]
-pub use reinhardt_browsable_api as browsable_api;
+pub use reinhardt_rest::browsable_api;
 
 // Re-export OpenAPI types
 //
@@ -851,14 +853,14 @@ pub use reinhardt_forms::{
 
 // Re-export DI and parameters (FastAPI-style parameter extraction)
 #[cfg(all(feature = "di", not(target_arch = "wasm32")))]
-pub use reinhardt_core::di::{Depends, DiError, DiResult, InjectionContext, RequestContext};
+pub use reinhardt_di::{Depends, DiError, DiResult, InjectionContext, RequestContext};
 
 // Re-export DI params - available in minimal, standard, and di features
 #[cfg(all(
 	any(feature = "minimal", feature = "standard", feature = "di"),
 	not(target_arch = "wasm32")
 ))]
-pub use reinhardt_core::di::params::{Body, Cookie, Header, Json, Path, Query};
+pub use reinhardt_di::params::{Body, Cookie, Header, Json, Path, Query};
 
 // Re-export template/rendering functionality from reinhardt-pages
 // Note: TemplateError was removed as Tera templating was replaced with reinhardt-pages SSR
