@@ -108,6 +108,10 @@ See docs/DOCUMENTATION_STANDARDS.md for comprehensive documentation standards.
 **Commit Policy:**
 - **NEVER** commit without explicit user instruction
 - **NEVER** push without explicit user instruction
+- **EXCEPTION**: Plan Mode approval is considered explicit commit authorization
+  - When user approves a plan via Exit Plan Mode, implementation and commits are both authorized
+  - Upon successful implementation, all planned commits are created automatically without additional confirmation
+  - If implementation fails or tests fail, NO commits are created (report to user instead)
 - Split commits by specific intent (NOT feature-level goals)
 - Each commit MUST be small enough to explain in one line
 - Use `git apply <patchfile name>.patch` for partial file commits
@@ -321,6 +325,7 @@ Before submitting code:
 - Clean up ALL test artifacts
 - Delete temp files from `/tmp` immediately
 - Wait for explicit user instruction before commits
+- Understand that Plan Mode approval authorizes both implementation and commits
 - Mark placeholders with `todo!()` or `// TODO:`
 - Use `#[serial(group_name)]` for global state tests
 - Split commits by specific intent, not features
@@ -348,7 +353,7 @@ Before submitting code:
 
 ### ❌ NEVER DO
 - Use `mod.rs` files (deprecated pattern)
-- Commit without user instruction
+- Commit without user instruction (except Plan Mode approval)
 - Leave docs outdated after code changes
 - Document user requests or AI interactions in project documentation
 - Save files to project directory (use `/tmp`)
