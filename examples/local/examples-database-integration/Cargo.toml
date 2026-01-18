@@ -57,8 +57,6 @@ sqlx = { version = "0.8", features = [
 anyhow = "1.0"
 serial_test = "3.2"
 tempfile = "3.15"
-reinhardt-test = { workspace = true, features = ["testcontainers"] }
-reinhardt-db = { workspace = true, features = ["backends"]}
 testcontainers = "0.25.2"
 
 [build-dependencies]
