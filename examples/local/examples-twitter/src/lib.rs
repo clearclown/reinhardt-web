@@ -11,7 +11,6 @@
 mod server_only {
 	// Re-export internal crates for macro-generated code
 	pub use reinhardt::core::async_trait;
-	pub use reinhardt::db::migrations;
 	pub use reinhardt::reinhardt_apps;
 	pub use reinhardt::reinhardt_core;
 	pub use reinhardt::reinhardt_di::params;
