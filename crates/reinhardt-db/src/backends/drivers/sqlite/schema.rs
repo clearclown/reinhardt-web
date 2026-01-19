@@ -4,7 +4,9 @@
 //!
 //! Note: SQLite has limited ALTER TABLE support. Some operations require table recreation.
 
-use super::super::super::schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult};
+use super::super::super::schema::{
+	BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult,
+};
 
 /// Quote SQLite identifier (double-quote escaping)
 fn quote_sqlite_identifier(name: &str) -> String {

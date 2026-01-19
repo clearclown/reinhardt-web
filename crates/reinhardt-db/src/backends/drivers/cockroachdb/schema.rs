@@ -1,3 +1,4 @@
+use super::super::super::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 /// CockroachDB-specific schema editor
 ///
 /// This module provides CockroachDB-specific DDL operations, including:
@@ -26,7 +27,6 @@
 /// assert!(sql.contains("LOCALITY REGIONAL BY ROW"));
 /// ```
 use super::super::postgresql::schema::PostgreSQLSchemaEditor;
-use super::super::super::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
 
 /// Quote an identifier with double quotes
 ///

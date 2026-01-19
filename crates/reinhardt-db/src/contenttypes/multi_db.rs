@@ -12,9 +12,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 #[cfg(feature = "database")]
-use super::{ContentType, ContentTypeRegistry};
-#[cfg(feature = "database")]
 use super::persistence::{ContentTypePersistence, ContentTypePersistenceBackend, PersistenceError};
+#[cfg(feature = "database")]
+use super::{ContentType, ContentTypeRegistry};
 
 /// ContentType management in multi-database environments
 ///

@@ -515,8 +515,8 @@ mod tests {
 			Ok(())
 		}
 
-		fn database_type(&self) -> super::types::DatabaseType {
-			super::types::DatabaseType::Postgres
+		fn database_type(&self) -> crate::backends::types::DatabaseType {
+			crate::backends::types::DatabaseType::Postgres
 		}
 	}
 
@@ -635,3 +635,6 @@ mod tests {
 		assert_eq!(alter_stmt.table_name(), "posts");
 	}
 }
+
+#[cfg(test)]
+pub mod test_utils;

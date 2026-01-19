@@ -3,8 +3,8 @@
 //! This module provides the `ManyToManyManager` type for managing many-to-many relationships
 //! through junction tables. It abstracts CRUD operations on the intermediate table.
 
-use reinhardt_core::exception::Result;
 use crate::orm::{DatabaseConnection, QueryRow};
+use reinhardt_core::exception::Result;
 use sea_query::{Alias, Asterisk, Expr, ExprTrait, Func, PostgresQueryBuilder, Query};
 use std::fmt::Display;
 use std::marker::PhantomData;

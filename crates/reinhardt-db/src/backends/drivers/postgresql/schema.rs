@@ -21,7 +21,9 @@
 /// # Ok(())
 /// # }
 /// ```
-use super::super::super::schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult};
+use super::super::super::schema::{
+	BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult,
+};
 use sqlx::PgPool;
 use std::sync::Arc;
 

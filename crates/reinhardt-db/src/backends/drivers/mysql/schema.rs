@@ -2,7 +2,9 @@
 //!
 //! This module provides MySQL-specific DDL operations through the `MySQLSchemaEditor`.
 
-use super::super::super::schema::{BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult};
+use super::super::super::schema::{
+	BaseDatabaseSchemaEditor, SchemaEditorError, SchemaEditorResult,
+};
 
 /// Quote MySQL identifier (backtick escaping)
 fn quote_mysql_identifier(name: &str) -> String {

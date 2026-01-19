@@ -493,7 +493,7 @@ impl ContentTypeTransaction {
 #[cfg(all(test, feature = "database"))]
 mod tests {
 	use super::*;
-	use super::persistence::ContentTypePersistence;
+	use crate::contenttypes::persistence::ContentTypePersistence;
 	use std::sync::Once;
 
 	static INIT_DRIVERS: Once = Once::new();
