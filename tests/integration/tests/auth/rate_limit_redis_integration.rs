@@ -805,7 +805,7 @@ fn test_rate_limit_key_strategy_debug() {
 	let strategy = RateLimitStrategy::PerUser;
 	let debug_str = format!("{:?}", strategy);
 
-	assert!(debug_str.contains("UserId"));
+	assert!(debug_str.contains("PerUser"));
 }
 
 // test_rate_limit_config_clone removed - RateLimitConfig no longer exists in new API
