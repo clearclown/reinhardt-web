@@ -2,9 +2,6 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use async_trait::async_trait;
-use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-
 /// Call record for tracking function calls
 #[derive(Debug, Clone)]
 pub struct CallRecord {
@@ -496,56 +493,6 @@ where
 }
 
 // ============================================================================
-// Schema Editor Mocks
-// ============================================================================
-
-/// Mock schema editor for testing database migration operations
-///
-/// A simple mock implementation of `BaseDatabaseSchemaEditor` that doesn't
-/// execute actual SQL but allows testing of schema modification logic.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// use reinhardt_test::mock::MockSchemaEditor;
-/// use reinhardt_db::backends::schema::BaseDatabaseSchemaEditor;
-///
-/// let editor = MockSchemaEditor::new();
-/// let stmt = editor.create_table_statement("users", &[
-///     ("id", "INTEGER PRIMARY KEY"),
-///     ("name", "VARCHAR(100)"),
-/// ]);
-/// // SQL generation example (requires sea_query and reinhardt-backends in dependencies)
-/// // let sql = stmt.to_string(PostgresQueryBuilder);
-/// // assert!(sql.contains("CREATE TABLE"));
-/// ```
-pub struct MockSchemaEditor;
-
-impl MockSchemaEditor {
-	/// Create a new MockSchemaEditor instance
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for MockSchemaEditor {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-#[async_trait]
-impl BaseDatabaseSchemaEditor for MockSchemaEditor {
-	fn database_type(&self) -> reinhardt_db::migrations::DatabaseType {
-		reinhardt_db::migrations::DatabaseType::Sqlite
-	}
-
-	async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
-		// Mock implementation - doesn't execute anything
-		Ok(())
-	}
-}
-
 #[cfg(test)]
 mod tests {
 	use super::*;
