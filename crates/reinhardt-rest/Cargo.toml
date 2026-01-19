@@ -140,4 +140,5 @@ reinhardt-pages = { workspace = true }
 reinhardt-server = { workspace = true }
 reqwest = { version = "0.12", features = ["json"] }
 serial_test = { workspace = true }
-reinhardt-urls = {workspace = true, features = ["routers"]}
+# Router integration (causes circular dependency, only for testing)
+reinhardt-urls = { workspace = true, features = ["routers"] }
