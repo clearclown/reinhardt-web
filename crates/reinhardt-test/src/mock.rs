@@ -434,9 +434,7 @@ impl<T> Default for Spy<T> {
 /// ```
 pub struct SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_http::Request,
-		) -> reinhardt_http::Result<reinhardt_http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -446,9 +444,7 @@ where
 
 impl<F> SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_http::Request,
-		) -> reinhardt_http::Result<reinhardt_http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -477,9 +473,7 @@ where
 #[async_trait::async_trait]
 impl<F> reinhardt_http::Handler for SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_http::Request,
-		) -> reinhardt_http::Result<reinhardt_http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -492,7 +486,6 @@ where
 	}
 }
 
-// ============================================================================
 #[cfg(test)]
 mod tests {
 	use super::*;

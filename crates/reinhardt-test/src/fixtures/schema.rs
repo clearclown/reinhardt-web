@@ -42,14 +42,14 @@
 use std::collections::HashMap;
 
 use reinhardt_db::backends::DatabaseConnection;
-use reinhardt_db::orm::Model;
-use reinhardt_db::orm::fields::FieldKwarg;
-use reinhardt_db::orm::inspection::{FieldInfo, RelationInfo};
-use reinhardt_db::orm::relationship::RelationshipType;
 use reinhardt_db::migrations::{
 	ColumnDefinition, Constraint, ForeignKeyAction, Migration, Operation,
 	executor::DatabaseMigrationExecutor, field_type_string_to_field_type, to_snake_case,
 };
+use reinhardt_db::orm::Model;
+use reinhardt_db::orm::fields::FieldKwarg;
+use reinhardt_db::orm::inspection::{FieldInfo, RelationInfo};
+use reinhardt_db::orm::relationship::RelationshipType;
 
 /// Error type for schema operations
 #[derive(Debug, thiserror::Error)]

@@ -2,7 +2,7 @@
 //!
 //! Provides a registry system for custom storage backends
 
-use crate::storage::Storage;
+use super::Storage;
 use std::collections::HashMap;
 use std::io;
 use std::sync::{Arc, RwLock};

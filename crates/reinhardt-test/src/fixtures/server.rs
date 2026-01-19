@@ -3,13 +3,13 @@
 //! This module provides rstest fixtures for testing HTTP servers with automatic
 //! cleanup via RAII pattern.
 
+use reinhardt_di::InjectionContext;
 use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response};
-use reinhardt_di::InjectionContext;
-use reinhardt_urls::routers::ServerRouter as Router;
 use reinhardt_server::{
 	HttpServer, RateLimitConfig, RateLimitHandler, ShutdownCoordinator, TimeoutHandler,
 };
+use reinhardt_urls::routers::ServerRouter as Router;
 use rstest::fixture;
 use std::net::SocketAddr;
 use std::sync::Arc;

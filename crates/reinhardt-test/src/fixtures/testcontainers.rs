@@ -1350,7 +1350,8 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn postgres_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>() -> Result<
+pub async fn postgres_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>()
+-> Result<
 	(
 		ContainerAsync<GenericImage>,
 		std::sync::Arc<reinhardt_db::DatabaseConnection>,
