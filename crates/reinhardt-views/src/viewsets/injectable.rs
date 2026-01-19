@@ -25,8 +25,8 @@
 
 use crate::ViewSet;
 use async_trait::async_trait;
-use reinhardt_http::{Request, Result};
 use reinhardt_di::{Injectable, Injected, InjectionContext};
+use reinhardt_http::{Request, Result};
 use std::sync::Arc;
 
 /// Extension trait for ViewSets that enables dependency injection

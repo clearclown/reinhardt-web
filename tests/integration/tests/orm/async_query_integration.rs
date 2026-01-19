@@ -12,13 +12,13 @@
 //! - postgres_container: PostgreSQL database container (reinhardt-test)
 //! - mysql_suite: MySQL database container (reinhardt-test, planned)
 
-use reinhardt_db::{orm::Model, DatabaseConnection};
-use reinhardt_integration_tests::migrations::apply_async_query_test_migrations;
-use reinhardt_macros::model;
 use reinhardt_db::orm::{
 	expressions::Q, manager::reinitialize_database, query_execution::QueryCompiler,
 	types::DatabaseDialect,
 };
+use reinhardt_db::{orm::Model, DatabaseConnection};
+use reinhardt_integration_tests::migrations::apply_async_query_test_migrations;
+use reinhardt_macros::model;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};

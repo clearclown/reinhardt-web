@@ -38,7 +38,9 @@ impl From<AdminError> for reinhardt_core::exception::Error {
 	fn from(err: AdminError) -> Self {
 		match err {
 			AdminError::ModelNotRegistered(msg) => reinhardt_core::exception::Error::NotFound(msg),
-			AdminError::PermissionDenied(msg) => reinhardt_core::exception::Error::Authorization(msg),
+			AdminError::PermissionDenied(msg) => {
+				reinhardt_core::exception::Error::Authorization(msg)
+			}
 			AdminError::InvalidAction(msg) => reinhardt_core::exception::Error::Http(msg),
 			AdminError::DatabaseError(msg) => reinhardt_core::exception::Error::Database(msg),
 			AdminError::ValidationError(msg) => reinhardt_core::exception::Error::Validation(msg),

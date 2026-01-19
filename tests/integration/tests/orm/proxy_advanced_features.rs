@@ -120,10 +120,9 @@ async fn test_association_proxy_with_creator() {
 async fn test_association_proxy_with_getter() {
 	// Define getter as a standalone function
 	fn get_bio(user: &User) -> Result<String, reinhardt_urls::proxy::ProxyError> {
-		user.profile
-			.as_ref()
-			.map(|p| p.bio.clone())
-			.ok_or_else(|| reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string()))
+		user.profile.as_ref().map(|p| p.bio.clone()).ok_or_else(|| {
+			reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string())
+		})
 	}
 
 	// Create proxy and set getter via public field
@@ -166,10 +165,9 @@ async fn test_association_proxy_with_setter() {
 async fn test_association_proxy_complete_builder() {
 	// Define helper functions
 	fn get_bio(user: &User) -> Result<String, reinhardt_urls::proxy::ProxyError> {
-		user.profile
-			.as_ref()
-			.map(|p| p.bio.clone())
-			.ok_or_else(|| reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string()))
+		user.profile.as_ref().map(|p| p.bio.clone()).ok_or_else(|| {
+			reinhardt_urls::proxy::ProxyError::RelationshipNotFound("profile".to_string())
+		})
 	}
 
 	fn set_bio(user: &mut User, bio: String) -> Result<(), reinhardt_urls::proxy::ProxyError> {

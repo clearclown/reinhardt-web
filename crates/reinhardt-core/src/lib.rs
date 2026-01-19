@@ -51,7 +51,6 @@ pub use reinhardt_macros as macros;
 // Re-export rate limiting types
 pub use crate::rate_limit::RateLimitStrategy;
 
-
 // Re-export common external dependencies
 pub use async_trait::async_trait;
 pub use tokio;

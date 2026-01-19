@@ -22,8 +22,8 @@
 //! # }
 //! ```
 
-use super::{FilterBackend, FilterResult};
 use super::optimizer::DatabaseType;
+use super::{FilterBackend, FilterResult};
 use async_trait::async_trait;
 use regex::Regex;
 use std::collections::HashMap;
@@ -376,9 +376,8 @@ impl IndexHintFilter {
 	/// Internal method to apply hints with proper table matching
 	fn apply_hints_internal(&self, sql: String, db_type: DatabaseType) -> FilterResult<String> {
 		// Find all table references in the SQL
-		let table_regex = Regex::new(r"(?i)\b(FROM|JOIN)\s+(\w+)\b").map_err(|e| {
-			super::FilterError::InvalidQuery(format!("Invalid regex: {}", e))
-		})?;
+		let table_regex = Regex::new(r"(?i)\b(FROM|JOIN)\s+(\w+)\b")
+			.map_err(|e| super::FilterError::InvalidQuery(format!("Invalid regex: {}", e)))?;
 
 		let mut table_positions: Vec<(usize, String, String)> = Vec::new(); // (position, keyword, table_name)
 

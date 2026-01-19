@@ -6,8 +6,8 @@
 use async_trait::async_trait;
 use hyper::header::HeaderName;
 use reinhardt_core::exception::Result;
-use reinhardt_http::{Request, Response};
 use reinhardt_http::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;

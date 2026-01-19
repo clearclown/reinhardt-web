@@ -111,8 +111,8 @@ pub use self::cursor::{
 	Direction, HasTimestamp, PaginationError as DatabasePaginationError,
 };
 
-use async_trait::async_trait;
 use crate::exception::Result;
+use async_trait::async_trait;
 
 // ============================================================================
 // Enum Wrapper for dyn Paginator Compatibility

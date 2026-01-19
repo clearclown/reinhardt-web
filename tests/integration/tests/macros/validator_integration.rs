@@ -1,7 +1,7 @@
 //! Integration tests for validator support in Model derive macro
 
-use reinhardt_macros::model;
 use reinhardt_db::orm::Model as ModelTrait;
+use reinhardt_macros::model;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

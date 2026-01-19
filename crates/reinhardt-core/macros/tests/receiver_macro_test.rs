@@ -1,5 +1,5 @@
-use reinhardt_macros::receiver;
 use reinhardt_core::signals::{SignalError, auto_connect_receivers};
+use reinhardt_macros::receiver;
 use serial_test::serial;
 use std::any::Any;
 use std::sync::Arc;

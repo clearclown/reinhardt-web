@@ -296,7 +296,10 @@ async fn test_version_propagation_through_request_lifecycle() {
 
 	#[async_trait::async_trait]
 	impl Handler for MultiStageHandler {
-		async fn handle(&self, request: Request) -> Result<Response, reinhardt_core::exception::Error> {
+		async fn handle(
+			&self,
+			request: Request,
+		) -> Result<Response, reinhardt_core::exception::Error> {
 			// First stage: read version
 			let version = request.version();
 			assert!(version.is_some());
@@ -360,7 +363,10 @@ async fn test_version_or_with_fallback() {
 
 	#[async_trait::async_trait]
 	impl Handler for FallbackHandler {
-		async fn handle(&self, request: Request) -> Result<Response, reinhardt_core::exception::Error> {
+		async fn handle(
+			&self,
+			request: Request,
+		) -> Result<Response, reinhardt_core::exception::Error> {
 			let version = request.version_or("fallback");
 			Ok(Response::ok().with_body(Bytes::from(format!("{{\"version\":\"{}\"}}", version))))
 		}

@@ -205,7 +205,11 @@ mod tests {
 			Ok(format!("hashed:{}", password))
 		}
 
-		fn verify(&self, password: &str, hash: &str) -> Result<bool, reinhardt_core::exception::Error> {
+		fn verify(
+			&self,
+			password: &str,
+			hash: &str,
+		) -> Result<bool, reinhardt_core::exception::Error> {
 			Ok(hash == format!("hashed:{}", password))
 		}
 	}

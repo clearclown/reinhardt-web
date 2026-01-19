@@ -9,9 +9,9 @@
 //! like `#[derive(Model)]` and `#[endpoint]` generate (e.g., `::reinhardt::db::orm::Model`).
 
 use bytes::Bytes;
+use reinhardt_db::migrations::{Constraint, ForeignKeyAction};
 use reinhardt_http::Handler;
 use reinhardt_http::Request;
-use reinhardt_db::migrations::{Constraint, ForeignKeyAction};
 use reinhardt_server::{HttpServer, ShutdownCoordinator};
 use sqlx::{Pool, Postgres};
 use std::net::SocketAddr;

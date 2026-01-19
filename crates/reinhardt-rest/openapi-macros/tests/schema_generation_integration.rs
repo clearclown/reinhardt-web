@@ -8,8 +8,8 @@
 //! - Schema references and $ref resolution
 //! - Documentation extraction and schema metadata
 
-use reinhardt_rest::openapi::{RefOr, Schema, ToSchema};
 use reinhardt_openapi_macros::Schema as DeriveSchema;
+use reinhardt_rest::openapi::{RefOr, Schema, ToSchema};
 use utoipa::openapi::schema::{SchemaType, Type};
 
 // Helper functions for assertions

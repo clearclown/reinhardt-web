@@ -15,11 +15,11 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container for session storage
 
-use reinhardt_db::orm::manager::{get_connection, reinitialize_database};
 use reinhardt_auth::sessions::{
 	backends::{cache::SessionBackend, database::DatabaseSessionBackend},
 	Session,
 };
+use reinhardt_db::orm::manager::{get_connection, reinitialize_database};
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use serde_json::json;

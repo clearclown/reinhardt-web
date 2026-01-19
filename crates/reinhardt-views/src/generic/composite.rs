@@ -1,12 +1,12 @@
 //! Composite API Views that combine multiple operations
 
+use crate::viewsets::{FilterConfig, PaginationConfig};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Manager, Model, QuerySet};
+use reinhardt_http::{Request, Response};
 use reinhardt_rest::serializers::{Serializer, ValidatorConfig};
-use crate::viewsets::{FilterConfig, PaginationConfig};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 

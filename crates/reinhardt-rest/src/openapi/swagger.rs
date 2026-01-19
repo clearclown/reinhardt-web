@@ -2,8 +2,8 @@
 //!
 //! Provides Swagger UI for browsing generated OpenAPI schemas.
 
-use crate::OpenApiSchema;
 use super::SchemaResult;
+use crate::OpenApiSchema;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use once_cell::sync::Lazy;
 use reinhardt_http::{Request, Response, Result};
@@ -22,11 +22,8 @@ static TEMPLATES: Lazy<Tera> = Lazy::new(|| {
 	let mut tera = Tera::default();
 
 	// Add embedded templates
-	tera.add_raw_template(
-		"swagger_ui.tpl",
-		include_str!("templates/swagger_ui.tpl"),
-	)
-	.expect("Failed to add swagger_ui.tpl template");
+	tera.add_raw_template("swagger_ui.tpl", include_str!("templates/swagger_ui.tpl"))
+		.expect("Failed to add swagger_ui.tpl template");
 
 	tera.add_raw_template("redoc_ui.tpl", include_str!("templates/redoc_ui.tpl"))
 		.expect("Failed to add redoc_ui.tpl template");

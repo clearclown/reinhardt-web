@@ -4,12 +4,12 @@
 //! Supports attributes, namespaces, and CDATA sections.
 
 use super::parser::{ParseResult, ParsedData, Parser};
+use crate::exception::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
 use quick_xml::Reader;
 use quick_xml::events::{Event, attributes::Attributes};
-use crate::exception::Error;
 use serde_json::{Map, Value, json};
 
 /// XML parser configuration

@@ -3,10 +3,10 @@
 //! This parser handles `application/protobuf` and `application/x-protobuf` content types,
 //! providing dynamic schema support for Protocol Buffers deserialization.
 
+use crate::exception::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use crate::exception::Error;
 use serde_json::{Value, json};
 use std::collections::HashMap;
 

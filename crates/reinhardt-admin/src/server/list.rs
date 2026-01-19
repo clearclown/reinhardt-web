@@ -14,7 +14,9 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use super::error::MapServerFnError;
 #[cfg(not(target_arch = "wasm32"))]
-use crate::server::type_inference::{get_field_metadata, infer_admin_field_type, infer_filter_type};
+use crate::server::type_inference::{
+	get_field_metadata, infer_admin_field_type, infer_filter_type,
+};
 #[cfg(not(target_arch = "wasm32"))]
 use reinhardt_utils::utils_core::text::humanize_field_name;
 

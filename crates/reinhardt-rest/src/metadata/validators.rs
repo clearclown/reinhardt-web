@@ -39,7 +39,8 @@ impl FieldValidator {
 	/// ```
 	pub fn extract_pattern(&self) -> Option<String> {
 		if self.validator_type == "regex" {
-			self.options.as_ref()
+			self.options
+				.as_ref()
 				.and_then(|opts| opts.get("pattern"))
 				.and_then(|p| p.as_str())
 				.map(|s| s.to_string())

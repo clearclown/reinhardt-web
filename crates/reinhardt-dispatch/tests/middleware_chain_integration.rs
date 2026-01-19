@@ -8,9 +8,9 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Method, StatusCode};
+use reinhardt_dispatch::middleware::MiddlewareChain;
 use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response};
-use reinhardt_dispatch::middleware::MiddlewareChain;
 use reinhardt_middleware::Middleware;
 use reinhardt_urls::prelude::Router;
 use reinhardt_urls::routers::{DefaultRouter, Route};

@@ -3,8 +3,8 @@
 //! Tries to store messages in cookies first, then falls back to session storage
 //! if the messages don't fit in the cookie.
 
-use super::{CookieStorage, MessageStorage, SessionStorage};
 use super::super::message::Message;
+use super::{CookieStorage, MessageStorage, SessionStorage};
 
 /// Storage backend that falls back from cookie to session
 ///

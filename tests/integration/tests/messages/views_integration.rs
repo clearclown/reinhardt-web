@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_integration_tests::message_middleware_mock::MockSuccessMessageMixin;
 	use reinhardt_core::messages::{CookieStorage, Level, Message, MessageStorage, SessionStorage};
+	use reinhardt_integration_tests::message_middleware_mock::MockSuccessMessageMixin;
 	use std::collections::HashMap;
 
 	#[test]

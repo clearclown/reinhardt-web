@@ -4,8 +4,8 @@
 //! enum schema builder, and serde attributes support.
 
 use super::endpoint_inspector::EndpointInspector;
-use super::{PathItem, SchemaError, OpenApiSchema};
 use super::registry::SchemaRegistry;
+use super::{OpenApiSchema, PathItem, SchemaError};
 use indexmap::IndexMap;
 
 /// Schema generator for OpenAPI schemas
@@ -200,94 +200,94 @@ impl SchemaGenerator {
 	///
 	/// let schema = generator.generate().unwrap();
 	/// ```
-// 	#[cfg(feature = "pages")]
-// 	pub fn add_server_fn<S: reinhardt_pages::prelude::ServerFnRegistration>(
-// 		mut self,
-// 		_marker: S,
-// 	) -> Self {
-// 		use utoipa::openapi::{
-// 			HttpMethod, ResponseBuilder,
-// 			content::ContentBuilder,
-// 			path::{OperationBuilder, PathItemBuilder},
-// 			request_body::RequestBodyBuilder,
-// 			schema::{ObjectBuilder, Schema},
-// 		};
-// 
-// 		let path = S::PATH;
-// 		let name = S::NAME;
-// 
-// 		// Create operation for this server function
-// 		let operation_id = name.to_string();
-// 		let summary = format!("Server function: {}", name);
-// 
-// 		// Try to get request/response schemas from registry
-// 		// Convention: server_fn name + "Request" / "Response"
-// 		let request_schema_name = format!("{}Request", name);
-// 		let response_schema_name = format!("{}Response", name);
-// 
-// 		let request_schema = if let Some(schema) =
-// 			super::registry::get_all_schemas().get(request_schema_name.as_str())
-// 		{
-// 			schema.clone()
-// 		} else {
-// 			// Fallback: Create placeholder schema
-// 			Schema::Object(
-// 				ObjectBuilder::new()
-// 					.description(Some(format!("Request data for {}", name)))
-// 					.build(),
-// 			)
-// 		};
-// 
-// 		let response_schema = if let Some(schema) =
-// 			super::registry::get_all_schemas().get(response_schema_name.as_str())
-// 		{
-// 			schema.clone()
-// 		} else {
-// 			// Fallback: Create placeholder schema
-// 			Schema::Object(
-// 				ObjectBuilder::new()
-// 					.description(Some(format!("Response data for {}", name)))
-// 					.build(),
-// 			)
-// 		};
-// 
-// 		// Create request body
-// 		let request_body = RequestBodyBuilder::new()
-// 			.description(Some(format!("Request body for {}", name)))
-// 			.required(Some(utoipa::openapi::Required::True))
-// 			.content(
-// 				"application/json",
-// 				ContentBuilder::new().schema(Some(request_schema)).build(),
-// 			)
-// 			.build();
-// 
-// 		// Create operation
-// 		let operation = OperationBuilder::new()
-// 			.operation_id(Some(operation_id))
-// 			.summary(Some(summary))
-// 			.request_body(Some(request_body))
-// 			.response(
-// 				"200",
-// 				ResponseBuilder::new()
-// 					.description("Successful response")
-// 					.content(
-// 						"application/json",
-// 						ContentBuilder::new().schema(Some(response_schema)).build(),
-// 					)
-// 					.build(),
-// 			)
-// 			.build();
-// 
-// 		// Create PathItem with POST operation
-// 		let path_item = PathItemBuilder::new()
-// 			.operation(HttpMethod::Post, operation)
-// 			.build();
-// 
-// 		// Insert into paths
-// 		self.paths.insert(path.to_string(), path_item);
-// 
-// 		self
-// 	}
+	// 	#[cfg(feature = "pages")]
+	// 	pub fn add_server_fn<S: reinhardt_pages::prelude::ServerFnRegistration>(
+	// 		mut self,
+	// 		_marker: S,
+	// 	) -> Self {
+	// 		use utoipa::openapi::{
+	// 			HttpMethod, ResponseBuilder,
+	// 			content::ContentBuilder,
+	// 			path::{OperationBuilder, PathItemBuilder},
+	// 			request_body::RequestBodyBuilder,
+	// 			schema::{ObjectBuilder, Schema},
+	// 		};
+	//
+	// 		let path = S::PATH;
+	// 		let name = S::NAME;
+	//
+	// 		// Create operation for this server function
+	// 		let operation_id = name.to_string();
+	// 		let summary = format!("Server function: {}", name);
+	//
+	// 		// Try to get request/response schemas from registry
+	// 		// Convention: server_fn name + "Request" / "Response"
+	// 		let request_schema_name = format!("{}Request", name);
+	// 		let response_schema_name = format!("{}Response", name);
+	//
+	// 		let request_schema = if let Some(schema) =
+	// 			super::registry::get_all_schemas().get(request_schema_name.as_str())
+	// 		{
+	// 			schema.clone()
+	// 		} else {
+	// 			// Fallback: Create placeholder schema
+	// 			Schema::Object(
+	// 				ObjectBuilder::new()
+	// 					.description(Some(format!("Request data for {}", name)))
+	// 					.build(),
+	// 			)
+	// 		};
+	//
+	// 		let response_schema = if let Some(schema) =
+	// 			super::registry::get_all_schemas().get(response_schema_name.as_str())
+	// 		{
+	// 			schema.clone()
+	// 		} else {
+	// 			// Fallback: Create placeholder schema
+	// 			Schema::Object(
+	// 				ObjectBuilder::new()
+	// 					.description(Some(format!("Response data for {}", name)))
+	// 					.build(),
+	// 			)
+	// 		};
+	//
+	// 		// Create request body
+	// 		let request_body = RequestBodyBuilder::new()
+	// 			.description(Some(format!("Request body for {}", name)))
+	// 			.required(Some(utoipa::openapi::Required::True))
+	// 			.content(
+	// 				"application/json",
+	// 				ContentBuilder::new().schema(Some(request_schema)).build(),
+	// 			)
+	// 			.build();
+	//
+	// 		// Create operation
+	// 		let operation = OperationBuilder::new()
+	// 			.operation_id(Some(operation_id))
+	// 			.summary(Some(summary))
+	// 			.request_body(Some(request_body))
+	// 			.response(
+	// 				"200",
+	// 				ResponseBuilder::new()
+	// 					.description("Successful response")
+	// 					.content(
+	// 						"application/json",
+	// 						ContentBuilder::new().schema(Some(response_schema)).build(),
+	// 					)
+	// 					.build(),
+	// 			)
+	// 			.build();
+	//
+	// 		// Create PathItem with POST operation
+	// 		let path_item = PathItemBuilder::new()
+	// 			.operation(HttpMethod::Post, operation)
+	// 			.build();
+	//
+	// 		// Insert into paths
+	// 		self.paths.insert(path.to_string(), path_item);
+	//
+	// 		self
+	// 	}
 
 	/// Add a single server function endpoint (no-op when pages feature is disabled)
 	#[cfg(not(feature = "pages"))]

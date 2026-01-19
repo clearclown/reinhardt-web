@@ -3,12 +3,12 @@
 //! Provides transparent decompression of request bodies with gzip, brotli, or deflate encoding.
 
 use super::parser::{ParseResult, ParsedData, Parser};
+use crate::exception::Error;
 use async_trait::async_trait;
 use brotli::Decompressor;
 use bytes::Bytes;
 use flate2::read::{DeflateDecoder, GzDecoder};
 use http::HeaderMap;
-use crate::exception::Error;
 use std::io::Read;
 use std::sync::Arc;
 

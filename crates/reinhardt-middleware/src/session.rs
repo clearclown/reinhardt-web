@@ -4,8 +4,8 @@
 //! Supports various backends including Cookie, Redis, and database.
 
 use async_trait::async_trait;
-use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

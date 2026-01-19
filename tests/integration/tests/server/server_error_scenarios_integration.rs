@@ -10,9 +10,9 @@
 
 use async_trait::async_trait;
 use http::StatusCode;
-use reinhardt_http::{Request, Response};
-use reinhardt_http::Handler;
 use reinhardt_core::exception::{Error, Result};
+use reinhardt_http::Handler;
+use reinhardt_http::{Request, Response};
 use reinhardt_server::ShutdownCoordinator;
 use reinhardt_test::fixtures::*;
 use reinhardt_test::APIClient;

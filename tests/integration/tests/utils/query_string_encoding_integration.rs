@@ -9,9 +9,9 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_http::Request;
 use reinhardt_di::params::extract::FromRequest;
 use reinhardt_di::params::{ParamContext, Query};
+use reinhardt_http::Request;
 use serde::Deserialize;
 
 /// Test: Query string with fragments and special characters

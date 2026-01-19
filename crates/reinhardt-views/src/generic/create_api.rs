@@ -3,8 +3,8 @@
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::{Model, QuerySet};
+use reinhardt_http::{Request, Response};
 use reinhardt_rest::serializers::{Serializer, ValidatorConfig};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;

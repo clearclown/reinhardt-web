@@ -29,7 +29,7 @@ use hyper::Method;
 use matchit::Router as MatchitRouter;
 use reinhardt_core::endpoint::EndpointInfo;
 use reinhardt_di::InjectionContext;
-use reinhardt_http::{Handler, MiddlewareChain, Error, Request, Response, Result};
+use reinhardt_http::{Error, Handler, MiddlewareChain, Request, Response, Result};
 use reinhardt_middleware::Middleware;
 use reinhardt_views::viewsets::{Action, ViewSet};
 use std::collections::HashMap;

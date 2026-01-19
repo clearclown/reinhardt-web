@@ -8,10 +8,10 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::{Method, StatusCode};
-use reinhardt_http::Handler;
-use reinhardt_http::{Request, Response};
 use reinhardt_core::signals::{request_finished, request_started};
 use reinhardt_dispatch::handler::BaseHandler;
+use reinhardt_http::Handler;
+use reinhardt_http::{Request, Response};
 use reinhardt_urls::prelude::Router;
 use reinhardt_urls::routers::{DefaultRouter, Route};
 use std::sync::Arc;

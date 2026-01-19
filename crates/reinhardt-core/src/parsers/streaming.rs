@@ -3,12 +3,12 @@
 //! This module provides parsers that can handle large files and data streams
 //! without loading the entire body into memory at once.
 
+use crate::exception::Error;
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
 use futures_util::StreamExt;
 use futures_util::stream::Stream;
 use http::HeaderMap;
-use crate::exception::Error;
 use std::pin::Pin;
 
 use super::parser::{ParseResult, ParsedData, Parser, UploadedFile};

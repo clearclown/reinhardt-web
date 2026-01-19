@@ -19,9 +19,9 @@
 //! ```
 
 use super::generator::SchemaGenerator;
-use crate::openapi::OpenApiSchema;
 use super::registry::get_all_schemas;
 use super::swagger::{RedocUI, SwaggerUI};
+use crate::openapi::OpenApiSchema;
 use reinhardt_http::{Request, Response, Result};
 use std::sync::LazyLock;
 

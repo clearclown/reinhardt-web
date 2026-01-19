@@ -3,10 +3,10 @@
 //! This parser handles `application/msgpack` and `application/x-msgpack` content types,
 //! deserializing MessagePack binary data into structured JSON values.
 
+use crate::exception::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use crate::exception::Error;
 use serde_json::Value;
 
 use super::parser::{ParseResult, ParsedData, Parser};

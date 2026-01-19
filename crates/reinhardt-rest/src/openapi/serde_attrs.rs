@@ -3,8 +3,8 @@
 //! This module provides utilities for handling common serde attributes
 //! when generating OpenAPI schemas.
 
-use super::{ObjectBuilder, Schema};
 use super::openapi::SchemaType;
+use super::{ObjectBuilder, Schema};
 use utoipa::openapi::Type;
 
 /// Field metadata extracted from serde attributes

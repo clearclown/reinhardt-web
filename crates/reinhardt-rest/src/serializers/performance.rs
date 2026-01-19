@@ -6,8 +6,8 @@
 //! - Query result caching
 //! - Performance monitoring utilities
 
-use crate::metadata::FieldInfo;
 use super::SerializerError;
+use crate::metadata::FieldInfo;
 // Note: reinhardt_db::orm::Model will be needed when database validation is implemented
 use regex::Regex;
 use std::collections::HashMap;

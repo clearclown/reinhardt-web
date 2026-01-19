@@ -30,8 +30,6 @@ struct RateLimitPermissionConfig {
 	scope: Option<String>,
 }
 
-
-
 /// Rate limiting permission
 ///
 /// Checks if a request should be allowed based on rate limits.
@@ -230,7 +228,6 @@ impl<B: ThrottleBackend> RateLimitPermission<B> {
 			}
 		})
 	}
-
 }
 
 /// Builder for RateLimitPermission
@@ -350,12 +347,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_ip_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerIp,
-			2.0,
-			1.0,
-		);
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerIp, 2.0, 1.0);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Forwarded-For", "192.168.1.100".parse().unwrap());
@@ -383,12 +375,7 @@ mod tests {
 		use uuid::Uuid;
 
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerUser,
-			3.0,
-			1.0,
-		);
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerUser, 3.0, 1.0);
 
 		let headers = HeaderMap::new();
 		let request = create_test_request(headers);
@@ -423,12 +410,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_unauthenticated_user_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerUser,
-			10.0,
-			1.0,
-		);
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerUser, 10.0, 1.0);
 
 		let headers = HeaderMap::new();
 		let request = create_test_request(headers);
@@ -447,12 +429,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_custom_strategy() {
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerRoute,
-			2.0,
-			1.0,
-		)
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerRoute, 2.0, 1.0)
 			.with_custom_key(|_ctx| Some("custom_key".to_string()));
 
 		let headers = HeaderMap::new();
@@ -475,14 +452,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_rate_limit_strategy_equality() {
-		assert_eq!(
-			RateLimitStrategy::PerIp,
-			RateLimitStrategy::PerIp
-		);
-		assert_ne!(
-			RateLimitStrategy::PerIp,
-			RateLimitStrategy::PerUser
-		);
+		assert_eq!(RateLimitStrategy::PerIp, RateLimitStrategy::PerIp);
+		assert_ne!(RateLimitStrategy::PerIp, RateLimitStrategy::PerUser);
 	}
 
 	#[tokio::test]
@@ -502,12 +473,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_with_scope() {
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerIp,
-			2.0,
-			1.0,
-		);
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerIp, 2.0, 1.0);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Real-IP", "10.0.0.1".parse().unwrap());
@@ -530,12 +496,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_rate_limit_permission_x_real_ip_header() {
 		let backend = Arc::new(MemoryBackend::new());
-		let permission = RateLimitPermission::new(
-			backend,
-			RateLimitStrategy::PerIp,
-			1.0,
-			1.0,
-		);
+		let permission = RateLimitPermission::new(backend, RateLimitStrategy::PerIp, 1.0, 1.0);
 
 		let mut headers = HeaderMap::new();
 		headers.insert("X-Real-IP", "172.16.0.1".parse().unwrap());
@@ -554,5 +515,4 @@ mod tests {
 		// Second request denied
 		assert!(!permission.has_permission(&context).await);
 	}
-
 }

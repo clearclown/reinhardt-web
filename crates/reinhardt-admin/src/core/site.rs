@@ -3,8 +3,8 @@
 //! The `AdminSite` is the central registry for all admin models and provides
 //! routing, authentication, and rendering functionality.
 
-use crate::types::{AdminError, AdminResult};
 use crate::core::{AdminRouter, ModelAdmin};
+use crate::types::{AdminError, AdminResult};
 use async_trait::async_trait;
 use dashmap::DashMap;
 use parking_lot::RwLock;

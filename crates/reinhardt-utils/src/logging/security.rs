@@ -214,8 +214,8 @@ impl SecurityLogger {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::logging::handlers::MemoryHandler;
 	use crate::logging::LogLevel;
+	use crate::logging::handlers::MemoryHandler;
 
 	#[tokio::test]
 	async fn test_security_error_display() {

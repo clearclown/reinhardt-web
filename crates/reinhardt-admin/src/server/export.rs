@@ -2,9 +2,7 @@
 //!
 //! Provides export operations for admin models.
 
-use crate::adapters::{
-	AdminDatabase, AdminRecord, AdminSite, ExportFormat, ExportResponse,
-};
+use crate::adapters::{AdminDatabase, AdminRecord, AdminSite, ExportFormat, ExportResponse};
 use reinhardt_pages::server_fn::{ServerFnError, server_fn};
 use std::sync::Arc;
 

@@ -8,9 +8,11 @@ use bytes::Bytes;
 use criterion::{criterion_group, criterion_main, Criterion};
 use http::{HeaderMap, StatusCode};
 use reinhardt_db::orm::{CascadeOption, LoadingStrategy, Relationship, RelationshipType};
-use reinhardt_urls::proxy::{AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue};
 use reinhardt_rest::serializers::{CharField, EmailField, IntegerField, JsonSerializer};
 use reinhardt_test::{APIClient, APIRequestFactory, MockFunction, Spy, TestResponse};
+use reinhardt_urls::proxy::{
+	AssociationProxy, CollectionProxy, ProxyTarget, ScalarProxy, ScalarValue,
+};
 use serde::{Deserialize, Serialize};
 use std::hint::black_box;
 use tokio::runtime::Runtime;

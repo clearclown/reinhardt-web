@@ -141,7 +141,10 @@ impl<T, U> AssociationProxy<T, U> {
 	///     .with_setter(custom_setter);
 	/// assert!(proxy.setter.is_some());
 	/// ```
-	pub fn with_setter(mut self, setter: fn(&mut T, U) -> Result<(), crate::proxy::ProxyError>) -> Self {
+	pub fn with_setter(
+		mut self,
+		setter: fn(&mut T, U) -> Result<(), crate::proxy::ProxyError>,
+	) -> Self {
 		self.setter = Some(setter);
 		self
 	}
@@ -161,7 +164,10 @@ impl<T, U> AssociationProxy<T, U> {
 	///     .with_validator(validate_value);
 	/// assert!(proxy.validator.is_some());
 	/// ```
-	pub fn with_validator(mut self, validator: fn(&U) -> Result<(), crate::proxy::ProxyError>) -> Self {
+	pub fn with_validator(
+		mut self,
+		validator: fn(&U) -> Result<(), crate::proxy::ProxyError>,
+	) -> Self {
 		self.validator = Some(validator);
 		self
 	}

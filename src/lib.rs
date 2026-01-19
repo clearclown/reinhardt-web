@@ -280,7 +280,6 @@ pub use reinhardt_conf::settings::sources::{
 pub use reinhardt_core::{
 	endpoint::EndpointMetadata,
 	exception::{Error, Result},
-	
 };
 
 // Re-export HTTP types

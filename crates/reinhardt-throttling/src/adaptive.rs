@@ -4,8 +4,8 @@
 //! and other performance metrics.
 
 use super::backend::ThrottleBackend;
-use super::{Throttle, ThrottleError, ThrottleResult};
 use super::time_provider::{SystemTimeProvider, TimeProvider};
+use super::{Throttle, ThrottleError, ThrottleResult};
 use async_trait::async_trait;
 use parking_lot::RwLock;
 use std::sync::Arc;

@@ -3,10 +3,10 @@
 //! Provides parsing of YAML content into a JSON-like structure using serde_yaml.
 
 use super::parser::{ParseResult, ParsedData, Parser};
+use crate::exception::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
 use http::HeaderMap;
-use crate::exception::Error;
 use serde_json::Value;
 
 /// YAML parser for application/x-yaml and application/yaml content types

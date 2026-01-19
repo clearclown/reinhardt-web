@@ -3,8 +3,8 @@
 //! Provides a completely type-safe filtering system using reinhardt-orm's
 //! Field<M, T> and Lookup types.
 
-use super::{FilterBackend, FilterResult};
 use super::ordering_field::OrderingField;
+use super::{FilterBackend, FilterResult};
 use async_trait::async_trait;
 use reinhardt_db::orm::{Lookup, Model, QueryFieldCompiler};
 use sea_query::{Cond, Expr, MysqlQueryBuilder, Query};

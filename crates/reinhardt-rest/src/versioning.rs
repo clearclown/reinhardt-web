@@ -886,11 +886,7 @@ impl NamespaceVersioning {
 	// Router integration disabled due to circular dependency (reinhardt-urls ↔ reinhardt-rest)
 	// Use extract_version_from_path() directly instead
 	#[allow(dead_code)]
-	fn extract_version_from_router_stub(
-		&self,
-		_router: &(),
-		path: &str,
-	) -> Option<String> {
+	fn extract_version_from_router_stub(&self, _router: &(), path: &str) -> Option<String> {
 		self.extract_version_from_path(path)
 	}
 
@@ -928,10 +924,7 @@ impl NamespaceVersioning {
 	/// ```
 	// Router integration disabled due to circular dependency (reinhardt-urls ↔ reinhardt-rest)
 	#[allow(dead_code)]
-	fn get_available_versions_from_router_stub(
-		&self,
-		_router: &(),
-	) -> Vec<String> {
+	fn get_available_versions_from_router_stub(&self, _router: &()) -> Vec<String> {
 		Vec::new()
 	}
 }

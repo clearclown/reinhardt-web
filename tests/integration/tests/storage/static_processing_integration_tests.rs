@@ -16,7 +16,9 @@ use tempfile::tempdir;
 use reinhardt_utils::r#static::processing::images::ImageOptimizer;
 
 #[cfg(feature = "source-maps")]
-use reinhardt_utils::r#static::processing::sourcemap::{SourceMap, SourceMapGenerator, SourceMapMerger};
+use reinhardt_utils::r#static::processing::sourcemap::{
+	SourceMap, SourceMapGenerator, SourceMapMerger,
+};
 
 // ========== Minification Integration Tests ==========
 

@@ -8,8 +8,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use reinhardt_core::exception::Result;
-use reinhardt_http::{Request, Response};
 use reinhardt_http::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
 
 use super::handler::{StaticError, StaticFileHandler};
 

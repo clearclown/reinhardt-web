@@ -4,9 +4,9 @@
 
 #[cfg(feature = "argon2-hasher")]
 use crate::DefaultUser;
+use crate::sessions::{Session, backends::SessionBackend};
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use reinhardt_http::Request;
-use crate::sessions::{Session, backends::SessionBackend};
 use std::sync::Arc;
 
 /// REST API authentication trait wrapper
@@ -641,8 +641,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_session_authentication() {
-		use crate::sessions::Session;
 		use crate::sessions::InMemorySessionBackend;
+		use crate::sessions::Session;
 
 		let session_backend = InMemorySessionBackend::new();
 

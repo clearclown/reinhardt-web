@@ -489,7 +489,8 @@ mod cache_aware_tests {
 
 	#[test]
 	fn test_cache_aware_save_context_with_invalidator() {
-		let invalidator = crate::serializers::CacheInvalidator::new(InvalidationStrategy::Immediate);
+		let invalidator =
+			crate::serializers::CacheInvalidator::new(InvalidationStrategy::Immediate);
 		let context = CacheAwareSaveContext::with_invalidator(invalidator);
 
 		assert!(context.invalidator.is_some());

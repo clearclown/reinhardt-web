@@ -264,7 +264,6 @@ impl From<DiError> for reinhardt_core::exception::Error {
 
 pub type DiResult<T> = std::result::Result<T, DiError>;
 
-
 // Generator support
 #[cfg(feature = "generator")]
 pub mod generator;

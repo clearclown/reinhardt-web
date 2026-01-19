@@ -21,8 +21,8 @@
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_http::{Request, Response};
 use reinhardt_core::macros::model;
+use reinhardt_http::{Request, Response};
 use reinhardt_rest::serializers::JsonSerializer;
 use reinhardt_test::fixtures::shared_db_pool;
 use reinhardt_views::{

@@ -172,7 +172,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckContainerHandler {
-			async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				assert!(
 					request.extensions.get::<MessagesContainer>().is_some(),
 					"MessagesContainer should be present in request extensions"
@@ -218,7 +221,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckExistingHandler {
-			async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
 					assert_eq!(messages.len(), 1);

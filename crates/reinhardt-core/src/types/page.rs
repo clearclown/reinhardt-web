@@ -385,7 +385,11 @@ impl PageElement {
 	}
 
 	/// Adds an attribute mutably (for parser use).
-	pub fn add_attr(&mut self, name: impl Into<Cow<'static, str>>, value: impl Into<Cow<'static, str>>) {
+	pub fn add_attr(
+		&mut self,
+		name: impl Into<Cow<'static, str>>,
+		value: impl Into<Cow<'static, str>>,
+	) {
 		self.attrs.push((name.into(), value.into()));
 	}
 

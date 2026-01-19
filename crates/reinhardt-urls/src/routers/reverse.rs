@@ -580,8 +580,8 @@ impl<U: UrlPatternWithParams> Default for UrlParams<U> {
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use super::Route;
+	use super::*;
 	use crate::routers_macros::path;
 	use async_trait::async_trait;
 	use reinhardt_http::{Handler, Request, Response, Result as CoreResult};

@@ -1,7 +1,7 @@
 //! Page number based pagination implementation
 
-use async_trait::async_trait;
 use crate::exception::{Error, Result};
+use async_trait::async_trait;
 
 use super::core::{AsyncPaginator, Page, PaginatedResponse, Paginator, SchemaParameter};
 

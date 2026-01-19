@@ -4,8 +4,8 @@
 //! rate differentiation.
 
 use super::backend::ThrottleBackend;
-use super::{Throttle, ThrottleError, ThrottleResult};
 use super::time_provider::{SystemTimeProvider, TimeProvider};
+use super::{Throttle, ThrottleError, ThrottleResult};
 use async_trait::async_trait;
 use std::sync::Arc;
 

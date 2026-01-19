@@ -6,8 +6,8 @@
 use super::BaseVersioning;
 use async_trait::async_trait;
 use bytes::Bytes;
-use reinhardt_http::Handler;
 use reinhardt_core::exception::Result;
+use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response};
 use std::collections::HashMap;
 use std::sync::Arc;

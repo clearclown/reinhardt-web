@@ -6,8 +6,8 @@
 use async_trait::async_trait;
 use hyper::{Method, Uri};
 use reinhardt_core::exception::Result;
-use reinhardt_http::{Request, Response};
 use reinhardt_http::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
 use std::sync::Arc;
 
 use super::renderer::{ApiContext, BrowsableApiRenderer};

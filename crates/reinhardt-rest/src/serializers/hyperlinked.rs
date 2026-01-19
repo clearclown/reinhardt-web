@@ -339,7 +339,8 @@ mod tests {
 			}
 		}
 
-		let reverser: Arc<dyn crate::serializers::hyperlinked::UrlReverser> = Arc::new(TestUrlReverser);
+		let reverser: Arc<dyn crate::serializers::hyperlinked::UrlReverser> =
+			Arc::new(TestUrlReverser);
 		let serializer = HyperlinkedModelSerializer::<TestModel>::new("detail", Some(reverser));
 		let model = TestModel {
 			id: Some(42),

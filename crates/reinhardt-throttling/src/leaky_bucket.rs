@@ -4,8 +4,8 @@
 //! smoothing out bursts. Requests that exceed the bucket's capacity are rejected.
 
 use super::backend::ThrottleBackend;
-use super::{Throttle, ThrottleResult};
 use super::time_provider::{SystemTimeProvider, TimeProvider};
+use super::{Throttle, ThrottleResult};
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::RwLock;

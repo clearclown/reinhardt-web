@@ -200,7 +200,10 @@ impl<T, U> ProxyBuilder<T, U> {
 	///     .attribute("value")
 	///     .with_setter(custom_setter);
 	/// ```
-	pub fn with_setter(mut self, setter: fn(&mut T, U) -> Result<(), crate::proxy::ProxyError>) -> Self {
+	pub fn with_setter(
+		mut self,
+		setter: fn(&mut T, U) -> Result<(), crate::proxy::ProxyError>,
+	) -> Self {
 		self.setter = Some(setter);
 		self
 	}
@@ -221,7 +224,10 @@ impl<T, U> ProxyBuilder<T, U> {
 	///     .attribute("value")
 	///     .with_validator(validate_value);
 	/// ```
-	pub fn with_validator(mut self, validator: fn(&U) -> Result<(), crate::proxy::ProxyError>) -> Self {
+	pub fn with_validator(
+		mut self,
+		validator: fn(&U) -> Result<(), crate::proxy::ProxyError>,
+	) -> Self {
 		self.validator = Some(validator);
 		self
 	}

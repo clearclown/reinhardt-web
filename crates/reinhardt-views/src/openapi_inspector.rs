@@ -3,15 +3,14 @@
 //! This module provides functionality to extract OpenAPI schema information from ViewSets,
 //! including paths, operations, parameters, and request/response schemas.
 
-use reinhardt_rest::openapi::{
-	Operation, Parameter, PathItem, RefOr, RequestBody, Response,
-	/* Responses, */ Schema,
-};
-use utoipa::openapi::path::ParameterIn;
-use hyper::Method;
 use crate::viewsets::{ActionMetadata, ViewSet};
+use hyper::Method;
+use reinhardt_rest::openapi::{
+	Operation, Parameter, PathItem, RefOr, RequestBody, Response, /* Responses, */ Schema,
+};
 use std::collections::HashMap;
 use utoipa::openapi::ContentBuilder;
+use utoipa::openapi::path::ParameterIn;
 use utoipa::openapi::path::{HttpMethod, OperationBuilder, ParameterBuilder, PathItemBuilder};
 use utoipa::openapi::request_body::RequestBodyBuilder;
 use utoipa::openapi::response::ResponseBuilder;
@@ -432,7 +431,9 @@ impl ViewSetInspector {
 	///
 	/// assert_eq!(name, Some("User".to_string()));
 	/// ```
-	pub fn extract_schema_with_name<T: reinhardt_rest::ToSchema>(&self) -> (Schema, Option<String>) {
+	pub fn extract_schema_with_name<T: reinhardt_rest::ToSchema>(
+		&self,
+	) -> (Schema, Option<String>) {
 		(T::schema(), T::schema_name())
 	}
 

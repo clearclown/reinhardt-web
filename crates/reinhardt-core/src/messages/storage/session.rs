@@ -1,7 +1,7 @@
 //! Session-based message storage backend
 
-use super::MessageStorage;
 use super::super::message::Message;
+use super::MessageStorage;
 use std::collections::VecDeque;
 
 /// Session-based message storage

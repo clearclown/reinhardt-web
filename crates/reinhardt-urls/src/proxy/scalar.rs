@@ -2,9 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::reflection::downcast_relationship;
 use crate::proxy::ProxyResult;
 use crate::proxy::ScalarValue;
-use super::reflection::downcast_relationship;
 
 /// Scalar proxy for accessing a single related object's attribute
 ///
@@ -78,9 +78,8 @@ impl ScalarProxy {
 		};
 
 		// 2. Downcast to Box<dyn Reflectable>
-		let related = downcast_relationship::<
-			Box<dyn super::reflection::Reflectable>,
-		>(relationship)?;
+		let related =
+			downcast_relationship::<Box<dyn super::reflection::Reflectable>>(relationship)?;
 
 		// 3. Get the attribute from the related object
 		let value = related.get_attribute(&self.attribute);

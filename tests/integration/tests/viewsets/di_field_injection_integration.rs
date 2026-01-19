@@ -3,8 +3,8 @@
 use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_di::{injectable, Injectable, Injected, InjectionContext, SingletonScope};
 use reinhardt_core::exception::Result;
+use reinhardt_di::{injectable, Injectable, Injected, InjectionContext, SingletonScope};
 use reinhardt_http::{Request, Response};
 use reinhardt_views::viewsets::{Action, ViewSet};
 use std::sync::Arc;

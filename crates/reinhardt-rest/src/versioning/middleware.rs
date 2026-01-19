@@ -6,8 +6,8 @@
 use super::{BaseVersioning, VersioningError};
 use async_trait::async_trait;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_http::{Request, Response};
 use reinhardt_http::{Handler, Middleware};
+use reinhardt_http::{Request, Response};
 use std::sync::Arc;
 
 /// API version extracted from request

@@ -13,12 +13,12 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
+use reinhardt_auth::sessions::{backends::InMemorySessionBackend, Session};
 use reinhardt_auth::{
 	AuthenticationBackend, AuthenticationError, CompositeAuthentication, RestAuthentication,
 	SessionAuthentication, SimpleUser, TokenAuthentication, User,
 };
 use reinhardt_http::Request;
-use reinhardt_auth::sessions::{backends::InMemorySessionBackend, Session};
 use reinhardt_test::fixtures::*;
 use rstest::*;
 use std::sync::Arc;

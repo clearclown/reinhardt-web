@@ -1,7 +1,7 @@
 //! Core pagination types and traits
 
-use async_trait::async_trait;
 use crate::exception::{Error, Result};
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
 /// Represents pagination metadata

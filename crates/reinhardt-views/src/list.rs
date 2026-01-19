@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::Model;
+use reinhardt_http::{Request, Response};
 use reinhardt_rest::serializers::{JsonSerializer, Serializer};
 use serde::{Deserialize, Serialize};
 

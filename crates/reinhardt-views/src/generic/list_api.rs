@@ -1,12 +1,12 @@
 //! ListAPIView implementation for displaying lists of objects
 
+use crate::viewsets::{FilterConfig, PaginationConfig};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_http::{Request, Response};
 use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QuerySet};
+use reinhardt_http::{Request, Response};
 use reinhardt_rest::serializers::Serializer;
-use crate::viewsets::{FilterConfig, PaginationConfig};
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 

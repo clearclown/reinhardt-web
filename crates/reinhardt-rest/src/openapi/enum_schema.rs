@@ -3,8 +3,8 @@
 //! This module provides support for generating OpenAPI schemas for Rust enums
 //! with various serde tagging strategies.
 
-use super::{ObjectBuilder, RefOr, Schema, SchemaExt};
 use super::openapi::SchemaType;
+use super::{ObjectBuilder, RefOr, Schema, SchemaExt};
 use utoipa::openapi::Type;
 
 /// Enum tagging strategy

@@ -12,8 +12,8 @@ pub mod encoder;
 pub mod ordering;
 pub mod relay;
 
-use async_trait::async_trait;
 use crate::exception::Result;
+use async_trait::async_trait;
 
 use super::core::{AsyncPaginator, PaginatedResponse, Paginator, SchemaParameter};
 pub use database::{
