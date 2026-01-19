@@ -425,9 +425,7 @@ async fn test_graphql_field_level_errors(data_store: DataStore) {
 	// In async-graphql, Result<T, E> fields are nullable. When a nullable field
 	// returns Err, only that field becomes null while other fields return normally.
 	// This is the expected GraphQL behavior for partial errors.
-	let data = json
-		.get("data")
-		.expect("data should exist in response");
+	let data = json.get("data").expect("data should exist in response");
 	assert!(
 		!data.is_null(),
 		"data should not be null for nullable field errors: {}",
@@ -477,9 +475,7 @@ async fn test_graphql_field_level_errors(data_store: DataStore) {
 
 	// Conditional error: conditionalError returns Result<T, E> which is nullable.
 	// When one alias fails, only that field becomes null while the successful alias returns normally.
-	let data = json
-		.get("data")
-		.expect("data should exist in response");
+	let data = json.get("data").expect("data should exist in response");
 	assert!(
 		!data.is_null(),
 		"data should not be null for nullable field errors: {}",
