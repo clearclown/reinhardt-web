@@ -275,7 +275,8 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_above_threshold() {
-		use crate::sessions::InMemorySessionBackend;
+		use super::{CompressedSessionBackend, ZstdCompressor};
+		use crate::sessions::{InMemorySessionBackend, SessionBackend};
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
@@ -298,7 +299,8 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_below_threshold() {
-		use crate::sessions::InMemorySessionBackend;
+		use super::{CompressedSessionBackend, ZstdCompressor};
+		use crate::sessions::{InMemorySessionBackend, SessionBackend};
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
@@ -320,7 +322,8 @@ mod tests {
 	#[cfg(feature = "compression-zstd")]
 	#[tokio::test]
 	async fn test_compressed_backend_delete() {
-		use crate::sessions::InMemorySessionBackend;
+		use super::{CompressedSessionBackend, ZstdCompressor};
+		use crate::sessions::{InMemorySessionBackend, SessionBackend};
 
 		let backend = InMemorySessionBackend::new();
 		let compressor = ZstdCompressor::new();
