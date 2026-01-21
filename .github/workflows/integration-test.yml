@@ -37,10 +37,10 @@ jobs:
       - name: Setup protoc
         uses: ./.github/actions/setup-protoc
 
-      - name: Install mold linker and clang
+      - name: Install mold linker and build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y mold clang
+          sudo apt-get install -y mold clang lld build-essential
 
       - name: Install cargo-make
         uses: taiki-e/install-action@v2
