@@ -14,14 +14,18 @@ env:
 
 jobs:
   cross-crate-integration-test:
-    name: Cross-Crate Integration Tests
+    name: Cross-Crate Integration Tests (${{ matrix.partition }}/2)
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        partition: [1, 2]
     steps:
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 512
+          root-reserve-mb: 4096
           swap-size-mb: 1024
           remove-dotnet: 'true'
           remove-android: 'true'
@@ -55,10 +59,17 @@ jobs:
         with:
           tool: nextest
 
-      - name: Run cross-crate integration tests
+      - name: Run cross-crate integration tests (partition ${{ matrix.partition }}/2)
         env:
           RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold"
-        run: cargo make cross-crate-integration-test
+        run: |
+          cargo nextest run \
+            --package reinhardt-integration-tests \
+            --all-features \
+            --partition hash:${{ matrix.partition }}/2 \
+            --no-fail-fast \
+            --status-level=none \
+            --final-status-level=none
 
       - name: Docker cleanup after tests
         if: always()
