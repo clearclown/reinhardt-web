@@ -26,7 +26,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: false  # Keep swap to prevent linker OOM
+          swap-storage: true  # Remove swap for additional disk space (mold linker prevents OOM)
 
       - name: Checkout repository
         uses: actions/checkout@v4
