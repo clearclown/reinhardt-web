@@ -1,4 +1,4 @@
-name: Integration Tests
+name: Intra-Crate Integration Tests
 
 on:
   workflow_call:
@@ -7,16 +7,14 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  CARGO_TARGET_DIR: /tmp/cargo_target
   CARGO_INCREMENTAL: 0
-  CARGO_BUILD_JOBS: 1  # Limit concurrent link jobs to prevent OOM
-  # Reduce debug info to minimize disk usage
+  CARGO_BUILD_JOBS: 1
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
 
 jobs:
-  integration-test:
-    name: Integration Tests
+  intra-crate-integration-test:
+    name: Intra-Crate Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -44,7 +42,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mold clang lld build-essential
-          # Clean apt cache immediately to free disk space
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
 
@@ -58,35 +55,7 @@ jobs:
         with:
           tool: nextest
 
-      - name: Additional disk cleanup before tests
-        run: |
-          echo "Disk usage before additional cleanup:"
-          df -h
-          # Remove apt cache
-          sudo apt-get clean
-          sudo rm -rf /var/lib/apt/lists/* || true
-          # Remove old Docker resources
-          docker system prune -af --volumes || true
-          # Remove Docker builder cache
-          docker builder prune -af || true
-          # Remove pip cache
-          rm -rf ~/.cache/pip || true
-          # Remove npm cache
-          rm -rf ~/.npm || true
-          # Remove yarn cache
-          rm -rf ~/.cache/yarn || true
-          # Remove Gradle cache
-          rm -rf ~/.gradle || true
-          # Remove Maven cache
-          rm -rf ~/.m2 || true
-          echo "Disk usage after additional cleanup:"
-          df -h
-
-      - name: Run integration tests
+      - name: Run intra-crate integration tests
         env:
           RUSTFLAGS: "-C linker=clang -C link-arg=-fuse-ld=mold"
-        run: cargo make integration-test-only
-
-      - name: Docker cleanup after integration tests
-        if: always()
-        run: docker system prune -af
+        run: cargo make intra-crate-integration-test

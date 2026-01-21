@@ -10,7 +10,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  CARGO_TARGET_DIR: /tmp/cargo_target
   CARGO_INCREMENTAL: 0
 
 jobs:
@@ -35,27 +34,32 @@ jobs:
 
   # Phase 2: Parallel execution group - tests run simultaneously on independent runners
   # Note: Each job runs on its own runner (no shared disk)
-  # Disk usage per job: integration (~15-20GB), doc (~5GB), ui (~5GB)
-  integration-test:
-    name: Integration Tests
-    uses: ./.github/workflows/integration-test.yml
-    needs: [unit-test]  # Run after unit tests complete
+  # Integration tests are split into intra-crate and cross-crate to reduce disk usage per job
+  intra-crate-integration-test:
+    name: Intra-Crate Integration Tests
+    uses: ./.github/workflows/intra-crate-integration-test.yml
+    needs: [unit-test]
+
+  cross-crate-integration-test:
+    name: Cross-Crate Integration Tests
+    uses: ./.github/workflows/cross-crate-integration-test.yml
+    needs: [unit-test]
 
   doc-test:
     name: Documentation Tests
     uses: ./.github/workflows/doc-test.yml
-    needs: [unit-test]  # Run in parallel with integration-test
+    needs: [unit-test]  # Run in parallel with integration tests
 
   ui-test:
     name: UI Tests
     uses: ./.github/workflows/ui-test.yml
-    needs: [unit-test]  # Run in parallel with integration-test and doc-test
+    needs: [unit-test]  # Run in parallel with integration tests and doc-test
 
   # Phase 3: Examples tests run last (requires 70-90GB, must run alone)
   examples-test:
     name: Examples Tests
     uses: ./.github/workflows/examples-test.yml
-    needs: [integration-test, doc-test, ui-test]  # Wait for all parallel tests to complete
+    needs: [intra-crate-integration-test, cross-crate-integration-test, doc-test, ui-test]  # Wait for all parallel tests to complete
 
   # All jobs must pass
   ci-success:
@@ -66,7 +70,8 @@ jobs:
       - fmt
       - clippy
       - unit-test
-      - integration-test
+      - intra-crate-integration-test
+      - cross-crate-integration-test
       - doc-test
       - examples-test
       - ui-test
