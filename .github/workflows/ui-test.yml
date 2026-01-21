@@ -41,6 +41,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mold clang lld build-essential
+          # Clean apt cache immediately to free disk space
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
 
       - name: Install cargo-make
         uses: taiki-e/install-action@v2
