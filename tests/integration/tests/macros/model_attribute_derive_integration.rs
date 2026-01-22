@@ -1,5 +1,14 @@
 //! Tests for automatic derive trait addition in `#[model(...)]` attribute macro
+//!
+//! This test suite validates that:
+//! - Model macro automatically derives Debug, Clone, and PartialEq
+//! - Users can manually add Hash and Eq when needed
+//! - ManyToMany fields generate accessor methods correctly
+//!
+//! Note: These tests were moved from reinhardt-macros crate to avoid circular
+//! dependency issues during crates.io publishing.
 
+use reinhardt::db::associations::ManyToManyField;
 use reinhardt::model;
 use serde::{Deserialize, Serialize};
 
@@ -176,22 +185,20 @@ fn test_partialeq() {
 
 #[test]
 fn test_many_to_many_accessor_methods_generated() {
-	use reinhardt::db::associations::ManyToManyField;
-
 	// Test basic ManyToMany field generates accessor method
-	#[model(app_label = "test", table_name = "users")]
+	#[model(app_label = "test", table_name = "m2m_users")]
 	#[derive(Serialize, Deserialize)]
-	pub(crate) struct User {
+	pub(crate) struct M2mUser {
 		#[field(primary_key = true)]
 		pub id: i64,
 		#[field(max_length = 255)]
 		pub username: String,
 		#[rel(many_to_many, related_name = "followers")]
-		pub following: ManyToManyField<User, User>,
+		pub following: ManyToManyField<M2mUser, M2mUser>,
 	}
 
 	// Verify the model compiles and has the expected structure
-	let _user = User {
+	let _user = M2mUser {
 		id: 1,
 		username: "alice".to_string(),
 		following: Default::default(),
@@ -200,14 +207,12 @@ fn test_many_to_many_accessor_methods_generated() {
 	// The accessor method should exist (compile-time check)
 	// Note: We verify the method exists by type-checking a function pointer
 	// We can't actually call it without a database connection
-	let _accessor_method: fn(&User, _) -> _ = User::following_accessor;
+	let _accessor_method: fn(&M2mUser, _) -> _ = M2mUser::following_accessor;
 	let _ = _accessor_method;
 }
 
 #[test]
 fn test_self_referential_many_to_many() {
-	use reinhardt::db::associations::ManyToManyField;
-
 	// Test self-referential ManyToMany (User -> User)
 	#[model(app_label = "test", table_name = "social_users")]
 	#[derive(Serialize, Deserialize)]
@@ -234,11 +239,9 @@ fn test_self_referential_many_to_many() {
 
 #[test]
 fn test_multiple_many_to_many_fields() {
-	use reinhardt::db::associations::ManyToManyField;
-
-	#[model(app_label = "test", table_name = "groups")]
+	#[model(app_label = "test", table_name = "m2m_groups")]
 	#[derive(Serialize, Deserialize)]
-	pub(crate) struct Group {
+	pub(crate) struct M2mGroup {
 		#[field(primary_key = true)]
 		pub id: i64,
 		#[field(max_length = 255)]
@@ -251,7 +254,7 @@ fn test_multiple_many_to_many_fields() {
 		#[field(primary_key = true)]
 		pub id: i64,
 		#[rel(many_to_many, related_name = "users")]
-		pub groups: ManyToManyField<MultiUser, Group>,
+		pub groups: ManyToManyField<MultiUser, M2mGroup>,
 		#[rel(many_to_many, related_name = "friends_of")]
 		pub friends: ManyToManyField<MultiUser, MultiUser>,
 	}
