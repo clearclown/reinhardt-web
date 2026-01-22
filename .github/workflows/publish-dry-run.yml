@@ -106,9 +106,12 @@ jobs:
           # These errors occur when dependent crates are not yet published to crates.io
           DEPENDENCY_ERRORS=$(echo "$OUTPUT" | grep "no matching package named" || true)
 
-          # If there are dependency errors, also filter out related "failed to prepare" errors
+          # If there are dependency errors, also filter out related cascading errors
+          # These include:
+          # - "failed to prepare local package for uploading" (direct consequence of missing deps)
+          # - "failed to parse manifest" (Cargo cannot resolve deps in manifest)
           if [ -n "$DEPENDENCY_ERRORS" ]; then
-            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" | grep -v "no matching package named" | grep -v "failed to prepare local package for uploading" || true)
+            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" | grep -v "no matching package named" | grep -v "failed to prepare local package for uploading" | grep -v "failed to parse manifest" || true)
           else
             FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" || true)
           fi
