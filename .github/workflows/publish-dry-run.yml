@@ -102,16 +102,42 @@ jobs:
           echo ""
 
           # Check for error patterns in output
-          if echo "$OUTPUT" | grep -qE "error:|failed to|Failed to|ERROR|Error"; then
+          # Filter out dependency resolution errors (expected for initial release)
+          # These errors occur when dependent crates are not yet published to crates.io
+          DEPENDENCY_ERRORS=$(echo "$OUTPUT" | grep "no matching package named" || true)
+
+          # If there are dependency errors, also filter out related "failed to prepare" errors
+          if [ -n "$DEPENDENCY_ERRORS" ]; then
+            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" | grep -v "no matching package named" | grep -v "failed to prepare local package for uploading" || true)
+          else
+            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" || true)
+          fi
+
+          if [ -n "$FILTERED_ERRORS" ]; then
             echo "=========================================="
             echo "❌ Publish dry-run detected errors"
             echo "=========================================="
             echo ""
             echo "Error details:"
-            echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" || true
+            echo "$FILTERED_ERRORS"
             echo ""
             echo "::error::Publish dry-run failed. Check output above for details."
             exit 1
+          fi
+
+          # Warn about dependency errors (expected for initial release)
+          if [ -n "$DEPENDENCY_ERRORS" ]; then
+            echo "=========================================="
+            echo "⚠️ Dependency resolution errors detected (expected for initial release)"
+            echo "=========================================="
+            echo ""
+            echo "The following dependencies are not yet published to crates.io:"
+            echo "$DEPENDENCY_ERRORS" | grep -oP "no matching package named \`\K[^\`]+" | sort -u | sed 's/^/  - /'
+            echo ""
+            echo "This is expected for initial release. The actual publish workflow"
+            echo "will publish crates in dependency order, resolving these errors."
+            echo ""
+            echo "::warning::Dependency errors detected but allowed for initial release."
           fi
 
           # Check for warning patterns
