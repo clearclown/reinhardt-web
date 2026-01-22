@@ -1,0 +1,64 @@
+[package]
+name = "reinhardt-middleware"
+version.workspace = true
+description = "Middleware system for request/response processing pipeline"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = []
+
+# Fine-grained middleware features
+cors = []
+compression = []
+security = []
+rate-limit = []
+sessions = []
+
+# Database support for certain middleware
+sqlx = ["dep:sqlx"]
+
+# Aggregate all middleware features
+full = ["cors", "compression", "security", "rate-limit", "sessions", "sqlx"]
+
+[dependencies]
+reinhardt-core = { workspace = true, features = [
+    "types",
+    "exception",
+    "security",
+] }
+reinhardt-http = { workspace = true }
+reinhardt-auth = { workspace = true, features = ["sessions"] }
+reinhardt-mail = { workspace = true }
+reinhardt-conf = { workspace = true, features = ["settings"] }
+reinhardt-di = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+hyper = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+flate2 = { workspace = true }
+brotli = "8.0.2"
+sha2 = { workspace = true }
+hex = "0.4"
+httpdate = "1.0"
+bytes = { workspace = true }
+sqlx = { workspace = true, optional = true }
+regex = "1.10"
+log = "0.4"
+thiserror = { workspace = true }
+url = "2.5"
+uuid = { workspace = true }
+tokio = { workspace = true }
+colored = "3.0"
+
+[dev-dependencies]
+reinhardt-test = { workspace = true }
+tokio-test = "0.4"
+tokio = { workspace = true }
+serial_test = { workspace = true }
+rstest = { workspace = true }
+proptest = "1.4"
+trybuild = "1.0"
+http = { workspace = true }

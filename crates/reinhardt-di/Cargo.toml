@@ -1,0 +1,89 @@
+
+[package]
+name = "reinhardt-di"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Dependency injection system for Reinhardt, inspired by FastAPI"
+
+[[bin]]
+name = "check-di"
+path = "src/bin/check-di.rs"
+
+[dependencies]
+reinhardt-http = { workspace = true }
+
+# Internal crates
+reinhardt-di-macros = { workspace = true, optional = true }
+
+tokio = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+dashmap = "6.1"
+once_cell = "1.20"
+inventory = "0.3"
+indexmap = { version = "2.0", optional = true }
+genawaiter = { version = "0.99", optional = true }
+reinhardt-core = {workspace = true, features = ["exception", "validators"]}
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = "0.7"
+form_urlencoded = "1.2"
+http = "1.0"
+urlencoding = "2.1"
+regex = { workspace = true }
+validator = { version = "0.20.0", features = ["derive"], optional = true }
+multer = { version = "3.1", optional = true }
+futures-util = { version = "0.3", optional = true }
+uuid = { workspace = true, optional = true }
+
+[features]
+default = []
+params = []
+macros = ["dep:reinhardt-di-macros"]
+dev-tools = ["dep:indexmap"]
+generator = ["dep:genawaiter"]
+di-full = [
+  "params",
+  "macros",
+  "dev-tools",
+  "generator",
+  
+]
+validation = ["reinhardt-core/validators", "validator"]
+multi-value-arrays = []
+multipart = ["multer", "futures-util"]
+uuid = ["dep:uuid"]
+full = ["validation", "multi-value-arrays", "multipart", "uuid"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+futures = "0.3"
+bytes.workspace = true
+hyper.workspace = true
+serial_test = { workspace = true }
+reinhardt-core = { workspace = true, features = ["types", "exception"] }
+reinhardt-macros = { workspace = true }
+serde = { workspace = true }
+proptest = { workspace = true }
+rstest = { workspace = true }
+reinhardt-test = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+sea-query = { workspace = true }
+criterion = { workspace = true, features = ["async_tokio"] }
+reinhardt-di = {workspace = true, features = ["params"]}
+
+[[bench]]
+name = "cache_performance"
+harness = false
+
+[[bench]]
+name = "depth_sampling"
+harness = false
+
+[[bench]]
+name = "concurrency"
+harness = false

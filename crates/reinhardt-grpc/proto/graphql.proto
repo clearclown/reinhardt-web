@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package reinhardt.graphql;
+
+import "common.proto";
+
+// GraphQL request
+message GraphQLRequest {
+  // GraphQL query string
+  string query = 1;
+
+  // Variables (JSON-formatted string)
+  optional string variables = 2;
+
+  // Operation name (specified when multiple operations exist)
+  optional string operation_name = 3;
+}
+
+// GraphQL error
+message GraphQLError {
+  // Error message
+  string message = 1;
+
+  // Error location information
+  repeated GraphQLLocation locations = 2;
+
+  // Error path
+  repeated PathSegment path = 3;
+
+  // Extension information (JSON-formatted string)
+  optional string extensions = 4;
+}
+
+// GraphQL error location
+message GraphQLLocation {
+  int32 line = 1;
+  int32 column = 2;
+}
+
+// Error path segment
+message PathSegment {
+  oneof segment {
+    string field = 1;
+    int32 index = 2;
+  }
+}
+
+// GraphQL response
+message GraphQLResponse {
+  // Response data (JSON-formatted string)
+  optional string data = 1;
+
+  // Error list
+  repeated GraphQLError errors = 2;
+
+  // Extension information (JSON-formatted string)
+  optional string extensions = 3;
+}
+
+// Subscription event
+message SubscriptionEvent {
+  // Event ID
+  string id = 1;
+
+  // Event type
+  string event_type = 2;
+
+  // Payload (GraphQLResponse)
+  GraphQLResponse payload = 3;
+
+  // Timestamp
+  reinhardt.common.Timestamp timestamp = 4;
+}
+
+// GraphQL service
+service GraphQLService {
+  // Query operation (unary RPC)
+  rpc ExecuteQuery(GraphQLRequest) returns (GraphQLResponse);
+
+  // Mutation operation (unary RPC)
+  rpc ExecuteMutation(GraphQLRequest) returns (GraphQLResponse);
+
+  // Subscription operation (server streaming RPC)
+  rpc ExecuteSubscription(GraphQLRequest) returns (stream SubscriptionEvent);
+}

@@ -1,0 +1,511 @@
+# Reinhardt - cargo-make configuration
+
+[config]
+default_to_workspace = false
+
+# Environment variables
+[env]
+CARGO_TERM_COLOR = "always"
+RUST_BACKTRACE = "1"
+
+# ============================================================================
+# Core Development Tasks
+# ============================================================================
+
+[tasks.check]
+description = "Run cargo check on workspace"
+command = "cargo"
+args = [
+  "check",
+  "--workspace",
+  "--all",
+  "--all-features",
+  "--all-targets",
+  "--tests",
+  "--benches",
+  "--examples",
+  "--quiet"
+]
+
+[tasks.build]
+description = "Build workspace"
+command = "cargo"
+args = ["build", "--workspace", "--all", "--all-features", "--all-targets", "--quiet", "--bins", "--examples", "--tests", "--benches"]
+
+[tasks.build-release]
+description = "Build workspace in release mode"
+command = "cargo"
+args = ["build", "--workspace", "--all", "--all-features", "--release", "--quiet"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+command = "cargo"
+args = ["clean"]
+
+# ============================================================================
+# Code Quality Tasks
+# ============================================================================
+
+[tasks.fmt-check]
+description = "Check all code formatting (Rust + page! DSL)"
+command = "cargo"
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all", "--check"]
+
+[tasks.fmt-fix]
+description = "Auto-fix all code formatting (Rust + page! DSL)"
+command = "cargo"
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt-all"]
+
+[tasks.fmt-rust-only]
+description = "Format Rust code only (without page! macro protection)"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.clippy-check]
+description = "Run clippy linter"
+command = "cargo"
+args = [
+  "clippy",
+  "--workspace",
+  "--all",
+  "--all-features",
+  "--",
+  "-D",
+  "warnings",
+]
+
+[tasks.clippy-fix]
+description = "Run clippy linter and automatically fix found errors."
+command = "cargo"
+args = [
+  "clippy",
+  "--fix",
+  "--workspace",
+  "--all",
+  "--all-features",
+  "--allow-dirty",
+  "--",
+  "-D",
+  "warnings",
+]
+
+[tasks.fmt-page-only]
+description = "Format page! macro DSL only (without rustfmt)"
+command = "cargo"
+args = ["run", "-p", "reinhardt-admin-cli", "--", "fmt", "."]
+
+[tasks.auto-fix]
+description = "Run all auto-fixes"
+dependencies = ["clippy-fix", "fmt-fix"]
+
+# ============================================================================
+# Testing Tasks
+# ============================================================================
+
+[tasks.doc-test-only]
+description = "Run only documentation tests without Docker cleanup"
+command = "cargo"
+args = ["test", "--workspace", "--doc", "--quiet", "--all-features", "--no-fail-fast"]
+
+[tasks.doc-test]
+clear = true
+description = "Run only documentation tests (with Docker cleanup)"
+dependencies = ["docker-cleanup-force", "doc-test-only"]
+
+[tasks.doc-test-crate]
+description = "Run documentation tests for specific package(s). Usage: cargo make doc-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo test $args --doc --quiet --all-features --no-fail-fast
+'''
+
+[tasks.bench]
+description = "Run benchmark tests in tests/bench"
+command = "cargo"
+args = ["bench", "--manifest-path", "tests/bench/Cargo.toml"]
+
+[tasks.unit-test]
+description = "Run unit tests (src/)"
+command = "cargo"
+args = [
+  "nextest",
+  "run",
+  "--workspace",
+  "--lib",
+  "--exclude",
+  "reinhardt-integration-tests",
+  "--all-features",
+  "--no-fail-fast",
+  "--status-level=none",
+  "--final-status-level=none",
+]
+
+[tasks.unit-test-crate]
+description = "Run unit tests for specific package(s). Usage: cargo make unit-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --lib --all-features --no-fail-fast --show-progress=none --status-level=none --final-status-level=none
+'''
+
+[tasks.intra-crate-integration-test]
+description = "Run intra-crate integration tests (tests/) excluding UI tests"
+command = "cargo"
+args = [
+  "nextest",
+  "run",
+  "--workspace",
+  "--test",
+  "*",
+  "--exclude",
+  "reinhardt-integration-tests",
+  "-E", "not binary(/ui/)",
+  "--all-features",
+  "--no-fail-fast",
+  "--status-level=none",
+  "--final-status-level=none"
+]
+
+[tasks.intra-crate-integration-test-crate]
+description = "Run intra-crate integration tests for specific package(s). Usage: cargo make intra-crate-integration-test-crate -- -p package1 -p package2"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --test "*" --all-features --no-fail-fast --show-progress=none --status-level=none --final-status-level=none
+'''
+
+[tasks.cross-crate-integration-test]
+description = "Run cross-crate integration tests (reinhardt-integration-tests)"
+command = "cargo"
+args = [
+  "nextest",
+  "run",
+  "--package",
+  "reinhardt-integration-tests",
+  "--all-features",
+  "--no-fail-fast",
+  "--status-level=none",
+  "--final-status-level=none"
+]
+
+[tasks.integration-test-only]
+description = "Run all integration tests without Docker cleanup"
+dependencies = ["intra-crate-integration-test", "cross-crate-integration-test"]
+
+[tasks.integration-test]
+description = "Run all integration tests (with Docker cleanup)"
+dependencies = ["docker-cleanup-force", "integration-test-only"]
+
+[tasks.local-examples-test]
+description = "Test local examples (now part of workspace)"
+command = "cargo"
+args = [
+  "nextest",
+  "run",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues",
+  "--verbose"
+]
+
+[tasks.local-examples-test-crate]
+description = "Test specific local example(s). Usage: cargo make local-examples-test-crate -- -p examples-hello-world -p examples-rest-api"
+script = '''
+#!/bin/bash
+args="${CARGO_MAKE_TASK_ARGS#--}"
+args="${args//;/ }"
+cargo nextest run $args --verbose
+'''
+
+[tasks.remote-examples-test]
+description = "Test remote examples (uses crates.io published versions)"
+cwd = "examples/remote"
+command = "cargo"
+args = ["nextest", "run", "--workspace", "--verbose"]
+
+[tasks.ui-test-only]
+description = "Run UI tests (trybuild) separately with serial execution without Docker cleanup"
+command = "cargo"
+args = [
+  "nextest",
+  "run",
+  "--profile", "ui-test",
+  "--workspace",
+  "-E", "binary(/ui/)",
+  "--no-fail-fast",
+  "--status-level=none",
+  "--final-status-level=none"
+]
+
+[tasks.ui-test]
+description = "Run UI tests (trybuild) separately with serial execution (with Docker cleanup)"
+dependencies = ["docker-cleanup-force", "ui-test-only"]
+
+[tasks.examples-test-only]
+description = "Test all examples (local + remote) without Docker cleanup"
+dependencies = ["local-examples-test", "remote-examples-test"]
+
+[tasks.examples-test]
+description = "Test all examples (local + remote) (with Docker cleanup)"
+dependencies = ["docker-cleanup-force", "examples-test-only"]
+
+[tasks.test-only]
+description = "Run all tests without Docker cleanup"
+dependencies = [
+  "unit-test",
+  "integration-test",
+  "doc-test",
+  "examples-test",
+  "ui-test"
+]
+
+[tasks.test]
+clear = true
+description = "Run all tests (with Docker cleanup)"
+dependencies = ["docker-cleanup-force", "test-only"]
+
+# ============================================================================
+# CI Tasks
+# ============================================================================
+
+[tasks.ci]
+clear = true
+description = "Run all CI checks (check, fmt, clippy, examples-build, tests)"
+dependencies = ["check", "fmt-check", "clippy-check", "examples-build", "test"]
+
+# ============================================================================
+# Documentation Tasks
+# ============================================================================
+
+[tasks.doc]
+description = "Build documentation"
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps"]
+
+[tasks.doc-open]
+description = "Build and open documentation"
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps", "--open"]
+
+# ============================================================================
+# Utility Tasks
+# ============================================================================
+
+[tasks.outdated]
+description = "Check for outdated dependencies"
+command = "cargo"
+args = ["outdated"]
+
+[tasks.update]
+description = "Update dependencies"
+command = "cargo"
+args = ["update"]
+
+[tasks.tree]
+description = "Display dependency tree"
+command = "cargo"
+args = ["tree", "--workspace"]
+
+[tasks.bloat]
+description = "Analyze binary bloat"
+command = "cargo"
+args = ["bloat", "--release"]
+
+# ============================================================================
+# Docker Cleanup Tasks
+# ============================================================================
+
+[tasks.docker-cleanup-list]
+description = "List TestContainers resources (containers, volumes, networks)"
+command = "scripts/cleanup-docker.sh"
+args = ["list"]
+
+[tasks.docker-cleanup]
+description = "Remove TestContainers resources interactively"
+command = "scripts/cleanup-docker.sh"
+args = ["all"]
+
+[tasks.docker-cleanup-force]
+description = "Remove all TestContainers resources without confirmation"
+command = "scripts/cleanup-docker.sh"
+args = ["all", "--force"]
+
+[tasks.docker-cleanup-containers]
+description = "Remove TestContainers containers only"
+command = "scripts/cleanup-docker.sh"
+args = ["containers"]
+
+[tasks.docker-cleanup-volumes]
+description = "Remove TestContainers volumes only"
+command = "scripts/cleanup-docker.sh"
+args = ["volumes"]
+
+[tasks.docker-cleanup-networks]
+description = "Remove TestContainers networks only"
+command = "scripts/cleanup-docker.sh"
+args = ["networks"]
+
+# ============================================================================
+# Helper Tasks
+# ============================================================================
+
+[tasks.default]
+description = "Default task - shows help"
+command = "cargo"
+args = ["make", "--list-all-steps"]
+
+[tasks.help]
+description = "Show available tasks"
+command = "cargo"
+args = ["make", "--list-all-steps"]
+
+# ============================================================================
+# Watch Tasks (using bacon)
+# ============================================================================
+
+[tasks.watch]
+description = "Watch for changes and run checks (requires bacon)"
+command = "bacon"
+dependencies = ["install-bacon"]
+
+[tasks.watch-test]
+description = "Watch for changes and run tests (requires bacon)"
+command = "bacon"
+args = ["test"]
+dependencies = ["install-bacon"]
+
+[tasks.watch-clippy]
+description = "Watch for changes and run clippy (requires bacon)"
+command = "bacon"
+args = ["clippy"]
+dependencies = ["install-bacon"]
+
+[tasks.install-bacon]
+description = "Install bacon if not already installed"
+script = '''
+if ! command -v bacon &> /dev/null
+then
+	echo "Installing bacon..."
+	cargo install --locked bacon
+else
+	echo "bacon is already installed"
+fi
+'''
+
+# ============================================================================
+# Examples Tasks
+# ============================================================================
+
+[tasks.local-examples-build]
+description = "Build local examples (now part of workspace)"
+command = "cargo"
+args = [
+  "build",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues",
+  "--release"
+]
+
+[tasks.remote-examples-build]
+description = "Build remote examples individually (auto-detect examples-* directories)"
+script = '''
+#!/bin/bash
+
+# Change to examples/remote directory
+cd examples/remote
+
+EXIT_CODE=0
+
+# Find all directories starting with "examples-"
+for example_dir in examples-*; do
+  if [ -d "$example_dir" ]; then
+    example_name=$(basename "$example_dir")
+    echo ""
+    echo "========================================"
+    echo "Building $example_name..."
+    echo "========================================"
+
+    # Build and capture output to temporary file
+    BUILD_LOG=$(mktemp)
+
+    # Run build and capture both output and exit status
+    # Use PIPESTATUS to get cargo's exit code (not tee's)
+    (cd "$example_dir" && cargo build --release 2>&1 | tee "$BUILD_LOG"; exit ${PIPESTATUS[0]})
+    BUILD_STATUS=$?
+
+    if [ $BUILD_STATUS -eq 0 ]; then
+      # Build succeeded
+      echo "✅ $example_name built successfully"
+      rm -f "$BUILD_LOG"
+    else
+      # Build failed - check if it's a version/dependency issue
+      if grep -qE "failed to select a version|does not have that feature|no matching version|could not be found" "$BUILD_LOG"; then
+        # Version/dependency issue - skip
+        echo "⏭️  Skipping $example_name (dependency version mismatch)"
+      else
+        # Other error - treat as actual build failure
+        echo "❌ Build failed: $example_name"
+        echo "Last 30 lines of error:"
+        tail -n 30 "$BUILD_LOG"
+        EXIT_CODE=1
+      fi
+      rm -f "$BUILD_LOG"
+    fi
+  fi
+done
+
+exit $EXIT_CODE
+'''
+
+[tasks.examples-build]
+description = "Build all examples (local + remote)"
+dependencies = ["local-examples-build", "remote-examples-build"]
+
+[tasks.local-examples-clean]
+description = "Clean local examples build artifacts (now part of workspace clean)"
+command = "cargo"
+args = [
+  "clean",
+  "-p", "examples-hello-world",
+  "-p", "examples-rest-api",
+  "-p", "examples-database-integration",
+  "-p", "examples-tutorial-basis",
+  "-p", "examples-tutorial-rest",
+  "-p", "examples-twitter",
+  "-p", "examples-github-issues"
+]
+
+[tasks.remote-examples-clean]
+description = "Clean remote examples build artifacts"
+cwd = "examples/remote"
+command = "cargo"
+args = ["clean"]
+
+[tasks.examples-clean]
+description = "Clean all examples build artifacts"
+dependencies = ["local-examples-clean", "remote-examples-clean"]
+
+# ============================================================================
+# Combined CI Tasks (including examples)
+# ============================================================================
+
+[tasks.ci-full]
+description = "Run all CI checks including examples tests"
+dependencies = ["check", "fmt", "clippy", "test", "examples-test"]
+
+[tasks.ci-with-examples]
+description = "Alias for ci-full"
+dependencies = ["ci-full"]

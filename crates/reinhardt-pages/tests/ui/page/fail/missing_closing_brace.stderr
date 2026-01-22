@@ -1,0 +1,10 @@
+error: mismatched closing delimiter: `)`
+  --> tests/ui/page/fail/missing_closing_brace.rs:9:26
+   |
+ 9 |     let _invalid = page!(|| {
+   |                         -   ^ unclosed delimiter
+   |                         |
+   |                         closing delimiter possibly meant for this
+...
+12 |     });
+   |      ^ mismatched closing delimiter

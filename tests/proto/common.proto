@@ -1,0 +1,11 @@
+syntax = "proto3";
+package reinhardt.common;
+
+// Timestamp message type (compatible with google.protobuf.Timestamp)
+message Timestamp {
+	int64 seconds = 1;
+	int32 nanos = 2;
+}
+
+// Empty message type (compatible with google.protobuf.Empty)
+message Empty {}

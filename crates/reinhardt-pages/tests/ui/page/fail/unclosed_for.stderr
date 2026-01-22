@@ -1,0 +1,8 @@
+error: mismatched closing delimiter: `)`
+  --> tests/ui/page/fail/unclosed_for.rs:9:44
+   |
+ 9 |     let _invalid = page!(|items: Vec<String>| {
+   |                                               ^ unclosed delimiter
+...
+15 | });
+   |  ^ mismatched closing delimiter

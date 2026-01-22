@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    # Run CI on PRs targeting any branch
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  # Call all reusable workflows
+  check:
+    name: Check
+    uses: ./.github/workflows/check.yml
+
+  fmt:
+    name: Format
+    uses: ./.github/workflows/fmt.yml
+
+  clippy:
+    name: Clippy
+    uses: ./.github/workflows/clippy.yml
+
+  # Phase 1: All tests run in parallel after lightweight checks
+  # Note: Each job runs on its own runner (no shared disk), so parallel execution is safe
+  # Integration tests are split into intra-crate and cross-crate to reduce disk usage per job
+  unit-test:
+    name: Unit Tests
+    uses: ./.github/workflows/unit-test.yml
+    needs: [check, fmt, clippy]
+
+  intra-crate-integration-test:
+    name: Intra-Crate Integration Tests
+    uses: ./.github/workflows/intra-crate-integration-test.yml
+    needs: [check, fmt, clippy]
+
+  cross-crate-integration-test:
+    name: Cross-Crate Integration Tests
+    uses: ./.github/workflows/cross-crate-integration-test.yml
+    needs: [check, fmt, clippy]
+
+  doc-test:
+    name: Documentation Tests
+    uses: ./.github/workflows/doc-test.yml
+    needs: [check, fmt, clippy]
+
+  ui-test:
+    name: UI Tests
+    uses: ./.github/workflows/ui-test.yml
+    needs: [check, fmt, clippy]
+
+  # Phase 2: Examples tests run last (requires 70-90GB, must run alone)
+  examples-test:
+    name: Examples Tests
+    uses: ./.github/workflows/examples-test.yml
+    needs: [unit-test, intra-crate-integration-test, cross-crate-integration-test, doc-test, ui-test]
+
+  # All jobs must pass
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs:
+      - check
+      - fmt
+      - clippy
+      - unit-test
+      - intra-crate-integration-test
+      - cross-crate-integration-test
+      - doc-test
+      - examples-test
+      - ui-test
+    steps:
+      - name: Mark CI as successful
+        run: echo "All CI checks passed!"

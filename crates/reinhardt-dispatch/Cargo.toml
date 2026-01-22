@@ -1,0 +1,40 @@
+[package]
+name = "reinhardt-dispatch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "URL dispatcher and request routing for Reinhardt framework"
+
+[dependencies]
+# Core dependencies
+reinhardt-urls = { workspace = true, features = ["routers"] }
+reinhardt-views = { workspace = true }
+reinhardt-middleware = { workspace = true }
+reinhardt-http = { workspace = true }
+reinhardt-core = { workspace = true, features = ["types", "signals", "exception"] }
+bytes = { workspace = true }
+
+# HTTP
+hyper = { workspace = true }
+http = { workspace = true }
+
+# Async
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+
+# Utilities
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[features]
+full = []
+
+[dev-dependencies]
+tokio = { workspace = true }
+hyper = { workspace = true }
+bytes = { workspace = true }
+tokio-test = "0.4"
+serde_json = { workspace = true }

@@ -1,0 +1,39 @@
+[package]
+name = "reinhardt-forms"
+version.workspace = true
+description = "Form handling and validation"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Documentation
+aquamarine = "0.5"
+
+# Internal dependencies
+reinhardt-core = { workspace = true, features = ["validators"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Regex
+regex = "1.10"
+
+# Date/Time
+chrono = { version = "0.4", features = ["serde"] }
+
+[features]
+full = []
+
+[dev-dependencies]
+tokio-test = "0.4"
+rstest = "0.23"
+proptest = "1.6"
+tempfile = "3"
+reinhardt-test = { workspace = true }

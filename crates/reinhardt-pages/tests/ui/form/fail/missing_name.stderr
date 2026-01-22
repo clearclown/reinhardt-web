@@ -1,0 +1,5 @@
+error: form! macro requires 'name' property
+ --> tests/ui/form/fail/missing_name.rs:8:3
+  |
+8 |         action: "/api/submit",
+  |         ^^^^^^

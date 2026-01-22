@@ -1,0 +1,64 @@
+name: Documentation Tests
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  CARGO_TARGET_DIR: /tmp/cargo_target
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  doc-test:
+    name: Documentation Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+
+      - name: Setup protoc
+        uses: ./.github/actions/setup-protoc
+
+      - name: Install cargo-make
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-make
+
+      - name: Additional disk cleanup before tests
+        run: |
+          echo "Disk usage before additional cleanup:"
+          df -h
+          # Remove apt cache
+          sudo apt-get clean
+          # Remove old Docker resources
+          docker system prune -af --volumes || true
+          # Remove Docker builder cache
+          docker builder prune -af || true
+          # Remove pip cache
+          rm -rf ~/.cache/pip || true
+          echo "Disk usage after additional cleanup:"
+          df -h
+
+      - name: Run doc tests
+        run: cargo make doc-test-only
+
+      - name: Docker cleanup after doc tests
+        if: always()
+        run: docker system prune -af

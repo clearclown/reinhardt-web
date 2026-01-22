@@ -1,0 +1,14 @@
+error[E0053]: method `execute` has an incompatible type for trait
+  --> tests/ui/command_invalid_return.rs:13:1
+   |
+13 | #[async_trait]
+   | ^^^^^^^^^^^^^^ expected `Result<(), CommandError>`, found `String`
+   |
+   = note: expected signature `fn(&'life0 InvalidReturnCommand, &'life1 CommandContext) -> Pin<Box<(dyn Future<Output = Result<(), CommandError>> + Send + 'async_trait)>>`
+              found signature `fn(&'life0 InvalidReturnCommand, &'life1 CommandContext) -> Pin<Box<(dyn Future<Output = String> + Send + 'async_trait)>>`
+   = note: this error originates in the attribute macro `async_trait` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: change the output type to match the trait
+   |
+13 - #[async_trait]
+13 + Pin<Box<(dyn Future<Output = Result<(), CommandError>> + Send + 'async_trait)>>
+   |

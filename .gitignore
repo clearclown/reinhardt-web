@@ -57,11 +57,12 @@ rust-project.json
 
 ### VisualStudioCode ###
 .vscode/*
-!.vscode/settings.json
+# !.vscode/settings.json
+# !.vscode/extensions.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/extensions.json
 !.vscode/*.code-snippets
+!.vscode/*.example.json
 
 # Local History for Visual Studio Code
 .history/
@@ -75,3 +76,42 @@ rust-project.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,rust,rust-analyzer
+
+# Reference repositories (not part of the project)
+django/
+django-rest-framework/
+sqlalchemy/
+fastapi/
+
+# Jekyll build files
+docs/_site/
+docs/.jekyll-cache/
+docs/.sass-cache/
+docs/Gemfile.lock
+
+**/*.bk*
+**/*.bak*
+**/*.backup*
+**/*.\~*
+**/.env*
+!.env.example
+!.env.sample
+.ignore/
+.claude/
+:memory:
+
+# Bacon export files
+.bacon-locations
+*.log
+*.tmp
+
+file::memory:
+*.skip
+
+# Proptest regression files
+*.proptest-regressions
+.playwright-mcp
+.claude-code-harness-version
+Plans.md
+
+.aida

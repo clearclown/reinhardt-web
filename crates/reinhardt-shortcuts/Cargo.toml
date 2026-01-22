@@ -1,0 +1,37 @@
+[package]
+name = "reinhardt-shortcuts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Django-style shortcut functions for redirects, rendering, and 404 error handling"
+
+[dependencies]
+reinhardt-core = { workspace = true }
+reinhardt-http = { workspace = true }
+reinhardt-views = { workspace = true }
+reinhardt-db = { workspace = true, optional = true }
+reinhardt-urls = { workspace = true, features = ["routers"] }
+
+bytes = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hyper = { workspace = true }
+
+[features]
+default = []
+database = ["reinhardt-db", "reinhardt-db/backends", "reinhardt-db/pool", "reinhardt-db/orm", "reinhardt-db/postgres"]
+full = ["database"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+rstest = { workspace = true }
+reinhardt-test = { workspace = true, features = ["testcontainers"] }
+sqlx = { workspace = true }
+serial_test = { workspace = true }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+async-trait = { workspace = true }
+tempfile = { workspace = true }

@@ -1,0 +1,123 @@
+# Nextest Configuration for Reinhardt
+#
+# This configuration addresses flaky test issues during parallel execution,
+# particularly for TestContainers-based database integration tests.
+
+[profile.default]
+# Limit concurrent test execution to prevent resource exhaustion
+# Views tests spawn PostgreSQL containers which consume significant resources
+test-threads = 2
+
+# Increase timeout for database operations
+# TestContainers startup can be slow, especially PostgreSQL 17
+slow-timeout = "360s"
+
+# Enable retries for flaky infrastructure tests
+retries = 2
+
+# Separate integration tests into dedicated worker threads
+# Reduces resource contention for database-dependent tests
+[[profile.default.overrides]]
+filter = 'test(integration)'
+threads-required = 1
+
+# Database tests in examples must run serially due to global state
+# cargo-nextest runs tests in separate processes, so serial_test crate doesn't work
+# Instead, we force these tests to run one at a time via nextest configuration
+[[profile.default.overrides]]
+filter = 'binary(examples-database-integration) & test(test_)'
+threads-required = 1
+
+# Views tests must run serially to prevent connection pool exhaustion
+# Each test spawns independent PostgreSQL containers
+[[profile.default.overrides]]
+filter = 'package(reinhardt-integration-tests) & test(views_)'
+threads-required = 1
+
+# Session database integration tests require serial execution
+# They share an in-memory SQLite database that doesn't persist across processes
+[[profile.default.overrides]]
+filter = 'test(database_backend_integration)'
+threads-required = 1
+
+# Two-phase commit tests require serial execution
+# These tests coordinate transactions across multiple connections
+[[profile.default.overrides]]
+filter = 'test(two_phase_commit)'
+threads-required = 1
+slow-timeout = "120s"
+
+# Database edge cases tests require serial execution
+# These tests use PostgreSQL containers with limited connection pools
+[[profile.default.overrides]]
+filter = 'test(edge_cases)'
+threads-required = 1
+
+# Infrastructure database integration tests require serial execution
+# These tests spawn multiple containers and have deep fixture chains
+[[profile.default.overrides]]
+filter = 'test(database_integration)'
+threads-required = 1
+
+# Note: trybuild UI tests are now separated into a dedicated profile
+# Use `cargo make ui-test` to run UI tests with the ui-test profile
+# UI tests are identified by binary(/ui/) filter pattern
+
+# JUnit output for CI/CD integration
+[profile.default.junit]
+path = "target/nextest/junit.xml"
+
+# Views tests profile - runs tests serially to prevent connection pool exhaustion
+# Each views test spawns independent PostgreSQL containers with limited connections
+#
+# Usage:
+#   cargo nextest run --profile views-serial -E 'test(views_)'
+[profile.views-serial]
+test-threads = 1
+slow-timeout = "60s"
+
+# Database-intensive test profile
+# Use this profile for tests that heavily use database connections
+# to avoid connection pool exhaustion and PoolTimedOut errors
+#
+# Usage:
+#   cargo nextest run --profile db-tests
+#   TEST_MAX_CONNECTIONS=30 cargo nextest run --profile db-tests
+[profile.db-tests]
+# Limit parallelism for database tests to reduce connection pool contention
+test-threads = 2  # 4→2 for stricter connection control
+
+# Increase timeouts for database operations
+slow-timeout = "60s"
+
+# Database migration/introspect/views/edge_cases tests need sequential execution
+# to avoid connection pool exhaustion
+[[profile.db-tests.overrides]]
+filter = 'test(/(migrations|introspect|views|db_|edge_cases)/)'
+threads-required = 1
+
+# Long-running test profile (DI macro compilation, etc.)
+# Separates slow tests from regular test flow to improve developer experience
+#
+# Usage:
+#   cargo nextest run --profile slow-tests
+[profile.slow-tests]
+# Very long timeout for compilation tests
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+# DI macro compilation tests can run in parallel but need extended timeout
+[[profile.slow-tests.overrides]]
+filter = 'test(compile) | test(trybuild)'
+slow-timeout = "600s"
+
+# UI Test dedicated profile (trybuild compile-time tests)
+# trybuild internally spawns the Rust compiler, requiring complete serial execution
+# to prevent file lock contention on the build directory
+#
+# Usage:
+#   cargo make ui-test
+#   cargo nextest run --profile ui-test -E 'binary(/ui/)'
+[profile.ui-test]
+test-threads = 1
+slow-timeout = "600s"
+retries = 0

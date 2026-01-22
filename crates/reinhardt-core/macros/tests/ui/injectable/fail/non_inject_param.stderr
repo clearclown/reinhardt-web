@@ -1,0 +1,5 @@
+error: #[injectable] functions can only have #[inject] parameters
+ --> tests/ui/injectable/fail/non_inject_param.rs:6:1
+  |
+6 | fn bad_factory(regular_param: String) -> MyService {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
