@@ -1,9 +1,19 @@
-use reinhardt_core::signals::{SignalError, auto_connect_receivers};
+//! Integration tests for the receiver macro
+//!
+//! Tests that verify:
+//! - Basic receiver registration via inventory
+//! - Auto-connection of receivers
+//! - Signal dispatch to receivers
+//!
+//! Note: These tests were moved from reinhardt-macros crate to avoid circular
+//! dependency issues during crates.io publishing.
+
+use reinhardt_core::signals::{auto_connect_receivers, get_signal_with_string, SignalError};
 use reinhardt_macros::receiver;
 use serial_test::serial;
 use std::any::Any;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 // Global counters for testing receiver invocation
 static SAVE_HANDLER_CALLS: AtomicUsize = AtomicUsize::new(0);
@@ -49,8 +59,6 @@ async fn test_auto_connect_receivers() {
 #[tokio::test]
 #[serial(receiver_registry)]
 async fn test_receiver_invocation_via_signal() {
-	use reinhardt_core::signals::get_signal_with_string;
-
 	// Reset counters
 	SAVE_HANDLER_CALLS.store(0, Ordering::SeqCst);
 	DELETE_HANDLER_CALLS.store(0, Ordering::SeqCst);
@@ -90,7 +98,6 @@ async fn test_receiver_invocation_via_signal() {
 #[tokio::test]
 #[serial(receiver_registry)]
 async fn test_receiver_priority_ordering() {
-	use reinhardt_core::signals::get_signal_with_string;
 	use std::sync::Mutex;
 
 	// Track call order
