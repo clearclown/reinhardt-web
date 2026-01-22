@@ -26,40 +26,39 @@ jobs:
     name: Clippy
     uses: ./.github/workflows/clippy.yml
 
-  # Phase 1: Unit tests run first to verify basic functionality
+  # Phase 1: All tests run in parallel after lightweight checks
+  # Note: Each job runs on its own runner (no shared disk), so parallel execution is safe
+  # Integration tests are split into intra-crate and cross-crate to reduce disk usage per job
   unit-test:
     name: Unit Tests
     uses: ./.github/workflows/unit-test.yml
-    needs: [check, fmt, clippy]  # Run after lightweight checks
+    needs: [check, fmt, clippy]
 
-  # Phase 2: Parallel execution group - tests run simultaneously on independent runners
-  # Note: Each job runs on its own runner (no shared disk)
-  # Integration tests are split into intra-crate and cross-crate to reduce disk usage per job
   intra-crate-integration-test:
     name: Intra-Crate Integration Tests
     uses: ./.github/workflows/intra-crate-integration-test.yml
-    needs: [unit-test]
+    needs: [check, fmt, clippy]
 
   cross-crate-integration-test:
     name: Cross-Crate Integration Tests
     uses: ./.github/workflows/cross-crate-integration-test.yml
-    needs: [unit-test]
+    needs: [check, fmt, clippy]
 
   doc-test:
     name: Documentation Tests
     uses: ./.github/workflows/doc-test.yml
-    needs: [unit-test]  # Run in parallel with integration tests
+    needs: [check, fmt, clippy]
 
   ui-test:
     name: UI Tests
     uses: ./.github/workflows/ui-test.yml
-    needs: [unit-test]  # Run in parallel with integration tests and doc-test
+    needs: [check, fmt, clippy]
 
-  # Phase 3: Examples tests run last (requires 70-90GB, must run alone)
+  # Phase 2: Examples tests run last (requires 70-90GB, must run alone)
   examples-test:
     name: Examples Tests
     uses: ./.github/workflows/examples-test.yml
-    needs: [intra-crate-integration-test, cross-crate-integration-test, doc-test, ui-test]  # Wait for all parallel tests to complete
+    needs: [unit-test, intra-crate-integration-test, cross-crate-integration-test, doc-test, ui-test]
 
   # All jobs must pass
   ci-success:
