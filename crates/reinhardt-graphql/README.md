@@ -6,9 +6,9 @@ GraphQL integration (facade crate)
 
 GraphQL API support with schema generation from models, query and mutation resolvers, and integration with the authentication and permission system. Provides a flexible alternative to REST APIs.
 
-This is a facade crate that re-exports functionality from:
-- **reinhardt-graphql-core**: Core GraphQL implementation
-- **reinhardt-graphql-macros**: Procedural macros for GraphQL (when features enabled)
+This is a facade crate that re-exports functionality from the following modules:
+- **core**: Core GraphQL implementation
+- **macros**: Procedural macros for GraphQL (when features enabled)
 
 ## Crate Structure
 
@@ -19,7 +19,7 @@ reinhardt-graphql/              (facade crate - public API)
 │   └── macros/                 (procedural macros)
 ```
 
-Users should depend on `reinhardt-graphql` (this facade crate), not the subcrates directly.
+Users should depend on `` `reinhardt-graphql` `` (this facade crate) for all GraphQL functionality.
 
 ## Features
 

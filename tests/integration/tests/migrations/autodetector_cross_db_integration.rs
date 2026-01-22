@@ -14,7 +14,7 @@
 //! - postgres_container: PostgreSQL database container
 //! - mysql_container: MySQL database container
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ConstraintDefinition, FieldState, FieldType, MigrationAutodetector, ModelState, ProjectState,
 };
 use rstest::*;
@@ -414,11 +414,11 @@ fn test_composite_pk_with_other_constraints() {
 		constraint_type: "ForeignKey".to_string(),
 		fields: vec!["order_id".to_string()],
 		expression: None,
-		foreign_key_info: Some(reinhardt_migrations::ForeignKeyConstraintInfo {
+		foreign_key_info: Some(reinhardt_db::migrations::ForeignKeyConstraintInfo {
 			referenced_table: "testapp_order".to_string(),
 			referenced_columns: vec!["id".to_string()],
-			on_delete: reinhardt_migrations::ForeignKeyAction::Cascade,
-			on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+			on_delete: reinhardt_db::migrations::ForeignKeyAction::Cascade,
+			on_update: reinhardt_db::migrations::ForeignKeyAction::NoAction,
 		}),
 	});
 

@@ -5,8 +5,8 @@
 //! - ListCreateAPIView, RetrieveUpdateAPIView, RetrieveDestroyAPIView, RetrieveUpdateDestroyAPIView
 
 use hyper::{HeaderMap, Method, Uri, Version};
-use reinhardt_core::http::Request;
-use reinhardt_serializers::JsonSerializer;
+use reinhardt_http::Request;
+use reinhardt_rest::serializers::JsonSerializer;
 use reinhardt_views::generic::{
 	CreateAPIView, DestroyAPIView, ListAPIView, ListCreateAPIView, RetrieveDestroyAPIView,
 	RetrieveUpdateAPIView, RetrieveUpdateDestroyAPIView, UpdateAPIView,

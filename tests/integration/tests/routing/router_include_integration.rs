@@ -1,6 +1,6 @@
 //! Router mount() API integration tests
 
-use reinhardt_routers::ServerRouter;
+use reinhardt_urls::routers::ServerRouter;
 
 #[tokio::test]
 async fn test_router_mount_basic() {

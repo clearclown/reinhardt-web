@@ -61,7 +61,7 @@ pub(crate) struct EchoPathHandler;
 
 #[async_trait::async_trait]
 impl Handler for EchoPathHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let path = request.path().to_string();
 		Ok(Response::ok().with_body(path))
 	}
@@ -73,7 +73,7 @@ pub(crate) struct StatusCodeHandler;
 
 #[async_trait::async_trait]
 impl Handler for StatusCodeHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		match request.path() {
 			"/200" => Ok(Response::ok().with_body("OK")),
 			"/404" => Ok(Response::not_found().with_body("Not Found")),
@@ -89,7 +89,7 @@ pub(crate) struct MethodEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for MethodEchoHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let method = request.method.as_str().to_string();
 		Ok(Response::ok().with_body(method))
 	}
@@ -104,7 +104,7 @@ pub(crate) struct DelayedHandler {
 
 #[async_trait::async_trait]
 impl Handler for DelayedHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		tokio::time::sleep(tokio::time::Duration::from_millis(self.delay_ms)).await;
 		Ok(Response::ok().with_body(self.response_body.clone()))
 	}
@@ -116,7 +116,7 @@ pub(crate) struct BodyEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for BodyEchoHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let body = request.read_body()?;
 		Ok(Response::ok().with_body(body))
 	}
@@ -130,7 +130,7 @@ pub(crate) struct LargeResponseHandler {
 
 #[async_trait::async_trait]
 impl Handler for LargeResponseHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		let data = "x".repeat(self.size_kb * 1024);
 		Ok(Response::ok().with_body(data))
 	}

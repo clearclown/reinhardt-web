@@ -277,7 +277,7 @@ impl Widget {
 
 /// Base field trait for forms
 ///
-/// This trait is specifically for form fields. For ORM fields, use `reinhardt_orm::Field`.
+/// This trait is specifically for form fields. For ORM fields, use `reinhardt_db::orm::Field`.
 pub trait FormField: Send + Sync {
 	fn name(&self) -> &str;
 	fn label(&self) -> Option<&str>;

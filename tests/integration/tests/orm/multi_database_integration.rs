@@ -40,7 +40,7 @@
 //! ❌ Distributed transaction protocols (2PC, Saga patterns)
 
 use reinhardt_core::macros::model;
-use reinhardt_orm::manager::reinitialize_database;
+use reinhardt_db::orm::manager::reinitialize_database;
 use reinhardt_test::fixtures::postgres_container;
 use rstest::*;
 use rust_decimal::Decimal;

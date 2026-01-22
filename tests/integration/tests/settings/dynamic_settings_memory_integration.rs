@@ -4,8 +4,8 @@
 //! the in-memory backend, including CRUD operations, caching, observer pattern,
 //! and TTL support.
 
-use reinhardt_settings::backends::MemoryBackend;
-use reinhardt_settings::dynamic::{DynamicBackend, DynamicSettings};
+use reinhardt_conf::settings::backends::MemoryBackend;
+use reinhardt_conf::settings::dynamic::{DynamicBackend, DynamicSettings};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 

@@ -2,7 +2,7 @@
 //!
 //! Creates test_users, test_products, and test_orders tables.
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ColumnDefinition, Constraint, FieldType, ForeignKeyAction, Migration, Operation,
 };
 

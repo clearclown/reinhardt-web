@@ -8,7 +8,7 @@
 //! - django/tests/messages_tests/test_session.py
 //! - django/tests/messages_tests/test_cookie.py
 
-use reinhardt_messages::{CookieStorage, Level, Message, MessageStorage, SessionStorage};
+use reinhardt_core::messages::{CookieStorage, Level, Message, MessageStorage, SessionStorage};
 
 // ========== Session Storage Integration Tests ==========
 

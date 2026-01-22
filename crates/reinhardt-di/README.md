@@ -451,6 +451,236 @@ The testing framework includes a comprehensive test suite:
 | Type Safety              | Runtime          | **Compile-time**    |
 | Performance              | Dynamic          | **Static & Fast**   |
 
+
+## macros
+
+The `macros` module provides procedural macros for simplified dependency injection setup.
+
+### Features
+
+### Implemented ✓
+
+#### `#[injectable]` - Struct Injection Registration
+
+Mark a struct as injectable and automatically register it with the global registry.
+
+**Syntax:**
+```rust
+#[injectable]
+#[scope(singleton|request|transient)]
+struct YourStruct {
+    #[no_inject]
+    field: Type,
+}
+```
+
+**Attributes:**
+- `` `#[scope(singleton)]` `` - Singleton scope (default)
+- `` `#[scope(request)]` `` - Request scope
+- `` `#[scope(transient)]` `` - Transient scope (new instance every time)
+- `` `#[no_inject]` `` - Exclude specific fields from automatic injection
+
+**Example:**
+```rust
+use reinhardt::di::macros::injectable;
+
+#[injectable]
+#[scope(singleton)]
+struct Config {
+    #[no_inject]
+    database_url: String,
+    api_key: String,
+}
+```
+
+#### `#[injectable_factory]` - Async Function Factory
+
+Mark an async function as a dependency factory for complex initialization logic.
+
+**Syntax:**
+```rust
+#[injectable_factory]
+#[scope(singleton|request|transient)]
+async fn factory_function(#[inject] dep: Arc<Dependency>) -> ReturnType {
+    // Initialization logic
+}
+```
+
+**Attributes:**
+- `` `#[scope(singleton)]` `` - Singleton scope (default)
+- `` `#[scope(request)]` `` - Request scope
+- `` `#[scope(transient)]` `` - Transient scope
+- `` `#[inject]` `` - Mark function parameters for automatic injection
+
+**Example:**
+```rust
+use reinhardt::di::macros::injectable_factory;
+use std::sync::Arc;
+
+#[injectable_factory]
+#[scope(singleton)]
+async fn create_database(#[inject] config: Arc<Config>) -> DatabaseConnection {
+    DatabaseConnection::connect(&config.database_url)
+        .await
+        .expect("Failed to connect to database")
+}
+```
+
+### Benefits of Using Macros
+
+- **Reduced Boilerplate**: Automatically implements `` `Injectable` `` trait
+- **Scope Management**: Declarative scope configuration
+- **Type Safety**: Compile-time verification of dependencies
+- **Automatic Registration**: Global registry integration without manual setup
+- **Async Support**: Native async/await support in factory functions
+
+### Usage Patterns
+
+#### Simple Struct Injection
+
+```rust
+use reinhardt::di::{macros::injectable, InjectionContext, SingletonScope};
+use std::sync::Arc;
+
+#[injectable]
+struct Logger {
+    level: String,
+}
+
+impl Default for Logger {
+    fn default() -> Self {
+        Logger {
+            level: "info".to_string(),
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let singleton = Arc::new(SingletonScope::new());
+    let ctx = InjectionContext::builder(singleton).build();
+
+    let logger = Logger::inject(&ctx).await.unwrap();
+    println!("Log level: {}", logger.level);
+}
+```
+
+#### Factory with Nested Dependencies
+
+```rust
+use reinhardt::di::macros::{injectable, injectable_factory};
+use std::sync::Arc;
+
+#[injectable]
+#[scope(singleton)]
+struct AppConfig {
+    #[no_inject]
+    db_url: String,
+    #[no_inject]
+    cache_size: usize,
+}
+
+#[injectable_factory]
+#[scope(request)]
+async fn create_service(
+    #[inject] config: Arc<AppConfig>
+) -> MyService {
+    MyService::new(config.db_url.clone(), config.cache_size)
+}
+```
+
+
+## params
+
+### Features
+
+### Implemented ✓
+
+#### Core Extraction System
+
+- **`FromRequest` trait**: Core abstraction for asynchronous parameter extraction
+- **`ParamContext`**: Management of path parameters and header/cookie names
+- **Type-safe parameter extraction**: Extraction from requests with compile-time type checking
+- **Error handling**: Detailed error messages via `ParamError`
+
+#### Path Parameters (`path.rs`)
+
+- **`Path<T>`**: Extract single value from URL path
+  - Support for all primitive types: `i8`, `i16`, `i32`, `i64`, `i128`, `u8`, `u16`, `u32`, `u64`, `u128`, `f32`, `f64`, `bool`, `String`
+  - Transparent access via `Deref`: `*path` or `path.0`
+  - Value extraction via `into_inner()` method
+- **`PathStruct<T>`**: Extract multiple path parameters into struct
+  - Supports any struct implementing `DeserializeOwned`
+  - Automatic type conversion using URL-encoded format (`"42"` → `42`)
+
+#### Query Parameters (`query.rs`)
+
+- **`Query<T>`**: Extract parameters from URL query string
+  - Flexible deserialization using `serde`
+  - Support for optional fields (`Option<T>`)
+- **Multi-value query parameters** (`multi-value-arrays` feature):
+  - `?q=5&q=6` → `Vec<i32>`
+  - Automatic type conversion: string → numeric, boolean, etc.
+  - JSON value-based deserialization
+
+#### Headers (`header.rs`, `header_named.rs`)
+
+- **`Header<T>`**: Extract value from request headers
+  - Support for `String` and `Option<String>`
+  - Runtime header name specification via `ParamContext`
+- **`HeaderStruct<T>`**: Extract multiple headers into struct
+  - Header name lowercase normalization
+  - Automatic type conversion using URL-encoded
+- **`HeaderNamed<N, T>`**: Compile-time header name specification
+  - Type-safe header names via marker types: `Authorization`, `ContentType`
+  - Support for `String` and `Option<String>`
+  - Custom header name definition via `HeaderName` trait
+
+#### Cookies (`cookie.rs`, `cookie_named.rs`)
+
+- **`Cookie<T>`**: Extract value from cookies
+  - Support for `String` and `Option<String>`
+  - Runtime cookie name specification via `ParamContext`
+- **`CookieStruct<T>`**: Extract multiple cookies into struct
+  - RFC 6265-compliant cookie parsing
+  - URL-decoding support
+- **`CookieNamed<N, T>`**: Compile-time cookie name specification
+  - Type-safe cookie names via marker types: `SessionId`, `CsrfToken`
+  - Support for `String` and `Option<String>`
+  - Custom cookie name definition via `CookieName` trait
+
+#### Body Extraction (`body.rs`, `json.rs`, `form.rs`)
+
+- **`Body`**: Extract raw request body as bytes
+- **`Json<T>`**: JSON body deserialization
+  - Type-safe deserialization using `serde_json`
+  - Access via `Deref` and `into_inner()`
+- **`Form<T>`**: Extract application/x-www-form-urlencoded form data
+  - Content-Type validation
+  - Deserialization using `serde_urlencoded`
+
+#### Multipart Support (`multipart.rs`, requires `multipart` feature)
+
+- **`Multipart`**: Multipart/form-data support
+  - Streaming parsing using `multer` crate
+  - File upload support
+  - Iteration via `next_field()`
+
+#### Validation Support (`validation.rs`, requires `validation` feature)
+
+- **`Validated<T, V>`**: Validated parameter wrapper
+- **`WithValidation` trait**: Fluent API for validation constraints
+  - **Length constraints**: `min_length()`, `max_length()`
+  - **Numeric ranges**: `min_value()`, `max_value()`
+  - **Pattern matching**: `regex()`
+  - **Format validation**: `email()`, `url()`
+- **`ValidationConstraints<T>`**: Chainable validation builder
+  - `validate_string()`: String value validation
+  - `validate_number()`: Numeric validation
+  - Support for combining multiple constraints
+- **Type aliases**: `ValidatedPath<T>`, `ValidatedQuery<T>`, `ValidatedForm<T>`
+- **Integration with `reinhardt-validators`**
+
 ## License
 
 This crate is part of the Reinhardt project and follows the same dual-license structure (MIT or Apache-2.0).

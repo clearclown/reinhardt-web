@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_messages::{FallbackStorage, Level, Message, MessageStorage};
+	use reinhardt_core::messages::{FallbackStorage, Level, Message, MessageStorage};
 
 	#[test]
 	fn test_no_fallback() {

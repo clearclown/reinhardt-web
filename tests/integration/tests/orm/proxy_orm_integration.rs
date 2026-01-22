@@ -3,11 +3,11 @@
 //! These tests verify the CollectionProxy integration with ORM models,
 //! focusing on the actual API provided by reinhardt-proxy.
 
-use reinhardt_orm::types::DatabaseDialect;
-use reinhardt_orm::{
+use reinhardt_db::orm::types::DatabaseDialect;
+use reinhardt_db::orm::{
 	Constraint, ForeignKeyConstraint, LoadingStrategy, OnDelete, Relationship, RelationshipType,
 };
-use reinhardt_proxy::CollectionProxy;
+use reinhardt_urls::proxy::CollectionProxy;
 use serde::{Deserialize, Serialize};
 
 use rstest::*;

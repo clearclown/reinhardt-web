@@ -13,13 +13,14 @@ path = "src/bin/manage.rs"
 # Use local workspace version directly via path
 # package="reinhardt-web" maps the crate name to the actual package name
 reinhardt = { workspace = true, features = [
-    "minimal",        # Core HTTP/Routing/DI/Server
-    "database",       # Database support
-    "db-sqlite",      # SQLite database backend
-    "db-postgres",    # PostgreSQL database backend
-    "admin",          # Admin Panel (TodoAdmin usage)
-    "commands",       # Management commands
-    "client-router",  # Client-side routing support (required for #[routes] macro)
+    "minimal",       # Core HTTP/Routing/DI/Server
+    "database",      # Database support
+    "db-sqlite",     # SQLite database backend
+    "db-postgres",   # PostgreSQL database backend
+    "admin",         # Admin Panel (TodoAdmin usage)
+    "commands",      # Management commands
+    "client-router", # Client-side routing support (required for #[routes] macro)
+    "test",          # Test utilities (required for TestContainers and fixtures)
 ] }
 
 # Required for collect_migrations! macro
@@ -57,9 +58,6 @@ sqlx = { version = "0.8", features = [
 anyhow = "1.0"
 serial_test = "3.2"
 tempfile = "3.15"
-reinhardt-test = { workspace = true, features = ["testcontainers"] }
-reinhardt-backends = { workspace = true }
-reinhardt-db = { workspace = true }
 testcontainers = "0.25.2"
 
 [build-dependencies]

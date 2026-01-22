@@ -17,7 +17,7 @@ mod fixtures;
 
 use fixtures::{ConfigurableTestHandler, create_test_request};
 use proptest::prelude::*;
-use reinhardt_core::Middleware;
+use reinhardt_http::Middleware;
 use std::sync::Arc;
 
 // =============================================================================

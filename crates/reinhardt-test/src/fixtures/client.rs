@@ -15,7 +15,7 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_test::fixtures::{test_server_guard, api_client_from_url, TestServerGuard};
-//! use reinhardt_routers::UnifiedRouter;
+//! use reinhardt_urls::routers::UnifiedRouter;
 //! use rstest::*;
 //!
 //! #[rstest]

@@ -50,7 +50,7 @@ use crate::core::user::User;
 ///     type User = SimpleUser;
 ///
 ///     async fn authenticate(&self, username: &str, password: &str)
-///         -> Result<Option<Self::User>, reinhardt_exception::Error> {
+///         -> Result<Option<Self::User>, reinhardt_core::exception::Error> {
 ///         if let Some((hash, user)) = self.users.get(username) {
 ///             if self.hasher.verify(password, hash)? {
 ///                 return Ok(Some(user.clone()));
@@ -60,7 +60,7 @@ use crate::core::user::User;
 ///     }
 ///
 ///     async fn get_user(&self, user_id: &str)
-///         -> Result<Option<Self::User>, reinhardt_exception::Error> {
+///         -> Result<Option<Self::User>, reinhardt_core::exception::Error> {
 ///         Ok(self.users.values()
 ///             .find(|(_, u)| u.id.to_string() == user_id)
 ///             .map(|(_, u)| u.clone()))
@@ -87,7 +87,7 @@ pub trait AuthBackend: Send + Sync {
 		&self,
 		username: &str,
 		password: &str,
-	) -> Result<Option<Self::User>, reinhardt_exception::Error>;
+	) -> Result<Option<Self::User>, reinhardt_core::exception::Error>;
 
 	/// Retrieves a user by their ID
 	///
@@ -100,7 +100,7 @@ pub trait AuthBackend: Send + Sync {
 	async fn get_user(
 		&self,
 		user_id: &str,
-	) -> Result<Option<Self::User>, reinhardt_exception::Error>;
+	) -> Result<Option<Self::User>, reinhardt_core::exception::Error>;
 }
 
 /// Composite auth backend - tries multiple backends in order
@@ -150,7 +150,7 @@ impl<U: User + 'static> AuthBackend for CompositeAuthBackend<U> {
 		&self,
 		username: &str,
 		password: &str,
-	) -> Result<Option<Self::User>, reinhardt_exception::Error> {
+	) -> Result<Option<Self::User>, reinhardt_core::exception::Error> {
 		for backend in &self.backends {
 			if let Some(user) = backend.authenticate(username, password).await? {
 				return Ok(Some(user));
@@ -162,7 +162,7 @@ impl<U: User + 'static> AuthBackend for CompositeAuthBackend<U> {
 	async fn get_user(
 		&self,
 		user_id: &str,
-	) -> Result<Option<Self::User>, reinhardt_exception::Error> {
+	) -> Result<Option<Self::User>, reinhardt_core::exception::Error> {
 		for backend in &self.backends {
 			if let Some(user) = backend.get_user(user_id).await? {
 				return Ok(Some(user));

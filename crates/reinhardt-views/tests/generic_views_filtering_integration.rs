@@ -22,12 +22,12 @@
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
-use reinhardt_serializers::JsonSerializer;
+use reinhardt_http::Request;
+use reinhardt_rest::serializers::JsonSerializer;
 use reinhardt_test::fixtures::shared_db_pool;
+use reinhardt_views::viewsets::FilterConfig;
 use reinhardt_views::{ListAPIView, View};
-use reinhardt_viewsets::FilterConfig;
 use rstest::*;
 use sea_query::{ColumnDef, Iden, PostgresQueryBuilder, Table};
 use serde::{Deserialize, Serialize};

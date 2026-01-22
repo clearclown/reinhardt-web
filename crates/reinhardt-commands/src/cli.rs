@@ -642,7 +642,7 @@ async fn execute_generateopenapi(
 	}
 
 	// Create SchemaGenerator
-	let generator = reinhardt_openapi::SchemaGenerator::new()
+	let generator = reinhardt_rest::openapi::SchemaGenerator::new()
 		.title(env::var("OPENAPI_TITLE").unwrap_or_else(|_| "API Documentation".to_string()))
 		.version(env::var("OPENAPI_VERSION").unwrap_or_else(|_| "1.0.0".to_string()))
 		.description(env::var("OPENAPI_DESCRIPTION").unwrap_or_default())

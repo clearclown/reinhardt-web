@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::{Request, Response};
-use reinhardt_viewsets::{
+use reinhardt_views::viewsets::{
 	action, clear_actions, register_action, ActionMetadata, FunctionActionHandler, ViewSet,
 };
 use serial_test::serial;
@@ -30,7 +30,7 @@ impl ViewSet for TestViewSet {
 	async fn dispatch(
 		&self,
 		_request: Request,
-		_action: reinhardt_viewsets::Action,
+		_action: reinhardt_views::viewsets::Action,
 	) -> reinhardt_http::Result<Response> {
 		Response::ok().with_json(&serde_json::json!({"test": true}))
 	}

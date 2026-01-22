@@ -26,7 +26,6 @@ full = ["cors", "compression", "security", "rate-limit", "sessions", "sqlx"]
 reinhardt-core = { workspace = true, features = [
     "types",
     "exception",
-    "http",
     "security",
 ] }
 reinhardt-http = { workspace = true }

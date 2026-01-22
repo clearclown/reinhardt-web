@@ -1,7 +1,7 @@
 //! Integration tests for validator support in Model derive macro
 
+use reinhardt_db::orm::Model as ModelTrait;
 use reinhardt_macros::model;
-use reinhardt_orm::Model as ModelTrait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
@@ -35,7 +35,7 @@ fn test_email_validator() {
 	assert!(email_field.attributes.contains_key("email"));
 	assert_eq!(
 		email_field.attributes.get("email"),
-		Some(&reinhardt_orm::fields::FieldKwarg::Bool(true))
+		Some(&reinhardt_db::orm::fields::FieldKwarg::Bool(true))
 	);
 }
 
@@ -51,7 +51,7 @@ fn test_url_validator() {
 	assert!(website_field.attributes.contains_key("url"));
 	assert_eq!(
 		website_field.attributes.get("url"),
-		Some(&reinhardt_orm::fields::FieldKwarg::Bool(true))
+		Some(&reinhardt_db::orm::fields::FieldKwarg::Bool(true))
 	);
 }
 
@@ -67,7 +67,7 @@ fn test_min_length_validator() {
 	assert!(username_field.attributes.contains_key("min_length"));
 	assert_eq!(
 		username_field.attributes.get("min_length"),
-		Some(&reinhardt_orm::fields::FieldKwarg::Uint(3))
+		Some(&reinhardt_db::orm::fields::FieldKwarg::Uint(3))
 	);
 }
 
@@ -83,13 +83,13 @@ fn test_min_max_value_validators() {
 	assert!(age_field.attributes.contains_key("min_value"));
 	assert_eq!(
 		age_field.attributes.get("min_value"),
-		Some(&reinhardt_orm::fields::FieldKwarg::Int(0))
+		Some(&reinhardt_db::orm::fields::FieldKwarg::Int(0))
 	);
 
 	assert!(age_field.attributes.contains_key("max_value"));
 	assert_eq!(
 		age_field.attributes.get("max_value"),
-		Some(&reinhardt_orm::fields::FieldKwarg::Int(120))
+		Some(&reinhardt_db::orm::fields::FieldKwarg::Int(120))
 	);
 }
 

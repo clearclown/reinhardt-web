@@ -5,7 +5,7 @@
 #[path = "di/test_helpers.rs"]
 mod test_helpers;
 
-// Temporarily disabled tests with compilation errors
+// TODO: Temporarily disabled tests with compilation errors
 // #[path = "di/core_integration.rs"]
 // mod core_integration;
 

@@ -4,7 +4,7 @@
 //! to inject test-specific data for command testing.
 
 use reinhardt_commands::{CommandContext, MigrateCommand};
-use reinhardt_migrations::{Migration, Operation};
+use reinhardt_db::migrations::{Migration, Operation};
 use reinhardt_test::fixtures::{postgres_container, TestMigrationSource};
 use rstest::*;
 use sea_query::{Alias, ColumnDef, PostgresQueryBuilder, Table};

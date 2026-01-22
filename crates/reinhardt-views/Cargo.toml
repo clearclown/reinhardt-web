@@ -8,12 +8,15 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-reinhardt-core = { workspace = true, features = ["exception", "types", "serializers", "http"] }
+reinhardt-core = { workspace = true, features = ["exception", "macros", "pagination", "serializers", "serde", "types"] }
 reinhardt-db = { workspace = true, features = ["orm", "di"] }
 reinhardt-di = { workspace = true }
+reinhardt-http = { workspace = true }
 async-trait = { workspace = true }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
+quick-xml = { version = "0.38.3", features = ["serialize"] }
+serde_yaml = "0.9.33"
 thiserror = { workspace = true }
 http-body-util = "0.1"
 lazy_static = "1.4"
@@ -23,16 +26,33 @@ hyper = { workspace = true }
 syntect = { workspace = true }
 once_cell = { workspace = true }
 
-# ViewSets dependency (required for generic views)
-reinhardt-viewsets = { workspace = true }
-reinhardt-serializers = { workspace = true }
+# REST framework for filters/serializers
+reinhardt-rest = {workspace = true, features = ["filters", "serializers", "openapi"]}
+reinhardt-auth = { workspace = true }
+reinhardt-utils = { workspace = true, features = ["cache"] }
+uuid = { workspace = true }
+sqlx = { workspace = true, features = [
+  "any",
+  "postgres",
+  "sqlite",
+  "runtime-tokio",
+  "tls-rustls",
+] }
+tokio = { workspace = true, features = ["sync"] }
+inventory = "0.3"
+urlencoding = "2.1"
+sea-query = { workspace = true }
+parking_lot = { workspace = true }
+utoipa = { version = "5.4", features = ["url", "uuid", "yaml"] }
 
 [features]
 default = []
 viewsets = []
 views-full = [
-  "reinhardt-viewsets/full",
+  
 ]
+argon2-hasher = ["reinhardt-auth/argon2-hasher"]
+full = ["argon2-hasher"]
 
 [dev-dependencies]
 tokio = { workspace = true }
@@ -48,8 +68,8 @@ serial_test = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
 chrono = { workspace = true }
 sea-query = { workspace = true }
-sqlx = { workspace = true }
-reinhardt-orm = { workspace = true }
-reinhardt-migrations = { workspace = true }
+sqlx = { workspace = true, features = ["any", "postgres", "runtime-tokio"]}
 ctor = { workspace = true }
 futures = { workspace = true }
+reinhardt-db = {workspace = true, features = ["migrations"]}
+async-trait = { workspace = true }

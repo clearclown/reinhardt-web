@@ -5,6 +5,8 @@
 //! - GraphQL (optional)
 //! - WebSocket (optional)
 
+pub mod server;
+
 // Re-export server implementation
 #[cfg(feature = "server")]
-pub use reinhardt_server_core::*;
+pub use crate::server::*;

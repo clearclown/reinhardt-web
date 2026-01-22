@@ -14,9 +14,9 @@
 //! - Verifies generated migration files
 //! - Tests migration executability on real databases
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::schema_diff::{ColumnSchema, DatabaseSchema, TableSchema};
+use reinhardt_db::migrations::{
 	AutoMigrationGenerator, ColumnDefinition, FieldType, FilesystemRepository, FilesystemSource,
 	Migration, MigrationNamer, MigrationNumbering, MigrationService, Operation,
 	autodetector::ProjectState,

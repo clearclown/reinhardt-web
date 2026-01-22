@@ -19,10 +19,10 @@
 use serde::{Deserialize, Serialize};
 
 use reinhardt_core::endpoint::EndpointMetadata;
-use reinhardt_openapi::{EndpointInspector, Schema as OpenApiSchema, ToSchema};
+use reinhardt_rest::openapi::{EndpointInspector, Schema as OpenApiSchema, ToSchema};
 
 /// Test model with Schema derivation
-#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_openapi::Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_rest::openapi::Schema)]
 struct CreateUserRequest {
 	username: String,
 	email: String,
@@ -30,14 +30,14 @@ struct CreateUserRequest {
 }
 
 /// Test model with optional fields
-#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_openapi::Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_rest::openapi::Schema)]
 struct UpdateUserRequest {
 	username: Option<String>,
 	email: Option<String>,
 }
 
 /// Test model with field attributes
-#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_openapi::Schema)]
+#[derive(Debug, Clone, Serialize, Deserialize, reinhardt_rest::openapi::Schema)]
 struct UserProfile {
 	#[schema(description = "User ID")]
 	id: i64,
@@ -109,7 +109,7 @@ fn test_schema_derive_macro_basic() {
 #[test]
 fn test_schema_global_registry_registration() {
 	// Access global registry
-	let registry = reinhardt_openapi::registry::get_all_schemas();
+	let registry = reinhardt_rest::openapi::registry::get_all_schemas();
 
 	// Verify CreateUserRequest is registered
 	assert!(
@@ -338,7 +338,7 @@ fn test_schema_with_optional_fields() {
 /// - No conflicts between schemas
 #[test]
 fn test_multiple_schema_registration() {
-	let registry = reinhardt_openapi::registry::get_all_schemas();
+	let registry = reinhardt_rest::openapi::registry::get_all_schemas();
 
 	// All three test models should be registered
 	let registered_schemas = vec!["CreateUserRequest", "UpdateUserRequest", "UserProfile"];

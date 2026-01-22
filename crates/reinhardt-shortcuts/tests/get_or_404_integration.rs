@@ -4,7 +4,7 @@
 //! generation for database query shortcuts.
 
 use hyper::StatusCode;
-use reinhardt_core::http::Response;
+use reinhardt_http::Response;
 use reinhardt_shortcuts::GetError;
 
 /// Test: GetError::NotFound to Response conversion

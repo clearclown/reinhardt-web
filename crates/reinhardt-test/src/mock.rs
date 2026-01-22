@@ -2,9 +2,6 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use async_trait::async_trait;
-use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-
 /// Call record for tracking function calls
 #[derive(Debug, Clone)]
 pub struct CallRecord {
@@ -394,8 +391,8 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
-/// use reinhardt_core::Handler;
+/// use reinhardt_http::{Request, Response};
+/// use reinhardt_http::Handler;
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     Ok(Response::ok().with_body("Hello, World!"))
@@ -408,7 +405,7 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
+/// use reinhardt_http::{Request, Response};
 ///
 /// let handler = SimpleHandler::new(|req: Request| {
 ///     match req.path() {
@@ -423,7 +420,7 @@ impl<T> Default for Spy<T> {
 ///
 /// ```no_run
 /// use reinhardt_test::mock::SimpleHandler;
-/// use reinhardt_core::http::{Request, Response};
+/// use reinhardt_http::{Request, Response};
 /// use std::sync::{Arc, Mutex};
 ///
 /// let call_count = Arc::new(Mutex::new(0));
@@ -437,9 +434,7 @@ impl<T> Default for Spy<T> {
 /// ```
 pub struct SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -449,9 +444,7 @@ where
 
 impl<F> SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
@@ -466,7 +459,7 @@ where
 	///
 	/// ```no_run
 	/// use reinhardt_test::mock::SimpleHandler;
-	/// use reinhardt_core::http::{Request, Response};
+	/// use reinhardt_http::{Request, Response};
 	///
 	/// let handler = SimpleHandler::new(|req| {
 	///     Ok(Response::ok().with_body("Success"))
@@ -478,71 +471,18 @@ where
 }
 
 #[async_trait::async_trait]
-impl<F> reinhardt_core::Handler for SimpleHandler<F>
+impl<F> reinhardt_http::Handler for SimpleHandler<F>
 where
-	F: Fn(
-			reinhardt_core::http::Request,
-		) -> reinhardt_core::http::Result<reinhardt_core::http::Response>
+	F: Fn(reinhardt_http::Request) -> reinhardt_http::Result<reinhardt_http::Response>
 		+ Send
 		+ Sync
 		+ 'static,
 {
 	async fn handle(
 		&self,
-		request: reinhardt_core::http::Request,
-	) -> reinhardt_core::http::Result<reinhardt_core::http::Response> {
+		request: reinhardt_http::Request,
+	) -> reinhardt_http::Result<reinhardt_http::Response> {
 		(self.handler_fn)(request)
-	}
-}
-
-// ============================================================================
-// Schema Editor Mocks
-// ============================================================================
-
-/// Mock schema editor for testing database migration operations
-///
-/// A simple mock implementation of `BaseDatabaseSchemaEditor` that doesn't
-/// execute actual SQL but allows testing of schema modification logic.
-///
-/// # Examples
-///
-/// ```rust,ignore
-/// use reinhardt_test::mock::MockSchemaEditor;
-/// use reinhardt_backends::schema::BaseDatabaseSchemaEditor;
-///
-/// let editor = MockSchemaEditor::new();
-/// let stmt = editor.create_table_statement("users", &[
-///     ("id", "INTEGER PRIMARY KEY"),
-///     ("name", "VARCHAR(100)"),
-/// ]);
-/// // SQL generation example (requires sea_query and reinhardt-backends in dependencies)
-/// // let sql = stmt.to_string(PostgresQueryBuilder);
-/// // assert!(sql.contains("CREATE TABLE"));
-/// ```
-pub struct MockSchemaEditor;
-
-impl MockSchemaEditor {
-	/// Create a new MockSchemaEditor instance
-	pub fn new() -> Self {
-		Self
-	}
-}
-
-impl Default for MockSchemaEditor {
-	fn default() -> Self {
-		Self::new()
-	}
-}
-
-#[async_trait]
-impl BaseDatabaseSchemaEditor for MockSchemaEditor {
-	fn database_type(&self) -> reinhardt_migrations::DatabaseType {
-		reinhardt_migrations::DatabaseType::Sqlite
-	}
-
-	async fn execute(&mut self, _sql: &str) -> SchemaEditorResult<()> {
-		// Mock implementation - doesn't execute anything
-		Ok(())
 	}
 }
 

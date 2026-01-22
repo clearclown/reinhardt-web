@@ -2,11 +2,11 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_integration_tests::message_middleware_mock::MockMessageMiddleware;
-	use reinhardt_integration_tests::messages_helpers::MockResponse;
-	use reinhardt_messages::{
+	use reinhardt_core::messages::{
 		CookieStorage, Level, MemoryStorage, Message, MessageStorage, SessionStorage,
 	};
+	use reinhardt_integration_tests::message_middleware_mock::MockMessageMiddleware;
+	use reinhardt_integration_tests::messages_helpers::MockResponse;
 
 	#[test]
 	fn test_response_without_messages() {
@@ -140,9 +140,9 @@ mod tests {
 		use async_trait::async_trait;
 		use bytes::Bytes;
 		use hyper::{HeaderMap, Method, StatusCode, Version};
+		use reinhardt_core::messages::middleware::MessagesContainer;
+		use reinhardt_core::messages::{Level, MemoryStorage, Message};
 		use reinhardt_http::{Handler, MessagesMiddleware, Middleware, Request, Response};
-		use reinhardt_messages::middleware::MessagesContainer;
-		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use std::sync::Arc;
 
 		// Mock handler that adds a message
@@ -150,7 +150,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for AddMessageHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				// Add a message during request processing
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					container.add(Message::new(Level::Success, "Message from first request"));
@@ -164,7 +167,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckMessageHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				// Verify message from previous request exists
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
@@ -213,9 +219,9 @@ mod tests {
 		use async_trait::async_trait;
 		use bytes::Bytes;
 		use hyper::{HeaderMap, Method, StatusCode, Version};
+		use reinhardt_core::messages::middleware::MessagesContainer;
+		use reinhardt_core::messages::{Level, MemoryStorage, Message};
 		use reinhardt_http::{Handler, MessagesMiddleware, Middleware, Request, Response};
-		use reinhardt_messages::middleware::MessagesContainer;
-		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use std::sync::Arc;
 
 		// Handler that retrieves messages (simulating display)
@@ -223,7 +229,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for DisplayMessagesHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				// Get messages (simulating template rendering)
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
@@ -240,7 +249,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckEmptyHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				// Verify no messages remain
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
@@ -290,9 +302,9 @@ mod tests {
 		use async_trait::async_trait;
 		use bytes::Bytes;
 		use hyper::{HeaderMap, Method, StatusCode, Version};
+		use reinhardt_core::messages::middleware::MessagesContainer;
+		use reinhardt_core::messages::{Level, MemoryStorage, Message};
 		use reinhardt_http::{Handler, MessagesMiddleware, Middleware, Request, Response};
-		use reinhardt_messages::middleware::MessagesContainer;
-		use reinhardt_messages::{Level, MemoryStorage, Message};
 		use std::sync::Arc;
 
 		// Handler that adds a message
@@ -303,7 +315,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for AddMessageHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					container.add(Message::new(self.level, &self.message_text));
 				}
@@ -318,7 +333,10 @@ mod tests {
 
 		#[async_trait]
 		impl Handler for CheckAccumulatedHandler {
-			async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+			async fn handle(
+				&self,
+				request: Request,
+			) -> reinhardt_core::exception::Result<Response> {
 				if let Some(container) = request.extensions.get::<MessagesContainer>() {
 					let messages = container.get_messages();
 					assert_eq!(messages.len(), self.expected_count);

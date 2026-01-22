@@ -6,7 +6,7 @@ use reinhardt_auth::session::InMemorySessionStore;
 use reinhardt_auth::{SimpleUser, User};
 use reinhardt_middleware::AuthenticationMiddleware;
 use reinhardt_middleware::csrf::{CsrfMiddleware, CsrfMiddlewareConfig};
-use reinhardt_security::csrf::{CsrfMeta, check_token, get_secret};
+use reinhardt_core::security::csrf::{CsrfMeta, check_token, get_secret};
 use reinhardt_urls::routers::{DefaultRouter, Router, path};
 use sqlx::{Pool, Postgres};
 use std::sync::{Arc, Mutex};

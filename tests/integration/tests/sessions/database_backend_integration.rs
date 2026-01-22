@@ -1,6 +1,6 @@
-use reinhardt_orm::manager::{get_connection, reinitialize_database};
-use reinhardt_sessions::backends::cache::SessionBackend;
-use reinhardt_sessions::backends::database::DatabaseSessionBackend;
+use reinhardt_auth::sessions::backends::cache::SessionBackend;
+use reinhardt_auth::sessions::backends::database::DatabaseSessionBackend;
+use reinhardt_db::orm::manager::{get_connection, reinitialize_database};
 use rstest::*;
 use serde_json::json;
 use serial_test::serial;

@@ -16,8 +16,8 @@
 //! - postgres_container: PostgreSQL database container
 //! - mysql_container: MySQL database container (when available)
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, operations::SqlDialect, ColumnDefinition, Constraint,
 	FieldType, Migration, Operation,
 };
@@ -490,8 +490,8 @@ async fn test_cascade_delete(
 				columns: vec!["parent_id".to_string()],
 				referenced_table: "cascade_parent".to_string(),
 				referenced_columns: vec!["id".to_string()],
-				on_delete: reinhardt_migrations::ForeignKeyAction::Cascade,
-				on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+				on_delete: reinhardt_db::migrations::ForeignKeyAction::Cascade,
+				on_update: reinhardt_db::migrations::ForeignKeyAction::NoAction,
 				deferrable: None,
 			}],
 			without_rowid: None,

@@ -1,7 +1,7 @@
 use super::Request;
 use bytes::Bytes;
 #[cfg(feature = "parsers")]
-use reinhardt_parsers::parser::{ParsedData, Parser};
+use reinhardt_core::parsers::parser::{ParsedData, Parser};
 #[cfg(feature = "parsers")]
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;

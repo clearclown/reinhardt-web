@@ -18,13 +18,13 @@ use std::collections::HashSet;
 
 use bytes::Bytes;
 use hyper::StatusCode;
+use reinhardt_di::params::Path;
 use reinhardt_http::{Request, Response, ViewResult};
 use reinhardt_macros::get;
-use reinhardt_params::Path;
 use reinhardt_rest::versioning::{AcceptHeaderVersioning, BaseVersioning, URLPathVersioning};
-use reinhardt_routers::ServerRouter;
 use reinhardt_test::fixtures::server::test_server_guard;
 use reinhardt_test::APIClient;
+use reinhardt_urls::routers::ServerRouter;
 
 // ============================================================================
 // Helper Functions - Test Handlers

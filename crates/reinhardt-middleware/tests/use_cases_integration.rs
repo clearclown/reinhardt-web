@@ -17,7 +17,7 @@
 mod fixtures;
 
 use fixtures::{ConfigurableTestHandler, create_request_with_headers, create_test_request};
-use reinhardt_core::Middleware;
+use reinhardt_http::Middleware;
 use std::sync::Arc;
 use std::time::Duration;
 

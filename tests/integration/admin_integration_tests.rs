@@ -17,13 +17,13 @@
 // Only compile when admin feature is available
 #![cfg(feature = "admin")]
 
-use reinhardt_admin_core::{AdminDatabase, AdminSite, ModelAdminConfig};
-use reinhardt_admin_server::{
+use reinhardt_admin::core::{AdminDatabase, AdminSite, ModelAdminConfig};
+use reinhardt_admin::server::{
 	BulkDeleteRequest, ExportFormat, ExportResponse, ImportFormat, ImportResponse, ListQueryParams,
 	MutationRequest, MutationResponse, create_record, delete_record, get_dashboard, get_detail,
 	get_list, update_record,
 };
-use reinhardt_admin_types::errors::AdminError;
+use reinhardt_admin::types::errors::AdminError;
 use reinhardt_test::fixtures::admin_panel::{
 	admin_database, admin_site, model_admin_config, server_fn_test_context,
 };
@@ -506,7 +506,7 @@ async fn test_export_import_server_functions_structure(
 	let model_name = "TestModel".to_string();
 
 	// Test export with JSON format
-	let export_result = reinhardt_admin_server::export_data(
+	let export_result = reinhardt_admin::server::export_data(
 		model_name.clone(),
 		ExportFormat::Json,
 		site.clone(),
@@ -526,7 +526,7 @@ async fn test_export_import_server_functions_structure(
 	assert!(export_response.data.is_empty()); // No data to export
 
 	// Test export with CSV format
-	let csv_export_result = reinhardt_admin_server::export_data(
+	let csv_export_result = reinhardt_admin::server::export_data(
 		model_name.clone(),
 		ExportFormat::Csv,
 		site.clone(),
@@ -537,7 +537,7 @@ async fn test_export_import_server_functions_structure(
 	assert!(csv_export_result.is_ok(), "CSV export should succeed");
 
 	// Test import with empty data (should handle gracefully)
-	let import_result = reinhardt_admin_server::import_data(
+	let import_result = reinhardt_admin::server::import_data(
 		model_name.clone(),
 		ImportFormat::Json,
 		vec![], // Empty data
@@ -614,7 +614,7 @@ async fn test_search_equivalence_partitioning(
 	// This test ensures the interface accepts various search strings
 
 	// Create a simple filter for search
-	use reinhardt_admin_core::{Filter, FilterOperator, FilterValue};
+	use reinhardt_admin::core::{Filter, FilterOperator, FilterValue};
 
 	let filters = if search_term.is_empty() {
 		vec![] // Empty search = no filter
@@ -645,7 +645,7 @@ async fn test_search_equivalence_partitioning(
 #[rstest]
 #[tokio::test]
 async fn test_filter_edge_cases(#[future] admin_database: Arc<AdminDatabase>) {
-	use reinhardt_admin_core::{Filter, FilterOperator, FilterValue};
+	use reinhardt_admin::core::{Filter, FilterOperator, FilterValue};
 	use reinhardt_db::Model;
 
 	let db = admin_database.await;

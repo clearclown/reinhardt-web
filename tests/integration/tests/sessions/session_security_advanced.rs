@@ -16,10 +16,10 @@
 //!
 //! ## Reinhardt Components Used
 //!
-//! - `reinhardt_sessions::Session` - High-level session API
-//! - `reinhardt_sessions::SessionModel` - Session data model with expiration
-//! - `reinhardt_sessions::CsrfSessionManager` - CSRF token management
-//! - `reinhardt_sessions::backends::InMemorySessionBackend` - In-memory session storage
+//! - `reinhardt_auth::sessions::Session` - High-level session API
+//! - `reinhardt_auth::sessions::SessionModel` - Session data model with expiration
+//! - `reinhardt_auth::sessions::CsrfSessionManager` - CSRF token management
+//! - `reinhardt_auth::sessions::backends::InMemorySessionBackend` - In-memory session storage
 //!
 //! ## Security Standards Verified
 //!
@@ -28,10 +28,10 @@
 //! - Expired sessions are rejected (enforces TTL)
 //! - Session validation correctly identifies valid/invalid sessions
 
-use reinhardt_sessions::backends::InMemorySessionBackend;
-use reinhardt_sessions::csrf::CsrfSessionManager;
-use reinhardt_sessions::models::SessionModel;
-use reinhardt_sessions::Session;
+use reinhardt_auth::sessions::backends::InMemorySessionBackend;
+use reinhardt_auth::sessions::csrf::CsrfSessionManager;
+use reinhardt_auth::sessions::models::SessionModel;
+use reinhardt_auth::sessions::Session;
 use rstest::*;
 use serde_json::json;
 use serial_test::serial;

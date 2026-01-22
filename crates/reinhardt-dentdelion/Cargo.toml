@@ -19,7 +19,7 @@ wasm = [
 	"tokio/rt",
 	"tokio/fs",
 	"dep:reqwest",
-	"dep:reinhardt-backends",
+	"dep:reinhardt-db",
 ]
 
 # CLI support (for crates.io integration)
@@ -72,7 +72,6 @@ crates_io_api = { version = "0.12.0", optional = true }
 reqwest = { workspace = true, optional = true }
 
 # Database access (optional, for WASM plugins)
-reinhardt-backends = { workspace = true, optional = true }
 
 # JavaScript runtime (optional, for SSR support)
 # Provides pure Rust JavaScript execution for React/Preact SSR
@@ -84,6 +83,7 @@ scraper = { version = "0.22", optional = true }
 
 # Documentation
 aquamarine = { workspace = true }
+reinhardt-db = {workspace = true, features = ["backends"], optional = true}
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

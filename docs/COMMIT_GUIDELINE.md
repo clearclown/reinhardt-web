@@ -26,6 +26,33 @@ Key principles from the specification:
 - Always wait for user confirmation before committing changes
 - Prepare changes and inform the user, but let them decide when to commit
 
+**EXCEPTION: Plan Mode Approval**
+
+When a user approves a plan by accepting Exit Plan Mode, this constitutes explicit authorization for both:
+1. Implementation of the planned changes
+2. Creation of all commits associated with the implementation
+
+**Automatic Commit Workflow after Plan Mode Approval:**
+
+1. **Success Case**: If implementation completes successfully and all tests pass:
+   - Automatically create all commits as planned in the approved plan
+   - NO additional user confirmation required for each commit
+   - Follow commit granularity rules (CE-2) and commit message format (CM-1, CM-2, CM-3)
+   - Commits are created sequentially in the logical order defined in the plan
+
+2. **Failure Case**: If implementation fails or tests fail:
+   - **DO NOT** create any commits
+   - Report the failure to the user with detailed information
+   - Wait for user instruction on how to proceed
+
+**Important Notes:**
+
+- Plan Mode approval does NOT authorize pushing commits to remote
+- Pushing still requires explicit user instruction
+- The approved plan should clearly outline the planned commits (number, scope, messages)
+- If the implementation deviates significantly from the plan, seek user confirmation before committing
+- Batch commits are still prohibited - commits are created one at a time, but automatically without confirmation
+
 ### CE-2 (MUST): Commit Granularity
 
 - Commits **MUST** be split into developer-friendly, understandable units

@@ -9,7 +9,7 @@ use async_trait::async_trait;
 #[cfg(feature = "argon2-hasher")]
 use chrono::Utc;
 #[cfg(feature = "argon2-hasher")]
-use reinhardt_exception::Error;
+use reinhardt_core::exception::Error;
 
 #[cfg(feature = "argon2-hasher")]
 type Result<T> = std::result::Result<T, Error>;
@@ -147,7 +147,7 @@ impl BaseUserManager<DefaultUser> for DefaultUserManager {
 	) -> Result<DefaultUser> {
 		// Check if username already exists
 		if self.get_by_username(username).is_some() {
-			return Err(reinhardt_exception::Error::Validation(format!(
+			return Err(reinhardt_core::exception::Error::Validation(format!(
 				"Username '{}' already exists",
 				username
 			)));

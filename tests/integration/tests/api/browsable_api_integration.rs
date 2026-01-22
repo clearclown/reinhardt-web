@@ -3,7 +3,7 @@
 //! These tests verify that reinhardt-browsable-api works correctly for rendering
 //! interactive HTML API documentation.
 
-use reinhardt_browsable_api::{ApiContext, BrowsableApiRenderer, FormContext, FormField};
+use reinhardt_rest::browsable_api::{ApiContext, BrowsableApiRenderer, FormContext, FormField};
 use serde_json::json;
 
 // ============================================================================

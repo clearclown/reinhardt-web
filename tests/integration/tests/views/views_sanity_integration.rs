@@ -23,9 +23,9 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
-use reinhardt_core::http::Request;
 use reinhardt_core::macros::model;
-use reinhardt_serializers::JsonSerializer;
+use reinhardt_http::Request;
+use reinhardt_rest::serializers::JsonSerializer;
 use reinhardt_test::fixtures::get_test_pool_with_orm;
 use reinhardt_views::{
 	CreateAPIView, DestroyAPIView, ListAPIView, RetrieveAPIView, UpdateAPIView, View,

@@ -24,7 +24,7 @@
 // Only compile when admin feature is enabled
 #[cfg(feature = "admin")]
 use {
-	reinhardt_admin_core::{AdminDatabase, AdminSite, ModelAdminConfig},
+	reinhardt_admin::core::{AdminDatabase, AdminSite, ModelAdminConfig},
 	reinhardt_db::DatabaseConnection,
 	rstest::*,
 	std::sync::Arc,
@@ -480,7 +480,7 @@ pub async fn export_import_test_context(
 #[cfg(all(feature = "admin", test))]
 mod tests {
 	use super::*;
-	use reinhardt_admin_core::ModelAdmin;
+	use reinhardt_admin::core::ModelAdmin;
 	use rstest::rstest;
 
 	#[rstest]

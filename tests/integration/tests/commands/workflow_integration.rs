@@ -309,7 +309,7 @@ fn test_workflow_complete_setup(temp_migration_dir: TempMigrationDir) {
 		app_label,
 		"0001_initial",
 		r#"
-use reinhardt_migrations::{Migration, MigrationOperation};
+use reinhardt_db::migrations::{Migration, MigrationOperation};
 
 pub fn migration() -> Migration {
     Migration {

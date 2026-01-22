@@ -5,9 +5,9 @@
 //! - reinhardt-orm (Model trait)
 //! - reinhardt-migrations (model_registry)
 
+use reinhardt_db::migrations::model_registry::global_registry;
+use reinhardt_db::orm::Model as ModelTrait;
 use reinhardt_macros::model;
-use reinhardt_migrations::model_registry::global_registry;
-use reinhardt_orm::Model as ModelTrait;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]

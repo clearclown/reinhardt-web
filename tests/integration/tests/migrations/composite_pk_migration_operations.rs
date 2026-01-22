@@ -2,10 +2,10 @@
 //!
 //! Tests SQL generation for CREATE TABLE and DROP TABLE operations with composite primary keys.
 
-use reinhardt_backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
-use reinhardt_migrations::FieldType;
-use reinhardt_migrations::operations::FieldDefinition;
-use reinhardt_migrations::operations::models::{CreateModel, DeleteModel};
+use reinhardt_db::backends::schema::{BaseDatabaseSchemaEditor, SchemaEditorResult};
+use reinhardt_db::migrations::FieldType;
+use reinhardt_db::migrations::operations::FieldDefinition;
+use reinhardt_db::migrations::operations::models::{CreateModel, DeleteModel};
 
 /// Mock schema editor for testing SQL generation
 struct MockSchemaEditor;

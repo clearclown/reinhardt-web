@@ -14,7 +14,7 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container (for DB-level validation)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ConstraintDefinition, FieldState, FieldType, ForeignKeyAction, ForeignKeyConstraintInfo,
 	MigrationAutodetector, ModelState, ProjectState,
 };

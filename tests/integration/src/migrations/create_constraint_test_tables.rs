@@ -3,7 +3,7 @@
 //! Creates test_posts and test_comments tables for testing
 //! composite UNIQUE constraints and CASCADE DELETE behavior.
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ColumnDefinition, Constraint, FieldType, ForeignKeyAction, Migration, Operation,
 };
 

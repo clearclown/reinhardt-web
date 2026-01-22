@@ -134,6 +134,9 @@
 
 #![warn(missing_docs)]
 
+// Re-export AST definitions from reinhardt-pages-ast
+pub use reinhardt_pages_ast as ast;
+
 // Core modules
 pub mod builder;
 pub mod callback;

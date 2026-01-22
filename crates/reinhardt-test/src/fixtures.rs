@@ -71,12 +71,12 @@
 //!
 //! ```rust,no_run
 //! use reinhardt_test::fixtures::*;
-//! use reinhardt_migrations::Migration;
-//! use reinhardt_migrations::registry::MigrationRegistry;
+//! use reinhardt_db::migrations::Migration;
+//! use reinhardt_db::migrations::registry::MigrationRegistry;
 //! use rstest::*;
 //!
 //! #[rstest]
-//! fn test_migration_registration(migration_registry: reinhardt_migrations::registry::LocalRegistry) {
+//! fn test_migration_registration(migration_registry: reinhardt_db::migrations::registry::LocalRegistry) {
 //!     let migration = Migration {
 //!         app_label: "polls".to_string(),
 //!         name: "0001_initial".to_string(),
@@ -103,6 +103,7 @@ pub mod shared_postgres;
 pub mod testcontainers;
 
 // New fixture modules for integration tests
+#[cfg(feature = "admin")]
 pub mod admin;
 #[cfg(all(feature = "admin", feature = "testcontainers"))]
 pub mod admin_panel;
@@ -159,13 +160,11 @@ pub use server::graphql_server;
 // From testcontainers module (conditional on feature)
 #[cfg(feature = "testcontainers")]
 pub use testcontainers::{
-	FileLockGuard, RedisClusterContainer, cockroachdb_container, create_test_any_pool,
-	localstack_fixture, mongodb_container, mysql_container, mysql_with_all_migrations,
-	mysql_with_apps_migrations, mysql_with_migrations_from, postgres_container,
-	postgres_with_all_migrations, postgres_with_apps_migrations, postgres_with_migrations_from,
-	rabbitmq_container, redis_cluster, redis_cluster_cleanup, redis_cluster_client,
-	redis_cluster_container, redis_cluster_fixture, redis_cluster_lock, redis_cluster_ports_ready,
-	redis_cluster_urls, redis_container, sqlite_with_all_migrations, sqlite_with_apps_migrations,
+	FileLockGuard, cockroachdb_container, create_test_any_pool, localstack_fixture,
+	mongodb_container, mysql_container, mysql_with_all_migrations, mysql_with_apps_migrations,
+	mysql_with_migrations_from, postgres_container, postgres_with_all_migrations,
+	postgres_with_apps_migrations, postgres_with_migrations_from, rabbitmq_container,
+	redis_container, sqlite_with_all_migrations, sqlite_with_apps_migrations,
 	sqlite_with_migrations_from,
 };
 
@@ -195,7 +194,7 @@ pub use migrations::{
 // Re-export migration types for use in test schemas
 // These are re-exported from reinhardt-migrations to allow functional crates
 // to use them in tests without adding reinhardt-migrations to dev-dependencies
-pub use reinhardt_migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
+pub use reinhardt_db::migrations::{ColumnDefinition, FieldType, Operation, SqlDialect};
 
 // Migration fixtures (conditional on testcontainers feature)
 #[cfg(feature = "testcontainers")]

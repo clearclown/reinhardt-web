@@ -7,31 +7,34 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  CARGO_TARGET_DIR: /tmp/cargo_target
   CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
 
 jobs:
   examples-test:
     name: Examples Tests
-    runs-on: ubuntu-latest-8-cores
+    runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
         with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+          root-reserve-mb: 4096
+          swap-size-mb: 1024
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Rust
         uses: ./.github/actions/setup-rust
+        with:
+          cache: 'false'
 
       - name: Setup protoc
         uses: ./.github/actions/setup-protoc
@@ -50,12 +53,17 @@ jobs:
         run: |
           echo "Disk usage before additional cleanup:"
           df -h
-          # Remove apt cache
           sudo apt-get clean
-          # Remove old Docker resources
+          sudo rm -rf /var/lib/apt/lists/* || true
           docker system prune -af --volumes || true
-          # Remove pip cache
+          docker builder prune -af || true
           rm -rf ~/.cache/pip || true
+          rm -rf ~/.npm || true
+          rm -rf ~/.cache/yarn || true
+          rm -rf ~/.gradle || true
+          rm -rf ~/.m2 || true
+          rm -rf ~/.cargo/registry/cache || true
+          rm -rf ~/.cargo/git/db || true
           echo "Disk usage after additional cleanup:"
           df -h
 

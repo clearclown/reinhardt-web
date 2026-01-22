@@ -1,8 +1,8 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Uri, Version};
 use reinhardt_apps::{Handler, Request};
-use reinhardt_routers::{DefaultRouter, Router};
-use reinhardt_viewsets::{GenericViewSet, ModelViewSet, ViewSet};
+use reinhardt_urls::routers::{DefaultRouter, Router};
+use reinhardt_views::viewsets::{GenericViewSet, ModelViewSet, ViewSet};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -204,7 +204,7 @@ async fn test_viewset_router_http_methods() {
 #[tokio::test]
 async fn test_extra_actions_with_router() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
+	use reinhardt_views::viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -221,7 +221,7 @@ async fn test_extra_actions_with_router() {
 		async fn dispatch(
 			&self,
 			_request: Request,
-			_action: reinhardt_viewsets::Action,
+			_action: reinhardt_views::viewsets::Action,
 		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
 			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
@@ -297,7 +297,7 @@ async fn test_extra_actions_with_router() {
 #[tokio::test]
 async fn test_get_extra_actions() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
+	use reinhardt_views::viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -314,7 +314,7 @@ async fn test_get_extra_actions() {
 		async fn dispatch(
 			&self,
 			_request: Request,
-			_action: reinhardt_viewsets::Action,
+			_action: reinhardt_views::viewsets::Action,
 		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
 			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
@@ -359,7 +359,7 @@ async fn test_get_extra_actions() {
 #[tokio::test]
 async fn test_extra_action_url_map() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
+	use reinhardt_views::viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -376,7 +376,7 @@ async fn test_extra_action_url_map() {
 		async fn dispatch(
 			&self,
 			_request: Request,
-			_action: reinhardt_viewsets::Action,
+			_action: reinhardt_views::viewsets::Action,
 		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
 			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
@@ -418,7 +418,7 @@ async fn test_extra_action_url_map() {
 #[tokio::test]
 async fn test_action_names_with_kwargs() {
 	use async_trait::async_trait;
-	use reinhardt_viewsets::{register_action, ActionMetadata, FunctionActionHandler};
+	use reinhardt_views::viewsets::{register_action, ActionMetadata, FunctionActionHandler};
 
 	// Define a custom ViewSet type
 	#[derive(Debug, Clone)]
@@ -435,7 +435,7 @@ async fn test_action_names_with_kwargs() {
 		async fn dispatch(
 			&self,
 			_request: Request,
-			_action: reinhardt_viewsets::Action,
+			_action: reinhardt_views::viewsets::Action,
 		) -> reinhardt_apps::Result<reinhardt_apps::Response> {
 			reinhardt_apps::Response::ok().with_json(&serde_json::json!({"test": true}))
 		}
@@ -540,7 +540,7 @@ async fn test_initialize_view_set_with_empty_actions() {
 /// Test as_view() with both name and suffix raises error
 #[tokio::test]
 async fn test_initialize_view_set_with_both_name_and_suffix() {
-	use reinhardt_viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test that providing both name and suffix produces an error
 	let viewset = GenericViewSet::new("test", ());
@@ -558,7 +558,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 		// Exact error message from builder.rs
 		assert_eq!(
 			err_msg,
-			"HTTP error: reinhardt_viewsets::viewset::GenericViewSet<()>() received both `name` and `suffix`, which are mutually exclusive arguments."
+			"HTTP error: reinhardt_views::viewsets::viewset::GenericViewSet<()>() received both `name` and `suffix`, which are mutually exclusive arguments."
 		);
 	}
 }
@@ -566,7 +566,7 @@ async fn test_initialize_view_set_with_both_name_and_suffix() {
 /// Test viewset has required attributes after as_view()
 #[tokio::test]
 async fn test_args_kwargs_request_action_map_on_self() {
-	use reinhardt_viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test that ViewSetHandler has the expected behavior:
 	// - It can be called as a handler
@@ -604,7 +604,7 @@ async fn test_args_kwargs_request_action_map_on_self() {
 async fn test_login_required_middleware_compat() {
 	use hyper::{Method, Version};
 	use reinhardt_test::TestViewSet;
-	use reinhardt_viewsets::viewset_actions;
+	use reinhardt_views::viewset_actions;
 
 	// Test ViewSet without login required
 	let viewset = TestViewSet::new("test");

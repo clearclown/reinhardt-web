@@ -23,8 +23,8 @@
 //! - **RunSQL**: Execute arbitrary SQL statements during migration
 //! - **RunCode**: Execute Rust code during migration (Django's RunPython equivalent)
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, operations::special::RunCode, ColumnDefinition, FieldType,
 	Migration, Operation,
 };

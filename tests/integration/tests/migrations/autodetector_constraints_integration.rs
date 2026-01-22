@@ -16,7 +16,7 @@
 //! **Fixtures Used:**
 //! - None (pure ProjectState manipulation)
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ConstraintDefinition, FieldState, FieldType, IndexDefinition, MigrationAutodetector,
 	ModelState, ProjectState,
 };

@@ -6,10 +6,10 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::{Error, Request, Response, Result};
-use reinhardt_metadata::{
+use reinhardt_rest::metadata::{
 	BaseMetadata, FieldInfoBuilder, FieldType, MetadataOptions, SimpleMetadata,
 };
-use reinhardt_versioning::{BaseVersioning, QueryParameterVersioning};
+use reinhardt_rest::versioning::{BaseVersioning, QueryParameterVersioning};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;

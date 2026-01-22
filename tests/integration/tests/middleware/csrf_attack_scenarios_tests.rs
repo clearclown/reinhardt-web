@@ -16,7 +16,7 @@
 
 use hyper::header::{COOKIE, HeaderName, HeaderValue, ORIGIN, REFERER};
 use reinhardt_http::Request;
-use reinhardt_security::csrf::{
+use reinhardt_core::security::csrf::{
 	RejectRequest, check_origin, check_referer, generate_token_hmac, generate_token_with_timestamp,
 	should_rotate_token, verify_token_hmac, verify_token_with_timestamp,
 };

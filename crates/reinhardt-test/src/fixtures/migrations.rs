@@ -24,7 +24,7 @@
 //!
 //! ```rust,no_run
 //! # use reinhardt_test::fixtures::*;
-//! # use reinhardt_migrations::Migration;
+//! # use reinhardt_db::migrations::Migration;
 //! # use rstest::*;
 //! // #[rstest]
 //! // fn test_migration_registration(migration_registry: LocalRegistry) {
@@ -39,7 +39,7 @@
 //!
 //! ```rust,no_run
 //! # use reinhardt_test::fixtures::*;
-//! # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+//! # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 //! # use rstest::*;
 //! // #[rstest]
 //! // #[tokio::test]
@@ -74,7 +74,7 @@
 //!
 //! ```rust,no_run
 //! # use reinhardt_test::fixtures::*;
-//! # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+//! # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 //! # use rstest::*;
 //! // #[rstest]
 //! // #[tokio::test]
@@ -102,8 +102,8 @@
 //! - **Consistency**: Same patterns across all tests
 
 use async_trait::async_trait;
-use reinhardt_migrations::registry::LocalRegistry;
-use reinhardt_migrations::{Migration, MigrationRepository, MigrationSource, Result};
+use reinhardt_db::migrations::registry::LocalRegistry;
+use reinhardt_db::migrations::{Migration, MigrationRepository, MigrationSource, Result};
 use rstest::*;
 use std::collections::HashMap;
 
@@ -111,9 +111,9 @@ use std::collections::HashMap;
 #[cfg(feature = "testcontainers")]
 use crate::fixtures::testcontainers::postgres_container;
 #[cfg(feature = "testcontainers")]
-use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 #[cfg(feature = "testcontainers")]
-use reinhardt_migrations::{DatabaseConnection, MigrationError, Operation};
+use reinhardt_db::migrations::{DatabaseConnection, MigrationError, Operation};
 #[cfg(feature = "testcontainers")]
 use std::sync::Arc;
 #[cfg(feature = "testcontainers")]
@@ -129,7 +129,7 @@ use testcontainers::{ContainerAsync, GenericImage};
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::Migration;
+/// # use reinhardt_db::migrations::Migration;
 /// # use rstest::*;
 /// // #[rstest]
 /// // fn test_migration_operations(migration_registry: LocalRegistry) {
@@ -158,7 +158,7 @@ pub fn migration_registry() -> LocalRegistry {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::TestMigrationSource;
-/// # use reinhardt_migrations::{Migration, MigrationSource};
+/// # use reinhardt_db::migrations::{Migration, MigrationSource};
 /// # #[tokio::main]
 /// # async fn main() {
 /// // #[tokio::test]
@@ -232,7 +232,7 @@ impl MigrationSource for TestMigrationSource {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::InMemoryRepository;
-/// # use reinhardt_migrations::{Migration, MigrationRepository};
+/// # use reinhardt_db::migrations::{Migration, MigrationRepository};
 /// # #[tokio::main]
 /// # async fn main() {
 /// // #[tokio::test]
@@ -302,7 +302,7 @@ impl MigrationRepository for InMemoryRepository {
 	async fn get(&self, app_label: &str, name: &str) -> Result<Migration> {
 		let key = (app_label.to_string(), name.to_string());
 		self.migrations.get(&key).cloned().ok_or_else(|| {
-			reinhardt_migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
+			reinhardt_db::migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
 		})
 	}
 
@@ -318,7 +318,7 @@ impl MigrationRepository for InMemoryRepository {
 	async fn delete(&mut self, app_label: &str, name: &str) -> Result<()> {
 		let key = (app_label.to_string(), name.to_string());
 		self.migrations.remove(&key).ok_or_else(|| {
-			reinhardt_migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
+			reinhardt_db::migrations::MigrationError::NotFound(format!("{}.{}", app_label, name))
 		})?;
 		Ok(())
 	}
@@ -332,7 +332,7 @@ impl MigrationRepository for InMemoryRepository {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Migration, MigrationSource};
+/// # use reinhardt_db::migrations::{Migration, MigrationSource};
 /// # use rstest::*;
 /// # #[tokio::main]
 /// # async fn main() {
@@ -360,7 +360,7 @@ pub fn test_migration_source() -> TestMigrationSource {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Migration, MigrationRepository};
+/// # use reinhardt_db::migrations::{Migration, MigrationRepository};
 /// # use rstest::*;
 /// # #[tokio::main]
 /// # async fn main() {
@@ -411,7 +411,7 @@ pub type MigrationExecutorFixture = (
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 /// # use rstest::*;
 /// #[rstest]
 /// #[tokio::test]
@@ -472,7 +472,7 @@ impl PostgresTableCreator {
 	///
 	/// ```rust,no_run
 	/// # use reinhardt_test::fixtures::*;
-	/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+	/// # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 	/// # async fn example(mut creator: PostgresTableCreator) {
 	/// let schema = vec![
 	///     Operation::CreateTable {
@@ -638,7 +638,7 @@ impl PostgresTableCreator {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 /// # use rstest::*;
 /// #[rstest]
 /// #[tokio::test]
@@ -669,7 +669,7 @@ impl PostgresTableCreator {
 #[cfg(all(feature = "admin", feature = "testcontainers"))]
 pub struct AdminTableCreator {
 	postgres_creator: PostgresTableCreator,
-	admin_db: Arc<reinhardt_admin_core::AdminDatabase>,
+	admin_db: Arc<reinhardt_admin::core::AdminDatabase>,
 }
 
 #[cfg(all(feature = "admin", feature = "testcontainers"))]
@@ -677,7 +677,7 @@ impl AdminTableCreator {
 	/// Create a new AdminTableCreator
 	pub fn new(
 		postgres_creator: PostgresTableCreator,
-		admin_db: Arc<reinhardt_admin_core::AdminDatabase>,
+		admin_db: Arc<reinhardt_admin::core::AdminDatabase>,
 	) -> Self {
 		Self {
 			postgres_creator,
@@ -695,7 +695,7 @@ impl AdminTableCreator {
 	/// Get a reference to the AdminDatabase
 	///
 	/// This provides access to admin panel operations like list, create, update, delete.
-	pub fn admin_db(&self) -> &Arc<reinhardt_admin_core::AdminDatabase> {
+	pub fn admin_db(&self) -> &Arc<reinhardt_admin::core::AdminDatabase> {
 		&self.admin_db
 	}
 
@@ -778,7 +778,7 @@ impl AdminTableCreator {
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::Migration;
+/// # use reinhardt_db::migrations::Migration;
 /// # use rstest::*;
 /// #[rstest]
 /// #[tokio::test]
@@ -823,7 +823,7 @@ pub async fn migration_executor(
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 /// # use rstest::*;
 /// #[rstest]
 /// #[tokio::test]
@@ -874,7 +874,7 @@ pub async fn postgres_table_creator(
 ///
 /// ```rust,no_run
 /// # use reinhardt_test::fixtures::*;
-/// # use reinhardt_migrations::{Operation, ColumnDefinition, FieldType};
+/// # use reinhardt_db::migrations::{Operation, ColumnDefinition, FieldType};
 /// # use rstest::*;
 /// #[rstest]
 /// #[tokio::test]
@@ -925,7 +925,7 @@ pub async fn admin_table_creator(
 	);
 
 	// Create AdminDatabase
-	let admin_db = Arc::new(reinhardt_admin_core::AdminDatabase::new(connection));
+	let admin_db = Arc::new(reinhardt_admin::core::AdminDatabase::new(connection));
 
 	AdminTableCreator::new(creator, admin_db)
 }
@@ -933,8 +933,8 @@ pub async fn admin_table_creator(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use reinhardt_migrations::Migration;
-	use reinhardt_migrations::registry::MigrationRegistry;
+	use reinhardt_db::migrations::Migration;
+	use reinhardt_db::migrations::registry::MigrationRegistry;
 
 	#[rstest]
 	fn test_migration_registry_fixture(migration_registry: LocalRegistry) {
@@ -963,7 +963,7 @@ mod tests {
 	#[cfg(feature = "testcontainers")]
 	mod testcontainer_fixtures {
 		use super::*;
-		use reinhardt_migrations::{ColumnDefinition, DatabaseType, FieldType, Operation};
+		use reinhardt_db::migrations::{ColumnDefinition, DatabaseType, FieldType, Operation};
 
 		#[rstest]
 		#[tokio::test]

@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
-	use reinhardt_messages::utils::{bisect_keep_left, bisect_keep_right};
-	use reinhardt_messages::{CookieStorage, Level, Message, MessageStorage, SafeData};
+	use reinhardt_core::messages::utils::{bisect_keep_left, bisect_keep_right};
+	use reinhardt_core::messages::{CookieStorage, Level, Message, MessageStorage, SafeData};
 
 	#[test]
 	fn test_cookie_storage_get() {

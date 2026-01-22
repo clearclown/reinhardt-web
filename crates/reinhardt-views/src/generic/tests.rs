@@ -4,7 +4,7 @@
 mod list_api_tests {
 	use crate::View;
 	use crate::generic::ListAPIView;
-	use reinhardt_serializers::JsonSerializer;
+	use reinhardt_rest::serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,7 +43,7 @@ mod list_api_tests {
 mod create_api_tests {
 	use crate::View;
 	use crate::generic::CreateAPIView;
-	use reinhardt_serializers::JsonSerializer;
+	use reinhardt_rest::serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]
@@ -73,7 +73,7 @@ mod create_api_tests {
 mod update_api_tests {
 	use crate::View;
 	use crate::generic::UpdateAPIView;
-	use reinhardt_serializers::JsonSerializer;
+	use reinhardt_rest::serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,7 +144,7 @@ mod composite_api_tests {
 		ListCreateAPIView, RetrieveDestroyAPIView, RetrieveUpdateAPIView,
 		RetrieveUpdateDestroyAPIView,
 	};
-	use reinhardt_serializers::JsonSerializer;
+	use reinhardt_rest::serializers::JsonSerializer;
 	use serde::{Deserialize, Serialize};
 
 	#[derive(Debug, Clone, Serialize, Deserialize)]

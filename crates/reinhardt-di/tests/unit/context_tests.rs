@@ -6,7 +6,7 @@ use rstest::*;
 use std::sync::Arc;
 
 #[cfg(feature = "params")]
-use reinhardt_params::{ParamContext, Request};
+use reinhardt_di::params::{ParamContext, Request};
 
 // Test type definitions
 #[derive(Clone, Debug, PartialEq)]

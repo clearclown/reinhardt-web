@@ -4,7 +4,7 @@
 //! from `reinhardt-orm` and verifies they work correctly with GraphQL.
 
 use crate::prelude::*;
-use reinhardt_orm::Model;
+use reinhardt_db::orm::Model;
 use sea_query::{Iden, PostgresQueryBuilder, Query};
 use serde_json::json;
 

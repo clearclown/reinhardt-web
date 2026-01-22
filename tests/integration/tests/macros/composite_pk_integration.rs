@@ -63,7 +63,7 @@ mod test_models {
 
 #[test]
 fn test_composite_pk_definition() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	// Verify composite_primary_key() returns Some
@@ -87,8 +87,8 @@ fn test_composite_pk_definition() {
 
 #[test]
 fn test_composite_pk_values() {
-	use reinhardt_orm::composite_pk::PkValue;
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::composite_pk::PkValue;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	// Create test instance
@@ -121,7 +121,7 @@ fn test_composite_pk_values() {
 
 #[test]
 fn test_composite_pk_with_optional_field() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	// Test with Some value
@@ -149,7 +149,7 @@ fn test_composite_pk_with_optional_field() {
 
 #[test]
 fn test_composite_pk_sql_generation() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	let composite_pk = PostTag::composite_primary_key().unwrap();
@@ -166,7 +166,7 @@ fn test_composite_pk_sql_generation() {
 
 #[test]
 fn test_composite_pk_field_metadata() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	let fields = PostTag::field_metadata();
@@ -188,7 +188,7 @@ fn test_composite_pk_field_metadata() {
 
 #[test]
 fn test_model_basic_properties() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	assert_eq!(PostTag::table_name(), "post_tags");
@@ -200,7 +200,7 @@ fn test_model_basic_properties() {
 
 #[test]
 fn test_index_metadata() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	let indexes = User::index_metadata();
@@ -217,7 +217,7 @@ fn test_index_metadata() {
 
 #[test]
 fn test_no_index() {
-	use reinhardt_orm::Model;
+	use reinhardt_db::orm::Model;
 	use test_models::*;
 
 	let indexes = SimpleModel::index_metadata();

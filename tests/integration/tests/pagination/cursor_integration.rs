@@ -3,9 +3,9 @@
 //! These tests verify cursor-based pagination with PostgreSQL TestContainers,
 //! testing cursor encoding/decoding, forward/backward navigation, and pagination metadata.
 
-use reinhardt_orm::DatabaseConnection;
-use reinhardt_pagination::cursor::{Base64CursorEncoder, CursorEncoder};
-use reinhardt_pagination::{AsyncPaginator, CursorPagination};
+use reinhardt_core::pagination::cursor::{Base64CursorEncoder, CursorEncoder};
+use reinhardt_core::pagination::{AsyncPaginator, CursorPagination};
+use reinhardt_db::orm::DatabaseConnection;
 use reinhardt_test::fixtures::testcontainers::postgres_container;
 use rstest::*;
 use serde::{Deserialize, Serialize};

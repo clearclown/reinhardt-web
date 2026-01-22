@@ -13,13 +13,7 @@ reinhardt = { workspace = true, features = ["full"] }
 
 # Reinhardt crates
 reinhardt-apps = { workspace = true }
-reinhardt-core = { workspace = true, features = [
-  "http",
-  "types",
-  "exception",
-  "di",
-  "validators",
-] }
+reinhardt-core = { workspace = true, features = ["exception", "messages", "negotiation", "pagination", "parsers", "security", "signals", "types", "validators"] }
 reinhardt-auth = { workspace = true, features = [
   "argon2-hasher",
   "jwt",
@@ -28,67 +22,30 @@ reinhardt-auth = { workspace = true, features = [
   "oauth",
   "database",
   "redis-sessions",
+  "rate-limit",
 ] }
-reinhardt-security = { workspace = true }
 reinhardt-http = { workspace = true, features = ["messages"] }
-reinhardt-params = { workspace = true }
-reinhardt-di = { workspace = true, features = ["macros"] }
+reinhardt-di = { workspace = true, features = ["macros", "params"] }
 reinhardt-middleware = { workspace = true }
-reinhardt-routers = { workspace = true }
-reinhardt-proxy = { workspace = true }
-reinhardt-viewsets = { workspace = true }
-reinhardt-openapi = { workspace = true }
 reinhardt-graphql = { workspace = true, features = ["full"] }
 reinhardt-grpc = { workspace = true }
-reinhardt-db = { workspace = true }
-reinhardt-orm = { workspace = true }
-reinhardt-migrations = { workspace = true }
-reinhardt-backends = { workspace = true }
-reinhardt-metadata = { workspace = true }
-reinhardt-versioning = { workspace = true }
-reinhardt-messages = { workspace = true }
-reinhardt-parsers = { workspace = true }
-reinhardt-exception = { workspace = true }
-reinhardt-types = { workspace = true }
-reinhardt-signals = { workspace = true }
+reinhardt-db = { workspace = true, features = ["backends", "contenttypes", "migrations", "orm"]}
 reinhardt-websockets = { workspace = true, features = ["redis-channel"] }
 reinhardt-server = { workspace = true, features = ["websocket"] }
-reinhardt-logging = { workspace = true }
 reinhardt-mail = { workspace = true }
-reinhardt-contenttypes = { workspace = true, features = ["database"] }
 reinhardt-macros = { workspace = true }
-reinhardt-cache = { workspace = true, features = [
-  "redis-backend",
-  "redis-sentinel",
-  "memcached-backend",
-] }
-reinhardt-views = { workspace = true }
-reinhardt-negotiation = { workspace = true }
-reinhardt-serializers = { workspace = true }
-reinhardt-settings = { workspace = true, features = [
-  "async",
-  "dynamic-database",
-  "dynamic-redis",
-  "hot-reload",
-  "caching",
-] }
-reinhardt-browsable-api = { workspace = true }
+reinhardt-views = { workspace = true, features = ["viewsets"]}
 reinhardt-i18n = { workspace = true }
 reinhardt-tasks = { workspace = true, features = [
   "redis-backend",
   "rabbitmq-backend",
 ] }
-reinhardt-rest = { workspace = true }
-reinhardt-shortcuts = { workspace = true, features = ["database"] }
-reinhardt-pagination = { workspace = true }
-reinhardt-filters = { workspace = true }
-reinhardt-forms = { workspace = true }
+reinhardt-rest = { workspace = true, features = ["browsable-api", "filters", "metadata", "openapi", "serializers", "throttling", "versioning"]}
 reinhardt-throttling = { workspace = true }
-reinhardt-utils = { workspace = true, features = ["cache", "logging"] }
-reinhardt-static = { workspace = true }
-reinhardt-storage = { workspace = true }
+reinhardt-shortcuts = { workspace = true, features = ["database"] }
+reinhardt-forms = { workspace = true }
+reinhardt-utils = { workspace = true, features = ["cache", "logging", "static", "storage", "memcached-backend", "redis-backend", "redis-sentinel"] }
 reinhardt-test = { workspace = true, features = ["testcontainers"] }
-reinhardt-sessions = { workspace = true, features = ["database"] }
 reinhardt-pages = { workspace = true }
 reinhardt-commands = { workspace = true, features = ["migrations"] }
 
@@ -162,16 +119,18 @@ image = { version = "0.25.9", default-features = false, features = ["png"] }
 
 # Macro runtime requirements
 inventory = "0.3"
+reinhardt-urls = {workspace = true, features = ["proxy"]}
+reinhardt-conf = {workspace = true, features = ["settings"]}
 
 [features]
 default = ["postgres", "sqlite", "caching", "hot-reload"]
 testcontainers = []
-postgres = ["reinhardt-orm/postgres", "reinhardt-backends/postgres"]
-sqlite = ["reinhardt-orm/sqlite", "reinhardt-backends/sqlite"]
-caching = ["reinhardt-settings/caching"]
+postgres = ["reinhardt-db/postgres"]
+sqlite = ["reinhardt-db/sqlite"]
+caching = ["reinhardt-conf/caching"]
 jwt = []
 argon2-hasher = []
-hot-reload = ["reinhardt-settings/hot-reload"]
+hot-reload = ["reinhardt-conf/hot-reload"]
 redis-backend = ["reinhardt-tasks/redis-backend"]
 rabbitmq-backend = ["reinhardt-tasks/rabbitmq-backend"]
 websocket = ["reinhardt-server/websocket"]

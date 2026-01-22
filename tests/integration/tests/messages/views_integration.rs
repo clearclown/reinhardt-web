@@ -2,8 +2,8 @@
 
 #[cfg(test)]
 mod tests {
+	use reinhardt_core::messages::{CookieStorage, Level, Message, MessageStorage, SessionStorage};
 	use reinhardt_integration_tests::message_middleware_mock::MockSuccessMessageMixin;
-	use reinhardt_messages::{CookieStorage, Level, Message, MessageStorage, SessionStorage};
 	use std::collections::HashMap;
 
 	#[test]
@@ -92,7 +92,7 @@ mod tests {
 	#[test]
 	fn test_context_processor_message_levels() {
 		// Test that message level constants are available in template context
-		use reinhardt_messages::Level;
+		use reinhardt_core::messages::Level;
 
 		// Render a template (simulated)
 		// Verify DEFAULT_MESSAGE_LEVELS is in context
@@ -118,5 +118,5 @@ mod tests {
 		assert!(default_message_levels["WARNING"] < default_message_levels["ERROR"]);
 	}
 
-	use reinhardt_messages::MemoryStorage;
+	use reinhardt_core::messages::MemoryStorage;
 }

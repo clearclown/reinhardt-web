@@ -2,7 +2,7 @@
 //!
 //! Creates test_models table for async query integration tests.
 
-use reinhardt_migrations::{ColumnDefinition, FieldType, Migration, Operation};
+use reinhardt_db::migrations::{ColumnDefinition, FieldType, Migration, Operation};
 
 /// Create async query test tables migration
 ///

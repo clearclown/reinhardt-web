@@ -2,7 +2,7 @@
 //!
 //! These tests verify that reinhardt-messages works correctly with different storage backends.
 
-use reinhardt_messages::{
+use reinhardt_core::messages::{
 	CookieStorage, FallbackStorage, Level, MemoryStorage, Message, MessageStorage, SessionStorage,
 };
 

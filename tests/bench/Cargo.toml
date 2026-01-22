@@ -7,14 +7,9 @@ publish = false
 [dependencies]
 # Reinhardt crates
 reinhardt-test = { workspace = true }
-reinhardt-proxy = { workspace = true }
-reinhardt-orm = { workspace = true }
 reinhardt-auth = { workspace = true, features = ["jwt"] }
-reinhardt-serializers = { workspace = true }
 reinhardt-apps = { workspace = true }
-reinhardt-settings = { workspace = true }
 reinhardt-http = { workspace = true }
-reinhardt-types = { workspace = true }
 
 # Benchmarking
 criterion = "0.8.1"
@@ -35,6 +30,11 @@ hyper = "1.0"
 tempfile = "3.14"
 futures = "0.3"
 chrono = { version = "0.4", default-features = false, features = ["std"] }
+reinhardt-urls = {workspace = true, features = ["proxy"]}
+reinhardt-db = {workspace = true, features = ["orm"]}
+reinhardt-rest = {workspace = true, features = ["serializers"]}
+reinhardt-conf = {workspace = true, features = ["settings"]}
+reinhardt-core = {workspace = true, features = ["types"]}
 
 [[bench]]
 name = "performance_benchmarks"

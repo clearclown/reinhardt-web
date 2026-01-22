@@ -25,7 +25,7 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
 use reinhardt_di::{Injectable, InjectionContext, SingletonScope};
-use reinhardt_exception::Result as ExceptionResult;
+use reinhardt_core::exception::Result as ExceptionResult;
 use reinhardt_http::Request;
 use reinhardt_macros::use_inject;
 use std::sync::Arc;

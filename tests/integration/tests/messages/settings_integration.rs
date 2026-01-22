@@ -2,7 +2,7 @@
 //!
 //! These tests demonstrate message configuration functionality using mock settings
 
-use reinhardt_messages::{Level, Message};
+use reinhardt_core::messages::{Level, Message};
 use std::collections::HashMap;
 
 // Mock message configuration for testing

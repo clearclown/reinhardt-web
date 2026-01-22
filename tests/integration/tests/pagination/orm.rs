@@ -3,7 +3,7 @@
 //! These tests work with reinhardt-orm and database backends.
 //! They test pagination with database querysets.
 
-use reinhardt_pagination::PageNumberPagination;
+use reinhardt_core::pagination::PageNumberPagination;
 use rstest::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};

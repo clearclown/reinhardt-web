@@ -12,6 +12,7 @@ description = "URL dispatcher and request routing for Reinhardt framework"
 reinhardt-urls = { workspace = true, features = ["routers"] }
 reinhardt-views = { workspace = true }
 reinhardt-middleware = { workspace = true }
+reinhardt-http = { workspace = true }
 reinhardt-core = { workspace = true, features = ["types", "signals", "exception"] }
 bytes = { workspace = true }
 

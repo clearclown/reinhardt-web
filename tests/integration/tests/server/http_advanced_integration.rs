@@ -17,7 +17,7 @@ struct BodyEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for BodyEchoHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let body = request.read_body()?;
 		Ok(Response::ok().with_body(body))
 	}
@@ -30,7 +30,7 @@ struct LargeResponseHandler {
 
 #[async_trait::async_trait]
 impl Handler for LargeResponseHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Generate large body (filled with 'x')
 		let body = "x".repeat(self.size_bytes);
 		Ok(Response::ok().with_body(body))
@@ -42,7 +42,7 @@ struct StreamingHandler;
 
 #[async_trait::async_trait]
 impl Handler for StreamingHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Return multiple chunks as a single response
 		let chunks = vec!["chunk1", "chunk2", "chunk3"];
 		let body = chunks.join("");
@@ -55,7 +55,7 @@ struct KeepAliveHandler;
 
 #[async_trait::async_trait]
 impl Handler for KeepAliveHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		Ok(Response::ok()
 			.with_header("Connection", "keep-alive")
 			.with_body("keep-alive response"))
@@ -67,7 +67,7 @@ struct ChunkedHandler;
 
 #[async_trait::async_trait]
 impl Handler for ChunkedHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Return response without Content-Length to trigger chunked encoding
 		let body = "chunked response body";
 		Ok(Response::ok()
@@ -81,7 +81,7 @@ struct ExpectContinueHandler;
 
 #[async_trait::async_trait]
 impl Handler for ExpectContinueHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Check for Expect header
 		let has_expect = request
 			.headers
@@ -107,7 +107,7 @@ struct MultipartHandler;
 
 #[async_trait::async_trait]
 impl Handler for MultipartHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Check Content-Type header
 		let content_type = request
 			.headers

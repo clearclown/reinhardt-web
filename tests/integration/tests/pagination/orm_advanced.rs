@@ -9,7 +9,7 @@
 //! - postgres_container: PostgreSQL database container (reinhardt-test)
 //! - paginate_test_db: Custom fixture providing database connection with test schema
 
-use reinhardt_pagination::PageNumberPagination;
+use reinhardt_core::pagination::PageNumberPagination;
 use reinhardt_test::fixtures::testcontainers::{postgres_container, ContainerAsync, GenericImage};
 use rstest::*;
 use serde::{Deserialize, Serialize};

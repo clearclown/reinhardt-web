@@ -19,8 +19,8 @@
 //! - sqlite_db: In-memory SQLite connection
 //! - postgres_container: For cross-database comparison
 
-use reinhardt_backends::connection::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::connection::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor,
 	operations::{Constraint, Operation},
 	ColumnDefinition, FieldType, ForeignKeyAction, Migration,

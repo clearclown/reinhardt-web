@@ -12,9 +12,9 @@ use std::sync::Arc;
 #[cfg(feature = "params")]
 use reinhardt_di::DiError;
 #[cfg(feature = "params")]
-use reinhardt_params::Path;
+use reinhardt_di::params::Path;
 #[cfg(feature = "params")]
-use reinhardt_params::extract::FromRequest;
+use reinhardt_di::params::extract::FromRequest;
 
 // Path parameter wrapper
 #[derive(Clone, Debug)]

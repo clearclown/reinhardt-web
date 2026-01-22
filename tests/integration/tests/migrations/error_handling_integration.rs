@@ -14,8 +14,8 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, ColumnDefinition, FieldType, Migration, Operation,
 };
 use reinhardt_test::fixtures::postgres_container;
@@ -50,7 +50,7 @@ fn create_test_migration(app: &str, name: &str, operations: Vec<Operation>) -> M
 }
 
 /// Create a non-atomic migration (for testing partial failure scenarios)
-// Temporarily unused but may be needed for future non-atomic test scenarios
+// TODO: Temporarily unused but may be needed for future non-atomic test scenarios
 #[allow(dead_code)]
 fn create_non_atomic_migration(app: &str, name: &str, operations: Vec<Operation>) -> Migration {
 	Migration {

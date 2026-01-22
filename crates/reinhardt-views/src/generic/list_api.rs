@@ -1,12 +1,12 @@
 //! ListAPIView implementation for displaying lists of objects
 
+use crate::viewsets::{FilterConfig, PaginationConfig};
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_core::http::{Request, Response};
 use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Model, QuerySet};
-use reinhardt_serializers::Serializer;
-use reinhardt_viewsets::{FilterConfig, PaginationConfig};
+use reinhardt_http::{Request, Response};
+use reinhardt_rest::serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -28,7 +28,7 @@ use crate::core::View;
 /// ```rust,no_run
 /// use reinhardt_views::ListAPIView;
 /// use reinhardt_db::orm::{Model, QuerySet};
-/// use reinhardt_serializers::JsonSerializer;
+/// use reinhardt_rest::serializers::JsonSerializer;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,7 +83,7 @@ where
 	///
 	/// ```rust,no_run
 	/// use reinhardt_views::ListAPIView;
-	/// use reinhardt_serializers::JsonSerializer;
+	/// use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -121,7 +121,7 @@ where
 	/// ```rust,no_run
 	/// # use reinhardt_views::ListAPIView;
 	/// # use reinhardt_db::orm::{Model, QuerySet};
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
 	/// # struct Article { id: Option<i64>, title: String }
@@ -154,7 +154,7 @@ where
 	///
 	/// ```rust,no_run
 	/// # use reinhardt_views::ListAPIView;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -189,8 +189,8 @@ where
 	///
 	/// ```rust,no_run
 	/// # use reinhardt_views::ListAPIView;
-	/// # use reinhardt_viewsets::PaginationConfig;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_views::viewsets::PaginationConfig;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -213,7 +213,7 @@ where
 	///
 	/// ```rust,no_run
 	/// # use reinhardt_views::ListAPIView;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]

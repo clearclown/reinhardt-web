@@ -3,9 +3,9 @@
 use async_trait::async_trait;
 use hyper::Method;
 use reinhardt_core::exception::{Error, Result};
-use reinhardt_core::http::{Request, Response};
 use reinhardt_db::orm::{Filter, FilterOperator, FilterValue, Manager, Model, QuerySet};
-use reinhardt_serializers::Serializer;
+use reinhardt_http::{Request, Response};
+use reinhardt_rest::serializers::Serializer;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -27,7 +27,7 @@ use crate::core::View;
 /// ```rust,no_run
 /// use reinhardt_views::UpdateAPIView;
 /// use reinhardt_db::orm::Model;
-/// use reinhardt_serializers::JsonSerializer;
+/// use reinhardt_rest::serializers::JsonSerializer;
 /// use serde::{Serialize, Deserialize};
 ///
 /// #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,7 +80,7 @@ where
 	///
 	/// ```rust,no_run
 	/// use reinhardt_views::UpdateAPIView;
-	/// use reinhardt_serializers::JsonSerializer;
+	/// use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,7 +122,7 @@ where
 	///
 	/// ```rust,no_run
 	/// # use reinhardt_views::UpdateAPIView;
-	/// # use reinhardt_serializers::JsonSerializer;
+	/// # use reinhardt_rest::serializers::JsonSerializer;
 	/// # use reinhardt_db::orm::Model;
 	/// # use serde::{Serialize, Deserialize};
 	/// # #[derive(Debug, Clone, Serialize, Deserialize)]

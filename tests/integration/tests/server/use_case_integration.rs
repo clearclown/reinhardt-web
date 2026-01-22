@@ -16,9 +16,9 @@ use bytes::Bytes;
 use http::Method;
 use reinhardt_http::Handler;
 use reinhardt_http::{Request, Response};
-use reinhardt_routers::ServerRouter as Router;
 use reinhardt_test::fixtures::*;
 use reinhardt_test::APIClient;
+use reinhardt_urls::routers::ServerRouter as Router;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -125,7 +125,7 @@ struct CreateArticleHandler;
 
 #[async_trait::async_trait]
 impl Handler for CreateArticleHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let payload: CreateArticleRequest =
 			serde_json::from_slice(request.body()).map_err(|e| format!("Invalid JSON: {}", e))?;
 
@@ -141,7 +141,7 @@ struct ListArticlesHandler;
 
 #[async_trait::async_trait]
 impl Handler for ListArticlesHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		let store = get_article_store();
 		let articles = store.list();
 		Response::ok().with_json(&articles)
@@ -154,7 +154,7 @@ struct GetArticleHandler;
 
 #[async_trait::async_trait]
 impl Handler for GetArticleHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract ID from path
 		let path = request.uri.path();
 		let id: u64 = path
@@ -176,7 +176,7 @@ struct UpdateArticleHandler;
 
 #[async_trait::async_trait]
 impl Handler for UpdateArticleHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract ID from path
 		let path = request.uri.path();
 		let id: u64 = path
@@ -201,7 +201,7 @@ struct DeleteArticleHandler;
 
 #[async_trait::async_trait]
 impl Handler for DeleteArticleHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract ID from path
 		let path = request.uri.path();
 		let id: u64 = path
@@ -364,7 +364,7 @@ struct UploadFileHandler;
 
 #[async_trait::async_trait]
 impl Handler for UploadFileHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract filename from query parameters
 		let filename = request
 			.uri
@@ -395,7 +395,7 @@ struct DownloadFileHandler;
 
 #[async_trait::async_trait]
 impl Handler for DownloadFileHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		// Extract filename from path
 		let path = request.uri.path();
 		let filename = path.trim_start_matches("/download/");
@@ -950,7 +950,7 @@ struct LoginHandler;
 
 #[async_trait::async_trait]
 impl Handler for LoginHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let payload: LoginRequest =
 			serde_json::from_slice(request.body()).map_err(|e| format!("Invalid JSON: {}", e))?;
 
@@ -982,7 +982,7 @@ struct ProtectedHandler;
 
 #[async_trait::async_trait]
 impl Handler for ProtectedHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let store = get_session_store();
 
 		// Extract session_id from Cookie header
@@ -1016,7 +1016,7 @@ struct LogoutHandler;
 
 #[async_trait::async_trait]
 impl Handler for LogoutHandler {
-	async fn handle(&self, request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, request: Request) -> reinhardt_core::exception::Result<Response> {
 		let store = get_session_store();
 
 		// Extract session_id from Cookie header

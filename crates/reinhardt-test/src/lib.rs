@@ -198,7 +198,7 @@ pub use messages::{
 	MessagesTestMixin, assert_message_count, assert_message_exists, assert_message_level,
 	assert_message_tags, assert_messages,
 };
-pub use mock::{CallRecord, MockFunction, MockSchemaEditor, SimpleHandler, Spy};
+pub use mock::{CallRecord, MockFunction, SimpleHandler, Spy};
 pub use resource::{
 	AsyncTeardownGuard, AsyncTestResource, SuiteGuard, SuiteResource, TeardownGuard, TestResource,
 	acquire_suite,

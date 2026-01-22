@@ -1,7 +1,9 @@
 //! Integration tests for throttling functionality
 //! Tests interactions between reinhardt-throttling and related crates
 
-use reinhardt_throttling::{AnonRateThrottle, ScopedRateThrottle, Throttle, UserRateThrottle};
+use reinhardt_rest::throttling::{
+	AnonRateThrottle, ScopedRateThrottle, Throttle, UserRateThrottle,
+};
 
 #[tokio::test]
 async fn test_request_throttling_multiple_throttles() {
@@ -171,12 +173,18 @@ async fn test_non_time_throttle() {
 
 	#[async_trait::async_trait]
 	impl Throttle for NonTimeThrottle {
-		async fn allow_request(&self, _key: &str) -> reinhardt_throttling::ThrottleResult<bool> {
+		async fn allow_request(
+			&self,
+			_key: &str,
+		) -> reinhardt_rest::throttling::ThrottleResult<bool> {
 			let was_called = self.called.swap(true, std::sync::atomic::Ordering::SeqCst);
 			Ok(!was_called) // Allow first request, deny subsequent
 		}
 
-		async fn wait_time(&self, _key: &str) -> reinhardt_throttling::ThrottleResult<Option<u64>> {
+		async fn wait_time(
+			&self,
+			_key: &str,
+		) -> reinhardt_rest::throttling::ThrottleResult<Option<u64>> {
 			Ok(None) // Non-time throttle returns None
 		}
 

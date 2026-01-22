@@ -4,7 +4,7 @@
 
 use crate::{CommandContext, CommandError, CommandResult};
 use async_trait::async_trait;
-use reinhardt_utils_core::checks::{CheckLevel, CheckRegistry};
+use reinhardt_utils::utils_core::checks::{CheckLevel, CheckRegistry};
 
 /// Base command trait
 ///

@@ -10,4 +10,4 @@
 //! ```
 
 #[cfg(feature = "core")]
-pub use reinhardt_core::http::*;
+pub use reinhardt_http::*;

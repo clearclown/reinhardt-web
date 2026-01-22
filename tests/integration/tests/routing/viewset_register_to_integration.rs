@@ -1,8 +1,8 @@
 //! ViewSet as_view → register_to_router integration tests
 
 use hyper::Method;
-use reinhardt_routers::ServerRouter;
-use reinhardt_viewsets::ModelViewSet;
+use reinhardt_urls::routers::ServerRouter;
+use reinhardt_views::viewsets::ModelViewSet;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

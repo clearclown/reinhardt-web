@@ -7,7 +7,7 @@ use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
 use reinhardt_http::{Handler, MiddlewareChain};
 use reinhardt_http::{Request, Response};
-use reinhardt_versioning::{
+use reinhardt_rest::versioning::{
 	AcceptHeaderVersioning, HostNameVersioning, NamespaceVersioning, QueryParameterVersioning,
 	RequestVersionExt, URLPathVersioning, VersioningMiddleware,
 };
@@ -18,7 +18,7 @@ struct VersionEchoHandler;
 
 #[async_trait::async_trait]
 impl Handler for VersionEchoHandler {
-	async fn handle(&self, request: Request) -> Result<Response, reinhardt_exception::Error> {
+	async fn handle(&self, request: Request) -> Result<Response, reinhardt_core::exception::Error> {
 		let version = request.version().unwrap_or_else(|| "unknown".to_string());
 		let body = format!("{{\"version\":\"{}\"}}", version);
 		Ok(Response::ok().with_body(Bytes::from(body)))
@@ -296,7 +296,10 @@ async fn test_version_propagation_through_request_lifecycle() {
 
 	#[async_trait::async_trait]
 	impl Handler for MultiStageHandler {
-		async fn handle(&self, request: Request) -> Result<Response, reinhardt_exception::Error> {
+		async fn handle(
+			&self,
+			request: Request,
+		) -> Result<Response, reinhardt_core::exception::Error> {
 			// First stage: read version
 			let version = request.version();
 			assert!(version.is_some());
@@ -360,7 +363,10 @@ async fn test_version_or_with_fallback() {
 
 	#[async_trait::async_trait]
 	impl Handler for FallbackHandler {
-		async fn handle(&self, request: Request) -> Result<Response, reinhardt_exception::Error> {
+		async fn handle(
+			&self,
+			request: Request,
+		) -> Result<Response, reinhardt_core::exception::Error> {
 			let version = request.version_or("fallback");
 			Ok(Response::ok().with_body(Bytes::from(format!("{{\"version\":\"{}\"}}", version))))
 		}

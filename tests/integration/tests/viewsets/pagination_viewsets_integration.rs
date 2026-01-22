@@ -3,7 +3,7 @@
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, StatusCode, Version};
 use reinhardt_http::{Request, Response};
-use reinhardt_viewsets::ReadOnlyModelViewSet;
+use reinhardt_views::viewsets::ReadOnlyModelViewSet;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 

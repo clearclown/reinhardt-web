@@ -8,17 +8,38 @@ authors.workspace = true
 description = "HTTP server implementation for Reinhardt framework"
 
 [dependencies]
-# Internal crates (optional)
-reinhardt-server-core = { workspace = true, optional = true }
+reinhardt-core = { workspace = true, features = ["exception", "types"] }
+reinhardt-http = { workspace = true }
+reinhardt-di = { workspace = true }
+serde_json = { workspace = true }
+bytes = { workspace = true }
+hyper = { workspace = true }
+hyper-util = { version = "0.1", features = ["tokio", "server", "http2"] }
+http-body-util = { workspace = true }
+http = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+async-graphql = { version = "7.0", optional = true }
+tokio-tungstenite = { version = "0.28.0", optional = true }
+futures-util = { version = "0.3", optional = true }
 
 [features]
 default = ["server"]
-server = ["dep:reinhardt-server-core"]
-graphql = ["server", "reinhardt-server-core/graphql"]
-websocket = ["server", "reinhardt-server-core/websocket"]
-server-full = [
-  "server",
-  "graphql",
-  "websocket",
-  "reinhardt-server-core/full",
-]
+
+# Module features (modules are always compiled, features for backwards compatibility)
+server = []
+graphql = ["async-graphql", "server"]
+websocket = ["futures-util", "server", "tokio-tungstenite"]
+server-full = ["server", "graphql", "websocket"]
+full = ["graphql", "websocket"]
+
+[dev-dependencies]
+reinhardt-test = { workspace = true }
+tokio-test = "0.4"
+anyhow = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }
+async-graphql = "7.0"
+tokio-tungstenite = "0.28.0"
+futures-util = "0.3"
+serde = { workspace = true }
+serde_json = { workspace = true }

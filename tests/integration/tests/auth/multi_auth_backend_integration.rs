@@ -13,12 +13,12 @@
 
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Version};
+use reinhardt_auth::sessions::{backends::InMemorySessionBackend, Session};
 use reinhardt_auth::{
 	AuthenticationBackend, AuthenticationError, CompositeAuthentication, RestAuthentication,
 	SessionAuthentication, SimpleUser, TokenAuthentication, User,
 };
 use reinhardt_http::Request;
-use reinhardt_sessions::{backends::InMemorySessionBackend, Session};
 use reinhardt_test::fixtures::*;
 use rstest::*;
 use std::sync::Arc;
@@ -864,7 +864,7 @@ impl DatabaseAuthBackend {
 impl AuthenticationBackend for DatabaseAuthBackend {
 	async fn authenticate(
 		&self,
-		request: &reinhardt_core::http::Request,
+		request: &reinhardt_http::Request,
 	) -> Result<Option<Box<dyn User>>, AuthenticationError> {
 		// Custom header: X-User-ID
 		let user_id_header = request

@@ -109,7 +109,7 @@ Advanced filtering and query building with SeaQuery integration:
 - **FilterCondition**: AND/OR conditions for complex queries
 - **FilterValue**: Type-safe value representation (String, Int, Float, Bool, Array)
 
-See [Panel README](crates/panel/README.md) for detailed database layer documentation.
+For detailed database layer documentation, see the [`core::database`](src/core/database.rs) module.
 
 ### Handlers
 
@@ -148,7 +148,7 @@ let router = AdminRouter::new(site, db)
 router.register_model_routes::<User>("/admin/user/")?;
 ```
 
-For comprehensive panel documentation, see [`crates/panel/README.md`](crates/panel/README.md).
+For comprehensive panel documentation, see the [`core`](src/core/) module.
 
 ## Advanced Features
 
@@ -228,8 +228,7 @@ The `ReorderHandler` validates reorder operations by:
 All database updates are performed using SeaQuery v1.0.0-rc within a
 transaction, ensuring atomicity.
 
-For a complete implementation example, see
-[`crates/panel/src/custom_views.rs`](crates/panel/src/custom_views.rs).
+For a complete implementation example, see the [`core::database`](src/core/database.rs) module.
 
 ## Feature Flags
 
@@ -239,8 +238,8 @@ For a complete implementation example, see
 
 ## Documentation
 
-- [API Documentation](https://docs.rs/reinhardt-panel) (coming soon)
-- [Panel Module Documentation](crates/panel/src/lib.rs)
+- [API Documentation](https://docs.rs/reinhardt-admin) (coming soon)
+- [Core Module Documentation](src/core/)
 
 ## License
 

@@ -5,7 +5,7 @@
 
 use hyper::{HeaderMap, Method, Uri, Version};
 use reinhardt_http::Request;
-use reinhardt_viewsets::viewset::ModelViewSet;
+use reinhardt_views::viewsets::viewset::ModelViewSet;
 use std::collections::HashMap;
 
 // Helper function to create a test request

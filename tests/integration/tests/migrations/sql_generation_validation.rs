@@ -21,8 +21,8 @@
 //! 4. Execute SQL and verify with information_schema
 
 use regex::Regex;
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, operations::SqlDialect, ColumnDefinition, Constraint,
 	FieldType, ForeignKeyAction, Migration, Operation,
 };

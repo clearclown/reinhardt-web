@@ -12,9 +12,9 @@
 
 #![cfg(feature = "params")]
 
+use reinhardt_di::params::Path;
+use reinhardt_di::params::extract::FromRequest;
 use reinhardt_di::{DiError, DiResult, Injectable, InjectionContext, SingletonScope};
-use reinhardt_params::Path;
-use reinhardt_params::extract::FromRequest;
 use std::sync::Arc;
 
 // Path parameter dependency

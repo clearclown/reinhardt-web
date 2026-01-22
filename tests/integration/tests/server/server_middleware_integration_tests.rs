@@ -29,7 +29,7 @@ impl TestHandler {
 
 #[async_trait]
 impl Handler for TestHandler {
-	async fn handle(&self, _request: Request) -> reinhardt_exception::Result<Response> {
+	async fn handle(&self, _request: Request) -> reinhardt_core::exception::Result<Response> {
 		use hyper::StatusCode;
 		let mut response = Response::new(StatusCode::OK);
 		response.body = self.response_body.clone().into();
@@ -58,7 +58,7 @@ impl Middleware for OrderTrackingMiddleware {
 		&self,
 		request: Request,
 		next: Arc<dyn Handler>,
-	) -> reinhardt_exception::Result<Response> {
+	) -> reinhardt_core::exception::Result<Response> {
 		// Log before processing
 		{
 			let mut log = self.log.lock().unwrap();
@@ -248,9 +248,9 @@ async fn test_middleware_error_handling() {
 			&self,
 			request: Request,
 			next: Arc<dyn Handler>,
-		) -> reinhardt_exception::Result<Response> {
+		) -> reinhardt_core::exception::Result<Response> {
 			if request.uri.path().contains("fail") {
-				return Err(reinhardt_exception::Error::Internal(
+				return Err(reinhardt_core::exception::Error::Internal(
 					"Intentional failure".to_string(),
 				));
 			}

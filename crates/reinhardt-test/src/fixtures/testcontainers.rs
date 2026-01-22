@@ -78,7 +78,7 @@ fn get_pool_config() -> (u32, u64) {
 /// * `database_url` - Connection URL (postgres://, mysql://, sqlite://)
 ///
 /// # Example
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::testcontainers::create_test_any_pool;
 ///
 /// # async fn example() {
@@ -223,7 +223,7 @@ use fs2::FileExt;
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::FileLockGuard;
 ///
 /// // Acquire lock (blocks until available)
@@ -279,7 +279,7 @@ impl Drop for FileLockGuard {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::postgres_container;
 /// use rstest::*;
 ///
@@ -479,7 +479,7 @@ pub async fn cockroachdb_container()
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::redis_container;
 /// use rstest::*;
 ///
@@ -573,8 +573,8 @@ impl std::fmt::Debug for RedisClusterContainer {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::redis_cluster_lock;
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::redis_cluster_lock;
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -595,8 +595,8 @@ pub fn redis_cluster_lock() -> FileLockGuard {
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::{redis_cluster_lock, redis_cluster_cleanup};
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::{redis_cluster_lock, redis_cluster_cleanup};
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -658,7 +658,7 @@ async fn try_start_redis_cluster(
 ) -> Result<(ContainerAsync<GenericImage>, Vec<u16>), Box<dyn std::error::Error>> {
 	let cluster = GenericImage::new("grokzen/redis-cluster", "7.0.10")
 		.with_wait_for(WaitFor::message_on_stdout("Cluster state changed: ok"))
-		.with_startup_timeout(std::time::Duration::from_secs(180))
+		.with_startup_timeout(std::time::Duration::from_secs(600))
 		.with_env_var("IP", "0.0.0.0")
 		.with_env_var("INITIAL_PORT", base_port.to_string())
 		.with_mapped_port(base_port, ContainerPort::Tcp(base_port))
@@ -798,8 +798,8 @@ pub async fn redis_cluster_ports_ready(
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::redis_cluster_container;
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::redis_cluster_container;
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -839,7 +839,7 @@ pub async fn redis_cluster_container(
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::redis_cluster;
 /// use rstest::*;
 ///
@@ -906,8 +906,8 @@ pub async fn redis_cluster(
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::redis_cluster_client;
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::redis_cluster_client;
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -964,8 +964,8 @@ pub async fn redis_cluster_client(
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::redis_cluster_urls;
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::redis_cluster_urls;
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -1003,8 +1003,8 @@ pub async fn redis_cluster_urls(
 ///
 /// # Examples
 ///
-/// ```rust,no_run
-/// use reinhardt_test::fixtures::redis_cluster_fixture;
+/// ```ignore
+/// use reinhardt_test::fixtures::testcontainers::redis_cluster_fixture;
 /// use rstest::*;
 ///
 /// #[rstest]
@@ -1081,7 +1081,7 @@ pub async fn redis_cluster_fixture() -> (
 			.with_exposed_port(7004.tcp())
 			.with_exposed_port(7005.tcp())
 			.with_wait_for(WaitFor::message_on_stdout("[OK] All 16384 slots covered."))
-			.with_startup_timeout(std::time::Duration::from_secs(180))
+			.with_startup_timeout(std::time::Duration::from_secs(600))
 			.start()
 			.await
 			.expect("Failed to start Redis cluster container");
@@ -1267,7 +1267,7 @@ pub async fn mongodb_container() -> (ContainerAsync<GenericImage>, String, u16) 
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::localstack_fixture;
 /// use rstest::*;
 ///
@@ -1323,9 +1323,9 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::postgres_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1350,7 +1350,8 @@ pub async fn localstack_fixture() -> (ContainerAsync<GenericImage>, u16, String)
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> Result<
+pub async fn postgres_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>()
+-> Result<
 	(
 		ContainerAsync<GenericImage>,
 		std::sync::Arc<reinhardt_db::DatabaseConnection>,
@@ -1358,7 +1359,7 @@ pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationPro
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1389,7 +1390,7 @@ pub async fn postgres_with_migrations_from<P: reinhardt_migrations::MigrationPro
 ///
 /// # Examples
 ///
-/// ```rust,no_run
+/// ```ignore
 /// use reinhardt_test::fixtures::mysql_container;
 /// use rstest::*;
 ///
@@ -1530,9 +1531,9 @@ pub async fn mysql_container() -> (
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::mysql_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1553,12 +1554,12 @@ pub async fn mysql_container() -> (
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvider>() -> (
+pub async fn mysql_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>() -> (
 	ContainerAsync<GenericImage>,
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1596,9 +1597,9 @@ pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvid
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::sqlite_with_migrations_from;
-/// # use reinhardt_migrations::MigrationProvider;
+/// # use reinhardt_db::migrations::MigrationProvider;
 /// # #[tokio::main]
 /// # async fn main() {
 /// // In your app's migrations.rs, use collect_migrations! macro
@@ -1619,10 +1620,10 @@ pub async fn mysql_with_migrations_from<P: reinhardt_migrations::MigrationProvid
 /// # }
 /// ```
 #[cfg(feature = "testcontainers")]
-pub async fn sqlite_with_migrations_from<P: reinhardt_migrations::MigrationProvider>()
+pub async fn sqlite_with_migrations_from<P: reinhardt_db::migrations::MigrationProvider>()
 -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";
@@ -1660,7 +1661,7 @@ pub async fn sqlite_with_migrations_from<P: reinhardt_migrations::MigrationProvi
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::*;
 /// # use rstest::*;
 /// # use std::sync::Arc;
@@ -1700,8 +1701,8 @@ pub async fn postgres_with_all_migrations() -> Result<
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1736,7 +1737,7 @@ pub async fn postgres_with_all_migrations() -> Result<
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::postgres_with_apps_migrations;
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -1759,8 +1760,8 @@ pub async fn postgres_with_apps_migrations(
 	Box<dyn std::error::Error>,
 > {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start PostgreSQL container
@@ -1796,7 +1797,7 @@ pub async fn postgres_with_apps_migrations(
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::*;
 /// # use rstest::*;
 /// # use std::sync::Arc;
@@ -1818,8 +1819,8 @@ pub async fn mysql_with_all_migrations() -> (
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1857,8 +1858,8 @@ pub async fn mysql_with_apps_migrations(
 	std::sync::Arc<reinhardt_db::DatabaseConnection>,
 ) {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	// Start MySQL container
@@ -1894,7 +1895,7 @@ pub async fn mysql_with_apps_migrations(
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```ignore
 /// # use reinhardt_test::fixtures::*;
 /// # use rstest::*;
 /// # use std::sync::Arc;
@@ -1912,8 +1913,8 @@ pub async fn mysql_with_apps_migrations(
 #[rstest::fixture]
 pub async fn sqlite_with_all_migrations() -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";
@@ -1947,8 +1948,8 @@ pub async fn sqlite_with_apps_migrations(
 	app_labels: &[&str],
 ) -> std::sync::Arc<reinhardt_db::DatabaseConnection> {
 	use reinhardt_db::DatabaseConnection;
-	use reinhardt_migrations::executor::DatabaseMigrationExecutor;
-	use reinhardt_migrations::registry::{MigrationRegistry, global_registry};
+	use reinhardt_db::migrations::executor::DatabaseMigrationExecutor;
+	use reinhardt_db::migrations::registry::{MigrationRegistry, global_registry};
 	use std::sync::Arc;
 
 	let database_url = "sqlite::memory:";

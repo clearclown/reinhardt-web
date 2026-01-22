@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 // Re-export ParamContext and Request types for convenience
 #[cfg(feature = "params")]
-pub use reinhardt_params::{ParamContext, Request};
+pub use crate::params::{ParamContext, Request};
 
 /// The main injection context for dependency resolution.
 ///

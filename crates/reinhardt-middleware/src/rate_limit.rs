@@ -6,10 +6,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use hyper::StatusCode;
-use reinhardt_core::{
-	Handler, Middleware,
-	http::{Request, Response, Result},
-};
+use reinhardt_http::{Handler, Middleware, Request, Response, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
@@ -138,16 +135,8 @@ impl RateLimitStore {
 	}
 }
 
-/// Rate Limiting Strategy
-#[derive(Debug, Clone, Copy)]
-pub enum RateLimitStrategy {
-	/// Rate limiting per route
-	PerRoute,
-	/// Rate limiting per user
-	PerUser,
-	/// Rate limiting per IP address
-	PerIp,
-}
+// Re-export RateLimitStrategy from reinhardt-core
+pub use reinhardt_core::RateLimitStrategy;
 
 /// Rate Limiting Configuration
 #[derive(Debug, Clone)]
@@ -249,7 +238,7 @@ impl Default for RateLimitConfig {
 /// ```
 /// use std::sync::Arc;
 /// use reinhardt_middleware::rate_limit::{RateLimitMiddleware, RateLimitConfig, RateLimitStrategy};
-/// use reinhardt_core::{Handler, Middleware, http::{Request, Response}};
+/// use reinhardt_http::{Handler, Middleware, Request, Response};
 /// use hyper::{StatusCode, Method, Version, HeaderMap};
 /// use bytes::Bytes;
 ///
@@ -393,6 +382,14 @@ impl RateLimitMiddleware {
 			}
 			RateLimitStrategy::PerIp => {
 				format!("ip:{}", self.extract_client_ip(request))
+			}
+			RateLimitStrategy::PerIpAndUser => {
+				let ip = self.extract_client_ip(request);
+				if let Some(user_id) = self.extract_user_id(request) {
+					format!("ip_user:{}:{}", ip, user_id)
+				} else {
+					format!("ip_user:{}:anonymous", ip)
+				}
 			}
 		}
 	}

@@ -20,8 +20,11 @@ token = []
 argon2-hasher = []
 
 # Database and session storage (ORM model support)
-database = ["sqlx", "sea-query", "reinhardt-orm", "reinhardt-migrations", "reinhardt-apps", "ctor"]
+database = ["ctor", "reinhardt-apps", "sea-query", "sqlx"]
 redis-sessions = ["redis"]
+
+# Rate limiting permission
+rate-limit = ["reinhardt-throttling"]
 
 # Aggregate all auth features
 auth-full = [
@@ -33,17 +36,31 @@ auth-full = [
   "argon2-hasher",
   "database",
   "redis-sessions",
-  "reinhardt-sessions/full",
+]
+file = ["fs2"]
+cookie = ["aes-gcm"]
+middleware = ["bytes"]
+messagepack = ["dep:rmp-serde"]
+cbor = ["dep:ciborium"]
+bincode = ["dep:bincode"]
+compression-zstd = ["dep:zstd"]
+compression-gzip = ["dep:flate2"]
+compression-brotli = ["dep:brotli"]
+compression = ["compression-zstd", "compression-gzip", "compression-brotli"]
+analytics-prometheus = ["dep:prometheus"]
+analytics = ["analytics-prometheus"]
+replication = []
+tenant = []
+full = [
+	"database", "file", "cookie", "jwt", "middleware",
+	"messagepack", "cbor", "bincode", "compression",
+	"analytics", "replication", "tenant",
 ]
 
 [dependencies]
-reinhardt-core = { workspace = true, features = ["macros"] }
+reinhardt-core = { workspace = true, features = ["exception", "macros", "types"] }
 reinhardt-di = { workspace = true }
-reinhardt-sessions = { workspace = true }
-reinhardt-db = { workspace = true, features = ["orm"] }
-reinhardt-throttling = { workspace = true }
-reinhardt-types = { workspace = true }
-reinhardt-exception = { workspace = true }
+reinhardt-db = { workspace = true, features = ["migrations", "orm"] }
 reinhardt-http = { workspace = true }
 hyper = { workspace = true }
 argon2 = { workspace = true }
@@ -58,7 +75,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 async-trait = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["fs", "macros", "rt", "sync", "time"]}
 base64 = "0.22"
 sha2 = { workspace = true }
 hmac = { workspace = true }
@@ -67,18 +84,30 @@ unicode-normalization = "0.1"
 reqwest = { version = "0.12", features = ["json"] }
 totp-lite = "2.0"
 data-encoding = "2.6"
-sqlx = { workspace = true, optional = true }
+sqlx = { workspace = true, optional = true, features = ["any", "runtime-tokio", "sqlite"]}
 sea-query = { version = "1.0.0-rc.29", features = [
   "backend-postgres",
   "backend-mysql",
   "backend-sqlite",
   "sqlx-utils",
 ], optional = true }
-reinhardt-orm = { workspace = true, optional = true }
-reinhardt-migrations = { workspace = true, optional = true }
 reinhardt-apps = { workspace = true, optional = true }
 ctor = { workspace = true, optional = true }
 redis = { workspace = true, optional = true }
+reinhardt-utils = { workspace = true, features = ["cache"] }
+reinhardt-throttling = { workspace = true, optional = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+fs2 = { version = "0.4", optional = true }
+aes-gcm = { version = "0.10", optional = true }
+bytes = { workspace = true, optional = true }
+rmp-serde = { version = "1.1", optional = true }
+ciborium = { version = "0.2", optional = true }
+bincode = { version = "2.0.1", optional = true, features = ["serde"] }
+zstd = { version = "0.13", optional = true }
+flate2 = { version = "1.0", optional = true }
+brotli = { version = "8.0.2", optional = true }
+prometheus = { version = "0.14.0", optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util", "macros", "rt-multi-thread"] }
@@ -90,3 +119,14 @@ proptest = { workspace = true }
 reinhardt-test = { workspace = true, features = ["testcontainers", "property-based"] }
 trybuild = { workspace = true }
 serial_test = "3.2"
+sqlx = { workspace = true, features = ["any", "sqlite", "runtime-tokio"] }
+testcontainers = { workspace = true }
+testcontainers-modules = { workspace = true }
+tempfile = { workspace = true }
+filetime = "0.2"
+sea-query = { version = "1.0.0-rc.29", features = [
+	"backend-postgres",
+	"backend-mysql",
+	"backend-sqlite",
+] }
+reinhardt-db = {workspace = true, features = ["orm"]}

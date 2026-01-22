@@ -15,8 +15,8 @@
 //! **Fixtures Used:**
 //! - postgres_container: PostgreSQL database container
 
-use reinhardt_backends::DatabaseConnection;
-use reinhardt_migrations::{
+use reinhardt_db::backends::DatabaseConnection;
+use reinhardt_db::migrations::{
 	executor::DatabaseMigrationExecutor, ColumnDefinition, Constraint, FieldType, Migration,
 	Operation,
 };
@@ -151,8 +151,8 @@ async fn test_self_referencing_fk(
 				columns: vec!["parent_id".to_string()],
 				referenced_table: "categories".to_string(),
 				referenced_columns: vec!["id".to_string()],
-				on_delete: reinhardt_migrations::ForeignKeyAction::SetNull,
-				on_update: reinhardt_migrations::ForeignKeyAction::NoAction,
+				on_delete: reinhardt_db::migrations::ForeignKeyAction::SetNull,
+				on_update: reinhardt_db::migrations::ForeignKeyAction::NoAction,
 				deferrable: None,
 			}],
 			without_rowid: None,

@@ -4,9 +4,9 @@
 
 #[cfg(feature = "argon2-hasher")]
 use crate::DefaultUser;
+use crate::sessions::{Session, backends::SessionBackend};
 use crate::{AuthenticationBackend, AuthenticationError, SimpleUser, User};
 use reinhardt_http::Request;
-use reinhardt_sessions::{Session, backends::SessionBackend};
 use std::sync::Arc;
 
 /// REST API authentication trait wrapper
@@ -80,7 +80,7 @@ impl Default for TokenAuthConfig {
 ///
 /// ```
 /// use reinhardt_auth::{CompositeAuthentication, SessionAuthentication, TokenAuthentication};
-/// use reinhardt_sessions::backends::InMemorySessionBackend;
+/// use reinhardt_auth::sessions::backends::InMemorySessionBackend;
 ///
 /// let session_backend = InMemorySessionBackend::new();
 /// let auth = CompositeAuthentication::new()
@@ -641,8 +641,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_session_authentication() {
-		use reinhardt_sessions::Session;
-		use reinhardt_sessions::backends::InMemorySessionBackend;
+		use crate::sessions::InMemorySessionBackend;
+		use crate::sessions::Session;
 
 		let session_backend = InMemorySessionBackend::new();
 

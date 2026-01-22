@@ -13,9 +13,8 @@ mod server_only {
 	pub use reinhardt::core::async_trait;
 	pub use reinhardt::reinhardt_apps;
 	pub use reinhardt::reinhardt_core;
+	pub use reinhardt::reinhardt_di::params;
 	pub use reinhardt::reinhardt_http;
-	pub use reinhardt::reinhardt_migrations;
-	pub use reinhardt::reinhardt_params;
 }
 #[cfg(server)]
 pub use server_only::*;

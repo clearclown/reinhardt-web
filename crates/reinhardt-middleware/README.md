@@ -169,18 +169,18 @@ use reinhardt::middleware::{SecurityHeadersMiddleware, HttpsRedirectMiddleware};
 
 The following middleware are implemented in separate crates:
 
-- **Session Middleware** - Implemented in `reinhardt-sessions`
-  - See [reinhardt-sessions](../contrib/crates/sessions/README.md) for session management and persistence
-- **Cache Middleware** - Implemented in `reinhardt-cache`
-  - See [reinhardt-cache](../utils/crates/cache/README.md) for response caching layer
+- **Session Middleware** - Implemented in `reinhardt-auth`
+  - See [reinhardt-auth](../reinhardt-auth/README.md) for session management and persistence
+- **Cache Middleware** - Implemented in `reinhardt-utils`
+  - See [reinhardt-utils](../reinhardt-utils/README.md) for response caching layer
 - **Permissions Middleware** - Implemented in `reinhardt-auth`
   - ✓ Permission-based access control
   - ✓ DRF-style permissions (IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly)
   - ✓ Model-level permissions (object permissions)
   - ✓ Permission operators (AND, OR, NOT)
   - ✓ Advanced permissions (dynamic, conditional, composite)
-  - See [reinhardt-auth](../contrib/crates/auth/README.md) for details
-- **Rate Limiting** - Implemented in `reinhardt-rest/throttling`
+  - See [reinhardt-auth](../reinhardt-auth/README.md) for details
+- **Rate Limiting** - Implemented in `reinhardt-rest`
   - ✓ Request throttling and rate limits
   - ✓ AnonRateThrottle for anonymous users
   - ✓ UserRateThrottle for authenticated users
@@ -188,7 +188,7 @@ The following middleware are implemented in separate crates:
   - ✓ BurstRateThrottle for burst protection
   - ✓ TieredRateThrottle for tiered limits
   - ✓ Memory and Redis backends
-  - See [reinhardt-rest/throttling](../../reinhardt-rest/crates/throttling/README.md) for details
+  - See [reinhardt-rest](../reinhardt-rest/README.md) for details
 
 ## CSRF Middleware Usage
 

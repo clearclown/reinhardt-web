@@ -6,7 +6,7 @@ use crate::extensions::Extensions;
 use bytes::Bytes;
 use hyper::{HeaderMap, Method, Uri, Version};
 #[cfg(feature = "parsers")]
-use reinhardt_parsers::parser::{ParsedData, Parser};
+use reinhardt_core::parsers::parser::{ParsedData, Parser};
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::AtomicBool;

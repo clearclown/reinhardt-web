@@ -6,9 +6,9 @@
 //! This module is only available with the `database` feature enabled.
 
 #[cfg(feature = "database")]
-use reinhardt_core::http::Response;
-#[cfg(feature = "database")]
 use reinhardt_db::prelude::Model;
+#[cfg(feature = "database")]
+use reinhardt_http::Response;
 
 /// Get a single object from the database or return a 404 response
 ///
@@ -20,7 +20,7 @@ use reinhardt_db::prelude::Model;
 /// ```rust,ignore
 /// use reinhardt_shortcuts::get_object_or_404;
 /// use reinhardt_db::orm::Model;
-/// use reinhardt_core::http::Response;
+/// use reinhardt_http::Response;
 ///
 /// // In an async view handler:
 /// async fn user_detail(user_id: i64) -> Result<Response, Response> {
@@ -77,7 +77,7 @@ where
 /// use reinhardt_shortcuts::get_list_or_404;
 /// use reinhardt_db::orm::{Model, QuerySet};
 /// use reinhardt_db::prelude::{FilterOperator, FilterValue};
-/// use reinhardt_core::http::Response;
+/// use reinhardt_http::Response;
 ///
 /// // In an async view handler:
 /// async fn user_list(status: &str) -> Result<Response, Response> {

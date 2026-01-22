@@ -3,7 +3,7 @@
 //! Tests the integration of MigrationNamer and MigrationNumbering modules
 //! with the migration system.
 
-use reinhardt_migrations::{
+use reinhardt_db::migrations::{
 	ColumnDefinition, Constraint, FieldType, Migration, MigrationNamer, MigrationNumbering,
 	MigrationOperation, Operation,
 };
