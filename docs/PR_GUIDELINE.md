@@ -106,6 +106,7 @@ gh pr create --draft --title "feat(auth): add JWT validation (WIP)"
 | `release` | **Release preparation (SPECIAL)** | **Version bump PRs for crates.io publication** |
 | `good first issue` | Beginner-friendly | Simple, well-defined changes |
 | `help wanted` | Needs additional input | Complex decisions or blocked PRs |
+| `question` | Further information requested | When clarification or discussion is needed |
 | `duplicate` | Duplicate PR | When PR duplicates existing work |
 | `invalid` | Invalid PR | When PR doesn't meet standards |
 | `wontfix` | Will not be merged | When PR is rejected |
