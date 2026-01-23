@@ -14,7 +14,7 @@ name = "reinhardt"
 default = ["full"]
 
 # Minimal feature set - for microservices and simple APIs
-# Equivalent to reinhardt-micro functionality (routing, DI, params, server, core)
+# Provides routing, DI, parameter extraction, HTTP server, and core functionality
 minimal = [
   "core",   # Core types, macros, HTTP
   "di",     # Dependency injection
@@ -273,7 +273,6 @@ tonic-prost-build = { workspace = true }
 resolver = "3"
 members = [
   # Core framework (always included)
-  "crates/reinhardt-micro",
   "crates/reinhardt-apps",
   "crates/reinhardt-conf",
   "crates/reinhardt-conf/crates/settings-cli",
@@ -361,7 +360,6 @@ no-individual-tags = false # Enable cargo-ws automatic tag generation
 reinhardt = { path = ".", package = "reinhardt-web", version = "0.1.0-alpha.1" }
 
 # Internal crates
-reinhardt-micro = { path = "crates/reinhardt-micro", version = "0.1.0-alpha.1" }
 reinhardt-apps = { path = "crates/reinhardt-apps", version = "0.1.0-alpha.1" }
 reinhardt-conf = { path = "crates/reinhardt-conf", version = "0.1.0-alpha.1" }
 reinhardt-settings-cli = { path = "crates/reinhardt-conf/crates/settings-cli", version = "0.1.0-alpha.1" }
