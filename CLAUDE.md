@@ -125,6 +125,13 @@ See docs/DOCUMENTATION_STANDARDS.md for comprehensive documentation standards.
 - Use `gh issue view` for viewing issue details
 - Use `gh api` for accessing GitHub API
 - **NEVER** use raw `curl` or web browser for GitHub operations when `gh` is available
+- **MUST** write all PR titles and descriptions in English
+- **MUST** write all issue titles and descriptions in English
+
+See docs/PR_GUIDELINE.md for detailed pull request guidelines including:
+- PR creation policy
+- PR title and description format
+- PR review process
 
 See docs/COMMIT_GUIDELINE.md for detailed commit guidelines including:
 - Commit execution policy (CE-1 ~ CE-5)
@@ -305,6 +312,7 @@ Before submitting code:
    - [ ] No anti-patterns (@docs/ANTI_PATTERNS.md)
    - [ ] Documentation updated (@docs/DOCUMENTATION_STANDARDS.md)
    - [ ] Git commit policy (@docs/COMMIT_GUIDELINE.md)
+   - [ ] PR guidelines (@docs/PR_GUIDELINE.md)
 
 ---
 
@@ -338,6 +346,8 @@ Before submitting code:
 - Commit version bump before creating tags
 - Update crate's CHANGELOG.md with version changes
 - Use GitHub CLI (`gh`) for all GitHub operations (PR, issues, releases)
+- Write all PR titles and descriptions in English
+- Write all issue titles and descriptions in English
 - Use `rstest` for ALL test cases (no plain `#[test]`)
 - Use `reinhardt-test` fixtures for test setup/teardown
 - Create specialized fixtures wrapping generic `reinhardt-test` fixtures for test data injection
@@ -392,6 +402,7 @@ For comprehensive guidelines, see:
 - **Anti-Patterns**: docs/ANTI_PATTERNS.md
 - **Documentation**: docs/DOCUMENTATION_STANDARDS.md
 - **Git Commits**: docs/COMMIT_GUIDELINE.md
+- **Pull Requests**: docs/PR_GUIDELINE.md
 - **Release Process**: docs/RELEASE_PROCESS.md
 - **Project Overview**: README.md
 
