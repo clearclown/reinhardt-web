@@ -397,9 +397,9 @@ reinhardt-commands = { path = "crates/reinhardt-commands", version = "0.1.0-alph
 reinhardt-db = { path = "crates/reinhardt-db", version = "0.1.0-alpha.1" }
 reinhardt-postgres = { path = "crates/reinhardt-postgres", version = "0.1.0-alpha.1" }
 reinhardt-events = { path = "crates/reinhardt-events", version = "0.1.0-alpha.1" }
-reinhardt-shortcuts = { path = "crates/reinhardt-shortcuts", version = "0.1.0-alpha.1" }
+reinhardt-shortcuts = { path = "crates/reinhardt-shortcuts", version = "0.1.0-alpha.2" }
 reinhardt-dispatch = { path = "crates/reinhardt-dispatch", version = "0.1.0-alpha.1" }
-reinhardt-i18n = { path = "crates/reinhardt-i18n", version = "0.1.0-alpha.1" }
+reinhardt-i18n = { path = "crates/reinhardt-i18n", version = "0.1.0-alpha.2" }
 reinhardt-mail = { path = "crates/reinhardt-mail", version = "0.1.0-alpha.1" }
 reinhardt-graphql = { path = "crates/reinhardt-graphql", version = "0.1.0-alpha.1" }
 reinhardt-websockets = { path = "crates/reinhardt-websockets", version = "0.1.0-alpha.1" }
