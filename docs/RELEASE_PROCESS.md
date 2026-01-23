@@ -59,7 +59,7 @@ cargo install cargo-workspaces --version 0.4.1
 
 ## Initial Publication (First-Time Release)
 
-This section covers the **first-time publication** of all 41 crates in the Reinhardt workspace to crates.io. For subsequent releases, see [Automated Publishing with CI/CD](#automated-publishing-with-cicd).
+This section covers the **first-time publication** of all 40 crates in the Reinhardt workspace to crates.io. For subsequent releases, see [Automated Publishing with CI/CD](#automated-publishing-with-cicd).
 
 ### Why Dependency Order Matters
 
@@ -77,7 +77,7 @@ location searched: crates.io index
 
 ### Dependency Phases
 
-The 41 crates are organized into **7 publication phases** based on their dependencies:
+The 40 crates are organized into **8 publication phases** based on their dependencies:
 
 **Phase 1A** (7 crates - no internal dependencies):
 - reinhardt-macros
@@ -107,8 +107,11 @@ The 41 crates are organized into **7 publication phases** based on their depende
 **Phase 5** (2 crates):
 - reinhardt-views, reinhardt-urls
 
-**Phase 6** (2 crates):
-- reinhardt-graphql, reinhardt-micro
+**Phase 6** (1 crate):
+- reinhardt-graphql
+
+**Phase 6B** (2 crates):
+- reinhardt-websockets, reinhardt-admin
 
 **Phase 7** (1 crate):
 - reinhardt-test
@@ -149,7 +152,7 @@ Before starting the publication process:
 ```
 
 **This script checks:**
-- Metadata validation (41 crates)
+- Metadata validation (40 crates)
 - Workspace build
 - Test suite
 - Format compliance
@@ -198,7 +201,7 @@ export CARGO_REGISTRY_TOKEN="your-token-here"
 ```
 
 **The script will:**
-- Publish 41 crates in 7 phases
+- Publish 40 crates in 8 phases
 - Perform dry-run validation for each crate
 - Request confirmation before each publication
 - Create Git tags automatically (`[crate-name]@v[version]`)
@@ -227,7 +230,7 @@ Step 5/5: Waiting for crates.io synchronization (30 seconds)...
 ✓ Successfully published reinhardt-macros
 ```
 
-**Estimated time:** 20-30 minutes for all 41 crates
+**Estimated time:** 20-30 minutes for all 40 crates
 
 #### Step 5: Push Git Tags
 
@@ -626,7 +629,7 @@ git commit -m "chore(release): Bump reinhardt-types v0.2.0 and reinhardt-orm v0.
 - No token expiration concerns
 - Industry best practice (PyPI, npm, RubyGems)
 
-#### Step 1: Configure Trusted Publishers (All 41 Crates)
+#### Step 1: Configure Trusted Publishers (All 40 Crates)
 
 For **each published crate**, configure Trusted Publisher on crates.io:
 
