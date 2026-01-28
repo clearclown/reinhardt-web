@@ -133,11 +133,8 @@ impl Component for WelcomePage {
 					)),
 			);
 
-		// Wrap in body element
-		let body = PageElement::new("body").child(body_content);
-
-		// Return page with head
-		body.into_page().with_head(head)
+		// Return container directly (SSR renderer adds body)
+		body_content.into_page().with_head(head)
 	}
 
 	fn name() -> &'static str {

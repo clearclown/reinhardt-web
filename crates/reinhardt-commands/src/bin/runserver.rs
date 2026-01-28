@@ -11,6 +11,7 @@ use hyper::service::service_fn;
 use hyper::{Request, Response, StatusCode, body::Incoming};
 use hyper_util::rt::TokioIo;
 use reinhardt_commands::WelcomePage;
+use reinhardt_pages::component::Component;
 use reinhardt_pages::ssr::SsrRenderer;
 use rustls::ServerConfig;
 use rustls_pemfile::{certs, private_key};
@@ -200,7 +201,7 @@ async fn handle_request(req: Request<Incoming>) -> Result<Response<Full<Bytes>>,
 fn serve_welcome_page() -> Result<Response<Full<Bytes>>, Infallible> {
 	let component = WelcomePage::new(env!("CARGO_PKG_VERSION"));
 	let mut renderer = SsrRenderer::new();
-	let html = renderer.render_page(&component);
+	let html = renderer.render_page_with_view_head(component.render());
 
 	Ok(Response::builder()
 		.status(StatusCode::OK)
