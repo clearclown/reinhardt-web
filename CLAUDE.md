@@ -72,11 +72,12 @@ See docs/ANTI_PATTERNS.md for comprehensive anti-patterns guide.
 - ALL test artifacts MUST be cleaned up
 - Global state tests MUST use `#[serial(group_name)]`
 - Use strict assertions (`assert_eq!`) instead of loose matching (`contains`)
+- Follow Arrange-Act-Assert (AAA) pattern for test structure
 
 See docs/TESTING_STANDARDS.md for comprehensive testing standards including:
 - Testing philosophy (TP-1, TP-2)
 - Test organization (TO-1, TO-2)
-- Test implementation (TI-1 ~ TI-5)
+- Test implementation (TI-1 ~ TI-6)
 - Infrastructure testing (IT-1)
 
 ### File Management
@@ -344,6 +345,7 @@ Before submitting code:
 - Report security vulnerabilities privately via GitHub Security Advisories
 - Use `.github/labels.yml` as source of truth for label definitions
 - Use `rstest` for ALL test cases (no plain `#[test]`)
+- Follow Arrange-Act-Assert (AAA) pattern with `// Arrange`, `// Act`, `// Assert` comments for test structure
 - Use `reinhardt-test` fixtures for test setup/teardown
 - Create specialized fixtures wrapping generic `reinhardt-test` fixtures for test data injection
 - Use SeaQuery (not raw SQL) for SQL construction in tests
@@ -386,6 +388,7 @@ Before submitting code:
 - Use non-English in issue titles or descriptions
 - Apply `release` label to issues (only for PRs)
 - Use plain `#[test]` instead of `#[rstest]`
+- Use non-standard phase labels in tests (`// Setup`, `// Execute`, `// Verify` -- use `// Arrange`, `// Act`, `// Assert`)
 - Write raw SQL strings in tests (use SeaQuery instead)
 - Duplicate infrastructure setup code (use `reinhardt-test` fixtures)
 - Write generic types without backticks in doc comments (causes HTML tag warnings)
