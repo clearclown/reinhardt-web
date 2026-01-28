@@ -104,14 +104,18 @@ jobs:
           # Check for error patterns in output
           # Filter out dependency resolution errors (expected for initial release)
           # These errors occur when dependent crates are not yet published to crates.io
-          DEPENDENCY_ERRORS=$(echo "$OUTPUT" | grep "no matching package named" || true)
+          # Cargo may report these as:
+          # - "no matching package named `<crate>`" (older Cargo versions)
+          # - "failed to select a version for the requirement `<crate> = \"<version>\"`" (newer Cargo versions)
+          DEPENDENCY_ERRORS=$(echo "$OUTPUT" | grep -E "no matching package named|failed to select a version for the requirement" || true)
 
           # If there are dependency errors, also filter out related cascading errors
           # These include:
           # - "failed to prepare local package for uploading" (direct consequence of missing deps)
           # - "failed to parse manifest" (Cargo cannot resolve deps in manifest)
+          # - "failed to select a version for the requirement" (version resolution failure)
           if [ -n "$DEPENDENCY_ERRORS" ]; then
-            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" | grep -v "no matching package named" | grep -v "failed to prepare local package for uploading" | grep -v "failed to parse manifest" || true)
+            FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" | grep -v "no matching package named" | grep -v "failed to prepare local package for uploading" | grep -v "failed to parse manifest" | grep -v "failed to select a version for the requirement" || true)
           else
             FILTERED_ERRORS=$(echo "$OUTPUT" | grep -E "error:|failed to|Failed to|ERROR|Error" || true)
           fi
@@ -135,7 +139,10 @@ jobs:
             echo "=========================================="
             echo ""
             echo "The following dependencies are not yet published to crates.io:"
-            echo "$DEPENDENCY_ERRORS" | grep -oP "no matching package named \`\K[^\`]+" | sort -u | sed 's/^/  - /'
+            # Extract crate names from both error message formats:
+            # - "no matching package named `<crate>`"
+            # - "failed to select a version for the requirement `<crate> = \"<version>\"`"
+            echo "$DEPENDENCY_ERRORS" | grep -oP "(no matching package named|for the requirement) \`\K[^\`=]+" | sed 's/ *$//' | sort -u | sed 's/^/  - /'
             echo ""
             echo "This is expected for initial release. The actual publish workflow"
             echo "will publish crates in dependency order, resolving these errors."
