@@ -1,6 +1,6 @@
 [package]
 name = "reinhardt-commands"
-version = "0.1.0-alpha.1"
+version = "0.1.0-alpha.2"
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -20,6 +20,7 @@ reinhardt-http = { workspace = true, optional = true }
 sqlx = { workspace = true, optional = true }
 reinhardt-server = { workspace = true, optional = true }
 reinhardt-middleware = { workspace = true, optional = true }
+reinhardt-pages = { workspace = true }
 chrono = { workspace = true }
 clap = { version = "4.5", features = ["derive", "cargo"] }
 tokio = { workspace = true }
@@ -56,7 +57,7 @@ tokio-rustls = "0.26"
 hyper-rustls = { version = "0.27", features = ["http1", "http2"] }
 rustls-pemfile = "2.0"
 rcgen = "0.14.5"
-reinhardt-utils = {workspace = true, features = ["utils-core"]}
+reinhardt-utils = {workspace = true, features = ["utils-core", "static"]}
 reinhardt-rest = {workspace = true, features = ["openapi"], optional = true}
 reinhardt-openapi = { workspace = true, optional = true }
 
