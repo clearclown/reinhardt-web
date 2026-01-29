@@ -31,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- No functional changes; version bump for workspace dependency synchronization
+- Improve CHECK constraints comments in PostgreSQL and MySQL introspectors for clarity
+- Update package version from workspace reference to explicit version
 
 ## [0.1.0-alpha.1] - 2026-01-23
 
